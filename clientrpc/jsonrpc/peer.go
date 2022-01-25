@@ -189,15 +189,24 @@ func (p *peer) queueResponse(ctx context.Context, id interface{}, result proto.M
 }
 
 func (p *peer) queueNotification(method string, payload proto.Message) error {
+	sentChan := make(chan struct{})
 	out := outboundMsg{
-		Version: version,
-		Params:  &protoPayload{payload: payload},
-		Method:  &method,
+		Version:  version,
+		Params:   &protoPayload{payload: payload},
+		Method:   &method,
+		sentChan: sentChan,
 	}
 	select {
 	case <-p.runDone:
 		return errRunDone
 	case p.outQ <- out:
+	}
+
+	// Wait until ntfn is sent in the wire.
+	select {
+	case <-p.runDone:
+		return errRunDone
+	case <-sentChan:
 		return nil
 	}
 }
@@ -401,6 +410,10 @@ loop:
 		if err := p.flushLastWrite(); err != nil {
 			loopErr = fmt.Errorf("error flushing encoded msg: %w", err)
 			break loop
+		}
+
+		if msg.sentChan != nil {
+			close(msg.sentChan)
 		}
 	}
 

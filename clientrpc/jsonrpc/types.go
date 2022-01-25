@@ -44,4 +44,6 @@ type outboundMsg struct {
 	Result  *protoPayload `json:"result,omitempty"`
 	Error   *Error        `json:"error,omitempty"`
 	Method  *string       `json:"method,omitempty"`
+
+	sentChan chan struct{}
 }
