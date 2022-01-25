@@ -72,7 +72,7 @@ func (s *responseStream) Recv(msg proto.Message) error {
 	l := len(s.q)
 	if l > 0 {
 		e = s.q[0]
-		copy(s.q, s.q[:l-1])
+		copy(s.q, s.q[1:])
 		s.q[l-1] = responseEvent{}
 		s.q = s.q[:l-1]
 	} else {

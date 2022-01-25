@@ -34,7 +34,7 @@ func (t *testServerImpl) KeepaliveStream(ctx context.Context, req *types.Keepali
 		}
 
 		event := &types.KeepaliveEvent{
-			Timestamp: time.Now().Unix(),
+			Timestamp: time.Now().UnixMilli(),
 		}
 		err := stream.Send(event)
 		if err != nil {
