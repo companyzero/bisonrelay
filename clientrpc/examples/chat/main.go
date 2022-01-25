@@ -62,9 +62,13 @@ func sendLoop(ctx context.Context, chat types.ChatServiceClient, log slog.Logger
 }
 
 func receiveLoop(ctx context.Context, chat types.ChatServiceClient, log slog.Logger) error {
+	var ackRes types.AckResponse
+	var ackReq types.AckRequest
 	for {
-		// Keep requesting a new stream if the connection breaks.
-		stream, err := chat.PMStream(ctx, nil)
+		// Keep requesting a new stream if the connection breaks. Also
+		// request any messages received since the last one we acked.
+		streamReq := types.PMStreamRequest{UnackedFrom: ackReq.SequenceId}
+		stream, err := chat.PMStream(ctx, &streamReq)
 		if errors.Is(err, context.Canceled) {
 			// Program is done.
 			return err
@@ -83,16 +87,32 @@ func receiveLoop(ctx context.Context, chat types.ChatServiceClient, log slog.Log
 				return err
 			}
 			if err != nil {
-				log.Warn("Error while receiving stream: %v", err)
+				log.Warnf("Error while receiving stream: %v", err)
 				break
 			}
 
 			// Escape content before sending it to the terminal.
 			nick := escapeNick(pm.Nick)
-			msg := escapeContent(pm.Msg.Message)
+			var msg string
+			if pm.Msg != nil {
+				msg = escapeContent(pm.Msg.Message)
+			}
+
+			log.Debugf("Received PM from '%s' with len %d and sequence %s",
+				nick, len(msg), types.DebugSequenceID(pm.SequenceId))
 
 			fmt.Println(nick, msg)
+
+			// Ack to client that message is processed.
+			ackReq.SequenceId = pm.SequenceId
+			err = chat.AckReceivedPM(ctx, &ackReq, &ackRes)
+			if err != nil {
+				log.Warnf("Error while ack'ing received pm: %v", err)
+				break
+			}
 		}
+
+		time.Sleep(time.Second)
 	}
 }
 
