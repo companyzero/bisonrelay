@@ -109,10 +109,16 @@ type ChatServiceClient interface {
 	PM(ctx context.Context, in *PMRequest, out *PMResponse) error
 	// PMStream returns a stream that gets PMs received by the client.
 	PMStream(ctx context.Context, in *PMStreamRequest) (ChatService_PMStreamClient, error)
+	// AckReceivedPM acks to the server that PMs up to a sequence ID have been
+	// processed.
+	AckReceivedPM(ctx context.Context, in *AckRequest, out *AckResponse) error
 	// GCM sends a message in a GC.
 	GCM(ctx context.Context, in *GCMRequest, out *GCMResponse) error
 	// GCMStream returns a stream that gets GC messages received by the client.
 	GCMStream(ctx context.Context, in *GCMStreamRequest) (ChatService_GCMStreamClient, error)
+	// AckReceivedGCM acks to the server that GCMs up to a sequence ID have been
+	// processed.
+	AckReceivedGCM(ctx context.Context, in *AckRequest, out *AckResponse) error
 }
 
 type client_ChatService struct {
@@ -138,6 +144,11 @@ func (c *client_ChatService) PMStream(ctx context.Context, in *PMStreamRequest) 
 	return streamerImpl[*ReceivedPM]{c: inner}, nil
 }
 
+func (c *client_ChatService) AckReceivedPM(ctx context.Context, in *AckRequest, out *AckResponse) error {
+	const method = "AckReceivedPM"
+	return c.defn.Methods[method].ClientHandler(c.c, ctx, in, out)
+}
+
 func (c *client_ChatService) GCM(ctx context.Context, in *GCMRequest, out *GCMResponse) error {
 	const method = "GCM"
 	return c.defn.Methods[method].ClientHandler(c.c, ctx, in, out)
@@ -156,6 +167,11 @@ func (c *client_ChatService) GCMStream(ctx context.Context, in *GCMStreamRequest
 	return streamerImpl[*GCReceivedMsg]{c: inner}, nil
 }
 
+func (c *client_ChatService) AckReceivedGCM(ctx context.Context, in *AckRequest, out *AckResponse) error {
+	const method = "AckReceivedGCM"
+	return c.defn.Methods[method].ClientHandler(c.c, ctx, in, out)
+}
+
 func NewChatServiceClient(c ClientConn) ChatServiceClient {
 	return &client_ChatService{c: c, defn: ChatServiceDefn()}
 }
@@ -166,10 +182,16 @@ type ChatServiceServer interface {
 	PM(context.Context, *PMRequest, *PMResponse) error
 	// PMStream returns a stream that gets PMs received by the client.
 	PMStream(context.Context, *PMStreamRequest, ChatService_PMStreamServer) error
+	// AckReceivedPM acks to the server that PMs up to a sequence ID have been
+	// processed.
+	AckReceivedPM(context.Context, *AckRequest, *AckResponse) error
 	// GCM sends a message in a GC.
 	GCM(context.Context, *GCMRequest, *GCMResponse) error
 	// GCMStream returns a stream that gets GC messages received by the client.
 	GCMStream(context.Context, *GCMStreamRequest, ChatService_GCMStreamServer) error
+	// AckReceivedGCM acks to the server that GCMs up to a sequence ID have been
+	// processed.
+	AckReceivedGCM(context.Context, *AckRequest, *AckResponse) error
 }
 
 type ChatService_PMStreamServer interface {
@@ -214,6 +236,21 @@ func ChatServiceDefn() ServiceDefn {
 					return conn.Stream(ctx, method, request)
 				},
 			},
+			"AckReceivedPM": {
+				IsStreaming:  false,
+				NewRequest:   func() proto.Message { return new(AckRequest) },
+				NewResponse:  func() proto.Message { return new(AckResponse) },
+				RequestDefn:  func() protoreflect.MessageDescriptor { return new(AckRequest).ProtoReflect().Descriptor() },
+				ResponseDefn: func() protoreflect.MessageDescriptor { return new(AckResponse).ProtoReflect().Descriptor() },
+				Help:         "AckReceivedPM acks to the server that PMs up to a sequence ID have been processed.",
+				ServerHandler: func(x interface{}, ctx context.Context, request, response proto.Message) error {
+					return x.(ChatServiceServer).AckReceivedPM(ctx, request.(*AckRequest), response.(*AckResponse))
+				},
+				ClientHandler: func(conn ClientConn, ctx context.Context, request, response proto.Message) error {
+					method := "ChatService.AckReceivedPM"
+					return conn.Request(ctx, method, request, response)
+				},
+			},
 			"GCM": {
 				IsStreaming:  false,
 				NewRequest:   func() proto.Message { return new(GCMRequest) },
@@ -244,6 +281,21 @@ func ChatServiceDefn() ServiceDefn {
 					return conn.Stream(ctx, method, request)
 				},
 			},
+			"AckReceivedGCM": {
+				IsStreaming:  false,
+				NewRequest:   func() proto.Message { return new(AckRequest) },
+				NewResponse:  func() proto.Message { return new(AckResponse) },
+				RequestDefn:  func() protoreflect.MessageDescriptor { return new(AckRequest).ProtoReflect().Descriptor() },
+				ResponseDefn: func() protoreflect.MessageDescriptor { return new(AckResponse).ProtoReflect().Descriptor() },
+				Help:         "AckReceivedGCM acks to the server that GCMs up to a sequence ID have been processed.",
+				ServerHandler: func(x interface{}, ctx context.Context, request, response proto.Message) error {
+					return x.(ChatServiceServer).AckReceivedGCM(ctx, request.(*AckRequest), response.(*AckResponse))
+				},
+				ClientHandler: func(conn ClientConn, ctx context.Context, request, response proto.Message) error {
+					method := "ChatService.AckReceivedGCM"
+					return conn.Request(ctx, method, request, response)
+				},
+			},
 		},
 	}
 }
@@ -267,6 +319,13 @@ var help_messages = map[string]map[string]string{
 		"@":         "KeepaliveEvent is a single keepalive event.",
 		"timestamp": "timestamp is the unix timestamp on the server, with second precision.",
 	},
+	"AckRequest": {
+		"@":           "",
+		"sequence_id": "",
+	},
+	"AckResponse": {
+		"@": "",
+	},
 	"PMRequest": {
 		"@":    "PMRequest is a request to send a new private message.",
 		"user": "user is either the nick, alias or an hex-encoded user ID of the destination.",
@@ -276,7 +335,8 @@ var help_messages = map[string]map[string]string{
 		"@": "PMResponse is the response of the client for a new message.",
 	},
 	"PMStreamRequest": {
-		"@": "PMStreamRequest is the request for a new private message reception stream.",
+		"@":            "PMStreamRequest is the request for a new private message reception stream.",
+		"unacked_from": "unacked_from specifies to the server the sequence_id of the last processed PM. PMs received by the server that have a higher sequence_id will be streamed back to the client.",
 	},
 	"ReceivedPM": {
 		"@":            "ReceivedPM is a private message received by the client.",
@@ -284,6 +344,7 @@ var help_messages = map[string]map[string]string{
 		"nick":         "nick is the source's nick or alias.",
 		"msg":          "msg is the received message payload.",
 		"timestamp_ms": "timestamp_ms is the timestamp from unix epoch with millisecond precision.",
+		"sequence_id":  "sequence_id is an opaque sequential ID.",
 	},
 	"GCMRequest": {
 		"@":   "GCMRequest is a request to send a GC message.",
@@ -294,7 +355,8 @@ var help_messages = map[string]map[string]string{
 		"@": "GCMResponse is the response to sending a GC message.",
 	},
 	"GCMStreamRequest": {
-		"@": "GCMStreamRequest is a request to a stream of received GC messages.",
+		"@":            "GCMStreamRequest is a request to a stream of received GC messages.",
+		"unacked_from": "unacked_from specifies to the server the sequence_id of the last processed GCM. GCMs received by the server that have a higher sequence_id will be streamed back to the client.",
 	},
 	"GCReceivedMsg": {
 		"@":            "GCReceivedMsg is a GC message received from a remote user.",
@@ -303,6 +365,7 @@ var help_messages = map[string]map[string]string{
 		"gc_alias":     "gc_alias is the local alias of the GC where the message was sent.",
 		"msg":          "msg is the received message.",
 		"timestamp_ms": "timestamp_ms is the server timestamp of the message with millisecond precision.",
+		"sequence_id":  "sequence_id is an opaque sequential ID.",
 	},
 	"RMPrivateMessage": {
 		"@":       "RMPrivateMessage is the network-level routed private message.",
