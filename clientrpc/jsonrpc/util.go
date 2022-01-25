@@ -2,8 +2,34 @@ package jsonrpc
 
 import (
 	"context"
+	"io"
 	"unicode/utf8"
+
+	"github.com/decred/slog"
 )
+
+// debugWriter logs all Write() calls to the logger.
+type debugWriter struct {
+	log   slog.Logger
+	inner io.Writer
+}
+
+func (dw debugWriter) Write(b []byte) (int, error) {
+	dw.log.Tracef("Wrote %s", b)
+	return dw.inner.Write(b)
+}
+
+// debugReader logs all Read() calls to the logger.
+type debugReader struct {
+	log   slog.Logger
+	inner io.Reader
+}
+
+func (dw debugReader) Read(b []byte) (int, error) {
+	n, err := dw.inner.Read(b)
+	dw.log.Tracef("Read %s", b[:n])
+	return n, err
+}
 
 // equalASCIIFold returns true if s is equal to t with ASCII case folding as
 // defined in RFC 4790.  This function was lifted and from the gorilla websocket
