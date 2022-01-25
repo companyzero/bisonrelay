@@ -79,6 +79,12 @@ func (c *chatServer) PMStream(ctx context.Context, req *types.PMStreamRequest, s
 	return ctx.Err()
 }
 
+// AckReceivedPM acks to the server that PMs up to a sequence ID have been
+// processed.
+func (c *chatServer) AckReceivedPM(_ context.Context, _ *types.AckRequest, _ *types.AckResponse) error {
+	panic("not implemented") // TODO: Implement
+}
+
 // GCM sends a message in a GC.
 func (c *chatServer) GCM(ctx context.Context, req *types.GCMRequest, res *types.GCMResponse) error {
 	gcid, err := c.c.GCIDByName(req.Gc)
@@ -124,6 +130,12 @@ func (c *chatServer) GCMStream(ctx context.Context, req *types.GCMStreamRequest,
 	reg.Unregister()
 	return ctx.Err()
 
+}
+
+// AckReceivedGCM acks to the server that GCMs up to a sequence ID have been
+// processed.
+func (c *chatServer) AckReceivedGCM(_ context.Context, _ *types.AckRequest, _ *types.AckResponse) error {
+	panic("not implemented") // TODO: Implement
 }
 
 var _ types.ChatServiceServer = (*chatServer)(nil)

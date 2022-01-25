@@ -29,11 +29,19 @@ service ChatService {
   /* PMStream returns a stream that gets PMs received by the client. */
   rpc PMStream(PMStreamRequest) returns (stream ReceivedPM);
 
+  /* AckReceivedPM acks to the server that PMs up to a sequence ID have been
+     processed. */
+  rpc AckReceivedPM(AckRequest) returns (AckResponse);
+
   /* GCM sends a message in a GC. */
   rpc GCM(GCMRequest) returns (GCMResponse);
 
   /* GCMStream returns a stream that gets GC messages received by the client. */
   rpc GCMStream(GCMStreamRequest) returns (stream GCReceivedMsg);
+
+  /* AckReceivedGCM acks to the server that GCMs up to a sequence ID have been
+     processed. */
+  rpc AckReceivedGCM(AckRequest) returns (AckResponse);
 }
 
 
@@ -71,6 +79,17 @@ message KeepaliveEvent{
   int64 timestamp = 1;
 }
 
+/* AckRequest is a request to ack that a type of message up to a sequence ID has
+   been processed. */
+message AckRequest {
+  /* sequence_id is the ID up to which messages have been processed. */
+  uint64 sequence_id = 1;
+}
+
+/* AckResponse is the response to an ack request. */
+message AckResponse {}
+
+
 /* PMRequest is a request to send a new private message. */
 message PMRequest {
   /* user is either the nick, alias or an hex-encoded user ID of the destination. */
@@ -84,7 +103,12 @@ message PMRequest {
 message PMResponse {}
 
 /* PMStreamRequest is the request for a new private message reception stream.*/
-message PMStreamRequest {}
+message PMStreamRequest {
+  /* unacked_from specifies to the server the sequence_id of the last processed
+     PM. PMs received by the server that have a higher sequence_id will be
+     streamed back to the client. */
+  uint64 unacked_from = 1;
+}
 
 /* ReceivedPM is a private message received by the client. */
 message ReceivedPM {
@@ -99,6 +123,9 @@ message ReceivedPM {
 
   /* timestamp_ms is the timestamp from unix epoch with millisecond precision. */
   int64 timestamp_ms = 4;
+
+  /* sequence_id is an opaque sequential ID. */
+  uint64 sequence_id = 5;
 }
 
 /* GCMRequest is a request to send a GC message. */
@@ -114,7 +141,12 @@ message GCMRequest {
 message GCMResponse {}
 
 /* GCMStreamRequest is a request to a stream of received GC messages. */
-message GCMStreamRequest {}
+message GCMStreamRequest {
+  /* unacked_from specifies to the server the sequence_id of the last processed
+     GCM. GCMs received by the server that have a higher sequence_id will be
+     streamed back to the client. */
+  uint64 unacked_from = 1;
+}
 
 /* GCReceivedMsg is a GC message received from a remote user. */
 message GCReceivedMsg {
@@ -128,6 +160,8 @@ message GCReceivedMsg {
   RMGroupMessage msg = 4;
   /* timestamp_ms is the server timestamp of the message with millisecond precision. */
   int64 timestamp_ms = 5;
+  /* sequence_id is an opaque sequential ID. */
+  uint64 sequence_id = 6;
 }
 
 
