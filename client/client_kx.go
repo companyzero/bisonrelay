@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"sort"
 	"time"
 
 	"github.com/companyzero/bisonrelay/client/clientdb"
@@ -525,4 +526,28 @@ func (c *Client) handleKXSuggestion(ru *RemoteUser, kxsg rpc.RMKXSuggestion) err
 		c.cfg.KXSuggestion(ru, kxsg.Target)
 	}
 	return nil
+}
+
+// LastUserReceivedTime is a record for user and their last decrypted message
+// time.
+type LastUserReceivedTime struct {
+	UID           clientintf.UserID
+	LastDecrypted time.Time
+}
+
+// ListUsersLastReceivedTime returns the UID and time of last received message
+// for all users.
+func (c *Client) ListUsersLastReceivedTime() ([]LastUserReceivedTime, error) {
+	c.rul.Lock()
+	res := make([]LastUserReceivedTime, len(c.rul.m))
+	var i int
+	for uid, ru := range c.rul.m {
+		_, decTS := ru.LastRatchetTimes()
+		res[i] = LastUserReceivedTime{UID: uid, LastDecrypted: decTS}
+		i += 1
+	}
+	c.rul.Unlock()
+
+	sort.Slice(res, func(i, j int) bool { return res[i].LastDecrypted.After(res[j].LastDecrypted) })
+	return res, nil
 }

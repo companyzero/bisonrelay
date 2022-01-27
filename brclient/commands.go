@@ -470,6 +470,26 @@ var listCommands = []tuicmd{
 
 			return nil
 		},
+	}, {
+		cmd:           "userslastmsgtime",
+		descr:         "List the timestamp of the last message received for every user",
+		usableOffline: true,
+		handler: func(args []string, as *appState) error {
+			users, err := as.c.ListUsersLastReceivedTime()
+			if err != nil {
+				return nil
+			}
+			as.cwHelpMsgs(func(pf printf) {
+				pf("")
+				pf("Last received message time from users (most recent first)")
+				for _, user := range users {
+					nick, _ := as.c.UserNick(user.UID)
+					pf("%s - %s - %s", user.LastDecrypted.Format(ISO8601DateTime),
+						strescape.Nick(nick), user.UID)
+				}
+			})
+			return nil
+		},
 	},
 }
 
