@@ -1,12 +1,14 @@
 package e2etests
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"testing"
 	"time"
 
 	"github.com/companyzero/bisonrelay/client"
+	"github.com/companyzero/bisonrelay/client/clientdb"
 	"github.com/companyzero/bisonrelay/internal/assert"
 	"github.com/companyzero/bisonrelay/rpc"
 )
@@ -16,7 +18,7 @@ import (
 // ratchet.
 func TestResendsUnackedRM(t *testing.T) {
 	// Setup Alice and Bob and have them KX.
-	tcfg := testScaffoldCfg{showLog: true}
+	tcfg := testScaffoldCfg{}
 	ts := newTestScaffold(t, tcfg)
 	alice := ts.newClient("alice")
 	bob := ts.newClient("bob")
@@ -146,4 +148,54 @@ func TestResendsUnackedRM(t *testing.T) {
 
 	assert.NilErr(t, bob.PM(alice.PublicID(), "bob msg"))
 	assert.DeepEqual(t, assert.ChanWritten(t, alicePMChan), "bob msg")
+}
+
+// TestLongOfflineClientResetsAllKX tests that if a client has been offline for
+// longer than the server's message retention policy, the client attempts to
+// reset KX with all its known users.
+func TestLongOfflineClientResetsAllKX(t *testing.T) {
+	// Setup Alice and Bob and have them KX.
+	tcfg := testScaffoldCfg{}
+	ts := newTestScaffold(t, tcfg)
+	alice := ts.newClient("alice")
+	bob := ts.newClient("bob")
+	invite, err := alice.WriteNewInvite(io.Discard)
+	assert.NilErr(t, err)
+	assert.NilErr(t, bob.AcceptInvite(invite))
+	assertClientsKXd(t, alice, bob)
+
+	// Shutdown bob.
+	bobUID := bob.PublicID()
+	ts.stopClient(bob)
+
+	// Modify Alice's DB directly marking its last conn time in the past.
+	err = alice.db.Update(context.Background(), func(tx clientdb.ReadWriteTx) error {
+		oldDate := time.Now().Add(-time.Hour * 24 * 365)
+		_, err := alice.db.ReplaceLastConnDate(tx, oldDate)
+		return err
+	})
+	assert.NilErr(t, err)
+
+	// Recreate alice.
+	alice = ts.recreateClient(alice)
+
+	// It should end up with a new reset KX attempt.
+	for i := 0; i < 20; i++ {
+		kx, err := alice.ListKXs()
+		assert.NilErr(t, err)
+		if len(kx) == 0 {
+			time.Sleep(time.Millisecond * 100)
+			continue
+		}
+
+		if !kx[0].IsForReset {
+			t.Fatalf("KX is not for reset")
+		}
+		if !kx[0].MediatorID.ConstantTimeEq(&bobUID) {
+			t.Fatalf("KX is not for Bob")
+		}
+		return // Test done!
+	}
+
+	t.Fatalf("Timeout waiting for Bob's reset KX to appear")
 }

@@ -692,6 +692,49 @@ func (c *Client) PM(uid UserID, msg string) error {
 	return ru.sendPM(msg)
 }
 
+// maybeResetAllKXAfterConn checks whether it's needed to reset KX with all
+// existing users due to the local client being offline for too long.
+func (c *Client) maybeResetAllKXAfterConn(expDays int) {
+	var oldConnDate time.Time
+	now := time.Now()
+	err := c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
+		var err error
+		oldConnDate, err = c.db.ReplaceLastConnDate(tx, now)
+		return err
+	})
+	if err != nil {
+		c.log.Errorf("Unable to replace last conn date in db: %v", err)
+		return
+	}
+
+	if oldConnDate.IsZero() {
+		// No old stored last conn date. Ignore.
+		return
+	}
+
+	limitInterval := time.Duration(expDays) * 24 * time.Hour
+	limitDate := now.Add(-limitInterval)
+	if !oldConnDate.Before(limitDate) {
+		c.log.Debugf("Skipping resetting all KX due to local "+
+			"client offline since %s with limit date %s", now,
+			limitDate)
+		return
+	}
+
+	c.ntfns.notifyOnLocalClientOfflineTooLong(oldConnDate)
+
+	c.log.Warnf("Local client offline since %s which is before "+
+		"the limit date imposed by the server message retention policy of %d "+
+		"days. Resetting all KXs", oldConnDate.Format(time.RFC3339), expDays)
+	res, err := c.ResetAllOldRatchets(limitInterval, nil)
+	if err != nil {
+		c.log.Errorf("Unable to reset all old ratchets: %v", err)
+		return
+	}
+	c.log.Infof("Started reset KX procedures with %d users due to offline "+
+		"local client", len(res))
+}
+
 // Run runs all client goroutines until the given context is canceled.
 //
 // Must only be called once.
@@ -841,7 +884,9 @@ func (c *Client) Run(ctx context.Context) error {
 				close(firstConnChan)
 				firstConn = false
 			}
-
+			if nextSess != nil {
+				go c.maybeResetAllKXAfterConn(nextSess.ExpirationDays())
+			}
 		}
 	})
 

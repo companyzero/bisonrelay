@@ -74,6 +74,7 @@ func (tc *testConn) RemoteAddr() net.Addr {
 
 type testClient struct {
 	*client.Client
+	db      *clientdb.DB
 	name    string
 	id      *zkidentity.FullIdentity
 	rootDir string
@@ -299,6 +300,7 @@ func (ts *testScaffold) newClientWithOpts(name string, rootDir string,
 		id:      id,
 		rootDir: rootDir,
 		runC:    make(chan error, 1),
+		db:      db,
 	}
 	go func() { tc.runC <- c.Run(ctx) }()
 
@@ -328,15 +330,21 @@ func (ts *testScaffold) newClient(name string) *testClient {
 	return ts.newClientWithOpts(name, rootDir, id)
 }
 
+// stopClient stops this client. It can't be used after this.
+func (ts *testScaffold) stopClient(tc *testClient) {
+	ts.t.Helper()
+	tc.cancel()
+	err := assert.ChanWritten(ts.t, tc.runC)
+	assert.ErrorIs(ts.t, err, context.Canceled)
+}
+
 // recreateClient stops the specified client and re-creates it using the same
 // database.
 func (ts *testScaffold) recreateClient(tc *testClient) *testClient {
 	ts.t.Helper()
 
 	// Stop existing client.
-	tc.cancel()
-	err := assert.ChanWritten(ts.t, tc.runC)
-	assert.ErrorIs(ts.t, err, context.Canceled)
+	ts.stopClient(tc)
 
 	// Recreate client.
 	return ts.newClientWithOpts(tc.name, tc.rootDir, tc.id)
