@@ -12,6 +12,7 @@ import (
 	"github.com/companyzero/bisonrelay/ratchet"
 	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/companyzero/bisonrelay/zkidentity"
+	"golang.org/x/sync/errgroup"
 )
 
 // Client KX flow is:
@@ -275,9 +276,102 @@ func (c *Client) ResetRatchet(uid UserID) error {
 	return c.kxl.requestReset(resetRV, ru.id)
 }
 
+// ResetAllOldRatchets starts the reset ratchet procedure with all users from
+// which no message has been received for the passed limit duration.
+//
+// If the interval is zero, then a default interval of 30 days is used.
+//
+// If progrChan is specified, each individual reset that is started is reported
+// in progrChan.
+func (c *Client) ResetAllOldRatchets(limitInterval time.Duration, progrChan chan clientintf.UserID) ([]clientintf.UserID, error) {
+	if limitInterval == 0 {
+		limitInterval = time.Hour * 24 * 30
+	}
+	limitDate := time.Now().Add(-limitInterval)
+
+	kxMap := make(map[clientintf.UserID]struct{})
+	err := c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
+		kxs, err := c.db.ListKXs(tx)
+		if err != nil {
+			return err
+		}
+
+		for _, kx := range kxs {
+			if !kx.IsForReset {
+				continue
+			}
+			if kx.MediatorID == nil {
+				// Should not happen, but sanity check.
+				c.log.Errorf("Reset KX %s with nil MediatorID",
+					kx.InitialRV)
+				continue
+			}
+
+			if !kx.Timestamp.Before(limitDate) {
+				// KX is still valid.
+				kxMap[*kx.MediatorID] = struct{}{}
+				continue
+			}
+
+			// KX attempt is too old, retry with a new one.
+			c.log.Debugf("Removing old reset KX attempt %s with %s from %s",
+				kx.InitialRV, kx.MediatorID, kx.Timestamp)
+			err := c.db.DeleteKX(tx, kx.InitialRV)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	var res []clientintf.UserID
+	g := errgroup.Group{}
+
+	ab := c.AddressBook()
+	for _, entry := range ab {
+		uid := entry.ID
+		ru, err := c.UserByID(uid)
+		if err != nil {
+			// Should not happen unless user was removed during
+			// iteration.
+			c.log.Warnf("Unknown user with ID %s", entry.ID)
+			continue
+		}
+
+		// Skip if we received messages from this user recently.
+		_, decTime := ru.LastRatchetTimes()
+		if decTime.After(limitDate) {
+			continue
+		}
+
+		// Skip if we're already KX'ing with them.
+		if _, ok := kxMap[entry.ID]; ok {
+			continue
+		}
+
+		// Start reset attempt. Start all in parallel, so subscriptions
+		// to the reset RVs are likely done in a single step.
+		res = append(res, uid)
+		g.Go(func() error {
+			err := c.ResetRatchet(uid)
+			if progrChan != nil {
+				select {
+				case progrChan <- uid:
+				case <-c.ctx.Done():
+				}
+			}
+			return err
+		})
+	}
+	return res, g.Wait()
+}
+
 func (c *Client) ListKXs() ([]clientdb.KXData, error) {
 	var kxs []clientdb.KXData
-	err := c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
+	err := c.dbView(func(tx clientdb.ReadTx) error {
 		var err error
 		kxs, err = c.db.ListKXs(tx)
 		return err

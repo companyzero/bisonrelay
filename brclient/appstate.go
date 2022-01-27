@@ -1379,6 +1379,37 @@ func (as *appState) requestRatchetReset(cw *chatWindow) {
 	as.repaintIfActive(cw)
 }
 
+func (as *appState) resetAllOldRatchets(interval time.Duration) error {
+	intervalStr := interval.String()
+	if interval > time.Hour*24*3 {
+		intervalStr = fmt.Sprintf("%d days",
+			interval/(time.Hour*24))
+	}
+	progrChan := make(chan clientintf.UserID)
+	go func() {
+		for uid := range progrChan {
+			nick, _ := as.c.UserNick(uid)
+			as.diagMsg("Requested ratchet reset with %s (%s)",
+				strescape.Nick(nick), uid)
+		}
+	}()
+
+	as.cwHelpMsg("Starting to reset ratchets older than %s", intervalStr)
+	go func() {
+		res, err := as.c.ResetAllOldRatchets(interval, progrChan)
+		as.manyDiagMsgsCb(func(pf printf) {
+			if len(res) == 0 && err == nil {
+				pf("No old ratchets in need of starting reset")
+			} else if err != nil {
+				pf("Unable to complete old ratchet reset: %v", err)
+			}
+		})
+		time.Sleep(time.Second)
+		close(progrChan)
+	}()
+	return nil
+}
+
 func (as *appState) requestMediateID(cw *chatWindow, target clientintf.UserID) {
 	m := cw.newInternalMsg(fmt.Sprintf("Requesting mediate identity with %s", target))
 	as.repaintIfActive(cw)
