@@ -255,3 +255,8 @@ type PostSubscriptionResult struct {
 	WasSubRequest bool               `json:"was_sub_request"`
 	Error         string             `json:"error"`
 }
+
+type LastUserReceivedTime struct {
+	UID           clientintf.UserID `json:"uid"`
+	LastDecrypted int64             `json:"last_decrypted"`
+}
