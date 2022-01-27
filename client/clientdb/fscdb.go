@@ -44,6 +44,7 @@ const (
 	postKXActionsDir   = "postkxactions"
 	payStatsFile       = "paystats.json"
 	unackedRMsDir      = "unackedrms"
+	lastConnDateFile   = "lastconndate.json"
 )
 
 func (db *DB) LocalID(tx ReadTx) (*zkidentity.FullIdentity, error) {
@@ -488,4 +489,18 @@ func (db *DB) LogGCMsg(tx ReadWriteTx, gcName string, gcID zkidentity.ShortID,
 
 	logFname := fmt.Sprintf("groupchat.%s.%s.log", strescape.PathElement(gcName), gcID)
 	return db.logMsg(logFname, internal, from, msg, ts)
+}
+
+// ReplaceLastConnDate replaces the last connection date of the local client to
+// the server with the specified one. Returns the old connection date.
+func (db *DB) ReplaceLastConnDate(tx ReadWriteTx, date time.Time) (time.Time, error) {
+	fname := filepath.Join(db.root, lastConnDateFile)
+	var oldDate time.Time
+	err := db.readJsonFile(fname, &oldDate)
+	if err != nil && !errors.Is(err, ErrNotFound) {
+		return oldDate, err
+	}
+
+	err = db.saveJsonFile(fname, date)
+	return oldDate, err
 }

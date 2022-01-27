@@ -59,6 +59,15 @@ type OnRemoteSubscriptionErrorNtfn func(user *RemoteUser, wasSubscribing bool, e
 
 func (_ OnRemoteSubscriptionErrorNtfn) typ() string { return onRemoteSubscriptionErrorNtfnType }
 
+const onLocalClientOfflineTooLong = "onLocalClientOfflineTooLong"
+
+// OnLocalClientOfflineTooLong is called after the local client connects to the
+// server, if it determines it has been offline for too long given the server's
+// message retention policy.
+type OnLocalClientOfflineTooLong func(time.Time)
+
+func (_ OnLocalClientOfflineTooLong) typ() string { return onLocalClientOfflineTooLong }
+
 // The following is used only in tests.
 
 const onTestNtfnType = "testNtfnType"
@@ -202,6 +211,12 @@ func (nmgr *NotificationManager) notifyOnRemoteSubErrored(user *RemoteUser, wasS
 		visit(func(h OnRemoteSubscriptionErrorNtfn) { h(user, wasSubscribing, errMsg) })
 }
 
+func (nmgr *NotificationManager) notifyOnLocalClientOfflineTooLong(date time.Time) {
+	nmgr.handlers[onLocalClientOfflineTooLong].(*handlersFor[OnLocalClientOfflineTooLong]).
+		visit(func(h OnLocalClientOfflineTooLong) { h(date) })
+
+}
+
 func NewNotificationManager() *NotificationManager {
 	return &NotificationManager{
 		handlers: map[string]handlersRegistry{
@@ -213,6 +228,7 @@ func NewNotificationManager() *NotificationManager {
 
 			onRemoteSubscriptionChangedType:   &handlersFor[OnRemoteSubscriptionChangedNtfn]{},
 			onRemoteSubscriptionErrorNtfnType: &handlersFor[OnRemoteSubscriptionErrorNtfn]{},
+			onLocalClientOfflineTooLong:       &handlersFor[OnLocalClientOfflineTooLong]{},
 		},
 	}
 }
