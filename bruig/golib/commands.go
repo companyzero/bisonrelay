@@ -98,6 +98,7 @@ const (
 	CTSkipWalletCheck                 = 0x62
 	CTLNRestoreMultiSCB               = 0x63
 	CTLNSaveMultiSCB                  = 0x64
+	CTListUsersLastMsgTimes           = 0x65
 
 	NTInviteReceived         = 0x1001
 	NTInviteAccepted         = 0x1002

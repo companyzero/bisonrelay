@@ -1266,3 +1266,17 @@ Map<String, dynamic> _$PostSubscriptionResultToJson(
       'was_sub_request': instance.wasSubRequest,
       'error': instance.error,
     };
+
+LastUserReceivedTime _$LastUserReceivedTimeFromJson(
+        Map<String, dynamic> json) =>
+    LastUserReceivedTime(
+      json['uid'] as String,
+      json['last_decrypted'] as int,
+    );
+
+Map<String, dynamic> _$LastUserReceivedTimeToJson(
+        LastUserReceivedTime instance) =>
+    <String, dynamic>{
+      'uid': instance.uid,
+      'last_decrypted': instance.lastDecrypted,
+    };

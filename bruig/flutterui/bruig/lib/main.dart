@@ -6,6 +6,7 @@ import 'dart:developer' as developer;
 import 'package:bruig/components/attach_file.dart';
 import 'package:bruig/components/route_error.dart';
 import 'package:bruig/models/menus.dart';
+import 'package:bruig/screens/contacts_msg_times.dart';
 import 'package:bruig/theme_manager.dart';
 import 'package:bruig/config.dart';
 import 'package:bruig/models/downloads.dart';
@@ -269,6 +270,10 @@ class _AppState extends State<App> with WindowListener {
                     Consumer2<AppNotifications, ClientModel>(
                         builder: (context, ntfns, client, child) =>
                             NeedsInChannelScreen(ntfns, client)),
+                ContactsLastMsgTimesScreen.routeName: (context) =>
+                    Consumer<ClientModel>(
+                        builder: (context, client, child) =>
+                            ContactsLastMsgTimesScreen(client)),
                 '/fatalError': (context) => const FatalErrorScreen(),
                 '/shutdown': (context) => Consumer<LogModel>(
                     builder: (context, log, child) => ShutdownScreen(

@@ -1252,6 +1252,17 @@ class PostSubscriptionResult extends ChatEvent {
       _$PostSubscriptionResultFromJson(json);
 }
 
+@JsonSerializable()
+class LastUserReceivedTime {
+  final String uid;
+  @JsonKey(name: "last_decrypted")
+  final int lastDecrypted;
+
+  LastUserReceivedTime(this.uid, this.lastDecrypted);
+  factory LastUserReceivedTime.fromJson(Map<String, dynamic> json) =>
+      _$LastUserReceivedTimeFromJson(json);
+}
+
 mixin NtfStreams {
   StreamController<RemoteUser> ntfAcceptedInvites =
       StreamController<RemoteUser>();
@@ -1774,6 +1785,16 @@ abstract class PluginPlatform {
       await asyncCall(CTCreateLockFile, rootDir);
   Future<void> closeLockFile(String rootDir) async =>
       await asyncCall(CTCloseLockFile, rootDir);
+
+  Future<List<LastUserReceivedTime>> listUsersLastMsgTimes() async {
+    var res = await asyncCall(CTListUsersLastMsgTimes, null);
+    if (res == null) {
+      return List.empty();
+    }
+    return (res as List)
+        .map<LastUserReceivedTime>((v) => LastUserReceivedTime.fromJson(v))
+        .toList();
+  }
 }
 
 const int CTUnknown = 0x00;
@@ -1865,6 +1886,7 @@ const int CTCloseLockFile = 0x61;
 const int CTSkipWalletCheck = 0x62;
 const int CTLNRestoreMultiSCB = 0x63;
 const int CTLNSaveMultiSCB = 0x64;
+const int CTListUsersLastMsgTimes = 0x65;
 
 const int notificationsStartID = 0x1000;
 

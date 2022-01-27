@@ -1225,6 +1225,20 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		}
 		return res.MultiChanBackup.MultiChanBackup, nil
 
+	case CTListUsersLastMsgTimes:
+		times, err := c.ListUsersLastReceivedTime()
+		if err != nil {
+			return nil, err
+		}
+
+		res := make([]LastUserReceivedTime, len(times))
+		for i := range times {
+			res[i] = LastUserReceivedTime{
+				UID:           times[i].UID,
+				LastDecrypted: times[i].LastDecrypted.Unix(),
+			}
+		}
+		return res, nil
 	}
 
 	return nil, nil

@@ -1,5 +1,6 @@
 import 'package:bruig/models/client.dart';
 import 'package:bruig/models/menus.dart';
+import 'package:bruig/screens/contacts_msg_times.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:bruig/screens/feed/feed_posts.dart';
@@ -140,6 +141,11 @@ Future<void> loadInvite(BuildContext context) async {
   var invite = await Golib.decodeInvite(filePath);
   Navigator.of(context, rootNavigator: true)
       .pushNamed('/verifyInvite', arguments: invite);
+}
+
+void gotoContactsLastMsgTimeScreen(BuildContext context) {
+  Navigator.of(context, rootNavigator: true)
+      .pushNamed(ContactsLastMsgTimesScreen.routeName);
 }
 
 class _ChatsList extends StatefulWidget {
@@ -283,6 +289,21 @@ class _ChatsListState extends State<_ChatsList> {
                       tooltip: "Load Invite",
                       onPressed: () => loadInvite(context),
                       icon: Icon(size: 15, color: darkTextColor, Icons.add)))),
+          Positioned(
+              bottom: 5,
+              left: 30,
+              child: Material(
+                  color: selectedBackgroundColor.withOpacity(0),
+                  child: IconButton(
+                      hoverColor: selectedBackgroundColor,
+                      splashRadius: 15,
+                      iconSize: 15,
+                      tooltip: "List last received message time",
+                      onPressed: () => gotoContactsLastMsgTimeScreen(context),
+                      icon: Icon(
+                          size: 15,
+                          color: darkTextColor,
+                          Icons.list_rounded)))),
           Positioned(
               bottom: 5,
               left: 5,
