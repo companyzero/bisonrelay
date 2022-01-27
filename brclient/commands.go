@@ -2114,10 +2114,31 @@ var commands = []tuicmd{
 		},
 	}, {
 		cmd:           "addressbook",
+		usage:         "[<user>]",
 		usableOffline: true,
 		aliases:       []string{"ab"},
-		descr:         "Show the address book of known peers",
+		descr:         "Show the address book of known remote users (or a user profile)",
 		handler: func(args []string, as *appState) error {
+			if len(args) > 0 {
+				ru, err := as.c.UserByNick(args[0])
+				if err != nil {
+					return err
+				}
+
+				as.cwHelpMsgs(func(pf printf) {
+					pii := ru.PublicIdentity()
+					encTime, decTime := ru.LastRatchetTimes()
+					pf("")
+					pf("Info for user %s", strescape.Nick(ru.Nick()))
+					pf("UID: %s", ru.ID())
+					pf("Name: %s", strescape.Content(pii.Name))
+					pf("Ignored: %v", ru.IsIgnored())
+					pf("Last Encrypt Time: %s", encTime.Format(ISO8601DateTimeMs))
+					pf("Last Decrypt Time: %s", decTime.Format(ISO8601DateTimeMs))
+				})
+				return nil
+			}
+
 			ab := as.c.AddressBook()
 			var maxNickLen int
 			for i := range ab {

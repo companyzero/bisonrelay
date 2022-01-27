@@ -94,6 +94,9 @@ type Ratchet struct {
 	theirHalf *[32]byte
 	kxPrivate *[32]byte
 
+	lastEncryptTime time.Time
+	lastDecryptTime time.Time
+
 	rand io.Reader
 }
 
@@ -344,6 +347,7 @@ func (r *Ratchet) Encrypt(out, msg []byte) ([]byte, error) {
 	out = secretbox.Seal(out, header[:], &headerNonce, &r.sendHeaderKey)
 	r.sendCount++
 
+	r.lastEncryptTime = time.Now()
 	return secretbox.Seal(out, msg, &messageNonce, &messageKey), nil
 }
 
@@ -466,6 +470,9 @@ func isZeroKey(key *[32]byte) bool {
 func (r *Ratchet) Decrypt(ciphertext []byte) ([]byte, error) {
 	msg, err := r.trySavedKeys(ciphertext)
 	if err != nil || msg != nil {
+		if err == nil {
+			r.lastDecryptTime = time.Now()
+		}
 		return msg, err
 	}
 
@@ -496,6 +503,7 @@ func (r *Ratchet) Decrypt(ciphertext []byte) ([]byte, error) {
 		copy(r.recvChainKey[:], provisionalChainKey[:])
 		r.mergeSavedKeys(savedKeys)
 		r.recvCount = messageNum + 1
+		r.lastDecryptTime = time.Now()
 		return msg, nil
 	}
 
@@ -565,6 +573,7 @@ func (r *Ratchet) Decrypt(ciphertext []byte) ([]byte, error) {
 	r.mergeSavedKeys(savedKeys)
 	r.ratchet = true
 
+	r.lastDecryptTime = time.Now()
 	return msg, nil
 }
 
@@ -588,6 +597,10 @@ func inv32(x []byte) []byte {
 	return ret
 }
 
+func (r *Ratchet) LastEncDecTimes() (time.Time, time.Time) {
+	return r.lastEncryptTime, r.lastDecryptTime
+}
+
 func (r *Ratchet) DiskState(lifetime time.Duration) *disk.RatchetState {
 	now := time.Now()
 	s := &disk.RatchetState{
@@ -609,6 +622,8 @@ func (r *Ratchet) DiskState(lifetime time.Duration) *disk.RatchetState {
 		KXPrivate:          dup32(r.kxPrivate),
 		MyHalf:             dup32(r.myHalf),
 		TheirHalf:          dup32(r.theirHalf),
+		LastEncryptTime:    r.lastEncryptTime.UnixMilli(),
+		LastDecryptTime:    r.lastDecryptTime.UnixMilli(),
 	}
 
 	for headerKey, messageKeys := range r.saved {
@@ -661,6 +676,8 @@ func (r *Ratchet) Unmarshal(s *disk.RatchetState) error {
 	r.prevSendCount = s.PrevSendCount
 	r.prevRecvCount = s.PrevRecvCount
 	r.ratchet = s.Ratchet
+	r.lastEncryptTime = time.UnixMilli(s.LastEncryptTime)
+	r.lastDecryptTime = time.UnixMilli(s.LastDecryptTime)
 
 	if len(s.KXPrivate) > 0 {
 		if !unmarshalKey(r.kxPrivate, s.KXPrivate) {

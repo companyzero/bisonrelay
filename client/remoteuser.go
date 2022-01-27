@@ -163,6 +163,13 @@ func (ru *RemoteUser) AddressBookEntry() AddressBookEntry {
 	}
 }
 
+func (ru *RemoteUser) LastRatchetTimes() (time.Time, time.Time) {
+	ru.rLock.Lock()
+	enc, dec := ru.r.LastEncDecTimes()
+	ru.rLock.Unlock()
+	return enc, dec
+}
+
 func (ru *RemoteUser) String() string {
 	return fmt.Sprintf("%s (%q)", ru.id.Identity, ru.id.Nick)
 }

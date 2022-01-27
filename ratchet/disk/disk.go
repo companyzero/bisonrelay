@@ -24,6 +24,8 @@ type RatchetState struct {
 	MyHalf             []byte                   `json:"myHalf"`
 	TheirHalf          []byte                   `json:"theirHalf"`
 	SavedKeys          []RatchetState_SavedKeys `json:"savedKeys"`
+	LastEncryptTime    int64                    `json:"lastEncryptTime"`
+	LastDecryptTime    int64                    `json:"lastDencryptTime"`
 }
 
 type RatchetState_SavedKeys struct {

@@ -20,8 +20,9 @@ import (
 )
 
 const (
-	ISO8601DateTime = "2006-01-02 15:04:00"
-	ISO8601Date     = "2006-01-02"
+	ISO8601DateTimeMs = "2006-01-02 15:04:05.000"
+	ISO8601DateTime   = "2006-01-02 15:04:05"
+	ISO8601Date       = "2006-01-02"
 )
 
 // Helper mixin to avoid having to add an Init() function everywhere.
