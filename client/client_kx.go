@@ -200,6 +200,8 @@ func (c *Client) initRemoteUser(id *zkidentity.PublicIdentity, r *ratchet.Ratche
 	if !oldUser {
 		select {
 		case c.newUsersChan <- ru:
+		case <-c.ctx.Done():
+			return nil, errClientExiting
 		case <-c.runDone:
 			return nil, errClientExiting
 		}
