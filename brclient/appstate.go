@@ -2314,6 +2314,12 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		}
 	}))
 
+	ntfns.Register(client.OnLocalClientOfflineTooLong(func(oldConnDate time.Time) {
+		as.diagMsg("The local client has been offline since %s which is before "+
+			"the limit date imposed by the server message retention policy. "+
+			"Resetting all KXs", oldConnDate.Format(ISO8601DateTime))
+	}))
+
 	// Initialize client config.
 	cfg := client.Config{
 		DB:             db,
