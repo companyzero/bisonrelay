@@ -63,6 +63,7 @@ func (db *DB) ListKXs(tx ReadTx) ([]KXData, error) {
 		return nil, fmt.Errorf("unable to read content dir: %v", err)
 	}
 
+	var testID UserID
 	res := make([]KXData, 0, len(dirEntries))
 	for _, f := range dirEntries {
 		if f.IsDir() {
@@ -70,6 +71,11 @@ func (db *DB) ListKXs(tx ReadTx) ([]KXData, error) {
 		}
 
 		fname := filepath.Join(dir, f.Name())
+		if err := testID.FromString(filepath.Base(fname)); err != nil {
+			db.log.Warnf("Filename %q is not a KX file", fname)
+			continue
+		}
+
 		blob, err := os.ReadFile(fname)
 		if err != nil {
 			return nil, err
@@ -78,7 +84,8 @@ func (db *DB) ListKXs(tx ReadTx) ([]KXData, error) {
 		var kxd KXData
 		err = json.Unmarshal(blob, &kxd)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("unable to unmarshal KX file %s: %v",
+				fname, err)
 		}
 		res = append(res, kxd)
 	}
