@@ -2347,6 +2347,39 @@ var commands = []tuicmd{
 			return nil
 		},
 	}, {
+		cmd:   "rresetold",
+		usage: "[age]",
+		descr: "Request a ratchet reset with contacts with no messages since [age] ago",
+		long: []string{"Request a ratchet reset with every remote user:",
+			"1. From which no message has been received since [age] ago.",
+			"2. No other KX reset procedure has been done since [age] ago.",
+			"This command is useful to restablish comms after the local client has been offline for a long time (greater than the time the data lives on the server), on which case it's likely that many ratchets have been broken",
+			"If [age] is not specified, it defaults to the ExpiryDays setting of the server.",
+			"[age] may be specified either in days (without any suffix) or as a Go time.Duration string (with a time suffix)"},
+
+		handler: func(args []string, as *appState) error {
+			var interval time.Duration
+			if len(args) > 0 {
+				var err error
+				interval, err = time.ParseDuration(args[0])
+				if err != nil {
+					d, err := strconv.ParseInt(args[0], 10, 64)
+					if err != nil {
+						return fmt.Errorf("arg %q is not a valid age",
+							args[0])
+					}
+					interval = time.Duration(d) * 24 * time.Hour
+				}
+			} else {
+				as.connectedMtx.Lock()
+				expiry := as.expirationDays
+				as.connectedMtx.Unlock()
+				interval = time.Duration(expiry) * 24 * time.Hour
+			}
+
+			return as.resetAllOldRatchets(interval)
+		},
+	}, {
 		cmd:     "mediateid",
 		aliases: []string{"mi"},
 		usage:   "<nick> <identity>",
