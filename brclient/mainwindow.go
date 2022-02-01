@@ -26,6 +26,10 @@ type mainWindowState struct {
 	viewport viewport.Model
 	textArea *textAreaModel // line editor
 
+	// embedded data for images/files/links
+	embedContent map[string][]byte
+	ew           *embedWidget
+
 	header string
 
 	debug string
@@ -43,10 +47,12 @@ func (mws *mainWindowState) updateHeader() {
 		connMsg = mws.as.styles.checkingWallet.Render("checking wallet")
 	}
 
+	helpMsg := mws.as.styles.header.Render(" - F2 to embed, ctrl+up/down to select, ctrl+v to view")
+
 	qlenMsg := mws.as.styles.header.Render(fmt.Sprintf("Q %d ", mws.as.rmqLen()))
 
 	server := mws.as.serverAddr
-	msg := fmt.Sprintf(" %s - %s", server, connMsg)
+	msg := fmt.Sprintf(" %s - %s%s", server, connMsg, helpMsg)
 	headerMsg := mws.as.styles.header.Render(msg)
 	spaces := mws.as.styles.header.Render(strings.Repeat(" ",
 		max(0, mws.as.winW-lipgloss.Width(headerMsg)-lipgloss.Width(qlenMsg))))
@@ -78,6 +84,15 @@ func (mws *mainWindowState) recalcViewportSize() {
 	mws.viewport.Height = mws.as.winH - verticalMarginHeight
 }
 
+func (mws *mainWindowState) addEmbedCB(id string, data []byte, embedStr string) error {
+	if id != "" && data != nil {
+		mws.embedContent[id] = data
+	}
+
+	mws.textArea.InsertString(embedStr)
+	return nil
+}
+
 func (mws *mainWindowState) onTextInputAction() {
 	text := mws.textArea.Value()
 	if text == "" {
@@ -88,6 +103,18 @@ func (mws *mainWindowState) onTextInputAction() {
 	if len(args) > 0 {
 		mws.as.handleCmd(text, args)
 	} else {
+
+		// Replace pseudo-data with data.
+		text = replaceEmbeds(text, func(args embeddedArgs) string {
+			data := string(args.data)
+			if strings.HasPrefix(data, "[content ") {
+				id := data[9 : len(args.data)-1]
+				args.data = mws.embedContent[id]
+			}
+
+			return args.String()
+		})
+
 		mws.as.msgInActiveWindow(text)
 	}
 
@@ -143,6 +170,11 @@ func (mws mainWindowState) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// Switch to the feed window if it got activated.
 	if mws.as.isFeedWinActive() {
 		return newFeedWindow(mws.as, -1, -1)
+	}
+
+	if mws.ew.active() {
+		_, cmd = mws.ew.Update(msg)
+		return mws, cmd
 	}
 
 	// Main msg handler. We only return early in cases where we switch to a
@@ -280,6 +312,9 @@ func (mws mainWindowState) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return msgProcessEsc{}
 			}
 
+		case msg.Type == tea.KeyF2:
+			cmds = mws.ew.activate()
+
 		default:
 			// Process line input.
 			prevVal := mws.textArea.Value()
@@ -390,6 +425,14 @@ func (mws mainWindowState) footerView() string {
 }
 
 func (mws mainWindowState) View() string {
+
+	if mws.ew.active() {
+		return fmt.Sprintf("%s\n%s\n%s\n",
+			mws.header,
+			mws.ew.View(),
+			mws.footerView())
+	}
+
 	var opt string
 	if mws.completeIdx < len(mws.completeOpts) {
 		opt = mws.completeOpts[mws.completeIdx]
@@ -407,7 +450,8 @@ func (mws mainWindowState) View() string {
 
 func newMainWindowState(as *appState) (mainWindowState, tea.Cmd) {
 	mws := mainWindowState{
-		as: as,
+		as:           as,
+		embedContent: make(map[string][]byte),
 	}
 	mws.textArea = newTextAreaModel(as.styles)
 	mws.textArea.Prompt = ""
@@ -418,6 +462,7 @@ func newMainWindowState(as *appState) (mainWindowState, tea.Cmd) {
 	mws.textArea.SetValue(as.workingCmd)
 	mws.textArea.Focus()
 
+	mws.ew = newEmbedWidget(as, mws.addEmbedCB)
 	mws.updateHeader()
 	mws.recalcViewportSize()
 	mws.updateViewportContent()
