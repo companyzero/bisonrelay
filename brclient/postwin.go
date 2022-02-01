@@ -2,8 +2,6 @@ package main
 
 import (
 	"fmt"
-	"os"
-	"os/exec"
 	"strconv"
 	"strings"
 	"time"
@@ -354,14 +352,14 @@ func (pw *postWindow) renderPost() {
 		case args.download.IsEmpty():
 			s += fmt.Sprintf("[Embedded data of type %q]", args.typ)
 		default:
-			hasFile, err := pw.as.c.HasDownloadedFile(args.download)
+			downloadedFilePath, err := pw.as.c.HasDownloadedFile(args.download)
 			filename := strescape.PathElement(args.filename)
 			if filename == "" {
 				filename = args.download.ShortLogID()
 			}
 			if err != nil {
 				s += fmt.Sprintf("[Error checking file: %v", err)
-			} else if hasFile {
+			} else if downloadedFilePath != "" {
 				s += fmt.Sprintf("[File %s]", filename)
 			} else {
 				eRate := pw.as.exchangeRate()
@@ -676,62 +674,29 @@ func (pw postWindow) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case msg.Type == tea.KeyCtrlD:
 			if len(pw.embeds) > 0 && len(pw.embeds) > pw.selEmbed {
-				// TODO - check if already downloaded
 				embedded := pw.embeds[pw.selEmbed]
-				if embedded.download.IsEmpty() {
-					pw.cmdErr = "nothing to download"
-					goto done
-				}
-				hasFile, err := pw.as.c.HasDownloadedFile(embedded.download)
-				if err != nil {
-					pw.cmdErr = fmt.Sprintf("Failed to check download: %v", err)
-					goto done
-				}
-				if hasFile {
-					pw.cmdErr = "Already have file"
-					goto done
-				}
 				uid, err := pw.as.c.UIDByNick(pw.author)
 				if err != nil {
 					pw.cmdErr = fmt.Sprintf("Unable to find author: %v", err)
 					goto done
 				}
-				// TODO - validate current cost
-				err = pw.as.c.GetUserContent(uid, embedded.download)
+
+				err = pw.as.downloadEmbed(uid, embedded)
 				if err != nil {
-					pw.cmdErr = fmt.Sprintf("Unable to fetch user content: %v", err)
+					pw.cmdErr = err.Error()
 					goto done
 				}
 			}
+
 		case msg.Type == tea.KeyCtrlV:
 			if len(pw.embeds) > 0 && len(pw.embeds) > pw.selEmbed {
 				embedded := pw.embeds[pw.selEmbed]
-				if len(embedded.data) == 0 {
-					pw.cmdErr = "no embedded file"
+				cmd, err := pw.as.viewEmbed(embedded)
+				if err != nil {
+					pw.cmdErr = err.Error()
 					goto done
 				}
-				prog := programByMimeType(pw.as.mimeMap, embedded.typ)
-				if prog != "" {
-					// TODO: save to downloads/users/file
-					f, err := os.CreateTemp("/tmp", tempFileTemplate)
-					if err != nil {
-						pw.cmdErr = fmt.Sprintf("failed to create temp file: %v", err)
-						goto done
-					}
-					if _, err = f.Write(embedded.data); err != nil {
-						pw.cmdErr = fmt.Sprintf("failed to write temp file: %v", err)
-						goto done
-					}
-					f.Close()
-					c := exec.Command(prog, f.Name())
-					cmd := tea.ExecProcess(c, func(error) tea.Msg {
-						os.Remove(f.Name())
-						return externalViewer{err: err}
-					})
-					return pw, cmd
-				} else {
-					pw.cmdErr = fmt.Sprintf("no external viewer configured for %v", embedded.typ)
-				}
+				return pw, cmd
 			}
 
 		case msg.String() == "alt+\r" && pw.commenting:

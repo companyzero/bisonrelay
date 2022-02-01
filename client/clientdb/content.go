@@ -931,18 +931,34 @@ func (db *DB) MissingFileDownloadChunks(tx ReadTx, fd *FileDownload) []int {
 	return res
 }
 
-func (db *DB) HasDownloadedFile(tx ReadTx, fid zkidentity.ShortID) (bool, error) {
+// HasDownloadedFile returns the path to the completed downloaded file (if it
+// exists).
+func (db *DB) HasDownloadedFile(tx ReadTx, fid zkidentity.ShortID) (string, error) {
 	downDir := filepath.Join(db.root, downloadingDir)
 	metaFname := filepath.Join(downDir, fid.String()+contentMetaExt)
 	if !fileExists(metaFname) {
-		return false, nil
+		return "", nil
 	}
 	var fd FileDownload
 	if err := db.readJsonFile(metaFname, &fd); err != nil {
-		return false, err
+		return "", err
 	}
 
-	return fd.CompletedName != "", nil
+	ab, err := db.getBaseABEntry(fd.UID)
+	if err != nil {
+		return "", fmt.Errorf("unable to load addressbook entry: %v", err)
+	}
+
+	fname := fd.CompletedName
+	if fname != "" {
+		fname = filepath.Join(db.downloadsDir,
+			strescape.PathElement(ab.ID.Nick), fd.CompletedName)
+		if !fileExists(fname) {
+			fname = ""
+		}
+	}
+
+	return fname, nil
 }
 
 // HasDownloadedFiles converts the given list of file metadata (possibly
