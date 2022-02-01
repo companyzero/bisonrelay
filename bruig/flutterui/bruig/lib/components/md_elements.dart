@@ -376,6 +376,14 @@ class ImageMarkdownElementBuilder extends MarkdownElementBuilder {
       tip += "Click to download file $download";
     }
 
-    return Downloadable(tip, download, Image.memory(imgBytes));
+    Image img;
+    try {
+      img = Image.memory(imgBytes);
+    } catch (exception) {
+      print("Unable to decode image: $exception");
+      img = Image.asset("assets/images/invalidimg.png");
+    }
+
+    return Downloadable(tip, download, img);
   }
 }
