@@ -368,9 +368,10 @@ class SharedFileAndShares {
   @JsonKey(name: "shared_file")
   final SharedFile sf;
   final int cost;
+  final int size;
   final bool global;
   final List<String> shares;
-  SharedFileAndShares(this.sf, this.cost, this.global, this.shares);
+  SharedFileAndShares(this.sf, this.cost, this.size, this.global, this.shares);
   factory SharedFileAndShares.fromJson(Map<String, dynamic> json) =>
       _$SharedFileAndSharesFromJson(json);
 }

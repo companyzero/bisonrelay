@@ -333,6 +333,7 @@ SharedFileAndShares _$SharedFileAndSharesFromJson(Map<String, dynamic> json) =>
     SharedFileAndShares(
       SharedFile.fromJson(json['shared_file'] as Map<String, dynamic>),
       json['cost'] as int,
+      json['size'] as int,
       json['global'] as bool,
       (json['shares'] as List<dynamic>).map((e) => e as String).toList(),
     );
@@ -342,6 +343,7 @@ Map<String, dynamic> _$SharedFileAndSharesToJson(
     <String, dynamic>{
       'shared_file': instance.sf,
       'cost': instance.cost,
+      'size': instance.size,
       'global': instance.global,
       'shares': instance.shares,
     };
