@@ -42,8 +42,14 @@ class _ActiveChatState extends State<ActiveChat> {
     }
   }
 
-  void sendMsg(String msg) {
-    chat?.sendMsg(msg);
+  void sendMsg(String msg) async {
+    try {
+      await chat?.sendMsg(msg);
+    } catch (exception) {
+      if (mounted) {
+        showErrorSnackbar(context, "Unable to send message: $exception");
+      }
+    }
   }
 
   @override
