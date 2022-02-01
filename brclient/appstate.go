@@ -641,6 +641,18 @@ func (as *appState) activeWindowMsgs() string {
 	return msgs
 }
 
+// activeChatWindow returns the currently active chat window or nil if the
+// active window is _not_ a chat window.
+func (as *appState) activeChatWindow() *chatWindow {
+	var res *chatWindow
+	as.chatWindowsMtx.Lock()
+	if as.activeCW >= 0 {
+		res = as.chatWindows[as.activeCW]
+	}
+	as.chatWindowsMtx.Unlock()
+	return res
+}
+
 func (as *appState) rmqLen() int {
 	as.qlenMtx.Lock()
 	l := as.qlen
@@ -2649,7 +2661,12 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 			}
 			as.contentMtx.Unlock()
 
-			as.repaintIfActive(cw)
+			activeCW := as.activeChatWindow()
+			as.sendMsg(msgDownloadCompleted(fid))
+			if activeCW != nil && activeCW != cw {
+				activeCW.newHelpMsg("Download completed: %s", diskPath)
+				as.repaintIfActive(activeCW)
+			}
 		},
 
 		FileDownloadProgress: func(user *client.RemoteUser, fm rpc.FileMetadata,

@@ -6,6 +6,7 @@ import (
 
 	"github.com/atotto/clipboard"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/companyzero/bisonrelay/client/clientdb"
 	"github.com/companyzero/bisonrelay/client/clientintf"
 	"github.com/companyzero/bisonrelay/zkidentity"
 	"github.com/decred/dcrd/dcrutil/v4"
@@ -62,6 +63,8 @@ type msgSubmitForm struct{}
 type msgShowSharedFilesForLink struct{}
 
 type msgProcessEsc struct{}
+
+type msgDownloadCompleted clientdb.FileID
 
 func paste() tea.Msg {
 	str, err := clipboard.ReadAll()
