@@ -270,38 +270,37 @@ class MarkdownArea extends StatelessWidget {
     var theme = Theme.of(context);
     var darkTextColor = theme.indicatorColor;
     var textColor = theme.focusColor;
+    var styleSheet = MarkdownStyleSheet(
+      p: TextStyle(
+          color: textColor, fontWeight: FontWeight.w300, letterSpacing: 0.44),
+      h1: TextStyle(color: textColor),
+      h2: TextStyle(color: textColor),
+      h3: TextStyle(color: textColor),
+      h4: TextStyle(color: textColor),
+      h5: TextStyle(color: textColor),
+      h6: TextStyle(color: textColor),
+      em: TextStyle(color: textColor),
+      strong: TextStyle(color: textColor),
+      del: TextStyle(color: textColor),
+      listBullet: TextStyle(color: textColor),
+      blockquote: TextStyle(color: textColor),
+      checkbox: TextStyle(color: textColor),
+      tableBody: TextStyle(color: textColor),
+      tableHead: TextStyle(color: textColor),
+      blockquoteDecoration: BoxDecoration(color: darkTextColor),
+      codeblockDecoration: BoxDecoration(color: darkTextColor),
+      code: TextStyle(color: textColor),
+    );
     return Consumer<ThemeNotifier>(
         builder: (context, theme, _) => MarkdownBody(
-            styleSheet: MarkdownStyleSheet(
-              p: TextStyle(
-                  fontSize: 8 + theme.getFontSize() * 7,
-                  color: textColor,
-                  fontWeight: FontWeight.w300,
-                  letterSpacing: 0.44),
-              h1: TextStyle(color: textColor),
-              h2: TextStyle(color: textColor),
-              h3: TextStyle(color: textColor),
-              h4: TextStyle(color: textColor),
-              h5: TextStyle(color: textColor),
-              h6: TextStyle(color: textColor),
-              em: TextStyle(color: textColor),
-              strong: TextStyle(color: textColor),
-              del: TextStyle(color: textColor),
-              listBullet: TextStyle(color: textColor),
-              blockquote: TextStyle(color: textColor),
-              checkbox: TextStyle(color: textColor),
-              tableBody: TextStyle(color: textColor),
-              tableHead: TextStyle(color: textColor),
-              blockquoteDecoration: BoxDecoration(color: darkTextColor),
-              codeblockDecoration: BoxDecoration(color: darkTextColor),
-              code: TextStyle(color: textColor),
-            ),
+            styleSheet: styleSheet,
             selectable: true,
             data: text.trim(),
             builders: {
               //"video": VideoMarkdownElementBuilder(basedir),
               "image": ImageMarkdownElementBuilder(),
-              "download": DownloadLinkElementBuilder(),
+              "download":
+                  DownloadLinkElementBuilder(TextStyle(color: darkTextColor)),
             },
             onTapLink: (text, url, blah) {
               launchUrlAwait(url);
@@ -345,11 +344,21 @@ class Downloadable extends StatelessWidget {
 }
 
 class DownloadLinkElementBuilder extends MarkdownElementBuilder {
+  final TextStyle style;
+
+  DownloadLinkElementBuilder(this.style);
+
   @override
   Widget visitElementAfter(md.Element element, TextStyle? preferredStyle) {
     var download = element.attributes["fid"] ?? "";
     var tip = "Click to download file $download";
-    return Downloadable(tip, download, Text(element.textContent));
+    return Downloadable(
+        tip,
+        download,
+        Text(
+          element.textContent,
+          style: style,
+        ));
   }
 }
 

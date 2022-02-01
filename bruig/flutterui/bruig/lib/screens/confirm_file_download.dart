@@ -20,6 +20,8 @@ class ConfirmFileDownloadScreen extends StatelessWidget {
     var sender = cm?.nick ?? fd.uid;
     var cost = formatDCR(atomsToDCR(fd.metadata.cost));
     var size = humanReadableSize(fd.metadata.size);
+    var theme = Theme.of(context);
+    var textColor = theme.focusColor;
 
     reply(bool res) async {
       try {
@@ -40,18 +42,19 @@ class ConfirmFileDownloadScreen extends StatelessWidget {
             padding: const EdgeInsets.all(10),
             child: Center(
                 child: Column(children: [
-              const Text("Confirm File Download",
-                  style: TextStyle(fontSize: 20)),
+              Text("Confirm File Download",
+                  style: TextStyle(fontSize: 20, color: textColor)),
               const SizedBox(height: 20),
-              Text("Sender: $sender"),
+              Text("Sender: $sender", style: TextStyle(color: textColor)),
               const SizedBox(height: 20),
-              Text("FID: ${fd.uid}"),
+              Text("FID: ${fd.uid}", style: TextStyle(color: textColor)),
               const SizedBox(height: 20),
-              Text("File Name: ${fd.metadata.filename}"),
+              Text("File Name: ${fd.metadata.filename}",
+                  style: TextStyle(color: textColor)),
               const SizedBox(height: 20),
-              Text("Size: $size"),
+              Text("Size: $size", style: TextStyle(color: textColor)),
               const SizedBox(height: 20),
-              Text("Cost: $cost"),
+              Text("Cost: $cost", style: TextStyle(color: textColor)),
               const SizedBox(height: 20),
               Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                 ElevatedButton(
