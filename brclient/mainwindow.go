@@ -315,6 +315,47 @@ func (mws mainWindowState) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case msg.Type == tea.KeyF2:
 			cmds = mws.ew.activate()
 
+		case msg.Type == tea.KeyCtrlUp, msg.Type == tea.KeyCtrlDown:
+			cw := mws.as.activeChatWindow()
+			if cw != nil {
+				delta := -1
+				if msg.Type == tea.KeyCtrlDown {
+					delta = 1
+				}
+				if cw.changeSelectedEmbed(delta) {
+					mws.updateViewportContent()
+				}
+			}
+
+		case msg.Type == tea.KeyCtrlV:
+			cw := mws.as.activeChatWindow()
+			if cw != nil && cw.selEmbed < cw.maxEmbeds {
+				embedded := cw.selEmbedArgs
+				cmd, err := mws.as.viewEmbed(embedded)
+				if err == nil {
+					return mws, cmd
+				} else {
+					cw.newHelpMsg("Unable to view embed: %v", err)
+					mws.updateViewportContent()
+				}
+			}
+
+		case msg.Type == tea.KeyCtrlD:
+			cw := mws.as.activeChatWindow()
+			if cw != nil && cw.selEmbed < cw.maxEmbeds {
+				embedded := cw.selEmbedArgs
+				if embedded.uid != nil {
+					err := mws.as.downloadEmbed(*embedded.uid, embedded)
+					if err == nil {
+						cw.newHelpMsg("Starting to download file %s", embedded.uid)
+						mws.updateViewportContent()
+						return mws, nil
+					}
+					cw.newHelpMsg("Unable to download embed: %v", err)
+					mws.updateViewportContent()
+				}
+			}
+
 		default:
 			// Process line input.
 			prevVal := mws.textArea.Value()
