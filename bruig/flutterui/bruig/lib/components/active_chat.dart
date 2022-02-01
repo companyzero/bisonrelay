@@ -1,8 +1,10 @@
 import 'dart:async';
 
+import 'package:bruig/components/attach_file.dart';
 import 'package:bruig/components/buttons.dart';
 import 'package:bruig/components/chats_list.dart';
 import 'package:bruig/components/manage_gc.dart';
+import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/screens/feed/feed_posts.dart';
 import 'package:bruig/components/md_elements.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
@@ -182,6 +184,7 @@ class _EditLineState extends State<EditLine> {
   final controller = TextEditingController();
 
   final FocusNode node = FocusNode();
+  List<AttachmentEmbed> embeds = [];
 
   @override
   void initState() {
@@ -211,13 +214,40 @@ class _EditLineState extends State<EditLine> {
         if (event.data.logicalKey.keyLabel == "Enter" && !modPressed) {
           controller.value = const TextEditingValue(
               text: "", selection: TextSelection.collapsed(offset: 0));
-          widget._send(trimmed);
+          final String withEmbeds =
+              embeds.fold(trimmed, (s, e) => e.replaceInString(s));
+          /*
+          if (withEmbeds.length > 1024 * 1024) {
+            showErrorSnackbar(context,
+                "Message is larger than maximum allowed (limit: 1MiB)");
+            return;
+          }
+          */
+          widget._send(withEmbeds);
           widget.chat.workingMsg = "";
+          setState(() {
+            embeds = [];
+          });
         } else {
           widget.chat.workingMsg = trimmed;
         }
       }
     }();
+  }
+
+  void attachFile() async {
+    var res = await Navigator.of(context, rootNavigator: true)
+        .pushNamed(AttachFileScreen.routeName);
+    if (res == null) {
+      return;
+    }
+    var embed = res as AttachmentEmbed;
+    embeds.add(embed);
+    setState(() {
+      controller.text = controller.text + embed.displayString() + " ";
+      widget.chat.workingMsg = controller.text;
+      widget.editLineFocusNode.requestFocus();
+    });
   }
 
   @override
@@ -231,34 +261,37 @@ class _EditLineState extends State<EditLine> {
         focusNode: node,
         onKey: handleKeyPress,
         child: Container(
-          margin: const EdgeInsets.only(bottom: 5),
-          child: TextField(
-            autofocus: true,
-            focusNode: widget.editLineFocusNode,
-            style: TextStyle(
-              fontSize: 11,
-              color: textColor,
-            ),
-            controller: controller,
-            minLines: 1,
-            maxLines: null,
-            //textInputAction: TextInputAction.done,
-            //style: normalTextStyle,
-            keyboardType: TextInputType.multiline,
-            decoration: InputDecoration(
-              filled: true,
-              fillColor: backgroundColor,
-              hoverColor: hoverColor,
-              isDense: true,
-              hintText: 'Type a message',
-              hintStyle: TextStyle(
-                fontSize: 11,
-                color: hintTextColor,
-              ),
-              border: InputBorder.none,
-            ),
-          ),
-        ));
+            margin: const EdgeInsets.only(bottom: 5),
+            child: Row(children: [
+              IconButton(onPressed: attachFile, icon: Icon(Icons.attach_file)),
+              Expanded(
+                  child: TextField(
+                autofocus: true,
+                focusNode: widget.editLineFocusNode,
+                style: TextStyle(
+                  fontSize: 11,
+                  color: textColor,
+                ),
+                controller: controller,
+                minLines: 1,
+                maxLines: null,
+                //textInputAction: TextInputAction.done,
+                //style: normalTextStyle,
+                keyboardType: TextInputType.multiline,
+                decoration: InputDecoration(
+                  filled: true,
+                  fillColor: backgroundColor,
+                  hoverColor: hoverColor,
+                  isDense: true,
+                  hintText: 'Type a message',
+                  hintStyle: TextStyle(
+                    fontSize: 11,
+                    color: hintTextColor,
+                  ),
+                  border: InputBorder.none,
+                ),
+              )),
+            ])));
   }
 }
 
