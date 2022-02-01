@@ -481,8 +481,9 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
                       const SizedBox(height: 20),
                       Container(
                           padding: const EdgeInsets.all(15),
-                          child: Provider<PostSummary>(
-                              create: (context) => widget.args.post.summ,
+                          child: Provider<DownloadSource>(
+                              create: (context) => DownloadSource(
+                                  widget.args.post.summ.authorID),
                               child: MarkdownArea(markdownData))),
                     ],
                   ),

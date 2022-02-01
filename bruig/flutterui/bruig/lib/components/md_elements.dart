@@ -11,6 +11,12 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:bruig/theme_manager.dart';
 
+class DownloadSource {
+  final String uid;
+
+  DownloadSource(this.uid);
+}
+
 class VideoInlineSyntax extends md.InlineSyntax {
   /// This is a primitive example pattern
   VideoInlineSyntax({
@@ -322,9 +328,9 @@ class Downloadable extends StatelessWidget {
 
   void download(BuildContext context) async {
     var downloads = Provider.of<DownloadsModel>(context, listen: false);
-    var post = Provider.of<PostSummary>(context, listen: false);
+    var source = Provider.of<DownloadSource>(context, listen: false);
     try {
-      await downloads.getUnknownUserFile(post.authorID, fid);
+      await downloads.getUnknownUserFile(source.uid, fid);
       showSuccessSnackbar(context, "Added $fid to download queue");
     } catch (exception) {
       showErrorSnackbar(context, "Unable to start download: $exception");

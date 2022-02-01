@@ -374,6 +374,10 @@ class _ReceivedSentPMState extends State<ReceivedSentPM> {
         break;
       default:
     }
+    var sourceID = widget.evnt.event.sid;
+    if (widget.evnt.source != null) {
+      sourceID = widget.evnt.source!.id;
+    }
     var now = DateTime.fromMillisecondsSinceEpoch(widget.timestamp);
     var formatter = DateFormat('yyyy-MM-dd HH:mm:ss');
     var date = formatter.format(now);
@@ -438,7 +442,9 @@ class _ReceivedSentPMState extends State<ReceivedSentPM> {
               )
             ]),
             const SizedBox(height: 10),
-            MarkdownArea(msg)
+            Provider<DownloadSource>(
+                create: (context) => DownloadSource(sourceID),
+                child: MarkdownArea(msg))
           ]),
         ))
       ]);
