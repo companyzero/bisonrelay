@@ -302,7 +302,7 @@ func (c *Client) ListGCInvitesFor(gcName string) ([]*clientdb.GCInvite, error) {
 // (unless that is the local client).
 func (c *Client) sendToGCMembers(gcID zkidentity.ShortID,
 	members []zkidentity.ShortID, payType string, msg interface{},
-	progressChan chan SendProgress) {
+	progressChan chan SendProgress) error {
 
 	localID := c.PublicID()
 	payEvent := fmt.Sprintf("gc.%s.%s", gcID.ShortLogID(), payType)
@@ -317,7 +317,7 @@ func (c *Client) sendToGCMembers(gcID zkidentity.ShortID,
 	}
 	sqid, err := c.addToSendQ(payEvent, msg, priorityGC, ids...)
 	if err != nil {
-		c.log.Errorf("Unable to add gc msg to send queue: %v", err)
+		return fmt.Errorf("Unable to add gc msg to send queue: %v", err)
 	}
 
 	var progressMtx sync.Mutex
@@ -375,6 +375,8 @@ func (c *Client) sendToGCMembers(gcID zkidentity.ShortID,
 			}
 		}()
 	}
+
+	return nil
 }
 
 // handleGCJoin handles a msg when a remote user is asking to join a GC we
@@ -445,7 +447,10 @@ func (c *Client) handleGCJoin(ru *RemoteUser, invite rpc.RMGroupJoin) error {
 
 	// Join fulfilled. Send new group list to every member except admin
 	// (us).
-	c.sendToGCMembers(gc.ID, gc.Members, "sendlist", gc, nil)
+	err = c.sendToGCMembers(gc.ID, gc.Members, "sendlist", gc, nil)
+	if err != nil {
+		return err
+	}
 
 	if c.cfg.GCJoinHandler != nil {
 		var entry clientdb.GCAddressBookEntry
@@ -645,8 +650,11 @@ func (c *Client) GCMessage(gcID zkidentity.ShortID, msg string, mode rpc.Message
 		Mode:       mode,
 	}
 	members := gcBlockList.FilterMembers(gc.Members)
-	c.sendToGCMembers(gcID, members, "msg", p, progressChan)
-	return nil
+	if len(members) == 0 {
+		return nil
+	}
+
+	return c.sendToGCMembers(gcID, members, "msg", p, progressChan)
 }
 
 func (c *Client) handleGCMessage(ru *RemoteUser, gcm rpc.RMGroupMessage, ts time.Time) error {
@@ -833,9 +841,7 @@ func (c *Client) GCKick(gcID zkidentity.ShortID, uid UserID, reason string) erro
 
 	// Saved updated GC members list. Send kick event to list of old
 	// members (which includes the kickee).
-	c.sendToGCMembers(gcID, oldMembers, "kick", rmgk, nil)
-
-	return nil
+	return c.sendToGCMembers(gcID, oldMembers, "kick", rmgk, nil)
 }
 
 func (c *Client) handleGCKick(ru *RemoteUser, rmgk rpc.RMGroupKick) error {
@@ -947,8 +953,7 @@ func (c *Client) PartFromGC(gcID zkidentity.ShortID, reason string) error {
 		ID:     gcID,
 		Reason: reason,
 	}
-	c.sendToGCMembers(gcID, gc.Members, "part", rmgp, nil)
-	return nil
+	return c.sendToGCMembers(gcID, gc.Members, "part", rmgp, nil)
 }
 
 func (c *Client) handleGCPart(ru *RemoteUser, rmgp rpc.RMGroupPart) error {
@@ -1010,8 +1015,7 @@ func (c *Client) KillGroupChat(gcID zkidentity.ShortID, reason string) error {
 
 	// Saved updated GC members list. Send kick event to list of old members (which
 	// includes the kickee).
-	c.sendToGCMembers(gcID, oldMembers, "kill", rmgk, nil)
-	return nil
+	return c.sendToGCMembers(gcID, oldMembers, "kill", rmgk, nil)
 }
 
 func (c *Client) handleGCKill(ru *RemoteUser, rmgk rpc.RMGroupKill) error {
