@@ -54,8 +54,11 @@ func (mws *mainWindowState) updateHeader() {
 }
 
 func (mws *mainWindowState) updateViewportContent() {
+	wasAtBottom := mws.viewport.AtBottom()
 	mws.viewport.SetContent(mws.as.activeWindowMsgs())
-	mws.viewport.GotoBottom()
+	if wasAtBottom {
+		mws.viewport.GotoBottom()
+	}
 }
 
 func (mws *mainWindowState) recalcViewportSize() {
@@ -371,6 +374,9 @@ func (mws mainWindowState) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (mws mainWindowState) footerView() string {
 	esc := ""
+	if !mws.viewport.AtBottom() {
+		esc = mws.as.styles.footer.Render("(more) ")
+	}
 	if mws.debug != "" {
 		esc = mws.debug
 	} else if mws.escMode {
