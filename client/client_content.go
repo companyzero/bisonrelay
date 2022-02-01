@@ -205,8 +205,9 @@ func (c *Client) handleFTList(ru *RemoteUser, ftls rpc.RMFTList) error {
 	}, "ftlistreply")
 }
 
-func (c *Client) HasDownloadedFile(fid zkidentity.ShortID) (bool, error) {
-	var res bool
+// HasDownloadedFile returns the path to a downloaded file if it exists.
+func (c *Client) HasDownloadedFile(fid zkidentity.ShortID) (string, error) {
+	var res string
 	err := c.dbView(func(tx clientdb.ReadTx) error {
 		var err error
 		res, err = c.db.HasDownloadedFile(tx, fid)

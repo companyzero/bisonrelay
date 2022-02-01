@@ -1907,6 +1907,56 @@ func (as *appState) kxSearchPostAuthor(from clientintf.UserID, pid clientintf.Po
 	return err
 }
 
+func (as *appState) viewEmbed(embedded embeddedArgs) (tea.Cmd, error) {
+	if len(embedded.data) == 0 {
+		return nil, fmt.Errorf("no embedded file")
+	}
+	prog := programByMimeType(as.mimeMap, embedded.typ)
+	if prog == "" {
+		return nil, fmt.Errorf("no external viewer configured for %v", embedded.typ)
+	}
+
+	// Save to downloads/users/file?
+	f, err := os.CreateTemp("", tempFileTemplate)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create temp file: %v", err)
+	}
+	if _, err = f.Write(embedded.data); err != nil {
+		return nil, fmt.Errorf("failed to write temp file: %v", err)
+	}
+	f.Close()
+	c := exec.Command(prog, f.Name())
+	cmd := tea.ExecProcess(c, func(error) tea.Msg {
+		os.Remove(f.Name())
+		return externalViewer{err: err}
+	})
+	return cmd, nil
+}
+
+func (as *appState) downloadEmbed(source clientintf.UserID, embedded embeddedArgs) error {
+
+	if source == as.c.PublicID() {
+		return fmt.Errorf("cannot download file from self")
+	}
+
+	if embedded.download.IsEmpty() {
+		return fmt.Errorf("nothing to download")
+	}
+	filePath, err := as.c.HasDownloadedFile(embedded.download)
+	if err != nil {
+		return fmt.Errorf("failed to check download: %v", err)
+	}
+	if filePath != "" {
+		return fmt.Errorf("already have file %s", filePath)
+	}
+	// TODO - validate current cost
+	err = as.c.GetUserContent(source, embedded.download)
+	if err != nil {
+		return fmt.Errorf("unable to fetch user content: %v", err)
+	}
+	return nil
+}
+
 // handleCmd executes the given (already parsed) command line.
 func (as *appState) handleCmd(rawText string, args []string) {
 	if len(args) == 0 {
