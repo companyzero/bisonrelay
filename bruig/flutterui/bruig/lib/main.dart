@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:math';
 import 'dart:developer' as developer;
 
+import 'package:bruig/components/attach_file.dart';
 import 'package:bruig/components/route_error.dart';
 import 'package:bruig/models/menus.dart';
 import 'package:bruig/theme_manager.dart';
@@ -257,6 +258,10 @@ class _AppState extends State<App> with WindowListener {
                     Consumer2<ClientModel, DownloadsModel>(
                         builder: (context, client, downloads, child) =>
                             ConfirmFileDownloadScreen(client, downloads)),
+                AttachFileScreen.routeName: (context) =>
+                    Consumer2<ClientModel, DownloadsModel>(
+                        builder: (context, client, downloads, child) =>
+                            AttachFileScreen()),
                 '/needsFunds': (context) => Consumer<AppNotifications>(
                     builder: (context, ntfns, child) =>
                         NeedsFundsScreen(ntfns)),
