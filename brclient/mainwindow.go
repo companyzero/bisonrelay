@@ -363,6 +363,9 @@ func (mws mainWindowState) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		mws.escStr = ""
 		mws.escMode = false
 
+	case msgDownloadCompleted:
+		mws.updateViewportContent()
+
 	default:
 		// Handle other messages.
 		mws.textArea, cmd = mws.textArea.Update(msg)
