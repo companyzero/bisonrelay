@@ -637,7 +637,7 @@ func (as *appState) activeWindowMsgs() string {
 
 	cw := as.chatWindows[as.activeCW]
 	as.chatWindowsMtx.Unlock()
-	msgs := cw.renderContent(as.winW, as.styles)
+	msgs := cw.renderContent(as.winW, as.styles, as)
 	return msgs
 }
 
@@ -2149,14 +2149,15 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		fromNick := strescape.Nick(user.PublicIdentity().Nick)
 		cw := as.findOrNewChatWindow(user.ID(), fromNick)
 		s := as.handleRcvdText(msg.Message, fromNick)
-		cw.newRecvdMsg(fromNick, s, ts)
+		cw.newRecvdMsg(fromNick, s, &cw.uid, ts)
 		as.repaintIfActiveWithMention(cw, hasMention(as.c.LocalNick(), s))
 	}))
 
 	ntfns.Register(client.OnGCMNtfn(func(user *client.RemoteUser, msg rpc.RMGroupMessage, ts time.Time) {
 		cw := as.findOrNewGCWindow(msg.ID)
+		fromUID := user.ID()
 		s := as.handleRcvdText(msg.Message, cw.alias)
-		cw.newRecvdMsg(user.Nick(), s, ts)
+		cw.newRecvdMsg(user.Nick(), s, &fromUID, ts)
 		as.repaintIfActiveWithMention(cw, hasMention(as.c.LocalNick(), s))
 	}))
 

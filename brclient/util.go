@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/companyzero/bisonrelay/client/clientintf"
 	"github.com/companyzero/bisonrelay/zkidentity"
 	"github.com/decred/dcrlnd"
 	"github.com/decred/dcrlnd/lnrpc"
@@ -178,6 +179,9 @@ type embeddedArgs struct {
 	filename string
 	size     uint64
 	cost     uint64
+
+	// May be set externally, not on the link.
+	uid *clientintf.UserID
 }
 
 func (args embeddedArgs) String() string {
