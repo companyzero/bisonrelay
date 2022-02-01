@@ -106,7 +106,7 @@ class ChatModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  void sendMsg(String msg) async {
+  Future<void> sendMsg(String msg) async {
     if (isGC) {
       var m = GCMsg(id, nick, msg, DateTime.now().millisecondsSinceEpoch);
       var evnt = ChatEventModel(m, null);
