@@ -3,7 +3,7 @@ description: Bison Relay UI (Graphical)
 
 # The following line prevents the package from being accidentally published to
 # pub.dev using `pub publish`. This is preferred for private packages.
-publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+publish_to: "none" # Remove this line if you wish to publish to pub.dev
 
 # The following defines the version and build number for your application.
 # A version number is three numbers separated by dots, like 1.2.43
@@ -89,7 +89,6 @@ flutter_icons:
 
 # The following section is specific to Flutter.
 flutter:
-
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
   # the material Icons class.
@@ -113,56 +112,63 @@ flutter:
   # list giving the asset and other descriptors for the font. For
   # example:
   fonts:
-   - family: Inter
-     fonts:
-      - asset: assets/fonts/Inter-Regular.otf
-      - asset: assets/fonts/Inter-Italic.otf
-        style: italic
-      - asset: assets/fonts/Inter-Black.otf
-        weight: 900
-      - asset: assets/fonts/Inter-BlackItalic.otf
-        weight: 900
-        style: italic
-      - asset: assets/fonts/Inter-ExtraBold.otf
-        weight: 800
-      - asset: assets/fonts/Inter-ExtraBoldItalic.otf
-        weight: 800
-        style: italic
-      - asset: assets/fonts/Inter-ExtraBold.otf
-        weight: 800
-      - asset: assets/fonts/Inter-ExtraBoldItalic.otf
-        weight: 800
-        style: italic
-      - asset: assets/fonts/Inter-Bold.otf
-        weight: 700
-      - asset: assets/fonts/Inter-BoldItalic.otf
-        weight: 700
-        style: italic     
-      - asset: assets/fonts/Inter-SemiBold.otf
-        weight: 600
-      - asset: assets/fonts/Inter-SemiBoldItalic.otf
-        weight: 600
-        style: italic      
-      - asset: assets/fonts/Inter-Medium.otf
-        weight: 500
-      - asset: assets/fonts/Inter-MediumItalic.otf
-        weight: 500
-        style: italic  
-      - asset: assets/fonts/Inter-Light.otf
-        weight: 300
-      - asset: assets/fonts/Inter-LightItalic.otf
-        weight: 300
-        style: italic
-      - asset: assets/fonts/Inter-ExtraLight.otf
-        weight: 200
-      - asset: assets/fonts/Inter-ExtraLightItalic.otf
-        weight: 200
-        style: italic      
-      - asset: assets/fonts/Inter-Thin.otf
-        weight: 100
-      - asset: assets/fonts/Inter-ThinItalic.otf
-        weight: 100
-        style: italic
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter-Regular.otf
+        - asset: assets/fonts/Inter-Italic.otf
+          style: italic
+        - asset: assets/fonts/Inter-Black.otf
+          weight: 900
+        - asset: assets/fonts/Inter-BlackItalic.otf
+          weight: 900
+          style: italic
+        - asset: assets/fonts/Inter-ExtraBold.otf
+          weight: 800
+        - asset: assets/fonts/Inter-ExtraBoldItalic.otf
+          weight: 800
+          style: italic
+        - asset: assets/fonts/Inter-ExtraBold.otf
+          weight: 800
+        - asset: assets/fonts/Inter-ExtraBoldItalic.otf
+          weight: 800
+          style: italic
+        - asset: assets/fonts/Inter-Bold.otf
+          weight: 700
+        - asset: assets/fonts/Inter-BoldItalic.otf
+          weight: 700
+          style: italic
+        - asset: assets/fonts/Inter-SemiBold.otf
+          weight: 600
+        - asset: assets/fonts/Inter-SemiBoldItalic.otf
+          weight: 600
+          style: italic
+        - asset: assets/fonts/Inter-Medium.otf
+          weight: 500
+        - asset: assets/fonts/Inter-MediumItalic.otf
+          weight: 500
+          style: italic
+        - asset: assets/fonts/Inter-Light.otf
+          weight: 300
+        - asset: assets/fonts/Inter-LightItalic.otf
+          weight: 300
+          style: italic
+        - asset: assets/fonts/Inter-ExtraLight.otf
+          weight: 200
+        - asset: assets/fonts/Inter-ExtraLightItalic.otf
+          weight: 200
+          style: italic
+        - asset: assets/fonts/Inter-Thin.otf
+          weight: 100
+        - asset: assets/fonts/Inter-ThinItalic.otf
+          weight: 100
+          style: italic
+    - family: notoemoji_win
+      fonts:
+        - asset: assets/fonts/NotoColorEmoji_WindowsCompatible.ttf
+    - family: notoemoji_unix
+      fonts:
+        - asset: assets/fonts/NotoColorEmoji-Regular.ttf
+
   #     fonts:
   #       - asset: fonts/Schyler-Regular.ttf
   #       - asset: fonts/Schyler-Italic.ttf

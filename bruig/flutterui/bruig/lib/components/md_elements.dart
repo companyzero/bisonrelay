@@ -302,6 +302,11 @@ class MarkdownArea extends StatelessWidget {
             styleSheet: styleSheet,
             selectable: true,
             data: text.trim(),
+            extensionSet: md.ExtensionSet(
+                md.ExtensionSet.gitHubFlavored.blockSyntaxes, [
+              md.EmojiSyntax(),
+              ...md.ExtensionSet.gitHubFlavored.inlineSyntaxes
+            ]),
             builders: {
               //"video": VideoMarkdownElementBuilder(basedir),
               "image": ImageMarkdownElementBuilder(),
