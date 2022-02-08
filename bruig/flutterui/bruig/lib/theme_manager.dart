@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import './storage_manager.dart';
 
@@ -15,8 +17,11 @@ class ThemeNotifier with ChangeNotifier {
   final double smallFontSize = 1;
   final double largeFontSize = 3;
   final double hugeFontSize = 4;
+  static String emojifont =
+      Platform.isWindows ? "notoemoji_win" : "notoemoji_unix";
   final darkTheme = ThemeData(
       fontFamily: "Inter",
+      fontFamilyFallback: [emojifont],
       //primarySwatch: Colors.blue,
       primaryColor: Colors.black,
       brightness: Brightness.dark,
@@ -47,6 +52,7 @@ class ThemeNotifier with ChangeNotifier {
 
   final lightTheme = ThemeData(
       fontFamily: "Inter",
+      fontFamilyFallback: [emojifont],
       //primarySwatch: Colors.blue,
       primaryColor: Colors.black,
       brightness: Brightness.dark,
