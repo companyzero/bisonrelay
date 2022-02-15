@@ -1,11 +1,19 @@
 package rpc
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 
 	"github.com/companyzero/bisonrelay/ratchet"
 )
+
+// ErrRMInvoicePayment is generated on servers when an RM push fails due
+// to some payment check failure in the invoice.
+//
+// Do not change this message as it's used in plain text across the C2S RPC
+// interface.
+var ErrRMInvoicePayment = errors.New("invoice payment error on RM push")
 
 const errUnpaidSubscriptionRVMsg = "unpaid subscription to RV"
 

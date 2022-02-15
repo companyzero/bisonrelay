@@ -162,14 +162,22 @@ func (q *RMQ) processRMAck(reply interface{}) (string, error) {
 	switch reply := reply.(type) {
 	case rpc.RouteMessageReply:
 		if reply.Error != "" {
-			err = routeMessageReplyError{errorStr: reply.Error}
+			if reply.Error == rpc.ErrRMInvoicePayment.Error() {
+				err = rpc.ErrRMInvoicePayment
+			} else {
+				err = routeMessageReplyError{errorStr: reply.Error}
+			}
 		}
 		if reply.NextInvoice != "" {
 			nextInvoice = reply.NextInvoice
 		}
 	case *rpc.RouteMessageReply:
 		if reply.Error != "" {
-			err = routeMessageReplyError{errorStr: reply.Error}
+			if reply.Error == rpc.ErrRMInvoicePayment.Error() {
+				err = rpc.ErrRMInvoicePayment
+			} else {
+				err = routeMessageReplyError{errorStr: reply.Error}
+			}
 		}
 		if reply.NextInvoice != "" {
 			nextInvoice = reply.NextInvoice
@@ -407,6 +415,27 @@ func (q *RMQ) sendToSession(ctx context.Context, rmm *rmmsg, sess clientintf.Ser
 	// sendloop will attempt to send again once the next connection is
 	// available (or after the client restarts).
 	if errors.Is(err, clientintf.ErrSubsysExiting) {
+		return
+	}
+
+	// When we receive back an invoice payment error, clear the invoice
+	// used for payment and try again with a fresh invoice.
+	if errors.Is(err, rpc.ErrRMInvoicePayment) {
+		rmm.mtx.Lock()
+		oldHash := rmm.paidHash
+		rmm.paidHash = nil
+		rmm.mtx.Unlock()
+
+		q.log.Warnf("Received ErrRMInvoicePayment when attempting to "+
+			"push to RV %s with old payment hash %x. Attempting again "+
+			"with new invoice.", rmm.rv, oldHash)
+
+		if err := q.db.DeleteRVPaymentAttempt(rmm.rv); err != nil {
+			q.log.Warnf("Unable to delete payment to push RV %s: %v",
+				rmm.rv, err)
+		}
+
+		q.sendToSession(ctx, rmm, sess, "", replyChan)
 		return
 	}
 
