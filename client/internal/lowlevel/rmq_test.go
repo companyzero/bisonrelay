@@ -135,6 +135,73 @@ func TestRMQAckErrors(t *testing.T) {
 	}
 }
 
+// TestRMQClearsInvoice asserts that when an appropriate error is returned from
+// the server, a new attempt to fetch an invoice is made.
+func TestRMQClearsInvoice(t *testing.T) {
+	t.Parallel()
+
+	mockID := &zkidentity.FullIdentity{}
+	q := NewRMQ(nil, clientintf.FreePaymentClient{}, mockID, newMockRMQDB())
+	runErr := make(chan error)
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() { runErr <- q.Run(ctx) }()
+
+	// Bind to the server.
+	sess := newMockServerSession()
+	q.BindToSession(sess)
+
+	// Send the RM.
+	rm := mockRM("test")
+	rmErrChan := make(chan error)
+	go func() { rmErrChan <- q.SendRM(rm) }()
+
+	// Reply to asking for the first invoice.
+	sess.replyNextPRPC(t, &rpc.GetInvoiceReply{})
+
+	// Reply the send attempt with an RPC error that triggers a new
+	// invoice fetch.
+	sess.replyNextPRPC(t, rpc.RouteMessageReply{Error: rpc.ErrRMInvoicePayment.Error()})
+
+	// Ensure no errors occurred yet.
+	select {
+	case err := <-runErr:
+		t.Fatal(err)
+	case err := <-rmErrChan:
+		t.Fatalf("unexpected error %v", err)
+	case <-time.After(100 * time.Millisecond):
+	}
+
+	// Reply to asking for the second invoice.
+	sess.replyNextPRPC(t, &rpc.GetInvoiceReply{})
+
+	// Expect the RM to be sent.
+	sess.replyNextPRPC(t, &rpc.RouteMessageReply{})
+
+	// Ensure no errors occurred.
+	select {
+	case err := <-runErr:
+		t.Fatal(err)
+	case err := <-rmErrChan:
+		if err != nil {
+			t.Fatalf("unexpected error %v", err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("timeout")
+	}
+
+	// Stop the rmq.
+	cancel()
+
+	select {
+	case err := <-runErr:
+		if !errors.Is(err, context.Canceled) {
+			t.Fatalf("unexpected error: got %v, want %v", err, context.Canceled)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("timeout")
+	}
+}
+
 // TestRMQMultipleRM asserts that the RMQ can successfully send multiple
 // messages to the servers.
 func TestRMQMultipleRM(t *testing.T) {

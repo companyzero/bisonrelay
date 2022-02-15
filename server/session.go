@@ -381,10 +381,6 @@ func (z *ZKS) sessionReader(ctx context.Context, sc *sessionContext) error {
 			if err != nil {
 				return fmt.Errorf("unmarshal RouteMessage failed")
 			}
-			err = z.isRMPaid(ctx, &r, sc)
-			if err != nil {
-				return fmt.Errorf("isRMPaid: %v", err)
-			}
 			err = z.handleRouteMessage(ctx, sc.writer, message, r, sc)
 			if err != nil {
 				return fmt.Errorf("handleRouteMessage: %v", err)

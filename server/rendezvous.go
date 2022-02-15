@@ -40,6 +40,17 @@ func (z *ZKS) handleRouteMessage(ctx context.Context, writer chan *RPCWrapper,
 		},
 	}
 
+	err := z.isRMPaid(ctx, &r, sc)
+	if err != nil {
+		// Reply with a generic invoice error.
+		reply.Payload = rpc.RouteMessageReply{
+			Error: rpc.ErrRMInvoicePayment.Error(),
+		}
+		writer <- &reply
+		sc.log.Errorf("handleRouteMessage isRMPaid: %v", err)
+		return nil
+	}
+
 	payload := rpc.RouteMessageReply{}
 	var invoiceID string
 
@@ -76,7 +87,7 @@ func (z *ZKS) handleRouteMessage(ctx context.Context, writer chan *RPCWrapper,
 	}
 
 	// Store on disk
-	err := z.db.StorePayload(z.dbCtx, r.Rendezvous, r.Message, time.Now())
+	err = z.db.StorePayload(z.dbCtx, r.Rendezvous, r.Message, time.Now())
 	if errors.Is(err, serverdb.ErrAlreadyStoredRV) {
 		sc.log.Warnf("Attempt to store already stored RV %s", r.Rendezvous)
 	} else if err != nil {
