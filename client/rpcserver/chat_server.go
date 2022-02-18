@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/companyzero/bisonrelay/client"
+	"github.com/companyzero/bisonrelay/client/clientintf"
 	"github.com/companyzero/bisonrelay/client/internal/replaymsglog"
 	"github.com/companyzero/bisonrelay/clientrpc/types"
 	"github.com/companyzero/bisonrelay/rpc"
@@ -43,8 +44,10 @@ type chatServer struct {
 	replayMtx    sync.Mutex
 	pmStreams    *serverStreams[types.ChatService_PMStreamServer]
 	gcmStreams   *serverStreams[types.ChatService_GCMStreamServer]
+	kxStreams    *serverStreams[types.ChatService_KXStreamServer]
 	pmReplayLog  *replaymsglog.Log
 	gcmReplayLog *replaymsglog.Log
+	kxReplayLog  *replaymsglog.Log
 }
 
 func (c *chatServer) PM(ctx context.Context, req *types.PMRequest, res *types.PMResponse) error {
@@ -138,7 +141,7 @@ func (c *chatServer) AckReceivedPM(ctx context.Context, req *types.AckRequest,
 	if err != nil {
 		c.log.Errorf("Unable to clear PM log up to id %s: %v", id, err)
 	}
-	return nil
+	return err
 }
 
 // GCM sends a message in a GC.
@@ -235,7 +238,87 @@ func (c *chatServer) AckReceivedGCM(ctx context.Context, req *types.AckRequest,
 	if err != nil {
 		c.log.Errorf("Unable to clear GCM log up to id %s: %v", id, err)
 	}
-	return nil
+	return err
+}
+
+func (c *chatServer) MediateKX(ctx context.Context, req *types.MediateKXRequest, res *types.MediateKXResponse) error {
+	mediator, err := c.c.UserByNick(req.Mediator)
+	if err != nil {
+		return err
+	}
+
+	var target clientintf.UserID
+	if err := target.FromString(req.Target); err != nil {
+		return err
+	}
+
+	return c.c.RequestMediateIdentity(mediator.ID(), target)
+}
+
+func (c *chatServer) KXStream(ctx context.Context, req *types.KXStreamRequest, stream types.ChatService_KXStreamServer) error {
+	id := replaymsglog.ID(req.UnackedFrom)
+	c.replayMtx.Lock()
+
+	// Send old messages before registering for the new ones.
+	ntfn := new(types.KXCompleted)
+	err := c.kxReplayLog.ReadAfter(id, ntfn, func(id replaymsglog.ID) error {
+		ntfn.SequenceId = uint64(id)
+		err := stream.Send(ntfn)
+		if err != nil {
+			return err
+		}
+		ntfn.Reset()
+		return nil
+	})
+
+	var streamID int32
+	if err == nil {
+		streamID, ctx = c.kxStreams.register(ctx, stream)
+	}
+	c.replayMtx.Unlock()
+	if err != nil {
+		return err
+	}
+
+	<-ctx.Done()
+	c.kxStreams.unregister(streamID)
+	return ctx.Err()
+}
+
+// kxNtfnHandler is called by the client when the client completes a KX with a user.
+func (c *chatServer) kxNtfnHandler(ru *client.RemoteUser) {
+	ntfn := &types.KXCompleted{
+		Uid:  ru.ID().Bytes(),
+		Nick: ru.Nick(),
+	}
+
+	// Save in replay file
+	c.replayMtx.Lock()
+	replayID, err := c.kxReplayLog.Store(ntfn)
+	c.replayMtx.Unlock()
+	if err != nil {
+		c.log.Errorf("Unable to store KX in replay log: %v", err)
+		return
+	}
+	ntfn.SequenceId = uint64(replayID)
+
+	c.kxStreams.iterateOver(func(id int32, stream types.ChatService_KXStreamServer) {
+		err := stream.Send(ntfn)
+		if err != nil {
+			c.log.Debugf("Unregistering KX stream %d due to err: %v",
+				id, err)
+			c.kxStreams.unregister(id)
+		}
+	})
+}
+
+func (c *chatServer) AckKXCompleted(_ context.Context, req *types.AckRequest, _ *types.AckResponse) error {
+	id := replaymsglog.ID(req.SequenceId)
+	err := c.kxReplayLog.ClearUpTo(id)
+	if err != nil {
+		c.log.Errorf("Unable to clear KX log up to id %s: %v", id, err)
+	}
+	return err
 }
 
 // registerOfflineMessageStorageHandlers registers the handlers for streams on
@@ -244,6 +327,7 @@ func (c *chatServer) registerOfflineMessageStorageHandlers() {
 	nmgr := c.c.NotificationManager()
 	nmgr.RegisterSync(client.OnPMNtfn(c.pmNtfnHandler))
 	nmgr.RegisterSync(client.OnGCMNtfn(c.gcmNtfnHandler))
+	nmgr.RegisterSync(client.OnKXCompleted(c.kxNtfnHandler))
 }
 
 var _ types.ChatServiceServer = (*chatServer)(nil)
@@ -271,6 +355,16 @@ func (s *Server) InitChatService(cfg ChatServerCfg) error {
 		return err
 	}
 
+	kxReplayLog, err := replaymsglog.New(replaymsglog.Config{
+		Log:     cfg.Log,
+		Prefix:  "kx",
+		RootDir: cfg.RootReplayMsgLogs,
+		MaxSize: 1 << 23, // 8MiB
+	})
+	if err != nil {
+		return err
+	}
+
 	cs := &chatServer{
 		cfg: cfg,
 		log: cfg.Log,
@@ -278,8 +372,10 @@ func (s *Server) InitChatService(cfg ChatServerCfg) error {
 
 		pmStreams:    &serverStreams[types.ChatService_PMStreamServer]{},
 		gcmStreams:   &serverStreams[types.ChatService_GCMStreamServer]{},
+		kxStreams:    &serverStreams[types.ChatService_KXStreamServer]{},
 		pmReplayLog:  pmReplayLog,
 		gcmReplayLog: gcmReplayLog,
+		kxReplayLog:  kxReplayLog,
 	}
 	cs.registerOfflineMessageStorageHandlers()
 	s.services.Bind("ChatService", types.ChatServiceDefn(), cs)

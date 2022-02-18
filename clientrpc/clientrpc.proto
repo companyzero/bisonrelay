@@ -42,6 +42,19 @@ service ChatService {
   /* AckReceivedGCM acks to the server that GCMs up to a sequence ID have been
      processed. */
   rpc AckReceivedGCM(AckRequest) returns (AckResponse);
+
+  /* MediateKX requests a transitive mediate KX with a mediator, towards a
+     target user. */
+  rpc MediateKX(MediateKXRequest) returns (MediateKXResponse);
+
+  /* KXStream returns a stream that gets notifications of completed KXs. Both
+     new users and KXs resulting from a reset trigger a new event in this
+     stream. */
+  rpc KXStream(KXStreamRequest) returns (stream KXCompleted);
+
+  /* AckKXCompleted acks to the server that KXs up to the sequence ID have been
+     processed. */
+  rpc AckKXCompleted(AckRequest) returns (AckResponse);
 }
 
 /* PostsService is the service for performing posts-related actions. */
@@ -295,6 +308,38 @@ message TipUserRequest {
 
 /* TipUserResponse is the response to a tip user request. */
 message TipUserResponse{}
+
+/* MediateKXRequest is the request to perform a transitive KX with a given
+   user. */
+message MediateKXRequest{
+  /* mediator is the nick or hex ID of the mediator user (which must already be
+     KX'd with). */
+  string mediator = 1;
+
+  /* target is the hex ID of the target user to KX with. */
+  string target = 2;
+}
+
+/* MediateKXResponse is the response to a mediate KX request. */
+message MediateKXResponse {}
+
+/* KXStreamRequest is the request sent when obtaining a stream of KX notifications. */
+message KXStreamRequest{
+  /* unacked_from specifies to the server the sequence_id of the last completed
+     KX. KXs completed by the server that have a higher sequence_id will be
+     streamed back to the client. */
+  uint64 unacked_from = 1;
+}
+
+/* KXCompleted is the information about a completed KX event. */
+message KXCompleted {
+  /* sequence_id is an opaque sequential ID. */
+  uint64 sequence_id = 1;
+  /* uid is the raw ID of the KX'd user. */
+  bytes uid = 2;
+  /* nick is the nick of the KX'd user. */
+  string nick = 3;
+}
 
 /******************************************************************************
   *                          Routed RPC Compat

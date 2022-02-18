@@ -119,6 +119,16 @@ type ChatServiceClient interface {
 	// AckReceivedGCM acks to the server that GCMs up to a sequence ID have been
 	// processed.
 	AckReceivedGCM(ctx context.Context, in *AckRequest, out *AckResponse) error
+	// MediateKX requests a transitive mediate KX with a mediator, towards a
+	// target user.
+	MediateKX(ctx context.Context, in *MediateKXRequest, out *MediateKXResponse) error
+	// KXStream returns a stream that gets notifications of completed KXs. Both
+	// new users and KXs resulting from a reset trigger a new event in this
+	// stream.
+	KXStream(ctx context.Context, in *KXStreamRequest) (ChatService_KXStreamClient, error)
+	// AckKXCompleted acks to the server that KXs up to the sequence ID have been
+	// processed.
+	AckKXCompleted(ctx context.Context, in *AckRequest, out *AckResponse) error
 }
 
 type client_ChatService struct {
@@ -172,6 +182,29 @@ func (c *client_ChatService) AckReceivedGCM(ctx context.Context, in *AckRequest,
 	return c.defn.Methods[method].ClientHandler(c.c, ctx, in, out)
 }
 
+func (c *client_ChatService) MediateKX(ctx context.Context, in *MediateKXRequest, out *MediateKXResponse) error {
+	const method = "MediateKX"
+	return c.defn.Methods[method].ClientHandler(c.c, ctx, in, out)
+}
+
+type ChatService_KXStreamClient interface {
+	Recv(*KXCompleted) error
+}
+
+func (c *client_ChatService) KXStream(ctx context.Context, in *KXStreamRequest) (ChatService_KXStreamClient, error) {
+	const method = "KXStream"
+	inner, err := c.defn.Methods[method].ClientStreamHandler(c.c, ctx, in)
+	if err != nil {
+		return nil, err
+	}
+	return streamerImpl[*KXCompleted]{c: inner}, nil
+}
+
+func (c *client_ChatService) AckKXCompleted(ctx context.Context, in *AckRequest, out *AckResponse) error {
+	const method = "AckKXCompleted"
+	return c.defn.Methods[method].ClientHandler(c.c, ctx, in, out)
+}
+
 func NewChatServiceClient(c ClientConn) ChatServiceClient {
 	return &client_ChatService{c: c, defn: ChatServiceDefn()}
 }
@@ -192,6 +225,16 @@ type ChatServiceServer interface {
 	// AckReceivedGCM acks to the server that GCMs up to a sequence ID have been
 	// processed.
 	AckReceivedGCM(context.Context, *AckRequest, *AckResponse) error
+	// MediateKX requests a transitive mediate KX with a mediator, towards a
+	// target user.
+	MediateKX(context.Context, *MediateKXRequest, *MediateKXResponse) error
+	// KXStream returns a stream that gets notifications of completed KXs. Both
+	// new users and KXs resulting from a reset trigger a new event in this
+	// stream.
+	KXStream(context.Context, *KXStreamRequest, ChatService_KXStreamServer) error
+	// AckKXCompleted acks to the server that KXs up to the sequence ID have been
+	// processed.
+	AckKXCompleted(context.Context, *AckRequest, *AckResponse) error
 }
 
 type ChatService_PMStreamServer interface {
@@ -200,6 +243,10 @@ type ChatService_PMStreamServer interface {
 
 type ChatService_GCMStreamServer interface {
 	Send(m *GCReceivedMsg) error
+}
+
+type ChatService_KXStreamServer interface {
+	Send(m *KXCompleted) error
 }
 
 func ChatServiceDefn() ServiceDefn {
@@ -293,6 +340,51 @@ func ChatServiceDefn() ServiceDefn {
 				},
 				ClientHandler: func(conn ClientConn, ctx context.Context, request, response proto.Message) error {
 					method := "ChatService.AckReceivedGCM"
+					return conn.Request(ctx, method, request, response)
+				},
+			},
+			"MediateKX": {
+				IsStreaming:  false,
+				NewRequest:   func() proto.Message { return new(MediateKXRequest) },
+				NewResponse:  func() proto.Message { return new(MediateKXResponse) },
+				RequestDefn:  func() protoreflect.MessageDescriptor { return new(MediateKXRequest).ProtoReflect().Descriptor() },
+				ResponseDefn: func() protoreflect.MessageDescriptor { return new(MediateKXResponse).ProtoReflect().Descriptor() },
+				Help:         "MediateKX requests a transitive mediate KX with a mediator, towards a target user.",
+				ServerHandler: func(x interface{}, ctx context.Context, request, response proto.Message) error {
+					return x.(ChatServiceServer).MediateKX(ctx, request.(*MediateKXRequest), response.(*MediateKXResponse))
+				},
+				ClientHandler: func(conn ClientConn, ctx context.Context, request, response proto.Message) error {
+					method := "ChatService.MediateKX"
+					return conn.Request(ctx, method, request, response)
+				},
+			},
+			"KXStream": {
+				IsStreaming:  true,
+				NewRequest:   func() proto.Message { return new(KXStreamRequest) },
+				NewResponse:  func() proto.Message { return new(KXCompleted) },
+				RequestDefn:  func() protoreflect.MessageDescriptor { return new(KXStreamRequest).ProtoReflect().Descriptor() },
+				ResponseDefn: func() protoreflect.MessageDescriptor { return new(KXCompleted).ProtoReflect().Descriptor() },
+				Help:         "KXStream returns a stream that gets notifications of completed KXs. Both new users and KXs resulting from a reset trigger a new event in this stream.",
+				ServerStreamHandler: func(x interface{}, ctx context.Context, request proto.Message, stream ServerStream) error {
+					return x.(ChatServiceServer).KXStream(ctx, request.(*KXStreamRequest), streamerImpl[*KXCompleted]{s: stream})
+				},
+				ClientStreamHandler: func(conn ClientConn, ctx context.Context, request proto.Message) (ClientStream, error) {
+					method := "ChatService.KXStream"
+					return conn.Stream(ctx, method, request)
+				},
+			},
+			"AckKXCompleted": {
+				IsStreaming:  false,
+				NewRequest:   func() proto.Message { return new(AckRequest) },
+				NewResponse:  func() proto.Message { return new(AckResponse) },
+				RequestDefn:  func() protoreflect.MessageDescriptor { return new(AckRequest).ProtoReflect().Descriptor() },
+				ResponseDefn: func() protoreflect.MessageDescriptor { return new(AckResponse).ProtoReflect().Descriptor() },
+				Help:         "AckKXCompleted acks to the server that KXs up to the sequence ID have been processed.",
+				ServerHandler: func(x interface{}, ctx context.Context, request, response proto.Message) error {
+					return x.(ChatServiceServer).AckKXCompleted(ctx, request.(*AckRequest), response.(*AckResponse))
+				},
+				ClientHandler: func(conn ClientConn, ctx context.Context, request, response proto.Message) error {
+					method := "ChatService.AckKXCompleted"
 					return conn.Request(ctx, method, request, response)
 				},
 			},
@@ -681,6 +773,24 @@ var help_messages = map[string]map[string]string{
 	},
 	"TipUserResponse": {
 		"@": "TipUserResponse is the response to a tip user request.",
+	},
+	"MediateKXRequest": {
+		"@":        "MediateKXRequest is the request to perform a transitive KX with a given user.",
+		"mediator": "mediator is the nick or hex ID of the mediator user (which must already be KX'd with).",
+		"target":   "target is the hex ID of the target user to KX with.",
+	},
+	"MediateKXResponse": {
+		"@": "MediateKXResponse is the response to a mediate KX request.",
+	},
+	"KXStreamRequest": {
+		"@":            "KXStreamRequest is the request sent when obtaining a stream of KX notifications.",
+		"unacked_from": "unacked_from specifies to the server the sequence_id of the last completed KX. KXs completed by the server that have a higher sequence_id will be streamed back to the client.",
+	},
+	"KXCompleted": {
+		"@":           "KXCompleted is the information about a completed KX event.",
+		"sequence_id": "sequence_id is an opaque sequential ID.",
+		"uid":         "uid is the raw ID of the KX'd user.",
+		"nick":        "nick is the nick of the KX'd user.",
 	},
 	"RMPrivateMessage": {
 		"@":       "RMPrivateMessage is the network-level routed private message.",
