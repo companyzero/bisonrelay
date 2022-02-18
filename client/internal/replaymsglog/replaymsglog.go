@@ -53,6 +53,7 @@ type logFile struct {
 	f        *os.File
 	fid      uint32
 	fileName string
+	log      slog.Logger
 
 	mtx             sync.Mutex
 	clearedToOffset int64
@@ -70,6 +71,12 @@ func (lf *logFile) clearUpTo(targetOffset int64) error {
 	if lf.f == nil {
 		// Consider already cleared.
 		return nil
+	}
+
+	if targetOffset > lf.writtenToOffset {
+		lf.log.Warnf("replaymsglog logfile %s clearing past writtenToOffset: "+
+			"clear target: %d, writtenToOffset: %d", lf.fileName, targetOffset,
+			lf.writtenToOffset)
 	}
 
 	// Clear in len(clearBuffer) blocks.
@@ -107,9 +114,8 @@ func (lf *logFile) append(b []byte) error {
 		return err
 	}
 	if off != lf.writtenToOffset {
-		// Should not happen unless there's a bug in this package or
-		// in the filesystem.
-		return fmt.Errorf("replaymsglog logfile %s invalid seek assertion: "+
+		// Usage error or filesystem error.
+		lf.log.Warnf("replaymsglog logfile %s invalid seek assertion: "+
 			"offset %d != old offset %d", lf.fileName, off,
 			lf.writtenToOffset)
 	}
@@ -220,7 +226,7 @@ func (l *Log) rotateFile() error {
 		return fmt.Errorf("unable to open new replaymsglog file: %v", err)
 	}
 
-	l.current = &logFile{f: f, fileName: fileName, fid: l.fileIndex}
+	l.current = &logFile{f: f, fileName: fileName, fid: l.fileIndex, log: l.log}
 	l.oldFiles[l.fileIndex] = l.current
 	l.log.Debugf("Rotating replaymsglog to new file %s (FID %s)", filePath,
 		makeFileID(l.fileIndex))
@@ -471,6 +477,7 @@ func New(cfg Config) (*Log, error) {
 			f:               f,
 			fileName:        fname,
 			writtenToOffset: info.Size(),
+			log:             log,
 		}
 		oldFiles[uint32(fid)] = lf
 
