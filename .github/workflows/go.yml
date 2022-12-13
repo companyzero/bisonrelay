@@ -1,0 +1,26 @@
+name: Build and Test
+on: [push, pull_request]
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Go CI
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go: [1.18, 1.19]
+    steps:
+      - name: Set up Go
+        uses: actions/setup-go@84cbf8094393cdc5fe1fe1671ff2647332956b1a #v3.2.1
+        with:
+          go-version: ${{ matrix.go }}
+      - name: Check out source
+        uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8 #v3.1.0
+      - name: Install Linters
+        run: "curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.50.1"
+      - name: Build
+        run: go build ./...
+      - name: Test
+        run: |
+          ./goclean.sh

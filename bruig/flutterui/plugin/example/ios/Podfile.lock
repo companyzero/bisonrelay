@@ -1,0 +1,22 @@
+PODS:
+  - Flutter (1.0.0)
+  - golib_plugin (0.0.1):
+    - Flutter
+
+DEPENDENCIES:
+  - Flutter (from `Flutter`)
+  - golib_plugin (from `.symlinks/plugins/golib_plugin/ios`)
+
+EXTERNAL SOURCES:
+  Flutter:
+    :path: Flutter
+  golib_plugin:
+    :path: ".symlinks/plugins/golib_plugin/ios"
+
+SPEC CHECKSUMS:
+  Flutter: 50d75fe2f02b26cc09d224853bb45737f8b3214a
+  golib_plugin: d182d1ba3c3cf8b292963e42903c26644a5feeac
+
+PODFILE CHECKSUM: aafe91acc616949ddb318b77800a7f51bffa2a4c
+
+COCOAPODS: 1.11.0

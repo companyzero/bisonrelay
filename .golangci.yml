@@ -1,0 +1,17 @@
+run:
+  deadline: 15m
+
+linters:
+  build-tags:
+    - e2elegacylntest
+
+  disable-all: true
+  enable:
+    - gofmt
+    - gosimple
+    - govet
+    - ineffassign
+    - misspell
+    - noctx
+    - unconvert
+    - unused

@@ -1,0 +1,31 @@
+==== BUG ====
+    - Sometimes a GC 'overwrites' an existing user in the chats list, always
+    resolves itself on reload.
+
+
+==== TODO ====
+    - Add request transitive invite action
+    - Add KX trans reset action
+    - Add page to list uploads
+    - Show failure when remote host doesn't have file? Or timeout?
+    - Show KX searches under progress
+    - Add cancel download feature
+    - Add seed warnings
+    - Allow seed copying
+    - Show client log
+
+
+
+==== INVESTIGATE ===
+    - Add a dashboard page
+    - Show in progress downloads
+    - Show download progress in chat window of sender
+    - Improve handling of download starts
+    - Notification to pay for file before starting download?
+    - Add ability to externally open downloaded files
+    - Display estimated price in USD for payments (tips, downloads, etc)
+    - Use themified font size everywhere
+
+
+==== DONE ====
+

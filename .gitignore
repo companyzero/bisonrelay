@@ -1,0 +1,11 @@
+*.sw?
+*~
+*.diff
+*.orig
+*.log
+scripts/zkc*
+brserver/brserver
+brclient/brclient
+server/internal/frpgdb/cmd/frdbsim/frdbsim
+server.crt
+build/

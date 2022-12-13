@@ -1,0 +1,131 @@
+==== BUG ====
+	* On mac config goes in Application\ Support/zkclientbt however when you use ! in config file it goes to the actual home dir. We need to pick how to handle this. Mac will always have inconsistent ~ evaluation because day to day it is actually home.
+	* Handle removing rmq and sendq items when the message generated is too
+	  large
+	* Add check before sharing post to avoid creating a post too big
+	* ctrl+z doesn't send app to background
+		* kill -s SIGSTP does but app does not repaing after coming back
+	* rune error upon pasting a utf-8 char that straddles the internal
+	  bubbletea 256 byte buffer used for reading from stdin
+
+
+
+
+
+==== TODO ====
+	* Track mediator/originator of kx
+		* Answers the question "who/why you kx with X"
+	* Add a ping/pong command to check if a given KX is still working
+	* Automatically reset KX if no message has been received after expiry days
+	* Unify FileID, PostID, etc, in rpc package
+	* Switch all int64 milliatom/atom to use respective types
+	* Verify signature in posts and status updates of previously unchecked
+	  records when we kx with a new user
+	* Show upload progress somewhere
+	* Add import of initial invite to setup wizard
+	* Add command to abort in-progress downloads
+	* Add command to abort in-progress uploads
+	* Add dcrtime inclusion proofs in posts and comments
+	* De-dupe code in server/util and lowlevel/util (decodeRPCPayload)
+	* Render post, comments as (properly escaped) markdown
+	* Add post filters (code examples in ttk tui)
+	* Redraws from a small window to a large window don't always work. I think we are missing a size message somewhere.
+		* Improved reflow in chatmsgs but needs to be double checked whether this was the actual issue
+		* So when you start with a window that is basically too small this fails.
+	* Manage sharing status perms in posts (auto share={on,off}, per-user share perms)
+	* Add cmd to forcefully remove subscriber
+	* Add cmd to fetch and show LN invoice from remote user
+	* Show KX progress in chat window
+	* Track who a post was shared with to avoid sending unneeded status updates
+		* For example, on old posts where a new subscriber might not have
+		  the post
+	* Handle download case where downloader gets an already expired invoice
+		* Happens when the downloader was offline when the uploader
+		  sends the invoice
+	* Allow sub-milliatom-per-byte fee rates
+		* milliatom-per-kb?
+	* Parametrize minimum push rate instead of hardcoded
+	* Add estimated time to fully sync wallet to chain sync page
+	* Try initial connection to server addr to verify it is reachable
+	* Unify author and comment kx search in post screen to single command
+	* Show more policy info when confirming request channel liquidity
+	* Show sum of paystats and siplay in USD as well
+	* Expose more settings to configure logging (specifically log rotation)
+	* Render colored log lines in /w log
+	* Show unconfirmed balances and channels to avoid giving the appearance
+	  that funds are disappearing during initial setup/opening channels
+		* Might get invalidated after moving initial channel setup to
+		  setup wizard
+	* Add command to clear window contents)
+	* Commands that generate an error line end up showing an error twice
+		* For example: /gc join <unknown gc> generantes [ERR] ... and Error: ...
+	* Add ability to select and quote reply to a chat message
+	* Improve startup/reconnect procedure to fetch all outstanding msgs and
+	  reordering them by time before issuing PMHandler notifications
+		* Objective is to sort messages and improve how they are
+		  displayed
+	* Save list of opened windows and restore on restart
+	* Add option to load last N lines of the log of a given chat window
+	* Unify screens to use formHelper and textInputHelper types
+	* Add timestamp to comments (maybe right of username)
+	* Add ability to reply to unreplicated comment in post
+	* Add config for interval for double digit esc
+	* Handle literal unexpanded "~" in filenames in command args
+		* For example, /ft send <nick> ~/some/file
+	* Replace postwin main area with markdown model
+	* Improve UI for posts that have updated comments (make it more obvious)
+	* Allow subscribing to individual posts instead of entire feed
+		* This is a design change; there was the assumption that a feed
+		  subscription is required for all posts-related actions
+	* Make commands work in feed window
+	* Make <esc># work in feed window
+	* Improve scrolling behavior for feed window (jumps around too much)
+
+
+==== DISCUSS ====
+	* Cross confirmation of msg delivery
+		* Idea: client sends 2 uint64 when pushing to server ("server nonce", "client nonce").
+		  Server nonce is also sent plaintext to server. Both are sent encrypted in RM.
+		  Fetcher of RV must send ack with decrypted server nonce. Server now
+		  knows client decrypted the pushed msg. Server returns ack with
+		  re-encrypted client nonce (re-encrypted by fetcher). Client now knows
+		  remote client fetched and decrypted msg.
+	* Blocking admin of GC means you no longer receive updates on the GC list
+		* Leave every GC if you blocked an admin?
+		* Modify GC joins to have a signed admin issued token that users can
+		  present to prove to third parties they were invited to the GC?
+			* What if the admin of the GC changes?
+	* Avoid listing third party (i.e. relayed) posts when listing posts?
+		* This would force active decision by the user to relay
+		* Need to impl tracking of who to send comments to to avoid leaking we have a post
+		* Might impact kx search?
+
+
+
+==== INVESTIGATE ===
+        * send msg delay after resume: resume from suspend, type into client, get invoice err
+	* Retry many times to pay/generate invoice inside the PayClient interface?
+		* This is so temporary failures are abstracted away inside the PayClient
+	* Surface LN errors to UI
+		* Log invoice requests that fail due to insufficient receive capacity
+		  (so that clients will figure out to open channels).
+	* Auto-sharing of (partially?) downloaded content
+	* Send RMs via multiple connections to server (to speed up sending)
+	* Rotate link key on every C2S connection every 60 minutes
+	* Add "reference" field to transitive msgs to allow filtering invites
+	* Abstract the 3 "main programs" in brclient: setup wizard, unlock and
+	  main into a single procedure
+	* Add dcrtime inclusion proofs in server-pushed messages
+	* Add dcrtime inclusion proofs in files
+	* Rotate reset RV every 24h and use it to verify whether the users'
+	  ratchets are still in sync
+	* Add ability to have multiple admins per GC.
+	* Add ability to have open GCs
+	* Instead of sending the entire KX invite OOB, push the data to the
+	  initial random invite RV and just send the RV+pass out of band
+
+
+
+
+==== DONE ====
+

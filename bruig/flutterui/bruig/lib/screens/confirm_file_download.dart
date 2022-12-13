@@ -1,0 +1,65 @@
+import 'package:bruig/components/buttons.dart';
+import 'package:bruig/components/snackbars.dart';
+import 'package:bruig/models/client.dart';
+import 'package:bruig/models/downloads.dart';
+import 'package:bruig/util.dart';
+import 'package:flutter/material.dart';
+import 'package:golib_plugin/definitions.dart';
+import 'package:golib_plugin/util.dart';
+
+class ConfirmFileDownloadScreen extends StatelessWidget {
+  final ClientModel client;
+  final DownloadsModel downloads;
+  const ConfirmFileDownloadScreen(this.client, this.downloads, {Key? key})
+      : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    var fd = ModalRoute.of(context)!.settings.arguments as ConfirmFileDownload;
+    var cm = client.getExistingChat(fd.uid);
+    var sender = cm?.nick ?? fd.uid;
+    var cost = formatDCR(atomsToDCR(fd.metadata.cost));
+    var size = humanReadableSize(fd.metadata.size);
+
+    reply(bool res) async {
+      try {
+        if (res) {
+          downloads.ensureDownloadExists(fd.uid, fd.fid, fd.metadata);
+        }
+        await downloads.confirmFileDownload(fd.uid, fd.fid, res);
+      } catch (exception) {
+        showErrorSnackbar(
+            context, "Unable to confirm file download: $exception");
+      } finally {
+        Navigator.pop(context);
+      }
+    }
+
+    return Scaffold(
+        body: Container(
+            padding: const EdgeInsets.all(10),
+            child: Center(
+                child: Column(children: [
+              const Text("Confirm File Download",
+                  style: TextStyle(fontSize: 20)),
+              const SizedBox(height: 20),
+              Text("Sender: $sender"),
+              const SizedBox(height: 20),
+              Text("FID: ${fd.uid}"),
+              const SizedBox(height: 20),
+              Text("File Name: ${fd.metadata.filename}"),
+              const SizedBox(height: 20),
+              Text("Size: $size"),
+              const SizedBox(height: 20),
+              Text("Cost: $cost"),
+              const SizedBox(height: 20),
+              Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                ElevatedButton(
+                    onPressed: () => reply(true),
+                    child: const Text("Pay & Download")),
+                const SizedBox(width: 10),
+                CancelButton(onPressed: () => reply(false)),
+              ]),
+            ]))));
+  }
+}

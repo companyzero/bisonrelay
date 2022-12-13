@@ -1,0 +1,33 @@
+name: Build and Test
+on: [push, pull_request]
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Dart
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install packages
+        run: sudo apt-get install -y ninja-build clang libgtk-3-dev
+
+      - name: Set up Go
+        uses: actions/setup-go@84cbf8094393cdc5fe1fe1671ff2647332956b1a #v3.2.1
+        with:
+          go-version: '1.19'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@dbf1fa04f4d2e52c33185153d06cdb5443aa189d #v2.8.0
+        with:
+          flutter-version: '3.3.5'
+
+      - name: Check out source
+        uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8 #v3.1.0
+
+      - name: Go generate
+        working-directory: ./bruig
+        run: go generate ./golibbuilder
+
+      - name: Linux GUI build
+        working-directory: ./bruig/flutterui/bruig
+        run: flutter build linux
