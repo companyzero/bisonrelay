@@ -218,7 +218,7 @@ the wallet seed is NOT sufficient to restore their state.
                                         fontWeight: FontWeight.w300)),
                                 Text(
                                     textAlign: TextAlign.right,
-                                    "$formatDCR(atomsToDCR(walletBalance))",
+                                    "${formatDCR(atomsToDCR(walletBalance))}",
                                     style: TextStyle(
                                         color: darkTextColor,
                                         fontSize: 13,
@@ -237,7 +237,7 @@ the wallet seed is NOT sufficient to restore their state.
                                     fontWeight: FontWeight.w300)),
                             Text(
                                 textAlign: TextAlign.right,
-                                "$formatDCR(atomsToDCR(maxOutAmount))",
+                                "${formatDCR(atomsToDCR(maxOutAmount))}",
                                 style: TextStyle(
                                     color: darkTextColor,
                                     fontSize: 13,
@@ -255,7 +255,7 @@ the wallet seed is NOT sufficient to restore their state.
                                     fontWeight: FontWeight.w300)),
                             Text(
                                 textAlign: TextAlign.right,
-                                "$numPendingChannels",
+                                "${numPendingChannels}",
                                 style: TextStyle(
                                     color: darkTextColor,
                                     fontSize: 13,
@@ -273,7 +273,7 @@ the wallet seed is NOT sufficient to restore their state.
                                     fontWeight: FontWeight.w300)),
                             Text(
                                 textAlign: TextAlign.right,
-                                "$numChannels",
+                                "${numChannels}",
                                 style: TextStyle(
                                     color: darkTextColor,
                                     fontSize: 13,

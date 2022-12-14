@@ -24,7 +24,6 @@ class _NotificationW extends StatelessWidget {
             "and perform payments to the server.";
         onTap = () {
           ntfns.delNtfn(ntf);
-          Navigator.of(context).pop();
           Navigator.of(context, rootNavigator: true).pushNamed("/needsFunds");
         };
         break;
@@ -35,7 +34,6 @@ class _NotificationW extends StatelessWidget {
             "to perform payments to the server and other users.";
         onTap = () {
           ntfns.delNtfn(ntf);
-          Navigator.of(context).pop();
           Navigator.of(context, rootNavigator: true)
               .pushNamed("/needsOutChannel");
         };
@@ -47,7 +45,6 @@ class _NotificationW extends StatelessWidget {
             "to receive payments from other users.";
         onTap = () {
           ntfns.delNtfn(ntf);
-          Navigator.of(context).pop();
           Navigator.of(context, rootNavigator: true)
               .pushNamed("/needsInChannel");
         };
