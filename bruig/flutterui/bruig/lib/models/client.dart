@@ -155,6 +155,8 @@ class ChatModel extends ChangeNotifier {
     }
   }
 
+  String workingMsg = "";
+
   void subscribeToPosts() {
     var event = InflightSubscribeToPosts(id);
     event.state = ISPS_sending;

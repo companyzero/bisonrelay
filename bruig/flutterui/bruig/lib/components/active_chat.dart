@@ -16,7 +16,8 @@ import 'package:bruig/components/profile.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class ActiveChat extends StatelessWidget {
-  const ActiveChat({Key? key}) : super(key: key);
+  var editLineFocusNode = FocusNode();
+  ActiveChat({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -33,7 +34,8 @@ class ActiveChat extends StatelessWidget {
           return UserProfile(chats, profile);
         }
       }
-      return ActiveChatFor(chat, chats.nick);
+      editLineFocusNode.requestFocus();
+      return ActiveChatFor(chat, chats.nick, editLineFocusNode);
     });
   }
 }
@@ -44,19 +46,27 @@ class EditLine extends StatelessWidget {
   final controller = TextEditingController();
   final SendMsg _send;
   final FocusNode node = FocusNode();
-  EditLine(this._send, {Key? key}) : super(key: key);
+  final ChatModel chat;
+  final FocusNode editLineFocusNode;
+  EditLine(this._send, this.chat, this.editLineFocusNode, {Key? key})
+      : super(key: key) {
+    controller.text = chat.workingMsg;
+  }
 
   void handleKeyPress(event) {
     // TODO: debounce event.
     () async {
       if (event is RawKeyUpEvent) {
         bool modPressed = event.isShiftPressed || event.isControlPressed;
+        final val = controller.value;
+        final trimmed = val.text.trim();
         if (event.data.logicalKey.keyLabel == "Enter" && !modPressed) {
-          final val = controller.value;
-          final trimmed = val.text.trim();
           controller.value = const TextEditingValue(
               text: "", selection: TextSelection.collapsed(offset: 0));
           _send(trimmed);
+          chat.workingMsg = "";
+        } else {
+          chat.workingMsg = trimmed;
         }
       }
     }();
@@ -75,6 +85,8 @@ class EditLine extends StatelessWidget {
         child: Container(
           margin: const EdgeInsets.only(bottom: 5),
           child: TextField(
+            focusNode: editLineFocusNode,
+            autofocus: true,
             style: TextStyle(
               fontSize: 11,
               color: textColor,
@@ -834,7 +846,9 @@ class _MessagesState extends State<Messages> {
 class ActiveChatFor extends StatelessWidget {
   final ChatModel chat;
   final String nick;
-  const ActiveChatFor(this.chat, this.nick, {Key? key}) : super(key: key);
+  final FocusNode editLineFocusNode;
+  const ActiveChatFor(this.chat, this.nick, this.editLineFocusNode, {Key? key})
+      : super(key: key);
 
   void sendMsg(String msg) {
     chat.sendMsg(msg);
@@ -845,7 +859,9 @@ class ActiveChatFor extends StatelessWidget {
     return Column(
       children: [
         Expanded(child: Messages(chat, nick)),
-        Row(children: [Expanded(child: EditLine(sendMsg))])
+        Row(children: [
+          Expanded(child: EditLine(sendMsg, chat, editLineFocusNode))
+        ])
       ],
     );
   }
