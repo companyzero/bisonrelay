@@ -46,6 +46,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
   ClientModel get client => widget.client;
   AppNotifications get ntfns => widget.ntfns;
   ServerSessionState connState = ServerSessionState.empty();
+  FocusNode editLineFocusNode = FocusNode();
 
   void clientChanged() {
     var newConnState = client.connState;
@@ -89,7 +90,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
     var backgroundColor = theme.backgroundColor;
 
     return Row(children: [
-      Container(width: 163, child: const ChatDrawerMenu()),
+      Container(width: 163, child: ChatDrawerMenu(editLineFocusNode)),
       Expanded(
           child: Container(
         margin: const EdgeInsets.all(1),
@@ -97,7 +98,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
           color: backgroundColor,
           borderRadius: BorderRadius.circular(3),
         ),
-        child: ActiveChat(),
+        child: ActiveChat(client, editLineFocusNode),
       )),
     ]);
   }

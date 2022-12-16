@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bruig/components/buttons.dart';
 import 'package:bruig/components/manage_gc.dart';
 import 'package:bruig/screens/feed/feed_posts.dart';
@@ -15,42 +17,112 @@ import 'package:provider/provider.dart';
 import 'package:bruig/components/profile.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-class ActiveChat extends StatelessWidget {
-  var editLineFocusNode = FocusNode();
-  ActiveChat({Key? key}) : super(key: key);
+class ActiveChat extends StatefulWidget {
+  final ClientModel client;
+  final FocusNode editLineFocusNode;
+  ActiveChat(this.client, this.editLineFocusNode, {Key? key}) : super(key: key);
+
+  @override
+  State<ActiveChat> createState() => _ActiveChatState();
+}
+
+class _ActiveChatState extends State<ActiveChat> {
+  ClientModel get client => widget.client;
+  FocusNode get editLineFocusNode => widget.editLineFocusNode;
+  ChatModel? chat;
+
+  void clientChanged() {
+    var newChat = client.active;
+    if (newChat != chat) {
+      setState(() {
+        chat = newChat;
+      });
+    }
+  }
+
+  void sendMsg(String msg) {
+    chat?.sendMsg(msg);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    client.addListener(clientChanged);
+  }
+
+  @override
+  void didUpdateWidget(ActiveChat oldWidget) {
+    oldWidget.client.removeListener(clientChanged);
+    super.didUpdateWidget(oldWidget);
+    client.addListener(clientChanged);
+  }
+
+  @override
+  void dispose() {
+    client.removeListener(clientChanged);
+    editLineFocusNode.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<ClientModel>(builder: (context, chats, child) {
-      var activeHeading = chats.active;
-      if (activeHeading == null) return Container();
-      var chat = chats.getExistingChat(activeHeading.id);
-      if (chat == null) return Container();
-      var profile = chats.profile;
-      if (profile != null) {
-        if (chat.isGC) {
-          return ManageGCScreen();
-        } else {
-          return UserProfile(chats, profile);
-        }
+    if (this.chat == null) return Container();
+    var chat = this.chat!;
+
+    var profile = client.profile;
+    if (profile != null) {
+      if (chat.isGC) {
+        return ManageGCScreen();
+      } else {
+        return UserProfile(client, profile);
       }
-      editLineFocusNode.requestFocus();
-      return ActiveChatFor(chat, chats.nick, editLineFocusNode);
-    });
+    }
+    //editLineFocusNode.requestFocus();
+    return Column(
+      children: [
+        Expanded(child: Messages(chat, client.nick)),
+        Row(children: [
+          Expanded(child: EditLine(sendMsg, chat, editLineFocusNode))
+        ])
+      ],
+    );
   }
 }
 
 typedef SendMsg = void Function(String msg);
 
-class EditLine extends StatelessWidget {
-  final controller = TextEditingController();
+class EditLine extends StatefulWidget {
   final SendMsg _send;
-  final FocusNode node = FocusNode();
   final ChatModel chat;
   final FocusNode editLineFocusNode;
   EditLine(this._send, this.chat, this.editLineFocusNode, {Key? key})
-      : super(key: key) {
-    controller.text = chat.workingMsg;
+      : super(key: key);
+
+  @override
+  State<EditLine> createState() => _EditLineState();
+}
+
+class _EditLineState extends State<EditLine> {
+  final controller = TextEditingController();
+
+  final FocusNode node = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    controller.text = widget.chat.workingMsg;
+  }
+
+  @override
+  void didUpdateWidget(EditLine oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    var workingMsg = widget.chat.workingMsg;
+    if (workingMsg != controller.text) {
+      controller.text = workingMsg;
+      controller.selection = TextSelection(
+          baseOffset: workingMsg.length, extentOffset: workingMsg.length);
+      widget.editLineFocusNode.requestFocus();
+    }
   }
 
   void handleKeyPress(event) {
@@ -63,10 +135,10 @@ class EditLine extends StatelessWidget {
         if (event.data.logicalKey.keyLabel == "Enter" && !modPressed) {
           controller.value = const TextEditingValue(
               text: "", selection: TextSelection.collapsed(offset: 0));
-          _send(trimmed);
-          chat.workingMsg = "";
+          widget._send(trimmed);
+          widget.chat.workingMsg = "";
         } else {
-          chat.workingMsg = trimmed;
+          widget.chat.workingMsg = trimmed;
         }
       }
     }();
@@ -85,8 +157,8 @@ class EditLine extends StatelessWidget {
         child: Container(
           margin: const EdgeInsets.only(bottom: 5),
           child: TextField(
-            focusNode: editLineFocusNode,
             autofocus: true,
+            focusNode: widget.editLineFocusNode,
             style: TextStyle(
               fontSize: 11,
               color: textColor,
@@ -840,29 +912,5 @@ class _MessagesState extends State<Messages> {
         itemCount: msgs.length,
         itemBuilder: (context, index) =>
             Event(chat, msgs[index], nick, scrollToBottom));
-  }
-}
-
-class ActiveChatFor extends StatelessWidget {
-  final ChatModel chat;
-  final String nick;
-  final FocusNode editLineFocusNode;
-  const ActiveChatFor(this.chat, this.nick, this.editLineFocusNode, {Key? key})
-      : super(key: key);
-
-  void sendMsg(String msg) {
-    chat.sendMsg(msg);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Expanded(child: Messages(chat, nick)),
-        Row(children: [
-          Expanded(child: EditLine(sendMsg, chat, editLineFocusNode))
-        ])
-      ],
-    );
   }
 }

@@ -113,7 +113,8 @@ class _ChatHeadingWState extends State<_ChatHeadingW> {
 }
 
 class ChatsList extends StatelessWidget {
-  const ChatsList({super.key});
+  final FocusNode editLineFocusNode;
+  ChatsList(this.editLineFocusNode, {super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -130,10 +131,16 @@ class ChatsList extends StatelessWidget {
       try {
         await Golib.generateInvite(filePath);
         showSuccessSnackbar(context, "Generated invitation at $filePath");
-        Navigator.pop(context);
       } catch (exception) {
         showErrorSnackbar(context, "Unable to generate invitation: $exception");
       }
+      editLineFocusNode.requestFocus();
+    }
+
+    void closeMenus(ClientModel client) {
+      client.subGCMenu = [];
+      client.subUserMenu = [];
+      editLineFocusNode.requestFocus();
     }
 
     void loadInvite() async {
@@ -145,8 +152,6 @@ class ChatsList extends StatelessWidget {
       filePath = filePath.trim();
       if (filePath == "") return;
       var invite = await Golib.decodeInvite(filePath);
-      //Navigator.pop(context);
-      Navigator.of(context, rootNavigator: true).pop();
       Navigator.of(context, rootNavigator: true)
           .pushNamed('/verifyInvite', arguments: invite);
     }
@@ -227,7 +232,7 @@ class ChatsList extends StatelessWidget {
                                 splashRadius: 15,
                                 hoverColor: selectedBackgroundColor,
                                 iconSize: 15,
-                                onPressed: () => chats.subGCMenu = [],
+                                onPressed: () => closeMenus(chats),
                                 icon: Icon(
                                     color: darkTextColor,
                                     Icons.close_outlined)))),
@@ -307,7 +312,7 @@ class ChatsList extends StatelessWidget {
                               hoverColor: selectedBackgroundColor,
                               splashRadius: 15,
                               iconSize: 15,
-                              onPressed: () => chats.subUserMenu = [],
+                              onPressed: () => closeMenus(chats),
                               icon: Icon(
                                   color: darkTextColor,
                                   Icons.close_outlined)))),
@@ -319,10 +324,11 @@ class ChatsList extends StatelessWidget {
 }
 
 class ChatDrawerMenu extends StatelessWidget {
-  const ChatDrawerMenu({Key? key}) : super(key: key);
+  final FocusNode editLineFocusNode;
+  const ChatDrawerMenu(this.editLineFocusNode, {Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return Column(children: const [Expanded(child: ChatsList())]);
+    return Column(children: [Expanded(child: ChatsList(editLineFocusNode))]);
   }
 }
