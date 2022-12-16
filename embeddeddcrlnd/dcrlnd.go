@@ -317,6 +317,7 @@ func RunDcrlnd(ctx context.Context, cfg Config) (*Dcrlnd, error) {
 	network := cfg.Network
 
 	rpcAddr := fmt.Sprintf("127.0.0.1:%d", port)
+	conf.LndDir = rootDir
 	conf.DataDir = filepath.Join(rootDir, "data")
 	conf.ConfigFile = filepath.Join(rootDir, "dcrlnd.conf")
 	conf.LogDir = filepath.Join(rootDir, "logs")
