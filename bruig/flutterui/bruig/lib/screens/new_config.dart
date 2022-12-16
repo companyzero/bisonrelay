@@ -41,7 +41,7 @@ class _NewConfigScreenState extends State<NewConfigScreen> {
               theme: ThemeData(
                 primarySwatch: Colors.green, // XXX THEMEDATA HERE??
               ),
-              initialRoute: "/newconf/networkChoice",
+              initialRoute: "/newconf/lnChoice/internal",
               routes: {
                 "/newconf/networkChoice": (context) =>
                     NetworkChoicePage(newconf),

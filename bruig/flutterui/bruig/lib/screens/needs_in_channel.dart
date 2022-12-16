@@ -232,7 +232,7 @@ messages. It is only required in order to receive payments from other users.
                                         fontWeight: FontWeight.w300)),
                                 Text(
                                     textAlign: TextAlign.right,
-                                    "$formatDCR(atomsToDCR(maxOutAmount))",
+                                    "${formatDCR(atomsToDCR(maxOutAmount))}",
                                     style: TextStyle(
                                         color: darkTextColor,
                                         fontSize: 13,
@@ -251,7 +251,7 @@ messages. It is only required in order to receive payments from other users.
                                     fontWeight: FontWeight.w300)),
                             Text(
                                 textAlign: TextAlign.right,
-                                "$formatDCR(atomsToDCR(maxInAmount))",
+                                "${formatDCR(atomsToDCR(maxInAmount))}",
                                 style: TextStyle(
                                     color: darkTextColor,
                                     fontSize: 13,
@@ -269,7 +269,7 @@ messages. It is only required in order to receive payments from other users.
                                     fontWeight: FontWeight.w300)),
                             Text(
                                 textAlign: TextAlign.right,
-                                "$numPendingChannels",
+                                "${numPendingChannels}",
                                 style: TextStyle(
                                     color: darkTextColor,
                                     fontSize: 13,
@@ -287,7 +287,7 @@ messages. It is only required in order to receive payments from other users.
                                     fontWeight: FontWeight.w300)),
                             Text(
                                 textAlign: TextAlign.right,
-                                "$numChannels",
+                                "${numChannels}",
                                 style: TextStyle(
                                     color: darkTextColor,
                                     fontSize: 13,

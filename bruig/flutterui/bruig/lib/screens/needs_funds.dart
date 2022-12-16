@@ -162,7 +162,7 @@ computer is corrupted or lost.
                                       fontWeight: FontWeight.w300)),
                               Text(
                                   textAlign: TextAlign.right,
-                                  "$formatDCR(atomsToDCR(unconfirmedBalance))",
+                                  "${formatDCR(atomsToDCR(unconfirmedBalance))}",
                                   style: TextStyle(
                                       color: darkTextColor,
                                       fontSize: 13,
@@ -179,7 +179,7 @@ computer is corrupted or lost.
                                       fontWeight: FontWeight.w300)),
                               Text(
                                   textAlign: TextAlign.right,
-                                  "$formatDCR(atomsToDCR(confirmedBalance))",
+                                  "${formatDCR(atomsToDCR(confirmedBalance))}",
                                   style: TextStyle(
                                       color: darkTextColor,
                                       fontSize: 13,
