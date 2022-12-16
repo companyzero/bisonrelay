@@ -76,4 +76,23 @@ class NewConfigModel extends ChangeNotifier {
     rpcHost = res.rpcHost;
     newWalletSeed = res.seed;
   }
+
+  Future<bool> hasLNWalletDB() async {
+    // Check for any of the networks.
+    for (var net in NetworkType.values) {
+      var fname = path.join(await lnWalletDir(), "data", "chain", "decred",
+          NetworkTypeStr(net), "wallet.db");
+      if (File(fname).existsSync()) {
+        netType = net;
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  Future<void> deleteLNWalletDir() async {
+    var dir = await lnWalletDir();
+    await File(dir).delete(recursive: true);
+  }
 }
