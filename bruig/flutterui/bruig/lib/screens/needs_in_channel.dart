@@ -209,7 +209,7 @@ One way of opening a channel with inbound capacity is to pay for a node to open
 a channel back to your LN wallet. This is done through a "Liquidity Provider"
 service.
 
-Note that having a channel with inbound capacity is for sending or receiving 
+Note that having a channel with inbound capacity is not for sending or receiving 
 messages. It is only required in order to receive payments from other users.
 ''',
                           style: TextStyle(
