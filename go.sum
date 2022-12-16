@@ -172,8 +172,8 @@ github.com/decred/dcrd/wire v1.2.0/go.mod h1:/JKOsLInOJu6InN+/zH5AyCq3YDIOW/Eqcf
 github.com/decred/dcrd/wire v1.4.0/go.mod h1:WxC/0K+cCAnBh+SKsRjIX9YPgvrjhmE+6pZlel1G7Ro=
 github.com/decred/dcrd/wire v1.5.0 h1:3SgcEzSjqAMQvOugP0a8iX7yQSpiVT1yNi9bc4iOXVg=
 github.com/decred/dcrd/wire v1.5.0/go.mod h1:fzAjVqw32LkbAZIt5mnrvBR751GTa3e0rRQdOIhPY3w=
-github.com/decred/dcrlnd v0.3.7 h1:YIAzeyzDXf7Zl6IAKPWNwfPrI9vQw0HsSbJNRyzcFvs=
-github.com/decred/dcrlnd v0.3.7/go.mod h1:JDGy+Y2bW/PQVPxrVaphRpNyI0Fnumr/1nf1wK1u1fU=
+github.com/decred/dcrlnd v0.3.8-0.20221102131920-cab0f1036108 h1:ZqdOdlUR5m2yKULWofet++NevzpVofiJaxsqZAY5PeQ=
+github.com/decred/dcrlnd v0.3.8-0.20221102131920-cab0f1036108/go.mod h1:JDGy+Y2bW/PQVPxrVaphRpNyI0Fnumr/1nf1wK1u1fU=
 github.com/decred/dcrlnlpd v0.0.0-20220923190153-dbfb003271b0 h1:CWU00CAlV1SIUxf1+SJsZxlGgzCv5hk8/5U1UZ38FH8=
 github.com/decred/dcrlnlpd v0.0.0-20220923190153-dbfb003271b0/go.mod h1:Trewq60nOIFOxvZYPrJ6Ce6BBJfCZ9FLyGs0gO6TYF4=
 github.com/decred/go-socks v1.1.0 h1:dnENcc0KIqQo3HSXdgboXAHgqsCIutkqq6ntQjYtm2U=
