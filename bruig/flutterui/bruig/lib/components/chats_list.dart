@@ -145,8 +145,10 @@ class ChatsList extends StatelessWidget {
       filePath = filePath.trim();
       if (filePath == "") return;
       var invite = await Golib.decodeInvite(filePath);
-      Navigator.pop(context);
-      Navigator.pushNamed(context, '/verifyInvite', arguments: invite);
+      //Navigator.pop(context);
+      Navigator.of(context, rootNavigator: true).pop();
+      Navigator.of(context, rootNavigator: true)
+          .pushNamed('/verifyInvite', arguments: invite);
     }
 
     var theme = Theme.of(context);
