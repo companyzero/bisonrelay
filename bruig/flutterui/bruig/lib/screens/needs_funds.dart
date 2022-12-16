@@ -131,7 +131,7 @@ The wallet requires on-chain DCR funds to be able to open Lightning Network (LN)
 channels and perform payments to the server and other users of the Bison Relay
 network.
 
-Send DCR funds to the folowing address to receive funds in your wallet. Note that
+Send DCR funds to the following address to receive funds in your wallet. Note that
 the wallet seed will be needed to recover these funds if the wallet data in this
 computer is corrupted or lost.
 ''',
