@@ -34,7 +34,7 @@ class _SidebarState extends State<Sidebar> {
   }
 
   void switchScreen(String route) {
-    widget.navKey.currentState!.pushNamed(route);
+    widget.navKey.currentState!.pushReplacementNamed(route);
   }
 
   void menuUpdated() {
