@@ -97,7 +97,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
           color: backgroundColor,
           borderRadius: BorderRadius.circular(3),
         ),
-        child: const ActiveChat(),
+        child: ActiveChat(),
       )),
     ]);
   }
