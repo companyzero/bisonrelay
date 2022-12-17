@@ -112,6 +112,33 @@ class _ChatHeadingWState extends State<_ChatHeadingW> {
   }
 }
 
+Future<void> generateInvite(BuildContext context) async {
+  var filePath = await FilePicker.platform.saveFile(
+    dialogTitle: "Select invitation file location",
+    fileName: "invite.bin",
+  );
+  if (filePath == null) return;
+  try {
+    await Golib.generateInvite(filePath);
+    showSuccessSnackbar(context, "Generated invitation at $filePath");
+  } catch (exception) {
+    showErrorSnackbar(context, "Unable to generate invitation: $exception");
+  }
+}
+
+Future<void> loadInvite(BuildContext context) async {
+  // Decode the invite and send to the user verification screen.
+  var filePickRes = await FilePicker.platform.pickFiles();
+  if (filePickRes == null) return;
+  var filePath = filePickRes.files.first.path;
+  if (filePath == null) return;
+  filePath = filePath.trim();
+  if (filePath == "") return;
+  var invite = await Golib.decodeInvite(filePath);
+  Navigator.of(context, rootNavigator: true)
+      .pushNamed('/verifyInvite', arguments: invite);
+}
+
 class ChatsList extends StatelessWidget {
   final FocusNode editLineFocusNode;
   ChatsList(this.editLineFocusNode, {super.key});
@@ -122,18 +149,8 @@ class ChatsList extends StatelessWidget {
       Navigator.of(context, rootNavigator: true).pushNamed('/newGC');
     }
 
-    void generateInvite() async {
-      var filePath = await FilePicker.platform.saveFile(
-        dialogTitle: "Select invitation file location",
-        fileName: "invite.bin",
-      );
-      if (filePath == null) return;
-      try {
-        await Golib.generateInvite(filePath);
-        showSuccessSnackbar(context, "Generated invitation at $filePath");
-      } catch (exception) {
-        showErrorSnackbar(context, "Unable to generate invitation: $exception");
-      }
+    void genInvite() async {
+      await generateInvite(context);
       editLineFocusNode.requestFocus();
     }
 
@@ -141,19 +158,6 @@ class ChatsList extends StatelessWidget {
       client.subGCMenu = [];
       client.subUserMenu = [];
       editLineFocusNode.requestFocus();
-    }
-
-    void loadInvite() async {
-      // Decode the invite and send to the user verification screen.
-      var filePickRes = await FilePicker.platform.pickFiles();
-      if (filePickRes == null) return;
-      var filePath = filePickRes.files.first.path;
-      if (filePath == null) return;
-      filePath = filePath.trim();
-      if (filePath == "") return;
-      var invite = await Golib.decodeInvite(filePath);
-      Navigator.of(context, rootNavigator: true)
-          .pushNamed('/verifyInvite', arguments: invite);
     }
 
     var theme = Theme.of(context);
@@ -274,7 +278,7 @@ class ChatsList extends StatelessWidget {
                               splashRadius: 15,
                               iconSize: 15,
                               tooltip: "Load Invite",
-                              onPressed: () => loadInvite(),
+                              onPressed: () => loadInvite(context),
                               icon: Icon(
                                   size: 15, color: darkTextColor, Icons.add)))),
                   Positioned(
@@ -287,7 +291,7 @@ class ChatsList extends StatelessWidget {
                               splashRadius: 15,
                               iconSize: 15,
                               tooltip: "Generate Invite",
-                              onPressed: () => generateInvite(),
+                              onPressed: () => genInvite(),
                               icon: Icon(
                                   size: 15,
                                   color: darkTextColor,
