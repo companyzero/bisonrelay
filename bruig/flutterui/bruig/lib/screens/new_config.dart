@@ -8,6 +8,7 @@ import 'package:bruig/screens/newconfig/ln_choice_external.dart';
 import 'package:bruig/screens/newconfig/ln_choice_internal.dart';
 import 'package:bruig/screens/newconfig/ln_wallet_seed.dart';
 import 'package:bruig/screens/newconfig/network_choice.dart';
+import 'package:bruig/screens/newconfig/restore_wallet.dart';
 import 'package:bruig/screens/newconfig/server.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -56,6 +57,7 @@ class _NewConfigScreenState extends State<NewConfigScreen> {
               LNExternalWalletPage(newconf),
           "/newconf/server": (context) => ServerPage(newconf),
           "/newconf/seed": (context) => NewLNWalletSeedPage(newconf),
+          "/newconf/restore": (context) => RestoreWalletPage(newconf),
         },
         builder: (BuildContext context, Widget? child) => Scaffold(
           body: Center(child: child),

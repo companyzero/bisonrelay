@@ -35,10 +35,17 @@ class _LNInternalWalletPageState extends State<LNInternalWalletPage> {
       loading = true;
     });
     try {
-      await widget.newconf.createNewWallet(passCtrl.text);
+      await widget.newconf
+          .createNewWallet(passCtrl.text, newconf.seedToRestore);
       Navigator.of(context).pushNamed("/newconf/seed");
     } catch (exception) {
       showErrorSnackbar(context, "Unable to create new LN wallet: $exception");
+      if (newconf.seedToRestore.isNotEmpty) {
+        // This assumes if there was a previously existing wallet, the user was
+        // already given the choice to delete it.
+        newconf.deleteLNWalletDir();
+        Navigator.of(context).pushNamed("/newconf/restore");
+      }
     } finally {
       setState(() {
         loading = false;
@@ -49,6 +56,10 @@ class _LNInternalWalletPageState extends State<LNInternalWalletPage> {
   void startAdvancedSetup() {
     newconf.advancedSetup = true;
     Navigator.of(context).pushNamed("/newconf/networkChoice");
+  }
+
+  void startSeedRestore() {
+    Navigator.of(context).pushNamed("/newconf/restore");
   }
 
   @override
@@ -90,7 +101,10 @@ class _LNInternalWalletPageState extends State<LNInternalWalletPage> {
                         fontSize: 34,
                         fontWeight: FontWeight.w200)),
                 const SizedBox(height: 20),
-                Text("Creating New Wallet",
+                Text(
+                    newconf.seedToRestore.isEmpty
+                        ? "Creating New Wallet"
+                        : "Restoring Wallet",
                     style: TextStyle(
                         color: secondaryTextColor,
                         fontSize: 21,
@@ -173,13 +187,22 @@ class _LNInternalWalletPageState extends State<LNInternalWalletPage> {
                           ]))),
                 ]),
                 const Expanded(child: Empty()),
-                !newconf.advancedSetup
-                    ? TextButton(
-                        child: Text("Advanced Setup",
-                            style: TextStyle(color: textColor)),
-                        onPressed: startAdvancedSetup,
-                      )
-                    : const Empty(),
+                Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                  !newconf.advancedSetup
+                      ? TextButton(
+                          onPressed: startAdvancedSetup,
+                          child: Text("Advanced Setup",
+                              style: TextStyle(color: textColor)),
+                        )
+                      : const Empty(),
+                  newconf.seedToRestore.isEmpty
+                      ? TextButton(
+                          onPressed: startSeedRestore,
+                          child: Text("Restore from Seed",
+                              style: TextStyle(color: textColor)),
+                        )
+                      : const Empty(),
+                ])
               ]))
         ]));
   }
