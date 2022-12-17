@@ -120,7 +120,9 @@ func (lndc *Dcrlnd) reconnect(ctx context.Context) error {
 
 // Create attempts to create a new wallet using a new seed and protects the
 // wallet with the given passphrase. The seed for the wallet is returned.
-func (lndc *Dcrlnd) Create(ctx context.Context, pass string, existingSeed []string) ([]byte, error) {
+func (lndc *Dcrlnd) Create(ctx context.Context, pass string, existingSeed []string,
+	multiChanBackup []byte) ([]byte, error) {
+
 	lnUnlocker := lnrpc.NewWalletUnlockerClient(lndc.conn)
 
 	var seedMnemonic []string
@@ -137,6 +139,13 @@ func (lndc *Dcrlnd) Create(ctx context.Context, pass string, existingSeed []stri
 	initReq := &lnrpc.InitWalletRequest{
 		WalletPassword:     []byte(pass),
 		CipherSeedMnemonic: seedMnemonic,
+	}
+	if len(multiChanBackup) > 0 {
+		initReq.ChannelBackups = &lnrpc.ChanBackupSnapshot{
+			MultiChanBackup: &lnrpc.MultiChanBackup{
+				MultiChanBackup: multiChanBackup,
+			},
+		}
 	}
 	_, err := lnUnlocker.InitWallet(ctx, initReq)
 	if err != nil {

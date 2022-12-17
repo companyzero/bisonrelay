@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:bruig/config.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/services.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:path/path.dart' as path;
@@ -40,6 +41,7 @@ class NewConfigModel extends ChangeNotifier {
   String newWalletSeed = "";
   bool advancedSetup = false;
   List<String> seedToRestore = [];
+  Uint8List? multichanBackupRestore;
 
   Future<LNInfo> tryExternalDcrlnd(
       String host, String tlsPath, String macaroonPath) async {
@@ -71,8 +73,8 @@ class NewConfigModel extends ChangeNotifier {
       String password, List<String> existingSeed) async {
     var rootPath = await lnWalletDir();
     await Directory(rootPath).create(recursive: true);
-    var res = await Golib.lnInitDcrlnd(
-        rootPath, NetworkTypeStr(netType), password, existingSeed);
+    var res = await Golib.lnInitDcrlnd(rootPath, NetworkTypeStr(netType),
+        password, existingSeed, multichanBackupRestore);
     tlsCertPath = path.join(rootPath, "tls.cert");
     macaroonPath = path.join(rootPath, "data", "chain", "decred",
         NetworkTypeStr(netType), "admin.macaroon");

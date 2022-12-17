@@ -1007,6 +1007,8 @@ class LNPeer {
 
 String hexToBase64(String? s) => s != null ? base64Encode(hex.decode(s)) : "";
 String base64ToHex(String s) => s != null ? hex.encode(base64Decode(s)) : "";
+String uint8listToBase64(Uint8List? b) => b != null ? base64Encode(b) : "";
+Uint8List? base64ToUint8list(String s) => s != "" ? base64Decode(s) : null;
 
 @JsonSerializable()
 class LNOpenChannelRequest {
@@ -1091,8 +1093,11 @@ class LNInitDcrlnd {
   final String network;
   final String password;
   final List<String> existingSeed;
+  @JsonKey(toJson: uint8listToBase64, fromJson: base64ToUint8list)
+  final Uint8List? multiChanBackup;
 
-  LNInitDcrlnd(this.rootDir, this.network, this.password, this.existingSeed);
+  LNInitDcrlnd(this.rootDir, this.network, this.password, this.existingSeed,
+      this.multiChanBackup);
   Map<String, dynamic> toJson() => _$LNInitDcrlndToJson(this);
 }
 
@@ -1664,16 +1669,21 @@ abstract class PluginPlatform {
     return LNInfo.fromJson(res);
   }
 
-  Future<LNNewWalletSeed> lnInitDcrlnd(String rootPath, String network,
-      String password, List<String> existingSeed) async {
-    var req = LNInitDcrlnd(rootPath, network, password, existingSeed);
+  Future<LNNewWalletSeed> lnInitDcrlnd(
+      String rootPath,
+      String network,
+      String password,
+      List<String> existingSeed,
+      Uint8List? multiChanBackup) async {
+    var req = LNInitDcrlnd(
+        rootPath, network, password, existingSeed, multiChanBackup);
     var res = await asyncCall(CTLNInitDcrlnd, req);
     return LNNewWalletSeed.fromJson(res);
   }
 
   Future<String> lnRunDcrlnd(
       String rootPath, String network, String password) async {
-    var req = LNInitDcrlnd(rootPath, network, password, []);
+    var req = LNInitDcrlnd(rootPath, network, password, [], null);
     var res = await asyncCall(CTLNRunDcrlnd, req);
     return res;
   }
@@ -1715,6 +1725,11 @@ abstract class PluginPlatform {
     return (res as Map<String, dynamic>).map<String, UserPayStats>(
         (k, v) => MapEntry(k, UserPayStats.fromJson(v)));
   }
+
+  Future<void> lnRestoreMultiSCB(Uint8List scb) async =>
+      await asyncCall(CTLNRestoreMultiSCB, uint8listToBase64(scb));
+  Future<Uint8List> lnSaveMultiSCB() async =>
+      base64ToUint8list(await asyncCall(CTLNSaveMultiSCB, null))!;
 
   Future<List<PayStatsSummary>> summarizeUserPayStats(String uid) async {
     var res = await asyncCall(CTSummUserPayStats, uid);
@@ -1830,6 +1845,8 @@ const int CTLNGetNodeInfo = 0x5f;
 const int CTCreateLockFile = 0x60;
 const int CTCloseLockFile = 0x61;
 const int CTSkipWalletCheck = 0x62;
+const int CTLNRestoreMultiSCB = 0x63;
+const int CTLNSaveMultiSCB = 0x64;
 
 const int notificationsStartID = 0x1000;
 

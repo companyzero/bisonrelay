@@ -96,6 +96,8 @@ const (
 	CTCreateLockFile                  = 0x60
 	CTCloseLockFile                   = 0x61
 	CTSkipWalletCheck                 = 0x62
+	CTLNRestoreMultiSCB               = 0x63
+	CTLNSaveMultiSCB                  = 0x64
 
 	NTInviteReceived         = 0x1001
 	NTInviteAccepted         = 0x1002

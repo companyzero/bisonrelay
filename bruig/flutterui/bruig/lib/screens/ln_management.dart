@@ -1,4 +1,5 @@
 import 'package:bruig/components/buttons.dart';
+import 'package:bruig/screens/ln/backups.dart';
 import 'package:bruig/screens/ln/channels.dart';
 import 'package:bruig/screens/ln/info.dart';
 import 'package:bruig/screens/ln/network.dart';
@@ -40,6 +41,8 @@ class _LNScreenState extends State<LNScreen> {
         return const LNPaymentsPage();
       case 3:
         return const LNNetworkPage();
+      case 4:
+        return const LNBackupsPage();
     }
     return Text("Active is $tabIndex");
   }

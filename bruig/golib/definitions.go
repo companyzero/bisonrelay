@@ -194,10 +194,11 @@ type LNTryExternalDcrlnd struct {
 }
 
 type LNInitDcrlnd struct {
-	RootDir      string   `json:"root_dir"`
-	Network      string   `json:"network"`
-	Password     string   `json:"password"`
-	ExistingSeed []string `json:"existingseed"`
+	RootDir         string   `json:"root_dir"`
+	Network         string   `json:"network"`
+	Password        string   `json:"password"`
+	ExistingSeed    []string `json:"existingseed"`
+	MultiChanBackup []byte   `json:"multichanbackup"`
 }
 
 type LNNewWalletSeed struct {

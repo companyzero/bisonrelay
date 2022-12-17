@@ -1,12 +1,19 @@
 import 'package:bruig/components/empty_widget.dart';
+import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/models/newconfig.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:bruig/components/buttons.dart';
+import 'package:flutter/services.dart';
 
 class NewLNWalletSeedPage extends StatelessWidget {
   final NewConfigModel newconf;
   const NewLNWalletSeedPage(this.newconf, {Key? key}) : super(key: key);
+
+  void copySeedToClipboard(BuildContext context) async {
+    Clipboard.setData(ClipboardData(text: newconf.newWalletSeed));
+    showSuccessSnackbar(context, "Copied seed to clipboard!");
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -75,6 +82,12 @@ class NewLNWalletSeedPage extends StatelessWidget {
                                         fontWeight: FontWeight.w300)))
                             : const Empty()
                     ])),
+              ),
+              const SizedBox(height: 10),
+              TextButton(
+                onPressed: () => copySeedToClipboard(context),
+                child: Text("Copy to Clipboard",
+                    style: TextStyle(color: textColor)),
               ),
               /*   XXX NEED TO FIGURE OUT LISTVIEW within a row FOR SEED WORD BUBBLES
               Expanded(

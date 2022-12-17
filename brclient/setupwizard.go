@@ -617,7 +617,7 @@ func cmdRunDcrlnd(ctx context.Context, root string, network string,
 func cmdCreateWallet(lndc *embeddeddcrlnd.Dcrlnd, pass string, existingSeed []string) tea.Msg {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
 	defer cancel()
-	seed, err := lndc.Create(ctx, pass, existingSeed)
+	seed, err := lndc.Create(ctx, pass, existingSeed, nil)
 	if err != nil {
 		err = fmt.Errorf("unable to create wallet: %v", err)
 	}
