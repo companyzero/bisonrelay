@@ -1090,8 +1090,9 @@ class LNInitDcrlnd {
   final String rootDir;
   final String network;
   final String password;
+  final List<String> existingSeed;
 
-  LNInitDcrlnd(this.rootDir, this.network, this.password);
+  LNInitDcrlnd(this.rootDir, this.network, this.password, this.existingSeed);
   Map<String, dynamic> toJson() => _$LNInitDcrlndToJson(this);
 }
 
@@ -1663,16 +1664,16 @@ abstract class PluginPlatform {
     return LNInfo.fromJson(res);
   }
 
-  Future<LNNewWalletSeed> lnInitDcrlnd(
-      String rootPath, String network, String password) async {
-    var req = LNInitDcrlnd(rootPath, network, password);
+  Future<LNNewWalletSeed> lnInitDcrlnd(String rootPath, String network,
+      String password, List<String> existingSeed) async {
+    var req = LNInitDcrlnd(rootPath, network, password, existingSeed);
     var res = await asyncCall(CTLNInitDcrlnd, req);
     return LNNewWalletSeed.fromJson(res);
   }
 
   Future<String> lnRunDcrlnd(
       String rootPath, String network, String password) async {
-    var req = LNInitDcrlnd(rootPath, network, password);
+    var req = LNInitDcrlnd(rootPath, network, password, []);
     var res = await asyncCall(CTLNRunDcrlnd, req);
     return res;
   }

@@ -1077,6 +1077,7 @@ LNInitDcrlnd _$LNInitDcrlndFromJson(Map<String, dynamic> json) => LNInitDcrlnd(
       json['root_dir'] as String,
       json['network'] as String,
       json['password'] as String,
+      (json['existingSeed'] as List<dynamic>).map((e) => e as String).toList(),
     );
 
 Map<String, dynamic> _$LNInitDcrlndToJson(LNInitDcrlnd instance) =>
@@ -1084,6 +1085,7 @@ Map<String, dynamic> _$LNInitDcrlndToJson(LNInitDcrlnd instance) =>
       'root_dir': instance.rootDir,
       'network': instance.network,
       'password': instance.password,
+      'existingSeed': instance.existingSeed,
     };
 
 LNNewWalletSeed _$LNNewWalletSeedFromJson(Map<String, dynamic> json) =>

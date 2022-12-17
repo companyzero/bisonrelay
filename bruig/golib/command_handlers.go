@@ -1218,8 +1218,7 @@ func handleLNInitDcrlnd(args LNInitDcrlnd) (*LNNewWalletSeed, error) {
 	}
 
 	// Call the create wallet gRPC endpoint.
-	var existingSeed []string
-	seed, err := lndc.Create(ctx, args.Password, existingSeed)
+	seed, err := lndc.Create(ctx, args.Password, args.ExistingSeed)
 	if err != nil {
 		return nil, err
 	}
