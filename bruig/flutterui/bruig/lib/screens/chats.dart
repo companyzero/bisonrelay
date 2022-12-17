@@ -1,3 +1,4 @@
+import 'package:bruig/components/buttons.dart';
 import 'package:bruig/components/chats_list.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/models/notifications.dart';
@@ -88,6 +89,53 @@ class _ChatsScreenState extends State<ChatsScreen> {
   Widget build(BuildContext context) {
     var theme = Theme.of(context);
     var backgroundColor = theme.backgroundColor;
+    var textColor = const Color(0xFF8E8D98);
+    var secondaryTextColor = const Color(0xFFE4E3E6);
+
+    if (client.chats.isEmpty) {
+      return Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(color: backgroundColor),
+          child: Center(
+              child: Column(
+            children: [
+              const SizedBox(height: 34),
+              Text("Initial Invitation",
+                  style: TextStyle(
+                      color: textColor,
+                      fontSize: 34,
+                      fontWeight: FontWeight.w200)),
+              const SizedBox(height: 34),
+              Text('''
+Bison Relay does not rely on a central server for user accounts, so to chat
+with someone else you need to exchange an invitation with them. This is 
+just a file that should be sent via some other secure transfer method.
+
+After the invitation is accepted, you'll be able to chat with them, and if they
+know other people, they'll be able to connect you with them.
+''',
+                  style: TextStyle(
+                      color: secondaryTextColor,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w300)),
+              const SizedBox(height: 34),
+              Center(
+                child:
+                    Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                  LoadingScreenButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    text: "Load Invitation",
+                  ),
+                  const SizedBox(width: 34),
+                  LoadingScreenButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    text: "Create Invitation",
+                  )
+                ]),
+              ),
+            ],
+          )));
+    }
 
     return Row(children: [
       Container(width: 163, child: ChatDrawerMenu(editLineFocusNode)),

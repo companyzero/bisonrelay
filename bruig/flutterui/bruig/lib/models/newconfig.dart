@@ -38,6 +38,7 @@ class NewConfigModel extends ChangeNotifier {
   String macaroonPath = "";
   String serverAddr = "";
   String newWalletSeed = "";
+  bool advancedSetup = false;
 
   Future<LNInfo> tryExternalDcrlnd(
       String host, String tlsPath, String macaroonPath) async {

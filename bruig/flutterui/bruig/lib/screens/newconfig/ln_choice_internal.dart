@@ -13,6 +13,7 @@ class LNInternalWalletPage extends StatefulWidget {
 }
 
 class _LNInternalWalletPageState extends State<LNInternalWalletPage> {
+  NewConfigModel get newconf => widget.newconf;
   TextEditingController passCtrl = TextEditingController();
   TextEditingController passRepeatCtrl = TextEditingController();
   bool loading = false;
@@ -43,6 +44,11 @@ class _LNInternalWalletPageState extends State<LNInternalWalletPage> {
         loading = false;
       });
     }
+  }
+
+  void startAdvancedSetup() {
+    newconf.advancedSetup = true;
+    Navigator.of(context).pushNamed("/newconf/networkChoice");
   }
 
   @override
@@ -164,8 +170,16 @@ class _LNInternalWalletPageState extends State<LNInternalWalletPage> {
                                         strokeWidth: 2),
                                   )
                                 : const SizedBox(width: 25),
-                          ])))
-                ])
+                          ]))),
+                ]),
+                const Expanded(child: Empty()),
+                !newconf.advancedSetup
+                    ? TextButton(
+                        child: Text("Advanced Setup",
+                            style: TextStyle(color: textColor)),
+                        onPressed: startAdvancedSetup,
+                      )
+                    : const Empty(),
               ]))
         ]));
   }
