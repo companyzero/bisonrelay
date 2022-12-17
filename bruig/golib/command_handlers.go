@@ -1175,6 +1175,36 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 
 	case CTSkipWalletCheck:
 		go func() { cc.skipWalletCheckChan <- struct{}{} }()
+
+	case CTLNRestoreMultiSCB:
+		if lnc == nil {
+			return nil, fmt.Errorf("ln client not initialized")
+		}
+		var args []byte
+		if err := cmd.decode(&args); err != nil {
+			return nil, err
+		}
+
+		_, err := lnc.RestoreChannelBackups(context.Background(),
+			&lnrpc.RestoreChanBackupRequest{
+				Backup: &lnrpc.RestoreChanBackupRequest_MultiChanBackup{
+					MultiChanBackup: args,
+				},
+			})
+		return nil, err
+
+	case CTLNSaveMultiSCB:
+		if lnc == nil {
+			return nil, fmt.Errorf("ln client not initialized")
+		}
+
+		res, err := lnc.ExportAllChannelBackups(context.Background(),
+			&lnrpc.ChanBackupExportRequest{})
+		if err != nil {
+			return nil, err
+		}
+		return res.MultiChanBackup.MultiChanBackup, nil
+
 	}
 
 	return nil, nil
@@ -1218,7 +1248,7 @@ func handleLNInitDcrlnd(args LNInitDcrlnd) (*LNNewWalletSeed, error) {
 	}
 
 	// Call the create wallet gRPC endpoint.
-	seed, err := lndc.Create(ctx, args.Password, args.ExistingSeed)
+	seed, err := lndc.Create(ctx, args.Password, args.ExistingSeed, args.MultiChanBackup)
 	if err != nil {
 		return nil, err
 	}

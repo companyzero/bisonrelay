@@ -1078,6 +1078,7 @@ LNInitDcrlnd _$LNInitDcrlndFromJson(Map<String, dynamic> json) => LNInitDcrlnd(
       json['network'] as String,
       json['password'] as String,
       (json['existingSeed'] as List<dynamic>).map((e) => e as String).toList(),
+      base64ToUint8list(json['multiChanBackup'] as String),
     );
 
 Map<String, dynamic> _$LNInitDcrlndToJson(LNInitDcrlnd instance) =>
@@ -1086,6 +1087,7 @@ Map<String, dynamic> _$LNInitDcrlndToJson(LNInitDcrlnd instance) =>
       'network': instance.network,
       'password': instance.password,
       'existingSeed': instance.existingSeed,
+      'multiChanBackup': uint8listToBase64(instance.multiChanBackup),
     };
 
 LNNewWalletSeed _$LNNewWalletSeedFromJson(Map<String, dynamic> json) =>

@@ -1,6 +1,10 @@
+import 'dart:io';
+
 import 'package:bruig/components/buttons.dart';
+import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/models/newconfig.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
@@ -15,6 +19,7 @@ class RestoreWalletPage extends StatefulWidget {
 class _RestoreWalletPageState extends State<RestoreWalletPage> {
   NewConfigModel get newconf => widget.newconf;
   TextEditingController seedCtrl = TextEditingController();
+  String scbFilename = "";
 
   @override
   void initState() {
@@ -35,6 +40,24 @@ class _RestoreWalletPageState extends State<RestoreWalletPage> {
 
     newconf.seedToRestore = split;
     Navigator.of(context).pushNamed("/newconf/lnChoice/internal");
+  }
+
+  void selectSCB() async {
+    try {
+      var filePickRes = await FilePicker.platform.pickFiles();
+      if (filePickRes == null) return;
+      var filePath = filePickRes.files.first.path;
+      if (filePath == null) return;
+      filePath = filePath.trim();
+      if (filePath == "") return;
+      var scb = await File(filePath).readAsBytes();
+      setState(() {
+        scbFilename = filePath!;
+      });
+      newconf.multichanBackupRestore = scb;
+    } catch (exception) {
+      showErrorSnackbar(context, "Unable to load SCB file: $exception");
+    }
   }
 
   @override
@@ -100,7 +123,21 @@ class _RestoreWalletPageState extends State<RestoreWalletPage> {
                             style: TextStyle(
                                 color: secondaryTextColor, fontSize: 21),
                             controller: seedCtrl))),
-                SizedBox(height: 34),
+                const SizedBox(height: 10),
+                Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                  TextButton(
+                    onPressed: selectSCB,
+                    child: Text(
+                      "Select optional SCB file To Restore",
+                      style: TextStyle(color: textColor),
+                    ),
+                  ),
+                  scbFilename.isNotEmpty
+                      ? Text(scbFilename,
+                          style: TextStyle(color: darkTextColor))
+                      : const Empty(),
+                ]),
+                const SizedBox(height: 34),
                 Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                   LoadingScreenButton(
                     onPressed: useSeed,

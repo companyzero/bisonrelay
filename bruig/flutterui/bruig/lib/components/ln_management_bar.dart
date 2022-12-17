@@ -104,6 +104,18 @@ class _LNManagementBarState extends State<LNManagementBar> {
               tabChange(3);
             },
           ),
+          ListTile(
+            title: Text("Backups",
+                style: TextStyle(
+                    color: selectedIndex == 4
+                        ? selectedTextColor
+                        : unselectedTextColor,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w400)),
+            onTap: () {
+              tabChange(4);
+            },
+          ),
         ]));
   }
 }
