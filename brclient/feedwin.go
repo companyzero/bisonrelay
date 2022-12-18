@@ -48,6 +48,12 @@ func (fw *feedWindow) renderPostSumm(post clientdb.PostSummary,
 	author, relayedBy := fw.as.postAuthorRelayer(post)
 	authorMe := post.AuthorID == me
 
+	// Limit displayed title.
+	maxTitleLen := fw.as.winW - 22 - min(len(author), 15) // timestamp + "by <author>"
+	if maxTitleLen > 0 && len(title) > maxTitleLen {
+		title = title[:maxTitleLen]
+	}
+
 	if fw.idx == i {
 		b.WriteString(st.focused.Render(pf("%s %s by %s", date, title, author)))
 	} else {
@@ -130,6 +136,7 @@ func (fw feedWindow) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg: // resize window
 		fw.as.winW = msg.Width
 		fw.as.winH = msg.Height
+		fw.renderPosts()
 
 	case tea.KeyMsg:
 		switch {
