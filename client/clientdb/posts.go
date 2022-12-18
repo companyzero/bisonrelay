@@ -42,7 +42,11 @@ func PostSummFromMetadata(post *rpc.PostMetadata, from UserID) PostSummary {
 	var pid PostID
 	_ = pid.FromString(post.Attributes[rpc.RMPIdentifier])
 
+	const maxTitleLen = 255
 	title := clientintf.PostTitle(post)
+	if len(title) > maxTitleLen {
+		title = title[:maxTitleLen]
+	}
 	return PostSummary{
 		ID:         pid,
 		From:       from,
