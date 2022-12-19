@@ -205,6 +205,7 @@ func (pw *postWindow) renderComment(cmt *comment, write func(s string), idx int)
 	nickStyle := styles.nick
 	contentStyle := styles.noStyle
 	uidStyle := styles.help
+	timestampStyle := styles.timestampHelp
 
 	const indentSz = 2 // ident per comment level
 	totIndent := indentSz * cmt.depth
@@ -215,41 +216,65 @@ func (pw *postWindow) renderComment(cmt *comment, write func(s string), idx int)
 		nickStyle = styles.focused
 		contentStyle = styles.focused
 		uidStyle = styles.focused
+		timestampStyle = styles.focused
 		pw.debug = cmt.id.String()
 	}
 
+	maxAuthorLen := max(pw.as.winW-29-len(indent), 5)
+
 	write(fromStyle.Render(indent))
+	authorLineLen := len(indent)
 	switch {
 	case cmt.from == "" && cmt.fromUID == nil:
-		write(uidStyle.Render("[unknown from UID]"))
+		s := "[unknown from UID]"
+		write(uidStyle.Render(s))
+		authorLineLen += len(s)
 	case cmt.fromUID != nil:
 		if ignored, _ := pw.as.c.IsIgnored(*cmt.fromUID); ignored {
 			cmt.from = "(ignored)"
 			cmt.comment = "(ignored)"
 		}
 
-		if cmt.from != "" {
-			write(nickStyle.Render(strescape.Nick(cmt.from)))
-		} else {
-			write(uidStyle.Render("[unknown peer]"))
+		if _, ok := pw.requestedInvites[*cmt.fromUID]; ok {
+			maxAuthorLen = max(maxAuthorLen-66, 5)
 		}
 
-		if _, ok := pw.requestedInvites[*cmt.fromUID]; ok {
-			write(uidStyle.Render("    (requested trans invite from poster)"))
+		if cmt.from != "" {
+			s := limitStr(strescape.Nick(cmt.from), maxAuthorLen)
+			write(nickStyle.Render(s))
+			authorLineLen += len(s)
 		} else {
-			write(uidStyle.Render("    " + cmt.fromUID.String()))
+			s := "[unknown peer]"
+			write(uidStyle.Render(s))
+			authorLineLen += len(s)
+		}
+
+		maxExtraLen := max(pw.as.winW-authorLineLen-27, 5)
+
+		if _, ok := pw.requestedInvites[*cmt.fromUID]; ok {
+			s := limitStr("    (requested trans invite from poster)", maxExtraLen)
+			write(uidStyle.Render(s))
+			authorLineLen += len(s)
+		} else {
+			s := limitStr("    "+cmt.fromUID.String(), maxExtraLen)
+			write(uidStyle.Render(s))
+			authorLineLen += len(s)
 		}
 	default:
-		write(nickStyle.Render(strescape.Nick(cmt.from)))
+		s := limitStr(strescape.Nick(cmt.from), maxAuthorLen)
+		write(nickStyle.Render(s))
+		authorLineLen += len(s)
+	}
+	if cmt.timestamp > 0 && (pw.as.winW-authorLineLen) > 0 {
+		spaceNb := (pw.as.winW - authorLineLen) - 27
+		if spaceNb > 0 {
+			write(strings.Repeat(" ", spaceNb))
+		}
+		date := time.Unix(cmt.timestamp, 0).Format("2006-01-02 15:04")
+		write(timestampStyle.Render(" Received "))
+		write(timestampStyle.Render(date))
 	}
 	write("\n")
-	if cmt.timestamp > 0 {
-		date := time.Unix(cmt.timestamp, 0).Format("2006-01-02 15:04")
-		write(indent)
-		write(styles.help.Render("Received "))
-		write(styles.timestampHelp.Render(date))
-		write("\n")
-	}
 
 	// TODO: Markdown, escape.
 	lines := strings.Split(cmt.comment, "\n")

@@ -60,6 +60,13 @@ func abs(v int) int {
 	return v
 }
 
+func limitStr(s string, maxLen int) string {
+	if maxLen >= 0 && len(s) > maxLen {
+		return s[:maxLen]
+	}
+	return s
+}
+
 // ltjustify truncates or left-justifies the given string, by either adding
 // or removing characters at the end of the string until it is of the specified
 // length.
