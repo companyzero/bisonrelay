@@ -489,6 +489,7 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
                                     p: TextStyle(
                                         color: textColor,
                                         fontSize: 13,
+                                        fontWeight: FontWeight.w300,
                                         letterSpacing: 0.44),
                                     h1: TextStyle(color: textColor),
                                     h2: TextStyle(color: textColor),
@@ -499,7 +500,15 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
                                     em: TextStyle(color: textColor),
                                     strong: TextStyle(color: textColor),
                                     del: TextStyle(color: textColor),
+                                    listBullet: TextStyle(color: textColor),
                                     blockquote: TextStyle(color: textColor),
+                                    tableBody: TextStyle(color: textColor),
+                                    tableHead: TextStyle(color: textColor),
+                                    blockquoteDecoration:
+                                        BoxDecoration(color: darkTextColor),
+                                    codeblockDecoration:
+                                        BoxDecoration(color: darkTextColor),
+                                    code: TextStyle(color: textColor),
                                   ),
                                   selectable: true,
                                   data: markdownData,

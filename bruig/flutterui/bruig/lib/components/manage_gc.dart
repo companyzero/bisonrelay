@@ -198,6 +198,8 @@ class ManageGCScreenState extends State<ManageGCScreenForChat> {
 
   @override
   Widget build(BuildContext context) {
+    var theme = Theme.of(context);
+    var textColor = theme.focusColor;
     if (firstLoading) {
       return const Scaffold(body: Center(child: Text("Loading...")));
     }
@@ -211,11 +213,13 @@ class ManageGCScreenState extends State<ManageGCScreenForChat> {
                 child: Column(
                   children: [
                     Row(children: [
-                      const Text("Managing GC - ",
-                          style: TextStyle(fontSize: 20)),
+                      Text("Managing GC - ",
+                          style: TextStyle(fontSize: 20, color: textColor)),
                       Text(gcName,
-                          style: const TextStyle(
-                              fontSize: 20, fontWeight: FontWeight.bold)),
+                          style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: textColor)),
                       const SizedBox(width: 20),
                       isAdmin
                           ? ElevatedButton(
