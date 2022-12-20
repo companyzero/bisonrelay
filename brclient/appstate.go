@@ -2357,13 +2357,15 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 
 			// user == nil when event is a post being relayed for
 			// the first time.
+			nick := "(no nick)"
 			if user != nil {
 				if user.IsIgnored() {
 					return
 				}
+				nick = user.Nick()
 			}
 			as.diagMsg("Received post %q (%s) from %q",
-				summ.Title, summ.ID, user.Nick())
+				summ.Title, summ.ID, nick)
 
 			// Store new post.
 			as.loadPosts()
