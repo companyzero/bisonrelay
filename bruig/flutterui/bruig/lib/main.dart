@@ -31,6 +31,7 @@ import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:provider/provider.dart';
+import 'package:window_size/window_size.dart';
 import 'package:window_manager/window_manager.dart';
 import './screens/app_start.dart';
 
@@ -39,6 +40,8 @@ final Random random = Random();
 void main(List<String> args) async {
   // Ensure the platform bindings are initialized.
   WidgetsFlutterBinding.ensureInitialized();
+
+  setWindowTitle("Bison Relay");
 
   // This debugs both the dart platform adapter and the native bindings.
   developer.log("Platform: ${Golib.majorPlatform}/${Golib.minorPlatform}");
