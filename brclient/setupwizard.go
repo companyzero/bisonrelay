@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -59,6 +61,7 @@ type setupWizardScreen struct {
 	walletPass     string
 	seedWords      []string
 	seed           []byte
+	mcbBytes       []byte
 }
 
 func (sws setupWizardScreen) Init() tea.Cmd {
@@ -161,7 +164,13 @@ func (sws *setupWizardScreen) initRestoreWallet() tea.Cmd {
 	txtRestore.Width = sws.winW
 	txtRestore.SetCursorMode(textinput.CursorBlink)
 
-	sws.inputs = []textinput.Model{txtRestore}
+	txtRestoreSCB := textinput.New()
+	txtRestoreSCB.Placeholder = ""
+	txtRestoreSCB.Prompt = "Path to Channel MCB (recommended): "
+	txtRestoreSCB.Width = sws.winW
+	txtRestoreSCB.SetCursorMode(textinput.CursorBlink)
+
+	sws.inputs = []textinput.Model{txtRestore, txtRestoreSCB}
 	return batchCmds(sws.setFocus(0))
 }
 
@@ -457,12 +466,16 @@ func (sws setupWizardScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		sws.validationErr = ""
 		sws.walletPass = sws.inputs[0].Value()
 		sws.stage = swsStageCreatingWallet
-		return sws, func() tea.Msg { return cmdCreateWallet(sws.lndc, sws.walletPass, sws.seedWords) }
+		return sws, func() tea.Msg { return cmdCreateWallet(sws.lndc, sws.walletPass, sws.seedWords, sws.mcbBytes) }
 
 	case swsStageWalletRestore:
 		cmd := sws.updateFocused(msg)
 		if !isEnterMsg(msg) {
 			return sws, cmd
+		}
+		if sws.focusIndex == 0 {
+			sws.setFocus(1)
+			return sws, nil
 		}
 
 		seedWords := strings.Split(strings.TrimSpace(sws.inputs[0].Value()), " ")
@@ -473,6 +486,20 @@ func (sws setupWizardScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return sws, nil
 		}
 
+		// Providing the channel backup is optional
+		mcbPath := strings.TrimSpace(sws.inputs[1].Value())
+		if len(mcbPath) > 0 {
+			mcbPath = filepath.Clean(mcbPath)
+			var mcbBytes []byte
+
+			mcbBytes, err := os.ReadFile(mcbPath)
+			if err != nil {
+				sws.validationErr = fmt.Sprintf("failed to read %v: %v", mcbPath, err)
+				sws.setFocus(1)
+				return sws, nil
+			}
+			sws.mcbBytes = mcbBytes
+		}
 		sws.seedWords = seedWords
 		sws.validationErr = ""
 		sws.stage = swsStageWalletPass
@@ -517,9 +544,10 @@ func (sws setupWizardScreen) innerView() string {
 		switch sws.stage {
 		case swsStageWalletRestore:
 			b.WriteString("\n\n")
-			b.WriteString("After the wallet restore is completed, execute\n")
-			b.WriteString("'/ln restoremultiscb <scb-file>' if you have an SCB backup file\n")
-			b.WriteString("to have your channel's counterparties force-close them.\n")
+			b.WriteString("The channel backup file is optional;  This will have\n")
+			b.WriteString("your channel's counterparties force-close them.\n")
+			b.WriteString("Execute '/ln restoremultiscb <scb-file>' if you wish\n")
+			b.WriteString("to do it at a later time.\n")
 		}
 
 		return b.String()
@@ -614,10 +642,10 @@ func cmdRunDcrlnd(ctx context.Context, root string, network string,
 	return lndc
 }
 
-func cmdCreateWallet(lndc *embeddeddcrlnd.Dcrlnd, pass string, existingSeed []string) tea.Msg {
+func cmdCreateWallet(lndc *embeddeddcrlnd.Dcrlnd, pass string, existingSeed []string, mcbBytes []byte) tea.Msg {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
 	defer cancel()
-	seed, err := lndc.Create(ctx, pass, existingSeed, nil)
+	seed, err := lndc.Create(ctx, pass, existingSeed, mcbBytes)
 	if err != nil {
 		err = fmt.Errorf("unable to create wallet: %v", err)
 	}
