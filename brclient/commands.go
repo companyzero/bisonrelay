@@ -2173,9 +2173,10 @@ var commands = []tuicmd{
 			return nil
 		},
 	}, {
-		cmd:     "winlist",
-		aliases: []string{"wls"},
-		descr:   "List currently opened windows",
+		cmd:           "winlist",
+		aliases:       []string{"wls"},
+		usableOffline: true,
+		descr:         "List currently opened windows",
 		handler: func(args []string, as *appState) error {
 			as.chatWindowsMtx.Lock()
 			windows := as.chatWindows[:]
@@ -2187,7 +2188,7 @@ var commands = []tuicmd{
 					if cw.isGC {
 						isGC = " (GC)"
 					}
-					pf("%2d - %s%s", i, cw.alias, isGC)
+					pf("%2d - %s%s", i+1, cw.alias, isGC)
 				}
 			})
 			return nil
