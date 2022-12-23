@@ -86,6 +86,12 @@ func (cw *chatWindow) manyHelpMsgs(f func(printf)) {
 	cw.Unlock()
 }
 
+func (cw *chatWindow) newHelpMsg(f string, args ...interface{}) {
+	cw.manyHelpMsgs(func(pf printf) {
+		pf(f, args...)
+	})
+}
+
 func (cw *chatWindow) newRecvdMsg(from, msg string, ts time.Time) *chatMsg {
 	m := &chatMsg{
 		mine: false,
