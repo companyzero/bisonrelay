@@ -36,6 +36,7 @@ class _NeedsInChannelScreenState extends State<NeedsInChannelScreen> {
   TextEditingController serverCtrl = TextEditingController();
   TextEditingController certCtrl = TextEditingController();
   AmountEditingController amountCtrl = AmountEditingController();
+  String preventMsg = "";
 
   void getNewAddress() async {
     try {
@@ -52,12 +53,26 @@ class _NeedsInChannelScreenState extends State<NeedsInChannelScreen> {
     try {
       var res = await Golib.lnGetBalances();
       var resInfo = await Golib.lnGetInfo();
+      var resPending = await Golib.lnListPendingChannels();
       setState(() {
         maxOutAmount = res.channel.maxOutboundAmount;
         maxInAmount = res.channel.maxInboundAmount;
         walletBalance = res.wallet.totalBalance;
-        numPendingChannels = resInfo.numPendingChannels;
+        numPendingChannels = resPending.pendingOpen.length;
         numChannels = resInfo.numActiveChannels;
+        if (maxOutAmount == 0) {
+          preventMsg =
+              '''The client cannot open an inbound channel without having channels 
+with outbound capacity. Please open new outbound channels before 
+requesting  inbound capacity.''';
+        } else if (numPendingChannels > 0) {
+          preventMsg =
+              '''The client cannot open an inbound channel while it still
+has pending channels being opened. Wait until the pending
+channel is confirmed to request a new inbound channel''';
+        } else {
+          preventMsg = "";
+        }
       });
 
       if (initialMaxInAmount == -1) {
@@ -294,47 +309,57 @@ messages. It is only required in order to receive payments from other users.
                                     fontWeight: FontWeight.w300))
                           ]),
                       const SizedBox(height: 10),
-                      Expanded(
-                          child: SimpleInfoGrid([
-                        Tuple2(
-                            Text("LP Server Address",
-                                style: TextStyle(
-                                    color: darkTextColor,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w300)),
-                            TextField(
-                              controller: serverCtrl,
-                              decoration: const InputDecoration(
-                                  hintText: "https://lpd-server:port"),
-                            )),
-                        Tuple2(
-                            Text("LP Server Cert",
-                                style: TextStyle(
-                                    color: darkTextColor,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w300)),
-                            TextField(
-                              controller: certCtrl,
-                              maxLines: null,
-                              keyboardType: TextInputType.multiline,
-                            )),
-                        Tuple2(
-                            Text("Amount",
-                                style: TextStyle(
-                                    color: darkTextColor,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w300)),
-                            SizedBox(
-                              width: 150,
-                              child: dcrInput(controller: amountCtrl),
-                            )),
-                        Tuple2(
-                            const SizedBox(height: 50),
-                            LoadingScreenButton(
-                              onPressed: !loading ? requestRecvCapacity : null,
-                              text: "Request Inbound Channel",
-                            ))
-                      ])),
+                      preventMsg == ""
+                          ? Expanded(
+                              child: SimpleInfoGrid([
+                              Tuple2(
+                                  Text("LP Server Address",
+                                      style: TextStyle(
+                                          color: darkTextColor,
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w300)),
+                                  TextField(
+                                    controller: serverCtrl,
+                                    decoration: const InputDecoration(
+                                        hintText: "https://lpd-server:port"),
+                                  )),
+                              Tuple2(
+                                  Text("LP Server Cert",
+                                      style: TextStyle(
+                                          color: darkTextColor,
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w300)),
+                                  TextField(
+                                    controller: certCtrl,
+                                    maxLines: null,
+                                    keyboardType: TextInputType.multiline,
+                                  )),
+                              Tuple2(
+                                  Text("Amount",
+                                      style: TextStyle(
+                                          color: darkTextColor,
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w300)),
+                                  SizedBox(
+                                    width: 150,
+                                    child: dcrInput(controller: amountCtrl),
+                                  )),
+                              Tuple2(
+                                  const SizedBox(height: 50),
+                                  LoadingScreenButton(
+                                    onPressed:
+                                        !loading ? requestRecvCapacity : null,
+                                    text: "Request Inbound Channel",
+                                  ))
+                            ]))
+                          : Expanded(
+                              child: Column(children: [
+                              SizedBox(height: 30),
+                              Text(
+                                preventMsg,
+                                style: TextStyle(color: textColor),
+                              )
+                            ])),
                       LoadingScreenButton(
                         onPressed: () => Navigator.of(context).pop(),
                         text: "Skip",

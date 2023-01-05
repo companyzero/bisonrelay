@@ -36,6 +36,7 @@ class _NeedsOutChannelScreenState extends State<NeedsOutChannelScreen> {
   bool loading = false;
   TextEditingController peerCtrl = TextEditingController();
   AmountEditingController amountCtrl = AmountEditingController();
+  String preventMsg = "foo";
 
   void getNewAddress() async {
     try {
@@ -52,11 +53,31 @@ class _NeedsOutChannelScreenState extends State<NeedsOutChannelScreen> {
     try {
       var res = await Golib.lnGetBalances();
       var resInfo = await Golib.lnGetInfo();
+      var resPending = await Golib.lnListPendingChannels();
       setState(() {
         maxOutAmount = res.channel.maxOutboundAmount;
         walletBalance = res.wallet.totalBalance;
-        numPendingChannels = resInfo.numPendingChannels;
+        numPendingChannels = resPending.pendingOpen.length;
         numChannels = resInfo.numActiveChannels;
+
+        if (numPendingChannels > 0) {
+          preventMsg =
+              '''Cannot open new outbound channels while the local client has pending 
+channels. Wait until all pending channels have been confirmed before
+attempting to open a new one.''';
+        } else if (res.wallet.confirmedBalance == 0 && walletBalance > 0) {
+          preventMsg =
+              '''Cannot open new outbound channels while the local client doesn't
+have a confirmed wallet balance. Wait until any recent transactions have been
+confirmed on-chain before attempting to open a new channel.''';
+        } else if (walletBalance == 0) {
+          preventMsg =
+              '''Cannot open a new outbound channel while the local client doesn't
+have any funds in its wallet. Send funds on-chain to the wallet so that it can
+open channels to other LN nodes.''';
+        } else {
+          preventMsg = "";
+        }
       });
 
       if (initialMaxOutAmount == -1) {
@@ -280,35 +301,42 @@ the wallet seed is NOT sufficient to restore their state.
                                     fontWeight: FontWeight.w300))
                           ]),
                       const SizedBox(height: 10),
-                      SimpleInfoGrid([
-                        Tuple2(
-                            Text("Peer ID and Address",
-                                style: TextStyle(
-                                    color: darkTextColor,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w300)),
-                            TextField(
-                              controller: peerCtrl,
-                              decoration: const InputDecoration(
-                                  hintText: "node-pub-key@addr:port"),
-                            )),
-                        Tuple2(
-                            Text("Amount",
-                                style: TextStyle(
-                                    color: darkTextColor,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w300)),
-                            SizedBox(
-                              width: 150,
-                              child: dcrInput(controller: amountCtrl),
-                            )),
-                        Tuple2(
-                            const SizedBox(height: 50),
-                            LoadingScreenButton(
-                              onPressed: !loading ? openChannel : null,
-                              text: "Request Outbound Channel",
-                            ))
-                      ]),
+                      preventMsg == ""
+                          ? SimpleInfoGrid([
+                              Tuple2(
+                                  Text("Peer ID and Address",
+                                      style: TextStyle(
+                                          color: darkTextColor,
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w300)),
+                                  TextField(
+                                    controller: peerCtrl,
+                                    decoration: const InputDecoration(
+                                        hintText: "node-pub-key@addr:port"),
+                                  )),
+                              Tuple2(
+                                  Text("Amount",
+                                      style: TextStyle(
+                                          color: darkTextColor,
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w300)),
+                                  SizedBox(
+                                    width: 150,
+                                    child: dcrInput(controller: amountCtrl),
+                                  )),
+                              Tuple2(
+                                  const SizedBox(height: 50),
+                                  LoadingScreenButton(
+                                    onPressed: !loading ? openChannel : null,
+                                    text: "Request Outbound Channel",
+                                  ))
+                            ])
+                          : Expanded(
+                              child: Column(children: [
+                              SizedBox(height: 30),
+                              Text(preventMsg,
+                                  style: TextStyle(color: textColor))
+                            ])),
                       const Expanded(child: Empty()),
                       LoadingScreenButton(
                         onPressed: () => Navigator.of(context).pop(),
