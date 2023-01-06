@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/companyzero/bisonrelay/client/clientintf"
+	"github.com/companyzero/bisonrelay/client/timestats"
 	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/decred/dcrd/dcrutil/v4"
 	"github.com/decred/dcrlnd/lnrpc"
@@ -35,6 +36,7 @@ type DcrlnPaymentClient struct {
 	lnInvoices invoicesrpc.InvoicesClient
 	lnUnlocker lnrpc.WalletUnlockerClient
 	log        slog.Logger
+	payTiming  *timestats.Tracker
 }
 
 // NewDcrlndPaymentClient creates a new payment client that can send payments
@@ -83,6 +85,7 @@ func NewDcrlndPaymentClient(ctx context.Context, cfg DcrlnPaymentClientCfg) (*Dc
 		lnInvoices: lnInvoices,
 		lnUnlocker: lnUnlocker,
 		log:        log,
+		payTiming:  timestats.NewTracker(250),
 	}, nil
 }
 
@@ -126,6 +129,7 @@ func (pc *DcrlnPaymentClient) PayInvoice(ctx context.Context, invoice string) (i
 		FeeLimit:       PaymentFeeLimit(uint64(payReq.NumMAtoms)),
 	}
 
+	start := time.Now()
 	sendPayRes, err := pc.lnRpc.SendPaymentSync(ctx, sendPayReq)
 	if err != nil {
 		return 0, fmt.Errorf("unable to complete LN payment: %v", err)
@@ -134,11 +138,13 @@ func (pc *DcrlnPaymentClient) PayInvoice(ctx context.Context, invoice string) (i
 	if sendPayRes.PaymentError != "" {
 		return 0, fmt.Errorf("LN payment error: %s", sendPayRes.PaymentError)
 	}
+	pc.payTiming.Add(time.Since(start))
 
 	fees := sendPayRes.PaymentRoute.TotalFeesMAtoms
+	nbHops := len(sendPayRes.PaymentRoute.Hops)
 
-	pc.log.Debugf("completed LN payment of hash %x preimage %x fees %d",
-		sendPayRes.PaymentHash, sendPayRes.PaymentPreimage, fees)
+	pc.log.Debugf("completed LN payment of hash %x preimage %x fees %d hops %d",
+		sendPayRes.PaymentHash, sendPayRes.PaymentPreimage, fees, nbHops)
 
 	return fees, nil
 }
@@ -160,6 +166,7 @@ func (pc *DcrlnPaymentClient) PayInvoiceAmount(ctx context.Context, invoice stri
 		FeeLimit:       PaymentFeeLimit(uint64(amount)),
 	}
 
+	start := time.Now()
 	sendPayRes, err := pc.lnRpc.SendPaymentSync(ctx, sendPayReq)
 	if err != nil {
 		return 0, fmt.Errorf("unable to complete LN payment: %v", err)
@@ -169,9 +176,12 @@ func (pc *DcrlnPaymentClient) PayInvoiceAmount(ctx context.Context, invoice stri
 		return 0, fmt.Errorf("LN payment error: %s", sendPayRes.PaymentError)
 	}
 
+	pc.payTiming.Add(time.Since(start))
+
 	fees := sendPayRes.PaymentRoute.TotalFeesMAtoms
-	pc.log.Debugf("completed LN payment of hash %x preimage %x fees %d",
-		sendPayRes.PaymentHash, sendPayRes.PaymentPreimage, fees)
+	hops := len(sendPayRes.PaymentRoute.Hops)
+	pc.log.Debugf("completed LN payment of hash %x preimage %x fees %d hops %d",
+		sendPayRes.PaymentHash, sendPayRes.PaymentPreimage, fees, hops)
 
 	return fees, nil
 }
@@ -272,6 +282,11 @@ func (pc *DcrlnPaymentClient) DecodeInvoice(ctx context.Context, invoice string)
 		MAtoms:     payReq.NumMAtoms,
 		ExpiryTime: time.Unix(expiryTS, 0),
 	}, nil
+}
+
+// PaymentTimingStats returns timing information for payment stats.
+func (pc *DcrlnPaymentClient) PaymentTimingStats() []timestats.Quantile {
+	return pc.payTiming.Quantiles()
 }
 
 const (

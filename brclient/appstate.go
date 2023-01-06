@@ -88,6 +88,7 @@ type appState struct {
 	isRestore   bool
 
 	lnRPC      lnrpc.LightningClient
+	lnPC       *client.DcrlnPaymentClient
 	httpClient *http.Client
 
 	winW, winH int
@@ -2660,6 +2661,7 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		styles:      theme,
 		serverAddr:  args.ServerAddr,
 		lnRPC:       lnRPC,
+		lnPC:        lnPC,
 		httpClient: &http.Client{
 			Transport: &http.Transport{
 				DialContext:           httpDialerFunc,

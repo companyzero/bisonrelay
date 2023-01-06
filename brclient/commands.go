@@ -443,6 +443,33 @@ var listCommands = []tuicmd{
 			})
 			return nil
 		},
+	}, {
+		cmd:           "timestats",
+		usableOffline: true,
+		descr:         "Show timing stats for outbound messages",
+		handler: func(args []string, as *appState) error {
+			if as.lnPC != nil {
+				stats := as.lnPC.PaymentTimingStats()
+				as.cwHelpMsgs(func(pf printf) {
+					pf("")
+					pf("Payment Timing Stats:")
+					for _, v := range stats {
+						pf("%5s: <= %5dms: %d", v.Rel, v.Max, v.N)
+					}
+				})
+			}
+
+			stats := as.c.RMQTimingStat()
+			as.cwHelpMsgs(func(pf printf) {
+				pf("")
+				pf("Outbound Message Timing Stats:")
+				for _, v := range stats {
+					pf("%5s: <= %5dms: %d", v.Rel, v.Max, v.N)
+				}
+			})
+
+			return nil
+		},
 	},
 }
 

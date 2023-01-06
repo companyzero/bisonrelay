@@ -4,9 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/companyzero/bisonrelay/client/clientintf"
 	"github.com/companyzero/bisonrelay/client/internal/multipriq"
+	"github.com/companyzero/bisonrelay/client/timestats"
 	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/companyzero/bisonrelay/zkidentity"
 	"github.com/davecgh/go-spew/spew"
@@ -19,6 +21,7 @@ type rmmsg struct {
 	replyChan chan error
 	rv        RVID
 	encrypted []byte
+	sendTime  time.Time
 }
 
 func (r rmmsg) sendReply(err error) {
@@ -44,6 +47,7 @@ type RMQ struct {
 	rmChan      chan rmmsg
 	enqueueDone chan struct{}
 	lenChan     chan chan int
+	timingStat  timestats.Tracker
 
 	nextSendChan chan *rmmsg
 	sendDoneChan chan struct{}
@@ -67,6 +71,7 @@ func NewRMQ(log slog.Logger, payClient clientintf.PaymentClient, localID *zkiden
 		lenChan:      make(chan chan int),
 		nextSendChan: make(chan *rmmsg),
 		sendDoneChan: make(chan struct{}),
+		timingStat:   *timestats.NewTracker(250),
 	}
 }
 
@@ -114,6 +119,11 @@ func (q *RMQ) SendRM(orm OutboundRM) error {
 	}
 
 	return <-replyChan
+}
+
+// TimingStats returns the latest timing stats for the RMQ.
+func (q *RMQ) TimingStats() []timestats.Quantile {
+	return q.timingStat.Quantiles()
 }
 
 // processRMAck processes the given ack'd reply from a previously sent rm rpc
@@ -273,6 +283,8 @@ func (q *RMQ) sendToSession(ctx context.Context, rmm *rmmsg, sess clientintf.Ser
 	if err != nil {
 		q.log.Debugf("Error sending rm %s at RV %s: %v", rmm.orm, rmm.rv, err)
 		return nil, err
+	} else {
+		rmm.sendTime = time.Now()
 	}
 
 	q.log.Debugf("Success sending rm %s at RV %s", rmm.orm, rmm.rv)
@@ -490,6 +502,8 @@ loop:
 				sess.RequestClose(ackErr)
 			}
 			sess = nil
+		} else {
+			q.timingStat.Add(time.Since(rmm.sendTime))
 		}
 
 		// Either way, we won't attempt to send this RM again. Alert

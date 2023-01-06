@@ -11,6 +11,7 @@ import (
 	"github.com/companyzero/bisonrelay/client/clientintf"
 	"github.com/companyzero/bisonrelay/client/internal/gcmcacher"
 	"github.com/companyzero/bisonrelay/client/internal/lowlevel"
+	"github.com/companyzero/bisonrelay/client/timestats"
 	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/companyzero/bisonrelay/zkidentity"
 	"github.com/decred/slog"
@@ -589,6 +590,11 @@ func (c *Client) RMQLen() int {
 // in the server.
 func (c *Client) RVsUpToDate() bool {
 	return c.rmgr.IsUpToDate()
+}
+
+// RMQTimingStat returns the latest timing stats for the outbound RMQ.
+func (c *Client) RMQTimingStat() []timestats.Quantile {
+	return c.q.TimingStats()
 }
 
 func (c *Client) AddressBook() []*AddressBookEntry {
