@@ -1117,6 +1117,10 @@ var ftCommands = []tuicmd{
 			if err != nil {
 				return err
 			}
+			nick, err := as.c.UserNick(uid)
+			if err != nil {
+				nick = args[0]
+			}
 
 			filename := args[1]
 			err = as.c.SendFile(uid, filename)
@@ -1124,7 +1128,14 @@ var ftCommands = []tuicmd{
 				return err
 			}
 
-			as.cwHelpMsg("Sending file %q to user", filepath.Base(filename))
+			cw := as.findChatWindow(uid)
+			msg := fmt.Sprintf("Sending file %q to user %q",
+				filepath.Base(filename), strescape.Nick(nick))
+			if cw == nil {
+				as.cwHelpMsg(msg)
+			} else {
+				cw.newHelpMsg(msg)
+			}
 
 			return nil
 		},
@@ -2173,9 +2184,10 @@ var commands = []tuicmd{
 			return nil
 		},
 	}, {
-		cmd:     "winlist",
-		aliases: []string{"wls"},
-		descr:   "List currently opened windows",
+		cmd:           "winlist",
+		aliases:       []string{"wls"},
+		usableOffline: true,
+		descr:         "List currently opened windows",
 		handler: func(args []string, as *appState) error {
 			as.chatWindowsMtx.Lock()
 			windows := as.chatWindows[:]
@@ -2187,7 +2199,7 @@ var commands = []tuicmd{
 					if cw.isGC {
 						isGC = " (GC)"
 					}
-					pf("%2d - %s%s", i, cw.alias, isGC)
+					pf("%2d - %s%s", i+1, cw.alias, isGC)
 				}
 			})
 			return nil
