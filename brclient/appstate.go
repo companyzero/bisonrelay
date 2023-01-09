@@ -1705,6 +1705,15 @@ func (as *appState) queryLNNodeInfo(nodePubKey string, amount uint64) error {
 		if nodeInfoErr != nil {
 			pf("Unable to query node info: %v", nodeInfoErr)
 		} else {
+			pf("Alias: %s", strescape.Nick(nodeInfoRes.Node.Alias))
+			if len(nodeInfoRes.Node.Addresses) == 0 {
+				pf("No advertised addresses")
+			} else {
+				pf("Addresses (%d):", len(nodeInfoRes.Node.Addresses))
+				for _, addr := range nodeInfoRes.Node.Addresses {
+					pf("%s:%s", addr.Network, addr.Addr)
+				}
+			}
 			pf("Num Channels %d   Total Capacity: %.8f",
 				nodeInfoRes.NumChannels,
 				float64(nodeInfoRes.TotalCapacity)/1e8)
