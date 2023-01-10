@@ -78,6 +78,8 @@ type Config struct {
 	// closed (either by the remote end or by the local end).
 	CheckServerSession func(connCtx context.Context, lnNode string) error
 
+	Notifications *NotificationManager
+
 	// ServerSessionChanged is called indicating that the connection to the
 	// server changed to the specified state (either connected or not).
 	//
@@ -222,15 +224,16 @@ type Client struct {
 	dbCtxCancel func()
 	runDone     chan struct{}
 
-	pc   clientintf.PaymentClient
-	id   *zkidentity.FullIdentity
-	db   *clientdb.DB
-	ck   *lowlevel.ConnKeeper
-	q    *lowlevel.RMQ
-	rmgr *lowlevel.RVManager
-	kxl  *kxList
-	rul  *remoteUserList
-	gcmq *gcmcacher.Cacher
+	pc    clientintf.PaymentClient
+	id    *zkidentity.FullIdentity
+	db    *clientdb.DB
+	ck    *lowlevel.ConnKeeper
+	q     *lowlevel.RMQ
+	rmgr  *lowlevel.RVManager
+	kxl   *kxList
+	rul   *remoteUserList
+	gcmq  *gcmcacher.Cacher
+	ntfns *NotificationManager
 
 	// abLoaded is closed when the address book has finished loading.
 	abLoaded chan struct{}
@@ -292,6 +295,11 @@ func New(cfg Config) (*Client, error) {
 	kxl.dbCtx = dbCtx
 	kxl.log = cfg.logger("KXLS")
 
+	ntfns := cfg.Notifications
+	if ntfns == nil {
+		ntfns = NewNotificationManager()
+	}
+
 	c := &Client{
 		cfg:         &cfg,
 		ctx:         ctx,
@@ -300,15 +308,16 @@ func New(cfg Config) (*Client, error) {
 		dbCtx:       dbCtx,
 		dbCtxCancel: dbCtxCancel,
 
-		db:   cfg.DB,
-		pc:   cfg.PayClient,
-		id:   id,
-		ck:   ck,
-		q:    q,
-		rmgr: rmgr,
-		kxl:  kxl,
-		log:  cfg.logger("CLNT"),
-		rul:  newRemoteUserList(),
+		db:    cfg.DB,
+		pc:    cfg.PayClient,
+		id:    id,
+		ck:    ck,
+		q:     q,
+		rmgr:  rmgr,
+		kxl:   kxl,
+		log:   cfg.logger("CLNT"),
+		rul:   newRemoteUserList(),
+		ntfns: ntfns,
 
 		abLoaded:     make(chan struct{}),
 		newUsersChan: make(chan *RemoteUser),
@@ -547,6 +556,10 @@ func (c *Client) cleanupPaidRVsDir(expirationDays int) {
 	if err != nil {
 		c.log.Warnf("Unable to cleanup paid rvs: %v", err)
 	}
+}
+
+func (c *Client) NotificationManager() *NotificationManager {
+	return c.ntfns
 }
 
 // PublicID is the public local identity of this client.
