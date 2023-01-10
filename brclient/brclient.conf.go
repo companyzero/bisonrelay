@@ -121,5 +121,22 @@ lnmacaroonpath = {{ .LNMacaroonPath }}
 minimumwalletbalance = 1.0
 minimumrecvbalance = 0.01
 minimumsendbalance = 0.01
+
+[clientrpc]
+# Enable the JSON-RPC clientrpc protocol on the comma-separated list of addresses.
+# jsonrpclisten = 127.0.0.1:7676
+
+# Path to the keypair used for running TLS on the clientrpc interfaces.
+# rpccertpath = {{ .Root }}/rpc.cert
+# rpckeypath = {{ .Root }}/rpc.key
+
+# Path to the certificate used as CA for client-side TLS authentication.
+# rpcclientcapath = {{ .Root }}/rpc-ca.cert
+
+# If set to true, generate the rpc-client.cert and rpc-client.key files in the
+# same dir as rpcclientcapath, that should be specified by a client connecting
+# over the clientrpc interfaces. If set to false, then the user is responsible
+# for generating the client CA, and cert files.
+# rpcissueclientcert = true
 `
 )
