@@ -1850,10 +1850,12 @@ var lnCommands = []tuicmd{
 	}, {
 		cmd:           "queryroute",
 		usableOffline: true,
-		usage:         "[dest node ID] [amount in atoms]",
-		aliases:       []string{"addinvoice"},
-		descr:         "Create an LN invoice",
+		usage:         "<dest node ID> [amount in atoms]",
+		descr:         "Query a route to a destination",
 		rawHandler: func(rawCmd string, args []string, as *appState) error {
+			if as.lnRPC == nil {
+				return fmt.Errorf("LN client not configured")
+			}
 			if len(args) < 1 {
 				return usageError{msg: "dest node ID cannot be empty"}
 			}
