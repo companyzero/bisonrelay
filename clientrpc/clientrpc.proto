@@ -28,6 +28,12 @@ service ChatService {
 
   /* PMStream returns a stream that gets PMs received by the client. */
   rpc PMStream(PMStreamRequest) returns (stream ReceivedPM);
+
+  /* GCM sends a message in a GC. */
+  rpc GCM(GCMRequest) returns (GCMResponse);
+
+  /* GCMStream returns a stream that gets GC messages received by the client. */
+  rpc GCMStream(GCMStreamRequest) returns (stream GCReceivedMsg);
 }
 
 
@@ -95,6 +101,36 @@ message ReceivedPM {
   int64 timestamp_ms = 4;
 }
 
+/* GCMRequest is a request to send a GC message. */
+message GCMRequest {
+  /* gc is either an hex-encoded GCID or a GC alias. */
+  string gc = 1;
+
+  /* msg is the text payload of the message. */
+  string msg = 2;
+}
+
+/* GCMResponse is the response to sending a GC message. */
+message GCMResponse {}
+
+/* GCMStreamRequest is a request to a stream of received GC messages. */
+message GCMStreamRequest {}
+
+/* GCReceivedMsg is a GC message received from a remote user. */
+message GCReceivedMsg {
+  /* uid is the source user ID. */
+  bytes uid = 1;
+  /* nick is the source user nick/alias. */
+  string nick = 2;
+  /* gc_alias is the local alias of the GC where the message was sent. */
+  string gc_alias = 3;
+  /* msg is the received message. */
+  RMGroupMessage msg = 4;
+  /* timestamp_ms is the server timestamp of the message with millisecond precision. */
+  int64 timestamp_ms = 5;
+}
+
+
 /******************************************************************************
   *                          Routed RPC Compat
   *****************************************************************************/
@@ -120,3 +156,15 @@ message RMPrivateMessage {
 }
 
 
+/* RMGroupMessage is the network-level routed group message. */
+message RMGroupMessage {
+  /* id is the group chat id where the message was sent. */
+  bytes id = 1;
+  /* generation is the internal generation of the group chat metadata when the
+     sender sent this message. */
+  uint64 generation = 2;
+  /* message is the textual content. */
+  string message = 3;
+  /* mode is the mode of the message. */
+  MessageMode mode = 4;
+}

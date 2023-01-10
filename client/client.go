@@ -105,10 +105,6 @@ type Config struct {
 	// GCKilled is called when the given GC is dissolved by its admin.
 	GCKilled func(gcid GCID, reason string)
 
-	// GCMsgHandler is called when a group chat message is received from
-	// the specified user.
-	GCMsgHandler func(user *RemoteUser, msg rpc.RMGroupMessage, ts time.Time)
-
 	// GCWithUnkxdMember is called when an attempt to send a GC message
 	// failed due to a GC member being unkxd with the local client.
 	GCWithUnkxdMember func(gcid GCID, uid UserID)

@@ -2073,6 +2073,13 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		as.repaintIfActiveWithMention(cw, hasMention(as.c.LocalNick(), s))
 	}))
 
+	ntfns.Register(client.OnGCMNtfn(func(user *client.RemoteUser, msg rpc.RMGroupMessage, ts time.Time) {
+		cw := as.findOrNewGCWindow(msg.ID)
+		s := as.handleRcvdText(msg.Message, cw.alias)
+		cw.newRecvdMsg(user.Nick(), s, ts)
+		as.repaintIfActiveWithMention(cw, hasMention(as.c.LocalNick(), s))
+	}))
+
 	// Initialize client config.
 	cfg := client.Config{
 		DB:             db,
@@ -2347,13 +2354,6 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 					"again by issuing the following command")
 				pf("/mi %s %s", adminAlias, uid)
 			})
-		},
-
-		GCMsgHandler: func(user *client.RemoteUser, msg rpc.RMGroupMessage, ts time.Time) {
-			cw := as.findOrNewGCWindow(msg.ID)
-			s := as.handleRcvdText(msg.Message, cw.alias)
-			cw.newRecvdMsg(user.Nick(), s, ts)
-			as.repaintIfActiveWithMention(cw, hasMention(as.c.LocalNick(), s))
 		},
 
 		KXCompleted: func(user *client.RemoteUser) {
@@ -2706,9 +2706,19 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 	chatRPCServerCfg := rpcserver.ChatServerCfg{
 		Log:    logBknd.logger("RPCS"),
 		Client: c,
+
+		// Following are handlers called when the rpc server receives
+		// a request to perform an action.
+
 		OnPM: func(ctx context.Context, uid client.UserID, pm *types.PMRequest) error {
 			cw := as.findOrNewChatWindow(uid, "")
 			cw.newInternalMsg("API: " + pm.Msg.Message)
+			as.repaintIfActive(cw)
+			return nil
+		},
+		OnGCM: func(ctx context.Context, gcid client.GCID, gcm *types.GCMRequest) error {
+			cw := as.findOrNewGCWindow(gcid)
+			cw.newInternalMsg("API: " + gcm.Msg)
 			as.repaintIfActive(cw)
 			return nil
 		},
