@@ -1,0 +1,18 @@
+lint:
+  rules:
+    all_default: true
+    remove:
+      - FILE_HAS_COMMENT
+      - ENUM_FIELD_NAMES_ZERO_VALUE_END_WITH
+  rules_option:
+    max_line_length:
+      max_chars: 120
+    indent:
+      not_insert_newline: true
+    services_have_comment:
+      should_follow_golang_style: true
+    rpcs_have_comment:
+      should_follow_golang_style: true
+    fields_have_comment:
+      should_follow_golang_style: true
+
