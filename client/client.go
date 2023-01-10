@@ -86,10 +86,6 @@ type Config struct {
 	// The push and subscription rates are specified in milliatoms/byte.
 	ServerSessionChanged func(connected bool, pushRate, subRate, expirationDays uint64)
 
-	// PMHandler is called when a message from the specified user is
-	// received.
-	PMHandler func(user *RemoteUser, msg rpc.RMPrivateMessage, ts time.Time)
-
 	// GCInviteHandler is called when the user received an invitation to
 	// join a group chat from a remote user.
 	GCInviteHandler func(user *RemoteUser, iid uint64, invite rpc.RMGroupInvite)

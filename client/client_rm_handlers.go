@@ -118,10 +118,6 @@ func (c *Client) innerHandleUserRM(ru *RemoteUser, h *rpc.RMHeader,
 		}
 		ru.log.Debugf("Received private message of length %d", len(p.Message))
 
-		// TODO: remove
-		if c.cfg.PMHandler != nil {
-			c.cfg.PMHandler(ru, p, ts)
-		}
 		c.ntfns.notifyOnPM(ru, p, ts)
 
 	case rpc.RMGroupInvite:
