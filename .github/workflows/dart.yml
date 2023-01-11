@@ -9,7 +9,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Install packages
-        run: sudo apt-get install -y ninja-build clang libgtk-3-dev
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build clang libgtk-3-dev
 
       - name: Set up Go
         uses: actions/setup-go@84cbf8094393cdc5fe1fe1671ff2647332956b1a #v3.2.1
