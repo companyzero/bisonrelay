@@ -9,6 +9,3 @@ brclient/brclient
 server/internal/frpgdb/cmd/frdbsim/frdbsim
 server.crt
 build/
-BisonRelay/
-bisonrelay-*
-*.AppImage
