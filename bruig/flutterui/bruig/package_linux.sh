@@ -3,10 +3,10 @@
 VERSION=v0.1.2
 TAR_NAME=bisonrelay-linux-amd64-$VERSION.tar.gz
 BUILD_DIR=build/linux/x64/release/bundle
-APPIMAGE_DIR=BisonRelay/
-APPRUN=AppRun
-DESKTOP_FILE=BisonRelay.desktop
-ICON_FILE=assets/images/icon.png
+APPIMAGE_DIR=BisonRelayBuild/
+APPRUN=../AppRun
+DESKTOP_FILE=../BisonRelay.desktop
+ICON_FILE=../assets/images/icon.png
 
 flutter clean
 flutter build linux --release
@@ -15,7 +15,9 @@ if [ -d "$APPIMAGE_DIR" ]; then
     printf '%s\n' "Removing Lock ($APPIMAGE_DIR)"
     rm -rf "$APPIMAGE_DIR"
 fi
-mv $BUILD_DIR $APPIMAGE_DIR
+mv $BUILD_DIR build/$APPIMAGE_DIR
+
+cd build
 
 tar -czf $TAR_NAME $APPIMAGE_DIR
 
@@ -34,4 +36,4 @@ fi
 
 appimagetool-x86_64.AppImage $APPIMAGE_DIR
 
-mv Bison_Relay-x86_64.AppImage BisonRelay-$VERSION.AppImage
+mv build/Bison_Relay-x86_64.AppImage build/BisonRelay-$VERSION.AppImage
