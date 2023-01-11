@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.15)
 project(fd LANGUAGES CXX)
 
-set(BINARY_NAME "bruig")
+set(BINARY_NAME "bisonrelay")
 
 cmake_policy(SET CMP0063 NEW)
 

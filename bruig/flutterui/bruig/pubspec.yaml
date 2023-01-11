@@ -49,7 +49,16 @@ dependencies:
       url: https://github.com/google/flutter-desktop-embedding.git
       path: plugins/window_size
       ref: 17d4710c17f4913137e7ec931f6e71eaef443363
+  msix: ^3.6.3
 
+msix_config:
+  display_name: Bison Relay GUI
+  publisher_display_name: Company 0, LLC
+  store: false
+  msix_version: 0.1.2.0
+  icons_background_color: "#ffffff"
+  architecture: x64
+  capabilities: "internetClient"
 
 dev_dependencies:
   flutter_lints: ^2.0.1
