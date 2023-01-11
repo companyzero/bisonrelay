@@ -1,0 +1,8 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Terminal=false
+Name=Bison Relay
+Exec=bisonrelay %u
+Icon=bisonrelay
+Categories=Utility;

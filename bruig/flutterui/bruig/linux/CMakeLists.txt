@@ -1,8 +1,9 @@
 cmake_minimum_required(VERSION 3.10)
 project(runner LANGUAGES CXX)
 
-set(BINARY_NAME "bruig")
+set(BINARY_NAME "bisonrelay")
 set(APPLICATION_ID "com.bisonrelay")
+set(VERSION "0.1.2")
 
 cmake_policy(SET CMP0063 NEW)
 
