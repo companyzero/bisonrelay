@@ -263,6 +263,20 @@ func handleInitClient(handle uint32, args InitClient) error {
 			notify(NTTipReceived, v, nil)
 		},
 
+		RemoteSubscriptionChanged: func(user *client.RemoteUser, subscribed bool) {
+			v := PostSubscriptionResult{ID: user.ID(), WasSubRequest: subscribed}
+			notify(NTRemoteSubChanged, v, nil)
+		},
+
+		RemoteSubscriptionError: func(user *client.RemoteUser, wasSubscribing bool, errMsg string) {
+			v := PostSubscriptionResult{
+				ID:            user.ID(),
+				WasSubRequest: wasSubscribing,
+				Error:         errMsg,
+			}
+			notify(NTRemoteSubChanged, v, nil)
+		},
+
 		PostReceived: func(user *client.RemoteUser,
 			summary clientdb.PostSummary, pm rpc.PostMetadata) {
 			notify(NTPostReceived, summary, nil)

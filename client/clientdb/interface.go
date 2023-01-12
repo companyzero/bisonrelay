@@ -299,6 +299,7 @@ var (
 	ServerIDEmptyError      = errors.New("server ID is not known")
 	ErrNotFound             = errors.New("entry not found")
 	ErrAlreadySubscribed    = errors.New("already subscribed")
+	ErrNotSubscribed        = errors.New("not subscribed")
 	ErrPostStatusValidation = errors.New("invalid post status update")
 	ErrAlreadyExists        = errors.New("already exists")
 	ErrDuplicatePostStatus  = errors.New("duplicate post status")

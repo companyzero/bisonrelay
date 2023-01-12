@@ -72,11 +72,8 @@ func (c *Client) takePostKXAction(ru *RemoteUser, act clientdb.PostKXAction) err
 			return err
 		}
 
-		if err := c.SubscribeToPosts(ru.ID()); err != nil {
-			return err
-		}
+		return c.subscribeToPosts(ru.ID(), &pid, true)
 
-		return c.GetUserPost(ru.ID(), pid, true)
 	default:
 		return fmt.Errorf("unknown post-kx action type")
 	}

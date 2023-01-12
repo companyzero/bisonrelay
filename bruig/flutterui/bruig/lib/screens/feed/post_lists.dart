@@ -1,3 +1,4 @@
+import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/models/client.dart';
 import 'package:flutter/material.dart';
@@ -22,11 +23,17 @@ class PostListsScreen extends StatefulWidget {
   State<PostListsScreen> createState() => _PostListsScreenState();
 }
 
+typedef _UnsubFunc = void Function(ChatModel chat);
+
 class _SubItem extends StatelessWidget {
   final int index;
   final String id;
   final ChatModel? chat;
-  const _SubItem(this.index, this.id, this.chat, {Key? key}) : super(key: key);
+  final bool remoteSub;
+  final _UnsubFunc unsub;
+  const _SubItem(this.index, this.id, this.chat, this.remoteSub, this.unsub,
+      {Key? key})
+      : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -41,11 +48,27 @@ class _SubItem extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
+              flex: 2,
               child: Text(chat?.nick ?? "",
                   style: TextStyle(color: textColor, fontSize: 11))),
-          Text(id,
-              style: TextStyle(
-                  color: textColor, fontSize: 11, fontWeight: FontWeight.w200)),
+          Expanded(
+              flex: 10,
+              child: Text(id,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                      color: textColor,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w200))),
+          (remoteSub
+              ? IconButton(
+                  tooltip: "Unsubscribe from users's posts",
+                  onPressed: chat != null
+                      ? () {
+                          unsub(chat!);
+                        }
+                      : null,
+                  icon: const Icon(Icons.remove_circle_outline_rounded))
+              : const Empty())
         ],
       ),
     );
@@ -76,6 +99,11 @@ class _PostListsScreenState extends State<PostListsScreen> {
         firstLoading = false;
       });
     }
+  }
+
+  void unsub(ChatModel chat) async {
+    await chat.unsubscribeToPosts();
+    loadLists();
   }
 
   @override
@@ -136,7 +164,9 @@ class _PostListsScreenState extends State<PostListsScreen> {
                     itemBuilder: (context, index) => _SubItem(
                         index,
                         subscribers[index],
-                        client.getExistingChat(subscribers[index])),
+                        client.getExistingChat(subscribers[index]),
+                        false,
+                        unsub),
                   ))),
           const SizedBox(height: 20),
           Row(children: [
@@ -148,7 +178,7 @@ class _PostListsScreenState extends State<PostListsScreen> {
               indent: 10, //spacing at the start of divider
               endIndent: 7, //spacing at the end of divider
             )),
-            Text("Subscribers to remote posters",
+            Text("Subscriptions to remote posters",
                 textAlign: TextAlign.center,
                 style: TextStyle(color: darkTextColor, fontSize: 11)),
             Expanded(
@@ -168,7 +198,9 @@ class _PostListsScreenState extends State<PostListsScreen> {
             itemBuilder: (context, index) => _SubItem(
                 index,
                 subscriptions[index],
-                client.getExistingChat(subscriptions[index])),
+                client.getExistingChat(subscriptions[index]),
+                true,
+                unsub),
           )),
         ],
       ),

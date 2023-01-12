@@ -1192,8 +1192,7 @@ var postCommands = []tuicmd{
 			if err != nil {
 				return err
 			}
-			cw := as.findOrNewChatWindow(uid, args[0])
-			go as.subscribeToPosts(cw)
+			go as.subscribeToPosts(uid)
 			return nil
 		},
 	}, {
@@ -1209,8 +1208,7 @@ var postCommands = []tuicmd{
 			if err != nil {
 				return err
 			}
-			cw := as.findOrNewChatWindow(uid, args[0])
-			go as.unsubscribeToPosts(cw)
+			go as.unsubscribeToPosts(uid)
 			return nil
 		},
 	}, {

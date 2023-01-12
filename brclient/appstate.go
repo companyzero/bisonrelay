@@ -1292,30 +1292,44 @@ func (as *appState) getUserContent(cw *chatWindow, filename string) {
 	as.repaintIfActive(cw)
 }
 
-func (as *appState) subscribeToPosts(cw *chatWindow) {
-	m := cw.newInternalMsg("Subscribing to posts")
-	as.repaintIfActive(cw)
-	err := as.c.SubscribeToPosts(cw.uid)
+func (as *appState) subscribeToPosts(uid clientintf.UserID) error {
+	cw := as.findChatWindow(uid)
+	nick, err := as.c.UserNick(uid)
 	if err != nil {
-		as.diagMsg("Unable to subscribe to posts: %v", err)
-		return
+		return err
 	}
-	cw.setMsgSent(m)
-	as.log.Debugf("Subscribed to posts from %q", cw.alias)
-	as.repaintIfActive(cw)
+	err = as.c.SubscribeToPosts(uid)
+	if err != nil {
+		return err
+	}
+	msg := fmt.Sprintf("Subscribing to %s posts", strescape.Nick(nick))
+	if cw != nil {
+		cw.newHelpMsg(msg)
+		as.repaintIfActive(cw)
+	} else {
+		as.cwHelpMsg(msg)
+	}
+	return nil
 }
 
-func (as *appState) unsubscribeToPosts(cw *chatWindow) {
-	m := cw.newInternalMsg("Unsubscribing to posts")
-	as.repaintIfActive(cw)
-	err := as.c.UnsubscribeToPosts(cw.uid)
+func (as *appState) unsubscribeToPosts(uid clientintf.UserID) error {
+	cw := as.findChatWindow(uid)
+	nick, err := as.c.UserNick(uid)
 	if err != nil {
-		as.diagMsg("Unable to unsubscribe to posts: %v", err)
-		return
+		return err
 	}
-	cw.setMsgSent(m)
-	as.log.Debugf("Unsubscribed to posts from %q", cw.alias)
-	as.repaintIfActive(cw)
+	err = as.c.UnsubscribeToPosts(uid)
+	if err != nil {
+		return err
+	}
+	msg := fmt.Sprintf("Unsubscribing to %s posts", strescape.Nick(nick))
+	if cw != nil {
+		cw.newHelpMsg(msg)
+		as.repaintIfActive(cw)
+	} else {
+		as.cwHelpMsg(msg)
+	}
+	return nil
 }
 
 func (as *appState) requestRatchetReset(cw *chatWindow) {
@@ -2453,14 +2467,46 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 
 		SubscriptionChanged: func(user *client.RemoteUser, subscribed bool) {
 			cw := as.findChatWindow(user.ID())
-			msg := fmt.Sprintf("%q subscribed to my posts", user.Nick())
+			msg := fmt.Sprintf("%s subscribed to my posts", strescape.Nick(user.Nick()))
 			if !subscribed {
-				msg = fmt.Sprintf("%q unsubscribed to my posts", user.Nick())
+				msg = fmt.Sprintf("%s unsubscribed from my posts",
+					strescape.Nick(user.Nick()))
 			}
 			if cw == nil {
 				as.diagMsg(msg)
 			} else {
-				cw.newInternalMsg(msg)
+				cw.newHelpMsg(msg)
+				as.repaintIfActive(cw)
+			}
+		},
+
+		RemoteSubscriptionChanged: func(user *client.RemoteUser, subscribed bool) {
+			cw := as.findChatWindow(user.ID())
+			msg := fmt.Sprintf("Subscribed to %s posts", strescape.Nick(user.Nick()))
+			if !subscribed {
+				msg = fmt.Sprintf("Unsubscribed from %s posts", strescape.Nick(user.Nick()))
+			}
+			if cw == nil {
+				as.diagMsg(msg)
+			} else {
+				cw.newHelpMsg(msg)
+				as.repaintIfActive(cw)
+			}
+		},
+
+		RemoteSubscriptionError: func(user *client.RemoteUser, wasSubscribing bool, errMsg string) {
+			cw := as.findChatWindow(user.ID())
+			msg := fmt.Sprintf("Attempt to subscribe to %s posts "+
+				"failed: %s", strescape.Nick(user.Nick()), strescape.Content(errMsg))
+			if !wasSubscribing {
+				msg = fmt.Sprintf("Attempt to unsubscribe to %s posts "+
+					"failed: %s", strescape.Nick(user.Nick()), strescape.Content(errMsg))
+			}
+			if cw == nil {
+				as.diagMsg(msg)
+			} else {
+				cw.newHelpMsg(msg)
+				as.repaintIfActive(cw)
 			}
 		},
 

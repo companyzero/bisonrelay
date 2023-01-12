@@ -249,3 +249,9 @@ type LocalRenameArgs struct {
 	NewName string             `json:"new_name"`
 	IsGC    bool               `json:"is_gc"`
 }
+
+type PostSubscriptionResult struct {
+	ID            zkidentity.ShortID `json:"id"`
+	WasSubRequest bool               `json:"was_sub_request"`
+	Error         string             `json:"error"`
+}
