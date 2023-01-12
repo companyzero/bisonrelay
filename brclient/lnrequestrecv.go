@@ -108,11 +108,14 @@ func (pw lnRequestRecvWindow) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		pw.request()
 
 	case tea.KeyMsg:
-		switch msg.String() {
-		default:
-			pw.form, cmd = pw.form.Update(msg)
-			return pw, cmd
+		oldServer := pw.form.inputs[0].(*textInputHelper).Value()
+		pw.form, cmd = pw.form.Update(msg)
+		newServer := pw.form.inputs[0].(*textInputHelper).Value()
+		if oldServer != newServer {
+			pw.form.inputs[1].(*textInputHelper).SetValue("")
 		}
+
+		return pw, cmd
 	}
 
 	return pw, nil
