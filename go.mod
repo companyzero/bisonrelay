@@ -9,6 +9,7 @@ require (
 	github.com/charmbracelet/lipgloss v0.5.0
 	github.com/companyzero/sntrup4591761 v0.0.0-20220309191932-9e0f3af2f07a
 	github.com/davecgh/go-spew v1.1.1
+	github.com/decred/dcrd/certgen v1.1.1
 	github.com/decred/dcrd/chaincfg/chainhash v1.0.3
 	github.com/decred/dcrd/crypto/blake256 v1.0.0
 	github.com/decred/dcrd/dcrutil/v4 v4.0.0
@@ -17,6 +18,7 @@ require (
 	github.com/decred/go-socks v1.1.0
 	github.com/decred/slog v1.2.0
 	github.com/erikgeiser/promptkit v0.7.0
+	github.com/gorilla/websocket v1.4.2
 	github.com/jrick/flagfile v0.0.0-20200906235446-2904c79186c7
 	github.com/jrick/logrotate v1.0.0
 	github.com/lib/pq v1.10.5
@@ -33,6 +35,7 @@ require (
 	golang.org/x/term v0.0.0-20220526004731-065cf7ba2467
 	golang.org/x/text v0.3.7
 	google.golang.org/grpc v1.46.0
+	google.golang.org/protobuf v1.27.1
 	gopkg.in/macaroon.v2 v2.1.0
 )
 
@@ -58,7 +61,6 @@ require (
 	github.com/decred/dcrd/blockchain/stake/v4 v4.0.0 // indirect
 	github.com/decred/dcrd/blockchain/standalone/v2 v2.1.0 // indirect
 	github.com/decred/dcrd/blockchain/v4 v4.0.2 // indirect
-	github.com/decred/dcrd/certgen v1.1.1 // indirect
 	github.com/decred/dcrd/chaincfg v1.5.2 // indirect
 	github.com/decred/dcrd/chaincfg/v3 v3.1.1 // indirect
 	github.com/decred/dcrd/connmgr v1.1.0 // indirect
@@ -85,7 +87,6 @@ require (
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/btree v1.0.0 // indirect
 	github.com/google/uuid v1.1.2 // indirect
-	github.com/gorilla/websocket v1.4.2 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.0.0 // indirect
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0 // indirect
@@ -132,9 +133,8 @@ require (
 	golang.org/x/time v0.0.0-20191024005414-555d28b269f0 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 	google.golang.org/genproto v0.0.0-20200924141100-a14c0a98937d // indirect
-	google.golang.org/protobuf v1.27.1 // indirect
 	gopkg.in/errgo.v1 v1.0.0 // indirect
 	gopkg.in/macaroon-bakery.v2 v2.1.0 // indirect
-	gopkg.in/yaml.v2 v2.3.0 // indirect
+	gopkg.in/yaml.v2 v2.4.0 // indirect
 	sigs.k8s.io/yaml v1.1.0 // indirect
 )

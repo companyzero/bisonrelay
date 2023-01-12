@@ -66,6 +66,11 @@ client is fully setup. Further information about a command be obtained by typing
 - `/add <filename>`: accept the invitation to communicate with a user.
 - `/msg <user> <message>` send a private message to a previously known user.
 
+#### Client Automation
+
+Automation (bots, integrations, etc) of a `brclient` instance can be done by
+using the [clientrpc](clientrpc) interface.
+
 ### Server
 
 A private server can be executed by running:
