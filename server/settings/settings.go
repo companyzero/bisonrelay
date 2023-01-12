@@ -32,7 +32,7 @@ type Settings struct {
 	Root            string        // root directory for brserver
 	RoutedMessages  string        // routed messages
 	PaidRVs         string        // paid for RVs
-	Listen          string        // listen address and port
+	Listen          []string      // listen addresses and port
 	InitSessTimeout time.Duration // How long to wait for session on a new connection
 
 	// policy section
@@ -81,7 +81,7 @@ func New() *Settings {
 		Root:            "~/.brserver",
 		RoutedMessages:  "~/.brserver/" + ZKSRoutedMessages,
 		PaidRVs:         "~/.brserver/" + ZKSPaidRVs,
-		Listen:          "127.0.0.1:12345",
+		Listen:          []string{"127.0.0.1:12345"},
 		InitSessTimeout: time.Second * 20,
 
 		// Policy
@@ -156,11 +156,14 @@ func (s *Settings) Load(filename string) error {
 	s.PaidRVs = strings.Replace(s.PaidRVs, "~", usr.HomeDir, 1)
 
 	// listen address
-	listen, ok := cfg.Get("", "listen")
+	rawListen, ok := cfg.Get("", "listen")
 	if ok {
-		s.Listen = listen
+		listenList := strings.Split(rawListen, ",")
+		for i := range listenList {
+			listenList[i] = strings.TrimSpace(listenList[i])
+		}
+		s.Listen = listenList
 	}
-	s.Listen = strings.Replace(s.Listen, "~", usr.HomeDir, 1)
 
 	// logging and debug
 	logFile, ok := cfg.Get("log", "logfile")
