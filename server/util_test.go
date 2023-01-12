@@ -35,7 +35,7 @@ func newTestServer(t testing.TB) *ZKS {
 	cfg.Root = dir
 	cfg.RoutedMessages = filepath.Join(dir, settings.ZKSRoutedMessages)
 	cfg.LogFile = filepath.Join(dir, "brserver.log")
-	cfg.Listen = "127.0.0.1:0"
+	cfg.Listen = []string{"127.0.0.1:0"}
 	cfg.InitSessTimeout = time.Second
 	cfg.DebugLevel = "off"
 

@@ -19,6 +19,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/companyzero/bisonrelay/internal/netutils"
 	"github.com/companyzero/bisonrelay/ratchet"
 	"github.com/companyzero/bisonrelay/rpc"
 	brfsdb "github.com/companyzero/bisonrelay/server/internal/fsdb"
@@ -285,7 +286,7 @@ func (z *ZKS) listen(ctx context.Context, l net.Listener) error {
 
 	z.log.Infof("Listening on %v", l.Addr())
 	z.Lock()
-	z.listenAddrs = []net.Addr{l.Addr()}
+	z.listenAddrs = append(z.listenAddrs, l.Addr())
 	z.Unlock()
 	for {
 		conn, err := l.Accept()
@@ -350,9 +351,18 @@ func (z *ZKS) expirationLoop(ctx context.Context) error {
 func (z *ZKS) Run(ctx context.Context) error {
 	defer z.log.Infof("End of times")
 
-	l, err := net.Listen("tcp", z.settings.Listen)
-	if err != nil {
-		return fmt.Errorf("could not listen: %v", err)
+	if len(z.settings.Listen) == 0 {
+		return fmt.Errorf("no listen addresses configured")
+	}
+
+	listeners := make([]net.Listener, 0, len(z.settings.Listen)*2)
+	for _, addr := range z.settings.Listen {
+		ls, err := netutils.Listen(addr)
+		if err != nil {
+			return fmt.Errorf("could not listen to addr %s: %v",
+				addr, err)
+		}
+		listeners = append(listeners, ls...)
 	}
 
 	g, gctx := errgroup.WithContext(ctx)
@@ -367,29 +377,39 @@ func (z *ZKS) Run(ctx context.Context) error {
 	// Cancel listening interfaces once context is done.
 	g.Go(func() error {
 		<-gctx.Done()
-		return l.Close()
+		var firstErr error
+		for i := range listeners {
+			err := listeners[i].Close()
+			if err != nil && firstErr == nil {
+				firstErr = err
+			}
+		}
+		return firstErr
 	})
 
 	// Run the expiration loop.
 	g.Go(func() error { return z.expirationLoop(ctx) })
 
 	// Listen for connections.
-	g.Go(func() error {
-		err := z.listen(gctx, l)
-		select {
-		case <-ctx.Done():
-			// Close() was requested, so ignore the error.
-			return nil
-		default:
-			// Unexpected listen error.
-			return err
-		}
-	})
+	for i := range listeners {
+		l := listeners[i]
+		g.Go(func() error {
+			err := z.listen(gctx, l)
+			select {
+			case <-ctx.Done():
+				// Close() was requested, so ignore the error.
+				return nil
+			default:
+				// Unexpected listen error.
+				return err
+			}
+		})
+	}
 	statLog := z.logBknd.logger("STAT")
 	g.Go(func() error { return z.stats.runPrinter(gctx, statLog) })
 
 	// Wait until all subsystems are done.
-	err = g.Wait()
+	err := g.Wait()
 
 	// Close DB if needed.
 	type dbcloser interface {
