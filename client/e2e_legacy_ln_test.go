@@ -938,10 +938,18 @@ func TestE2EDcrlnPostContent(t *testing.T) {
 		statusFrom UserID, status rpc.PostMetadataStatus) {
 		bobRecvComments <- status.Attributes[rpc.RMPSComment]
 	}
+	bobSubChanged := make(chan bool, 3)
+	bob.cfg.RemoteSubscriptionChanged = func(user *RemoteUser, subscribed bool) {
+		bobSubChanged <- subscribed
+	}
 
 	charlieRecvPosts := make(chan rpc.PostMetadata, 1)
 	charlie.cfg.PostReceived = func(ru *RemoteUser, summary clientdb.PostSummary, pm rpc.PostMetadata) {
 		charlieRecvPosts <- pm
+	}
+	charlieSubChanged := make(chan bool, 3)
+	charlie.cfg.RemoteSubscriptionChanged = func(user *RemoteUser, subscribed bool) {
+		charlieSubChanged <- subscribed
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -970,10 +978,16 @@ func TestE2EDcrlnPostContent(t *testing.T) {
 	if err := bob.SubscribeToPosts(alice.PublicID()); err != nil {
 		t.Fatal(err)
 	}
+	if !assert.ChanWritten(t, bobSubChanged) {
+		t.Fatal("bob did not subscribe to alice's posts")
+	}
 
 	// Charlie subscribes to Bob's posts.
 	if err := charlie.SubscribeToPosts(bob.PublicID()); err != nil {
 		t.Fatal(err)
+	}
+	if !assert.ChanWritten(t, charlieSubChanged) {
+		t.Fatal("charlie did not subscribe to alice's posts")
 	}
 
 	// Alice creates a post that bob will receive.
@@ -1023,6 +1037,9 @@ func TestE2EDcrlnPostContent(t *testing.T) {
 	// Bob unsubscribes to Alice's posts.
 	if err := bob.UnsubscribeToPosts(alice.PublicID()); err != nil {
 		t.Fatal(err)
+	}
+	if assert.ChanWritten(t, bobSubChanged) {
+		t.Fatal("bob did not unsubscribe to alice's posts")
 	}
 
 	// Alice creates a post that Bob shouldn't get anymore.
@@ -1763,17 +1780,33 @@ func TestE2EDcrlnKXSearch(t *testing.T) {
 	bob.cfg.PostReceived = func(ru *RemoteUser, summary clientdb.PostSummary, pm rpc.PostMetadata) {
 		bobRecvPosts <- summary
 	}
+	bobSubChanged := make(chan bool, 1)
+	bob.cfg.RemoteSubscriptionChanged = func(ru *RemoteUser, subscribed bool) {
+		bobSubChanged <- subscribed
+	}
 	charlieRecvPosts := make(chan clientdb.PostSummary, 1)
 	charlie.cfg.PostReceived = func(ru *RemoteUser, summary clientdb.PostSummary, pm rpc.PostMetadata) {
 		charlieRecvPosts <- summary
+	}
+	charlieSubChanged := make(chan bool, 1)
+	charlie.cfg.RemoteSubscriptionChanged = func(ru *RemoteUser, subscribed bool) {
+		charlieSubChanged <- subscribed
 	}
 	daveRecvPosts := make(chan clientdb.PostSummary, 1)
 	dave.cfg.PostReceived = func(ru *RemoteUser, summary clientdb.PostSummary, pm rpc.PostMetadata) {
 		daveRecvPosts <- summary
 	}
+	daveSubChanged := make(chan bool, 1)
+	dave.cfg.RemoteSubscriptionChanged = func(ru *RemoteUser, subscribed bool) {
+		daveSubChanged <- subscribed
+	}
 	eveRecvPosts := make(chan clientdb.PostSummary, 2)
 	eve.cfg.PostReceived = func(ru *RemoteUser, summary clientdb.PostSummary, pm rpc.PostMetadata) {
 		eveRecvPosts <- summary
+	}
+	eveSubChanged := make(chan bool, 1)
+	eve.cfg.RemoteSubscriptionChanged = func(ru *RemoteUser, subscribed bool) {
+		eveSubChanged <- subscribed
 	}
 
 	eveKXdChan := make(chan *RemoteUser, 1)
@@ -1842,16 +1875,19 @@ func TestE2EDcrlnKXSearch(t *testing.T) {
 	assertKXd(eveKXdChan, dave.PublicID())
 
 	// Make each one in the chain subscribe to the previous one's posts.
-	subToPosts := func(poster, subber *Client) {
+	subToPosts := func(poster, subber *Client, subberChan chan bool) {
 		t.Helper()
 		if err := subber.SubscribeToPosts(poster.PublicID()); err != nil {
 			t.Fatal(err)
 		}
+		if !assert.ChanWritten(t, subberChan) {
+			t.Fatal("subscriber failed to subscribe to poster")
+		}
 	}
-	subToPosts(alice, bob)
-	subToPosts(bob, charlie)
-	subToPosts(charlie, dave)
-	subToPosts(dave, eve)
+	subToPosts(alice, bob, bobSubChanged)
+	subToPosts(bob, charlie, charlieSubChanged)
+	subToPosts(charlie, dave, daveSubChanged)
+	subToPosts(dave, eve, eveSubChanged)
 
 	// Alice creates a post and comments on it.
 	postSumm, err := alice.CreatePost("first", "")

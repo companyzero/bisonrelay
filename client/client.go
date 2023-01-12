@@ -147,6 +147,17 @@ type Config struct {
 	// unsubscribed).
 	SubscriptionChanged func(user *RemoteUser, subscribed bool)
 
+	// RemoteSubscriptionChanged is called whenever the local client
+	// receives the result of a {Subscribe,Unsubscribe}ToPosts call. In
+	// other words, it's called whenever the status of a local subscription
+	// to a remote user's posts changes.
+	RemoteSubscriptionChanged func(user *RemoteUser, subscribed bool)
+
+	// RemoteSubscriptionError is called when the local client receives a
+	// reply to a {Subscribe,Unsubscribe}ToPosts call with a remote error
+	// message.
+	RemoteSubscriptionError func(user *RemoteUser, wasSubscribing bool, errMsg string)
+
 	// ContentListReceived is called when the list of content of the user is
 	// received.
 	ContentListReceived func(user *RemoteUser, files []clientdb.RemoteFile, listErr error)

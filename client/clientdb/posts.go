@@ -138,7 +138,7 @@ func (db *DB) UnsubscribeToPosts(tx ReadWriteTx, user UserID) error {
 		ss = append(ss, s)
 	}
 	if !unsubscribed {
-		return fmt.Errorf("not subscribed")
+		return ErrNotSubscribed
 	}
 
 	// If we get here we can write the file back

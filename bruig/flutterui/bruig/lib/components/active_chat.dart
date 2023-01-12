@@ -603,62 +603,6 @@ class _InflightTipState extends State<InflightTipW> {
   }
 }
 
-class InflightSubscribeToPostsW extends StatefulWidget {
-  final InflightSubscribeToPosts event;
-  const InflightSubscribeToPostsW(this.event, {Key? key}) : super(key: key);
-
-  @override
-  State<InflightSubscribeToPostsW> createState() =>
-      _InflightSubscribeToPostsWState();
-}
-
-class _InflightSubscribeToPostsWState extends State<InflightSubscribeToPostsW> {
-  @override
-  initState() {
-    super.initState();
-    widget.event.addListener(stateChanged);
-  }
-
-  @override
-  didUpdateWidget(InflightSubscribeToPostsW oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    oldWidget.event.removeListener(stateChanged);
-    widget.event.addListener(stateChanged);
-  }
-
-  @override
-  dispose() {
-    widget.event.removeListener(stateChanged);
-    super.dispose();
-  }
-
-  void stateChanged() {
-    setState(() {});
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    var event = widget.event;
-    late Widget child;
-    var theme = Theme.of(context);
-    var textColor = theme.dividerColor;
-    if (event.state == ISPS_subscribed) {
-      child = Text("✓ Subscribed to posts!",
-          style: TextStyle(fontSize: 9, color: textColor));
-    } else if (event.state == ISPS_errored) {
-      child = Text("✗ Failed to subscribe to posts ${event.error}",
-          style: TextStyle(fontSize: 9, color: textColor));
-    } else if (event.state == ISPS_sending) {
-      child = Text("… Subscribing to posts",
-          style: TextStyle(fontSize: 9, color: textColor));
-    } else {
-      child = Text("? unknown state ${event.state}",
-          style: TextStyle(fontSize: 9, color: textColor));
-    }
-    return ServerEvent(child: child);
-  }
-}
-
 class SynthEventW extends StatefulWidget {
   final SynthChatEvent event;
   const SynthEventW(this.event, {Key? key}) : super(key: key);
@@ -757,6 +701,31 @@ class PostEventW extends StatelessWidget {
   }
 }
 
+class PostSubscriptionEventW extends StatelessWidget {
+  final PostSubscriptionResult event;
+  const PostSubscriptionEventW(this.event, {Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    var theme = Theme.of(context);
+    var textColor = theme.dividerColor;
+    String msg;
+    if (event.wasSubRequest && event.error != "") {
+      msg = "Unable to subscribe to user's posts: ${event.error}";
+    } else if (event.wasSubRequest) {
+      msg = "Subscribed to user's posts!";
+    } else if (event.error != "") {
+      msg = "Unable to unsubscribe from user's posts: ${event.error}";
+    } else {
+      msg = "Unsubscribed from user's posts!";
+    }
+
+    return ServerEvent(
+        child: SelectableText(msg,
+            style: TextStyle(fontSize: 9, color: textColor)));
+  }
+}
+
 class FileDownloadedEventW extends StatelessWidget {
   final FileDownloadedEvent event;
   const FileDownloadedEventW(this.event, {Key? key}) : super(key: key);
@@ -803,10 +772,6 @@ class Event extends StatelessWidget {
       return GCUserEventW(event);
     }
 
-    if (event.event is InflightSubscribeToPosts) {
-      return InflightSubscribeToPostsW(event.event as InflightSubscribeToPosts);
-    }
-
     if (event.event is FeedPostEvent) {
       return PostEventW(event.event as FeedPostEvent);
     }
@@ -829,6 +794,10 @@ class Event extends StatelessWidget {
 
     if (event.event is UserContentList) {
       return UserContentEventW(event.event as UserContentList, chat);
+    }
+
+    if (event.event is PostSubscriptionResult) {
+      return PostSubscriptionEventW(event.event as PostSubscriptionResult);
     }
 
     var theme = Theme.of(context);
