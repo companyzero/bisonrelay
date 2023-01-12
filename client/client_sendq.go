@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/companyzero/bisonrelay/client/clientdb"
@@ -25,6 +26,13 @@ func (c *Client) addToSendQ(typ string, msg interface{}, priority uint,
 	blob, err := rpc.ComposeCompressedRM(c.id, msg, c.cfg.CompressLevel)
 	if err != nil {
 		return sendqID, err
+	}
+
+	if rpc.EstimateRoutedRMWireSize(len(blob)) > rpc.MaxMsgSize {
+		return sendqID, fmt.Errorf("cannot enqueue message %T "+
+			"estimated as larger than max message size %d > %d: %w",
+			msg, rpc.EstimateRoutedRMWireSize(len(blob)),
+			rpc.MaxMsgSize, errRMTooLarge)
 	}
 
 	err = c.dbUpdate(func(tx clientdb.ReadWriteTx) error {

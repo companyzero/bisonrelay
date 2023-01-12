@@ -14,6 +14,7 @@
 package rpc
 
 import (
+	"encoding/base64"
 	"strconv"
 	"time"
 
@@ -267,3 +268,16 @@ var (
 // This command must be acknowledged by the remote side.
 type Ping struct{}
 type Pong struct{}
+
+// EstimateRoutedRMWireSize estimates the final wire size of a compressed RM
+// (with compression set to its lowest value, which effectively disables it).
+func EstimateRoutedRMWireSize(compressedRMSize int) int {
+	// Estimation of the overhead in all the various framings used for a
+	// message encoded by ComposeCompressedRM to be sent on the wire.
+	const overheadEstimate = 512
+
+	// The compressed RM will end up encoded as base64 within a json
+	// message.
+	b64size := base64.StdEncoding.EncodedLen(compressedRMSize)
+	return b64size + overheadEstimate
+}

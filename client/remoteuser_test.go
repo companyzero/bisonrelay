@@ -3,12 +3,16 @@ package client
 import (
 	"context"
 	"errors"
+	"math"
 	"math/rand"
+	"strings"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/companyzero/bisonrelay/internal/assert"
 	"github.com/companyzero/bisonrelay/rpc"
+	"github.com/companyzero/bisonrelay/zkidentity"
 )
 
 func newRemoteUserTestPair(t testing.TB, rnd *rand.Rand, svr *mockRMServer, name1, name2 string) (*RemoteUser, *RemoteUser) {
@@ -182,4 +186,49 @@ func TestRemoteUserPMs(t *testing.T) {
 			t.Fatalf("Bob did not receive message %v", want)
 		}
 	}
+}
+
+// TestAttemptMaxRMSize tests an attempt to send an RM larger than the max
+// acceptable size.
+func TestAttemptMaxRMSize(t *testing.T) {
+	t.Parallel()
+
+	rnd := testRand(t)
+	svr := newMockRMServer(t)
+
+	aliceRemote, bobRemote := newRemoteUserTestPair(t, rnd, svr, "alice", "bob")
+	aliceRun, bobRun := make(chan error), make(chan error)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go func() { aliceRun <- aliceRemote.run(ctx) }()
+	go func() { bobRun <- bobRemote.run(ctx) }()
+
+	gotBobRM := make(chan struct{}, 1)
+	bobRemote.rmHandler = func(_ *RemoteUser, h *rpc.RMHeader, p interface{}, ts time.Time) {
+		gotBobRM <- struct{}{}
+	}
+
+	rm := rpc.RMFTGetChunkReply{
+		FileID: zkidentity.ShortID{}.String(),
+		Index:  math.MaxInt,
+		Tag:    math.MaxUint32,
+		Chunk:  make([]byte, 1024*1024),
+	}
+
+	// Send a valid file chunk with the max size.
+	err := aliceRemote.sendRM(rm, "")
+	assert.NilErr(t, err)
+	assert.ChanWritten(t, gotBobRM)
+
+	// Send a file slightly larger than the max size.
+	rm.Chunk = make([]byte, (1024+15)*1024)
+	err = aliceRemote.sendRM(rm, "")
+	assert.ErrorIs(t, err, errRMTooLarge)
+
+	// Send a very large PM.
+	pm := rpc.RMPrivateMessage{
+		Message: strings.Repeat(" ", (1024+357)*1024+703),
+	}
+	err = aliceRemote.sendRM(pm, "")
+	assert.ErrorIs(t, err, errRMTooLarge)
 }

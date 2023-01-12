@@ -332,6 +332,9 @@ func ComposeCompressedRM(from *zkidentity.FullIdentity, rm interface{}, zlibLeve
 		return nil, err
 	}
 
+	log.Debugf("Composed compressed %s: payload size %d, "+
+		"final size %d", h.Command, len(payload), mb.Len())
+
 	return mb.Bytes(), nil
 }
 
