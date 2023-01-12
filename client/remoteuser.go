@@ -3,7 +3,6 @@ package client
 import (
 	"context"
 	"crypto/rand"
-	"encoding/base64"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -213,6 +212,13 @@ func (ru *RemoteUser) queueRMPriority(payload interface{}, priority uint,
 	me, err := rpc.ComposeCompressedRM(ru.localID, payload, ru.compressLevel)
 	if err != nil {
 		return err
+	}
+
+	if rpc.EstimateRoutedRMWireSize(len(me)) > rpc.MaxMsgSize {
+		return fmt.Errorf("message %T estimated as larger than "+
+			"max message size %d > %d: %w", payload,
+			rpc.EstimateRoutedRMWireSize(len(me)),
+			rpc.MaxMsgSize, errRMTooLarge)
 	}
 
 	if ru.logPayloads.Level() <= slog.LevelTrace {
@@ -482,10 +488,10 @@ func (ru *RemoteUser) encryptRM(rm *remoteUserRM) (lowlevel.RVID, []byte, error)
 
 	rm.encrypted = enc
 	rm.sendRV = sendRV
-	b64size := base64.StdEncoding.EncodedLen(len(enc))
+	wireEstSize := rpc.EstimateRoutedRMWireSize(len(rm.msg))
 	ru.log.Debugf("Sending RM %s via RV %s (payload size %d, "+
-		"encrypted size %d, b64 size %d)", rm, rm.sendRV, len(rm.msg),
-		len(enc), b64size)
+		"encrypted size %d, wire est. size %d)", rm, rm.sendRV, len(rm.msg),
+		len(enc), wireEstSize)
 
 	return rm.sendRV, rm.encrypted, err
 }

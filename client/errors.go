@@ -1,6 +1,7 @@
 package client
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/companyzero/bisonrelay/client/clientintf"
@@ -11,6 +12,7 @@ var (
 	errClientExiting     = fmt.Errorf("client: %w", clientintf.ErrSubsysExiting)
 	errAlreadyExists     = fmt.Errorf("already exists")
 	errUserBlocked       = fmt.Errorf("user is blocked")
+	errRMTooLarge        = errors.New("RM is too large")
 )
 
 type userNotFoundError struct {
