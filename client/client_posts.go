@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/companyzero/bisonrelay/client/clientdb"
@@ -14,79 +15,110 @@ import (
 	"github.com/companyzero/bisonrelay/zkidentity"
 )
 
-// SubscribeToPosts attempts to subscribe to the posts of the given user.
-//
-// It returns when the remote user replies or the client exits.
-func (c *Client) SubscribeToPosts(uid UserID) error {
+// subscribeToPosts subscribes to the given user posts, optionally fetching
+// the given post as well.
+func (c *Client) subscribeToPosts(uid UserID, pid *clientintf.PostID, includeStatus bool) error {
 	ru, err := c.rul.byID(uid)
 	if err != nil {
 		return err
 	}
 
-	// Waiting until we can send a RMPostsSubscribe (only 1 at a time).
-	replyChan := ru.wqSubPosts.WaitForReadyToSend(c.ctx)
-	if replyChan == nil {
-		return errClientExiting
-	}
-
-	err = ru.sendRM(rpc.RMPostsSubscribe{}, "posts.subscribe")
+	payEvent := "posts.subscribe"
+	rm := rpc.RMPostsSubscribe{GetPost: pid, IncludeStatus: includeStatus}
+	err = c.sendWithSendQ(payEvent, rm, uid)
 	if err != nil {
 		return err
 	}
-
-	// Wait until we get a reply.
-	select {
-	case res := <-replyChan:
-		switch res := res.(type) {
-		case error:
-			return res
-		default:
-		}
-	case <-c.ctx.Done():
-		return errClientExiting
-	}
-
-	// We got a reply.
-	ru.log.Infof("Subscribed to posts")
-
-	err = c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
-		return c.db.StorePostSubscription(tx, uid)
-	})
-	if err != nil {
-		c.log.Warnf("Unable to store post subscription: %v", err)
-	}
-
+	ru.log.Infof("Subscribing to posts")
 	return nil
 }
 
+// SubscribeToPosts attempts to subscribe to the posts of the given user.
+//
+// It returns when the remote user replies or the client exits.
+func (c *Client) SubscribeToPosts(uid UserID) error {
+	return c.subscribeToPosts(uid, nil, false)
+}
+
 func (c *Client) handlePostsSubscribe(ru *RemoteUser, ps rpc.RMPostsSubscribe) error {
+	var post rpc.PostMetadata
+	var updates []rpc.PostMetadataStatus
 	err := c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
-		return c.db.SubscribeToPosts(tx, ru.ID())
+		err := c.db.SubscribeToPosts(tx, ru.ID())
+		if err != nil {
+			return err
+		}
+
+		if ps.GetPost == nil {
+			return nil
+		}
+
+		if post, err = c.db.ReadPost(tx, c.PublicID(), *ps.GetPost); err != nil {
+			return err
+		}
+		if ps.IncludeStatus {
+			if updates, err = c.db.ListPostStatusUpdates(tx, c.PublicID(), *ps.GetPost); err != nil {
+				return err
+			}
+		}
+		return nil
 	})
 
-	var errMsg *string
 	if err != nil && !errors.Is(err, clientdb.ErrAlreadySubscribed) {
+		return err
+	}
+
+	var errMsg *string
+	if err != nil {
 		msg := err.Error()
 		errMsg = &msg
-		ru.log.Warnf("DB error during postsSubscribe: %v", err)
-	}
-	ru.log.Infof("Subscribed to our posts")
 
-	if c.cfg.SubscriptionChanged != nil {
-		c.cfg.SubscriptionChanged(ru, true)
+		ru.log.Infof("Failed store remote user subscription: %v", err)
+	} else {
+		ru.log.Infof("Subscribed to our posts")
+
+		if c.cfg.SubscriptionChanged != nil {
+			c.cfg.SubscriptionChanged(ru, true)
+		}
 	}
 
 	rm := rpc.RMPostsSubscribeReply{Error: errMsg}
 	payEvent := "posts.subscribereply"
-	return ru.sendRM(rm, payEvent)
+	if err := c.sendWithSendQ(payEvent, rm, ru.ID()); err != nil {
+		return err
+	}
+
+	if errMsg != nil || ps.GetPost == nil {
+		return nil
+	}
+
+	// Have post to send.
+	return c.sendPostToUser(ru, *ps.GetPost, post, updates)
 }
 
 func (c *Client) handlePostsSubscribeReply(ru *RemoteUser, psr rpc.RMPostsSubscribeReply) error {
-	var v interface{}
 	if psr.Error != nil {
-		v = errors.New(*psr.Error)
+		subErr := strings.TrimSpace(*psr.Error)
+		ru.log.Warnf("Received error reply when subscribing to posts: %q", subErr)
+		if c.cfg.RemoteSubscriptionError != nil {
+			c.cfg.RemoteSubscriptionError(ru, true, subErr)
+		}
+	} else {
+		uid := ru.ID()
+		err := c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
+			return c.db.StorePostSubscription(tx, uid)
+		})
+		if err != nil {
+			return err
+		}
+		ru.log.Infof("Successfully subscribed to posts")
+
+		if c.cfg.RemoteSubscriptionChanged != nil {
+			c.cfg.RemoteSubscriptionChanged(ru, true)
+		}
 	}
-	return ru.wqSubPosts.ReplyLastSend(c.ctx, v)
+
+	return nil
 }
 
 // UnsubscribeToPosts unsubscribes the local user to the posts made by the
@@ -99,37 +131,22 @@ func (c *Client) UnsubscribeToPosts(uid UserID) error {
 		return err
 	}
 
-	// Waiting until we can send a RMPostsUnsubscribe (only 1 at a time).
-	replyChan := ru.wqSubPosts.WaitForReadyToSend(c.ctx)
-	if replyChan == nil {
-		return errClientExiting
-	}
-
-	err = ru.sendRM(rpc.RMPostsUnsubscribe{}, "posts.unsubscribe")
+	payEvent := "posts.unsubscribe"
+	err = c.sendWithSendQ(payEvent, rpc.RMPostsUnsubscribe{}, uid)
 	if err != nil {
 		return err
 	}
 
-	ru.log.Infof("Unsubscribed to posts")
+	// Ensure we store the unsubscription, in case we start receiving new
+	// posts from the remote before it processes our unsubscribe request.
 	err = c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
 		return c.db.StorePostUnsubscription(tx, uid)
 	})
 	if err != nil {
-		c.log.Warnf("Unable to store post unsubscription: %v", err)
+		return err
 	}
 
-	// Wait until we get a reply.
-	select {
-	case res := <-replyChan:
-		switch res := res.(type) {
-		case error:
-			return res
-		default:
-		}
-	case <-c.ctx.Done():
-		return errClientExiting
-	}
-
+	ru.log.Infof("Unsubscribing to posts")
 	return nil
 }
 
@@ -138,28 +155,51 @@ func (c *Client) handlePostsUnsubscribe(ru *RemoteUser, pu rpc.RMPostsUnsubscrib
 		return c.db.UnsubscribeToPosts(tx, ru.ID())
 	})
 
+	if err != nil && !errors.Is(err, clientdb.ErrNotSubscribed) {
+		return err
+	}
+
 	var errMsg *string
 	if err != nil {
 		msg := err.Error()
 		errMsg = &msg
-		ru.log.Warnf("DB error during postsSubscribe: %v", err)
-	}
-
-	ru.log.Infof("Unsubscribed to our posts")
-	if c.cfg.SubscriptionChanged != nil {
-		c.cfg.SubscriptionChanged(ru, false)
+		ru.log.Warnf("Failed to store remote unsubscription: %v", err)
+	} else {
+		ru.log.Infof("Unsubscribed to our posts")
+		if c.cfg.SubscriptionChanged != nil {
+			c.cfg.SubscriptionChanged(ru, false)
+		}
 	}
 
 	rm := rpc.RMPostsUnsubscribeReply{Error: errMsg}
-	return ru.sendRM(rm, "posts.ubsubscribereply")
+	payEvent := "posts.ubsubscribereply"
+	return c.sendWithSendQ(payEvent, rm, ru.ID())
 }
 
 func (c *Client) handlePostsUnsubscribeReply(ru *RemoteUser, psr rpc.RMPostsUnsubscribeReply) error {
-	var v interface{}
 	if psr.Error != nil {
-		v = errors.New(*psr.Error)
+		unsubErr := strings.TrimSpace(*psr.Error)
+		ru.log.Warnf("Received error reply when unsubscribing to posts: %q", unsubErr)
+		if c.cfg.RemoteSubscriptionError != nil {
+			c.cfg.RemoteSubscriptionError(ru, false, unsubErr)
+		}
+	} else {
+		// Double check we unsubscribed.
+		uid := ru.ID()
+		err := c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
+			return c.db.StorePostUnsubscription(tx, uid)
+		})
+		if err != nil {
+			return err
+		}
+		ru.log.Infof("Successfully unsubscribed to posts")
+
+		if c.cfg.RemoteSubscriptionChanged != nil {
+			c.cfg.RemoteSubscriptionChanged(ru, false)
+		}
 	}
-	return ru.wqSubPosts.ReplyLastSend(c.ctx, v)
+
+	return nil
 }
 
 // HasPostSubscribers returns true if the local client has subscribers to our
@@ -809,6 +849,32 @@ func (c *Client) GetUserPost(from UserID, pid clientintf.PostID, includeStatus b
 	return ru.sendRM(rm, payEvent)
 }
 
+// sendPostToUser sends the given post to the user.
+func (c *Client) sendPostToUser(ru *RemoteUser, pid clientintf.PostID, post rpc.PostMetadata, updates []rpc.PostMetadataStatus) error {
+
+	ru.log.Infof("Sending requested post %s (IncludeStatus=%v)", pid,
+		updates != nil)
+	payEvent := fmt.Sprintf("posts.%s.getreply", pid.ShortLogID())
+	rm := rpc.RMPostShare(post)
+	if err := c.sendWithSendQ(payEvent, rm, ru.ID()); err != nil {
+		return err
+	}
+	if len(updates) > 0 {
+		payEvent := fmt.Sprintf("posts.%s.getreplystatusupdate",
+			pid.ShortLogID())
+		for _, update := range updates {
+			rm := rpc.RMPostShare{
+				Version:    update.Version,
+				Attributes: update.Attributes,
+			}
+			if err := c.sendWithSendQ(payEvent, rm, ru.ID()); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
 func (c *Client) handleGetPost(ru *RemoteUser, gp rpc.RMGetPost) error {
 	// Check if user is subscriber.
 	errNotSubscriber := errors.New("not a subscriber")
@@ -848,28 +914,7 @@ func (c *Client) handleGetPost(ru *RemoteUser, gp rpc.RMGetPost) error {
 		return err
 	}
 
-	// Is a subscriber and have post. Send it.
-	ru.log.Infof("Sending requested post %s (IncludeStatus=%v)", gp.ID,
-		gp.IncludeStatus)
-	payEvent := fmt.Sprintf("posts.%s.getreply", gp.ID.ShortLogID())
-	rm := rpc.RMPostShare(post)
-	if err := c.sendWithSendQ(payEvent, rm, ru.ID()); err != nil {
-		return err
-	}
-	if len(updates) > 0 {
-		payEvent := fmt.Sprintf("posts.%s.getreplystatusupdate",
-			gp.ID.ShortLogID())
-		for _, update := range updates {
-			rm := rpc.RMPostShare{
-				Version:    update.Version,
-				Attributes: update.Attributes,
-			}
-			if err := c.sendWithSendQ(payEvent, rm, ru.ID()); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
+	return c.sendPostToUser(ru, gp.ID, post, updates)
 }
 
 // relayPost relays the post to the specified users.

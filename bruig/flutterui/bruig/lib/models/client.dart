@@ -31,32 +31,6 @@ class SynthChatEvent extends ChatEvent with ChangeNotifier {
   }
 }
 
-const ISPS_unknown = 0;
-const ISPS_sending = 1;
-const ISPS_subscribed = 2;
-const ISPS_errored = 3;
-
-class InflightSubscribeToPosts extends ChatEvent with ChangeNotifier {
-  InflightSubscribeToPosts(uid, [this._state = ISPS_unknown, this._error])
-      : super(uid, "");
-
-  int _state;
-  int get state => _state;
-  void set state(int v) {
-    _state = v;
-    notifyListeners();
-  }
-
-  Exception? _error;
-  Exception? get error => _error;
-  void set error(Exception? e) {
-    if (e == null) throw Exception("Cannot set error to null");
-    _error = e;
-    _state = ISPS_errored;
-    notifyListeners();
-  }
-}
-
 const int CMS_unknown = 0;
 const int CMS_sending = 1;
 const int CMS_sent = 2;
@@ -158,15 +132,29 @@ class ChatModel extends ChangeNotifier {
   String workingMsg = "";
 
   void subscribeToPosts() {
-    var event = InflightSubscribeToPosts(id);
-    event.state = ISPS_sending;
+    var event = SynthChatEvent("Subscribing to user's posts");
+    event.state = SCE_sending;
     append(ChatEventModel(event, null));
     (() async {
       try {
         await Golib.subscribeToPosts(id);
-        event.state = ISPS_subscribed;
+        event.state = SCE_sent;
       } catch (error) {
-        event.error = new Exception(error);
+        event.error = Exception(error);
+      }
+    })();
+  }
+
+  Future<void> unsubscribeToPosts() {
+    var event = SynthChatEvent("Unsubscribing from user's posts");
+    event.state = SCE_sending;
+    append(ChatEventModel(event, null));
+    return (() async {
+      try {
+        await Golib.unsubscribeToPosts(id);
+        event.state = SCE_sent;
+      } catch (error) {
+        event.error = Exception(error);
       }
     })();
   }

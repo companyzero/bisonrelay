@@ -1248,3 +1248,19 @@ Map<String, dynamic> _$LocalRenameArgsToJson(LocalRenameArgs instance) =>
       'new_name': instance.newName,
       'is_gc': instance.isGC,
     };
+
+PostSubscriptionResult _$PostSubscriptionResultFromJson(
+        Map<String, dynamic> json) =>
+    PostSubscriptionResult(
+      json['id'] as String,
+      json['was_sub_request'] as bool,
+      json['error'] as String,
+    );
+
+Map<String, dynamic> _$PostSubscriptionResultToJson(
+        PostSubscriptionResult instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'was_sub_request': instance.wasSubRequest,
+      'error': instance.error,
+    };

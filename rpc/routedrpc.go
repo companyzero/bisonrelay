@@ -948,7 +948,14 @@ const (
 )
 
 // RMPostSubscribe subscribes to new posts from a user.
-type RMPostsSubscribe struct{}
+type RMPostsSubscribe struct {
+	// GetPost is an optional post to send to the client, assuming
+	// subscribing to the posts worked.
+	GetPost *zkidentity.ShortID `json:"get_post,omitempty"`
+
+	// IncludeStatus also sends the post status updates if GetPost != nil.
+	IncludeStatus bool `json:"include_status,omitempty"`
+}
 
 const RMCPostsSubscribe = "postssubscribe"
 

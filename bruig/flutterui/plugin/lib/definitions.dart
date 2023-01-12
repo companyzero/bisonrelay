@@ -1238,6 +1238,19 @@ class LocalRenameArgs {
   Map<String, dynamic> toJson() => _$LocalRenameArgsToJson(this);
 }
 
+@JsonSerializable()
+class PostSubscriptionResult extends ChatEvent {
+  final String id;
+  @JsonKey(name: "was_sub_request")
+  final bool wasSubRequest;
+  final String error;
+
+  PostSubscriptionResult(this.id, this.wasSubRequest, this.error)
+      : super(id, "");
+  factory PostSubscriptionResult.fromJson(Map<String, dynamic> json) =>
+      _$PostSubscriptionResultFromJson(json);
+}
+
 mixin NtfStreams {
   StreamController<RemoteUser> ntfAcceptedInvites =
       StreamController<RemoteUser>();
@@ -1456,6 +1469,10 @@ abstract class PluginPlatform {
 
   Future<void> subscribeToPosts(String uid) async {
     await asyncCall(CTSubscribeToPosts, uid);
+  }
+
+  Future<void> unsubscribeToPosts(String uid) async {
+    await asyncCall(CTUnsubscribeToPosts, uid);
   }
 
   Future<void> requestKXReset(String uid) async {
@@ -1877,3 +1894,4 @@ const int NTLNDcrlndStopped = 0x1018;
 const int NTClientStopped = 0x1019;
 const int NTUserPostsList = 0x101a;
 const int NTUserContentList = 0x101b;
+const int NTPostSubscriptionResult = 0x101c;
