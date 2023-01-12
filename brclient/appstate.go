@@ -1998,6 +1998,8 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		return nil, err
 	}
 
+	rpc.SetLog(logBknd.logger("RRPC"))
+
 	// Initialize DB.
 	db, err := clientdb.New(clientdb.Config{
 		Root:          args.DBRoot,

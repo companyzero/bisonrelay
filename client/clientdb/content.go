@@ -94,6 +94,8 @@ func (db *DB) chunkFile(srcFile, chunkDir string) ([]rpc.FileManifest, []byte, u
 		// Accumulate into global file hasher.
 		fHasher.Write(chunk)
 	}
+	db.log.Debugf("Chunked file %s total size %d into %d chunks of max size %d",
+		srcFile, fsize, len(fm), chunkSize)
 	return fm, fHasher.Sum(nil), size, nil
 }
 
