@@ -51,12 +51,24 @@ class _LNUnlockPage extends StatefulWidget {
 class __LNUnlockPageState extends State<_LNUnlockPage> {
   bool loading = false;
   final TextEditingController passCtrl = TextEditingController();
+  String _validate = "";
+
+  @override
+  void dispose() {
+    passCtrl.dispose();
+    super.dispose();
+  }
 
   Future<void> unlock() async {
     setState(() {
       loading = true;
+      _validate = passCtrl.text.isEmpty ? "Password cannot be empty" : "";
     });
     try {
+      // Validation failed so don't even attempt
+      if (_validate.isNotEmpty) {
+        return;
+      }
       var cfg = widget.cfg;
       var rpcHost = await Golib.lnRunDcrlnd(
           cfg.internalWalletDir, cfg.network, passCtrl.text);
@@ -66,7 +78,12 @@ class __LNUnlockPageState extends State<_LNUnlockPage> {
       widget.setCfg(Config.newWithRPCHost(cfg, rpcHost, tlsCert, macaroonPath));
       Navigator.of(context).pushNamed("/sync");
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to unlock wallet: $exception");
+      if (exception.toString().contains("invalid passphrase")) {
+        _validate = "Incorrect password, please try again.";
+      } else {
+        showErrorSnackbar(context, "Unable to unlock wallet: $exception");
+      }
+      // Catch error and show error in errorText?
     } finally {
       setState(() {
         loading = false;
@@ -127,8 +144,10 @@ class __LNUnlockPageState extends State<_LNUnlockPage> {
                     child: SizedBox(
                         width: 377,
                         child: TextField(
+                            autofocus: true,
                             cursorColor: secondaryTextColor,
                             decoration: InputDecoration(
+                                errorText: _validate,
                                 border: InputBorder.none,
                                 hintText: "Password",
                                 hintStyle:
@@ -138,7 +157,19 @@ class __LNUnlockPageState extends State<_LNUnlockPage> {
                             style: TextStyle(
                                 color: secondaryTextColor, fontSize: 21),
                             controller: passCtrl,
-                            obscureText: true))),
+                            obscureText: true,
+                            onSubmitted: (value) {
+                              if (!loading) {
+                                unlock();
+                              }
+                            },
+                            onChanged: (value) {
+                              setState(() {
+                                _validate = value.isEmpty
+                                    ? "Password cannot be empty"
+                                    : "";
+                              });
+                            }))),
                 const SizedBox(height: 34),
                 Center(
                     child: SizedBox(
