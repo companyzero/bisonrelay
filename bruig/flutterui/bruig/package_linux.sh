@@ -6,7 +6,7 @@ BUILD_DIR=build/linux/x64/release/bundle
 APPIMAGE_DIR=BisonRelayBuild/
 APPRUN=../AppRun
 DESKTOP_FILE=../BisonRelay.desktop
-ICON_FILE=../assets/images/icon.png
+ICON_FILE=../assets/icons/icon_32x32.png
 
 flutter clean
 flutter build linux --release
