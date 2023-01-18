@@ -484,47 +484,7 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
                           padding: const EdgeInsets.all(15),
                           child: Provider<PostSummary>(
                               create: (context) => widget.args.post.summ,
-                              child: MarkdownBody(
-                                  styleSheet: MarkdownStyleSheet(
-                                    p: TextStyle(
-                                        color: textColor,
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w300,
-                                        letterSpacing: 0.44),
-                                    h1: TextStyle(color: textColor),
-                                    h2: TextStyle(color: textColor),
-                                    h3: TextStyle(color: textColor),
-                                    h4: TextStyle(color: textColor),
-                                    h5: TextStyle(color: textColor),
-                                    h6: TextStyle(color: textColor),
-                                    em: TextStyle(color: textColor),
-                                    strong: TextStyle(color: textColor),
-                                    del: TextStyle(color: textColor),
-                                    listBullet: TextStyle(color: textColor),
-                                    blockquote: TextStyle(color: textColor),
-                                    tableBody: TextStyle(color: textColor),
-                                    tableHead: TextStyle(color: textColor),
-                                    blockquoteDecoration:
-                                        BoxDecoration(color: darkTextColor),
-                                    codeblockDecoration:
-                                        BoxDecoration(color: darkTextColor),
-                                    code: TextStyle(color: textColor),
-                                  ),
-                                  selectable: true,
-                                  data: markdownData,
-                                  builders: {
-                                    //"video": VideoMarkdownElementBuilder(basedir),
-                                    "image": ImageMarkdownElementBuilder(),
-                                    "download": DownloadLinkElementBuilder(),
-                                  },
-                                  onTapLink: (text, url, blah) {
-                                    launchUrlAwait(url);
-                                  },
-                                  inlineSyntaxes: [
-                                    //VideoInlineSyntax(),
-                                    //ImageInlineSyntax()
-                                    EmbedInlineSyntax(),
-                                  ]))),
+                              child: MarkdownArea(markdownData))),
                     ],
                   ),
                 ),
