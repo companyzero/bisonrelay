@@ -223,8 +223,10 @@ class ChatsList extends StatelessWidget {
                       itemBuilder: (context, index) => ListTile(
                         title: Text(chats.subGCMenu[index].label,
                             style: const TextStyle(fontSize: 11)),
-                        onTap: () =>
-                            chats.subGCMenu[index].onSelected(context, chats),
+                        onTap: () {
+                          chats.subGCMenu[index].onSelected(context, chats);
+                          closeMenus(chats);
+                        },
                       ),
                     ),
                     Positioned(
@@ -301,11 +303,12 @@ class ChatsList extends StatelessWidget {
                   ListView.builder(
                     itemCount: chats.subUserMenu.length,
                     itemBuilder: (context, index) => ListTile(
-                      title: Text(chats.subUserMenu[index].label,
-                          style: const TextStyle(fontSize: 11)),
-                      onTap: () =>
-                          chats.subUserMenu[index].onSelected(context, chats),
-                    ),
+                        title: Text(chats.subUserMenu[index].label,
+                            style: const TextStyle(fontSize: 11)),
+                        onTap: () {
+                          chats.subUserMenu[index].onSelected(context, chats);
+                          closeMenus(chats);
+                        }),
                   ),
                   Positioned(
                       top: 5,

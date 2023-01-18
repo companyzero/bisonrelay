@@ -121,38 +121,7 @@ class FeedPostW extends StatelessWidget {
                     alignment: Alignment.center,
                     child: Provider<PostSummary>(
                         create: (context) => post.summ,
-                        child: MarkdownBody(
-                            styleSheet: MarkdownStyleSheet(
-                              p: TextStyle(
-                                  color: textColor,
-                                  fontSize: 13,
-                                  letterSpacing: 0.44),
-                              h1: TextStyle(color: textColor),
-                              h2: TextStyle(color: textColor),
-                              h3: TextStyle(color: textColor),
-                              h4: TextStyle(color: textColor),
-                              h5: TextStyle(color: textColor),
-                              h6: TextStyle(color: textColor),
-                              em: TextStyle(color: textColor),
-                              strong: TextStyle(color: textColor),
-                              del: TextStyle(color: textColor),
-                              blockquote: TextStyle(color: textColor),
-                            ),
-                            selectable: true,
-                            data: post.summ.title,
-                            builders: {
-                              //"video": VideoMarkdownElementBuilder(basedir),
-                              "image": ImageMarkdownElementBuilder(),
-                              "download": DownloadLinkElementBuilder(),
-                            },
-                            onTapLink: (text, url, blah) {
-                              launchUrlAwait(url);
-                            },
-                            inlineSyntaxes: [
-                              //VideoInlineSyntax(),
-                              //ImageInlineSyntax()
-                              EmbedInlineSyntax(),
-                            ])))),
+                        child: MarkdownArea(post.summ.title))))
           ]),
           const SizedBox(height: 5),
           Row(children: [

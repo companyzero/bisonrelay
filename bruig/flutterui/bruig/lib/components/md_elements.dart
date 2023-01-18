@@ -8,6 +8,7 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:markdown/markdown.dart' as md;
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class VideoInlineSyntax extends md.InlineSyntax {
   /// This is a primitive example pattern
@@ -127,6 +128,7 @@ class EmbedInlineSyntax extends md.InlineSyntax {
     return true;
   }
 }
+
 /*
 class _VideoMarkdownDesktopElement extends StatefulWidget {
   final String filename;
@@ -252,6 +254,63 @@ class VideoMarkdownElementBuilder extends MarkdownElementBuilder {
   }
 }
 */
+class MarkdownArea extends StatelessWidget {
+  final String text;
+  const MarkdownArea(this.text, {Key? key}) : super(key: key);
+
+  Future<void> launchUrlAwait(url) async {
+    if (!await launchUrl(Uri.parse(url))) {
+      throw 'Could not launch $url';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    var theme = Theme.of(context);
+    var darkTextColor = theme.indicatorColor;
+    var textColor = theme.focusColor;
+    return MarkdownBody(
+        styleSheet: MarkdownStyleSheet(
+          p: TextStyle(
+              color: textColor,
+              fontSize: 13,
+              fontWeight: FontWeight.w300,
+              letterSpacing: 0.44),
+          h1: TextStyle(color: textColor),
+          h2: TextStyle(color: textColor),
+          h3: TextStyle(color: textColor),
+          h4: TextStyle(color: textColor),
+          h5: TextStyle(color: textColor),
+          h6: TextStyle(color: textColor),
+          em: TextStyle(color: textColor),
+          strong: TextStyle(color: textColor),
+          del: TextStyle(color: textColor),
+          listBullet: TextStyle(color: textColor),
+          blockquote: TextStyle(color: textColor),
+          checkbox: TextStyle(color: textColor),
+          tableBody: TextStyle(color: textColor),
+          tableHead: TextStyle(color: textColor),
+          blockquoteDecoration: BoxDecoration(color: darkTextColor),
+          codeblockDecoration: BoxDecoration(color: darkTextColor),
+          code: TextStyle(color: textColor),
+        ),
+        selectable: true,
+        data: text,
+        builders: {
+          //"video": VideoMarkdownElementBuilder(basedir),
+          "image": ImageMarkdownElementBuilder(),
+          "download": DownloadLinkElementBuilder(),
+        },
+        onTapLink: (text, url, blah) {
+          launchUrlAwait(url);
+        },
+        inlineSyntaxes: [
+          //VideoInlineSyntax(),
+          //ImageInlineSyntax()
+          EmbedInlineSyntax(),
+        ]);
+  }
+}
 
 class Downloadable extends StatelessWidget {
   final String tip;
