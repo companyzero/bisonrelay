@@ -187,8 +187,7 @@ class _CommentWState extends State<_CommentW> {
           Row(
             children: [
               Expanded(
-                child: Text(widget.comment.comment,
-                    style: TextStyle(fontSize: 11, color: textColor)),
+                child: MarkdownArea(widget.comment.comment),
               ),
             ],
           ),
