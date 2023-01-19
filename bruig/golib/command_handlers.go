@@ -128,6 +128,17 @@ func handleInitClient(handle uint32, args InitClient) error {
 	},
 	))
 
+	ntfns.Register(client.OnGCMNtfn(func(user *client.RemoteUser, msg rpc.RMGroupMessage, ts time.Time) {
+		// TODO: replace GCMessage{} for types.ReceivedGCMsg{}.
+		gcm := GCMessage{
+			SenderUID: user.ID(),
+			ID:        msg.ID.String(),
+			Msg:       msg.Message,
+			TimeStamp: ts.Unix(),
+		}
+		notify(NTGCMessage, gcm, nil)
+	}))
+
 	cfg := client.Config{
 		DB:             db,
 		Dialer:         clientintf.NetDialer(args.ServerAddr, logBknd.logger("CONN")),
@@ -246,16 +257,6 @@ func handleInitClient(handle uint32, args InitClient) error {
 				Name:    name,
 			}
 			notify(NTGCListUpdated, gce, nil)
-		},
-
-		GCMsgHandler: func(user *client.RemoteUser, msg rpc.RMGroupMessage, ts time.Time) {
-			gcm := GCMessage{
-				SenderUID: user.ID(),
-				ID:        msg.ID.String(),
-				Msg:       msg.Message,
-				TimeStamp: ts.Unix(),
-			}
-			notify(NTGCMessage, gcm, nil)
 		},
 
 		KXCompleted: func(user *client.RemoteUser) {

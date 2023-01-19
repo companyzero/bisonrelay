@@ -109,6 +109,10 @@ type ChatServiceClient interface {
 	PM(ctx context.Context, in *PMRequest, out *PMResponse) error
 	// PMStream returns a stream that gets PMs received by the client.
 	PMStream(ctx context.Context, in *PMStreamRequest) (ChatService_PMStreamClient, error)
+	// GCM sends a message in a GC.
+	GCM(ctx context.Context, in *GCMRequest, out *GCMResponse) error
+	// GCMStream returns a stream that gets GC messages received by the client.
+	GCMStream(ctx context.Context, in *GCMStreamRequest) (ChatService_GCMStreamClient, error)
 }
 
 type client_ChatService struct {
@@ -134,6 +138,24 @@ func (c *client_ChatService) PMStream(ctx context.Context, in *PMStreamRequest) 
 	return streamerImpl[*ReceivedPM]{c: inner}, nil
 }
 
+func (c *client_ChatService) GCM(ctx context.Context, in *GCMRequest, out *GCMResponse) error {
+	const method = "GCM"
+	return c.defn.Methods[method].ClientHandler(c.c, ctx, in, out)
+}
+
+type ChatService_GCMStreamClient interface {
+	Recv(*GCReceivedMsg) error
+}
+
+func (c *client_ChatService) GCMStream(ctx context.Context, in *GCMStreamRequest) (ChatService_GCMStreamClient, error) {
+	const method = "GCMStream"
+	inner, err := c.defn.Methods[method].ClientStreamHandler(c.c, ctx, in)
+	if err != nil {
+		return nil, err
+	}
+	return streamerImpl[*GCReceivedMsg]{c: inner}, nil
+}
+
 func NewChatServiceClient(c ClientConn) ChatServiceClient {
 	return &client_ChatService{c: c, defn: ChatServiceDefn()}
 }
@@ -144,10 +166,18 @@ type ChatServiceServer interface {
 	PM(context.Context, *PMRequest, *PMResponse) error
 	// PMStream returns a stream that gets PMs received by the client.
 	PMStream(context.Context, *PMStreamRequest, ChatService_PMStreamServer) error
+	// GCM sends a message in a GC.
+	GCM(context.Context, *GCMRequest, *GCMResponse) error
+	// GCMStream returns a stream that gets GC messages received by the client.
+	GCMStream(context.Context, *GCMStreamRequest, ChatService_GCMStreamServer) error
 }
 
 type ChatService_PMStreamServer interface {
 	Send(m *ReceivedPM) error
+}
+
+type ChatService_GCMStreamServer interface {
+	Send(m *GCReceivedMsg) error
 }
 
 func ChatServiceDefn() ServiceDefn {
@@ -181,6 +211,36 @@ func ChatServiceDefn() ServiceDefn {
 				},
 				ClientStreamHandler: func(conn ClientConn, ctx context.Context, request proto.Message) (ClientStream, error) {
 					method := "ChatService.PMStream"
+					return conn.Stream(ctx, method, request)
+				},
+			},
+			"GCM": {
+				IsStreaming:  false,
+				NewRequest:   func() proto.Message { return new(GCMRequest) },
+				NewResponse:  func() proto.Message { return new(GCMResponse) },
+				RequestDefn:  func() protoreflect.MessageDescriptor { return new(GCMRequest).ProtoReflect().Descriptor() },
+				ResponseDefn: func() protoreflect.MessageDescriptor { return new(GCMResponse).ProtoReflect().Descriptor() },
+				Help:         "GCM sends a message in a GC.",
+				ServerHandler: func(x interface{}, ctx context.Context, request, response proto.Message) error {
+					return x.(ChatServiceServer).GCM(ctx, request.(*GCMRequest), response.(*GCMResponse))
+				},
+				ClientHandler: func(conn ClientConn, ctx context.Context, request, response proto.Message) error {
+					method := "ChatService.GCM"
+					return conn.Request(ctx, method, request, response)
+				},
+			},
+			"GCMStream": {
+				IsStreaming:  true,
+				NewRequest:   func() proto.Message { return new(GCMStreamRequest) },
+				NewResponse:  func() proto.Message { return new(GCReceivedMsg) },
+				RequestDefn:  func() protoreflect.MessageDescriptor { return new(GCMStreamRequest).ProtoReflect().Descriptor() },
+				ResponseDefn: func() protoreflect.MessageDescriptor { return new(GCReceivedMsg).ProtoReflect().Descriptor() },
+				Help:         "GCMStream returns a stream that gets GC messages received by the client.",
+				ServerStreamHandler: func(x interface{}, ctx context.Context, request proto.Message, stream ServerStream) error {
+					return x.(ChatServiceServer).GCMStream(ctx, request.(*GCMStreamRequest), streamerImpl[*GCReceivedMsg]{s: stream})
+				},
+				ClientStreamHandler: func(conn ClientConn, ctx context.Context, request proto.Message) (ClientStream, error) {
+					method := "ChatService.GCMStream"
 					return conn.Stream(ctx, method, request)
 				},
 			},
@@ -225,9 +285,35 @@ var help_messages = map[string]map[string]string{
 		"msg":          "msg is the received message payload.",
 		"timestamp_ms": "timestamp_ms is the timestamp from unix epoch with millisecond precision.",
 	},
+	"GCMRequest": {
+		"@":   "GCMRequest is a request to send a GC message.",
+		"gc":  "gc is either an hex-encoded GCID or a GC alias.",
+		"msg": "msg is the text payload of the message.",
+	},
+	"GCMResponse": {
+		"@": "GCMResponse is the response to sending a GC message.",
+	},
+	"GCMStreamRequest": {
+		"@": "GCMStreamRequest is a request to a stream of received GC messages.",
+	},
+	"GCReceivedMsg": {
+		"@":            "GCReceivedMsg is a GC message received from a remote user.",
+		"uid":          "uid is the source user ID.",
+		"nick":         "nick is the source user nick/alias.",
+		"gc_alias":     "gc_alias is the local alias of the GC where the message was sent.",
+		"msg":          "msg is the received message.",
+		"timestamp_ms": "timestamp_ms is the server timestamp of the message with millisecond precision.",
+	},
 	"RMPrivateMessage": {
 		"@":       "RMPrivateMessage is the network-level routed private message.",
 		"message": "message is the private message payload.",
 		"mode":    "mode is the message mode.",
+	},
+	"RMGroupMessage": {
+		"@":          "RMGroupMessage is the network-level routed group message.",
+		"id":         "id is the group chat id where the message was sent.",
+		"generation": "generation is the internal generation of the group chat metadata when the sender sent this message.",
+		"message":    "message is the textual content.",
+		"mode":       "mode is the mode of the message.",
 	},
 }

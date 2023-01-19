@@ -85,10 +85,8 @@ type testClient struct {
 	conn            *testConn
 	preventConn     error
 	onKXCompleted   func(user *client.RemoteUser)
-	onPM            func(user *client.RemoteUser, msg rpc.RMPrivateMessage, ts time.Time)
 	onConnChanged   func(connected bool, pushRate, subRate uint64)
 	onInvitedToGC   func(user *client.RemoteUser, iid uint64, invite rpc.RMGroupInvite)
-	onGCMsg         func(user *client.RemoteUser, msg rpc.RMGroupMessage, ts time.Time)
 	onGCListUpdated func(gc clientdb.GCAddressBookEntry)
 	onGCUserParted  func(gcid client.GCID, uid clientintf.UserID, reason string, kicked bool)
 }
@@ -263,15 +261,6 @@ func (ts *testScaffold) newClientWithOpts(name string, rootDir string,
 			tc.mtx.Unlock()
 			if f != nil {
 				f(user, iid, invite)
-			}
-		},
-
-		GCMsgHandler: func(user *client.RemoteUser, msg rpc.RMGroupMessage, ts time.Time) {
-			tc.mtx.Lock()
-			f := tc.onGCMsg
-			tc.mtx.Unlock()
-			if f != nil {
-				f(user, msg, ts)
 			}
 		},
 

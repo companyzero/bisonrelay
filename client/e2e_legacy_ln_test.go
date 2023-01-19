@@ -337,22 +337,22 @@ func TestE2EDcrlnGC(t *testing.T) {
 	var aliceMtx, bobMtx sync.Mutex
 	aliceDoneMsgs := make(chan struct{})
 	bobDoneMsgs := make(chan struct{})
-	alice.cfg.GCMsgHandler = func(ru *RemoteUser, msg rpc.RMGroupMessage, ts time.Time) {
+	alice.cfg.Notifications.Register(OnGCMNtfn(func(ru *RemoteUser, msg rpc.RMGroupMessage, ts time.Time) {
 		aliceMtx.Lock()
 		aliceReceivedMsgs[msg.Message] = struct{}{}
 		if len(aliceReceivedMsgs) == nbMsgs {
 			close(aliceDoneMsgs)
 		}
 		aliceMtx.Unlock()
-	}
-	bob.cfg.GCMsgHandler = func(ru *RemoteUser, msg rpc.RMGroupMessage, ts time.Time) {
+	}))
+	bob.cfg.Notifications.Register(OnGCMNtfn(func(ru *RemoteUser, msg rpc.RMGroupMessage, ts time.Time) {
 		bobMtx.Lock()
 		bobReceivedMsgs[msg.Message] = struct{}{}
 		if len(bobReceivedMsgs) == nbMsgs {
 			close(bobDoneMsgs)
 		}
 		bobMtx.Unlock()
-	}
+	}))
 
 	sendErrChan := make(chan error)
 	go func() {
@@ -656,15 +656,15 @@ func TestE2EDcrlnGCBlockList(t *testing.T) {
 	}
 
 	bobMsgChan, aliceMsgChan, charlieMsgChan := make(chan string, 1), make(chan string, 1), make(chan string, 1)
-	alice.cfg.GCMsgHandler = func(ru *RemoteUser, msg rpc.RMGroupMessage, ts time.Time) {
+	alice.cfg.Notifications.Register(OnGCMNtfn(func(ru *RemoteUser, msg rpc.RMGroupMessage, ts time.Time) {
 		aliceMsgChan <- msg.Message
-	}
-	bob.cfg.GCMsgHandler = func(ru *RemoteUser, msg rpc.RMGroupMessage, ts time.Time) {
+	}))
+	bob.cfg.Notifications.Register(OnGCMNtfn(func(ru *RemoteUser, msg rpc.RMGroupMessage, ts time.Time) {
 		bobMsgChan <- msg.Message
-	}
-	charlie.cfg.GCMsgHandler = func(ru *RemoteUser, msg rpc.RMGroupMessage, ts time.Time) {
+	}))
+	charlie.cfg.Notifications.Register(OnGCMNtfn(func(ru *RemoteUser, msg rpc.RMGroupMessage, ts time.Time) {
 		charlieMsgChan <- msg.Message
-	}
+	}))
 	bobGCListChan := make(chan struct{}, 2)
 	bob.cfg.GCListUpdated = func(gc clientdb.GCAddressBookEntry) {
 		bobGCListChan <- struct{}{}
@@ -1590,15 +1590,15 @@ func TestE2EDcrlnBlockIgnore(t *testing.T) {
 		go func() { bobGCListChan <- struct{}{} }()
 	}
 	aliceGCMChan, bobGCMChan, charlieGCMChan := make(chan string), make(chan string), make(chan string)
-	alice.cfg.GCMsgHandler = func(user *RemoteUser, msg rpc.RMGroupMessage, ts time.Time) {
+	alice.cfg.Notifications.Register(OnGCMNtfn(func(user *RemoteUser, msg rpc.RMGroupMessage, ts time.Time) {
 		go func() { aliceGCMChan <- msg.Message }()
-	}
-	bob.cfg.GCMsgHandler = func(user *RemoteUser, msg rpc.RMGroupMessage, ts time.Time) {
+	}))
+	bob.cfg.Notifications.Register(OnGCMNtfn(func(user *RemoteUser, msg rpc.RMGroupMessage, ts time.Time) {
 		go func() { bobGCMChan <- msg.Message }()
-	}
-	charlie.cfg.GCMsgHandler = func(user *RemoteUser, msg rpc.RMGroupMessage, ts time.Time) {
+	}))
+	charlie.cfg.Notifications.Register(OnGCMNtfn(func(user *RemoteUser, msg rpc.RMGroupMessage, ts time.Time) {
 		go func() { charlieGCMChan <- msg.Message }()
-	}
+	}))
 
 	ctx, cancel := context.WithCancel(context.Background())
 	runErr := make(chan error)

@@ -19,6 +19,13 @@ type OnPMNtfn func(*RemoteUser, rpc.RMPrivateMessage, time.Time)
 
 func (_ OnPMNtfn) typ() string { return onPMNtfnType }
 
+const onGCMNtfnType = "onGCM"
+
+// OnGCMNtfn is the handler for received gc messages.
+type OnGCMNtfn func(*RemoteUser, rpc.RMGroupMessage, time.Time)
+
+func (_ OnGCMNtfn) typ() string { return onGCMNtfnType }
+
 // The following is used only in tests.
 
 const onTestNtfnType = "testNtfnType"
@@ -137,11 +144,17 @@ func (nmgr *NotificationManager) notifyOnPM(user *RemoteUser, pm rpc.RMPrivateMe
 		visit(func(h OnPMNtfn) { h(user, pm, ts) })
 }
 
+func (nmgr *NotificationManager) notifyOnGCM(user *RemoteUser, gcm rpc.RMGroupMessage, ts time.Time) {
+	nmgr.handlers[onGCMNtfnType].(*handlersFor[OnGCMNtfn]).
+		visit(func(h OnGCMNtfn) { h(user, gcm, ts) })
+}
+
 func NewNotificationManager() *NotificationManager {
 	return &NotificationManager{
 		handlers: map[string]handlersRegistry{
 			onTestNtfnType: &handlersFor[onTestNtfn]{},
 			onPMNtfnType:   &handlersFor[OnPMNtfn]{},
+			onGCMNtfnType:  &handlersFor[OnGCMNtfn]{},
 		},
 	}
 }
