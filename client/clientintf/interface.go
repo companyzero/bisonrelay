@@ -49,6 +49,12 @@ type Dialer func(context.Context) (Conn, *tls.ConnectionState, error)
 // server is safe.
 type CertConfirmer func(context.Context, *tls.ConnectionState, *zkidentity.PublicIdentity) error
 
+// ServerPolicy is the policy for a given server session.
+type ServerPolicy struct {
+	PushPaymentLifetime time.Duration
+	MaxPushInvoices     int
+}
+
 // ServerSessionIntf is the interface available from serverSession to
 // consumers.
 type ServerSessionIntf interface {
@@ -57,6 +63,7 @@ type ServerSessionIntf interface {
 	PayClient() PaymentClient
 	PaymentRates() (uint64, uint64)
 	ExpirationDays() int
+	Policy() ServerPolicy
 
 	// Context returns a context that gets cancelled once this session stops
 	// running.

@@ -79,6 +79,8 @@ type serverSession struct {
 	logPings       bool   // Whether to log ping/pong messages.
 	expirationDays int    // After When data is purged from server
 
+	policy clientintf.ServerPolicy
+
 	// Handler for pushed routed messages.
 	//
 	// If the handler returns an error that unwraps into an AckError
@@ -128,6 +130,10 @@ func (sess *serverSession) PaymentRates() (uint64, uint64) {
 
 func (sess *serverSession) ExpirationDays() int {
 	return sess.expirationDays
+}
+
+func (sess *serverSession) Policy() clientintf.ServerPolicy {
+	return sess.policy
 }
 
 // SendPRPC sends the given msg and payload to the server. This returns when

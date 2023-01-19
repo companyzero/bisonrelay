@@ -183,6 +183,9 @@ func (ck *ConnKeeper) attemptWelcome(conn clientintf.Conn, kx msgReaderWriter) (
 		// TODO: modify to zero once clients are updated to force
 		// server to send an appropriate value.
 		expd int64 = rpc.PropExpirationDaysDefault
+
+		pushPaymentLifetime int64 = rpc.PropPushPaymentLifetimeDefault
+		maxPushInvoices     int64 = rpc.PropMaxPushInvoicesDefault
 	)
 
 	for _, v := range wmsg.Properties {
@@ -227,6 +230,18 @@ func (ck *ConnKeeper) attemptWelcome(conn clientintf.Conn, kx msgReaderWriter) (
 				return nil, fmt.Errorf("invalid expiration days: %v", err)
 			}
 
+		case rpc.PropPushPaymentLifetime:
+			pushPaymentLifetime, err = strconv.ParseInt(v.Value, 10, 32)
+			if err != nil {
+				return nil, fmt.Errorf("invalid push payment lifetime: %v", err)
+			}
+
+		case rpc.PropMaxPushInvoices:
+			maxPushInvoices, err = strconv.ParseInt(v.Value, 10, 32)
+			if err != nil {
+				return nil, fmt.Errorf("invalid max push invoices: %v", err)
+			}
+
 		default:
 			if v.Required {
 				errMsg := fmt.Sprintf("unhandled server property: %v", v.Key)
@@ -254,13 +269,23 @@ func (ck *ConnKeeper) attemptWelcome(conn clientintf.Conn, kx msgReaderWriter) (
 	// Max payment rate enforcement.
 	const maxPushPaymentRate = uint64(rpc.PropPushPaymentRateDefault * 10)
 	if ppr > maxPushPaymentRate {
-		return nil, fmt.Errorf("push payment rate higher then maximum. got %d"+
+		return nil, fmt.Errorf("push payment rate higher then maximum. got %d "+
 			"want %d", ppr, maxPushPaymentRate)
 	}
 	const maxSubPaymentRate = uint64(rpc.PropSubPaymentRateDefault * 10)
 	if spr > maxSubPaymentRate {
-		return nil, fmt.Errorf("sub payment rate higher then maximum. got %d"+
+		return nil, fmt.Errorf("sub payment rate higher then maximum. got %d "+
 			"want %d", spr, maxSubPaymentRate)
+	}
+
+	// Push policy enforcement.
+	minPushPaymentLifetime := int64(15 * 60) // 15 minutes.
+	if pushPaymentLifetime < minPushPaymentLifetime {
+		return nil, fmt.Errorf("push payment lifetime is lower than minimum. got %d "+
+			"want %d", pushPaymentLifetime, minPushPaymentLifetime)
+	}
+	if maxPushInvoices < 1 {
+		return nil, fmt.Errorf("max push invoices %d < 1", maxPushInvoices)
 	}
 
 	// server time
@@ -310,6 +335,10 @@ func (ck *ConnKeeper) attemptWelcome(conn clientintf.Conn, kx msgReaderWriter) (
 	sess.pushedRoutedMsgsHandler = ck.cfg.PushedRoutedMsgsHandler
 	sess.expirationDays = int(expd)
 	sess.logPings = ck.cfg.LogPings
+	sess.policy = clientintf.ServerPolicy{
+		PushPaymentLifetime: time.Duration(pushPaymentLifetime) * time.Second,
+		MaxPushInvoices:     int(maxPushInvoices),
+	}
 
 	ck.log.Infof("Connected to server %s",
 		conn.RemoteAddr())

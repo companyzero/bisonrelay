@@ -316,12 +316,17 @@ var mockServerSessionErr = errors.New("mock server session errored")
 type mockServerSession struct {
 	sendErrChan chan wireMsg
 	rpcChan     chan wireMsg
+	policy      clientintf.ServerPolicy
 }
 
 func newMockServerSession() *mockServerSession {
 	return &mockServerSession{
 		sendErrChan: make(chan wireMsg),
 		rpcChan:     make(chan wireMsg),
+		policy: clientintf.ServerPolicy{
+			MaxPushInvoices:     1,
+			PushPaymentLifetime: time.Second,
+		},
 	}
 }
 
@@ -363,9 +368,10 @@ func (m *mockServerSession) RequestClose(err error) {}
 func (m *mockServerSession) PayClient() clientintf.PaymentClient {
 	return clientintf.FreePaymentClient{}
 }
-func (m *mockServerSession) PaymentRates() (uint64, uint64) { return 0, 0 }
-func (m *mockServerSession) ExpirationDays() int            { return 7 }
-func (m *mockServerSession) Context() context.Context       { return context.Background() }
+func (m *mockServerSession) PaymentRates() (uint64, uint64)  { return 0, 0 }
+func (m *mockServerSession) ExpirationDays() int             { return 7 }
+func (m *mockServerSession) Context() context.Context        { return context.Background() }
+func (m *mockServerSession) Policy() clientintf.ServerPolicy { return m.policy }
 
 type mockRM string
 
