@@ -1,0 +1,122 @@
+syntax = "proto3";
+
+/******************************************************************************
+  *                            Services
+  *****************************************************************************/
+
+option go_package = "github.com/companyzero/bisconrelay/clientrpc/types";
+
+/* VersionService is the service information about the version of a running RPC
+   server. */
+service VersionService {
+  /* Version returns version information about the server. */
+  rpc Version(VersionRequest) returns (VersionResponse);
+
+  /* KeepaliveStream returns a stream where the server continuously writes
+     keepalive events.
+
+     The stream only terminates if the client requests it or the connection to
+     the server is closed.
+   */
+  rpc KeepaliveStream(KeepaliveStreamRequest) returns (stream KeepaliveEvent);
+}
+
+/* ChatService is the service for interacting with a BR client chat messages. */
+service ChatService {
+  /* PM sends a private message to a user of the client. */
+  rpc PM(PMRequest) returns (PMResponse);
+
+  /* PMStream returns a stream that gets PMs received by the client. */
+  rpc PMStream(PMStreamRequest) returns (stream ReceivedPM);
+}
+
+
+/******************************************************************************
+  *                           Messages
+  *****************************************************************************/
+
+message VersionRequest {
+}
+
+/* VersionResponse is the information about the running RPC server. */
+message VersionResponse {
+  /* app_version is the version of the application. */
+  string app_version = 1;
+
+  /* go_runtime is the Go version the server was compiled with. */
+  string go_runtime = 2;
+
+  /* app_name is the name of the underlying app running the server. */
+  string app_name = 3;
+}
+
+/* KeepaliveStreamRequest is the request for a new keepalive stream. */
+message KeepaliveStreamRequest{
+  /* interval is how often to send the keepalive (in milliseconds).
+
+     A minimum of 1 second is imposed, regardless of the value passed as
+     interval. */
+  int64 interval = 1;
+}
+
+/* KeepaliveEvent is a single keepalive event. */
+message KeepaliveEvent{
+  /* timestamp is the unix timestamp on the server, with second precision. */
+  int64 timestamp = 1;
+}
+
+/* PMRequest is a request to send a new private message. */
+message PMRequest {
+  /* user is either the nick, alias or an hex-encoded user ID of the destination. */
+  string user = 1;
+
+  /* msg is the message to be sent. */
+  RMPrivateMessage msg = 2;
+}
+
+/* PMResponse is the response of the client for a new message. */
+message PMResponse {}
+
+/* PMStreamRequest is the request for a new private message reception stream.*/
+message PMStreamRequest {}
+
+/* ReceivedPM is a private message received by the client. */
+message ReceivedPM {
+  /* uid is the source user ID in raw format. */
+  bytes uid = 1;
+
+  /* nick is the source's nick or alias. */
+  string nick = 2;
+
+  /* msg is the received message payload. */
+  RMPrivateMessage msg = 3;
+
+  /* timestamp_ms is the timestamp from unix epoch with millisecond precision. */
+  int64 timestamp_ms = 4;
+}
+
+/******************************************************************************
+  *                          Routed RPC Compat
+  *****************************************************************************/
+
+/* The message definitions below this point should all be compatible to their
+   corresponding definitions in the /rpc package. The intention is to eventually
+   replace the definitions there for this ones. In particular, the json_name
+   defined for each field MUST be the same as the existing one for the type. */
+
+enum MessageMode {
+  /* MESSAGE_MODE_NORMAL is the standard mode for messages. */
+  MESSAGE_MODE_NORMAL = 0;
+  /* MESSAGE_MODE_ME are messages sent in the passive voice (i.e. with /me). */
+  MESSAGE_MODE_ME = 1;
+}
+
+/* RMPrivateMessage is the network-level routed private message.*/
+message RMPrivateMessage {
+  /* message is the private message payload. */
+  string message = 1;
+  /* mode is the message mode. */
+  MessageMode mode = 2;
+}
+
+
