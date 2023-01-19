@@ -4,6 +4,7 @@ go 1.18
 
 require (
 	github.com/atotto/clipboard v0.1.4
+	github.com/bahlo/generic-list-go v0.2.0
 	github.com/charmbracelet/bubbles v0.13.1-0.20220815142520-649f78e1fd8b
 	github.com/charmbracelet/bubbletea v0.22.1
 	github.com/charmbracelet/lipgloss v0.5.0

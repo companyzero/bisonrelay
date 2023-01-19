@@ -1,6 +1,7 @@
 package lowlevel
 
 import (
+	"bytes"
 	"context"
 	"encoding/hex"
 	"errors"
@@ -10,6 +11,7 @@ import (
 	"time"
 
 	"github.com/companyzero/bisonrelay/client/clientintf"
+	"github.com/companyzero/bisonrelay/internal/assert"
 	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/companyzero/bisonrelay/zkidentity"
 )
@@ -410,9 +412,6 @@ func TestRMQEncryptErrorFailsRM(t *testing.T) {
 	rmErrChan := make(chan error)
 	go func() { rmErrChan <- q.SendRM(failRM) }()
 
-	// Reply to asking for a payload.
-	sess.replyNextPRPC(t, &rpc.GetInvoiceReply{})
-
 	// Expect the RM to fail to encrypt.
 	select {
 	case err := <-rmErrChan:
@@ -464,5 +463,212 @@ func TestRMQMaxMsgSizeErrors(t *testing.T) {
 	if !errors.Is(err, errORMTooLarge) {
 		t.Fatalf("Unexpected error: got %v, want %v", err,
 			errORMTooLarge)
+	}
+}
+
+// TestReusesPaidRM tests that attempting to send a message for which payment
+// had already been made reuses the same (already paid) invoice id.
+func TestReusesPaidRM(t *testing.T) {
+	t.Parallel()
+
+	invoice := "paidinvoice"
+	db := newMockRMQDB()
+	rm := mockRM("test")
+	rv, _, _ := rm.EncryptedMsg()
+	db.StoreRVPaymentAttempt(rv, invoice, time.Now())
+
+	mockID := &zkidentity.FullIdentity{}
+	q := NewRMQ(nil, clientintf.FreePaymentClient{}, mockID, db)
+	runErr := make(chan error)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go func() { runErr <- q.Run(ctx) }()
+
+	// Bind to the server.
+	sess := newMockServerSession()
+	q.BindToSession(sess)
+
+	// Send the RM.
+	rmErrChan := make(chan error)
+	go func() { rmErrChan <- q.SendRM(rm) }()
+
+	// The RMQ will reuse the same invoice, therefore it won't request a new
+	// one.
+
+	// Expect the RM to be sent.
+	reply := sess.replyNextPRPC(t, &rpc.RouteMessageReply{})
+	sentRM, ok := reply.(*rpc.RouteMessage)
+	if !ok {
+		t.Fatalf("Unexpected message from RMQ. got %T, want %T",
+			reply, rpc.RouteMessage{})
+	}
+	var wantInvoiceID [32]byte
+	copy(wantInvoiceID[:], invoice)
+	if !bytes.Equal(sentRM.PaidInvoiceID, wantInvoiceID[:]) {
+		t.Fatalf("Unexpected paid invoice ID: got %x, want %x",
+			sentRM.PaidInvoiceID, wantInvoiceID)
+	}
+
+	// Ensure no errors occurred.
+	select {
+	case err := <-runErr:
+		t.Fatal(err)
+	case err := <-rmErrChan:
+		if err != nil {
+			t.Fatalf("unexpected error %v", err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("timeout")
+	}
+}
+
+// TestRequestsInvoiceForOldInvoice tests that when a successful payment attempt
+// was made too long ago (longer than the max acceptable), that a new invoice is
+// requested from the server and that this new invoice is used to pay for an
+// outbound RM.
+func TestRequestsInvoiceForOldInvoice(t *testing.T) {
+	t.Parallel()
+
+	invoice := "paidinvoice"
+	db := newMockRMQDB()
+	rm := mockRM("test")
+	rv, _, _ := rm.EncryptedMsg()
+	db.StoreRVPaymentAttempt(rv, invoice, time.Now().Add(-time.Hour*24*2))
+
+	mockID := &zkidentity.FullIdentity{}
+	q := NewRMQ(nil, clientintf.FreePaymentClient{}, mockID, db)
+	runErr := make(chan error)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go func() { runErr <- q.Run(ctx) }()
+
+	// Bind to the server.
+	sess := newMockServerSession()
+	q.BindToSession(sess)
+
+	// Send the RM.
+	rmErrChan := make(chan error)
+	go func() { rmErrChan <- q.SendRM(rm) }()
+
+	// Reply to asking for a payload. Send a new invoice that was not
+	// marked as paid.
+	newInvoice := "newinvoice"
+	sess.replyNextPRPC(t, &rpc.GetInvoiceReply{Invoice: newInvoice})
+
+	// Expect the RM to be sent.
+	reply := sess.replyNextPRPC(t, &rpc.RouteMessageReply{})
+	sentRM, ok := reply.(*rpc.RouteMessage)
+	if !ok {
+		t.Fatalf("Unexpected message from RMQ. got %T, want %T",
+			reply, rpc.RouteMessage{})
+	}
+	var wantInvoiceID [32]byte
+	copy(wantInvoiceID[:], newInvoice)
+	if !bytes.Equal(sentRM.PaidInvoiceID, wantInvoiceID[:]) {
+		t.Fatalf("Unexpected paid invoice ID: got %x, want %x",
+			sentRM.PaidInvoiceID, wantInvoiceID)
+	}
+
+	// Ensure no errors occurred.
+	select {
+	case err := <-runErr:
+		t.Fatal(err)
+	case err := <-rmErrChan:
+		if err != nil {
+			t.Fatalf("unexpected error %v", err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("timeout")
+	}
+}
+
+// TestConcurrentRMQSends tests that the RMQ can send multiple outbound RMs
+// before any one is confirmed by the server.
+func TestConcurrentRMQSends(t *testing.T) {
+	t.Parallel()
+
+	mockID := &zkidentity.FullIdentity{}
+	q := NewRMQ(nil, clientintf.FreePaymentClient{}, mockID, newMockRMQDB())
+	runErr := make(chan error)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go func() { runErr <- q.Run(ctx) }()
+
+	// Number of concurrent RMs to use in test (one more than this will be
+	// sent).
+	nbRMs := 3
+
+	// Bind to the server.
+	sess := newMockServerSession()
+	sess.policy.MaxPushInvoices = nbRMs
+	q.BindToSession(sess)
+
+	// Send the RM. Send one more than the max number of concurrent RMs to
+	// test the additional RM is enqueued, but not sent.
+	rmErrChan := make(chan error, nbRMs+1)
+	for i := 0; i < (nbRMs + 1); i++ {
+		rm := mockRM(fmt.Sprintf("test_%d", i))
+		go func() { rmErrChan <- q.SendRM(rm) }()
+	}
+
+	// Wait for all invoices to be asked.
+	time.Sleep(50 * time.Millisecond)
+
+	// One RM should be queued.
+	gotLen := q.Len()
+	if gotLen != 1 {
+		t.Fatalf("Unexpected queue len: got %d, want 1", gotLen)
+	}
+
+	// Reply to asking for a payload.
+	//
+	// Note: if the attempt to send the RM (after rpc.GetInvoiceReply is
+	// received) happens too fast, this section of the test may flake.
+	for i := 0; i < nbRMs; i++ {
+		sess.replyNextPRPC(t, &rpc.GetInvoiceReply{})
+	}
+
+	// Expect the RMs to be sent.
+	for i := 0; i < nbRMs; i++ {
+		sess.replyNextPRPC(t, &rpc.RouteMessageReply{})
+	}
+
+	// Ensure no errors occurred.
+	for i := 0; i < nbRMs; i++ {
+		select {
+		case err := <-runErr:
+			t.Fatal(err)
+		case err := <-rmErrChan:
+			if err != nil {
+				t.Fatalf("unexpected error %v", err)
+			}
+		case <-time.After(time.Second):
+			t.Fatal("timeout")
+		}
+	}
+
+	// The final RM is not yet successfully sent.
+	assert.ChanNotWritten(t, rmErrChan, 100*time.Millisecond)
+
+	// Send the invoice and accept the last RM.
+	sess.replyNextPRPC(t, &rpc.GetInvoiceReply{})
+	sess.replyNextPRPC(t, &rpc.RouteMessageReply{})
+
+	// Ensure no errors occurred on the final RM.
+	select {
+	case err := <-runErr:
+		t.Fatal(err)
+	case err := <-rmErrChan:
+		if err != nil {
+			t.Fatalf("unexpected error %v", err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("timeout")
+	}
+
+	// Queue should be empty.
+	gotLen = q.Len()
+	if gotLen != 0 {
+		t.Fatalf("Unexpected queue len: got %d, want 0", gotLen)
 	}
 }
