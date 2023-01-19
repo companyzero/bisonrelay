@@ -22,4 +22,6 @@ type ServerDB interface {
 	IsSubscriptionPaid(ctx context.Context, rv ratchet.RVPoint) (bool, error)
 	StoreSubscriptionPaid(ctx context.Context, rv ratchet.RVPoint, insertTime time.Time) error
 	Expire(ctx context.Context, date time.Time) (uint64, error)
+	IsPushPaymentRedeemed(ctx context.Context, payID []byte) (bool, error)
+	StorePushPaymentRedeemed(ctx context.Context, payID []byte, insertTime time.Time) error
 }

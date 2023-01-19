@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/companyzero/bisonrelay/internal/assert"
 	"github.com/companyzero/bisonrelay/ratchet"
 	brfsdb "github.com/companyzero/bisonrelay/server/internal/fsdb"
 	"github.com/companyzero/bisonrelay/server/serverdb"
@@ -112,14 +113,26 @@ func testServerDBInterface(t *testing.T, db serverdb.ServerDB) {
 		t.Fatal(err)
 	}
 
+	// Unredeemed push payment returns true.
+	isRedeemed, err := db.IsPushPaymentRedeemed(ctx, rv[:])
+	assert.NilErr(t, err)
+	assert.DeepEqual(t, isRedeemed, false)
+
+	// Store push payment as redeemed twice (neither should error as second
+	// time is a NOP).
+	assert.NilErr(t, db.StorePushPaymentRedeemed(ctx, rv[:], now))
+	assert.NilErr(t, db.StorePushPaymentRedeemed(ctx, rv[:], now))
+
+	// Push payment now shows as redeemed.
+	isRedeemed, err = db.IsPushPaymentRedeemed(ctx, rv[:])
+	assert.NilErr(t, err)
+	assert.DeepEqual(t, isRedeemed, true)
+
 	// Store a different rv to test expiration.
 	rng.Read(rv[:])
-	if err := db.StorePayload(ctx, rv, data1, now); err != nil {
-		t.Fatal(err)
-	}
-	if err := db.StoreSubscriptionPaid(ctx, rv, now); err != nil {
-		t.Fatal(err)
-	}
+	assert.NilErr(t, db.StorePayload(ctx, rv, data1, now))
+	assert.NilErr(t, db.StoreSubscriptionPaid(ctx, rv, now))
+	assert.NilErr(t, db.StorePushPaymentRedeemed(ctx, rv[:], now))
 
 	// Expire the data and subscriptions.
 	if _, err := db.Expire(ctx, now); err != nil {
@@ -142,6 +155,11 @@ func testServerDBInterface(t *testing.T, db serverdb.ServerDB) {
 		t.Fatalf("unexpected paid flag: got %v, want %v",
 			paid, false)
 	}
+
+	// Payment no longer shows as redeemed.
+	isRedeemed, err = db.IsPushPaymentRedeemed(ctx, rv[:])
+	assert.NilErr(t, err)
+	assert.DeepEqual(t, isRedeemed, false)
 
 	// Expiring an inexistent partition shouldn't error.
 	if _, err := db.Expire(ctx, time.Time{}); err != nil {
