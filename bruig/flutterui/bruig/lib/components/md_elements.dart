@@ -295,7 +295,7 @@ class MarkdownArea extends StatelessWidget {
           code: TextStyle(color: textColor),
         ),
         selectable: true,
-        data: text,
+        data: text.trim(),
         builders: {
           //"video": VideoMarkdownElementBuilder(basedir),
           "image": ImageMarkdownElementBuilder(),
