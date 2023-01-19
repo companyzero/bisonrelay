@@ -39,12 +39,14 @@ type Settings struct {
 	ExpirationDays int // How many days after which to expire data
 
 	// payment section
-	PayScheme         string
-	LNRPCHost         string
-	LNTLSCert         string
-	LNMacaroonPath    string
-	MilliAtomsPerByte uint64
-	MilliAtomsPerSub  uint64
+	PayScheme           string
+	LNRPCHost           string
+	LNTLSCert           string
+	LNMacaroonPath      string
+	MilliAtomsPerByte   uint64
+	MilliAtomsPerSub    uint64
+	PushPaymentLifetime int // how long a payment to a push is valid
+	MaxPushInvoices     int
 
 	// log section
 	LogFile    string // log filename
@@ -88,9 +90,11 @@ func New() *Settings {
 		ExpirationDays: rpc.PropExpirationDaysDefault,
 
 		// payment
-		PayScheme:         "free",
-		MilliAtomsPerByte: rpc.PropPushPaymentRateDefault,
-		MilliAtomsPerSub:  rpc.PropSubPaymentRateDefault,
+		PayScheme:           "free",
+		MilliAtomsPerByte:   rpc.PropPushPaymentRateDefault,
+		MilliAtomsPerSub:    rpc.PropSubPaymentRateDefault,
+		PushPaymentLifetime: rpc.PropPushPaymentLifetimeDefault,
+		MaxPushInvoices:     rpc.PropMaxPushInvoicesDefault,
 
 		// log
 		LogFile:    "~/.brserver/brserver.log",
@@ -241,6 +245,20 @@ func (s *Settings) Load(filename string) error {
 		return err
 	}
 	s.ExpirationDays = expirationDays
+
+	pushPaymentLifetime := rpc.PropPushPaymentLifetimeDefault
+	err = iniInt(cfg, &pushPaymentLifetime, "policy", "pushpaymentlifetime")
+	if err != nil && !errors.Is(err, errIniNotFound) {
+		return err
+	}
+	s.PushPaymentLifetime = pushPaymentLifetime
+
+	maxPushInvoices := rpc.PropMaxPushInvoicesDefault
+	err = iniInt(cfg, &pushPaymentLifetime, "policy", "maxpushinvoices")
+	if err != nil && !errors.Is(err, errIniNotFound) {
+		return err
+	}
+	s.MaxPushInvoices = maxPushInvoices
 
 	return nil
 }
