@@ -85,6 +85,12 @@ type config struct {
 
 	WinPin  []string
 	MimeMap map[string]string
+
+	JSONRPCListen      []string
+	RPCCertPath        string
+	RPCKeyPath         string
+	RPCClientCAPath    string
+	RPCIssueClientCert bool
 }
 
 func defaultAppDataDir(homeDir string) string {
@@ -144,6 +150,12 @@ func defaultLNWalletDir(rootDir string) string {
 }
 
 func loadConfig() (*config, error) {
+	const (
+		rpcCertFileName     = "rpc.cert"
+		rpcKeyFileName      = "rpc.key"
+		rpcClientCAFileName = "rpc-ca.cert"
+	)
+
 	// Setup defaults.
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
@@ -156,6 +168,9 @@ func loadConfig() (*config, error) {
 	defaultDebugLevel := "info"
 	defaultCompressLevel := 4
 	defaultWalletType := "disabled"
+	defaultRPCCertPath := filepath.Join(defaultAppDir, rpcCertFileName)
+	defaultRPCKeyPath := filepath.Join(defaultAppDir, rpcKeyFileName)
+	defaultRPCClientCA := filepath.Join(defaultAppDir, rpcClientCAFileName)
 
 	// Parse CLI arguments.
 	fs := flag.NewFlagSet("CLI Arguments", flag.ContinueOnError)
@@ -225,6 +240,11 @@ func loadConfig() (*config, error) {
 	flagWinPin := fs.String("winpin", "", "Comma delimited list of DM and GC windows to launch on start")
 	flagBlinkCursor := fs.Bool("blinkcursor", true, "Blink cursor")
 	flagBellCmd := fs.String("bellcmd", "", "Bell command on new msgs")
+	flagJSONRPCListen := fs.String("jsonrpclisten", "", "Comma delimited list of JSON-RPC server binding addresses")
+	flagRPCCertPath := fs.String("rpccertpath", defaultRPCCertPath, "")
+	flagRPCKeyPath := fs.String("rpckeypath", defaultRPCKeyPath, "")
+	flagRPCClientCAPath := fs.String("rpcclientcapath", defaultRPCClientCA, "")
+	flagRPCIssueClientCert := fs.Bool("rpcissueclientcert", true, "")
 
 	flagProxyAddr := fs.String("proxyaddr", "", "")
 	flagProxyUser := fs.String("proxyuser", "", "")
@@ -247,12 +267,25 @@ func loadConfig() (*config, error) {
 		return nil, fmt.Errorf("flag 'root' cannot be empty")
 	}
 
-	// Clean paths.
+	// Clean the root dir.
 	*flagRootDir = cleanAndExpandPath(homeDir, *flagRootDir)
+
+	// Reconfigure dirs that are based on the root dir when they are not
+	// specified.
+	if *flagRPCCertPath == defaultRPCCertPath {
+		*flagRPCCertPath = filepath.Join(*flagRootDir, rpcCertFileName)
+		*flagRPCKeyPath = filepath.Join(*flagRootDir, rpcKeyFileName)
+		*flagRPCClientCAPath = filepath.Join(*flagRootDir, rpcClientCAFileName)
+	}
+
+	// Clean paths.
 	*flagLogFile = cleanAndExpandPath(homeDir, *flagLogFile)
 	*flagLNTLSCert = cleanAndExpandPath(homeDir, *flagLNTLSCert)
 	*flagLNMacaroonPath = cleanAndExpandPath(homeDir, *flagLNMacaroonPath)
 	*flagMsgRoot = cleanAndExpandPath(homeDir, *flagMsgRoot)
+	*flagRPCKeyPath = cleanAndExpandPath(homeDir, *flagRPCKeyPath)
+	*flagRPCCertPath = cleanAndExpandPath(homeDir, *flagRPCCertPath)
+	*flagRPCClientCAPath = cleanAndExpandPath(homeDir, *flagRPCClientCAPath)
 
 	var cmdHistoryPath string
 	if *flagSaveHistory {
@@ -284,42 +317,52 @@ func loadConfig() (*config, error) {
 		mimeMap[spl[0]] = spl[1]
 	}
 
+	var jrpcListen []string
+	if *flagJSONRPCListen != "" {
+		jrpcListen = strings.Split(*flagJSONRPCListen, ",")
+	}
+
 	// Return the final cfg object.
 	return &config{
-		ServerAddr:     *flagServerAddr,
-		Root:           *flagRootDir,
-		DBRoot:         filepath.Join(*flagRootDir, "db"),
-		DownloadsRoot:  filepath.Join(*flagRootDir, "downloads"),
-		WalletType:     *flagWalletType,
-		MsgRoot:        *flagMsgRoot,
-		LNRPCHost:      *flagLNHost,
-		LNTLSCertPath:  *flagLNTLSCert,
-		LNMacaroonPath: *flagLNMacaroonPath,
-		LNDebugLevel:   *flagLNDebugLevel,
-		LNMaxLogFiles:  *flagLNMaxLogFiles,
-		LogFile:        *flagLogFile,
-		MaxLogFiles:    *flagMaxLogFiles,
-		DebugLevel:     *flagDebugLevel,
-		CompressLevel:  *flagCompressLevel,
-		CmdHistoryPath: cmdHistoryPath,
-		NickColor:      *flagNickColor,
-		GCOtherColor:   *flagGCOtherColor,
-		PMOtherColor:   *flagPMOtherColor,
-		BlinkCursor:    *flagBlinkCursor,
-		BellCmd:        strings.TrimSpace(*flagBellCmd),
-		Network:        *flagNetwork,
-		CPUProfile:     *flagCPUProfile,
-		CPUProfileHz:   *flagCPUProfileHz,
-		LogPings:       *flagLogPings,
-		ProxyAddr:      *flagProxyAddr,
-		ProxyUser:      *flagProxyUser,
-		ProxyPass:      *flagProxyPass,
-		TorIsolation:   *flagTorIsolation,
-		MinWalletBal:   minWalletBal,
-		MinRecvBal:     minRecvBal,
-		MinSendBal:     minSendBal,
-		WinPin:         winpin,
-		MimeMap:        mimeMap,
+		ServerAddr:         *flagServerAddr,
+		Root:               *flagRootDir,
+		DBRoot:             filepath.Join(*flagRootDir, "db"),
+		DownloadsRoot:      filepath.Join(*flagRootDir, "downloads"),
+		WalletType:         *flagWalletType,
+		MsgRoot:            *flagMsgRoot,
+		LNRPCHost:          *flagLNHost,
+		LNTLSCertPath:      *flagLNTLSCert,
+		LNMacaroonPath:     *flagLNMacaroonPath,
+		LNDebugLevel:       *flagLNDebugLevel,
+		LNMaxLogFiles:      *flagLNMaxLogFiles,
+		LogFile:            *flagLogFile,
+		MaxLogFiles:        *flagMaxLogFiles,
+		DebugLevel:         *flagDebugLevel,
+		CompressLevel:      *flagCompressLevel,
+		CmdHistoryPath:     cmdHistoryPath,
+		NickColor:          *flagNickColor,
+		GCOtherColor:       *flagGCOtherColor,
+		PMOtherColor:       *flagPMOtherColor,
+		BlinkCursor:        *flagBlinkCursor,
+		BellCmd:            strings.TrimSpace(*flagBellCmd),
+		Network:            *flagNetwork,
+		CPUProfile:         *flagCPUProfile,
+		CPUProfileHz:       *flagCPUProfileHz,
+		LogPings:           *flagLogPings,
+		ProxyAddr:          *flagProxyAddr,
+		ProxyUser:          *flagProxyUser,
+		ProxyPass:          *flagProxyPass,
+		TorIsolation:       *flagTorIsolation,
+		MinWalletBal:       minWalletBal,
+		MinRecvBal:         minRecvBal,
+		MinSendBal:         minSendBal,
+		WinPin:             winpin,
+		MimeMap:            mimeMap,
+		JSONRPCListen:      jrpcListen,
+		RPCCertPath:        *flagRPCCertPath,
+		RPCKeyPath:         *flagRPCKeyPath,
+		RPCClientCAPath:    *flagRPCClientCAPath,
+		RPCIssueClientCert: *flagRPCIssueClientCert,
 	}, nil
 }
 

@@ -29,7 +29,10 @@ import (
 	"github.com/companyzero/bisonrelay/client"
 	"github.com/companyzero/bisonrelay/client/clientdb"
 	"github.com/companyzero/bisonrelay/client/clientintf"
+	"github.com/companyzero/bisonrelay/client/rpcserver"
+	"github.com/companyzero/bisonrelay/clientrpc/types"
 	"github.com/companyzero/bisonrelay/internal/strescape"
+	"github.com/companyzero/bisonrelay/internal/tlsconn"
 	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/companyzero/bisonrelay/zkidentity"
 	"github.com/decred/dcrd/chaincfg/chainhash"
@@ -86,6 +89,7 @@ type appState struct {
 	styles      *theme
 	network     string
 	isRestore   bool
+	rpcServer   *rpcserver.Server
 
 	lnRPC      lnrpc.LightningClient
 	lnPC       *client.DcrlnPaymentClient
@@ -265,6 +269,15 @@ func (as *appState) run() error {
 				as.sendMsg(repaintActiveChat{})
 			}
 		}
+	}()
+
+	as.wg.Add(1)
+	go func() {
+		err := as.rpcServer.Run(as.ctx)
+		if err != nil && !errors.Is(err, context.Canceled) {
+			as.log.Errorf("RPCServer Run() error: %v", err)
+		}
+		as.wg.Done()
 	}()
 
 	as.wg.Wait()
@@ -955,6 +968,13 @@ func (as *appState) findOrNewChatWindow(id clientintf.UserID, alias string) *cha
 		if cw.uid == id {
 			as.chatWindowsMtx.Unlock()
 			return cw
+		}
+	}
+
+	if alias == "" {
+		alias, _ = as.c.UserNick(id)
+		if alias == "" {
+			alias = id.ShortLogID()
 		}
 	}
 
@@ -2059,6 +2079,16 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		dialer = clientintf.NetDialer(args.ServerAddr, logBknd.logger("CONN"))
 	}
 
+	// Setup notification handlers.
+	ntfns := client.NewNotificationManager()
+	ntfns.Register(client.OnPMNtfn(func(user *client.RemoteUser, msg rpc.RMPrivateMessage, ts time.Time) {
+		fromNick := strescape.Nick(user.PublicIdentity().Nick)
+		cw := as.findOrNewChatWindow(user.ID(), fromNick)
+		s := as.handleRcvdText(msg.Message, fromNick)
+		cw.newRecvdMsg(fromNick, s, ts)
+		as.repaintIfActiveWithMention(cw, hasMention(as.c.LocalNick(), s))
+	}))
+
 	// Initialize client config.
 	cfg := client.Config{
 		DB:             db,
@@ -2068,6 +2098,7 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		LogPings:       args.LogPings,
 		ReconnectDelay: 5 * time.Second,
 		CompressLevel:  args.CompressLevel,
+		Notifications:  ntfns,
 
 		CertConfirmer: func(ctx context.Context, cs *tls.ConnectionState,
 			svrID *zkidentity.PublicIdentity) error {
@@ -2222,14 +2253,6 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 			} else {
 				as.diagMsg("Connection to server closed")
 			}
-		},
-
-		PMHandler: func(user *client.RemoteUser, msg rpc.RMPrivateMessage, ts time.Time) {
-			fromNick := strescape.Nick(user.PublicIdentity().Nick)
-			cw := as.findOrNewChatWindow(user.ID(), fromNick)
-			s := as.handleRcvdText(msg.Message, fromNick)
-			cw.newRecvdMsg(fromNick, s, ts)
-			as.repaintIfActiveWithMention(cw, hasMention(as.c.LocalNick(), s))
 		},
 
 		GCInviteHandler: func(user *client.RemoteUser, iid uint64, invite rpc.RMGroupInvite) {
@@ -2706,6 +2729,40 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		return nil, err
 	}
 
+	// Initialize RPC server.
+	rpcsLog := logBknd.logger("RPCS")
+	tlsConnCfg := tlsconn.TLSListenersConfig{
+		Addresses:                   args.JSONRPCListen,
+		CertPath:                    args.RPCCertPath,
+		KeyPath:                     args.RPCKeyPath,
+		CreateCertPairIfNotExists:   true,
+		ClientCAPath:                args.RPCClientCAPath,
+		ClientCertPath:              filepath.Join(filepath.Dir(args.RPCClientCAPath), "rpc-client.cert"),
+		ClientKeyPath:               filepath.Join(filepath.Dir(args.RPCClientCAPath), "rpc-client.key"),
+		CreateClientCertIfNotExists: args.RPCIssueClientCert,
+		Log:                         rpcsLog,
+	}
+	jsonListeners, err := tlsconn.TLSListeners(tlsConnCfg)
+	if err != nil {
+		return nil, err
+	}
+	rpcServer := rpcserver.New(rpcserver.Config{
+		JSONRPCListeners: jsonListeners,
+		Log:              rpcsLog,
+	})
+	rpcServer.InitVersionService(appName, version.Version)
+	chatRPCServerCfg := rpcserver.ChatServerCfg{
+		Log:    logBknd.logger("RPCS"),
+		Client: c,
+		OnPM: func(ctx context.Context, uid client.UserID, pm *types.PMRequest) error {
+			cw := as.findOrNewChatWindow(uid, "")
+			cw.newInternalMsg("API: " + pm.Msg.Message)
+			as.repaintIfActive(cw)
+			return nil
+		},
+	}
+	rpcServer.InitChatService(chatRPCServerCfg)
+
 	ctx, cancel := context.WithCancel(context.Background())
 	as = &appState{
 		ctx:         ctx,
@@ -2732,6 +2789,7 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		gcInvites: make(map[string]uint64),
 		network:   args.Network,
 		isRestore: isRestore,
+		rpcServer: rpcServer,
 
 		skipWalletCheckChan: make(chan struct{}),
 
