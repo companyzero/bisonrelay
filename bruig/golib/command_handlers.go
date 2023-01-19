@@ -119,6 +119,15 @@ func handleInitClient(handle uint32, args InitClient) error {
 
 	var c *client.Client
 	var cctx *clientCtx
+
+	ntfns := client.NewNotificationManager()
+	ntfns.Register(client.OnPMNtfn(func(user *client.RemoteUser, msg rpc.RMPrivateMessage, ts time.Time) {
+		// TODO: replace PM{} for types.ReceivedPM{}.
+		pm := PM{UID: user.ID(), Msg: msg.Message, TimeStamp: ts.Unix()}
+		notify(NTPM, pm, nil)
+	},
+	))
+
 	cfg := client.Config{
 		DB:             db,
 		Dialer:         clientintf.NetDialer(args.ServerAddr, logBknd.logger("CONN")),
@@ -126,6 +135,7 @@ func handleInitClient(handle uint32, args InitClient) error {
 		Logger:         logBknd.logger,
 		ReconnectDelay: 5 * time.Second,
 		CompressLevel:  4,
+		Notifications:  ntfns,
 
 		CertConfirmer: func(ctx context.Context, cs *tls.ConnectionState,
 			svrID *zkidentity.PublicIdentity) error {
@@ -208,11 +218,6 @@ func handleInitClient(handle uint32, args InitClient) error {
 			}
 			st := ServerSessState{State: state}
 			notify(NTServerSessChanged, st, nil)
-		},
-
-		PMHandler: func(user *client.RemoteUser, msg rpc.RMPrivateMessage, ts time.Time) {
-			pm := PM{UID: user.ID(), Msg: msg.Message, TimeStamp: ts.Unix()}
-			notify(NTPM, pm, nil)
 		},
 
 		GCInviteHandler: func(user *client.RemoteUser, iid uint64, invite rpc.RMGroupInvite) {

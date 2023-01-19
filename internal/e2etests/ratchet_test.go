@@ -27,18 +27,14 @@ func TestResendsUnackedRM(t *testing.T) {
 
 	// Hook into Alice's and Bob's onPM event.
 	bobPMChan := make(chan string, 7)
-	bob.modifyHandlers(func() {
-		bob.onPM = func(user *client.RemoteUser, msg rpc.RMPrivateMessage, ts time.Time) {
-			bobPMChan <- msg.Message
-		}
-	})
+	bob.NotificationManager().Register(client.OnPMNtfn(func(user *client.RemoteUser, msg rpc.RMPrivateMessage, ts time.Time) {
+		bobPMChan <- msg.Message
+	}))
 
 	alicePMChan := make(chan string, 2)
-	alice.modifyHandlers(func() {
-		alice.onPM = func(user *client.RemoteUser, msg rpc.RMPrivateMessage, ts time.Time) {
-			alicePMChan <- msg.Message
-		}
-	})
+	alice.NotificationManager().Register(client.OnPMNtfn(func(user *client.RemoteUser, msg rpc.RMPrivateMessage, ts time.Time) {
+		alicePMChan <- msg.Message
+	}))
 
 	// Send an initial Alice->Bob and Bob->Alice message and assert they
 	// were received.
@@ -144,11 +140,10 @@ func TestResendsUnackedRM(t *testing.T) {
 	assert.DeepEqual(t, assert.ChanWritten(t, bobPMChan), wantMsg7)
 
 	// Finally send a Bob->Alice message.
-	alice.modifyHandlers(func() {
-		alice.onPM = func(user *client.RemoteUser, msg rpc.RMPrivateMessage, ts time.Time) {
-			alicePMChan <- msg.Message
-		}
-	})
+	alice.NotificationManager().Register(client.OnPMNtfn(func(user *client.RemoteUser, msg rpc.RMPrivateMessage, ts time.Time) {
+		alicePMChan <- msg.Message
+	}))
+
 	assert.NilErr(t, bob.PM(alice.PublicID(), "bob msg"))
 	assert.DeepEqual(t, assert.ChanWritten(t, alicePMChan), "bob msg")
 }

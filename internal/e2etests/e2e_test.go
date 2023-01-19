@@ -248,16 +248,6 @@ func (ts *testScaffold) newClientWithOpts(name string, rootDir string,
 			}
 		},
 
-		PMHandler: func(user *client.RemoteUser, msg rpc.RMPrivateMessage, ts time.Time) {
-			tc.mtx.Lock()
-			f := tc.onPM
-			tc.mtx.Unlock()
-			if f != nil {
-				f(user, msg, ts)
-			}
-
-		},
-
 		ServerSessionChanged: func(connected bool, pushRate, subRate, expDays uint64) {
 			tc.mtx.Lock()
 			f := tc.onConnChanged
