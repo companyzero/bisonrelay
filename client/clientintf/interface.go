@@ -92,6 +92,7 @@ type PaymentClient interface {
 	GetInvoice(context.Context, int64, func(int64)) (string, error)
 	DecodeInvoice(context.Context, string) (DecodedInvoice, error)
 	IsInvoicePaid(context.Context, int64, string) error
+	IsPaymentCompleted(context.Context, string) error
 }
 
 // FreePaymentClient implements the PaymentClient interface for servers that
@@ -108,6 +109,9 @@ func (pc FreePaymentClient) GetInvoice(ctx context.Context, mat int64, cb func(i
 	return fmt.Sprintf("free invoice for %d milliatoms", mat), nil
 }
 func (pc FreePaymentClient) IsInvoicePaid(context.Context, int64, string) error {
+	return nil
+}
+func (pc FreePaymentClient) IsPaymentCompleted(context.Context, string) error {
 	return nil
 }
 

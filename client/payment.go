@@ -14,6 +14,7 @@ import (
 	"github.com/decred/dcrd/dcrutil/v4"
 	"github.com/decred/dcrlnd/lnrpc"
 	"github.com/decred/dcrlnd/lnrpc/invoicesrpc"
+	"github.com/decred/dcrlnd/lnrpc/routerrpc"
 	"github.com/decred/dcrlnd/macaroons"
 	"github.com/decred/slog"
 	"golang.org/x/sync/errgroup"
@@ -35,6 +36,7 @@ type DcrlnPaymentClient struct {
 	lnRpc      lnrpc.LightningClient
 	lnInvoices invoicesrpc.InvoicesClient
 	lnUnlocker lnrpc.WalletUnlockerClient
+	lnRouter   routerrpc.RouterClient
 	log        slog.Logger
 	payTiming  *timestats.Tracker
 }
@@ -74,6 +76,7 @@ func NewDcrlndPaymentClient(ctx context.Context, cfg DcrlnPaymentClientCfg) (*Dc
 	lnRpc := lnrpc.NewLightningClient(conn)
 	lnInvoices := invoicesrpc.NewInvoicesClient(conn)
 	lnUnlocker := lnrpc.NewWalletUnlockerClient(conn)
+	lnRouter := routerrpc.NewRouterClient(conn)
 
 	log := slog.Disabled
 	if cfg.Log != nil {
@@ -84,6 +87,7 @@ func NewDcrlndPaymentClient(ctx context.Context, cfg DcrlnPaymentClientCfg) (*Dc
 		lnRpc:      lnRpc,
 		lnInvoices: lnInvoices,
 		lnUnlocker: lnUnlocker,
+		lnRouter:   lnRouter,
 		log:        log,
 		payTiming:  timestats.NewTracker(250),
 	}, nil
@@ -282,6 +286,65 @@ func (pc *DcrlnPaymentClient) DecodeInvoice(ctx context.Context, invoice string)
 		MAtoms:     payReq.NumMAtoms,
 		ExpiryTime: time.Unix(expiryTS, 0),
 	}, nil
+}
+
+func (pc *DcrlnPaymentClient) IsPaymentCompleted(ctx context.Context, invoice string) error {
+	payReq, err := pc.lnRpc.DecodePayReq(ctx, &lnrpc.PayReqString{PayReq: invoice})
+	if err != nil {
+		return fmt.Errorf("unable to decode pay req")
+	}
+
+	payHash, err := hex.DecodeString(payReq.PaymentHash)
+	if err != nil {
+		return fmt.Errorf("unable to decode payment hash: %v", err)
+	}
+
+	// Create a special context to limit how long we wait for inflight
+	// payments to complete. This handles the case where a payment takes
+	// too long to complete and we might want to unblock callers.
+	//
+	// NOTE: this causes this function to only returns nil ("invoice paid")
+	// if the payment completely succeeded. The payment might still be
+	// inflight after reconnecting, but it won't be reused in that case,
+	// potentially causing a double payment for the same RV.
+	//
+	// The tradeoff is having to hang on to the payment attempt for
+	// potentially a _long_ time (in the worse case scenario, an on-chain
+	// settlement, hundreds of blocks in the future) and never being able
+	// to send this message in a timely manner, causing broken ratchets.
+	//
+	// We assume this risk of double payment here, for the moment. In the
+	// future, this should be exposed to the user somehow.
+	const paymentTimeout = time.Minute
+	ctx, cancel := context.WithTimeout(ctx, paymentTimeout)
+	defer cancel()
+
+	req := &routerrpc.TrackPaymentRequest{
+		PaymentHash: payHash,
+	}
+	stream, err := pc.lnRouter.TrackPaymentV2(ctx, req)
+	if err != nil {
+		return fmt.Errorf("unable to create payment tracking stream: %v", err)
+	}
+	for {
+		event, err := stream.Recv()
+		if err != nil {
+			return fmt.Errorf("error reading from payment tracking stream: %v", err)
+		}
+
+		switch event.Status {
+		case lnrpc.Payment_SUCCEEDED:
+			return nil
+		case lnrpc.Payment_FAILED:
+			return fmt.Errorf("payment failed due to %s", event.FailureReason.String())
+		case lnrpc.Payment_UNKNOWN:
+			return fmt.Errorf("payment status is unknown")
+		case lnrpc.Payment_IN_FLIGHT:
+			pc.log.Tracef("Payment %x is inflight", payHash)
+		default:
+			return fmt.Errorf("unknown payment tracking status %s", event.Status)
+		}
+	}
 }
 
 // PaymentTimingStats returns timing information for payment stats.
