@@ -98,8 +98,9 @@ type Message struct {
 
 // RouteMessage is a hack
 type RouteMessage struct {
-	Rendezvous ratchet.RVPoint
-	Message    []byte
+	Rendezvous    ratchet.RVPoint
+	PaidInvoiceID []byte
+	Message       []byte
 }
 
 type RouteMessageReply struct {
