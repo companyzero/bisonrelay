@@ -1,7 +1,6 @@
 package clientdb
 
 import (
-	"errors"
 	"os"
 	"path/filepath"
 	"sort"
@@ -135,9 +134,8 @@ func (db *DB) ListSendQueue(tx ReadTx) ([]SendQueueElement, error) {
 	return ssq.q, nil
 }
 
-// ReplaceUserUnackedRM replaces the unacked RM registered for the given user
-// with the specified one. It is not an error if no previous unacked rm exists.
-func (db *DB) ReplaceUserUnackedRM(tx ReadWriteTx, uid UserID, encrypted []byte,
+// StoreUserUnackedRM stores the passed RM as unacked for the given user.
+func (db *DB) StoreUserUnackedRM(tx ReadWriteTx, uid UserID, encrypted []byte,
 	rv RawRVID, payEvent string) error {
 
 	rm := UnackedRM{
@@ -146,46 +144,36 @@ func (db *DB) ReplaceUserUnackedRM(tx ReadWriteTx, uid UserID, encrypted []byte,
 		RV:        rv,
 		PayEvent:  payEvent,
 	}
-	fname := filepath.Join(db.root, inboundDir, uid.String(), unackedRMFile)
+	fname := filepath.Join(db.root, inboundDir, uid.String(), unackedRMsDir,
+		rv.String())
 	return db.saveJsonFile(fname, rm)
 }
 
-// RemoveUserUnackedRMWithRV removes the unacked rm of the specified user if it
-// exists and if it has the specified RV. It does not return an error if the
-// unacked RM did not exist. The return bool indicates whether the unacked rm
-// existed.
+// RemoveUserUnackedRMWithRV removes the unacked rm of the specified user if
+// one exists wth the specified RV. It does not return an error if the unacked
+// RM did not exist. The return bool indicates whether the unacked rm existed.
 func (db *DB) RemoveUserUnackedRMWithRV(tx ReadWriteTx, uid UserID, rv RawRVID) (bool, error) {
-	fname := filepath.Join(db.root, inboundDir, uid.String(), unackedRMFile)
-	var unsent UnackedRM
-	if err := db.readJsonFile(fname, &unsent); err != nil {
-		if errors.Is(err, ErrNotFound) {
-			return false, nil
-		}
-		return false, err
-	}
-
-	if unsent.RV != rv {
-		// The saved RV is not the specified one. Log a debug line, but
-		// otherwise this is not an error. This can happen when sending
-		// an RM happens faster then processing the one just sent.
-		db.log.Debugf("Skip removing unsent RM from user %s since stored "+
-			"RV %s is not the specified %s (pay event %s)", uid,
-			unsent.RV, rv, unsent.PayEvent)
-		return false, nil
-	}
-
+	fname := filepath.Join(db.root, inboundDir, uid.String(), unackedRMsDir,
+		rv.String())
 	err := os.Remove(fname)
-	return err == nil, err
+	existed := err == nil
+	if os.IsNotExist(err) {
+		// Ignore this error.
+		err = nil
+	}
+	return existed, err
 }
 
 // ListUnackedtUserRMs lists unacked RMs from all users.
 func (db *DB) ListUnackedUserRMs(tx ReadTx) ([]UnackedRM, error) {
-	pattern := filepath.Join(db.root, inboundDir, "*", unackedRMFile)
+	// Find all unacked rms from each user's unackedRMs dir.
+	pattern := filepath.Join(db.root, inboundDir, "*", unackedRMsDir, "*")
 	matches, err := filepath.Glob(pattern)
 	if err != nil {
 		return nil, err
 	}
 
+	// Actually read the files.
 	res := make([]UnackedRM, len(matches))
 	for i := range matches {
 		err := db.readJsonFile(matches[i], &res[i])
@@ -193,5 +181,6 @@ func (db *DB) ListUnackedUserRMs(tx ReadTx) ([]UnackedRM, error) {
 			return nil, err
 		}
 	}
+
 	return res, nil
 }
