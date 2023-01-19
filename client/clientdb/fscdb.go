@@ -42,7 +42,7 @@ const (
 	miRequestsDir      = "mirequests"
 	postKXActionsDir   = "postkxactions"
 	payStatsFile       = "paystats.json"
-	unackedRMFile      = "unackedrm.json"
+	unackedRMsDir      = "unackedrms"
 )
 
 func (db *DB) LocalID(tx ReadTx) (*zkidentity.FullIdentity, error) {

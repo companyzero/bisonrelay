@@ -198,6 +198,16 @@ func (ru *RemoteUser) removeUnacked(rv clientintf.RawRVID) {
 	}
 }
 
+// removeUnackedRMDueToErr returns true if we should remove the unacked RM
+// due to the specified error received from the sending loop.
+func removeUnackedRMDueToErr(err error) bool {
+	if errors.Is(err, context.Canceled) || errors.Is(err, clientintf.ErrSubsysExiting) {
+		return false
+	}
+
+	return true
+}
+
 // queueRMPriority queues the given payload in the underlying RMQ and returns
 // once it has been queued.
 //
@@ -253,7 +263,7 @@ func (ru *RemoteUser) queueRMPriority(payload interface{}, priority uint,
 			ru.log.Debugf("Sent RM %T via RV %s (err: %v)", payload,
 				orm.sendRV, err)
 
-			if err == nil {
+			if removeUnackedRMDueToErr(err) {
 				ru.removeUnacked(orm.sendRV)
 			}
 
@@ -437,7 +447,7 @@ func (ru *RemoteUser) saveRatchet(encrypted []byte, rv *clientintf.RawRVID,
 		err := ru.db.UpdateRatchet(tx, ru.r, ru.id.Identity)
 
 		if err == nil && encrypted != nil && rv != nil {
-			err = ru.db.ReplaceUserUnackedRM(tx, ru.ID(), encrypted,
+			err = ru.db.StoreUserUnackedRM(tx, ru.ID(), encrypted,
 				*rv, payEvent)
 		}
 

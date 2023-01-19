@@ -158,6 +158,11 @@ func New(cfg Config) (*DB, error) {
 		payStats:     make(map[string]UserPayStats),
 	}
 
+	// Perform upgrades as needed.
+	if err := db.performUpgrades(); err != nil {
+		return nil, err
+	}
+
 	// Try to read the pay stats file.
 	if err := db.readJsonFile(filepath.Join(root, payStatsFile), &db.payStats); err != nil {
 		if !errors.Is(err, ErrNotFound) {
