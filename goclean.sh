@@ -19,6 +19,9 @@ env GORACE="halt_on_error=1" go test ./...
 # check linters
 golangci-lint run
 
+# check client protobuf linters
+(cd clientrpc && protolint lint .)
+
 # To submit the test coverage result to coveralls.io,
 # use goveralls (https://github.com/mattn/goveralls)
 # goveralls -coverprofile=profile.cov -service=travis-ci
