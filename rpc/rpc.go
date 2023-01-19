@@ -204,6 +204,18 @@ const (
 	// from the server automatically.
 	PropExpirationDays        = "expirationdays"
 	PropExpirationDaysDefault = 7
+
+	// PropPushPaymentLifetime is the maximum duration when a successful
+	// payment for a push may be redeemed. After this duration, the push
+	// needs to be paid for again. This value is in seconds.
+	PropPushPaymentLifetime        = "pushpaymentlifetime"
+	PropPushPaymentLifetimeDefault = 60 * 60 * 24 // 24 hours
+
+	// PropMaxPushInvoices is the maximum number of outstanding (unredeemed)
+	// push invoices a connected client may request before needing to pay
+	// for them.
+	PropMaxPushInvoices        = "maxpushinvoices"
+	PropMaxPushInvoicesDefault = 8
 )
 
 var (
@@ -241,6 +253,20 @@ var (
 		Required: false,
 	}
 
+	// TODO: make this a required prop once clients have updated.
+	DefaultPropPushPaymentLifetime = ServerProperty{
+		Key:      PropPushPaymentLifetime,
+		Value:    strconv.Itoa(PropPushPaymentLifetimeDefault),
+		Required: false,
+	}
+
+	// TODO: make this a required prop once clients have updated.
+	DefaultPropMaxPushInvoices = ServerProperty{
+		Key:      PropMaxPushInvoices,
+		Value:    strconv.Itoa(PropMaxPushInvoicesDefault),
+		Required: false,
+	}
+
 	// optional
 	DefaultPropServerLNNode = ServerProperty{
 		Key:      PropServerLNNode,
@@ -256,6 +282,8 @@ var (
 		DefaultPropPaymentScheme,
 		DefaultPropPushPaymentRate,
 		DefaultPropSubPaymentRate,
+		DefaultPropPushPaymentLifetime,
+		DefaultPropMaxPushInvoices,
 
 		// TODO: Add it here once the clients are updated.
 		//DefaultPropExpirationDays,
