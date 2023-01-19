@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 	"sort"
+	"time"
 
 	"github.com/companyzero/bisonrelay/client/clientdb"
 	"github.com/companyzero/bisonrelay/client/internal/lowlevel"
@@ -80,6 +81,35 @@ func (rvdb *rvManagerDBAdapter) MarkRVUnpaid(rv lowlevel.RVID) error {
 		return rvdb.c.db.MarkRVUnpaid(tx, rv)
 	})
 	return err
+}
+
+// rmqDBAdapter is an adapter structure that satisfies the RMQDB interface using
+// a client's db as backing storage.
+type rmqDBAdapter struct {
+	c *Client
+}
+
+func (rmqdb *rmqDBAdapter) RVHasPaymentAttempt(rv lowlevel.RVID) (string, time.Time, error) {
+	var invoice string
+	var ts time.Time
+	err := rmqdb.c.dbView(func(tx clientdb.ReadTx) error {
+		var err error
+		invoice, ts, err = rmqdb.c.db.HasPushPaymentAttempt(tx, rv)
+		return err
+	})
+	return invoice, ts, err
+}
+
+func (rmqdb *rmqDBAdapter) StoreRVPaymentAttempt(rv lowlevel.RVID, invoice string, ts time.Time) error {
+	return rmqdb.c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
+		return rmqdb.c.db.StorePushPaymentAttempt(tx, rv, invoice, ts)
+	})
+}
+
+func (rmqdb *rmqDBAdapter) DeleteRVPaymentAttempt(rv lowlevel.RVID) error {
+	return rmqdb.c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
+		return rmqdb.c.db.DeletePushPaymentAttempt(tx, rv)
+	})
 }
 
 // SortedUserPayStatsIDs returns a sorted list of IDs from the passed stats

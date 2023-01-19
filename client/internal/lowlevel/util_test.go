@@ -12,6 +12,7 @@ import (
 	"math/rand"
 	"net"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -444,5 +445,44 @@ func (db *mockRvMgrDB) SavePaidRVs(rvs []RVID) error {
 
 func (db *mockRvMgrDB) MarkRVUnpaid(rv RVID) error {
 	delete(db.paid, rv)
+	return nil
+}
+
+type mockRMQDBEntry struct {
+	invoice string
+	date    time.Time
+}
+
+type mockRMQDB struct {
+	mtx   sync.Mutex
+	store map[RVID]mockRMQDBEntry
+}
+
+func newMockRMQDB() *mockRMQDB {
+	return &mockRMQDB{
+		store: make(map[RVID]mockRMQDBEntry),
+	}
+}
+
+func (m *mockRMQDB) RVHasPaymentAttempt(rv RVID) (string, time.Time, error) {
+	m.mtx.Lock()
+	defer m.mtx.Unlock()
+	if e, ok := m.store[rv]; ok {
+		return e.invoice, e.date, nil
+	}
+	return "", time.Time{}, nil
+}
+
+func (m *mockRMQDB) StoreRVPaymentAttempt(rv RVID, invoice string, date time.Time) error {
+	m.mtx.Lock()
+	defer m.mtx.Unlock()
+	m.store[rv] = mockRMQDBEntry{invoice: invoice, date: date}
+	return nil
+}
+
+func (m *mockRMQDB) DeleteRVPaymentAttempt(rv RVID) error {
+	m.mtx.Lock()
+	defer m.mtx.Unlock()
+	delete(m.store, rv)
 	return nil
 }

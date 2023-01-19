@@ -31,6 +31,22 @@ func (r rmmsg) sendReply(err error) {
 	r.replyChan <- err
 }
 
+// RMQDB is the interface required of a DB to persist RMQ-related data.
+type RMQDB interface {
+	// StoreRVPaymentAttempt should store that an attempt to pay to push
+	// to the given RV is being made with the given invoice.
+	StoreRVPaymentAttempt(RVID, string, time.Time) error
+
+	// RVHasPaymentAttempt should return the invoice and time that an
+	// attempt to pay to push to the RV was made (i.e. it returns the
+	// invoice and time saved on a prior call to StoreRVPaymentAttempt).
+	RVHasPaymentAttempt(RVID) (string, time.Time, error)
+
+	// DeleteRVPaymentAttempt removes the prior attempt to pay for the given
+	// RV.
+	DeleteRVPaymentAttempt(RVID) error
+}
+
 // RMQ is a queue for sending RoutedMessages (RMs) to the server. The rmq
 // supports a flickering server connection: any unsent RMs are queued (FIFO
 // style) until a new server session is bound via `bindToSession`.
@@ -48,6 +64,7 @@ type RMQ struct {
 	enqueueDone chan struct{}
 	lenChan     chan chan int
 	timingStat  timestats.Tracker
+	db          RMQDB
 
 	nextSendChan chan *rmmsg
 	sendDoneChan chan struct{}
@@ -58,7 +75,8 @@ type RMQ struct {
 	nextInvoice string
 }
 
-func NewRMQ(log slog.Logger, payClient clientintf.PaymentClient, localID *zkidentity.FullIdentity) *RMQ {
+func NewRMQ(log slog.Logger, payClient clientintf.PaymentClient,
+	localID *zkidentity.FullIdentity, db RMQDB) *RMQ {
 	if log == nil {
 		log = slog.Disabled
 	}
@@ -67,6 +85,7 @@ func NewRMQ(log slog.Logger, payClient clientintf.PaymentClient, localID *zkiden
 		localID:      localID,
 		log:          log,
 		rmChan:       make(chan rmmsg),
+		db:           db,
 		enqueueDone:  make(chan struct{}),
 		lenChan:      make(chan chan int),
 		nextSendChan: make(chan *rmmsg),

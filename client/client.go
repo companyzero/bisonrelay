@@ -288,7 +288,8 @@ func New(cfg Config) (*Client, error) {
 	}
 	ck := lowlevel.NewConnKeeper(ckCfg)
 
-	q := lowlevel.NewRMQ(cfg.logger("RMQU"), cfg.PayClient, id)
+	rmqdb := &rmqDBAdapter{}
+	q := lowlevel.NewRMQ(cfg.logger("RMQU"), cfg.PayClient, id, rmqdb)
 	ctx, cancel := context.WithCancel(context.Background())
 
 	dbCtx, dbCtxCancel := context.WithCancel(context.Background())
@@ -335,6 +336,7 @@ func New(cfg Config) (*Client, error) {
 	c.gcmq = gcmcacher.New(gcmqDelay, gcmqMaxDelay, slog.Disabled, c.handleDelayedGCMessages)
 
 	rmgrdb.c = c
+	rmqdb.c = c
 	kxl.kxCompleted = c.kxCompleted
 
 	return c, nil
