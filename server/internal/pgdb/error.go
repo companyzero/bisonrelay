@@ -67,6 +67,10 @@ const (
 	// ErrUpgradeV2 indicates an error that happened during the upgrade to
 	// the version 2 database.
 	ErrUpgradeV2 = ErrorKind("ErrUpgradeV2")
+
+	// ErrUpgradeV3 indicates an error that happened during the upgrade to
+	// the version 3 database.
+	ErrUpgradeV3 = ErrorKind("ErrUpgradeV3")
 )
 
 // Error satisfies the error interface and prints human-readable errors.

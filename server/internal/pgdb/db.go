@@ -3,6 +3,7 @@ package pgdb
 import (
 	"context"
 	"database/sql"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"runtime/trace"
@@ -42,7 +43,7 @@ const (
 
 const (
 	// currentDBVersion indicates the current database version.
-	currentDBVersion = 2
+	currentDBVersion = 3
 
 	// pgDateFormat is the format string to use when specifying the date ranges
 	// for partitions in the format Postgres understands such that they refer to
@@ -101,9 +102,13 @@ type DB struct {
 	//
 	// paidSubsPartitions houses all the known partitions for the paid
 	// subscriptions table.
-	partitionMtx       sync.Mutex
-	dataPartitions     map[string]struct{}
-	paidSubsPartitions map[string]struct{}
+	//
+	// redeemedPushesPartitions houses all the known partitions for the
+	// redeemed push payments table.
+	partitionMtx             sync.Mutex
+	dataPartitions           map[string]struct{}
+	paidSubsPartitions       map[string]struct{}
+	redeemedPushesPartitions map[string]struct{}
 }
 
 // sqlTx runs the provided function inside of SQL transaction and will either
@@ -295,6 +300,19 @@ func (db *DB) createPaidSubsTableQuery() string {
 	return fmt.Sprintf(query, tablespace)
 }
 
+// createRedeemedPushPaymentsQuery returns a SQL query that creates the virtual
+// data table that tracks payment hashes for pushed messages that were redeemed
+// and that is partioned by range if it does not already exist.
+func (db *DB) createRedeemedPushPaymentsQuery() string {
+	const query = "CREATE TABLE IF NOT EXISTS redeemed_push_payments (" +
+		"	payment_id TEXT NOT NULL," +
+		"	insert_time DATE NOT NULL," +
+		"	UNIQUE(payment_id, insert_time) USING INDEX TABLESPACE %s" +
+		") PARTITION BY RANGE (insert_time);"
+	tablespace := pq.QuoteIdentifier(db.indexTablespace)
+	return fmt.Sprintf(query, tablespace)
+}
+
 // procedureExists returns whether or not the provided stored procedure exists.
 func procedureExists(tx *sql.Tx, procName string) (bool, error) {
 	//	--SELECT * FROM information_schema.routines WHERE routine_name = 'global_data_rv_unique';
@@ -422,16 +440,40 @@ func (db *DB) discoverExistingPaidSubsPartitions(tx *sql.Tx) error {
 	return nil
 }
 
+// discoverExistingRedeemedPushPayments finds all existing partitions of the
+// the redeemed push payments table.
+func (db *DB) discoverExistingRedeemedPushPayments(tx *sql.Tx) error {
+	db.partitionMtx.Lock()
+	defer db.partitionMtx.Unlock()
+
+	parts, err := db.discoverExistingPartitions(tx, "redeemed_push_payments")
+	if err != nil {
+		return err
+	}
+	db.redeemedPushesPartitions = parts
+	return nil
+}
+
 // upgradeDB upgrades old database versions to the newest version by applying
 // all possible upgrades iteratively.
 //
 // NOTE: The passed database info will be updated with the latest versions.
-func upgradeDB(ctx context.Context, tx *sql.Tx, dbInfo *databaseInfo) error {
+func upgradeDB(ctx context.Context, tx *sql.Tx, dbInfo *databaseInfo, indexTablespace string) error {
 	if dbInfo.version == 1 {
 		if err := upgradeDBToV2(ctx, tx, dbInfo); err != nil {
 			return err
 		}
 		dbInfo.version = 2
+		if err := updateDatabaseInfo(tx, dbInfo); err != nil {
+			return err
+		}
+	}
+
+	if dbInfo.version == 2 {
+		if err := upgradeDBToV3(ctx, tx, dbInfo, indexTablespace); err != nil {
+			return err
+		}
+		dbInfo.version = 3
 		if err := updateDatabaseInfo(tx, dbInfo); err != nil {
 			return err
 		}
@@ -526,6 +568,14 @@ func (db *DB) initDB(ctx context.Context, tx *sql.Tx) error {
 			str := fmt.Sprintf("unable to create paid subscriptions table: %v", err)
 			return contextError(ErrQueryFailed, str, err)
 		}
+
+		// Create the virtual partitioned redeemed push payments table if needed.
+		_, err = tx.Exec(db.createRedeemedPushPaymentsQuery())
+		if err != nil {
+			str := fmt.Sprintf("unable to create redeemed push payments table: %v", err)
+			return contextError(ErrQueryFailed, str, err)
+		}
+
 	}
 
 	if db.dbInfo.version > currentDBVersion {
@@ -536,7 +586,7 @@ func (db *DB) initDB(ctx context.Context, tx *sql.Tx) error {
 	}
 
 	// Upgrade the database if needed.
-	if err := upgradeDB(ctx, tx, db.dbInfo); err != nil {
+	if err := upgradeDB(ctx, tx, db.dbInfo, db.indexTablespace); err != nil {
 		return err
 	}
 
@@ -545,7 +595,13 @@ func (db *DB) initDB(ctx context.Context, tx *sql.Tx) error {
 	if err := db.discoverExistingDataPartitions(tx); err != nil {
 		return err
 	}
-	return db.discoverExistingPaidSubsPartitions(tx)
+	if err := db.discoverExistingPaidSubsPartitions(tx); err != nil {
+		return err
+	}
+	if err := db.discoverExistingRedeemedPushPayments(tx); err != nil {
+		return err
+	}
+	return nil
 }
 
 // tableExists returns whether or not the provided table exists.
@@ -653,7 +709,7 @@ func (db *DB) checkDatabaseSanity(tx *sql.Tx) error {
 	}
 
 	// Ensure the virtual partitioned tables exist.
-	tables := []string{"data", "paid_subs"}
+	tables := []string{"data", "paid_subs", "redeemed_push_payments"}
 	for _, tableName := range tables {
 		// Ensure the main virtual partitioned data table exists.
 		exists, err := tableExists(tx, tableName)
@@ -676,14 +732,23 @@ func (db *DB) checkDatabaseSanity(tx *sql.Tx) error {
 	// Ensure the data partitions are all configured with the expected data and
 	// index tablespaces.
 	db.partitionMtx.Lock()
-	checkPartitions := []map[string]struct{}{db.dataPartitions, db.paidSubsPartitions}
-	for _, partitions := range checkPartitions {
+	checkPartitions := []map[string]struct{}{db.dataPartitions, db.paidSubsPartitions,
+		db.redeemedPushesPartitions}
+	for ip, partitions := range checkPartitions {
 		for tableName := range partitions {
 			if err := db.checkBulkTablespace(tx, tableName); err != nil {
 				return err
 			}
 
-			idxName := fmt.Sprintf("%s_rendezvous_point_insert_time_key", tableName)
+			// Determine the correct index name expected for the given
+			// table.
+			var idxName string
+			if ip == 2 {
+				idxName = fmt.Sprintf("%s_payment_id_insert_time_key", tableName)
+			} else {
+				idxName = fmt.Sprintf("%s_rendezvous_point_insert_time_key", tableName)
+			}
+
 			if err := db.checkIndexTablespace(tx, tableName, idxName); err != nil {
 				return err
 			}
@@ -789,6 +854,15 @@ func (db *DB) maybeCreatePartitions(ctx context.Context, date time.Time) error {
 			return err
 		}
 		db.paidSubsPartitions[paidSubsPartitionName] = struct{}{}
+	}
+
+	paidRedeemedPushPayPartitionName := partitionTableName("redeemed_push_payments", date)
+	if _, exists := db.redeemedPushesPartitions[paidRedeemedPushPayPartitionName]; !exists {
+		err := db.maybeCreatePartition(ctx, "redeemed_push_payments", date)
+		if err != nil {
+			return err
+		}
+		db.redeemedPushesPartitions[paidRedeemedPushPayPartitionName] = struct{}{}
 	}
 
 	return nil
@@ -1088,6 +1162,95 @@ func (db *DB) expireTablePartition(ctx context.Context, baseTableName string, da
 	return count, nil
 }
 
+// IsPushPaymentRedeemed returns whether the payment done with the specified ID
+// was recorded in the database (i.e. redeemed).
+func (db *DB) IsPushPaymentRedeemed(ctx context.Context, payID []byte) (bool, error) {
+	ctx, task := trace.NewTask(ctx, "isPushPaymentRedeemed")
+	defer task.End()
+
+	const query = "SELECT count(*) FROM redeemed_push_payments WHERE payment_id = $1;"
+	row := db.db.QueryRowContext(ctx, query, hex.EncodeToString(payID))
+	var count int
+	if err := row.Scan(&count); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return false, nil
+		}
+
+		str := fmt.Sprintf("unable to fetch subscription payment status: %v", err)
+		return false, contextError(ErrQueryFailed, str, err)
+	}
+
+	return count > 0, nil
+}
+
+// StorePushPaymentRedeemed stores the passed payment ID as redeemed at the
+// passed date.
+func (db *DB) StorePushPaymentRedeemed(ctx context.Context, payID []byte, insertTime time.Time) error {
+	ctx, task := trace.NewTask(ctx, "storePushPaymentRedeemed")
+	defer task.End()
+
+	// Create a concrete data parition for the day associated with the provided
+	// date if needed.
+	insertTime = insertTime.UTC()
+	db.partitionMtx.Lock()
+	if err := db.maybeCreatePartitions(ctx, insertTime); err != nil {
+		db.partitionMtx.Unlock()
+		return err
+	}
+	db.partitionMtx.Unlock()
+
+	hexID := hex.EncodeToString(payID)
+	for attempts := 0; attempts < 2; attempts++ {
+		const query = "INSERT INTO redeemed_push_payments" +
+			"(payment_id, insert_time) " +
+			"VALUES ($1, $2);"
+		_, err := db.db.ExecContext(ctx, query, hexID, insertTime)
+		if err != nil {
+			// Create the redeemed_push_payments partition and go
+			// back to the top of the loop to try the insert again
+			// if the error indicates the partition doesn't exist.
+			//
+			// This should pretty much never be hit in practice, but it is
+			// technically possible for the partition to have been removed from
+			// another connection to the database which would cause the local
+			// map of known partitions to be out of sync.  This gracefully
+			// handles that scenario.
+			var e *pq.Error
+			isPQErr := errors.As(err, &e)
+			if isPQErr && e.Code.Name() == "check_violation" &&
+				attempts == 0 {
+
+				// Ensure the redeemed_push_payments partition
+				// is no longer marked as known to exist to
+				// ensure an attempt to create it is made.
+				partitionName := partitionTableName("redeemed_push_payments", insertTime)
+				db.partitionMtx.Lock()
+				delete(db.redeemedPushesPartitions, partitionName)
+				if err := db.maybeCreatePartitions(ctx, insertTime); err != nil {
+					db.partitionMtx.Unlock()
+					return err
+				}
+				db.partitionMtx.Unlock()
+				continue
+			}
+
+			// A unique violation constraint when attempting to
+			// mark a push payment as redeemed is not a logical
+			// error in this software, it's simply regarded as a
+			// NOP. So return without error in this case.
+			if isPQErr && e.Code.Name() == "unique_violation" &&
+				strings.Contains(e.Constraint, "_payment_id_insert_time_key") {
+				return nil
+			}
+
+			str := fmt.Sprintf("unable to mark push payment as redeemed: %v", err)
+			return contextError(ErrQueryFailed, str, err)
+		}
+		break
+	}
+	return nil
+}
+
 // Expire removes all entries that were inserted on the same day as the day
 // associated with the provided date.  The provided date will be converted to
 // UTC if needed.  It returns the number of entries that were removed.
@@ -1124,6 +1287,18 @@ func (db *DB) Expire(ctx context.Context, date time.Time) (uint64, error) {
 
 		// The partition no longer exists.
 		delete(db.paidSubsPartitions, paidSubPartitionName)
+	}
+
+	// Drop the redeemed push pyaments partition if it exists.
+	redeemedPushPayName := partitionTableName("redeemed_push_payments", date)
+	if _, exists := db.redeemedPushesPartitions[redeemedPushPayName]; exists {
+		_, err := db.expireTablePartition(ctx, "redeemed_push_payments", date)
+		if err != nil {
+			return 0, err
+		}
+
+		// The partition no longer exists.
+		delete(db.redeemedPushesPartitions, redeemedPushPayName)
 	}
 
 	return count, nil
@@ -1314,12 +1489,14 @@ func Open(ctx context.Context, opts ...Option) (*DB, error) {
 	}
 
 	db := &DB{
-		dbName:             o.dbName,
-		roleName:           o.roleName,
-		indexTablespace:    o.indexTablespace,
-		bulkDataTablespace: o.bulkDataTablespace,
-		db:                 sqlDB,
-		dataPartitions:     make(map[string]struct{}),
+		dbName:                   o.dbName,
+		roleName:                 o.roleName,
+		indexTablespace:          o.indexTablespace,
+		bulkDataTablespace:       o.bulkDataTablespace,
+		db:                       sqlDB,
+		dataPartitions:           make(map[string]struct{}),
+		paidSubsPartitions:       make(map[string]struct{}),
+		redeemedPushesPartitions: make(map[string]struct{}),
 	}
 
 	// This ensures proper behavior in the case multiple connections are opened

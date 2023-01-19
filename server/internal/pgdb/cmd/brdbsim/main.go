@@ -87,6 +87,33 @@ func (s *simulator) paySubHandler(ctx context.Context, rng *rand.Rand,
 	return nil
 }
 
+func (s *simulator) redeemedPaidPushesHandler(ctx context.Context, rng *rand.Rand,
+	timeInserted time.Time, total uint64) error {
+	for i := uint64(0); i < total; i++ {
+		var id [32]byte
+		if _, err := rng.Read(id[:]); err != nil {
+			return err
+		}
+
+		s.randomRVs.mtx.Lock()
+		if s.randomRVs.numSaved < queriesPerDay {
+			s.randomRVs.rvs = append(s.randomRVs.rvs, id)
+			s.randomRVs.numSaved++
+		}
+		s.randomRVs.mtx.Unlock()
+
+		// Insert with a random time within the specified day.
+		randDur := rng.Int63n(maxDayDuration)
+		recordTime := timeInserted.Add(time.Duration(randDur))
+
+		// Store the payload at the provided rv.
+		err := s.db.StorePushPaymentRedeemed(ctx, id[:], recordTime)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
 func (s *simulator) genStoreHandler(ctx context.Context, rng *rand.Rand, timeInserted time.Time, c <-chan uint64) error {
 	for {
 		select {
@@ -322,6 +349,82 @@ func (s *simulator) Run(ctx context.Context) error {
 		fmt.Printf("\n")
 	}
 
+	// Timing registering redeemed push payments.
+	start = time.Now()
+	toRedeemPerCPU := totalRecordsInserted / s.daysToSimulate / uint64(numCPU)
+	totalToRedeem := toPayPerCPU * s.daysToSimulate * uint64(numCPU)
+	fmt.Printf("Registering %d push payments as redeemed... ", totalToPay)
+	for day := uint64(0); day < s.daysToSimulate; day++ {
+		// Reset count of saved RVs for the day.
+		s.randomRVs.mtx.Lock()
+		s.randomRVs.numSaved = 0
+		s.randomRVs.mtx.Unlock()
+
+		timeInserted := startDay.Add(time.Hour * 24 * time.Duration(day))
+		g, groupCtx := errgroup.WithContext(ctx)
+		for i := 0; i < numCPU; i++ {
+			i := i
+			g.Go(func() error {
+				seed := baseSeed
+				seed += (int64(day) * int64(numCPU)) + int64(i)
+				rng := rand.New(rand.NewSource(seed))
+				return s.redeemedPaidPushesHandler(groupCtx, rng, timeInserted, toRedeemPerCPU)
+			})
+		}
+
+		if err := g.Wait(); err != nil {
+			return fmt.Errorf("unable to mark paid subscriptions: %v", err)
+		}
+	}
+	elapsed = time.Since(start)
+	if totalToPay > 0 {
+		fmt.Printf("elapsed %v, average per redemption %v\n",
+			elapsed.Round(time.Millisecond),
+			(elapsed / time.Duration(totalToRedeem)).Round(time.Microsecond))
+	}
+
+	// Timing querying for redeemed push payments.
+	s.randomRVs.mtx.Lock()
+	randomRVs = s.randomRVs.rvs
+	s.randomRVs.mtx.Unlock()
+
+	start = time.Now()
+	fmt.Printf("Querying %d ids for redeemed status... ", len(randomRVs))
+	for i := range randomRVs {
+		id := randomRVs[i][:]
+		redeemed, err := s.db.IsPushPaymentRedeemed(ctx, id)
+		if err != nil {
+			return fmt.Errorf("unable to query subscription paid status: %v", err)
+		}
+		if !redeemed {
+			return fmt.Errorf("unexpected unpaid status for RV %x", id)
+		}
+	}
+	elapsed = time.Since(start)
+	if len(randomRVs) > 0 {
+		fmt.Printf("elapsed %v, average per query: %v\n",
+			elapsed.Round(time.Millisecond),
+			(elapsed / time.Duration(len(randomRVs))).Round(time.Microsecond))
+	} else {
+		fmt.Printf("\n")
+	}
+
+	// Timing querying for inexistent push payment.
+	var randomID [32]byte
+	_, _ = rand.Read(randomID[:])
+	start = time.Now()
+	isRedeemed, err := s.db.IsPushPaymentRedeemed(ctx, randomID[:])
+	if err != nil {
+		return err
+	}
+	if isRedeemed {
+		fmt.Printf("random ID is marked as redeemed %x\n",
+			randomID)
+	}
+	elapsed = time.Since(start)
+	fmt.Printf("Query time for unredeemed push payment: %s\n", elapsed.Round(time.Microsecond))
+
+	// Log final sizes.
 	bulkSize, indexSize, err := s.db.TableSpacesSizes(ctx)
 	if err != nil {
 		return fmt.Errorf("Unable to fetch table space sizes: %v", err)
