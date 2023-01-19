@@ -282,7 +282,13 @@ func (pc *DcrlnPaymentClient) DecodeInvoice(ctx context.Context, invoice string)
 
 	expiryTS := (payReq.Timestamp + payReq.Expiry)
 
+	id, err := hex.DecodeString(payReq.PaymentHash)
+	if err != nil {
+		return clientintf.DecodedInvoice{}, fmt.Errorf("unable to decode payment hash: %v", err)
+	}
+
 	return clientintf.DecodedInvoice{
+		ID:         id,
 		MAtoms:     payReq.NumMAtoms,
 		ExpiryTime: time.Unix(expiryTS, 0),
 	}, nil

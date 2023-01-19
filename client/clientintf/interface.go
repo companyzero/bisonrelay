@@ -73,6 +73,7 @@ type ServerSessionIntf interface {
 // DecodedInvoice represents an invoice that was successfully decoded by the
 // PaymentClient
 type DecodedInvoice struct {
+	ID         []byte
 	MAtoms     int64
 	ExpiryTime time.Time
 }
@@ -126,8 +127,10 @@ func (pc FreePaymentClient) IsPaymentCompleted(context.Context, string) error {
 // invoices.
 var farFutureExpiryTime = time.Date(2200, 01, 01, 0, 0, 0, 0, time.UTC)
 
-func (pc FreePaymentClient) DecodeInvoice(context.Context, string) (DecodedInvoice, error) {
-	return DecodedInvoice{ExpiryTime: farFutureExpiryTime}, nil
+func (pc FreePaymentClient) DecodeInvoice(_ context.Context, invoice string) (DecodedInvoice, error) {
+	var id [32]byte
+	copy(id[:], invoice)
+	return DecodedInvoice{ExpiryTime: farFutureExpiryTime, ID: id[:]}, nil
 }
 
 var (
