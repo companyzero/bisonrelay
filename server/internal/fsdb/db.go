@@ -2,6 +2,7 @@ package frfsdb
 
 import (
 	"context"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -14,8 +15,9 @@ import (
 )
 
 type fsdb struct {
-	rootMsgs string
-	rootSubs string
+	rootMsgs                 string
+	rootSubs                 string
+	rootRedeemedPushPayments string
 }
 
 func NewFSDB(rootMsgs, rootSubs string) (serverdb.ServerDB, error) {
@@ -27,8 +29,16 @@ func NewFSDB(rootMsgs, rootSubs string) (serverdb.ServerDB, error) {
 	if err != nil {
 		return nil, err
 	}
+	rootRedeemedPushPayments := filepath.Join(rootMsgs, "redeemedPayments")
+	if err := os.MkdirAll(rootRedeemedPushPayments, 0700); err != nil {
+		return nil, err
+	}
 
-	return &fsdb{rootMsgs: rootMsgs, rootSubs: rootSubs}, nil
+	return &fsdb{
+		rootMsgs:                 rootMsgs,
+		rootSubs:                 rootSubs,
+		rootRedeemedPushPayments: rootRedeemedPushPayments,
+	}, nil
 }
 
 // Static assertion that fsdb implements ServerDB.
@@ -92,6 +102,21 @@ func (db *fsdb) StoreSubscriptionPaid(ctx context.Context, rv ratchet.RVPoint, i
 	return os.WriteFile(fname, nil, 0o600)
 }
 
+func (db *fsdb) IsPushPaymentRedeemed(ctx context.Context, payID []byte) (bool, error) {
+	fname := filepath.Join(db.rootRedeemedPushPayments, hex.EncodeToString(payID))
+	_, err := os.Stat(fname)
+	return err == nil, nil
+}
+
+func (db *fsdb) StorePushPaymentRedeemed(ctx context.Context, payID []byte, insertTime time.Time) error {
+	fname := filepath.Join(db.rootRedeemedPushPayments, hex.EncodeToString(payID))
+	content, err := time.Now().MarshalJSON()
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(fname, content, 0o600)
+}
+
 // Expire the old messages from the specified date.
 //
 // Note: this is currently significantly slow, as it involves listing all
@@ -99,7 +124,7 @@ func (db *fsdb) StoreSubscriptionPaid(ctx context.Context, rv ratchet.RVPoint, i
 func (db *fsdb) Expire(ctx context.Context, date time.Time) (uint64, error) {
 	date = date.UTC()
 	y, m, d := date.Date()
-	dirs := []string{db.rootMsgs, db.rootSubs}
+	dirs := []string{db.rootMsgs, db.rootSubs, db.rootRedeemedPushPayments}
 
 	var count uint64
 	for i, dirPath := range dirs {
@@ -113,6 +138,10 @@ func (db *fsdb) Expire(ctx context.Context, date time.Time) (uint64, error) {
 			files, err := dir.Readdir(nbListEntries)
 
 			for _, finfo := range files {
+				if finfo.IsDir() {
+					continue
+				}
+
 				fy, fm, fd := finfo.ModTime().Date()
 				if y == fy && m == fm && d == fd {
 					err := os.Remove(filepath.Join(dirPath, finfo.Name()))
