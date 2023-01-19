@@ -561,6 +561,18 @@ func (c *Client) cleanupPaidRVsDir(expirationDays int) {
 	}
 }
 
+// cleanupPushPaymentAttempts cleans up the push payment attempts db based on
+// the passed limit for payment time.
+func (c *Client) cleanupPushPaymentAttempts(maxLifetime time.Duration) {
+	limit := time.Now().Add(-maxLifetime)
+	err := c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
+		return c.db.CleanupPushPaymentAttempts(tx, limit)
+	})
+	if err != nil {
+		c.log.Warnf("Unable to cleanup push payment attempts: %v", err)
+	}
+}
+
 func (c *Client) NotificationManager() *NotificationManager {
 	return c.ntfns
 }
@@ -804,6 +816,8 @@ func (c *Client) Run(ctx context.Context) error {
 					c.cleanupPaidRVsDir(nextSess.ExpirationDays())
 					lastExpDays = expDays
 				}
+
+				c.cleanupPushPaymentAttempts(nextSess.Policy().PushPaymentLifetime)
 			}
 
 			c.rmgr.BindToSession(nextSess)

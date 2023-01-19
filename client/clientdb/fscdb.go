@@ -38,6 +38,7 @@ const (
 	sendqDir           = "sendqueue"
 	blockedUsersFile   = "blockedusers.json"
 	paidRVsDir         = "paidrvs"
+	paidPushesDir      = "paidpushes"
 	kxSearches         = "kxsearches"
 	miRequestsDir      = "mirequests"
 	postKXActionsDir   = "postkxactions"
