@@ -269,7 +269,7 @@ class ChatsList extends StatelessWidget {
                       child: ListView.builder(
                           itemCount: chatList.length,
                           itemBuilder: (context, index) => _ChatHeadingW(
-                              list[index], makeActive, showUserSubMenu))),
+                              chatList[index], makeActive, showUserSubMenu))),
                   Positioned(
                       bottom: 5,
                       right: 5,
