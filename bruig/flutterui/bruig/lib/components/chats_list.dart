@@ -57,7 +57,7 @@ class _ChatHeadingWState extends State<_ChatHeadingW> {
 
     Widget? trailing;
     if (chat.active) {
-      //textColor = hightLightTextColor;
+      // Do we want to do any text color changes on active?
     } else if (chat.unreadMsgCount > 0) {
       textColor = hightLightTextColor;
       trailing = Container(
@@ -207,10 +207,9 @@ class _ChatsListState extends State<_ChatsList> {
     var darkTextColor = const Color(0xFF5A5968);
     var selectedBackgroundColor = theme.highlightColor;
 
-    var gcList = chats.gcChats.where((x) => x.isGC).toList();
-    //gcList.sort((a, b) => b.unreadCount.compareTo(a.unreadCount));
-    var chatList = chats.userChats.where((x) => !x.isGC).toList();
-    //chatList.sort((a, b) => b.unreadCount.compareTo(a.unreadCount));
+    var gcList = chats.gcChats.toList();
+    var chatList = chats.userChats.toList();
+
     makeActive(ChatModel? c) =>
         {chats.active = c, chats.subGCMenu = [], chats.subUserMenu = []};
     showGCSubMenu(List<ChatMenuItem> sm) => {chats.subGCMenu = sm};
