@@ -1,6 +1,10 @@
 #!/bin/sh
 
-VERSION=v0.1.2
+if [ $# -ne 1 ]; then
+    echo "invalid arguments: version" >&2
+    exit 2
+fi
+VERSION=$1
 TAR_NAME=bisonrelay-linux-amd64-$VERSION.tar.gz
 BUILD_DIR=build/linux/x64/release/bundle
 APPIMAGE_DIR=BisonRelayBuild/
@@ -36,4 +40,4 @@ fi
 
 appimagetool-x86_64.AppImage $APPIMAGE_DIR
 
-mv build/Bison_Relay-x86_64.AppImage build/BisonRelay-$VERSION.AppImage
+mv Bison_Relay-x86_64.AppImage BisonRelay-$VERSION.AppImage
