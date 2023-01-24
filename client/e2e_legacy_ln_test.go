@@ -61,6 +61,7 @@ func newTestClient(t testing.TB, rnd io.Reader, name string) *Client {
 		LocalIDIniter:  fixedIDIniter(id),
 		ReconnectDelay: 5 * time.Second,
 		DB:             testDB(t, id, logger("FSDB")),
+		Notifications:  NewNotificationManager(),
 	}
 
 	cli, err := New(cfg)
@@ -132,7 +133,7 @@ func TestE2EDcrlnPMs(t *testing.T) {
 	gotAliceMsgs, gotBobMsgs := make([]string, nbMsgs), make([]string, nbMsgs)
 	doneAliceMsgs, doneBobMsgs := make(chan error), make(chan error)
 	var gotAliceCount, gotBobCount int
-	bob.cfg.PMHandler = func(ru *RemoteUser, pm rpc.RMPrivateMessage, ts time.Time) {
+	bob.cfg.Notifications.Register(OnPMNtfn(func(ru *RemoteUser, pm rpc.RMPrivateMessage, ts time.Time) {
 		// Bob receives Alice's msgs.
 		gotAliceMtx.Lock()
 		i, _ := strconv.ParseInt(pm.Message[2:4], 16, 64)
@@ -142,8 +143,8 @@ func TestE2EDcrlnPMs(t *testing.T) {
 			close(doneAliceMsgs)
 		}
 		gotAliceMtx.Unlock()
-	}
-	alice.cfg.PMHandler = func(ru *RemoteUser, pm rpc.RMPrivateMessage, ts time.Time) {
+	}))
+	alice.cfg.Notifications.Register(OnPMNtfn(func(ru *RemoteUser, pm rpc.RMPrivateMessage, ts time.Time) {
 		// Alice receives Bob's msgs.
 		gotBobMtx.Lock()
 		i, _ := strconv.ParseInt(pm.Message[2:4], 16, 64)
@@ -153,7 +154,7 @@ func TestE2EDcrlnPMs(t *testing.T) {
 			close(doneBobMsgs)
 		}
 		gotBobMtx.Unlock()
-	}
+	}))
 
 	// Start the clients. Return any run errors on errChan.
 	ctx, cancel := context.WithCancel(context.Background())
@@ -336,22 +337,22 @@ func TestE2EDcrlnGC(t *testing.T) {
 	var aliceMtx, bobMtx sync.Mutex
 	aliceDoneMsgs := make(chan struct{})
 	bobDoneMsgs := make(chan struct{})
-	alice.cfg.GCMsgHandler = func(ru *RemoteUser, msg rpc.RMGroupMessage, ts time.Time) {
+	alice.cfg.Notifications.Register(OnGCMNtfn(func(ru *RemoteUser, msg rpc.RMGroupMessage, ts time.Time) {
 		aliceMtx.Lock()
 		aliceReceivedMsgs[msg.Message] = struct{}{}
 		if len(aliceReceivedMsgs) == nbMsgs {
 			close(aliceDoneMsgs)
 		}
 		aliceMtx.Unlock()
-	}
-	bob.cfg.GCMsgHandler = func(ru *RemoteUser, msg rpc.RMGroupMessage, ts time.Time) {
+	}))
+	bob.cfg.Notifications.Register(OnGCMNtfn(func(ru *RemoteUser, msg rpc.RMGroupMessage, ts time.Time) {
 		bobMtx.Lock()
 		bobReceivedMsgs[msg.Message] = struct{}{}
 		if len(bobReceivedMsgs) == nbMsgs {
 			close(bobDoneMsgs)
 		}
 		bobMtx.Unlock()
-	}
+	}))
 
 	sendErrChan := make(chan error)
 	go func() {
@@ -460,13 +461,13 @@ func TestE2EDcrlnGC(t *testing.T) {
 
 	// Bob and charlie should be able to PM each other.
 	bobPMChan := make(chan string)
-	bob.cfg.PMHandler = func(user *RemoteUser, msg rpc.RMPrivateMessage, ts time.Time) {
+	bob.cfg.Notifications.Register(OnPMNtfn(func(user *RemoteUser, msg rpc.RMPrivateMessage, ts time.Time) {
 		bobPMChan <- msg.Message
-	}
+	}))
 	charliePMChan := make(chan string)
-	charlie.cfg.PMHandler = func(user *RemoteUser, msg rpc.RMPrivateMessage, ts time.Time) {
+	charlie.cfg.Notifications.Register(OnPMNtfn(func(user *RemoteUser, msg rpc.RMPrivateMessage, ts time.Time) {
 		charliePMChan <- msg.Message
-	}
+	}))
 	testMsg := "booooo!!!! found you!!"
 	err = charlie.PM(bob.PublicID(), testMsg)
 	if err != nil {
@@ -655,15 +656,15 @@ func TestE2EDcrlnGCBlockList(t *testing.T) {
 	}
 
 	bobMsgChan, aliceMsgChan, charlieMsgChan := make(chan string, 1), make(chan string, 1), make(chan string, 1)
-	alice.cfg.GCMsgHandler = func(ru *RemoteUser, msg rpc.RMGroupMessage, ts time.Time) {
+	alice.cfg.Notifications.Register(OnGCMNtfn(func(ru *RemoteUser, msg rpc.RMGroupMessage, ts time.Time) {
 		aliceMsgChan <- msg.Message
-	}
-	bob.cfg.GCMsgHandler = func(ru *RemoteUser, msg rpc.RMGroupMessage, ts time.Time) {
+	}))
+	bob.cfg.Notifications.Register(OnGCMNtfn(func(ru *RemoteUser, msg rpc.RMGroupMessage, ts time.Time) {
 		bobMsgChan <- msg.Message
-	}
-	charlie.cfg.GCMsgHandler = func(ru *RemoteUser, msg rpc.RMGroupMessage, ts time.Time) {
+	}))
+	charlie.cfg.Notifications.Register(OnGCMNtfn(func(ru *RemoteUser, msg rpc.RMGroupMessage, ts time.Time) {
 		charlieMsgChan <- msg.Message
-	}
+	}))
 	bobGCListChan := make(chan struct{}, 2)
 	bob.cfg.GCListUpdated = func(gc clientdb.GCAddressBookEntry) {
 		bobGCListChan <- struct{}{}
@@ -1106,13 +1107,13 @@ func TestE2EDcrlnReset(t *testing.T) {
 	alice.cfg.KXCompleted = func(*RemoteUser) { go func() { aliceKXdChan <- struct{}{} }() }
 	bob.cfg.KXCompleted = func(*RemoteUser) { go func() { bobKXdChan <- struct{}{} }() }
 	alicePMChan, bobPMChan := make(chan string, 1), make(chan string, 1)
-	alice.cfg.PMHandler = func(ru *RemoteUser, pm rpc.RMPrivateMessage, ts time.Time) {
+	alice.cfg.Notifications.Register(OnPMNtfn(func(ru *RemoteUser, pm rpc.RMPrivateMessage, ts time.Time) {
 		alicePMChan <- pm.Message
-	}
+	}))
 
-	bob.cfg.PMHandler = func(ru *RemoteUser, pm rpc.RMPrivateMessage, ts time.Time) {
+	bob.cfg.Notifications.Register(OnPMNtfn(func(ru *RemoteUser, pm rpc.RMPrivateMessage, ts time.Time) {
 		bobPMChan <- pm.Message
-	}
+	}))
 
 	// Helper to consume the KXCompleted events.
 	assertKXCompleted := func() {
@@ -1200,12 +1201,12 @@ func TestE2EDcrlnTransReset(t *testing.T) {
 	bob.cfg.KXCompleted = func(*RemoteUser) { go func() { bobKXdChan <- struct{}{} }() }
 
 	alicePMs, bobPMs := make(chan string), make(chan string)
-	alice.cfg.PMHandler = func(ru *RemoteUser, pm rpc.RMPrivateMessage, ts time.Time) {
+	alice.cfg.Notifications.Register(OnPMNtfn(func(ru *RemoteUser, pm rpc.RMPrivateMessage, ts time.Time) {
 		go func() { alicePMs <- pm.Message }()
-	}
-	bob.cfg.PMHandler = func(ru *RemoteUser, pm rpc.RMPrivateMessage, ts time.Time) {
+	}))
+	bob.cfg.Notifications.Register(OnPMNtfn(func(ru *RemoteUser, pm rpc.RMPrivateMessage, ts time.Time) {
 		go func() { bobPMs <- pm.Message }()
-	}
+	}))
 
 	// Helper to consume the KXCompleted events.
 	assertKXCompleted := func() {
@@ -1291,12 +1292,12 @@ func TestE2EDcrlnOfflineMsgs(t *testing.T) {
 	bob := newTestClient(t, rnd, "bob")
 
 	alicePMs, bobPMs := make(chan string), make(chan string)
-	alice.cfg.PMHandler = func(ru *RemoteUser, pm rpc.RMPrivateMessage, ts time.Time) {
+	alice.cfg.Notifications.Register(OnPMNtfn(func(ru *RemoteUser, pm rpc.RMPrivateMessage, ts time.Time) {
 		go func() { alicePMs <- pm.Message }()
-	}
-	bob.cfg.PMHandler = func(ru *RemoteUser, pm rpc.RMPrivateMessage, ts time.Time) {
+	}))
+	bob.cfg.Notifications.Register(OnPMNtfn(func(ru *RemoteUser, pm rpc.RMPrivateMessage, ts time.Time) {
 		go func() { bobPMs <- pm.Message }()
-	}
+	}))
 	aliceSess, bobSess := make(chan bool), make(chan bool)
 	alice.cfg.ServerSessionChanged = func(connected bool, pushRate, subRate, expDays uint64) {
 		go func() { aliceSess <- connected }()
@@ -1422,12 +1423,12 @@ func TestE2EDcrlnSendOfflineMsgs(t *testing.T) {
 	bob := newTestClient(t, rnd, "bob")
 
 	alicePMs, bobPMs := make(chan string), make(chan string)
-	alice.cfg.PMHandler = func(ru *RemoteUser, pm rpc.RMPrivateMessage, ts time.Time) {
+	alice.cfg.Notifications.Register(OnPMNtfn(func(ru *RemoteUser, pm rpc.RMPrivateMessage, ts time.Time) {
 		go func() { alicePMs <- pm.Message }()
-	}
-	bob.cfg.PMHandler = func(ru *RemoteUser, pm rpc.RMPrivateMessage, ts time.Time) {
+	}))
+	bob.cfg.Notifications.Register(OnPMNtfn(func(ru *RemoteUser, pm rpc.RMPrivateMessage, ts time.Time) {
 		go func() { bobPMs <- pm.Message }()
-	}
+	}))
 	aliceSess, bobSess := make(chan bool), make(chan bool)
 	alice.cfg.ServerSessionChanged = func(connected bool, pushRate, subRate, expDays uint64) {
 		go func() { aliceSess <- connected }()
@@ -1558,12 +1559,12 @@ func TestE2EDcrlnBlockIgnore(t *testing.T) {
 	charlie := newTestClient(t, rnd, "charlie")
 
 	alicePMs, bobPMs := make(chan string), make(chan string)
-	alice.cfg.PMHandler = func(ru *RemoteUser, pm rpc.RMPrivateMessage, ts time.Time) {
+	alice.cfg.Notifications.Register(OnPMNtfn(func(ru *RemoteUser, pm rpc.RMPrivateMessage, ts time.Time) {
 		go func() { alicePMs <- pm.Message }()
-	}
-	bob.cfg.PMHandler = func(ru *RemoteUser, pm rpc.RMPrivateMessage, ts time.Time) {
+	}))
+	bob.cfg.Notifications.Register(OnPMNtfn(func(ru *RemoteUser, pm rpc.RMPrivateMessage, ts time.Time) {
 		go func() { bobPMs <- pm.Message }()
-	}
+	}))
 
 	bobBlockedChan := make(chan struct{})
 	bob.cfg.UserBlocked = func(ru *RemoteUser) {
@@ -1589,15 +1590,15 @@ func TestE2EDcrlnBlockIgnore(t *testing.T) {
 		go func() { bobGCListChan <- struct{}{} }()
 	}
 	aliceGCMChan, bobGCMChan, charlieGCMChan := make(chan string), make(chan string), make(chan string)
-	alice.cfg.GCMsgHandler = func(user *RemoteUser, msg rpc.RMGroupMessage, ts time.Time) {
+	alice.cfg.Notifications.Register(OnGCMNtfn(func(user *RemoteUser, msg rpc.RMGroupMessage, ts time.Time) {
 		go func() { aliceGCMChan <- msg.Message }()
-	}
-	bob.cfg.GCMsgHandler = func(user *RemoteUser, msg rpc.RMGroupMessage, ts time.Time) {
+	}))
+	bob.cfg.Notifications.Register(OnGCMNtfn(func(user *RemoteUser, msg rpc.RMGroupMessage, ts time.Time) {
 		go func() { bobGCMChan <- msg.Message }()
-	}
-	charlie.cfg.GCMsgHandler = func(user *RemoteUser, msg rpc.RMGroupMessage, ts time.Time) {
+	}))
+	charlie.cfg.Notifications.Register(OnGCMNtfn(func(user *RemoteUser, msg rpc.RMGroupMessage, ts time.Time) {
 		go func() { charlieGCMChan <- msg.Message }()
-	}
+	}))
 
 	ctx, cancel := context.WithCancel(context.Background())
 	runErr := make(chan error)

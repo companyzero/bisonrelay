@@ -11,6 +11,11 @@ import (
 // arrays that are interpreted as unique IDs.
 type ShortID [32]byte
 
+// Bytes returns the ID as a slice of bytes.
+func (u ShortID) Bytes() []byte {
+	return u[:]
+}
+
 // String returns the hex encoding of the ShortID.
 func (u ShortID) String() string {
 	return hex.EncodeToString(u[:])

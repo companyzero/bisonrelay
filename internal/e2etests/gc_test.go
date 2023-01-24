@@ -39,16 +39,12 @@ func TestGCKickBlockedUser(t *testing.T) {
 
 	// Setup handlers for GC messages.
 	bobGCMsgChan, charlieGCMsgChan := make(chan string, 1), make(chan string, 1)
-	bob.modifyHandlers(func() {
-		bob.onGCMsg = func(user *client.RemoteUser, msg rpc.RMGroupMessage, ts time.Time) {
-			bobGCMsgChan <- msg.Message
-		}
-	})
-	charlie.modifyHandlers(func() {
-		charlie.onGCMsg = func(user *client.RemoteUser, msg rpc.RMGroupMessage, ts time.Time) {
-			charlieGCMsgChan <- msg.Message
-		}
-	})
+	bob.NotificationManager().Register(client.OnGCMNtfn(func(user *client.RemoteUser, msg rpc.RMGroupMessage, ts time.Time) {
+		bobGCMsgChan <- msg.Message
+	}))
+	charlie.NotificationManager().Register(client.OnGCMNtfn(func(user *client.RemoteUser, msg rpc.RMGroupMessage, ts time.Time) {
+		charlieGCMsgChan <- msg.Message
+	}))
 
 	// Alice sends a GC message. Both Bob and Charlie should receive it.
 	testMsg1 := "test gc message 1"

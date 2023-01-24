@@ -589,10 +589,6 @@ func (c *Client) handleGCList(ru *RemoteUser, gl rpc.RMGroupList) error {
 // handleDelayedGCMessages is called by the gc message cacher when it's time
 // to let external callers know about new messages.
 func (c *Client) handleDelayedGCMessages(msgs []gcmcacher.Msg) {
-	if c.cfg.GCMsgHandler == nil {
-		return
-	}
-
 	for _, msg := range msgs {
 		user, err := c.UserByID(msg.UID)
 		if err != nil {
@@ -601,7 +597,8 @@ func (c *Client) handleDelayedGCMessages(msgs []gcmcacher.Msg) {
 			c.log.Warnf("Delayed GC message with unknown user %s", msg.UID)
 			continue
 		}
-		c.cfg.GCMsgHandler(user, msg.GCM, msg.TS)
+
+		c.ntfns.notifyOnGCM(user, msg.GCM, msg.TS)
 	}
 }
 
