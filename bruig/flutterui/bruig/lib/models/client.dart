@@ -71,14 +71,17 @@ class ChatModel extends ChangeNotifier {
 
   ChatModel(this.id, this._nick, this.isGC);
 
-  int _unreadCount = 0;
-  int get unreadCount => _unreadCount;
+  int _unreadMsgCount = 0;
+  int get unreadMsgCount => _unreadMsgCount;
+  int _unreadEventCount = 0;
+  int get unreadEventCount => _unreadEventCount;
 
   bool _active = false;
   bool get active => _active;
   void _setActive(bool b) {
     _active = b;
-    _unreadCount = 0;
+    _unreadMsgCount = 0;
+    _unreadEventCount = 0;
     notifyListeners();
   }
 
@@ -87,9 +90,13 @@ class ChatModel extends ChangeNotifier {
   void append(ChatEventModel msg) {
     _msgs.add(msg);
     if (!_active) {
-      _unreadCount += 1;
+      if (msg.event is PM || msg.event is GCMsg) {
+        _unreadMsgCount += 1;
+      } else {
+        _unreadEventCount += 1;
+      }
+      notifyListeners();
     }
-    notifyListeners();
   }
 
   void payTip(double amount) async {
@@ -183,8 +190,12 @@ class ClientModel extends ChangeNotifier {
     _fetchInfo();
   }
 
-  List<ChatModel> _chats = [];
-  UnmodifiableListView<ChatModel> get chats => UnmodifiableListView(_chats);
+  List<ChatModel> _gcChats = [];
+  UnmodifiableListView<ChatModel> get gcChats => UnmodifiableListView(_gcChats);
+
+  List<ChatModel> _userChats = [];
+  UnmodifiableListView<ChatModel> get userChats =>
+      UnmodifiableListView(_userChats);
 
   List<ChatMenuItem> _subGCMenu = [];
   UnmodifiableListView<ChatMenuItem> get subGCMenu =>
@@ -234,9 +245,11 @@ class ClientModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  void setActiveByNick(String nick) {
+  void setActiveByNick(String nick, bool isGC) {
     try {
-      var c = _chats.firstWhere((c) => c.nick == nick);
+      var c = isGC
+          ? _gcChats.firstWhere((c) => c.nick == nick)
+          : _userChats.firstWhere((c) => c.nick == nick);
       active = c;
     } on StateError {
       // Ignore if chat doesn't exist.
@@ -263,9 +276,16 @@ class ClientModel extends ChangeNotifier {
     _activeChats[id] = c;
 
     // TODO: this test should be superflous.
-    if (_chats.indexWhere((c) => c.id == id) == -1) {
-      // Add to list of chats.
-      _chats.add(c);
+    if (isGC) {
+      if (_gcChats.indexWhere((c) => c.id == id) == -1) {
+        // Add to list of chats.
+        _gcChats.add(c);
+      }
+    } else {
+      if (_userChats.indexWhere((c) => c.id == id) == -1) {
+        // Add to list of chats.
+        _userChats.add(c);
+      }
     }
     notifyListeners();
 
@@ -273,7 +293,7 @@ class ClientModel extends ChangeNotifier {
   }
 
   void removeChat(ChatModel chat) {
-    _chats.remove(chat);
+    chat.isGC ? _gcChats.remove(chat) : _userChats.remove(chat);
     _activeChats.remove(chat.id);
     notifyListeners();
   }
@@ -309,6 +329,14 @@ class ClientModel extends ChangeNotifier {
         source = chat;
       }
       chat.append(ChatEventModel(evnt, source));
+
+      // Sorting algo to attempt to retain order
+      if (chat.isGC) {
+        _gcChats.sort((a, b) => b.unreadMsgCount.compareTo(a.unreadMsgCount));
+      } else {
+        _userChats.sort((a, b) => b.unreadMsgCount.compareTo(a.unreadMsgCount));
+      }
+      notifyListeners();
     }
   }
 

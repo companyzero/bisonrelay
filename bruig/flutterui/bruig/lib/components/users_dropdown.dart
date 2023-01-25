@@ -23,8 +23,7 @@ class _UsersDropdownState extends State<UsersDropdown> {
     var textColor = theme.focusColor;
     var backgroundColor = theme.backgroundColor;
     return Consumer<ClientModel>(builder: (context, client, child) {
-      List<ChatModel?> list =
-          client.chats.where((c) => !c.isGC).cast<ChatModel?>().toList();
+      List<ChatModel?> list = client.userChats.cast<ChatModel?>().toList();
       if (widget.allowEmpty) {
         list.insert(0, null);
       }

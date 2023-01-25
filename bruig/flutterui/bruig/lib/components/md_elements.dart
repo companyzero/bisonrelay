@@ -269,11 +269,12 @@ class MarkdownArea extends StatelessWidget {
     var theme = Theme.of(context);
     var darkTextColor = theme.indicatorColor;
     var textColor = theme.focusColor;
+    final screenWidth = MediaQuery.of(context).size.width;
     return MarkdownBody(
         styleSheet: MarkdownStyleSheet(
           p: TextStyle(
               color: textColor,
-              fontSize: 13,
+              fontSize: screenWidth * 0.02,
               fontWeight: FontWeight.w300,
               letterSpacing: 0.44),
           h1: TextStyle(color: textColor),
