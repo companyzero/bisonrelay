@@ -354,25 +354,31 @@ class ClientModel extends ChangeNotifier {
         source = chat;
       }
       chat.append(ChatEventModel(evnt, source));
-
       // Sorting algo to attempt to retain order
       if (chat.isGC) {
         _gcChats.sort((a, b) => b.unreadMsgCount.compareTo(a.unreadMsgCount));
-        List<String> gcChatOrder = [];
+
+        String gcChatOrder = "";
         for (int i = 0; i < _gcChats.length; i++) {
-          gcChatOrder.add(_gcChats[i].nick);
+          if (i == _gcChats.length - 1) {
+            gcChatOrder += _gcChats[i].nick;
+          } else {
+            gcChatOrder += "${_gcChats[i].nick},";
+          }
         }
         StorageManager.saveData('gcListOrder', gcChatOrder);
-        print(gcChatOrder);
       } else {
         _userChats.sort((a, b) => b.unreadMsgCount.compareTo(a.unreadMsgCount));
 
-        List<String> userChatOrder = [];
+        String userChatOrder = "";
         for (int i = 0; i < _userChats.length; i++) {
-          userChatOrder.add(_userChats[i].nick);
+          if (i == _userChats.length - 1) {
+            userChatOrder += _userChats[i].nick;
+          } else {
+            userChatOrder += "${_userChats[i].nick},";
+          }
         }
-        StorageManager.saveData('gcListOrder', userChatOrder);
-        print(userChatOrder);
+        StorageManager.saveData('userListOrder', userChatOrder);
       }
       notifyListeners();
     }
@@ -388,10 +394,35 @@ class ClientModel extends ChangeNotifier {
     gcs.forEach((v) => _newChat(v.id, v.name, true));
 
     StorageManager.readData('gcListOrder').then((value) {
-      print("gcListOrder $value");
+      if (value.length > 0) {
+        List<ChatModel> sortedGCList = [];
+        var gcSplitList = value.split(',');
+        for (int i = 0; i < gcSplitList.length; i++) {
+          for (int j = 0; j < _gcChats.length; j++) {
+            if (gcSplitList[i] == gcChats[j].nick) {
+              sortedGCList.add(_gcChats[j]);
+            }
+          }
+        }
+        _gcChats = sortedGCList;
+      }
     });
     StorageManager.readData('userListOrder').then((value) {
-      print("userListOrder $value");
+      if (value.length > 0) {
+        List<ChatModel> sortedUserList = [];
+        var userSplitList = value.split(',');
+        for (int i = 0; i < userSplitList.length; i++) {
+          for (int j = 0; j < _userChats.length; j++) {
+            if (userSplitList[i] == _userChats[j].nick) {
+              sortedUserList.add(_userChats[j]);
+            }
+          }
+        }
+        _userChats = sortedUserList;
+      }
+      if (value.length > 0) {
+        var splitList = value.split(',');
+      }
     });
   }
 
