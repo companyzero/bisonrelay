@@ -1,5 +1,4 @@
 import 'package:bruig/models/newconfig.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:bruig/components/buttons.dart';
 
@@ -10,6 +9,11 @@ class NetworkChoicePage extends StatelessWidget {
   void setChoice(BuildContext context, NetworkType type) {
     newconf.netType = type;
     Navigator.of(context).pushNamed("/newconf/lnChoice");
+  }
+
+  void goBack(BuildContext context) {
+    newconf.advancedSetup = false;
+    Navigator.of(context).pop();
   }
 
   @override
@@ -72,7 +76,13 @@ class NetworkChoicePage extends StatelessWidget {
                       text: "Simnet",
                       empty: true),
                 ])
-              ]))
+              ])),
+          Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+            TextButton(
+              onPressed: () => goBack(context),
+              child: Text("Go Back", style: TextStyle(color: textColor)),
+            )
+          ])
         ]));
   }
 }

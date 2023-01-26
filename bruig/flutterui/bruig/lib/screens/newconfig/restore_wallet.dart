@@ -60,6 +60,10 @@ class _RestoreWalletPageState extends State<RestoreWalletPage> {
     }
   }
 
+  void goBack(BuildContext context) {
+    Navigator.of(context).pop();
+  }
+
   @override
   Widget build(BuildContext context) {
     var backgroundColor = const Color(0xFF19172C);
@@ -144,7 +148,13 @@ class _RestoreWalletPageState extends State<RestoreWalletPage> {
                     text: "Continue",
                   ),
                 ]),
-              ]))
+              ])),
+          Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+            TextButton(
+              onPressed: () => goBack(context),
+              child: Text("Go Back", style: TextStyle(color: textColor)),
+            )
+          ])
         ]));
   }
 }
