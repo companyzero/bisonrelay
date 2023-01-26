@@ -3,6 +3,7 @@ import 'package:bruig/models/menus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
+import '../storage_manager.dart';
 
 const SCE_unknown = 0;
 const SCE_sending = 1;
@@ -357,8 +358,21 @@ class ClientModel extends ChangeNotifier {
       // Sorting algo to attempt to retain order
       if (chat.isGC) {
         _gcChats.sort((a, b) => b.unreadMsgCount.compareTo(a.unreadMsgCount));
+        List<String> gcChatOrder = [];
+        for (int i = 0; i < _gcChats.length; i++) {
+          gcChatOrder.add(_gcChats[i].nick);
+        }
+        StorageManager.saveData('gcListOrder', gcChatOrder);
+        print(gcChatOrder);
       } else {
         _userChats.sort((a, b) => b.unreadMsgCount.compareTo(a.unreadMsgCount));
+
+        List<String> userChatOrder = [];
+        for (int i = 0; i < _userChats.length; i++) {
+          userChatOrder.add(_userChats[i].nick);
+        }
+        StorageManager.saveData('gcListOrder', userChatOrder);
+        print(userChatOrder);
       }
       notifyListeners();
     }
@@ -372,6 +386,13 @@ class ClientModel extends ChangeNotifier {
     ab.forEach((v) => _newChat(v.id, v.nick, false));
     var gcs = await Golib.listGCs();
     gcs.forEach((v) => _newChat(v.id, v.name, true));
+
+    StorageManager.readData('gcListOrder').then((value) {
+      print("gcListOrder $value");
+    });
+    StorageManager.readData('userListOrder').then((value) {
+      print("userListOrder $value");
+    });
   }
 
   void acceptInvite(Invitation invite) async {
