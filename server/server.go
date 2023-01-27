@@ -140,6 +140,10 @@ func (z *ZKS) welcome(kx *session.KX) error {
 			properties[k].Value = strconv.FormatUint(z.settings.MilliAtomsPerSub, 10)
 		case rpc.PropExpirationDays:
 			properties[k].Value = strconv.FormatInt(int64(z.settings.ExpirationDays), 10)
+		case rpc.PropPushPaymentLifetime:
+			properties[k].Value = strconv.FormatInt(int64(z.settings.PushPaymentLifetime), 10)
+		case rpc.PropMaxPushInvoices:
+			properties[k].Value = strconv.FormatInt(int64(z.settings.MaxPushInvoices), 10)
 		}
 	}
 

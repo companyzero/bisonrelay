@@ -76,68 +76,94 @@ func (z *ZKS) initPayments() error {
 }
 
 func (z *ZKS) generateNextLNInvoice(ctx context.Context, sc *sessionContext, action rpc.GetInvoiceAction) (string, string, error) {
-	// TODO: configurable timeout limit?
+
+	// Configurable timeout limit?
 	ctx, cancel := context.WithTimeout(ctx, time.Second*10)
 	defer cancel()
 
+	sc.Lock()
+	defer sc.Unlock()
+
+	// Check for limits of invoice generation. Depending on the action,
+	// different limits are applied.
+	switch action {
+	case rpc.InvoiceActionPush:
+		// When at the limit of max amount of concurrent invoices,
+		// check if any have already expired.
+		if len(sc.lnPushHashes) >= z.settings.MaxPushInvoices {
+			now := time.Now()
+			deleted := false
+			for id, expires := range sc.lnPushHashes {
+				if now.After(expires) {
+					delete(sc.lnPushHashes, id)
+					deleted = true
+				}
+			}
+			if !deleted {
+				return "", "", fmt.Errorf("max amount of unpaid invoices reached")
+			}
+		}
+	case rpc.InvoiceActionSub:
+		if sc.lnPayReqHashSub != nil {
+			// Double check this invoice was not cancelled or expired.
+			lookupReq := &lnrpc.PaymentHash{
+				RHash: sc.lnPayReqHashSub,
+			}
+			var lookupRes *lnrpc.Invoice
+			lookupRes, err := z.lnRpc.LookupInvoice(ctx, lookupReq)
+			if err != nil && strings.HasSuffix(err.Error(), "unable to locate invoice") {
+				// Invoice expired.
+				err = nil
+			} else if lookupRes != nil {
+				unsettledInvoice := (lookupRes.State != lnrpc.Invoice_CANCELED) &&
+					(lookupRes.State != lnrpc.Invoice_SETTLED)
+				if unsettledInvoice {
+					expireTS := time.Unix(lookupRes.CreationDate+lookupRes.Expiry, 0)
+					minExpiryTS := time.Now().Add(rpc.InvoiceExpiryAffordance)
+					if expireTS.After(minExpiryTS) {
+						err = fmt.Errorf("already have outstanding "+
+							"ln payment request that expires only "+
+							"in %s", expireTS.Sub(minExpiryTS))
+					}
+				}
+			}
+
+			// There was already an outstanding payment for this
+			// session. Returning an error here ensures only a
+			// single invoice can be requested at a time.
+			if err != nil {
+				return "", "", err
+			}
+		}
+
+	default:
+		return "", "", fmt.Errorf("unknown action %q", action)
+	}
+
+	expirySeconds := 3600
 	addInvoiceReq := &lnrpc.Invoice{
-		Memo: "FR server invoice",
+		Memo:   "BR server invoice",
+		Expiry: int64(expirySeconds),
 	}
 	addInvoiceRes, err := z.lnRpc.AddInvoice(ctx, addInvoiceReq)
 	if err != nil {
 		return "", "", err
 	}
 
-	sc.Lock()
-	var hash *[]byte
+	// Store the generated invoice to count it towards the limits.
 	switch action {
 	case rpc.InvoiceActionPush:
-		hash = &sc.lnPayReqHashPush
+		// Track when this invoice will expire.
+		var hash [32]byte
+		copy(hash[:], addInvoiceRes.RHash)
+		expireTS := time.Now().Add(time.Second*time.Duration(expirySeconds) - rpc.InvoiceExpiryAffordance)
+		sc.lnPushHashes[hash] = expireTS
 	case rpc.InvoiceActionSub:
-		hash = &sc.lnPayReqHashSub
-	default:
-		sc.Unlock()
-		return "", "", fmt.Errorf("unknown action %q", action)
+		sc.lnPayReqHashSub = addInvoiceRes.RHash
 	}
-
-	if *hash != nil {
-		// Double check this invoice was not cancelled or expired.
-		lookupReq := &lnrpc.PaymentHash{
-			RHash: *hash,
-		}
-		var lookupRes *lnrpc.Invoice
-		lookupRes, err = z.lnRpc.LookupInvoice(ctx, lookupReq)
-		if err != nil && strings.HasSuffix(err.Error(), "unable to locate invoice") {
-			// Invoice expired.
-			err = nil
-		} else if lookupRes != nil {
-			unsettledInvoice := (lookupRes.State != lnrpc.Invoice_CANCELED) &&
-				(lookupRes.State != lnrpc.Invoice_SETTLED)
-			if unsettledInvoice {
-				expireTS := time.Unix(lookupRes.CreationDate+lookupRes.Expiry, 0)
-				minExpiryTS := time.Now().Add(rpc.InvoiceExpiryAffordance)
-				if expireTS.After(minExpiryTS) {
-					err = fmt.Errorf("already have outstanding "+
-						"ln payment request that expires only "+
-						"in %s", expireTS.Sub(minExpiryTS))
-				}
-			}
-		}
-
-		// There was already an outstanding payment for this
-		// session. Returning an error here ensures only a
-		// single invoice can be requested at a time.
-		if err != nil {
-			sc.Unlock()
-			return "", "", err
-		}
-	}
-	*hash = addInvoiceRes.RHash
-	id := hex.EncodeToString(addInvoiceRes.RHash)
-	sc.Unlock()
 
 	z.stats.invoicesSent.add(1)
-
+	id := hex.EncodeToString(addInvoiceRes.RHash)
 	return addInvoiceRes.PaymentRequest, id, nil
 }
 
@@ -204,19 +230,52 @@ func (z *ZKS) isRMPaid(ctx context.Context, rm *rpc.RouteMessage, sc *sessionCon
 			wantMAtoms = int64(rpc.MinRMPushPayment)
 		}
 
-		sc.Lock()
 		var err error
 		if wantMAtoms < 0 {
 			// Sanity check. Should never happen.
 			err = fmt.Errorf("wantMAtoms (%d) < 0", wantMAtoms)
-		} else if sc.lnPayReqHashPush == nil {
-			err = fmt.Errorf("ln invoice not generated for next routed message")
-		} else {
+		}
+
+		// Compat to old clients: if the PaidInvoiceID field is nil and
+		// there is a single outstanding invoice, use that one.
+		//
+		// TODO: remove in the future once all clients have updated.
+		paidInvoiceID := rm.PaidInvoiceID
+		if paidInvoiceID == nil {
+			sc.Lock()
+			if len(sc.lnPushHashes) == 1 {
+				for id := range sc.lnPushHashes {
+					paidInvoiceID = id[:]
+				}
+			}
+			sc.Unlock()
+		}
+
+		// Sanity check paid invoice id.
+		if err == nil && len(paidInvoiceID) != 32 {
+			err = fmt.Errorf("paid invoice ID was not specified")
+		}
+
+		// Verify the potentially paid invoice was not redeemed yet.
+		if err == nil {
+			var redeemed bool
+			redeemed, err = z.db.IsPushPaymentRedeemed(ctx, paidInvoiceID)
+			if err == nil && redeemed {
+				err = fmt.Errorf("already redeemed invoice %x", paidInvoiceID)
+			}
+		}
+
+		// Verify the invoice was settled.
+		if err == nil {
 			lookupReq := &lnrpc.PaymentHash{
-				RHash: sc.lnPayReqHashPush,
+				RHash: paidInvoiceID,
 			}
 
+			maxLifetimeDuration := time.Duration(z.settings.PushPaymentLifetime) * time.Second
+			payTimeLimit := time.Now().Add(-maxLifetimeDuration)
+
 			// Use a 5-second timeout context to avoid stalling the
+			// server.
 			var lookupRes *lnrpc.Invoice
 			lookupRes, err = z.lnRpc.LookupInvoice(ctx, lookupReq)
 			if lookupRes != nil {
@@ -224,20 +283,22 @@ func (z *ZKS) isRMPaid(ctx context.Context, rm *rpc.RouteMessage, sc *sessionCon
 				case lookupRes.State == lnrpc.Invoice_CANCELED:
 					err = fmt.Errorf("LN invoice canceled")
 
-					// Clear canceled/timed out invoices so
-					// a new one can be generated.
-					sc.lnPayReqHashPush = nil
-
 				case lookupRes.State != lnrpc.Invoice_SETTLED:
 					err = fmt.Errorf("Unexpected LN state: %d",
 						lookupRes.State)
 
 				case lookupRes.AmtPaidMAtoms < wantMAtoms:
-					// TODO: also have upper limit if
+					// Also have upper limit if
 					// overpaid?
 					err = fmt.Errorf("LN invoice not "+
 						"sufficiently paid (got %d, want %d)",
 						lookupRes.AmtPaidMAtoms, wantMAtoms)
+
+				case time.Unix(lookupRes.SettleDate, 0).Before(payTimeLimit):
+					err = fmt.Errorf("LN invoice settled at %s "+
+						"while limit date for redemption "+
+						"is %s", time.Unix(lookupRes.SettleDate, 0),
+						payTimeLimit)
 
 				default:
 					z.stats.invoicesRecv.add(1)
@@ -254,12 +315,16 @@ func (z *ZKS) isRMPaid(ctx context.Context, rm *rpc.RouteMessage, sc *sessionCon
 		}
 
 		if err == nil {
-			// Clear the successful payment req so we can wait for
-			// the next request to generate a new invoice.
-			sc.lnPayReqHashPush = nil
-		}
+			// Store that the invoice was redeemed.
+			err = z.db.StorePushPaymentRedeemed(ctx, paidInvoiceID, time.Now())
 
-		sc.Unlock()
+			// And decrement from total amount of concurrent invoices.
+			var hash [32]byte
+			copy(hash[:], paidInvoiceID)
+			sc.Lock()
+			delete(sc.lnPushHashes, hash)
+			sc.Unlock()
+		}
 
 		return err
 	default:
@@ -300,7 +365,7 @@ func (z *ZKS) areSubsPaid(ctx context.Context, r *rpc.SubscribeRoutedMessages, s
 					// a new one can be generated, but
 					// otherwise don't error because we might
 					// not need any new payments yet.
-					sc.lnPayReqHashPush = nil
+					sc.lnPayReqHashSub = nil
 
 				case lookupRes.State == lnrpc.Invoice_SETTLED:
 					// Invoice paid. Determine how many
@@ -321,7 +386,7 @@ func (z *ZKS) areSubsPaid(ctx context.Context, r *rpc.SubscribeRoutedMessages, s
 				default:
 					err = fmt.Errorf("Unexpected LN state: %d",
 						lookupRes.State)
-					sc.lnPayReqHashPush = nil
+					sc.lnPayReqHashSub = nil
 				}
 			}
 		} else {
@@ -357,5 +422,17 @@ func (z *ZKS) areSubsPaid(ctx context.Context, r *rpc.SubscribeRoutedMessages, s
 			"performed", nbAllowed)
 	}
 
+	return err
+}
+
+func (z *ZKS) cancelLNInvoice(ctx context.Context, hash []byte) error {
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	req := &invoicesrpc.CancelInvoiceMsg{
+		PaymentHash: hash,
+	}
+
+	_, err := z.lnInvoices.CancelInvoice(ctx, req)
 	return err
 }
