@@ -109,7 +109,7 @@ func New(cfg Config) (*DB, error) {
 		return nil, err
 	}
 	if cfg.MsgsRoot != "" {
-		if err := os.MkdirAll(filepath.Join(cfg.MsgsRoot), 0o700); err != nil {
+		if err := os.MkdirAll(filepath.Clean(cfg.MsgsRoot), 0o700); err != nil {
 			return nil, err
 		}
 	}
