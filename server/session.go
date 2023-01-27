@@ -35,9 +35,9 @@ type sessionContext struct {
 
 	// protected
 	sync.Mutex
-	tagMessage       []*RPCWrapper
-	lnPayReqHashPush []byte
-	lnPayReqHashSub  []byte
+	tagMessage      []*RPCWrapper
+	lnPayReqHashSub []byte
+	lnPushHashes    map[[32]byte]time.Time
 }
 
 func (z *ZKS) sessionWriter(ctx context.Context, sc *sessionContext) error {
@@ -445,6 +445,8 @@ func (z *ZKS) runNewSession(ctx context.Context, conn net.Conn, kx *session.KX) 
 		msgSetC: make(chan rpc.SubscribeRoutedMessages),
 		msgC:    make(chan ratchet.RVPoint, 2), // To allow write in go func itself
 		msgAckC: make(chan ratchet.RVPoint),
+
+		lnPushHashes: make(map[[32]byte]time.Time),
 	}
 
 	// Mark session online.
@@ -469,6 +471,29 @@ func (z *ZKS) runNewSession(ctx context.Context, conn net.Conn, kx *session.KX) 
 		z.logConn.Errorf("handleSession offline: %v", err)
 	} else {
 		z.logConn.Debugf("handleSession offline: %v", err)
+	}
+
+	// Cancel any outstanding invoices the session had that have not yet
+	// been redeemed.
+	for hash := range sc.lnPushHashes {
+		err := z.cancelLNInvoice(ctx, hash[:])
+		if err != nil {
+			z.logConn.Warnf("handleSession: unable to cancel push "+
+				"invoice hash %x", hash)
+		} else {
+			z.logConn.Debugf("handleSession: canceled push invoice %x", hash)
+		}
+	}
+	if sc.lnPayReqHashSub != nil {
+		err := z.cancelLNInvoice(ctx, sc.lnPayReqHashSub)
+		if err != nil {
+			z.logConn.Warnf("handleSession: unable to cancel sub invoice "+
+				"hash %x", sc.lnPayReqHashSub)
+		} else {
+			z.logConn.Debugf("handleSession: canceled sub invoice %x",
+				sc.lnPayReqHashSub)
+		}
+
 	}
 
 	z.stats.disconnections.add(1)
