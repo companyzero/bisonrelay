@@ -265,11 +265,11 @@ class _ReceivedSentPMState extends State<ReceivedSentPM> {
     var date = formatter.format(now);
 
     var msg = "$prefix${widget.evnt.event.msg}$suffix";
-
+    msg = msg.replaceAll("\n",
+        "  \n"); // Replace newlines with <space space newline> for proper md render
     var theme = Theme.of(context);
-    var bgColor = theme.backgroundColor; // CHAT BUBBLE COLOR
-    var darkTextColor = theme.indicatorColor; // CHAT BUBBLE BORDER COLOR
-    var textColor = theme.focusColor; // MESSAGE TEXT COLOR
+    var bgColor = theme.backgroundColor;
+    var darkTextColor = theme.indicatorColor;
     var hightLightTextColor = theme.dividerColor; // NAME TEXT COLOR
     var avatarColor = colorFromNick(widget.nick);
     var avatarTextColor =
