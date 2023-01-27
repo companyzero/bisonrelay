@@ -79,7 +79,7 @@ func (t *Tracker) Quantiles() []Quantile {
 		})
 		lastIdx = idx
 	}
-	sort.Slice(res, func(i, j int) bool { return res[i].Max < res[i].Max })
+	sort.Slice(res, func(i, j int) bool { return res[i].Max < res[j].Max })
 
 	/*
 		res := []Quantile{
