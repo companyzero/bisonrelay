@@ -397,11 +397,16 @@ class ClientModel extends ChangeNotifier {
       if (value.length > 0) {
         List<ChatModel> sortedGCList = [];
         var gcSplitList = value.split(',');
-        for (int i = 0; i < gcSplitList.length; i++) {
-          for (int j = 0; j < _gcChats.length; j++) {
-            if (gcSplitList[i] == gcChats[j].nick) {
-              sortedGCList.add(_gcChats[j]);
+        for (int i = 0; i < _gcChats.length; i++) {
+          var found = false;
+          for (int j = 0; j < gcSplitList.length; j++) {
+            if (gcSplitList[j] == _gcChats[i].nick) {
+              sortedGCList.add(_gcChats[i]);
+              found = true;
             }
+          }
+          if (!found) {
+            sortedGCList.add(_gcChats[i]);
           }
         }
         _gcChats = sortedGCList;
@@ -411,17 +416,19 @@ class ClientModel extends ChangeNotifier {
       if (value.length > 0) {
         List<ChatModel> sortedUserList = [];
         var userSplitList = value.split(',');
-        for (int i = 0; i < userSplitList.length; i++) {
-          for (int j = 0; j < _userChats.length; j++) {
-            if (userSplitList[i] == _userChats[j].nick) {
-              sortedUserList.add(_userChats[j]);
+        for (int i = 0; i < _userChats.length; i++) {
+          var found = false;
+          for (int j = 0; j < userSplitList.length; j++) {
+            if (userSplitList[j] == _userChats[i].nick) {
+              sortedUserList.add(_userChats[i]);
+              found = true;
             }
+          }
+          if (!found) {
+            sortedUserList.add(_userChats[i]);
           }
         }
         _userChats = sortedUserList;
-      }
-      if (value.length > 0) {
-        var splitList = value.split(',');
       }
     });
   }
