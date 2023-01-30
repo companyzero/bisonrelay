@@ -274,7 +274,6 @@ class MarkdownArea extends StatelessWidget {
         styleSheet: MarkdownStyleSheet(
           p: TextStyle(
               color: textColor,
-              fontSize: screenWidth * 0.02,
               fontWeight: FontWeight.w300,
               letterSpacing: 0.44),
           h1: TextStyle(color: textColor),
