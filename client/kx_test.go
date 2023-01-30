@@ -133,17 +133,18 @@ func TestDropStaleKXs(t *testing.T) {
 	arnd := rand.New(rand.NewSource(rnd.Int63()))
 	svr := newMockRMServer(t)
 	alice := newTestKXList(t, svr, arnd, "alice")
+	kxExpiryLimit := 24 * time.Hour
 
 	// Manually create 2 kxs. One will be stale. Add them to Alice's DB.
 	kxdOk := clientdb.KXData{
 		Stage:     clientdb.KXStageStep2IDKX,
 		InitialRV: ratchet.RVPoint{0: 0xff},
-		Timestamp: time.Now().Add(-alice.kxExpiryLimit / 2),
+		Timestamp: time.Now().Add(-kxExpiryLimit / 2),
 	}
 	kxdStale := clientdb.KXData{
 		Stage:     clientdb.KXStageStep2IDKX,
 		InitialRV: ratchet.RVPoint{0: 0xee},
-		Timestamp: time.Now().Add(-alice.kxExpiryLimit - time.Hour),
+		Timestamp: time.Now().Add(-kxExpiryLimit - time.Hour),
 	}
 	err := alice.db.Update(context.Background(), func(tx clientdb.ReadWriteTx) error {
 		if err := alice.db.SaveKX(tx, kxdOk); err != nil {
@@ -159,7 +160,7 @@ func TestDropStaleKXs(t *testing.T) {
 	}
 
 	// Listen to KXs. This should drop the stale kx.
-	if err := alice.listenAllKXs(); err != nil {
+	if err := alice.listenAllKXs(kxExpiryLimit); err != nil {
 		t.Fatal(err)
 	}
 
@@ -170,6 +171,6 @@ func TestDropStaleKXs(t *testing.T) {
 		t.Fatal("unexpected subscription for stale RV exists in RV manager")
 	}
 	if !rvmgr.hasSub(kxdOk.InitialRV) {
-		t.Fatal("expected subscription for stale RV does not exist in RV manager")
+		t.Fatal("expected subscription for non-stale RV does not exist in RV manager")
 	}
 }

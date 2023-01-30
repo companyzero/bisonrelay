@@ -802,8 +802,6 @@ func (c *Client) Run(ctx context.Context) error {
 
 	g.Go(func() error { return c.loadAddressBook(gctx) })
 
-	g.Go(func() error { return c.kxl.listenAllKXs() })
-
 	g.Go(func() error {
 		err := c.ck.Run(gctx)
 		if err != nil && !errors.Is(err, context.Canceled) {
@@ -868,9 +866,9 @@ func (c *Client) Run(ctx context.Context) error {
 			c.rmgr.BindToSession(nextSess)
 			c.q.BindToSession(nextSess)
 			c.gcmq.SessionChanged(nextSess != nil)
+			var pushRate, subRate, expDays uint64
 			if c.cfg.ServerSessionChanged != nil {
 				connected := nextSess != nil
-				var pushRate, subRate, expDays uint64
 				if nextSess != nil {
 					pushRate, subRate = nextSess.PaymentRates()
 					expDays = uint64(nextSess.ExpirationDays())
@@ -883,6 +881,8 @@ func (c *Client) Run(ctx context.Context) error {
 			if nextSess != nil && firstConn {
 				close(firstConnChan)
 				firstConn = false
+				kxExpiryLimit := time.Duration(expDays) * time.Hour * 24
+				g.Go(func() error { return c.kxl.listenAllKXs(kxExpiryLimit) })
 			}
 			if nextSess != nil {
 				go c.maybeResetAllKXAfterConn(nextSess.ExpirationDays())

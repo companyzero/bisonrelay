@@ -33,23 +33,19 @@ type kxList struct {
 		clientdb.RawRVID, clientdb.RawRVID)
 
 	log slog.Logger
-
-	// kxExpiryLimit is when to stop waiting for a reply to a kx.
-	kxExpiryLimit time.Duration
 }
 
 func newKXList(q rmqIntf, rmgr rdzvManagerIntf, id *zkidentity.FullIdentity,
 	db *clientdb.DB, ctx context.Context) *kxList {
 	return &kxList{
-		q:             q,
-		rmgr:          rmgr,
-		id:            id,
-		db:            db,
-		randReader:    rand.Reader,
-		log:           slog.Disabled,
-		ctx:           ctx,
-		dbCtx:         ctx,
-		kxExpiryLimit: time.Hour * 24 * 7,
+		q:          q,
+		rmgr:       rmgr,
+		id:         id,
+		db:         db,
+		randReader: rand.Reader,
+		log:        slog.Disabled,
+		ctx:        ctx,
+		dbCtx:      ctx,
 	}
 }
 
@@ -404,8 +400,9 @@ func (kx *kxList) listenInvite(kxd *clientdb.KXData) error {
 	return kx.rmgr.Sub(rv, handler, subPaidHandler)
 }
 
-// listenAllKXs listens for all outstanding kxs in the db.
-func (kx *kxList) listenAllKXs() error {
+// listenAllKXs listens for all outstanding kxs in the db. KXs which are older
+// than the passed kxExpiryLimit are dropped.
+func (kx *kxList) listenAllKXs(kxExpiryLimit time.Duration) error {
 	var kxs []clientdb.KXData
 	err := kx.db.Update(kx.dbCtx, func(tx clientdb.ReadWriteTx) error {
 		var err error
@@ -417,7 +414,7 @@ func (kx *kxList) listenAllKXs() error {
 		// Remove any KXs that have expired. We remove all KXs which
 		// timestamp is older then now()-kxExpiryLimit (i.e. keep all
 		// which timestamp is after the limit).
-		limit := time.Now().Add(-kx.kxExpiryLimit)
+		limit := time.Now().Add(-kxExpiryLimit)
 		for i := 0; i < len(kxs); {
 			if kxs[i].Timestamp.After(limit) {
 				i += 1
