@@ -6,7 +6,7 @@ import FlutterMacOS
 import Foundation
 
 import golib_plugin
-import path_provider_macos
+import path_provider_foundation
 
 func RegisterGeneratedPlugins(registry: FlutterPluginRegistry) {
   GolibPlugin.register(with: registry.registrar(forPlugin: "GolibPlugin"))
