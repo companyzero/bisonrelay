@@ -9,6 +9,7 @@ import 'package:golib_plugin/definitions.dart';
 import 'package:markdown/markdown.dart' as md;
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:bruig/theme_manager.dart';
 
 class VideoInlineSyntax extends md.InlineSyntax {
   /// This is a primitive example pattern
@@ -269,46 +270,47 @@ class MarkdownArea extends StatelessWidget {
     var theme = Theme.of(context);
     var darkTextColor = theme.indicatorColor;
     var textColor = theme.focusColor;
-    final screenWidth = MediaQuery.of(context).size.width;
-    return MarkdownBody(
-        styleSheet: MarkdownStyleSheet(
-          p: TextStyle(
-              color: textColor,
-              fontWeight: FontWeight.w300,
-              letterSpacing: 0.44),
-          h1: TextStyle(color: textColor),
-          h2: TextStyle(color: textColor),
-          h3: TextStyle(color: textColor),
-          h4: TextStyle(color: textColor),
-          h5: TextStyle(color: textColor),
-          h6: TextStyle(color: textColor),
-          em: TextStyle(color: textColor),
-          strong: TextStyle(color: textColor),
-          del: TextStyle(color: textColor),
-          listBullet: TextStyle(color: textColor),
-          blockquote: TextStyle(color: textColor),
-          checkbox: TextStyle(color: textColor),
-          tableBody: TextStyle(color: textColor),
-          tableHead: TextStyle(color: textColor),
-          blockquoteDecoration: BoxDecoration(color: darkTextColor),
-          codeblockDecoration: BoxDecoration(color: darkTextColor),
-          code: TextStyle(color: textColor),
-        ),
-        selectable: true,
-        data: text.trim(),
-        builders: {
-          //"video": VideoMarkdownElementBuilder(basedir),
-          "image": ImageMarkdownElementBuilder(),
-          "download": DownloadLinkElementBuilder(),
-        },
-        onTapLink: (text, url, blah) {
-          launchUrlAwait(url);
-        },
-        inlineSyntaxes: [
-          //VideoInlineSyntax(),
-          //ImageInlineSyntax()
-          EmbedInlineSyntax(),
-        ]);
+    return Consumer<ThemeNotifier>(
+        builder: (context, theme, _) => MarkdownBody(
+            styleSheet: MarkdownStyleSheet(
+              p: TextStyle(
+                  fontSize: 8 + theme.getFontSize() * 7,
+                  color: textColor,
+                  fontWeight: FontWeight.w300,
+                  letterSpacing: 0.44),
+              h1: TextStyle(color: textColor),
+              h2: TextStyle(color: textColor),
+              h3: TextStyle(color: textColor),
+              h4: TextStyle(color: textColor),
+              h5: TextStyle(color: textColor),
+              h6: TextStyle(color: textColor),
+              em: TextStyle(color: textColor),
+              strong: TextStyle(color: textColor),
+              del: TextStyle(color: textColor),
+              listBullet: TextStyle(color: textColor),
+              blockquote: TextStyle(color: textColor),
+              checkbox: TextStyle(color: textColor),
+              tableBody: TextStyle(color: textColor),
+              tableHead: TextStyle(color: textColor),
+              blockquoteDecoration: BoxDecoration(color: darkTextColor),
+              codeblockDecoration: BoxDecoration(color: darkTextColor),
+              code: TextStyle(color: textColor),
+            ),
+            selectable: true,
+            data: text.trim(),
+            builders: {
+              //"video": VideoMarkdownElementBuilder(basedir),
+              "image": ImageMarkdownElementBuilder(),
+              "download": DownloadLinkElementBuilder(),
+            },
+            onTapLink: (text, url, blah) {
+              launchUrlAwait(url);
+            },
+            inlineSyntaxes: [
+              //VideoInlineSyntax(),
+              //ImageInlineSyntax()
+              EmbedInlineSyntax(),
+            ]));
   }
 }
 
