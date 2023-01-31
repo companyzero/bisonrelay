@@ -69,7 +69,6 @@ final List<MainMenuItem> mainMenu = [
     (context) => const PayStatsScreenTitle(),
     Icons.wallet_outlined,
   ),
-  /*
   MainMenuItem(
       "Settings",
       SettingsScreen.routeName,
@@ -77,7 +76,6 @@ final List<MainMenuItem> mainMenu = [
           builder: (context, client, child) => SettingsScreen(client)),
       (context) => const SettingsScreenTitle(),
       Icons.settings_rounded),
-      */
   MainMenuItem(
       "Logs",
       LogScreen.routeName,
