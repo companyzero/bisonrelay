@@ -190,12 +190,23 @@ func (ts *testScaffold) newClientWithOpts(name string, rootDir string,
 		ts.t.Fatal("name cannot be empty")
 	}
 
-	dbLog := slog.Disabled
-	logBknd := func(subsys string) slog.Logger { return slog.Disabled }
+	var logBknd func(subsys string) slog.Logger
 	if ts.showLog {
 		logBknd = testutils.TestLoggerBackend(ts.t, name)
-		dbLog = logBknd("FSDB")
+	} else {
+		logf, err := os.Create(filepath.Join(rootDir, "applog.log"))
+		if err != nil {
+			ts.t.Fatalf("unable to create log file: %v", err)
+		}
+		bknd := slog.NewBackend(logf)
+		logBknd = func(subsys string) slog.Logger {
+			logger := bknd.Logger(subsys)
+			logger.SetLevel(slog.LevelTrace)
+			return logger
+		}
+		ts.t.Cleanup(func() { logf.Close() })
 	}
+	dbLog := logBknd("FSDB")
 
 	idIniter := func(context.Context) (*zkidentity.FullIdentity, error) {
 		c := new(zkidentity.FullIdentity)
