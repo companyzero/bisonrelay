@@ -26,3 +26,10 @@ jobs:
       - name: Test
         run: |
           ./goclean.sh
+      - name: Upload logs if tests failed
+        if: failure()
+        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
+        with:
+          name: ${{matrix.go}}-test-logs
+          path: /tmp/br*
+
