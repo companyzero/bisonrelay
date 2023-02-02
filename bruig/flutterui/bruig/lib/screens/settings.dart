@@ -57,6 +57,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     var theme = Theme.of(context);
     var backgroundColor = theme.backgroundColor;
+    var textColor = theme.focusColor;
 
     return Consumer<ThemeNotifier>(
       builder: (context, theme, _) => Container(
@@ -65,7 +66,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             borderRadius: BorderRadius.circular(3), color: backgroundColor),
         padding: const EdgeInsets.all(10),
         child: Column(children: [
-          /* XXX HIDING THEME BUTTON UNTIL LIGHT THEME PROVIDED
+          /*
+          // XXX HIDING THEME BUTTON UNTIL LIGHT THEME PROVIDED
           ElevatedButton(
             onPressed: () => {
               theme.getTheme().brightness == Brightness.dark
@@ -77,6 +79,52 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 : Text('Set Dark Theme'),
           ),
           */
+          Column(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
+            Text('Font Size',
+                style: TextStyle(
+                    fontSize: 8 + theme.getFontSize() * 7, color: textColor)),
+            Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
+              const SizedBox(width: 50),
+              Expanded(
+                  child: Slider(
+                divisions: 3,
+                min: 1,
+                max: 4,
+                value: theme.getFontSize(),
+                onChanged: (double value) {
+                  setState(() {
+                    if (value < theme.defaultFontSize) {
+                      theme.setSmallFontMode();
+                    } else if (value >= theme.defaultFontSize &&
+                        value < theme.largeFontSize) {
+                      theme.setDefaultFontMode();
+                    } else if (value >= theme.largeFontSize &&
+                        value < theme.hugeFontSize) {
+                      theme.setLargeFontMode();
+                    } else if (value >= theme.largeFontSize) {
+                      theme.setHugeFontMode();
+                    }
+                  });
+                },
+              )),
+              const SizedBox(width: 50),
+            ]),
+            Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
+              Text('Small',
+                  style: TextStyle(
+                      fontSize: 8 + theme.smallFontSize * 7, color: textColor)),
+              Text('Normal',
+                  style: TextStyle(
+                      fontSize: 8 + theme.defaultFontSize * 7,
+                      color: textColor)),
+              Text('Large',
+                  style: TextStyle(
+                      fontSize: 8 + theme.largeFontSize * 7, color: textColor)),
+              Text('Huge',
+                  style: TextStyle(
+                      fontSize: 8 + theme.hugeFontSize * 7, color: textColor)),
+            ]),
+          ]),
           const SizedBox(height: 20),
         ]),
       ),

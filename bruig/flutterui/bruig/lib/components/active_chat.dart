@@ -479,7 +479,6 @@ class _PostsListWState extends State<PostsListW> {
   Widget build(BuildContext context) {
     var theme = Theme.of(context);
     var textColor = theme.focusColor;
-    var darkTextColor = theme.indicatorColor; // CHAT BUBBLE BORDER COLOR
     return ServerEvent(
         child: Column(
       children: [

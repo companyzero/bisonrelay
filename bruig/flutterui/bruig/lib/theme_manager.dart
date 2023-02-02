@@ -11,6 +11,10 @@ import './storage_manager.dart';
 //  colorScheme: ColorScheme.fromSeed(seedColor: Color(0xff2970ff))),
 
 class ThemeNotifier with ChangeNotifier {
+  final double defaultFontSize = 2;
+  final double smallFontSize = 1;
+  final double largeFontSize = 3;
+  final double hugeFontSize = 4;
   final darkTheme = ThemeData(
       fontFamily: "Inter",
       //primarySwatch: Colors.blue,
@@ -73,6 +77,9 @@ class ThemeNotifier with ChangeNotifier {
   late ThemeData _themeData = lightTheme;
   ThemeData getTheme() => _themeData;
 
+  late double _fontSize = defaultFontSize;
+  double getFontSize() => _fontSize;
+
   ThemeNotifier() {
     StorageManager.readData('themeMode').then((value) {
       debugPrint('value read from storage: ${value.toString()}');
@@ -82,6 +89,20 @@ class ThemeNotifier with ChangeNotifier {
       } else {
         debugPrint('setting dark theme');
         _themeData = darkTheme;
+      }
+      notifyListeners();
+    });
+    StorageManager.readData('fontSize').then((value) {
+      debugPrint('value read from storage: ${value.toString()}');
+      var fontMode = value ?? 'defaultFontSize';
+      if (fontMode == 'defaultFontSize') {
+        _fontSize = defaultFontSize;
+      } else if (fontMode == 'smallFontSize') {
+        _fontSize = smallFontSize;
+      } else if (fontMode == 'largeFontSize') {
+        _fontSize = largeFontSize;
+      } else if (fontMode == 'hugeFontSize') {
+        _fontSize = hugeFontSize;
       }
       notifyListeners();
     });
@@ -96,6 +117,30 @@ class ThemeNotifier with ChangeNotifier {
   void setLightMode() async {
     _themeData = lightTheme;
     StorageManager.saveData('themeMode', 'light');
+    notifyListeners();
+  }
+
+  void setSmallFontMode() async {
+    _fontSize = smallFontSize;
+    StorageManager.saveData('fontSize', 'smallFontSize');
+    notifyListeners();
+  }
+
+  void setDefaultFontMode() async {
+    _fontSize = defaultFontSize;
+    StorageManager.saveData('fontSize', 'defaultFontSize');
+    notifyListeners();
+  }
+
+  void setLargeFontMode() async {
+    _fontSize = largeFontSize;
+    StorageManager.saveData('fontSize', 'largeFontSize');
+    notifyListeners();
+  }
+
+  void setHugeFontMode() async {
+    _fontSize = hugeFontSize;
+    StorageManager.saveData('fontSize', 'hugeFontSize');
     notifyListeners();
   }
 }

@@ -6,9 +6,9 @@ import FlutterMacOS
 import Foundation
 
 import golib_plugin
-import path_provider_foundation
+import path_provider_macos
 import screen_retriever
-import shared_preferences_foundation
+import shared_preferences_macos
 import url_launcher_macos
 import window_manager
 import window_size
