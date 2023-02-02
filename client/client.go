@@ -882,7 +882,13 @@ func (c *Client) Run(ctx context.Context) error {
 				close(firstConnChan)
 				firstConn = false
 				kxExpiryLimit := time.Duration(expDays) * time.Hour * 24
-				g.Go(func() error { return c.kxl.listenAllKXs(kxExpiryLimit) })
+				g.Go(func() error {
+					err := c.kxl.listenAllKXs(kxExpiryLimit)
+					if err != nil && !errors.Is(err, context.Canceled) {
+						c.log.Errorf("Unable to listen to all KXs: %v", err)
+					}
+					return err
+				})
 			}
 			if nextSess != nil {
 				go c.maybeResetAllKXAfterConn(nextSess.ExpirationDays())
