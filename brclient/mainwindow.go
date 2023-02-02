@@ -24,7 +24,7 @@ type mainWindowState struct {
 	escStr  string
 
 	viewport viewport.Model
-	textArea textAreaModel // line editor
+	textArea *textAreaModel // line editor
 
 	header string
 

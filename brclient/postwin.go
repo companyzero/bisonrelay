@@ -71,7 +71,7 @@ type postWindow struct {
 	cmdErr            string
 
 	viewport viewport.Model
-	textArea textAreaModel
+	textArea *textAreaModel
 }
 
 func (pw *postWindow) processStatus(status rpc.PostMetadataStatus) *comment {

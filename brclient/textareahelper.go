@@ -19,7 +19,7 @@ type textAreaModel struct {
 	textarea.Model
 }
 
-func newTextAreaModel(theme *theme) textAreaModel {
+func newTextAreaModel(theme *theme) *textAreaModel {
 	ta := textarea.New()
 	if !theme.blink {
 		ta.Cursor.SetMode(cursor.CursorStatic)
@@ -27,7 +27,7 @@ func newTextAreaModel(theme *theme) textAreaModel {
 
 	// Fix for light themes not displaying colors correctly.
 	ta.FocusedStyle.CursorLine = lipgloss.NewStyle()
-	return textAreaModel{
+	return &textAreaModel{
 		Model: ta,
 	}
 }
@@ -143,7 +143,7 @@ func (t *textAreaModel) recalcDynHeight(winW, winH int) int {
 	return lineCount
 }
 
-func (t textAreaModel) Update(msg tea.Msg) (textAreaModel, tea.Cmd) {
+func (t *textAreaModel) Update(msg tea.Msg) (*textAreaModel, tea.Cmd) {
 	var (
 		cmd  tea.Cmd
 		cmds []tea.Cmd
