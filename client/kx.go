@@ -17,6 +17,7 @@ import (
 	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/companyzero/bisonrelay/zkidentity"
 	"github.com/decred/slog"
+	"golang.org/x/sync/errgroup"
 )
 
 type kxList struct {
@@ -440,13 +441,24 @@ func (kx *kxList) listenAllKXs(kxExpiryLimit time.Duration) error {
 		return err
 	}
 
+	// Listen on all KXs in parallel, so that only a single sub message is
+	// sent to server.
+	g := &errgroup.Group{}
 	for _, kxd := range kxs {
-		if err := kx.listenInvite(&kxd); err != nil {
+		kxd := kxd
+		g.Go(func() error {
+			err := kx.listenInvite(&kxd)
+			if errors.Is(err, lowlevel.ErrRVAlreadySubscribed{}) {
+				// This error might happen when the invite is
+				// created before the client is first connected
+				// to the server and can be safely ignored.
+				err = nil
+			}
 			return err
-		}
+		})
 	}
 
-	return nil
+	return g.Wait()
 }
 
 // requestReset sends a new invite to the given rv point, which should be a
