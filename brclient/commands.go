@@ -2147,14 +2147,24 @@ var commands = []tuicmd{
 
 				as.cwHelpMsgs(func(pf printf) {
 					pii := ru.PublicIdentity()
-					encTime, decTime := ru.LastRatchetTimes()
+					r := ru.RatchetDebugInfo()
 					pf("")
 					pf("Info for user %s", strescape.Nick(ru.Nick()))
-					pf("UID: %s", ru.ID())
-					pf("Name: %s", strescape.Content(pii.Name))
-					pf("Ignored: %v", ru.IsIgnored())
-					pf("Last Encrypt Time: %s", encTime.Format(ISO8601DateTimeMs))
-					pf("Last Decrypt Time: %s", decTime.Format(ISO8601DateTimeMs))
+					pf("              UID: %s", ru.ID())
+					pf("             Name: %s", strescape.Content(pii.Name))
+					pf("          Ignored: %v", ru.IsIgnored())
+					pf("Last Encrypt Time: %s", r.LastEncTime.Format(ISO8601DateTimeMs))
+					pf("Last Decrypt Time: %s", r.LastDecTime.Format(ISO8601DateTimeMs))
+					pf("          Send RV: %s (%s...)",
+						r.SendRVPlain, r.SendRV.ShortLogID())
+					pf("          Recv RV: %s (%s...)",
+						r.RecvRVPlain, r.RecvRV.ShortLogID())
+					pf("         Drain RV: %s (%s...)",
+						r.DrainRVPlain, r.DrainRV.ShortLogID())
+					pf("      My Reset RV: %s", r.MyResetRV)
+					pf("   Their Reset RV: %s", r.TheirResetRV)
+					pf("       Saved Keys: %d", r.NbSavedKeys)
+					pf("     Will Ratchet: %v", r.WillRatchet)
 				})
 				return nil
 			}
