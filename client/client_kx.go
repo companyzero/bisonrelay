@@ -116,6 +116,8 @@ func (c *Client) initRemoteUser(id *zkidentity.PublicIdentity, r *ratchet.Ratche
 	ru.log = c.cfg.logger(fmt.Sprintf("RUSR %x", id.Identity[:8]))
 	ru.logPayloads = c.cfg.logger(fmt.Sprintf("RMPL %x", id.Identity[:8]))
 	ru.rmHandler = c.handleUserRM
+	ru.myResetRV = myResetRV
+	ru.theirResetRV = theirResetRV
 
 	oldRU, err := c.rul.add(ru)
 	oldUser := false

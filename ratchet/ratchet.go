@@ -269,7 +269,7 @@ func (r *Ratchet) SendRendezvous() RVPoint {
 }
 
 func (r *Ratchet) SendRendezvousPlainText() string {
-	return fmt.Sprintf("%x.%d", r.sendRVKey(), r.sendCount)
+	return fmt.Sprintf("%x.%03d", r.sendRVKey(), r.sendCount)
 }
 
 func (r *Ratchet) recvRVKeys() ([32]byte, [32]byte) {
@@ -295,10 +295,10 @@ func (r *Ratchet) RecvRendezvous() (RVPoint, RVPoint) {
 
 func (r *Ratchet) RecvRendezvousPlainText() (string, string) {
 	rhk, dk := r.recvRVKeys()
-	rv := fmt.Sprintf("%x.%d", rhk, r.recvCount)
+	rv := fmt.Sprintf("%x.%03d", rhk, r.recvCount)
 	var drain string
 	if !isZeroKey(&dk) {
-		drain = fmt.Sprintf("%x.%d", rhk, r.prevRecvCount)
+		drain = fmt.Sprintf("%x.%03d", dk, r.prevRecvCount)
 	}
 	return rv, drain
 }
@@ -455,6 +455,20 @@ func (r *Ratchet) mergeSavedKeys(newKeys map[[32]byte]map[uint32]savedKey) {
 			messageKeys[n] = messageKey
 		}
 	}
+}
+
+// NbSavedKeys returns the total number of saved keys.
+func (r *Ratchet) NbSavedKeys() int {
+	var total int
+	for _, m := range r.saved {
+		total += len(m)
+	}
+	return total
+}
+
+// WillRatchet returns whether the next message sent will cause a ratchet op.
+func (r *Ratchet) WillRatchet() bool {
+	return r.ratchet
 }
 
 // isZeroKey returns true if key is all zeros.
