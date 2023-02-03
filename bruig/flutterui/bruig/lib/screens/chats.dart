@@ -24,6 +24,11 @@ class ChatsScreenTitle extends StatelessWidget {
                 TextStyle(fontSize: 15, color: Theme.of(context).focusColor));
       }
       var chat = client.getExistingChat(activeHeading.id);
+      if (chat == null) {
+        return Text("Bison Relay / Chat",
+            style:
+                TextStyle(fontSize: 15, color: Theme.of(context).focusColor));
+      }
       var profile = client.profile;
       var suffix = chat?.nick != "" ? " / ${chat?.nick}" : "";
       var profileSuffix = profile != null

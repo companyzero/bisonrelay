@@ -1239,6 +1239,18 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 			}
 		}
 		return res, nil
+
+	case CTUserRatchetDebugInfo:
+		var args clientintf.UserID
+		if err := cmd.decode(&args); err != nil {
+			return nil, err
+		}
+
+		ru, err := c.UserByID(args)
+		if err != nil {
+			return nil, err
+		}
+		return ru.RatchetDebugInfo(), nil
 	}
 
 	return nil, nil
