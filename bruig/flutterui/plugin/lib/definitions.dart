@@ -7,6 +7,7 @@ import 'dart:developer' as developer;
 import 'package:convert/convert.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:golib_plugin/mock.dart';
+import 'package:golib_plugin/util.dart';
 import 'package:json_annotation/json_annotation.dart';
 import 'package:blake_hash/blake_hash.dart';
 
@@ -1263,6 +1264,65 @@ class LastUserReceivedTime {
       _$LastUserReceivedTimeFromJson(json);
 }
 
+@JsonSerializable()
+class RatchetDebugInfo {
+  @JsonKey(name: "send_rv")
+  final String sendRV;
+  @JsonKey(name: "send_rv_plain")
+  final String sendRVPlain;
+  @JsonKey(name: "recv_rv")
+  final String recvRV;
+  @JsonKey(name: "recv_rv_plain")
+  final String recvRVPlain;
+  @JsonKey(name: "drain_rv")
+  final String drainRV;
+  @JsonKey(name: "drain_rv_plain")
+  final String drainRVPlain;
+  @JsonKey(name: "my_reset_rv")
+  final String myResetRV;
+  @JsonKey(name: "their_reset_rv")
+  final String theirResetRV;
+  @JsonKey(name: "nb_saved_keys")
+  final int nbSavedKeys;
+  @JsonKey(name: "will_ratchet")
+  final bool willRatchet;
+  @JsonKey(name: "last_enc_time")
+  final DateTime lastEncTime;
+  @JsonKey(name: "last_dec_time")
+  final DateTime lastDecTime;
+
+  RatchetDebugInfo(
+      this.sendRV,
+      this.sendRVPlain,
+      this.recvRV,
+      this.recvRVPlain,
+      this.drainRV,
+      this.drainRVPlain,
+      this.myResetRV,
+      this.theirResetRV,
+      this.nbSavedKeys,
+      this.willRatchet,
+      this.lastEncTime,
+      this.lastDecTime);
+
+  factory RatchetDebugInfo.empty() => RatchetDebugInfo(
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      0,
+      false,
+      DateTime.fromMillisecondsSinceEpoch(0),
+      DateTime.fromMillisecondsSinceEpoch(0));
+
+  factory RatchetDebugInfo.fromJson(Map<String, dynamic> json) =>
+      _$RatchetDebugInfoFromJson(json);
+}
+
 mixin NtfStreams {
   StreamController<RemoteUser> ntfAcceptedInvites =
       StreamController<RemoteUser>();
@@ -1795,6 +1855,9 @@ abstract class PluginPlatform {
         .map<LastUserReceivedTime>((v) => LastUserReceivedTime.fromJson(v))
         .toList();
   }
+
+  Future<RatchetDebugInfo> userRatchetInfo(String uid) async =>
+      RatchetDebugInfo.fromJson(await asyncCall(CTUserRatchetDebugInfo, uid));
 }
 
 const int CTUnknown = 0x00;
@@ -1887,6 +1950,7 @@ const int CTSkipWalletCheck = 0x62;
 const int CTLNRestoreMultiSCB = 0x63;
 const int CTLNSaveMultiSCB = 0x64;
 const int CTListUsersLastMsgTimes = 0x65;
+const int CTUserRatchetDebugInfo = 0x66;
 
 const int notificationsStartID = 0x1000;
 

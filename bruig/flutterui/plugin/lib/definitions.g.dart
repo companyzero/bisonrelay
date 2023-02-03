@@ -1280,3 +1280,35 @@ Map<String, dynamic> _$LastUserReceivedTimeToJson(
       'uid': instance.uid,
       'last_decrypted': instance.lastDecrypted,
     };
+
+RatchetDebugInfo _$RatchetDebugInfoFromJson(Map<String, dynamic> json) =>
+    RatchetDebugInfo(
+      json['send_rv'] as String,
+      json['send_rv_plain'] as String,
+      json['recv_rv'] as String,
+      json['recv_rv_plain'] as String,
+      json['drain_rv'] as String,
+      json['drain_rv_plain'] as String,
+      json['my_reset_rv'] as String,
+      json['their_reset_rv'] as String,
+      json['nb_saved_keys'] as int,
+      json['will_ratchet'] as bool,
+      DateTime.parse(json['last_enc_time'] as String),
+      DateTime.parse(json['last_dec_time'] as String),
+    );
+
+Map<String, dynamic> _$RatchetDebugInfoToJson(RatchetDebugInfo instance) =>
+    <String, dynamic>{
+      'send_rv': instance.sendRV,
+      'send_rv_plain': instance.sendRVPlain,
+      'recv_rv': instance.recvRV,
+      'recv_rv_plain': instance.recvRVPlain,
+      'drain_rv': instance.drainRV,
+      'drain_rv_plain': instance.drainRVPlain,
+      'my_reset_rv': instance.myResetRV,
+      'their_reset_rv': instance.theirResetRV,
+      'nb_saved_keys': instance.nbSavedKeys,
+      'will_ratchet': instance.willRatchet,
+      'last_enc_time': instance.lastEncTime.toIso8601String(),
+      'last_dec_time': instance.lastDecTime.toIso8601String(),
+    };

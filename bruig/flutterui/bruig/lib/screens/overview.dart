@@ -54,7 +54,9 @@ class _OverviewScreenTitleState extends State<_OverviewScreenTitle> {
 
 class OverviewScreen extends StatefulWidget {
   static const routeName = '/overview';
-  static String subRoute(String route) => "$routeName/$route";
+  static String subRoute(String route) => route.isNotEmpty && route[0] == "/"
+      ? "$routeName$route"
+      : "$routeName/$route";
   final ClientModel client;
   final AppNotifications ntfns;
   final DownloadsModel down;
