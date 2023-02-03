@@ -80,6 +80,8 @@ type RemoteUser struct {
 	decryptedRMChan chan error
 	sentRMChan      chan error
 	compressLevel   int
+	myResetRV       clientdb.RawRVID
+	theirResetRV    clientdb.RawRVID
 
 	// mtx protects the following fields.
 	mtx     sync.Mutex
@@ -139,6 +141,46 @@ func (ru *RemoteUser) PublicIdentity() zkidentity.PublicIdentity {
 
 func (ru *RemoteUser) Nick() string {
 	return ru.id.Nick
+}
+
+// RatchetDebugInfo is debug information about a user's ratchet state.
+type RatchetDebugInfo struct {
+	SendRV       ratchet.RVPoint `json:"send_rv"`
+	SendRVPlain  string          `json:"send_rv_plain"`
+	RecvRV       ratchet.RVPoint `json:"recv_rv"`
+	RecvRVPlain  string          `json:"recv_rv_plain"`
+	DrainRV      ratchet.RVPoint `json:"drain_rv"`
+	DrainRVPlain string          `json:"drain_rv_plain"`
+	MyResetRV    string          `json:"my_reset_rv"`
+	TheirResetRV string          `json:"their_reset_rv"`
+	NbSavedKeys  int             `json:"nb_saved_keys"`
+	WillRatchet  bool            `json:"will_ratchet"`
+	LastEncTime  time.Time       `json:"last_enc_time"`
+	LastDecTime  time.Time       `json:"last_dec_time"`
+}
+
+// RatchetDebugInfo returns debug information about this user's ratchet.
+func (ru *RemoteUser) RatchetDebugInfo() RatchetDebugInfo {
+	ru.rLock.Lock()
+	recvPlain, drainPlain := ru.r.RecvRendezvousPlainText()
+	recv, drain := ru.r.RecvRendezvous()
+	encTime, decTime := ru.r.LastEncDecTimes()
+	res := RatchetDebugInfo{
+		SendRV:       ru.r.SendRendezvous(),
+		SendRVPlain:  ru.r.SendRendezvousPlainText(),
+		RecvRV:       recv,
+		RecvRVPlain:  recvPlain,
+		DrainRV:      drain,
+		DrainRVPlain: drainPlain,
+		MyResetRV:    ru.myResetRV.String(),
+		TheirResetRV: ru.theirResetRV.String(),
+		NbSavedKeys:  ru.r.NbSavedKeys(),
+		WillRatchet:  ru.r.WillRatchet(),
+		LastEncTime:  encTime,
+		LastDecTime:  decTime,
+	}
+	ru.rLock.Unlock()
+	return res
 }
 
 func (ru *RemoteUser) IsIgnored() bool {
