@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:bruig/components/buttons.dart';
+import 'package:bruig/components/chats_list.dart';
 import 'package:bruig/components/manage_gc.dart';
 import 'package:bruig/screens/feed/feed_posts.dart';
 import 'package:bruig/components/md_elements.dart';
@@ -16,6 +17,7 @@ import 'package:golib_plugin/golib_plugin.dart';
 import 'package:provider/provider.dart';
 import 'package:bruig/components/profile.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:bruig/components/empty_widget.dart';
 
 class ActiveChat extends StatefulWidget {
   final ClientModel client;
@@ -72,20 +74,81 @@ class _ActiveChatState extends State<ActiveChat> {
     var profile = client.profile;
     if (profile != null) {
       if (chat.isGC) {
-        return ManageGCScreen();
+        return const ManageGCScreen();
       } else {
         return UserProfile(client, profile);
       }
     }
     //editLineFocusNode.requestFocus();
-    return Column(
-      children: [
-        Expanded(child: Messages(chat, client.nick)),
+    var theme = Theme.of(context);
+    var darkTextColor = theme.indicatorColor;
+    var selectedBackgroundColor = theme.highlightColor;
+    var subMenuBorderColor = theme.canvasColor;
+    var hightLightTextColor = theme.focusColor; // NAME TEXT COLOR
+    var avatarColor = colorFromNick(chat.nick);
+    var avatarTextColor =
+        ThemeData.estimateBrightnessForColor(avatarColor) == Brightness.dark
+            ? hightLightTextColor
+            : darkTextColor;
+
+    showSubMenu(String id) => chat.isGC
+        ? client.showSubMenu(true, id)
+        : client.showSubMenu(false, id);
+
+    return Row(children: [
+      Expanded(
+          child: Column(children: [
+        Expanded(child: Messages(chat, client.nick, showSubMenu)),
         Row(children: [
           Expanded(child: EditLine(sendMsg, chat, editLineFocusNode))
         ])
-      ],
-    );
+      ])),
+      client.activeSubMenu.isEmpty
+          ? const Empty()
+          : Container(
+              width: 250,
+              decoration: BoxDecoration(
+                  border: Border(
+                      left: BorderSide(width: 2, color: subMenuBorderColor))),
+              child: Stack(alignment: Alignment.topRight, children: [
+                Column(children: [
+                  Container(
+                      margin: const EdgeInsets.only(top: 20, bottom: 20),
+                      child: CircleAvatar(
+                          radius: 75,
+                          backgroundColor: avatarColor,
+                          child: Text(chat.nick[0].toUpperCase(),
+                              style: TextStyle(
+                                  color: avatarTextColor, fontSize: 75)))),
+                  ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: client.activeSubMenu.length,
+                    itemBuilder: (context, index) => ListTile(
+                        title: Text(client.activeSubMenu[index].label,
+                            style: const TextStyle(fontSize: 11)),
+                        onTap: () {
+                          client.activeSubMenu[index]
+                              .onSelected(context, client);
+                          client.hideSubMenu();
+                        },
+                        hoverColor: Colors.black),
+                  )
+                ]),
+                Positioned(
+                    top: 5,
+                    right: 5,
+                    child: Material(
+                        color: selectedBackgroundColor.withOpacity(0),
+                        child: IconButton(
+                            tooltip: "Close",
+                            hoverColor: selectedBackgroundColor,
+                            splashRadius: 15,
+                            iconSize: 15,
+                            onPressed: () => client.hideSubMenu(),
+                            icon: Icon(
+                                color: darkTextColor, Icons.close_outlined)))),
+              ]))
+    ]);
   }
 }
 
@@ -208,7 +271,9 @@ class ReceivedSentPM extends StatefulWidget {
   final ChatEventModel evnt;
   final String nick;
   final int timestamp;
-  const ReceivedSentPM(this.evnt, this.nick, this.timestamp, {Key? key})
+  final ShowSubMenuCB showSubMenu;
+  const ReceivedSentPM(this.evnt, this.nick, this.timestamp, this.showSubMenu,
+      {Key? key})
       : super(key: key);
 
   @override
@@ -276,18 +341,27 @@ class _ReceivedSentPMState extends State<ReceivedSentPM> {
         ThemeData.estimateBrightnessForColor(avatarColor) == Brightness.dark
             ? hightLightTextColor
             : darkTextColor;
+    var selectedBackgroundColor = theme.highlightColor;
 
     return LayoutBuilder(
         builder: (BuildContext context, BoxConstraints constraints) {
       return Row(children: [
         Container(
-          width: 28,
-          margin: const EdgeInsets.only(top: 0, bottom: 0, left: 5, right: 0),
-          child: CircleAvatar(
-              backgroundColor: avatarColor,
-              child: Text(widget.nick[0].toUpperCase(),
-                  style: TextStyle(color: avatarTextColor, fontSize: 20))),
-        ),
+            width: 28,
+            margin: const EdgeInsets.only(top: 0, bottom: 0, left: 5, right: 0),
+            child: IconButton(
+              splashRadius: 20,
+              hoverColor: selectedBackgroundColor,
+              icon: CircleAvatar(
+                  backgroundColor: avatarColor,
+                  child: Text(widget.nick[0].toUpperCase(),
+                      style: TextStyle(color: avatarTextColor, fontSize: 20))),
+              padding: const EdgeInsets.all(0),
+              tooltip: widget.nick,
+              onPressed: () {
+                widget.showSubMenu(widget.nick);
+              },
+            )),
         Expanded(
             child: Container(
           decoration: BoxDecoration(
@@ -326,7 +400,9 @@ class _ReceivedSentPMState extends State<ReceivedSentPM> {
 class PMW extends StatelessWidget {
   final ChatEventModel evnt;
   final String nick;
-  const PMW(this.evnt, this.nick, {Key? key}) : super(key: key);
+  final ShowSubMenuCB showSubMenu;
+  const PMW(this.evnt, this.nick, this.showSubMenu, {Key? key})
+      : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -336,14 +412,17 @@ class PMW extends StatelessWidget {
       timestamp =
           evnt.source?.nick == null ? event.timestamp : event.timestamp * 1000;
     }
-    return ReceivedSentPM(evnt, evnt.source?.nick ?? nick, timestamp);
+    return ReceivedSentPM(
+        evnt, evnt.source?.nick ?? nick, timestamp, showSubMenu);
   }
 }
 
 class GCMW extends StatelessWidget {
   final ChatEventModel evnt;
   final String nick;
-  const GCMW(this.evnt, this.nick, {Key? key}) : super(key: key);
+  final ShowSubMenuCB showSubMenu;
+  const GCMW(this.evnt, this.nick, this.showSubMenu, {Key? key})
+      : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -353,7 +432,8 @@ class GCMW extends StatelessWidget {
       timestamp =
           evnt.source?.nick == null ? event.timestamp : event.timestamp * 1000;
     }
-    return ReceivedSentPM(evnt, evnt.source?.nick ?? nick, timestamp);
+    return ReceivedSentPM(
+        evnt, evnt.source?.nick ?? nick, timestamp, showSubMenu);
   }
 }
 
@@ -709,14 +789,17 @@ class Event extends StatelessWidget {
   final ChatEventModel event;
   final ChatModel chat;
   final String nick;
+  final ShowSubMenuCB showSubMenu;
   final Function() scrollToBottom;
-  const Event(this.chat, this.event, this.nick, this.scrollToBottom, {Key? key})
+  const Event(
+      this.chat, this.event, this.nick, this.scrollToBottom, this.showSubMenu,
+      {Key? key})
       : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     if (event.event is PM) {
-      return PMW(event, nick);
+      return PMW(event, nick, showSubMenu);
     }
 
     if (event.event is InflightTip) {
@@ -724,7 +807,7 @@ class Event extends StatelessWidget {
     }
 
     if (event.event is GCMsg) {
-      return GCMW(event, nick);
+      return GCMW(event, nick, showSubMenu);
     }
 
     if (event.event is GCUserEvent) {
@@ -771,7 +854,9 @@ class Event extends StatelessWidget {
 class Messages extends StatefulWidget {
   final ChatModel chat;
   final String nick;
-  const Messages(this.chat, this.nick, {Key? key}) : super(key: key);
+  final ShowSubMenuCB showSubMenu;
+  const Messages(this.chat, this.nick, this.showSubMenu, {Key? key})
+      : super(key: key);
 
   @override
   State<Messages> createState() => _MessagesState();
@@ -846,6 +931,33 @@ class _MessagesState extends State<Messages> {
         controller: _scroller,
         itemCount: msgs.length,
         itemBuilder: (context, index) =>
-            Event(chat, msgs[index], nick, scrollToBottom));
+            Event(chat, msgs[index], nick, scrollToBottom, widget.showSubMenu));
   }
 }
+/*
+                
+                Stack(alignment: Alignment.topRight, children: [
+                ListView.builder(
+                  itemCount: chats.subUserMenu.length,
+                  itemBuilder: (context, index) => ListTile(
+                      title: Text(chats.subUserMenu[index].label,
+                          style: const TextStyle(fontSize: 11)),
+                      onTap: () {
+                        chats.subUserMenu[index].onSelected(context, chats);
+                        closeMenus(chats);
+                      }),
+                ),
+                Positioned(
+                    top: 5,
+                    right: 5,
+                    child: Material(
+                        color: selectedBackgroundColor.withOpacity(0),
+                        child: IconButton(
+                            hoverColor: selectedBackgroundColor,
+                            splashRadius: 15,
+                            iconSize: 15,
+                            onPressed: () => closeMenus(chats),
+                            icon: Icon(
+                                color: darkTextColor, Icons.close_outlined)))),
+              ])
+              */

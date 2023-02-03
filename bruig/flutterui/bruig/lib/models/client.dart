@@ -190,28 +190,42 @@ class ClientModel extends ChangeNotifier {
     _fetchInfo();
   }
 
-  List<ChatModel> _gcChats = [];
+  final List<ChatModel> _gcChats = [];
   UnmodifiableListView<ChatModel> get gcChats => UnmodifiableListView(_gcChats);
 
-  List<ChatModel> _userChats = [];
+  final List<ChatModel> _userChats = [];
   UnmodifiableListView<ChatModel> get userChats =>
       UnmodifiableListView(_userChats);
 
-  List<ChatMenuItem> _subGCMenu = [];
-  UnmodifiableListView<ChatMenuItem> get subGCMenu =>
-      UnmodifiableListView(_subGCMenu);
+  final Map<String, List<ChatMenuItem>> _subGCMenus = {};
+  UnmodifiableMapView<String, List<ChatMenuItem>> get subGCMenus =>
+      UnmodifiableMapView(_subGCMenus);
 
-  void set subGCMenu(List<ChatMenuItem> sm) {
-    _subGCMenu = sm;
+  final Map<String, List<ChatMenuItem>> _subUserMenus = {};
+  UnmodifiableMapView<String, List<ChatMenuItem>> get subUserMenus =>
+      UnmodifiableMapView(_subUserMenus);
+
+  List<ChatMenuItem> _activeSubMenu = [];
+  UnmodifiableListView<ChatMenuItem> get activeSubMenu =>
+      UnmodifiableListView(_activeSubMenu);
+
+  void set activeSubMenu(List<ChatMenuItem> sm) {
+    _activeSubMenu = sm;
     notifyListeners();
   }
 
-  List<ChatMenuItem> _subUserMenu = [];
-  UnmodifiableListView<ChatMenuItem> get subUserMenu =>
-      UnmodifiableListView(_subUserMenu);
+  void showSubMenu(bool isGC, String id) {
+    if (isGC) {
+      activeSubMenu = subGCMenus[id] ?? [];
+    } else {
+      activeSubMenu = subUserMenus[id] ?? [];
+    }
+    print("here! $id $isGC $activeSubMenu");
+    notifyListeners();
+  }
 
-  void set subUserMenu(List<ChatMenuItem> sm) {
-    _subUserMenu = sm;
+  void hideSubMenu() {
+    activeSubMenu = [];
     notifyListeners();
   }
 
@@ -229,11 +243,13 @@ class ClientModel extends ChangeNotifier {
 
   ChatModel? _active;
   ChatModel? get active => _active;
+
   void set active(ChatModel? c) {
     _profile = null;
     _active?._setActive(false);
     _active = c;
     c?._setActive(true);
+    hideSubMenu();
     notifyListeners();
   }
 
@@ -280,20 +296,29 @@ class ClientModel extends ChangeNotifier {
       if (_gcChats.indexWhere((c) => c.id == id) == -1) {
         // Add to list of chats.
         _gcChats.add(c);
+        _subGCMenus[c.id] = buildGCMenu(c);
       }
     } else {
       if (_userChats.indexWhere((c) => c.id == id) == -1) {
         // Add to list of chats.
         _userChats.add(c);
+        _subUserMenus[c.id] = buildUserChatMenu(c);
       }
     }
+
     notifyListeners();
 
     return c;
   }
 
   void removeChat(ChatModel chat) {
-    chat.isGC ? _gcChats.remove(chat) : _userChats.remove(chat);
+    if (chat.isGC) {
+      _gcChats.remove(chat);
+      _subGCMenus.remove(chat.id);
+    } else {
+      _userChats.remove(chat);
+      _subUserMenus.remove(chat.id);
+    }
     _activeChats.remove(chat.id);
     notifyListeners();
   }
