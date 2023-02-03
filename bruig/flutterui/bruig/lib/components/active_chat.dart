@@ -945,30 +945,3 @@ class _MessagesState extends State<Messages> {
             Event(chat, msgs[index], nick, scrollToBottom, widget.showSubMenu));
   }
 }
-/*
-                
-                Stack(alignment: Alignment.topRight, children: [
-                ListView.builder(
-                  itemCount: chats.subUserMenu.length,
-                  itemBuilder: (context, index) => ListTile(
-                      title: Text(chats.subUserMenu[index].label,
-                          style: const TextStyle(fontSize: 11)),
-                      onTap: () {
-                        chats.subUserMenu[index].onSelected(context, chats);
-                        closeMenus(chats);
-                      }),
-                ),
-                Positioned(
-                    top: 5,
-                    right: 5,
-                    child: Material(
-                        color: selectedBackgroundColor.withOpacity(0),
-                        child: IconButton(
-                            hoverColor: selectedBackgroundColor,
-                            splashRadius: 15,
-                            iconSize: 15,
-                            onPressed: () => closeMenus(chats),
-                            icon: Icon(
-                                color: darkTextColor, Icons.close_outlined)))),
-              ])
-              */
