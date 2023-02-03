@@ -279,7 +279,10 @@ class ReceivedSentPM extends StatefulWidget {
   final String nick;
   final int timestamp;
   final ShowSubMenuCB showSubMenu;
-  const ReceivedSentPM(this.evnt, this.nick, this.timestamp, this.showSubMenu,
+  final String id;
+
+  const ReceivedSentPM(
+      this.evnt, this.nick, this.timestamp, this.showSubMenu, this.id,
       {Key? key})
       : super(key: key);
 
@@ -366,7 +369,7 @@ class _ReceivedSentPMState extends State<ReceivedSentPM> {
               padding: const EdgeInsets.all(0),
               tooltip: widget.nick,
               onPressed: () {
-                widget.showSubMenu(widget.nick);
+                widget.showSubMenu(widget.id);
               },
             )),
         Expanded(
@@ -419,8 +422,9 @@ class PMW extends StatelessWidget {
       timestamp =
           evnt.source?.nick == null ? event.timestamp : event.timestamp * 1000;
     }
-    return ReceivedSentPM(
-        evnt, evnt.source?.nick ?? nick, timestamp, showSubMenu);
+
+    return ReceivedSentPM(evnt, evnt.source?.nick ?? nick, timestamp,
+        showSubMenu, evnt.source?.id ?? "");
   }
 }
 
@@ -439,8 +443,8 @@ class GCMW extends StatelessWidget {
       timestamp =
           evnt.source?.nick == null ? event.timestamp : event.timestamp * 1000;
     }
-    return ReceivedSentPM(
-        evnt, evnt.source?.nick ?? nick, timestamp, showSubMenu);
+    return ReceivedSentPM(evnt, evnt.source?.nick ?? nick, timestamp,
+        showSubMenu, evnt.source?.id ?? "");
   }
 }
 

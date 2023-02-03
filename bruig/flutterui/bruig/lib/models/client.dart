@@ -220,7 +220,6 @@ class ClientModel extends ChangeNotifier {
     } else {
       activeSubMenu = subUserMenus[id] ?? [];
     }
-    print("here! $id $isGC $activeSubMenu");
     notifyListeners();
   }
 
