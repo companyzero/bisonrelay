@@ -81,6 +81,7 @@ class _ActiveChatState extends State<ActiveChat> {
     }
     //editLineFocusNode.requestFocus();
     var theme = Theme.of(context);
+    var textColor = theme.dividerColor;
     var darkTextColor = theme.indicatorColor;
     var selectedBackgroundColor = theme.highlightColor;
     var subMenuBorderColor = theme.canvasColor;
@@ -120,6 +121,12 @@ class _ActiveChatState extends State<ActiveChat> {
                           child: Text(chat.nick[0].toUpperCase(),
                               style: TextStyle(
                                   color: avatarTextColor, fontSize: 75)))),
+                  chat.isGC
+                      ? Text("Group Chat",
+                          style: TextStyle(fontSize: 15, color: textColor))
+                      : Empty(),
+                  Text(chat.nick,
+                      style: TextStyle(fontSize: 15, color: textColor)),
                   ListView.builder(
                     shrinkWrap: true,
                     itemCount: client.activeSubMenu.length,
