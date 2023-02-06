@@ -7,6 +7,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
 
 	"github.com/companyzero/bisonrelay/client/clientintf"
 	"github.com/companyzero/bisonrelay/internal/strescape"
@@ -113,6 +114,7 @@ type chatWindow struct {
 	selEmbedArgs embeddedArgs
 	selEmbed     int
 	maxEmbeds    int
+	unreadIdx    int
 }
 
 func (cw *chatWindow) empty() bool {
@@ -127,7 +129,12 @@ func (cw *chatWindow) appendMsg(msg *chatMsg) {
 		return
 	}
 	cw.Lock()
+	resetUnreadIdx := (msg.mine || msg.internal || msg.help) &&
+		cw.unreadIdx == len(cw.msgs)
 	cw.msgs = append(cw.msgs, msg)
+	if resetUnreadIdx {
+		cw.unreadIdx = len(cw.msgs)
+	}
 	cw.Unlock()
 }
 
@@ -196,6 +203,19 @@ func (cw *chatWindow) setMsgSent(msg *chatMsg) {
 	msg.sent = true
 	// TODO: move to end of messages and update time?
 	cw.Unlock()
+}
+
+func (cw *chatWindow) markAllRead() {
+	cw.Lock()
+	cw.unreadIdx = len(cw.msgs)
+	cw.Unlock()
+}
+
+func (cw *chatWindow) unreadCount() int {
+	cw.Lock()
+	count := len(cw.msgs) - cw.unreadIdx
+	cw.Unlock()
+	return count
 }
 
 func (cw *chatWindow) renderPost(winW int, styles *theme, b *strings.Builder, msg *chatMsg) {
@@ -332,7 +352,14 @@ func (cw *chatWindow) renderContent(winW int, styles *theme, as *appState) strin
 	// TODO: estimate total length to perform only a single alloc.
 	cw.maxEmbeds = 0
 	b := new(strings.Builder)
-	for _, msg := range cw.msgs {
+	for i, msg := range cw.msgs {
+		if i == cw.unreadIdx {
+			unreadMsg := []byte(" unread ――――――――")
+			l := utf8.RuneCount(unreadMsg)
+			b.WriteString(strings.Repeat("―", winW-l))
+			b.Write(unreadMsg)
+			b.WriteRune('\n')
+		}
 		if msg.post != nil {
 			cw.renderPost(winW, styles, b, msg)
 			continue

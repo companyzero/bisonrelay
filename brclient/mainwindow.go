@@ -214,9 +214,19 @@ func (mws mainWindowState) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				msg.Alt = false
 			}
 
+			wasAtBottom := mws.viewport.AtBottom()
+
 			// send to viewport
 			mws.viewport, cmd = mws.viewport.Update(msg)
 			cmds = appendCmd(cmds, cmd)
+
+			if !wasAtBottom && mws.viewport.AtBottom() {
+				cw := mws.as.activeChatWindow()
+				if cw != nil {
+					cmds = appendCmd(cmds, markAllRead(cw))
+					mws.updateViewportContent()
+				}
+			}
 
 		case msg.Type == tea.KeyTab:
 			mws.updateCompletion()
@@ -382,6 +392,26 @@ func (mws mainWindowState) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		mws.updateHeader()
 		mws.recalcViewportSize()
 		mws.updateViewportContent()
+
+	case msgActiveWindowChanged:
+		cw := mws.as.activeChatWindow()
+		if cw != nil {
+			if cw.unreadCount() < mws.as.winH {
+				cmds = appendCmd(cmds, markAllRead(cw))
+				mws.updateViewportContent()
+			}
+		}
+
+	case msgNewRecvdMsg:
+		// Clear unread count from active chat if we're following at
+		// the bottom of the screen.
+		if mws.viewport.AtBottom() {
+			cw := mws.as.activeChatWindow()
+			if cw != nil {
+				cmds = appendCmd(cmds, markAllRead(cw))
+				mws.updateViewportContent()
+			}
+		}
 
 	case repaintActiveChat:
 		mws.updateViewportContent()

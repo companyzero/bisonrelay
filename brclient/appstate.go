@@ -740,6 +740,7 @@ func (as *appState) changeActiveWindow(win int) {
 
 	if win != as.activeCW {
 		as.prevActiveCW = as.activeCW
+		as.sendMsg(msgActiveWindowChanged{})
 	}
 
 	// Remove from list of updated windows.
@@ -2150,6 +2151,7 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		cw := as.findOrNewChatWindow(user.ID(), fromNick)
 		s := as.handleRcvdText(msg.Message, fromNick)
 		cw.newRecvdMsg(fromNick, s, &cw.uid, ts)
+		as.sendMsg(msgNewRecvdMsg{})
 		as.repaintIfActiveWithMention(cw, hasMention(as.c.LocalNick(), s))
 	}))
 
@@ -2158,6 +2160,7 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		fromUID := user.ID()
 		s := as.handleRcvdText(msg.Message, cw.alias)
 		cw.newRecvdMsg(user.Nick(), s, &fromUID, ts)
+		as.sendMsg(msgNewRecvdMsg{})
 		as.repaintIfActiveWithMention(cw, hasMention(as.c.LocalNick(), s))
 	}))
 
