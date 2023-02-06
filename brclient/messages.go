@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/tls"
 	"errors"
+	"time"
 
 	"github.com/atotto/clipboard"
 	tea "github.com/charmbracelet/bubbletea"
@@ -57,6 +58,8 @@ type msgConfirmedFunds dcrutil.Amount
 type msgPaste string
 type msgPasteErr error
 
+type msgNewRecvdMsg struct{}
+
 type msgCancelForm struct{}
 type msgSubmitForm struct{}
 
@@ -65,6 +68,8 @@ type msgShowSharedFilesForLink struct{}
 type msgProcessEsc struct{}
 
 type msgDownloadCompleted clientdb.FileID
+
+type msgActiveWindowChanged struct{}
 
 func paste() tea.Msg {
 	str, err := clipboard.ReadAll()
@@ -212,4 +217,12 @@ func isEscMsg(msg tea.Msg) bool {
 		return false
 	}
 	return keyMsg.String() == "esc"
+}
+
+func markAllRead(cw *chatWindow) tea.Cmd {
+	return func() tea.Msg {
+		time.Sleep(1500 * time.Millisecond)
+		cw.markAllRead()
+		return repaintActiveChat{}
+	}
 }
