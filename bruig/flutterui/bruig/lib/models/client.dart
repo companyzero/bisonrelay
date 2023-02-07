@@ -193,6 +193,7 @@ class ClientModel extends ChangeNotifier {
 
   final List<ChatModel> _gcChats = [];
   UnmodifiableListView<ChatModel> get gcChats => UnmodifiableListView(_gcChats);
+
   void set gcChats(List<ChatModel> gc) {
     _gcChats = gc;
     notifyListeners();
@@ -201,6 +202,7 @@ class ClientModel extends ChangeNotifier {
   final List<ChatModel> _userChats = [];
   UnmodifiableListView<ChatModel> get userChats =>
       UnmodifiableListView(_userChats);
+
   void set userChats(List<ChatModel> us) {
     _userChats = us;
     notifyListeners();
