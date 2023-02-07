@@ -394,15 +394,23 @@ class ClientModel extends ChangeNotifier {
     gcs.forEach((v) => _newChat(v.id, v.name, true));
 
     StorageManager.readData('gcListOrder').then((value) {
-      if (value.length > 0) {
+      if (value != null && value.length > 0) {
         List<ChatModel> sortedGCList = [];
         var gcSplitList = value.split(',');
+        for (int i = 0; i < gcSplitList.length; i++) {
+          for (int j = 0; j < _gcChats.length; j++) {
+            if (gcSplitList[i] == _gcChats[j].nick) {
+              sortedGCList.add(_gcChats[j]);
+              break;
+            }
+          }
+        }
         for (int i = 0; i < _gcChats.length; i++) {
           var found = false;
           for (int j = 0; j < gcSplitList.length; j++) {
             if (gcSplitList[j] == _gcChats[i].nick) {
-              sortedGCList.add(_gcChats[i]);
               found = true;
+              break;
             }
           }
           if (!found) {
@@ -413,15 +421,26 @@ class ClientModel extends ChangeNotifier {
       }
     });
     StorageManager.readData('userListOrder').then((value) {
-      if (value.length > 0) {
+      if (value != null && value.length > 0) {
         List<ChatModel> sortedUserList = [];
         var userSplitList = value.split(',');
+        // First order existing users from last saved.
+        for (int i = 0; i < userSplitList.length; i++) {
+          for (int j = 0; j < _userChats.length; j++) {
+            if (userSplitList[i] == _userChats[j].nick) {
+              sortedUserList.add(_userChats[j]);
+              break;
+            }
+          }
+        }
+        // Then try and find any received chats that aren't in the saved list.
+        // Add them on the end.
         for (int i = 0; i < _userChats.length; i++) {
           var found = false;
           for (int j = 0; j < userSplitList.length; j++) {
             if (userSplitList[j] == _userChats[i].nick) {
-              sortedUserList.add(_userChats[i]);
               found = true;
+              break;
             }
           }
           if (!found) {
