@@ -8,7 +8,7 @@ import 'package:bruig/components/snackbars.dart';
 import 'package:file_picker/file_picker.dart';
 
 typedef MakeActiveCB = void Function(ChatModel? c);
-typedef ShowSubMenuCB = void Function(List<ChatMenuItem>);
+typedef ShowSubMenuCB = void Function(String);
 
 class _ChatHeadingW extends StatefulWidget {
   final ChatModel chat;
@@ -49,11 +49,11 @@ class _ChatHeadingWState extends State<_ChatHeadingW> {
   @override
   Widget build(BuildContext context) {
     var theme = Theme.of(context);
-    var textColor = theme.dividerColor; //  UNREAD COUNT TEXT COLOR
-    var hightLightTextColor = theme.focusColor; // NAME TEXT COLOR
+    var textColor = theme.dividerColor;
+    var hightLightTextColor = theme.focusColor;
     var selectedBackgroundColor = theme.highlightColor;
     var unreadMessageIconColor = theme.indicatorColor;
-    var darkTextColor = const Color(0xFF5A5968);
+    var darkTextColor = theme.indicatorColor;
 
     Widget? trailing;
     if (chat.active) {
@@ -75,13 +75,6 @@ class _ChatHeadingWState extends State<_ChatHeadingW> {
               CircleAvatar(backgroundColor: unreadMessageIconColor, radius: 3));
     }
 
-    List<ChatMenuItem> Function(ChatModel) popupMenuBuilder;
-
-    if (!chat.isGC) {
-      popupMenuBuilder = buildUserChatMenu;
-    } else {
-      popupMenuBuilder = buildGCMenu;
-    }
     var avatarColor = colorFromNick(chat.nick);
     var avatarTextColor =
         ThemeData.estimateBrightnessForColor(avatarColor) == Brightness.dark
@@ -100,7 +93,7 @@ class _ChatHeadingWState extends State<_ChatHeadingW> {
           tooltip: chat.nick,
           onPressed: () {
             widget.makeActive(chat);
-            widget.showSubMenu(popupMenuBuilder(chat));
+            widget.showSubMenu(chat.id);
           },
         ));
 
@@ -196,24 +189,22 @@ class _ChatsListState extends State<_ChatsList> {
     }
 
     void closeMenus(ClientModel client) {
-      client.subGCMenu = [];
-      client.subUserMenu = [];
       editLineFocusNode.requestFocus();
     }
 
     var theme = Theme.of(context);
     var sidebarBackground = theme.backgroundColor;
     var hoverColor = theme.hoverColor;
-    var darkTextColor = const Color(0xFF5A5968);
+    var darkTextColor = theme.indicatorColor;
     var selectedBackgroundColor = theme.highlightColor;
 
     var gcList = chats.gcChats.toList();
     var chatList = chats.userChats.toList();
 
-    makeActive(ChatModel? c) =>
-        {chats.active = c, chats.subGCMenu = [], chats.subUserMenu = []};
-    showGCSubMenu(List<ChatMenuItem> sm) => {chats.subGCMenu = sm};
-    showUserSubMenu(List<ChatMenuItem> sm) => {chats.subUserMenu = sm};
+    makeActive(ChatModel? c) => {chats.active = c};
+
+    showGCSubMenu(String id) => {chats.showSubMenu(true, id)};
+    showUserSubMenu(String id) => {chats.showSubMenu(false, id)};
     return Column(children: [
       Container(
           height: 209,
@@ -234,53 +225,26 @@ class _ChatsListState extends State<_ChatsList> {
                   1
                 ]),
           ),
-          child: chats.subGCMenu.isEmpty
-              ? Stack(children: [
-                  Container(
-                      padding: const EdgeInsets.only(bottom: 40),
-                      child: ListView.builder(
-                          itemCount: gcList.length,
-                          itemBuilder: (context, index) => _ChatHeadingW(
-                              gcList[index], makeActive, showGCSubMenu))),
-                  Positioned(
-                      bottom: 5,
-                      right: 5,
-                      child: Material(
-                          color: selectedBackgroundColor.withOpacity(0),
-                          child: IconButton(
-                              splashRadius: 15,
-                              iconSize: 15,
-                              hoverColor: selectedBackgroundColor,
-                              tooltip: "Add GC",
-                              onPressed: () => createGC(),
-                              icon: Icon(color: darkTextColor, Icons.add))))
-                ])
-              : Stack(children: [
-                  ListView.builder(
-                    itemCount: chats.subGCMenu.length,
-                    itemBuilder: (context, index) => ListTile(
-                      title: Text(chats.subGCMenu[index].label,
-                          style: const TextStyle(fontSize: 11)),
-                      onTap: () {
-                        chats.subGCMenu[index].onSelected(context, chats);
-                        closeMenus(chats);
-                      },
-                    ),
-                  ),
-                  Positioned(
-                      top: 5,
-                      right: 5,
-                      child: Material(
-                          color: selectedBackgroundColor.withOpacity(0),
-                          child: IconButton(
-                              splashRadius: 15,
-                              hoverColor: selectedBackgroundColor,
-                              iconSize: 15,
-                              onPressed: () => closeMenus(chats),
-                              icon: Icon(
-                                  color: darkTextColor,
-                                  Icons.close_outlined)))),
-                ])),
+          child: Stack(children: [
+            Container(
+                padding: const EdgeInsets.only(bottom: 40),
+                child: ListView.builder(
+                    itemCount: gcList.length,
+                    itemBuilder: (context, index) => _ChatHeadingW(
+                        gcList[index], makeActive, showGCSubMenu))),
+            Positioned(
+                bottom: 5,
+                right: 5,
+                child: Material(
+                    color: selectedBackgroundColor.withOpacity(0),
+                    child: IconButton(
+                        splashRadius: 15,
+                        iconSize: 15,
+                        hoverColor: selectedBackgroundColor,
+                        tooltip: "Add GC",
+                        onPressed: () => createGC(),
+                        icon: Icon(color: darkTextColor, Icons.add))))
+          ])),
       Expanded(
           child: Container(
         margin: const EdgeInsets.all(1),
@@ -300,65 +264,39 @@ class _ChatsListState extends State<_ChatsList> {
                 1
               ]),
         ),
-        child: chats.subUserMenu.isEmpty
-            ? Stack(children: [
-                Container(
-                    padding: const EdgeInsets.only(bottom: 40),
-                    child: ListView.builder(
-                        itemCount: chatList.length,
-                        itemBuilder: (context, index) => _ChatHeadingW(
-                            chatList[index], makeActive, showUserSubMenu))),
-                Positioned(
-                    bottom: 5,
-                    right: 5,
-                    child: Material(
-                        color: selectedBackgroundColor.withOpacity(0),
-                        child: IconButton(
-                            hoverColor: selectedBackgroundColor,
-                            splashRadius: 15,
-                            iconSize: 15,
-                            tooltip: "Load Invite",
-                            onPressed: () => loadInvite(context),
-                            icon: Icon(
-                                size: 15, color: darkTextColor, Icons.add)))),
-                Positioned(
-                    bottom: 5,
-                    left: 5,
-                    child: Material(
-                        color: selectedBackgroundColor.withOpacity(0),
-                        child: IconButton(
-                            hoverColor: selectedBackgroundColor,
-                            splashRadius: 15,
-                            iconSize: 15,
-                            tooltip: "Generate Invite",
-                            onPressed: () => genInvite(),
-                            icon: Icon(
-                                size: 15, color: darkTextColor, Icons.people))))
-              ])
-            : Stack(alignment: Alignment.topRight, children: [
-                ListView.builder(
-                  itemCount: chats.subUserMenu.length,
-                  itemBuilder: (context, index) => ListTile(
-                      title: Text(chats.subUserMenu[index].label,
-                          style: const TextStyle(fontSize: 11)),
-                      onTap: () {
-                        chats.subUserMenu[index].onSelected(context, chats);
-                        closeMenus(chats);
-                      }),
-                ),
-                Positioned(
-                    top: 5,
-                    right: 5,
-                    child: Material(
-                        color: selectedBackgroundColor.withOpacity(0),
-                        child: IconButton(
-                            hoverColor: selectedBackgroundColor,
-                            splashRadius: 15,
-                            iconSize: 15,
-                            onPressed: () => closeMenus(chats),
-                            icon: Icon(
-                                color: darkTextColor, Icons.close_outlined)))),
-              ]),
+        child: Stack(children: [
+          Container(
+              padding: const EdgeInsets.only(bottom: 40),
+              child: ListView.builder(
+                  itemCount: chatList.length,
+                  itemBuilder: (context, index) => _ChatHeadingW(
+                      chatList[index], makeActive, showUserSubMenu))),
+          Positioned(
+              bottom: 5,
+              right: 5,
+              child: Material(
+                  color: selectedBackgroundColor.withOpacity(0),
+                  child: IconButton(
+                      hoverColor: selectedBackgroundColor,
+                      splashRadius: 15,
+                      iconSize: 15,
+                      tooltip: "Load Invite",
+                      onPressed: () => loadInvite(context),
+                      icon: Icon(size: 15, color: darkTextColor, Icons.add)))),
+          Positioned(
+              bottom: 5,
+              left: 5,
+              child: Material(
+                  color: selectedBackgroundColor.withOpacity(0),
+                  child: IconButton(
+                      hoverColor: selectedBackgroundColor,
+                      splashRadius: 15,
+                      iconSize: 15,
+                      tooltip: "Generate Invite",
+                      onPressed: () => genInvite(),
+                      icon:
+                          Icon(size: 15, color: darkTextColor, Icons.people))))
+        ]),
       ))
     ]);
   }
