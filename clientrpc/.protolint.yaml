@@ -5,7 +5,7 @@ lint:
       - FILE_HAS_COMMENT
       - ENUM_FIELD_NAMES_ZERO_VALUE_END_WITH
       - FIELD_NAMES_EXCLUDE_PREPOSITIONS
-      - FIELD_NAMES_EXCLUDE_PREPOSITIONS
+      - MESSAGE_NAMES_EXCLUDE_PREPOSITIONS
   rules_option:
     max_line_length:
       max_chars: 120

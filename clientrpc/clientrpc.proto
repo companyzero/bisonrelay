@@ -44,6 +44,37 @@ service ChatService {
   rpc AckReceivedGCM(AckRequest) returns (AckResponse);
 }
 
+/* PostsService is the service for performing posts-related actions. */
+service PostsService {
+  /* SubscribeToPosts makes the local client subscribe to a remote user's posts. */
+  rpc SubscribeToPosts(SubscribeToPostsRequest) returns (SubscribeToPostsResponse);
+
+  /* UnsubscribeToPosts makes the local client unsubscribe from a remote user's posts. */
+  rpc UnsubscribeToPosts(UnsubscribeToPostsRequest) returns (UnsubscribeToPostsResponse);
+
+  /* PostsStream creates a stream that receives updates about posts received
+     from remote users the local client is subscribed to. */
+  rpc PostsStream(PostsStreamRequest) returns (stream ReceivedPost);
+
+  /* AckReceivedPost acknowledges posts received up to a given sequence_id have
+     been processed. */
+  rpc AckReceivedPost(AckRequest) returns (AckResponse);
+
+  /* PostsStatusStream creates a stream that receives updates about post status
+     events (comments, replies, etc). */
+  rpc PostsStatusStream(PostsStatusStreamRequest) returns (stream ReceivedPostStatus);
+
+  /* AckReceivedPostStatus acknowledges post status received up to a given
+     sequence_id have been processed. */
+  rpc AckReceivedPostStatus(AckRequest) returns (AckResponse);
+}
+
+/* PaymentsService is the service to perform payment-related actions. */
+service PaymentsService {
+  /* TipUser attempts to send a tip to a user. The user must be or come online
+     for this to complete. */
+  rpc TipUser(TipUserRequest) returns (TipUserResponse);
+}
 
 /******************************************************************************
   *                           Messages
@@ -164,6 +195,106 @@ message GCReceivedMsg {
   uint64 sequence_id = 6;
 }
 
+/* SubscribeToPostsRequest is a request to subscribe to a remote user's posts. */
+message SubscribeToPostsRequest   {
+  /* user is the nick or hex-encoded ID of the user to subscribe to. */
+  string user = 1;
+}
+
+/* SubscribeToPostsResponse is the response to subscribing to a remote user's posts. */
+message SubscribeToPostsResponse  {}
+
+/* UnsubscribeToPostsRequest is a request to unsubscribe from a remote user's posts. */
+message UnsubscribeToPostsRequest {
+  /* user is the nick or hex-encoded ID of the user to unsubscribe from. */
+  string user = 1;
+}
+
+/* UnsubscribeToPostsResponse is the response to an unsubscribe request. */
+message UnsubscribeToPostsResponse{}
+
+
+/* PostSummary is the summary information about a post. */
+message PostSummary {
+  /* id is the post ID (hash of the post metadata). */
+  bytes id = 1;
+  /* from is the id of the relayer of the post (who the local client received
+     the post from). */
+  bytes from = 2;
+  /* author_id is the id of the author of the post. */
+  bytes author_id = 3;
+  /* author_nick is the reported nick of the author of the post. */
+  string author_nick = 4;
+  /* date is the unix timestamp of the post. */
+  int64 date = 5;
+  /* last_status_ts is the timestamp of the last recorded status update of the
+     post. */
+  int64 last_status_ts = 6;
+  /* title is either the included or suggested title of the post. */
+  string title = 7;
+}
+
+/* PostsStreamRequest is the request to establish a stream of received post events. */
+message PostsStreamRequest {
+  /* unacked_from specifies to the server the sequence_id of the last processed
+     post. Posts received by the server that have a higher sequence_id will be
+     streamed back to the client. */
+  uint64 unacked_from = 1;
+}
+
+/* ReceivedPost is a post received by the local client. */
+message ReceivedPost {
+  /* sequence_id is an opaque sequential ID. */
+  uint64 sequence_id = 1;
+
+  /* relayer_id is the id of the user we received the post from (may not be the
+     same as the author). */
+  bytes relayer_id = 2;
+
+  /* summary is the summary information about the post. */
+  PostSummary summary = 3;
+
+  /* post is the full post data. */
+  PostMetadata post = 4;
+}
+
+/* PostsStatusStreamRequest is a request to establish a stream that receives
+   post status updates received by the local client. */
+message PostsStatusStreamRequest  {
+  /* unacked_from specifies to the server the sequence_id of the last processed
+     Post Status. Post Status received by the server that have a higher
+     sequence_id will be streamed back to the client. */
+  uint64 unacked_from = 1;
+}
+
+/* ReceivedPostStatus is a post status update received by the local client. */
+message ReceivedPostStatus{
+  /* sequence_id is an opaque sequential ID. */
+  uint64 sequence_id = 1;
+
+  /* relayer_id is the id of the sender of the client that sent the update. */
+  bytes relayer_id = 2;
+
+  /* post_id is the id of the corresponding post. */
+  bytes post_id = 3;
+
+  /* status_from is the original author of the status. */
+  bytes status_from = 4;
+
+  /* status is the full status data. */
+  PostMetadataStatus status = 5;
+}
+
+/* TipUserRequest is a request to tip a remote user. */
+message TipUserRequest {
+  /* user is the remote user nick or hex-encoded ID. */
+  string user = 1;
+  /* dcr_amount is the DCR amount to send as tip. */
+  double dcr_amount = 2;
+}
+
+/* TipUserResponse is the response to a tip user request. */
+message TipUserResponse{}
 
 /******************************************************************************
   *                          Routed RPC Compat
@@ -201,4 +332,24 @@ message RMGroupMessage {
   string message = 3;
   /* mode is the mode of the message. */
   MessageMode mode = 4;
+}
+
+/* PostMetadata is the network-level post data. */
+message PostMetadata {
+  /* version defines the available fields within attributes. */
+  uint64 version = 1;
+  /* attributes defines the available post attributes. */
+  map<string, string> attributes = 2;
+}
+
+/* PostMetadataStatus is the network-level post status update data. */
+message PostMetadataStatus {
+  /* version defines the available fields within attributes. */
+  uint64 version = 1;
+  /* from is the UID of the original status creator. */
+  string from = 2;
+  /* link is the ID of the post. */
+  string link = 3;
+  /* attributes is the list of post update attributes. */
+  map<string,string> attributes = 4;
 }

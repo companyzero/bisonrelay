@@ -48,6 +48,20 @@ func (pmv protoMessageValue) Set(s string) error {
 		}
 		pmv.m.Set(pmv.f, protoreflect.ValueOfInt64(v))
 
+	case protoreflect.Uint64Kind:
+		v, err := strconv.ParseUint(s, 10, 64)
+		if err != nil {
+			return err
+		}
+		pmv.m.Set(pmv.f, protoreflect.ValueOfUint64(v))
+
+	case protoreflect.DoubleKind:
+		v, err := strconv.ParseFloat(s, 10)
+		if err != nil {
+			return err
+		}
+		pmv.m.Set(pmv.f, protoreflect.ValueOfFloat64(v))
+
 	default:
 		return fmt.Errorf("unsupported kind %s in field %s", kind, pmv.f.Name())
 	}
