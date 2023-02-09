@@ -2780,6 +2780,25 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		if err != nil {
 			return nil, err
 		}
+
+		postsRPCServerCfg := rpcserver.PostsServerCfg{
+			Log:               logBknd.logger("RPCS"),
+			Client:            c,
+			RootReplayMsgLogs: filepath.Join(args.DBRoot, "replaymsglog"),
+		}
+		err = rpcServer.InitPostsService(postsRPCServerCfg)
+		if err != nil {
+			return nil, err
+		}
+
+		payRPCServerCfg := rpcserver.PaymentsServerCfg{
+			Log:    logBknd.logger("RPCS"),
+			Client: c,
+		}
+		err = rpcServer.InitPaymentsService(payRPCServerCfg)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
