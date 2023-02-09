@@ -35,7 +35,7 @@ func PostSummFromMetadata(post *rpc.PostMetadata, from UserID) PostSummary {
 		_ = authorID.FromString(id) // Ok to ingore error
 	}
 	var authorNick string
-	if nick, ok := post.Attributes[rpc.RMPStatusFrom]; ok {
+	if nick, ok := post.Attributes[rpc.RMPFromNick]; ok {
 		authorNick = nick
 	}
 
