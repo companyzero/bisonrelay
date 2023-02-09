@@ -5,6 +5,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/companyzero/bisonrelay/client/clientdb"
+	"github.com/companyzero/bisonrelay/client/clientintf"
 	"github.com/companyzero/bisonrelay/rpc"
 )
 
@@ -25,6 +27,37 @@ const onGCMNtfnType = "onGCM"
 type OnGCMNtfn func(*RemoteUser, rpc.RMGroupMessage, time.Time)
 
 func (_ OnGCMNtfn) typ() string { return onGCMNtfnType }
+
+const onPostRcvdNtfnType = "onPostRcvd"
+
+// OnPostRcvdNtfn is the handler for received posts.
+type OnPostRcvdNtfn func(*RemoteUser, clientdb.PostSummary, rpc.PostMetadata)
+
+func (_ OnPostRcvdNtfn) typ() string { return onPostRcvdNtfnType }
+
+const onPostStatusRcvdNtfnType = "onPostStatusRcvd"
+
+// OnPostStatusRcvdNtfn is the handler for received post status updates.0
+type OnPostStatusRcvdNtfn func(*RemoteUser, clientintf.PostID, UserID,
+	rpc.PostMetadataStatus)
+
+func (_ OnPostStatusRcvdNtfn) typ() string { return onPostStatusRcvdNtfnType }
+
+const onRemoteSubscriptionChangedType = "onSubChanged"
+
+// OnRemoteSubscriptionChanged is the handler for a remote user subscription
+// changed event.
+type OnRemoteSubscriptionChangedNtfn func(*RemoteUser, bool)
+
+func (_ OnRemoteSubscriptionChangedNtfn) typ() string { return onRemoteSubscriptionChangedType }
+
+const onRemoteSubscriptionErrorNtfnType = "onSubChangedErr"
+
+// OnRemoteSubscriptionErrorNtfn is the handler for a remote user subscription
+// change attempt that errored.
+type OnRemoteSubscriptionErrorNtfn func(user *RemoteUser, wasSubscribing bool, errMsg string)
+
+func (_ OnRemoteSubscriptionErrorNtfn) typ() string { return onRemoteSubscriptionErrorNtfnType }
 
 // The following is used only in tests.
 
@@ -136,7 +169,6 @@ func (nmgr *NotificationManager) RegisterSync(handler NotificationHandler) Notif
 func (nmgr *NotificationManager) notifyTest() {
 	nmgr.handlers[onTestNtfnType].(*handlersFor[onTestNtfn]).
 		visit(func(h onTestNtfn) { h() })
-
 }
 
 func (nmgr *NotificationManager) notifyOnPM(user *RemoteUser, pm rpc.RMPrivateMessage, ts time.Time) {
@@ -149,12 +181,38 @@ func (nmgr *NotificationManager) notifyOnGCM(user *RemoteUser, gcm rpc.RMGroupMe
 		visit(func(h OnGCMNtfn) { h(user, gcm, ts) })
 }
 
+func (nmgr *NotificationManager) notifyOnPostRcvd(user *RemoteUser, summary clientdb.PostSummary, post rpc.PostMetadata) {
+	nmgr.handlers[onPostRcvdNtfnType].(*handlersFor[OnPostRcvdNtfn]).
+		visit(func(h OnPostRcvdNtfn) { h(user, summary, post) })
+}
+
+func (nmgr *NotificationManager) notifyOnPostStatusRcvd(user *RemoteUser, pid clientintf.PostID,
+	statusFrom UserID, status rpc.PostMetadataStatus) {
+	nmgr.handlers[onPostStatusRcvdNtfnType].(*handlersFor[OnPostStatusRcvdNtfn]).
+		visit(func(h OnPostStatusRcvdNtfn) { h(user, pid, statusFrom, status) })
+}
+
+func (nmgr *NotificationManager) notifyOnRemoteSubChanged(user *RemoteUser, subscribed bool) {
+	nmgr.handlers[onRemoteSubscriptionChangedType].(*handlersFor[OnRemoteSubscriptionChangedNtfn]).
+		visit(func(h OnRemoteSubscriptionChangedNtfn) { h(user, subscribed) })
+}
+
+func (nmgr *NotificationManager) notifyOnRemoteSubErrored(user *RemoteUser, wasSubscribing bool, errMsg string) {
+	nmgr.handlers[onRemoteSubscriptionErrorNtfnType].(*handlersFor[OnRemoteSubscriptionErrorNtfn]).
+		visit(func(h OnRemoteSubscriptionErrorNtfn) { h(user, wasSubscribing, errMsg) })
+}
+
 func NewNotificationManager() *NotificationManager {
 	return &NotificationManager{
 		handlers: map[string]handlersRegistry{
-			onTestNtfnType: &handlersFor[onTestNtfn]{},
-			onPMNtfnType:   &handlersFor[OnPMNtfn]{},
-			onGCMNtfnType:  &handlersFor[OnGCMNtfn]{},
+			onTestNtfnType:           &handlersFor[onTestNtfn]{},
+			onPMNtfnType:             &handlersFor[OnPMNtfn]{},
+			onGCMNtfnType:            &handlersFor[OnGCMNtfn]{},
+			onPostRcvdNtfnType:       &handlersFor[OnPostRcvdNtfn]{},
+			onPostStatusRcvdNtfnType: &handlersFor[OnPostStatusRcvdNtfn]{},
+
+			onRemoteSubscriptionChangedType:   &handlersFor[OnRemoteSubscriptionChangedNtfn]{},
+			onRemoteSubscriptionErrorNtfnType: &handlersFor[OnRemoteSubscriptionErrorNtfn]{},
 		},
 	}
 }

@@ -100,9 +100,7 @@ func (c *Client) handlePostsSubscribeReply(ru *RemoteUser, psr rpc.RMPostsSubscr
 	if psr.Error != nil {
 		subErr := strings.TrimSpace(*psr.Error)
 		ru.log.Warnf("Received error reply when subscribing to posts: %q", subErr)
-		if c.cfg.RemoteSubscriptionError != nil {
-			c.cfg.RemoteSubscriptionError(ru, true, subErr)
-		}
+		c.ntfns.notifyOnRemoteSubErrored(ru, true, subErr)
 	} else {
 		uid := ru.ID()
 		err := c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
@@ -113,9 +111,7 @@ func (c *Client) handlePostsSubscribeReply(ru *RemoteUser, psr rpc.RMPostsSubscr
 		}
 		ru.log.Infof("Successfully subscribed to posts")
 
-		if c.cfg.RemoteSubscriptionChanged != nil {
-			c.cfg.RemoteSubscriptionChanged(ru, true)
-		}
+		c.ntfns.notifyOnRemoteSubChanged(ru, true)
 	}
 
 	return nil
@@ -180,9 +176,7 @@ func (c *Client) handlePostsUnsubscribeReply(ru *RemoteUser, psr rpc.RMPostsUnsu
 	if psr.Error != nil {
 		unsubErr := strings.TrimSpace(*psr.Error)
 		ru.log.Warnf("Received error reply when unsubscribing to posts: %q", unsubErr)
-		if c.cfg.RemoteSubscriptionError != nil {
-			c.cfg.RemoteSubscriptionError(ru, false, unsubErr)
-		}
+		c.ntfns.notifyOnRemoteSubErrored(ru, false, unsubErr)
 	} else {
 		// Double check we unsubscribed.
 		uid := ru.ID()
@@ -194,9 +188,7 @@ func (c *Client) handlePostsUnsubscribeReply(ru *RemoteUser, psr rpc.RMPostsUnsu
 		}
 		ru.log.Infof("Successfully unsubscribed to posts")
 
-		if c.cfg.RemoteSubscriptionChanged != nil {
-			c.cfg.RemoteSubscriptionChanged(ru, false)
-		}
+		c.ntfns.notifyOnRemoteSubChanged(ru, false)
 	}
 
 	return nil
@@ -547,14 +539,10 @@ func (c *Client) handlePostShare(ru *RemoteUser, ps rpc.RMPostShare) error {
 
 	if !isUpdate {
 		ru.log.Infof("Received post %s", pid)
-		if c.cfg.PostReceived != nil {
-			c.cfg.PostReceived(ru, summ, p)
-		}
+		c.ntfns.notifyOnPostRcvd(ru, summ, p)
 	} else {
 		ru.log.Infof("Received post update %s from %s", pid, statusFrom)
-		if c.cfg.PostStatusReceived != nil {
-			c.cfg.PostStatusReceived(ru, pid, statusFrom, update)
-		}
+		c.ntfns.notifyOnPostStatusRcvd(ru, pid, statusFrom, update)
 	}
 
 	return nil
@@ -639,9 +627,7 @@ func (c *Client) addStatusToPost(statusFrom clientintf.UserID, pms *rpc.PostMeta
 	c.log.Infof("New %s %x from %s on post %s", statusType, pms.Hash(), fromStr, pid)
 
 	// Alert UI that we have a new post status.
-	if c.cfg.PostStatusReceived != nil {
-		c.cfg.PostStatusReceived(nil, pid, statusFrom, *pms)
-	}
+	c.ntfns.notifyOnPostStatusRcvd(nil, pid, statusFrom, *pms)
 
 	// Send status update to all subscribers.
 	if err := c.shareWithPostSubscribers(subs, pid, rm, "statusupdate"); err != nil {
@@ -947,10 +933,10 @@ func (c *Client) relayPost(postFrom clientintf.UserID, pid clientintf.PostID,
 		pid, len(updates), from, len(users))
 
 	// If relaying for the first time, send an event to UI.
-	if firstRelay && c.cfg.PostReceived != nil {
+	if firstRelay {
 		summ := clientdb.PostSummFromMetadata(&post, c.id.Public.Identity)
 		summ.Date = time.Now()
-		c.cfg.PostReceived(nil, summ, post)
+		c.ntfns.notifyOnPostRcvd(nil, summ, post)
 	}
 
 	// Relay post.

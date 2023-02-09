@@ -123,7 +123,7 @@ type Config struct {
 
 	// PostReceived is called when a new post is received from a remote
 	// user.
-	PostReceived func(user *RemoteUser, summary clientdb.PostSummary, post rpc.PostMetadata)
+	//PostReceived func(user *RemoteUser, summary clientdb.PostSummary, post rpc.PostMetadata)
 
 	// PostStatusReceived is called when we receive a status update for a
 	// given post.
@@ -131,8 +131,8 @@ type Config struct {
 	// Note: user may be nil if the status update is for a post made by the
 	// local user. This can happen both for received status updates and
 	// status updates made by the local client.
-	PostStatusReceived func(user *RemoteUser, pid clientintf.PostID,
-		statusFrom UserID, status rpc.PostMetadataStatus)
+	//PostStatusReceived func(user *RemoteUser, pid clientintf.PostID,
+	//	statusFrom UserID, status rpc.PostMetadataStatus)
 
 	TipReceived func(user *RemoteUser, amount float64)
 
@@ -145,12 +145,12 @@ type Config struct {
 	// receives the result of a {Subscribe,Unsubscribe}ToPosts call. In
 	// other words, it's called whenever the status of a local subscription
 	// to a remote user's posts changes.
-	RemoteSubscriptionChanged func(user *RemoteUser, subscribed bool)
+	//RemoteSubscriptionChanged func(user *RemoteUser, subscribed bool)
 
 	// RemoteSubscriptionError is called when the local client receives a
 	// reply to a {Subscribe,Unsubscribe}ToPosts call with a remote error
 	// message.
-	RemoteSubscriptionError func(user *RemoteUser, wasSubscribing bool, errMsg string)
+	//RemoteSubscriptionError func(user *RemoteUser, wasSubscribing bool, errMsg string)
 
 	// ContentListReceived is called when the list of content of the user is
 	// received.

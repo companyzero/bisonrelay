@@ -2098,6 +2098,125 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		as.repaintIfActiveWithMention(cw, hasMention(as.c.LocalNick(), s))
 	}))
 
+	ntfns.Register(client.OnPostRcvdNtfn(func(user *client.RemoteUser,
+		summ clientdb.PostSummary, pm rpc.PostMetadata) {
+
+		// user == nil when event is a post being relayed for
+		// the first time.
+		nick := "(no nick)"
+		if user != nil {
+			if user.IsIgnored() {
+				return
+			}
+			nick = user.Nick()
+		}
+		as.diagMsg("Received post %q (%s) from %q",
+			summ.Title, summ.ID, nick)
+
+		// Store new post.
+		as.loadPosts()
+
+		// Signal updated feed window.
+		as.chatWindowsMtx.Lock()
+		if as.activeCW != activeCWFeed {
+			as.updatedCW[activeCWFeed] = false
+		}
+		as.chatWindowsMtx.Unlock()
+
+		as.footerInvalidate()
+		as.sendMsg(feedUpdated{})
+	}))
+
+	ntfns.Register(client.OnPostStatusRcvdNtfn(func(user *client.RemoteUser, pid clientintf.PostID,
+		statusFrom clientintf.UserID, status rpc.PostMetadataStatus) {
+		as.postsMtx.Lock()
+
+		// If user is nil, post is from myself.
+		postFrom := as.c.PublicID()
+		if user != nil {
+			postFrom = user.ID()
+		}
+
+		if user == nil || statusFrom == as.c.PublicID() {
+			// Comment from me. Remove comment from list of
+			// unsent.
+			for i, cmt := range as.myComments {
+				if cmt != status.Attributes[rpc.RMPSComment] {
+					continue
+				}
+
+				copy(as.myComments[i:], as.myComments[i+1:])
+				as.myComments = as.myComments[:len(as.myComments)-1]
+				break
+			}
+		}
+
+		// Mark post updated.
+		for i := range as.posts {
+			post := &as.posts[i]
+			if postFrom != post.From || pid != post.ID {
+				continue
+			}
+
+			// Status is for this post.
+			post.LastStatusTS = time.Now()
+		}
+
+		if postFrom == as.postSumm.From && pid == as.postSumm.ID {
+			// It's the active post, so store the new
+			// status update.
+			as.postStatus = append(as.postStatus, status)
+		}
+
+		as.postsMtx.Unlock()
+
+		if statusFrom != as.c.PublicID() {
+			// Signal updated feed window.
+			as.chatWindowsMtx.Lock()
+			if as.activeCW != activeCWFeed {
+				as.updatedCW[activeCWFeed] = false
+			}
+			as.chatWindowsMtx.Unlock()
+			as.footerInvalidate()
+		}
+
+		if user != nil && user.IsIgnored() {
+			return
+		}
+
+		as.sendMsg(status)
+	}))
+
+	ntfns.Register(client.OnRemoteSubscriptionChangedNtfn(func(user *client.RemoteUser, subscribed bool) {
+		cw := as.findChatWindow(user.ID())
+		msg := fmt.Sprintf("Subscribed to %s posts", strescape.Nick(user.Nick()))
+		if !subscribed {
+			msg = fmt.Sprintf("Unsubscribed from %s posts", strescape.Nick(user.Nick()))
+		}
+		if cw == nil {
+			as.diagMsg(msg)
+		} else {
+			cw.newHelpMsg(msg)
+			as.repaintIfActive(cw)
+		}
+	}))
+
+	ntfns.Register(client.OnRemoteSubscriptionErrorNtfn(func(user *client.RemoteUser, wasSubscribing bool, errMsg string) {
+		cw := as.findChatWindow(user.ID())
+		msg := fmt.Sprintf("Attempt to subscribe to %s posts "+
+			"failed: %s", strescape.Nick(user.Nick()), strescape.Content(errMsg))
+		if !wasSubscribing {
+			msg = fmt.Sprintf("Attempt to unsubscribe to %s posts "+
+				"failed: %s", strescape.Nick(user.Nick()), strescape.Content(errMsg))
+		}
+		if cw == nil {
+			as.diagMsg(msg)
+		} else {
+			cw.newHelpMsg(msg)
+			as.repaintIfActive(cw)
+		}
+	}))
+
 	// Initialize client config.
 	cfg := client.Config{
 		DB:             db,
@@ -2403,131 +2522,12 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 			as.repaintIfActive(cw)
 		},
 
-		PostReceived: func(user *client.RemoteUser,
-			summ clientdb.PostSummary, pm rpc.PostMetadata) {
-
-			// user == nil when event is a post being relayed for
-			// the first time.
-			nick := "(no nick)"
-			if user != nil {
-				if user.IsIgnored() {
-					return
-				}
-				nick = user.Nick()
-			}
-			as.diagMsg("Received post %q (%s) from %q",
-				summ.Title, summ.ID, nick)
-
-			// Store new post.
-			as.loadPosts()
-
-			// Signal updated feed window.
-			as.chatWindowsMtx.Lock()
-			if as.activeCW != activeCWFeed {
-				as.updatedCW[activeCWFeed] = false
-			}
-			as.chatWindowsMtx.Unlock()
-
-			as.footerInvalidate()
-			as.sendMsg(feedUpdated{})
-		},
-
-		PostStatusReceived: func(user *client.RemoteUser, pid clientintf.PostID,
-			statusFrom clientintf.UserID, status rpc.PostMetadataStatus) {
-			as.postsMtx.Lock()
-
-			// If user is nil, post is from myself.
-			postFrom := as.c.PublicID()
-			if user != nil {
-				postFrom = user.ID()
-			}
-
-			if user == nil || statusFrom == as.c.PublicID() {
-				// Comment from me. Remove comment from list of
-				// unsent.
-				for i, cmt := range as.myComments {
-					if cmt != status.Attributes[rpc.RMPSComment] {
-						continue
-					}
-
-					copy(as.myComments[i:], as.myComments[i+1:])
-					as.myComments = as.myComments[:len(as.myComments)-1]
-					break
-				}
-			}
-
-			// Mark post updated.
-			for i := range as.posts {
-				post := &as.posts[i]
-				if postFrom != post.From || pid != post.ID {
-					continue
-				}
-
-				// Status is for this post.
-				post.LastStatusTS = time.Now()
-			}
-
-			if postFrom == as.postSumm.From && pid == as.postSumm.ID {
-				// It's the active post, so store the new
-				// status update.
-				as.postStatus = append(as.postStatus, status)
-			}
-
-			as.postsMtx.Unlock()
-
-			if statusFrom != as.c.PublicID() {
-				// Signal updated feed window.
-				as.chatWindowsMtx.Lock()
-				if as.activeCW != activeCWFeed {
-					as.updatedCW[activeCWFeed] = false
-				}
-				as.chatWindowsMtx.Unlock()
-				as.footerInvalidate()
-			}
-
-			if user != nil && user.IsIgnored() {
-				return
-			}
-
-			as.sendMsg(status)
-		},
-
 		SubscriptionChanged: func(user *client.RemoteUser, subscribed bool) {
 			cw := as.findChatWindow(user.ID())
 			msg := fmt.Sprintf("%s subscribed to my posts", strescape.Nick(user.Nick()))
 			if !subscribed {
 				msg = fmt.Sprintf("%s unsubscribed from my posts",
 					strescape.Nick(user.Nick()))
-			}
-			if cw == nil {
-				as.diagMsg(msg)
-			} else {
-				cw.newHelpMsg(msg)
-				as.repaintIfActive(cw)
-			}
-		},
-
-		RemoteSubscriptionChanged: func(user *client.RemoteUser, subscribed bool) {
-			cw := as.findChatWindow(user.ID())
-			msg := fmt.Sprintf("Subscribed to %s posts", strescape.Nick(user.Nick()))
-			if !subscribed {
-				msg = fmt.Sprintf("Unsubscribed from %s posts", strescape.Nick(user.Nick()))
-			}
-			if cw == nil {
-				as.diagMsg(msg)
-			} else {
-				cw.newHelpMsg(msg)
-				as.repaintIfActive(cw)
-			}
-		},
-
-		RemoteSubscriptionError: func(user *client.RemoteUser, wasSubscribing bool, errMsg string) {
-			cw := as.findChatWindow(user.ID())
-			msg := fmt.Sprintf("Attempt to subscribe to %s posts "+
-				"failed: %s", strescape.Nick(user.Nick()), strescape.Content(errMsg))
-			if !wasSubscribing {
-				msg = fmt.Sprintf("Attempt to unsubscribe to %s posts "+
-					"failed: %s", strescape.Nick(user.Nick()), strescape.Content(errMsg))
 			}
 			if cw == nil {
 				as.diagMsg(msg)

@@ -161,6 +161,11 @@ func (tc *testClient) nextGCUserPartedIs(gcID client.GCID, uid client.UserID, ki
 	return c
 }
 
+// handle is syntatic sugar for tc.NotificationManager().Register()
+func (tc *testClient) handle(handler client.NotificationHandler) client.NotificationRegistration {
+	return tc.NotificationManager().Register(handler)
+}
+
 // testScaffold holds all scaffolding needed to run an E2E test that involves
 // an instance of a BR server and client.
 type testScaffold struct {
