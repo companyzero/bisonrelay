@@ -3,7 +3,8 @@ package types
 // Services returns the full list of service definitions defined in this
 // package.
 func Services() []ServiceDefn {
-	return []ServiceDefn{VersionServiceDefn(), ChatServiceDefn()}
+	return []ServiceDefn{VersionServiceDefn(), ChatServiceDefn(),
+		PostsServiceDefn(), PaymentsServiceDefn()}
 }
 
 // HelpForMessage returns the top-level help defined for the given proto

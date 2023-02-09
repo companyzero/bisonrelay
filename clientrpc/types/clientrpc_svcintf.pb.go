@@ -300,6 +300,266 @@ func ChatServiceDefn() ServiceDefn {
 	}
 }
 
+// PostsServiceClient is the client API for PostsService service.
+type PostsServiceClient interface {
+	// SubscribeToPosts makes the local client subscribe to a remote user's posts.
+	SubscribeToPosts(ctx context.Context, in *SubscribeToPostsRequest, out *SubscribeToPostsResponse) error
+	// UnsubscribeToPosts makes the local client unsubscribe from a remote user's posts.
+	UnsubscribeToPosts(ctx context.Context, in *UnsubscribeToPostsRequest, out *UnsubscribeToPostsResponse) error
+	// PostsStream creates a stream that receives updates about posts received
+	// from remote users the local client is subscribed to.
+	PostsStream(ctx context.Context, in *PostsStreamRequest) (PostsService_PostsStreamClient, error)
+	// AckReceivedPost acknowledges posts received up to a given sequence_id have
+	// been processed.
+	AckReceivedPost(ctx context.Context, in *AckRequest, out *AckResponse) error
+	// PostsStatusStream creates a stream that receives updates about post status
+	// events (comments, replies, etc).
+	PostsStatusStream(ctx context.Context, in *PostsStatusStreamRequest) (PostsService_PostsStatusStreamClient, error)
+	// AckReceivedPostStatus acknowledges post status received up to a given
+	// sequence_id have been processed.
+	AckReceivedPostStatus(ctx context.Context, in *AckRequest, out *AckResponse) error
+}
+
+type client_PostsService struct {
+	c    ClientConn
+	defn ServiceDefn
+}
+
+func (c *client_PostsService) SubscribeToPosts(ctx context.Context, in *SubscribeToPostsRequest, out *SubscribeToPostsResponse) error {
+	const method = "SubscribeToPosts"
+	return c.defn.Methods[method].ClientHandler(c.c, ctx, in, out)
+}
+
+func (c *client_PostsService) UnsubscribeToPosts(ctx context.Context, in *UnsubscribeToPostsRequest, out *UnsubscribeToPostsResponse) error {
+	const method = "UnsubscribeToPosts"
+	return c.defn.Methods[method].ClientHandler(c.c, ctx, in, out)
+}
+
+type PostsService_PostsStreamClient interface {
+	Recv(*ReceivedPost) error
+}
+
+func (c *client_PostsService) PostsStream(ctx context.Context, in *PostsStreamRequest) (PostsService_PostsStreamClient, error) {
+	const method = "PostsStream"
+	inner, err := c.defn.Methods[method].ClientStreamHandler(c.c, ctx, in)
+	if err != nil {
+		return nil, err
+	}
+	return streamerImpl[*ReceivedPost]{c: inner}, nil
+}
+
+func (c *client_PostsService) AckReceivedPost(ctx context.Context, in *AckRequest, out *AckResponse) error {
+	const method = "AckReceivedPost"
+	return c.defn.Methods[method].ClientHandler(c.c, ctx, in, out)
+}
+
+type PostsService_PostsStatusStreamClient interface {
+	Recv(*ReceivedPostStatus) error
+}
+
+func (c *client_PostsService) PostsStatusStream(ctx context.Context, in *PostsStatusStreamRequest) (PostsService_PostsStatusStreamClient, error) {
+	const method = "PostsStatusStream"
+	inner, err := c.defn.Methods[method].ClientStreamHandler(c.c, ctx, in)
+	if err != nil {
+		return nil, err
+	}
+	return streamerImpl[*ReceivedPostStatus]{c: inner}, nil
+}
+
+func (c *client_PostsService) AckReceivedPostStatus(ctx context.Context, in *AckRequest, out *AckResponse) error {
+	const method = "AckReceivedPostStatus"
+	return c.defn.Methods[method].ClientHandler(c.c, ctx, in, out)
+}
+
+func NewPostsServiceClient(c ClientConn) PostsServiceClient {
+	return &client_PostsService{c: c, defn: PostsServiceDefn()}
+}
+
+// PostsServiceServer is the server API for PostsService service.
+type PostsServiceServer interface {
+	// SubscribeToPosts makes the local client subscribe to a remote user's posts.
+	SubscribeToPosts(context.Context, *SubscribeToPostsRequest, *SubscribeToPostsResponse) error
+	// UnsubscribeToPosts makes the local client unsubscribe from a remote user's posts.
+	UnsubscribeToPosts(context.Context, *UnsubscribeToPostsRequest, *UnsubscribeToPostsResponse) error
+	// PostsStream creates a stream that receives updates about posts received
+	// from remote users the local client is subscribed to.
+	PostsStream(context.Context, *PostsStreamRequest, PostsService_PostsStreamServer) error
+	// AckReceivedPost acknowledges posts received up to a given sequence_id have
+	// been processed.
+	AckReceivedPost(context.Context, *AckRequest, *AckResponse) error
+	// PostsStatusStream creates a stream that receives updates about post status
+	// events (comments, replies, etc).
+	PostsStatusStream(context.Context, *PostsStatusStreamRequest, PostsService_PostsStatusStreamServer) error
+	// AckReceivedPostStatus acknowledges post status received up to a given
+	// sequence_id have been processed.
+	AckReceivedPostStatus(context.Context, *AckRequest, *AckResponse) error
+}
+
+type PostsService_PostsStreamServer interface {
+	Send(m *ReceivedPost) error
+}
+
+type PostsService_PostsStatusStreamServer interface {
+	Send(m *ReceivedPostStatus) error
+}
+
+func PostsServiceDefn() ServiceDefn {
+	return ServiceDefn{
+		Name: "PostsService",
+		Methods: map[string]MethodDefn{
+			"SubscribeToPosts": {
+				IsStreaming: false,
+				NewRequest:  func() proto.Message { return new(SubscribeToPostsRequest) },
+				NewResponse: func() proto.Message { return new(SubscribeToPostsResponse) },
+				RequestDefn: func() protoreflect.MessageDescriptor { return new(SubscribeToPostsRequest).ProtoReflect().Descriptor() },
+				ResponseDefn: func() protoreflect.MessageDescriptor {
+					return new(SubscribeToPostsResponse).ProtoReflect().Descriptor()
+				},
+				Help: "SubscribeToPosts makes the local client subscribe to a remote user's posts.",
+				ServerHandler: func(x interface{}, ctx context.Context, request, response proto.Message) error {
+					return x.(PostsServiceServer).SubscribeToPosts(ctx, request.(*SubscribeToPostsRequest), response.(*SubscribeToPostsResponse))
+				},
+				ClientHandler: func(conn ClientConn, ctx context.Context, request, response proto.Message) error {
+					method := "PostsService.SubscribeToPosts"
+					return conn.Request(ctx, method, request, response)
+				},
+			},
+			"UnsubscribeToPosts": {
+				IsStreaming: false,
+				NewRequest:  func() proto.Message { return new(UnsubscribeToPostsRequest) },
+				NewResponse: func() proto.Message { return new(UnsubscribeToPostsResponse) },
+				RequestDefn: func() protoreflect.MessageDescriptor {
+					return new(UnsubscribeToPostsRequest).ProtoReflect().Descriptor()
+				},
+				ResponseDefn: func() protoreflect.MessageDescriptor {
+					return new(UnsubscribeToPostsResponse).ProtoReflect().Descriptor()
+				},
+				Help: "UnsubscribeToPosts makes the local client unsubscribe from a remote user's posts.",
+				ServerHandler: func(x interface{}, ctx context.Context, request, response proto.Message) error {
+					return x.(PostsServiceServer).UnsubscribeToPosts(ctx, request.(*UnsubscribeToPostsRequest), response.(*UnsubscribeToPostsResponse))
+				},
+				ClientHandler: func(conn ClientConn, ctx context.Context, request, response proto.Message) error {
+					method := "PostsService.UnsubscribeToPosts"
+					return conn.Request(ctx, method, request, response)
+				},
+			},
+			"PostsStream": {
+				IsStreaming:  true,
+				NewRequest:   func() proto.Message { return new(PostsStreamRequest) },
+				NewResponse:  func() proto.Message { return new(ReceivedPost) },
+				RequestDefn:  func() protoreflect.MessageDescriptor { return new(PostsStreamRequest).ProtoReflect().Descriptor() },
+				ResponseDefn: func() protoreflect.MessageDescriptor { return new(ReceivedPost).ProtoReflect().Descriptor() },
+				Help:         "PostsStream creates a stream that receives updates about posts received from remote users the local client is subscribed to.",
+				ServerStreamHandler: func(x interface{}, ctx context.Context, request proto.Message, stream ServerStream) error {
+					return x.(PostsServiceServer).PostsStream(ctx, request.(*PostsStreamRequest), streamerImpl[*ReceivedPost]{s: stream})
+				},
+				ClientStreamHandler: func(conn ClientConn, ctx context.Context, request proto.Message) (ClientStream, error) {
+					method := "PostsService.PostsStream"
+					return conn.Stream(ctx, method, request)
+				},
+			},
+			"AckReceivedPost": {
+				IsStreaming:  false,
+				NewRequest:   func() proto.Message { return new(AckRequest) },
+				NewResponse:  func() proto.Message { return new(AckResponse) },
+				RequestDefn:  func() protoreflect.MessageDescriptor { return new(AckRequest).ProtoReflect().Descriptor() },
+				ResponseDefn: func() protoreflect.MessageDescriptor { return new(AckResponse).ProtoReflect().Descriptor() },
+				Help:         "AckReceivedPost acknowledges posts received up to a given sequence_id have been processed.",
+				ServerHandler: func(x interface{}, ctx context.Context, request, response proto.Message) error {
+					return x.(PostsServiceServer).AckReceivedPost(ctx, request.(*AckRequest), response.(*AckResponse))
+				},
+				ClientHandler: func(conn ClientConn, ctx context.Context, request, response proto.Message) error {
+					method := "PostsService.AckReceivedPost"
+					return conn.Request(ctx, method, request, response)
+				},
+			},
+			"PostsStatusStream": {
+				IsStreaming: true,
+				NewRequest:  func() proto.Message { return new(PostsStatusStreamRequest) },
+				NewResponse: func() proto.Message { return new(ReceivedPostStatus) },
+				RequestDefn: func() protoreflect.MessageDescriptor {
+					return new(PostsStatusStreamRequest).ProtoReflect().Descriptor()
+				},
+				ResponseDefn: func() protoreflect.MessageDescriptor { return new(ReceivedPostStatus).ProtoReflect().Descriptor() },
+				Help:         "PostsStatusStream creates a stream that receives updates about post status events (comments, replies, etc).",
+				ServerStreamHandler: func(x interface{}, ctx context.Context, request proto.Message, stream ServerStream) error {
+					return x.(PostsServiceServer).PostsStatusStream(ctx, request.(*PostsStatusStreamRequest), streamerImpl[*ReceivedPostStatus]{s: stream})
+				},
+				ClientStreamHandler: func(conn ClientConn, ctx context.Context, request proto.Message) (ClientStream, error) {
+					method := "PostsService.PostsStatusStream"
+					return conn.Stream(ctx, method, request)
+				},
+			},
+			"AckReceivedPostStatus": {
+				IsStreaming:  false,
+				NewRequest:   func() proto.Message { return new(AckRequest) },
+				NewResponse:  func() proto.Message { return new(AckResponse) },
+				RequestDefn:  func() protoreflect.MessageDescriptor { return new(AckRequest).ProtoReflect().Descriptor() },
+				ResponseDefn: func() protoreflect.MessageDescriptor { return new(AckResponse).ProtoReflect().Descriptor() },
+				Help:         "AckReceivedPostStatus acknowledges post status received up to a given sequence_id have been processed.",
+				ServerHandler: func(x interface{}, ctx context.Context, request, response proto.Message) error {
+					return x.(PostsServiceServer).AckReceivedPostStatus(ctx, request.(*AckRequest), response.(*AckResponse))
+				},
+				ClientHandler: func(conn ClientConn, ctx context.Context, request, response proto.Message) error {
+					method := "PostsService.AckReceivedPostStatus"
+					return conn.Request(ctx, method, request, response)
+				},
+			},
+		},
+	}
+}
+
+// PaymentsServiceClient is the client API for PaymentsService service.
+type PaymentsServiceClient interface {
+	// TipUser attempts to send a tip to a user. The user must be or come online
+	// for this to complete.
+	TipUser(ctx context.Context, in *TipUserRequest, out *TipUserResponse) error
+}
+
+type client_PaymentsService struct {
+	c    ClientConn
+	defn ServiceDefn
+}
+
+func (c *client_PaymentsService) TipUser(ctx context.Context, in *TipUserRequest, out *TipUserResponse) error {
+	const method = "TipUser"
+	return c.defn.Methods[method].ClientHandler(c.c, ctx, in, out)
+}
+
+func NewPaymentsServiceClient(c ClientConn) PaymentsServiceClient {
+	return &client_PaymentsService{c: c, defn: PaymentsServiceDefn()}
+}
+
+// PaymentsServiceServer is the server API for PaymentsService service.
+type PaymentsServiceServer interface {
+	// TipUser attempts to send a tip to a user. The user must be or come online
+	// for this to complete.
+	TipUser(context.Context, *TipUserRequest, *TipUserResponse) error
+}
+
+func PaymentsServiceDefn() ServiceDefn {
+	return ServiceDefn{
+		Name: "PaymentsService",
+		Methods: map[string]MethodDefn{
+			"TipUser": {
+				IsStreaming:  false,
+				NewRequest:   func() proto.Message { return new(TipUserRequest) },
+				NewResponse:  func() proto.Message { return new(TipUserResponse) },
+				RequestDefn:  func() protoreflect.MessageDescriptor { return new(TipUserRequest).ProtoReflect().Descriptor() },
+				ResponseDefn: func() protoreflect.MessageDescriptor { return new(TipUserResponse).ProtoReflect().Descriptor() },
+				Help:         "TipUser attempts to send a tip to a user. The user must be or come online for this to complete.",
+				ServerHandler: func(x interface{}, ctx context.Context, request, response proto.Message) error {
+					return x.(PaymentsServiceServer).TipUser(ctx, request.(*TipUserRequest), response.(*TipUserResponse))
+				},
+				ClientHandler: func(conn ClientConn, ctx context.Context, request, response proto.Message) error {
+					method := "PaymentsService.TipUser"
+					return conn.Request(ctx, method, request, response)
+				},
+			},
+		},
+	}
+}
+
 var help_messages = map[string]map[string]string{
 	"VersionRequest": {
 		"@": "",
@@ -320,11 +580,11 @@ var help_messages = map[string]map[string]string{
 		"timestamp": "timestamp is the unix timestamp on the server, with second precision.",
 	},
 	"AckRequest": {
-		"@":           "",
-		"sequence_id": "",
+		"@":           "AckRequest is a request to ack that a type of message up to a sequence ID has been processed.",
+		"sequence_id": "sequence_id is the ID up to which messages have been processed.",
 	},
 	"AckResponse": {
-		"@": "",
+		"@": "AckResponse is the response to an ack request.",
 	},
 	"PMRequest": {
 		"@":    "PMRequest is a request to send a new private message.",
@@ -367,6 +627,61 @@ var help_messages = map[string]map[string]string{
 		"timestamp_ms": "timestamp_ms is the server timestamp of the message with millisecond precision.",
 		"sequence_id":  "sequence_id is an opaque sequential ID.",
 	},
+	"SubscribeToPostsRequest": {
+		"@":    "SubscribeToPostsRequest is a request to subscribe to a remote user's posts.",
+		"user": "user is the nick or hex-encoded ID of the user to subscribe to.",
+	},
+	"SubscribeToPostsResponse": {
+		"@": "SubscribeToPostsResponse is the response to subscribing to a remote user's posts.",
+	},
+	"UnsubscribeToPostsRequest": {
+		"@":    "UnsubscribeToPostsRequest is a request to unsubscribe from a remote user's posts.",
+		"user": "user is the nick or hex-encoded ID of the user to unsubscribe from.",
+	},
+	"UnsubscribeToPostsResponse": {
+		"@": "UnsubscribeToPostsResponse is the response to an unsubscribe request.",
+	},
+	"PostSummary": {
+		"@":              "PostSummary is the summary information about a post.",
+		"id":             "id is the post ID (hash of the post metadata).",
+		"from":           "from is the id of the relayer of the post (who the local client received the post from).",
+		"author_id":      "author_id is the id of the author of the post.",
+		"author_nick":    "author_nick is the reported nick of the author of the post.",
+		"date":           "date is the unix timestamp of the post.",
+		"last_status_ts": "last_status_ts is the timestamp of the last recorded status update of the post.",
+		"title":          "title is either the included or suggested title of the post.",
+	},
+	"PostsStreamRequest": {
+		"@":            "PostsStreamRequest is the request to establish a stream of received post events.",
+		"unacked_from": "unacked_from specifies to the server the sequence_id of the last processed post. Posts received by the server that have a higher sequence_id will be streamed back to the client.",
+	},
+	"ReceivedPost": {
+		"@":           "ReceivedPost is a post received by the local client.",
+		"sequence_id": "sequence_id is an opaque sequential ID.",
+		"relayer_id":  "relayer_id is the id of the user we received the post from (may not be the same as the author).",
+		"summary":     "summary is the summary information about the post.",
+		"post":        "post is the full post data.",
+	},
+	"PostsStatusStreamRequest": {
+		"@":            "PostsStatusStreamRequest is a request to establish a stream that receives post status updates received by the local client.",
+		"unacked_from": "unacked_from specifies to the server the sequence_id of the last processed Post Status. Post Status received by the server that have a higher sequence_id will be streamed back to the client.",
+	},
+	"ReceivedPostStatus": {
+		"@":           "ReceivedPostStatus is a post status update received by the local client.",
+		"sequence_id": "sequence_id is an opaque sequential ID.",
+		"relayer_id":  "relayer_id is the id of the sender of the client that sent the update.",
+		"post_id":     "post_id is the id of the corresponding post.",
+		"status_from": "status_from is the original author of the status.",
+		"status":      "status is the full status data.",
+	},
+	"TipUserRequest": {
+		"@":          "TipUserRequest is a request to tip a remote user.",
+		"user":       "user is the remote user nick or hex-encoded ID.",
+		"dcr_amount": "dcr_amount is the DCR amount to send as tip.",
+	},
+	"TipUserResponse": {
+		"@": "TipUserResponse is the response to a tip user request.",
+	},
 	"RMPrivateMessage": {
 		"@":       "RMPrivateMessage is the network-level routed private message.",
 		"message": "message is the private message payload.",
@@ -378,5 +693,17 @@ var help_messages = map[string]map[string]string{
 		"generation": "generation is the internal generation of the group chat metadata when the sender sent this message.",
 		"message":    "message is the textual content.",
 		"mode":       "mode is the mode of the message.",
+	},
+	"PostMetadata": {
+		"@":          "PostMetadata is the network-level post data.",
+		"version":    "version defines the available fields within attributes.",
+		"attributes": "attributes defines the available post attributes.",
+	},
+	"PostMetadataStatus": {
+		"@":          "PostMetadataStatus is the network-level post status update data.",
+		"version":    "version defines the available fields within attributes.",
+		"from":       "from is the UID of the original status creator.",
+		"link":       "link is the ID of the post.",
+		"attributes": "attributes is the list of post update attributes.",
 	},
 }
