@@ -924,180 +924,6 @@ func TestE2EDcrlnTipUser(t *testing.T) {
 	}
 }
 
-func TestE2EDcrlnPostContent(t *testing.T) {
-	rnd := testRand(t)
-	alice := newTestClient(t, rnd, "alice")
-	bob := newTestClient(t, rnd, "bob")
-	charlie := newTestClient(t, rnd, "charlie")
-
-	bobRecvPosts := make(chan rpc.PostMetadata, 1)
-	bob.cfg.PostReceived = func(ru *RemoteUser, summary clientdb.PostSummary, pm rpc.PostMetadata) {
-		bobRecvPosts <- pm
-	}
-	bobRecvComments := make(chan string)
-	bob.cfg.PostStatusReceived = func(user *RemoteUser, pid clientintf.PostID,
-		statusFrom UserID, status rpc.PostMetadataStatus) {
-		bobRecvComments <- status.Attributes[rpc.RMPSComment]
-	}
-	bobSubChanged := make(chan bool, 3)
-	bob.cfg.RemoteSubscriptionChanged = func(user *RemoteUser, subscribed bool) {
-		bobSubChanged <- subscribed
-	}
-
-	charlieRecvPosts := make(chan rpc.PostMetadata, 1)
-	charlie.cfg.PostReceived = func(ru *RemoteUser, summary clientdb.PostSummary, pm rpc.PostMetadata) {
-		charlieRecvPosts <- pm
-	}
-	charlieSubChanged := make(chan bool, 3)
-	charlie.cfg.RemoteSubscriptionChanged = func(user *RemoteUser, subscribed bool) {
-		charlieSubChanged <- subscribed
-	}
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	go func() { _ = alice.Run(ctx) }()
-	go func() { _ = bob.Run(ctx) }()
-	go func() { _ = charlie.Run(ctx) }()
-
-	time.Sleep(100 * time.Millisecond) // Time for run() to start.
-	completeC2CKX(t, alice, bob)
-	completeC2CKX(t, bob, charlie)
-
-	// Alice creates a post before any subscriptions.
-	if _, err := alice.CreatePost("first", ""); err != nil {
-		t.Fatal(err)
-	}
-
-	// Bob should _not_ get a notification.
-	select {
-	case pm := <-bobRecvPosts:
-		t.Fatalf("received unexpected post: %v", pm)
-	case <-time.After(50 * time.Millisecond):
-	}
-
-	// Bob subscribe to Alice's posts.
-	if err := bob.SubscribeToPosts(alice.PublicID()); err != nil {
-		t.Fatal(err)
-	}
-	if !assert.ChanWritten(t, bobSubChanged) {
-		t.Fatal("bob did not subscribe to alice's posts")
-	}
-
-	// Charlie subscribes to Bob's posts.
-	if err := charlie.SubscribeToPosts(bob.PublicID()); err != nil {
-		t.Fatal(err)
-	}
-	if !assert.ChanWritten(t, charlieSubChanged) {
-		t.Fatal("charlie did not subscribe to alice's posts")
-	}
-
-	// Alice creates a post that bob will receive.
-	alicePost, err := alice.CreatePost("second", "")
-	if err != nil {
-		t.Fatal(err)
-	}
-	select {
-	case pm := <-bobRecvPosts:
-		if pm.Attributes[rpc.RMPMain] != "second" {
-			t.Fatalf("unexpected pm: %v", pm)
-		}
-	case <-time.After(10 * time.Second):
-		t.Fatal("timeout")
-	}
-
-	// Alice writes a comment. Bob should receive it.
-	wantComment := "alice comment"
-	if err := alice.CommentPost(alice.PublicID(), alicePost.ID, wantComment, nil); err != nil {
-		t.Fatal(err)
-	}
-	select {
-	case comment := <-bobRecvComments:
-		if comment != wantComment {
-			t.Fatalf("unexpected comment: got %s, want %s", comment,
-				wantComment)
-		}
-	case <-time.After(30 * time.Second):
-		t.Fatal("timeout")
-	}
-
-	// Bob writes a comment. Bob should receive after it's replicated by Alice.
-	wantComment = "bob comment"
-	if err := bob.CommentPost(alice.PublicID(), alicePost.ID, wantComment, nil); err != nil {
-		t.Fatal(err)
-	}
-	select {
-	case comment := <-bobRecvComments:
-		if comment != wantComment {
-			t.Fatalf("unexpected comment: got %s, want %s", comment,
-				wantComment)
-		}
-	case <-time.After(30 * time.Second):
-		t.Fatal("timeout")
-	}
-
-	// Bob unsubscribes to Alice's posts.
-	if err := bob.UnsubscribeToPosts(alice.PublicID()); err != nil {
-		t.Fatal(err)
-	}
-	if assert.ChanWritten(t, bobSubChanged) {
-		t.Fatal("bob did not unsubscribe to alice's posts")
-	}
-
-	// Alice creates a post that Bob shouldn't get anymore.
-	if _, err := alice.CreatePost("third", ""); err != nil {
-		t.Fatal(err)
-	}
-	select {
-	case pm := <-bobRecvPosts:
-		t.Fatalf("received unexpected post: %v", pm)
-	case <-time.After(50 * time.Millisecond):
-	}
-
-	// Charlie shouldn't have received any posts.
-	select {
-	case pm := <-charlieRecvPosts:
-		t.Fatalf("received unexpected post: %v", pm)
-	case <-time.After(50 * time.Millisecond):
-	}
-
-	// Bob relays Alice's post to Charlie.
-	if err := bob.RelayPost(alice.PublicID(), alicePost.ID, charlie.PublicID()); err != nil {
-		t.Fatal(err)
-	}
-
-	// Bob gets a relay event.
-	select {
-	case <-bobRecvPosts:
-	case <-time.After(10 * time.Second):
-		t.Fatal("timeout")
-	}
-
-	// Charlie should get the relayed post.
-	select {
-	case pm := <-charlieRecvPosts:
-		if pm.Hash() != alicePost.ID {
-			t.Fatalf("received unexpected post %v", pm)
-		}
-	case <-time.After(10 * time.Second):
-		t.Fatal("timeout")
-	}
-
-	// Charlie comments on the relayed post. Bob should get it.
-	wantComment = "charlie comment"
-	if err := charlie.CommentPost(bob.PublicID(), alicePost.ID, wantComment, nil); err != nil {
-		t.Fatal(err)
-	}
-	select {
-	case comment := <-bobRecvComments:
-		if comment != wantComment {
-			t.Fatalf("unexpected comment: got %s, want %s", comment,
-				wantComment)
-		}
-	case <-time.After(30 * time.Second):
-		t.Fatal("timeout")
-	}
-}
-
 func TestE2EDcrlnReset(t *testing.T) {
 	rnd := testRand(t)
 	alice := newTestClient(t, rnd, "alice")
@@ -1778,37 +1604,37 @@ func TestE2EDcrlnKXSearch(t *testing.T) {
 	eve := newTestClient(t, rnd, "eve")
 
 	bobRecvPosts := make(chan clientdb.PostSummary, 1)
-	bob.cfg.PostReceived = func(ru *RemoteUser, summary clientdb.PostSummary, pm rpc.PostMetadata) {
+	bob.cfg.Notifications.Register(OnPostRcvdNtfn(func(ru *RemoteUser, summary clientdb.PostSummary, pm rpc.PostMetadata) {
 		bobRecvPosts <- summary
-	}
+	}))
 	bobSubChanged := make(chan bool, 1)
-	bob.cfg.RemoteSubscriptionChanged = func(ru *RemoteUser, subscribed bool) {
+	bob.cfg.Notifications.Register(OnRemoteSubscriptionChangedNtfn(func(ru *RemoteUser, subscribed bool) {
 		bobSubChanged <- subscribed
-	}
+	}))
 	charlieRecvPosts := make(chan clientdb.PostSummary, 1)
-	charlie.cfg.PostReceived = func(ru *RemoteUser, summary clientdb.PostSummary, pm rpc.PostMetadata) {
+	charlie.cfg.Notifications.Register(OnPostRcvdNtfn(func(ru *RemoteUser, summary clientdb.PostSummary, pm rpc.PostMetadata) {
 		charlieRecvPosts <- summary
-	}
+	}))
 	charlieSubChanged := make(chan bool, 1)
-	charlie.cfg.RemoteSubscriptionChanged = func(ru *RemoteUser, subscribed bool) {
+	charlie.cfg.Notifications.Register(OnRemoteSubscriptionChangedNtfn(func(ru *RemoteUser, subscribed bool) {
 		charlieSubChanged <- subscribed
-	}
+	}))
 	daveRecvPosts := make(chan clientdb.PostSummary, 1)
-	dave.cfg.PostReceived = func(ru *RemoteUser, summary clientdb.PostSummary, pm rpc.PostMetadata) {
+	dave.cfg.Notifications.Register(OnPostRcvdNtfn(func(ru *RemoteUser, summary clientdb.PostSummary, pm rpc.PostMetadata) {
 		daveRecvPosts <- summary
-	}
+	}))
 	daveSubChanged := make(chan bool, 1)
-	dave.cfg.RemoteSubscriptionChanged = func(ru *RemoteUser, subscribed bool) {
+	dave.cfg.Notifications.Register(OnRemoteSubscriptionChangedNtfn(func(ru *RemoteUser, subscribed bool) {
 		daveSubChanged <- subscribed
-	}
+	}))
 	eveRecvPosts := make(chan clientdb.PostSummary, 2)
-	eve.cfg.PostReceived = func(ru *RemoteUser, summary clientdb.PostSummary, pm rpc.PostMetadata) {
+	eve.cfg.Notifications.Register(OnPostRcvdNtfn(func(ru *RemoteUser, summary clientdb.PostSummary, pm rpc.PostMetadata) {
 		eveRecvPosts <- summary
-	}
+	}))
 	eveSubChanged := make(chan bool, 1)
-	eve.cfg.RemoteSubscriptionChanged = func(ru *RemoteUser, subscribed bool) {
+	eve.cfg.Notifications.Register(OnRemoteSubscriptionChangedNtfn(func(ru *RemoteUser, subscribed bool) {
 		eveSubChanged <- subscribed
-	}
+	}))
 
 	eveKXdChan := make(chan *RemoteUser, 1)
 	eve.cfg.KXCompleted = func(ru *RemoteUser) { eveKXdChan <- ru }
@@ -1826,10 +1652,10 @@ func TestE2EDcrlnKXSearch(t *testing.T) {
 	}
 
 	eveRecvUpdate := make(chan rpc.PostMetadataStatus, 10)
-	eve.cfg.PostStatusReceived = func(user *RemoteUser, pid clientintf.PostID,
+	eve.cfg.Notifications.Register(OnPostStatusRcvdNtfn(func(user *RemoteUser, pid clientintf.PostID,
 		statusFrom UserID, status rpc.PostMetadataStatus) {
 		eveRecvUpdate <- status
-	}
+	}))
 	assertComment := func(wantComment string) {
 		t.Helper()
 		select {

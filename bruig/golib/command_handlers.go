@@ -139,6 +139,41 @@ func handleInitClient(handle uint32, args InitClient) error {
 		notify(NTGCMessage, gcm, nil)
 	}))
 
+	ntfns.Register(client.OnRemoteSubscriptionChangedNtfn(func(user *client.RemoteUser, subscribed bool) {
+		v := PostSubscriptionResult{ID: user.ID(), WasSubRequest: subscribed}
+		notify(NTRemoteSubChanged, v, nil)
+	}))
+
+	ntfns.Register(client.OnRemoteSubscriptionErrorNtfn(func(user *client.RemoteUser, wasSubscribing bool, errMsg string) {
+		v := PostSubscriptionResult{
+			ID:            user.ID(),
+			WasSubRequest: wasSubscribing,
+			Error:         errMsg,
+		}
+		notify(NTRemoteSubChanged, v, nil)
+	}))
+
+	ntfns.Register(client.OnPostRcvdNtfn(func(user *client.RemoteUser,
+		summary clientdb.PostSummary, pm rpc.PostMetadata) {
+		notify(NTPostReceived, summary, nil)
+	}))
+
+	ntfns.Register(client.OnPostStatusRcvdNtfn(func(user *client.RemoteUser, pid clientintf.PostID,
+		statusFrom clientintf.UserID, status rpc.PostMetadataStatus) {
+		pr := PostStatusReceived{
+			PID:        pid,
+			StatusFrom: statusFrom,
+			Status:     status,
+			Mine:       statusFrom == c.PublicID(),
+		}
+		if user != nil {
+			pr.PostFrom = user.ID()
+		} else {
+			pr.PostFrom = c.PublicID()
+		}
+		notify(NTPostStatusReceived, pr, nil)
+	}))
+
 	cfg := client.Config{
 		DB:             db,
 		Dialer:         clientintf.NetDialer(args.ServerAddr, logBknd.logger("CONN")),
@@ -269,47 +304,12 @@ func handleInitClient(handle uint32, args InitClient) error {
 			notify(NTTipReceived, v, nil)
 		},
 
-		RemoteSubscriptionChanged: func(user *client.RemoteUser, subscribed bool) {
-			v := PostSubscriptionResult{ID: user.ID(), WasSubRequest: subscribed}
-			notify(NTRemoteSubChanged, v, nil)
-		},
-
-		RemoteSubscriptionError: func(user *client.RemoteUser, wasSubscribing bool, errMsg string) {
-			v := PostSubscriptionResult{
-				ID:            user.ID(),
-				WasSubRequest: wasSubscribing,
-				Error:         errMsg,
-			}
-			notify(NTRemoteSubChanged, v, nil)
-		},
-
-		PostReceived: func(user *client.RemoteUser,
-			summary clientdb.PostSummary, pm rpc.PostMetadata) {
-			notify(NTPostReceived, summary, nil)
-		},
-
 		PostsListReceived: func(user *client.RemoteUser, postList rpc.RMListPostsReply) {
 			v := UserPostList{
 				UID:   user.ID(),
 				Posts: postList.Posts,
 			}
 			notify(NTUserPostsList, v, nil)
-		},
-
-		PostStatusReceived: func(user *client.RemoteUser, pid clientintf.PostID,
-			statusFrom clientintf.UserID, status rpc.PostMetadataStatus) {
-			pr := PostStatusReceived{
-				PID:        pid,
-				StatusFrom: statusFrom,
-				Status:     status,
-				Mine:       statusFrom == c.PublicID(),
-			}
-			if user != nil {
-				pr.PostFrom = user.ID()
-			} else {
-				pr.PostFrom = c.PublicID()
-			}
-			notify(NTPostStatusReceived, pr, nil)
 		},
 
 		ContentListReceived: func(user *client.RemoteUser, files []clientdb.RemoteFile, listErr error) {
