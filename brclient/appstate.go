@@ -271,14 +271,16 @@ func (as *appState) run() error {
 		}
 	}()
 
-	as.wg.Add(1)
-	go func() {
-		err := as.rpcServer.Run(as.ctx)
-		if err != nil && !errors.Is(err, context.Canceled) {
-			as.log.Errorf("RPCServer Run() error: %v", err)
-		}
-		as.wg.Done()
-	}()
+	if as.rpcServer != nil {
+		as.wg.Add(1)
+		go func() {
+			err := as.rpcServer.Run(as.ctx)
+			if err != nil && !errors.Is(err, context.Canceled) {
+				as.log.Errorf("RPCServer Run() error: %v", err)
+			}
+			as.wg.Done()
+		}()
+	}
 
 	as.wg.Wait()
 	if as.cmdHistoryFile != nil {
@@ -2730,48 +2732,55 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 	}
 
 	// Initialize RPC server.
-	rpcsLog := logBknd.logger("RPCS")
-	tlsConnCfg := tlsconn.TLSListenersConfig{
-		Addresses:                   args.JSONRPCListen,
-		CertPath:                    args.RPCCertPath,
-		KeyPath:                     args.RPCKeyPath,
-		CreateCertPairIfNotExists:   true,
-		ClientCAPath:                args.RPCClientCAPath,
-		ClientCertPath:              filepath.Join(filepath.Dir(args.RPCClientCAPath), "rpc-client.cert"),
-		ClientKeyPath:               filepath.Join(filepath.Dir(args.RPCClientCAPath), "rpc-client.key"),
-		CreateClientCertIfNotExists: args.RPCIssueClientCert,
-		Log:                         rpcsLog,
-	}
-	jsonListeners, err := tlsconn.TLSListeners(tlsConnCfg)
-	if err != nil {
-		return nil, err
-	}
-	rpcServer := rpcserver.New(rpcserver.Config{
-		JSONRPCListeners: jsonListeners,
-		Log:              rpcsLog,
-	})
-	rpcServer.InitVersionService(appName, version.Version)
-	chatRPCServerCfg := rpcserver.ChatServerCfg{
-		Log:    logBknd.logger("RPCS"),
-		Client: c,
+	var rpcServer *rpcserver.Server
+	if len(args.JSONRPCListen) > 0 {
+		rpcsLog := logBknd.logger("RPCS")
+		tlsConnCfg := tlsconn.TLSListenersConfig{
+			Addresses:                   args.JSONRPCListen,
+			CertPath:                    args.RPCCertPath,
+			KeyPath:                     args.RPCKeyPath,
+			CreateCertPairIfNotExists:   true,
+			ClientCAPath:                args.RPCClientCAPath,
+			ClientCertPath:              filepath.Join(filepath.Dir(args.RPCClientCAPath), "rpc-client.cert"),
+			ClientKeyPath:               filepath.Join(filepath.Dir(args.RPCClientCAPath), "rpc-client.key"),
+			CreateClientCertIfNotExists: args.RPCIssueClientCert,
+			Log:                         rpcsLog,
+		}
+		jsonListeners, err := tlsconn.TLSListeners(tlsConnCfg)
+		if err != nil {
+			return nil, err
+		}
+		rpcServer = rpcserver.New(rpcserver.Config{
+			JSONRPCListeners: jsonListeners,
+			Log:              rpcsLog,
+		})
+		rpcServer.InitVersionService(appName, version.Version)
+		chatRPCServerCfg := rpcserver.ChatServerCfg{
+			Log:               logBknd.logger("RPCS"),
+			Client:            c,
+			RootReplayMsgLogs: filepath.Join(args.DBRoot, "replaymsglog"),
 
-		// Following are handlers called when the rpc server receives
-		// a request to perform an action.
+			// Following are handlers called when the rpc server receives
+			// a request to perform an action.
 
-		OnPM: func(ctx context.Context, uid client.UserID, pm *types.PMRequest) error {
-			cw := as.findOrNewChatWindow(uid, "")
-			cw.newInternalMsg("API: " + pm.Msg.Message)
-			as.repaintIfActive(cw)
-			return nil
-		},
-		OnGCM: func(ctx context.Context, gcid client.GCID, gcm *types.GCMRequest) error {
-			cw := as.findOrNewGCWindow(gcid)
-			cw.newInternalMsg("API: " + gcm.Msg)
-			as.repaintIfActive(cw)
-			return nil
-		},
+			OnPM: func(ctx context.Context, uid client.UserID, pm *types.PMRequest) error {
+				cw := as.findOrNewChatWindow(uid, "")
+				cw.newInternalMsg("API: " + pm.Msg.Message)
+				as.repaintIfActive(cw)
+				return nil
+			},
+			OnGCM: func(ctx context.Context, gcid client.GCID, gcm *types.GCMRequest) error {
+				cw := as.findOrNewGCWindow(gcid)
+				cw.newInternalMsg("API: " + gcm.Msg)
+				as.repaintIfActive(cw)
+				return nil
+			},
+		}
+		err = rpcServer.InitChatService(chatRPCServerCfg)
+		if err != nil {
+			return nil, err
+		}
 	}
-	rpcServer.InitChatService(chatRPCServerCfg)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	as = &appState{
