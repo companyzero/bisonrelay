@@ -167,7 +167,7 @@ func isQuitMsg(msg tea.Msg) error {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		k := msg.String()
-		if k == "ctrl+q" || k == "ctrl+c" {
+		if k == "ctrl+q" {
 			return errQuitRequested
 		}
 	case requestShutdown:
