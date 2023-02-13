@@ -13,5 +13,6 @@ linters:
     - ineffassign
     - misspell
     - noctx
+    - sqlclosecheck
     - unconvert
     - unused

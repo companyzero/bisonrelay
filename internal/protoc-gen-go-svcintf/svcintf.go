@@ -39,7 +39,6 @@ var (
 	ctxIdent             = protogen.GoIdent{GoName: "Context", GoImportPath: contextPackage}
 	protoMsgIdent        = protogen.GoIdent{GoName: "Message", GoImportPath: protoPackage}
 	protoDescriptorIdent = protogen.GoIdent{GoName: "MessageDescriptor", GoImportPath: protoReflectPackage}
-	errNewIdent          = protogen.GoIdent{GoName: "New", GoImportPath: errPackage}
 )
 
 type serviceGenerateHelperInterface interface {
