@@ -3,6 +3,7 @@ import 'package:bruig/models/menus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
+import '../storage_manager.dart';
 
 const SCE_unknown = 0;
 const SCE_sending = 1;
@@ -190,12 +191,22 @@ class ClientModel extends ChangeNotifier {
     _fetchInfo();
   }
 
-  final List<ChatModel> _gcChats = [];
+  List<ChatModel> _gcChats = [];
   UnmodifiableListView<ChatModel> get gcChats => UnmodifiableListView(_gcChats);
 
-  final List<ChatModel> _userChats = [];
+  void set gcChats(List<ChatModel> gc) {
+    _gcChats = gc;
+    notifyListeners();
+  }
+
+  List<ChatModel> _userChats = [];
   UnmodifiableListView<ChatModel> get userChats =>
       UnmodifiableListView(_userChats);
+
+  void set userChats(List<ChatModel> us) {
+    _userChats = us;
+    notifyListeners();
+  }
 
   final Map<String, List<ChatMenuItem>> _subGCMenus = {};
   UnmodifiableMapView<String, List<ChatMenuItem>> get subGCMenus =>
@@ -353,12 +364,31 @@ class ClientModel extends ChangeNotifier {
         source = chat;
       }
       chat.append(ChatEventModel(evnt, source));
-
       // Sorting algo to attempt to retain order
       if (chat.isGC) {
         _gcChats.sort((a, b) => b.unreadMsgCount.compareTo(a.unreadMsgCount));
+
+        String gcChatOrder = "";
+        for (int i = 0; i < _gcChats.length; i++) {
+          if (i == _gcChats.length - 1) {
+            gcChatOrder += _gcChats[i].nick;
+          } else {
+            gcChatOrder += "${_gcChats[i].nick},";
+          }
+        }
+        StorageManager.saveData('gcListOrder', gcChatOrder);
       } else {
         _userChats.sort((a, b) => b.unreadMsgCount.compareTo(a.unreadMsgCount));
+
+        String userChatOrder = "";
+        for (int i = 0; i < _userChats.length; i++) {
+          if (i == _userChats.length - 1) {
+            userChatOrder += _userChats[i].nick;
+          } else {
+            userChatOrder += "${_userChats[i].nick},";
+          }
+        }
+        StorageManager.saveData('userListOrder', userChatOrder);
       }
       notifyListeners();
     }
@@ -372,6 +402,64 @@ class ClientModel extends ChangeNotifier {
     ab.forEach((v) => _newChat(v.id, v.nick, false));
     var gcs = await Golib.listGCs();
     gcs.forEach((v) => _newChat(v.id, v.name, true));
+
+    StorageManager.readData('gcListOrder').then((value) {
+      if (value != null && value.length > 0) {
+        List<ChatModel> sortedGCList = [];
+        var gcSplitList = value.split(',');
+        for (int i = 0; i < gcSplitList.length; i++) {
+          for (int j = 0; j < _gcChats.length; j++) {
+            if (gcSplitList[i] == _gcChats[j].nick) {
+              sortedGCList.add(_gcChats[j]);
+              break;
+            }
+          }
+        }
+        for (int i = 0; i < _gcChats.length; i++) {
+          var found = false;
+          for (int j = 0; j < gcSplitList.length; j++) {
+            if (gcSplitList[j] == _gcChats[i].nick) {
+              found = true;
+              break;
+            }
+          }
+          if (!found) {
+            sortedGCList.add(_gcChats[i]);
+          }
+        }
+        gcChats = sortedGCList;
+      }
+    });
+    StorageManager.readData('userListOrder').then((value) {
+      if (value != null && value.length > 0) {
+        List<ChatModel> sortedUserList = [];
+        var userSplitList = value.split(',');
+        // First order existing users from last saved.
+        for (int i = 0; i < userSplitList.length; i++) {
+          for (int j = 0; j < _userChats.length; j++) {
+            if (userSplitList[i] == _userChats[j].nick) {
+              sortedUserList.add(_userChats[j]);
+              break;
+            }
+          }
+        }
+        // Then try and find any received chats that aren't in the saved list.
+        // Add them on the end.
+        for (int i = 0; i < _userChats.length; i++) {
+          var found = false;
+          for (int j = 0; j < userSplitList.length; j++) {
+            if (userSplitList[j] == _userChats[i].nick) {
+              found = true;
+              break;
+            }
+          }
+          if (!found) {
+            sortedUserList.add(_userChats[i]);
+          }
+        }
+        userChats = sortedUserList;
+      }
+    });
   }
 
   void acceptInvite(Invitation invite) async {
