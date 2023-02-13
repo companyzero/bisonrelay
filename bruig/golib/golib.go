@@ -22,6 +22,7 @@ func GetURL(url string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	defer res.Body.Close()
 
 	resData, err := io.ReadAll(res.Body)
 	if err != nil {

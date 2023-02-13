@@ -1115,7 +1115,7 @@ func (as *appState) writeInvite(filename string) {
 		return
 	}
 
-	err = os.WriteFile(filename, w.Bytes(), 0o700)
+	err = os.WriteFile(filename, w.Bytes(), 0o600)
 	if err != nil {
 		as.cwHelpMsg("Unable to write invite file: %v", err)
 		return
