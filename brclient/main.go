@@ -108,7 +108,7 @@ func realMain() error {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 		defer cancel()
 		if err := lndc.Wait(ctx); err != nil {
-			fmt.Println("Error running dcrlnd:", err)
+			fmt.Println("Error waiting for dcrlnd:", err)
 		}
 	}()
 

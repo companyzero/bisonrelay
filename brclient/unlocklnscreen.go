@@ -221,8 +221,7 @@ func newUnlockLNScreen(cfg *config, lndc *embeddeddcrlnd.Dcrlnd,
 }
 
 func cmdUnlockDcrlnd(lndc *embeddeddcrlnd.Dcrlnd, pass string) tea.Msg {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
-	defer cancel()
+	ctx := context.Background()
 	err := lndc.TryUnlock(ctx, pass)
 	return unlockDcrlndResult{err: err}
 }
