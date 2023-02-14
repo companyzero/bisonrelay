@@ -128,6 +128,21 @@ func realMain() error {
 		return err
 	}
 
+	// Start CPU profiling.
+	if args.CPUProfile != "" {
+		f, err := os.Create(args.CPUProfile)
+		if err != nil {
+			return err
+		}
+		if args.CPUProfileHz > 0 {
+			runtime.SetCPUProfileRate(args.CPUProfileHz)
+		}
+
+		pprof.StartCPUProfile(f)
+		defer f.Close()
+		defer pprof.StopCPUProfile()
+	}
+
 	// At this point, we know the db root, so use an app-wide lockfile to
 	// handle the case where dcrlnd is internal.
 	lockFilePath := filepath.Join(args.DBRoot, clientintf.LockFileName)
@@ -144,20 +159,6 @@ func realMain() error {
 		if err != nil {
 			return err
 		}
-	}
-
-	if args.CPUProfile != "" {
-		f, err := os.Create(args.CPUProfile)
-		if err != nil {
-			return err
-		}
-		if args.CPUProfileHz > 0 {
-			runtime.SetCPUProfileRate(args.CPUProfileHz)
-		}
-
-		pprof.StartCPUProfile(f)
-		defer f.Close()
-		defer pprof.StopCPUProfile()
 	}
 
 	// Run main app.
