@@ -5,9 +5,9 @@ go 1.18
 require (
 	github.com/atotto/clipboard v0.1.4
 	github.com/bahlo/generic-list-go v0.2.0
-	github.com/charmbracelet/bubbles v0.13.1-0.20220815142520-649f78e1fd8b
-	github.com/charmbracelet/bubbletea v0.22.1
-	github.com/charmbracelet/lipgloss v0.5.0
+	github.com/charmbracelet/bubbles v0.15.0
+	github.com/charmbracelet/bubbletea v0.23.1
+	github.com/charmbracelet/lipgloss v0.6.0
 	github.com/companyzero/sntrup4591761 v0.0.0-20220309191932-9e0f3af2f07a
 	github.com/davecgh/go-spew v1.1.1
 	github.com/decred/dcrd/certgen v1.1.1
@@ -23,7 +23,7 @@ require (
 	github.com/jrick/flagfile v0.0.0-20200906235446-2904c79186c7
 	github.com/jrick/logrotate v1.0.0
 	github.com/lib/pq v1.10.5
-	github.com/mattn/go-runewidth v0.0.13
+	github.com/mattn/go-runewidth v0.0.14
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/muesli/reflow v0.3.0
 	github.com/rogpeppe/go-internal v1.3.0
@@ -47,6 +47,7 @@ require (
 	github.com/NebulousLabs/go-upnp v0.0.0-20181203152547-b32978b8ccbf // indirect
 	github.com/Yawning/aez v0.0.0-20180408160647-ec7426b44926 // indirect
 	github.com/agl/ed25519 v0.0.0-20170116200512-5312a6153412 // indirect
+	github.com/aymanbagabas/go-osc52 v1.0.3 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/btcsuite/btcwallet/walletdb v1.4.0 // indirect
 	github.com/containerd/console v1.0.3 // indirect
@@ -111,7 +112,7 @@ require (
 	github.com/modern-go/reflect2 v1.0.1 // indirect
 	github.com/muesli/ansi v0.0.0-20211031195517-c9f0611b6c70 // indirect
 	github.com/muesli/cancelreader v0.2.2 // indirect
-	github.com/muesli/termenv v0.12.0 // indirect
+	github.com/muesli/termenv v0.13.0 // indirect
 	github.com/prometheus/client_golang v0.9.3 // indirect
 	github.com/prometheus/client_model v0.0.0-20190812154241-14fe0d1b01d4 // indirect
 	github.com/prometheus/common v0.4.0 // indirect

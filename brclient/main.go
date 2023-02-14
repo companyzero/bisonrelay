@@ -26,7 +26,7 @@ func runSetupWizard(cfgFilePath string) (*config, *embeddeddcrlnd.Dcrlnd, bool, 
 	unlockDone := make(chan struct{})
 	go listenToCrashSignals(p, unlockDone, slog.Disabled)
 
-	resModel, err := p.StartReturningModel()
+	resModel, err := p.Run()
 	close(unlockDone)
 	if err != nil {
 		return nil, nil, false, err
@@ -68,7 +68,7 @@ func runUnlockAndSyncDcrlnd(cfg *config, lndc *embeddeddcrlnd.Dcrlnd,
 	unlockDone := make(chan struct{})
 	go listenToCrashSignals(p, unlockDone, slog.Disabled)
 
-	resModel, err := p.StartReturningModel()
+	resModel, err := p.Run()
 	close(unlockDone)
 	logEventLis.Close()
 	if err != nil {
@@ -181,7 +181,7 @@ func realMain() error {
 
 	progDoneChan := make(chan struct{})
 	go listenToCrashSignals(p, progDoneChan, as.log)
-	err = p.Start()
+	_, err = p.Run()
 	close(progDoneChan)
 	if err != nil {
 		return err

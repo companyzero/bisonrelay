@@ -22,7 +22,7 @@ type textAreaModel struct {
 func newTextAreaModel(theme *theme) textAreaModel {
 	ta := textarea.New()
 	if !theme.blink {
-		ta.Cursor.SetCursorMode(cursor.CursorStatic)
+		ta.Cursor.SetMode(cursor.CursorStatic)
 	}
 
 	// Fix for light themes not displaying colors correctly.
