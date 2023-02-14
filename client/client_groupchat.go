@@ -593,18 +593,16 @@ func (c *Client) handleGCList(ru *RemoteUser, gl rpc.RMGroupList) error {
 
 // handleDelayedGCMessages is called by the gc message cacher when it's time
 // to let external callers know about new messages.
-func (c *Client) handleDelayedGCMessages(msgs []gcmcacher.Msg) {
-	for _, msg := range msgs {
-		user, err := c.UserByID(msg.UID)
-		if err != nil {
-			// Should only happen if we blocked the user
-			// during the gcm cacher delay.
-			c.log.Warnf("Delayed GC message with unknown user %s", msg.UID)
-			continue
-		}
-
-		c.ntfns.notifyOnGCM(user, msg.GCM, msg.TS)
+func (c *Client) handleDelayedGCMessages(msg gcmcacher.Msg) {
+	user, err := c.UserByID(msg.UID)
+	if err != nil {
+		// Should only happen if we blocked the user
+		// during the gcm cacher delay.
+		c.log.Warnf("Delayed GC message with unknown user %s", msg.UID)
+		return
 	}
+
+	c.ntfns.notifyOnGCM(user, msg.GCM, msg.TS)
 }
 
 // SendProgress is sent to track progress of messages that are sent to multiple

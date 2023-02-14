@@ -180,29 +180,6 @@ type Config struct {
 	// KXSearchCompleted is called when KX is completed with a user that
 	// was the target of a KX search.
 	KXSearchCompleted func(user *RemoteUser)
-
-	// GCMInterMsgDelay is the time between GC messages received for
-	// delaying delivering message events. This helps during reconnection
-	// when multiple GC messages are received out of order.
-	GCMInterMsgDelay time.Duration
-
-	// GCMMaxDelay is the max delay after which GC messages are delivered
-	// without any caching.
-	GCMMaxDelay time.Duration
-}
-
-func (cfg *Config) gcmInterMsgDelay() time.Duration {
-	if cfg.GCMInterMsgDelay > 0 {
-		return cfg.GCMInterMsgDelay
-	}
-	return 3 * time.Second
-}
-
-func (cfg *Config) gcmMaxDelay() time.Duration {
-	if cfg.GCMMaxDelay > 0 {
-		return cfg.GCMMaxDelay
-	}
-	return 30 * time.Second
 }
 
 // logger creates a logger for the given subsystem in the configured backend.
@@ -331,9 +308,11 @@ func New(cfg Config) (*Client, error) {
 	// after restarting so that messages are displayed in the order they
 	// were received by the server (vs in arbitrary order based on which
 	// ratchets are updated first).
-	gcmqDelay := cfg.gcmInterMsgDelay()
-	gcmqMaxDelay := cfg.gcmMaxDelay()
-	c.gcmq = gcmcacher.New(gcmqDelay, gcmqMaxDelay, slog.Disabled, c.handleDelayedGCMessages)
+	gcmqMaxLifetime := time.Second * 10
+	gcmqUpdtDelay := time.Second
+	gcmqInitialDelay := time.Second * 30
+	c.gcmq = gcmcacher.New(gcmqMaxLifetime, gcmqUpdtDelay, gcmqInitialDelay,
+		slog.Disabled, c.handleDelayedGCMessages)
 
 	rmgrdb.c = c
 	rmqdb.c = c
@@ -863,9 +842,9 @@ func (c *Client) Run(ctx context.Context) error {
 				c.cleanupPushPaymentAttempts(nextSess.Policy().PushPaymentLifetime)
 			}
 
+			c.gcmq.SessionChanged(nextSess != nil)
 			c.rmgr.BindToSession(nextSess)
 			c.q.BindToSession(nextSess)
-			c.gcmq.SessionChanged(nextSess != nil)
 			var pushRate, subRate, expDays uint64
 			if c.cfg.ServerSessionChanged != nil {
 				connected := nextSess != nil

@@ -241,6 +241,7 @@ func (c *Client) innerHandleUserRM(ru *RemoteUser, h *rpc.RMHeader,
 // what to do with the given RM from the given user.
 func (c *Client) handleUserRM(ru *RemoteUser, h *rpc.RMHeader, p interface{}, ts time.Time) {
 	ru.log.Tracef("Starting to handle %T", p)
+	c.gcmq.RMReceived(ru.ID(), ts)
 	err := c.innerHandleUserRM(ru, h, p, ts)
 	if err != nil {
 		if ru.log.Level() <= slog.LevelDebug {
