@@ -7,7 +7,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
@@ -23,7 +22,9 @@ const (
 	swsStageNewOrRestore
 	swsStageExternalDetails
 	swsStageServer
+	swsStageWaitingRunForWalletPass
 	swsStageWalletPass
+	swsStageWaitingRunForWalletRestore
 	swsStageWalletRestore
 	swsStageCreatingWallet
 	swsStageSeed
@@ -257,6 +258,12 @@ func (sws setupWizardScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case *embeddeddcrlnd.Dcrlnd:
 		sws.lndc = msg
+		switch sws.stage {
+		case swsStageWaitingRunForWalletPass:
+			sws.stage = swsStageWalletPass
+		case swsStageWaitingRunForWalletRestore:
+			sws.stage = swsStageWalletRestore
+		}
 		return sws, nil
 
 	case createWalletResult:
@@ -356,10 +363,10 @@ func (sws setupWizardScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		sws.newOrRestore = v.Value.(string)
 		switch sws.newOrRestore {
 		case "new":
-			sws.stage = swsStageWalletPass
+			sws.stage = swsStageWaitingRunForWalletPass
 			sws.initInputsWalletPass()
 		case "restore":
-			sws.stage = swsStageWalletRestore
+			sws.stage = swsStageWaitingRunForWalletRestore
 			sws.initRestoreWallet()
 		default:
 			sws.err = fmt.Errorf("unknown new or restore selection %s", sws.newOrRestore)
@@ -466,7 +473,9 @@ func (sws setupWizardScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		sws.validationErr = ""
 		sws.walletPass = sws.inputs[0].Value()
 		sws.stage = swsStageCreatingWallet
-		return sws, func() tea.Msg { return cmdCreateWallet(sws.lndc, sws.walletPass, sws.seedWords, sws.mcbBytes) }
+		return sws, func() tea.Msg {
+			return cmdCreateWallet(sws.connCtx, sws.lndc, sws.walletPass, sws.seedWords, sws.mcbBytes)
+		}
 
 	case swsStageWalletRestore:
 		cmd := sws.updateFocused(msg)
@@ -526,6 +535,8 @@ func (sws setupWizardScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (sws setupWizardScreen) innerView() string {
 	switch sws.stage {
+	case swsStageWaitingRunForWalletPass, swsStageWaitingRunForWalletRestore:
+		return "Waiting for the embedded dcrlnd instance to initialize..."
 	case swsStageNetwork:
 		return sws.selNetwork.View()
 	case swsStageWalletType:
@@ -642,9 +653,7 @@ func cmdRunDcrlnd(ctx context.Context, root string, network string,
 	return lndc
 }
 
-func cmdCreateWallet(lndc *embeddeddcrlnd.Dcrlnd, pass string, existingSeed []string, mcbBytes []byte) tea.Msg {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
-	defer cancel()
+func cmdCreateWallet(ctx context.Context, lndc *embeddeddcrlnd.Dcrlnd, pass string, existingSeed []string, mcbBytes []byte) tea.Msg {
 	seed, err := lndc.Create(ctx, pass, existingSeed, mcbBytes)
 	if err != nil {
 		err = fmt.Errorf("unable to create wallet: %v", err)

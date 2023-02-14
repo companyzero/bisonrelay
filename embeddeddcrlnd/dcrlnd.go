@@ -109,9 +109,6 @@ func (lndc *Dcrlnd) TryUnlock(ctx context.Context, pass string) error {
 }
 
 func (lndc *Dcrlnd) reconnect(ctx context.Context) error {
-	ctx, cancel := context.WithTimeout(ctx, time.Second*60)
-	defer cancel()
-
 	var err error
 	rpcAddr := fmt.Sprintf("127.0.0.1:%d", lndc.grpcPort)
 	lndc.conn, err = grpc.DialContext(ctx, rpcAddr, append(lndc.connOpts, grpc.WithBlock())...)
@@ -292,7 +289,7 @@ func (lndc *Dcrlnd) Wait(ctx context.Context) error {
 
 	select {
 	case <-ctx.Done():
-		return ctx.Err()
+		return fmt.Errorf("wait context error: %v", ctx.Err())
 	case <-lndc.runDone:
 		return lndc.runErr
 	}
@@ -381,9 +378,13 @@ func RunDcrlnd(ctx context.Context, cfg Config) (*Dcrlnd, error) {
 		tlsCertPath: conf.TLSCertPath,
 	}
 	go func() {
-		lndc.runErr = dcrlnd.Main(
+		err := dcrlnd.Main(
 			validConf, dcrlnd.ListenerCfg{}, lndc.shutdownChan,
 		)
+		if err != nil {
+			err = fmt.Errorf("dcrlnd.Main error: %v", err)
+		}
+		lndc.runErr = err
 		close(lndc.runDone)
 	}()
 
