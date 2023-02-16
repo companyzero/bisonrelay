@@ -682,7 +682,7 @@ func TestConcurrentRMQSends(t *testing.T) {
 	time.Sleep(50 * time.Millisecond)
 
 	// One RM should be queued.
-	gotLen := q.Len()
+	gotLen, _ := q.Len()
 	if gotLen != 1 {
 		t.Fatalf("Unexpected queue len: got %d, want 1", gotLen)
 	}
@@ -734,7 +734,8 @@ func TestConcurrentRMQSends(t *testing.T) {
 	}
 
 	// Queue should be empty.
-	gotLen = q.Len()
+	gotQueue, gotSend := q.Len()
+	gotLen = gotQueue + gotSend
 	if gotLen != 0 {
 		t.Fatalf("Unexpected queue len: got %d, want 0", gotLen)
 	}

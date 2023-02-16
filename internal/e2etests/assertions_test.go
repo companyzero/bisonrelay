@@ -46,7 +46,7 @@ func assertClientUpToDate(t testing.TB, c *testClient) {
 		err = nil
 		if !c.RVsUpToDate() {
 			err = fmt.Errorf("RVs are not up to date in the server")
-		} else if c.RMQLen() != 0 {
+		} else if q, s := c.RMQLen(); q+s != 0 {
 			err = fmt.Errorf("RMQ is not empty")
 		}
 		if err != nil {
