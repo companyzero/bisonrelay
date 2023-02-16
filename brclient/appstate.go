@@ -2320,6 +2320,14 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 			"Resetting all KXs", oldConnDate.Format(ISO8601DateTime))
 	}))
 
+	ntfns.Register(client.OnKXCompleted(func(user *client.RemoteUser) {
+		as.manyDiagMsgsCb(func(pf printf) {
+			pf("Completed KX with user %q ID %s",
+				user.Nick(), user.ID())
+			pf("Type /msg %s to chat", strescape.Nick(user.Nick()))
+		})
+	}))
+
 	// Initialize client config.
 	cfg := client.Config{
 		DB:             db,
@@ -2593,14 +2601,6 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 				pf("A transitive KX with this user can be attempted " +
 					"again by issuing the following command")
 				pf("/mi %s %s", adminAlias, uid)
-			})
-		},
-
-		KXCompleted: func(user *client.RemoteUser) {
-			as.manyDiagMsgsCb(func(pf printf) {
-				pf("Completed KX with user %q ID %s",
-					user.Nick(), user.ID())
-				pf("Type /msg %s to chat", strescape.Nick(user.Nick()))
 			})
 		},
 

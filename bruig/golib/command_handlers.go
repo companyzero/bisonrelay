@@ -174,6 +174,11 @@ func handleInitClient(handle uint32, args InitClient) error {
 		notify(NTPostStatusReceived, pr, nil)
 	}))
 
+	ntfns.Register(client.OnKXCompleted(func(user *client.RemoteUser) {
+		pii := user.PublicIdentity()
+		notify(NTKXCompleted, remoteUserFromPII(&pii), nil)
+	}))
+
 	cfg := client.Config{
 		DB:             db,
 		Dialer:         clientintf.NetDialer(args.ServerAddr, logBknd.logger("CONN")),
@@ -292,11 +297,6 @@ func handleInitClient(handle uint32, args InitClient) error {
 				Name:    name,
 			}
 			notify(NTGCListUpdated, gce, nil)
-		},
-
-		KXCompleted: func(user *client.RemoteUser) {
-			pii := user.PublicIdentity()
-			notify(NTKXCompleted, remoteUserFromPII(&pii), nil)
 		},
 
 		TipReceived: func(user *client.RemoteUser, dcrAmount float64) {

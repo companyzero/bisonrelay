@@ -109,10 +109,6 @@ type Config struct {
 	// failed due to a GC member being unkxd with the local client.
 	GCWithUnkxdMember func(gcid GCID, uid UserID)
 
-	// KXCompleted is called when a KX processed completed with a remote
-	// user.
-	KXCompleted func(user *RemoteUser)
-
 	// KXSuggestion is called when a remote user sends a suggestion to KX
 	// with a new user.
 	KXSuggestion func(user *RemoteUser, pii zkidentity.PublicIdentity)

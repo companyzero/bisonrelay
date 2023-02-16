@@ -104,10 +104,7 @@ func (c *Client) handleRMTransitiveReset(mediator *RemoteUser, target UserID, tr
 	}
 
 	// Send UI event.
-	if c.cfg.KXCompleted != nil {
-		c.cfg.KXCompleted(ru)
-	}
-
+	c.ntfns.notifyOnKXCompleted(ru)
 	return nil
 }
 
@@ -150,9 +147,6 @@ func (c *Client) handleRMTransitiveResetReply(mediator *RemoteUser,
 	ru.replaceRatchet(r)
 
 	// Send UI event.
-	if c.cfg.KXCompleted != nil {
-		c.cfg.KXCompleted(ru)
-	}
-
+	c.ntfns.notifyOnKXCompleted(ru)
 	return nil
 }

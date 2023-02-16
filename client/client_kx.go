@@ -232,9 +232,7 @@ func (c *Client) kxCompleted(public *zkidentity.PublicIdentity, r *ratchet.Ratch
 		c.log.Errorf("unable to init user for completed kx: %v", err)
 	}
 
-	if c.cfg.KXCompleted != nil {
-		c.cfg.KXCompleted(ru)
-	}
+	c.ntfns.notifyOnKXCompleted(ru)
 }
 
 // WriteNewInvite creates a new invite and writes it to the given writer.
