@@ -586,8 +586,9 @@ func (c *Client) GoOnline() {
 }
 
 // RMQLen is the number of outstanding messages in the outbound routed messages
-// queue.
-func (c *Client) RMQLen() int {
+// queue. There are two queues involved in the reply: msgs that are waiting
+// to be sent and messages that are in the process of being paid/sent/ack.
+func (c *Client) RMQLen() (int, int) {
 	return c.q.Len()
 }
 

@@ -68,14 +68,15 @@ type RMQ struct {
 	// The following fields should only be set during setup this struct and
 	// are not safe for concurrent modification.
 
-	sessionChan chan clientintf.ServerSessionIntf
-	localID     *zkidentity.FullIdentity
-	log         slog.Logger
-	rmChan      chan *rmmsg
-	enqueueDone chan struct{}
-	lenChan     chan chan int
-	timingStat  timestats.Tracker
-	db          RMQDB
+	sessionChan    chan clientintf.ServerSessionIntf
+	localID        *zkidentity.FullIdentity
+	log            slog.Logger
+	rmChan         chan *rmmsg
+	enqueueDone    chan struct{}
+	enqueueLenChan chan chan int
+	sendLenChan    chan chan int
+	timingStat     timestats.Tracker
+	db             RMQDB
 
 	nextSendChan chan *rmmsg
 	sendDoneChan chan struct{}
@@ -87,16 +88,17 @@ func NewRMQ(log slog.Logger, payClient clientintf.PaymentClient,
 		log = slog.Disabled
 	}
 	return &RMQ{
-		sessionChan:  make(chan clientintf.ServerSessionIntf),
-		localID:      localID,
-		log:          log,
-		db:           db,
-		rmChan:       make(chan *rmmsg),
-		enqueueDone:  make(chan struct{}),
-		lenChan:      make(chan chan int),
-		nextSendChan: make(chan *rmmsg),
-		sendDoneChan: make(chan struct{}),
-		timingStat:   *timestats.NewTracker(250),
+		sessionChan:    make(chan clientintf.ServerSessionIntf),
+		localID:        localID,
+		log:            log,
+		db:             db,
+		rmChan:         make(chan *rmmsg),
+		enqueueDone:    make(chan struct{}),
+		enqueueLenChan: make(chan chan int),
+		sendLenChan:    make(chan chan int),
+		nextSendChan:   make(chan *rmmsg),
+		sendDoneChan:   make(chan struct{}),
+		timingStat:     *timestats.NewTracker(250),
 	}
 }
 
@@ -471,21 +473,36 @@ func (q *RMQ) sendToSession(ctx context.Context, rmm *rmmsg, sess clientintf.Ser
 	}
 }
 
-// Len returns the current number of outstanding messages in the RMQ.
-func (q *RMQ) Len() int {
-	c := make(chan int)
+// Len returns the current number of outstanding messages in the RMQs enqueue
+// loop and send loop.
+func (q *RMQ) Len() (int, int) {
+	// Send the request for len.
+	cq, cs := make(chan int, 1), make(chan int, 1)
 	select {
-	case q.lenChan <- c:
+	case q.enqueueLenChan <- cq:
 	case <-q.enqueueDone:
-		return 0
+		return 0, 0
+	}
+	select {
+	case q.sendLenChan <- cs:
+	case <-q.enqueueDone:
+		return 0, 0
 	}
 
+	// Read the replies.
+	var lq, ls int
 	select {
-	case l := <-c:
-		return l
+	case lq = <-cq:
 	case <-q.enqueueDone:
-		return 0
+		return 0, 0
 	}
+	select {
+	case ls = <-cs:
+	case <-q.enqueueDone:
+		return 0, 0
+	}
+
+	return lq, ls
 }
 
 // enqueueLoop is responsible for maintaining the prioritized outbound queue of
@@ -537,7 +554,7 @@ loop:
 				nextRMM = dequeue()
 			}
 
-		case c := <-q.lenChan:
+		case c := <-q.enqueueLenChan:
 			l := outq.Len()
 			if nextRMM != nil {
 				l += 1
@@ -716,6 +733,9 @@ loop:
 			if reply.nextInvoice != "" {
 				invoices.PushBack(reply.nextInvoice)
 			}
+
+		case c := <-q.sendLenChan:
+			c <- len(rmms)
 
 		case <-ctx.Done():
 			break loop

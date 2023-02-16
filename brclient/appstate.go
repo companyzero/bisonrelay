@@ -216,7 +216,8 @@ func (as *appState) run() error {
 	// Track outbound RMQ length.
 	go func() {
 		for {
-			l := as.c.RMQLen()
+			ql, sl := as.c.RMQLen()
+			l := ql + sl
 			as.qlenMtx.Lock()
 			changed := l != as.qlen
 			as.qlen = l
