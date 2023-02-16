@@ -9,6 +9,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	genericlist "github.com/bahlo/generic-list-go"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/companyzero/bisonrelay/client/clientintf"
 	"github.com/companyzero/bisonrelay/internal/strescape"
@@ -24,66 +25,92 @@ type chatMsgEl struct {
 	mention *string
 }
 
-type chatMsgElLine []chatMsgEl
+type chatMsgElLine struct {
+	genericlist.List[chatMsgEl]
+}
 
-func parseMsgLine(line string, mention string) chatMsgElLine {
-	// Setup mention splitting.
-	splitMentions := func(s string) []chatMsgEl {
-		return []chatMsgEl{{text: s}}
+func (l *chatMsgElLine) splitMentions(mention string) {
+	re, err := regexp.Compile(`\b` + mention + `\b`)
+	if err != nil {
+		return
 	}
-	if mention != "" {
-		re, err := regexp.Compile(`\b` + mention + `\b`)
-		if err == nil {
-			splitMentions = func(s string) []chatMsgEl {
-				positions := re.FindAllStringIndex(s, -1)
-				if len(positions) == 0 {
-					return []chatMsgEl{{text: s}}
-				}
-
-				var res []chatMsgEl
-				lastEnd := 0
-				for _, pos := range positions {
-					prefix := s[lastEnd:pos[0]]
-					res = append(res, chatMsgEl{text: prefix})
-
-					mention := s[pos[0]:pos[1]]
-					res = append(res, chatMsgEl{mention: &mention})
-					lastEnd = pos[1]
-				}
-				res = append(res, chatMsgEl{text: s[lastEnd:]})
-				return res
-			}
+	for el := l.Front(); el != nil; el = el.Next() {
+		s := el.Value.text
+		if s == "" {
+			continue
 		}
+
+		positions := re.FindAllStringIndex(s, -1)
+		if len(positions) == 0 {
+			continue
+		}
+
+		// Replace el with new elements.
+		lastEnd := 0
+		for _, pos := range positions {
+			prefix := s[lastEnd:pos[0]]
+			l.InsertBefore(chatMsgEl{text: prefix}, el)
+
+			mention := s[pos[0]:pos[1]]
+			l.InsertBefore(chatMsgEl{mention: &mention}, el)
+			lastEnd = pos[1]
+		}
+		suffix := s[lastEnd:]
+		newEl := l.InsertBefore(chatMsgEl{text: suffix}, el)
+		l.Remove(el)
+		el = newEl
 	}
+}
 
-	// Split embeds.
-	var res chatMsgElLine
-	embedPositions := embedRegexp.FindAllStringIndex(line, -1)
-	if len(embedPositions) == 0 {
-		return splitMentions(line)
+func (l *chatMsgElLine) splitEmbeds() {
+	for el := l.Front(); el != nil; el = el.Next() {
+		s := el.Value.text
+		if s == "" {
+			continue
+		}
+
+		embedPositions := embedRegexp.FindAllStringIndex(s, -1)
+		if len(embedPositions) == 0 {
+			continue
+		}
+
+		// Copy [prefix]--embed[data]-
+		var lastEnd int
+		for _, embedPos := range embedPositions {
+			prefix := s[lastEnd:embedPos[0]]
+			l.InsertBefore(chatMsgEl{text: prefix}, el)
+
+			args := parseEmbedArgs(s[embedPos[0]:embedPos[1]])
+			l.InsertBefore(chatMsgEl{embed: &args}, el)
+
+			lastEnd = embedPos[1]
+		}
+
+		// Copy last [suffix]
+		newEl := l.InsertBefore(chatMsgEl{text: s[lastEnd:]}, el)
+		l.Remove(el)
+		el = newEl
 	}
+}
 
-	// Copy [prefix]--embed[data]-
-	var lastEnd int
-	for _, embedPos := range embedPositions {
-		prefix := line[lastEnd:embedPos[0]]
-		res = append(res, splitMentions(prefix)...)
-
-		args := parseEmbedArgs(line[embedPos[0]:embedPos[1]])
-		res = append(res, chatMsgEl{embed: &args})
-
-		lastEnd = embedPos[1]
+func (l *chatMsgElLine) parseLine(line, mention string) {
+	l.PushBack(chatMsgEl{text: line})
+	l.splitEmbeds()
+	if mention != "" {
+		l.splitMentions(mention)
 	}
+}
 
-	// Copy last [suffix]
-	res = append(res, splitMentions(line[lastEnd:])...)
+func parseMsgLine(line string, mention string) *chatMsgElLine {
+	res := &chatMsgElLine{}
+	res.parseLine(line, mention)
 	return res
 }
 
-func parseMsgIntoElements(msg string, mention string) []chatMsgElLine {
+func parseMsgIntoElements(msg string, mention string) []*chatMsgElLine {
 	// First, break into lines.
 	lines := strings.Split(msg, "\n")
-	res := make([]chatMsgElLine, 0, len(lines))
+	res := make([]*chatMsgElLine, 0, len(lines))
 	for _, line := range lines {
 		res = append(res, parseMsgLine(line, mention))
 	}
@@ -94,7 +121,7 @@ type chatMsg struct {
 	ts       time.Time
 	sent     bool
 	msg      string
-	elements []chatMsgElLine
+	elements []*chatMsgElLine
 	mine     bool
 	internal bool
 	help     bool
@@ -252,7 +279,7 @@ func (cw *chatWindow) changeSelectedEmbed(delta int) bool {
 // writeWrappedWithStyle writes s to b using the style with wrapping at winW.
 // Returns the new offset.
 func writeWrappedWithStyle(b *strings.Builder, offset, winW int, style lipgloss.Style, s string) int {
-	words := strings.Split(s, " ")
+	words := strings.SplitAfter(s, " ")
 	var line string
 	for _, w := range words {
 		if len(line)+offset+len(w)+1 > winW {
@@ -261,7 +288,7 @@ func writeWrappedWithStyle(b *strings.Builder, offset, winW int, style lipgloss.
 			line = ""
 			offset = 0
 		}
-		line += w + " "
+		line += w
 	}
 	b.WriteString(style.Render(line))
 	offset += len(line)
@@ -299,7 +326,8 @@ func (cw *chatWindow) renderMsg(winW int, styles *theme, b *strings.Builder, as 
 	// Loop through hard newlines.
 	for _, line := range msg.elements {
 		// Style each element.
-		for _, el := range line {
+		for elel := line.Front(); elel != nil; elel = elel.Next() {
+			el := elel.Value
 			var s string
 			if el.embed != nil {
 				args := el.embed
