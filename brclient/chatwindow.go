@@ -9,12 +9,12 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/companyzero/bisonrelay/client/clientintf"
 	"github.com/companyzero/bisonrelay/internal/strescape"
 	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/companyzero/bisonrelay/zkidentity"
 	"github.com/decred/dcrd/dcrutil/v4"
-	"github.com/muesli/reflow/wordwrap"
 )
 
 // chatMsgEl is one element of a chat msg AST.
@@ -249,6 +249,25 @@ func (cw *chatWindow) changeSelectedEmbed(delta int) bool {
 	return true
 }
 
+// writeWrappedWithStyle writes s to b using the style with wrapping at winW.
+// Returns the new offset.
+func writeWrappedWithStyle(b *strings.Builder, offset, winW int, style lipgloss.Style, s string) int {
+	words := strings.Split(s, " ")
+	var line string
+	for _, w := range words {
+		if len(line)+offset+len(w)+1 > winW {
+			b.WriteString(style.Render(line))
+			b.WriteRune('\n')
+			line = ""
+			offset = 0
+		}
+		line += w + " "
+	}
+	b.WriteString(style.Render(line))
+	offset += len(line)
+	return offset
+}
+
 func (cw *chatWindow) renderMsg(winW int, styles *theme, b *strings.Builder, as *appState, msg *chatMsg) {
 	prefix := styles.timestamp.Render(msg.ts.Format("15:04:05 "))
 	if msg.help {
@@ -274,15 +293,11 @@ func (cw *chatWindow) renderMsg(winW int, styles *theme, b *strings.Builder, as 
 		style = styles.unsent
 	}
 
-	// Loop through hard newlines.
-	for i, line := range msg.elements {
-		// Wrap on the window.
-		wrapper := wordwrap.NewWriter(winW)
-		wrapper.Breakpoints = []rune{}
-		if i == 0 {
-			wrapper.Write([]byte(prefix))
-		}
+	b.WriteString(prefix)
+	offset := lipgloss.Width(prefix)
 
+	// Loop through hard newlines.
+	for _, line := range msg.elements {
 		// Style each element.
 		for _, el := range line {
 			var s string
@@ -330,18 +345,16 @@ func (cw *chatWindow) renderMsg(winW int, styles *theme, b *strings.Builder, as 
 					cw.selEmbedArgs = *args
 				}
 				cw.maxEmbeds += 1
-				s = style.Render(s)
+				offset = writeWrappedWithStyle(b, offset, winW, style, s)
 			} else if el.mention != nil {
-				s = styles.mention.Render(*el.mention)
+				style := styles.mention
+				s = *el.mention
+				offset = writeWrappedWithStyle(b, offset, winW, style, s)
 			} else {
-				s = style.Render(el.text)
+				s = el.text
+				offset = writeWrappedWithStyle(b, offset, winW, style, s)
 			}
-
-			wrapper.Write([]byte(s))
 		}
-
-		wrapper.Close()
-		b.Write(wrapper.Bytes())
 		b.WriteRune('\n')
 	}
 }
