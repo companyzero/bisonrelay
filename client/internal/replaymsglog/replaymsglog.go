@@ -272,7 +272,8 @@ func (l *Log) Store(v interface{}) (ID, error) {
 	fid := l.fileIndex
 	endOffset := l.current.writtenToOffset
 	id = makeID(fid, uint32(endOffset))
-	l.log.Debugf("Stored message %s (len %d)", id, writeLen)
+	l.log.Debugf("Stored message %s (len %d) with prefix %s", id, writeLen,
+		l.cfg.Prefix)
 	return id, nil
 }
 
@@ -282,7 +283,8 @@ func (l *Log) Store(v interface{}) (ID, error) {
 func (l *Log) removeFile(fid uint32) error {
 	lf := l.oldFiles[fid]
 	if lf == nil {
-		return fmt.Errorf("cannot remove inexisted fid %d", fid)
+		return fmt.Errorf("cannot remove inexisted fid %s_%d",
+			l.cfg.Prefix, fid)
 	}
 
 	// Remove entire file.
@@ -316,8 +318,8 @@ func (l *Log) ClearUpTo(target ID) error {
 	oldIDs := make([]uint32, 0, len(l.oldFiles))
 	for id := range l.oldFiles {
 		if id > targetFID {
-			l.log.Tracef("Skipping file %s while clearing up to ID %s",
-				makeFileID(id), target)
+			l.log.Tracef("Skipping file %s_%s while clearing up to ID %s",
+				l.cfg.Prefix, makeFileID(id), target)
 		} else {
 			oldIDs = append(oldIDs, id)
 		}
@@ -332,8 +334,8 @@ func (l *Log) ClearUpTo(target ID) error {
 				l.mtx.Unlock()
 				return err
 			}
-			l.log.Debugf("Removed file %s while clearing up to ID %s",
-				makeFileID(id), target)
+			l.log.Debugf("Removed file %s_%s while clearing up to ID %s",
+				l.cfg.Prefix, makeFileID(id), target)
 			continue
 		}
 
@@ -347,7 +349,8 @@ func (l *Log) ClearUpTo(target ID) error {
 			return err
 		}
 
-		l.log.Debugf("Cleared target file up to ID %s", target)
+		l.log.Debugf("Cleared target file with prefix %s up to ID %s",
+			l.cfg.Prefix, target)
 		return nil
 	}
 
@@ -405,7 +408,7 @@ func (l *Log) ReadAfter(fromID ID, m interface{}, f func(ID) error) error {
 		}
 	}
 
-	l.log.Debugf("Read all entries after id %s", fromID)
+	l.log.Debugf("Read all entries of prefix %s after id %s", l.cfg.Prefix, fromID)
 
 	return nil
 }
@@ -476,8 +479,8 @@ func New(cfg Config) (*Log, error) {
 		totalOldSize += lf.writtenToOffset
 	}
 
-	log.Infof("Opened %d msg log files with total size %d with last FID %s",
-		len(oldFiles), totalOldSize, makeFileID(uint32(lastFID)))
+	log.Infof("Opened %d replay log files with prefix %s, total size %d, last FID %s",
+		len(oldFiles), cfg.Prefix, totalOldSize, makeFileID(uint32(lastFID)))
 
 	current := oldFiles[uint32(lastFID)]
 
