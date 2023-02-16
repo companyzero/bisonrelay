@@ -37,6 +37,10 @@ type wsPeer struct {
 	lastWriter io.WriteCloser
 }
 
+func (p *wsPeer) close() error {
+	return p.conn.Close()
+}
+
 func (p *wsPeer) request(ctx context.Context, method string, req, res proto.Message) error {
 	return p.p.request(ctx, method, req, res)
 }
@@ -67,6 +71,8 @@ func (p *wsPeer) flushLastWrite() error {
 }
 
 func (p *wsPeer) run(ctx context.Context) error {
+	defer p.close()
+
 	g, gctx := errgroup.WithContext(ctx)
 
 	pongChan := make(chan [pingPayloadSize]byte)
@@ -169,6 +175,16 @@ type WSClient struct {
 	mtx         sync.Mutex
 	peer        *wsPeer
 	waitingPeer []chan *wsPeer
+}
+
+func (c *WSClient) Close() error {
+	c.mtx.Lock()
+	var err error
+	if c.peer != nil {
+		err = c.peer.close()
+	}
+	c.mtx.Unlock()
+	return err
 }
 
 // nextPeer returns the currently running peer or waits until the next peer
