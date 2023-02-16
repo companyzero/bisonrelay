@@ -23,6 +23,7 @@ type chatMsgEl struct {
 	text    string
 	embed   *embeddedArgs
 	mention *string
+	url     *string
 }
 
 type chatMsgElLine struct {
@@ -93,9 +94,41 @@ func (l *chatMsgElLine) splitEmbeds() {
 	}
 }
 
+var urlRegexp = regexp.MustCompile(`\bhttps?[^\s]*\b`)
+
+func (l *chatMsgElLine) splitURLs() {
+	for el := l.Front(); el != nil; el = el.Next() {
+		s := el.Value.text
+		if s == "" {
+			continue
+		}
+
+		positions := urlRegexp.FindAllStringIndex(s, -1)
+		if len(positions) == 0 {
+			continue
+		}
+
+		// Replace el with new elements.
+		lastEnd := 0
+		for _, pos := range positions {
+			prefix := s[lastEnd:pos[0]]
+			l.InsertBefore(chatMsgEl{text: prefix}, el)
+
+			url := s[pos[0]:pos[1]]
+			l.InsertBefore(chatMsgEl{url: &url}, el)
+			lastEnd = pos[1]
+		}
+		suffix := s[lastEnd:]
+		newEl := l.InsertBefore(chatMsgEl{text: suffix}, el)
+		l.Remove(el)
+		el = newEl
+	}
+}
+
 func (l *chatMsgElLine) parseLine(line, mention string) {
 	l.PushBack(chatMsgEl{text: line})
 	l.splitEmbeds()
+	l.splitURLs()
 	if mention != "" {
 		l.splitMentions(mention)
 	}
@@ -295,6 +328,25 @@ func writeWrappedWithStyle(b *strings.Builder, offset, winW int, style lipgloss.
 	return offset
 }
 
+func writeWrappedURL(b *strings.Builder, offset, winW int, url string) int {
+	if offset+len(url) > winW {
+		b.WriteRune('\n')
+		offset = 0
+	}
+	// This is supposed to work, but doesn't. Bubbletea bug? see:
+	// https://gist.github.com/egmontkob/eb114294efbcd5adb1944c9f3cb5feda
+	//
+	//s := "\x1b]8;id=100;" + url + "\x1b\\" + url +
+	//		"\x1b]8;;\x1b\\"
+	b.WriteString(url)
+	offset += len(url)
+	if offset > winW {
+		b.WriteRune('\n')
+		offset = 0
+	}
+	return offset
+}
+
 func (cw *chatWindow) renderMsg(winW int, styles *theme, b *strings.Builder, as *appState, msg *chatMsg) {
 	prefix := styles.timestamp.Render(msg.ts.Format("15:04:05 "))
 	if msg.help {
@@ -378,6 +430,8 @@ func (cw *chatWindow) renderMsg(winW int, styles *theme, b *strings.Builder, as 
 				style := styles.mention
 				s = *el.mention
 				offset = writeWrappedWithStyle(b, offset, winW, style, s)
+			} else if el.url != nil {
+				offset = writeWrappedURL(b, offset, winW, *el.url)
 			} else {
 				s = el.text
 				offset = writeWrappedWithStyle(b, offset, winW, style, s)
