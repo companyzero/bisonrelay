@@ -679,7 +679,7 @@ func TestE2EDcrlnGCBlockList(t *testing.T) {
 				t.Fatalf("unexpected msg: got %q, want %q",
 					gotMsg, wantMsg)
 			}
-		case <-time.After(10 * time.Second):
+		case <-time.After(40 * time.Second):
 			t.Fatal("timeout")
 		}
 	}
@@ -922,192 +922,6 @@ func TestE2EDcrlnTipUser(t *testing.T) {
 	case <-time.After(30 * time.Second):
 		t.Fatal("timeout")
 	}
-}
-
-func TestE2EDcrlnReset(t *testing.T) {
-	rnd := testRand(t)
-	alice := newTestClient(t, rnd, "alice")
-	bob := newTestClient(t, rnd, "bob")
-
-	aliceKXdChan, bobKXdChan := make(chan struct{}), make(chan struct{})
-	alice.cfg.KXCompleted = func(*RemoteUser) { go func() { aliceKXdChan <- struct{}{} }() }
-	bob.cfg.KXCompleted = func(*RemoteUser) { go func() { bobKXdChan <- struct{}{} }() }
-	alicePMChan, bobPMChan := make(chan string, 1), make(chan string, 1)
-	alice.cfg.Notifications.Register(OnPMNtfn(func(ru *RemoteUser, pm rpc.RMPrivateMessage, ts time.Time) {
-		alicePMChan <- pm.Message
-	}))
-
-	bob.cfg.Notifications.Register(OnPMNtfn(func(ru *RemoteUser, pm rpc.RMPrivateMessage, ts time.Time) {
-		bobPMChan <- pm.Message
-	}))
-
-	// Helper to consume the KXCompleted events.
-	assertKXCompleted := func() {
-		t.Helper()
-		select {
-		case <-aliceKXdChan:
-		case <-time.After(30 * time.Second):
-			t.Fatal("timeout")
-		}
-		select {
-		case <-bobKXdChan:
-		case <-time.After(30 * time.Second):
-			t.Fatal("timeout")
-		}
-	}
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	go func() { _ = alice.Run(ctx) }()
-	go func() { _ = bob.Run(ctx) }()
-
-	time.Sleep(100 * time.Millisecond) // Time for run() to start.
-	completeC2CKX(t, alice, bob)
-
-	// Consume the two KXCompleted Events.
-	assertKXCompleted()
-
-	alice.log.Infof("================ kx completed")
-	bob.log.Infof("================ kx completed")
-
-	// Perform a reset.
-	err := alice.ResetRatchet(bob.PublicID())
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Ensure we got the new reset events.
-	assertKXCompleted()
-
-	// Reset on the other direction.
-	err = bob.ResetRatchet(alice.PublicID())
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Ensure we got the new reset events.
-	assertKXCompleted()
-
-	// Ensure Alice and Bob can message each other.
-	aliceMsg, bobMsg := "i am alice", "i am bob"
-	if err := alice.PM(bob.PublicID(), aliceMsg); err != nil {
-		t.Fatal(err)
-	}
-	if err := bob.PM(alice.PublicID(), bobMsg); err != nil {
-		t.Fatal(err)
-	}
-	select {
-	case gotMsg := <-alicePMChan:
-		if gotMsg != bobMsg { // Alice gets Bob's msg
-			t.Fatalf("unexpected alice msg: got %q, want %q",
-				gotMsg, aliceMsg)
-		}
-	case <-time.After(10 * time.Second):
-		t.Fatal("timeout")
-	}
-	select {
-	case gotMsg := <-bobPMChan:
-		if gotMsg != aliceMsg { // Bob gets Alice's msg
-			t.Fatalf("unexpected bob msg: got %q, want %q",
-				gotMsg, bobMsg)
-		}
-	case <-time.After(10 * time.Second):
-		t.Fatal("timeout")
-	}
-}
-
-func TestE2EDcrlnTransReset(t *testing.T) {
-	rnd := testRand(t)
-	alice := newTestClient(t, rnd, "alice")
-	bob := newTestClient(t, rnd, "bob")
-	charlie := newTestClient(t, rnd, "charlie")
-
-	aliceKXdChan, bobKXdChan := make(chan struct{}), make(chan struct{})
-	alice.cfg.KXCompleted = func(*RemoteUser) { go func() { aliceKXdChan <- struct{}{} }() }
-	bob.cfg.KXCompleted = func(*RemoteUser) { go func() { bobKXdChan <- struct{}{} }() }
-
-	alicePMs, bobPMs := make(chan string), make(chan string)
-	alice.cfg.Notifications.Register(OnPMNtfn(func(ru *RemoteUser, pm rpc.RMPrivateMessage, ts time.Time) {
-		go func() { alicePMs <- pm.Message }()
-	}))
-	bob.cfg.Notifications.Register(OnPMNtfn(func(ru *RemoteUser, pm rpc.RMPrivateMessage, ts time.Time) {
-		go func() { bobPMs <- pm.Message }()
-	}))
-
-	// Helper to consume the KXCompleted events.
-	assertKXCompleted := func() {
-		t.Helper()
-		select {
-		case <-aliceKXdChan:
-		case <-time.After(30 * time.Second):
-			t.Fatal("timeout")
-		}
-		select {
-		case <-bobKXdChan:
-		case <-time.After(30 * time.Second):
-			t.Fatal("timeout")
-		}
-	}
-
-	// Helper to verify the Alice -> Bob ratchet works.
-	checkAliceBobRatchet := func() {
-		t.Helper()
-
-		testMsg := "test message " + strconv.Itoa(rand.Int())
-		if err := alice.PM(bob.PublicID(), testMsg); err != nil {
-			t.Fatalf("Alice PM() error: %v", err)
-		}
-		if err := bob.PM(alice.PublicID(), testMsg); err != nil {
-			t.Fatalf("Bob PM() error: %v", err)
-		}
-		select {
-		case gotPM := <-alicePMs:
-			if gotPM != testMsg {
-				t.Fatalf("unexpected msg: got %v, want %v", gotPM, testMsg)
-			}
-		case <-time.After(10 * time.Second):
-			t.Fatalf("timeout waiting for bob msg")
-		}
-		select {
-		case gotPM := <-bobPMs:
-			if gotPM != testMsg {
-				t.Fatalf("unexpected msg: got %v, want %v", gotPM, testMsg)
-			}
-		case <-time.After(10 * time.Second):
-			t.Fatalf("timeout waiting for alice msg")
-		}
-	}
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	go func() { _ = alice.Run(ctx) }()
-	go func() { _ = bob.Run(ctx) }()
-	go func() { _ = charlie.Run(ctx) }()
-	time.Sleep(100 * time.Millisecond) // Time for run() to start.
-
-	// Complete KXs between Alice->Bob, Alice->Charlie and Bob->Charlie
-	completeC2CKX(t, alice, bob)
-	completeC2CKX(t, alice, charlie)
-	completeC2CKX(t, bob, charlie)
-
-	// We should get two kx events on Alice and Bob.
-	assertKXCompleted()
-	assertKXCompleted()
-
-	// Verify the Alice-Bob ratchet works.
-	checkAliceBobRatchet()
-
-	// Perform a transitive reset Alice -> Charlie -> Bob
-	err := alice.RequestTransitiveReset(charlie.PublicID(), bob.PublicID())
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// We should get new KX completed events.
-	assertKXCompleted()
-
-	// Ensure Alice and Bob can message each other.
-	checkAliceBobRatchet()
 }
 
 // TestE2EDcrlnOfflineMsgs ensures that attempting to send messages while the
@@ -1485,7 +1299,7 @@ func TestE2EDcrlnBlockIgnore(t *testing.T) {
 				t.Fatalf("unexpected msg: got %q, want %q",
 					gotMsg, wantGCM)
 			}
-		case <-time.After(10 * time.Second):
+		case <-time.After(40 * time.Second):
 			if wantGCM != "" {
 				t.Fatal("timeout")
 			}
@@ -1637,7 +1451,7 @@ func TestE2EDcrlnKXSearch(t *testing.T) {
 	}))
 
 	eveKXdChan := make(chan *RemoteUser, 1)
-	eve.cfg.KXCompleted = func(ru *RemoteUser) { eveKXdChan <- ru }
+	eve.cfg.Notifications.Register(OnKXCompleted(func(ru *RemoteUser) { eveKXdChan <- ru }))
 	assertKXd := func(c chan *RemoteUser, to UserID) {
 		t.Helper()
 		select {

@@ -85,7 +85,6 @@ type testClient struct {
 	mtx             sync.Mutex
 	conn            *testConn
 	preventConn     error
-	onKXCompleted   func(user *client.RemoteUser)
 	onConnChanged   func(connected bool, pushRate, subRate uint64)
 	onInvitedToGC   func(user *client.RemoteUser, iid uint64, invite rpc.RMGroupInvite)
 	onGCListUpdated func(gc clientdb.GCAddressBookEntry)
@@ -253,15 +252,6 @@ func (ts *testScaffold) newClientWithOpts(name string, rootDir string,
 		DB:            db,
 		LocalIDIniter: idIniter,
 		Logger:        logBknd,
-
-		KXCompleted: func(user *client.RemoteUser) {
-			tc.mtx.Lock()
-			f := tc.onKXCompleted
-			tc.mtx.Unlock()
-			if f != nil {
-				f(user)
-			}
-		},
 
 		ServerSessionChanged: func(connected bool, pushRate, subRate, expDays uint64) {
 			tc.mtx.Lock()

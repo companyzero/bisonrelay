@@ -68,6 +68,14 @@ type OnLocalClientOfflineTooLong func(time.Time)
 
 func (_ OnLocalClientOfflineTooLong) typ() string { return onLocalClientOfflineTooLong }
 
+const onKXCompleted = "onKXCompleted"
+
+// OnKXCompleted is called after KX is completed with a remote user (either a
+// new user or a reset KX).
+type OnKXCompleted func(*RemoteUser)
+
+func (_ OnKXCompleted) typ() string { return onKXCompleted }
+
 // The following is used only in tests.
 
 const onTestNtfnType = "testNtfnType"
@@ -214,7 +222,11 @@ func (nmgr *NotificationManager) notifyOnRemoteSubErrored(user *RemoteUser, wasS
 func (nmgr *NotificationManager) notifyOnLocalClientOfflineTooLong(date time.Time) {
 	nmgr.handlers[onLocalClientOfflineTooLong].(*handlersFor[OnLocalClientOfflineTooLong]).
 		visit(func(h OnLocalClientOfflineTooLong) { h(date) })
+}
 
+func (nmgr *NotificationManager) notifyOnKXCompleted(user *RemoteUser) {
+	nmgr.handlers[onKXCompleted].(*handlersFor[OnKXCompleted]).
+		visit(func(h OnKXCompleted) { h(user) })
 }
 
 func NewNotificationManager() *NotificationManager {
@@ -223,6 +235,7 @@ func NewNotificationManager() *NotificationManager {
 			onTestNtfnType:           &handlersFor[onTestNtfn]{},
 			onPMNtfnType:             &handlersFor[OnPMNtfn]{},
 			onGCMNtfnType:            &handlersFor[OnGCMNtfn]{},
+			onKXCompleted:            &handlersFor[OnKXCompleted]{},
 			onPostRcvdNtfnType:       &handlersFor[OnPostRcvdNtfn]{},
 			onPostStatusRcvdNtfnType: &handlersFor[OnPostStatusRcvdNtfn]{},
 

@@ -13,7 +13,7 @@ import (
 
 func TestBasicPostFeatures(t *testing.T) {
 	// Setup Alice and Bob and have them KX.
-	tcfg := testScaffoldCfg{showLog: true}
+	tcfg := testScaffoldCfg{}
 	ts := newTestScaffold(t, tcfg)
 	alice := ts.newClient("alice")
 	bob := ts.newClient("bob")
