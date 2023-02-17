@@ -749,6 +749,27 @@ class _SynthEventWState extends State<SynthEventW> {
     } else if (event.state == SCE_received) {
       child = Text(widget.event.msg,
           style: TextStyle(fontSize: 9, color: textColor));
+    } else if (event.state == SCE_new_posts) {
+      child = Row(children: [
+        Expanded(
+            child: Divider(
+          color: textColor, //color of divider
+          height: 8, //height spacing of divider
+          thickness: 1, //thickness of divier line
+          indent: 5, //spacing at the start of divider
+          endIndent: 5, //spacing at the end of divider
+        )),
+        Text("Last read posts",
+            style: TextStyle(fontSize: 9, color: textColor)),
+        Expanded(
+            child: Divider(
+          color: textColor, //color of divider
+          height: 8, //height spacing of divider
+          thickness: 1, //thickness of divier line
+          indent: 5, //spacing at the start of divider
+          endIndent: 5, //spacing at the end of divider
+        )),
+      ]);
     } else {
       child = Text("? unknown state ${event.state}",
           style: TextStyle(fontSize: 9, color: textColor));

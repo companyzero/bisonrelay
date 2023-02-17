@@ -9,6 +9,7 @@ const SCE_unknown = 0;
 const SCE_sending = 1;
 const SCE_sent = 2;
 const SCE_received = 3;
+const SCE_new_posts = 4;
 const SCE_errored = 99;
 
 class SynthChatEvent extends ChatEvent with ChangeNotifier {
@@ -89,6 +90,15 @@ class ChatModel extends ChangeNotifier {
   List<ChatEventModel> _msgs = [];
   UnmodifiableListView<ChatEventModel> get msgs => UnmodifiableListView(_msgs);
   void append(ChatEventModel msg) {
+    if (!_active) {
+      print("sadfsadf);");
+      if (checkForNewPosts() < 0) {
+        print("sadfswweeadf);");
+        var event = SynthChatEvent("New posts synth_event");
+        event.state = SCE_new_posts;
+        _msgs.add(ChatEventModel(event, null));
+      }
+    }
     _msgs.add(msg);
     if (!_active) {
       if (msg.event is PM || msg.event is GCMsg) {
@@ -98,6 +108,17 @@ class ChatModel extends ChangeNotifier {
       }
       notifyListeners();
     }
+  }
+
+  int checkForNewPosts() {
+    return msgs
+        .indexWhere((item) => item.event.msg.contains("New posts synth_event"));
+  }
+
+  void removeNewPostMessage() {
+    print("remove possdsts");
+    _msgs.removeWhere(
+        (item) => item.event.msg.contains("New posts synth_event"));
   }
 
   void payTip(double amount) async {
@@ -256,6 +277,9 @@ class ClientModel extends ChangeNotifier {
 
   void set active(ChatModel? c) {
     _profile = null;
+    // Remove new posts messages
+    print("remove posts");
+    _active?.removeNewPostMessage();
     _active?._setActive(false);
     _active = c;
     c?._setActive(true);
@@ -351,6 +375,7 @@ class ClientModel extends ChangeNotifier {
       var isGC = (evnt is GCMsg) || (evnt is GCUserEvent);
 
       var chat = _newChat(evnt.sid, "", isGC);
+      print("sadfsdfsdsd");
       ChatModel? source = null;
       if (evnt is PM) {
         if (!evnt.mine) {
