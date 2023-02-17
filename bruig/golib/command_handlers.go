@@ -128,7 +128,8 @@ func handleInitClient(handle uint32, args InitClient) error {
 	},
 	))
 
-	ntfns.Register(client.OnGCMNtfn(func(user *client.RemoteUser, msg rpc.RMGroupMessage, ts time.Time) {
+	// GCM must be sync to order correctly on startup.
+	ntfns.RegisterSync(client.OnGCMNtfn(func(user *client.RemoteUser, msg rpc.RMGroupMessage, ts time.Time) {
 		// TODO: replace GCMessage{} for types.ReceivedGCMsg{}.
 		gcm := GCMessage{
 			SenderUID: user.ID(),
