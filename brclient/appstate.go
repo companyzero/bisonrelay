@@ -22,6 +22,7 @@ import (
 	"sync"
 	"time"
 
+	genericlist "github.com/bahlo/generic-list-go"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/companyzero/bisonrelay/brclient/internal/sloglinesbuffer"
@@ -75,6 +76,12 @@ type balance struct {
 	conf  dcrutil.Amount
 	recv  dcrutil.Amount
 	send  dcrutil.Amount
+}
+
+type inboundRemoteMsg struct {
+	user *client.RemoteUser
+	rm   interface{}
+	ts   time.Time
 }
 
 type appState struct {
@@ -197,6 +204,10 @@ type appState struct {
 	// in the UI at most once every 24h to avoid too much spam.
 	missingKXUsersMtx sync.Mutex
 	missingKXUsers    map[client.UserID]time.Time
+
+	inboundMsgsMtx  sync.Mutex
+	inboundMsgs     *genericlist.List[inboundRemoteMsg]
+	inboundMsgsChan chan struct{}
 }
 
 type appStateErr struct {
@@ -241,6 +252,7 @@ func (as *appState) run() error {
 
 	go as.trackExchangeRate()
 	go as.trackLNBalances()
+	go as.processInboundMsgs()
 
 	// Listen to lnd log lines.
 	lndLogCb := as.lndLogLines.Listen(func(s string) { as.sendMsg(lndLogUpdated(s)) })
@@ -456,6 +468,72 @@ func (as *appState) trackLNBalances() {
 		}
 	}
 
+}
+
+// processInboundMsgs processes inbound msgs (PMs and GCMs) in a serialized way.
+func (as *appState) processInboundMsgs() {
+
+	// repaintChan is filled when there's stuff to repaint.
+	var repaintChan <-chan time.Time
+	var msgInActiveWin bool
+
+loop:
+	for {
+		select {
+		case <-as.ctx.Done():
+			return
+		case <-repaintChan:
+			repaintChan = nil
+			as.footerInvalidate()
+			if msgInActiveWin {
+				as.sendMsg(repaintActiveChat{})
+			} else {
+				as.sendMsg(struct{}{}) // force update footer
+			}
+			msgInActiveWin = false
+			continue loop
+		case <-as.inboundMsgsChan:
+			// Keep going to process all messages.
+		}
+
+		// Safe to do in 2 steps because we only pop from this goroutine.
+		as.inboundMsgsMtx.Lock()
+		hasInbound := as.inboundMsgs.Len() > 0
+		as.inboundMsgsMtx.Unlock()
+		if !hasInbound {
+			// No messages, return to idle loop.
+			continue loop
+		}
+		for hasInbound {
+			as.inboundMsgsMtx.Lock()
+			inmsg := as.inboundMsgs.Remove(as.inboundMsgs.Front())
+			hasInbound = as.inboundMsgs.Len() > 0
+			as.inboundMsgsMtx.Unlock()
+
+			user, ts := inmsg.user, inmsg.ts
+			fromNick := strescape.Nick(user.Nick())
+			fromUID := user.ID()
+
+			var msgContent string
+			var cw *chatWindow
+			switch msg := inmsg.rm.(type) {
+			case rpc.RMPrivateMessage:
+				cw = as.findOrNewChatWindow(user.ID(), fromNick)
+				msgContent = as.handleRcvdText(msg.Message, fromNick)
+
+			case rpc.RMGroupMessage:
+				cw = as.findOrNewGCWindow(msg.ID)
+				msgContent = as.handleRcvdText(msg.Message, cw.alias)
+			default:
+				panic("unimplemented")
+			}
+
+			cw.newRecvdMsg(fromNick, msgContent, &fromUID, ts)
+			cwActive := as.markWindowUpdated(cw, hasMention(as.c.LocalNick(), msgContent))
+			msgInActiveWin = msgInActiveWin || cwActive
+		}
+		repaintChan = time.After(5 * time.Millisecond) // debounce repaints
+	}
 }
 
 // storeCrash logs all currently executing goroutines to the app log and stores it as
@@ -1049,12 +1127,11 @@ func (as *appState) openChatWindow(nick string) error {
 	return nil
 }
 
-// repaintIfActiveWithMention sends a msg to the UI to repaint the current
-// window if the current window is the specified window.
+// markWindowUpdated marks the window as updated.
 //
 // If mentioned is specified, the window is noted as updated with a local user
 // mention.
-func (as *appState) repaintIfActiveWithMention(cw *chatWindow, mentioned bool) {
+func (as *appState) markWindowUpdated(cw *chatWindow, mentioned bool) bool {
 	as.chatWindowsMtx.Lock()
 	active := as.activeCW >= 0 && len(as.chatWindows) > as.activeCW &&
 		as.chatWindows[as.activeCW] == cw
@@ -1070,18 +1147,19 @@ func (as *appState) repaintIfActiveWithMention(cw *chatWindow, mentioned bool) {
 		}
 	}
 	as.chatWindowsMtx.Unlock()
+	return active
+}
 
+// repaintIfActive sends a msg to the UI to repaint the current window if the
+// current window is the specified window.
+func (as *appState) repaintIfActive(cw *chatWindow) {
+	active := as.markWindowUpdated(cw, false)
 	as.footerInvalidate()
 	if active {
 		as.sendMsg(repaintActiveChat{})
 	} else {
 		as.sendMsg(struct{}{}) // force update footer
 	}
-}
-
-// repaintIfActive see repaintIfActiveWithMention.
-func (as *appState) repaintIfActive(cw *chatWindow) {
-	as.repaintIfActiveWithMention(cw, false)
 }
 
 // handleRcvdText does some improvements to a raw received message (escapes,
@@ -2177,22 +2255,32 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 
 	// Setup notification handlers.
 	ntfns := client.NewNotificationManager()
-	ntfns.Register(client.OnPMNtfn(func(user *client.RemoteUser, msg rpc.RMPrivateMessage, ts time.Time) {
-		fromNick := strescape.Nick(user.PublicIdentity().Nick)
-		cw := as.findOrNewChatWindow(user.ID(), fromNick)
-		s := as.handleRcvdText(msg.Message, fromNick)
-		cw.newRecvdMsg(fromNick, s, &cw.uid, ts)
-		as.sendMsg(msgNewRecvdMsg{})
-		as.repaintIfActiveWithMention(cw, hasMention(as.c.LocalNick(), s))
+	ntfns.RegisterSync(client.OnPMNtfn(func(user *client.RemoteUser, msg rpc.RMPrivateMessage, ts time.Time) {
+		inmsg := inboundRemoteMsg{user: user, rm: msg, ts: ts}
+		as.inboundMsgsMtx.Lock()
+		as.inboundMsgs.PushBack(inmsg)
+		as.inboundMsgsMtx.Unlock()
+		go func() {
+			select {
+			case as.inboundMsgsChan <- struct{}{}:
+			case <-as.ctx.Done():
+			}
+		}()
 	}))
 
-	ntfns.Register(client.OnGCMNtfn(func(user *client.RemoteUser, msg rpc.RMGroupMessage, ts time.Time) {
-		cw := as.findOrNewGCWindow(msg.ID)
-		fromUID := user.ID()
-		s := as.handleRcvdText(msg.Message, cw.alias)
-		cw.newRecvdMsg(user.Nick(), s, &fromUID, ts)
-		as.sendMsg(msgNewRecvdMsg{})
-		as.repaintIfActiveWithMention(cw, hasMention(as.c.LocalNick(), s))
+	// onGCM needs to be sync, otherwise during startup when fetching
+	// multiple initial messages we might inadvertedly reorder them.
+	ntfns.RegisterSync(client.OnGCMNtfn(func(user *client.RemoteUser, msg rpc.RMGroupMessage, ts time.Time) {
+		inmsg := inboundRemoteMsg{user: user, rm: msg, ts: ts}
+		as.inboundMsgsMtx.Lock()
+		as.inboundMsgs.PushBack(inmsg)
+		as.inboundMsgsMtx.Unlock()
+		go func() {
+			select {
+			case as.inboundMsgsChan <- struct{}{}:
+			case <-as.ctx.Done():
+			}
+		}()
 	}))
 
 	ntfns.Register(client.OnPostRcvdNtfn(func(user *client.RemoteUser,
@@ -2965,6 +3053,9 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		collator: collate.New(language.Und),
 
 		missingKXUsers: make(map[client.UserID]time.Time),
+
+		inboundMsgs:     &genericlist.List[inboundRemoteMsg]{},
+		inboundMsgsChan: make(chan struct{}, 8),
 	}
 
 	as.diagMsg("%s version %s", appName, version.String())
