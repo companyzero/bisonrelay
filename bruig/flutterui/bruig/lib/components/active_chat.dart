@@ -399,22 +399,26 @@ class _ReceivedSentPMState extends State<ReceivedSentPM> {
     return LayoutBuilder(
         builder: (BuildContext context, BoxConstraints constraints) {
       return Row(children: [
-        Container(
-            width: 28,
-            margin: const EdgeInsets.only(top: 0, bottom: 0, left: 5, right: 0),
-            child: IconButton(
-              splashRadius: 20,
-              hoverColor: selectedBackgroundColor,
-              icon: CircleAvatar(
-                  backgroundColor: avatarColor,
-                  child: Text(widget.nick[0].toUpperCase(),
-                      style: TextStyle(color: avatarTextColor, fontSize: 20))),
-              padding: const EdgeInsets.all(0),
-              tooltip: widget.nick,
-              onPressed: () {
-                widget.showSubMenu(widget.id);
-              },
-            )),
+        widget.evnt.sameUser
+            ? const SizedBox(width: 28)
+            : Container(
+                width: 28,
+                margin:
+                    const EdgeInsets.only(top: 0, bottom: 0, left: 5, right: 0),
+                child: IconButton(
+                  splashRadius: 20,
+                  hoverColor: selectedBackgroundColor,
+                  icon: CircleAvatar(
+                      backgroundColor: avatarColor,
+                      child: Text(widget.nick[0].toUpperCase(),
+                          style:
+                              TextStyle(color: avatarTextColor, fontSize: 20))),
+                  padding: const EdgeInsets.all(0),
+                  tooltip: widget.nick,
+                  onPressed: () {
+                    widget.showSubMenu(widget.id);
+                  },
+                )),
         Expanded(
             child: Container(
           decoration: BoxDecoration(
@@ -426,20 +430,25 @@ class _ReceivedSentPMState extends State<ReceivedSentPM> {
           child:
               Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             Row(children: [
-              Text(
-                widget.nick,
-                style: TextStyle(
-                    fontSize: 12,
-                    color: hightLightTextColor, // NAME TEXT COLOR,
-                    fontWeight: FontWeight.bold,
-                    fontStyle: FontStyle.italic),
-              ),
+              widget.evnt.sameUser
+                  ? const Empty()
+                  : Text(
+                      widget.nick,
+                      style: TextStyle(
+                          fontSize: 12,
+                          color: hightLightTextColor, // NAME TEXT COLOR,
+                          fontWeight: FontWeight.bold,
+                          fontStyle: FontStyle.italic),
+                    ),
               const SizedBox(width: 10),
-              Text(
-                date,
-                style:
-                    TextStyle(fontSize: 9, color: darkTextColor), // DATE COLOR
-              )
+              Expanded(
+                  child: Align(
+                      alignment: Alignment.topRight,
+                      child: Text(
+                        date,
+                        style: TextStyle(
+                            fontSize: 9, color: darkTextColor), // DATE COLOR
+                      )))
             ]),
             const SizedBox(height: 10),
             Provider<DownloadSource>(

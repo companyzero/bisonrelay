@@ -58,6 +58,13 @@ class ChatEventModel extends ChangeNotifier {
     _sentState = CMS_errored;
     notifyListeners();
   }
+
+  bool _sameUser = false;
+  bool get sameUser => _sameUser;
+  void set sameUser(bool b) {
+    _sameUser = b;
+    notifyListeners();
+  }
 }
 
 class ChatModel extends ChangeNotifier {
@@ -91,13 +98,14 @@ class ChatModel extends ChangeNotifier {
   UnmodifiableListView<ChatEventModel> get msgs => UnmodifiableListView(_msgs);
   void append(ChatEventModel msg) {
     if (!_active) {
-      print("sadfsadf);");
       if (checkForNewPosts() < 0) {
-        print("sadfswweeadf);");
         var event = SynthChatEvent("New posts synth_event");
         event.state = SCE_new_posts;
         _msgs.add(ChatEventModel(event, null));
       }
+    }
+    if (_msgs[_msgs.length - 1].source?.nick == msg.source?.nick) {
+      msg.sameUser = true;
     }
     _msgs.add(msg);
     if (!_active) {
@@ -116,7 +124,6 @@ class ChatModel extends ChangeNotifier {
   }
 
   void removeNewPostMessage() {
-    print("remove possdsts");
     _msgs.removeWhere(
         (item) => item.event.msg.contains("New posts synth_event"));
   }
@@ -132,6 +139,9 @@ class ChatModel extends ChangeNotifier {
       var m = GCMsg(id, nick, msg, DateTime.now().millisecondsSinceEpoch);
       var evnt = ChatEventModel(m, null);
       evnt.sentState = CMS_sending; // Track individual sending status?
+      if (_msgs[_msgs.length - 1].source == null) {
+        evnt.sameUser = true;
+      }
       _msgs.add(evnt);
       notifyListeners();
 
@@ -146,6 +156,9 @@ class ChatModel extends ChangeNotifier {
       var m = PM(id, msg, true, ts);
       var evnt = ChatEventModel(m, null);
       evnt.sentState = CMS_sending;
+      if (_msgs[_msgs.length - 1].source == null) {
+        evnt.sameUser = true;
+      }
       _msgs.add(evnt);
       notifyListeners();
 
@@ -278,7 +291,6 @@ class ClientModel extends ChangeNotifier {
   void set active(ChatModel? c) {
     _profile = null;
     // Remove new posts messages
-    print("remove posts");
     _active?.removeNewPostMessage();
     _active?._setActive(false);
     _active = c;
@@ -375,7 +387,6 @@ class ClientModel extends ChangeNotifier {
       var isGC = (evnt is GCMsg) || (evnt is GCUserEvent);
 
       var chat = _newChat(evnt.sid, "", isGC);
-      print("sadfsdfsdsd");
       ChatModel? source = null;
       if (evnt is PM) {
         if (!evnt.mine) {
