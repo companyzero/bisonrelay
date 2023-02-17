@@ -695,7 +695,7 @@ func (c *Client) maybeResetAllKXAfterConn(expDays int) {
 	limitDate := now.Add(-limitInterval)
 	if !oldConnDate.Before(limitDate) {
 		c.log.Debugf("Skipping resetting all KX due to local "+
-			"client offline since %s with limit date %s", now,
+			"client offline since %s with limit date %s", oldConnDate,
 			limitDate)
 		return
 	}
