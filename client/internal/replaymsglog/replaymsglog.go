@@ -298,7 +298,7 @@ func (l *Log) removeFile(fid uint32) error {
 		return err
 	}
 	err := os.Remove(filepath.Join(l.cfg.RootDir, lf.fileName))
-	if err != nil {
+	if err != nil && !os.IsNotExist(err) {
 		return err
 	}
 
