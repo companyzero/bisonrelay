@@ -312,7 +312,7 @@ func New(cfg Config) (*Client, error) {
 	gcmqUpdtDelay := time.Second
 	gcmqInitialDelay := time.Second * 30
 	c.gcmq = gcmcacher.New(gcmqMaxLifetime, gcmqUpdtDelay, gcmqInitialDelay,
-		slog.Disabled, c.handleDelayedGCMessages)
+		cfg.logger("GCMQ"), c.handleDelayedGCMessages)
 
 	rmgrdb.c = c
 	rmqdb.c = c
