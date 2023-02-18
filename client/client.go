@@ -828,10 +828,15 @@ func (c *Client) Run(ctx context.Context) error {
 				}
 			}
 
+			var pushRate, subRate uint64
+			var expDays int
+
 			// Clean old unpaid RVs based on server expirationDays
 			// setting if it changed.
 			if nextSess != nil {
-				expDays := nextSess.ExpirationDays()
+				pushRate, subRate = nextSess.PaymentRates()
+				expDays = nextSess.ExpirationDays()
+
 				if lastExpDays != expDays {
 					c.log.Infof("Cleaning up expired RVs "+
 						"older than %d days", expDays)
@@ -845,14 +850,9 @@ func (c *Client) Run(ctx context.Context) error {
 			c.gcmq.SessionChanged(nextSess != nil)
 			c.rmgr.BindToSession(nextSess)
 			c.q.BindToSession(nextSess)
-			var pushRate, subRate, expDays uint64
 			if c.cfg.ServerSessionChanged != nil {
 				connected := nextSess != nil
-				if nextSess != nil {
-					pushRate, subRate = nextSess.PaymentRates()
-					expDays = uint64(nextSess.ExpirationDays())
-				}
-				go c.cfg.ServerSessionChanged(connected, pushRate, subRate, expDays)
+				go c.cfg.ServerSessionChanged(connected, pushRate, subRate, uint64(expDays))
 			}
 			if canceled(gctx) {
 				return nil
