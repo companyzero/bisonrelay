@@ -88,6 +88,7 @@ type RVManager struct {
 	isUpToDate  chan chan bool
 	db          RVManagerDB
 	nextInvoice string
+	subDoneCB   func()
 
 	// subsDelayer is used to do some hysteresis around the full
 	// subscription set and avoid sending multiple subscription requests to
@@ -95,7 +96,7 @@ type RVManager struct {
 	subsDelayer func() <-chan time.Time
 }
 
-func NewRVManager(log slog.Logger, db RVManagerDB, subsDelayer func() <-chan time.Time) *RVManager {
+func NewRVManager(log slog.Logger, db RVManagerDB, subsDelayer func() <-chan time.Time, subDoneCB func()) *RVManager {
 	// Default is to use a delayer that never delays (by returning a closed
 	// chan it always writes the empty value immediately).
 	closedTimeChan := make(chan time.Time)
@@ -120,6 +121,7 @@ func NewRVManager(log slog.Logger, db RVManagerDB, subsDelayer func() <-chan tim
 		runDone:     make(chan struct{}),
 		isUpToDate:  make(chan chan bool),
 		subsDelayer: subsDelayer,
+		subDoneCB:   subDoneCB,
 	}
 }
 
@@ -623,10 +625,14 @@ loop:
 				delayChan = rmgr.subsDelayer()
 			}
 
+			// Call global sub done CB.
+			if rmgr.subDoneCB != nil {
+				rmgr.subDoneCB()
+			}
+
 			continue loop
 
 		case replyC := <-rmgr.isUpToDate:
-			rmgr.log.Tracef("XXXXXXX needs %v last %v", needsUpdate, lastUpdateSuccess)
 			replyC <- !needsUpdate && lastUpdateSuccess
 			continue loop
 

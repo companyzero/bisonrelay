@@ -231,6 +231,8 @@ type Client struct {
 
 // New creates a new CR client with the given config.
 func New(cfg Config) (*Client, error) {
+	var c *Client
+
 	id := new(zkidentity.FullIdentity)
 
 	subsDelayer := func() <-chan time.Time {
@@ -238,9 +240,12 @@ func New(cfg Config) (*Client, error) {
 		// concurrent changes to be sent in a single batched update.
 		return time.After(100 * time.Millisecond)
 	}
+	subsDoneCB := func() {
+		c.gcmq.SessionChanged(true)
+	}
 	rmgrLog := cfg.logger("RVMR")
 	rmgrdb := &rvManagerDBAdapter{}
-	rmgr := lowlevel.NewRVManager(rmgrLog, rmgrdb, subsDelayer)
+	rmgr := lowlevel.NewRVManager(rmgrLog, rmgrdb, subsDelayer, subsDoneCB)
 
 	// Wrap cert confirmer to update DB on successful confirmation from UI.
 	certConfirmer := func(ctx context.Context, cs *tls.ConnectionState,
@@ -282,7 +287,7 @@ func New(cfg Config) (*Client, error) {
 		ntfns = NewNotificationManager()
 	}
 
-	c := &Client{
+	c = &Client{
 		cfg:         &cfg,
 		ctx:         ctx,
 		cancel:      cancel,
@@ -310,9 +315,12 @@ func New(cfg Config) (*Client, error) {
 	// after restarting so that messages are displayed in the order they
 	// were received by the server (vs in arbitrary order based on which
 	// ratchets are updated first).
+	//
+	// These times were obtained by profiling a client connected over tor
+	// to the server and may need tweaking from time to time.
 	gcmqMaxLifetime := time.Second * 10
 	gcmqUpdtDelay := time.Second
-	gcmqInitialDelay := time.Second * 30
+	gcmqInitialDelay := time.Second * 10
 	c.gcmq = gcmcacher.New(gcmqMaxLifetime, gcmqUpdtDelay, gcmqInitialDelay,
 		cfg.logger("GCMQ"), c.handleDelayedGCMessages)
 
@@ -848,9 +856,13 @@ func (c *Client) Run(ctx context.Context) error {
 				}
 
 				c.cleanupPushPaymentAttempts(nextSess.Policy().PushPaymentLifetime)
+			} else {
+				// c.gcmq.SessionChanged(true) is called after
+				// the initial batch of subscriptions is done
+				// after restart.
+				c.gcmq.SessionChanged(false)
 			}
 
-			c.gcmq.SessionChanged(nextSess != nil)
 			c.rmgr.BindToSession(nextSess)
 			c.q.BindToSession(nextSess)
 			if c.cfg.ServerSessionChanged != nil {
