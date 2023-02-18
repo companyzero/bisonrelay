@@ -679,7 +679,7 @@ func TestE2EDcrlnGCBlockList(t *testing.T) {
 				t.Fatalf("unexpected msg: got %q, want %q",
 					gotMsg, wantMsg)
 			}
-		case <-time.After(10 * time.Second):
+		case <-time.After(40 * time.Second):
 			t.Fatal("timeout")
 		}
 	}

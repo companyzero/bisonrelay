@@ -17,7 +17,7 @@ func TestSuccessRendezvousManager(t *testing.T) {
 	t.Parallel()
 
 	rnd := testRand(t)
-	rmgr := NewRVManager(nil, &mockRvMgrDB{alwaysPaid: true}, nil)
+	rmgr := NewRVManager(nil, &mockRvMgrDB{alwaysPaid: true}, nil, nil)
 	delayChan := make(chan time.Time)
 	rmgr.subsDelayer = func() <-chan time.Time { return delayChan }
 	ctx, cancel := context.WithCancel(context.Background())
@@ -127,7 +127,7 @@ func TestUnsubbedRendezvous(t *testing.T) {
 	// Create the manager with a delay so we can test IsUpToDate() in
 	// intermediate sync states.
 	sleepDuration := time.Millisecond * 10
-	rmgr := NewRVManager(nil, &mockRvMgrDB{alwaysPaid: true}, nil)
+	rmgr := NewRVManager(nil, &mockRvMgrDB{alwaysPaid: true}, nil, nil)
 	rmgr.subsDelayer = func() <-chan time.Time { return time.After(sleepDuration * 2) }
 
 	assertUpToDateIs := func(want bool) {
@@ -215,7 +215,7 @@ func TestUnsubbedRendezvous(t *testing.T) {
 func TestSubRendezvousFailingSession(t *testing.T) {
 	t.Parallel()
 
-	rmgr := NewRVManager(nil, &mockRvMgrDB{alwaysPaid: true}, nil)
+	rmgr := NewRVManager(nil, &mockRvMgrDB{alwaysPaid: true}, nil, nil)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	runErr := make(chan error, 1)
@@ -284,7 +284,7 @@ func TestSubRendezvousFailingSession(t *testing.T) {
 func TestRendezvousActionsAfterCancel(t *testing.T) {
 	t.Parallel()
 
-	rmgr := NewRVManager(nil, &mockRvMgrDB{alwaysPaid: true}, nil)
+	rmgr := NewRVManager(nil, &mockRvMgrDB{alwaysPaid: true}, nil, nil)
 	ctx, cancel := context.WithCancel(context.Background())
 	runErr := make(chan error, 1)
 	go func() { runErr <- rmgr.Run(ctx) }()
@@ -336,7 +336,7 @@ func TestRendezvousActionsAfterCancel(t *testing.T) {
 func TestRendezvousManagerNilSession(t *testing.T) {
 	t.Parallel()
 
-	rmgr := NewRVManager(nil, &mockRvMgrDB{alwaysPaid: true}, nil)
+	rmgr := NewRVManager(nil, &mockRvMgrDB{alwaysPaid: true}, nil, nil)
 	//rmgr.log = testLogger(t)
 	delayChan := make(chan time.Time)
 	rmgr.subsDelayer = func() <-chan time.Time { return delayChan }

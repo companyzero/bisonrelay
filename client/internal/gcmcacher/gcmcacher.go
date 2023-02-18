@@ -244,6 +244,8 @@ func (c *Cacher) Run(ctx context.Context) error {
 	// cacher should switch to relaying messages directly, without caching.
 	var doneCaching bool
 
+	var wasOnline bool
+
 loop:
 	for {
 		select {
@@ -280,6 +282,10 @@ loop:
 			}
 
 		case online := <-c.connectedChan:
+			// Skip repeated event.
+			if wasOnline == online {
+				continue loop
+			}
 			if !online {
 				users.dropStale(0)
 				initialDelayChan = nil
@@ -288,6 +294,12 @@ loop:
 				doneCaching = false
 				initialDelayChan = time.After(c.initialDelay)
 				c.log.Tracef("Gone online")
+			}
+			wasOnline = online
+
+			// If offline, continue execution of this iteration to
+			// emit currently cached msgs.
+			if online {
 				continue loop
 			}
 
