@@ -9,7 +9,6 @@ const SCE_unknown = 0;
 const SCE_sending = 1;
 const SCE_sent = 2;
 const SCE_received = 3;
-const SCE_new_posts = 4;
 const SCE_errored = 99;
 
 class SynthChatEvent extends ChatEvent with ChangeNotifier {
@@ -59,6 +58,13 @@ class ChatEventModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  bool _firstUnread = false;
+  bool get firstUnread => _firstUnread;
+  void set firstUnread(bool b) {
+    _firstUnread = b;
+    notifyListeners();
+  }
+
   bool _sameUser = false;
   bool get sameUser => _sameUser;
   void set sameUser(bool b) {
@@ -97,14 +103,11 @@ class ChatModel extends ChangeNotifier {
   List<ChatEventModel> _msgs = [];
   UnmodifiableListView<ChatEventModel> get msgs => UnmodifiableListView(_msgs);
   void append(ChatEventModel msg) {
-    if (!_active) {
-      if (checkForNewPosts() < 0) {
-        var event = SynthChatEvent("New posts synth_event");
-        event.state = SCE_new_posts;
-        _msgs.add(ChatEventModel(event, null));
-      }
+    if (!_active && _unreadMsgCount == 0) {
+      msg.firstUnread = true;
     }
-    if (_msgs[_msgs.length - 1].source?.nick == msg.source?.nick) {
+    if (_msgs.isNotEmpty &&
+        _msgs[_msgs.length - 1].source?.id == msg.source?.id) {
       msg.sameUser = true;
     }
     _msgs.add(msg);
@@ -118,14 +121,13 @@ class ChatModel extends ChangeNotifier {
     }
   }
 
-  int checkForNewPosts() {
-    return msgs
-        .indexWhere((item) => item.event.msg.contains("New posts synth_event"));
-  }
-
-  void removeNewPostMessage() {
-    _msgs.removeWhere(
-        (item) => item.event.msg.contains("New posts synth_event"));
+  void removeFirstUnread() {
+    for (int i = 0; i < _msgs.length; i++) {
+      if (_msgs[i].firstUnread) {
+        _msgs[i].firstUnread = false;
+        return;
+      }
+    }
   }
 
   void payTip(double amount) async {
@@ -139,7 +141,7 @@ class ChatModel extends ChangeNotifier {
       var m = GCMsg(id, nick, msg, DateTime.now().millisecondsSinceEpoch);
       var evnt = ChatEventModel(m, null);
       evnt.sentState = CMS_sending; // Track individual sending status?
-      if (_msgs[_msgs.length - 1].source == null) {
+      if (_msgs.isNotEmpty && _msgs[_msgs.length - 1].source == null) {
         evnt.sameUser = true;
       }
       _msgs.add(evnt);
@@ -156,7 +158,7 @@ class ChatModel extends ChangeNotifier {
       var m = PM(id, msg, true, ts);
       var evnt = ChatEventModel(m, null);
       evnt.sentState = CMS_sending;
-      if (_msgs[_msgs.length - 1].source == null) {
+      if (_msgs.isNotEmpty && _msgs[_msgs.length - 1].source == null) {
         evnt.sameUser = true;
       }
       _msgs.add(evnt);
@@ -291,7 +293,7 @@ class ClientModel extends ChangeNotifier {
   void set active(ChatModel? c) {
     _profile = null;
     // Remove new posts messages
-    _active?.removeNewPostMessage();
+    _active?.removeFirstUnread();
     _active?._setActive(false);
     _active = c;
     c?._setActive(true);
