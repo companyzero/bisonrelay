@@ -276,30 +276,32 @@ class MarkdownArea extends StatelessWidget {
     var theme = Theme.of(context);
     var darkTextColor = theme.indicatorColor;
     var textColor = theme.focusColor;
-    var styleSheet = MarkdownStyleSheet(
-      p: TextStyle(
-          color: textColor, fontWeight: FontWeight.w300, letterSpacing: 0.44),
-      h1: TextStyle(color: textColor),
-      h2: TextStyle(color: textColor),
-      h3: TextStyle(color: textColor),
-      h4: TextStyle(color: textColor),
-      h5: TextStyle(color: textColor),
-      h6: TextStyle(color: textColor),
-      em: TextStyle(color: textColor),
-      strong: TextStyle(color: textColor),
-      del: TextStyle(color: textColor),
-      listBullet: TextStyle(color: textColor),
-      blockquote: TextStyle(color: textColor),
-      checkbox: TextStyle(color: textColor),
-      tableBody: TextStyle(color: textColor),
-      tableHead: TextStyle(color: textColor),
-      blockquoteDecoration: BoxDecoration(color: darkTextColor),
-      codeblockDecoration: BoxDecoration(color: darkTextColor),
-      code: TextStyle(color: textColor),
-    );
     return Consumer<ThemeNotifier>(
         builder: (context, theme, _) => MarkdownBody(
-            styleSheet: styleSheet,
+            styleSheet: MarkdownStyleSheet(
+              p: TextStyle(
+                  fontSize: 8 + theme.getFontSize() * 7,
+                  color: textColor,
+                  fontWeight: FontWeight.w300,
+                  letterSpacing: 0.44),
+              h1: TextStyle(color: textColor),
+              h2: TextStyle(color: textColor),
+              h3: TextStyle(color: textColor),
+              h4: TextStyle(color: textColor),
+              h5: TextStyle(color: textColor),
+              h6: TextStyle(color: textColor),
+              em: TextStyle(color: textColor),
+              strong: TextStyle(color: textColor),
+              del: TextStyle(color: textColor),
+              listBullet: TextStyle(color: textColor),
+              blockquote: TextStyle(color: textColor),
+              checkbox: TextStyle(color: textColor),
+              tableBody: TextStyle(color: textColor),
+              tableHead: TextStyle(color: textColor),
+              blockquoteDecoration: BoxDecoration(color: darkTextColor),
+              codeblockDecoration: BoxDecoration(color: darkTextColor),
+              code: TextStyle(color: textColor),
+            ),
             selectable: true,
             data: text.trim(),
             extensionSet: md.ExtensionSet(
