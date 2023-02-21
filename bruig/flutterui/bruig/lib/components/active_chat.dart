@@ -7,7 +7,6 @@ import 'package:bruig/components/manage_gc.dart';
 import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/screens/feed/feed_posts.dart';
 import 'package:bruig/components/md_elements.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:bruig/components/user_content_list.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/models/downloads.dart';
@@ -57,6 +56,7 @@ class _ActiveChatState extends State<ActiveChat> {
   @override
   void initState() {
     super.initState();
+    chat = client.active;
     client.addListener(clientChanged);
   }
 

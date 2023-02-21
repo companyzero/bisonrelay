@@ -30,9 +30,9 @@ class ChatsScreenTitle extends StatelessWidget {
                 TextStyle(fontSize: 15, color: Theme.of(context).focusColor));
       }
       var profile = client.profile;
-      var suffix = chat?.nick != "" ? " / ${chat?.nick}" : "";
+      var suffix = chat.nick != "" ? " / ${chat.nick}" : "";
       var profileSuffix = profile != null
-          ? chat!.isGC
+          ? chat.isGC
               ? " / Manage Group Chat"
               : " / Profile"
           : "";
