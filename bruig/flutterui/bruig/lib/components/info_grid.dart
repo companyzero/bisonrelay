@@ -12,7 +12,7 @@ class SimpleInfoGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListView.builder(
         shrinkWrap: true,
-        controller: controller,
+        //controller: controller,
         itemCount: items.length,
         itemBuilder: (context, index) => Container(
             margin: const EdgeInsets.only(bottom: 3),
