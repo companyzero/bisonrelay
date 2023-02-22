@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:golib_plugin/util.dart';
+import 'package:qr_flutter/qr_flutter.dart';
+import 'package:bruig/components/empty_widget.dart';
 
 class LNInfoPage extends StatefulWidget {
   const LNInfoPage({Key? key}) : super(key: key);
@@ -194,6 +196,17 @@ class _LNInfoPageState extends State<LNInfoPage> {
               const SizedBox(width: 20),
               Copyable(depositAddr, TextStyle(color: textColor, fontSize: 15)),
             ]),
+            const SizedBox(width: 21),
+            depositAddr.isNotEmpty
+                ? Container(
+                    margin: const EdgeInsets.all(10),
+                    color: Colors.white,
+                    child: QrImage(
+                      data: depositAddr,
+                      version: QrVersions.auto,
+                      size: 200.0,
+                    ))
+                : Empty(),
           ],
         ));
   }

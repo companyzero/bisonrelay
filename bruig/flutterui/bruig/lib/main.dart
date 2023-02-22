@@ -164,7 +164,7 @@ class _AppState extends State<App> with WindowListener {
     try {
       var balances = await Golib.lnGetBalances();
       var pushed = false;
-      if (balances.wallet.totalBalance == 0) {
+      if (balances.wallet.totalBalance != 0) {
         ntfns.addNtfn(AppNtfn(AppNtfnType.walletNeedsFunds));
         navkey.currentState!.pushNamed("/needsFunds");
         pushed = true;
