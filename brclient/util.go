@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+	"net"
 	"net/url"
 	"regexp"
 	"runtime"
@@ -20,6 +21,8 @@ import (
 )
 
 const (
+	defaultLNPort = "9735"
+
 	ISO8601DateTimeMs = "2006-01-02 15:04:05.000"
 	ISO8601DateTime   = "2006-01-02 15:04:05"
 	ISO8601Date       = "2006-01-02"
@@ -344,4 +347,13 @@ func blankLines(nb int) string {
 		return ""
 	}
 	return strings.Repeat("\n", nb)
+}
+
+func normalizeAddress(addr string, defaultPort string) string {
+	port := defaultPort
+	if a, p, err := net.SplitHostPort(addr); err == nil {
+		addr = a
+		port = p
+	}
+	return net.JoinHostPort(addr, port)
 }

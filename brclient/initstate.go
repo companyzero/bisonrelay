@@ -97,7 +97,7 @@ func (ins initStepState) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return newLNFundWalletWindow(ins.as)
 			}
 			if !isRestore && needsSendChan {
-				return newLNOpenChannelWindow(ins.as, true)
+				return newLNOpenChannelWindow(ins.as, false)
 			}
 
 			return newMainWindowState(ins.as)
