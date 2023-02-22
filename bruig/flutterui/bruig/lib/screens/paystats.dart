@@ -31,7 +31,8 @@ class _PayStatsScreenState extends State<PayStatsScreen> {
   List<Tuple3<String, String, UserPayStats>> stats = []; // UID,nick,stat
   int selectedIndex = -1;
   List<PayStatsSummary> userStats = [];
-  ScrollController userStatsCtrl = ScrollController();
+  ScrollController userStatsSentCtrl = ScrollController();
+  ScrollController userStatsReceivedCtrl = ScrollController();
   int userStatsTotalReceived = 0;
   int userStatsTotalSent = 0;
 
@@ -195,7 +196,7 @@ class _PayStatsScreenState extends State<PayStatsScreen> {
                                         style: TextStyle(color: textColor))
                                     : const Empty()))
                             .toList(),
-                        controller: userStatsCtrl,
+                        controller: userStatsSentCtrl,
                       ))
                     ]),
                   ),
@@ -229,7 +230,7 @@ class _PayStatsScreenState extends State<PayStatsScreen> {
                                             style: TextStyle(color: textColor))
                                         : const Empty()))
                                 .toList(),
-                            controller: userStatsCtrl,
+                            controller: userStatsReceivedCtrl,
                           ))
                         ]),
                   )
