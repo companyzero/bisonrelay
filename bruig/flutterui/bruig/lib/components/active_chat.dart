@@ -879,6 +879,27 @@ class FileDownloadedEventW extends StatelessWidget {
   }
 }
 
+class GCVersionWarnW extends StatelessWidget {
+  final GCVersionWarn event;
+  const GCVersionWarnW(this.event, {Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    var theme = Theme.of(context);
+    var bgColor = Colors.red[600];
+    var textColor = Colors.white;
+    return Container(
+        padding: const EdgeInsets.only(left: 41, top: 5, bottom: 5),
+        margin: const EdgeInsets.all(5),
+        decoration: BoxDecoration(
+            color: bgColor,
+            borderRadius: const BorderRadius.all(Radius.circular(5))),
+        child: SelectableText(
+            "Received GC definitions with unsupported version ${event.version}. Please update the software to interact in this GC.",
+            style: TextStyle(fontSize: 9, color: textColor)));
+  }
+}
+
 class Event extends StatelessWidget {
   final ChatEventModel event;
   final ChatModel chat;
@@ -934,6 +955,10 @@ class Event extends StatelessWidget {
 
     if (event.event is PostSubscriptionResult) {
       return PostSubscriptionEventW(event.event as PostSubscriptionResult);
+    }
+
+    if (event.event is GCVersionWarn) {
+      return GCVersionWarnW(event.event as GCVersionWarn);
     }
 
     var theme = Theme.of(context);

@@ -1328,3 +1328,21 @@ Map<String, dynamic> _$InvoiceGenFailedToJson(InvoiceGenFailed instance) =>
       'dcr_amount': instance.dcrAmount,
       'err': instance.err,
     };
+
+GCVersionWarn _$GCVersionWarnFromJson(Map<String, dynamic> json) =>
+    GCVersionWarn(
+      json['id'] as String,
+      json['alias'] as String? ?? '',
+      json['version'] as int,
+      json['min_version'] as int,
+      json['max_version'] as int,
+    );
+
+Map<String, dynamic> _$GCVersionWarnToJson(GCVersionWarn instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'alias': instance.alias,
+      'version': instance.version,
+      'min_version': instance.minVersion,
+      'max_version': instance.maxVersion,
+    };

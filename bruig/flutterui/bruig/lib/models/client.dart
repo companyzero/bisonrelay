@@ -215,6 +215,8 @@ class ChatModel extends ChangeNotifier {
       }
     })();
   }
+
+  Future<void> resendGCList() async => await Golib.resendGCList(id);
 }
 
 class ClientModel extends ChangeNotifier {

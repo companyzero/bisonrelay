@@ -16,6 +16,13 @@ import (
 	"github.com/companyzero/bisonrelay/zkidentity"
 )
 
+const (
+	// {min,max}SupportedGCVersion tracks the mininum and maximum versions
+	// the client code handles for GCs.
+	minSupportedGCVersion = 0
+	maxSupportedGCVersion = 0
+)
+
 // The group chat flow is:
 //
 //          Alice                                    Bob
@@ -464,6 +471,12 @@ func (c *Client) handleGCJoin(ru *RemoteUser, invite rpc.RMGroupJoin) error {
 // handleGCList handles updates to a GC metadata. The sending user must have
 // been the admin, otherwise this update is rejected.
 func (c *Client) handleGCList(ru *RemoteUser, gl rpc.RMGroupList) error {
+	// Helper to determine if the user needs a warning about the GC version.
+	notifyVersionWarning := false
+	checkNeedsVersionWarning := func() {
+		notifyVersionWarning = (gl.Version < minSupportedGCVersion || gl.Version > maxSupportedGCVersion) && !c.gcWarnedVersions.Set(gl.ID)
+	}
+
 	newGC := false
 	err := c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
 		oldGC, err := c.db.GetGC(tx, gl.ID)
@@ -497,6 +510,11 @@ func (c *Client) handleGCList(ru *RemoteUser, gl rpc.RMGroupList) error {
 					"list", gl.ID.String())
 			}
 
+			// Check for version warning. This is done before the
+			// admin check because future versions may allow
+			// receiving the GC list from non-admins.
+			checkNeedsVersionWarning()
+
 			// Ensure we received this from the admin.
 			if gl.Members[0] != ru.ID() {
 				return fmt.Errorf("received gc list %q from non-admin",
@@ -510,6 +528,11 @@ func (c *Client) handleGCList(ru *RemoteUser, gl rpc.RMGroupList) error {
 				}
 			}
 		} else {
+			// Check for version warning. This is done before the
+			// admin check because future versions may allow
+			// receiving the GC list from non-admins.
+			checkNeedsVersionWarning()
+
 			// Ensure we received this from the existing admin.
 			if oldGC.Members[0] != ru.ID() {
 				return fmt.Errorf("received gc list %q from non-admin",
@@ -546,6 +569,13 @@ func (c *Client) handleGCList(ru *RemoteUser, gl rpc.RMGroupList) error {
 
 		return nil
 	})
+	if notifyVersionWarning {
+		c.log.Warnf("Received GCList for GC %s with version "+
+			"%d which is not between the supported versions %d to %d",
+			gl.ID, gl.Version, minSupportedGCVersion, maxSupportedGCVersion)
+		c.ntfns.notifyOnGCVersionWarning(ru, gl, minSupportedGCVersion,
+			maxSupportedGCVersion)
+	}
 	if err != nil {
 		return err
 	}
@@ -1103,4 +1133,61 @@ func (c *Client) RemoveFromGCBlockList(gcid zkidentity.ShortID, uid UserID) erro
 		// Block user in GC.
 		return c.db.RemoveFromGCBlockList(tx, gcid, uid)
 	})
+}
+
+// ResendGCList resends the GC list to a user. We must be the admin of the GC
+// for this to be accepted by the remote user.
+//
+// When the UID is not specified, the list is resent to all members.
+func (c *Client) ResendGCList(gcid zkidentity.ShortID, uid *UserID) error {
+	allMembers := uid == nil
+	if !allMembers {
+		// Verify user exists.
+		_, err := c.UserByID(*uid)
+		if err != nil {
+			return err
+		}
+	}
+
+	var gc rpc.RMGroupList
+	err := c.dbView(func(tx clientdb.ReadTx) error {
+		// Fetch GC.
+		var err error
+		gc, err = c.db.GetGC(tx, gcid)
+		if err != nil {
+			return err
+		}
+
+		// Ensure we're the GC admin.
+		if gc.Members[0] != c.PublicID() {
+			return fmt.Errorf("cannot send GC list to user when local client is not the GC admin")
+		}
+
+		// Ensure specified uid is a member.
+		if !allMembers {
+			found := false
+			for i := range gc.Members {
+				if *uid == gc.Members[i] {
+					found = true
+					break
+				}
+			}
+			if !found {
+				return fmt.Errorf("user %s is not part of the GC", uid)
+			}
+		}
+
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	payType := "resendGCList"
+	if allMembers {
+		c.sendToGCMembers(gcid, gc.Members, payType, gc, nil)
+		return nil
+	}
+	payEvent := fmt.Sprintf("gc.%s.%s", gcid.ShortLogID(), payType)
+	return c.sendWithSendQ(payEvent, gc, *uid)
 }

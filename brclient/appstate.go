@@ -2339,6 +2339,16 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		})
 	}))
 
+	ntfns.Register(client.OnGCVersionWarning(func(user *client.RemoteUser, gc rpc.RMGroupList, minVersion, maxVersion uint8) {
+		as.manyDiagMsgsCb(func(pf printf) {
+			gcAlias, _ := as.c.GetGCAlias(gc.ID)
+			msg := fmt.Sprintf("Received GC list for GC %q (%s) with "+
+				"unsupported GC version %d", gcAlias, gc.ID, gc.Version)
+			pf(as.styles.err.Render(msg))
+			pf("Please update the client software to interact in updated GCs.")
+		})
+	}))
+
 	// Initialize client config.
 	cfg := client.Config{
 		DB:             db,

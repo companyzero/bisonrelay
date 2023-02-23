@@ -267,3 +267,11 @@ type InvoiceGenFailed struct {
 	DcrAmount float64           `json:"dcr_amount"`
 	Err       string            `json:"err"`
 }
+
+type GCVersionWarn struct {
+	ID         zkidentity.ShortID `json:"id"`
+	Alias      string             `json:"alias"`
+	Version    uint8              `json:"version"`
+	MinVersion uint8              `json:"min_version"`
+	MaxVersion uint8              `json:"max_version"`
+}

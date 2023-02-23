@@ -11,6 +11,7 @@ import (
 	"github.com/companyzero/bisonrelay/client/clientintf"
 	"github.com/companyzero/bisonrelay/client/internal/gcmcacher"
 	"github.com/companyzero/bisonrelay/client/internal/lowlevel"
+	"github.com/companyzero/bisonrelay/client/internal/singlesetmap"
 	"github.com/companyzero/bisonrelay/client/timestats"
 	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/companyzero/bisonrelay/zkidentity"
@@ -222,6 +223,10 @@ type Client struct {
 	// gcAliasMap maps a local gc name to a global gc id.
 	gcAliasMtx sync.Mutex
 	gcAliasMap map[string]zkidentity.ShortID
+
+	// gcWarnedVersions tracks GCs for which the warning about an
+	// incompatible version has been issued.
+	gcWarnedVersions *singlesetmap.Map[zkidentity.ShortID]
 }
 
 // New creates a new CR client with the given config.
@@ -296,8 +301,9 @@ func New(cfg Config) (*Client, error) {
 		rul:   newRemoteUserList(),
 		ntfns: ntfns,
 
-		abLoaded:     make(chan struct{}),
-		newUsersChan: make(chan *RemoteUser),
+		abLoaded:         make(chan struct{}),
+		newUsersChan:     make(chan *RemoteUser),
+		gcWarnedVersions: &singlesetmap.Map[zkidentity.ShortID]{},
 	}
 
 	// Use the GC message cacher to collect gc messages for a few seconds

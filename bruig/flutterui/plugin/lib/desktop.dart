@@ -271,6 +271,11 @@ mixin BaseDesktopPlatform on NtfStreams {
             NTInvoiceGenFailed, InvoiceGenFailed.fromJson(payload)));
         break;
 
+      case NTGCVersionWarn:
+        var event = GCVersionWarn.fromJson(payload);
+        ntfChatEvents.add(event);
+        break;
+
       default:
         print("Received unknown notification ${cmd.toRadixString(16)}");
     }

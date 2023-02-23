@@ -100,6 +100,7 @@ const (
 	CTLNSaveMultiSCB                  = 0x64
 	CTListUsersLastMsgTimes           = 0x65
 	CTUserRatchetDebugInfo            = 0x66
+	CTResendGCList                    = 0x67
 
 	NTInviteReceived         = 0x1001
 	NTInviteAccepted         = 0x1002
@@ -130,6 +131,7 @@ const (
 	NTUserContentList        = 0x101b
 	NTRemoteSubChanged       = 0x101c
 	NTInvoiceGenFailed       = 0x101d
+	NTGCVersionWarn          = 0x101e
 )
 
 type cmd struct {
