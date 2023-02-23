@@ -266,6 +266,11 @@ mixin BaseDesktopPlatform on NtfStreams {
         ntfChatEvents.add(event);
         break;
 
+      case NTInvoiceGenFailed:
+        ntfConfs.add(ConfNotification(
+            NTInvoiceGenFailed, InvoiceGenFailed.fromJson(payload)));
+        break;
+
       default:
         print("Received unknown notification ${cmd.toRadixString(16)}");
     }

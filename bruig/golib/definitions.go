@@ -260,3 +260,10 @@ type LastUserReceivedTime struct {
 	UID           clientintf.UserID `json:"uid"`
 	LastDecrypted int64             `json:"last_decrypted"`
 }
+
+type InvoiceGenFailed struct {
+	UID       clientintf.UserID `json:"uid"`
+	Nick      string            `json:"nick"`
+	DcrAmount float64           `json:"dcr_amount"`
+	Err       string            `json:"err"`
+}

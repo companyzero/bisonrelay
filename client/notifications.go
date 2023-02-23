@@ -76,6 +76,12 @@ type OnKXCompleted func(*RemoteUser)
 
 func (_ OnKXCompleted) typ() string { return onKXCompleted }
 
+const onInvoiceGenFailedNtfnType = "onInvoiceGenFailed"
+
+type OnInvoiceGenFailedNtfn func(user *RemoteUser, dcrAmount float64, err error)
+
+func (_ OnInvoiceGenFailedNtfn) typ() string { return onInvoiceGenFailedNtfnType }
+
 // The following is used only in tests.
 
 const onTestNtfnType = "testNtfnType"
@@ -229,6 +235,11 @@ func (nmgr *NotificationManager) notifyOnKXCompleted(user *RemoteUser) {
 		visit(func(h OnKXCompleted) { h(user) })
 }
 
+func (nmgr *NotificationManager) notifyInvoiceGenFailed(user *RemoteUser, dcrAmount float64, err error) {
+	nmgr.handlers[onInvoiceGenFailedNtfnType].(*handlersFor[OnInvoiceGenFailedNtfn]).
+		visit(func(h OnInvoiceGenFailedNtfn) { h(user, dcrAmount, err) })
+}
+
 func NewNotificationManager() *NotificationManager {
 	return &NotificationManager{
 		handlers: map[string]handlersRegistry{
@@ -239,6 +250,7 @@ func NewNotificationManager() *NotificationManager {
 			onPostRcvdNtfnType:       &handlersFor[OnPostRcvdNtfn]{},
 			onPostStatusRcvdNtfnType: &handlersFor[OnPostStatusRcvdNtfn]{},
 
+			onInvoiceGenFailedNtfnType:        &handlersFor[OnInvoiceGenFailedNtfn]{},
 			onRemoteSubscriptionChangedType:   &handlersFor[OnRemoteSubscriptionChangedNtfn]{},
 			onRemoteSubscriptionErrorNtfnType: &handlersFor[OnRemoteSubscriptionErrorNtfn]{},
 			onLocalClientOfflineTooLong:       &handlersFor[OnLocalClientOfflineTooLong]{},

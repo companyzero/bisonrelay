@@ -6,6 +6,7 @@ enum AppNtfnType {
   walletNeedsInChannels,
   error,
   walletCheckFailed,
+  invoiceGenFailed,
 }
 
 class AppNtfn {

@@ -66,6 +66,17 @@ class _NotificationW extends StatelessWidget {
           ntfns.delNtfn(ntf);
         };
         break;
+
+      case AppNtfnType.invoiceGenFailed:
+        content = "Failed to generate invoice to receive funds";
+        tooltip =
+            "${ntf.msg}\n\nOpen inbound channels to add receive capacity to your wallet.";
+        onTap = () {
+          ntfns.delNtfn(ntf);
+          Navigator.of(context, rootNavigator: true)
+              .pushNamed("/needsInChannel");
+        };
+        break;
     }
 
     return ListTile(

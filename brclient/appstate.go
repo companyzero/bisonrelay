@@ -2315,6 +2315,16 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		}
 	}))
 
+	ntfns.Register(client.OnInvoiceGenFailedNtfn(func(user *client.RemoteUser, dcrAmount float64, err error) {
+		as.manyDiagMsgsCb(func(pf printf) {
+			pf(as.styles.err.Render("Unable to generate LN invoice"))
+			pf("Unable to generate invoice for remote user %s to send us %.8f DCR: %v",
+				strescape.Nick(user.Nick()), dcrAmount, err)
+			pf("More receive capacity may be obtained by opening receive " +
+				"channels with '/ln requestrecv'")
+		})
+	}))
+
 	ntfns.Register(client.OnLocalClientOfflineTooLong(func(oldConnDate time.Time) {
 		as.diagMsg("The local client has been offline since %s which is before "+
 			"the limit date imposed by the server message retention policy. "+

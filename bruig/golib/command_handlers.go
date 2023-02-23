@@ -179,6 +179,16 @@ func handleInitClient(handle uint32, args InitClient) error {
 		notify(NTKXCompleted, remoteUserFromPII(&pii), nil)
 	}))
 
+	ntfns.Register(client.OnInvoiceGenFailedNtfn(func(user *client.RemoteUser, dcrAmount float64, err error) {
+		ntf := InvoiceGenFailed{
+			UID:       user.ID(),
+			Nick:      user.Nick(),
+			DcrAmount: dcrAmount,
+			Err:       err.Error(),
+		}
+		notify(NTInvoiceGenFailed, ntf, nil)
+	}))
+
 	cfg := client.Config{
 		DB:             db,
 		Dialer:         clientintf.NetDialer(args.ServerAddr, logBknd.logger("CONN")),

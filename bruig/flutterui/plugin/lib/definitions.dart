@@ -1323,6 +1323,19 @@ class RatchetDebugInfo {
       _$RatchetDebugInfoFromJson(json);
 }
 
+@JsonSerializable()
+class InvoiceGenFailed {
+  final String uid;
+  final String nick;
+  @JsonKey(name: "dcr_amount", defaultValue: 0)
+  final double dcrAmount;
+  final String err;
+
+  InvoiceGenFailed(this.uid, this.nick, this.dcrAmount, this.err);
+  factory InvoiceGenFailed.fromJson(Map<String, dynamic> json) =>
+      _$InvoiceGenFailedFromJson(json);
+}
+
 mixin NtfStreams {
   StreamController<RemoteUser> ntfAcceptedInvites =
       StreamController<RemoteUser>();
@@ -1982,3 +1995,4 @@ const int NTClientStopped = 0x1019;
 const int NTUserPostsList = 0x101a;
 const int NTUserContentList = 0x101b;
 const int NTPostSubscriptionResult = 0x101c;
+const int NTInvoiceGenFailed = 0x101d;
