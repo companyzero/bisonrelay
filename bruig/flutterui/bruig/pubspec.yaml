@@ -50,6 +50,7 @@ dependencies:
       path: plugins/window_size
       ref: 17d4710c17f4913137e7ec931f6e71eaef443363
   msix: ^3.6.3
+  qr_flutter: ^4.0.0
 
 msix_config:
   display_name: Bison Relay GUI

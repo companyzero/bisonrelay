@@ -7,6 +7,7 @@ import 'package:bruig/models/notifications.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:golib_plugin/util.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
 class NeedsFundsScreen extends StatefulWidget {
   final AppNotifications ntfns;
@@ -113,7 +114,7 @@ class _NeedsFundsScreenState extends State<NeedsFundsScreen> {
                   padding: const EdgeInsets.all(10),
                   child: Column(
                     children: [
-                      const SizedBox(height: 89),
+                      const SizedBox(height: 59),
                       Text("Setting up Bison Relay",
                           style: TextStyle(
                               color: textColor,
@@ -139,9 +140,17 @@ computer is corrupted or lost.
                               color: secondaryTextColor,
                               fontSize: 13,
                               fontWeight: FontWeight.w300)),
-                      const SizedBox(height: 21),
+                      const SizedBox(height: 13),
                       Container(
-                          margin: const EdgeInsets.only(left: 324, right: 324),
+                          margin: const EdgeInsets.all(10),
+                          color: Colors.white,
+                          child: QrImage(
+                            data: addr,
+                            version: QrVersions.auto,
+                            size: 200.0,
+                          )),
+                      const SizedBox(height: 13),
+                      Container(
                           color: cardColor,
                           padding: const EdgeInsets.only(
                               left: 22, top: 18, right: 22, bottom: 18),
@@ -151,40 +160,41 @@ computer is corrupted or lost.
                       Container(
                           padding: const EdgeInsets.only(
                               left: 324 + 22, right: 324 + 20),
-                          child: Column(children: [
-                            Row(children: [
-                              Text(
-                                  textAlign: TextAlign.left,
-                                  "Unconfirmed wallet balance:",
-                                  style: TextStyle(
-                                      color: darkTextColor,
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w300)),
-                              Text(
-                                  textAlign: TextAlign.right,
-                                  "${formatDCR(atomsToDCR(unconfirmedBalance))}",
-                                  style: TextStyle(
-                                      color: darkTextColor,
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w300)),
-                            ]),
-                            const SizedBox(height: 3),
-                            Row(children: [
-                              Text(
-                                  textAlign: TextAlign.left,
-                                  "Confirmed wallet balance:",
-                                  style: TextStyle(
-                                      color: darkTextColor,
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w300)),
-                              Text(
-                                  textAlign: TextAlign.right,
-                                  "${formatDCR(atomsToDCR(confirmedBalance))}",
-                                  style: TextStyle(
-                                      color: darkTextColor,
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w300))
-                            ])
+                          child: Row(children: [
+                            Text(
+                                textAlign: TextAlign.left,
+                                "Unconfirmed wallet balance:",
+                                style: TextStyle(
+                                    color: darkTextColor,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w300)),
+                            Text(
+                                textAlign: TextAlign.right,
+                                formatDCR(atomsToDCR(unconfirmedBalance)),
+                                style: TextStyle(
+                                    color: darkTextColor,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w300)),
+                          ])),
+                      const SizedBox(height: 3),
+                      Container(
+                          padding: const EdgeInsets.only(
+                              left: 324 + 22, right: 324 + 20),
+                          child: Row(children: [
+                            Text(
+                                textAlign: TextAlign.left,
+                                "Confirmed wallet balance:",
+                                style: TextStyle(
+                                    color: darkTextColor,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w300)),
+                            Text(
+                                textAlign: TextAlign.right,
+                                formatDCR(atomsToDCR(confirmedBalance)),
+                                style: TextStyle(
+                                    color: darkTextColor,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w300))
                           ])),
                       const SizedBox(height: 34),
                       LoadingScreenButton(
