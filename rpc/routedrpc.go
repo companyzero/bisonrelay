@@ -681,6 +681,7 @@ type RMGroupInvite struct {
 	Token       uint64             `json:"token"`       // invite token
 	Description string             `json:"description"` // group description
 	Expires     int64              `json:"expires"`     // unix time when this invite expires
+	Version     uint8              `json:"version"`     // version the GC is running on
 }
 
 const RMCGroupInvite = "groupinvite"
