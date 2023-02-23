@@ -1336,6 +1336,25 @@ class InvoiceGenFailed {
       _$InvoiceGenFailedFromJson(json);
 }
 
+@JsonSerializable()
+class GCVersionWarn extends ChatEvent {
+  final String id;
+  @JsonKey(defaultValue: "")
+  final String alias;
+  final int version;
+  @JsonKey(name: "min_version")
+  final int minVersion;
+  @JsonKey(name: "max_version")
+  final int maxVersion;
+
+  GCVersionWarn(
+      this.id, this.alias, this.version, this.minVersion, this.maxVersion)
+      : super(id,
+            "Received GC list with unsupported $version (min $minVersion, max $maxVersion). Please update the client software.");
+  factory GCVersionWarn.fromJson(Map<String, dynamic> json) =>
+      _$GCVersionWarnFromJson(json);
+}
+
 mixin NtfStreams {
   StreamController<RemoteUser> ntfAcceptedInvites =
       StreamController<RemoteUser>();
@@ -1871,6 +1890,9 @@ abstract class PluginPlatform {
 
   Future<RatchetDebugInfo> userRatchetInfo(String uid) async =>
       RatchetDebugInfo.fromJson(await asyncCall(CTUserRatchetDebugInfo, uid));
+
+  Future<void> resendGCList(String gcid) async =>
+      await asyncCall(CTResendGCList, gcid);
 }
 
 const int CTUnknown = 0x00;
@@ -1964,6 +1986,7 @@ const int CTLNRestoreMultiSCB = 0x63;
 const int CTLNSaveMultiSCB = 0x64;
 const int CTListUsersLastMsgTimes = 0x65;
 const int CTUserRatchetDebugInfo = 0x66;
+const int CTResendGCList = 0x67;
 
 const int notificationsStartID = 0x1000;
 
@@ -1996,3 +2019,4 @@ const int NTUserPostsList = 0x101a;
 const int NTUserContentList = 0x101b;
 const int NTPostSubscriptionResult = 0x101c;
 const int NTInvoiceGenFailed = 0x101d;
+const int NTGCVersionWarn = 0x101e;

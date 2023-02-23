@@ -189,6 +189,18 @@ func handleInitClient(handle uint32, args InitClient) error {
 		notify(NTInvoiceGenFailed, ntf, nil)
 	}))
 
+	ntfns.Register(client.OnGCVersionWarning(func(user *client.RemoteUser, gc rpc.RMGroupList, minVersion, maxVersion uint8) {
+		alias, _ := c.GetGCAlias(gc.ID)
+		warn := GCVersionWarn{
+			ID:         gc.ID,
+			Alias:      alias,
+			Version:    gc.Version,
+			MinVersion: minVersion,
+			MaxVersion: maxVersion,
+		}
+		notify(NTGCVersionWarn, warn, nil)
+	}))
+
 	cfg := client.Config{
 		DB:             db,
 		Dialer:         clientintf.NetDialer(args.ServerAddr, logBknd.logger("CONN")),
@@ -1252,15 +1264,19 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 
 	case CTUserRatchetDebugInfo:
 		var args clientintf.UserID
-		if err := cmd.decode(&args); err != nil {
-			return nil, err
-		}
-
 		ru, err := c.UserByID(args)
 		if err != nil {
 			return nil, err
 		}
 		return ru.RatchetDebugInfo(), nil
+
+	case CTResendGCList:
+		var args zkidentity.ShortID
+		if err := cmd.decode(&args); err != nil {
+			return nil, err
+		}
+
+		return nil, c.ResendGCList(args, nil)
 	}
 
 	return nil, nil

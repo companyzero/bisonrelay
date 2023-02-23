@@ -740,6 +740,7 @@ type RMGroupList struct {
 	Name       string             `json:"name"`
 	Generation uint64             `json:"generation"` // incremented every time list changes
 	Timestamp  int64              `json:"timestamp"`  // unix time last generation changed
+	Version    uint8              `json:"version"`    // version of the rules for GC op
 
 	// all participants, [0] is administrator
 	// receiver must check [0] == originator

@@ -82,6 +82,14 @@ type OnInvoiceGenFailedNtfn func(user *RemoteUser, dcrAmount float64, err error)
 
 func (_ OnInvoiceGenFailedNtfn) typ() string { return onInvoiceGenFailedNtfnType }
 
+const onGCVersionWarningType = "onGCVersionWarn"
+
+// OnGCVersionWarning is a handler for warnings about a GC that has an
+// unsupported version.
+type OnGCVersionWarning func(user *RemoteUser, gc rpc.RMGroupList, minVersion, maxVersion uint8)
+
+func (_ OnGCVersionWarning) typ() string { return onGCVersionWarningType }
+
 // The following is used only in tests.
 
 const onTestNtfnType = "testNtfnType"
@@ -230,6 +238,11 @@ func (nmgr *NotificationManager) notifyOnLocalClientOfflineTooLong(date time.Tim
 		visit(func(h OnLocalClientOfflineTooLong) { h(date) })
 }
 
+func (nmgr *NotificationManager) notifyOnGCVersionWarning(user *RemoteUser, gc rpc.RMGroupList, minVersion, maxVersion uint8) {
+	nmgr.handlers[onGCVersionWarningType].(*handlersFor[OnGCVersionWarning]).
+		visit(func(h OnGCVersionWarning) { h(user, gc, minVersion, maxVersion) })
+}
+
 func (nmgr *NotificationManager) notifyOnKXCompleted(user *RemoteUser) {
 	nmgr.handlers[onKXCompleted].(*handlersFor[OnKXCompleted]).
 		visit(func(h OnKXCompleted) { h(user) })
@@ -249,6 +262,7 @@ func NewNotificationManager() *NotificationManager {
 			onKXCompleted:            &handlersFor[OnKXCompleted]{},
 			onPostRcvdNtfnType:       &handlersFor[OnPostRcvdNtfn]{},
 			onPostStatusRcvdNtfnType: &handlersFor[OnPostStatusRcvdNtfn]{},
+			onGCVersionWarningType:   &handlersFor[OnGCVersionWarning]{},
 
 			onInvoiceGenFailedNtfnType:        &handlersFor[OnInvoiceGenFailedNtfn]{},
 			onRemoteSubscriptionChangedType:   &handlersFor[OnRemoteSubscriptionChangedNtfn]{},

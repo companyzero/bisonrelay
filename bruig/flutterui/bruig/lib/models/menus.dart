@@ -203,5 +203,19 @@ List<ChatMenuItem> buildGCMenu(ChatModel chat) {
       "Rename GC",
       (context, chats) => showRenameModalBottom(context, chats.active!),
     ),
+    ChatMenuItem(
+      "Resend GC List",
+      (context, chats) async {
+        var msg = SynthChatEvent("Resending GC list to members");
+        msg.state = SCE_sending;
+        chat.append(ChatEventModel(msg, null));
+        try {
+          await chat.resendGCList();
+          msg.state = SCE_sent;
+        } catch (exception) {
+          msg.error = Exception("Unable to resend GC list: $exception");
+        }
+      },
+    ),
   ];
 }

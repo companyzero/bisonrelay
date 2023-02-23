@@ -934,6 +934,50 @@ var gcCommands = []tuicmd{
 			as.repaintIfActive(gcWin)
 			return nil
 		},
+	}, {
+		cmd:   "resendlist",
+		usage: "<gc> [<user>]",
+		descr: "Resends the GC definition to the specified user or all users",
+		handler: func(args []string, as *appState) error {
+			if len(args) < 1 {
+				return usageError{msg: "GC cannot be empty"}
+			}
+
+			gcID, err := as.c.GCIDByName(args[0])
+			if err != nil {
+				return err
+			}
+
+			var uid *clientintf.UserID
+			if len(args) > 1 {
+				user, err := as.c.UIDByNick(args[1])
+				if err != nil {
+					return err
+				}
+				uid = &user
+			}
+
+			go func() {
+				gcWin := as.findOrNewGCWindow(gcID)
+				var msg *chatMsg
+				if uid == nil {
+					msg = gcWin.newInternalMsg("Resending GC list to all GC members")
+				} else {
+					nick, _ := as.c.UserNick(*uid)
+					msg = gcWin.newInternalMsg(fmt.Sprintf("Resending GC list to %q", nick))
+				}
+				as.repaintIfActive(gcWin)
+				err := as.c.ResendGCList(gcID, uid)
+				if err != nil {
+					gcWin.newHelpMsg("Unable to resent GC List: %v", err)
+				} else {
+					gcWin.setMsgSent(msg)
+				}
+				as.repaintIfActive(gcWin)
+			}()
+
+			return nil
+		},
 	},
 }
 
