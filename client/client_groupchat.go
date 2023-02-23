@@ -182,6 +182,7 @@ func (c *Client) InviteToGroupChat(gcID zkidentity.ShortID, user UserID) error {
 		}
 
 		invite.Name = gc.Name
+		invite.Version = gc.Version
 
 		// Generate an unused token.
 		for {
@@ -223,6 +224,11 @@ func (c *Client) handleGCInvite(ru *RemoteUser, invite rpc.RMGroupInvite) error 
 	invite.Name = strings.TrimSpace(invite.Name)
 	if invite.Name == "" {
 		invite.Name = hex.EncodeToString(invite.ID[:8])
+	}
+
+	if invite.Version < minSupportedGCVersion || invite.Version > maxSupportedGCVersion {
+		return fmt.Errorf("invited to GC %s (%q) with unsupported version %d",
+			invite.ID, invite.Name, invite.Version)
 	}
 
 	// Add this invite to the DB.
