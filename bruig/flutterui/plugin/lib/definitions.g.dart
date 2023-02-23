@@ -1312,3 +1312,19 @@ Map<String, dynamic> _$RatchetDebugInfoToJson(RatchetDebugInfo instance) =>
       'last_enc_time': instance.lastEncTime.toIso8601String(),
       'last_dec_time': instance.lastDecTime.toIso8601String(),
     };
+
+InvoiceGenFailed _$InvoiceGenFailedFromJson(Map<String, dynamic> json) =>
+    InvoiceGenFailed(
+      json['uid'] as String,
+      json['nick'] as String,
+      (json['dcr_amount'] as num?)?.toDouble() ?? 0,
+      json['err'] as String,
+    );
+
+Map<String, dynamic> _$InvoiceGenFailedToJson(InvoiceGenFailed instance) =>
+    <String, dynamic>{
+      'uid': instance.uid,
+      'nick': instance.nick,
+      'dcr_amount': instance.dcrAmount,
+      'err': instance.err,
+    };

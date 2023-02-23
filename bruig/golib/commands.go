@@ -129,6 +129,7 @@ const (
 	NTUserPostsList          = 0x101a
 	NTUserContentList        = 0x101b
 	NTRemoteSubChanged       = 0x101c
+	NTInvoiceGenFailed       = 0x101d
 )
 
 type cmd struct {

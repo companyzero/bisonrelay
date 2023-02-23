@@ -232,6 +232,14 @@ class _AppState extends State<App> with WindowListener {
           shutdownNtfs.add(ntf);
           break;
 
+        case NTInvoiceGenFailed:
+          var fail = ntf.payload as InvoiceGenFailed;
+          var ntfns = Provider.of<AppNotifications>(context, listen: false);
+          var msg =
+              "Failed to generate invoice to user ${fail.nick} for ${fail.dcrAmount} DCR: ${fail.err}";
+          ntfns.addNtfn(AppNtfn(AppNtfnType.invoiceGenFailed, msg: msg));
+          break;
+
         default:
           developer.log("Unknown conf ntf received ${ntf.type}");
       }

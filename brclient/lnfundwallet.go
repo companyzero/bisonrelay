@@ -125,7 +125,7 @@ func (ws lnFundWalletWindow) View() string {
 	fmt.Fprintf(&b, "\n\n%s\n\n", button)
 	nbLines += 4
 
-	b.WriteString(strings.Repeat("\n", ws.as.winH-nbLines-1))
+	b.WriteString(blankLines(ws.as.winH - nbLines - 1))
 	b.WriteString(ws.footerView())
 
 	return b.String()

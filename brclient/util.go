@@ -337,3 +337,11 @@ func programByMimeType(mimeMap map[string]string, t string) string {
 	}
 	return ""
 }
+
+// blankLines returns blank lines if nb > 0.
+func blankLines(nb int) string {
+	if nb <= 0 {
+		return ""
+	}
+	return strings.Repeat("\n", nb)
+}

@@ -138,18 +138,26 @@ func (c *Client) handleGetInvoice(ru *RemoteUser, getInvoice rpc.RMGetInvoice) e
 	}
 
 	amountMAtoms := int64(getInvoice.MilliAtoms)
+	dcrAmount := float64(amountMAtoms) / 1e11
 	inv, err := c.pc.GetInvoice(c.ctx, amountMAtoms, cb)
 	if err != nil {
+		c.ntfns.notifyInvoiceGenFailed(ru, dcrAmount, err)
 		replyWithErr(fmt.Errorf("unable to generate payment invoice"))
-		return err
+		ru.log.Warnf("Unable to generate invoice for %.8f DCR: %v",
+			dcrAmount, err)
+
+		// The prior notification and logging will alert users about
+		// the failure to generate the invoice, but otherwise this call
+		// was handled, so return nil instead of the error.
+		return nil
 	}
 
 	if ru.log.Level() <= slog.LevelDebug {
 		ru.log.Debugf("Generated invoice for user payment of %.8f DCR: %s",
-			float64(amountMAtoms)/1e11, inv)
+			dcrAmount, inv)
 	} else {
 		ru.log.Infof("Generated invoice for user payment of %.8f DCR",
-			float64(amountMAtoms)/1e11)
+			dcrAmount)
 	}
 
 	// Send reply.
