@@ -57,6 +57,20 @@ class ChatEventModel extends ChangeNotifier {
     _sentState = CMS_errored;
     notifyListeners();
   }
+
+  bool _firstUnread = false;
+  bool get firstUnread => _firstUnread;
+  void set firstUnread(bool b) {
+    _firstUnread = b;
+    notifyListeners();
+  }
+
+  bool _sameUser = false;
+  bool get sameUser => _sameUser;
+  void set sameUser(bool b) {
+    _sameUser = b;
+    notifyListeners();
+  }
 }
 
 class ChatModel extends ChangeNotifier {
@@ -89,6 +103,13 @@ class ChatModel extends ChangeNotifier {
   List<ChatEventModel> _msgs = [];
   UnmodifiableListView<ChatEventModel> get msgs => UnmodifiableListView(_msgs);
   void append(ChatEventModel msg) {
+    if (!_active && _unreadMsgCount == 0) {
+      msg.firstUnread = true;
+    }
+    if (_msgs.isNotEmpty &&
+        _msgs[_msgs.length - 1].source?.id == msg.source?.id) {
+      msg.sameUser = true;
+    }
     _msgs.add(msg);
     if (!_active) {
       if (msg.event is PM || msg.event is GCMsg) {
@@ -97,6 +118,15 @@ class ChatModel extends ChangeNotifier {
         _unreadEventCount += 1;
       }
       notifyListeners();
+    }
+  }
+
+  void removeFirstUnread() {
+    for (int i = 0; i < _msgs.length; i++) {
+      if (_msgs[i].firstUnread) {
+        _msgs[i].firstUnread = false;
+        return;
+      }
     }
   }
 
@@ -111,6 +141,9 @@ class ChatModel extends ChangeNotifier {
       var m = GCMsg(id, nick, msg, DateTime.now().millisecondsSinceEpoch);
       var evnt = ChatEventModel(m, null);
       evnt.sentState = CMS_sending; // Track individual sending status?
+      if (_msgs.isNotEmpty && _msgs[_msgs.length - 1].source == null) {
+        evnt.sameUser = true;
+      }
       _msgs.add(evnt);
       notifyListeners();
 
@@ -125,6 +158,9 @@ class ChatModel extends ChangeNotifier {
       var m = PM(id, msg, true, ts);
       var evnt = ChatEventModel(m, null);
       evnt.sentState = CMS_sending;
+      if (_msgs.isNotEmpty && _msgs[_msgs.length - 1].source == null) {
+        evnt.sameUser = true;
+      }
       _msgs.add(evnt);
       notifyListeners();
 
@@ -256,6 +292,8 @@ class ClientModel extends ChangeNotifier {
 
   void set active(ChatModel? c) {
     _profile = null;
+    // Remove new posts messages
+    _active?.removeFirstUnread();
     _active?._setActive(false);
     _active = c;
     c?._setActive(true);

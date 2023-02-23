@@ -395,58 +395,96 @@ class _ReceivedSentPMState extends State<ReceivedSentPM> {
             ? hightLightTextColor
             : darkTextColor;
     var selectedBackgroundColor = theme.highlightColor;
+    var textColor = theme.dividerColor;
 
     return LayoutBuilder(
         builder: (BuildContext context, BoxConstraints constraints) {
-      return Row(children: [
-        Container(
-            width: 28,
-            margin: const EdgeInsets.only(top: 0, bottom: 0, left: 5, right: 0),
-            child: IconButton(
-              splashRadius: 20,
-              hoverColor: selectedBackgroundColor,
-              icon: CircleAvatar(
-                  backgroundColor: avatarColor,
-                  child: Text(widget.nick[0].toUpperCase(),
-                      style: TextStyle(color: avatarTextColor, fontSize: 20))),
-              padding: const EdgeInsets.all(0),
-              tooltip: widget.nick,
-              onPressed: () {
-                widget.showSubMenu(widget.id);
-              },
-            )),
-        Expanded(
-            child: Container(
-          decoration: BoxDecoration(
-              color: bgColor,
-              borderRadius: const BorderRadius.all(Radius.elliptical(10, 10))),
-          padding: const EdgeInsets.all(5),
-          margin: const EdgeInsets.only(top: 5, bottom: 5, left: 10, right: 10),
-          alignment: Alignment.centerLeft,
-          child:
-              Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            Row(children: [
-              Text(
-                widget.nick,
-                style: TextStyle(
-                    fontSize: 12,
-                    color: hightLightTextColor, // NAME TEXT COLOR,
-                    fontWeight: FontWeight.bold,
-                    fontStyle: FontStyle.italic),
-              ),
-              const SizedBox(width: 10),
-              Text(
-                date,
-                style:
-                    TextStyle(fontSize: 9, color: darkTextColor), // DATE COLOR
-              )
-            ]),
-            const SizedBox(height: 10),
-            Provider<DownloadSource>(
-                create: (context) => DownloadSource(sourceID),
-                child: MarkdownArea(msg))
-          ]),
-        ))
+      return Column(children: [
+        widget.evnt.firstUnread
+            ? Row(children: [
+                Expanded(
+                    child: Divider(
+                  color: textColor, //color of divider
+                  height: 8, //height spacing of divider
+                  thickness: 1, //thickness of divier line
+                  indent: 5, //spacing at the start of divider
+                  endIndent: 5, //spacing at the end of divider
+                )),
+                Text("Last read posts",
+                    style: TextStyle(fontSize: 9, color: textColor)),
+                Expanded(
+                    child: Divider(
+                  color: textColor, //color of divider
+                  height: 8, //height spacing of divider
+                  thickness: 1, //thickness of divier line
+                  indent: 5, //spacing at the start of divider
+                  endIndent: 5, //spacing at the end of divider
+                )),
+              ])
+            : Empty(),
+        Row(children: [
+          widget.evnt.sameUser
+              ? const SizedBox(width: 28)
+              : Container(
+                  width: 28,
+                  margin: const EdgeInsets.only(
+                      top: 0, bottom: 0, left: 5, right: 0),
+                  child: IconButton(
+                    splashRadius: 20,
+                    hoverColor: selectedBackgroundColor,
+                    icon: CircleAvatar(
+                        backgroundColor: avatarColor,
+                        child: Text(widget.nick[0].toUpperCase(),
+                            style: TextStyle(
+                                color: avatarTextColor, fontSize: 20))),
+                    padding: const EdgeInsets.all(0),
+                    tooltip: widget.nick,
+                    onPressed: () {
+                      widget.showSubMenu(widget.id);
+                    },
+                  )),
+          Expanded(
+              child: Container(
+            decoration: BoxDecoration(
+                color: bgColor,
+                borderRadius:
+                    const BorderRadius.all(Radius.elliptical(10, 10))),
+            padding: const EdgeInsets.all(5),
+            margin:
+                const EdgeInsets.only(top: 5, bottom: 5, left: 10, right: 10),
+            alignment: Alignment.centerLeft,
+            child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(children: [
+                    widget.evnt.sameUser
+                        ? const Empty()
+                        : Text(
+                            widget.nick,
+                            style: TextStyle(
+                                fontSize: 12,
+                                color: hightLightTextColor, // NAME TEXT COLOR,
+                                fontWeight: FontWeight.bold,
+                                fontStyle: FontStyle.italic),
+                          ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                        child: Align(
+                            alignment: Alignment.topRight,
+                            child: Text(
+                              date,
+                              style: TextStyle(
+                                  fontSize: 9,
+                                  color: darkTextColor), // DATE COLOR
+                            )))
+                  ]),
+                  const SizedBox(height: 10),
+                  Provider<DownloadSource>(
+                      create: (context) => DownloadSource(sourceID),
+                      child: MarkdownArea(msg))
+                ]),
+          ))
+        ])
       ]);
     });
   }
