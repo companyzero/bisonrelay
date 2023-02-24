@@ -16,6 +16,7 @@ import (
 	"github.com/companyzero/bisonrelay/brclient/internal/version"
 	"github.com/decred/dcrd/dcrutil/v4"
 	"github.com/jrick/flagfile"
+	"golang.org/x/exp/slices"
 )
 
 const (
@@ -57,6 +58,7 @@ type config struct {
 	LNMacaroonPath string
 	LNDebugLevel   string
 	LNMaxLogFiles  int
+	LNRPCListen    []string
 	LogFile        string
 	MaxLogFiles    int
 	DebugLevel     string
@@ -228,6 +230,7 @@ func loadConfig() (*config, error) {
 	flagLNTLSCert := fs.String("lntlscert", "~/.dcrlnd/tls.cert", "path to dcrlnd tls.cert")
 	flagLNDebugLevel := fs.String("lndebuglevel", "info", "LN log level")
 	flagLNMaxLogFiles := fs.Int("lnmaxlogfiles", 3, "LN Max Log Files")
+	flagLNRPCListen := fs.String("lnrpclisten", "", "list of addrs for the embedded ln to listen on")
 	flagNickColor := fs.String("nickcolor", "bold:white:na", "color of the nick")
 	flagGCOtherColor := fs.String("gcothercolor", "bold:green:na", "color of other nicks in gc")
 	flagPMOtherColor := fs.String("pmothercolor", "bold:cyan:na", "color of other nicks in pms")
@@ -322,6 +325,20 @@ func loadConfig() (*config, error) {
 		jrpcListen = strings.Split(*flagJSONRPCListen, ",")
 	}
 
+	var lnRPCListen []string
+	if *flagLNRPCListen != "" {
+		lnRPCListen = strings.Split(*flagLNRPCListen, ",")
+		for i := 0; i < len(lnRPCListen); i++ {
+			v := strings.TrimSpace(lnRPCListen[i])
+			if v == "" {
+				lnRPCListen = slices.Delete(lnRPCListen, i, i)
+			} else {
+				lnRPCListen[i] = v
+				i += 1
+			}
+		}
+	}
+
 	// Return the final cfg object.
 	return &config{
 		ServerAddr:         *flagServerAddr,
@@ -335,6 +352,7 @@ func loadConfig() (*config, error) {
 		LNMacaroonPath:     *flagLNMacaroonPath,
 		LNDebugLevel:       *flagLNDebugLevel,
 		LNMaxLogFiles:      *flagLNMaxLogFiles,
+		LNRPCListen:        lnRPCListen,
 		LogFile:            *flagLogFile,
 		MaxLogFiles:        *flagMaxLogFiles,
 		DebugLevel:         *flagDebugLevel,

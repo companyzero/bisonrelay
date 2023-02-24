@@ -375,8 +375,13 @@ func (sws setupWizardScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		rootDir := defaultLNWalletDir(defaultRootDir(sws.cfgFilePath))
 		return sws, func() tea.Msg {
-			return cmdRunDcrlnd(sws.connCtx,
-				rootDir, sws.net, "info", 3)
+			cfg := embeddeddcrlnd.Config{
+				RootDir:     rootDir,
+				Network:     sws.net,
+				DebugLevel:  "info",
+				MaxLogFiles: 3,
+			}
+			return cmdRunDcrlnd(sws.connCtx, cfg)
 		}
 
 	case swsStageExternalDetails:
@@ -637,15 +642,7 @@ func newSetupWizardScreen(cfgFilePath string) setupWizardScreen {
 	}
 }
 
-func cmdRunDcrlnd(ctx context.Context, root string, network string,
-	debugLevel string, maxLogFiles int) tea.Msg {
-
-	cfg := embeddeddcrlnd.Config{
-		RootDir:     root,
-		Network:     network,
-		DebugLevel:  debugLevel,
-		MaxLogFiles: maxLogFiles,
-	}
+func cmdRunDcrlnd(ctx context.Context, cfg embeddeddcrlnd.Config) tea.Msg {
 	lndc, err := embeddeddcrlnd.RunDcrlnd(ctx, cfg)
 	if err != nil {
 		return runDcrlndErrMsg{err}

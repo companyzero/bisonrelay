@@ -122,6 +122,11 @@ minimumwalletbalance = 1.0
 minimumrecvbalance = 0.01
 minimumsendbalance = 0.01
 
+# LN RPC listen addresses. Only used with internal dcrlnd instance. Comma
+# separated. If specified, the first address MUST be a locally accessible one
+# (such as 127.0.0.1:10009).
+# lnrpclisten = 127.0.0.1:<port>
+
 [clientrpc]
 # Enable the JSON-RPC clientrpc protocol on the comma-separated list of addresses.
 # jsonrpclisten = 127.0.0.1:7676
