@@ -154,6 +154,10 @@ func (fh formHelper) View() string {
 	return b.String()
 }
 
+func (fh *formHelper) AddInputs(inputs ...tea.Model) {
+	fh.inputs = append(fh.inputs, inputs...)
+}
+
 func newFormHelper(styles *theme, inputs ...tea.Model) formHelper {
 	fh := formHelper{
 		inputs: inputs,

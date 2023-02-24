@@ -439,7 +439,7 @@ func (mws mainWindowState) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case msgLNRequestRecv:
 		mws.as.workingCmd = ""
-		return newLNRequestRecvWindow(mws.as)
+		return newLNRequestRecvWindow(mws.as, false)
 
 	case msgLNOpenChannel:
 		mws.as.workingCmd = ""

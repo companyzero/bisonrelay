@@ -23,7 +23,7 @@ type lnFundWalletWindow struct {
 func (ws *lnFundWalletWindow) resultModel() (tea.Model, tea.Cmd) {
 	_, needsSendChan := ws.as.setupNeedsFlags()
 	if needsSendChan {
-		return newLNOpenChannelWindow(ws.as, true)
+		return newLNOpenChannelWindow(ws.as, false)
 	}
 
 	return newMainWindowState(ws.as)

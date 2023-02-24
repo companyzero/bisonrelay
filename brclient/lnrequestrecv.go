@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -21,16 +22,48 @@ type lnRequestRecvWindow struct {
 	confirmIdx int
 	requesting bool
 	reqPolicy  lnReqRecvConfirmPayment
+
+	isManual bool
 }
 
+const (
+	lp0Server = "https://lp0.bisonrelay.org:9130"
+	lp0Cert   = `-----BEGIN CERTIFICATE-----
+MIIBwjCCAWmgAwIBAgIQA78YKmDt+ffFJmAN5EZmejAKBggqhkjOPQQDAjAyMRMw
+EQYDVQQKEwpiaXNvbnJlbGF5MRswGQYDVQQDExJscDAuYmlzb25yZWxheS5vcmcw
+HhcNMjIwOTE4MTMzNjA4WhcNMzIwOTE2MTMzNjA4WjAyMRMwEQYDVQQKEwpiaXNv
+bnJlbGF5MRswGQYDVQQDExJscDAuYmlzb25yZWxheS5vcmcwWTATBgcqhkjOPQIB
+BggqhkjOPQMBBwNCAASF1StlsfdDUaCXMiZvDBhhMZMdvAUoD6wBdS0tMBN+9y91
+UwCBu4klh+VmpN1kCzcR6HJHSx5Cctxn7Smw/w+6o2EwXzAOBgNVHQ8BAf8EBAMC
+AoQwDwYDVR0TAQH/BAUwAwEB/zAdBgNVHQ4EFgQUqqlcDx8e+XgXXU9cXAGQEhS8
+59kwHQYDVR0RBBYwFIISbHAwLmJpc29ucmVsYXkub3JnMAoGCCqGSM49BAMCA0cA
+MEQCIGtLFLIVMnU2EloN+gI+uuGqqqeBIDSNhP9+bznnZL/JAiABsLKKtaTllCSM
+cNPr8Y+sSs2MHf6xMNBQzV4KuIlPIg==
+-----END CERTIFICATE-----`
+)
+
 func (pw *lnRequestRecvWindow) request() {
-	server := pw.form.inputs[0].(*textInputHelper).Value()
-	cert := []byte(pw.form.inputs[1].(*textInputHelper).Value())
-	amount := pw.form.inputs[2].(*textInputHelper).Value()
 	key := ""
 	as := pw.as
 	pw.requestErr = nil
 	pw.requesting = true
+
+	var cert []byte
+	var server string
+	if pw.isManual {
+		server = pw.form.inputs[1].(*textInputHelper).Value()
+		certPath := pw.form.inputs[2].(*textInputHelper).Value()
+
+		cert, pw.requestErr = os.ReadFile(certPath)
+	} else if pw.as.network == "mainnet" {
+		server = lp0Server
+		cert = []byte(lp0Cert)
+	}
+
+	amount := pw.form.inputs[0].(*textInputHelper).Value()
+	if pw.requestErr != nil {
+		return
+	}
 
 	// reqestRecv() blocks until the inbound channel is confirmed, so
 	// run as a goroutine.
@@ -57,13 +90,20 @@ func (pw lnRequestRecvWindow) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return ss, cmd
 	}
 
-	// Return to main window on ESC.
+	// Return to previous window on ESC.
 	if isEscMsg(msg) {
+		if pw.isManual {
+			newLNRequestRecvWindow(pw.as, false)
+		}
 		return newMainWindowState(pw.as)
 	}
 
 	// Handle generic messages.
 	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		if msg.Type == tea.KeyF2 {
+			return newLNRequestRecvWindow(pw.as, true)
+		}
 	case tea.WindowSizeMsg: // resize window
 		pw.as.winW = msg.Width
 		pw.as.winH = msg.Height
@@ -108,14 +148,19 @@ func (pw lnRequestRecvWindow) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		pw.request()
 
 	case tea.KeyMsg:
-		oldServer := pw.form.inputs[0].(*textInputHelper).Value()
-		pw.form, cmd = pw.form.Update(msg)
-		newServer := pw.form.inputs[0].(*textInputHelper).Value()
-		if oldServer != newServer {
-			pw.form.inputs[1].(*textInputHelper).SetValue("")
+		if pw.isManual {
+			oldServer := pw.form.inputs[1].(*textInputHelper).Value()
+			pw.form, cmd = pw.form.Update(msg)
+			newServer := pw.form.inputs[1].(*textInputHelper).Value()
+			if oldServer != newServer {
+				// Clear certificate path
+				pw.form.inputs[2].(*textInputHelper).SetValue("")
+			}
+			return pw, cmd
+		} else {
+			pw.form, cmd = pw.form.Update(msg)
+			return pw, cmd
 		}
-
-		return pw, cmd
 	}
 
 	return pw, nil
@@ -123,6 +168,9 @@ func (pw lnRequestRecvWindow) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (pw lnRequestRecvWindow) headerView() string {
 	msg := " Request Lightning Wallet Receive Capacity"
+	if !pw.isManual {
+		msg += " - Press F2 for manual entry"
+	}
 	headerMsg := pw.as.styles.header.Render(msg)
 	spaces := pw.as.styles.header.Render(strings.Repeat(" ",
 		max(0, pw.as.winW-lipgloss.Width(headerMsg))))
@@ -170,7 +218,7 @@ func (pw lnRequestRecvWindow) View() string {
 		pf("\n")
 
 		nbLines += 9
-	} else if pw.requesting {
+	} else if pw.requesting && pw.requestErr == nil {
 		b.WriteString("Requesting liquidity...")
 		nbLines += 1
 	} else {
@@ -182,6 +230,7 @@ func (pw lnRequestRecvWindow) View() string {
 
 		pf("\n")
 		if pw.requestErr != nil {
+			pw.requesting = false
 			b.WriteString(pw.as.styles.err.Render(pw.requestErr.Error()))
 		}
 		pf("\n")
@@ -197,42 +246,29 @@ func (pw lnRequestRecvWindow) View() string {
 	return b.String()
 }
 
-func newLNRequestRecvWindow(as *appState) (lnRequestRecvWindow, tea.Cmd) {
-	var server, cert string
-	switch as.network {
-	case "mainnet":
-		server = "https://lp0.bisonrelay.org:9130"
-		cert = `-----BEGIN CERTIFICATE-----
-MIIBwjCCAWmgAwIBAgIQA78YKmDt+ffFJmAN5EZmejAKBggqhkjOPQQDAjAyMRMw
-EQYDVQQKEwpiaXNvbnJlbGF5MRswGQYDVQQDExJscDAuYmlzb25yZWxheS5vcmcw
-HhcNMjIwOTE4MTMzNjA4WhcNMzIwOTE2MTMzNjA4WjAyMRMwEQYDVQQKEwpiaXNv
-bnJlbGF5MRswGQYDVQQDExJscDAuYmlzb25yZWxheS5vcmcwWTATBgcqhkjOPQIB
-BggqhkjOPQMBBwNCAASF1StlsfdDUaCXMiZvDBhhMZMdvAUoD6wBdS0tMBN+9y91
-UwCBu4klh+VmpN1kCzcR6HJHSx5Cctxn7Smw/w+6o2EwXzAOBgNVHQ8BAf8EBAMC
-AoQwDwYDVR0TAQH/BAUwAwEB/zAdBgNVHQ4EFgQUqqlcDx8e+XgXXU9cXAGQEhS8
-59kwHQYDVR0RBBYwFIISbHAwLmJpc29ucmVsYXkub3JnMAoGCCqGSM49BAMCA0cA
-MEQCIGtLFLIVMnU2EloN+gI+uuGqqqeBIDSNhP9+bznnZL/JAiABsLKKtaTllCSM
-cNPr8Y+sSs2MHf6xMNBQzV4KuIlPIg==
------END CERTIFICATE-----`
-	case "simnet":
-		server = "https://127.0.0.1:29130"
-	}
-
-	certModel := newTextAreaModel(as.styles)
-	certModel.SetHeight(5)
-
+func newLNRequestRecvWindow(as *appState, isManual bool) (lnRequestRecvWindow, tea.Cmd) {
 	form := newFormHelper(as.styles,
-		newTextInputHelper(as.styles,
-			tihWithPrompt("Server:Port: "),
-			tihWithValue(server),
-		),
-		newTextInputHelper(as.styles,
-			tihWithPrompt("Certificate: "),
-			tihWithValue(cert),
-		),
 		newTextInputHelper(as.styles,
 			tihWithPrompt("Amount: "),
 		),
+	)
+
+	if isManual {
+		server := "https://"
+		if as.network == "simnet" {
+			server = "https://127.0.0.1:29130"
+		}
+		form.AddInputs(
+			newTextInputHelper(as.styles,
+				tihWithPrompt("Server URL: "),
+				tihWithValue(server),
+			),
+			newTextInputHelper(as.styles,
+				tihWithPrompt("Certificate Path: "),
+			),
+		)
+	}
+	form.AddInputs(
 		newButtonHelper(as.styles,
 			btnWithLabel(" [ Request Inbound Capacity ]"),
 			btnWithTrailing("\n"),
@@ -242,7 +278,8 @@ cNPr8Y+sSs2MHf6xMNBQzV4KuIlPIg==
 
 	cmds := form.setFocus(0)
 	return lnRequestRecvWindow{
-		as:   as,
-		form: form,
+		as:       as,
+		form:     form,
+		isManual: isManual,
 	}, batchCmds(cmds)
 }
