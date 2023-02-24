@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:golib_plugin/util.dart';
 import 'package:tuple/tuple.dart';
+import 'package:bruig/components/empty_widget.dart';
 
 class NeedsInChannelScreen extends StatefulWidget {
   final AppNotifications ntfns;
@@ -37,6 +38,7 @@ class _NeedsInChannelScreenState extends State<NeedsInChannelScreen> {
   TextEditingController certCtrl = TextEditingController();
   AmountEditingController amountCtrl = AmountEditingController();
   String preventMsg = "";
+  bool showAdvanced = false;
 
   void getNewAddress() async {
     try {
@@ -154,6 +156,18 @@ cNPr8Y+sSs2MHf6xMNBQzV4KuIlPIg==
     }
   }
 
+  void showAdvancedArea() {
+    setState(() {
+      showAdvanced = true;
+    });
+  }
+
+  void hideAdvancedArea() {
+    setState(() {
+      showAdvanced = false;
+    });
+  }
+
   @override
   void initState() {
     super.initState();
@@ -247,7 +261,7 @@ messages. It is only required in order to receive payments from other users.
                                         fontWeight: FontWeight.w300)),
                                 Text(
                                     textAlign: TextAlign.right,
-                                    "${formatDCR(atomsToDCR(maxOutAmount))}",
+                                    formatDCR(atomsToDCR(maxOutAmount)),
                                     style: TextStyle(
                                         color: darkTextColor,
                                         fontSize: 13,
@@ -266,7 +280,7 @@ messages. It is only required in order to receive payments from other users.
                                     fontWeight: FontWeight.w300)),
                             Text(
                                 textAlign: TextAlign.right,
-                                "${formatDCR(atomsToDCR(maxInAmount))}",
+                                formatDCR(atomsToDCR(maxInAmount)),
                                 style: TextStyle(
                                     color: darkTextColor,
                                     fontSize: 13,
@@ -284,7 +298,7 @@ messages. It is only required in order to receive payments from other users.
                                     fontWeight: FontWeight.w300)),
                             Text(
                                 textAlign: TextAlign.right,
-                                "${numPendingChannels}",
+                                "$numPendingChannels",
                                 style: TextStyle(
                                     color: darkTextColor,
                                     fontSize: 13,
@@ -302,7 +316,7 @@ messages. It is only required in order to receive payments from other users.
                                     fontWeight: FontWeight.w300)),
                             Text(
                                 textAlign: TextAlign.right,
-                                "${numChannels}",
+                                "$numChannels",
                                 style: TextStyle(
                                     color: darkTextColor,
                                     fontSize: 13,
@@ -310,51 +324,78 @@ messages. It is only required in order to receive payments from other users.
                           ]),
                       const SizedBox(height: 10),
                       preventMsg == ""
+                          ? LoadingScreenButton(
+                              empty: true,
+                              onPressed: showAdvanced
+                                  ? hideAdvancedArea
+                                  : showAdvancedArea,
+                              text: showAdvanced
+                                  ? "Hide Advanced"
+                                  : "Show Advanced",
+                            )
+                          : Empty(),
+                      const SizedBox(height: 10),
+                      preventMsg == ""
                           ? Expanded(
-                              child: SimpleInfoGrid([
-                              Tuple2(
-                                  Text("LP Server Address",
-                                      style: TextStyle(
-                                          color: darkTextColor,
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w300)),
-                                  TextField(
-                                    controller: serverCtrl,
-                                    decoration: const InputDecoration(
-                                        hintText: "https://lpd-server:port"),
-                                  )),
-                              Tuple2(
-                                  Text("LP Server Cert",
-                                      style: TextStyle(
-                                          color: darkTextColor,
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w300)),
-                                  TextField(
-                                    controller: certCtrl,
-                                    maxLines: null,
-                                    keyboardType: TextInputType.multiline,
-                                  )),
-                              Tuple2(
-                                  Text("Amount",
-                                      style: TextStyle(
-                                          color: darkTextColor,
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w300)),
-                                  SizedBox(
-                                    width: 150,
-                                    child: dcrInput(controller: amountCtrl),
-                                  )),
-                              Tuple2(
-                                  const SizedBox(height: 50),
-                                  LoadingScreenButton(
-                                    onPressed:
-                                        !loading ? requestRecvCapacity : null,
-                                    text: "Request Inbound Channel",
-                                  ))
-                            ]))
+                              child: ListView(
+                                  shrinkWrap: true,
+                                  padding: const EdgeInsets.all(15.0),
+                                  children: <Widget>[
+                                  SimpleInfoGrid([
+                                    Tuple2(
+                                        Text("Amount",
+                                            style: TextStyle(
+                                                color: darkTextColor,
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.w300)),
+                                        SizedBox(
+                                          width: 150,
+                                          child:
+                                              dcrInput(controller: amountCtrl),
+                                        )),
+                                    Tuple2(
+                                        const SizedBox(height: 50),
+                                        LoadingScreenButton(
+                                          onPressed: !loading
+                                              ? requestRecvCapacity
+                                              : null,
+                                          text: "Request Inbound Channel",
+                                        ))
+                                  ]),
+                                  showAdvanced
+                                      ? SimpleInfoGrid([
+                                          Tuple2(
+                                              Text("LP Server Address",
+                                                  style: TextStyle(
+                                                      color: darkTextColor,
+                                                      fontSize: 13,
+                                                      fontWeight:
+                                                          FontWeight.w300)),
+                                              TextField(
+                                                controller: serverCtrl,
+                                                decoration: const InputDecoration(
+                                                    hintText:
+                                                        "https://lpd-server:port"),
+                                              )),
+                                          Tuple2(
+                                              Text("LP Server Cert",
+                                                  style: TextStyle(
+                                                      color: darkTextColor,
+                                                      fontSize: 13,
+                                                      fontWeight:
+                                                          FontWeight.w300)),
+                                              TextField(
+                                                controller: certCtrl,
+                                                maxLines: null,
+                                                keyboardType:
+                                                    TextInputType.multiline,
+                                              )),
+                                        ])
+                                      : const Empty(),
+                                ]))
                           : Expanded(
                               child: Column(children: [
-                              SizedBox(height: 30),
+                              const SizedBox(height: 30),
                               Text(
                                 preventMsg,
                                 style: TextStyle(color: textColor),

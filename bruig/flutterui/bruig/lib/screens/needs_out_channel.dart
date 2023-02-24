@@ -37,6 +37,7 @@ class _NeedsOutChannelScreenState extends State<NeedsOutChannelScreen> {
   TextEditingController peerCtrl = TextEditingController();
   AmountEditingController amountCtrl = AmountEditingController();
   String preventMsg = "foo";
+  bool showAdvanced = false;
 
   void getNewAddress() async {
     try {
@@ -147,6 +148,18 @@ open channels to other LN nodes.''';
     }
   }
 
+  void showAdvancedArea() {
+    setState(() {
+      showAdvanced = true;
+    });
+  }
+
+  void hideAdvancedArea() {
+    setState(() {
+      showAdvanced = false;
+    });
+  }
+
   @override
   void initState() {
     super.initState();
@@ -239,7 +252,7 @@ the wallet seed is NOT sufficient to restore their state.
                                         fontWeight: FontWeight.w300)),
                                 Text(
                                     textAlign: TextAlign.right,
-                                    "${formatDCR(atomsToDCR(walletBalance))}",
+                                    formatDCR(atomsToDCR(walletBalance)),
                                     style: TextStyle(
                                         color: darkTextColor,
                                         fontSize: 13,
@@ -258,7 +271,7 @@ the wallet seed is NOT sufficient to restore their state.
                                     fontWeight: FontWeight.w300)),
                             Text(
                                 textAlign: TextAlign.right,
-                                "${formatDCR(atomsToDCR(maxOutAmount))}",
+                                formatDCR(atomsToDCR(maxOutAmount)),
                                 style: TextStyle(
                                     color: darkTextColor,
                                     fontSize: 13,
@@ -276,7 +289,7 @@ the wallet seed is NOT sufficient to restore their state.
                                     fontWeight: FontWeight.w300)),
                             Text(
                                 textAlign: TextAlign.right,
-                                "${numPendingChannels}",
+                                "$numPendingChannels",
                                 style: TextStyle(
                                     color: darkTextColor,
                                     fontSize: 13,
@@ -294,7 +307,7 @@ the wallet seed is NOT sufficient to restore their state.
                                     fontWeight: FontWeight.w300)),
                             Text(
                                 textAlign: TextAlign.right,
-                                "${numChannels}",
+                                "$numChannels",
                                 style: TextStyle(
                                     color: darkTextColor,
                                     fontSize: 13,
@@ -302,42 +315,67 @@ the wallet seed is NOT sufficient to restore their state.
                           ]),
                       const SizedBox(height: 10),
                       preventMsg == ""
-                          ? SimpleInfoGrid([
-                              Tuple2(
-                                  Text("Peer ID and Address",
-                                      style: TextStyle(
-                                          color: darkTextColor,
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w300)),
-                                  TextField(
-                                    controller: peerCtrl,
-                                    decoration: const InputDecoration(
-                                        hintText: "node-pub-key@addr:port"),
-                                  )),
-                              Tuple2(
-                                  Text("Amount",
-                                      style: TextStyle(
-                                          color: darkTextColor,
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w300)),
-                                  SizedBox(
-                                    width: 150,
-                                    child: dcrInput(controller: amountCtrl),
-                                  )),
-                              Tuple2(
-                                  const SizedBox(height: 50),
-                                  LoadingScreenButton(
-                                    onPressed: !loading ? openChannel : null,
-                                    text: "Request Outbound Channel",
-                                  ))
-                            ])
+                          ? LoadingScreenButton(
+                              empty: true,
+                              onPressed: showAdvanced
+                                  ? hideAdvancedArea
+                                  : showAdvancedArea,
+                              text: showAdvanced
+                                  ? "Hide Advanced"
+                                  : "Show Advanced",
+                            )
+                          : const Empty(),
+                      const SizedBox(height: 10),
+                      preventMsg == ""
+                          ? Expanded(
+                              child: ListView(
+                                  shrinkWrap: true,
+                                  padding: const EdgeInsets.all(15.0),
+                                  children: <Widget>[
+                                  SimpleInfoGrid([
+                                    Tuple2(
+                                        Text("Amount",
+                                            style: TextStyle(
+                                                color: darkTextColor,
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.w300)),
+                                        SizedBox(
+                                          width: 150,
+                                          child:
+                                              dcrInput(controller: amountCtrl),
+                                        )),
+                                    Tuple2(
+                                        const SizedBox(height: 50),
+                                        LoadingScreenButton(
+                                          onPressed:
+                                              !loading ? openChannel : null,
+                                          text: "Request Outbound Channel",
+                                        ))
+                                  ]),
+                                  showAdvanced
+                                      ? SimpleInfoGrid([
+                                          Tuple2(
+                                              Text("Peer ID and Address",
+                                                  style: TextStyle(
+                                                      color: darkTextColor,
+                                                      fontSize: 13,
+                                                      fontWeight:
+                                                          FontWeight.w300)),
+                                              TextField(
+                                                controller: peerCtrl,
+                                                decoration: const InputDecoration(
+                                                    hintText:
+                                                        "node-pub-key@addr:port"),
+                                              )),
+                                        ])
+                                      : const Empty(),
+                                ]))
                           : Expanded(
                               child: Column(children: [
-                              SizedBox(height: 30),
+                              const SizedBox(height: 30),
                               Text(preventMsg,
                                   style: TextStyle(color: textColor))
                             ])),
-                      const Expanded(child: Empty()),
                       LoadingScreenButton(
                         onPressed: () => Navigator.of(context).pop(),
                         text: "Skip",
