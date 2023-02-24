@@ -44,13 +44,18 @@ type Config struct {
 
 	// MaxLogFiles is the max number of log files to keep around.
 	MaxLogFiles int
+
+	// RPCAddresses are addresses to bind gRPC to. When non-empty, the
+	// first address MUST be one accessible for the local host (e.g.
+	// 127.0.0.1:<port>), otherwise initialization may hang forever.
+	RPCAddresses []string
 }
 
 // Dcrlnd is a running instance of an embedded dcrlnd instance.
 type Dcrlnd struct {
 	runErr       error
 	runDone      chan struct{}
-	grpcPort     uint16
+	rpcAddr      string
 	shutdownChan chan struct{}
 	connOpts     []grpc.DialOption
 	conn         *grpc.ClientConn
@@ -66,7 +71,7 @@ var ErrLNWalletNotFound = errors.New("wallet not found")
 // RPCAddr returns the address of the gRPC endpoint of the running dcrlnd
 // instance.
 func (lndc *Dcrlnd) RPCAddr() string {
-	return fmt.Sprintf("127.0.0.1:%d", lndc.grpcPort)
+	return lndc.rpcAddr
 }
 
 // TLSCertPath returns the path to the TLS cert of the dcrlnd instance.
@@ -110,7 +115,7 @@ func (lndc *Dcrlnd) TryUnlock(ctx context.Context, pass string) error {
 
 func (lndc *Dcrlnd) reconnect(ctx context.Context) error {
 	var err error
-	rpcAddr := fmt.Sprintf("127.0.0.1:%d", lndc.grpcPort)
+	rpcAddr := lndc.rpcAddr
 	lndc.conn, err = grpc.DialContext(ctx, rpcAddr, append(lndc.connOpts, grpc.WithBlock())...)
 	return err
 }
@@ -313,16 +318,22 @@ func (lndc *Dcrlnd) Stop() {
 // The passed context is only used during the attempts to connect to the
 // running node.
 func RunDcrlnd(ctx context.Context, cfg Config) (*Dcrlnd, error) {
-	port, err := findAvailablePort()
-	if err != nil {
-		return nil, err
+	var rpcAddrs []string
+	if len(cfg.RPCAddresses) > 0 {
+		rpcAddrs = cfg.RPCAddresses
+	} else {
+		port, err := findAvailablePort()
+		if err != nil {
+			return nil, err
+		}
+		rpcAddrs = []string{fmt.Sprintf("127.0.0.1:%d", port)}
 	}
 	conf := dcrlnd.DefaultConfig()
 
 	rootDir := cfg.RootDir
 	network := cfg.Network
 
-	rpcAddr := fmt.Sprintf("127.0.0.1:%d", port)
+	rpcAddr := rpcAddrs[0]
 	conf.LndDir = rootDir
 	conf.DataDir = filepath.Join(rootDir, "data")
 	conf.ConfigFile = filepath.Join(rootDir, "dcrlnd.conf")
@@ -330,7 +341,7 @@ func RunDcrlnd(ctx context.Context, cfg Config) (*Dcrlnd, error) {
 	conf.MaxLogFiles = cfg.MaxLogFiles
 	conf.TLSCertPath = filepath.Join(rootDir, "tls.cert")
 	conf.TLSKeyPath = filepath.Join(rootDir, "tls.key")
-	conf.RawRPCListeners = []string{rpcAddr}
+	conf.RawRPCListeners = rpcAddrs
 	conf.DisableRest = true
 	conf.DisableListen = true
 	conf.BackupFilePath = filepath.Join(rootDir, "channels.backup")
@@ -372,7 +383,7 @@ func RunDcrlnd(ctx context.Context, cfg Config) (*Dcrlnd, error) {
 	lndc := &Dcrlnd{
 		runDone:      make(chan struct{}),
 		shutdownChan: make(chan struct{}),
-		grpcPort:     port,
+		rpcAddr:      rpcAddr,
 		macaroonPath: filepath.Join(conf.DataDir, "chain", "decred",
 			network, "admin.macaroon"),
 		tlsCertPath: conf.TLSCertPath,

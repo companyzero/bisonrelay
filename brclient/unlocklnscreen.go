@@ -40,13 +40,16 @@ type unlockLNScreen struct {
 func (ulns unlockLNScreen) Init() tea.Cmd {
 	var cmds []tea.Cmd
 	if ulns.lndc == nil {
-		rootDir := defaultLNWalletDir(ulns.cfg.Root)
-		net := ulns.cfg.Network
-		lnDebugLevel := ulns.cfg.LNDebugLevel
-		maxLogFiles := ulns.cfg.LNMaxLogFiles
+		cfg := embeddeddcrlnd.Config{
+			RootDir:      defaultLNWalletDir(ulns.cfg.Root),
+			Network:      ulns.cfg.Network,
+			DebugLevel:   ulns.cfg.LNDebugLevel,
+			MaxLogFiles:  ulns.cfg.LNMaxLogFiles,
+			RPCAddresses: ulns.cfg.LNRPCListen,
+		}
+
 		cmd := func() tea.Msg {
-			return cmdRunDcrlnd(ulns.connCtx,
-				rootDir, net, lnDebugLevel, maxLogFiles)
+			return cmdRunDcrlnd(ulns.connCtx, cfg)
 		}
 		cmds = appendCmd(cmds, cmd)
 	} else if !ulns.needsUnlock {
