@@ -166,14 +166,30 @@ func (p *postsServer) PostsStatusStream(ctx context.Context, req *types.PostsSta
 
 func (p *postsServer) postStatusNtfnHandler(user *client.RemoteUser, pid clientintf.PostID,
 	statusFrom client.UserID, status rpc.PostMetadataStatus) {
+
 	var relayerID []byte
 	if user != nil {
 		relayerID = user.ID().Bytes()
 	}
+
+	// Determine the best nick.
+	var statusFromNick string
+	if fromNick, err := p.c.UserNick(statusFrom); err == nil {
+		// Local client has this user, use this as nick.
+		statusFromNick = fromNick
+	} else if fromNick, ok := status.Attributes[rpc.RMPFromNick]; ok {
+		// Status includes a nick, use the included one.
+		statusFromNick = fromNick
+	} else {
+		// Status does not include nick, use the prefix of the ID.
+		statusFromNick = statusFrom.ShortLogID()
+	}
+
 	ntfn := &types.ReceivedPostStatus{
-		RelayerId:  relayerID,
-		PostId:     pid[:],
-		StatusFrom: statusFrom[:],
+		RelayerId:      relayerID,
+		PostId:         pid[:],
+		StatusFrom:     statusFrom[:],
+		StatusFromNick: statusFromNick,
 		Status: &types.PostMetadataStatus{
 			Version:    status.Version,
 			From:       status.From,

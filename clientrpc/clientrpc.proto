@@ -296,6 +296,9 @@ message ReceivedPostStatus{
 
   /* status is the full status data. */
   PostMetadataStatus status = 5;
+
+  /* status_from_nick is the nick of the original author of the status. */
+  string status_from_nick = 6;
 }
 
 /* TipUserRequest is a request to tip a remote user. */
