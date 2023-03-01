@@ -8,6 +8,7 @@ import (
 	"github.com/companyzero/bisonrelay/client/clientdb"
 	"github.com/companyzero/bisonrelay/client/clientintf"
 	"github.com/companyzero/bisonrelay/rpc"
+	"github.com/companyzero/bisonrelay/zkidentity"
 )
 
 // Following are the notification types. Add new types at the bottom of this
@@ -147,6 +148,12 @@ const onGCKilledNtfnType = "onGCKilled"
 type OnGCKilledNtfn func(gcid GCID, reason string)
 
 func (_ OnGCKilledNtfn) typ() string { return onGCKilledNtfnType }
+
+const onGCAdminsChangedNtfnType = "onGCAdminsChanged"
+
+type OnGCAdminsChangedNtfn func(ru *RemoteUser, gc rpc.RMGroupList, added, removed []zkidentity.ShortID)
+
+func (_ OnGCAdminsChangedNtfn) typ() string { return onGCAdminsChangedNtfnType }
 
 // The following is used only in tests.
 
@@ -351,6 +358,12 @@ func (nmgr *NotificationManager) notifyOnGCKilled(gcid GCID, reason string) {
 		visit(func(h OnGCKilledNtfn) { h(gcid, reason) })
 }
 
+func (nmgr *NotificationManager) notifyGCAdminsChanged(ru *RemoteUser, gc rpc.RMGroupList,
+	added, removed []zkidentity.ShortID) {
+	nmgr.handlers[onGCAdminsChangedNtfnType].(*handlersFor[OnGCAdminsChangedNtfn]).
+		visit(func(h OnGCAdminsChangedNtfn) { h(ru, gc, added, removed) })
+}
+
 func NewNotificationManager() *NotificationManager {
 	return &NotificationManager{
 		handlers: map[string]handlersRegistry{
@@ -370,6 +383,7 @@ func NewNotificationManager() *NotificationManager {
 			onGCInviteAcceptedNtfnType: &handlersFor[OnGCInviteAcceptedNtfn]{},
 			onGCUserPartedNtfnType:     &handlersFor[OnGCUserPartedNtfn]{},
 			onGCKilledNtfnType:         &handlersFor[OnGCKilledNtfn]{},
+			onGCAdminsChangedNtfnType:  &handlersFor[OnGCAdminsChangedNtfn]{},
 
 			onInvoiceGenFailedNtfnType:        &handlersFor[OnInvoiceGenFailedNtfn]{},
 			onRemoteSubscriptionChangedType:   &handlersFor[OnRemoteSubscriptionChangedNtfn]{},

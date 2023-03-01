@@ -1,6 +1,7 @@
 package e2etests
 
 import (
+	"fmt"
 	"math/rand"
 	"strconv"
 	"sync"
@@ -11,6 +12,7 @@ import (
 	"github.com/companyzero/bisonrelay/client/clientintf"
 	"github.com/companyzero/bisonrelay/internal/assert"
 	"github.com/companyzero/bisonrelay/rpc"
+	"github.com/companyzero/bisonrelay/zkidentity"
 )
 
 // TestBasicGCFeatures performs tests for the basic GC features.
@@ -522,4 +524,129 @@ func TestInviteToTwoGCsAcceptAfterJoin(t *testing.T) {
 	assert.NilErr(t, err)
 	assert.DeepEqual(t, gotGCName2, gcName2)
 
+}
+
+// TestVersion1GCs tests version 1 GC features (extra admins).
+func TestVersion1GCs(t *testing.T) {
+	tcfg := testScaffoldCfg{showLog: true}
+	ts := newTestScaffold(t, tcfg)
+	alice := ts.newClient("alice")
+	bob := ts.newClient("bob")
+	charlie := ts.newClient("charlie")
+
+	ts.kxUsers(alice, bob)
+	ts.kxUsers(alice, charlie)
+	ts.kxUsers(bob, charlie)
+
+	gcID, err := alice.NewGroupChat("test gc")
+	assert.NilErr(t, err)
+
+	// Sanity check that the GC was originally created to be version 0.
+	v0gc, err := alice.GetGC(gcID)
+	assert.NilErr(t, err)
+	assert.DeepEqual(t, v0gc.Version, 0)
+
+	// Bob joins the GC.
+	bob.acceptNextGCInvite(gcID)
+	assert.NilErr(t, alice.InviteToGroupChat(gcID, bob.PublicID()))
+	assertClientInGC(t, bob, gcID)
+
+	// Bob cannot invite charlie.
+	err = bob.InviteToGroupChat(gcID, charlie.PublicID())
+	assert.NonNilErr(t, err)
+
+	// Upgrade the GC. Bob sees the upgrade.
+	bobUpgradedGCChan := make(chan error, 1)
+	bob.handle(client.OnGCUpgradedNtfn(func(gc rpc.RMGroupList, oldVersion uint8) {
+		if oldVersion != 0 {
+			bobUpgradedGCChan <- fmt.Errorf("unexpected old version: "+
+				"got %d, want %d", oldVersion, 0)
+		} else if gc.Version != 1 {
+			bobUpgradedGCChan <- fmt.Errorf("unexpected new version: "+
+				"got %d, want %d", gc.Version, 1)
+		} else {
+			bobUpgradedGCChan <- nil
+		}
+	}))
+	err = alice.UpgradeGC(gcID, 1)
+	assert.NilErr(t, err)
+	assert.NilErrFromChan(t, bobUpgradedGCChan)
+
+	// Alice adds Bob as extra admin.
+	bobAddedExtraAdminChan := make(chan error, 1)
+	ntfnReg := bob.handle(client.OnGCAdminsChangedNtfn(func(_ *client.RemoteUser, gc rpc.RMGroupList, added, removed []zkidentity.ShortID) {
+		if len(added) != 1 {
+			bobAddedExtraAdminChan <- fmt.Errorf("unexpected nb of "+
+				"added admins: got %d, want %d", len(added), 1)
+		} else if added[0] != bob.PublicID() {
+			bobAddedExtraAdminChan <- fmt.Errorf("unexpected id of "+
+				"added admin: got %s, want %s", added[0],
+				bob.PublicID())
+		} else {
+			bobAddedExtraAdminChan <- nil
+		}
+
+	}))
+	err = alice.ModifyGCAdmins(gcID, []zkidentity.ShortID{bob.PublicID()}, "")
+	assert.NilErr(t, err)
+	assert.NilErrFromChan(t, bobAddedExtraAdminChan)
+	ntfnReg.Unregister()
+
+	// Bob can now invite Charlie to the GC. Alice should see charlie and
+	// everyone should be GCM'ing.
+	charlie.acceptNextGCInvite(gcID)
+	assert.NilErr(t, bob.InviteToGroupChat(gcID, charlie.PublicID()))
+	assertClientInGC(t, charlie, gcID)
+	assertClientSeesInGC(t, alice, gcID, charlie.PublicID())
+	assertClientsCanGCM(t, gcID, alice, bob, charlie)
+
+	// Bob will remove itself and add charlie as admin.
+	charlieAddedExtraAdminChan := make(chan error, 1)
+	ntfnReg = charlie.handle(client.OnGCAdminsChangedNtfn(func(_ *client.RemoteUser, gc rpc.RMGroupList, added, removed []zkidentity.ShortID) {
+		if len(added) != 1 {
+			charlieAddedExtraAdminChan <- fmt.Errorf("unexpected nb of "+
+				"added admins: got %d, want %d", len(added), 1)
+		} else if len(removed) != 1 {
+			charlieAddedExtraAdminChan <- fmt.Errorf("unexpected nb of "+
+				"removed admins: got %d, want %d", len(removed), 1)
+		} else if removed[0] != bob.PublicID() {
+			charlieAddedExtraAdminChan <- fmt.Errorf("unexpected id of "+
+				"added admin: got %s, want %s", added[0],
+				bob.PublicID())
+		} else if added[0] != charlie.PublicID() {
+			charlieAddedExtraAdminChan <- fmt.Errorf("unexpected id of "+
+				"added admin: got %s, want %s", added[0],
+				charlie.PublicID())
+		} else {
+			charlieAddedExtraAdminChan <- nil
+		}
+
+	}))
+	err = bob.ModifyGCAdmins(gcID, []zkidentity.ShortID{charlie.PublicID()}, "")
+	assert.NilErr(t, err)
+	assert.NilErrFromChan(t, charlieAddedExtraAdminChan)
+	ntfnReg.Unregister()
+
+	// Charlie will kick Bob from the GC now that he's an admin.
+	bobKickedChan := make(chan error, 1)
+	bob.handle(client.OnGCUserPartedNtfn(func(gcid client.GCID, uid client.UserID, reason string, kicked bool) {
+		if uid != bob.PublicID() {
+			bobKickedChan <- fmt.Errorf("unexpected kicked uid: "+
+				"got %s, want %s", uid, bob.PublicID())
+		} else if !kicked {
+			bobKickedChan <- fmt.Errorf("unexpected kicked flag: "+
+				"got %v, want %v", kicked, true)
+		} else {
+			bobKickedChan <- nil
+		}
+	}))
+	err = charlie.GCKick(gcID, bob.PublicID(), "")
+	assert.NilErr(t, err)
+	assert.NilErrFromChan(t, bobKickedChan)
+	assertClientsCanGCM(t, gcID, alice, charlie)
+	assertClientCannotSeeGCM(t, gcID, alice, bob)
+
+	// Charlie cannot kick Alice.
+	err = charlie.GCKick(gcID, alice.PublicID(), "")
+	assert.NonNilErr(t, err)
 }

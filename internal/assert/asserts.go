@@ -98,6 +98,15 @@ func NilErrFromChan(t testing.TB, errChan chan error) {
 	}
 }
 
+// NonNilErr asserts that err is not nil. It's preferable to use a specific
+// error check instead of this one.
+func NonNilErr(t testing.TB, err error) {
+	t.Helper()
+	if err == nil {
+		t.Fatal("unexpected nil error")
+	}
+}
+
 // DoesNotBlock asserts that calling f() does not block for an inordinate amount
 // of time.
 func DoesNotBlock(t testing.TB, f func()) {

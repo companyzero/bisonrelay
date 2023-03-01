@@ -21,7 +21,7 @@ const (
 	// {min,max}SupportedGCVersion tracks the mininum and maximum versions
 	// the client code handles for GCs.
 	minSupportedGCVersion = 0
-	maxSupportedGCVersion = 0
+	maxSupportedGCVersion = 1
 )
 
 // The group chat flow is:
@@ -180,6 +180,20 @@ func (c *Client) uidHasGCPerm(gc rpc.RMGroupList, uid clientintf.UserID) error {
 		}
 
 		return fmt.Errorf("user %s not version 0 GC admin", uid)
+	}
+
+	if gc.Version == 1 {
+		if len(gc.Members) > 0 && gc.Members[0].ConstantTimeEq(&uid) {
+			// Update from admin. Accept.
+			return nil
+		}
+
+		if slices.Contains(gc.ExtraAdmins, uid) {
+			// Additional admin.
+			return nil
+		}
+
+		return fmt.Errorf("user %s not version 1 GC admin", uid)
 	}
 
 	return fmt.Errorf("unsupported GC version %d", gc.Version)
@@ -464,6 +478,7 @@ func (c *Client) maybeUpdateGCFunc(ru *RemoteUser, gcid zkidentity.ShortID, f fu
 		// everything.
 		newGC = oldGC
 		newGC.Members = slices.Clone(oldGC.Members)
+		newGC.ExtraAdmins = slices.Clone(oldGC.ExtraAdmins)
 		if err := f(&newGC); err != nil {
 			return err
 		}
@@ -609,7 +624,7 @@ func (c *Client) handleGCJoin(ru *RemoteUser, invite rpc.RMGroupJoin) error {
 
 // notifyUpdatedGC determines what changed between two GC definitions and
 // notifies the user about it.
-func (c *Client) notifyUpdatedGC(oldGC, newGC rpc.RMGroupList) {
+func (c *Client) notifyUpdatedGC(ru *RemoteUser, oldGC, newGC rpc.RMGroupList) {
 	if oldGC.Version != newGC.Version {
 		c.ntfns.notifyOnGCUpgraded(newGC, oldGC.Version)
 	}
@@ -620,6 +635,18 @@ func (c *Client) notifyUpdatedGC(oldGC, newGC rpc.RMGroupList) {
 	}
 	if len(memberChanges.removed) > 0 {
 		c.ntfns.notifyOnRemovedGCMembers(newGC, memberChanges.removed)
+	}
+
+	adminChanges := sliceDiff(oldGC.ExtraAdmins, newGC.ExtraAdmins)
+
+	// Also check if the "owner" (Members[0] admin) changed.
+	if oldGC.Members[0] != newGC.Members[0] {
+		adminChanges.added = append(memberChanges.added, newGC.Members[0])
+		adminChanges.removed = append(memberChanges.removed, oldGC.Members[0])
+	}
+
+	if len(adminChanges.removed) > 0 || len(adminChanges.added) > 0 {
+		c.ntfns.notifyGCAdminsChanged(ru, newGC, adminChanges.added, adminChanges.removed)
 	}
 }
 
@@ -708,7 +735,7 @@ func (c *Client) handleGCList(ru *RemoteUser, gl rpc.RMGroupList) error {
 
 		gcName, _ = c.GetGCAlias(gl.ID)
 		c.log.Infof("Received updated GC list %s (%q) from %s", gl.ID, gcName, ru)
-		c.notifyUpdatedGC(oldGC, gl)
+		c.notifyUpdatedGC(ru, oldGC, gl)
 		return nil
 	}
 
@@ -960,6 +987,10 @@ func (c *Client) removeFromGC(gcID zkidentity.ShortID, uid UserID,
 			return fmt.Errorf("user is not a member of the GC")
 		}
 
+		if idxAdmin := slices.Index(gc.ExtraAdmins, uid); idxAdmin > -1 {
+			gc.ExtraAdmins = slices.Delete(gc.ExtraAdmins, idxAdmin, idxAdmin+1)
+		}
+
 		gc.Members = newMembers
 		gc.Timestamp = time.Now().Unix()
 		if localUserMustBeAdmin {
@@ -1025,7 +1056,7 @@ func (c *Client) handleGCKick(ru *RemoteUser, rmgk rpc.RMGroupKick) error {
 	// Notify specific part and any other updates.
 	c.ntfns.notifyGCUserParted(rmgk.NewGroupList.ID, rmgk.Member,
 		rmgk.Reason, !rmgk.Parted)
-	c.notifyUpdatedGC(oldGC, rmgk.NewGroupList)
+	c.notifyUpdatedGC(ru, oldGC, rmgk.NewGroupList)
 
 	return nil
 }
@@ -1098,7 +1129,7 @@ func (c *Client) KillGroupChat(gcID zkidentity.ShortID, reason string) error {
 		}
 
 		if len(gc.Members) == 0 || gc.Members[0] != c.PublicID() {
-			return fmt.Errorf("cannot kill GC: not an admin of gc %q",
+			return fmt.Errorf("cannot kill GC: not the owner of gc %q",
 				gcID.String())
 		}
 
@@ -1141,7 +1172,7 @@ func (c *Client) handleGCKill(ru *RemoteUser, rmgk rpc.RMGroupKill) error {
 
 		// Ensure we received this from the existing admin.
 		if len(gc.Members) == 0 || gc.Members[0] != ru.ID() {
-			return fmt.Errorf("received gc kill %q from non-admin",
+			return fmt.Errorf("received gc kill %q from non-owner",
 				gc.ID.String())
 		}
 		if err := c.db.DeleteGC(tx, gc.ID); err != nil {
@@ -1224,6 +1255,17 @@ func (c *Client) RemoveFromGCBlockList(gcid zkidentity.ShortID, uid UserID) erro
 // When the UID is not specified, the list is resent to all members.
 func (c *Client) ResendGCList(gcid zkidentity.ShortID, uid *UserID) error {
 	allMembers := uid == nil
+
+	var ru *RemoteUser
+	if !allMembers {
+		// Verify user exists.
+		var err error
+		ru, err = c.UserByID(*uid)
+		if err != nil {
+			return err
+		}
+	}
+
 	var gc rpc.RMGroupList
 	err := c.dbView(func(tx clientdb.ReadTx) error {
 		// Fetch GC.
@@ -1252,9 +1294,94 @@ func (c *Client) ResendGCList(gcid zkidentity.ShortID, uid *UserID) error {
 
 	payType := "resendGCList"
 	if allMembers {
+		c.log.Infof("Resending GC %s list to all members", gcid)
 		c.sendToGCMembers(gcid, gc.Members, payType, gc, nil)
 		return nil
 	}
+	ru.log.Infof("Resending GC %s list to user", gcid)
 	payEvent := fmt.Sprintf("gc.%s.%s", gcid.ShortLogID(), payType)
 	return c.sendWithSendQ(payEvent, gc, *uid)
+}
+
+// UpgradeGC upgrades the version of the GC to the specified one. The local
+// user must have permission to upgrade the GC.
+func (c *Client) UpgradeGC(gcid zkidentity.ShortID, newVersion uint8) error {
+	if newVersion < minSupportedGCVersion || newVersion > maxSupportedGCVersion {
+		return fmt.Errorf("unsupported GC version %d not between %d and %d",
+			newVersion, minSupportedGCVersion, maxSupportedGCVersion)
+	}
+
+	cb := func(gc *rpc.RMGroupList) error {
+		if gc.Version >= newVersion {
+			return fmt.Errorf("cannot downgrade GC %s from version %d to %d",
+				gcid, gc.Version, newVersion)
+
+		}
+
+		gc.Version = newVersion
+		gc.Timestamp = time.Now().Unix()
+		gc.Generation += 1
+		return nil
+	}
+
+	oldGC, newGC, err := c.maybeUpdateGCFunc(nil, gcid, cb)
+	if err != nil {
+		return err
+	}
+	c.log.Infof("Upgraded GC %s version from %d to %d",
+		gcid, oldGC.Version, newVersion)
+
+	rm := rpc.RMGroupUpgradeVersion{
+		NewGroupList: newGC,
+	}
+	return c.sendToGCMembers(gcid, newGC.Members, "upgradeGC", rm, nil)
+}
+
+func (c *Client) handleGCUpgradeVersion(ru *RemoteUser, gcuv rpc.RMGroupUpgradeVersion) error {
+	oldGC, err := c.maybeUpdateGC(ru, gcuv.NewGroupList)
+	if err != nil {
+		return err
+	}
+	ru.log.Infof("Received GC %s Version Upgrade from %d to %d",
+		gcuv.NewGroupList.ID, oldGC.Version, gcuv.NewGroupList.Version)
+	c.notifyUpdatedGC(ru, oldGC, gcuv.NewGroupList)
+	return err
+}
+
+// ModifyGCAdmins modifies the admins of the GC.
+func (c *Client) ModifyGCAdmins(gcid zkidentity.ShortID, extraAdmins []zkidentity.ShortID, reason string) error {
+	cb := func(gc *rpc.RMGroupList) error {
+		if gc.Version < 1 {
+			return fmt.Errorf("cannot modify extra admins for GC with version < 1")
+		}
+		gc.Timestamp = time.Now().Unix()
+		gc.Generation += 1
+		gc.ExtraAdmins = extraAdmins
+		return nil
+	}
+
+	_, newGC, err := c.maybeUpdateGCFunc(nil, gcid, cb)
+	if err != nil {
+		return err
+	}
+
+	c.log.Infof("Changed list of GC admins for GC %s to %v",
+		gcid, extraAdmins)
+
+	rm := rpc.RMGroupUpdateAdmins{
+		Reason:       reason,
+		NewGroupList: newGC,
+	}
+	return c.sendToGCMembers(gcid, newGC.Members, "modifyAdmins", rm, nil)
+}
+
+func (c *Client) handleGCUpdateAdmins(ru *RemoteUser, gcup rpc.RMGroupUpdateAdmins) error {
+	oldGC, err := c.maybeUpdateGC(ru, gcup.NewGroupList)
+	if err != nil {
+		return err
+	}
+	ru.log.Infof("Updated list of GC admins for GC %s to %v",
+		gcup.NewGroupList.ID, gcup.NewGroupList.ExtraAdmins)
+	c.notifyUpdatedGC(ru, oldGC, gcup.NewGroupList)
+	return err
 }
