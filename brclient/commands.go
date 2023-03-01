@@ -583,13 +583,13 @@ var gcCommands = []tuicmd{
 			as.gcInvitesMtx.Unlock()
 			if !ok {
 				// Try to find it in the db.
-				invites, err := as.c.ListGCInvitesFor(gcName)
+				invites, err := as.c.ListGCInvitesFor(nil)
 				if err != nil {
 					return err
 				}
 
 				for i := len(invites) - 1; i >= 0; i-- {
-					if !invites[i].Accepted {
+					if invites[i].Invite.Name == gcName && !invites[i].Accepted {
 						iid = invites[i].ID
 						ok = true
 						break

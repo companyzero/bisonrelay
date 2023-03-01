@@ -11,7 +11,6 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
-	"strings"
 	"sync"
 
 	"github.com/companyzero/bisonrelay/client/clientintf"
@@ -44,32 +43,6 @@ func itoa(i uint64) string {
 
 func atoi(s string) (uint64, error) {
 	return strconv.ParseUint(s, 10, 64)
-}
-
-func validName(name string) error {
-	if strings.TrimSpace(name) == "" {
-		return fmt.Errorf("empty name")
-	}
-	const validLetters = "abcdefghijklmnopqrstuvwyz" +
-		"ABCDEFGHIJKLMNOPQRSTUVWYZ" +
-		"1234567890" +
-		"_-@."
-
-	var found bool
-	for _, c := range []byte(name) {
-		found = false
-		for _, v := range []byte(validLetters) {
-			if c == v {
-				found = true
-				break
-			}
-		}
-		if !found {
-			return fmt.Errorf("invalid name")
-		}
-	}
-
-	return nil
 }
 
 func fileExists(fname string) bool {

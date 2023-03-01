@@ -144,18 +144,37 @@ func (db *DB) DelGCInvite(tx ReadWriteTx, inviteID uint64) error {
 	return nil
 }
 
-func (db *DB) ListGCInvites(tx ReadTx, name string) ([]*GCInvite, error) {
-	if err := validName(name); err != nil {
-		return nil, fmt.Errorf("invalid gc name: %v", err)
-	}
-
-	res := make([]*GCInvite, 0)
+// DelAllInvitesToGC removes all invites to the given GC.
+func (db *DB) DelAllInvitesToGC(tx ReadWriteTx, gcid zkidentity.ShortID) error {
 	records := db.invites.Records(invitesTable)
+	for k, v := range records {
+		dbi := new(GCInvite)
+		err := dbi.unmarshal(v)
+		if err != nil {
+			return fmt.Errorf("unable to unmarshal db gc invite: %v", err)
+		}
+
+		if dbi.Invite.ID == gcid {
+			db.invites.Del(invitesTable, k)
+		}
+	}
+	return db.invites.Save()
+}
+
+// ListGCInvites lists the GC invites. If gc is specified, lists only invites
+// for the specified GCID.
+func (db *DB) ListGCInvites(tx ReadTx, gc *zkidentity.ShortID) ([]*GCInvite, error) {
+	records := db.invites.Records(invitesTable)
+	res := make([]*GCInvite, 0, len(records))
 	for _, v := range records {
 		dbi := new(GCInvite)
 		err := dbi.unmarshal(v)
 		if err != nil {
-			return nil, fmt.Errorf("unable to unmarshal db gc invite")
+			return nil, fmt.Errorf("unable to unmarshal db gc invite: %v", err)
+		}
+
+		if gc != nil && !dbi.Invite.ID.ConstantTimeEq(gc) {
+			continue
 		}
 
 		res = append(res, dbi)
@@ -164,6 +183,7 @@ func (db *DB) ListGCInvites(tx ReadTx, name string) ([]*GCInvite, error) {
 	return res, nil
 }
 
+// FindGCInvite looks for an invite to a GC with a given token.
 func (db *DB) FindGCInvite(tx ReadTx, gcID zkidentity.ShortID, token uint64) (rpc.RMGroupInvite, UserID, uint64, error) {
 	fail := func(err error) (rpc.RMGroupInvite, UserID, uint64, error) {
 		return rpc.RMGroupInvite{}, UserID{}, 0, err
@@ -179,11 +199,39 @@ func (db *DB) FindGCInvite(tx ReadTx, gcID zkidentity.ShortID, token uint64) (rp
 
 		err = dbi.unmarshal(v)
 		if err != nil {
-			return fail(fmt.Errorf("unable to unmarshal db gc invite"))
+			return fail(fmt.Errorf("unable to unmarshal db gc invite: %v", err))
 		}
 
 		if dbi.Invite.ID == gcID && dbi.Invite.Token == token {
 			return dbi.Invite, dbi.User, id, nil
+		}
+	}
+
+	return fail(fmt.Errorf("gc invite: %w", ErrNotFound))
+}
+
+// FindAcceptedGCInvite looks for an invite to a GC sent by the specified user
+// that has been previously marked as accepted.
+func (db *DB) FindAcceptedGCInvite(tx ReadTx, gcID, uid zkidentity.ShortID) (rpc.RMGroupInvite, uint64, error) {
+	fail := func(err error) (rpc.RMGroupInvite, uint64, error) {
+		return rpc.RMGroupInvite{}, 0, err
+	}
+
+	var dbi GCInvite
+	records := db.invites.Records(invitesTable)
+	for k, v := range records {
+		id, err := atoi(k)
+		if err != nil {
+			return fail(fmt.Errorf("invalid invite key: %v", err))
+		}
+
+		err = dbi.unmarshal(v)
+		if err != nil {
+			return fail(fmt.Errorf("unable to unmarshal db gc invite"))
+		}
+
+		if dbi.Accepted && dbi.Invite.ID == gcID && dbi.User == uid {
+			return dbi.Invite, id, nil
 		}
 	}
 

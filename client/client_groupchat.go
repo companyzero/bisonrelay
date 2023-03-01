@@ -296,13 +296,13 @@ func (c *Client) AcceptGroupChatInvite(iid uint64) error {
 	return ru.sendRM(join, payEvent)
 }
 
-// ListGCInvitesFor returns all GC invites received that were for the specified
-// gc name.
-func (c *Client) ListGCInvitesFor(gcName string) ([]*clientdb.GCInvite, error) {
+// ListGCInvitesFor returns all GC invites. If gcid is specified, only invites
+// for the specified GC are returned.
+func (c *Client) ListGCInvitesFor(gcid *zkidentity.ShortID) ([]*clientdb.GCInvite, error) {
 	var invites []*clientdb.GCInvite
 	err := c.dbView(func(tx clientdb.ReadTx) error {
 		var err error
-		invites, err = c.db.ListGCInvites(tx, gcName)
+		invites, err = c.db.ListGCInvites(tx, gcid)
 		return err
 	})
 	return invites, err
@@ -506,24 +506,9 @@ func (c *Client) handleGCList(ru *RemoteUser, gl rpc.RMGroupList) error {
 		if newGC {
 			// This must have been an invite we accepted. Ensure
 			// this came from the expected user.
-			invites, err := c.db.ListGCInvites(tx, gl.ID.String())
+			invite, _, err := c.db.FindAcceptedGCInvite(tx, gl.ID, ru.ID())
 			if err != nil {
 				return fmt.Errorf("unable to list gc invites: %v", err)
-			}
-			found := false
-			for _, inv := range invites {
-				if !inv.Accepted {
-					continue
-				}
-				if inv.User == ru.ID() {
-					found = true
-					gcName = inv.Invite.Name
-					break
-				}
-			}
-			if !found {
-				return fmt.Errorf("received unexpected group %q "+
-					"list", gl.ID.String())
 			}
 
 			// Check for version warning. This is done before the
@@ -537,11 +522,23 @@ func (c *Client) handleGCList(ru *RemoteUser, gl rpc.RMGroupList) error {
 					gl.ID.String())
 			}
 
-			// Clear out the invites.
-			for _, inv := range invites {
-				if err := c.db.DelGCInvite(tx, inv.ID); err != nil {
-					return fmt.Errorf("unable to del gc invite: %v", err)
-				}
+			// Remove all invites received to this GC.
+			if err := c.db.DelAllInvitesToGC(tx, gl.ID); err != nil {
+				return fmt.Errorf("unable to del gc invite: %v", err)
+			}
+
+			// Figure out the GC name.
+			gcName = invite.Name
+			_, err = c.GCIDByName(gcName)
+			for i := 1; err == nil; i += 1 {
+				gcName = fmt.Sprintf("%s_%d", invite.Name, i)
+				_, err = c.GCIDByName(gcName)
+			}
+
+			if aliasMap, err := c.db.SetGCAlias(tx, gl.ID, gcName); err != nil {
+				c.log.Errorf("can't set name %s for gc %s: %v", gcName, gl.ID.String(), err)
+			} else {
+				c.setGCAlias(aliasMap)
 			}
 		} else {
 			// Check for version warning. This is done before the
@@ -561,29 +558,13 @@ func (c *Client) handleGCList(ru *RemoteUser, gl rpc.RMGroupList) error {
 					"generation (%d < %d)", oldGC.ID.String(), gl.Generation,
 					oldGC.Generation)
 			}
+
+			gcName, _ = c.GetGCAlias(gl.ID)
 		}
 
 		// All is well. Update the local gc data.
 		if err = c.db.SaveGC(tx, gl); err != nil {
 			return fmt.Errorf("unable to save gc: %v", err)
-		}
-		if gcName != "" {
-			// Check if already have this alias.
-			alias := gcName
-			_, err := c.GCIDByName(alias)
-			for i := 1; err == nil; i += 1 {
-				alias = fmt.Sprintf("%s_%d", gcName, i)
-				_, err = c.GCIDByName(alias)
-			}
-
-			if aliasMap, err := c.db.SetGCAlias(tx, gl.ID, alias); err != nil {
-				c.log.Errorf("can't set name %s for gc %s: %v", alias, gl.ID.String(), err)
-			} else {
-				c.setGCAlias(aliasMap)
-			}
-			gcName = alias
-		} else {
-			gcName, _ = c.GetGCAlias(gl.ID)
 		}
 
 		return nil
