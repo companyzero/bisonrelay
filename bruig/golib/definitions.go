@@ -275,3 +275,21 @@ type GCVersionWarn struct {
 	MinVersion uint8              `json:"min_version"`
 	MaxVersion uint8              `json:"max_version"`
 }
+
+type GCAddedMembers struct {
+	ID   zkidentity.ShortID   `json:"id"`
+	UIDs []zkidentity.ShortID `json:"uids"`
+}
+
+type GCUpgradedVersion struct {
+	ID         zkidentity.ShortID `json:"id"`
+	OldVersion uint8              `json:"old_version"`
+	NewVersion uint8              `json:"new_version"`
+}
+
+type GCMemberParted struct {
+	GCID   zkidentity.ShortID `json:"gcid"`
+	UID    zkidentity.ShortID `json:"uid"`
+	Reason string             `json:"reason"`
+	Kicked bool               `json:"kicked"`
+}

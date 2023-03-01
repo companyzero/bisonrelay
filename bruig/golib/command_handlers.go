@@ -202,6 +202,61 @@ func handleInitClient(handle uint32, args InitClient) error {
 		notify(NTGCVersionWarn, warn, nil)
 	}))
 
+	ntfns.Register(client.OnInvitedToGCNtfn(func(user *client.RemoteUser, iid uint64, invite rpc.RMGroupInvite) {
+		pubid := user.PublicIdentity()
+		inv := GCInvitation{
+			Inviter: remoteUserFromPII(&pubid),
+			IID:     iid,
+			Name:    invite.Name,
+		}
+		notify(NTInvitedToGC, inv, nil)
+	}))
+
+	ntfns.Register(client.OnGCInviteAcceptedNtfn(func(user *client.RemoteUser, gc rpc.RMGroupList) {
+		inv := InviteToGC{GC: gc.ID, UID: user.ID()}
+		notify(NTUserAcceptedGCInvite, inv, nil)
+	}))
+
+	ntfns.Register(client.OnJoinedGCNtfn(func(gc rpc.RMGroupList) {
+		name, err := c.GetGCAlias(gc.ID)
+		if err != nil {
+			return
+		}
+		gce := GCAddressBookEntry{
+			ID:      gc.ID,
+			Members: gc.Members,
+			Name:    name,
+		}
+		notify(NTGCJoined, gce, nil)
+	}))
+
+	ntfns.Register(client.OnAddedGCMembersNtfn(func(gc rpc.RMGroupList, uids []clientintf.UserID) {
+		ntf := GCAddedMembers{
+			ID:   gc.ID,
+			UIDs: uids,
+		}
+		notify(NTGCAddedMembers, ntf, nil)
+	}))
+
+	ntfns.Register(client.OnGCUpgradedNtfn(func(gc rpc.RMGroupList, oldVersion uint8) {
+		ntf := GCUpgradedVersion{
+			ID:         gc.ID,
+			OldVersion: oldVersion,
+			NewVersion: gc.Version,
+		}
+		notify(NTGCUpgradedVersion, ntf, nil)
+	}))
+
+	ntfns.Register(client.OnGCUserPartedNtfn(func(gc zkidentity.ShortID, uid clientintf.UserID, reason string, kicked bool) {
+		ntf := GCMemberParted{
+			GCID:   gc,
+			UID:    uid,
+			Reason: reason,
+			Kicked: kicked,
+		}
+		notify(NTGCMemberParted, ntf, nil)
+	}))
+
 	cfg := client.Config{
 		DB:             db,
 		Dialer:         clientintf.NetDialer(args.ServerAddr, logBknd.logger("CONN")),
@@ -292,34 +347,6 @@ func handleInitClient(handle uint32, args InitClient) error {
 			}
 			st := ServerSessState{State: state}
 			notify(NTServerSessChanged, st, nil)
-		},
-
-		GCInviteHandler: func(user *client.RemoteUser, iid uint64, invite rpc.RMGroupInvite) {
-			pubid := user.PublicIdentity()
-			inv := GCInvitation{
-				Inviter: remoteUserFromPII(&pubid),
-				IID:     iid,
-				Name:    invite.Name,
-			}
-			notify(NTInvitedToGC, inv, nil)
-		},
-
-		GCJoinHandler: func(user *client.RemoteUser, gc clientdb.GCAddressBookEntry) {
-			inv := InviteToGC{GC: gc.ID, UID: user.ID()}
-			notify(NTUserAcceptedGCInvite, inv, nil)
-		},
-
-		GCListUpdated: func(gc clientdb.GCAddressBookEntry) {
-			name, err := c.GetGCAlias(gc.ID)
-			if err != nil {
-				return
-			}
-			gce := GCAddressBookEntry{
-				ID:      gc.ID,
-				Members: gc.Members,
-				Name:    name,
-			}
-			notify(NTGCListUpdated, gce, nil)
 		},
 
 		TipReceived: func(user *client.RemoteUser, dcrAmount float64) {

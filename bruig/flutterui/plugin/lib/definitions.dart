@@ -1355,6 +1355,45 @@ class GCVersionWarn extends ChatEvent {
       _$GCVersionWarnFromJson(json);
 }
 
+@JsonSerializable()
+class GCAddedMembers extends ChatEvent {
+  final String id;
+  final List<String> uids;
+
+  GCAddedMembers(this.id, this.uids)
+      : super(id, "Added new members to GC: $uids");
+  factory GCAddedMembers.fromJson(Map<String, dynamic> json) =>
+      _$GCAddedMembersFromJson(json);
+}
+
+@JsonSerializable()
+class GCUpgradedVersion extends ChatEvent {
+  final String id;
+  @JsonKey(name: "old_version", defaultValue: 0)
+  final int oldVersion;
+  @JsonKey(name: "new_version", defaultValue: 0)
+  final int newVersion;
+
+  GCUpgradedVersion(this.id, this.oldVersion, this.newVersion)
+      : super(id, "Upgraded from $oldVersion to $newVersion");
+  factory GCUpgradedVersion.fromJson(Map<String, dynamic> json) =>
+      _$GCUpgradedVersionFromJson(json);
+}
+
+@JsonSerializable()
+class GCMemberParted extends ChatEvent {
+  final String gcid;
+  final String uid;
+  final String reason;
+  @JsonKey(defaultValue: false)
+  final bool kicked;
+
+  GCMemberParted(this.gcid, this.uid, this.reason, this.kicked)
+      : super(gcid, "User $uid parted");
+  factory GCMemberParted.fromJson(Map<String, dynamic> json) =>
+      _$GCMemberPartedFromJson(json);
+}
+
 mixin NtfStreams {
   StreamController<RemoteUser> ntfAcceptedInvites =
       StreamController<RemoteUser>();
@@ -2000,7 +2039,7 @@ const int NTServerSessChanged = 0x1007;
 const int NTNOP = 0x1008;
 const int NTInvitedToGC = 0x1009;
 const int NTUserAcceptedGCInvite = 0x100a;
-const int NTGCListUpdated = 0x100b;
+const int NTGCJoined = 0x100b;
 const int NTGCMessage = 0x100c;
 const int NTKXCompleted = 0x100d;
 const int NTTipReceived = 0x100e;
@@ -2020,3 +2059,6 @@ const int NTUserContentList = 0x101b;
 const int NTPostSubscriptionResult = 0x101c;
 const int NTInvoiceGenFailed = 0x101d;
 const int NTGCVersionWarn = 0x101e;
+const int NTGCAddedMembers = 0x101f;
+const int NTGCUpgradedVersion = 0x1020;
+const int NTGCMemberParted = 0x1021;

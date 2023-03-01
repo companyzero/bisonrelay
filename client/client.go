@@ -87,25 +87,6 @@ type Config struct {
 	// The push and subscription rates are specified in milliatoms/byte.
 	ServerSessionChanged func(connected bool, pushRate, subRate, expirationDays uint64)
 
-	// GCInviteHandler is called when the user received an invitation to
-	// join a group chat from a remote user.
-	GCInviteHandler func(user *RemoteUser, iid uint64, invite rpc.RMGroupInvite)
-
-	// GCJoinHandler is called when a user has joined a GC we administer.
-	GCJoinHandler func(user *RemoteUser, gc clientdb.GCAddressBookEntry)
-
-	// GCListUpdated is called when we receive remote updates for a GC from
-	// the GC admin.
-	GCListUpdated func(gc clientdb.GCAddressBookEntry)
-
-	// GCUserParted is called when a user was removed from a GC. Kicked
-	// signals whether it was the user that left or whether the admin
-	// kicked the user.
-	GCUserParted func(gcid GCID, uid UserID, reason string, kicked bool)
-
-	// GCKilled is called when the given GC is dissolved by its admin.
-	GCKilled func(gcid GCID, reason string)
-
 	// GCWithUnkxdMember is called when an attempt to send a GC message
 	// failed due to a GC member being unkxd with the local client.
 	GCWithUnkxdMember func(gcid GCID, uid UserID)
