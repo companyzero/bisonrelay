@@ -56,6 +56,9 @@ class _ChatHeadingWState extends State<_ChatHeadingW> {
     var unreadMessageIconColor = theme.indicatorColor;
     var darkTextColor = theme.indicatorColor;
 
+    // Show 1k+ if unread cound goes about 1000
+    var unreadCount = chat.unreadMsgCount > 1000 ? "1k+" : chat.unreadMsgCount;
+
     Widget? trailing;
     if (chat.active) {
       // Do we want to do any text color changes on active?
@@ -66,7 +69,7 @@ class _ChatHeadingWState extends State<_ChatHeadingW> {
           child: CircleAvatar(
               backgroundColor: unreadMessageIconColor,
               radius: 10,
-              child: Text("${chat.unreadMsgCount}",
+              child: Text("$unreadCount",
                   style: TextStyle(color: hightLightTextColor, fontSize: 10))));
     } else if (chat.unreadEventCount > 0) {
       textColor = hightLightTextColor;
