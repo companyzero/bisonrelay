@@ -733,7 +733,7 @@ var gcCommands = []tuicmd{
 
 			// Collect and sort members according to display order.
 			var maxNickW int
-			members := gc.Members[:]
+			members := slices.Clone(gc.Members[:])
 			myID := as.c.PublicID()
 			if idx := slices.Index(members, myID); idx > -1 {
 				// Remove local client id from list.
@@ -772,12 +772,26 @@ var gcCommands = []tuicmd{
 
 			as.cwHelpMsgs(func(pf printf) {
 				pf("")
-				pf("Members of GC %q - %s", gcName, gc.ID.String())
+				pf("GC %q - %s", gcName, gc.ID.String())
+				pf("Version: %d, Generation: %d, Timestamp: %s",
+					gc.Version, gc.Generation,
+					time.Unix(gc.Timestamp, 0).Format(ISO8601DateTime))
+				if gc.Members[0] == myID {
+					pf("Local client is owner of this GC")
+				} else if slices.Contains(gc.ExtraAdmins, myID) {
+					pf("Local client is admin of this GC")
+				}
+				pf("Members (%d + local client)", len(members))
 				firstUknown := true
 				for _, uid := range members {
 					var ignored string
+					if uid == gc.Members[0] {
+						ignored += " (owner)"
+					} else if slices.Contains(gc.ExtraAdmins, uid) {
+						ignored += " (admin)"
+					}
 					if gcbl.IsBlocked(uid) {
-						ignored = " (in GC blocklist)"
+						ignored += " (in GC blocklist)"
 					}
 					ru := users[uid]
 					if ru == nil {
@@ -1072,6 +1086,109 @@ var gcCommands = []tuicmd{
 
 			return nil
 		},
+
+		completer: func(args []string, arg string, as *appState) []string {
+			if len(args) == 0 {
+				return gcCompleter(arg, as)
+			}
+			if len(args) == 1 {
+				return nickCompleter(arg, as)
+			}
+			return nil
+		},
+	}, {
+		cmd:   "upgrade",
+		usage: "<gc>",
+		descr: "Upgrades the GC to the next available version",
+		handler: func(args []string, as *appState) error {
+			if len(args) < 1 {
+				return usageError{msg: "GC cannot be empty"}
+			}
+			gcID, err := as.c.GCIDByName(args[0])
+			if err != nil {
+				return err
+			}
+			gc, err := as.c.GetGC(gcID)
+			if err != nil {
+				return err
+			}
+			newVersion := gc.Version + 1
+			err = as.c.UpgradeGC(gcID, newVersion)
+			if err != nil {
+				return err
+			}
+
+			cw := as.findOrNewGCWindow(gc.ID)
+			cw.newHelpMsg("Upgraded GC to version %d", newVersion)
+			as.repaintIfActive(cw)
+			return nil
+		},
+
+		completer: func(args []string, arg string, as *appState) []string {
+			if len(args) == 0 {
+				return gcCompleter(arg, as)
+			}
+			return nil
+		},
+	}, {
+		cmd:   "addadmin",
+		usage: "<gc> <new admin>",
+		descr: "Add a user as an admin of a GC",
+		handler: func(args []string, as *appState) error {
+			if len(args) < 1 {
+				return usageError{msg: "GC cannot be empty"}
+			}
+			if len(args) < 2 {
+				return usageError{msg: "New admin cannot be empty"}
+			}
+
+			gcID, err := as.c.GCIDByName(args[0])
+			if err != nil {
+				return err
+			}
+
+			uid, err := as.c.UIDByNick(args[1])
+			if err != nil {
+				return err
+			}
+
+			return as.modifyGCAdmins(gcID, uid, clientintf.UserID{})
+		},
+
+		completer: func(args []string, arg string, as *appState) []string {
+			if len(args) == 0 {
+				return gcCompleter(arg, as)
+			}
+			if len(args) == 1 {
+				return nickCompleter(arg, as)
+			}
+			return nil
+		},
+	}, {
+		cmd:   "deladmin",
+		usage: "<gc> <existing admin>",
+		descr: "Removes a user as an admin of a GC",
+		handler: func(args []string, as *appState) error {
+			if len(args) < 1 {
+				return usageError{msg: "GC cannot be empty"}
+			}
+			if len(args) < 2 {
+				return usageError{msg: "New admin cannot be empty"}
+			}
+
+			gcID, err := as.c.GCIDByName(args[0])
+			if err != nil {
+				return err
+			}
+
+			uid, err := as.c.UIDByNick(args[1])
+			if err != nil {
+				return err
+			}
+
+			return as.modifyGCAdmins(gcID, clientintf.UserID{}, uid)
+		},
+
 		completer: func(args []string, arg string, as *appState) []string {
 			if len(args) == 0 {
 				return gcCompleter(arg, as)

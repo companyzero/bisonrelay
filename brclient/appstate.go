@@ -45,6 +45,7 @@ import (
 	"github.com/decred/slog"
 	"github.com/muesli/reflow/wordwrap"
 	"golang.org/x/exp/maps"
+	"golang.org/x/exp/slices"
 	"golang.org/x/text/collate"
 	"golang.org/x/text/language"
 )
@@ -2080,6 +2081,49 @@ func (as *appState) downloadEmbed(source clientintf.UserID, embedded embeddedArg
 	return nil
 }
 
+func (as *appState) modifyGCAdmins(gcID zkidentity.ShortID, add, del clientintf.UserID) error {
+	if add.IsEmpty() && del.IsEmpty() {
+		return fmt.Errorf("no modifications")
+	}
+
+	gc, err := as.c.GetGC(gcID)
+	if err != nil {
+		return err
+	}
+
+	newAdmins := gc.ExtraAdmins
+
+	if !add.IsEmpty() {
+		if slices.Contains(gc.ExtraAdmins, add) {
+			return fmt.Errorf("user %s already an admin", add)
+		}
+		newAdmins = append(newAdmins, add)
+	}
+	if !del.IsEmpty() {
+		idx := slices.Index(newAdmins, del)
+		if idx == -1 {
+			return fmt.Errorf("user %s not an admin", del)
+		}
+		newAdmins = slices.Delete(newAdmins, idx, idx+1)
+	}
+
+	cw := as.findOrNewGCWindow(gcID)
+	err = as.c.ModifyGCAdmins(gcID, newAdmins, "")
+	if err != nil {
+		return err
+	}
+	if !add.IsEmpty() {
+		nick, _ := as.c.UserNick(add)
+		cw.newHelpMsg("Added %s as GC admin", strescape.Nick(nick))
+	}
+	if !del.IsEmpty() {
+		nick, _ := as.c.UserNick(del)
+		cw.newHelpMsg("Removed %s as GC admin", strescape.Nick(nick))
+	}
+	as.repaintIfActive(cw)
+	return nil
+}
+
 // handleCmd executes the given (already parsed) command line.
 func (as *appState) handleCmd(rawText string, args []string) {
 	if len(args) == 0 {
@@ -2516,6 +2560,35 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 	ntfns.Register(client.OnGCKilledNtfn(func(gcid client.GCID, reason string) {
 		cw := as.findOrNewGCWindow(gcid)
 		cw.newInternalMsg(fmt.Sprintf("GC killed by admin. Reason: %q", reason))
+		as.repaintIfActive(cw)
+	}))
+
+	ntfns.Register(client.OnGCAdminsChangedNtfn(func(ru *client.RemoteUser, gc rpc.RMGroupList, added, removed []zkidentity.ShortID) {
+		srcNick := strescape.Nick(ru.Nick())
+
+		cw := as.findOrNewGCWindow(gc.ID)
+		cw.manyHelpMsgs(func(pf printf) {
+			myID := as.c.PublicID()
+			pf("List of GC Admins modified by %s", srcNick)
+			for _, uid := range added {
+				if uid == myID {
+					pf("Added local client as admin")
+				} else {
+					nick, _ := as.c.UserNick(uid)
+					pf("Added %q (%s) as admin", strescape.Nick(nick),
+						uid)
+				}
+			}
+			for _, uid := range removed {
+				if uid == myID {
+					pf("Removed local client as admin")
+				} else {
+					nick, _ := as.c.UserNick(uid)
+					pf("Removed %q (%s) as admin", strescape.Nick(nick),
+						uid)
+				}
+			}
+		})
 		as.repaintIfActive(cw)
 	}))
 
