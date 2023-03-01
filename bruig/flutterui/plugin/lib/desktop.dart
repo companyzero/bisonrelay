@@ -291,6 +291,11 @@ mixin BaseDesktopPlatform on NtfStreams {
         ntfChatEvents.add(event);
         break;
 
+      case NTGCAdminsChanged:
+        var event = GCAdminsChanged.fromJson(payload);
+        ntfChatEvents.add(event);
+        break;
+
       default:
         print("Received unknown notification ${cmd.toRadixString(16)}");
     }

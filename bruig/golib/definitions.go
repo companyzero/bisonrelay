@@ -293,3 +293,15 @@ type GCMemberParted struct {
 	Reason string             `json:"reason"`
 	Kicked bool               `json:"kicked"`
 }
+
+type GCModifyAdmins struct {
+	GCID      zkidentity.ShortID   `json:"gcid"`
+	NewAdmins []zkidentity.ShortID `json:"new_admins"`
+}
+
+type GCAdminsChanged struct {
+	GCID    zkidentity.ShortID   `json:"gcid"`
+	Source  zkidentity.ShortID   `json:"source"`
+	Added   []zkidentity.ShortID `json:"added"`
+	Removed []zkidentity.ShortID `json:"removed"`
+}

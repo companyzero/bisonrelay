@@ -257,6 +257,16 @@ func handleInitClient(handle uint32, args InitClient) error {
 		notify(NTGCMemberParted, ntf, nil)
 	}))
 
+	ntfns.Register(client.OnGCAdminsChangedNtfn(func(ru *client.RemoteUser, gc rpc.RMGroupList, added, removed []zkidentity.ShortID) {
+		ntfn := GCAdminsChanged{
+			Source:  ru.ID(),
+			GCID:    gc.ID,
+			Added:   added,
+			Removed: removed,
+		}
+		notify(NTGCAdminsChanged, ntfn, nil)
+	}))
+
 	cfg := client.Config{
 		DB:             db,
 		Dialer:         clientintf.NetDialer(args.ServerAddr, logBknd.logger("CONN")),
@@ -580,16 +590,12 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		if err != nil {
 			return nil, err
 		}
-		name, err := c.GetGCAlias(gc.ID)
+		gc.Name, err = c.GetGCAlias(gc.ID)
 		if err != nil {
 			return nil, err
 		}
 
-		return GCAddressBookEntry{
-			ID:      id,
-			Name:    name,
-			Members: gc.Members,
-		}, nil
+		return gc, nil
 
 	case CTGCMsg:
 		var gcm GCMessageToSend
@@ -1305,6 +1311,24 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		}
 
 		return nil, c.ResendGCList(args, nil)
+
+	case CTGCUpgradeVersion:
+		var args zkidentity.ShortID
+		if err := cmd.decode(&args); err != nil {
+			return nil, err
+		}
+		gc, err := c.GetGC(args)
+		if err != nil {
+			return nil, err
+		}
+		return nil, c.UpgradeGC(args, gc.Version+1)
+
+	case CTGCModifyAdmins:
+		var args GCModifyAdmins
+		if err := cmd.decode(&args); err != nil {
+			return nil, err
+		}
+		return nil, c.ModifyGCAdmins(args.GCID, args.NewAdmins, "")
 	}
 
 	return nil, nil

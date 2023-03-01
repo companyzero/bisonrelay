@@ -101,6 +101,8 @@ const (
 	CTListUsersLastMsgTimes           = 0x65
 	CTUserRatchetDebugInfo            = 0x66
 	CTResendGCList                    = 0x67
+	CTGCUpgradeVersion                = 0x68
+	CTGCModifyAdmins                  = 0x69
 
 	NTInviteReceived         = 0x1001
 	NTInviteAccepted         = 0x1002
@@ -135,6 +137,7 @@ const (
 	NTGCAddedMembers         = 0x101f
 	NTGCUpgradedVersion      = 0x1020
 	NTGCMemberParted         = 0x1021
+	NTGCAdminsChanged        = 0x1022
 )
 
 type cmd struct {
