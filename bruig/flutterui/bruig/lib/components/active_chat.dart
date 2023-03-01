@@ -107,7 +107,7 @@ class _ActiveChatState extends State<ActiveChat> {
     return Row(children: [
       Expanded(
           child: Column(children: [
-        Expanded(child: Messages(chat, client.nick, showSubMenu)),
+        Expanded(child: Messages(chat, client.nick, showSubMenu, client)),
         Row(children: [
           Expanded(child: EditLine(sendMsg, chat, editLineFocusNode))
         ])
@@ -900,14 +900,82 @@ class GCVersionWarnW extends StatelessWidget {
   }
 }
 
+class GCAddedMembersW extends StatelessWidget {
+  final GCAddedMembers event;
+  final ClientModel client;
+  const GCAddedMembersW(this.event, this.client, {Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    var theme = Theme.of(context);
+    var textColor = theme.dividerColor;
+    String msg = "Added to GC:\n";
+    event.uids.forEach((uid) {
+      var nick = client.getNick(uid);
+      if (nick == "") {
+        msg += "Unknown user $uid\n";
+      } else {
+        msg += "User '$nick'\n";
+      }
+    });
+
+    return ServerEvent(
+        child: SelectableText(msg,
+            style: TextStyle(fontSize: 9, color: textColor)));
+  }
+}
+
+class GCPartedMemberW extends StatelessWidget {
+  final GCMemberParted event;
+  final ClientModel client;
+  const GCPartedMemberW(this.event, this.client, {Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    var theme = Theme.of(context);
+    var textColor = theme.dividerColor;
+    var nick = client.getNick(event.uid);
+    if (nick == "") {
+      nick = event.uid;
+    }
+    String msg;
+    if (event.kicked) {
+      msg = "User '$nick' kicked from GC. Reason: '${event.reason}'";
+    } else {
+      msg = "User '$nick' parted from GC. Reason: '${event.reason}'";
+    }
+
+    return ServerEvent(
+        child: SelectableText(msg,
+            style: TextStyle(fontSize: 9, color: textColor)));
+  }
+}
+
+class GCUpgradedVersionW extends StatelessWidget {
+  final GCUpgradedVersion event;
+  const GCUpgradedVersionW(this.event, {Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    var theme = Theme.of(context);
+    var textColor = theme.dividerColor;
+    String msg =
+        "GC Upgraded from version ${event.oldVersion} to ${event.newVersion}";
+    return ServerEvent(
+        child: SelectableText(msg,
+            style: TextStyle(fontSize: 9, color: textColor)));
+  }
+}
+
 class Event extends StatelessWidget {
   final ChatEventModel event;
   final ChatModel chat;
   final String nick;
   final ShowSubMenuCB showSubMenu;
+  final ClientModel client;
   final Function() scrollToBottom;
-  const Event(
-      this.chat, this.event, this.nick, this.scrollToBottom, this.showSubMenu,
+  const Event(this.chat, this.event, this.nick, this.client,
+      this.scrollToBottom, this.showSubMenu,
       {Key? key})
       : super(key: key);
 
@@ -961,6 +1029,18 @@ class Event extends StatelessWidget {
       return GCVersionWarnW(event.event as GCVersionWarn);
     }
 
+    if (event.event is GCAddedMembers) {
+      return GCAddedMembersW(event.event as GCAddedMembers, client);
+    }
+
+    if (event.event is GCMemberParted) {
+      return GCPartedMemberW(event.event as GCMemberParted, client);
+    }
+
+    if (event.event is GCUpgradedVersion) {
+      return GCUpgradedVersionW(event.event as GCUpgradedVersion);
+    }
+
     var theme = Theme.of(context);
     var textColor = theme.focusColor;
     return Container(
@@ -974,7 +1054,9 @@ class Messages extends StatefulWidget {
   final ChatModel chat;
   final String nick;
   final ShowSubMenuCB showSubMenu;
-  const Messages(this.chat, this.nick, this.showSubMenu, {Key? key})
+  final ClientModel client;
+  const Messages(this.chat, this.nick, this.showSubMenu, this.client,
+      {Key? key})
       : super(key: key);
 
   @override
@@ -982,6 +1064,7 @@ class Messages extends StatefulWidget {
 }
 
 class _MessagesState extends State<Messages> {
+  ClientModel get client => widget.client;
   ChatModel get chat => widget.chat;
   String get nick => widget.nick;
   final ScrollController _scroller = ScrollController();
@@ -1049,7 +1132,7 @@ class _MessagesState extends State<Messages> {
     return ListView.builder(
         controller: _scroller,
         itemCount: msgs.length,
-        itemBuilder: (context, index) =>
-            Event(chat, msgs[index], nick, scrollToBottom, widget.showSubMenu));
+        itemBuilder: (context, index) => Event(chat, msgs[index], nick, client,
+            scrollToBottom, widget.showSubMenu));
   }
 }

@@ -82,13 +82,10 @@ type testClient struct {
 	cancel  func()
 	runC    chan error
 
-	mtx             sync.Mutex
-	conn            *testConn
-	preventConn     error
-	onConnChanged   func(connected bool, pushRate, subRate uint64)
-	onInvitedToGC   func(user *client.RemoteUser, iid uint64, invite rpc.RMGroupInvite)
-	onGCListUpdated func(gc clientdb.GCAddressBookEntry)
-	onGCUserParted  func(gcid client.GCID, uid clientintf.UserID, reason string, kicked bool)
+	mtx           sync.Mutex
+	conn          *testConn
+	preventConn   error
+	onConnChanged func(connected bool, pushRate, subRate uint64)
 }
 
 // modifyHandlers calls f with the mutex held, so that the client handlers can
@@ -106,36 +103,28 @@ func (tc *testClient) preventFutureConns(err error) {
 	tc.mtx.Unlock()
 }
 
-// acceptNextGCInvite replaces the onInvitedToGC handler with one that will
-// accept the next GC invite received by the client as long as it is for the
-// specified GC ID. It returns a chan that is written to when the invite is
-// accepted.
+// acceptNextGCInvite adds a handler that will accept the next GC invite
+// received by the client as long as it is for the specified GC ID. It returns
+// a chan that is written to when the invite is accepted.
 func (tc *testClient) acceptNextGCInvite(gcID zkidentity.ShortID) chan error {
 	c := make(chan error, 1)
-	tc.mtx.Lock()
-	tc.onInvitedToGC = func(user *client.RemoteUser, iid uint64, invite rpc.RMGroupInvite) {
+	tc.handle(client.OnInvitedToGCNtfn(func(user *client.RemoteUser, iid uint64, invite rpc.RMGroupInvite) {
 		if invite.ID != gcID {
 			return
 		}
-		tc.mtx.Lock()
-		tc.onInvitedToGC = nil
-		tc.mtx.Unlock()
-
 		go func() {
 			time.Sleep(5 * time.Millisecond)
 			c <- tc.AcceptGroupChatInvite(iid)
 		}()
-	}
-	tc.mtx.Unlock()
+	}))
 	return c
 }
 
-// nextGCUserPartedIs returns a chan that gets written when the next GC user
-// parted even is the specified one.
+// nextGCUserPartedIs returns a chan that gets written when the client receives
+// a GC parted event for the given user.
 func (tc *testClient) nextGCUserPartedIs(gcID client.GCID, uid client.UserID, kick bool) chan error {
 	c := make(chan error, 1)
-	tc.mtx.Lock()
-	tc.onGCUserParted = func(gotGCID client.GCID, gotUID clientintf.UserID, reason string, gotKick bool) {
+	tc.handle(client.OnGCUserPartedNtfn(func(gotGCID client.GCID, gotUID clientintf.UserID, reason string, gotKick bool) {
 		var err error
 		if err == nil && gotGCID != gcID {
 			err = fmt.Errorf("unexpected GCID: got %s, want %s",
@@ -151,13 +140,8 @@ func (tc *testClient) nextGCUserPartedIs(gcID client.GCID, uid client.UserID, ki
 
 		}
 
-		tc.mtx.Lock()
-		tc.onGCUserParted = nil
-		tc.mtx.Unlock()
-
 		c <- err
-	}
-	tc.mtx.Unlock()
+	}))
 	return c
 }
 
@@ -259,33 +243,6 @@ func (ts *testScaffold) newClientWithOpts(name string, rootDir string,
 			tc.mtx.Unlock()
 			if f != nil {
 				f(connected, pushRate, subRate)
-			}
-		},
-
-		GCInviteHandler: func(user *client.RemoteUser, iid uint64, invite rpc.RMGroupInvite) {
-			tc.mtx.Lock()
-			f := tc.onInvitedToGC
-			tc.mtx.Unlock()
-			if f != nil {
-				f(user, iid, invite)
-			}
-		},
-
-		GCListUpdated: func(gc clientdb.GCAddressBookEntry) {
-			tc.mtx.Lock()
-			f := tc.onGCListUpdated
-			tc.mtx.Unlock()
-			if f != nil {
-				f(gc)
-			}
-		},
-
-		GCUserParted: func(gcid client.GCID, uid client.UserID, reason string, kicked bool) {
-			tc.mtx.Lock()
-			f := tc.onGCUserParted
-			tc.mtx.Unlock()
-			if f != nil {
-				f(gcid, uid, reason, kicked)
 			}
 		},
 	}

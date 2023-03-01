@@ -1293,7 +1293,7 @@ func (as *appState) block(cw *chatWindow, uid clientintf.UserID) {
 // inviteToGC invites the given user to the GC in the specified window. Blocks
 // until the invite message is sent to the server.
 func (as *appState) inviteToGC(cw *chatWindow, nick string, uid clientintf.UserID) {
-	m := cw.newUnsentPM(fmt.Sprintf("Invited user %q to gc %s", nick, cw.alias))
+	m := cw.newInternalMsg(fmt.Sprintf("Invited user %q to gc %s", nick, cw.alias))
 	as.repaintIfActive(cw)
 	err := as.c.InviteToGroupChat(cw.gc, uid)
 	if err == nil {
@@ -2437,6 +2437,88 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		})
 	}))
 
+	ntfns.Register(client.OnInvitedToGCNtfn(func(user *client.RemoteUser, iid uint64, invite rpc.RMGroupInvite) {
+		gcName := strescape.Nick(invite.Name)
+		as.gcInvitesMtx.Lock()
+		as.gcInvites[gcName] = iid
+		as.gcInvitesMtx.Unlock()
+		as.diagMsg("Invited to gc \"%s\" (%v) by %q. Type /gc join %s to join.",
+			gcName, invite.ID.String(), user.Nick(), gcName)
+	}))
+
+	ntfns.Register(client.OnGCInviteAcceptedNtfn(func(user *client.RemoteUser, gc rpc.RMGroupList) {
+		cw := as.findOrNewGCWindow(gc.ID)
+		cw.newInternalMsg(fmt.Sprintf("User %q joined GC", user.Nick()))
+		as.repaintIfActive(cw)
+	}))
+
+	ntfns.Register(client.OnJoinedGCNtfn(func(gc rpc.RMGroupList) {
+		// Remove GC invite if it exists.
+		gcName, _ := as.c.GetGCAlias(gc.ID)
+		as.gcInvitesMtx.Lock()
+		delete(as.gcInvites, gcName)
+		as.gcInvitesMtx.Unlock()
+
+		cw := as.findOrNewGCWindow(gc.ID)
+		cw.newInternalMsg("Joined GC")
+		as.repaintIfActive(cw)
+	}))
+
+	ntfns.Register(client.OnAddedGCMembersNtfn(func(gc rpc.RMGroupList, uids []clientintf.UserID) {
+		cw := as.findOrNewGCWindow(gc.ID)
+		for _, uid := range uids {
+			ru, err := as.c.UserByID(uid)
+			var msg string
+			if err == nil {
+				msg = fmt.Sprintf("%s was added to this GC", strescape.Nick(ru.Nick()))
+			} else {
+				msg = fmt.Sprintf("Unknown user %s added to this GC. Waiting for user to send transitive KX request", uid)
+			}
+			cw.newInternalMsg(msg)
+		}
+		as.repaintIfActive(cw)
+	}))
+
+	ntfns.Register(client.OnGCUserPartedNtfn(func(gcid client.GCID, uid clientintf.UserID, reason string, kicked bool) {
+		cw := as.findOrNewGCWindow(gcid)
+		if uid == as.c.PublicID() {
+			if kicked {
+				cw.newInternalMsg(fmt.Sprintf("Admin kicked us! Reason: %q",
+					reason))
+			} else {
+				cw.newInternalMsg(fmt.Sprintf("Parted from GC! Reason: %q",
+					reason))
+			}
+		} else {
+			user := uid.String()
+			if ru, err := as.c.UserByID(uid); err == nil {
+				user = ru.Nick()
+			}
+			if kicked {
+				cw.newInternalMsg(fmt.Sprintf("Admin kicked %q! Reason: %q",
+					user, reason))
+			} else {
+				cw.newInternalMsg(fmt.Sprintf("User %q parted from GC. Reason: %q",
+					user, reason))
+			}
+		}
+
+		as.repaintIfActive(cw)
+	}))
+
+	ntfns.Register(client.OnGCUpgradedNtfn(func(gc rpc.RMGroupList, oldVersion uint8) {
+		cw := as.findOrNewGCWindow(gc.ID)
+		cw.newInternalMsg(fmt.Sprintf("GC Upgraded from version %d to version %d", oldVersion,
+			gc.Version))
+		as.repaintIfActive(cw)
+	}))
+
+	ntfns.Register(client.OnGCKilledNtfn(func(gcid client.GCID, reason string) {
+		cw := as.findOrNewGCWindow(gcid)
+		cw.newInternalMsg(fmt.Sprintf("GC killed by admin. Reason: %q", reason))
+		as.repaintIfActive(cw)
+	}))
+
 	// Initialize client config.
 	cfg := client.Config{
 		DB:             db,
@@ -2601,66 +2683,6 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 			} else {
 				as.diagMsg("Connection to server closed")
 			}
-		},
-
-		GCInviteHandler: func(user *client.RemoteUser, iid uint64, invite rpc.RMGroupInvite) {
-			gcName := strescape.Nick(invite.Name)
-			as.gcInvitesMtx.Lock()
-			as.gcInvites[gcName] = iid
-			as.gcInvitesMtx.Unlock()
-			as.diagMsg("Invited to gc \"%s\" (%v) by %q. Type /gc join %s to join.",
-				gcName, invite.ID.String(), user.Nick(), gcName)
-		},
-
-		GCJoinHandler: func(user *client.RemoteUser, gc clientdb.GCAddressBookEntry) {
-			cw := as.findOrNewGCWindow(gc.ID)
-			cw.newInternalMsg(fmt.Sprintf("User %q joined GC", user.Nick()))
-			as.repaintIfActive(cw)
-		},
-
-		GCListUpdated: func(gc clientdb.GCAddressBookEntry) {
-			// Remove GC invite if it exists.
-			gcName, _ := as.c.GetGCAlias(gc.ID)
-			as.gcInvitesMtx.Lock()
-			delete(as.gcInvites, gcName)
-			as.gcInvitesMtx.Unlock()
-
-			cw := as.findOrNewGCWindow(gc.ID)
-			cw.newInternalMsg("GC list updated")
-			as.repaintIfActive(cw)
-		},
-
-		GCUserParted: func(gcid client.GCID, uid clientintf.UserID, reason string, kicked bool) {
-			cw := as.findOrNewGCWindow(gcid)
-			if uid == as.c.PublicID() {
-				if kicked {
-					cw.newInternalMsg(fmt.Sprintf("Admin kicked us! Reason: %q",
-						reason))
-				} else {
-					cw.newInternalMsg(fmt.Sprintf("Parted from GC! Reason: %q",
-						reason))
-				}
-			} else {
-				user := uid.String()
-				if ru, err := as.c.UserByID(uid); err == nil {
-					user = ru.Nick()
-				}
-				if kicked {
-					cw.newInternalMsg(fmt.Sprintf("Admin kicked %q! Reason: %q",
-						user, reason))
-				} else {
-					cw.newInternalMsg(fmt.Sprintf("User %q parted from GC. Reason: %q",
-						user, reason))
-				}
-			}
-
-			as.repaintIfActive(cw)
-		},
-
-		GCKilled: func(gcid client.GCID, reason string) {
-			cw := as.findOrNewGCWindow(gcid)
-			cw.newInternalMsg(fmt.Sprintf("GC killed by admin. Reason: %q", reason))
-			as.repaintIfActive(cw)
 		},
 
 		GCWithUnkxdMember: func(gcid client.GCID, uid client.UserID) {

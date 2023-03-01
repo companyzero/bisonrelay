@@ -90,6 +90,64 @@ type OnGCVersionWarning func(user *RemoteUser, gc rpc.RMGroupList, minVersion, m
 
 func (_ OnGCVersionWarning) typ() string { return onGCVersionWarningType }
 
+const onJoinedGCNtfnType = "onJoinedGC"
+
+// OnJoinedGCNtfn is a handler for when the local client joins a GC.
+type OnJoinedGCNtfn func(gc rpc.RMGroupList)
+
+func (_ OnJoinedGCNtfn) typ() string { return onJoinedGCNtfnType }
+
+const onAddedGCMembersNtfnType = "onAddedGCMembers"
+
+// OnAddedGCMembersNtfn is a handler for new members added to a GC.
+type OnAddedGCMembersNtfn func(gc rpc.RMGroupList, uids []clientintf.UserID)
+
+func (_ OnAddedGCMembersNtfn) typ() string { return onAddedGCMembersNtfnType }
+
+const onRemovedGCMembersNtfnType = "onRemovedGCMembers"
+
+// OnRemovedGCMembersNtfn is a handler for members removed from a GC.
+type OnRemovedGCMembersNtfn func(gc rpc.RMGroupList, uids []clientintf.UserID)
+
+func (_ OnRemovedGCMembersNtfn) typ() string { return onRemovedGCMembersNtfnType }
+
+const onGCUpgradedNtfnType = "onGCUpgraded"
+
+// OnGCUpgradedNtfn is a handler for a GC that had its version upgraded.
+type OnGCUpgradedNtfn func(gc rpc.RMGroupList, oldVersion uint8)
+
+func (_ OnGCUpgradedNtfn) typ() string { return onGCUpgradedNtfnType }
+
+const onInvitedToGCNtfnType = "onInvitedToGC"
+
+// OnInvitedToGCNtfn is a handler for invites received to join GCs.
+type OnInvitedToGCNtfn func(user *RemoteUser, iid uint64, invite rpc.RMGroupInvite)
+
+func (_ OnInvitedToGCNtfn) typ() string { return onInvitedToGCNtfnType }
+
+const onGCInviteAcceptedNtfnType = "onGCInviteAccepted"
+
+// OnGCInviteAcceptedNtfn is a handler for invites accepted by remote users to
+// join a GC we invited them to.
+type OnGCInviteAcceptedNtfn func(user *RemoteUser, gc rpc.RMGroupList)
+
+func (_ OnGCInviteAcceptedNtfn) typ() string { return onGCInviteAcceptedNtfnType }
+
+const onGCUserPartedNtfnType = "onGCUserParted"
+
+// OnGCUserPartedNtfn is a handler when a user parted from a GC or an admin
+// kicked a user.
+type OnGCUserPartedNtfn func(gcid GCID, uid UserID, reason string, kicked bool)
+
+func (_ OnGCUserPartedNtfn) typ() string { return onGCUserPartedNtfnType }
+
+const onGCKilledNtfnType = "onGCKilled"
+
+// OnGCKilledNtfn is a handler for a GC dissolved by its admin.
+type OnGCKilledNtfn func(gcid GCID, reason string)
+
+func (_ OnGCKilledNtfn) typ() string { return onGCKilledNtfnType }
+
 // The following is used only in tests.
 
 const onTestNtfnType = "testNtfnType"
@@ -253,6 +311,46 @@ func (nmgr *NotificationManager) notifyInvoiceGenFailed(user *RemoteUser, dcrAmo
 		visit(func(h OnInvoiceGenFailedNtfn) { h(user, dcrAmount, err) })
 }
 
+func (nmgr *NotificationManager) notifyOnJoinedGC(gc rpc.RMGroupList) {
+	nmgr.handlers[onJoinedGCNtfnType].(*handlersFor[OnJoinedGCNtfn]).
+		visit(func(h OnJoinedGCNtfn) { h(gc) })
+}
+
+func (nmgr *NotificationManager) notifyOnAddedGCMembers(gc rpc.RMGroupList, uids []clientintf.UserID) {
+	nmgr.handlers[onAddedGCMembersNtfnType].(*handlersFor[OnAddedGCMembersNtfn]).
+		visit(func(h OnAddedGCMembersNtfn) { h(gc, uids) })
+}
+
+func (nmgr *NotificationManager) notifyOnRemovedGCMembers(gc rpc.RMGroupList, uids []clientintf.UserID) {
+	nmgr.handlers[onRemovedGCMembersNtfnType].(*handlersFor[OnRemovedGCMembersNtfn]).
+		visit(func(h OnRemovedGCMembersNtfn) { h(gc, uids) })
+}
+
+func (nmgr *NotificationManager) notifyOnGCUpgraded(gc rpc.RMGroupList, oldVersion uint8) {
+	nmgr.handlers[onGCUpgradedNtfnType].(*handlersFor[OnGCUpgradedNtfn]).
+		visit(func(h OnGCUpgradedNtfn) { h(gc, oldVersion) })
+}
+
+func (nmgr *NotificationManager) notifyInvitedToGC(user *RemoteUser, iid uint64, invite rpc.RMGroupInvite) {
+	nmgr.handlers[onInvitedToGCNtfnType].(*handlersFor[OnInvitedToGCNtfn]).
+		visit(func(h OnInvitedToGCNtfn) { h(user, iid, invite) })
+}
+
+func (nmgr *NotificationManager) notifyGCInviteAccepted(user *RemoteUser, gc rpc.RMGroupList) {
+	nmgr.handlers[onGCInviteAcceptedNtfnType].(*handlersFor[OnGCInviteAcceptedNtfn]).
+		visit(func(h OnGCInviteAcceptedNtfn) { h(user, gc) })
+}
+
+func (nmgr *NotificationManager) notifyGCUserParted(gcid GCID, uid UserID, reason string, kicked bool) {
+	nmgr.handlers[onGCUserPartedNtfnType].(*handlersFor[OnGCUserPartedNtfn]).
+		visit(func(h OnGCUserPartedNtfn) { h(gcid, uid, reason, kicked) })
+}
+
+func (nmgr *NotificationManager) notifyOnGCKilled(gcid GCID, reason string) {
+	nmgr.handlers[onGCKilledNtfnType].(*handlersFor[OnGCKilledNtfn]).
+		visit(func(h OnGCKilledNtfn) { h(gcid, reason) })
+}
+
 func NewNotificationManager() *NotificationManager {
 	return &NotificationManager{
 		handlers: map[string]handlersRegistry{
@@ -262,7 +360,16 @@ func NewNotificationManager() *NotificationManager {
 			onKXCompleted:            &handlersFor[OnKXCompleted]{},
 			onPostRcvdNtfnType:       &handlersFor[OnPostRcvdNtfn]{},
 			onPostStatusRcvdNtfnType: &handlersFor[OnPostStatusRcvdNtfn]{},
-			onGCVersionWarningType:   &handlersFor[OnGCVersionWarning]{},
+
+			onGCVersionWarningType:     &handlersFor[OnGCVersionWarning]{},
+			onJoinedGCNtfnType:         &handlersFor[OnJoinedGCNtfn]{},
+			onAddedGCMembersNtfnType:   &handlersFor[OnAddedGCMembersNtfn]{},
+			onRemovedGCMembersNtfnType: &handlersFor[OnRemovedGCMembersNtfn]{},
+			onGCUpgradedNtfnType:       &handlersFor[OnGCUpgradedNtfn]{},
+			onInvitedToGCNtfnType:      &handlersFor[OnInvitedToGCNtfn]{},
+			onGCInviteAcceptedNtfnType: &handlersFor[OnGCInviteAcceptedNtfn]{},
+			onGCUserPartedNtfnType:     &handlersFor[OnGCUserPartedNtfn]{},
+			onGCKilledNtfnType:         &handlersFor[OnGCKilledNtfn]{},
 
 			onInvoiceGenFailedNtfnType:        &handlersFor[OnInvoiceGenFailedNtfn]{},
 			onRemoteSubscriptionChangedType:   &handlersFor[OnRemoteSubscriptionChangedNtfn]{},

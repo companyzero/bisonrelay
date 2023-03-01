@@ -257,10 +257,7 @@ func (c *Client) handleGCInvite(ru *RemoteUser, invite rpc.RMGroupInvite) error 
 
 	// Let user know about it.
 	c.log.Infof("Received invitation to gc %q from user %s", invite.ID.String(), ru)
-	if c.cfg.GCInviteHandler != nil {
-		c.cfg.GCInviteHandler(ru, iid, invite)
-	}
-
+	c.ntfns.notifyInvitedToGC(ru, iid, invite)
 	return nil
 }
 
@@ -465,13 +462,24 @@ func (c *Client) handleGCJoin(ru *RemoteUser, invite rpc.RMGroupJoin) error {
 		return err
 	}
 
-	if c.cfg.GCJoinHandler != nil {
-		var entry clientdb.GCAddressBookEntry
-		clientdb.RMGroupListToGCEntry(&gc, &entry)
-		c.cfg.GCJoinHandler(ru, entry)
+	c.ntfns.notifyGCInviteAccepted(ru, gc)
+	return nil
+}
+
+// notifyUpdatedGC determines what changed between two GC definitions and
+// notifies the user about it.
+func (c *Client) notifyUpdatedGC(oldGC, newGC rpc.RMGroupList) {
+	if oldGC.Version != newGC.Version {
+		c.ntfns.notifyOnGCUpgraded(newGC, oldGC.Version)
 	}
 
-	return nil
+	memberChanges := sliceDiff(oldGC.Members, newGC.Members)
+	if len(memberChanges.added) > 0 {
+		c.ntfns.notifyOnAddedGCMembers(newGC, memberChanges.added)
+	}
+	if len(memberChanges.removed) > 0 {
+		c.ntfns.notifyOnRemovedGCMembers(newGC, memberChanges.removed)
+	}
 }
 
 // handleGCList handles updates to a GC metadata. The sending user must have
@@ -483,16 +491,18 @@ func (c *Client) handleGCList(ru *RemoteUser, gl rpc.RMGroupList) error {
 		notifyVersionWarning = (gl.Version < minSupportedGCVersion || gl.Version > maxSupportedGCVersion) && !c.gcWarnedVersions.Set(gl.ID)
 	}
 
+	var oldGC rpc.RMGroupList
+	var gcName string
 	newGC := false
 	err := c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
-		oldGC, err := c.db.GetGC(tx, gl.ID)
+		var err error
+		oldGC, err = c.db.GetGC(tx, gl.ID)
 		if errors.Is(err, clientdb.ErrNotFound) {
 			newGC = true
 		} else if err != nil {
 			return err
 		}
 
-		var gcName string
 		if newGC {
 			// This must have been an invite we accepted. Ensure
 			// this came from the expected user.
@@ -571,6 +581,9 @@ func (c *Client) handleGCList(ru *RemoteUser, gl rpc.RMGroupList) error {
 			} else {
 				c.setGCAlias(aliasMap)
 			}
+			gcName = alias
+		} else {
+			gcName, _ = c.GetGCAlias(gl.ID)
 		}
 
 		return nil
@@ -587,15 +600,11 @@ func (c *Client) handleGCList(ru *RemoteUser, gl rpc.RMGroupList) error {
 	}
 
 	if newGC {
-		c.log.Infof("Received first GC list of %q from %s", gl.ID.String(), ru)
+		c.log.Infof("Received first GC list of %s (%q) from %s", gl.ID, gcName, ru)
+		c.ntfns.notifyOnJoinedGC(gl)
 	} else {
-		c.log.Debugf("Received updated gc list of %q from %s", gl.ID.String(), ru)
-	}
-
-	if c.cfg.GCListUpdated != nil {
-		var entry clientdb.GCAddressBookEntry
-		clientdb.RMGroupListToGCEntry(&gl, &entry)
-		c.cfg.GCListUpdated(entry)
+		c.log.Infof("Received updated GC list %s (%q) from %s", gl.ID, gcName, ru)
+		c.notifyUpdatedGC(oldGC, gl)
 	}
 
 	// Start kx with unknown members if we just joined the chat.
@@ -880,32 +889,34 @@ func (c *Client) GCKick(gcID zkidentity.ShortID, uid UserID, reason string) erro
 
 func (c *Client) handleGCKick(ru *RemoteUser, rmgk rpc.RMGroupKick) error {
 	meKicked := rmgk.Member == c.PublicID()
+	var oldGC rpc.RMGroupList
 	err := c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
 		// Ensure gc exists.
-		gc, err := c.db.GetGC(tx, rmgk.NewGroupList.ID)
+		var err error
+		oldGC, err = c.db.GetGC(tx, rmgk.NewGroupList.ID)
 		if err != nil {
 			return err
 		}
 
 		// Ensure we received this from the existing admin.
-		if len(gc.Members) == 0 || gc.Members[0] != ru.ID() {
+		if len(oldGC.Members) == 0 || oldGC.Members[0] != ru.ID() {
 			return fmt.Errorf("received gc kick %q from non-admin",
-				gc.ID.String())
+				oldGC.ID.String())
 		}
 
 		// Ensure no backtrack on generation.
-		if rmgk.NewGroupList.Generation < gc.Generation {
+		if rmgk.NewGroupList.Generation < oldGC.Generation {
 			return fmt.Errorf("received gc list %q with wrong "+
-				"generation (%d < %d)", gc.ID.String(), rmgk.NewGroupList.Generation,
-				gc.Generation)
+				"generation (%d < %d)", oldGC.ID.String(), rmgk.NewGroupList.Generation,
+				oldGC.Generation)
 		}
 
 		// If we were kicked, remove gc from DB.
 		if meKicked {
-			if err := c.db.DeleteGC(tx, gc.ID); err != nil {
+			if err := c.db.DeleteGC(tx, oldGC.ID); err != nil {
 				return err
 			}
-			if aliasMap, err := c.db.SetGCAlias(tx, gc.ID, ""); err != nil {
+			if aliasMap, err := c.db.SetGCAlias(tx, oldGC.ID, ""); err != nil {
 				return err
 			} else {
 				c.setGCAlias(aliasMap)
@@ -934,10 +945,10 @@ func (c *Client) handleGCKick(ru *RemoteUser, rmgk rpc.RMGroupKick) error {
 	c.log.Infof("User %s %s from GC %q. Reason: %q", us, verb,
 		rmgk.NewGroupList.ID.String(), rmgk.Reason)
 
-	if c.cfg.GCUserParted != nil {
-		c.cfg.GCUserParted(rmgk.NewGroupList.ID, rmgk.Member,
-			rmgk.Reason, !rmgk.Parted)
-	}
+	// Notify specific part and any other updates.
+	c.ntfns.notifyGCUserParted(rmgk.NewGroupList.ID, rmgk.Member,
+		rmgk.Reason, !rmgk.Parted)
+	c.notifyUpdatedGC(oldGC, rmgk.NewGroupList)
 
 	return nil
 }
@@ -999,11 +1010,7 @@ func (c *Client) handleGCPart(ru *RemoteUser, rmgp rpc.RMGroupPart) error {
 	c.log.Infof("User %s parting from GC %q. Reason: %q", ru, rmgp.ID.String(),
 		rmgp.Reason)
 
-	if c.cfg.GCUserParted != nil {
-		c.cfg.GCUserParted(rmgp.ID, ru.ID(),
-			rmgp.Reason, false)
-	}
-
+	c.ntfns.notifyGCUserParted(rmgp.ID, ru.ID(), rmgp.Reason, false)
 	return nil
 }
 
@@ -1081,9 +1088,7 @@ func (c *Client) handleGCKill(ru *RemoteUser, rmgk rpc.RMGroupKill) error {
 
 	c.log.Infof("User %s killed GC %q. Reason: %q", ru, rmgk.ID.String(), rmgk.Reason)
 
-	if c.cfg.GCKilled != nil {
-		c.cfg.GCKilled(rmgk.ID, rmgk.Reason)
-	}
+	c.ntfns.notifyOnGCKilled(rmgk.ID, rmgk.Reason)
 	return nil
 }
 

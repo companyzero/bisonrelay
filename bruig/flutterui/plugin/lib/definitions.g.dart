@@ -1346,3 +1346,45 @@ Map<String, dynamic> _$GCVersionWarnToJson(GCVersionWarn instance) =>
       'min_version': instance.minVersion,
       'max_version': instance.maxVersion,
     };
+
+GCAddedMembers _$GCAddedMembersFromJson(Map<String, dynamic> json) =>
+    GCAddedMembers(
+      json['id'] as String,
+      (json['uids'] as List<dynamic>).map((e) => e as String).toList(),
+    );
+
+Map<String, dynamic> _$GCAddedMembersToJson(GCAddedMembers instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'uids': instance.uids,
+    };
+
+GCUpgradedVersion _$GCUpgradedVersionFromJson(Map<String, dynamic> json) =>
+    GCUpgradedVersion(
+      json['id'] as String,
+      json['old_version'] as int? ?? 0,
+      json['new_version'] as int? ?? 0,
+    );
+
+Map<String, dynamic> _$GCUpgradedVersionToJson(GCUpgradedVersion instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'old_version': instance.oldVersion,
+      'new_version': instance.newVersion,
+    };
+
+GCMemberParted _$GCMemberPartedFromJson(Map<String, dynamic> json) =>
+    GCMemberParted(
+      json['gcid'] as String,
+      json['uid'] as String,
+      json['reason'] as String,
+      json['kicked'] as bool? ?? false,
+    );
+
+Map<String, dynamic> _$GCMemberPartedToJson(GCMemberParted instance) =>
+    <String, dynamic>{
+      'gcid': instance.gcid,
+      'uid': instance.uid,
+      'reason': instance.reason,
+      'kicked': instance.kicked,
+    };

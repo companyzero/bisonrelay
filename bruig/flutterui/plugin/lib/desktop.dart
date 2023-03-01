@@ -179,7 +179,7 @@ mixin BaseDesktopPlatform on NtfStreams {
             evnt.uid, evnt.gc, "Accepted our invitation to join the GC"));
         break;
 
-      case NTGCListUpdated:
+      case NTGCJoined:
         var gc = GCAddressBookEntry.fromJson(payload);
         ntfGCListUpdates.add(gc);
         break;
@@ -273,6 +273,21 @@ mixin BaseDesktopPlatform on NtfStreams {
 
       case NTGCVersionWarn:
         var event = GCVersionWarn.fromJson(payload);
+        ntfChatEvents.add(event);
+        break;
+
+      case NTGCAddedMembers:
+        var event = GCAddedMembers.fromJson(payload);
+        ntfChatEvents.add(event);
+        break;
+
+      case NTGCUpgradedVersion:
+        var event = GCUpgradedVersion.fromJson(payload);
+        ntfChatEvents.add(event);
+        break;
+
+      case NTGCMemberParted:
+        var event = GCMemberParted.fromJson(payload);
         ntfChatEvents.add(event);
         break;
 

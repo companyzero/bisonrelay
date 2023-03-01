@@ -112,7 +112,7 @@ const (
 	NTNOP                    = 0x1008
 	NTInvitedToGC            = 0x1009
 	NTUserAcceptedGCInvite   = 0x100a
-	NTGCListUpdated          = 0x100b
+	NTGCJoined               = 0x100b
 	NTGCMessage              = 0x100c
 	NTKXCompleted            = 0x100d
 	NTTipReceived            = 0x100e
@@ -132,6 +132,9 @@ const (
 	NTRemoteSubChanged       = 0x101c
 	NTInvoiceGenFailed       = 0x101d
 	NTGCVersionWarn          = 0x101e
+	NTGCAddedMembers         = 0x101f
+	NTGCUpgradedVersion      = 0x1020
+	NTGCMemberParted         = 0x1021
 )
 
 type cmd struct {

@@ -132,3 +132,38 @@ func SortedUserPayStatsIDs(stats map[UserID]clientdb.UserPayStats) []UserID {
 
 	return res
 }
+
+type sliceChanges[T comparable] struct {
+	added   []T
+	removed []T
+}
+
+// sliceDiff returns added and removed items in newSlice compared to oldSlice.
+func sliceDiff[T comparable](oldSlice, newSlice []T) sliceChanges[T] {
+	var added, removed []T
+
+	// Aux map of items in newAux that already existed in oldSlice.
+	newAux := make(map[T]bool, len(newSlice))
+	for _, newV := range newSlice {
+		newAux[newV] = true
+	}
+
+	// Determine items that were removed or already existed in old.
+	for _, oldV := range oldSlice {
+		if _, ok := newAux[oldV]; !ok {
+			// Deleted from new.
+			removed = append(removed, oldV)
+		} else {
+			// Already existed in old.
+			newAux[oldV] = false
+		}
+	}
+
+	// Anything not set in the map is a new item.
+	for newV, isNew := range newAux {
+		if isNew {
+			added = append(added, newV)
+		}
+	}
+	return sliceChanges[T]{added: added, removed: removed}
+}
