@@ -129,6 +129,12 @@ func (c *Client) innerHandleUserRM(ru *RemoteUser, h *rpc.RMHeader,
 	case rpc.RMGroupList:
 		return c.handleGCList(ru, p)
 
+	case rpc.RMGroupUpgradeVersion:
+		return c.handleGCUpgradeVersion(ru, p)
+
+	case rpc.RMGroupUpdateAdmins:
+		return c.handleGCUpdateAdmins(ru, p)
+
 	case rpc.RMGroupMessage:
 		if ru.IsIgnored() {
 			ru.log.Tracef("Ignoring received GC message")

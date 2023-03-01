@@ -213,8 +213,11 @@ func ComposeCompressedRM(from *zkidentity.FullIdentity, rm interface{}, zlibLeve
 	case RMGroupKick:
 		h.Command = RMCGroupKick
 
-	case RMGroupUpdate:
-		h.Command = RMCGroupUpdate
+	case RMGroupUpgradeVersion:
+		h.Command = RMCGroupUpgradeVersion
+
+	case RMGroupUpdateAdmins:
+		h.Command = RMGCGroupUpdateAdmins
 
 	case RMGroupList:
 		h.Command = RMCGroupList
@@ -480,10 +483,15 @@ func DecomposeRM(id *zkidentity.PublicIdentity, mb []byte) (*RMHeader, interface
 		err = pmd.Decode(&groupKick)
 		payload = groupKick
 
-	case RMCGroupUpdate:
-		var groupUpdate RMGroupUpdate
-		err = pmd.Decode(&groupUpdate)
-		payload = groupUpdate
+	case RMCGroupUpgradeVersion:
+		var groupUpVers RMGroupUpgradeVersion
+		err = pmd.Decode(&groupUpVers)
+		payload = groupUpVers
+
+	case RMGCGroupUpdateAdmins:
+		var groupUpPerms RMGroupUpdateAdmins
+		err = pmd.Decode(&groupUpPerms)
+		payload = groupUpPerms
 
 	case RMCGroupList:
 		var groupList RMGroupList
@@ -724,14 +732,19 @@ type RMGroupKick struct {
 
 const RMCGroupKick = "groupkick"
 
-// RMGroupUpdate is a forced update from the admin. This can be used in case of
-// gc' generation getting out of sync.
-type RMGroupUpdate struct {
-	Reason       string      `json:"reason"`       // why member was kicked
-	NewGroupList RMGroupList `json:"newgrouplist"` // new GroupList
+type RMGroupUpgradeVersion struct {
+	NewGroupList RMGroupList `json:"newgrouplist"`
 }
 
-const RMCGroupUpdate = "groupupdate"
+const RMCGroupUpgradeVersion = "groupupversion"
+
+// RMGroupUpdateAdmins updates the list of extra admins in the GC.
+type RMGroupUpdateAdmins struct {
+	Reason       string      `json:"reason"`
+	NewGroupList RMGroupList `json:"newgrouplist"`
+}
+
+const RMGCGroupUpdateAdmins = "groupupdateadmins"
 
 // RMGroupList, currently we detect spoofing by ensuring the origin of the
 // message.  This may not be sufficient and we may have to add a signature of
@@ -746,6 +759,12 @@ type RMGroupList struct {
 	// all participants, [0] is administrator
 	// receiver must check [0] == originator
 	Members []zkidentity.ShortID `json:"members"`
+
+	// Version 1 fields.
+
+	// ExtraAdmins are additional admins. Members[0] is still considered
+	// an admin in version 1 GCs.
+	ExtraAdmins []zkidentity.ShortID `json:"extra_admins"`
 }
 
 const RMCGroupList = "grouplist"

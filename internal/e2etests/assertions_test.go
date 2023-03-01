@@ -107,6 +107,57 @@ func assertClientsCanPM(t testing.TB, alice, bob *testClient) {
 	assert.ChanWrittenWithVal(t, bobChan, aliceMsg)
 }
 
+// assertClientsCanGCM asserts that the clients can send GC messages to each
+// other inside a GC.
+func assertClientsCanGCM(t testing.TB, gcID zkidentity.ShortID, clients ...*testClient) {
+	regs := make([]client.NotificationRegistration, len(clients))
+	chans := make([]chan string, len(clients))
+
+	// Setup all handlers.
+	for i := range clients {
+		i := i
+		chans[i] = make(chan string, 1)
+		regs[i] = clients[i].handle(client.OnGCMNtfn(func(_ *client.RemoteUser, msg rpc.RMGroupMessage, _ time.Time) {
+			chans[i] <- msg.Message
+		}))
+	}
+
+	// Send one message from each client and ensure the other ones receive
+	// it.
+	for i := range clients {
+		wantMsg := fmt.Sprintf("msg from %d - %s", i, clients[i].name)
+		err := clients[i].GCMessage(gcID, wantMsg, 0, nil)
+		assert.NilErr(t, err)
+		for j := range clients {
+			if i == j {
+				continue
+			}
+
+			assert.ChanWrittenWithVal(t, chans[j], wantMsg)
+		}
+	}
+
+	// Teardown the handlers.
+	for i := range clients {
+		regs[i].Unregister()
+	}
+}
+
+// assertClientCannotSeeGCM asserts that a GCM send by the source client is not
+// received by the target client.
+func assertClientCannotSeeGCM(t testing.TB, gcID zkidentity.ShortID, src, target *testClient) {
+	c := make(chan string, 1)
+	reg := target.handle(client.OnGCMNtfn(func(_ *client.RemoteUser, msg rpc.RMGroupMessage, _ time.Time) {
+		c <- msg.Message
+	}))
+
+	msg := fmt.Sprintf("msg from %s not seen by %s", src.name, target.name)
+	err := src.GCMessage(gcID, msg, 0, nil)
+	assert.NilErr(t, err)
+	assert.ChanNotWritten(t, c, time.Millisecond*500)
+	reg.Unregister()
+}
+
 func testRand(t testing.TB) *rand.Rand {
 	seed := time.Now().UnixNano()
 	rnd := rand.New(rand.NewSource(seed))
