@@ -394,3 +394,132 @@ func TestGCKickBlockedUser(t *testing.T) {
 	assert.NilErr(t, alice.GCKick(gcID, bob.PublicID(), "no reason"))
 	assert.NilErrFromChan(t, charlieUserPartedChan)
 }
+
+// TestInviteToTwoGCsConcurrentAccept tests an old buggy scenario where the
+// client could not accept two GC invites at the same time.
+func TestInviteToTwoGCsConcurrentAccept(t *testing.T) {
+	tcfg := testScaffoldCfg{}
+	ts := newTestScaffold(t, tcfg)
+	alice := ts.newClient("alice")
+	bob := ts.newClient("bob")
+
+	ts.kxUsers(alice, bob)
+
+	gcName1, gcName2 := "test gc 1", "test gc 2"
+	gcID1, err := alice.NewGroupChat(gcName1)
+	assert.NilErr(t, err)
+	gcID2, err := alice.NewGroupChat(gcName2)
+	assert.NilErr(t, err)
+
+	testDone := make(chan struct{})
+	defer close(testDone)
+	invite1Recvd := make(chan struct{})
+	invite2Recvd := make(chan struct{})
+	acceptErrChan := make(chan error, 2)
+
+	// This handler is called async, once for each invite.
+	bob.handle(client.OnInvitedToGCNtfn(func(ru *client.RemoteUser, iid uint64, invite rpc.RMGroupInvite) {
+		if invite.ID == gcID1 {
+			// Wait until invite 2 is received, then accept invite.
+			close(invite1Recvd)
+			select {
+			case <-invite2Recvd:
+			case <-testDone:
+			}
+			acceptErrChan <- bob.AcceptGroupChatInvite(iid)
+		} else if invite.ID == gcID2 {
+			// Singal invite 2 received, wait until invite 1
+			// accepted, then accept this invite.
+			close(invite2Recvd)
+			select {
+			case <-invite1Recvd:
+			case <-testDone:
+			}
+			acceptErrChan <- bob.AcceptGroupChatInvite(iid)
+		}
+	}))
+
+	// Alice invites to the 2 GCs.
+	assert.NilErr(t, alice.InviteToGroupChat(gcID1, bob.PublicID()))
+	assert.NilErr(t, alice.InviteToGroupChat(gcID2, bob.PublicID()))
+
+	// Expect 2 GC acceptances.
+	for i := 0; i < 2; i++ {
+		assert.ChanWrittenWithVal(t, acceptErrChan, nil)
+	}
+
+	// Expect Bob to be in the two GCs.
+	assertClientInGC(t, bob, gcID1)
+	assertClientInGC(t, bob, gcID2)
+}
+
+// TestInviteToTwoGCsConcurrentAccept tests an old buggy scenario where the
+// client could not accept a GC after it had joined a second one.
+func TestInviteToTwoGCsAcceptAfterJoin(t *testing.T) {
+	tcfg := testScaffoldCfg{}
+	ts := newTestScaffold(t, tcfg)
+	alice := ts.newClient("alice")
+	bob := ts.newClient("bob")
+
+	ts.kxUsers(alice, bob)
+
+	gcName1, gcName2 := "test gc 1", "test gc 2"
+	gcID1, err := alice.NewGroupChat(gcName1)
+	assert.NilErr(t, err)
+	gcID2, err := alice.NewGroupChat(gcName2)
+	assert.NilErr(t, err)
+
+	testDone := make(chan struct{})
+	defer close(testDone)
+	invite2Recvd := make(chan struct{})
+	acceptErrChan := make(chan error, 2)
+	joinedGC1 := make(chan struct{})
+
+	// This handler is called async, once for each invite.
+	bob.handle(client.OnInvitedToGCNtfn(func(ru *client.RemoteUser, iid uint64, invite rpc.RMGroupInvite) {
+		if invite.ID == gcID1 {
+			// Wait until invite 2 is received, then accept invite.
+			select {
+			case <-invite2Recvd:
+			case <-testDone:
+			}
+			acceptErrChan <- bob.AcceptGroupChatInvite(iid)
+		} else if invite.ID == gcID2 {
+			// Singal invite 2 received, wait until fully joined
+			// GC1, then accept this invite.
+			close(invite2Recvd)
+			select {
+			case <-joinedGC1:
+			case <-testDone:
+			}
+			acceptErrChan <- bob.AcceptGroupChatInvite(iid)
+		}
+	}))
+	bob.handle(client.OnJoinedGCNtfn(func(gc rpc.RMGroupList) {
+		if gc.ID == gcID1 {
+			close(joinedGC1)
+		}
+	}))
+
+	// Alice invites to the 2 GCs.
+	assert.NilErr(t, alice.InviteToGroupChat(gcID1, bob.PublicID()))
+	assert.NilErr(t, alice.InviteToGroupChat(gcID2, bob.PublicID()))
+
+	// Expect 2 GC acceptances.
+	for i := 0; i < 2; i++ {
+		assert.ChanWrittenWithVal(t, acceptErrChan, nil)
+	}
+
+	// Expect Bob to be in the two GCs.
+	assertClientInGC(t, bob, gcID1)
+	assertClientInGC(t, bob, gcID2)
+
+	gotGCName1, err := bob.GetGCAlias(gcID1)
+	assert.NilErr(t, err)
+	assert.DeepEqual(t, gotGCName1, gcName1)
+
+	gotGCName2, err := bob.GetGCAlias(gcID2)
+	assert.NilErr(t, err)
+	assert.DeepEqual(t, gotGCName2, gcName2)
+
+}

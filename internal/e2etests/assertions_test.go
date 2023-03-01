@@ -31,6 +31,7 @@ func assertClientsKXd(t testing.TB, alice, bob *testClient) {
 	}
 }
 
+// assertClientInGC asserts that `c` sees itself as a member of the GC.
 func assertClientInGC(t testing.TB, c *testClient, gcID zkidentity.ShortID) {
 	t.Helper()
 	for i := 0; i < 100; i++ {
