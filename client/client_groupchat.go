@@ -14,6 +14,7 @@ import (
 	"github.com/companyzero/bisonrelay/client/internal/gcmcacher"
 	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/companyzero/bisonrelay/zkidentity"
+	"golang.org/x/exp/slices"
 )
 
 const (
@@ -156,6 +157,21 @@ func (c *Client) NewGroupChat(name string) (zkidentity.ShortID, error) {
 	return id, err
 }
 
+// uidHasGCPerm returns true whether the given UID has permission to modify the
+// given GC. This takes into account the GC version.
+func (c *Client) uidHasGCPerm(gc rpc.RMGroupList, uid clientintf.UserID) error {
+	if gc.Version == 0 {
+		// Version 0 GCs only have admin as Members[0].
+		if len(gc.Members) > 0 && gc.Members[0].ConstantTimeEq(&uid) {
+			return nil
+		}
+
+		return fmt.Errorf("user %s not version 0 GC admin", uid)
+	}
+
+	return fmt.Errorf("unsupported GC version %d", gc.Version)
+}
+
 // InviteToGroupChat invites the given user to the given gc. The local user
 // must be the admin of the group and the remote user must have been KX'd with.
 func (c *Client) InviteToGroupChat(gcID zkidentity.ShortID, user UserID) error {
@@ -176,9 +192,8 @@ func (c *Client) InviteToGroupChat(gcID zkidentity.ShortID, user UserID) error {
 			return err
 		}
 
-		if len(gc.Members) == 0 || gc.Members[0] != c.PublicID() {
-			return fmt.Errorf("cannot create gc invite: not an admin of gc %s",
-				gcID)
+		if err := c.uidHasGCPerm(gc, c.PublicID()); err != nil {
+			return fmt.Errorf("not permitted to send send invite: %v", err)
 		}
 
 		invite.Name = gc.Name
@@ -389,6 +404,121 @@ func (c *Client) sendToGCMembers(gcID zkidentity.ShortID,
 	return nil
 }
 
+// maybeNotifyGCVersionWarning checks whether a notification for a GC version
+// mismatch is needed for a received GC list, and triggers the notification.
+func (c *Client) maybeNotifyGCVersionWarning(ru *RemoteUser, gcid zkidentity.ShortID, gcl rpc.RMGroupList) {
+	notifyVersionWarning := (gcl.Version < minSupportedGCVersion || gcl.Version > maxSupportedGCVersion) && !c.gcWarnedVersions.Set(gcid)
+	if notifyVersionWarning {
+		c.log.Warnf("Received GCList for GC %s with version "+
+			"%d which is not between the supported versions %d to %d",
+			gcid, gcl.Version, minSupportedGCVersion, maxSupportedGCVersion)
+		c.ntfns.notifyOnGCVersionWarning(ru, gcl, minSupportedGCVersion,
+			maxSupportedGCVersion)
+	}
+}
+
+// maybeUpdateGCFunc verifies that the given gcid exists, calls f() with the
+// existing GC definition, then updates the DB with the modified value. It
+// returns both the old and new GC definitions.
+//
+// Checks are performed to ensure the new GC definitions are sane and allowed
+// by the given remote user. If ru is nil, then the update is assumed to be
+// made by the local client.
+//
+// f is called within a DB tx.
+func (c *Client) maybeUpdateGCFunc(ru *RemoteUser, gcid zkidentity.ShortID, f func(*rpc.RMGroupList) error) (oldGC, newGC rpc.RMGroupList, err error) {
+	var checkVersionWarning bool
+	var updaterID clientintf.UserID
+	if ru != nil {
+		updaterID = ru.ID()
+	} else {
+		updaterID = c.PublicID()
+	}
+
+	err = c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
+		// Fetch GC.
+		var err error
+		oldGC, err = c.db.GetGC(tx, gcid)
+		if err != nil {
+			return err
+		}
+
+		if len(oldGC.Members) == 0 {
+			return fmt.Errorf("old GC %s has zero members", gcid)
+		}
+
+		// Produce the new GC. Deep copy the old GC so f() can mutate
+		// everything.
+		newGC = oldGC
+		newGC.Members = slices.Clone(oldGC.Members)
+		if err := f(&newGC); err != nil {
+			return err
+		}
+
+		// Ensure no backtrack on generation.
+		if newGC.Generation < oldGC.Generation {
+			return fmt.Errorf("cannot backtrack GC generation on "+
+				"GC %s (%d < %d)", gcid, oldGC.Generation,
+				newGC.Generation)
+		}
+
+		// Ensure no downgrade in version.
+		if newGC.Version < oldGC.Version {
+			return fmt.Errorf("cannot downgrade GC version on "+
+				"GC %s (%d < %d)", gcid, oldGC.Generation,
+				newGC.Generation)
+		}
+
+		// Special case changing the admin: only the admin itself
+		// can do it.
+		if oldGC.Members[0] != newGC.Members[0] && oldGC.Members[0] != updaterID {
+			return fmt.Errorf("only previous GC admin %s may change "+
+				"GC's %s admin", oldGC.Members[0], gcid)
+		}
+
+		// This check is done before checking for permission because a
+		// future version might have different rules for checking
+		// permission.
+		checkVersionWarning = ru != nil
+
+		if err := c.uidHasGCPerm(oldGC, updaterID); err != nil {
+			return err
+		}
+
+		// Handle case where the local client was removed from GC.
+		stillMember := slices.Contains(newGC.Members, c.PublicID())
+		if !stillMember {
+			if err := c.db.DeleteGC(tx, oldGC.ID); err != nil {
+				return err
+			}
+			if aliasMap, err := c.db.SetGCAlias(tx, oldGC.ID, ""); err != nil {
+				return err
+			} else {
+				c.setGCAlias(aliasMap)
+			}
+			return nil
+		}
+
+		return c.db.SaveGC(tx, newGC)
+	})
+
+	if checkVersionWarning {
+		c.maybeNotifyGCVersionWarning(ru, newGC.ID, newGC)
+	}
+
+	return
+}
+
+// maybeUpdateGC updates the given GC definitions for the specified one.
+func (c *Client) maybeUpdateGC(ru *RemoteUser, newGC rpc.RMGroupList) (oldGC rpc.RMGroupList, err error) {
+	cb := func(ngc *rpc.RMGroupList) error {
+		*ngc = newGC
+		return nil
+	}
+	oldGC, _, err = c.maybeUpdateGCFunc(ru, newGC.ID, cb)
+	return
+}
+
 // handleGCJoin handles a msg when a remote user is asking to join a GC we
 // administer (that is, responding to an invite previously sent by us).
 func (c *Client) handleGCJoin(ru *RemoteUser, invite rpc.RMGroupJoin) error {
@@ -409,21 +539,25 @@ func (c *Client) handleGCJoin(ru *RemoteUser, invite rpc.RMGroupJoin) error {
 				"it was sent to user %s", ru.ID(), uid)
 		}
 
-		// Ensure we are the admin of the group.
+		// Ensure we have permission to add people to GC.
 		gc, err = c.db.GetGC(tx, invite.ID)
 		if err != nil {
 			return err
 		}
-		if gc.Members[0] != c.PublicID() {
-			return fmt.Errorf("cannot add gc member when not the gc admin")
+		if err := c.uidHasGCPerm(gc, c.PublicID()); err != nil {
+			return fmt.Errorf("local user does not have permission "+
+				"to add gc member: %v", err)
+		}
+
+		// This invitation is fulfilled.
+		if err = c.db.DelGCInvite(tx, iid); err != nil {
+			return err
 		}
 
 		// Ensure user is not on gc yet.
-		for _, v := range gc.Members {
-			if uid == v {
-				return fmt.Errorf("user %s already part of gc %q",
-					uid, gc.ID.String())
-			}
+		if slices.Contains(gc.Members, uid) {
+			return fmt.Errorf("user %s already part of gc %q",
+				uid, gc.ID.String())
 		}
 
 		if invite.Error == "" {
@@ -440,12 +574,6 @@ func (c *Client) handleGCJoin(ru *RemoteUser, invite rpc.RMGroupJoin) error {
 			c.log.Infof("User %s rejected invitation to %q: %q",
 				ru, gc.ID.String(), invite.Error)
 		}
-
-		// This invitation is fulfilled.
-		if err = c.db.DelGCInvite(tx, iid); err != nil {
-			return err
-		}
-
 		return nil
 	})
 
@@ -482,116 +610,105 @@ func (c *Client) notifyUpdatedGC(oldGC, newGC rpc.RMGroupList) {
 	}
 }
 
-// handleGCList handles updates to a GC metadata. The sending user must have
-// been the admin, otherwise this update is rejected.
-func (c *Client) handleGCList(ru *RemoteUser, gl rpc.RMGroupList) error {
-	// Helper to determine if the user needs a warning about the GC version.
-	notifyVersionWarning := false
-	checkNeedsVersionWarning := func() {
-		notifyVersionWarning = (gl.Version < minSupportedGCVersion || gl.Version > maxSupportedGCVersion) && !c.gcWarnedVersions.Set(gl.ID)
-	}
-
-	var oldGC rpc.RMGroupList
+// saveJoinedGC is called when the local client receives the first RMGroupList
+// after requesting to join the GC with the GC admin.
+//
+// Returns the new GC name.
+func (c *Client) saveJoinedGC(ru *RemoteUser, gl rpc.RMGroupList) (string, error) {
+	var checkVersionWarning bool
 	var gcName string
-	newGC := false
 	err := c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
-		var err error
-		oldGC, err = c.db.GetGC(tx, gl.ID)
-		if errors.Is(err, clientdb.ErrNotFound) {
-			newGC = true
-		} else if err != nil {
+		// Double check GC does not exist yet.
+		_, err := c.db.GetGC(tx, gl.ID)
+		if err == nil {
+			return fmt.Errorf("GC %s already exists when attempting "+
+				"to save after joining", gl.ID)
+		}
+
+		// This must have been an invite we accepted. Ensure
+		// this came from the expected user.
+		invite, _, err := c.db.FindAcceptedGCInvite(tx, gl.ID, ru.ID())
+		if err != nil {
+			return fmt.Errorf("unable to list gc invites: %v", err)
+		}
+
+		// This is set to true before the perm check because future
+		// versions might change the permissions about who can send the
+		// list.
+		checkVersionWarning = true
+
+		// Ensure we received this from someone that can add
+		// members.
+		if err := c.uidHasGCPerm(gl, ru.ID()); err != nil {
 			return err
 		}
 
-		if newGC {
-			// This must have been an invite we accepted. Ensure
-			// this came from the expected user.
-			invite, _, err := c.db.FindAcceptedGCInvite(tx, gl.ID, ru.ID())
-			if err != nil {
-				return fmt.Errorf("unable to list gc invites: %v", err)
-			}
+		// Remove all invites received to this GC.
+		if err := c.db.DelAllInvitesToGC(tx, gl.ID); err != nil {
+			return fmt.Errorf("unable to del gc invite: %v", err)
+		}
 
-			// Check for version warning. This is done before the
-			// admin check because future versions may allow
-			// receiving the GC list from non-admins.
-			checkNeedsVersionWarning()
-
-			// Ensure we received this from the admin.
-			if gl.Members[0] != ru.ID() {
-				return fmt.Errorf("received gc list %q from non-admin",
-					gl.ID.String())
-			}
-
-			// Remove all invites received to this GC.
-			if err := c.db.DelAllInvitesToGC(tx, gl.ID); err != nil {
-				return fmt.Errorf("unable to del gc invite: %v", err)
-			}
-
-			// Figure out the GC name.
-			gcName = invite.Name
+		// Figure out the GC name.
+		gcName = invite.Name
+		_, err = c.GCIDByName(gcName)
+		for i := 1; err == nil; i += 1 {
+			gcName = fmt.Sprintf("%s_%d", invite.Name, i)
 			_, err = c.GCIDByName(gcName)
-			for i := 1; err == nil; i += 1 {
-				gcName = fmt.Sprintf("%s_%d", invite.Name, i)
-				_, err = c.GCIDByName(gcName)
-			}
+		}
 
-			if aliasMap, err := c.db.SetGCAlias(tx, gl.ID, gcName); err != nil {
-				c.log.Errorf("can't set name %s for gc %s: %v", gcName, gl.ID.String(), err)
-			} else {
-				c.setGCAlias(aliasMap)
-			}
+		if aliasMap, err := c.db.SetGCAlias(tx, gl.ID, gcName); err != nil {
+			c.log.Errorf("can't set name %s for gc %s: %v", gcName, gl.ID.String(), err)
 		} else {
-			// Check for version warning. This is done before the
-			// admin check because future versions may allow
-			// receiving the GC list from non-admins.
-			checkNeedsVersionWarning()
-
-			// Ensure we received this from the existing admin.
-			if oldGC.Members[0] != ru.ID() {
-				return fmt.Errorf("received gc list %q from non-admin",
-					oldGC.ID.String())
-			}
-
-			// Ensure no backtrack on generation.
-			if gl.Generation < oldGC.Generation {
-				return fmt.Errorf("received gc list %q with wrong "+
-					"generation (%d < %d)", oldGC.ID.String(), gl.Generation,
-					oldGC.Generation)
-			}
-
-			gcName, _ = c.GetGCAlias(gl.ID)
+			c.setGCAlias(aliasMap)
 		}
 
 		// All is well. Update the local gc data.
-		if err = c.db.SaveGC(tx, gl); err != nil {
+		if err := c.db.SaveGC(tx, gl); err != nil {
 			return fmt.Errorf("unable to save gc: %v", err)
 		}
-
 		return nil
 	})
-	if notifyVersionWarning {
-		c.log.Warnf("Received GCList for GC %s with version "+
-			"%d which is not between the supported versions %d to %d",
-			gl.ID, gl.Version, minSupportedGCVersion, maxSupportedGCVersion)
-		c.ntfns.notifyOnGCVersionWarning(ru, gl, minSupportedGCVersion,
-			maxSupportedGCVersion)
+	if checkVersionWarning {
+		c.maybeNotifyGCVersionWarning(ru, gl.ID, gl)
 	}
-	if err != nil {
+	return gcName, err
+}
+
+// handleGCList handles updates to a GC metadata. The sending user must have
+// been the admin, otherwise this update is rejected.
+func (c *Client) handleGCList(ru *RemoteUser, gl rpc.RMGroupList) error {
+	var gcName string
+
+	// Check if GC exists to determine if it's the first GC list.
+	_, err := c.GetGC(gl.ID)
+	isNewGC := err != nil && errors.Is(err, clientdb.ErrNotFound)
+	if err != nil && !isNewGC {
 		return err
 	}
 
-	if newGC {
-		c.log.Infof("Received first GC list of %s (%q) from %s", gl.ID, gcName, ru)
-		c.ntfns.notifyOnJoinedGC(gl)
-	} else {
+	if !isNewGC {
+		// Existing GC update. Do the update, then return.
+		oldGC, err := c.maybeUpdateGC(ru, gl)
+		if err != nil {
+			return err
+		}
+
+		gcName, _ = c.GetGCAlias(gl.ID)
 		c.log.Infof("Received updated GC list %s (%q) from %s", gl.ID, gcName, ru)
 		c.notifyUpdatedGC(oldGC, gl)
-	}
-
-	// Start kx with unknown members if we just joined the chat.
-	if !newGC {
 		return nil
 	}
+
+	// First GC list from a GC we just joined.
+	gcName, err = c.saveJoinedGC(ru, gl)
+	if err != nil {
+		return err
+	}
+	c.log.Infof("Received first GC list of %s (%q) from %s", gl.ID, gcName, ru)
+	c.ntfns.notifyOnJoinedGC(gl)
+
+	// Start kx with unknown members. They are relying on us performing
+	// transitive KX via an admin.
 	me := c.PublicID()
 	for _, v := range gl.Members {
 		v := v
@@ -754,17 +871,14 @@ func (c *Client) handleGCMessage(ru *RemoteUser, gcm rpc.RMGroupMessage, ts time
 }
 
 // GetGC returns information about the given gc the local user participates in.
-func (c *Client) GetGC(gcID zkidentity.ShortID) (clientdb.GCAddressBookEntry, error) {
+func (c *Client) GetGC(gcID zkidentity.ShortID) (rpc.RMGroupList, error) {
 	var gc rpc.RMGroupList
 	err := c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
 		var err error
 		gc, err = c.db.GetGC(tx, gcID)
 		return err
 	})
-
-	var entry clientdb.GCAddressBookEntry
-	clientdb.RMGroupListToGCEntry(&gc, &entry)
-	return entry, err
+	return gc, err
 }
 
 // GetGCBlockList returns the blocklist of the given GC.
@@ -809,8 +923,10 @@ func (c *Client) removeFromGC(gcID zkidentity.ShortID, uid UserID,
 
 		oldMembers = gc.Members
 
-		if localUserMustBeAdmin && (len(oldMembers) == 0 || oldMembers[0] != c.PublicID()) {
-			return fmt.Errorf("local user is not the admin of the GC")
+		if localUserMustBeAdmin {
+			if err := c.uidHasGCPerm(gc, c.PublicID()); err != nil {
+				return fmt.Errorf("local user cannot remove from GC: %v", err)
+			}
 		}
 
 		// Ensure the user is in the GC.
@@ -818,6 +934,9 @@ func (c *Client) removeFromGC(gcID zkidentity.ShortID, uid UserID,
 		for i, id := range gc.Members {
 			if id != uid {
 				continue
+			}
+			if i == 0 {
+				return fmt.Errorf("cannot remove members[0] from GC")
 			}
 			newMembers = make([]zkidentity.ShortID, 0, len(gc.Members)-1)
 			newMembers = append(newMembers, gc.Members[:i]...)
@@ -830,6 +949,10 @@ func (c *Client) removeFromGC(gcID zkidentity.ShortID, uid UserID,
 
 		gc.Members = newMembers
 		gc.Timestamp = time.Now().Unix()
+		if localUserMustBeAdmin {
+			// Only bump generation when removing as an admin.
+			gc.Generation += 1
+		}
 		if err = c.db.SaveGC(tx, gc); err != nil {
 			return err
 		}
@@ -869,52 +992,12 @@ func (c *Client) GCKick(gcID zkidentity.ShortID, uid UserID, reason string) erro
 }
 
 func (c *Client) handleGCKick(ru *RemoteUser, rmgk rpc.RMGroupKick) error {
-	meKicked := rmgk.Member == c.PublicID()
-	var oldGC rpc.RMGroupList
-	err := c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
-		// Ensure gc exists.
-		var err error
-		oldGC, err = c.db.GetGC(tx, rmgk.NewGroupList.ID)
-		if err != nil {
-			return err
-		}
-
-		// Ensure we received this from the existing admin.
-		if len(oldGC.Members) == 0 || oldGC.Members[0] != ru.ID() {
-			return fmt.Errorf("received gc kick %q from non-admin",
-				oldGC.ID.String())
-		}
-
-		// Ensure no backtrack on generation.
-		if rmgk.NewGroupList.Generation < oldGC.Generation {
-			return fmt.Errorf("received gc list %q with wrong "+
-				"generation (%d < %d)", oldGC.ID.String(), rmgk.NewGroupList.Generation,
-				oldGC.Generation)
-		}
-
-		// If we were kicked, remove gc from DB.
-		if meKicked {
-			if err := c.db.DeleteGC(tx, oldGC.ID); err != nil {
-				return err
-			}
-			if aliasMap, err := c.db.SetGCAlias(tx, oldGC.ID, ""); err != nil {
-				return err
-			} else {
-				c.setGCAlias(aliasMap)
-			}
-			return nil
-		}
-
-		// All is well. Update the local gc data.
-		if err = c.db.SaveGC(tx, rmgk.NewGroupList); err != nil {
-			return fmt.Errorf("unable to save gc: %v", err)
-		}
-		return nil
-	})
+	oldGC, err := c.maybeUpdateGC(ru, rmgk.NewGroupList)
 	if err != nil {
 		return err
 	}
 
+	// Log event.
 	us := UserID(rmgk.Member).String()
 	if ru, err := c.rul.byID(rmgk.Member); err == nil {
 		us = ru.String()
@@ -951,15 +1034,6 @@ func (c *Client) PartFromGC(gcID zkidentity.ShortID, reason string) error {
 			return fmt.Errorf("cannot part from GC when we're the GC admin")
 		}
 
-		return nil
-	})
-	if err != nil {
-		return err
-	}
-
-	c.log.Infof("Parting from GC %q", gcID.String())
-
-	err = c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
 		if err := c.db.DeleteGC(tx, gcID); err != nil {
 			return err
 		}
@@ -974,6 +1048,8 @@ func (c *Client) PartFromGC(gcID zkidentity.ShortID, reason string) error {
 		return err
 	}
 
+	c.log.Infof("Parting from GC %q", gcID.String())
+
 	// Send GroupPart msg to all members.
 	rmgp := rpc.RMGroupPart{
 		ID:     gcID,
@@ -983,6 +1059,8 @@ func (c *Client) PartFromGC(gcID zkidentity.ShortID, reason string) error {
 }
 
 func (c *Client) handleGCPart(ru *RemoteUser, rmgp rpc.RMGroupPart) error {
+	// A part comes from the user himself (instead of admin) so it does
+	// not use maybeUpdaGC().
 	_, _, err := c.removeFromGC(rmgp.ID, ru.ID(), false)
 	if err != nil {
 		return err
@@ -1133,14 +1211,6 @@ func (c *Client) RemoveFromGCBlockList(gcid zkidentity.ShortID, uid UserID) erro
 // When the UID is not specified, the list is resent to all members.
 func (c *Client) ResendGCList(gcid zkidentity.ShortID, uid *UserID) error {
 	allMembers := uid == nil
-	if !allMembers {
-		// Verify user exists.
-		_, err := c.UserByID(*uid)
-		if err != nil {
-			return err
-		}
-	}
-
 	var gc rpc.RMGroupList
 	err := c.dbView(func(tx clientdb.ReadTx) error {
 		// Fetch GC.
@@ -1151,22 +1221,14 @@ func (c *Client) ResendGCList(gcid zkidentity.ShortID, uid *UserID) error {
 		}
 
 		// Ensure we're the GC admin.
-		if gc.Members[0] != c.PublicID() {
-			return fmt.Errorf("cannot send GC list to user when local client is not the GC admin")
+		if err := c.uidHasGCPerm(gc, c.PublicID()); err != nil {
+			return fmt.Errorf("cannot send GC list to user when "+
+				"local client is not a GC admin: %v", err)
 		}
 
 		// Ensure specified uid is a member.
-		if !allMembers {
-			found := false
-			for i := range gc.Members {
-				if *uid == gc.Members[i] {
-					found = true
-					break
-				}
-			}
-			if !found {
-				return fmt.Errorf("user %s is not part of the GC", uid)
-			}
+		if !allMembers && !slices.Contains(gc.Members, *uid) {
+			return fmt.Errorf("user %s is not part of the GC", uid)
 		}
 
 		return nil
