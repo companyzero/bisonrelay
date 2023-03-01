@@ -187,6 +187,24 @@ class GCAddressBookEntry {
 }
 
 @JsonSerializable()
+class RMGroupList {
+  final String id;
+  final String name;
+  final int generation;
+  final int timestamp;
+  final int version;
+  final List<String> members;
+  @JsonKey(name: "extra_admins")
+  final List<String>? extraAdmins;
+
+  RMGroupList(this.id, this.name, this.generation, this.timestamp, this.version,
+      this.members, this.extraAdmins);
+
+  factory RMGroupList.fromJson(Map<String, dynamic> json) =>
+      _$RMGroupListFromJson(json);
+}
+
+@JsonSerializable()
 class GCInvitation extends ChatEvent {
   final RemoteUser inviter;
   final int iid;
@@ -1394,6 +1412,30 @@ class GCMemberParted extends ChatEvent {
       _$GCMemberPartedFromJson(json);
 }
 
+@JsonSerializable()
+class GCModifyAdmins {
+  @JsonKey(name: "gcid")
+  final String gcid;
+  @JsonKey(name: "new_admins")
+  final List<String> newAdmins;
+
+  GCModifyAdmins(this.gcid, this.newAdmins);
+  Map<String, dynamic> toJson() => _$GCModifyAdminsToJson(this);
+}
+
+@JsonSerializable()
+class GCAdminsChanged extends ChatEvent {
+  final String gcid;
+  final String source;
+  final List<String>? added;
+  final List<String>? removed;
+
+  GCAdminsChanged(this.gcid, this.source, this.added, this.removed)
+      : super(gcid, "Admins changed");
+  factory GCAdminsChanged.fromJson(Map<String, dynamic> json) =>
+      _$GCAdminsChangedFromJson(json);
+}
+
 mixin NtfStreams {
   StreamController<RemoteUser> ntfAcceptedInvites =
       StreamController<RemoteUser>();
@@ -1547,9 +1589,9 @@ abstract class PluginPlatform {
 
   Future<void> acceptGCInvite(int iid) => asyncCall(CTAcceptGCInvite, iid);
 
-  Future<GCAddressBookEntry> getGC(String name) async {
+  Future<RMGroupList> getGC(String name) async {
     var res = await asyncCall(CTGetGC, name);
-    return GCAddressBookEntry.fromJson(res);
+    return RMGroupList.fromJson(res);
   }
 
   Future<void> sendToGC(String gc, String msg) =>
@@ -1932,6 +1974,12 @@ abstract class PluginPlatform {
 
   Future<void> resendGCList(String gcid) async =>
       await asyncCall(CTResendGCList, gcid);
+
+  Future<void> upgradeGC(String gcid) async =>
+      await asyncCall(CTGCUpgradeVersion, gcid);
+
+  Future<void> modifyGCAdmins(String gcid, List<String> newAdmins) async =>
+      await asyncCall(CTGCModifyAdmins, GCModifyAdmins(gcid, newAdmins));
 }
 
 const int CTUnknown = 0x00;
@@ -2026,6 +2074,8 @@ const int CTLNSaveMultiSCB = 0x64;
 const int CTListUsersLastMsgTimes = 0x65;
 const int CTUserRatchetDebugInfo = 0x66;
 const int CTResendGCList = 0x67;
+const int CTGCUpgradeVersion = 0x68;
+const int CTGCModifyAdmins = 0x69;
 
 const int notificationsStartID = 0x1000;
 
@@ -2062,3 +2112,4 @@ const int NTGCVersionWarn = 0x101e;
 const int NTGCAddedMembers = 0x101f;
 const int NTGCUpgradedVersion = 0x1020;
 const int NTGCMemberParted = 0x1021;
+const int NTGCAdminsChanged = 0x1022;

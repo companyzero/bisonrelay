@@ -159,6 +159,29 @@ Map<String, dynamic> _$GCAddressBookEntryToJson(GCAddressBookEntry instance) =>
       'members': instance.members,
     };
 
+RMGroupList _$RMGroupListFromJson(Map<String, dynamic> json) => RMGroupList(
+      json['id'] as String,
+      json['name'] as String,
+      json['generation'] as int,
+      json['timestamp'] as int,
+      json['version'] as int,
+      (json['members'] as List<dynamic>).map((e) => e as String).toList(),
+      (json['extra_admins'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList(),
+    );
+
+Map<String, dynamic> _$RMGroupListToJson(RMGroupList instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'name': instance.name,
+      'generation': instance.generation,
+      'timestamp': instance.timestamp,
+      'version': instance.version,
+      'members': instance.members,
+      'extra_admins': instance.extraAdmins,
+    };
+
 GCInvitation _$GCInvitationFromJson(Map<String, dynamic> json) => GCInvitation(
       RemoteUser.fromJson(json['inviter'] as Map<String, dynamic>),
       json['iid'] as int,
@@ -1387,4 +1410,32 @@ Map<String, dynamic> _$GCMemberPartedToJson(GCMemberParted instance) =>
       'uid': instance.uid,
       'reason': instance.reason,
       'kicked': instance.kicked,
+    };
+
+GCModifyAdmins _$GCModifyAdminsFromJson(Map<String, dynamic> json) =>
+    GCModifyAdmins(
+      json['gcid'] as String,
+      (json['new_admins'] as List<dynamic>).map((e) => e as String).toList(),
+    );
+
+Map<String, dynamic> _$GCModifyAdminsToJson(GCModifyAdmins instance) =>
+    <String, dynamic>{
+      'gcid': instance.gcid,
+      'new_admins': instance.newAdmins,
+    };
+
+GCAdminsChanged _$GCAdminsChangedFromJson(Map<String, dynamic> json) =>
+    GCAdminsChanged(
+      json['gcid'] as String,
+      json['source'] as String,
+      (json['added'] as List<dynamic>?)?.map((e) => e as String).toList(),
+      (json['removed'] as List<dynamic>?)?.map((e) => e as String).toList(),
+    );
+
+Map<String, dynamic> _$GCAdminsChangedToJson(GCAdminsChanged instance) =>
+    <String, dynamic>{
+      'gcid': instance.gcid,
+      'source': instance.source,
+      'added': instance.added,
+      'removed': instance.removed,
     };

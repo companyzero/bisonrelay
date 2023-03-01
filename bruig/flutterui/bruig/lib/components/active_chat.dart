@@ -962,6 +962,39 @@ class GCUpgradedVersionW extends StatelessWidget {
   }
 }
 
+class GCAdminsChangedW extends StatelessWidget {
+  final GCAdminsChanged event;
+  final ClientModel client;
+  const GCAdminsChangedW(this.event, this.client, {Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    var theme = Theme.of(context);
+    var textColor = theme.dividerColor;
+    var srcNick = client.getNick(event.source);
+    String msg = "$srcNick modified the GC admins:\n";
+    var myID = client.publicID;
+    if (event.added != null) {
+      msg += event.added!.fold("", (prev, e) {
+        var nick = e == myID ? "Local client" : client.getNick(e);
+        nick = nick == "" ? e : nick;
+        return prev + "\n$nick added as admin";
+      });
+    }
+    if (event.removed != null) {
+      msg += event.removed!.fold("", (prev, e) {
+        var nick = e == myID ? "Local client" : client.getNick(e);
+        nick = nick == "" ? e : nick;
+        return prev + "\n$nick removed as admin";
+      });
+    }
+
+    return ServerEvent(
+        child: SelectableText(msg,
+            style: TextStyle(fontSize: 9, color: textColor)));
+  }
+}
+
 class Event extends StatelessWidget {
   final ChatEventModel event;
   final ChatModel chat;
@@ -1034,6 +1067,10 @@ class Event extends StatelessWidget {
 
     if (event.event is GCUpgradedVersion) {
       return GCUpgradedVersionW(event.event as GCUpgradedVersion);
+    }
+
+    if (event.event is GCAdminsChanged) {
+      return GCAdminsChangedW(event.event as GCAdminsChanged, client);
     }
 
     var theme = Theme.of(context);
