@@ -103,7 +103,7 @@ class ChatModel extends ChangeNotifier {
   List<ChatEventModel> _msgs = [];
   UnmodifiableListView<ChatEventModel> get msgs => UnmodifiableListView(_msgs);
   void append(ChatEventModel msg) {
-    if (!_active && _unreadMsgCount == 0) {
+    if (!_active && _unreadMsgCount == 0 && _msgs.isNotEmpty) {
       msg.firstUnread = true;
     }
     if (_msgs.isNotEmpty &&
