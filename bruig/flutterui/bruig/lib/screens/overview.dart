@@ -52,6 +52,12 @@ class _OverviewScreenTitleState extends State<_OverviewScreenTitle> {
   }
 }
 
+class PageTabs {
+  final int tabIndex;
+
+  PageTabs(this.tabIndex);
+}
+
 class OverviewScreen extends StatefulWidget {
   static const routeName = '/overview';
   static String subRoute(String route) => route.isNotEmpty && route[0] == "/"
@@ -92,6 +98,10 @@ class _OverviewScreenState extends State<OverviewScreen> {
         ntfns.addNtfn(AppNtfn(AppNtfnType.walletCheckFailed, msg: msg));
       }
     }
+  }
+
+  void goToNewPost() {
+    navKey.currentState!.pushReplacementNamed('/feed', arguments: PageTabs(2));
   }
 
   void goOnline() async {
@@ -176,6 +186,13 @@ class _OverviewScreenState extends State<OverviewScreen> {
         appBar: AppBar(
           title: Row(children: [
             const SizedBox(width: 10),
+            IconButton(
+                splashRadius: 20,
+                tooltip: "Create a new post",
+                onPressed: goToNewPost,
+                color: Colors.red,
+                iconSize: 20,
+                icon: Icon(color: theme.dividerColor, size: 20, Icons.mode)),
             IconButton(
                 splashRadius: 20,
                 tooltip: connStateLabel,
