@@ -22,14 +22,20 @@ class MainMenuItem {
   final String routeName;
   final WidgetBuilder builder;
   final WidgetBuilder titleBuilder;
-  final IconData icon;
+  final Widget? icon;
+  final Widget? iconNotification;
 
-  MainMenuItem(
-      this.label, this.routeName, this.builder, this.titleBuilder, this.icon);
+  MainMenuItem(this.label, this.routeName, this.builder, this.titleBuilder,
+      this.icon, this.iconNotification);
 }
 
-MainMenuItem _emptyMenu = MainMenuItem("", "", (context) => const Text(""),
-    (context) => const Text(""), Icons.question_mark);
+MainMenuItem _emptyMenu = MainMenuItem(
+    "",
+    "",
+    (context) => const Text(""),
+    (context) => const Text(""),
+    const SidebarIcon(Icons.question_mark, false),
+    null);
 
 final List<MainMenuItem> mainMenu = [
   MainMenuItem(
@@ -37,7 +43,8 @@ final List<MainMenuItem> mainMenu = [
     FeedScreen.routeName,
     (context) => const FeedScreen(),
     (context) => const FeedScreenTitle(),
-    Icons.list_alt,
+    const SidebarIcon(Icons.list_alt, false),
+    const SidebarIcon(Icons.new_releases_outlined, true),
   ),
   MainMenuItem(
     "Chats",
@@ -45,21 +52,24 @@ final List<MainMenuItem> mainMenu = [
     (context) => Consumer2<ClientModel, AppNotifications>(
         builder: (context, client, ntfns, child) => ChatsScreen(client, ntfns)),
     (context) => const ChatsScreenTitle(),
-    Icons.chat_bubble_outline,
+    const SidebarIcon(Icons.chat_bubble_outline, false),
+    const SidebarIcon(Icons.new_releases_outlined, true),
   ),
   MainMenuItem(
     "LN Management",
     LNScreen.routeName,
     (context) => const LNScreen(),
     (context) => const LNScreenTitle(),
-    Icons.device_hub,
+    const SidebarIcon(Icons.device_hub, false),
+    const SidebarIcon(Icons.device_hub, false),
   ),
   MainMenuItem(
     "Manage Content",
     ManageContentScreen.routeName,
     (context) => const ManageContentScreen(),
     (context) => const ManageContentScreenTitle(),
-    Icons.file_download,
+    const SidebarIcon(Icons.file_download, false),
+    const SidebarIcon(Icons.file_download, false),
   ),
   MainMenuItem(
     "Payment Stats",
@@ -67,22 +77,27 @@ final List<MainMenuItem> mainMenu = [
     (context) => Consumer<ClientModel>(
         builder: (context, client, child) => PayStatsScreen(client)),
     (context) => const PayStatsScreenTitle(),
-    Icons.wallet_outlined,
+    const SidebarIcon(Icons.wallet_outlined, false),
+    const SidebarIcon(Icons.wallet_outlined, false),
   ),
   MainMenuItem(
-      "Settings",
-      SettingsScreen.routeName,
-      (context) => Consumer<ClientModel>(
-          builder: (context, client, child) => SettingsScreen(client)),
-      (context) => const SettingsScreenTitle(),
-      Icons.settings_rounded),
+    "Settings",
+    SettingsScreen.routeName,
+    (context) => Consumer<ClientModel>(
+        builder: (context, client, child) => SettingsScreen(client)),
+    (context) => const SettingsScreenTitle(),
+    const SidebarIcon(Icons.settings_rounded, false),
+    const SidebarIcon(Icons.settings_rounded, false),
+  ),
   MainMenuItem(
-      "Logs",
-      LogScreen.routeName,
-      (context) =>
-          Consumer<LogModel>(builder: (context, log, child) => LogScreen(log)),
-      (context) => const LogScreenTitle(),
-      Icons.list_rounded),
+    "Logs",
+    LogScreen.routeName,
+    (context) =>
+        Consumer<LogModel>(builder: (context, log, child) => LogScreen(log)),
+    (context) => const LogScreenTitle(),
+    const SidebarIcon(Icons.list_rounded, false),
+    const SidebarIcon(Icons.list_rounded, false),
+  ),
 ];
 
 class MainMenuModel extends ChangeNotifier {
@@ -218,4 +233,19 @@ List<ChatMenuItem> buildGCMenu(ChatModel chat) {
       },
     ),
   ];
+}
+
+class SidebarIcon extends StatelessWidget {
+  final IconData icon;
+  final bool alert;
+  const SidebarIcon(this.icon, this.alert, {Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    if (alert) {
+      return Icon(icon, color: Colors.amber);
+    } else {
+      return Icon(icon);
+    }
+  }
 }

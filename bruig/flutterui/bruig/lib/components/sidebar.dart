@@ -169,8 +169,10 @@ class _SidebarState extends State<Sidebar> {
         controller: ctrl,
         items: mainMenu.menus
             .map((e) => SidebarXItem(
-                  icon: e.icon,
                   label: e.label,
+                  iconWidget: e.label == "Chats" && client.hasUnreadChats
+                      ? e.iconNotification
+                      : e.icon,
                   onTap: () => switchScreen(e.routeName),
                 ))
             .toList(),
