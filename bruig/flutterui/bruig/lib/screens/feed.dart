@@ -1,4 +1,5 @@
 import 'package:bruig/models/client.dart';
+import 'package:bruig/screens/overview.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:bruig/models/feed.dart';
@@ -7,6 +8,7 @@ import 'package:bruig/components/feed_bar.dart';
 import 'package:bruig/screens/feed/post_content.dart';
 import 'package:bruig/screens/feed/new_post.dart';
 import 'package:bruig/screens/feed/post_lists.dart';
+import 'package:bruig/components/empty_widget.dart';
 
 /*
 
@@ -63,7 +65,8 @@ class FeedScreenTitle extends StatelessWidget {
 
 class FeedScreen extends StatefulWidget {
   static const routeName = '/feed';
-  const FeedScreen({Key? key}) : super(key: key);
+  final int tabIndex;
+  const FeedScreen({Key? key, this.tabIndex = 0}) : super(key: key);
 
   @override
   State<FeedScreen> createState() => _FeedScreenState();
@@ -72,6 +75,7 @@ class FeedScreen extends StatefulWidget {
 class _FeedScreenState extends State<FeedScreen> {
   int tabIndex = 0;
   PostContentScreenArgs? showPost;
+  GlobalKey<NavigatorState> navKey = GlobalKey(debugLabel: "overview nav key");
 
   Widget activeTab() {
     switch (tabIndex) {
@@ -115,8 +119,15 @@ class _FeedScreenState extends State<FeedScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (ModalRoute.of(context)!.settings.arguments != null) {
+      final args = ModalRoute.of(context)!.settings.arguments as PageTabs;
+      tabIndex = args.tabIndex;
+    }
+
     return Row(children: [
-      FeedBar(onItemChanged, tabIndex),
+      ModalRoute.of(context)!.settings.arguments == null
+          ? FeedBar(onItemChanged, tabIndex)
+          : const Empty(),
       Expanded(child: activeTab())
     ]);
   }
