@@ -155,7 +155,7 @@ func (t *textAreaModel) Update(msg tea.Msg) (*textAreaModel, tea.Cmd) {
 		case msg.String() == "alt+[":
 			// Ignore (textarea bug)
 
-		case msg.String() == "ctrl+v":
+		case msg.String() == "ctrl+v" || msg.String() == "alt+v":
 			cmds = appendCmd(cmds, paste)
 
 		default:
