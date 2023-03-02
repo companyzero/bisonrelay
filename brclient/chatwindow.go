@@ -436,8 +436,13 @@ func (cw *chatWindow) renderMsg(winW int, styles *theme, b *strings.Builder, as 
 				s = el.text
 				offset = writeWrappedWithStyle(b, offset, winW, style, s)
 			}
+
+			// Uncomment to debug element separtions.
+			// b.WriteString("¶")
+			// offset += 1
 		}
 		b.WriteRune('\n')
+		offset = 0
 	}
 }
 
