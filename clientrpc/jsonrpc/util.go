@@ -3,6 +3,7 @@ package jsonrpc
 import (
 	"context"
 	"io"
+	"time"
 	"unicode/utf8"
 
 	"github.com/decred/slog"
@@ -76,15 +77,18 @@ func (r requestsSemaphore) release() {
 }
 
 // drain the semaphore. This blocks until all semaphore items have been
-// released or until the context is canceled.
-func (r requestsSemaphore) drain(ctx context.Context) {
+// released or until the context is canceled. Returns the number of outstanding
+// elements in the semaphore if the context was canceled before all elements
+// were drained.
+func (r requestsSemaphore) drain(ctx context.Context) int {
 	for i := 0; i < cap(r); i++ {
 		select {
 		case <-r:
 		case <-ctx.Done():
-			return
+			return cap(r) - i
 		}
 	}
+	return 0
 }
 
 // makeRequestsSemaphore creates a semaphore with the given max capacity.
@@ -94,6 +98,27 @@ func makeRequestsSemaphore(max int) requestsSemaphore {
 		res <- struct{}{}
 	}
 	return res
+}
+
+// delayedCancelCtx returns a context that gets canceled when the passed
+// context is canceled _and_ after a delay has passed (or if the returned
+// cancel function is called).
+func delayedCancelCtx(ctx context.Context, timeout time.Duration) (context.Context, func()) {
+	outer, cancelOuter := context.WithCancel(context.Background())
+	go func() {
+		select {
+		case <-ctx.Done():
+		case <-outer.Done():
+			return
+		}
+
+		select {
+		case <-time.After(timeout):
+			cancelOuter()
+		case <-outer.Done():
+		}
+	}()
+	return outer, cancelOuter
 }
 
 type slogWriter struct {

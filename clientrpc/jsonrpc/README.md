@@ -36,4 +36,14 @@ authentication. Error handling is omitted for brevity:
     fmt.Println(res)
 ```
 
+## Example curl call
+
+```shell
+$ curl \
+    --cert ~/.brclient/rpc-client.cert \
+    --key ~/.brclient/rpc-client.key \
+    --cacert ~/.brclient/rpc.cert \
+    --data-binary '{"jsonrpc":"2.0","id":"dummy_id","method":"VersionService.Version","params":{}}' \
+    https://127.0.0.1:7676/index
+```
 
