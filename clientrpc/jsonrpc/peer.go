@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/companyzero/bisonrelay/clientrpc/types"
 	"github.com/decred/slog"
@@ -293,6 +294,9 @@ func (p *peer) readLoop(ctx context.Context) error {
 		}
 	}
 
+	// Inner context to cancel outstanding requests as needed.
+	ctx, cancel := context.WithCancel(ctx)
+
 	var dec *json.Decoder
 loop:
 	for {
@@ -364,9 +368,31 @@ loop:
 		p.log.Debugf("readLoop exiting due to unexpected error: %v", loopErr)
 	}
 
-	// Wait until all outstanding requests have been processed before
-	// terminating the peer.
-	p.reqsSema.drain(ctx)
+	// Decide what to do regarding outstanding requests.
+	if errors.Is(loopErr, io.EOF) {
+		// EOF means we're done receiving new requests, but we should
+		// still process any outstanding ones (so don't cancel the
+		// inner context yet).
+		defer cancel()
+	} else {
+		// For any other errors (including unexpected EOF, which signals
+		// a conn dropping), cancel the inner request ctx (which cancels
+		// outstanding requests).
+		cancel()
+	}
+
+	// Wait (up to 1 second) after the context is canceled or until all
+	// outstanding requests have been processed before terminating the
+	// peer.
+	drainCtx, cancelDrain := delayedCancelCtx(ctx, time.Second)
+	if nbRemaining := p.reqsSema.drain(drainCtx); nbRemaining > 0 {
+		// There are still requests that haven't been canceled even if
+		// the inner context was (sign of a bug).
+		p.log.Warnf("peer readLoop exiting with %d outstanding requests", nbRemaining)
+	} else {
+		p.log.Debugf("Drained requests semaphore")
+	}
+	cancelDrain()
 	return loopErr
 }
 
