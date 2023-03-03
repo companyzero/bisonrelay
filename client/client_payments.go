@@ -1,6 +1,7 @@
 package client
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
@@ -24,8 +25,18 @@ import (
 //   handleInvoice()
 //     (out-of-band payment)
 
-// TipUser sends a tip with the given dcr amount to the remote user.
-func (c *Client) TipUser(uid UserID, dcrAmount float64) error {
+// TipUser sends a tip with the given dcr amount to the remote user. This
+// blocks until the tip is received by the remote user or if the payment fails.
+//
+// Note: canceling the context only cancels the payment if the the invoice
+// from the remote user has not been received yet. If the invoice has been
+// received and a payment attempt has started, canceling the context may not
+// cancel the actual payment attempt. The exact behavior will depend on the
+// underlying payment client implementation.
+//
+// Tip payment is not persisted, therefore a client shutdown behaves as if the
+// context had been canceled.
+func (c *Client) TipUser(ctx context.Context, uid UserID, dcrAmount float64) error {
 	if dcrAmount <= 0 {
 		return fmt.Errorf("cannot pay user %f <= 0", dcrAmount)
 	}
@@ -66,17 +77,23 @@ func (c *Client) TipUser(uid UserID, dcrAmount float64) error {
 		default:
 			return fmt.Errorf("unknown result type %T", res)
 		}
+	case <-ctx.Done():
+		ru.log.Debugf("caller context done while waiting for invoice: %v", ctx.Err())
+		return ctx.Err()
 	case <-c.ctx.Done():
 		return errClientExiting
 	}
 
 	ru.log.Debugf("Got invoice to pay user: %q", ir.Invoice)
 
+	ctx, cancel := multiCtx(c.ctx, ctx)
+	defer cancel()
+
 	// Decode invoice and verify.
 	if ir.Invoice == "" {
 		return nil
 	}
-	inv, err := c.pc.DecodeInvoice(c.ctx, ir.Invoice)
+	inv, err := c.pc.DecodeInvoice(ctx, ir.Invoice)
 	if err != nil {
 		return err
 	}
@@ -86,7 +103,7 @@ func (c *Client) TipUser(uid UserID, dcrAmount float64) error {
 	}
 
 	// Pay for invoice.
-	fees, err := c.pc.PayInvoice(c.ctx, ir.Invoice)
+	fees, err := c.pc.PayInvoice(ctx, ir.Invoice)
 	if err == nil {
 		ru.log.Infof("Paid user %.8f DCR", float64(inv.MAtoms)/1e11)
 		err = c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
