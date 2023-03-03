@@ -1266,7 +1266,7 @@ func (as *appState) pm(cw *chatWindow, msg string) {
 func (as *appState) payTip(cw *chatWindow, dcrAmount float64) {
 	m := cw.newInternalMsg(fmt.Sprintf("Sending %.8f DCR as tip", dcrAmount))
 	as.repaintIfActive(cw)
-	err := as.c.TipUser(cw.uid, dcrAmount)
+	err := as.c.TipUser(as.ctx, cw.uid, dcrAmount)
 	if err != nil {
 		as.cwHelpMsg("Unable to tip user %q: %v",
 			cw.alias, err)

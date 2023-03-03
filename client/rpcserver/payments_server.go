@@ -30,7 +30,7 @@ type paymentsServer struct {
 	c   *client.Client
 }
 
-func (c *paymentsServer) TipUser(_ context.Context, req *types.TipUserRequest, _ *types.TipUserResponse) error {
+func (c *paymentsServer) TipUser(ctx context.Context, req *types.TipUserRequest, _ *types.TipUserResponse) error {
 	user, err := c.c.UserByNick(req.User)
 	if err != nil {
 		return err
@@ -41,7 +41,7 @@ func (c *paymentsServer) TipUser(_ context.Context, req *types.TipUserRequest, _
 			return err
 		}
 	}
-	return c.c.TipUser(user.ID(), req.DcrAmount)
+	return c.c.TipUser(ctx, user.ID(), req.DcrAmount)
 }
 
 var _ types.PaymentsServiceServer = (*paymentsServer)(nil)

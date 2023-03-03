@@ -913,7 +913,7 @@ func TestE2EDcrlnTipUser(t *testing.T) {
 
 	// Send a tip from Alice to Bob.
 	errChan := make(chan error)
-	go func() { errChan <- alice.TipUser(bob.PublicID(), 0.00001) }()
+	go func() { errChan <- alice.TipUser(ctx, bob.PublicID(), 0.00001) }()
 	select {
 	case err := <-errChan:
 		if err != nil {

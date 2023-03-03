@@ -643,7 +643,7 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		if err := cmd.decode(&args); err != nil {
 			return nil, err
 		}
-		return nil, c.TipUser(args.UID, args.Amount)
+		return nil, c.TipUser(cc.ctx, args.UID, args.Amount)
 
 	case CTSubscribeToPosts:
 		var uid clientintf.UserID

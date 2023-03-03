@@ -27,6 +27,26 @@ func zeroSlice(b []byte) {
 	}
 }
 
+// multiCtx returns a context that is canceled once any one of the passed
+// contexts are cancelled.
+//
+// The returned Cancel() function MUST be called, otherwise this leaks
+// goroutines.
+func multiCtx(ctxs ...context.Context) (context.Context, func()) {
+	ctx, cancel := context.WithCancel(context.Background())
+	for _, c := range ctxs {
+		c := c
+		go func() {
+			select {
+			case <-c.Done():
+				cancel()
+			case <-ctx.Done():
+			}
+		}()
+	}
+	return ctx, cancel
+}
+
 func mustRandomUint32() uint32 {
 	var b [4]byte
 	if n, err := rand.Read(b[:]); n < 4 || err != nil {
