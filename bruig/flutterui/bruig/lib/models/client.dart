@@ -103,7 +103,7 @@ class ChatModel extends ChangeNotifier {
   List<ChatEventModel> _msgs = [];
   UnmodifiableListView<ChatEventModel> get msgs => UnmodifiableListView(_msgs);
   void append(ChatEventModel msg) {
-    if (!_active && _unreadMsgCount == 0) {
+    if (!_active && _unreadMsgCount == 0 && _msgs.isNotEmpty) {
       msg.firstUnread = true;
     }
     if (_msgs.isNotEmpty &&
@@ -246,6 +246,13 @@ class ClientModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  bool _hasUnreadChats = false;
+  bool get hasUnreadChats => _hasUnreadChats;
+  void set hasUnreadChats(bool b) {
+    _hasUnreadChats = b;
+    notifyListeners();
+  }
+
   final Map<String, List<ChatMenuItem>> _subGCMenus = {};
   UnmodifiableMapView<String, List<ChatMenuItem>> get subGCMenus =>
       UnmodifiableMapView(_subGCMenus);
@@ -299,6 +306,21 @@ class ClientModel extends ChangeNotifier {
     _active?._setActive(false);
     _active = c;
     c?._setActive(true);
+
+    // Check for unreadMessages so we can turn off sidebar notification
+    bool unreadChats = false;
+    for (int i = 0; i < _gcChats.length; i++) {
+      if (_gcChats[i].unreadMsgCount > 0) {
+        unreadChats = true;
+      }
+    }
+
+    for (int i = 0; i < _userChats.length; i++) {
+      if (_userChats[i].unreadMsgCount > 0) {
+        unreadChats = true;
+      }
+    }
+    hasUnreadChats = unreadChats;
     hideSubMenu();
     notifyListeners();
   }
@@ -410,6 +432,9 @@ class ClientModel extends ChangeNotifier {
 
         String gcChatOrder = "";
         for (int i = 0; i < _gcChats.length; i++) {
+          if (_gcChats[i].unreadMsgCount > 0) {
+            hasUnreadChats = true;
+          }
           if (i == _gcChats.length - 1) {
             gcChatOrder += _gcChats[i].nick;
           } else {
@@ -422,6 +447,9 @@ class ClientModel extends ChangeNotifier {
 
         String userChatOrder = "";
         for (int i = 0; i < _userChats.length; i++) {
+          if (_userChats[i].unreadMsgCount > 0) {
+            hasUnreadChats = true;
+          }
           if (i == _userChats.length - 1) {
             userChatOrder += _userChats[i].nick;
           } else {

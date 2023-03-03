@@ -359,17 +359,17 @@ class _ReceivedSentPMState extends State<ReceivedSentPM> {
 
   @override
   Widget build(BuildContext context) {
-    var prefix = " ";
+    var prefix = "";
     var suffix = "";
     switch (widget.evnt.sentState) {
       case CMS_sending:
-        prefix = "… ";
+        prefix = "…";
         break;
       case CMS_sent:
-        prefix = "✓ ";
+        prefix = "✓";
         break;
       case CMS_errored:
-        prefix = "✗ ";
+        prefix = "✗";
         suffix = "\n\n${widget.evnt.sendError}";
         break;
       default:
@@ -382,7 +382,7 @@ class _ReceivedSentPMState extends State<ReceivedSentPM> {
     var formatter = DateFormat('yyyy-MM-dd HH:mm:ss');
     var date = formatter.format(now);
 
-    var msg = "$prefix${widget.evnt.event.msg}$suffix";
+    var msg = "${widget.evnt.event.msg}$suffix";
     msg = msg.replaceAll("\n",
         "  \n"); // Replace newlines with <space space newline> for proper md render
     var theme = Theme.of(context);
@@ -397,35 +397,33 @@ class _ReceivedSentPMState extends State<ReceivedSentPM> {
     var selectedBackgroundColor = theme.highlightColor;
     var textColor = theme.dividerColor;
 
-    return LayoutBuilder(
-        builder: (BuildContext context, BoxConstraints constraints) {
-      return Column(children: [
-        widget.evnt.firstUnread
-            ? Row(children: [
-                Expanded(
-                    child: Divider(
-                  color: textColor, //color of divider
-                  height: 8, //height spacing of divider
-                  thickness: 1, //thickness of divier line
-                  indent: 5, //spacing at the start of divider
-                  endIndent: 5, //spacing at the end of divider
-                )),
-                Text("Last read posts",
-                    style: TextStyle(fontSize: 9, color: textColor)),
-                Expanded(
-                    child: Divider(
-                  color: textColor, //color of divider
-                  height: 8, //height spacing of divider
-                  thickness: 1, //thickness of divier line
-                  indent: 5, //spacing at the start of divider
-                  endIndent: 5, //spacing at the end of divider
-                )),
-              ])
-            : Empty(),
-        Row(children: [
-          widget.evnt.sameUser
-              ? const SizedBox(width: 28)
-              : Container(
+    return Column(children: [
+      widget.evnt.firstUnread
+          ? Row(children: [
+              Expanded(
+                  child: Divider(
+                color: textColor, //color of divider
+                height: 8, //height spacing of divider
+                thickness: 1, //thickness of divier line
+                indent: 5, //spacing at the start of divider
+                endIndent: 5, //spacing at the end of divider
+              )),
+              Text("Last read posts",
+                  style: TextStyle(fontSize: 9, color: textColor)),
+              Expanded(
+                  child: Divider(
+                color: textColor, //color of divider
+                height: 8, //height spacing of divider
+                thickness: 1, //thickness of divier line
+                indent: 5, //spacing at the start of divider
+                endIndent: 5, //spacing at the end of divider
+              )),
+            ])
+          : const Empty(),
+      widget.evnt.sameUser
+          ? const Empty()
+          : Row(children: [
+              Container(
                   width: 28,
                   margin: const EdgeInsets.only(
                       top: 0, bottom: 0, left: 5, right: 0),
@@ -443,50 +441,47 @@ class _ReceivedSentPMState extends State<ReceivedSentPM> {
                       widget.showSubMenu(widget.id);
                     },
                   )),
+              const SizedBox(width: 10),
+              Text(
+                widget.nick,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: avatarColor, // NAME TEXT COLOR,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ]),
+      //const SizedBox(height: 10),
+      Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Row(children: [
+          const SizedBox(width: 13),
+          SizedBox(
+              width: 5,
+              child: Text(
+                prefix,
+                style: TextStyle(
+                    fontSize: 12,
+                    color: hightLightTextColor, // NAME TEXT COLOR,
+                    fontWeight: FontWeight.bold,
+                    fontStyle: FontStyle.italic),
+              )),
+          const SizedBox(width: 24),
+          Provider<DownloadSource>(
+              create: (context) => DownloadSource(sourceID),
+              child: MarkdownArea(msg)),
           Expanded(
-              child: Container(
-            decoration: BoxDecoration(
-                color: bgColor,
-                borderRadius:
-                    const BorderRadius.all(Radius.elliptical(10, 10))),
-            padding: const EdgeInsets.all(5),
-            margin:
-                const EdgeInsets.only(top: 5, bottom: 5, left: 10, right: 10),
-            alignment: Alignment.centerLeft,
-            child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(children: [
-                    widget.evnt.sameUser
-                        ? const Empty()
-                        : Text(
-                            widget.nick,
-                            style: TextStyle(
-                                fontSize: 12,
-                                color: hightLightTextColor, // NAME TEXT COLOR,
-                                fontWeight: FontWeight.bold,
-                                fontStyle: FontStyle.italic),
-                          ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                        child: Align(
-                            alignment: Alignment.topRight,
-                            child: Text(
-                              date,
-                              style: TextStyle(
-                                  fontSize: 9,
-                                  color: darkTextColor), // DATE COLOR
-                            )))
-                  ]),
-                  const SizedBox(height: 10),
-                  Provider<DownloadSource>(
-                      create: (context) => DownloadSource(sourceID),
-                      child: MarkdownArea(msg))
-                ]),
-          ))
-        ])
-      ]);
-    });
+              child: Align(
+                  alignment: Alignment.topRight,
+                  child: Text(
+                    date,
+                    style: TextStyle(
+                        fontSize: 9, color: darkTextColor), // DATE COLOR
+                  ))),
+          const SizedBox(width: 10)
+        ]),
+        const SizedBox(height: 5),
+      ])
+    ]);
   }
 }
 
