@@ -136,10 +136,18 @@ func (pc *DcrlnPaymentClient) PayInvoice(ctx context.Context, invoice string) (i
 	start := time.Now()
 	sendPayRes, err := pc.lnRpc.SendPaymentSync(ctx, sendPayReq)
 	if err != nil {
+		pc.log.Warnf("SendPayment error (%v) when attempting to pay "+
+			"invoice. hash=%s, target=%s numMAtoms=%d",
+			err, payReq.PaymentHash,
+			payReq.Destination, payReq.NumMAtoms)
 		return 0, fmt.Errorf("unable to complete LN payment: %v", err)
 	}
 
 	if sendPayRes.PaymentError != "" {
+		pc.log.Warnf("Payment error (%s) when attempting to pay "+
+			"invoice. hash=%s, target=%s numMAtoms=%d",
+			sendPayRes.PaymentError, payReq.PaymentHash,
+			payReq.Destination, payReq.NumMAtoms)
 		return 0, fmt.Errorf("LN payment error: %s", sendPayRes.PaymentError)
 	}
 	pc.payTiming.Add(time.Since(start))
