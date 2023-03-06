@@ -3,12 +3,10 @@ package rpcserver
 import (
 	"context"
 	"fmt"
-	"sync"
 	"time"
 
 	"github.com/companyzero/bisonrelay/client"
 	"github.com/companyzero/bisonrelay/client/clientintf"
-	"github.com/companyzero/bisonrelay/client/internal/replaymsglog"
 	"github.com/companyzero/bisonrelay/clientrpc/types"
 	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/decred/slog"
@@ -41,13 +39,9 @@ type chatServer struct {
 	log slog.Logger
 	cfg ChatServerCfg
 
-	replayMtx    sync.Mutex
-	pmStreams    *serverStreams[types.ChatService_PMStreamServer]
-	gcmStreams   *serverStreams[types.ChatService_GCMStreamServer]
-	kxStreams    *serverStreams[types.ChatService_KXStreamServer]
-	pmReplayLog  *replaymsglog.Log
-	gcmReplayLog *replaymsglog.Log
-	kxReplayLog  *replaymsglog.Log
+	pmStreams  *serverStreams[*types.ReceivedPM]
+	gcmStreams *serverStreams[*types.GCReceivedMsg]
+	kxStreams  *serverStreams[*types.KXCompleted]
 }
 
 func (c *chatServer) PM(ctx context.Context, req *types.PMRequest, res *types.PMResponse) error {
@@ -71,33 +65,7 @@ func (c *chatServer) PM(ctx context.Context, req *types.PMRequest, res *types.PM
 }
 
 func (c *chatServer) PMStream(ctx context.Context, req *types.PMStreamRequest, stream types.ChatService_PMStreamServer) error {
-	id := replaymsglog.ID(req.UnackedFrom)
-	c.replayMtx.Lock()
-
-	// Send old messages before registering for the new ones.
-	ntfn := new(types.ReceivedPM)
-	err := c.pmReplayLog.ReadAfter(id, ntfn, func(id replaymsglog.ID) error {
-		ntfn.SequenceId = uint64(id)
-		err := stream.Send(ntfn)
-		if err != nil {
-			return err
-		}
-		ntfn.Reset()
-		return nil
-	})
-
-	var streamID int32
-	if err == nil {
-		streamID, ctx = c.pmStreams.register(ctx, stream)
-	}
-	c.replayMtx.Unlock()
-	if err != nil {
-		return err
-	}
-
-	<-ctx.Done()
-	c.pmStreams.unregister(streamID)
-	return ctx.Err()
+	return c.pmStreams.runStream(ctx, req.UnackedFrom, stream)
 }
 
 // pmNtfnHandler is called by the client when a PM arrived from a remote user.
@@ -112,36 +80,14 @@ func (c *chatServer) pmNtfnHandler(ru *client.RemoteUser, p rpc.RMPrivateMessage
 		},
 	}
 
-	// Save in replay file
-	c.replayMtx.Lock()
-	replayID, err := c.pmReplayLog.Store(ntfn)
-	c.replayMtx.Unlock()
-	if err != nil {
-		c.log.Errorf("Unable to store PM in replay log: %v", err)
-		return
-	}
-	ntfn.SequenceId = uint64(replayID)
-
-	c.pmStreams.iterateOver(func(id int32, stream types.ChatService_PMStreamServer) {
-		err := stream.Send(ntfn)
-		if err != nil {
-			c.log.Debugf("Unregistering PM stream %d due to err: %v",
-				id, err)
-			c.pmStreams.unregister(id)
-		}
-	})
+	c.pmStreams.send(ntfn)
 }
 
 // AckReceivedPM acks to the server that PMs up to a sequence ID have been
 // processed.
 func (c *chatServer) AckReceivedPM(ctx context.Context, req *types.AckRequest,
 	res *types.AckResponse) error {
-	id := replaymsglog.ID(req.SequenceId)
-	err := c.pmReplayLog.ClearUpTo(id)
-	if err != nil {
-		c.log.Errorf("Unable to clear PM log up to id %s: %v", id, err)
-	}
-	return err
+	return c.pmStreams.ack(req.SequenceId)
 }
 
 // GCM sends a message in a GC.
@@ -161,33 +107,7 @@ func (c *chatServer) GCM(ctx context.Context, req *types.GCMRequest, res *types.
 
 // GCMStream returns a stream that gets GC messages received by the client.
 func (c *chatServer) GCMStream(ctx context.Context, req *types.GCMStreamRequest, stream types.ChatService_GCMStreamServer) error {
-	id := replaymsglog.ID(req.UnackedFrom)
-	c.replayMtx.Lock()
-
-	// Send old messages before registering for the new ones.
-	ntfn := new(types.GCReceivedMsg)
-	err := c.gcmReplayLog.ReadAfter(id, ntfn, func(id replaymsglog.ID) error {
-		ntfn.SequenceId = uint64(id)
-		err := stream.Send(ntfn)
-		if err != nil {
-			return err
-		}
-		ntfn.Reset()
-		return nil
-	})
-
-	var streamID int32
-	if err == nil {
-		streamID, ctx = c.gcmStreams.register(ctx, stream)
-	}
-	c.replayMtx.Unlock()
-	if err != nil {
-		return err
-	}
-
-	<-ctx.Done()
-	c.gcmStreams.unregister(streamID)
-	return ctx.Err()
+	return c.gcmStreams.runStream(ctx, req.UnackedFrom, stream)
 }
 
 // gcmNtfnHandler is called by the client when a GC message arrives from a
@@ -209,36 +129,14 @@ func (c *chatServer) gcmNtfnHandler(ru *client.RemoteUser, gcm rpc.RMGroupMessag
 		},
 	}
 
-	// Save in replay file
-	c.replayMtx.Lock()
-	replayID, err := c.gcmReplayLog.Store(ntfn)
-	c.replayMtx.Unlock()
-	if err != nil {
-		c.log.Errorf("Unable to store PM in replay log: %v", err)
-		return
-	}
-	ntfn.SequenceId = uint64(replayID)
-
-	c.gcmStreams.iterateOver(func(id int32, stream types.ChatService_GCMStreamServer) {
-		err := stream.Send(ntfn)
-		if err != nil {
-			c.log.Debugf("Unregistering PM stream %d due to err: %v",
-				id, err)
-			c.pmStreams.unregister(id)
-		}
-	})
+	c.gcmStreams.send(ntfn)
 }
 
 // AckReceivedGCM acks to the server that GCMs up to a sequence ID have been
 // processed.
 func (c *chatServer) AckReceivedGCM(ctx context.Context, req *types.AckRequest,
 	res *types.AckResponse) error {
-	id := replaymsglog.ID(req.SequenceId)
-	err := c.gcmReplayLog.ClearUpTo(id)
-	if err != nil {
-		c.log.Errorf("Unable to clear GCM log up to id %s: %v", id, err)
-	}
-	return err
+	return c.gcmStreams.ack(req.SequenceId)
 }
 
 func (c *chatServer) MediateKX(ctx context.Context, req *types.MediateKXRequest, res *types.MediateKXResponse) error {
@@ -256,33 +154,7 @@ func (c *chatServer) MediateKX(ctx context.Context, req *types.MediateKXRequest,
 }
 
 func (c *chatServer) KXStream(ctx context.Context, req *types.KXStreamRequest, stream types.ChatService_KXStreamServer) error {
-	id := replaymsglog.ID(req.UnackedFrom)
-	c.replayMtx.Lock()
-
-	// Send old messages before registering for the new ones.
-	ntfn := new(types.KXCompleted)
-	err := c.kxReplayLog.ReadAfter(id, ntfn, func(id replaymsglog.ID) error {
-		ntfn.SequenceId = uint64(id)
-		err := stream.Send(ntfn)
-		if err != nil {
-			return err
-		}
-		ntfn.Reset()
-		return nil
-	})
-
-	var streamID int32
-	if err == nil {
-		streamID, ctx = c.kxStreams.register(ctx, stream)
-	}
-	c.replayMtx.Unlock()
-	if err != nil {
-		return err
-	}
-
-	<-ctx.Done()
-	c.kxStreams.unregister(streamID)
-	return ctx.Err()
+	return c.kxStreams.runStream(ctx, req.UnackedFrom, stream)
 }
 
 // kxNtfnHandler is called by the client when the client completes a KX with a user.
@@ -292,33 +164,11 @@ func (c *chatServer) kxNtfnHandler(ru *client.RemoteUser) {
 		Nick: ru.Nick(),
 	}
 
-	// Save in replay file
-	c.replayMtx.Lock()
-	replayID, err := c.kxReplayLog.Store(ntfn)
-	c.replayMtx.Unlock()
-	if err != nil {
-		c.log.Errorf("Unable to store KX in replay log: %v", err)
-		return
-	}
-	ntfn.SequenceId = uint64(replayID)
-
-	c.kxStreams.iterateOver(func(id int32, stream types.ChatService_KXStreamServer) {
-		err := stream.Send(ntfn)
-		if err != nil {
-			c.log.Debugf("Unregistering KX stream %d due to err: %v",
-				id, err)
-			c.kxStreams.unregister(id)
-		}
-	})
+	c.kxStreams.send(ntfn)
 }
 
 func (c *chatServer) AckKXCompleted(_ context.Context, req *types.AckRequest, _ *types.AckResponse) error {
-	id := replaymsglog.ID(req.SequenceId)
-	err := c.kxReplayLog.ClearUpTo(id)
-	if err != nil {
-		c.log.Errorf("Unable to clear KX log up to id %s: %v", id, err)
-	}
-	return err
+	return c.kxStreams.ack(req.SequenceId)
 }
 
 // registerOfflineMessageStorageHandlers registers the handlers for streams on
@@ -334,33 +184,17 @@ var _ types.ChatServiceServer = (*chatServer)(nil)
 
 // InitChatService initializes and binds a ChatService server to the RPC server.
 func (s *Server) InitChatService(cfg ChatServerCfg) error {
-
-	pmReplayLog, err := replaymsglog.New(replaymsglog.Config{
-		Log:     cfg.Log,
-		Prefix:  "pm",
-		RootDir: cfg.RootReplayMsgLogs,
-		MaxSize: 1 << 23, // 8MiB
-	})
+	pmStreams, err := newServerStreams[*types.ReceivedPM](cfg.RootReplayMsgLogs, "pm", cfg.Log)
 	if err != nil {
 		return err
 	}
 
-	gcmReplayLog, err := replaymsglog.New(replaymsglog.Config{
-		Log:     cfg.Log,
-		Prefix:  "gcm",
-		RootDir: cfg.RootReplayMsgLogs,
-		MaxSize: 1 << 23, // 8MiB
-	})
+	gcmStreams, err := newServerStreams[*types.GCReceivedMsg](cfg.RootReplayMsgLogs, "gcm", cfg.Log)
 	if err != nil {
 		return err
 	}
 
-	kxReplayLog, err := replaymsglog.New(replaymsglog.Config{
-		Log:     cfg.Log,
-		Prefix:  "kx",
-		RootDir: cfg.RootReplayMsgLogs,
-		MaxSize: 1 << 23, // 8MiB
-	})
+	kxStreams, err := newServerStreams[*types.KXCompleted](cfg.RootReplayMsgLogs, "kx", cfg.Log)
 	if err != nil {
 		return err
 	}
@@ -370,12 +204,9 @@ func (s *Server) InitChatService(cfg ChatServerCfg) error {
 		log: cfg.Log,
 		c:   cfg.Client,
 
-		pmStreams:    &serverStreams[types.ChatService_PMStreamServer]{},
-		gcmStreams:   &serverStreams[types.ChatService_GCMStreamServer]{},
-		kxStreams:    &serverStreams[types.ChatService_KXStreamServer]{},
-		pmReplayLog:  pmReplayLog,
-		gcmReplayLog: gcmReplayLog,
-		kxReplayLog:  kxReplayLog,
+		pmStreams:  pmStreams,
+		gcmStreams: gcmStreams,
+		kxStreams:  kxStreams,
 	}
 	cs.registerOfflineMessageStorageHandlers()
 	s.services.Bind("ChatService", types.ChatServiceDefn(), cs)
