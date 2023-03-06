@@ -16,6 +16,10 @@ import (
 	"github.com/decred/slog"
 )
 
+// readBufferPageSize is the size of the buffer used to read when iterating a
+// file, looking for messages.
+const readBufferPageSize = 4096
+
 // ID is the ID of a message stored in a log. It is monotonically increasing,
 // except when the log is entirely cleared (in which case, the set of IDs is
 // reset).
@@ -138,7 +142,7 @@ func (lf *logFile) readNextMessage(startOffset int64, buf *bytes.Buffer) (int64,
 
 	offset := startOffset
 
-	var b [4096]byte
+	var b [readBufferPageSize]byte
 	_, err := lf.f.Seek(offset, 0)
 	if err != nil {
 		return 0, err
@@ -157,7 +161,7 @@ func (lf *logFile) readNextMessage(startOffset int64, buf *bytes.Buffer) (int64,
 			}
 		}
 		buf.Write(b[:])
-		offset += int64(n + 1)
+		offset += int64(n)
 	}
 }
 

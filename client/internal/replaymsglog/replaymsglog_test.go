@@ -20,7 +20,7 @@ type testStruct struct {
 
 // TestCorrectBehavior ensure the msg logger behaves correctly.
 func TestCorrectBehavior(t *testing.T) {
-	maxSize := 1 << 10 // 1KiB / file
+	maxSize := 1 << 13 // 8KiB / file
 	cfg := Config{
 		RootDir: testutils.TempTestDir(t, "replaymsglog"),
 		Prefix:  "rl",
@@ -30,13 +30,13 @@ func TestCorrectBehavior(t *testing.T) {
 	rl, err := New(cfg)
 	assert.NilErr(t, err)
 
-	sampleFieldVal := strings.Repeat(" ", 100)
+	sampleFieldVal := strings.Repeat("x", 253)
 	v := testStruct{Field: sampleFieldVal}
 	encodedV, _ := json.Marshal(v)
-	vSize := len(encodedV) + 1 + 5 // v + \n + XXXXX suffix in .Field
+	vSize := len(encodedV) + 1 // v + \n
 
 	// Generate enough data for 4 files.
-	nbEntries := (maxSize * 3) / vSize
+	nbEntries := (maxSize*3)/vSize + 3
 	allIDs := make([]ID, 0, nbEntries)
 	for i := 0; i < nbEntries; i++ {
 		v.Field = sampleFieldVal + fmt.Sprintf("%05d", i)
@@ -215,7 +215,7 @@ func TestConcurrentReplayMsgLog(t *testing.T) {
 
 // TestConcurrentReadClear tests that clearing while reading works as intended.
 func TestConcurrentReadClear(t *testing.T) {
-	maxSize := 1 << 10 // 1KiB / file
+	maxSize := 1 << 15 // 32KiB / file
 	cfg := Config{
 		RootDir: testutils.TempTestDir(t, "replaymsglog"),
 		Prefix:  "rl",
@@ -226,9 +226,9 @@ func TestConcurrentReadClear(t *testing.T) {
 	assert.NilErr(t, err)
 
 	// Store a number of entries.
-	const nbEntries = 100
+	const nbEntries = 300
 	var testID ID
-	sampleFieldVal := strings.Repeat(" ", 100)
+	sampleFieldVal := strings.Repeat(" ", 500)
 	for i := 0; i < nbEntries; i++ {
 		v := testStruct{Field: sampleFieldVal + fmt.Sprintf("%05d", i)}
 		id, err := rl.Store(v)
@@ -280,4 +280,80 @@ func TestClearEmptyLog(t *testing.T) {
 	assert.NilErr(t, err)
 	err = rl.ClearUpTo(makeID(100, 200))
 	assert.NilErr(t, err)
+}
+
+// TestReadingAfterBlankPages tests that reading after many pages have been
+// erased in the file does not lead to an error.
+//
+// This exercises an old bug.
+func TestReadingAfterBlankPages(t *testing.T) {
+	maxSize := readBufferPageSize * 6
+	cfg := Config{
+		RootDir: testutils.TempTestDir(t, "replaymsglog"),
+		Prefix:  "rl",
+		MaxSize: uint32(maxSize),
+		Log:     testutils.TestLoggerSys(t, "XXXX"),
+	}
+	rl, err := New(cfg)
+	assert.NilErr(t, err)
+
+	sampleFieldVal := strings.Repeat("x", 253)
+	v := testStruct{Field: sampleFieldVal}
+	encodedV, _ := json.Marshal(v)
+	vSize := len(encodedV) + 1 // v + \n
+
+	// Store enough messages that it will take multiple iterations to
+	// read the file.
+	nbToAdd := (readBufferPageSize * 3) / vSize
+	for i := 0; i < nbToAdd; i++ {
+		_, err := rl.Store(v)
+		assert.NilErr(t, err)
+	}
+
+	// Store the last one and clear up to this point.
+	toClear, err := rl.Store(v)
+	assert.NilErr(t, err)
+	err = rl.ClearUpTo(toClear)
+	assert.NilErr(t, err)
+
+	// Store the entries to test.
+	wantNbEntries := 3
+	var firstID ID
+	for i := 0; i < wantNbEntries; i++ {
+		id, err := rl.Store(v)
+		if i == 0 {
+			firstID = id
+		}
+		assert.NilErr(t, err)
+	}
+
+	// Read all entries, starting at 0. There should be the correct nb of
+	// entries.
+	var nbRead int
+	var readV testStruct
+	err = rl.ReadAfter(0, &readV, func(id ID) error {
+		nbRead += 1
+		return nil
+	})
+	assert.NilErr(t, err)
+	if nbRead != wantNbEntries {
+		t.Fatalf("Unexpected nb of entries read: got %d, want %d",
+			nbRead, wantNbEntries)
+	}
+
+	// Clear the first one
+	err = rl.ClearUpTo(firstID)
+	assert.NilErr(t, err)
+
+	// Read again. There should be one less.
+	nbRead, wantNbEntries = 0, wantNbEntries-1
+	err = rl.ReadAfter(0, &readV, func(id ID) error {
+		nbRead += 1
+		return nil
+	})
+	assert.NilErr(t, err)
+	if nbRead != wantNbEntries {
+		t.Fatalf("Unexpected nb of entries read: got %d, want %d",
+			nbRead, wantNbEntries)
+	}
 }
