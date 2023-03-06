@@ -325,7 +325,7 @@ func (db *DB) DeleteGC(tx ReadWriteTx, gcID zkidentity.ShortID) error {
 	return nil
 }
 
-func (db *DB) ListGCs(tx ReadTx) ([]GCAddressBookEntry, error) {
+func (db *DB) ListGCs(tx ReadTx) ([]rpc.RMGroupList, error) {
 	gcDir := filepath.Join(db.root, groupchatDir)
 	entries, err := os.ReadDir(gcDir)
 	if err != nil {
@@ -335,7 +335,7 @@ func (db *DB) ListGCs(tx ReadTx) ([]GCAddressBookEntry, error) {
 		return nil, err
 	}
 
-	groups := make([]GCAddressBookEntry, 0, len(entries))
+	groups := make([]rpc.RMGroupList, 0, len(entries))
 	for _, v := range entries {
 		if v.IsDir() {
 			continue
@@ -354,9 +354,7 @@ func (db *DB) ListGCs(tx ReadTx) ([]GCAddressBookEntry, error) {
 			continue
 		}
 
-		var entry GCAddressBookEntry
-		RMGroupListToGCEntry(&gc, &entry)
-		groups = append(groups, entry)
+		groups = append(groups, gc)
 	}
 
 	return groups, nil
