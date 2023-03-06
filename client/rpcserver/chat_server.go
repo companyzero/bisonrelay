@@ -1,6 +1,7 @@
 package rpcserver
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"time"
@@ -169,6 +170,56 @@ func (c *chatServer) kxNtfnHandler(ru *client.RemoteUser) {
 
 func (c *chatServer) AckKXCompleted(_ context.Context, req *types.AckRequest, _ *types.AckResponse) error {
 	return c.kxStreams.ack(req.SequenceId)
+}
+
+func marshalOOBPublicIDInvite(invite *rpc.OOBPublicIdentityInvite, res *types.OOBPublicIdentityInvite) *types.OOBPublicIdentityInvite {
+	if res == nil {
+		res = &types.OOBPublicIdentityInvite{}
+	}
+	*res = types.OOBPublicIdentityInvite{
+		InitialRendezvous: invite.InitialRendezvous[:],
+		ResetRendezvous:   invite.ResetRendezvous[:],
+	}
+	if res.Public == nil {
+		res.Public = &types.PublicIdentity{}
+	}
+	*res.Public = types.PublicIdentity{
+		Name:      invite.Public.Name,
+		Nick:      invite.Public.Nick,
+		SigKey:    invite.Public.SigKey[:],
+		Key:       invite.Public.Key[:],
+		Identity:  invite.Public.Identity[:],
+		Digest:    invite.Public.Digest[:],
+		Signature: invite.Public.Signature[:],
+	}
+	return res
+}
+
+func (c *chatServer) WriteNewInvite(_ context.Context, _ *types.WriteNewInviteRequest, res *types.WriteNewInviteResponse) error {
+	b := bytes.NewBuffer(nil)
+	invite, err := c.c.WriteNewInvite(b)
+	if err != nil {
+		return err
+	}
+	*res = types.WriteNewInviteResponse{
+		InviteBytes: b.Bytes(),
+		Invite:      marshalOOBPublicIDInvite(&invite, res.Invite),
+	}
+	return nil
+}
+
+func (c *chatServer) AcceptInvite(_ context.Context, req *types.AcceptInviteRequest, res *types.AcceptInviteResponse) error {
+	b := bytes.NewBuffer(req.InviteBytes)
+	invite, err := c.c.ReadInvite(b)
+	if err != nil {
+		return err
+	}
+	err = c.c.AcceptInvite(invite)
+	if err != nil {
+		return err
+	}
+	res.Invite = marshalOOBPublicIDInvite(&invite, res.Invite)
+	return nil
 }
 
 // registerOfflineMessageStorageHandlers registers the handlers for streams on

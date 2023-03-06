@@ -55,6 +55,61 @@ service ChatService {
   /* AckKXCompleted acks to the server that KXs up to the sequence ID have been
      processed. */
   rpc AckKXCompleted(AckRequest) returns (AckResponse);
+
+  /* WriteNewInvite writes an invite to be sent (out-of-band) to an user to
+     perform KX with. */
+  rpc WriteNewInvite(WriteNewInviteRequest) returns (WriteNewInviteResponse);
+
+  /* AcceptInvite accepts an invite to kx with the user-provided invite. */
+  rpc AcceptInvite(AcceptInviteRequest) returns (AcceptInviteResponse);
+}
+
+/* GCService offers GC-related management operations. */
+service GCService {
+  /* InviteToGC invites an user to join a GC. The local user must have admin
+     privileges in the gc. */
+  rpc InviteToGC(InviteToGCRequest) returns (InviteToGCResponse);
+
+  /* AcceptGCInvite accepts an invitation to join a GC. */
+  rpc AcceptGCInvite(AcceptGCInviteRequest) returns (AcceptGCInviteResponse);
+
+  /* KickFromGC kicks an user from a GC. The local user must have admin
+     privileges in the GC. */
+  rpc KickFromGC(KickFromGCRequest) returns (KickFromGCResponse);
+
+  /* GetGC returns the full definition for a GC. */
+  rpc GetGC(GetGCRequest) returns (GetGCResponse);
+
+  /* List returns a list with all GCs. */
+  rpc List(ListGCsRequest) returns (ListGCsResponse);
+
+  /* ReceivedGCInvites returns a stream that gets sent invitations that remote
+     users make for the local client to join GCs. */
+  rpc ReceivedGCInvites(ReceivedGCInvitesRequest) returns (stream ReceivedGCInvite);
+
+  /* AckReceivedGCInvites acks received gc invite events. */
+  rpc AckReceivedGCInvites(AckRequest) returns (AckResponse);
+
+  /* MembersAdded returns a stream that gets sent events about members added
+     to GCs the local client participates in. */
+  rpc MembersAdded(GCMembersAddedRequest) returns (stream GCMembersAddedEvent);
+
+  /* AckMembersAdded acks received members added events. */
+  rpc AckMembersAdded(AckRequest) returns (AckResponse);
+
+  /* MembersRemoved returns a stream that gets sent events about members removed
+     from GCs the local client participates in. */
+  rpc MembersRemoved(GCMembersRemovedRequest) returns (stream GCMembersRemovedEvent);
+
+  /* AckMembersRemoved acks received members removed events. */
+  rpc AckMembersRemoved(AckRequest) returns (AckResponse);
+
+  /* JoinedGCs returns a stream that gets sent events about GCs the local client
+     has joined. */
+  rpc JoinedGCs(JoinedGCsRequest) returns (stream JoinedGCEvent);
+
+  /* AckJoinedGCs acks received joined gc events. */
+  rpc AckJoinedGCs(AckRequest) returns (AckResponse);
 }
 
 /* PostsService is the service for performing posts-related actions. */
@@ -344,6 +399,192 @@ message KXCompleted {
   string nick = 3;
 }
 
+/* WriteNewInviteRequest is the request to add a new invite. */
+message WriteNewInviteRequest {};
+
+/* WriteNewInviteResponse is an invite that can be sent (out-of-band) to an
+   user the local client wishes to KX with. */
+message WriteNewInviteResponse {
+  /* invite_bytes is the raw invite. */
+  bytes invite_bytes = 1;
+
+  /* invite is the data contained in the raw invite. */
+  OOBPublicIdentityInvite invite = 2;
+};
+
+/* AcceptInviteRequest is the request to accept an invite to KX with an user. */
+message AcceptInviteRequest {
+  /* invite_bytes is the raw invite. */
+  bytes invite_bytes = 1;
+};
+
+/* AcceptInviteResponse is the response to accepting an invite to KX with an user. */
+message AcceptInviteResponse {
+  /* invite is the decoded invite accepted. */
+  OOBPublicIdentityInvite invite = 1;
+};
+
+/* InviteToGCRequest is the request to invite an user to a GC. */
+message InviteToGCRequest {
+  /* gc is the hex-encoded ID or the alias of the GC in the local client. */
+  string gc = 1;
+  /* user is the hex-encoded ID of the user or its nick. */
+  string user = 2;
+};
+
+/* InviteToGCResponse is the response to the request to invite an user to a GC. */
+message InviteToGCResponse {};
+
+/* AcceptGCInviteRequest is the request to accept an invite to join a GC. */
+message AcceptGCInviteRequest {
+  /* invite_id is the id to use to join the invite. */
+  uint64 invite_id = 1;
+};
+
+/* AcceptGCInviteResponse is the response to accept an invite to join a GC. */
+message AcceptGCInviteResponse {};
+
+/* KickFromGCRequest is the request to kick an user from a GC. */
+message KickFromGCRequest {
+  /* gc is the hex-encoded ID or alias of the target GC. */
+  string gc = 1;
+  /* user is the hex-encoded ID or nick of the target user. */
+  string user = 2;
+  /* reason is an optional reason to send for the kick. */
+  string reason = 3;
+};
+
+/* KickFromGCResponse is the response to a kick request. */
+message KickFromGCResponse {};
+
+/* GetGCRequest is the request to get GC datails. */
+message GetGCRequest {
+  /* gc is the hex-encoded ID or alias of the target GC. */
+  string gc = 1;
+};
+
+/* GetGCResponse is the response to a request to get GC details. */
+message GetGCResponse {
+  /* gc is the gc definition. */
+  RMGroupList gc = 1;
+};
+
+/* ListGCsRequest is the request to list GC data. */
+message ListGCsRequest {};
+
+/* ListGCsResponse is the response to a request to list GC data. */
+message ListGCsResponse {
+  /* GCInfo is the summary info for a GC. */
+  message GCInfo {
+    /* id is the unique GC ID. */
+    bytes id = 1;
+    /* name is the local name/alias for the GC. */
+    string name = 2;
+    /* version is the current version the GC definition is on. */
+    uint32 version = 3;
+    /* timestamp is the timestamp of the last modification to the GC definition. */
+    int64 timestamp = 4;
+    /* nb_members is the total number of members in the GC. */
+    uint32 nb_members = 5;
+  }
+
+  /* gcs is the list of GCs for the local client. */
+  repeated GCInfo gcs = 1;
+};
+
+/* ReceivedGCInvitesRequest is the request to start receiving GC invite events. */
+message ReceivedGCInvitesRequest {
+  /* unacked_from specifies to the server the sequence_id of the last received
+     GC invite. Invites received by the server that have a higher sequence_id
+     will be streamed back to the client. */
+  uint64 unacked_from = 1;
+};
+
+/* ReceivedGCInvite is the event sent when an invitation to join a GC is received. */
+message ReceivedGCInvite {
+  /* sequence_id is an opaque sequential ID. */
+  uint64 sequence_id = 1;
+  /* inviter_uid is the UID of the user that sent the invitation. */
+  bytes inviter_uid = 2;
+  /* inviter_nick is the nick of the user that sent the invitation. */
+  string inviter_nick = 3;
+  /* invite_id is the unique invite ID that must be spcecified when accepting
+     the invitation. */
+  uint64 invite_id = 4;
+  /* invite is the invite information. */
+  RMGroupInvite invite = 5;
+};
+
+/* UserAndNick groups users and nicks when used in lists. */
+message UserAndNick {
+  /* uid is the unique user ID. */
+  bytes uid = 1;
+  /* nick is the local alias or nick of the user. */
+  string nick = 2;
+  /* known flags whether the local client is KX'd with this user. */
+  bool known = 3;
+}
+
+/* GCMembersAddedRequest is the request sent to create a stream that receives
+   GC members added events. */
+message GCMembersAddedRequest {
+  /* unacked_from specifies to the server the sequence_id of the last received
+     GC members added event. Events received by the server that have a higher
+     sequence_id will be streamed back to the client. */
+  uint64 unacked_from = 1;
+};
+
+/* GCMembersAddedEvent are events received when a GC has new members. */
+message GCMembersAddedEvent {
+  /* sequence_id is an opaque sequential ID. */
+  uint64 sequence_id = 1;
+  /* gc is the ID of the GC. */
+  bytes gc = 2;
+  /* gc_name is the local alias of the GC. */
+  string gc_name = 3;
+  /* users is the list of users added to the GC. */
+  repeated UserAndNick users = 4;
+};
+
+/* GCMembersRemovedRequest is the request to create a stream to receive GC
+   members removed events. */
+message GCMembersRemovedRequest {
+  /* unacked_from specifies to the server the sequence_id of the last received
+     GC members removed event. Events received by the server that have a higher
+     sequence_id will be streamed back to the client. */
+  uint64 unacked_from = 1;
+};
+
+/* GCMembersRemovedEvent is an event received when members are removed from a GC. */
+message GCMembersRemovedEvent {
+  /* sequence_id is an opaque sequential ID. */
+  uint64 sequence_id = 1;
+  /* gc is the ID of the GC. */
+  bytes gc = 2;
+  /* gc_name is the local alias of the GC. */
+  string gc_name = 3;
+  /* users is the list of users removed from the GC. */
+  repeated UserAndNick users = 4;
+};
+
+/* JoinedGCsRequest is the request to create a stream that receives events about
+   GCs the local client has joined. */
+message JoinedGCsRequest {
+  /* unacked_from specifies to the server the sequence_id of the last received
+     GC joined event. Events received by the server that have a higher
+     sequence_id will be streamed back to the client. */
+  uint64 unacked_from = 1;
+};
+
+/* JoinedGCEvent is the event received when the local client joins a GC. */
+message JoinedGCEvent {
+  /* sequence_id is an opaque sequential ID. */
+  uint64 sequence_id = 1;
+  /* gc is the GC definition. */
+  RMGroupList gc = 2;
+};
+
+
 /******************************************************************************
   *                          Routed RPC Compat
   *****************************************************************************/
@@ -400,4 +641,66 @@ message PostMetadataStatus {
   string link = 3;
   /* attributes is the list of post update attributes. */
   map<string,string> attributes = 4;
+}
+
+/* PublicIdentity is the lowlevel public identity. */
+message PublicIdentity {
+  /* name is the name of the user. */
+  string name = 1;
+  /* nick is the short name/alias of the user. */
+  string nick = 2;
+  /* sig_key is the signature key used to authenticate messages from the user. */
+  bytes sig_key = 3;
+  /* key is the NTRU public key of the user. */
+  bytes key = 4;
+  /* identity is the public ID of the user. */
+  bytes identity = 5;
+  /* digest is a hash of the user's public information. */
+  bytes digest = 6;
+  /* signature is a signature of the user's public information. */
+  bytes signature = 7;
+}
+
+/* OOBPublicIdentityInvite is an out-of-band invite to perform a KX. */
+message OOBPublicIdentityInvite {
+  /* public is the public identity of the inviter. */
+  PublicIdentity public = 1;
+  /* initial_rendezvous is the initial random RV where key exchange will happen. */
+  bytes initial_rendezvous = 2 [json_name="initialrendezvous"];
+  /* reset_rendezvous is the inviter's reset RV in case of ratchet reset actions. */
+  bytes reset_rendezvous = 3 [json_name="resetrendezvous"];
+}
+
+/* RMGroupInvite is the information about an invite to join a GC. */
+message RMGroupInvite {
+  /* id is the ID of the GC. */
+  bytes id = 1;
+  /* name is the name of the GC. */
+  string name = 2;
+  /* token is a random number that must be sent back by the invitee to the inviter. */
+  uint64 token = 3;
+  /* description is a description of the GC. */
+  string description = 4;
+  /* expires is a timestamp for when the invitation expires. */
+  int64 expires = 5;
+  /* version is the version of the current definition of the GC. */
+  uint32 version = 6;
+}
+
+/* RMGroupList is the full definition of a GC. */
+message RMGroupList {
+  /* id is the ID of the GC. */
+  bytes id = 1;
+  /* name is the name of the GC. */
+  string name = 2;
+  /* generation is a monotonically increasing count of GC changes. */
+  uint64 generation = 3;
+  /* timestamp is the timestamp for the last modification of the GC defintions. */
+  int64 timestamp = 4;
+  /* version is the GC rules version. */
+  uint32 version = 5;
+  /* members is the list of user IDs that are in the GC. */
+  repeated bytes members = 6;
+  /* extra_admins is the list of user IDs that are additional admins of the GC. */
+  repeated bytes extra_admins = 7 [json_name="extra_admins"];
 }

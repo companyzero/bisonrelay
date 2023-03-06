@@ -934,8 +934,8 @@ func (c *Client) GetGCBlockList(gcID zkidentity.ShortID) (clientdb.GCBlockList, 
 }
 
 // ListGCs lists all local GCs the user is participating in.
-func (c *Client) ListGCs() ([]clientdb.GCAddressBookEntry, error) {
-	var gcs []clientdb.GCAddressBookEntry
+func (c *Client) ListGCs() ([]rpc.RMGroupList, error) {
+	var gcs []rpc.RMGroupList
 	err := c.dbView(func(tx clientdb.ReadTx) error {
 		var err error
 		gcs, err = c.db.ListGCs(tx)

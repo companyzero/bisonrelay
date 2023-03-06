@@ -129,6 +129,11 @@ type ChatServiceClient interface {
 	// AckKXCompleted acks to the server that KXs up to the sequence ID have been
 	// processed.
 	AckKXCompleted(ctx context.Context, in *AckRequest, out *AckResponse) error
+	// WriteNewInvite writes an invite to be sent (out-of-band) to an user to
+	// perform KX with.
+	WriteNewInvite(ctx context.Context, in *WriteNewInviteRequest, out *WriteNewInviteResponse) error
+	// AcceptInvite accepts an invite to kx with the user-provided invite.
+	AcceptInvite(ctx context.Context, in *AcceptInviteRequest, out *AcceptInviteResponse) error
 }
 
 type client_ChatService struct {
@@ -205,6 +210,16 @@ func (c *client_ChatService) AckKXCompleted(ctx context.Context, in *AckRequest,
 	return c.defn.Methods[method].ClientHandler(c.c, ctx, in, out)
 }
 
+func (c *client_ChatService) WriteNewInvite(ctx context.Context, in *WriteNewInviteRequest, out *WriteNewInviteResponse) error {
+	const method = "WriteNewInvite"
+	return c.defn.Methods[method].ClientHandler(c.c, ctx, in, out)
+}
+
+func (c *client_ChatService) AcceptInvite(ctx context.Context, in *AcceptInviteRequest, out *AcceptInviteResponse) error {
+	const method = "AcceptInvite"
+	return c.defn.Methods[method].ClientHandler(c.c, ctx, in, out)
+}
+
 func NewChatServiceClient(c ClientConn) ChatServiceClient {
 	return &client_ChatService{c: c, defn: ChatServiceDefn()}
 }
@@ -235,6 +250,11 @@ type ChatServiceServer interface {
 	// AckKXCompleted acks to the server that KXs up to the sequence ID have been
 	// processed.
 	AckKXCompleted(context.Context, *AckRequest, *AckResponse) error
+	// WriteNewInvite writes an invite to be sent (out-of-band) to an user to
+	// perform KX with.
+	WriteNewInvite(context.Context, *WriteNewInviteRequest, *WriteNewInviteResponse) error
+	// AcceptInvite accepts an invite to kx with the user-provided invite.
+	AcceptInvite(context.Context, *AcceptInviteRequest, *AcceptInviteResponse) error
 }
 
 type ChatService_PMStreamServer interface {
@@ -385,6 +405,435 @@ func ChatServiceDefn() ServiceDefn {
 				},
 				ClientHandler: func(conn ClientConn, ctx context.Context, request, response proto.Message) error {
 					method := "ChatService.AckKXCompleted"
+					return conn.Request(ctx, method, request, response)
+				},
+			},
+			"WriteNewInvite": {
+				IsStreaming:  false,
+				NewRequest:   func() proto.Message { return new(WriteNewInviteRequest) },
+				NewResponse:  func() proto.Message { return new(WriteNewInviteResponse) },
+				RequestDefn:  func() protoreflect.MessageDescriptor { return new(WriteNewInviteRequest).ProtoReflect().Descriptor() },
+				ResponseDefn: func() protoreflect.MessageDescriptor { return new(WriteNewInviteResponse).ProtoReflect().Descriptor() },
+				Help:         "WriteNewInvite writes an invite to be sent (out-of-band) to an user to perform KX with.",
+				ServerHandler: func(x interface{}, ctx context.Context, request, response proto.Message) error {
+					return x.(ChatServiceServer).WriteNewInvite(ctx, request.(*WriteNewInviteRequest), response.(*WriteNewInviteResponse))
+				},
+				ClientHandler: func(conn ClientConn, ctx context.Context, request, response proto.Message) error {
+					method := "ChatService.WriteNewInvite"
+					return conn.Request(ctx, method, request, response)
+				},
+			},
+			"AcceptInvite": {
+				IsStreaming:  false,
+				NewRequest:   func() proto.Message { return new(AcceptInviteRequest) },
+				NewResponse:  func() proto.Message { return new(AcceptInviteResponse) },
+				RequestDefn:  func() protoreflect.MessageDescriptor { return new(AcceptInviteRequest).ProtoReflect().Descriptor() },
+				ResponseDefn: func() protoreflect.MessageDescriptor { return new(AcceptInviteResponse).ProtoReflect().Descriptor() },
+				Help:         "AcceptInvite accepts an invite to kx with the user-provided invite.",
+				ServerHandler: func(x interface{}, ctx context.Context, request, response proto.Message) error {
+					return x.(ChatServiceServer).AcceptInvite(ctx, request.(*AcceptInviteRequest), response.(*AcceptInviteResponse))
+				},
+				ClientHandler: func(conn ClientConn, ctx context.Context, request, response proto.Message) error {
+					method := "ChatService.AcceptInvite"
+					return conn.Request(ctx, method, request, response)
+				},
+			},
+		},
+	}
+}
+
+// GCServiceClient is the client API for GCService service.
+type GCServiceClient interface {
+	// InviteToGC invites an user to join a GC. The local user must have admin
+	// privileges in the gc.
+	InviteToGC(ctx context.Context, in *InviteToGCRequest, out *InviteToGCResponse) error
+	// AcceptGCInvite accepts an invitation to join a GC.
+	AcceptGCInvite(ctx context.Context, in *AcceptGCInviteRequest, out *AcceptGCInviteResponse) error
+	// KickFromGC kicks an user from a GC. The local user must have admin
+	// privileges in the GC.
+	KickFromGC(ctx context.Context, in *KickFromGCRequest, out *KickFromGCResponse) error
+	// GetGC returns the full definition for a GC.
+	GetGC(ctx context.Context, in *GetGCRequest, out *GetGCResponse) error
+	// List returns a list with all GCs.
+	List(ctx context.Context, in *ListGCsRequest, out *ListGCsResponse) error
+	// ReceivedGCInvites returns a stream that gets sent invitations that remote
+	// users make for the local client to join GCs.
+	ReceivedGCInvites(ctx context.Context, in *ReceivedGCInvitesRequest) (GCService_ReceivedGCInvitesClient, error)
+	// AckReceivedGCInvites acks received gc invite events.
+	AckReceivedGCInvites(ctx context.Context, in *AckRequest, out *AckResponse) error
+	// MembersAdded returns a stream that gets sent events about members added
+	// to GCs the local client participates in.
+	MembersAdded(ctx context.Context, in *GCMembersAddedRequest) (GCService_MembersAddedClient, error)
+	// AckMembersAdded acks received members added events.
+	AckMembersAdded(ctx context.Context, in *AckRequest, out *AckResponse) error
+	// MembersRemoved returns a stream that gets sent events about members removed
+	// from GCs the local client participates in.
+	MembersRemoved(ctx context.Context, in *GCMembersRemovedRequest) (GCService_MembersRemovedClient, error)
+	// AckMembersRemoved acks received members removed events.
+	AckMembersRemoved(ctx context.Context, in *AckRequest, out *AckResponse) error
+	// JoinedGCs returns a stream that gets sent events about GCs the local client
+	// has joined.
+	JoinedGCs(ctx context.Context, in *JoinedGCsRequest) (GCService_JoinedGCsClient, error)
+	// AckJoinedGCs acks received joined gc events.
+	AckJoinedGCs(ctx context.Context, in *AckRequest, out *AckResponse) error
+}
+
+type client_GCService struct {
+	c    ClientConn
+	defn ServiceDefn
+}
+
+func (c *client_GCService) InviteToGC(ctx context.Context, in *InviteToGCRequest, out *InviteToGCResponse) error {
+	const method = "InviteToGC"
+	return c.defn.Methods[method].ClientHandler(c.c, ctx, in, out)
+}
+
+func (c *client_GCService) AcceptGCInvite(ctx context.Context, in *AcceptGCInviteRequest, out *AcceptGCInviteResponse) error {
+	const method = "AcceptGCInvite"
+	return c.defn.Methods[method].ClientHandler(c.c, ctx, in, out)
+}
+
+func (c *client_GCService) KickFromGC(ctx context.Context, in *KickFromGCRequest, out *KickFromGCResponse) error {
+	const method = "KickFromGC"
+	return c.defn.Methods[method].ClientHandler(c.c, ctx, in, out)
+}
+
+func (c *client_GCService) GetGC(ctx context.Context, in *GetGCRequest, out *GetGCResponse) error {
+	const method = "GetGC"
+	return c.defn.Methods[method].ClientHandler(c.c, ctx, in, out)
+}
+
+func (c *client_GCService) List(ctx context.Context, in *ListGCsRequest, out *ListGCsResponse) error {
+	const method = "List"
+	return c.defn.Methods[method].ClientHandler(c.c, ctx, in, out)
+}
+
+type GCService_ReceivedGCInvitesClient interface {
+	Recv(*ReceivedGCInvite) error
+}
+
+func (c *client_GCService) ReceivedGCInvites(ctx context.Context, in *ReceivedGCInvitesRequest) (GCService_ReceivedGCInvitesClient, error) {
+	const method = "ReceivedGCInvites"
+	inner, err := c.defn.Methods[method].ClientStreamHandler(c.c, ctx, in)
+	if err != nil {
+		return nil, err
+	}
+	return streamerImpl[*ReceivedGCInvite]{c: inner}, nil
+}
+
+func (c *client_GCService) AckReceivedGCInvites(ctx context.Context, in *AckRequest, out *AckResponse) error {
+	const method = "AckReceivedGCInvites"
+	return c.defn.Methods[method].ClientHandler(c.c, ctx, in, out)
+}
+
+type GCService_MembersAddedClient interface {
+	Recv(*GCMembersAddedEvent) error
+}
+
+func (c *client_GCService) MembersAdded(ctx context.Context, in *GCMembersAddedRequest) (GCService_MembersAddedClient, error) {
+	const method = "MembersAdded"
+	inner, err := c.defn.Methods[method].ClientStreamHandler(c.c, ctx, in)
+	if err != nil {
+		return nil, err
+	}
+	return streamerImpl[*GCMembersAddedEvent]{c: inner}, nil
+}
+
+func (c *client_GCService) AckMembersAdded(ctx context.Context, in *AckRequest, out *AckResponse) error {
+	const method = "AckMembersAdded"
+	return c.defn.Methods[method].ClientHandler(c.c, ctx, in, out)
+}
+
+type GCService_MembersRemovedClient interface {
+	Recv(*GCMembersRemovedEvent) error
+}
+
+func (c *client_GCService) MembersRemoved(ctx context.Context, in *GCMembersRemovedRequest) (GCService_MembersRemovedClient, error) {
+	const method = "MembersRemoved"
+	inner, err := c.defn.Methods[method].ClientStreamHandler(c.c, ctx, in)
+	if err != nil {
+		return nil, err
+	}
+	return streamerImpl[*GCMembersRemovedEvent]{c: inner}, nil
+}
+
+func (c *client_GCService) AckMembersRemoved(ctx context.Context, in *AckRequest, out *AckResponse) error {
+	const method = "AckMembersRemoved"
+	return c.defn.Methods[method].ClientHandler(c.c, ctx, in, out)
+}
+
+type GCService_JoinedGCsClient interface {
+	Recv(*JoinedGCEvent) error
+}
+
+func (c *client_GCService) JoinedGCs(ctx context.Context, in *JoinedGCsRequest) (GCService_JoinedGCsClient, error) {
+	const method = "JoinedGCs"
+	inner, err := c.defn.Methods[method].ClientStreamHandler(c.c, ctx, in)
+	if err != nil {
+		return nil, err
+	}
+	return streamerImpl[*JoinedGCEvent]{c: inner}, nil
+}
+
+func (c *client_GCService) AckJoinedGCs(ctx context.Context, in *AckRequest, out *AckResponse) error {
+	const method = "AckJoinedGCs"
+	return c.defn.Methods[method].ClientHandler(c.c, ctx, in, out)
+}
+
+func NewGCServiceClient(c ClientConn) GCServiceClient {
+	return &client_GCService{c: c, defn: GCServiceDefn()}
+}
+
+// GCServiceServer is the server API for GCService service.
+type GCServiceServer interface {
+	// InviteToGC invites an user to join a GC. The local user must have admin
+	// privileges in the gc.
+	InviteToGC(context.Context, *InviteToGCRequest, *InviteToGCResponse) error
+	// AcceptGCInvite accepts an invitation to join a GC.
+	AcceptGCInvite(context.Context, *AcceptGCInviteRequest, *AcceptGCInviteResponse) error
+	// KickFromGC kicks an user from a GC. The local user must have admin
+	// privileges in the GC.
+	KickFromGC(context.Context, *KickFromGCRequest, *KickFromGCResponse) error
+	// GetGC returns the full definition for a GC.
+	GetGC(context.Context, *GetGCRequest, *GetGCResponse) error
+	// List returns a list with all GCs.
+	List(context.Context, *ListGCsRequest, *ListGCsResponse) error
+	// ReceivedGCInvites returns a stream that gets sent invitations that remote
+	// users make for the local client to join GCs.
+	ReceivedGCInvites(context.Context, *ReceivedGCInvitesRequest, GCService_ReceivedGCInvitesServer) error
+	// AckReceivedGCInvites acks received gc invite events.
+	AckReceivedGCInvites(context.Context, *AckRequest, *AckResponse) error
+	// MembersAdded returns a stream that gets sent events about members added
+	// to GCs the local client participates in.
+	MembersAdded(context.Context, *GCMembersAddedRequest, GCService_MembersAddedServer) error
+	// AckMembersAdded acks received members added events.
+	AckMembersAdded(context.Context, *AckRequest, *AckResponse) error
+	// MembersRemoved returns a stream that gets sent events about members removed
+	// from GCs the local client participates in.
+	MembersRemoved(context.Context, *GCMembersRemovedRequest, GCService_MembersRemovedServer) error
+	// AckMembersRemoved acks received members removed events.
+	AckMembersRemoved(context.Context, *AckRequest, *AckResponse) error
+	// JoinedGCs returns a stream that gets sent events about GCs the local client
+	// has joined.
+	JoinedGCs(context.Context, *JoinedGCsRequest, GCService_JoinedGCsServer) error
+	// AckJoinedGCs acks received joined gc events.
+	AckJoinedGCs(context.Context, *AckRequest, *AckResponse) error
+}
+
+type GCService_ReceivedGCInvitesServer interface {
+	Send(m *ReceivedGCInvite) error
+}
+
+type GCService_MembersAddedServer interface {
+	Send(m *GCMembersAddedEvent) error
+}
+
+type GCService_MembersRemovedServer interface {
+	Send(m *GCMembersRemovedEvent) error
+}
+
+type GCService_JoinedGCsServer interface {
+	Send(m *JoinedGCEvent) error
+}
+
+func GCServiceDefn() ServiceDefn {
+	return ServiceDefn{
+		Name: "GCService",
+		Methods: map[string]MethodDefn{
+			"InviteToGC": {
+				IsStreaming:  false,
+				NewRequest:   func() proto.Message { return new(InviteToGCRequest) },
+				NewResponse:  func() proto.Message { return new(InviteToGCResponse) },
+				RequestDefn:  func() protoreflect.MessageDescriptor { return new(InviteToGCRequest).ProtoReflect().Descriptor() },
+				ResponseDefn: func() protoreflect.MessageDescriptor { return new(InviteToGCResponse).ProtoReflect().Descriptor() },
+				Help:         "InviteToGC invites an user to join a GC. The local user must have admin privileges in the gc.",
+				ServerHandler: func(x interface{}, ctx context.Context, request, response proto.Message) error {
+					return x.(GCServiceServer).InviteToGC(ctx, request.(*InviteToGCRequest), response.(*InviteToGCResponse))
+				},
+				ClientHandler: func(conn ClientConn, ctx context.Context, request, response proto.Message) error {
+					method := "GCService.InviteToGC"
+					return conn.Request(ctx, method, request, response)
+				},
+			},
+			"AcceptGCInvite": {
+				IsStreaming:  false,
+				NewRequest:   func() proto.Message { return new(AcceptGCInviteRequest) },
+				NewResponse:  func() proto.Message { return new(AcceptGCInviteResponse) },
+				RequestDefn:  func() protoreflect.MessageDescriptor { return new(AcceptGCInviteRequest).ProtoReflect().Descriptor() },
+				ResponseDefn: func() protoreflect.MessageDescriptor { return new(AcceptGCInviteResponse).ProtoReflect().Descriptor() },
+				Help:         "AcceptGCInvite accepts an invitation to join a GC.",
+				ServerHandler: func(x interface{}, ctx context.Context, request, response proto.Message) error {
+					return x.(GCServiceServer).AcceptGCInvite(ctx, request.(*AcceptGCInviteRequest), response.(*AcceptGCInviteResponse))
+				},
+				ClientHandler: func(conn ClientConn, ctx context.Context, request, response proto.Message) error {
+					method := "GCService.AcceptGCInvite"
+					return conn.Request(ctx, method, request, response)
+				},
+			},
+			"KickFromGC": {
+				IsStreaming:  false,
+				NewRequest:   func() proto.Message { return new(KickFromGCRequest) },
+				NewResponse:  func() proto.Message { return new(KickFromGCResponse) },
+				RequestDefn:  func() protoreflect.MessageDescriptor { return new(KickFromGCRequest).ProtoReflect().Descriptor() },
+				ResponseDefn: func() protoreflect.MessageDescriptor { return new(KickFromGCResponse).ProtoReflect().Descriptor() },
+				Help:         "KickFromGC kicks an user from a GC. The local user must have admin  privileges in the GC.",
+				ServerHandler: func(x interface{}, ctx context.Context, request, response proto.Message) error {
+					return x.(GCServiceServer).KickFromGC(ctx, request.(*KickFromGCRequest), response.(*KickFromGCResponse))
+				},
+				ClientHandler: func(conn ClientConn, ctx context.Context, request, response proto.Message) error {
+					method := "GCService.KickFromGC"
+					return conn.Request(ctx, method, request, response)
+				},
+			},
+			"GetGC": {
+				IsStreaming:  false,
+				NewRequest:   func() proto.Message { return new(GetGCRequest) },
+				NewResponse:  func() proto.Message { return new(GetGCResponse) },
+				RequestDefn:  func() protoreflect.MessageDescriptor { return new(GetGCRequest).ProtoReflect().Descriptor() },
+				ResponseDefn: func() protoreflect.MessageDescriptor { return new(GetGCResponse).ProtoReflect().Descriptor() },
+				Help:         "GetGC returns the full definition for a GC.",
+				ServerHandler: func(x interface{}, ctx context.Context, request, response proto.Message) error {
+					return x.(GCServiceServer).GetGC(ctx, request.(*GetGCRequest), response.(*GetGCResponse))
+				},
+				ClientHandler: func(conn ClientConn, ctx context.Context, request, response proto.Message) error {
+					method := "GCService.GetGC"
+					return conn.Request(ctx, method, request, response)
+				},
+			},
+			"List": {
+				IsStreaming:  false,
+				NewRequest:   func() proto.Message { return new(ListGCsRequest) },
+				NewResponse:  func() proto.Message { return new(ListGCsResponse) },
+				RequestDefn:  func() protoreflect.MessageDescriptor { return new(ListGCsRequest).ProtoReflect().Descriptor() },
+				ResponseDefn: func() protoreflect.MessageDescriptor { return new(ListGCsResponse).ProtoReflect().Descriptor() },
+				Help:         "List returns a list with all GCs.",
+				ServerHandler: func(x interface{}, ctx context.Context, request, response proto.Message) error {
+					return x.(GCServiceServer).List(ctx, request.(*ListGCsRequest), response.(*ListGCsResponse))
+				},
+				ClientHandler: func(conn ClientConn, ctx context.Context, request, response proto.Message) error {
+					method := "GCService.List"
+					return conn.Request(ctx, method, request, response)
+				},
+			},
+			"ReceivedGCInvites": {
+				IsStreaming: true,
+				NewRequest:  func() proto.Message { return new(ReceivedGCInvitesRequest) },
+				NewResponse: func() proto.Message { return new(ReceivedGCInvite) },
+				RequestDefn: func() protoreflect.MessageDescriptor {
+					return new(ReceivedGCInvitesRequest).ProtoReflect().Descriptor()
+				},
+				ResponseDefn: func() protoreflect.MessageDescriptor { return new(ReceivedGCInvite).ProtoReflect().Descriptor() },
+				Help:         "ReceivedGCInvites returns a stream that gets sent invitations that remote users make for the local client to join GCs.",
+				ServerStreamHandler: func(x interface{}, ctx context.Context, request proto.Message, stream ServerStream) error {
+					return x.(GCServiceServer).ReceivedGCInvites(ctx, request.(*ReceivedGCInvitesRequest), streamerImpl[*ReceivedGCInvite]{s: stream})
+				},
+				ClientStreamHandler: func(conn ClientConn, ctx context.Context, request proto.Message) (ClientStream, error) {
+					method := "GCService.ReceivedGCInvites"
+					return conn.Stream(ctx, method, request)
+				},
+			},
+			"AckReceivedGCInvites": {
+				IsStreaming:  false,
+				NewRequest:   func() proto.Message { return new(AckRequest) },
+				NewResponse:  func() proto.Message { return new(AckResponse) },
+				RequestDefn:  func() protoreflect.MessageDescriptor { return new(AckRequest).ProtoReflect().Descriptor() },
+				ResponseDefn: func() protoreflect.MessageDescriptor { return new(AckResponse).ProtoReflect().Descriptor() },
+				Help:         "AckReceivedGCInvites acks received gc invite events.",
+				ServerHandler: func(x interface{}, ctx context.Context, request, response proto.Message) error {
+					return x.(GCServiceServer).AckReceivedGCInvites(ctx, request.(*AckRequest), response.(*AckResponse))
+				},
+				ClientHandler: func(conn ClientConn, ctx context.Context, request, response proto.Message) error {
+					method := "GCService.AckReceivedGCInvites"
+					return conn.Request(ctx, method, request, response)
+				},
+			},
+			"MembersAdded": {
+				IsStreaming:  true,
+				NewRequest:   func() proto.Message { return new(GCMembersAddedRequest) },
+				NewResponse:  func() proto.Message { return new(GCMembersAddedEvent) },
+				RequestDefn:  func() protoreflect.MessageDescriptor { return new(GCMembersAddedRequest).ProtoReflect().Descriptor() },
+				ResponseDefn: func() protoreflect.MessageDescriptor { return new(GCMembersAddedEvent).ProtoReflect().Descriptor() },
+				Help:         "MembersAdded returns a stream that gets sent events about members added to GCs the local client participates in.",
+				ServerStreamHandler: func(x interface{}, ctx context.Context, request proto.Message, stream ServerStream) error {
+					return x.(GCServiceServer).MembersAdded(ctx, request.(*GCMembersAddedRequest), streamerImpl[*GCMembersAddedEvent]{s: stream})
+				},
+				ClientStreamHandler: func(conn ClientConn, ctx context.Context, request proto.Message) (ClientStream, error) {
+					method := "GCService.MembersAdded"
+					return conn.Stream(ctx, method, request)
+				},
+			},
+			"AckMembersAdded": {
+				IsStreaming:  false,
+				NewRequest:   func() proto.Message { return new(AckRequest) },
+				NewResponse:  func() proto.Message { return new(AckResponse) },
+				RequestDefn:  func() protoreflect.MessageDescriptor { return new(AckRequest).ProtoReflect().Descriptor() },
+				ResponseDefn: func() protoreflect.MessageDescriptor { return new(AckResponse).ProtoReflect().Descriptor() },
+				Help:         "AckMembersAdded acks received members added events.",
+				ServerHandler: func(x interface{}, ctx context.Context, request, response proto.Message) error {
+					return x.(GCServiceServer).AckMembersAdded(ctx, request.(*AckRequest), response.(*AckResponse))
+				},
+				ClientHandler: func(conn ClientConn, ctx context.Context, request, response proto.Message) error {
+					method := "GCService.AckMembersAdded"
+					return conn.Request(ctx, method, request, response)
+				},
+			},
+			"MembersRemoved": {
+				IsStreaming:  true,
+				NewRequest:   func() proto.Message { return new(GCMembersRemovedRequest) },
+				NewResponse:  func() proto.Message { return new(GCMembersRemovedEvent) },
+				RequestDefn:  func() protoreflect.MessageDescriptor { return new(GCMembersRemovedRequest).ProtoReflect().Descriptor() },
+				ResponseDefn: func() protoreflect.MessageDescriptor { return new(GCMembersRemovedEvent).ProtoReflect().Descriptor() },
+				Help:         "MembersRemoved returns a stream that gets sent events about members removed from GCs the local client participates in.",
+				ServerStreamHandler: func(x interface{}, ctx context.Context, request proto.Message, stream ServerStream) error {
+					return x.(GCServiceServer).MembersRemoved(ctx, request.(*GCMembersRemovedRequest), streamerImpl[*GCMembersRemovedEvent]{s: stream})
+				},
+				ClientStreamHandler: func(conn ClientConn, ctx context.Context, request proto.Message) (ClientStream, error) {
+					method := "GCService.MembersRemoved"
+					return conn.Stream(ctx, method, request)
+				},
+			},
+			"AckMembersRemoved": {
+				IsStreaming:  false,
+				NewRequest:   func() proto.Message { return new(AckRequest) },
+				NewResponse:  func() proto.Message { return new(AckResponse) },
+				RequestDefn:  func() protoreflect.MessageDescriptor { return new(AckRequest).ProtoReflect().Descriptor() },
+				ResponseDefn: func() protoreflect.MessageDescriptor { return new(AckResponse).ProtoReflect().Descriptor() },
+				Help:         "AckMembersRemoved acks received members removed events.",
+				ServerHandler: func(x interface{}, ctx context.Context, request, response proto.Message) error {
+					return x.(GCServiceServer).AckMembersRemoved(ctx, request.(*AckRequest), response.(*AckResponse))
+				},
+				ClientHandler: func(conn ClientConn, ctx context.Context, request, response proto.Message) error {
+					method := "GCService.AckMembersRemoved"
+					return conn.Request(ctx, method, request, response)
+				},
+			},
+			"JoinedGCs": {
+				IsStreaming:  true,
+				NewRequest:   func() proto.Message { return new(JoinedGCsRequest) },
+				NewResponse:  func() proto.Message { return new(JoinedGCEvent) },
+				RequestDefn:  func() protoreflect.MessageDescriptor { return new(JoinedGCsRequest).ProtoReflect().Descriptor() },
+				ResponseDefn: func() protoreflect.MessageDescriptor { return new(JoinedGCEvent).ProtoReflect().Descriptor() },
+				Help:         "JoinedGCs returns a stream that gets sent events about GCs the local client has joined.",
+				ServerStreamHandler: func(x interface{}, ctx context.Context, request proto.Message, stream ServerStream) error {
+					return x.(GCServiceServer).JoinedGCs(ctx, request.(*JoinedGCsRequest), streamerImpl[*JoinedGCEvent]{s: stream})
+				},
+				ClientStreamHandler: func(conn ClientConn, ctx context.Context, request proto.Message) (ClientStream, error) {
+					method := "GCService.JoinedGCs"
+					return conn.Stream(ctx, method, request)
+				},
+			},
+			"AckJoinedGCs": {
+				IsStreaming:  false,
+				NewRequest:   func() proto.Message { return new(AckRequest) },
+				NewResponse:  func() proto.Message { return new(AckResponse) },
+				RequestDefn:  func() protoreflect.MessageDescriptor { return new(AckRequest).ProtoReflect().Descriptor() },
+				ResponseDefn: func() protoreflect.MessageDescriptor { return new(AckResponse).ProtoReflect().Descriptor() },
+				Help:         "AckJoinedGCs acks received joined gc events.",
+				ServerHandler: func(x interface{}, ctx context.Context, request, response proto.Message) error {
+					return x.(GCServiceServer).AckJoinedGCs(ctx, request.(*AckRequest), response.(*AckResponse))
+				},
+				ClientHandler: func(conn ClientConn, ctx context.Context, request, response proto.Message) error {
+					method := "GCService.AckJoinedGCs"
 					return conn.Request(ctx, method, request, response)
 				},
 			},
@@ -793,6 +1242,110 @@ var help_messages = map[string]map[string]string{
 		"uid":         "uid is the raw ID of the KX'd user.",
 		"nick":        "nick is the nick of the KX'd user.",
 	},
+	"WriteNewInviteRequest": {
+		"@": "WriteNewInviteRequest is the request to add a new invite.",
+	},
+	"WriteNewInviteResponse": {
+		"@":            "WriteNewInviteResponse is an invite that can be sent (out-of-band) to an user the local client wishes to KX with.",
+		"invite_bytes": "invite_bytes is the raw invite.",
+		"invite":       "invite is the data contained in the raw invite.",
+	},
+	"AcceptInviteRequest": {
+		"@":            "AcceptInviteRequest is the request to accept an invite to KX with an user.",
+		"invite_bytes": "invite_bytes is the raw invite.",
+	},
+	"AcceptInviteResponse": {
+		"@":      "AcceptInviteResponse is the response to accepting an invite to KX with an user.",
+		"invite": "invite is the decoded invite accepted.",
+	},
+	"InviteToGCRequest": {
+		"@":    "InviteToGCRequest is the request to invite an user to a GC.",
+		"gc":   "gc is the hex-encoded ID or the alias of the GC in the local client.",
+		"user": "user is the hex-encoded ID of the user or its nick.",
+	},
+	"InviteToGCResponse": {
+		"@": "InviteToGCResponse is the response to the request to invite an user to a GC.",
+	},
+	"AcceptGCInviteRequest": {
+		"@":         "AcceptGCInviteRequest is the request to accept an invite to join a GC.",
+		"invite_id": "invite_id is the id to use to join the invite.",
+	},
+	"AcceptGCInviteResponse": {
+		"@": "AcceptGCInviteResponse is the response to accept an invite to join a GC.",
+	},
+	"KickFromGCRequest": {
+		"@":      "KickFromGCRequest is the request to kick an user from a GC.",
+		"gc":     "gc is the hex-encoded ID or alias of the target GC.",
+		"user":   "user is the hex-encoded ID or nick of the target user.",
+		"reason": "reason is an optional reason to send for the kick.",
+	},
+	"KickFromGCResponse": {
+		"@": "KickFromGCResponse is the response to a kick request.",
+	},
+	"GetGCRequest": {
+		"@":  "GetGCRequest is the request to get GC datails.",
+		"gc": "gc is the hex-encoded ID or alias of the target GC.",
+	},
+	"GetGCResponse": {
+		"@":  "GetGCResponse is the response to a request to get GC details.",
+		"gc": "gc is the gc definition.",
+	},
+	"ListGCsRequest": {
+		"@": "ListGCsRequest is the request to list GC data.",
+	},
+	"ListGCsResponse": {
+		"@":   "ListGCsResponse is the response to a request to list GC data.",
+		"gcs": "gcs is the list of GCs for the local client.",
+	},
+	"ReceivedGCInvitesRequest": {
+		"@":            "ReceivedGCInvitesRequest is the request to start receiving GC invite events.",
+		"unacked_from": "unacked_from specifies to the server the sequence_id of the last received GC invite. Invites received by the server that have a higher sequence_id will be streamed back to the client.",
+	},
+	"ReceivedGCInvite": {
+		"@":            "ReceivedGCInvite is the event sent when an invitation to join a GC is received.",
+		"sequence_id":  "sequence_id is an opaque sequential ID.",
+		"inviter_uid":  "inviter_uid is the UID of the user that sent the invitation.",
+		"inviter_nick": "inviter_nick is the nick of the user that sent the invitation.",
+		"invite_id":    "invite_id is the unique invite ID that must be spcecified when accepting the invitation.",
+		"invite":       "invite is the invite information.",
+	},
+	"UserAndNick": {
+		"@":     "UserAndNick groups users and nicks when used in lists.",
+		"uid":   "uid is the unique user ID.",
+		"nick":  "nick is the local alias or nick of the user.",
+		"known": "known flags whether the local client is KX'd with this user.",
+	},
+	"GCMembersAddedRequest": {
+		"@":            "GCMembersAddedRequest is the request sent to create a stream that receives GC members added events.",
+		"unacked_from": "unacked_from specifies to the server the sequence_id of the last received GC members added event. Events received by the server that have a higher sequence_id will be streamed back to the client.",
+	},
+	"GCMembersAddedEvent": {
+		"@":           "GCMembersAddedEvent are events received when a GC has new members.",
+		"sequence_id": "sequence_id is an opaque sequential ID.",
+		"gc":          "gc is the ID of the GC.",
+		"gc_name":     "gc_name is the local alias of the GC.",
+		"users":       "users is the list of users added to the GC.",
+	},
+	"GCMembersRemovedRequest": {
+		"@":            "GCMembersRemovedRequest is the request to create a stream to receive GC members removed events.",
+		"unacked_from": "unacked_from specifies to the server the sequence_id of the last received GC members removed event. Events received by the server that have a higher sequence_id will be streamed back to the client.",
+	},
+	"GCMembersRemovedEvent": {
+		"@":           "GCMembersRemovedEvent is an event received when members are removed from a GC.",
+		"sequence_id": "sequence_id is an opaque sequential ID.",
+		"gc":          "gc is the ID of the GC.",
+		"gc_name":     "gc_name is the local alias of the GC.",
+		"users":       "users is the list of users removed from the GC.",
+	},
+	"JoinedGCsRequest": {
+		"@":            "JoinedGCsRequest is the request to create a stream that receives events about GCs the local client has joined.",
+		"unacked_from": "unacked_from specifies to the server the sequence_id of the last received GC joined event. Events received by the server that have a higher sequence_id will be streamed back to the client.",
+	},
+	"JoinedGCEvent": {
+		"@":           "JoinedGCEvent is the event received when the local client joins a GC.",
+		"sequence_id": "sequence_id is an opaque sequential ID.",
+		"gc":          "gc is the GC definition.",
+	},
 	"RMPrivateMessage": {
 		"@":       "RMPrivateMessage is the network-level routed private message.",
 		"message": "message is the private message payload.",
@@ -816,5 +1369,40 @@ var help_messages = map[string]map[string]string{
 		"from":       "from is the UID of the original status creator.",
 		"link":       "link is the ID of the post.",
 		"attributes": "attributes is the list of post update attributes.",
+	},
+	"PublicIdentity": {
+		"@":         "PublicIdentity is the lowlevel public identity.",
+		"name":      "name is the name of the user.",
+		"nick":      "nick is the short name/alias of the user.",
+		"sig_key":   "sig_key is the signature key used to authenticate messages from the user.",
+		"key":       "key is the NTRU public key of the user.",
+		"identity":  "identity is the public ID of the user.",
+		"digest":    "digest is a hash of the user's public information.",
+		"signature": "signature is a signature of the user's public information.",
+	},
+	"OOBPublicIdentityInvite": {
+		"@":                  "OOBPublicIdentityInvite is an out-of-band invite to perform a KX.",
+		"public":             "public is the public identity of the inviter.",
+		"initial_rendezvous": "initial_rendezvous is the initial random RV where key exchange will happen.",
+		"reset_rendezvous":   "reset_rendezvous is the inviter's reset RV in case of ratchet reset actions.",
+	},
+	"RMGroupInvite": {
+		"@":           "RMGroupInvite is the information about an invite to join a GC.",
+		"id":          "id is the ID of the GC.",
+		"name":        "name is the name of the GC.",
+		"token":       "token is a random number that must be sent back by the invitee to the inviter.",
+		"description": "description is a description of the GC.",
+		"expires":     "expires is a timestamp for when the invitation expires.",
+		"version":     "version is the version of the current definition of the GC.",
+	},
+	"RMGroupList": {
+		"@":            "RMGroupList is the full definition of a GC.",
+		"id":           "id is the ID of the GC.",
+		"name":         "name is the name of the GC.",
+		"generation":   "generation is a monotonically increasing count of GC changes.",
+		"timestamp":    "timestamp is the timestamp for the last modification of the GC defintions.",
+		"version":      "version is the GC rules version.",
+		"members":      "members is the list of user IDs that are in the GC.",
+		"extra_admins": "extra_admins is the list of user IDs that are additional admins of the GC.",
 	},
 }

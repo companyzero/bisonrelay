@@ -4,7 +4,7 @@ package types
 // package.
 func Services() []ServiceDefn {
 	return []ServiceDefn{VersionServiceDefn(), ChatServiceDefn(),
-		PostsServiceDefn(), PaymentsServiceDefn()}
+		PostsServiceDefn(), PaymentsServiceDefn(), GCServiceDefn()}
 }
 
 // HelpForMessage returns the top-level help defined for the given proto
