@@ -135,6 +135,10 @@ func (mws *mainWindowState) updateCompletion() {
 	mws.completeOpts = genCompleterOpts(cl, mws.as)
 
 	args := parseCommandLinePreserveQuotes(cl)
+	if len(args) == 0 {
+		// Nothing to complete.
+		return
+	}
 
 	var lastArgRepl string
 	if len(mws.completeOpts) == 1 {

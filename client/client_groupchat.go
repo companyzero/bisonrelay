@@ -111,6 +111,19 @@ func (c *Client) GCIDByName(name string) (zkidentity.ShortID, error) {
 	return id, nil
 }
 
+// GCsWithPrefix returns a list of GC aliases that have the specified prefix.
+func (c *Client) GCsWithPrefix(prefix string) []string {
+	var res []string
+	c.gcAliasMtx.Lock()
+	for alias := range c.gcAliasMap {
+		if strings.HasPrefix(alias, prefix) {
+			res = append(res, alias)
+		}
+	}
+	c.gcAliasMtx.Unlock()
+	return res
+}
+
 // NewGroupChat creates a new gc with the local user as admin.
 func (c *Client) NewGroupChat(name string) (zkidentity.ShortID, error) {
 	var id zkidentity.ShortID

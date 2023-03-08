@@ -130,6 +130,40 @@ func cmdCompleter(cmds []tuicmd, arg string, topLevel bool) []string {
 	return res
 }
 
+// addressbookCompleter returns completions for both nicks and GCs that have a
+// prefix.
+func addressbookCompleter(arg string, as *appState) []string {
+	var res []string
+	if nicks := as.c.NicksWithPrefix(arg); len(nicks) > 0 {
+		res = append(res, nicks...)
+	}
+	if aliases := as.c.GCsWithPrefix(arg); len(aliases) > 0 {
+		res = append(res, aliases...)
+	}
+	as.collator.SortStrings(res)
+	return res
+}
+
+// nickCompleter returns completions for nicks that have a prefix.
+func nickCompleter(arg string, as *appState) []string {
+	var res []string
+	if nicks := as.c.NicksWithPrefix(arg); len(nicks) > 0 {
+		res = append(res, nicks...)
+	}
+	as.collator.SortStrings(res)
+	return res
+}
+
+// gcCompleter returns completions for GCs that have a prefix.
+func gcCompleter(arg string, as *appState) []string {
+	var res []string
+	if aliases := as.c.GCsWithPrefix(arg); len(aliases) > 0 {
+		res = append(res, aliases...)
+	}
+	as.collator.SortStrings(res)
+	return res
+}
+
 // subcmdNeededHandler is used on top-level commands that only work with a
 // subcommand.
 func subcmdNeededHandler(args []string, as *appState) error {
@@ -538,6 +572,15 @@ var gcCommands = []tuicmd{
 			go as.inviteToGC(cw, args[1], uid)
 			return nil
 		},
+		completer: func(args []string, arg string, as *appState) []string {
+			if len(args) == 0 {
+				return gcCompleter(arg, as)
+			}
+			if len(args) == 1 {
+				return nickCompleter(arg, as)
+			}
+			return nil
+		},
 	},
 	{
 		cmd:     "msg",
@@ -565,6 +608,12 @@ var gcCommands = []tuicmd{
 			}
 			cw := as.findOrNewGCWindow(gcID)
 			go as.pm(cw, msg)
+			return nil
+		},
+		completer: func(args []string, arg string, as *appState) []string {
+			if len(args) == 0 {
+				return gcCompleter(arg, as)
+			}
 			return nil
 		},
 	},
@@ -797,6 +846,15 @@ var gcCommands = []tuicmd{
 			go as.kickFromGC(gcWin, uid, nick, reason)
 			return nil
 		},
+		completer: func(args []string, arg string, as *appState) []string {
+			if len(args) == 0 {
+				return gcCompleter(arg, as)
+			}
+			if len(args) == 1 {
+				return nickCompleter(arg, as)
+			}
+			return nil
+		},
 	}, {
 		cmd:   "part",
 		usage: "<gc> [<reason>]",
@@ -820,6 +878,12 @@ var gcCommands = []tuicmd{
 			go as.partFromGC(gcWin, reason)
 			return nil
 		},
+		completer: func(args []string, arg string, as *appState) []string {
+			if len(args) == 0 {
+				return gcCompleter(arg, as)
+			}
+			return nil
+		},
 	}, {
 		cmd:   "kill",
 		usage: "<gc> [<reason>]",
@@ -841,6 +905,12 @@ var gcCommands = []tuicmd{
 			}
 			gcWin := as.findOrNewGCWindow(gcID)
 			go as.killGC(gcWin, reason)
+			return nil
+		},
+		completer: func(args []string, arg string, as *appState) []string {
+			if len(args) == 0 {
+				return gcCompleter(arg, as)
+			}
 			return nil
 		},
 	}, {
@@ -876,6 +946,15 @@ var gcCommands = []tuicmd{
 			as.repaintIfActive(gcWin)
 			return nil
 		},
+		completer: func(args []string, arg string, as *appState) []string {
+			if len(args) == 0 {
+				return gcCompleter(arg, as)
+			}
+			if len(args) == 1 {
+				return nickCompleter(arg, as)
+			}
+			return nil
+		},
 	}, {
 		cmd:           "unignore",
 		usableOffline: true,
@@ -906,6 +985,15 @@ var gcCommands = []tuicmd{
 			as.repaintIfActive(gcWin)
 			return nil
 		},
+		completer: func(args []string, arg string, as *appState) []string {
+			if len(args) == 0 {
+				return gcCompleter(arg, as)
+			}
+			if len(args) == 1 {
+				return nickCompleter(arg, as)
+			}
+			return nil
+		},
 	}, {
 		cmd:           "alias",
 		usableOffline: true,
@@ -932,6 +1020,12 @@ var gcCommands = []tuicmd{
 			gcWin.newInternalMsg(fmt.Sprintf("Renamed GC to %s", newAlias))
 			gcWin.alias = newAlias // FIXME: this is racing.
 			as.repaintIfActive(gcWin)
+			return nil
+		},
+		completer: func(args []string, arg string, as *appState) []string {
+			if len(args) == 0 {
+				return gcCompleter(arg, as)
+			}
 			return nil
 		},
 	}, {
@@ -978,6 +1072,15 @@ var gcCommands = []tuicmd{
 
 			return nil
 		},
+		completer: func(args []string, arg string, as *appState) []string {
+			if len(args) == 0 {
+				return gcCompleter(arg, as)
+			}
+			if len(args) == 1 {
+				return nickCompleter(arg, as)
+			}
+			return nil
+		},
 	},
 }
 
@@ -993,7 +1096,13 @@ var ftCommands = []tuicmd{
 			"By default, the passed cost is *added* to the estimated upload cost. Use \"=<amount>\" to directly specify the full cost",
 		},
 		completer: func(args []string, arg string, as *appState) []string {
-			return fileCompleter(arg)
+			if len(args) == 0 {
+				return fileCompleter(arg)
+			}
+			if len(args) == 2 {
+				return nickCompleter(arg, as)
+			}
+			return nil
 		},
 		handler: func(args []string, as *appState) error {
 			if len(args) < 1 {
@@ -1085,6 +1194,12 @@ var ftCommands = []tuicmd{
 			go as.listUserContent(cw, args[1], filter)
 			return nil
 		},
+		completer: func(args []string, arg string, as *appState) []string {
+			if len(args) == 0 {
+				return nickCompleter(arg, as)
+			}
+			return nil
+		},
 	}, {
 		cmd:   "get",
 		usage: "<nick> [<filename> | <FID>]",
@@ -1108,6 +1223,12 @@ var ftCommands = []tuicmd{
 
 			cw := as.findOrNewChatWindow(uid, args[0])
 			go as.getUserContent(cw, args[1])
+			return nil
+		},
+		completer: func(args []string, arg string, as *appState) []string {
+			if len(args) == 0 {
+				return nickCompleter(arg, as)
+			}
 			return nil
 		},
 	}, {
@@ -1191,6 +1312,9 @@ var ftCommands = []tuicmd{
 		usage: "<user> <filename>",
 		descr: "Send a file to user",
 		completer: func(args []string, arg string, as *appState) []string {
+			if len(args) == 0 {
+				return nickCompleter(arg, as)
+			}
 			if len(args) == 1 {
 				return fileCompleter(arg)
 			}
@@ -1259,6 +1383,12 @@ var postCommands = []tuicmd{
 			go as.subscribeToPosts(uid)
 			return nil
 		},
+		completer: func(args []string, arg string, as *appState) []string {
+			if len(args) == 0 {
+				return nickCompleter(arg, as)
+			}
+			return nil
+		},
 	}, {
 		cmd:     "unsubscribe",
 		aliases: []string{"unsub"},
@@ -1273,6 +1403,12 @@ var postCommands = []tuicmd{
 				return err
 			}
 			go as.unsubscribeToPosts(uid)
+			return nil
+		},
+		completer: func(args []string, arg string, as *appState) []string {
+			if len(args) == 0 {
+				return nickCompleter(arg, as)
+			}
 			return nil
 		},
 	}, {
@@ -1300,6 +1436,12 @@ var postCommands = []tuicmd{
 			as.repaintIfActive(cw)
 			return nil
 		},
+		completer: func(args []string, arg string, as *appState) []string {
+			if len(args) == 0 {
+				return nickCompleter(arg, as)
+			}
+			return nil
+		},
 	}, {
 		cmd:   "get",
 		usage: "<nick> <post id>",
@@ -1324,6 +1466,12 @@ var postCommands = []tuicmd{
 
 			cw := as.findOrNewChatWindow(uid, args[0])
 			go as.getUserPost(cw, pid)
+			return nil
+		},
+		completer: func(args []string, arg string, as *appState) []string {
+			if len(args) == 0 {
+				return nickCompleter(arg, as)
+			}
 			return nil
 		},
 	}, {
@@ -1356,6 +1504,12 @@ var postCommands = []tuicmd{
 
 			cw := as.findOrNewChatWindow(toUID, args[2])
 			go as.relayPost(fromUID, pid, cw)
+			return nil
+		},
+		completer: func(args []string, arg string, as *appState) []string {
+			if len(args) == 0 || len(args) == 2 {
+				return nickCompleter(arg, as)
+			}
 			return nil
 		},
 	},
@@ -2055,6 +2209,12 @@ var commands = []tuicmd{
 			}
 			return as.c.Ignore(uid, true)
 		},
+		completer: func(args []string, arg string, as *appState) []string {
+			if len(args) == 0 {
+				return nickCompleter(arg, as)
+			}
+			return nil
+		},
 	}, {
 		cmd:           "unignore",
 		usableOffline: true,
@@ -2069,6 +2229,12 @@ var commands = []tuicmd{
 				return err
 			}
 			return as.c.Ignore(uid, false)
+		},
+		completer: func(args []string, arg string, as *appState) []string {
+			if len(args) == 0 {
+				return nickCompleter(arg, as)
+			}
+			return nil
 		},
 	}, {
 		cmd:   "block",
@@ -2088,6 +2254,12 @@ var commands = []tuicmd{
 			}
 			cw := as.findOrNewChatWindow(uid, args[0])
 			go as.block(cw, uid)
+			return nil
+		},
+		completer: func(args []string, arg string, as *appState) []string {
+			if len(args) == 0 {
+				return nickCompleter(arg, as)
+			}
 			return nil
 		},
 	}, {
@@ -2114,6 +2286,12 @@ var commands = []tuicmd{
 				return usageError{msg: "nick cannot be empty"}
 			}
 			return as.openChatWindow(args[0])
+		},
+		completer: func(args []string, arg string, as *appState) []string {
+			if len(args) == 0 {
+				return addressbookCompleter(arg, as)
+			}
+			return nil
 		},
 	},
 	{
@@ -2242,6 +2420,12 @@ var commands = []tuicmd{
 			})
 			return nil
 		},
+		completer: func(args []string, arg string, as *appState) []string {
+			if len(args) == 1 {
+				return nickCompleter(arg, as)
+			}
+			return nil
+		},
 	}, {
 		cmd:     "msg",
 		usage:   "<nick or id> <message>",
@@ -2264,6 +2448,12 @@ var commands = []tuicmd{
 			_, msg := popNArgs(rawCmd, 2) // cmd + nick
 			cw := as.findOrNewChatWindow(ru.ID(), ru.Nick())
 			go as.pm(cw, msg)
+			return nil
+		},
+		completer: func(args []string, arg string, as *appState) []string {
+			if len(args) == 0 {
+				return nickCompleter(arg, as)
+			}
 			return nil
 		},
 	}, {
@@ -2366,6 +2556,12 @@ var commands = []tuicmd{
 			go as.payTip(cw, dcrAmount)
 			return nil
 		},
+		completer: func(args []string, arg string, as *appState) []string {
+			if len(args) == 0 {
+				return nickCompleter(arg, as)
+			}
+			return nil
+		},
 	}, {
 		cmd:   "ft",
 		usage: "[sub]",
@@ -2418,6 +2614,12 @@ var commands = []tuicmd{
 			}
 			cw := as.findOrNewChatWindow(uid, args[0])
 			go as.requestRatchetReset(cw)
+			return nil
+		},
+		completer: func(args []string, arg string, as *appState) []string {
+			if len(args) == 0 {
+				return nickCompleter(arg, as)
+			}
 			return nil
 		},
 	}, {
@@ -2510,6 +2712,12 @@ var commands = []tuicmd{
 
 			return nil
 		},
+		completer: func(args []string, arg string, as *appState) []string {
+			if len(args) == 0 || len(args) == 1 {
+				return nickCompleter(arg, as)
+			}
+			return nil
+		},
 	}, {
 		cmd:     "treset",
 		aliases: []string{"tr", "transreset"},
@@ -2533,6 +2741,12 @@ var commands = []tuicmd{
 			medCW := as.findOrNewChatWindow(mediator, args[0])
 			targetCW := as.findOrNewChatWindow(target, args[1])
 			go as.requestTransReset(medCW, targetCW)
+			return nil
+		},
+		completer: func(args []string, arg string, as *appState) []string {
+			if len(args) == 0 || len(args) == 1 {
+				return nickCompleter(arg, as)
+			}
 			return nil
 		},
 	}, {
@@ -2560,6 +2774,12 @@ var commands = []tuicmd{
 			}
 
 			as.cwHelpMsg("Renamed user %s to %q", uid, newNick)
+			return nil
+		},
+		completer: func(args []string, arg string, as *appState) []string {
+			if len(args) == 0 {
+				return nickCompleter(arg, as)
+			}
 			return nil
 		},
 	}, {
