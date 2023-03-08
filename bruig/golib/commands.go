@@ -103,6 +103,7 @@ const (
 	CTResendGCList                    = 0x67
 	CTGCUpgradeVersion                = 0x68
 	CTGCModifyAdmins                  = 0x69
+	CTGetKXSearch                     = 0x6a
 
 	NTInviteReceived         = 0x1001
 	NTInviteAccepted         = 0x1002

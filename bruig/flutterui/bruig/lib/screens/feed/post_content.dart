@@ -4,10 +4,8 @@ import 'package:bruig/components/md_elements.dart';
 import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/models/feed.dart';
-import 'package:golib_plugin/definitions.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/golib_plugin.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -24,9 +22,9 @@ class PostContentScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<ClientModel>(
-        builder: (context, client, child) =>
-            _PostContentScreenForArgs(args, client, tabChange));
+    return Consumer2<ClientModel, FeedModel>(
+        builder: (context, client, feed, child) =>
+            _PostContentScreenForArgs(args, client, tabChange, feed));
   }
 }
 
@@ -34,7 +32,9 @@ class _PostContentScreenForArgs extends StatefulWidget {
   final PostContentScreenArgs args;
   final ClientModel client;
   final Function tabChange;
-  const _PostContentScreenForArgs(this.args, this.client, this.tabChange,
+  final FeedModel feed;
+  const _PostContentScreenForArgs(
+      this.args, this.client, this.tabChange, this.feed,
       {Key? key})
       : super(key: key);
 
@@ -227,6 +227,9 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
   String markdownData = "";
   Iterable<FeedCommentModel> comments = [];
   TextEditingController newCommentCtrl = TextEditingController();
+  bool knowsAuthor = false;
+  bool isKXSearchingAuthor = false;
+  bool sentSubscribeAttempt = false;
 
   void loadContent() async {
     setState(() {
@@ -237,6 +240,22 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
     try {
       await widget.args.post.readPost();
       await widget.args.post.readComments();
+
+      bool newIsKxSearching = false;
+      var summ = widget.args.post.summ;
+      var newKnowsAuthor = widget.client.getExistingChat(summ.authorID) != null;
+      try {
+        if (summ.authorID != summ.from && !newKnowsAuthor) {
+          var kxSearch = await Golib.getKXSearch(summ.authorID);
+          newIsKxSearching = kxSearch.target == summ.authorID;
+        }
+      } catch (exception) {
+        // ignore as it means we're not KX searching the author.
+      }
+      setState(() {
+        knowsAuthor = newKnowsAuthor;
+        isKXSearchingAuthor = newIsKxSearching;
+      });
     } catch (exception) {
       showErrorSnackbar(context, 'Unable to load content: $exception');
     } finally {
@@ -245,6 +264,18 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
   }
 
   void postUpdated() {
+    if (widget.args.post.replacedByAuthorVersion) {
+      // Relayed post replaced by the author version. Switch to the author version.
+      var summ = widget.args.post.summ;
+      var post = widget.feed.getPost(summ.authorID, summ.id);
+      if (post != null) {
+        (() async {
+          await post.readPost();
+          await post.readComments();
+          widget.tabChange(0, PostContentScreenArgs(post));
+        })();
+      }
+    }
     setState(() {
       markdownData = widget.args.post.content;
       comments = widget.args.post.comments;
@@ -271,6 +302,9 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
     try {
       await Golib.kxSearchPostAuthor(
           widget.args.post.summ.from, widget.args.post.summ.id);
+      setState(() {
+        isKXSearchingAuthor = true;
+      });
     } catch (exception) {
       if (!mounted) {
         return;
@@ -310,6 +344,16 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
     }
   }
 
+  Future<void> subscribeAndFetchPost() async {
+    try {
+      var summ = widget.args.post.summ;
+      await Golib.subscribeToPostsAndFetch(summ.authorID, summ.id);
+      setState(() => sentSubscribeAttempt = true);
+    } catch (exception) {
+      showErrorSnackbar(context, "Unable to subscribe to posts: $exception");
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (loading) {
@@ -346,7 +390,8 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
     }
 
     var relayerID = widget.args.post.summ.from;
-    if (relayerID != authorID) {
+    var relayedByAuthor = relayerID == authorID;
+    if (!relayedByAuthor) {
       var relayerChat = widget.client.getExistingChat(relayerID);
       if (relayerChat != null) {
         relayer = relayerChat.nick;
@@ -364,10 +409,10 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
             ? hightLightTextColor
             : darkTextColor;
 
-    List<Widget> newCommentsW = [];
+    List<Widget> commentsWidgets = [];
     var newComments = widget.args.post.newComments;
-    if (newComments.isNotEmpty) {
-      newCommentsW = [
+    if (relayedByAuthor) {
+      commentsWidgets.addAll([
         const SizedBox(height: 20),
         Row(children: [
           Expanded(
@@ -378,7 +423,7 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
             indent: 10, //spacing at the start of divider
             endIndent: 7, //spacing at the end of divider
           )),
-          Text("Unreplicated Comments",
+          Text("Comments",
               textAlign: TextAlign.center,
               style: TextStyle(color: darkTextColor, fontSize: 11)),
           Expanded(
@@ -390,12 +435,140 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
             endIndent: 10, //spacing at the end of divider
           )),
         ]),
-        ...newComments.map((e) => Container(
-              padding: const EdgeInsets.all(10),
-              child: Text(e, style: TextStyle(fontSize: 11, color: textColor)),
+        const SizedBox(height: 20),
+        ...comments.map(
+            (e) => _CommentW(widget.args.post, e, sendReply, widget.client)),
+        const SizedBox(height: 20),
+        newComments.isNotEmpty
+            ? Column(children: [
+                Row(children: [
+                  Expanded(
+                      child: Divider(
+                    color: dividerColor, //color of divider
+                    height: 10, //height spacing of divider
+                    thickness: 1, //thickness of divier line
+                    indent: 10, //spacing at the start of divider
+                    endIndent: 7, //spacing at the end of divider
+                  )),
+                  Text("Unreplicated Comments",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: darkTextColor, fontSize: 11)),
+                  Expanded(
+                      child: Divider(
+                    color: dividerColor, //color of divider
+                    height: 10, //height spacing of divider
+                    thickness: 1, //thickness of divier line
+                    indent: 7, //spacing at the start of divider
+                    endIndent: 10, //spacing at the end of divider
+                  )),
+                ]),
+                Container(
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 10, horizontal: 40),
+                    child: Text(
+                        """Unreplicated comments are those that have been sent to the post's relayer for replication but which the relayer has not yet sent back to the local client. Comment replication requires the remote user to be online so it may take some time until the comment is received back.""",
+                        style: TextStyle(
+                            color: hightLightTextColor,
+                            fontSize: 11,
+                            letterSpacing: 1))),
+                ...newComments.map((e) => Container(
+                      padding: const EdgeInsets.all(10),
+                      child: Text(e,
+                          style: TextStyle(fontSize: 11, color: textColor)),
+                    )),
+              ])
+            : const Empty(),
+        const SizedBox(height: 20),
+        Container(
+            color: darkAddCommentColor,
+            padding:
+                const EdgeInsets.only(left: 13, right: 13, top: 11, bottom: 11),
+            margin:
+                const EdgeInsets.only(left: 114, right: 108, top: 0, bottom: 0),
+            child: TextField(
+              minLines: 3,
+              style: TextStyle(
+                  color: textColor, fontSize: 13, letterSpacing: 0.44),
+              controller: newCommentCtrl,
+              keyboardType: TextInputType.multiline,
+              maxLines: null,
             )),
         const SizedBox(height: 20),
-      ];
+        Row(children: [
+          const SizedBox(width: 114),
+          ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                  textStyle: TextStyle(
+                      color: textColor, fontSize: 11, letterSpacing: 1),
+                  padding: const EdgeInsets.only(
+                      bottom: 4, top: 4, left: 8, right: 8)),
+              onPressed: addComment,
+              child: Text(
+                "Add Comment",
+                style:
+                    TextStyle(color: textColor, fontSize: 11, letterSpacing: 1),
+              ))
+        ]),
+      ]);
+    } else {
+      commentsWidgets.addAll([
+        Row(children: [
+          Expanded(
+              child: Divider(
+            color: dividerColor, //color of divider
+            height: 10, //height spacing of divider
+            thickness: 1, //thickness of divier line
+            indent: 10, //spacing at the start of divider
+            endIndent: 7, //spacing at the end of divider
+          )),
+        ]),
+        Container(
+            padding:
+                const EdgeInsets.only(top: 10, bottom: 10, left: 40, right: 40),
+            child: Column(children: [
+              Text("""This is a relayed post and cannot be commented on.""",
+                  style: TextStyle(
+                      color: textColor, fontSize: 11, letterSpacing: 1)),
+              const SizedBox(height: 10),
+              isKXSearchingAuthor
+                  ? Text(
+                      """Currently attempting to KX search for post author. This may take a long time to complete, as it involves contacting and performing KX with multiple peers.""",
+                      style: TextStyle(
+                          color: textColor, fontSize: 11, letterSpacing: 1))
+                  : !knowsAuthor
+                      ? Column(children: [
+                          Text(
+                              """In order to comment on the post, the local client needs to KX with the post author and subscribe to their posts. This may be done automatically by using the "KX Search" action. KX search may take a long time to complete, because it depends on remote peers completing KX and referring us to the original author.""",
+                              style: TextStyle(
+                                  color: textColor,
+                                  fontSize: 11,
+                                  letterSpacing: 1)),
+                          const SizedBox(height: 10),
+                          ElevatedButton(
+                              onPressed: kxSearchAuthor,
+                              child: const Text("Start KX Search Attempt"))
+                        ])
+                      : !sentSubscribeAttempt
+                          ? Column(children: [
+                              Text(
+                                  """In order to comment on the post, the local client needs subscribe to the author's posts and then fetch this post. The process to do this can be started automatically, but it may take some time until the author responds.""",
+                                  style: TextStyle(
+                                      color: textColor,
+                                      fontSize: 11,
+                                      letterSpacing: 1)),
+                              const SizedBox(height: 10),
+                              ElevatedButton(
+                                  onPressed: subscribeAndFetchPost,
+                                  child: const Text("Subscribe and Fetch Post"))
+                            ])
+                          : Text(
+                              """Sent subscription attempt. It may take some time until the author responds.""",
+                              style: TextStyle(
+                                  color: textColor,
+                                  fontSize: 11,
+                                  letterSpacing: 1)),
+            ])),
+      ]);
     }
 
     return Container(
@@ -488,64 +661,8 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 20),
-                Row(children: [
-                  Expanded(
-                      child: Divider(
-                    color: dividerColor, //color of divider
-                    height: 10, //height spacing of divider
-                    thickness: 1, //thickness of divier line
-                    indent: 10, //spacing at the start of divider
-                    endIndent: 7, //spacing at the end of divider
-                  )),
-                  Text("Comments",
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: darkTextColor, fontSize: 11)),
-                  Expanded(
-                      child: Divider(
-                    color: dividerColor, //color of divider
-                    height: 10, //height spacing of divider
-                    thickness: 1, //thickness of divier line
-                    indent: 7, //spacing at the start of divider
-                    endIndent: 10, //spacing at the end of divider
-                  )),
-                ]),
 
-                const SizedBox(height: 20),
-                ...comments.map((e) =>
-                    _CommentW(widget.args.post, e, sendReply, widget.client)),
-                const SizedBox(height: 20),
-                ...newCommentsW,
-                Container(
-                    color: darkAddCommentColor,
-                    padding: const EdgeInsets.only(
-                        left: 13, right: 13, top: 11, bottom: 11),
-                    margin: const EdgeInsets.only(
-                        left: 114, right: 108, top: 0, bottom: 0),
-                    child: TextField(
-                      minLines: 3,
-                      style: TextStyle(
-                          color: textColor, fontSize: 13, letterSpacing: 0.44),
-                      controller: newCommentCtrl,
-                      keyboardType: TextInputType.multiline,
-                      maxLines: null,
-                    )),
-                const SizedBox(height: 20),
-                Row(children: [
-                  const SizedBox(width: 114),
-                  ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                          textStyle: TextStyle(
-                              color: textColor, fontSize: 11, letterSpacing: 1),
-                          padding: const EdgeInsets.only(
-                              bottom: 4, top: 4, left: 8, right: 8)),
-                      onPressed: addComment,
-                      child: Text(
-                        "Add Comment",
-                        style: TextStyle(
-                            color: textColor, fontSize: 11, letterSpacing: 1),
-                      ))
-                ]),
+                ...commentsWidgets,
 
                 // end of post area
               ]),

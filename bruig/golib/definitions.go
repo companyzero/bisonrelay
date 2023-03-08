@@ -305,3 +305,8 @@ type GCAdminsChanged struct {
 	Added   []zkidentity.ShortID `json:"added"`
 	Removed []zkidentity.ShortID `json:"removed"`
 }
+
+type SubscribeToPosts struct {
+	Target    clientintf.UserID  `json:"target"`
+	FetchPost *clientintf.PostID `json:"fetch_post"`
+}
