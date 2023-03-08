@@ -1436,6 +1436,60 @@ class GCAdminsChanged extends ChatEvent {
       _$GCAdminsChangedFromJson(json);
 }
 
+@JsonSerializable()
+class SubscribeToPosts {
+  final String target;
+  @JsonKey(name: "fetch_post", includeIfNull: false)
+  final String? fetchPost;
+
+  SubscribeToPosts(this.target, this.fetchPost);
+  Map<String, dynamic> toJson() => _$SubscribeToPostsToJson(this);
+}
+
+@JsonSerializable()
+class RMKXSearchRef {
+  final String type;
+  final String ref;
+
+  RMKXSearchRef(this.type, this.ref);
+  factory RMKXSearchRef.fromJson(Map<String, dynamic> json) =>
+      _$RMKXSearchRefFromJson(json);
+}
+
+@JsonSerializable()
+class RMKXSearch {
+  @JsonKey(defaultValue: [])
+  final List<RMKXSearchRef> refs;
+
+  RMKXSearch(this.refs);
+  factory RMKXSearch.fromJson(Map<String, dynamic> json) =>
+      _$RMKXSearchFromJson(json);
+}
+
+@JsonSerializable()
+class KXSearchQuery {
+  final String user;
+  @JsonKey(name: "date_sent")
+  final DateTime dateSent;
+  @JsonKey(name: "ids_received", defaultValue: [])
+  final List<String> idsReceived;
+
+  KXSearchQuery(this.user, this.dateSent, this.idsReceived);
+  factory KXSearchQuery.fromJson(Map<String, dynamic> json) =>
+      _$KXSearchQueryFromJson(json);
+}
+
+@JsonSerializable()
+class KXSearch {
+  final String target;
+  final RMKXSearch search;
+  final List<KXSearchQuery> queries;
+
+  KXSearch(this.target, this.search, this.queries);
+  factory KXSearch.fromJson(Map<String, dynamic> json) =>
+      _$KXSearchFromJson(json);
+}
+
 mixin NtfStreams {
   StreamController<RemoteUser> ntfAcceptedInvites =
       StreamController<RemoteUser>();
@@ -1653,7 +1707,11 @@ abstract class PluginPlatform {
   }
 
   Future<void> subscribeToPosts(String uid) async {
-    await asyncCall(CTSubscribeToPosts, uid);
+    await asyncCall(CTSubscribeToPosts, SubscribeToPosts(uid, null));
+  }
+
+  Future<void> subscribeToPostsAndFetch(String uid, String pid) async {
+    await asyncCall(CTSubscribeToPosts, SubscribeToPosts(uid, pid));
   }
 
   Future<void> unsubscribeToPosts(String uid) async {
@@ -1980,6 +2038,11 @@ abstract class PluginPlatform {
 
   Future<void> modifyGCAdmins(String gcid, List<String> newAdmins) async =>
       await asyncCall(CTGCModifyAdmins, GCModifyAdmins(gcid, newAdmins));
+
+  Future<KXSearch> getKXSearch(String uid) async {
+    var res = await asyncCall(CTGetKXSearch, uid);
+    return KXSearch.fromJson(res);
+  }
 }
 
 const int CTUnknown = 0x00;
@@ -2076,6 +2139,7 @@ const int CTUserRatchetDebugInfo = 0x66;
 const int CTResendGCList = 0x67;
 const int CTGCUpgradeVersion = 0x68;
 const int CTGCModifyAdmins = 0x69;
+const int CTGetKXSearch = 0x6a;
 
 const int notificationsStartID = 0x1000;
 

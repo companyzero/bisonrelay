@@ -147,6 +147,14 @@ class FeedPostModel extends ChangeNotifier {
 
     notifyListeners();
   }
+
+  // Whether this post was replaced by the author version of the post in the client.
+  bool _replacedByAuthorVersion = false;
+  bool get replacedByAuthorVersion => _replacedByAuthorVersion;
+  void _replaceByAuthorVersion() {
+    _replacedByAuthorVersion = true;
+    notifyListeners();
+  }
 }
 
 class FeedModel extends ChangeNotifier {
@@ -166,6 +174,20 @@ class FeedModel extends ChangeNotifier {
     await for (var msg in stream) {
       // Add at the start of the feed so it appears at the top of the feed page.
       _posts.insert(0, FeedPostModel(msg));
+
+      // Handle posts that replace a previously relayed post: the client removes
+      // the relayed post in favor of the one by the author, so remove such posts
+      // from the list.
+      if (msg.from == msg.authorID) {
+        _posts.removeWhere((e) {
+          var remove = e.summ.id == msg.id && e.summ.from != msg.authorID;
+          if (remove) {
+            e._replaceByAuthorVersion();
+          }
+          return remove;
+        });
+      }
+
       notifyListeners();
     }
   }
@@ -174,13 +196,12 @@ class FeedModel extends ChangeNotifier {
     var stream = Golib.postStatusFeed();
     await for (var msg in stream) {
       // Find the post.
-      var post = _posts.firstWhere(
+      var postIdx = _posts.indexWhere(
           (p) => p.summ.from == msg.postFrom && p.summ.id == msg.pid);
-      if (post == null) {
-        // Did not find original post.
-        continue;
+      if (postIdx > -1) {
+        var post = _posts[postIdx];
+        post.addReceivedStatus(msg.status, true);
       }
-      post.addReceivedStatus(msg.status, true);
     }
   }
 
@@ -188,6 +209,12 @@ class FeedModel extends ChangeNotifier {
     var newPost = await Golib.createPost(content);
     _posts.insert(0, FeedPostModel(newPost));
     notifyListeners();
+  }
+
+  FeedPostModel? getPost(String fromID, String pid) {
+    var idx =
+        _posts.indexWhere((e) => e.summ.from == fromID && e.summ.id == pid);
+    return idx == -1 ? null : _posts[idx];
   }
 
   FeedModel() {

@@ -1439,3 +1439,79 @@ Map<String, dynamic> _$GCAdminsChangedToJson(GCAdminsChanged instance) =>
       'added': instance.added,
       'removed': instance.removed,
     };
+
+SubscribeToPosts _$SubscribeToPostsFromJson(Map<String, dynamic> json) =>
+    SubscribeToPosts(
+      json['target'] as String,
+      json['fetch_post'] as String?,
+    );
+
+Map<String, dynamic> _$SubscribeToPostsToJson(SubscribeToPosts instance) {
+  final val = <String, dynamic>{
+    'target': instance.target,
+  };
+
+  void writeNotNull(String key, dynamic value) {
+    if (value != null) {
+      val[key] = value;
+    }
+  }
+
+  writeNotNull('fetch_post', instance.fetchPost);
+  return val;
+}
+
+RMKXSearchRef _$RMKXSearchRefFromJson(Map<String, dynamic> json) =>
+    RMKXSearchRef(
+      json['type'] as String,
+      json['ref'] as String,
+    );
+
+Map<String, dynamic> _$RMKXSearchRefToJson(RMKXSearchRef instance) =>
+    <String, dynamic>{
+      'type': instance.type,
+      'ref': instance.ref,
+    };
+
+RMKXSearch _$RMKXSearchFromJson(Map<String, dynamic> json) => RMKXSearch(
+      (json['refs'] as List<dynamic>?)
+              ?.map((e) => RMKXSearchRef.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          [],
+    );
+
+Map<String, dynamic> _$RMKXSearchToJson(RMKXSearch instance) =>
+    <String, dynamic>{
+      'refs': instance.refs,
+    };
+
+KXSearchQuery _$KXSearchQueryFromJson(Map<String, dynamic> json) =>
+    KXSearchQuery(
+      json['user'] as String,
+      DateTime.parse(json['date_sent'] as String),
+      (json['ids_received'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          [],
+    );
+
+Map<String, dynamic> _$KXSearchQueryToJson(KXSearchQuery instance) =>
+    <String, dynamic>{
+      'user': instance.user,
+      'date_sent': instance.dateSent.toIso8601String(),
+      'ids_received': instance.idsReceived,
+    };
+
+KXSearch _$KXSearchFromJson(Map<String, dynamic> json) => KXSearch(
+      json['target'] as String,
+      RMKXSearch.fromJson(json['search'] as Map<String, dynamic>),
+      (json['queries'] as List<dynamic>)
+          .map((e) => KXSearchQuery.fromJson(e as Map<String, dynamic>))
+          .toList(),
+    );
+
+Map<String, dynamic> _$KXSearchToJson(KXSearch instance) => <String, dynamic>{
+      'target': instance.target,
+      'search': instance.search,
+      'queries': instance.queries,
+    };

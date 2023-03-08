@@ -679,11 +679,14 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		return nil, c.TipUser(cc.ctx, args.UID, args.Amount)
 
 	case CTSubscribeToPosts:
-		var uid clientintf.UserID
-		if err := cmd.decode(&uid); err != nil {
+		var args SubscribeToPosts
+		if err := cmd.decode(&args); err != nil {
 			return nil, err
 		}
-		return nil, c.SubscribeToPosts(uid)
+		if args.FetchPost == nil || args.FetchPost.IsEmpty() {
+			return nil, c.SubscribeToPosts(args.Target)
+		}
+		return nil, c.SubscribeToPostsAndFetch(args.Target, *args.FetchPost)
 
 	case CTUnsubscribeToPosts:
 		var uid clientintf.UserID
@@ -1329,6 +1332,14 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 			return nil, err
 		}
 		return nil, c.ModifyGCAdmins(args.GCID, args.NewAdmins, "")
+
+	case CTGetKXSearch:
+		var args zkidentity.ShortID
+		if err := cmd.decode(&args); err != nil {
+			return nil, err
+		}
+
+		return c.GetKXSearch(args)
 	}
 
 	return nil, nil
