@@ -105,7 +105,9 @@ type showNewPostWindow struct{}
 type showFeedWindow struct{}
 
 // feedUpdated when the feed of posts should be updated.
-type feedUpdated struct{}
+type feedUpdated struct {
+	summ clientdb.PostSummary
+}
 
 // sentPostComment is sent when a new local comment to a post is sent.
 type sentPostComment struct{}
