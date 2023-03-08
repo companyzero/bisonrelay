@@ -34,10 +34,14 @@ func (c *Client) subscribeToPosts(uid UserID, pid *clientintf.PostID, includeSta
 }
 
 // SubscribeToPosts attempts to subscribe to the posts of the given user.
-//
-// It returns when the remote user replies or the client exits.
 func (c *Client) SubscribeToPosts(uid UserID) error {
 	return c.subscribeToPosts(uid, nil, false)
+}
+
+// SubscribeToPostsAndFetch attempts to subscribe to the posts of the given user
+// and also (if successful) asks the user to send the specified post.
+func (c *Client) SubscribeToPostsAndFetch(uid UserID, pid clientintf.PostID) error {
+	return c.subscribeToPosts(uid, &pid, true)
 }
 
 func (c *Client) handlePostsSubscribe(ru *RemoteUser, ps rpc.RMPostsSubscribe) error {
@@ -470,6 +474,7 @@ func (c *Client) handlePostShare(ru *RemoteUser, ps rpc.RMPostShare) error {
 	}
 
 	errStatusWithoutPost := errors.New("status without post")
+	errHaveCopyFromAuthor := errors.New("have post copy from author")
 
 	var summ clientdb.PostSummary
 	var isUpdate bool
@@ -515,6 +520,26 @@ func (c *Client) handlePostShare(ru *RemoteUser, ps rpc.RMPostShare) error {
 			return err
 		}
 
+		// If we received this post from its author, remove the relayed
+		// copies.
+		var postAuthor UserID
+		if id, ok := p.Attributes[rpc.RMPStatusFrom]; ok {
+			_ = postAuthor.FromString(id) // Ok to ingore error
+		}
+		if !postAuthor.IsEmpty() && from == postAuthor {
+			err := c.db.RemoveRelayedPostCopies(from, pid)
+			if err != nil {
+				return err
+			}
+		}
+		if !postAuthor.IsEmpty() && from != postAuthor {
+			if exists, _ := c.db.PostExists(tx, postAuthor, pid); exists {
+				// Ignore relayed copy of the post in favor of
+				// the one from the author.
+				return errHaveCopyFromAuthor
+			}
+		}
+
 		// Post does not exist. Save it.
 		pid, summ, err = c.db.SaveReceivedPost(tx, from, p)
 		return err
@@ -532,6 +557,14 @@ func (c *Client) handlePostShare(ru *RemoteUser, ps rpc.RMPostShare) error {
 		if errors.Is(err, errStatusWithoutPost) {
 			ru.log.Warnf("Received post status for unknown post %s",
 				pid)
+			return nil
+		}
+
+		// Log a debug message, but otherwise ignore as the post from
+		// the author is the authoritative one.
+		if errors.Is(err, errHaveCopyFromAuthor) {
+			ru.log.Debugf("Received relayed copy of post %s which "+
+				"we already have from author", pid)
 			return nil
 		}
 		return err
@@ -642,13 +675,42 @@ func (c *Client) sendPostStatus(postFrom clientintf.UserID,
 	pid clientintf.PostID, attr map[string]string) error {
 
 	// Ensure post exists.
+	var kxSearchTarget *UserID
 	err := c.dbView(func(tx clientdb.ReadTx) error {
-		var err error
-		_, err = c.db.ReadPost(tx, postFrom, pid)
-		return err
+		post, err := c.db.ReadPost(tx, postFrom, pid)
+		if err != nil {
+			return err
+		}
+
+		// If this is a relayed post (postAuthor != postFrom), we won't
+		// add the status in the relayed post but instead attempt to
+		// KX search the author.
+		var postAuthor UserID
+		if id, ok := post.Attributes[rpc.RMPStatusFrom]; ok {
+			_ = postAuthor.FromString(id) // Ok to ingore error
+		}
+
+		if postAuthor == postFrom {
+			return nil
+		}
+
+		// Double check we don't have the original post.
+		_, err = c.db.ReadPost(tx, postAuthor, pid)
+		if err == nil {
+			// We do. Modify postFrom to be for the original post.
+			postFrom = postAuthor
+		} else {
+			kxSearchTarget = &postAuthor
+		}
+
+		return nil
 	})
 	if err != nil {
 		return err
+	}
+
+	if kxSearchTarget != nil {
+		return ErrKXSearchNeeded{Author: *kxSearchTarget}
 	}
 
 	// Status is coming from the local client.
@@ -908,16 +970,10 @@ func (c *Client) relayPost(postFrom clientintf.UserID, pid clientintf.PostID,
 	users ...clientintf.UserID) error {
 
 	var post rpc.PostMetadata
-	var firstRelay bool
 	var updates []rpc.PostMetadataStatus
 	err := c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
 		var err error
-		post, firstRelay, err = c.db.RelayPost(tx, postFrom, pid, c.id)
-		if err != nil {
-			return err
-		}
-
-		updates, err = c.db.ListPostStatusUpdates(tx, postFrom, pid)
+		post, err = c.db.ReadPost(tx, postFrom, pid)
 		return err
 	})
 	if err != nil {
@@ -929,31 +985,13 @@ func (c *Client) relayPost(postFrom clientintf.UserID, pid clientintf.PostID,
 	if from, err = c.rul.byID(postFrom); err != nil {
 		from = postFrom
 	}
-	c.log.Infof("Relaying post %s and %d updates from %s to %d subscribers",
+	c.log.Infof("Relaying post %s from %s to %d subscribers",
 		pid, len(updates), from, len(users))
-
-	// If relaying for the first time, send an event to UI.
-	if firstRelay {
-		summ := clientdb.PostSummFromMetadata(&post, c.id.Public.Identity)
-		summ.Date = time.Now()
-		c.ntfns.notifyOnPostRcvd(nil, summ, post)
-	}
 
 	// Relay post.
 	rm := rpc.RMPostShare(post)
 	if err := c.shareWithPostSubscribers(users, pid, rm, "relaypost"); err != nil {
 		return err
-	}
-
-	// Replay updates.
-	for _, update := range updates {
-		rm := rpc.RMPostShare{
-			Version:    update.Version,
-			Attributes: update.Attributes,
-		}
-		if err := c.shareWithPostSubscribers(users, pid, rm, "relayupdate"); err != nil {
-			return err
-		}
 	}
 
 	return nil
