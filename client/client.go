@@ -646,6 +646,13 @@ func (c *Client) UserNick(uid UserID) (string, error) {
 	return ru.Nick(), nil
 }
 
+// NicksWithPrefix returns a list of nicks for users that have the specified
+// prefix.
+func (c *Client) NicksWithPrefix(prefix string) []string {
+	<-c.abLoaded
+	return c.rul.nicksWithPrefix(prefix)
+}
+
 // PM sends a private message to the given user, identified by its public id.
 // The user must have been already KX'd with for this to work.
 func (c *Client) PM(uid UserID, msg string) error {

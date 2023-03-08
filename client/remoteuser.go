@@ -886,6 +886,19 @@ func (rul *remoteUserList) addressBook() []*AddressBookEntry {
 	return res
 }
 
+func (rul *remoteUserList) nicksWithPrefix(prefix string) []string {
+	rul.Lock()
+	var res []string
+	for _, ru := range rul.m {
+		nick := ru.Nick()
+		if strings.HasPrefix(nick, prefix) {
+			res = append(res, nick)
+		}
+	}
+	rul.Unlock()
+	return res
+}
+
 func (rul *remoteUserList) modifyUserNick(ru *RemoteUser, newNick string) {
 	rul.Lock()
 	ru.id.Nick = newNick
