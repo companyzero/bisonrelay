@@ -41,18 +41,20 @@ type comment struct {
 // properly start.
 type postWindow struct {
 	initless
-	as         *appState
-	post       rpc.PostMetadata
-	comments   []*comment
-	myComments []string
-	hearts     int
-	summ       clientdb.PostSummary
-	author     string
-	relayedBy  string
+	as          *appState
+	post        rpc.PostMetadata
+	comments    []*comment
+	myComments  []string
+	hearts      int
+	summ        clientdb.PostSummary
+	author      string
+	relayedBy   string
+	knowsAuthor bool
 
 	feedActiveIdx   int
 	feedYOffsetHint int
 
+	postRequested     bool
 	kxSearchingAuthor bool
 	kxSearchCompleted bool
 	requestedInvites  map[clientintf.UserID]struct{}
@@ -148,10 +150,11 @@ func (pw *postWindow) updatePost() {
 
 	pw.author, pw.relayedBy = pw.as.postAuthorRelayer(pw.summ)
 
-	_, err := pw.as.c.GetKXSearch(pw.summ.AuthorID)
-	if err == nil {
-		pw.kxSearchingAuthor = true
-	}
+	_, err := pw.as.c.UserByID(pw.summ.AuthorID)
+	pw.knowsAuthor = err == nil
+
+	_, err = pw.as.c.GetKXSearch(pw.summ.AuthorID)
+	pw.kxSearchingAuthor = err == nil
 
 	var roots []*comment
 	cmap := make(map[clientintf.ID]*comment)
@@ -387,31 +390,88 @@ func (pw *postWindow) renderPost() {
 	content = wrap.String(wordwrap.String(content, lineLimit), lineLimit)
 	write(content)
 	write("\n\n")
-	write(styles.help.Render("═════ Comments ══════════ (R)eply, (C)omment, (S+I) Req. Invite "))
-	write(styles.help.Render(strings.Repeat("═", pw.as.winW-15)))
-	write("\n\n")
-	pw.startCommentsLine = lineCount
 
-	// Render comments.
-	for i, cmt := range pw.comments {
-		pw.comments[i].startLine = lineCount
-		pw.renderComment(cmt, write, i)
-		pw.comments[i].endLine = lineCount
-	}
-
-	// Render unsent comments.
-	if len(pw.myComments) > 0 {
+	if pw.relayedBy != "" && !pw.knowsAuthor {
+		write(styles.help.Render(strings.Repeat("═", pw.as.winW-1)))
 		write("\n")
-		write(styles.help.Render("═════ Unreplicated Comments "))
-		write(styles.help.Render(strings.Repeat("═", pw.as.winW-28)))
+		write("This is a relayed post. KX with the original post author\n")
+		write("to view and write comments.\n")
+		write("\n")
+		if pw.kxSearchCompleted {
+			write("KX search of the author completed! currently attempting\n")
+			write("to subscribe and fetch the original post from the author.\n")
+			write("\n")
+			write("This can also be manually done by using the\n")
+			write("following command:\n\n")
+			nick, _ := pw.as.c.UserNick(pw.summ.AuthorID)
+			if nick == "" {
+				nick = pw.summ.AuthorID.String()
+			} else {
+				nick = strescape.Nick(nick)
+			}
+			write(fmt.Sprintf("  /ln post get %s %s\n", nick, pw.summ.ID))
+		} else if pw.kxSearchingAuthor {
+			write("Currently attempting to KX search author. This can take\n")
+			write("a long time to complete, as it requires a multi-hop\n")
+			write("search of peers to KX with that can introduce the\n")
+			write("author.")
+		} else {
+			write("Press Shift+S to start a KX search for the author.")
+		}
+	} else if pw.relayedBy != "" {
+		nick, _ := pw.as.c.UserNick(pw.summ.AuthorID)
+		if nick == "" {
+			nick = pw.summ.AuthorID.String()
+		} else {
+			nick = strescape.Nick(nick)
+		}
+
+		write(styles.help.Render(strings.Repeat("═", pw.as.winW-1)))
+		write("\n")
+		write(fmt.Sprintf("This is a relayed post from the known user %s.\n",
+			strescape.Nick(pw.author)))
+		write("Subscribe to the user's posts and fetch this post to comment on it.\n")
+		write("\n")
+		if !pw.postRequested {
+			write("Press Shift+G to perform this automatically.\n")
+			write("\n")
+			write("Otherwise use the following commands to subscribe and fetch this post:\n")
+		} else {
+			write("A request to subscribe and fetch the post has been sent\n")
+			write("but it may take time for the remote user to reply.\n")
+			write("A manual attempt may be tried with the following commands:\n")
+		}
+		write("\n")
+		write(fmt.Sprintf("  /post sub %s\n", nick))
+		write(fmt.Sprintf("  /post get %s %s\n", nick, pw.summ.ID))
+
+	} else {
+		write(styles.help.Render("═════ Comments ══════════ (R)eply, (C)omment, (S+I) Req. Invite "))
+		write(styles.help.Render(strings.Repeat("═", pw.as.winW-15)))
 		write("\n\n")
-	}
-	commentSep := styles.help.Render(strings.Repeat("┈", pw.as.winW))
-	for _, cmt := range pw.myComments {
-		write(styles.help.Render(cmt))
-		write("\n")
-		write(commentSep)
-		write("\n")
+		pw.startCommentsLine = lineCount
+
+		// Render comments.
+		for i, cmt := range pw.comments {
+			pw.comments[i].startLine = lineCount
+			pw.renderComment(cmt, write, i)
+			pw.comments[i].endLine = lineCount
+		}
+
+		// Render unsent comments.
+		if len(pw.myComments) > 0 {
+			write("\n")
+			write(styles.help.Render("═════ Unreplicated Comments "))
+			write(styles.help.Render(strings.Repeat("═", pw.as.winW-28)))
+			write("\n\n")
+		}
+		commentSep := styles.help.Render(strings.Repeat("┈", pw.as.winW))
+		for _, cmt := range pw.myComments {
+			write(styles.help.Render(cmt))
+			write("\n")
+			write(commentSep)
+			write("\n")
+		}
 	}
 
 	pw.viewport.SetContent(b.String())
@@ -777,6 +837,15 @@ func (pw postWindow) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			pw.kxSearchAuthor()
 			return pw, cmd
 
+		case msg.String() == "G":
+			pw.debug = fmt.Sprintf("XXX %v %v", pw.knowsAuthor, pw.postRequested)
+			if pw.knowsAuthor {
+				go pw.as.subscribeAndFetchPost(pw.summ.AuthorID, pw.summ.ID)
+				pw.postRequested = true
+				pw.renderPost()
+			}
+			return pw, cmd
+
 		case msg.String() == "R":
 			pw.debug = ""
 			go pw.as.relayPostToAll(pw.summ.From, pw.summ.ID)
@@ -852,6 +921,16 @@ func (pw postWindow) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			pw.renderPost()
 		}
 		return pw, cmd
+
+	case feedUpdated:
+		if msg.summ.ID == pw.summ.ID && msg.summ.AuthorID == msg.summ.From &&
+			msg.summ.From != pw.summ.From {
+
+			// Received original post from author after KX search.
+			// Switch to it.
+			pw.as.activatePost(&msg.summ)
+			pw.renderPost()
+		}
 
 	default:
 		// Handle paste, etc

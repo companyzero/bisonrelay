@@ -1897,6 +1897,13 @@ func (as *appState) relayPostToAll(fromUID clientintf.UserID, pid clientintf.Pos
 	}
 }
 
+func (as *appState) subscribeAndFetchPost(uid clientintf.UserID, pid clientintf.PostID) {
+	err := as.c.SubscribeToPostsAndFetch(uid, pid)
+	if err != nil {
+		as.diagMsg("Unable to subscribe and fetch post: %v", err)
+	}
+}
+
 func (as *appState) queryLNNodeInfo(nodePubKey string, amount uint64) error {
 	if as.lnRPC == nil {
 		return fmt.Errorf("LN client not configured")
@@ -2410,7 +2417,7 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		as.chatWindowsMtx.Unlock()
 
 		as.footerInvalidate()
-		as.sendMsg(feedUpdated{})
+		as.sendMsg(feedUpdated{summ: summ})
 	}))
 
 	ntfns.Register(client.OnPostStatusRcvdNtfn(func(user *client.RemoteUser, pid clientintf.PostID,
