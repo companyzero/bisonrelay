@@ -155,6 +155,13 @@ type OnGCAdminsChangedNtfn func(ru *RemoteUser, gc rpc.RMGroupList, added, remov
 
 func (_ OnGCAdminsChangedNtfn) typ() string { return onGCAdminsChangedNtfnType }
 
+const onKXSearchCompletedNtfnType = "kxSearchCompleted"
+
+// OnKXSearchCompleted is a handler for completed KX search procedures.
+type OnKXSearchCompleted func(user *RemoteUser)
+
+func (_ OnKXSearchCompleted) typ() string { return onKXSearchCompletedNtfnType }
+
 // The following is used only in tests.
 
 const onTestNtfnType = "testNtfnType"
@@ -313,6 +320,11 @@ func (nmgr *NotificationManager) notifyOnKXCompleted(user *RemoteUser) {
 		visit(func(h OnKXCompleted) { h(user) })
 }
 
+func (nmgr *NotificationManager) notifyOnKXSearchCompleted(user *RemoteUser) {
+	nmgr.handlers[onKXSearchCompletedNtfnType].(*handlersFor[OnKXSearchCompleted]).
+		visit(func(h OnKXSearchCompleted) { h(user) })
+}
+
 func (nmgr *NotificationManager) notifyInvoiceGenFailed(user *RemoteUser, dcrAmount float64, err error) {
 	nmgr.handlers[onInvoiceGenFailedNtfnType].(*handlersFor[OnInvoiceGenFailedNtfn]).
 		visit(func(h OnInvoiceGenFailedNtfn) { h(user, dcrAmount, err) })
@@ -385,6 +397,7 @@ func NewNotificationManager() *NotificationManager {
 			onGCKilledNtfnType:         &handlersFor[OnGCKilledNtfn]{},
 			onGCAdminsChangedNtfnType:  &handlersFor[OnGCAdminsChangedNtfn]{},
 
+			onKXSearchCompletedNtfnType:       &handlersFor[OnKXSearchCompleted]{},
 			onInvoiceGenFailedNtfnType:        &handlersFor[OnInvoiceGenFailedNtfn]{},
 			onRemoteSubscriptionChangedType:   &handlersFor[OnRemoteSubscriptionChangedNtfn]{},
 			onRemoteSubscriptionErrorNtfnType: &handlersFor[OnRemoteSubscriptionErrorNtfn]{},

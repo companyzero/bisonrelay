@@ -2652,6 +2652,11 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		as.repaintIfActive(cw)
 	}))
 
+	ntfns.Register(client.OnKXSearchCompleted(func(ru *client.RemoteUser) {
+		as.diagMsg("Completed KX search of %s", ru)
+		as.sendMsg(kxSearchCompleted{uid: ru.ID()})
+	}))
+
 	// Initialize client config.
 	cfg := client.Config{
 		DB:             db,
@@ -3021,11 +3026,6 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 			cw := as.findOrNewChatWindow(ru.ID(), strescape.Nick(ru.Nick()))
 			cw.newInternalMsg("User requested us to block them from further messages")
 			as.repaintIfActive(cw)
-		},
-
-		KXSearchCompleted: func(ru *client.RemoteUser) {
-			as.diagMsg("Completed KX search of %s", ru)
-			as.sendMsg(kxSearchCompleted{uid: ru.ID()})
 		},
 
 		KXSuggestion: func(user *client.RemoteUser, pii zkidentity.PublicIdentity) {
