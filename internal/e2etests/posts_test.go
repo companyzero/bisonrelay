@@ -99,19 +99,15 @@ func TestBasicPostFeatures(t *testing.T) {
 	// Bob relays Alice's post to Charlie.
 	bob.RelayPost(alice.PublicID(), alicePost.ID, charlie.PublicID())
 
-	// Bob gets a new post due to relay event.
-	assert.ChanWritten(t, bobRecvPosts)
-
 	// Charlie should get the relayed post.
 	pm = assert.ChanWritten(t, charlieRecvPosts)
 	assert.DeepEqual(t, pm.Hash(), alicePost.ID)
 
-	// Charlie comments on the relayed post. Bob should get it.
+	// Charlie attempts to comment on the relayed post. It doesn't work
+	// because Charlie isn't KXd with Alice.
 	wantComment = "charlie comment"
 	err = charlie.CommentPost(bob.PublicID(), alicePost.ID, wantComment, nil)
-	assert.NilErr(t, err)
-	gotComment = assert.ChanWritten(t, bobRecvComments)
-	assert.DeepEqual(t, gotComment, wantComment)
+	assert.ErrorIs(t, err, client.ErrKXSearchNeeded{})
 }
 
 // TestKXSearchFromPosts tests the KX search feature from posts.

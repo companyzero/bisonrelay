@@ -413,7 +413,7 @@ func (db *DB) verifyPostStatusUpdate(statusFname string, from UserID, pid PostID
 	return nil
 }
 
-// AddPostStatus adds a status update to a post. postFrom is the author of the
+// AddPostStatus adds a status update to a post. postFrom is the relayer of the
 // post, while statusFrom is who sent the status update.
 func (db *DB) AddPostStatus(tx ReadWriteTx, postFrom, statusFrom UserID, pid PostID,
 	pms *rpc.PostMetadataStatus) error {
@@ -421,8 +421,17 @@ func (db *DB) AddPostStatus(tx ReadWriteTx, postFrom, statusFrom UserID, pid Pos
 	// Ensure post exists.
 	dir := filepath.Join(db.root, postsDir, postFrom.String())
 	postFname := filepath.Join(dir, pid.String())
-	if _, err := os.Stat(postFname); err != nil {
+	post, err := db.readPost(postFname)
+	if err != nil {
 		return err
+	}
+	var postAuthor UserID
+	if id, ok := post.Attributes[rpc.RMPStatusFrom]; ok {
+		_ = postAuthor.FromString(id) // Ok to ingore error
+	}
+	if postAuthor != postFrom {
+		return fmt.Errorf("cannot add status update to relayed post "+
+			"authored by %s relayed by %s", postAuthor, postFrom)
 	}
 
 	// Verify this status update is valid when coming from the given user.
@@ -929,35 +938,36 @@ func (db *DB) IsPostSubscription(tx ReadTx, uid UserID) (bool, error) {
 	return false, nil
 }
 
-// RelayPost marks the post as being relayed by the local user. It returns a
-// copy of the post contents. The bool return value indicates whether this is
-// the first time this is relayed.
-func (db *DB) RelayPost(tx ReadWriteTx, from UserID, pid PostID,
-	me *zkidentity.FullIdentity) (rpc.PostMetadata, bool, error) {
-
-	dstFilename := filepath.Join(db.root, postsDir, me.Public.Identity.String(),
-		pid.String())
-
-	firstTime := !fileExists(dstFilename)
-	if firstTime {
-		if err := os.MkdirAll(filepath.Dir(dstFilename), 0o700); err != nil {
-			return rpc.PostMetadata{}, firstTime, err
-		}
-
-		// Relayed post does not exist. Copy from source to dest.
-		srcFilename := filepath.Join(db.root, postsDir, from.String(),
-			pid.String())
-		if err := copyFile(srcFilename, dstFilename); err != nil {
-			return rpc.PostMetadata{}, firstTime, err
-		}
-	}
-
-	pm, err := db.readPost(dstFilename)
-	if os.IsNotExist(err) {
-		err = fmt.Errorf("post %s: %w", pid, ErrNotFound)
-	}
+// RemoveRelayedPostCopies removes all copies of the post that may have been
+// relayed, except the one by the specified user, which should be the post
+// author.
+func (db *DB) RemoveRelayedPostCopies(author UserID, pid PostID) error {
+	pattern := filepath.Join(db.root, postsDir, "*", pid.String())
+	files, err := filepath.Glob(pattern)
 	if err != nil {
-		return rpc.PostMetadata{}, firstTime, err
+		return err
 	}
-	return *pm, firstTime, nil
+	for _, f := range files {
+		idStr := filepath.Base(filepath.Dir(f))
+		var fromID UserID
+		if err := fromID.FromString(idStr); err != nil {
+			db.log.Debugf("Not an ID while listing relayers: %s: %v",
+				idStr, err)
+			continue
+		}
+
+		if fromID == author {
+			continue
+		}
+
+		if err := os.Remove(f); err != nil {
+			db.log.Debugf("Unable to remove relayed post %s: %v",
+				f, err)
+			continue
+		}
+
+		db.log.Debugf("Removed relayed post %s", f)
+	}
+
+	return nil
 }

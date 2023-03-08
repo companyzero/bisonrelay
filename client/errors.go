@@ -67,3 +67,20 @@ func (err WalletUsableError) Unwrap() error {
 func makeWalletUsableErr(kind WalletUsableErrorKind, descr string) WalletUsableError {
 	return WalletUsableError{descr: descr, err: kind}
 }
+
+// ErrKXSearchNeeded is returned when an action cannot be completed and a KX
+// search must be performed.
+type ErrKXSearchNeeded struct {
+	Author UserID
+}
+
+func (err ErrKXSearchNeeded) Error() string {
+	return fmt.Sprintf("KX search needed to find post author %s", err.Author)
+}
+
+func (err ErrKXSearchNeeded) Is(target error) bool {
+	if _, ok := target.(ErrKXSearchNeeded); ok {
+		return true
+	}
+	return false
+}
