@@ -357,3 +357,27 @@ func normalizeAddress(addr string, defaultPort string) string {
 	}
 	return net.JoinHostPort(addr, port)
 }
+
+// stringsCommonPrefix returns the common prefix shared by all strings in the
+// slice.
+func stringsCommonPrefix(src []string) string {
+	if len(src) == 0 {
+		return ""
+	}
+	res := src[0]
+	for i := 1; i < len(src); i++ {
+		if len(src[i]) < len(res) {
+			res = res[:len(src[i])]
+		}
+		for j := 0; j < len(res); j++ {
+			if res[j] != src[i][j] {
+				res = res[:j]
+				break
+			}
+		}
+		if len(res) == 0 {
+			return ""
+		}
+	}
+	return res
+}
