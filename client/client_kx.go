@@ -217,8 +217,8 @@ func (c *Client) initRemoteUser(id *zkidentity.PublicIdentity, r *ratchet.Ratche
 	}
 
 	// If this target was the subject of a KX search, trigger event.
-	if hadKXSearch && c.cfg.KXSearchCompleted != nil {
-		c.cfg.KXSearchCompleted(ru)
+	if hadKXSearch {
+		c.ntfns.notifyOnKXSearchCompleted(ru)
 	}
 
 	return ru, nil

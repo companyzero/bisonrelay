@@ -99,36 +99,12 @@ type Config struct {
 	// a remote user.
 	PostsListReceived func(user *RemoteUser, postList rpc.RMListPostsReply)
 
-	// PostReceived is called when a new post is received from a remote
-	// user.
-	//PostReceived func(user *RemoteUser, summary clientdb.PostSummary, post rpc.PostMetadata)
-
-	// PostStatusReceived is called when we receive a status update for a
-	// given post.
-	//
-	// Note: user may be nil if the status update is for a post made by the
-	// local user. This can happen both for received status updates and
-	// status updates made by the local client.
-	//PostStatusReceived func(user *RemoteUser, pid clientintf.PostID,
-	//	statusFrom UserID, status rpc.PostMetadataStatus)
-
 	TipReceived func(user *RemoteUser, amount float64)
 
 	// SubscriptionChanged is called whenever the given user changes its
 	// subscription status with the local client (either subscribed or
 	// unsubscribed).
 	SubscriptionChanged func(user *RemoteUser, subscribed bool)
-
-	// RemoteSubscriptionChanged is called whenever the local client
-	// receives the result of a {Subscribe,Unsubscribe}ToPosts call. In
-	// other words, it's called whenever the status of a local subscription
-	// to a remote user's posts changes.
-	//RemoteSubscriptionChanged func(user *RemoteUser, subscribed bool)
-
-	// RemoteSubscriptionError is called when the local client receives a
-	// reply to a {Subscribe,Unsubscribe}ToPosts call with a remote error
-	// message.
-	//RemoteSubscriptionError func(user *RemoteUser, wasSubscribing bool, errMsg string)
 
 	// ContentListReceived is called when the list of content of the user is
 	// received.
@@ -154,10 +130,6 @@ type Config struct {
 	// request. Note that the passed user cannot be used for messaging
 	// anymore.
 	UserBlocked func(user *RemoteUser)
-
-	// KXSearchCompleted is called when KX is completed with a user that
-	// was the target of a KX search.
-	KXSearchCompleted func(user *RemoteUser)
 }
 
 // logger creates a logger for the given subsystem in the configured backend.

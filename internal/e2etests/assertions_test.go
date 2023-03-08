@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/companyzero/bisonrelay/client"
+	"github.com/companyzero/bisonrelay/client/clientdb"
+	"github.com/companyzero/bisonrelay/client/clientintf"
 	"github.com/companyzero/bisonrelay/internal/assert"
 	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/companyzero/bisonrelay/zkidentity"
@@ -155,6 +157,38 @@ func assertClientCannotSeeGCM(t testing.TB, gcID zkidentity.ShortID, src, target
 	err := src.GCMessage(gcID, msg, 0, nil)
 	assert.NilErr(t, err)
 	assert.ChanNotWritten(t, c, time.Millisecond*500)
+	reg.Unregister()
+}
+
+// assertSubscribeToPosts attempts to make subscriber subscribe to target's
+// posts.
+func assertSubscribeToPosts(t testing.TB, target, subscriber *testClient) {
+	t.Helper()
+	subChan := make(chan error, 1)
+	reg := subscriber.handle(client.OnRemoteSubscriptionChangedNtfn(func(ru *client.RemoteUser, subscribed bool) {
+		if ru.ID() == target.PublicID() && subscribed {
+			subChan <- nil
+		}
+	}))
+	err := subscriber.SubscribeToPosts(target.PublicID())
+	assert.NilErr(t, err)
+	assert.NilErrFromChan(t, subChan)
+	reg.Unregister()
+}
+
+// assertRelaysPost attempts to relay a post from src to dst and verify that it
+// was received in dst.
+func assertRelaysPost(t testing.TB, src, dst *testClient, postFrom clientintf.UserID, pid clientintf.PostID) {
+	t.Helper()
+	relayChan := make(chan error, 1)
+	reg := dst.handle(client.OnPostRcvdNtfn(func(ru *client.RemoteUser, summ clientdb.PostSummary, _ rpc.PostMetadata) {
+		if ru.ID() == src.PublicID() && summ.ID == pid {
+			relayChan <- nil
+		}
+	}))
+	err := src.RelayPost(postFrom, pid, dst.PublicID())
+	assert.NilErr(t, err)
+	assert.NilErrFromChan(t, relayChan)
 	reg.Unregister()
 }
 

@@ -113,3 +113,79 @@ func TestBasicPostFeatures(t *testing.T) {
 	gotComment = assert.ChanWritten(t, bobRecvComments)
 	assert.DeepEqual(t, gotComment, wantComment)
 }
+
+// TestKXSearchFromPosts tests the KX search feature from posts.
+//
+// The test plan is the following: create a chain of 5 KXd users (A-E). Create
+// a post and relay across the chain. The last user (Eve) attempts to search
+// for the original post author (Alice).
+func TestKXSearchFromPosts(t *testing.T) {
+	tcfg := testScaffoldCfg{}
+	ts := newTestScaffold(t, tcfg)
+	alice := ts.newClient("alice")
+	bob := ts.newClient("bob")
+	charlie := ts.newClient("charlie")
+	dave := ts.newClient("dave")
+	eve := ts.newClient("eve")
+
+	ts.kxUsers(alice, bob)
+	ts.kxUsers(bob, charlie)
+	ts.kxUsers(charlie, dave)
+	ts.kxUsers(dave, eve)
+
+	assertSubscribeToPosts(t, alice, bob)
+	assertSubscribeToPosts(t, bob, charlie)
+	assertSubscribeToPosts(t, charlie, dave)
+	assertSubscribeToPosts(t, dave, eve)
+
+	// Alice creates a post and comments on it.
+	bobRecvPostChan := make(chan clientintf.PostID, 1)
+	bob.handle(client.OnPostRcvdNtfn(func(ru *client.RemoteUser, summ clientdb.PostSummary, _ rpc.PostMetadata) {
+		bobRecvPostChan <- summ.ID
+	}))
+
+	alicePost, err := alice.CreatePost("alice's post", "")
+	alicePostID := alicePost.ID
+	assert.NilErr(t, err)
+	aliceComment := "alice's comment"
+	err = alice.CommentPost(alice.PublicID(), alicePostID, aliceComment, nil)
+	assert.NilErr(t, err)
+	assert.ChanWrittenWithVal(t, bobRecvPostChan, alicePostID)
+
+	// Each client will relay the post to the next one.
+	assertRelaysPost(t, bob, charlie, alice.PublicID(), alicePostID)
+	assertRelaysPost(t, charlie, dave, bob.PublicID(), alicePostID)
+	assertRelaysPost(t, dave, eve, charlie.PublicID(), alicePostID)
+
+	// Setup to track relevant events.
+	eveKXdChan := make(chan clientintf.UserID, 4)
+	eve.handle(client.OnKXCompleted(func(ru *client.RemoteUser) {
+		eveKXdChan <- ru.ID()
+	}))
+	eveKXSearched := make(chan clientintf.UserID, 1)
+	eve.handle(client.OnKXSearchCompleted(func(ru *client.RemoteUser) {
+		eveKXSearched <- ru.ID()
+	}))
+	eveRcvdStatus := make(chan string, 1)
+	eve.handle(client.OnPostStatusRcvdNtfn(func(_ *client.RemoteUser, _ clientintf.PostID, _ client.UserID,
+		status rpc.PostMetadataStatus) {
+		eveRcvdStatus <- status.Attributes[rpc.RMPSComment]
+	}))
+
+	// Eve will search for Alice (the post author).
+	err = eve.KXSearchPostAuthor(dave.PublicID(), alicePostID)
+	assert.NilErr(t, err)
+
+	// Eve will KX with everyone up to Alice and receive the original
+	// comment.
+	assert.ChanWrittenWithVal(t, eveKXdChan, charlie.PublicID())
+	assert.ChanWrittenWithVal(t, eveKXdChan, bob.PublicID())
+	assert.ChanWrittenWithVal(t, eveKXdChan, alice.PublicID())
+	assert.ChanWrittenWithVal(t, eveKXSearched, alice.PublicID())
+	assert.ChanWrittenWithVal(t, eveRcvdStatus, aliceComment)
+
+	// Bob comments on Alice's post. Eve should receive it.
+	bobComment := "bob comment"
+	assert.NilErr(t, bob.CommentPost(alice.PublicID(), alicePostID, bobComment, nil))
+	assert.ChanWrittenWithVal(t, eveRcvdStatus, bobComment)
+}
