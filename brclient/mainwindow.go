@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/charmbracelet/bubbles/textarea"
 	"github.com/charmbracelet/bubbles/viewport"
@@ -132,20 +133,31 @@ func (mws *mainWindowState) updateCompletion() {
 
 	cl := mws.textArea.Value()
 	mws.completeOpts = genCompleterOpts(cl, mws.as)
-	if len(mws.completeOpts) != 1 {
-		return
+
+	args := parseCommandLinePreserveQuotes(cl)
+
+	var lastArgRepl string
+	if len(mws.completeOpts) == 1 {
+		// Only have one completion option. Use it, replacing the last
+		// arg with the completion.
+		lastArgRepl = mws.completeOpts[0]
+		mws.completeOpts = nil
+	} else {
+		// Multiple completion options. Find out the common prefix
+		// for all of them (if there is one), and pre-complete with
+		// this prefix.
+		lastArgRepl = stringsCommonPrefix(mws.completeOpts)
+		if lastArgRepl == "" {
+			lastArgRepl = args[len(args)-1]
+		}
 	}
 
-	// Only have one completion option. Use it, replacing the last arg with
-	// the completion.
-	args := parseCommandLinePreserveQuotes(cl)
-	args[len(args)-1] = mws.completeOpts[0]
+	args[len(args)-1] = lastArgRepl
 	newValue := strings.Join(args, " ")
 	if newValue[0] != leader {
 		newValue = string(leader) + newValue
 	}
 	mws.textArea.SetValue(newValue)
-	mws.completeOpts = nil
 }
 
 func (mws mainWindowState) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -504,8 +516,12 @@ func (mws mainWindowState) View() string {
 			mws.footerView())
 	}
 
+	textAreaView := mws.textArea.View()
 	var opt string
 	if mws.completeIdx < len(mws.completeOpts) {
+		// TrimRight is needed to remove textArea suffix stuff. This may
+		// break in the future if textArea changes.
+		textAreaView = strings.TrimRightFunc(textAreaView, unicode.IsSpace)
 		opt = mws.completeOpts[mws.completeIdx]
 		opt = mws.as.styles.help.Render(opt)
 	}
@@ -514,7 +530,7 @@ func (mws mainWindowState) View() string {
 		mws.header,
 		mws.viewport.View(),
 		mws.footerView(),
-		mws.textArea.View(),
+		textAreaView,
 		opt,
 	)
 }
