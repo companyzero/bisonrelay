@@ -319,9 +319,10 @@ class ReceivedSentPM extends StatefulWidget {
   final int timestamp;
   final ShowSubMenuCB showSubMenu;
   final String id;
+  final String userNick;
 
-  const ReceivedSentPM(
-      this.evnt, this.nick, this.timestamp, this.showSubMenu, this.id,
+  const ReceivedSentPM(this.evnt, this.nick, this.timestamp, this.showSubMenu,
+      this.id, this.userNick,
       {Key? key})
       : super(key: key);
 
@@ -468,7 +469,10 @@ class _ReceivedSentPMState extends State<ReceivedSentPM> {
           const SizedBox(width: 24),
           Provider<DownloadSource>(
               create: (context) => DownloadSource(sourceID),
-              child: MarkdownArea(msg)),
+              child: MarkdownArea(
+                  msg,
+                  widget.userNick != widget.nick &&
+                      msg.contains(widget.userNick))),
           Expanded(
               child: Align(
                   alignment: Alignment.topRight,
@@ -500,9 +504,9 @@ class PMW extends StatelessWidget {
       timestamp =
           evnt.source?.nick == null ? event.timestamp : event.timestamp * 1000;
     }
-
+    print(nick);
     return ReceivedSentPM(evnt, evnt.source?.nick ?? nick, timestamp,
-        showSubMenu, evnt.source?.id ?? "");
+        showSubMenu, evnt.source?.id ?? "", nick);
   }
 }
 
@@ -522,7 +526,7 @@ class GCMW extends StatelessWidget {
           evnt.source?.nick == null ? event.timestamp : event.timestamp * 1000;
     }
     return ReceivedSentPM(evnt, evnt.source?.nick ?? nick, timestamp,
-        showSubMenu, evnt.source?.id ?? "");
+        showSubMenu, evnt.source?.id ?? "", nick);
   }
 }
 
@@ -665,7 +669,7 @@ class _PostsListWState extends State<PostsListW> {
                     icon: const Icon(Icons.download),
                     tooltip: "Fetch post ${posts[index].id}",
                   ),
-                  Expanded(child: MarkdownArea(posts[index].title))
+                  Expanded(child: MarkdownArea(posts[index].title, false))
                 ],
               );
             }),

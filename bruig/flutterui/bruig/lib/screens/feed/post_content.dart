@@ -187,7 +187,7 @@ class _CommentWState extends State<_CommentW> {
           Row(
             children: [
               Expanded(
-                child: MarkdownArea(widget.comment.comment),
+                child: MarkdownArea(widget.comment.comment, false),
               ),
             ],
           ),
@@ -484,7 +484,7 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
                           child: Provider<DownloadSource>(
                               create: (context) => DownloadSource(
                                   widget.args.post.summ.authorID),
-                              child: MarkdownArea(markdownData))),
+                              child: MarkdownArea(markdownData, false))),
                     ],
                   ),
                 ),
