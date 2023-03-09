@@ -263,7 +263,8 @@ class VideoMarkdownElementBuilder extends MarkdownElementBuilder {
 */
 class MarkdownArea extends StatelessWidget {
   final String text;
-  const MarkdownArea(this.text, {Key? key}) : super(key: key);
+  final bool hasNick;
+  const MarkdownArea(this.text, this.hasNick, {Key? key}) : super(key: key);
 
   Future<void> launchUrlAwait(url) async {
     if (!await launchUrl(Uri.parse(url))) {
@@ -282,7 +283,7 @@ class MarkdownArea extends StatelessWidget {
               p: TextStyle(
                   fontSize: 8 + theme.getFontSize() * 7,
                   color: textColor,
-                  fontWeight: FontWeight.w300,
+                  fontWeight: hasNick ? FontWeight.w700 : FontWeight.w300,
                   letterSpacing: 0.44),
               h1: TextStyle(color: textColor),
               h2: TextStyle(color: textColor),

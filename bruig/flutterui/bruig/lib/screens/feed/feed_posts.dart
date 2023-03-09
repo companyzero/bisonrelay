@@ -121,7 +121,7 @@ class FeedPostW extends StatelessWidget {
                     alignment: Alignment.center,
                     child: Provider<DownloadSource>(
                         create: (context) => DownloadSource(post.summ.authorID),
-                        child: MarkdownArea(post.summ.title))))
+                        child: MarkdownArea(post.summ.title, false))))
           ]),
           const SizedBox(height: 5),
           Row(children: [
