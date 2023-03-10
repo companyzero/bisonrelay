@@ -37,12 +37,12 @@ func TestCorrectBehavior(t *testing.T) {
 
 	// Generate enough data for 4 files.
 	nbEntries := (maxSize * 3) / vSize
-	allIDs := make([]ID, nbEntries)
+	allIDs := make([]ID, 0, nbEntries)
 	for i := 0; i < nbEntries; i++ {
 		v.Field = sampleFieldVal + fmt.Sprintf("%05d", i)
 		id, err := rl.Store(v)
 		assert.NilErr(t, err)
-		allIDs[i] = id
+		allIDs = append(allIDs, id)
 	}
 
 	// Last ID should have file index of 4.
