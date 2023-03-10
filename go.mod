@@ -15,7 +15,7 @@ require (
 	github.com/decred/dcrd/crypto/blake256 v1.0.0
 	github.com/decred/dcrd/dcrutil/v4 v4.0.0
 	github.com/decred/dcrlnd v0.3.8-0.20221102131920-cab0f1036108
-	github.com/decred/dcrlnlpd v0.0.0-20220923190153-dbfb003271b0
+	github.com/decred/dcrlnlpd v0.0.0-20230310195229-355b059ee936
 	github.com/decred/go-socks v1.1.0
 	github.com/decred/slog v1.2.0
 	github.com/erikgeiser/promptkit v0.7.0

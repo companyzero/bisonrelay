@@ -7,12 +7,16 @@ linters:
 
   disable-all: true
   enable:
+    - asciicheck
     - gofmt
+    - goimports
     - gosimple
     - govet
     - ineffassign
+    - makezero
     - misspell
     - noctx
     - sqlclosecheck
+    - structcheck
     - unconvert
     - unused

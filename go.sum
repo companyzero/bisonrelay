@@ -179,8 +179,8 @@ github.com/decred/dcrd/wire v1.5.0 h1:3SgcEzSjqAMQvOugP0a8iX7yQSpiVT1yNi9bc4iOXV
 github.com/decred/dcrd/wire v1.5.0/go.mod h1:fzAjVqw32LkbAZIt5mnrvBR751GTa3e0rRQdOIhPY3w=
 github.com/decred/dcrlnd v0.3.8-0.20221102131920-cab0f1036108 h1:ZqdOdlUR5m2yKULWofet++NevzpVofiJaxsqZAY5PeQ=
 github.com/decred/dcrlnd v0.3.8-0.20221102131920-cab0f1036108/go.mod h1:JDGy+Y2bW/PQVPxrVaphRpNyI0Fnumr/1nf1wK1u1fU=
-github.com/decred/dcrlnlpd v0.0.0-20220923190153-dbfb003271b0 h1:CWU00CAlV1SIUxf1+SJsZxlGgzCv5hk8/5U1UZ38FH8=
-github.com/decred/dcrlnlpd v0.0.0-20220923190153-dbfb003271b0/go.mod h1:Trewq60nOIFOxvZYPrJ6Ce6BBJfCZ9FLyGs0gO6TYF4=
+github.com/decred/dcrlnlpd v0.0.0-20230310195229-355b059ee936 h1:nG3jkgEBgIuNe/MfVZ/loBGeG8G0861N95w7h6nUIYE=
+github.com/decred/dcrlnlpd v0.0.0-20230310195229-355b059ee936/go.mod h1:kQ62mwV51Uprv94TSj/q3JIMqMpGiQPfv9O2fJTNR+A=
 github.com/decred/go-socks v1.1.0 h1:dnENcc0KIqQo3HSXdgboXAHgqsCIutkqq6ntQjYtm2U=
 github.com/decred/go-socks v1.1.0/go.mod h1:sDhHqkZH0X4JjSa02oYOGhcGHYp12FsY1jQ/meV8md0=
 github.com/decred/lightning-onion/v4 v4.0.0 h1:p4WRnx0YFoqD8rq/VHUtfBp24K/cHFJ8tO/gutkWIyI=
