@@ -199,14 +199,20 @@ func (pw lnRequestRecvWindow) View() string {
 
 	nbLines := 2 + 2
 	if pw.confirming {
-		pf("Confirm payment of %s to receive inbound capacity?\n\n",
+		pf("Confirm LN payment of %s to receive inbound capacity?\n\n",
 			dcrutil.Amount(pw.reqPolicy.estimatedAmount))
 
+		_, _, sendBal := pw.as.channelBalance()
 		pf("Channel Size: %s\n", dcrutil.Amount(pw.reqPolicy.chanSize))
 		pf("Minimum channel lifetime: %s\n", pw.reqPolicy.policy.MinChanLifetime)
+		pf("Current available outbound capacity: %s", sendBal)
 		pf("\n")
 		pf("Note that the channel may be closed by the liquidity provider\n")
 		pf("after the minimum lifetime if not enough payments flow through it.\n")
+		pf("\n")
+		pf("After the channel is opened, it may take up to 6 confirmations for it\n")
+		pf("to be broadcast through the network. Individual peers may take longer to\n")
+		pf("detect and to consider the channel to send payments.")
 		pf("\n")
 
 		yesStyle, noStyle := pw.as.styles.focused, pw.as.styles.noStyle

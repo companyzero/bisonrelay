@@ -240,6 +240,10 @@ service.
 
 Note that having a channel with inbound capacity is not for sending or receiving 
 messages. It is only required in order to receive payments from other users.
+
+After the channel is opened, it may take up to 6 confirmations for it to be broadcast
+through the network. Individual peers may take longer to detect and to consider
+the channel to send payments.
 ''',
                           style: TextStyle(
                               color: secondaryTextColor,

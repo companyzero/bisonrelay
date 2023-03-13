@@ -254,6 +254,7 @@ func (as *appState) run() error {
 
 	go as.trackExchangeRate()
 	go as.trackLNBalances()
+	go as.trackLNChannelEvents()
 	go as.processInboundMsgs()
 
 	// Listen to lnd log lines.
@@ -470,6 +471,55 @@ func (as *appState) trackLNBalances() {
 		}
 	}
 
+}
+
+func (as *appState) trackLNChannelEvents() {
+	chanEvents, err := as.lnRPC.SubscribeChannelEvents(as.ctx, &lnrpc.ChannelEventSubscription{})
+	if err != nil {
+		as.log.Errorf("Unable to track channel events: %v")
+		return
+	}
+
+	for {
+		event, err := chanEvents.Recv()
+		if err != nil {
+			as.log.Errorf("Error while tracking channel events: %v")
+			return
+		}
+
+		var msg string
+		switch event := event.Channel.(type) {
+		case *lnrpc.ChannelEventUpdate_OpenChannel:
+			msg = fmt.Sprintf("LN Channel %s (%s send, %s recv) is open",
+				event.OpenChannel.ChannelPoint,
+				dcrutil.Amount(event.OpenChannel.LocalBalance),
+				dcrutil.Amount(event.OpenChannel.RemoteBalance))
+
+		case *lnrpc.ChannelEventUpdate_ClosedChannel:
+			msg = fmt.Sprintf("LN Channel %s closed (settled %s, time-locked %s)",
+				event.ClosedChannel.ChannelPoint,
+				dcrutil.Amount(event.ClosedChannel.SettledBalance),
+				dcrutil.Amount(event.ClosedChannel.TimeLockedBalance))
+
+		case *lnrpc.ChannelEventUpdate_ActiveChannel:
+			channel := chanPointToStr(event.ActiveChannel)
+			msg = fmt.Sprintf("LN Channel %s became active",
+				channel)
+
+		case *lnrpc.ChannelEventUpdate_InactiveChannel:
+			channel := chanPointToStr(event.InactiveChannel)
+			msg = fmt.Sprintf("LN Channel %s became inactive",
+				channel)
+
+		case *lnrpc.ChannelEventUpdate_PendingOpenChannel:
+			channel := fmt.Sprintf("%x:%d", event.PendingOpenChannel.Txid,
+				event.PendingOpenChannel.OutputIndex)
+			msg = fmt.Sprintf("LN Channel %s is pending open",
+				channel)
+		}
+
+		as.diagMsg(msg)
+	}
 }
 
 // processInboundMsgs processes inbound msgs (PMs and GCMs) in a serialized way.
