@@ -101,7 +101,7 @@ class LNConfirmRecvChanPaymentScreen extends StatelessWidget {
         body: Container(
             padding: const EdgeInsets.all(10),
             child: Column(children: [
-              Text("Confirm Payment to Open Receive Channel",
+              Text("Confirm LN Payment to Open Receive Channel",
                   style: TextStyle(color: textColor, fontSize: 20)),
               const SizedBox(height: 20),
               Text("Amount: $amount", style: TextStyle(color: textColor)),

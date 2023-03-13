@@ -1904,7 +1904,7 @@ var lnCommands = []tuicmd{
 						height, commitFee, commitSize, feePerKb.ToCoin())
 				}
 
-				pf("Pending Force-Closed Channels")
+				pf("Pending Force-Closed Channels: %d", len(chans.PendingForceClosingChannels))
 				for _, c := range chans.PendingForceClosingChannels {
 					remoteNodePub := c.Channel.RemoteNodePub
 					capacity := dcrutil.Amount(c.Channel.Capacity).ToCoin()
@@ -1925,9 +1925,13 @@ var lnCommands = []tuicmd{
 						limboBal, recoveredBal, nbHTLCs)
 					pf("  closingTx:%s maturityHeight:%d", closingTx,
 						matHeight)
+					for i, htlc := range c.PendingHtlcs {
+						amount := dcrutil.Amount(htlc.Amount).ToCoin()
+						pf("    HTLC %d: amount:%.8f  incoming:%v  maturityHeight:%d", i, amount, htlc.Incoming, htlc.MaturityHeight)
+					}
 				}
 
-				pf("Waiting Close Confirmation")
+				pf("Waiting Close Confirmation: %d", len(chans.WaitingCloseChannels))
 				for _, c := range chans.WaitingCloseChannels {
 					remoteNodePub := c.Channel.RemoteNodePub
 					capacity := dcrutil.Amount(c.Channel.Capacity).ToCoin()
@@ -2132,6 +2136,42 @@ var lnCommands = []tuicmd{
 				}
 			}
 			as.cwHelpMsg(msg)
+			return nil
+		},
+	}, {
+		cmd:           "decodeinvoice",
+		usableOffline: true,
+		usage:         "[invoice]",
+		aliases:       []string{"decinvoice", "decodeinv"},
+		descr:         "Decode an LN invoice",
+		handler: func(args []string, as *appState) error {
+			if as.lnRPC == nil {
+				return fmt.Errorf("LN client not configured")
+			}
+			if len(args) < 1 {
+				return usageError{msg: "invoice cannot be empty"}
+			}
+
+			req := &lnrpc.PayReqString{PayReq: args[0]}
+			invoice, err := as.lnRPC.DecodePayReq(as.ctx, req)
+			if err != nil {
+				return err
+			}
+
+			as.cwHelpMsgs(func(pf printf) {
+				pf("")
+				pf("Decoded Invoice")
+				if invoice.NumMAtoms < 1000 {
+					pf("Amount: %d MAtoms", invoice.NumMAtoms)
+				} else {
+					pf("Amount: %s", dcrutil.Amount(invoice.NumAtoms))
+				}
+				pf("Destination: %s", invoice.Destination)
+				expiryTime := time.Unix(invoice.Timestamp, 0).Add(time.Duration(invoice.Expiry) * time.Second)
+				pf("Expiry: %s", expiryTime.Format(ISO8601DateTime))
+				pf("CLTV expiry: %d blocks", invoice.CltvExpiry)
+				pf("Description: %s", strescape.Content(invoice.Description))
+			})
 			return nil
 		},
 	}, {
