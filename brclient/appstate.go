@@ -2486,8 +2486,12 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		as.gcInvitesMtx.Lock()
 		as.gcInvites[gcName] = iid
 		as.gcInvitesMtx.Unlock()
-		as.diagMsg("Invited to gc \"%s\" (%v) by %q. Type /gc join %s to join.",
+		as.diagMsg("Invited to GC %q (%v) by %q. Type /gc join %s to join.",
 			gcName, invite.ID.String(), user.Nick(), gcName)
+		cw := as.findOrNewChatWindow(user.ID(), user.Nick())
+		cw.newInternalMsg(fmt.Sprintf("%q has invited you to GC %q (%v).  Type /gc join %s to join",
+			user.Nick(), gcName, invite.ID.String(), gcName))
+		as.repaintIfActive(cw)
 	}))
 
 	ntfns.Register(client.OnGCInviteAcceptedNtfn(func(user *client.RemoteUser, gc rpc.RMGroupList) {
