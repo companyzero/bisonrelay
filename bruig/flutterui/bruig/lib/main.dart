@@ -35,6 +35,8 @@ import 'package:golib_plugin/golib_plugin.dart';
 import 'package:provider/provider.dart';
 import 'package:window_size/window_size.dart';
 import 'package:window_manager/window_manager.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import './screens/app_start.dart';
 
 final Random random = Random();
@@ -57,6 +59,7 @@ void main(List<String> args) async {
 
   var defAppDir = await defaultAppDataDir();
   developer.log("Default app dir: $defAppDir");
+  //initializeDateFormatting('en');
 
   try {
     Config cfg = await configFromArgs(args);
@@ -251,6 +254,16 @@ class _AppState extends State<App> with WindowListener {
     return Consumer<ThemeNotifier>(
         builder: (context, theme, _) => MaterialApp(
               title: 'Bison Relay',
+              localizationsDelegates: const [
+                AppLocalizations.delegate, // Add this line
+                GlobalMaterialLocalizations.delegate,
+                GlobalWidgetsLocalizations.delegate,
+                GlobalCupertinoLocalizations.delegate,
+              ],
+              supportedLocales: const [
+                Locale('en'), // English
+                // Locale('es'), // Spanish
+              ],
               theme: theme.getTheme(),
               navigatorKey: navkey,
               initialRoute: '/',

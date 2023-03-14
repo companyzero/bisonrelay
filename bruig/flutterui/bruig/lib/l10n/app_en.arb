@@ -1,0 +1,60 @@
+{
+  "connectBisonRelay": "Connect to Bison Relay",
+  "password": "Password",
+  "passwordEmpty": "Password cannot be empty",
+  "passwordIncorrectTryAgain": "Incorrect password, please try again.",
+  "unlockWallet": "Unlock Wallet",
+  "errorUnlockWallet": "Unable to unlock wallet: {exception}",
+  "@errorUnlockWallet": {
+    "description": "Message shown when unlocking wallet hits an unexpected error",
+    "placeholders": {
+        "exception": {
+        "type": "String",
+        "example": "Error"
+        }
+    }
+  },
+  "setUpBisonRelay": "Setting up Bison Relay",
+  "setUpBlockHeight": "Block Height: {blockHeight}",
+  "@setUpBlockHeight": {
+    "description": "Block Height indicator during setup",
+    "placeholders": {
+        "blockHeight": {
+        "type": "num",
+        "example": "1234"
+        }
+    }
+  },
+  "setUpBlockHash": "Block Hash: {blockHash}",
+  "@setUpBlockHash": {
+    "description": "Block Hash indicator during setup",
+    "placeholders": {
+        "blockHash": {
+        "type": "String",
+        "example": "0000000000000000971cdf679121395d10ad6fee3eb55dfd9a27e44df750f7e9"
+        }
+    }
+  },
+  "setUpBlockTime": "Block Time: {blockTimestamp}",
+  "@setUpBlockTime": {
+    "description": "Block Time indicator during setup",
+    "placeholders": {
+        "blockTimestamp": {
+        "type": "DateTime",
+        "format": "yyyy-MM-dd hh:mm",
+        "isCustomDateFormat": "true",
+        "example": "yyyy-MM-dd hh:mm"
+        }
+    }
+  },
+  "nWombats": "{count, plural, =0{no wombats} =1{1 wombat} other{{count} wombats}}",
+  "@nWombats": {
+    "description": "A plural message",
+    "placeholders": {
+      "count": {
+        "type": "num",
+        "format": "compact"
+      }
+    }
+  }
+}

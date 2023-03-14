@@ -51,6 +51,8 @@ dependencies:
       ref: 17d4710c17f4913137e7ec931f6e71eaef443363
   msix: ^3.6.3
   qr_flutter: ^4.0.0
+  flutter_localizations:
+    sdk: flutter
 
 msix_config:
   display_name: Bison Relay GUI
@@ -94,6 +96,7 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+  generate: true # Add this line
 
   # To add assets to your application, add an assets section, like this:
   assets:
