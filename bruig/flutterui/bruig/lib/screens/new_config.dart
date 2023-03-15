@@ -7,6 +7,7 @@ import 'package:bruig/screens/newconfig/ln_choice.dart';
 import 'package:bruig/screens/newconfig/ln_choice_external.dart';
 import 'package:bruig/screens/newconfig/ln_choice_internal.dart';
 import 'package:bruig/screens/newconfig/ln_wallet_seed.dart';
+import 'package:bruig/screens/newconfig/ln_wallet_seed_confirm.dart';
 import 'package:bruig/screens/newconfig/network_choice.dart';
 import 'package:bruig/screens/newconfig/restore_wallet.dart';
 import 'package:bruig/screens/newconfig/server.dart';
@@ -48,6 +49,7 @@ class _NewConfigScreenState extends State<NewConfigScreen> {
         routes: {
           "/newconf/initializing": (context) =>
               InitializingNewConfPage(newconf),
+          "/newconf/confirm": (context) => ConfirmLNWalletSeedPage(newconf),
           "/newconf/deleteOldWallet": (context) => DeleteOldWalletPage(newconf),
           "/newconf/networkChoice": (context) => NetworkChoicePage(newconf),
           "/newconf/lnChoice": (context) => LNChoicePage(newconf),

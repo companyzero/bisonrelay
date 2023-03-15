@@ -1,24 +1,16 @@
 import 'package:bruig/components/empty_widget.dart';
-import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/models/newconfig.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:bruig/components/buttons.dart';
-import 'package:flutter/services.dart';
 
-class NewLNWalletSeedPage extends StatelessWidget {
+class ConfirmLNWalletSeedPage extends StatelessWidget {
   final NewConfigModel newconf;
-  const NewLNWalletSeedPage(this.newconf, {Key? key}) : super(key: key);
-
-  void copySeedToClipboard(BuildContext context) async {
-    Clipboard.setData(ClipboardData(text: newconf.newWalletSeed));
-    showSuccessSnackbar(context, "Copied seed to clipboard!");
-  }
+  const ConfirmLNWalletSeedPage(this.newconf, {Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     void done() {
-      Navigator.of(context).pushNamed("/newconf/confirmseed");
+      Navigator.of(context).pushNamed("/newconf/server");
     }
 
     var backgroundColor = const Color(0xFF19172C);
@@ -26,7 +18,7 @@ class NewLNWalletSeedPage extends StatelessWidget {
     var textColor = const Color(0xFF8E8D98);
     var secondaryTextColor = const Color(0xFFE4E3E6);
     //var darkTextColor = const Color(0xFF5A5968);
-    var seedWords = newconf.newWalletSeed.split(' ');
+    var confirmSeedWords = newconf.confirmSeedWords;
     return Container(
         color: backgroundColor,
         child: Stack(children: [
@@ -69,13 +61,13 @@ class NewLNWalletSeedPage extends StatelessWidget {
                 child: SizedBox(
                     width: 519,
                     child: Wrap(spacing: 5, runSpacing: 5, children: [
-                      for (var i in seedWords)
-                        i != ""
+                      for (var i in confirmSeedWords)
+                        i.seedWordChoices.isNotEmpty
                             ? Container(
                                 padding: const EdgeInsets.only(
                                     left: 8, top: 3, right: 8, bottom: 3),
                                 color: backgroundColor,
-                                child: Text(i,
+                                child: Text("${i.position}",
                                     style: TextStyle(
                                         color: textColor,
                                         fontSize: 13,
@@ -84,11 +76,6 @@ class NewLNWalletSeedPage extends StatelessWidget {
                     ])),
               ),
               const SizedBox(height: 10),
-              TextButton(
-                onPressed: () => copySeedToClipboard(context),
-                child: Text("Copy to Clipboard",
-                    style: TextStyle(color: textColor)),
-              ),
               /*   XXX NEED TO FIGURE OUT LISTVIEW within a row FOR SEED WORD BUBBLES
               Expanded(
                   child: ListView.builder(
