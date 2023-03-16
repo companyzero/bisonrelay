@@ -121,6 +121,7 @@ class NewConfigModel extends ChangeNotifier {
       confirmSeedWords.add(
           ConfirmSeedWords(position, seedWords[position], seedWordChoices));
     }
+    // Sort the questions by position
     confirmSeedWords.sort((a, b) {
       return a.position.compareTo(b.position);
     });

@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/models/newconfig.dart';
 import 'package:flutter/material.dart';
 import 'package:bruig/components/buttons.dart';
@@ -23,7 +22,7 @@ class _ConfirmLNWalletSeedPageState extends State<ConfirmLNWalletSeedPage> {
     setState(() {
       // Only update seed if it hasn't been already st
       _visible = false;
-      Timer(Duration(milliseconds: 500), () {
+      Timer(const Duration(milliseconds: 500), () {
         setState(() {
           if (answer) {
             currentQuestion++;
@@ -95,9 +94,7 @@ class _ConfirmLNWalletSeedPageState extends State<ConfirmLNWalletSeedPage> {
                       fontWeight: FontWeight.w300)),
               const SizedBox(height: 34),
               AnimatedOpacity(
-                opacity: _visible
-                    ? 1.0
-                    : 0.0, //abandon say cushion width electric fever bind buddy pole wear sick dry faint notable tiny gaze session brand crumble option ivory broken people elegant
+                opacity: _visible ? 1.0 : 0.0,
                 duration: const Duration(milliseconds: 500),
                 child: currentQuestion < confirmSeedWords.length
                     ? !answerWrong
