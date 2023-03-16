@@ -49,7 +49,7 @@ class _NewConfigScreenState extends State<NewConfigScreen> {
         routes: {
           "/newconf/initializing": (context) =>
               InitializingNewConfPage(newconf),
-          "/newconf/confirm": (context) => ConfirmLNWalletSeedPage(newconf),
+          "/newconf/confirmseed": (context) => ConfirmLNWalletSeedPage(newconf),
           "/newconf/deleteOldWallet": (context) => DeleteOldWalletPage(newconf),
           "/newconf/networkChoice": (context) => NetworkChoicePage(newconf),
           "/newconf/lnChoice": (context) => LNChoicePage(newconf),

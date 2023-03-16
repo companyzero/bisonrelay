@@ -86,17 +86,18 @@ class NewConfigModel extends ChangeNotifier {
     var numWords = 5;
     var numChoices = 3;
     for (int i = 0; i < numWords; i++) {
-      var position = Random().nextInt(seedWords.length);
-      var positionUsed = false;
+      int position;
+      bool positionUsed;
       // Keep generating new positions until we have one that isn't used yet.
       do {
+        positionUsed = false;
+        position = Random().nextInt(seedWords.length);
         for (int k = 0; k < confirmSeedWords.length; k++) {
           if (position == confirmSeedWords[k].position) {
             positionUsed = true;
           }
         }
-        position = Random().nextInt(seedWords.length);
-      } while (!positionUsed);
+      } while (positionUsed);
       List<String> seedWordChoices = [seedWords[position]];
       // Keep generating new words in the seedWordChoice list until its length
       // is equal to the number of choices set above.
@@ -117,11 +118,12 @@ class NewConfigModel extends ChangeNotifier {
       seedWordChoices.sort((a, b) {
         return a.toLowerCase().compareTo(b.toLowerCase());
       });
-      print("$position ${seedWords[position]} $seedWordChoices");
       confirmSeedWords.add(
           ConfirmSeedWords(position, seedWords[position], seedWordChoices));
     }
-    print(confirmSeedWords);
+    confirmSeedWords.sort((a, b) {
+      return a.position.compareTo(b.position);
+    });
     return confirmSeedWords;
   }
 
