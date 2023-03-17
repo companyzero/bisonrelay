@@ -104,6 +104,10 @@ class _OverviewScreenState extends State<OverviewScreen> {
     navKey.currentState!.pushReplacementNamed('/feed', arguments: PageTabs(2));
   }
 
+  void goToAbout() {
+    Navigator.of(context).pushNamed("/about");
+  }
+
   void goOnline() async {
     try {
       await Golib.goOnline();
@@ -205,10 +209,13 @@ class _OverviewScreenState extends State<OverviewScreen> {
           ]),
           leading: Builder(
               builder: (BuildContext context) => Row(children: [
-                    Expanded(
-                        child: Image.asset(
-                      "assets/images/icon.png",
-                    )),
+                    IconButton(
+                        tooltip: "About Bison Relay",
+                        iconSize: 40,
+                        onPressed: goToAbout,
+                        icon: Image.asset(
+                          "assets/images/icon.png",
+                        )),
                   ])),
         ),
         body: Row(children: [
