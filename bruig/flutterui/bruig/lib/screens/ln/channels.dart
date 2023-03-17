@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:bruig/components/copyable.dart';
 import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/screens/needs_out_channel.dart';
 import 'package:flutter/material.dart';
@@ -55,11 +56,11 @@ class _ChanW extends StatelessWidget {
           Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(state, style: TextStyle(fontSize: 11, color: textColor)),
             const SizedBox(height: 8),
-            Text(chan.remotePubkey,
-                style: TextStyle(fontSize: 11, color: textColor)),
+            Copyable(
+                chan.remotePubkey, TextStyle(fontSize: 11, color: textColor)),
             const SizedBox(height: 8),
-            Text(chan.channelPoint,
-                style: TextStyle(fontSize: 11, color: textColor)),
+            Copyable(
+                chan.channelPoint, TextStyle(fontSize: 11, color: textColor)),
             const SizedBox(height: 8),
             Text("$capacity DCR",
                 style: TextStyle(fontSize: 11, color: textColor)),
@@ -135,20 +136,6 @@ Widget pendingChanSummary(LNPendingChannel chan, String state, Color textColor,
     ]),
   ]);
 }
-/*
-  return [
-    Text("Remote Node", style: TextStyle(color: textColor)),
-    Text(chan.remoteNodePub, style: TextStyle(color: textColor)),
-    Text("Channel Point", style: TextStyle(color: textColor)),
-    Text(chan.channelPoint, style: TextStyle(color: textColor)),
-    Text("Channel Capacity", style: TextStyle(color: textColor)),
-    Text("$capacity DCR", style: TextStyle(color: textColor)),
-    Text("Relative Balances", style: TextStyle(color: textColor)),
-    Text("Local $localBalance DCR <--> $remoteBalance DCR Remote",
-        style: TextStyle(color: textColor)),
-  ];
-}
-*/
 
 class _PendingOpenChanW extends StatelessWidget {
   final LNPendingOpenChannel pending;
