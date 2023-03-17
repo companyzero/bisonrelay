@@ -6,6 +6,8 @@ import 'package:bruig/main.dart';
 import 'package:bruig/models/log.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/golib_plugin.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:path/path.dart' as path;
 
 class UnlockLNApp extends StatefulWidget {
@@ -23,10 +25,20 @@ class UnlockLNApp extends StatefulWidget {
 
 class _UnlockLNAppState extends State<UnlockLNApp> {
   Config get cfg => widget.cfg;
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: "Connect to Bison Relay",
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('en'), // English
+      ],
       initialRoute: widget.initialRoute,
       routes: {
         "/": (context) => _LNUnlockPage(widget.cfg, widget.setCfg),
@@ -62,7 +74,9 @@ class __LNUnlockPageState extends State<_LNUnlockPage> {
   Future<void> unlock() async {
     setState(() {
       loading = true;
-      _validate = passCtrl.text.isEmpty ? "Password cannot be empty" : "";
+      _validate = passCtrl.text.isEmpty
+          ? AppLocalizations.of(context)!.passwordEmpty
+          : "";
     });
     try {
       // Validation failed so don't even attempt
@@ -79,9 +93,12 @@ class __LNUnlockPageState extends State<_LNUnlockPage> {
       Navigator.of(context).pushNamed("/sync");
     } catch (exception) {
       if (exception.toString().contains("invalid passphrase")) {
-        _validate = "Incorrect password, please try again.";
+        _validate = AppLocalizations.of(context)!.passwordIncorrectTryAgain;
       } else {
-        showErrorSnackbar(context, "Unable to unlock wallet: $exception");
+        showErrorSnackbar(
+            context,
+            AppLocalizations.of(context)!
+                .errorUnlockWallet(exception.toString()));
       }
       // Catch error and show error in errorText?
     } finally {
@@ -124,7 +141,7 @@ class __LNUnlockPageState extends State<_LNUnlockPage> {
             padding: const EdgeInsets.all(10),
             child: Column(children: [
               const SizedBox(height: 258),
-              Text("Connect to Bison Relay",
+              Text(AppLocalizations.of(context)!.connectBisonRelay,
                   style: TextStyle(
                       color: textColor,
                       fontSize: 34,
@@ -133,7 +150,7 @@ class __LNUnlockPageState extends State<_LNUnlockPage> {
               Column(children: [
                 SizedBox(
                     width: 377,
-                    child: Text("Password",
+                    child: Text(AppLocalizations.of(context)!.password,
                         textAlign: TextAlign.left,
                         style: TextStyle(
                             color: darkTextColor,
@@ -149,7 +166,8 @@ class __LNUnlockPageState extends State<_LNUnlockPage> {
                             decoration: InputDecoration(
                                 errorText: _validate,
                                 border: InputBorder.none,
-                                hintText: "Password",
+                                hintText:
+                                    AppLocalizations.of(context)!.password,
                                 hintStyle:
                                     TextStyle(fontSize: 21, color: textColor),
                                 filled: true,
@@ -166,7 +184,8 @@ class __LNUnlockPageState extends State<_LNUnlockPage> {
                             onChanged: (value) {
                               setState(() {
                                 _validate = value.isEmpty
-                                    ? "Password cannot be empty"
+                                    ? AppLocalizations.of(context)!
+                                        .passwordEmpty
                                     : "";
                               });
                             }))),
@@ -178,7 +197,7 @@ class __LNUnlockPageState extends State<_LNUnlockPage> {
                           const SizedBox(width: 35),
                           LoadingScreenButton(
                             onPressed: !loading ? unlock : null,
-                            text: "Unlock Wallet",
+                            text: AppLocalizations.of(context)!.unlockWallet,
                           ),
                           const SizedBox(width: 10),
                           loading
@@ -343,7 +362,7 @@ class _LNChainSyncPageState extends State<_LNChainSyncPage> {
               padding: const EdgeInsets.all(10),
               child: Column(children: [
                 const SizedBox(height: 89),
-                Text("Setting up Bison Relay",
+                Text(AppLocalizations.of(context)!.setUpBisonRelay,
                     style: TextStyle(
                         color: textColor,
                         fontSize: 34,
@@ -389,38 +408,29 @@ class _LNChainSyncPageState extends State<_LNChainSyncPage> {
                       color: cardColor,
                       child: Column(children: [
                         Row(children: [
-                          Text("Block Height: ",
-                              style: TextStyle(
-                                  color: textColor,
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.w300)),
-                          Text("$blockHeight",
-                              style: TextStyle(
-                                  color: textColor,
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.w300)),
-                          const SizedBox(width: 21),
-                          Text("Block Hash: ",
-                              style: TextStyle(
-                                  color: textColor,
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.w300)),
-                          Text("$blockHeight",
+                          Text(
+                              AppLocalizations.of(context)!
+                                  .setUpBlockHeight(blockHeight),
                               style: TextStyle(
                                   color: textColor,
                                   fontSize: 9,
                                   fontWeight: FontWeight.w300)),
                           const SizedBox(width: 21),
-                          Text("Block Time: ",
+                          Text(
+                              AppLocalizations.of(context)!
+                                  .setUpBlockHash(blockHash),
                               style: TextStyle(
                                   color: textColor,
                                   fontSize: 9,
                                   fontWeight: FontWeight.w300)),
-                          Text(blockTimestamp.toString(),
+                          const SizedBox(width: 21),
+                          Text(
+                              AppLocalizations.of(context)!
+                                  .setUpBlockTime(blockTimestamp),
                               style: TextStyle(
                                   color: textColor,
                                   fontSize: 9,
-                                  fontWeight: FontWeight.w300))
+                                  fontWeight: FontWeight.w300)),
                         ]),
                         Expanded(
                             child: LogLines(globalLogModel,
