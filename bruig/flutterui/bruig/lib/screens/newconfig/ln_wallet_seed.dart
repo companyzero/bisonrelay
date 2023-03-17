@@ -18,7 +18,7 @@ class NewLNWalletSeedPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     void done() {
-      Navigator.of(context).pushNamed("/newconf/server");
+      Navigator.of(context).pushNamed("/newconf/confirmseed");
     }
 
     var backgroundColor = const Color(0xFF19172C);
