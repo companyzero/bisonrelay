@@ -3,6 +3,7 @@ import 'package:bruig/screens/overview.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:bruig/models/feed.dart';
+import 'package:bruig/models/snackbar.dart';
 import 'package:bruig/screens/feed/feed_posts.dart';
 import 'package:bruig/components/feed_bar.dart';
 import 'package:bruig/screens/feed/post_content.dart';
@@ -66,13 +67,16 @@ class FeedScreenTitle extends StatelessWidget {
 class FeedScreen extends StatefulWidget {
   static const routeName = '/feed';
   final int tabIndex;
-  const FeedScreen({Key? key, this.tabIndex = 0}) : super(key: key);
+  final SnackBarModel snackBar;
+  const FeedScreen(this.snackBar, {Key? key, this.tabIndex = 0})
+      : super(key: key);
 
   @override
   State<FeedScreen> createState() => _FeedScreenState();
 }
 
 class _FeedScreenState extends State<FeedScreen> {
+  SnackBarModel get snackBar => widget.snackBar;
   int tabIndex = 0;
   PostContentScreenArgs? showPost;
   GlobalKey<NavigatorState> navKey = GlobalKey(debugLabel: "overview nav key");
@@ -103,7 +107,7 @@ class _FeedScreenState extends State<FeedScreen> {
             builder: (context, client, child) => PostListsScreen(client));
       case 3:
         return Consumer<FeedModel>(
-            builder: (context, feed, child) => NewPostScreen(feed));
+            builder: (context, feed, child) => NewPostScreen(feed, snackBar));
     }
     return Text("Active is $tabIndex");
   }
