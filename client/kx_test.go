@@ -43,10 +43,10 @@ func TestKXSucceeds(t *testing.T) {
 
 	// Ensure we're tracking the success of kx.
 	aliceRChan, bobRChan := make(chan *ratchet.Ratchet), make(chan *ratchet.Ratchet)
-	alice.kxCompleted = func(id *zkidentity.PublicIdentity, r *ratchet.Ratchet, mrrv clientdb.RawRVID, trrv clientdb.RawRVID) {
+	alice.kxCompleted = func(id *zkidentity.PublicIdentity, r *ratchet.Ratchet, irrv, mrrv, trrv clientdb.RawRVID) {
 		aliceRChan <- r
 	}
-	bob.kxCompleted = func(id *zkidentity.PublicIdentity, r *ratchet.Ratchet, mrrv clientdb.RawRVID, trrv clientdb.RawRVID) {
+	bob.kxCompleted = func(id *zkidentity.PublicIdentity, r *ratchet.Ratchet, irrv, mrrv, trrv clientdb.RawRVID) {
 		bobRChan <- r
 	}
 

@@ -2453,8 +2453,8 @@ var commands = []tuicmd{
 	},
 	{
 		cmd:   "invite",
-		usage: "<filename>",
-		descr: "Create invitation file to send OOB to another user",
+		usage: "<filename> [gcname]",
+		descr: "Create invitation file with optional GC to send OOB to another user",
 		handler: func(args []string, as *appState) error {
 			if len(args) < 1 {
 				return usageError{msg: "filename must be specified"}
@@ -2464,11 +2464,30 @@ var commands = []tuicmd{
 			if err != nil {
 				return err
 			}
-			go as.writeInvite(filename)
+
+			var gcID zkidentity.ShortID
+			if len(args) == 2 {
+				gcName := args[1]
+				gcID, err = as.c.GCIDByName(gcName)
+				if err != nil {
+					return err
+				}
+				if _, err := as.c.GetGC(gcID); err != nil {
+					return err
+				}
+			}
+
+			go as.writeInvite(filename, gcID)
 			return nil
 		},
 		completer: func(args []string, arg string, as *appState) []string {
-			return fileCompleter(arg)
+			if len(args) == 0 {
+				return fileCompleter(arg)
+			}
+			if len(args) == 1 {
+				return gcCompleter(arg, as)
+			}
+			return nil
 		},
 	}, {
 		cmd:   "add",

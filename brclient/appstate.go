@@ -1251,7 +1251,7 @@ func (as *appState) handleRcvdText(s string, nick string) string {
 
 // writeInvite writes a new invite to the given filename. This blocks until the
 // invite is written.
-func (as *appState) writeInvite(filename string) {
+func (as *appState) writeInvite(filename string, gcID zkidentity.ShortID) {
 	as.cwHelpMsg("Attempting to create and subscribe to new invite")
 	w := new(bytes.Buffer)
 	pii, err := as.c.WriteNewInvite(w)
@@ -1259,11 +1259,17 @@ func (as *appState) writeInvite(filename string) {
 		as.cwHelpMsg("Unable to create invite: %v", err)
 		return
 	}
-
 	err = os.WriteFile(filename, w.Bytes(), 0o600)
 	if err != nil {
 		as.cwHelpMsg("Unable to write invite file: %v", err)
 		return
+	}
+	if !gcID.IsEmpty() {
+		err = as.c.AddInviteOnKX(pii.InitialRendezvous, gcID)
+		if err != nil {
+			as.cwHelpMsg("Unable to add KX action: %v", err)
+			return
+		}
 	}
 
 	as.cwHelpMsg("Created invite at RV %s", pii.InitialRendezvous)

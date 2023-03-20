@@ -31,7 +31,7 @@ type kxList struct {
 	compressLevel int
 
 	kxCompleted func(*zkidentity.PublicIdentity, *ratchet.Ratchet,
-		clientdb.RawRVID, clientdb.RawRVID)
+		clientdb.RawRVID, clientdb.RawRVID, clientdb.RawRVID)
 
 	log slog.Logger
 }
@@ -280,7 +280,7 @@ func (kx *kxList) handleStep2IDKX(kxid clientdb.RawRVID, blob lowlevel.RVBlob) e
 
 	// Alert client of completed kx.
 	if kx.kxCompleted != nil {
-		kx.kxCompleted(&rmohk.Public, r, kxd.MyResetRV, rmohk.ResetRendezvous)
+		kx.kxCompleted(&rmohk.Public, r, kxd.InitialRV, kxd.MyResetRV, rmohk.ResetRendezvous)
 	}
 	return nil
 }
@@ -345,7 +345,7 @@ func (kx *kxList) handleStep3IDKX(kxid clientdb.RawRVID, blob lowlevel.RVBlob) e
 
 	// Alert client of completed kx.
 	if kx.kxCompleted != nil {
-		kx.kxCompleted(&public, r, kxd.MyResetRV, kxd.TheirResetRV)
+		kx.kxCompleted(&public, r, kxid, kxd.MyResetRV, kxd.TheirResetRV)
 	}
 
 	return nil

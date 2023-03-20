@@ -260,6 +260,7 @@ type PostKXActionType string
 const (
 	PKXActionKXSearch  PostKXActionType = "kx_search"
 	PKXActionFetchPost PostKXActionType = "fetch_post"
+	PKXActionInviteGC  PostKXActionType = "invite_gc"
 )
 
 type PostKXAction struct {

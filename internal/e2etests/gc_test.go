@@ -15,6 +15,42 @@ import (
 	"github.com/companyzero/bisonrelay/zkidentity"
 )
 
+// TestInviteGCOnKX performs tests for inviting new users to GC's
+func TestInviteGCOnKX(t *testing.T) {
+	// Setup Alice and Bob.
+	tcfg := testScaffoldCfg{}
+	ts := newTestScaffold(t, tcfg)
+	alice := ts.newClient("alice")
+	bob := ts.newClient("bob")
+
+	aliceAcceptedInvitesChan := make(chan clientintf.UserID, 1)
+	alice.handle(client.OnGCInviteAcceptedNtfn(func(user *client.RemoteUser, _ rpc.RMGroupList) {
+		aliceAcceptedInvitesChan <- user.ID()
+	}))
+	bobJoinedGCChan := make(chan struct{}, 1)
+	bob.handle(client.OnJoinedGCNtfn(func(gc rpc.RMGroupList) {
+		bobJoinedGCChan <- struct{}{}
+	}))
+
+	// Alice creates a GC.
+	gcName := "testGC"
+	gcID, err := alice.NewGroupChat(gcName)
+	assert.NilErr(t, err)
+
+	// Setup Bob to accept Alice's invite and send the invite.
+	bobAcceptedChan := bob.acceptNextGCInvite(gcID)
+
+	ts.kxUsersWithInvite(alice, bob, gcID)
+
+	// Bob correctly accepted to join and Alice was notified Bob joined.
+	assert.NilErrFromChan(t, bobAcceptedChan)
+	assert.ChanWrittenWithVal(t, aliceAcceptedInvitesChan, bob.PublicID())
+	assert.ChanWritten(t, bobJoinedGCChan)
+
+	// Double check bob is in the GC.
+	assertClientInGC(t, bob, gcID)
+}
+
 // TestBasicGCFeatures performs tests for the basic GC features.
 func TestBasicGCFeatures(t *testing.T) {
 	// Setup Alice and Bob.

@@ -42,6 +42,7 @@ const (
 	kxSearches         = "kxsearches"
 	miRequestsDir      = "mirequests"
 	postKXActionsDir   = "postkxactions"
+	initKXActionsDir   = "initkxactions"
 	payStatsFile       = "paystats.json"
 	unackedRMsDir      = "unackedrms"
 	lastConnDateFile   = "lastconndate.json"

@@ -76,6 +76,18 @@ func (c *Client) takePostKXAction(ru *RemoteUser, act clientdb.PostKXAction) err
 
 		return c.subscribeToPosts(ru.ID(), &pid, true)
 
+	case clientdb.PKXActionInviteGC:
+		// Invite user to GC
+		gcname := act.Data
+		gcID, err := c.GCIDByName(gcname)
+		if err != nil {
+			return err
+		}
+		if _, err := c.GetGC(gcID); err != nil {
+			return err
+		}
+
+		return c.InviteToGroupChat(gcID, ru.ID())
 	default:
 		return fmt.Errorf("unknown post-kx action type")
 	}
@@ -105,7 +117,7 @@ func (c *Client) takePostKXActions(ru *RemoteUser, actions []clientdb.PostKXActi
 
 // initRemoteUser inserts the given ratchet as a new remote user.
 func (c *Client) initRemoteUser(id *zkidentity.PublicIdentity, r *ratchet.Ratchet,
-	updateAB bool, myResetRV, theirResetRV clientdb.RawRVID, ignored bool) (*RemoteUser, error) {
+	updateAB bool, initialRV, myResetRV, theirResetRV clientdb.RawRVID, ignored bool) (*RemoteUser, error) {
 
 	var postKXActions []clientdb.PostKXAction
 
@@ -166,12 +178,19 @@ func (c *Client) initRemoteUser(id *zkidentity.PublicIdentity, r *ratchet.Ratche
 			}
 		}
 
+		// Convert initial actions to post actions.
+		if !initialRV.IsEmpty() {
+			err = c.db.InitialToPostKXActions(tx, initialRV, id.Identity)
+			if err != nil {
+				return err
+			}
+		}
+
 		// See if there are any actions to be taken after completing KX.
 		postKXActions, err = c.db.ListPostKXActions(tx, id.Identity)
 		if err != nil {
 			return err
 		}
-
 		// Remove KX search if it exists.
 		if _, err := c.db.GetKXSearch(tx, id.Identity); err == nil {
 			hadKXSearch = true
@@ -225,14 +244,27 @@ func (c *Client) initRemoteUser(id *zkidentity.PublicIdentity, r *ratchet.Ratche
 }
 
 func (c *Client) kxCompleted(public *zkidentity.PublicIdentity, r *ratchet.Ratchet,
-	myResetRV, theirResetRV clientdb.RawRVID) {
+	initialRV, myResetRV, theirResetRV clientdb.RawRVID) {
 
-	ru, err := c.initRemoteUser(public, r, true, myResetRV, theirResetRV, false)
+	ru, err := c.initRemoteUser(public, r, true, initialRV, myResetRV, theirResetRV, false)
 	if err != nil && !errors.Is(err, clientintf.ErrSubsysExiting) {
 		c.log.Errorf("unable to init user for completed kx: %v", err)
 	}
 
 	c.ntfns.notifyOnKXCompleted(ru)
+}
+
+// AddInviteOnKX adds a post kx action, based on the initial rv,
+// that invites the user to the given groupchat.
+func (c *Client) AddInviteOnKX(initialRV, gcID zkidentity.ShortID) error {
+	action := clientdb.PostKXAction{
+		Type:      clientdb.PKXActionInviteGC,
+		DateAdded: time.Now(),
+		Data:      gcID.String(),
+	}
+	return c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
+		return c.db.AddInitialKXAction(tx, initialRV, action)
+	})
 }
 
 // WriteNewInvite creates a new invite and writes it to the given writer.

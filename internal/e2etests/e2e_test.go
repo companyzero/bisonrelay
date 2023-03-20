@@ -308,6 +308,18 @@ func (ts *testScaffold) recreateClient(tc *testClient) *testClient {
 	return ts.newClientWithOpts(tc.name, tc.rootDir, tc.id)
 }
 
+// kxUsers performs a kx between the two users with an additional gc invite.
+// This MUST be called only from the main test goroutine.
+func (ts *testScaffold) kxUsersWithInvite(inviter, invitee *testClient, gcID zkidentity.ShortID) {
+	ts.t.Helper()
+	invite, err := inviter.WriteNewInvite(io.Discard)
+	assert.NilErr(ts.t, err)
+	ts.t.Logf("%s alice:%s bob:%s\n", invite.InitialRendezvous.String(), inviter.id.Public.String(), invitee.id.Public.String())
+	assert.NilErr(ts.t, inviter.AddInviteOnKX(invite.InitialRendezvous, gcID))
+	assert.NilErr(ts.t, invitee.AcceptInvite(invite))
+	assertClientsKXd(ts.t, inviter, invitee)
+}
+
 // kxUsers performs a kx between the two users, so that they can communicate
 // with each other. This MUST be called only from the main test goroutine.
 func (ts *testScaffold) kxUsers(inviter, invitee *testClient) {
