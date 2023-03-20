@@ -134,6 +134,8 @@ type ChatServiceClient interface {
 	WriteNewInvite(ctx context.Context, in *WriteNewInviteRequest, out *WriteNewInviteResponse) error
 	// AcceptInvite accepts an invite to kx with the user-provided invite.
 	AcceptInvite(ctx context.Context, in *AcceptInviteRequest, out *AcceptInviteResponse) error
+	// SendFile sends a file to a user.
+	SendFile(ctx context.Context, in *SendFileRequest, out *SendFileResponse) error
 }
 
 type client_ChatService struct {
@@ -220,6 +222,11 @@ func (c *client_ChatService) AcceptInvite(ctx context.Context, in *AcceptInviteR
 	return c.defn.Methods[method].ClientHandler(c.c, ctx, in, out)
 }
 
+func (c *client_ChatService) SendFile(ctx context.Context, in *SendFileRequest, out *SendFileResponse) error {
+	const method = "SendFile"
+	return c.defn.Methods[method].ClientHandler(c.c, ctx, in, out)
+}
+
 func NewChatServiceClient(c ClientConn) ChatServiceClient {
 	return &client_ChatService{c: c, defn: ChatServiceDefn()}
 }
@@ -255,6 +262,8 @@ type ChatServiceServer interface {
 	WriteNewInvite(context.Context, *WriteNewInviteRequest, *WriteNewInviteResponse) error
 	// AcceptInvite accepts an invite to kx with the user-provided invite.
 	AcceptInvite(context.Context, *AcceptInviteRequest, *AcceptInviteResponse) error
+	// SendFile sends a file to a user.
+	SendFile(context.Context, *SendFileRequest, *SendFileResponse) error
 }
 
 type ChatService_PMStreamServer interface {
@@ -435,6 +444,21 @@ func ChatServiceDefn() ServiceDefn {
 				},
 				ClientHandler: func(conn ClientConn, ctx context.Context, request, response proto.Message) error {
 					method := "ChatService.AcceptInvite"
+					return conn.Request(ctx, method, request, response)
+				},
+			},
+			"SendFile": {
+				IsStreaming:  false,
+				NewRequest:   func() proto.Message { return new(SendFileRequest) },
+				NewResponse:  func() proto.Message { return new(SendFileResponse) },
+				RequestDefn:  func() protoreflect.MessageDescriptor { return new(SendFileRequest).ProtoReflect().Descriptor() },
+				ResponseDefn: func() protoreflect.MessageDescriptor { return new(SendFileResponse).ProtoReflect().Descriptor() },
+				Help:         "SendFile sends a file to a user.",
+				ServerHandler: func(x interface{}, ctx context.Context, request, response proto.Message) error {
+					return x.(ChatServiceServer).SendFile(ctx, request.(*SendFileRequest), response.(*SendFileResponse))
+				},
+				ClientHandler: func(conn ClientConn, ctx context.Context, request, response proto.Message) error {
+					method := "ChatService.SendFile"
 					return conn.Request(ctx, method, request, response)
 				},
 			},
@@ -676,7 +700,7 @@ func GCServiceDefn() ServiceDefn {
 				NewResponse:  func() proto.Message { return new(KickFromGCResponse) },
 				RequestDefn:  func() protoreflect.MessageDescriptor { return new(KickFromGCRequest).ProtoReflect().Descriptor() },
 				ResponseDefn: func() protoreflect.MessageDescriptor { return new(KickFromGCResponse).ProtoReflect().Descriptor() },
-				Help:         "KickFromGC kicks an user from a GC. The local user must have admin  privileges in the GC.",
+				Help:         "KickFromGC kicks an user from a GC. The local user must have admin privileges in the GC.",
 				ServerHandler: func(x interface{}, ctx context.Context, request, response proto.Message) error {
 					return x.(GCServiceServer).KickFromGC(ctx, request.(*KickFromGCRequest), response.(*KickFromGCResponse))
 				},
@@ -1272,6 +1296,14 @@ var help_messages = map[string]map[string]string{
 	},
 	"AcceptGCInviteResponse": {
 		"@": "AcceptGCInviteResponse is the response to accept an invite to join a GC.",
+	},
+	"SendFileRequest": {
+		"@":        "SendFileRequest is the request to send a file to a user.",
+		"user":     "user is the hex-encoded ID of the user or its nick.",
+		"filename": "filename is the absolute path to the file.",
+	},
+	"SendFileResponse": {
+		"@": "SendFileResponse is the response to sending a file to a user.",
 	},
 	"KickFromGCRequest": {
 		"@":      "KickFromGCRequest is the request to kick an user from a GC.",

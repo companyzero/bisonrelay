@@ -45,6 +45,15 @@ type chatServer struct {
 	kxStreams  *serverStreams[*types.KXCompleted]
 }
 
+func (c *chatServer) SendFile(_ context.Context, req *types.SendFileRequest, _ *types.SendFileResponse) error {
+	user, err := c.c.UserByNick(req.User)
+	if err != nil {
+		return err
+	}
+
+	return c.c.SendFile(user.ID(), req.Filename)
+}
+
 func (c *chatServer) PM(ctx context.Context, req *types.PMRequest, res *types.PMResponse) error {
 	if req.Msg == nil {
 		return fmt.Errorf("msg is nil")

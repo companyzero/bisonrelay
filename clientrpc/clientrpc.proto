@@ -62,6 +62,9 @@ service ChatService {
 
   /* AcceptInvite accepts an invite to kx with the user-provided invite. */
   rpc AcceptInvite(AcceptInviteRequest) returns (AcceptInviteResponse);
+
+  /* SendFile sends a file to a user. */
+  rpc SendFile(SendFileRequest) returns (SendFileResponse);
 }
 
 /* GCService offers GC-related management operations. */
@@ -443,6 +446,18 @@ message AcceptGCInviteRequest {
 
 /* AcceptGCInviteResponse is the response to accept an invite to join a GC. */
 message AcceptGCInviteResponse {};
+
+/* SendFileRequest is the request to send a file to a user. */
+message SendFileRequest {
+  /* user is the hex-encoded ID of the user or its nick. */
+  string user = 1;
+
+  /* filename is the absolute path to the file. */
+  string filename = 2;
+};
+
+/* SendFileResponse is the response to sending a file to a user. */
+message SendFileResponse {};
 
 /* KickFromGCRequest is the request to kick an user from a GC. */
 message KickFromGCRequest {
