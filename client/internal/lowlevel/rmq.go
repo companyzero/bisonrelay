@@ -269,6 +269,24 @@ func (q *RMQ) isRVInvoicePaid(ctx context.Context, rv RVID, amt int64, pc client
 		return nil
 	}
 
+	// Create a special context to limit how long we wait for inflight
+	// payments to complete. This handles the case where a payment takes
+	// too long to complete and we might want to unblock the queue.
+	//
+	// NOTE: The payment might still be inflight, but it won't be reused in
+	// that case, potentially causing a double payment for the same RV.
+	//
+	// The tradeoff is having to hang on to the payment attempt for
+	// potentially a _long_ time (in the worse case scenario, an on-chain
+	// settlement, hundreds of blocks in the future) and never being able
+	// to send this message in a timely manner, causing broken ratchets.
+	//
+	// We assume this risk of double payment here, for the moment. In the
+	// future, this should be exposed to the user somehow.
+	const paymentTimeout = time.Minute
+	ctx, cancel := context.WithTimeout(ctx, paymentTimeout)
+	defer cancel()
+
 	// Check invoice payment actually completed.
 	err = pc.IsPaymentCompleted(ctx, payInvoice)
 	if err != nil {

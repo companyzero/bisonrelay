@@ -320,26 +320,6 @@ func (pc *DcrlnPaymentClient) IsPaymentCompleted(ctx context.Context, invoice st
 		return fmt.Errorf("unable to decode payment hash: %v", err)
 	}
 
-	// Create a special context to limit how long we wait for inflight
-	// payments to complete. This handles the case where a payment takes
-	// too long to complete and we might want to unblock callers.
-	//
-	// NOTE: this causes this function to only returns nil ("invoice paid")
-	// if the payment completely succeeded. The payment might still be
-	// inflight after reconnecting, but it won't be reused in that case,
-	// potentially causing a double payment for the same RV.
-	//
-	// The tradeoff is having to hang on to the payment attempt for
-	// potentially a _long_ time (in the worse case scenario, an on-chain
-	// settlement, hundreds of blocks in the future) and never being able
-	// to send this message in a timely manner, causing broken ratchets.
-	//
-	// We assume this risk of double payment here, for the moment. In the
-	// future, this should be exposed to the user somehow.
-	const paymentTimeout = time.Minute
-	ctx, cancel := context.WithTimeout(ctx, paymentTimeout)
-	defer cancel()
-
 	req := &routerrpc.TrackPaymentRequest{
 		PaymentHash: payHash,
 	}
