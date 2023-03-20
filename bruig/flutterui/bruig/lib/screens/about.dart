@@ -31,13 +31,9 @@ class _AboutScreenState extends State<AboutScreen> {
 
   @override
   Widget build(BuildContext context) {
-    var theme = Theme.of(context);
-    var textColor = theme.focusColor;
-    var appStartBackground = theme.backgroundColor;
+    var textColor = const Color(0xFFE4E3E6);
     var backgroundColor = const Color(0xFF19172C);
     var cardColor = const Color(0xFF05031A);
-    var secondaryTextColor = const Color(0xFFE4E3E6);
-    var darkTextColor = const Color(0xFF5A5968);
 
     return Scaffold(
         body: Container(
@@ -75,7 +71,7 @@ class _AboutScreenState extends State<AboutScreen> {
                               decoration: BoxDecoration(
                                 borderRadius:
                                     BorderRadius.all(Radius.circular(30)),
-                                border: Border.all(color: secondaryTextColor),
+                                border: Border.all(color: textColor),
                               ),
                               width: 600,
                               height: 300,

@@ -1,6 +1,7 @@
 import 'package:bruig/components/recent_log.dart';
 import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/components/buttons.dart';
+import 'package:bruig/screens/about.dart';
 import 'package:bruig/config.dart';
 import 'package:bruig/main.dart';
 import 'package:bruig/models/log.dart';
@@ -30,7 +31,8 @@ class _UnlockLNAppState extends State<UnlockLNApp> {
       initialRoute: widget.initialRoute,
       routes: {
         "/": (context) => _LNUnlockPage(widget.cfg, widget.setCfg),
-        "/sync": (context) => _LNChainSyncPage(widget.cfg)
+        "/sync": (context) => _LNChainSyncPage(widget.cfg),
+        '/about': (context) => const AboutScreen(),
       },
       builder: (BuildContext context, Widget? child) => Scaffold(
         body: child,
@@ -91,6 +93,10 @@ class __LNUnlockPageState extends State<_LNUnlockPage> {
     }
   }
 
+  void goToAbout() {
+    Navigator.of(context).pushNamed("/about");
+  }
+
   @override
   Widget build(BuildContext context) {
     var backgroundColor = const Color(0xFF19172C);
@@ -123,7 +129,17 @@ class __LNUnlockPageState extends State<_LNUnlockPage> {
                 ])),
             padding: const EdgeInsets.all(10),
             child: Column(children: [
-              const SizedBox(height: 258),
+              Row(children: [
+                IconButton(
+                    alignment: Alignment.topLeft,
+                    tooltip: "About Bison Relay",
+                    iconSize: 50,
+                    onPressed: goToAbout,
+                    icon: Image.asset(
+                      "assets/images/icon.png",
+                    )),
+              ]),
+              const SizedBox(height: 208),
               Text("Connect to Bison Relay",
                   style: TextStyle(
                       color: textColor,
@@ -194,62 +210,6 @@ class __LNUnlockPageState extends State<_LNUnlockPage> {
                               : const SizedBox(width: 25),
                         ])))
               ]),
-
-/*
-                ],
-                    stops: const [
-                  0,
-                  0.17,
-                  1
-                ])),
-            padding: const EdgeInsets.all(10),
-            child: Column(children: [
-              const SizedBox(height: 258),
-              Text("Connect to Bison Relay",
-                  style: TextStyle(
-                      color: textColor,
-                      fontSize: 34,
-                      fontWeight: FontWeight.w200)),
-              const SizedBox(height: 55),
-              Row(children: [
-                const SizedBox(width: 323),
-                Expanded(
-                    child: TextField(
-                        decoration: InputDecoration(
-                            hintText: "Password",
-                            hintStyle:
-                                TextStyle(fontSize: 21, color: textColor),
-                            filled: true,
-                            fillColor: cardColor),
-                        style: TextStyle(color: textColor, fontSize: 21),
-                        controller: passCtrl,
-                        obscureText: true)),
-                        ])
-              
-                  Center(
-                      child: SizedBox(
-                          width: 283,
-                          child: Row(children: [
-                            const SizedBox(width: 35),
-                            LoadingScreenButton(
-                              loading: loading,
-                              onPressed: unlock,
-                              text: "Unlock Wallet",
-                            ),
-                            const SizedBox(width: 10),
-                            loading
-                                ? SizedBox(
-                                    height: 25,
-                                    width: 25,
-                                    child: CircularProgressIndicator(
-                                        value: null,
-                                        backgroundColor: backgroundColor,
-                                        color: textColor,
-                                        strokeWidth: 2),
-                                  )
-                                : const SizedBox(width: 25),
-                          ])))
-                          */
             ]),
           )
         ]));
@@ -315,6 +275,11 @@ class _LNChainSyncPageState extends State<_LNChainSyncPage> {
     var cardColor = const Color(0xFF05031A);
     var textColor = const Color(0xFF8E8D98);
     var secondaryTextColor = const Color(0xFFE4E3E6);
+
+    void goToAbout() {
+      Navigator.of(context).pushNamed("/about");
+    }
+
     return Container(
         color: backgroundColor,
         child: Stack(children: [
@@ -342,7 +307,17 @@ class _LNChainSyncPageState extends State<_LNChainSyncPage> {
           Container(
               padding: const EdgeInsets.all(10),
               child: Column(children: [
-                const SizedBox(height: 89),
+                Row(children: [
+                  IconButton(
+                      alignment: Alignment.topLeft,
+                      tooltip: "About Bison Relay",
+                      iconSize: 50,
+                      onPressed: goToAbout,
+                      icon: Image.asset(
+                        "assets/images/icon.png",
+                      )),
+                ]),
+                const SizedBox(height: 39),
                 Text("Setting up Bison Relay",
                     style: TextStyle(
                         color: textColor,
@@ -373,7 +348,7 @@ class _LNChainSyncPageState extends State<_LNChainSyncPage> {
                                           textColor)))),
                           const SizedBox(width: 20),
                           Text(
-                              "${((progress > 1 ? 1 : progress) * 100).toStringAsFixed(2)}%",
+                              "${((progress > 1 ? 1 : progress) * 100).toStringAsFixed(0)}%",
                               style: TextStyle(
                                   color: textColor,
                                   fontSize: 15,
