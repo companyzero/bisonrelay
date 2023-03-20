@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/companyzero/bisonrelay/rpc"
+	"github.com/companyzero/bisonrelay/zkidentity"
 )
 
 func (db *DB) SaveKX(tx ReadWriteTx, kx KXData) error {
@@ -258,6 +259,50 @@ func (db *DB) ListKXSearches(tx ReadTx) ([]UserID, error) {
 	}
 
 	return res, nil
+}
+
+// AddInitialKXAction adds an action to be taken after kx completes with the given
+// initial rendezvous.
+func (db *DB) AddInitialKXAction(tx ReadWriteTx, initialRV zkidentity.ShortID, action PostKXAction) error {
+	filename := filepath.Join(db.root, initKXActionsDir, initialRV.String())
+	var actions []PostKXAction
+	err := db.readJsonFile(filename, &actions)
+	if err != nil && !errors.Is(err, ErrNotFound) {
+		return err
+	}
+	actions = append(actions, action)
+	return db.saveJsonFile(filename, actions)
+}
+
+// RemoveInitialKXActions removes the initial-kx actions registered for the given
+// initial rendezvous.
+func (db *DB) RemoveInitialKXActions(tx ReadWriteTx, initialRV zkidentity.ShortID) error {
+	filename := filepath.Join(db.root, initKXActionsDir, initialRV.String())
+	err := os.Remove(filename)
+	if os.IsNotExist(err) {
+		return nil
+	}
+	return err
+}
+
+// InitialToPostKXAction converts an action based on initial rendezvous to a known user id.
+func (db *DB) InitialToPostKXActions(tx ReadWriteTx, initialRV, target zkidentity.ShortID) error {
+	filename := filepath.Join(db.root, initKXActionsDir, initialRV.String())
+	var actions []PostKXAction
+	err := db.readJsonFile(filename, &actions)
+	switch {
+	case errors.Is(err, ErrNotFound):
+		return nil
+	case err != nil:
+		return err
+	default:
+	}
+	for _, action := range actions {
+		if err = db.AddUniquePostKXAction(tx, target, action); err != nil {
+			return err
+		}
+	}
+	return db.RemoveInitialKXActions(tx, initialRV)
 }
 
 // AddPostKXAction adds an action to be taken after kx completes with the given
