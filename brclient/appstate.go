@@ -3172,8 +3172,9 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		}
 
 		payRPCServerCfg := rpcserver.PaymentsServerCfg{
-			Log:    logBknd.logger("RPCS"),
-			Client: c,
+			Log:               logBknd.logger("RPCS"),
+			Client:            c,
+			RootReplayMsgLogs: filepath.Join(args.DBRoot, "replaymsglog"),
 		}
 		err = rpcServer.InitPaymentsService(payRPCServerCfg)
 		if err != nil {
