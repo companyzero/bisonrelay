@@ -1321,9 +1321,10 @@ func (as *appState) pm(cw *chatWindow, msg string) {
 // payTip sends a tip to the user of the given window. This blocks until the
 // tip has been paid.
 func (as *appState) payTip(cw *chatWindow, dcrAmount float64) {
+	const maxAttempts = 1
 	m := cw.newInternalMsg(fmt.Sprintf("Sending %.8f DCR as tip", dcrAmount))
 	as.repaintIfActive(cw)
-	err := as.c.TipUser(as.ctx, cw.uid, dcrAmount)
+	err := as.c.TipUser(cw.uid, dcrAmount, maxAttempts)
 	if err != nil {
 		as.cwHelpMsg("Unable to tip user %q: %v",
 			cw.alias, err)

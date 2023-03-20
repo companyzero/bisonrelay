@@ -295,6 +295,21 @@ type UnackedRM struct {
 	PayEvent  string  `json:"pay_event"`
 }
 
+type TipUserAttempt struct {
+	UID              UserID     `json:"uid"`
+	Tag              int32      `json:"tag"`
+	MilliAtoms       uint64     `json:"milli_atoms"`
+	Created          time.Time  `json:"created"`
+	Attempts         int32      `json:"attempts"`
+	MaxAttempts      int32      `json:"max_attempts"`
+	InvoiceRequested time.Time  `json:"invoice_requested"`
+	PaymentAttempt   *time.Time `json:"payment_attempt"`
+	LastInvoice      string     `json:"last_invoice"`
+	PrevInvoices     []string   `json:"prev_invoices"`
+	LastInvoiceError *string    `json:"last_invoice_error,omitempty"`
+	Completed        *time.Time `json:"completed,omitempty"`
+}
+
 var (
 	LocalIDEmptyError       = errors.New("local ID is not initialized")
 	ServerIDEmptyError      = errors.New("server ID is not known")

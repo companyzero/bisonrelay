@@ -81,6 +81,8 @@ type testClient struct {
 	ctx     context.Context
 	cancel  func()
 	runC    chan error
+	mpc     *testutils.MockPayClient
+	cfg     *client.Config
 
 	mtx           sync.Mutex
 	conn          *testConn
@@ -148,6 +150,11 @@ func (tc *testClient) nextGCUserPartedIs(gcID client.GCID, uid client.UserID, ki
 // handle is syntatic sugar for tc.NotificationManager().Register()
 func (tc *testClient) handle(handler client.NotificationHandler) client.NotificationRegistration {
 	return tc.NotificationManager().Register(handler)
+}
+
+// handleSync is syntatic sugar for tc.NotificationManager().RegisterSync()
+func (tc *testClient) handleSync(handler client.NotificationHandler) client.NotificationRegistration {
+	return tc.NotificationManager().RegisterSync(handler)
 }
 
 // testScaffold holds all scaffolding needed to run an E2E test that involves
@@ -226,6 +233,8 @@ func (ts *testScaffold) newClientWithOpts(name string, rootDir string,
 	db, err := clientdb.New(dbCfg)
 	assert.NilErr(ts.t, err)
 
+	mpc := &testutils.MockPayClient{}
+
 	cfg := client.Config{
 		ReconnectDelay: 500 * time.Millisecond,
 		Dialer:         dialer,
@@ -236,6 +245,11 @@ func (ts *testScaffold) newClientWithOpts(name string, rootDir string,
 		DB:            db,
 		LocalIDIniter: idIniter,
 		Logger:        logBknd,
+		PayClient:     mpc,
+
+		TipUserRestartDelay:          2 * time.Second,
+		TipUserReRequestInvoiceDelay: time.Second,
+		TipUserMaxLifetime:           10 * time.Second,
 
 		ServerSessionChanged: func(connected bool, pushRate, subRate, expDays uint64) {
 			tc.mtx.Lock()
@@ -259,6 +273,8 @@ func (ts *testScaffold) newClientWithOpts(name string, rootDir string,
 		rootDir: rootDir,
 		runC:    make(chan error, 1),
 		db:      db,
+		mpc:     mpc,
+		cfg:     &cfg,
 	}
 	go func() { tc.runC <- c.Run(ctx) }()
 
@@ -305,6 +321,13 @@ func (ts *testScaffold) recreateClient(tc *testClient) *testClient {
 	ts.stopClient(tc)
 
 	// Recreate client.
+	return ts.newClientWithOpts(tc.name, tc.rootDir, tc.id)
+}
+
+// recreateStoppedClient recreates a client that was previously stopped. If
+// the client was not stopped, results are undefined.
+func (ts *testScaffold) recreateStoppedClient(tc *testClient) *testClient {
+	ts.t.Helper()
 	return ts.newClientWithOpts(tc.name, tc.rootDir, tc.id)
 }
 

@@ -1241,9 +1241,10 @@ var help_messages = map[string]map[string]string{
 		"status_from_nick": "status_from_nick is the nick of the original author of the status.",
 	},
 	"TipUserRequest": {
-		"@":          "TipUserRequest is a request to tip a remote user.",
-		"user":       "user is the remote user nick or hex-encoded ID.",
-		"dcr_amount": "dcr_amount is the DCR amount to send as tip.",
+		"@":            "TipUserRequest is a request to tip a remote user.",
+		"user":         "user is the remote user nick or hex-encoded ID.",
+		"dcr_amount":   "dcr_amount is the DCR amount to send as tip.",
+		"max_attempts": "max_attempts is the number of max attempts to try to send the tip.",
 	},
 	"TipUserResponse": {
 		"@": "TipUserResponse is the response to a tip user request.",
@@ -1265,7 +1266,7 @@ var help_messages = map[string]map[string]string{
 		"sequence_id":        "sequence_id is an opaque sequential ID.",
 		"uid":                "uid is the raw ID of the KX'd user.",
 		"nick":               "nick is the nick of the KX'd user.",
-		"initial_rendezvous": "initialrendezvous is the initial random RV the key exchange happened.",
+		"initial_rendezvous": "initial_rendezvous is the initial random RV the key exchange happened.",
 	},
 	"WriteNewInviteRequest": {
 		"@": "WriteNewInviteRequest is the request to add a new invite.",

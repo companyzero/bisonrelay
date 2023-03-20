@@ -130,6 +130,24 @@ type Config struct {
 	// request. Note that the passed user cannot be used for messaging
 	// anymore.
 	UserBlocked func(user *RemoteUser)
+
+	// TipUserRestartDelay is how long to wait after client start and
+	// initial server connection to restart TipUser attempts. If unset,
+	// a default value of 1 minute is used.
+	TipUserRestartDelay time.Duration
+
+	// TipUserReRequestInvoiceDelay is how long to wait to re-request an
+	// invoice from the user, if one has not been received yet when
+	// attempting to tip. If unset, a default value of 24 hours is used.
+	TipUserReRequestInvoiceDelay time.Duration
+
+	// TipUserMaxLifetime is the maximum amount of time an invoice will
+	// be paid after received. After this delay elapses, there won't be
+	// attempts to pay received invoices for a tip attempt. This delay is
+	// based on the initial TipUser attempt.
+	//
+	// If unspecified, a default value of 72 hours is used.
+	TipUserMaxLifetime time.Duration
 }
 
 // logger creates a logger for the given subsystem in the configured backend.
@@ -139,6 +157,19 @@ func (cfg *Config) logger(subsys string) slog.Logger {
 	}
 
 	return cfg.Logger(subsys)
+}
+
+// setDefaults sets default options for unset/empty config fields.
+func (cfg *Config) setDefaults() {
+	if cfg.TipUserRestartDelay == 0 {
+		cfg.TipUserRestartDelay = time.Minute
+	}
+	if cfg.TipUserReRequestInvoiceDelay == 0 {
+		cfg.TipUserReRequestInvoiceDelay = time.Hour * 24
+	}
+	if cfg.TipUserMaxLifetime == 0 {
+		cfg.TipUserMaxLifetime = time.Hour * 72
+	}
 }
 
 // Client is the main state manager for a CR client connection. It attempts to
@@ -168,6 +199,10 @@ type Client struct {
 	// abLoaded is closed when the address book has finished loading.
 	abLoaded chan struct{}
 
+	// firstSubDone is closed when the first subscription to remote RVs is
+	// done after the client starts.
+	firstSubDone chan struct{}
+
 	svrLnNodeMtx sync.Mutex
 	svrLnNode    string
 
@@ -186,6 +221,7 @@ type Client struct {
 func New(cfg Config) (*Client, error) {
 	var c *Client
 
+	cfg.setDefaults()
 	id := new(zkidentity.FullIdentity)
 
 	subsDelayer := func() <-chan time.Time {
@@ -195,6 +231,11 @@ func New(cfg Config) (*Client, error) {
 	}
 	subsDoneCB := func() {
 		c.gcmq.SessionChanged(true)
+		select {
+		case <-c.firstSubDone:
+		default:
+			close(c.firstSubDone)
+		}
 	}
 	rmgrLog := cfg.logger("RVMR")
 	rmgrdb := &rvManagerDBAdapter{}
@@ -260,6 +301,7 @@ func New(cfg Config) (*Client, error) {
 		ntfns: ntfns,
 
 		abLoaded:         make(chan struct{}),
+		firstSubDone:     make(chan struct{}),
 		newUsersChan:     make(chan *RemoteUser),
 		gcWarnedVersions: &singlesetmap.Map[zkidentity.ShortID]{},
 	}
@@ -925,6 +967,9 @@ func (c *Client) Run(ctx context.Context) error {
 		c.clearOldMediateIDs()
 		return nil
 	})
+
+	// Restart tip payments.
+	g.Go(func() error { return c.restartTipUserAttempts(gctx) })
 
 	return g.Wait()
 }

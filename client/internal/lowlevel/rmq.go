@@ -249,13 +249,13 @@ func (q *RMQ) fetchInvoice(ctx context.Context, sess clientintf.ServerSessionInt
 //
 // Returns the payment token, or nil if a new payment attempt is needed.
 func (q *RMQ) isRVInvoicePaid(ctx context.Context, rv RVID, amt int64, pc clientintf.PaymentClient,
-	sess clientintf.ServerSessionIntf) []byte {
+	sess clientintf.ServerSessionIntf) (int64, []byte) {
 
 	// Check if there was a previous payment attempt for this rv.
 	payInvoice, payDate, err := q.db.RVHasPaymentAttempt(rv)
 	if err != nil || payInvoice == "" {
 		q.log.Debugf("Push to RV %s has no stored payment attempt", rv)
-		return nil
+		return 0, nil
 	}
 
 	// Check that the payment attempt isn't so old that the payment token
@@ -266,7 +266,7 @@ func (q *RMQ) isRVInvoicePaid(ctx context.Context, rv RVID, amt int64, pc client
 		q.log.Warnf("Push payment attempt stored timed out: invoice %q "+
 			"attempt time %s limit time %s amount %d milliatoms",
 			payInvoice, payDate, payLifetimeLimit, amt)
-		return nil
+		return 0, nil
 	}
 
 	// Create a special context to limit how long we wait for inflight
@@ -288,11 +288,11 @@ func (q *RMQ) isRVInvoicePaid(ctx context.Context, rv RVID, amt int64, pc client
 	defer cancel()
 
 	// Check invoice payment actually completed.
-	err = pc.IsPaymentCompleted(ctx, payInvoice)
+	fees, err := pc.IsPaymentCompleted(ctx, payInvoice)
 	if err != nil {
 		q.log.Warnf("Push payment attempt stored failed IsInvoicePaid "+
 			"check: %v", err)
-		return nil
+		return 0, nil
 	}
 
 	// Paid for this RV and payment still valid. Extract payment id to
@@ -301,11 +301,11 @@ func (q *RMQ) isRVInvoicePaid(ctx context.Context, rv RVID, amt int64, pc client
 	if err != nil {
 		q.log.Warnf("Push payment attempt stored invoice %s failed "+
 			"to decode: %v", payInvoice, err)
-		return nil
+		return 0, nil
 	}
 
 	q.log.Debugf("Reusing payment id for push to RV %s: %x", rv, decoded.ID)
-	return decoded.ID
+	return fees, decoded.ID
 }
 
 // payForRM pays for the given rm on the server.
@@ -324,7 +324,8 @@ func (q *RMQ) payForRM(ctx context.Context, rmm *rmmsg, invoice string,
 	}
 
 	// Check for a successful previous payment attempt.
-	paidHash := q.isRVInvoicePaid(ctx, rmm.rv, amt, pc, sess)
+	// TODO: track fees? What about duplicate checks?
+	_, paidHash := q.isRVInvoicePaid(ctx, rmm.rv, amt, pc, sess)
 	if paidHash != nil {
 		rmm.mtx.Lock()
 		rmm.paidHash = paidHash

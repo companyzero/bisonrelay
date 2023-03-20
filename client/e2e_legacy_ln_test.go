@@ -413,17 +413,18 @@ func TestE2EDcrlnTipUser(t *testing.T) {
 	time.Sleep(100 * time.Millisecond) // Time for run() to start.
 	completeC2CKX(t, alice, bob)
 
-	// Send a tip from Alice to Bob.
+	progressErrChan := make(chan error, 1)
+	alice.cfg.Notifications.Register(OnTipAttemptProgressNtfn(func(ru *RemoteUser, amtMAtoms int64, completed bool, attempt int, attemptErr error, willRetry bool) {
+		progressErrChan <- attemptErr
+	}))
+
+	// Send a tip from Alice to Bob. Sending should succeed and we should
+	// get a completed progress event.
 	errChan := make(chan error)
-	go func() { errChan <- alice.TipUser(ctx, bob.PublicID(), 0.00001) }()
-	select {
-	case err := <-errChan:
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-	case <-time.After(30 * time.Second):
-		t.Fatal("timeout")
-	}
+	const maxAttempts = 1
+	go func() { errChan <- alice.TipUser(bob.PublicID(), 0.00001, maxAttempts) }()
+	assert.NilErrFromChan(t, errChan)
+	assert.NilErrFromChan(t, progressErrChan)
 }
 
 // TestE2EDcrlnOfflineMsgs ensures that attempting to send messages while the

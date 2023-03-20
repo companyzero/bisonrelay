@@ -694,7 +694,8 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		if err := cmd.decode(&args); err != nil {
 			return nil, err
 		}
-		return nil, c.TipUser(cc.ctx, args.UID, args.Amount)
+		const maxAttempts = 1
+		return nil, c.TipUser(args.UID, args.Amount, maxAttempts)
 
 	case CTSubscribeToPosts:
 		var args SubscribeToPosts

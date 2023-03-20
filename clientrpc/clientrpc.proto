@@ -365,6 +365,8 @@ message TipUserRequest {
   string user = 1;
   /* dcr_amount is the DCR amount to send as tip. */
   double dcr_amount = 2;
+  /* max_attempts is the number of max attempts to try to send the tip. */
+  int32 max_attempts = 3;
 }
 
 /* TipUserResponse is the response to a tip user request. */

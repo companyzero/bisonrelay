@@ -41,7 +41,7 @@ func (c *paymentsServer) TipUser(ctx context.Context, req *types.TipUserRequest,
 			return err
 		}
 	}
-	return c.c.TipUser(ctx, user.ID(), req.DcrAmount)
+	return c.c.TipUser(user.ID(), req.DcrAmount, req.MaxAttempts)
 }
 
 var _ types.PaymentsServiceServer = (*paymentsServer)(nil)

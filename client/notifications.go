@@ -170,6 +170,12 @@ type OnKXSearchCompleted func(user *RemoteUser)
 
 func (_ OnKXSearchCompleted) typ() string { return onKXSearchCompletedNtfnType }
 
+const onTipAttemptProgressNtfnType = "onTipAttemptProgress"
+
+type OnTipAttemptProgressNtfn func(ru *RemoteUser, amtMAtoms int64, completed bool, attempt int, attemptErr error, willRetry bool)
+
+func (_ OnTipAttemptProgressNtfn) typ() string { return onTipAttemptProgressNtfnType }
+
 // The following is used only in tests.
 
 const onTestNtfnType = "testNtfnType"
@@ -389,6 +395,11 @@ func (nmgr *NotificationManager) notifyGCAdminsChanged(ru *RemoteUser, gc rpc.RM
 		visit(func(h OnGCAdminsChangedNtfn) { h(ru, gc, added, removed) })
 }
 
+func (nmgr *NotificationManager) notifyTipAttemptProgress(ru *RemoteUser, amtMAtoms int64, completed bool, attempt int, attemptErr error, willRetry bool) {
+	nmgr.handlers[onTipAttemptProgressNtfnType].(*handlersFor[OnTipAttemptProgressNtfn]).
+		visit(func(h OnTipAttemptProgressNtfn) { h(ru, amtMAtoms, completed, attempt, attemptErr, willRetry) })
+}
+
 func NewNotificationManager() *NotificationManager {
 	return &NotificationManager{
 		handlers: map[string]handlersRegistry{
@@ -416,6 +427,7 @@ func NewNotificationManager() *NotificationManager {
 			onRemoteSubscriptionChangedType:   &handlersFor[OnRemoteSubscriptionChangedNtfn]{},
 			onRemoteSubscriptionErrorNtfnType: &handlersFor[OnRemoteSubscriptionErrorNtfn]{},
 			onLocalClientOfflineTooLong:       &handlersFor[OnLocalClientOfflineTooLong]{},
+			onTipAttemptProgressNtfnType:      &handlersFor[OnTipAttemptProgressNtfn]{},
 		},
 	}
 }

@@ -99,12 +99,6 @@ type RemoteUser struct {
 	// one at a time, because there's no way to demux replies.
 	wqSubPosts *waitingq.WaitingReplyQueue
 
-	// taggedChans keep track of inflight calls to this user that are
-	// waiting for a reply and can be demuxed due to the presence of a
-	// 'Tag' field.
-	taggedChansMtx sync.Mutex
-	taggedChans    map[uint32]chan interface{}
-
 	rLock  sync.Mutex
 	r      *ratchet.Ratchet
 	rError error
@@ -124,7 +118,6 @@ func newRemoteUser(q rmqIntf, rmgr rdzvManagerIntf, db *clientdb.DB, remoteID *z
 		stopChan:        make(chan struct{}),
 		nextRMChan:      make(chan *remoteUserRM),
 		wqSubPosts:      new(waitingq.WaitingReplyQueue),
-		taggedChans:     make(map[uint32]chan interface{}),
 		ratchetChan:     make(chan *ratchet.Ratchet),
 		decryptedRMChan: make(chan error),
 		sentRMChan:      make(chan error),
@@ -418,40 +411,6 @@ func (ru *RemoteUser) paidForRM(event string, amount, fees int64) {
 		ru.log.Warnf("Unable to store payment %d of event %q: %v", amount,
 			event, err)
 	}
-}
-
-// tagForMsg returns a random tag number that can be used to send a message to
-// the remote user and expect a reply using the same tag number.
-func (ru *RemoteUser) tagForMsg(replyChan chan interface{}) uint32 {
-	ru.taggedChansMtx.Lock()
-	tag := mustRandomUint32()
-	for ru.taggedChans[tag] != nil {
-		tag = mustRandomUint32()
-	}
-	ru.taggedChans[tag] = replyChan
-	ru.taggedChansMtx.Unlock()
-	return tag
-}
-
-// replyToTaggedMsg sends v as a response to the caller waiting for a reply on
-// the specified tag.
-func (ru *RemoteUser) replyToTaggedMsg(tag uint32, v interface{}) error {
-	ru.taggedChansMtx.Lock()
-	c, ok := ru.taggedChans[tag]
-	if ok {
-		delete(ru.taggedChans, tag)
-	}
-	ru.taggedChansMtx.Unlock()
-	if !ok {
-		return fmt.Errorf("unknown previous tagged msg %d", tag)
-	}
-	go func() {
-		select {
-		case c <- v:
-		case <-ru.runDone:
-		}
-	}()
-	return nil
 }
 
 // saveRatchet saves the current ratchet to the DB. This MUST be called with the
