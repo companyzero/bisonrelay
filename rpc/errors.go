@@ -15,6 +15,13 @@ import (
 // interface.
 var ErrRMInvoicePayment = errors.New("invoice payment error on RM push")
 
+// ErrUnableToGenerateInvoice is generated on clients when they are unable to
+// generate an invoice for a remote peer.
+//
+// Do not change this message as it's used in plain text across the C2C RPC
+// interface.
+var ErrUnableToGenerateInvoice = errors.New("unable to generate payment invoice")
+
 const errUnpaidSubscriptionRVMsg = "unpaid subscription to RV"
 
 // ErrUnpaidSubscriptionRV is an error returned while attempting to subscribe

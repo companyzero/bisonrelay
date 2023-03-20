@@ -83,6 +83,14 @@ func (db *DB) mustRandomUint64() uint64 {
 	return binary.LittleEndian.Uint64(b[:])
 }
 
+func (db *DB) mustRandomInt31() int32 {
+	var b [4]byte
+	if n, err := db.rnd.Read(b[:]); n < 4 || err != nil {
+		panic("out of entropy")
+	}
+	return int32(binary.LittleEndian.Uint32(b[:]) & 0x7fffffff)
+}
+
 // randomIDInDir generates a random id that does not yet exist as a file in the
 // given dir.
 func (db *DB) randomIDInDir(dir string) (clientintf.ID, error) {

@@ -309,15 +309,15 @@ func (pc *DcrlnPaymentClient) DecodeInvoice(ctx context.Context, invoice string)
 	}, nil
 }
 
-func (pc *DcrlnPaymentClient) IsPaymentCompleted(ctx context.Context, invoice string) error {
+func (pc *DcrlnPaymentClient) IsPaymentCompleted(ctx context.Context, invoice string) (int64, error) {
 	payReq, err := pc.lnRpc.DecodePayReq(ctx, &lnrpc.PayReqString{PayReq: invoice})
 	if err != nil {
-		return fmt.Errorf("unable to decode pay req")
+		return 0, fmt.Errorf("unable to decode pay req")
 	}
 
 	payHash, err := hex.DecodeString(payReq.PaymentHash)
 	if err != nil {
-		return fmt.Errorf("unable to decode payment hash: %v", err)
+		return 0, fmt.Errorf("unable to decode payment hash: %v", err)
 	}
 
 	req := &routerrpc.TrackPaymentRequest{
@@ -325,25 +325,25 @@ func (pc *DcrlnPaymentClient) IsPaymentCompleted(ctx context.Context, invoice st
 	}
 	stream, err := pc.lnRouter.TrackPaymentV2(ctx, req)
 	if err != nil {
-		return fmt.Errorf("unable to create payment tracking stream: %v", err)
+		return 0, fmt.Errorf("unable to create payment tracking stream: %v", err)
 	}
 	for {
 		event, err := stream.Recv()
 		if err != nil {
-			return fmt.Errorf("error reading from payment tracking stream: %v", err)
+			return 0, fmt.Errorf("error reading from payment tracking stream: %v", err)
 		}
 
 		switch event.Status {
 		case lnrpc.Payment_SUCCEEDED:
-			return nil
+			return event.FeeMAtoms, nil
 		case lnrpc.Payment_FAILED:
-			return fmt.Errorf("payment failed due to %s", event.FailureReason.String())
+			return 0, fmt.Errorf("payment failed due to %s", event.FailureReason.String())
 		case lnrpc.Payment_UNKNOWN:
-			return fmt.Errorf("payment status is unknown")
+			return 0, fmt.Errorf("payment status is unknown")
 		case lnrpc.Payment_IN_FLIGHT:
 			pc.log.Tracef("Payment %x is inflight", payHash)
 		default:
-			return fmt.Errorf("unknown payment tracking status %s", event.Status)
+			return 0, fmt.Errorf("unknown payment tracking status %s", event.Status)
 		}
 	}
 }

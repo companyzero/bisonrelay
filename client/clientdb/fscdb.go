@@ -46,6 +46,7 @@ const (
 	payStatsFile       = "paystats.json"
 	unackedRMsDir      = "unackedrms"
 	lastConnDateFile   = "lastconndate.json"
+	tipsDir            = "tips"
 )
 
 func (db *DB) LocalID(tx ReadTx) (*zkidentity.FullIdentity, error) {
