@@ -1322,7 +1322,7 @@ func (as *appState) pm(cw *chatWindow, msg string) {
 // tip has been paid.
 func (as *appState) payTip(cw *chatWindow, dcrAmount float64) {
 	const maxAttempts = 1
-	m := cw.newInternalMsg(fmt.Sprintf("Sending %.8f DCR as tip", dcrAmount))
+	m := cw.newInternalMsg(fmt.Sprintf("Attempting to send %.8f DCR as tip", dcrAmount))
 	as.repaintIfActive(cw)
 	err := as.c.TipUser(cw.uid, dcrAmount, maxAttempts)
 	if err != nil {
@@ -2663,6 +2663,23 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 	ntfns.Register(client.OnKXSearchCompleted(func(ru *client.RemoteUser) {
 		as.diagMsg("Completed KX search of %s", ru)
 		as.sendMsg(kxSearchCompleted{uid: ru.ID()})
+	}))
+
+	ntfns.Register(client.OnTipAttemptProgressNtfn(func(ru *client.RemoteUser, amtMAtoms int64, completed bool, attempt int, attemptErr error, willRetry bool) {
+		// Ignore non-final attempts (user can check logs).
+		if willRetry {
+			return
+		}
+
+		amtStr := fmt.Sprintf("%.8f DCR", float64(amtMAtoms)/1e11)
+		nick := strescape.Nick(ru.Nick())
+		if completed {
+			as.diagMsg("Completed tip payment of %s to %s", amtStr, nick)
+		} else {
+			as.diagMsg("Unable to complete tip payment of %s to %s "+
+				"after %d attempts: %v",
+				amtStr, nick, attempt, attemptErr)
+		}
 	}))
 
 	// Initialize client config.
