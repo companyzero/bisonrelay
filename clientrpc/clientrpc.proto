@@ -143,8 +143,17 @@ service PostsService {
 /* PaymentsService is the service to perform payment-related actions. */
 service PaymentsService {
   /* TipUser attempts to send a tip to a user. The user must be or come online
-     for this to complete. */
+     for this to complete. The request to tip an user is persisted and may
+     continue after a client restart. */
   rpc TipUser(TipUserRequest) returns (TipUserResponse);
+
+  /* TipProgress starts a stream that receives events about the progress of
+     TipUser requests. Multiple events for the same request may be received. */
+  rpc TipProgress(TipProgressRequest) returns (stream TipProgressEvent);
+
+  /* AckTipProgress acknowledges events received up to a given
+     sequence_id have been processed. */
+  rpc AckTipProgress(AckRequest) returns (AckResponse);
 }
 
 /******************************************************************************
@@ -601,6 +610,38 @@ message JoinedGCEvent {
   uint64 sequence_id = 1;
   /* gc is the GC definition. */
   RMGroupList gc = 2;
+};
+
+/* TipProgressRequest is the request to create a stream that receives events
+   about the progress of TipUser requests. */
+message TipProgressRequest {
+  /* unacked_from specifies to the server the sequence_id of the last received
+     tip progress event. Events received by the server that have a higher
+     sequence_id will be streamed back to the client. */
+  uint64 unacked_from = 1;
+};
+
+/* TipProgressEvent details the progress of a TipUser request. */
+message TipProgressEvent{
+  /* sequence_id is an opaque sequential ID. */
+  uint64 sequence_id = 1;
+  /* uid is the User ID of the TipUser target. */
+  bytes uid = 2;
+  /* nick is the nick of the TipUser target. */
+  string nick = 3;
+  /* amount_matoms is the amount being tipped in milli-atoms. */
+  int64 amount_matoms = 4;
+  /* completed flags whether the TipUser request was successfully completed
+     (i.e. if the tip was paid). */
+  bool completed = 5;
+  /* attempt is the attempt number. */
+  int32 attempt = 6;
+  /* attempt_err is filled when the attempt to fetch an invoice or perform
+     the payment for a received invoice failed. */
+  string attempt_err = 7;
+  /* will_retry flags whether a new attempt to request an invoice and perform
+     a payment will be done or if no more attempts will happen. */
+  bool will_retry = 8;
 };
 
 

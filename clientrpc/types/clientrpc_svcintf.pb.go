@@ -1079,6 +1079,8 @@ type PaymentsServiceClient interface {
 	// TipUser attempts to send a tip to a user. The user must be or come online
 	// for this to complete.
 	TipUser(ctx context.Context, in *TipUserRequest, out *TipUserResponse) error
+	TipProgress(ctx context.Context, in *TipProgressRequest) (PaymentsService_TipProgressClient, error)
+	AckTipProgress(ctx context.Context, in *AckRequest, out *AckResponse) error
 }
 
 type client_PaymentsService struct {
@@ -1091,6 +1093,24 @@ func (c *client_PaymentsService) TipUser(ctx context.Context, in *TipUserRequest
 	return c.defn.Methods[method].ClientHandler(c.c, ctx, in, out)
 }
 
+type PaymentsService_TipProgressClient interface {
+	Recv(*TipProgressEvent) error
+}
+
+func (c *client_PaymentsService) TipProgress(ctx context.Context, in *TipProgressRequest) (PaymentsService_TipProgressClient, error) {
+	const method = "TipProgress"
+	inner, err := c.defn.Methods[method].ClientStreamHandler(c.c, ctx, in)
+	if err != nil {
+		return nil, err
+	}
+	return streamerImpl[*TipProgressEvent]{c: inner}, nil
+}
+
+func (c *client_PaymentsService) AckTipProgress(ctx context.Context, in *AckRequest, out *AckResponse) error {
+	const method = "AckTipProgress"
+	return c.defn.Methods[method].ClientHandler(c.c, ctx, in, out)
+}
+
 func NewPaymentsServiceClient(c ClientConn) PaymentsServiceClient {
 	return &client_PaymentsService{c: c, defn: PaymentsServiceDefn()}
 }
@@ -1100,6 +1120,12 @@ type PaymentsServiceServer interface {
 	// TipUser attempts to send a tip to a user. The user must be or come online
 	// for this to complete.
 	TipUser(context.Context, *TipUserRequest, *TipUserResponse) error
+	TipProgress(context.Context, *TipProgressRequest, PaymentsService_TipProgressServer) error
+	AckTipProgress(context.Context, *AckRequest, *AckResponse) error
+}
+
+type PaymentsService_TipProgressServer interface {
+	Send(m *TipProgressEvent) error
 }
 
 func PaymentsServiceDefn() ServiceDefn {
@@ -1118,6 +1144,36 @@ func PaymentsServiceDefn() ServiceDefn {
 				},
 				ClientHandler: func(conn ClientConn, ctx context.Context, request, response proto.Message) error {
 					method := "PaymentsService.TipUser"
+					return conn.Request(ctx, method, request, response)
+				},
+			},
+			"TipProgress": {
+				IsStreaming:  true,
+				NewRequest:   func() proto.Message { return new(TipProgressRequest) },
+				NewResponse:  func() proto.Message { return new(TipProgressEvent) },
+				RequestDefn:  func() protoreflect.MessageDescriptor { return new(TipProgressRequest).ProtoReflect().Descriptor() },
+				ResponseDefn: func() protoreflect.MessageDescriptor { return new(TipProgressEvent).ProtoReflect().Descriptor() },
+				Help:         "",
+				ServerStreamHandler: func(x interface{}, ctx context.Context, request proto.Message, stream ServerStream) error {
+					return x.(PaymentsServiceServer).TipProgress(ctx, request.(*TipProgressRequest), streamerImpl[*TipProgressEvent]{s: stream})
+				},
+				ClientStreamHandler: func(conn ClientConn, ctx context.Context, request proto.Message) (ClientStream, error) {
+					method := "PaymentsService.TipProgress"
+					return conn.Stream(ctx, method, request)
+				},
+			},
+			"AckTipProgress": {
+				IsStreaming:  false,
+				NewRequest:   func() proto.Message { return new(AckRequest) },
+				NewResponse:  func() proto.Message { return new(AckResponse) },
+				RequestDefn:  func() protoreflect.MessageDescriptor { return new(AckRequest).ProtoReflect().Descriptor() },
+				ResponseDefn: func() protoreflect.MessageDescriptor { return new(AckResponse).ProtoReflect().Descriptor() },
+				Help:         "",
+				ServerHandler: func(x interface{}, ctx context.Context, request, response proto.Message) error {
+					return x.(PaymentsServiceServer).AckTipProgress(ctx, request.(*AckRequest), response.(*AckResponse))
+				},
+				ClientHandler: func(conn ClientConn, ctx context.Context, request, response proto.Message) error {
+					method := "PaymentsService.AckTipProgress"
 					return conn.Request(ctx, method, request, response)
 				},
 			},
@@ -1379,6 +1435,21 @@ var help_messages = map[string]map[string]string{
 		"@":           "JoinedGCEvent is the event received when the local client joins a GC.",
 		"sequence_id": "sequence_id is an opaque sequential ID.",
 		"gc":          "gc is the GC definition.",
+	},
+	"TipProgressRequest": {
+		"@":            "",
+		"unacked_from": "unacked_from specifies to the server the sequence_id of the last received tip progress event. Events received by the server that have a higher sequence_id will be streamed back to the client.",
+	},
+	"TipProgressEvent": {
+		"@":             "",
+		"sequence_id":   "sequence_id is an opaque sequential ID.",
+		"uid":           "",
+		"nick":          "",
+		"amount_matoms": "",
+		"completed":     "",
+		"attempt":       "",
+		"attempt_err":   "",
+		"will_retry":    "",
 	},
 	"RMPrivateMessage": {
 		"@":       "RMPrivateMessage is the network-level routed private message.",
