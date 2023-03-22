@@ -1490,6 +1490,31 @@ class KXSearch {
       _$KXSearchFromJson(json);
 }
 
+@JsonSerializable()
+class SuggestKX {
+  @JsonKey(name: "invitee")
+  final String inviteeID;
+  @JsonKey(name: "target")
+  final String targetID;
+
+  SuggestKX(this.inviteeID, this.targetID);
+  Map<String, dynamic> toJson() => _$SuggestKXToJson(this);
+}
+
+@JsonSerializable()
+class KXSuggested extends ChatEvent {
+  final String inviteeNick;
+  final String inviteeID;
+  final String targetNick;
+  final String targetID;
+
+  KXSuggested(this.inviteeNick, this.inviteeID, this.targetNick, this.targetID)
+      : super(inviteeID,
+            "User $inviteeNick has suggested you KX with $targetNick");
+  factory KXSuggested.fromJson(Map<String, dynamic> json) =>
+      _$KXSuggestedFromJson(json);
+}
+
 mixin NtfStreams {
   StreamController<RemoteUser> ntfAcceptedInvites =
       StreamController<RemoteUser>();
@@ -2043,6 +2068,10 @@ abstract class PluginPlatform {
     var res = await asyncCall(CTGetKXSearch, uid);
     return KXSearch.fromJson(res);
   }
+
+  Future<void> suggestKX(String iuid, tuid) async {
+    await asyncCall(CTSuggestKX, SuggestKX(iuid, tuid));
+  }
 }
 
 const int CTUnknown = 0x00;
@@ -2140,6 +2169,7 @@ const int CTResendGCList = 0x67;
 const int CTGCUpgradeVersion = 0x68;
 const int CTGCModifyAdmins = 0x69;
 const int CTGetKXSearch = 0x6a;
+const int CTSuggestKX = 0x6b;
 
 const int notificationsStartID = 0x1000;
 
@@ -2177,3 +2207,4 @@ const int NTGCAddedMembers = 0x101f;
 const int NTGCUpgradedVersion = 0x1020;
 const int NTGCMemberParted = 0x1021;
 const int NTGCAdminsChanged = 0x1022;
+const int NTKXCSuggested = 0x1023;

@@ -81,7 +81,7 @@ const onKXSuggested = "onKXSuggested"
 
 // OnKXSuggested is called after a remote user suggests that this user should KX
 // with another remote user.
-type OnKXSuggested func(*RemoteUser, *RemoteUser)
+type OnKXSuggested func(*RemoteUser, zkidentity.PublicIdentity)
 
 func (_ OnKXSuggested) typ() string { return onKXCompleted }
 
@@ -331,10 +331,11 @@ func (nmgr *NotificationManager) notifyOnKXCompleted(ir *clientintf.RawRVID, use
 func (nmgr *NotificationManager) notifyOnKXSearchCompleted(user *RemoteUser) {
 	nmgr.handlers[onKXSearchCompletedNtfnType].(*handlersFor[OnKXSearchCompleted]).
 		visit(func(h OnKXSearchCompleted) { h(user) })
-		
-func (nmgr *NotificationManager) notifyOnKXSuggested(user *RemoteUser) {
+}
+
+func (nmgr *NotificationManager) notifyOnKXSuggested(invitee *RemoteUser, target zkidentity.PublicIdentity) {
 	nmgr.handlers[onKXSuggested].(*handlersFor[OnKXSuggested]).
-		visit(func(h OnKXSuggested) { h(user, user) })
+		visit(func(h OnKXSuggested) { h(invitee, target) })
 }
 
 func (nmgr *NotificationManager) notifyInvoiceGenFailed(user *RemoteUser, dcrAmount float64, err error) {

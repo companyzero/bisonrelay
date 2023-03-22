@@ -180,9 +180,14 @@ func handleInitClient(handle uint32, args InitClient) error {
 		notify(NTKXCompleted, remoteUserFromPII(&pii), nil)
 	}))
 
-	ntfns.Register(client.OnKXSuggested(func(user *client.RemoteUser) {
-		pii := user.PublicIdentity()
-		notify(NTKXCompleted, remoteUserFromPII(&pii), nil)
+	ntfns.Register(client.OnKXSuggested(func(invitee *client.RemoteUser, target zkidentity.PublicIdentity) {
+		ipii := invitee.PublicIdentity()
+
+		skx := SuggestKX{
+			Invitee: ipii.Identity,
+			Target:  target.Identity,
+		}
+		notify(NTKXSuggested, skx, nil)
 	}))
 
 	ntfns.Register(client.OnInvoiceGenFailedNtfn(func(user *client.RemoteUser, dcrAmount float64, err error) {
