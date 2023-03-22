@@ -15,28 +15,28 @@ require (
 	github.com/decred/dcrd/crypto/blake256 v1.0.0
 	github.com/decred/dcrd/dcrutil/v4 v4.0.0
 	github.com/decred/dcrlnd v0.3.8-0.20221102131920-cab0f1036108
-	github.com/decred/dcrlnlpd v0.0.0-20230310195229-355b059ee936
+	github.com/decred/dcrlnlpd v0.0.0-20230322170740-0a76ced98d80
 	github.com/decred/go-socks v1.1.0
 	github.com/decred/slog v1.2.0
 	github.com/erikgeiser/promptkit v0.7.0
 	github.com/gorilla/websocket v1.4.2
 	github.com/jrick/flagfile v0.0.0-20200906235446-2904c79186c7
 	github.com/jrick/logrotate v1.0.0
-	github.com/lib/pq v1.10.5
+	github.com/lib/pq v1.10.7
 	github.com/mattn/go-runewidth v0.0.14
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/muesli/reflow v0.3.0
 	github.com/rogpeppe/go-internal v1.3.0
 	github.com/vaughan0/go-ini v0.0.0-20130923145212-a98ad7ee00ec
 	golang.org/x/crypto v0.0.0-20210711020723-a769d52b0f97
-	golang.org/x/exp v0.0.0-20220921023135-46d9e7742f1e
+	golang.org/x/exp v0.0.0-20230321023759-10a507213a29
 	golang.org/x/mobile v0.0.0-20190719004257-d2bd2a29d028
-	golang.org/x/net v0.0.0-20210226172049-e18ecbb05110
-	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
-	golang.org/x/term v0.0.0-20220526004731-065cf7ba2467
-	golang.org/x/text v0.3.7
-	google.golang.org/grpc v1.46.0
-	google.golang.org/protobuf v1.27.1
+	golang.org/x/net v0.8.0
+	golang.org/x/sync v0.1.0
+	golang.org/x/term v0.6.0
+	golang.org/x/text v0.8.0
+	google.golang.org/grpc v1.54.0
+	google.golang.org/protobuf v1.28.1
 	gopkg.in/macaroon.v2 v2.1.0
 )
 
@@ -88,7 +88,7 @@ require (
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/btree v1.0.0 // indirect
-	github.com/google/uuid v1.1.2 // indirect
+	github.com/google/uuid v1.3.0 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.0.0 // indirect
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0 // indirect
@@ -131,10 +131,10 @@ require (
 	go.uber.org/atomic v1.6.0 // indirect
 	go.uber.org/multierr v1.5.0 // indirect
 	go.uber.org/zap v1.10.0 // indirect
-	golang.org/x/sys v0.0.0-20220811171246-fbc7d0a398ab // indirect
+	golang.org/x/sys v0.6.0 // indirect
 	golang.org/x/time v0.0.0-20191024005414-555d28b269f0 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
-	google.golang.org/genproto v0.0.0-20200924141100-a14c0a98937d // indirect
+	google.golang.org/genproto v0.0.0-20230110181048-76db0878b65f // indirect
 	gopkg.in/errgo.v1 v1.0.0 // indirect
 	gopkg.in/macaroon-bakery.v2 v2.1.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
