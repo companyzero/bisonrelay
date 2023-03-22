@@ -77,6 +77,14 @@ type OnKXCompleted func(*clientintf.RawRVID, *RemoteUser)
 
 func (_ OnKXCompleted) typ() string { return onKXCompleted }
 
+const onKXSuggested = "onKXSuggested"
+
+// OnKXSuggested is called after a remote user suggests that this user should KX
+// with another remote user.
+type OnKXSuggested func(*RemoteUser, *RemoteUser)
+
+func (_ OnKXSuggested) typ() string { return onKXCompleted }
+
 const onInvoiceGenFailedNtfnType = "onInvoiceGenFailed"
 
 type OnInvoiceGenFailedNtfn func(user *RemoteUser, dcrAmount float64, err error)
@@ -323,6 +331,10 @@ func (nmgr *NotificationManager) notifyOnKXCompleted(ir *clientintf.RawRVID, use
 func (nmgr *NotificationManager) notifyOnKXSearchCompleted(user *RemoteUser) {
 	nmgr.handlers[onKXSearchCompletedNtfnType].(*handlersFor[OnKXSearchCompleted]).
 		visit(func(h OnKXSearchCompleted) { h(user) })
+		
+func (nmgr *NotificationManager) notifyOnKXSuggested(user *RemoteUser) {
+	nmgr.handlers[onKXSuggested].(*handlersFor[OnKXSuggested]).
+		visit(func(h OnKXSuggested) { h(user, user) })
 }
 
 func (nmgr *NotificationManager) notifyInvoiceGenFailed(user *RemoteUser, dcrAmount float64, err error) {
@@ -383,6 +395,7 @@ func NewNotificationManager() *NotificationManager {
 			onPMNtfnType:             &handlersFor[OnPMNtfn]{},
 			onGCMNtfnType:            &handlersFor[OnGCMNtfn]{},
 			onKXCompleted:            &handlersFor[OnKXCompleted]{},
+			onKXSuggested:            &handlersFor[OnKXCompleted]{},
 			onPostRcvdNtfnType:       &handlersFor[OnPostRcvdNtfn]{},
 			onPostStatusRcvdNtfnType: &handlersFor[OnPostStatusRcvdNtfn]{},
 

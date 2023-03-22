@@ -180,6 +180,11 @@ func handleInitClient(handle uint32, args InitClient) error {
 		notify(NTKXCompleted, remoteUserFromPII(&pii), nil)
 	}))
 
+	ntfns.Register(client.OnKXSuggested(func(user *client.RemoteUser) {
+		pii := user.PublicIdentity()
+		notify(NTKXCompleted, remoteUserFromPII(&pii), nil)
+	}))
+
 	ntfns.Register(client.OnInvoiceGenFailedNtfn(func(user *client.RemoteUser, dcrAmount float64, err error) {
 		ntf := InvoiceGenFailed{
 			UID:       user.ID(),
@@ -1340,8 +1345,14 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		}
 
 		return c.GetKXSearch(args)
-	}
 
+	case CTSuggestKX:
+		var args SuggestKX
+		if err := cmd.decode(&args); err != nil {
+			return nil, err
+		}
+		return nil, c.SuggestKX(args.Invitee, args.Target)
+	}
 	return nil, nil
 }
 
