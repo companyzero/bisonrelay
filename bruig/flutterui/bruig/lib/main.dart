@@ -6,6 +6,7 @@ import 'dart:developer' as developer;
 import 'package:bruig/components/attach_file.dart';
 import 'package:bruig/components/route_error.dart';
 import 'package:bruig/models/menus.dart';
+import 'package:bruig/screens/about.dart';
 import 'package:bruig/screens/contacts_msg_times.dart';
 import 'package:bruig/theme_manager.dart';
 import 'package:bruig/config.dart';
@@ -253,6 +254,7 @@ class _AppState extends State<App> with WindowListener {
               initialRoute: '/',
               routes: {
                 '/': (context) => const AppStartingLoadScreen(),
+                '/about': (context) => const AboutScreen(),
                 '/initLocalID': (context) => const InitLocalIDScreen(),
                 '/startup/verifyServer': (context) =>
                     const VerifyServerScreen(),

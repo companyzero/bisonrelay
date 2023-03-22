@@ -11,6 +11,7 @@ import 'package:bruig/screens/newconfig/ln_wallet_seed_confirm.dart';
 import 'package:bruig/screens/newconfig/network_choice.dart';
 import 'package:bruig/screens/newconfig/restore_wallet.dart';
 import 'package:bruig/screens/newconfig/server.dart';
+import 'package:bruig/screens/about.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -47,6 +48,7 @@ class _NewConfigScreenState extends State<NewConfigScreen> {
         ),
         initialRoute: "/newconf/initializing",
         routes: {
+          '/about': (context) => const AboutScreen(),
           "/newconf/initializing": (context) =>
               InitializingNewConfPage(newconf),
           "/newconf/confirmseed": (context) => ConfirmLNWalletSeedPage(newconf),

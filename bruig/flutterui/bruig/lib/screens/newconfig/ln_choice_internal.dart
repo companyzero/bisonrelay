@@ -69,6 +69,11 @@ class _LNInternalWalletPageState extends State<LNInternalWalletPage> {
     var textColor = const Color(0xFF8E8D98);
     var secondaryTextColor = const Color(0xFFE4E3E6);
     var darkTextColor = const Color(0xFF5A5968);
+
+    void goToAbout() {
+      Navigator.of(context).pushNamed("/about");
+    }
+
     return Container(
         color: backgroundColor,
         child: Stack(children: [
@@ -94,7 +99,17 @@ class _LNInternalWalletPageState extends State<LNInternalWalletPage> {
                   ])),
               padding: const EdgeInsets.all(10),
               child: Column(children: [
-                const SizedBox(height: 89),
+                Row(children: [
+                  IconButton(
+                      alignment: Alignment.topLeft,
+                      tooltip: "About Bison Relay",
+                      iconSize: 50,
+                      onPressed: goToAbout,
+                      icon: Image.asset(
+                        "assets/images/icon.png",
+                      )),
+                ]),
+                const SizedBox(height: 39),
                 Text("Setting up Bison Relay",
                     style: TextStyle(
                         color: textColor,
