@@ -74,6 +74,9 @@ class _ActiveChatState extends State<ActiveChat> {
     super.dispose();
   }
 
+  String nickCapitalLetter() =>
+      chat != null && chat!.nick.isNotEmpty ? chat!.nick[0].toUpperCase() : "";
+
   @override
   Widget build(BuildContext context) {
     if (this.chat == null) return Container();
@@ -126,7 +129,7 @@ class _ActiveChatState extends State<ActiveChat> {
                       child: CircleAvatar(
                           radius: 75,
                           backgroundColor: avatarColor,
-                          child: Text(chat.nick[0].toUpperCase(),
+                          child: Text(nickCapitalLetter(),
                               style: TextStyle(
                                   color: avatarTextColor, fontSize: 75)))),
                   chat.isGC
@@ -358,6 +361,9 @@ class _ReceivedSentPMState extends State<ReceivedSentPM> {
     }
   }
 
+  String nickCapitalLetter() =>
+      widget.nick.isNotEmpty ? widget.nick[0].toUpperCase() : "";
+
   @override
   Widget build(BuildContext context) {
     var prefix = "";
@@ -433,7 +439,7 @@ class _ReceivedSentPMState extends State<ReceivedSentPM> {
                     hoverColor: selectedBackgroundColor,
                     icon: CircleAvatar(
                         backgroundColor: avatarColor,
-                        child: Text(widget.nick[0].toUpperCase(),
+                        child: Text(nickCapitalLetter(),
                             style: TextStyle(
                                 color: avatarTextColor, fontSize: 20))),
                     padding: const EdgeInsets.all(0),
