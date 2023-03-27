@@ -32,7 +32,10 @@ func TestCorrectBehavior(t *testing.T) {
 
 	sampleFieldVal := strings.Repeat("x", 253)
 	v := testStruct{Field: sampleFieldVal}
-	encodedV, _ := json.Marshal(v)
+	encodedV, err := json.Marshal(v)
+	if err != nil {
+		t.Fatalf("failed to marshal: %v", err)
+	}
 	vSize := len(encodedV) + 1 // v + \n
 
 	// Generate enough data for 4 files.
@@ -299,7 +302,10 @@ func TestReadingAfterBlankPages(t *testing.T) {
 
 	sampleFieldVal := strings.Repeat("x", 253)
 	v := testStruct{Field: sampleFieldVal}
-	encodedV, _ := json.Marshal(v)
+	encodedV, err := json.Marshal(v)
+	if err != nil {
+		t.Fatalf("failed to marshal: %v", err)
+	}
 	vSize := len(encodedV) + 1 // v + \n
 
 	// Store enough messages that it will take multiple iterations to

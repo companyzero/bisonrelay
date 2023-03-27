@@ -400,6 +400,8 @@ message KXCompleted {
   bytes uid = 2;
   /* nick is the nick of the KX'd user. */
   string nick = 3;
+  /* initial_rendezvous is the initial random RV the key exchange happened. */
+  bytes initial_rendezvous = 4;
 }
 
 /* WriteNewInviteRequest is the request to add a new invite. */

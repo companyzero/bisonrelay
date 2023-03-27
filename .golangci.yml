@@ -8,15 +8,27 @@ linters:
   disable-all: true
   enable:
     - asciicheck
+    - bidichk
+    - bodyclose
+    - durationcheck
+    - errchkjson
+    - exportloopref
     - gofmt
     - goimports
     - gosimple
     - govet
+    - grouper
     - ineffassign
     - makezero
     - misspell
     - noctx
+    - nosprintfhostport
+    - reassign
+    - rowserrcheck
     - sqlclosecheck
-    - structcheck
+    - tparallel
+    - typecheck
     - unconvert
     - unused
+    - vetshadow
+    - wastedassign

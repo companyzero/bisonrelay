@@ -348,6 +348,7 @@ func (cfg *clientConfig) makeDialer() (func(context.Context) (*websocket.Conn, e
 		TLSClientConfig: tlsConfig,
 	}
 	dialer := func(ctx context.Context) (*websocket.Conn, error) {
+		//nolint:bodyclose
 		conn, _, err := wsDialer.DialContext(ctx, cfg.url, nil)
 		return conn, err
 	}
