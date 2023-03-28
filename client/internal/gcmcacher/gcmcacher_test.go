@@ -7,13 +7,13 @@ import (
 
 	"github.com/companyzero/bisonrelay/client/clientintf"
 	"github.com/companyzero/bisonrelay/internal/assert"
-	"github.com/companyzero/bisonrelay/internal/testutils"
 	"github.com/companyzero/bisonrelay/rpc"
+	"github.com/decred/slog"
 	"golang.org/x/net/context"
 )
 
 const (
-	testUpdateDelay  = time.Millisecond
+	testUpdateDelay  = 10 * time.Millisecond
 	testMaxLifetime  = 10 * testUpdateDelay
 	testInitialDelay = 10 * testMaxLifetime
 )
@@ -24,7 +24,7 @@ func testCacher(t testing.TB) (*Cacher, chan Msg) {
 	handler := func(msg Msg) {
 		ch <- msg
 	}
-	log := testutils.TestLoggerSys(t, "GCMC")
+	log := slog.Disabled
 	c := New(testMaxLifetime, testUpdateDelay, testInitialDelay, log, handler)
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
@@ -36,6 +36,7 @@ func testCacher(t testing.TB) (*Cacher, chan Msg) {
 // TestGCMSortsMessages asserts that messages are reordered based on their
 // timestamp.
 func TestGCMSortsMessages(t *testing.T) {
+	t.Parallel()
 	c, ch := testCacher(t)
 
 	// Send 5 messages in reverse order.
@@ -60,6 +61,7 @@ func TestGCMSortsMessages(t *testing.T) {
 // TestGCMCMessagesOffline asserts that the handler callback is called even if
 // the cacher goes offline after receiving some messages.
 func TestGCMCMessagesOffline(t *testing.T) {
+	t.Parallel()
 	c, ch := testCacher(t)
 	uid := clientintf.UserID{}
 
@@ -77,6 +79,7 @@ func TestGCMCMessagesOffline(t *testing.T) {
 // delay has elapsed, and thus need to reorder based on the rate of received
 // messages.
 func TestSlowServerConn(t *testing.T) {
+	t.Parallel()
 	c, ch := testCacher(t)
 	uid1 := clientintf.UserID{0: 1}
 	uid2 := clientintf.UserID{0: 2}
