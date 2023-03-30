@@ -251,7 +251,7 @@ func (c *Client) kxCompleted(public *zkidentity.PublicIdentity, r *ratchet.Ratch
 		c.log.Errorf("unable to init user for completed kx: %v", err)
 	}
 
-	c.ntfns.notifyOnKXCompleted(ru)
+	c.ntfns.notifyOnKXCompleted(&initialRV, ru)
 }
 
 // AddInviteOnKX adds a post kx action, based on the initial rv,

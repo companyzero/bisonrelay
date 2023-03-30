@@ -1261,10 +1261,11 @@ var help_messages = map[string]map[string]string{
 		"unacked_from": "unacked_from specifies to the server the sequence_id of the last completed KX. KXs completed by the server that have a higher sequence_id will be streamed back to the client.",
 	},
 	"KXCompleted": {
-		"@":           "KXCompleted is the information about a completed KX event.",
-		"sequence_id": "sequence_id is an opaque sequential ID.",
-		"uid":         "uid is the raw ID of the KX'd user.",
-		"nick":        "nick is the nick of the KX'd user.",
+		"@":                  "KXCompleted is the information about a completed KX event.",
+		"sequence_id":        "sequence_id is an opaque sequential ID.",
+		"uid":                "uid is the raw ID of the KX'd user.",
+		"nick":               "nick is the nick of the KX'd user.",
+		"initial_rendezvous": "initialrendezvous is the initial random RV the key exchange happened.",
 	},
 	"WriteNewInviteRequest": {
 		"@": "WriteNewInviteRequest is the request to add a new invite.",

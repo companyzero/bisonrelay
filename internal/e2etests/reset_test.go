@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/companyzero/bisonrelay/client"
+	"github.com/companyzero/bisonrelay/client/clientintf"
 	"github.com/companyzero/bisonrelay/internal/assert"
 	"github.com/companyzero/bisonrelay/rpc"
 )
@@ -18,10 +19,10 @@ func TestDirectReset(t *testing.T) {
 	bob := ts.newClient("bob")
 
 	aliceKXdChan, bobKXdChan := make(chan struct{}), make(chan struct{})
-	alice.handle(client.OnKXCompleted(func(ru *client.RemoteUser) {
+	alice.handle(client.OnKXCompleted(func(*clientintf.RawRVID, *client.RemoteUser) {
 		aliceKXdChan <- struct{}{}
 	}))
-	bob.handle(client.OnKXCompleted(func(ru *client.RemoteUser) {
+	bob.handle(client.OnKXCompleted(func(*clientintf.RawRVID, *client.RemoteUser) {
 		bobKXdChan <- struct{}{}
 	}))
 
@@ -75,10 +76,10 @@ func TestTransitiveReset(t *testing.T) {
 	charlie := ts.newClient("charlie")
 
 	aliceKXdChan, bobKXdChan := make(chan struct{}), make(chan struct{})
-	alice.handle(client.OnKXCompleted(func(ru *client.RemoteUser) {
+	alice.handle(client.OnKXCompleted(func(*clientintf.RawRVID, *client.RemoteUser) {
 		aliceKXdChan <- struct{}{}
 	}))
-	bob.handle(client.OnKXCompleted(func(ru *client.RemoteUser) {
+	bob.handle(client.OnKXCompleted(func(*clientintf.RawRVID, *client.RemoteUser) {
 		bobKXdChan <- struct{}{}
 	}))
 

@@ -283,6 +283,8 @@ func TestSessionTagsInvariants(t *testing.T) {
 // TestReadAndDecodeMsg tests that the readAndDecodeMsg function works as
 // intended.
 func TestReadAndDecodeMsg(t *testing.T) {
+	t.Parallel()
+
 	var errTest = errors.New("test error")
 	tests := []struct {
 		name        string
@@ -460,6 +462,7 @@ func TestRecvLoopPushedMsgs(t *testing.T) {
 	for _, tc := range tests {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 
 			pushedChan := make(chan *rpc.PushRoutedMessage)
 			pushHandler := func(msg *rpc.PushRoutedMessage) error {

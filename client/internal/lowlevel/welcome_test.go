@@ -79,7 +79,10 @@ func TestAttemptsConn(t *testing.T) {
 	ctx := context.Background()
 
 	for _, tc := range tests {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
 			cfg := ConnKeeperCfg{
 				PC:       clientintf.FreePaymentClient{},
 				Dialer:   tc.dialer,
