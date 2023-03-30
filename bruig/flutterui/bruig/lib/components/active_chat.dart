@@ -460,7 +460,7 @@ class _ReceivedSentPMState extends State<ReceivedSentPM> {
             ]),
       //const SizedBox(height: 10),
       Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Row(children: [
+        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           const SizedBox(width: 13),
           SizedBox(
               width: 5,
@@ -473,20 +473,17 @@ class _ReceivedSentPMState extends State<ReceivedSentPM> {
                     fontStyle: FontStyle.italic),
               )),
           const SizedBox(width: 24),
-          Provider<DownloadSource>(
-              create: (context) => DownloadSource(sourceID),
-              child: MarkdownArea(
-                  msg,
-                  widget.userNick != widget.nick &&
-                      msg.contains(widget.userNick))),
           Expanded(
-              child: Align(
-                  alignment: Alignment.topRight,
-                  child: Text(
-                    date,
-                    style: TextStyle(
-                        fontSize: 9, color: darkTextColor), // DATE COLOR
-                  ))),
+              child: Provider<DownloadSource>(
+                  create: (context) => DownloadSource(sourceID),
+                  child: MarkdownArea(
+                      msg,
+                      widget.userNick != widget.nick &&
+                          msg.contains(widget.userNick)))),
+          Text(
+            date,
+            style: TextStyle(fontSize: 9, color: darkTextColor), // DATE COLOR
+          ),
           const SizedBox(width: 10)
         ]),
         const SizedBox(height: 5),
