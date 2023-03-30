@@ -9,3 +9,5 @@ brclient/brclient
 server/internal/frpgdb/cmd/frdbsim/frdbsim
 server.crt
 build/
+.vscode
+*.DS_Store

@@ -46,7 +46,9 @@ dependencies:
   url_launcher: ^6.1.6
   msix: ^3.6.3
   qr_flutter: ^4.0.0
+  file_icon: ^1.0.0
   package_info_plus: ^3.0.3
+  open_filex: ^4.3.2
 
 msix_config:
   display_name: Bison Relay GUI
