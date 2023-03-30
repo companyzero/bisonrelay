@@ -264,7 +264,7 @@ the wallet seed is NOT sufficient to restore their state.
                           children: [
                             Text(
                                 textAlign: TextAlign.left,
-                                "Inbound Channel Capacity:",
+                                "Outbound Channel Capacity:",
                                 style: TextStyle(
                                     color: darkTextColor,
                                     fontSize: 13,
