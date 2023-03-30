@@ -74,6 +74,9 @@ class _ActiveChatState extends State<ActiveChat> {
     super.dispose();
   }
 
+  String nickCapitalLetter() =>
+      chat != null && chat!.nick.isNotEmpty ? chat!.nick[0].toUpperCase() : "";
+
   @override
   Widget build(BuildContext context) {
     if (this.chat == null) return Container();
@@ -126,7 +129,7 @@ class _ActiveChatState extends State<ActiveChat> {
                       child: CircleAvatar(
                           radius: 75,
                           backgroundColor: avatarColor,
-                          child: Text(chat.nick[0].toUpperCase(),
+                          child: Text(nickCapitalLetter(),
                               style: TextStyle(
                                   color: avatarTextColor, fontSize: 75)))),
                   chat.isGC
@@ -358,6 +361,9 @@ class _ReceivedSentPMState extends State<ReceivedSentPM> {
     }
   }
 
+  String nickCapitalLetter() =>
+      widget.nick.isNotEmpty ? widget.nick[0].toUpperCase() : "";
+
   @override
   Widget build(BuildContext context) {
     var prefix = "";
@@ -433,7 +439,7 @@ class _ReceivedSentPMState extends State<ReceivedSentPM> {
                     hoverColor: selectedBackgroundColor,
                     icon: CircleAvatar(
                         backgroundColor: avatarColor,
-                        child: Text(widget.nick[0].toUpperCase(),
+                        child: Text(nickCapitalLetter(),
                             style: TextStyle(
                                 color: avatarTextColor, fontSize: 20))),
                     padding: const EdgeInsets.all(0),
@@ -454,7 +460,7 @@ class _ReceivedSentPMState extends State<ReceivedSentPM> {
             ]),
       //const SizedBox(height: 10),
       Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Row(children: [
+        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           const SizedBox(width: 13),
           SizedBox(
               width: 5,
@@ -467,20 +473,17 @@ class _ReceivedSentPMState extends State<ReceivedSentPM> {
                     fontStyle: FontStyle.italic),
               )),
           const SizedBox(width: 24),
-          Provider<DownloadSource>(
-              create: (context) => DownloadSource(sourceID),
-              child: MarkdownArea(
-                  msg,
-                  widget.userNick != widget.nick &&
-                      msg.contains(widget.userNick))),
           Expanded(
-              child: Align(
-                  alignment: Alignment.topRight,
-                  child: Text(
-                    date,
-                    style: TextStyle(
-                        fontSize: 9, color: darkTextColor), // DATE COLOR
-                  ))),
+              child: Provider<DownloadSource>(
+                  create: (context) => DownloadSource(sourceID),
+                  child: MarkdownArea(
+                      msg,
+                      widget.userNick != widget.nick &&
+                          msg.contains(widget.userNick)))),
+          Text(
+            date,
+            style: TextStyle(fontSize: 9, color: darkTextColor), // DATE COLOR
+          ),
           const SizedBox(width: 10)
         ]),
         const SizedBox(height: 5),
@@ -504,7 +507,6 @@ class PMW extends StatelessWidget {
       timestamp =
           evnt.source?.nick == null ? event.timestamp : event.timestamp * 1000;
     }
-    print(nick);
     return ReceivedSentPM(evnt, evnt.source?.nick ?? nick, timestamp,
         showSubMenu, evnt.source?.id ?? "", nick);
   }
