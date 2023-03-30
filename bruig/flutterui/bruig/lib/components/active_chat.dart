@@ -510,7 +510,6 @@ class PMW extends StatelessWidget {
       timestamp =
           evnt.source?.nick == null ? event.timestamp : event.timestamp * 1000;
     }
-    print(nick);
     return ReceivedSentPM(evnt, evnt.source?.nick ?? nick, timestamp,
         showSubMenu, evnt.source?.id ?? "", nick);
   }
