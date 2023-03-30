@@ -82,7 +82,7 @@ class NewConfigModel extends ChangeNotifier {
 
   List<ConfirmSeedWords> createConfirmSeedWords(String seed) {
     List<ConfirmSeedWords> confirmSeedWords = [];
-    var seedWords = seed.split(' ');
+    var seedWords = seed.trim().split(' ');
     var numWords = 5;
     var numChoices = 3;
     for (int i = 0; i < numWords; i++) {
