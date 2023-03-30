@@ -20,6 +20,8 @@ import 'package:provider/provider.dart';
 import 'package:bruig/components/profile.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:bruig/components/empty_widget.dart';
+import 'package:open_filex/open_filex.dart';
+import 'package:file_icon/file_icon.dart';
 
 class ActiveChat extends StatefulWidget {
   final ClientModel client;
@@ -869,17 +871,37 @@ class FileDownloadedEventW extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // TODO: add button to open file.
     var theme = Theme.of(context);
     var textColor = theme.dividerColor;
     var backgroundColor = theme.highlightColor;
     return ServerEvent(
-        child: Container(
-            decoration: BoxDecoration(
-                color: backgroundColor,
-                borderRadius: const BorderRadius.all(Radius.circular(5))),
-            child: SelectableText("Downloaded file ${event.diskPath}",
-                style: TextStyle(fontSize: 9, color: textColor))));
+      child: Container(
+        padding: const EdgeInsets.all(0),
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          borderRadius: const BorderRadius.all(Radius.circular(5)),
+        ),
+        child: Row(
+          children: [
+            Material(
+              color: backgroundColor,
+              child: IconButton(
+                onPressed: () {
+                  OpenFilex.open(event.diskPath);
+                },
+                splashRadius: 20,
+                icon: FileIcon(event.diskPath, size: 24),
+              ),
+            ),
+            const SizedBox(width: 10),
+            SelectableText(
+              "Downloaded file ${event.diskPath}",
+              style: TextStyle(fontSize: 9, color: textColor),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
