@@ -52,7 +52,7 @@ func TestKXSucceeds(t *testing.T) {
 
 	// Create the invite in the host.
 	buff := new(bytes.Buffer)
-	_, err := alice.createInvite(buff, nil, nil, false)
+	_, err := alice.createInvite(buff, nil, nil, false, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -102,7 +102,7 @@ func TestRepeatedResetActivation(t *testing.T) {
 	// the scenario where Alice attempts to start the kx twice before one
 	// completes.
 
-	invite, err := bob.createInvite(nil, nil, nil, false)
+	invite, err := bob.createInvite(nil, nil, nil, false, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

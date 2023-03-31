@@ -208,7 +208,7 @@ func marshalOOBPublicIDInvite(invite *rpc.OOBPublicIdentityInvite, res *types.OO
 
 func (c *chatServer) WriteNewInvite(_ context.Context, req *types.WriteNewInviteRequest, res *types.WriteNewInviteResponse) error {
 	b := bytes.NewBuffer(nil)
-	invite, err := c.c.WriteNewInvite(b)
+	invite, err := c.c.WriteNewInvite(b, nil)
 	if err != nil {
 		return err
 	}

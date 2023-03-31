@@ -1256,7 +1256,7 @@ func (as *appState) handleRcvdText(s string, nick string) string {
 func (as *appState) writeInvite(filename string, gcID zkidentity.ShortID) {
 	as.cwHelpMsg("Attempting to create and subscribe to new invite")
 	w := new(bytes.Buffer)
-	pii, err := as.c.WriteNewInvite(w)
+	pii, err := as.c.WriteNewInvite(w, nil)
 	if err != nil {
 		as.cwHelpMsg("Unable to create invite: %v", err)
 		return

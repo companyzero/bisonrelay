@@ -268,8 +268,11 @@ func (c *Client) AddInviteOnKX(initialRV, gcID zkidentity.ShortID) error {
 }
 
 // WriteNewInvite creates a new invite and writes it to the given writer.
-func (c *Client) WriteNewInvite(w io.Writer) (rpc.OOBPublicIdentityInvite, error) {
-	return c.kxl.createInvite(w, nil, nil, false)
+//
+// If the optional funds is specified, those funds will be redeemed by the
+// remote user prior to accepting the invite.
+func (c *Client) WriteNewInvite(w io.Writer, funds *rpc.InviteFunds) (rpc.OOBPublicIdentityInvite, error) {
+	return c.kxl.createInvite(w, nil, nil, false, funds)
 }
 
 // ReadInvite decodes an invite from the given reader. Note the invite is not

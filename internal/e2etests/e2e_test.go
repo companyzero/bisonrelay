@@ -335,7 +335,7 @@ func (ts *testScaffold) recreateStoppedClient(tc *testClient) *testClient {
 // This MUST be called only from the main test goroutine.
 func (ts *testScaffold) kxUsersWithInvite(inviter, invitee *testClient, gcID zkidentity.ShortID) {
 	ts.t.Helper()
-	invite, err := inviter.WriteNewInvite(io.Discard)
+	invite, err := inviter.WriteNewInvite(io.Discard, nil)
 	assert.NilErr(ts.t, err)
 	ts.t.Logf("%s alice:%s bob:%s\n", invite.InitialRendezvous.String(), inviter.id.Public.String(), invitee.id.Public.String())
 	assert.NilErr(ts.t, inviter.AddInviteOnKX(invite.InitialRendezvous, gcID))
@@ -347,7 +347,7 @@ func (ts *testScaffold) kxUsersWithInvite(inviter, invitee *testClient, gcID zki
 // with each other. This MUST be called only from the main test goroutine.
 func (ts *testScaffold) kxUsers(inviter, invitee *testClient) {
 	ts.t.Helper()
-	invite, err := inviter.WriteNewInvite(io.Discard)
+	invite, err := inviter.WriteNewInvite(io.Discard, nil)
 	assert.NilErr(ts.t, err)
 	assert.NilErr(ts.t, invitee.AcceptInvite(invite))
 	assertClientsKXd(ts.t, inviter, invitee)
