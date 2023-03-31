@@ -19,6 +19,7 @@ import (
 	"github.com/companyzero/bisonrelay/zkidentity"
 	"github.com/decred/dcrd/dcrutil/v4"
 	"github.com/decred/dcrlnd/lnrpc"
+	"github.com/decred/dcrlnd/lnrpc/walletrpc"
 	"github.com/decred/dcrlnd/lnwire"
 	"github.com/mitchellh/go-homedir"
 	"golang.org/x/exp/slices"
@@ -1666,13 +1667,21 @@ var lnCommands = []tuicmd{
 	{
 		cmd:           "newaddress",
 		usableOffline: true,
+		usage:         "[<account>]",
 		descr:         "Create a new standard P2PKH address from the LN wallet",
 		handler: func(args []string, as *appState) error {
+			var account string
+			if len(args) > 0 {
+				account = args[0]
+			}
 			if as.lnRPC == nil {
 				return fmt.Errorf("LN client not configured")
 			}
-			na, err := as.lnRPC.NewAddress(as.ctx,
-				&lnrpc.NewAddressRequest{Type: lnrpc.AddressType_PUBKEY_HASH})
+			req := &lnrpc.NewAddressRequest{
+				Type:    lnrpc.AddressType_PUBKEY_HASH,
+				Account: account,
+			}
+			na, err := as.lnRPC.NewAddress(as.ctx, req)
 			if err != nil {
 				return err
 			}
@@ -2245,7 +2254,7 @@ var lnCommands = []tuicmd{
 		},
 	}, {
 		cmd:           "sendonchain",
-		usage:         "<DCR amount> <dest address>",
+		usage:         "<DCR amount> <dest address> [<source account>]",
 		descr:         "Send funds from the on-chain wallet",
 		usableOffline: true,
 		handler: func(args []string, as *appState) error {
@@ -2254,6 +2263,10 @@ var lnCommands = []tuicmd{
 			}
 			if len(args) < 2 {
 				return usageError{msg: "destination address cannot be empty"}
+			}
+			var account string
+			if len(args) > 2 {
+				account = args[2]
 			}
 			dcrAmount, err := strconv.ParseFloat(args[0], 64)
 			if err != nil {
@@ -2271,8 +2284,9 @@ var lnCommands = []tuicmd{
 			as.cwHelpMsg("Sending %s DCR to %s", amount, addr)
 			go func() {
 				req := &lnrpc.SendCoinsRequest{
-					Addr:   addr,
-					Amount: int64(amount),
+					Addr:    addr,
+					Amount:  int64(amount),
+					Account: account,
 				}
 				res, err := as.lnRPC.SendCoins(as.ctx, req)
 				if err != nil {
@@ -2297,6 +2311,54 @@ var lnCommands = []tuicmd{
 			}
 			_, err := as.lnRPC.DebugLevel(as.ctx, req)
 			return err
+		},
+	}, {
+		cmd:           "accounts",
+		usableOffline: true,
+		descr:         "List wallet accounts",
+		handler: func(args []string, as *appState) error {
+			res, err := as.lnWallet.ListAccounts(as.ctx, &walletrpc.ListAccountsRequest{})
+			if err != nil {
+				return err
+			}
+
+			bal, err := as.lnRPC.WalletBalance(as.ctx, &lnrpc.WalletBalanceRequest{})
+			if err != nil {
+				return err
+			}
+
+			as.cwHelpMsgs(func(pf printf) {
+				pf("")
+				pf("Wallet accounts (%d)", len(res.Accounts))
+				for _, acc := range res.Accounts {
+					acctBal := dcrutil.Amount(bal.AccountBalance[acc.Name].ConfirmedBalance + bal.AccountBalance[acc.Name].UnconfirmedBalance)
+					pf("%s - %s - keys: %d internal, %d external",
+						acc.Name, acctBal, acc.InternalKeyCount,
+						acc.ExternalKeyCount)
+				}
+			})
+			return nil
+		},
+	}, {
+		cmd:           "newaccount",
+		usage:         "<name>",
+		usableOffline: true,
+		descr:         "Create a new wallet account",
+		handler: func(args []string, as *appState) error {
+			if len(args) < 1 {
+				return usageError{msg: "account name cannot be empty"}
+			}
+			name := strings.TrimSpace(args[0])
+			if len(name) == 0 {
+				return usageError{msg: "account name cannot be empty string"}
+			}
+
+			_, err := as.lnWallet.DeriveNextAccount(as.ctx, &walletrpc.DeriveNextAccountRequest{Name: name})
+			if err != nil {
+				return err
+			}
+			as.cwHelpMsg("Created account %s", name)
+			return nil
 		},
 	},
 }

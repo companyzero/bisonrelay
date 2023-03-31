@@ -15,6 +15,7 @@ import (
 	"github.com/decred/dcrlnd/lnrpc"
 	"github.com/decred/dcrlnd/lnrpc/invoicesrpc"
 	"github.com/decred/dcrlnd/lnrpc/routerrpc"
+	"github.com/decred/dcrlnd/lnrpc/walletrpc"
 	"github.com/decred/dcrlnd/macaroons"
 	"github.com/decred/slog"
 	"golang.org/x/sync/errgroup"
@@ -37,6 +38,7 @@ type DcrlnPaymentClient struct {
 	lnInvoices invoicesrpc.InvoicesClient
 	lnUnlocker lnrpc.WalletUnlockerClient
 	lnRouter   routerrpc.RouterClient
+	lnWallet   walletrpc.WalletKitClient
 	log        slog.Logger
 	payTiming  *timestats.Tracker
 }
@@ -77,6 +79,7 @@ func NewDcrlndPaymentClient(ctx context.Context, cfg DcrlnPaymentClientCfg) (*Dc
 	lnInvoices := invoicesrpc.NewInvoicesClient(conn)
 	lnUnlocker := lnrpc.NewWalletUnlockerClient(conn)
 	lnRouter := routerrpc.NewRouterClient(conn)
+	lnWallet := walletrpc.NewWalletKitClient(conn)
 
 	log := slog.Disabled
 	if cfg.Log != nil {
@@ -88,6 +91,7 @@ func NewDcrlndPaymentClient(ctx context.Context, cfg DcrlnPaymentClientCfg) (*Dc
 		lnInvoices: lnInvoices,
 		lnUnlocker: lnUnlocker,
 		lnRouter:   lnRouter,
+		lnWallet:   lnWallet,
 		log:        log,
 		payTiming:  timestats.NewTracker(250),
 	}, nil
@@ -95,6 +99,10 @@ func NewDcrlndPaymentClient(ctx context.Context, cfg DcrlnPaymentClientCfg) (*Dc
 
 func (pc *DcrlnPaymentClient) LNRPC() lnrpc.LightningClient {
 	return pc.lnRpc
+}
+
+func (pc *DcrlnPaymentClient) LNWallet() walletrpc.WalletKitClient {
+	return pc.lnWallet
 }
 
 func (pc *DcrlnPaymentClient) PayScheme() string {
