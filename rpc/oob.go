@@ -16,7 +16,16 @@ import (
 	"github.com/companyzero/sntrup4591761"
 )
 
-// OOOPublicIdentityInvite is an unencrypted OOB command which contains all
+type InviteFunds struct {
+	Tx         TxHash `json:"txid"`
+	Index      uint32 `json:"index"`
+	Tree       int8   `json:"tree"`
+	PrivateKey string `json:"private_key"`
+	HeightHint uint32 `json:"height_hint"`
+	Address    string `json:"address"`
+}
+
+// OOBPublicIdentityInvite is an unencrypted OOB command which contains all
 // information to kick of an initial KX. This command is NOT part of the wire
 // protocol. This is provided out-of-band. With this the other side can
 // commence a KX by issuing a RMOCHalfKX command to the provided
@@ -25,6 +34,7 @@ type OOBPublicIdentityInvite struct {
 	Public            zkidentity.PublicIdentity `json:"public"`
 	InitialRendezvous zkidentity.ShortID        `json:"initialrendezvous"`
 	ResetRendezvous   zkidentity.ShortID        `json:"resetrendezvous"`
+	Funds             *InviteFunds              `json:"funds,omitempty"`
 }
 
 const OOBCPublicIdentityInvite = "oobpublicidentityinvite"

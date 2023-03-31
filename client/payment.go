@@ -11,7 +11,9 @@ import (
 	"github.com/companyzero/bisonrelay/client/clientintf"
 	"github.com/companyzero/bisonrelay/client/timestats"
 	"github.com/companyzero/bisonrelay/rpc"
+	"github.com/decred/dcrd/chaincfg/chainhash"
 	"github.com/decred/dcrd/dcrutil/v4"
+	"github.com/decred/dcrd/wire"
 	"github.com/decred/dcrlnd/lnrpc"
 	"github.com/decred/dcrlnd/lnrpc/invoicesrpc"
 	"github.com/decred/dcrlnd/lnrpc/routerrpc"
@@ -359,6 +361,107 @@ func (pc *DcrlnPaymentClient) IsPaymentCompleted(ctx context.Context, invoice st
 // PaymentTimingStats returns timing information for payment stats.
 func (pc *DcrlnPaymentClient) PaymentTimingStats() []timestats.Quantile {
 	return pc.payTiming.Quantiles()
+}
+
+func (pc *DcrlnPaymentClient) CreateInviteFunds(ctx context.Context, amount dcrutil.Amount, account string) (*rpc.InviteFunds, error) {
+	minAmount := dcrutil.Amount(6030 * 4) // 6030 == dust limit
+	if amount < minAmount {
+		return nil, fmt.Errorf("cannot send less than %s in invite",
+			minAmount)
+	}
+
+	info, err := pc.lnRpc.GetInfo(ctx, &lnrpc.GetInfoRequest{})
+	if err != nil {
+		return nil, err
+	}
+
+	addr, err := pc.lnWallet.NextAddr(ctx, &walletrpc.AddrRequest{Account: account})
+	if err != nil {
+		return nil, err
+	}
+
+	sentCoins, err := pc.lnRpc.SendCoins(ctx, &lnrpc.SendCoinsRequest{Addr: addr.Addr, Amount: int64(amount)})
+	if err != nil {
+		return nil, err
+	}
+
+	listUnspentReq := &walletrpc.ListUnspentRequest{
+		Account:  account,
+		MinConfs: 0,
+		MaxConfs: 16,
+	}
+	allUnspent, err := pc.lnWallet.ListUnspent(ctx, listUnspentReq)
+	if err != nil {
+		return nil, err
+	}
+	var utxo *lnrpc.Utxo
+	for _, unspent := range allUnspent.Utxos {
+		if unspent.Outpoint.TxidStr != sentCoins.Txid {
+			continue
+		}
+		if unspent.Address != addr.Addr {
+			continue
+		}
+		utxo = unspent
+		break
+	}
+	if utxo == nil {
+		return nil, fmt.Errorf("unable to find correct utxo")
+	}
+
+	pk, err := pc.lnWallet.ExportPrivateKey(ctx, &walletrpc.ExportPrivateKeyRequest{Address: addr.Addr})
+	if err != nil {
+		return nil, err
+	}
+
+	var txh rpc.TxHash
+	copy(txh[:], utxo.Outpoint.TxidBytes)
+	res := &rpc.InviteFunds{
+		Tx:         txh,
+		Index:      utxo.Outpoint.OutputIndex,
+		Tree:       0,
+		PrivateKey: pk.Wif,
+		HeightHint: info.BlockHeight - 6,
+		Address:    addr.Addr,
+	}
+
+	pc.log.Infof("Stored %s as invite funds from account %q on tx %s",
+		amount, account, txh)
+	return res, nil
+}
+
+func (pc *DcrlnPaymentClient) RedeemInviteFunds(ctx context.Context, funds *rpc.InviteFunds) (dcrutil.Amount, chainhash.Hash, error) {
+	spendReq := &walletrpc.SpendUTXOsRequest{
+		Utxos: []*walletrpc.SpendUTXOsRequest_UTXOAndKey{{
+			Txid:          funds.Tx[:],
+			Index:         funds.Index,
+			PrivateKeyWif: funds.PrivateKey,
+			HeightHint:    funds.HeightHint,
+			Address:       funds.Address,
+		}},
+	}
+	res, err := pc.lnWallet.SpendUTXOs(ctx, spendReq)
+	if err != nil {
+		return 0, chainhash.Hash{}, err
+	}
+	txh, err := chainhash.NewHash(res.Txid)
+	if err != nil {
+		return 0, chainhash.Hash{}, err
+	}
+
+	var tx wire.MsgTx
+	if err := tx.FromBytes(res.RawTx); err != nil {
+		return 0, chainhash.Hash{}, err
+	}
+
+	var total int64
+	for _, out := range tx.TxOut {
+		total += out.Value
+	}
+
+	pc.log.Infof("Redeemed %s from UTXO %s:%d as invite funds in tx %s",
+		dcrutil.Amount(total), funds.Tx, funds.Index, txh)
+	return dcrutil.Amount(total), *txh, nil
 }
 
 const (
