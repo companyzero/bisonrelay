@@ -127,10 +127,65 @@ class RemoteUser {
       _$RemoteUserFromJson(json);
 }
 
+@JsonSerializable()
+class InviteFunds {
+  final String txid;
+  final int index;
+  final int tree;
+  @JsonKey(name: "private_key")
+  final String privateKey;
+  @JsonKey(name: "height_hint")
+  final int heightHint;
+  final String address;
+
+  InviteFunds(this.txid, this.index, this.tree, this.privateKey,
+      this.heightHint, this.address);
+  factory InviteFunds.fromJson(Map<String, dynamic> json) =>
+      _$InviteFundsFromJson(json);
+  Map<String, dynamic> toJson() => _$InviteFundsToJson(this);
+}
+
+@JsonSerializable()
+class PublicIdentity {
+  final String name;
+  final String nick;
+  final String identity;
+
+  PublicIdentity(this.name, this.nick, this.identity);
+  factory PublicIdentity.fromJson(Map<String, dynamic> json) =>
+      _$PublicIdentityFromJson(json);
+}
+
+@JsonSerializable()
+class OOBPublicIdentityInvite {
+  final PublicIdentity public;
+  @JsonKey(name: "initialrendezvous")
+  final String initialRendezvous;
+  @JsonKey(name: "resetrendezvous")
+  final String resetRendezvous;
+  final InviteFunds? funds;
+
+  OOBPublicIdentityInvite(
+      this.public, this.initialRendezvous, this.resetRendezvous, this.funds);
+  factory OOBPublicIdentityInvite.fromJson(Map<String, dynamic> json) =>
+      _$OOBPublicIdentityInviteFromJson(json);
+}
+
 class Invitation {
-  final RemoteUser user;
+  final OOBPublicIdentityInvite invite;
   final Uint8List inviteBlob;
-  Invitation(this.user, this.inviteBlob);
+  Invitation(this.invite, this.inviteBlob);
+}
+
+@JsonSerializable()
+class GeneratedKXInvite {
+  @JsonKey(fromJson: base64Decode)
+  final Uint8List blob;
+  final InviteFunds? funds;
+
+  GeneratedKXInvite(this.blob, this.funds);
+  factory GeneratedKXInvite.fromJson(Map<String, dynamic> json) =>
+      _$GeneratedKXInviteFromJson(json);
 }
 
 class ChatEvent {
@@ -1570,6 +1625,29 @@ class SendOnChain {
   Map<String, dynamic> toJson() => _$SendOnChainToJson(this);
 }
 
+@JsonSerializable()
+class WriteInvite {
+  @JsonKey(name: "fund_amount")
+  final int fundAmount;
+  @JsonKey(name: "fund_account")
+  final String fundAccount;
+  @JsonKey(name: "gc_id")
+  final String? gcid;
+
+  WriteInvite(this.fundAmount, this.fundAccount, this.gcid);
+  Map<String, dynamic> toJson() => _$WriteInviteToJson(this);
+}
+
+@JsonSerializable()
+class RedeemedInviteFunds {
+  final String txid;
+  final int total;
+
+  RedeemedInviteFunds(this.txid, this.total);
+  factory RedeemedInviteFunds.fromJson(Map<String, dynamic> json) =>
+      _$RedeemedInviteFundsFromJson(json);
+}
+
 mixin NtfStreams {
   StreamController<RemoteUser> ntfAcceptedInvites =
       StreamController<RemoteUser>();
@@ -1674,18 +1752,20 @@ abstract class PluginPlatform {
     return await asyncCall(CTGetUserNick, uid);
   }
 
-  Future<void> generateInvite(String filepath) async {
-    var blobRaw = await asyncCall(CTInvite, "");
-    var blobDecoded = base64Decode(blobRaw as String);
+  Future<GeneratedKXInvite> generateInvite(
+      String filepath, int fundAmount, String fundAccount, String? gcid) async {
+    var req = WriteInvite(fundAmount, fundAccount, gcid);
+    var res = GeneratedKXInvite.fromJson(await asyncCall(CTInvite, req));
     var f = File(filepath);
-    await f.writeAsBytes(blobDecoded);
+    await f.writeAsBytes(res.blob);
+    return res;
   }
 
   Future<Invitation> decodeInvite(String filepath) async {
     var f = File(filepath);
     var blobRaw = await f.readAsBytes();
     var res = await asyncCall(CTDecodeInvite, blobRaw);
-    return Invitation(RemoteUser.fromJson(res), blobRaw);
+    return Invitation(OOBPublicIdentityInvite.fromJson(res), blobRaw);
   }
 
   Future<RemoteUser> acceptInvite(Invitation invite) async {
@@ -2144,6 +2224,10 @@ abstract class PluginPlatform {
     var req = SendOnChain(addr, dcrToAtoms(dcrAmount), fromAccount);
     await asyncCall(CTSendOnchain, req);
   }
+
+  Future<RedeemedInviteFunds> redeemInviteFunds(InviteFunds funds) async =>
+      RedeemedInviteFunds.fromJson(
+          await asyncCall(CTRedeeemInviteFunds, funds));
 }
 
 const int CTUnknown = 0x00;
@@ -2245,6 +2329,8 @@ const int CTSuggestKX = 0x6b;
 const int CTListAccounts = 0x6c;
 const int CTCreateAccount = 0x6d;
 const int CTSendOnchain = 0x6e;
+const int CTRedeeemInviteFunds = 0x6f;
+
 
 const int notificationsStartID = 0x1000;
 

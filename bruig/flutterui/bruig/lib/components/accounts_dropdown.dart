@@ -7,7 +7,9 @@ typedef void OnAccountChanged(String);
 
 class AccountsDropDown extends StatefulWidget {
   final OnAccountChanged? onChanged;
-  const AccountsDropDown({this.onChanged, super.key});
+  final bool excludeDefault;
+  const AccountsDropDown(
+      {this.onChanged, this.excludeDefault = false, super.key});
 
   @override
   State<AccountsDropDown> createState() => _AccountsDropDownState();
@@ -20,6 +22,9 @@ class _AccountsDropDownState extends State<AccountsDropDown> {
   void reloadAccounts() async {
     try {
       var newAccounts = await Golib.listAccounts();
+      if (widget.excludeDefault) {
+        newAccounts.removeAt(0);
+      }
       setState(() {
         accounts = newAccounts;
         if (accounts.isNotEmpty && selected == null) {

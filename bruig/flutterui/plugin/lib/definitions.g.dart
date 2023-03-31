@@ -102,6 +102,73 @@ Map<String, dynamic> _$RemoteUserToJson(RemoteUser instance) =>
       'nick': instance.nick,
     };
 
+InviteFunds _$InviteFundsFromJson(Map<String, dynamic> json) => InviteFunds(
+      json['txid'] as String,
+      json['index'] as int,
+      json['tree'] as int,
+      json['private_key'] as String,
+      json['height_hint'] as int,
+      json['address'] as String,
+    );
+
+Map<String, dynamic> _$InviteFundsToJson(InviteFunds instance) =>
+    <String, dynamic>{
+      'txid': instance.txid,
+      'index': instance.index,
+      'tree': instance.tree,
+      'private_key': instance.privateKey,
+      'height_hint': instance.heightHint,
+      'address': instance.address,
+    };
+
+PublicIdentity _$PublicIdentityFromJson(Map<String, dynamic> json) =>
+    PublicIdentity(
+      json['name'] as String,
+      json['nick'] as String,
+      json['identity'] as String,
+    );
+
+Map<String, dynamic> _$PublicIdentityToJson(PublicIdentity instance) =>
+    <String, dynamic>{
+      'name': instance.name,
+      'nick': instance.nick,
+      'identity': instance.identity,
+    };
+
+OOBPublicIdentityInvite _$OOBPublicIdentityInviteFromJson(
+        Map<String, dynamic> json) =>
+    OOBPublicIdentityInvite(
+      PublicIdentity.fromJson(json['public'] as Map<String, dynamic>),
+      json['initialrendezvous'] as String,
+      json['resetrendezvous'] as String,
+      json['funds'] == null
+          ? null
+          : InviteFunds.fromJson(json['funds'] as Map<String, dynamic>),
+    );
+
+Map<String, dynamic> _$OOBPublicIdentityInviteToJson(
+        OOBPublicIdentityInvite instance) =>
+    <String, dynamic>{
+      'public': instance.public,
+      'initialrendezvous': instance.initialRendezvous,
+      'resetrendezvous': instance.resetRendezvous,
+      'funds': instance.funds,
+    };
+
+GeneratedKXInvite _$GeneratedKXInviteFromJson(Map<String, dynamic> json) =>
+    GeneratedKXInvite(
+      base64Decode(json['blob'] as String),
+      json['funds'] == null
+          ? null
+          : InviteFunds.fromJson(json['funds'] as Map<String, dynamic>),
+    );
+
+Map<String, dynamic> _$GeneratedKXInviteToJson(GeneratedKXInvite instance) =>
+    <String, dynamic>{
+      'blob': instance.blob,
+      'funds': instance.funds,
+    };
+
 PM _$PMFromJson(Map<String, dynamic> json) => PM(
       json['sid'],
       json['msg'],
@@ -1592,4 +1659,30 @@ Map<String, dynamic> _$SendOnChainToJson(SendOnChain instance) =>
       'addr': instance.addr,
       'amount': instance.amount,
       'from_account': instance.fromAccount,
+    };
+
+WriteInvite _$WriteInviteFromJson(Map<String, dynamic> json) => WriteInvite(
+      json['fund_amount'] as int,
+      json['fund_account'] as String,
+      json['gc_id'] as String?,
+    );
+
+Map<String, dynamic> _$WriteInviteToJson(WriteInvite instance) =>
+    <String, dynamic>{
+      'fund_amount': instance.fundAmount,
+      'fund_account': instance.fundAccount,
+      'gc_id': instance.gcid,
+    };
+
+RedeemedInviteFunds _$RedeemedInviteFundsFromJson(Map<String, dynamic> json) =>
+    RedeemedInviteFunds(
+      json['txid'] as String,
+      json['total'] as int,
+    );
+
+Map<String, dynamic> _$RedeemedInviteFundsToJson(
+        RedeemedInviteFunds instance) =>
+    <String, dynamic>{
+      'txid': instance.txid,
+      'total': instance.total,
     };

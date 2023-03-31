@@ -8,6 +8,7 @@ import 'package:bruig/components/route_error.dart';
 import 'package:bruig/models/menus.dart';
 import 'package:bruig/screens/about.dart';
 import 'package:bruig/screens/contacts_msg_times.dart';
+import 'package:bruig/screens/generate_invite.dart';
 import 'package:bruig/theme_manager.dart';
 import 'package:bruig/config.dart';
 import 'package:bruig/models/downloads.dart';
@@ -258,6 +259,7 @@ class _AppState extends State<App> with WindowListener {
                 '/initLocalID': (context) => const InitLocalIDScreen(),
                 '/startup/verifyServer': (context) =>
                     const VerifyServerScreen(),
+                '/generateInvite': (context) => const GenerateInviteScreen(),
                 '/verifyInvite': (context) => const VerifyInviteScreen(),
                 '/newGC': (context) => const NewGCScreen(),
                 '/ln/confirmRecvChannelPay': (context) =>
