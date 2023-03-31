@@ -127,6 +127,10 @@ minimumsendbalance = 0.01
 # (such as 127.0.0.1:10009).
 # lnrpclisten = 127.0.0.1:<port>
 
+# Account to use to generate private keys and store funds to send to remote
+# users on-chain inside invites.
+# invitefundsaccount = non-default-account
+
 [clientrpc]
 # Enable the JSON-RPC clientrpc protocol on the comma-separated list of addresses.
 # jsonrpclisten = 127.0.0.1:7676

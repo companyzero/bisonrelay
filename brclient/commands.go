@@ -2515,7 +2515,7 @@ var commands = []tuicmd{
 	},
 	{
 		cmd:   "invite",
-		usage: "<filename> [gcname]",
+		usage: "<filename> [<gcname>]",
 		descr: "Create invitation file with optional GC to send OOB to another user",
 		handler: func(args []string, as *appState) error {
 			if len(args) < 1 {
@@ -2528,7 +2528,7 @@ var commands = []tuicmd{
 			}
 
 			var gcID zkidentity.ShortID
-			if len(args) == 2 {
+			if len(args) > 1 && len(args[1]) > 0 {
 				gcName := args[1]
 				gcID, err = as.c.GCIDByName(gcName)
 				if err != nil {
@@ -2539,7 +2539,75 @@ var commands = []tuicmd{
 				}
 			}
 
-			go as.writeInvite(filename, gcID)
+			go as.writeInvite(filename, gcID, nil)
+			return nil
+		},
+		completer: func(args []string, arg string, as *appState) []string {
+			if len(args) == 0 {
+				return fileCompleter(arg)
+			}
+			if len(args) == 1 {
+				return gcCompleter(arg, as)
+			}
+			return nil
+		},
+	}, {
+		cmd:   "fundedinvite",
+		usage: "<filename> <fund amount> [<gcname>]",
+		descr: "Create invitation file with funds",
+		long: []string{
+			"The specified amount of DCR will be sent from the default wallet account to the configured invite funding account and the corresponding private key will be included in the created invitation.",
+			"The invite funding account may be specified in the config file and cannot be the default wallet account",
+		},
+		handler: func(args []string, as *appState) error {
+			if len(args) < 1 {
+				return usageError{msg: "filename must be specified"}
+			}
+			if len(args) < 2 {
+				return usageError{msg: "amount must be specified"}
+			}
+			if as.inviteFundsAccount == "" || as.inviteFundsAccount == "default" {
+				as.manyDiagMsgsCb(func(pf printf) {
+					pf(as.styles.err.Render("Cannot fund invite when funding account is set to the default wallet account"))
+					pf("Create a new account with '/ln newaccount <name>'")
+					pf("and set the 'invitefundsaccount = <name>' config option in brclient.conf")
+				})
+				return nil
+			}
+
+			filename, err := homedir.Expand(args[0])
+			if err != nil {
+				return err
+			}
+			dcrAmount, err := strconv.ParseFloat(args[1], 64)
+			if err != nil {
+				return usageError{msg: fmt.Sprintf("amount not a valid DCR amount: %v", err)}
+			}
+			amount, err := dcrutil.NewAmount(dcrAmount)
+			if err != nil {
+				return err
+			}
+
+			var gcID zkidentity.ShortID
+			if len(args) > 2 {
+				gcName := args[2]
+				gcID, err = as.c.GCIDByName(gcName)
+				if err != nil {
+					return err
+				}
+				if _, err := as.c.GetGC(gcID); err != nil {
+					return err
+				}
+			}
+
+			funds, err := as.lnPC.CreateInviteFunds(as.ctx, amount, as.inviteFundsAccount)
+			if err != nil {
+				return err
+			}
+			as.cwHelpMsg("%s available for invitee after tx %s confirms",
+				amount, funds.Tx)
+
+			go as.writeInvite(filename, gcID, funds)
 			return nil
 		},
 		completer: func(args []string, arg string, as *appState) []string {
@@ -2562,6 +2630,10 @@ var commands = []tuicmd{
 			if len(args) < 1 {
 				return usageError{msg: "filename must be specified"}
 			}
+			var ignoreFunds bool
+			if len(args) > 1 && args[1] == "ignorefunds" {
+				ignoreFunds = true
+			}
 
 			filename, err := homedir.Expand(args[0])
 			if err != nil {
@@ -2577,6 +2649,20 @@ var commands = []tuicmd{
 			if err != nil {
 				return err
 			}
+
+			if pii.Funds != nil && !ignoreFunds {
+				as.cwHelpMsgs(func(pf printf) {
+					pf("")
+					pf("Invitation from peer includes funds")
+					pf("Nick: %q", pii.Public.Nick)
+					pf("UTXO: %s:%d", pii.Funds.Tx, pii.Funds.Index)
+					pf("Type '/add %s ignorefunds' to add the invite anyway",
+						args[0])
+					pf("or '/redeeminvitefunds %s' to redeem the funds on-chain",
+						args[0])
+				})
+				return nil
+			}
 			as.cwHelpMsgs(func(pf printf) {
 				pf("")
 				pf("Adding invitation to peer")
@@ -2591,6 +2677,44 @@ var commands = []tuicmd{
 				}
 			}()
 			return nil
+		},
+	}, {
+		cmd:   "redeeminvitefunds",
+		usage: "<filename>",
+		descr: "Redeem funds included in an invitation",
+		handler: func(args []string, as *appState) error {
+			if len(args) < 1 {
+				return usageError{msg: "filename must be specified"}
+			}
+			filename, err := homedir.Expand(args[0])
+			if err != nil {
+				return err
+			}
+			f, err := os.Open(filename)
+			if err != nil {
+				return err
+			}
+			defer f.Close()
+
+			pii, err := as.c.ReadInvite(f)
+			if err != nil {
+				return err
+			}
+
+			total, tx, err := as.lnPC.RedeemInviteFunds(as.ctx, pii.Funds)
+			if err != nil {
+				return err
+			}
+			as.cwHelpMsgs(func(pf printf) {
+				pf("")
+				pf("Redeemed %s as invite funds in tx %s", total, tx)
+				pf("The invite can be accepted by issuing the command")
+				pf("  /add %s ignorefunds", args[0])
+			})
+			return nil
+		},
+		completer: func(args []string, arg string, as *appState) []string {
+			return fileCompleter(arg)
 		},
 	}, {
 		cmd:           "addressbook",
