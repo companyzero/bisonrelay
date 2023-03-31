@@ -521,7 +521,7 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 	switch cmd.Type {
 	case CTInvite:
 		b := &bytes.Buffer{}
-		_, err := c.WriteNewInvite(b)
+		_, err := c.WriteNewInvite(b, nil)
 		if err != nil {
 			return nil, err
 		}

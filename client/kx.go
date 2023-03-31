@@ -71,7 +71,7 @@ func (kx *kxList) makePaidForRMCB(uid UserID, event string) func(int64, int64) {
 // createInvite creates a new invite that can be used to create a ratchet with
 // a remote party.
 func (kx *kxList) createInvite(w io.Writer, invitee *zkidentity.PublicIdentity,
-	mediator *clientintf.UserID, isForReset bool) (rpc.OOBPublicIdentityInvite, error) {
+	mediator *clientintf.UserID, isForReset bool, funds *rpc.InviteFunds) (rpc.OOBPublicIdentityInvite, error) {
 
 	var rv, resetRV [32]byte
 	if _, err := io.ReadFull(kx.randReader, rv[:]); err != nil {
@@ -86,6 +86,7 @@ func (kx *kxList) createInvite(w io.Writer, invitee *zkidentity.PublicIdentity,
 		Public:            kx.id.Public,
 		InitialRendezvous: rv,
 		ResetRendezvous:   resetRV,
+		Funds:             funds,
 	}
 	if w != nil {
 		jw := json.NewEncoder(w)
@@ -464,7 +465,7 @@ func (kx *kxList) listenAllKXs(kxExpiryLimit time.Duration) error {
 // requestReset sends a new invite to the given rv point, which should be a
 // reset RV of the specified remote user.
 func (kx *kxList) requestReset(rv clientdb.RawRVID, id *zkidentity.PublicIdentity) error {
-	invite, err := kx.createInvite(nil, nil, &id.Identity, true)
+	invite, err := kx.createInvite(nil, nil, &id.Identity, true, nil)
 	if err != nil {
 		return err
 	}

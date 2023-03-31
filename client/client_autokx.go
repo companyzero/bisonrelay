@@ -98,7 +98,7 @@ func (c *Client) handleRMInvite(ru *RemoteUser, iv rpc.RMInvite) error {
 
 	// Generate an invite.
 	mediatorID := ru.ID()
-	pii, err := c.kxl.createInvite(nil, &iv.Invitee, &mediatorID, false)
+	pii, err := c.kxl.createInvite(nil, &iv.Invitee, &mediatorID, false, nil)
 	if err != nil {
 		return err
 	}

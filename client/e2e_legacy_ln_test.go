@@ -94,7 +94,7 @@ func completeC2CKX(t testing.TB, alice, bob *Client) {
 
 	// Alice generates the invite.
 	br := bytes.NewBuffer(nil)
-	_, err := alice.WriteNewInvite(br)
+	_, err := alice.WriteNewInvite(br, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
