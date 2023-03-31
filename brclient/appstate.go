@@ -39,6 +39,7 @@ import (
 	"github.com/decred/dcrd/chaincfg/chainhash"
 	"github.com/decred/dcrd/dcrutil/v4"
 	"github.com/decred/dcrlnd/lnrpc"
+	"github.com/decred/dcrlnd/lnrpc/walletrpc"
 	"github.com/decred/dcrlnd/lnwire"
 	lpclient "github.com/decred/dcrlnlpd/client"
 	"github.com/decred/go-socks/socks"
@@ -101,6 +102,7 @@ type appState struct {
 
 	lnRPC      lnrpc.LightningClient
 	lnPC       *client.DcrlnPaymentClient
+	lnWallet   walletrpc.WalletKitClient
 	httpClient *http.Client
 
 	winW, winH int
@@ -2321,6 +2323,7 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 	var pc clientintf.PaymentClient = clientintf.FreePaymentClient{}
 	var lnRPC lnrpc.LightningClient
 	var lnPC *client.DcrlnPaymentClient
+	var lnWallet walletrpc.WalletKitClient
 	if args.WalletType != "disabled" {
 		pcCfg := client.DcrlnPaymentClientCfg{
 			TLSCertPath:  args.LNTLSCertPath,
@@ -2334,6 +2337,7 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		}
 		pc = lnPC
 		lnRPC = lnPC.LNRPC()
+		lnWallet = lnPC.LNWallet()
 	}
 
 	var d net.Dialer
@@ -3222,6 +3226,7 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		serverAddr:  args.ServerAddr,
 		lnRPC:       lnRPC,
 		lnPC:        lnPC,
+		lnWallet:    lnWallet,
 		httpClient: &http.Client{
 			Transport: &http.Transport{
 				DialContext:           httpDialerFunc,
