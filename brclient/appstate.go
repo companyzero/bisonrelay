@@ -487,7 +487,7 @@ func (as *appState) trackLNChannelEvents() {
 	for {
 		event, err := chanEvents.Recv()
 		if err != nil {
-			as.log.Errorf("Error while tracking channel events: %v")
+			as.log.Errorf("Error while tracking channel events: %v", err)
 			return
 		}
 
