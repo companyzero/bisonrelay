@@ -211,6 +211,8 @@ type appState struct {
 	inboundMsgsMtx  sync.Mutex
 	inboundMsgs     *genericlist.List[inboundRemoteMsg]
 	inboundMsgsChan chan struct{}
+
+	inviteFundsAccount string
 }
 
 type appStateErr struct {
@@ -1253,10 +1255,10 @@ func (as *appState) handleRcvdText(s string, nick string) string {
 
 // writeInvite writes a new invite to the given filename. This blocks until the
 // invite is written.
-func (as *appState) writeInvite(filename string, gcID zkidentity.ShortID) {
+func (as *appState) writeInvite(filename string, gcID zkidentity.ShortID, funds *rpc.InviteFunds) {
 	as.cwHelpMsg("Attempting to create and subscribe to new invite")
 	w := new(bytes.Buffer)
-	pii, err := as.c.WriteNewInvite(w, nil)
+	pii, err := as.c.WriteNewInvite(w, funds)
 	if err != nil {
 		as.cwHelpMsg("Unable to create invite: %v", err)
 		return
@@ -3263,9 +3265,10 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		lnRequestRecvChan: make(chan msgLNRequestRecvReply),
 		lnFundWalletChan:  make(chan msgLNFundWalletReply),
 
-		winpin:  args.WinPin,
-		mimeMap: args.MimeMap,
-		bellCmd: bellCmd,
+		winpin:             args.WinPin,
+		mimeMap:            args.MimeMap,
+		bellCmd:            bellCmd,
+		inviteFundsAccount: args.InviteFundsAccount,
 
 		collator: collate.New(language.Und),
 

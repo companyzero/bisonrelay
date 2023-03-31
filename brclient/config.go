@@ -85,8 +85,9 @@ type config struct {
 	MinRecvBal   dcrutil.Amount
 	MinSendBal   dcrutil.Amount
 
-	WinPin  []string
-	MimeMap map[string]string
+	WinPin             []string
+	MimeMap            map[string]string
+	InviteFundsAccount string
 
 	JSONRPCListen      []string
 	RPCCertPath        string
@@ -243,6 +244,7 @@ func loadConfig() (*config, error) {
 	flagWinPin := fs.String("winpin", "", "Comma delimited list of DM and GC windows to launch on start")
 	flagBlinkCursor := fs.Bool("blinkcursor", true, "Blink cursor")
 	flagBellCmd := fs.String("bellcmd", "", "Bell command on new msgs")
+	flagInviteFundsAccount := fs.String("invitefundsaccount", "", "")
 	flagJSONRPCListen := fs.String("jsonrpclisten", "", "Comma delimited list of JSON-RPC server binding addresses")
 	flagRPCCertPath := fs.String("rpccertpath", defaultRPCCertPath, "")
 	flagRPCKeyPath := fs.String("rpckeypath", defaultRPCKeyPath, "")
@@ -381,6 +383,7 @@ func loadConfig() (*config, error) {
 		RPCKeyPath:         *flagRPCKeyPath,
 		RPCClientCAPath:    *flagRPCClientCAPath,
 		RPCIssueClientCert: *flagRPCIssueClientCert,
+		InviteFundsAccount: *flagInviteFundsAccount,
 	}, nil
 }
 
