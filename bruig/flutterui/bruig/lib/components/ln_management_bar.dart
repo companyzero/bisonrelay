@@ -69,7 +69,7 @@ class _LNManagementBarState extends State<LNManagementBar> {
             },
           ),
           ListTile(
-            title: Text("Channels",
+            title: Text("Accounts",
                 style: TextStyle(
                     color: selectedIndex == 1
                         ? selectedTextColor
@@ -81,7 +81,7 @@ class _LNManagementBarState extends State<LNManagementBar> {
             },
           ),
           ListTile(
-            title: Text("Payments",
+            title: Text("On-Chain",
                 style: TextStyle(
                     color: selectedIndex == 2
                         ? selectedTextColor
@@ -93,7 +93,7 @@ class _LNManagementBarState extends State<LNManagementBar> {
             },
           ),
           ListTile(
-            title: Text("Network",
+            title: Text("Channels",
                 style: TextStyle(
                     color: selectedIndex == 3
                         ? selectedTextColor
@@ -105,7 +105,7 @@ class _LNManagementBarState extends State<LNManagementBar> {
             },
           ),
           ListTile(
-            title: Text("Backups",
+            title: Text("Payments",
                 style: TextStyle(
                     color: selectedIndex == 4
                         ? selectedTextColor
@@ -114,6 +114,30 @@ class _LNManagementBarState extends State<LNManagementBar> {
                     fontWeight: FontWeight.w400)),
             onTap: () {
               tabChange(4);
+            },
+          ),
+          ListTile(
+            title: Text("Network",
+                style: TextStyle(
+                    color: selectedIndex == 5
+                        ? selectedTextColor
+                        : unselectedTextColor,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w400)),
+            onTap: () {
+              tabChange(5);
+            },
+          ),
+          ListTile(
+            title: Text("Backups",
+                style: TextStyle(
+                    color: selectedIndex == 6
+                        ? selectedTextColor
+                        : unselectedTextColor,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w400)),
+            onTap: () {
+              tabChange(6);
             },
           ),
         ]));

@@ -38,7 +38,7 @@ class _LNInfoPageState extends State<LNInfoPage> {
 
   void getDepositAddr() async {
     try {
-      var newAddr = await Golib.lnGetDepositAddr();
+      var newAddr = await Golib.lnGetDepositAddr("");
       setState(() {
         depositAddr = newAddr;
       });

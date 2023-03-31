@@ -105,6 +105,9 @@ const (
 	CTGCModifyAdmins                  = 0x69
 	CTGetKXSearch                     = 0x6a
 	CTSuggestKX                       = 0x6b
+	CTListAccounts                    = 0x6c
+	CTCreateAccount                   = 0x6d
+	CTSendOnchain                     = 0x6e
 
 	NTInviteReceived         = 0x1001
 	NTInviteAccepted         = 0x1002

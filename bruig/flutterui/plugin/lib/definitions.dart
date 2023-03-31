@@ -1540,6 +1540,36 @@ class TipProgressEvent extends ChatEvent {
       _$TipProgressEventFromJson(json);
 }
 
+@JsonSerializable()
+class Account {
+  final String name;
+  @JsonKey(name: "unconfirmed_balance")
+  final int unconfirmedBalance;
+  @JsonKey(name: "confirmed_balance")
+  final int confirmedBalance;
+  @JsonKey(name: "internal_key_count")
+  final int internalKeyCount;
+  @JsonKey(name: "external_key_count")
+  final int externalKeyCount;
+
+  Account(this.name, this.unconfirmedBalance, this.confirmedBalance,
+      this.internalKeyCount, this.externalKeyCount);
+
+  factory Account.fromJson(Map<String, dynamic> json) =>
+      _$AccountFromJson(json);
+}
+
+@JsonSerializable()
+class SendOnChain {
+  final String addr;
+  final int amount;
+  @JsonKey(name: "from_account")
+  final String fromAccount;
+
+  SendOnChain(this.addr, this.amount, this.fromAccount);
+  Map<String, dynamic> toJson() => _$SendOnChainToJson(this);
+}
+
 mixin NtfStreams {
   StreamController<RemoteUser> ntfAcceptedInvites =
       StreamController<RemoteUser>();
@@ -1998,8 +2028,8 @@ abstract class PluginPlatform {
     return res;
   }
 
-  Future<String> lnGetDepositAddr() async =>
-      await asyncCall(CTLNGetDepositAddr, null);
+  Future<String> lnGetDepositAddr(String account) async =>
+      await asyncCall(CTLNGetDepositAddr, account);
 
   Future<void> lnRequestRecvCapacity(String server, String key, double chanSize,
           String certificates) async =>
@@ -2096,6 +2126,23 @@ abstract class PluginPlatform {
 
   Future<void> suggestKX(String iuid, tuid) async {
     await asyncCall(CTSuggestKX, SuggestKX(iuid, tuid));
+  }
+
+  Future<List<Account>> listAccounts() async {
+    var res = await asyncCall(CTListAccounts, null);
+    if (res == null) {
+      return List.empty();
+    }
+    return (res as List).map<Account>((v) => Account.fromJson(v)).toList();
+  }
+
+  Future<void> createAccount(String name) async =>
+      await asyncCall(CTCreateAccount, name);
+
+  Future<void> sendOnChain(
+      String addr, double dcrAmount, String fromAccount) async {
+    var req = SendOnChain(addr, dcrToAtoms(dcrAmount), fromAccount);
+    await asyncCall(CTSendOnchain, req);
   }
 }
 
@@ -2195,6 +2242,9 @@ const int CTGCUpgradeVersion = 0x68;
 const int CTGCModifyAdmins = 0x69;
 const int CTGetKXSearch = 0x6a;
 const int CTSuggestKX = 0x6b;
+const int CTListAccounts = 0x6c;
+const int CTCreateAccount = 0x6d;
+const int CTSendOnchain = 0x6e;
 
 const int notificationsStartID = 0x1000;
 

@@ -1,8 +1,10 @@
 import 'package:bruig/components/buttons.dart';
+import 'package:bruig/screens/ln/accounts.dart';
 import 'package:bruig/screens/ln/backups.dart';
 import 'package:bruig/screens/ln/channels.dart';
 import 'package:bruig/screens/ln/info.dart';
 import 'package:bruig/screens/ln/network.dart';
+import 'package:bruig/screens/ln/onchain.dart';
 import 'package:bruig/screens/ln/payments.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
@@ -36,12 +38,16 @@ class _LNScreenState extends State<LNScreen> {
       case 0:
         return const LNInfoPage();
       case 1:
-        return const LNChannelsPage();
+        return const LNAccountsPage();
       case 2:
-        return const LNPaymentsPage();
+        return const LNOnChainPage();
       case 3:
-        return const LNNetworkPage();
+        return const LNChannelsPage();
       case 4:
+        return const LNPaymentsPage();
+      case 5:
+        return const LNNetworkPage();
+      case 6:
         return const LNBackupsPage();
     }
     return Text("Active is $tabIndex");

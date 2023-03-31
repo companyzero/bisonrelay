@@ -26,7 +26,7 @@ class _NeedsFundsScreenState extends State<NeedsFundsScreen> {
 
   void getNewAddress() async {
     try {
-      var res = await Golib.lnGetDepositAddr();
+      var res = await Golib.lnGetDepositAddr("");
       setState(() {
         addr = res;
       });
