@@ -10,3 +10,6 @@ String shortChanIDToStr(int sid) {
   var txPos = sid & 0xFFFF;
   return "$bh:$txIndex:$txPos";
 }
+
+int dcrToAtoms(double dcr) =>
+    dcr < 0 ? (dcr * 1e8 - 0.5).truncate() : (dcr * 1e8 + 0.5).truncate();

@@ -26,6 +26,7 @@ import (
 	"github.com/decred/dcrlnd/build"
 	"github.com/decred/dcrlnd/lnrpc"
 	"github.com/decred/dcrlnd/lnrpc/initchainsyncrpc"
+	"github.com/decred/dcrlnd/lnrpc/walletrpc"
 	lpclient "github.com/decred/dcrlnlpd/client"
 	"github.com/decred/slog"
 )
@@ -514,8 +515,10 @@ func handleInitClient(handle uint32, args InitClient) error {
 func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 	c := cc.c
 	var lnc lnrpc.LightningClient
+	var lnWallet walletrpc.WalletKitClient
 	if cc.lnpc != nil {
 		lnc = cc.lnpc.LNRPC()
+		lnWallet = cc.lnpc.LNWallet()
 	}
 
 	switch cmd.Type {
@@ -1094,7 +1097,14 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		if lnc == nil {
 			return nil, fmt.Errorf("LN client not initialized")
 		}
-		req := &lnrpc.NewAddressRequest{Type: lnrpc.AddressType_PUBKEY_HASH}
+		var args string
+		if err := cmd.decode(&args); err != nil {
+			return nil, err
+		}
+		req := &lnrpc.NewAddressRequest{
+			Type:    lnrpc.AddressType_PUBKEY_HASH,
+			Account: args,
+		}
 		res, err := lnc.NewAddress(context.Background(), req)
 		if err != nil {
 			return nil, err
@@ -1387,6 +1397,57 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 			return nil, err
 		}
 		return nil, c.SuggestKX(args.Invitee, args.Target)
+
+	case CTListAccounts:
+		if lnc == nil {
+			return nil, fmt.Errorf("ln client not initialized")
+		}
+
+		accts, err := lnWallet.ListAccounts(cc.ctx, &walletrpc.ListAccountsRequest{})
+		if err != nil {
+			return nil, err
+		}
+
+		bal, err := lnc.WalletBalance(cc.ctx, &lnrpc.WalletBalanceRequest{})
+		if err != nil {
+			return nil, err
+		}
+
+		res := make([]Account, 0, len(accts.Accounts))
+		for _, acc := range accts.Accounts {
+			accBal := bal.AccountBalance[acc.Name]
+			res = append(res, Account{
+				Name:               acc.Name,
+				ConfirmedBalance:   dcrutil.Amount(accBal.ConfirmedBalance),
+				UnconfirmedBalance: dcrutil.Amount(accBal.UnconfirmedBalance),
+				InternalKeyCount:   acc.InternalKeyCount,
+				ExternalKeyCount:   acc.ExternalKeyCount,
+			})
+		}
+		return res, nil
+
+	case CTCreateAccount:
+		var args string
+		if err := cmd.decode(&args); err != nil {
+			return nil, err
+		}
+
+		req := &walletrpc.DeriveNextAccountRequest{Name: args}
+		_, err := lnWallet.DeriveNextAccount(cc.ctx, req)
+		return nil, err
+
+	case CTSendOnchain:
+		var args SendOnChain
+		if err := cmd.decode(&args); err != nil {
+			return nil, err
+		}
+		req := &lnrpc.SendCoinsRequest{
+			Addr:    args.Addr,
+			Amount:  int64(args.Amount),
+			Account: args.FromAccount,
+		}
+		res, err := lnc.SendCoins(cc.ctx, req)
+		return res, err
 	}
 	return nil, nil
 }

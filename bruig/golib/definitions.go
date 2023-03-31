@@ -5,6 +5,7 @@ import (
 	"github.com/companyzero/bisonrelay/client/clientintf"
 	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/companyzero/bisonrelay/zkidentity"
+	"github.com/decred/dcrd/dcrutil/v4"
 	"github.com/decred/dcrlnd/lnrpc"
 	lpclient "github.com/decred/dcrlnlpd/client"
 )
@@ -317,4 +318,18 @@ type SuggestKX struct {
 	Invitee      zkidentity.ShortID `json:"inviteeid"`
 	TargetNick   string             `json:"targetnick"`
 	Target       zkidentity.ShortID `json:"targetid"`
+}
+
+type Account struct {
+	Name               string         `json:"name"`
+	UnconfirmedBalance dcrutil.Amount `json:"unconfirmed_balance"`
+	ConfirmedBalance   dcrutil.Amount `json:"confirmed_balance"`
+	InternalKeyCount   uint32         `json:"internal_key_count"`
+	ExternalKeyCount   uint32         `json:"external_key_count"`
+}
+
+type SendOnChain struct {
+	Addr        string         `json:"addr"`
+	Amount      dcrutil.Amount `json:"amount"`
+	FromAccount string         `json:"from_account"`
 }

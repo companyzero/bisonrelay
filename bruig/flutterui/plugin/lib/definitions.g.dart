@@ -1564,3 +1564,32 @@ Map<String, dynamic> _$TipProgressEventToJson(TipProgressEvent instance) =>
       'attempt_err': instance.attemptErr,
       'will_retry': instance.willRetry,
     };
+
+Account _$AccountFromJson(Map<String, dynamic> json) => Account(
+      json['name'] as String,
+      json['unconfirmed_balance'] as int,
+      json['confirmed_balance'] as int,
+      json['internal_key_count'] as int,
+      json['external_key_count'] as int,
+    );
+
+Map<String, dynamic> _$AccountToJson(Account instance) => <String, dynamic>{
+      'name': instance.name,
+      'unconfirmed_balance': instance.unconfirmedBalance,
+      'confirmed_balance': instance.confirmedBalance,
+      'internal_key_count': instance.internalKeyCount,
+      'external_key_count': instance.externalKeyCount,
+    };
+
+SendOnChain _$SendOnChainFromJson(Map<String, dynamic> json) => SendOnChain(
+      json['addr'] as String,
+      json['amount'] as int,
+      json['from_account'] as String,
+    );
+
+Map<String, dynamic> _$SendOnChainToJson(SendOnChain instance) =>
+    <String, dynamic>{
+      'addr': instance.addr,
+      'amount': instance.amount,
+      'from_account': instance.fromAccount,
+    };

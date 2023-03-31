@@ -41,7 +41,7 @@ class _NeedsOutChannelScreenState extends State<NeedsOutChannelScreen> {
 
   void getNewAddress() async {
     try {
-      var res = await Golib.lnGetDepositAddr();
+      var res = await Golib.lnGetDepositAddr("");
       setState(() {
         addr = res;
       });
