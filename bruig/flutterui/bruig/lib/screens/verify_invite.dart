@@ -1,6 +1,11 @@
+import 'package:bruig/components/copyable.dart';
+import 'package:bruig/components/empty_widget.dart';
+import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/models/client.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
+import 'package:golib_plugin/golib_plugin.dart';
+import 'package:golib_plugin/util.dart';
 import 'package:provider/provider.dart';
 
 class VerifyInviteScreen extends StatefulWidget {
@@ -12,6 +17,8 @@ class VerifyInviteScreen extends StatefulWidget {
 
 class _VerifyInviteScreenState extends State<VerifyInviteScreen> {
   bool _loading = false;
+  bool redeeming = false;
+  RedeemedInviteFunds? redeemed;
 
   @override
   void initState() {
@@ -33,6 +40,50 @@ class _VerifyInviteScreenState extends State<VerifyInviteScreen> {
     Navigator.pop(context);
   }
 
+  void redeemFunds(BuildContext context, InviteFunds funds) async {
+    setState(() => redeeming = true);
+    try {
+      var res = await Golib.redeemInviteFunds(funds);
+      setState(() {
+        redeemed = res;
+      });
+    } catch (exception) {
+      showErrorSnackbar(context, "Unable to redeem funds: $exception");
+      setState(() => redeeming = false);
+    }
+  }
+
+  Widget buildFundsWidget(BuildContext context, InviteFunds funds) {
+    var textColor = const Color(0xFF8E8D98);
+    var ts = TextStyle(color: textColor);
+
+    if (redeemed != null) {
+      var total = formatDCR(atomsToDCR(redeemed!.total));
+      return Column(children: [
+        Text("Redeemed $total on the following tx:", style: ts),
+        Copyable(redeemed!.txid, ts),
+        Text("The funds will be available after the tx is mined.", style: ts),
+      ]);
+    }
+
+    if (redeeming) {
+      return Text("Attempting to redeem funds...", style: ts);
+    }
+
+    return Column(children: [
+      Column(children: [
+        Text("This invite contains funds stored in the following UTXO:",
+            style: ts),
+        Copyable("${funds.txid}:${funds.index}", ts),
+        Text("Attempt to redeem funds?", style: ts),
+      ]),
+      const SizedBox(height: 10),
+      ElevatedButton(
+          onPressed: () => redeemFunds(context, funds),
+          child: const Text("Redeem Funds")),
+    ]);
+  }
+
   @override
   Widget build(BuildContext context) {
     var invite = ModalRoute.of(context)!.settings.arguments as Invitation;
@@ -41,8 +92,6 @@ class _VerifyInviteScreenState extends State<VerifyInviteScreen> {
     var backgroundColor = const Color(0xFF19172C);
     var cardColor = const Color(0xFF05031A);
     var textColor = const Color(0xFF8E8D98);
-    var secondaryTextColor = const Color(0xFFE4E3E6);
-    var darkTextColor = const Color(0xFF5A5968);
     return Scaffold(
         body: Container(
             color: backgroundColor,
@@ -69,24 +118,28 @@ class _VerifyInviteScreenState extends State<VerifyInviteScreen> {
                       ])),
                   padding: const EdgeInsets.all(10),
                   child: Column(children: [
-                    const SizedBox(height: 258),
+                    const Expanded(child: Empty()),
                     Text("Accept Invite",
                         style: TextStyle(
                             color: textColor,
                             fontSize: 34,
                             fontWeight: FontWeight.w200)),
                     const SizedBox(height: 34),
-                    Text("Name: ${invite.user.name}",
+                    invite.invite.funds != null
+                        ? buildFundsWidget(context, invite.invite.funds!)
+                        : const Empty(),
+                    const SizedBox(height: 20),
+                    Text("Name: ${invite.invite.public.name}",
                         style: TextStyle(
                             color: textColor,
                             fontSize: 15,
                             fontWeight: FontWeight.w300)),
-                    Text("Nick: ${invite.user.nick}",
+                    Text("Nick: ${invite.invite.public.nick}",
                         style: TextStyle(
                             color: textColor,
                             fontSize: 15,
                             fontWeight: FontWeight.w300)),
-                    Text("Identity: ${invite.user.uid}",
+                    Text("Identity: ${invite.invite.public.identity}",
                         style: TextStyle(
                             color: textColor,
                             fontSize: 15,
@@ -102,7 +155,8 @@ class _VerifyInviteScreenState extends State<VerifyInviteScreen> {
                         style: ElevatedButton.styleFrom(
                             backgroundColor: theme.errorColor),
                         onPressed: () => onDenyInvite(context),
-                        child: const Text("Deny"))
+                        child: const Text("Deny")),
+                    const Expanded(child: Empty()),
                   ]))
             ])));
   }

@@ -146,17 +146,7 @@ class _ChatHeadingWState extends State<_ChatHeadingW> {
 }
 
 Future<void> generateInvite(BuildContext context) async {
-  var filePath = await FilePicker.platform.saveFile(
-    dialogTitle: "Select invitation file location",
-    fileName: "invite.bin",
-  );
-  if (filePath == null) return;
-  try {
-    await Golib.generateInvite(filePath);
-    showSuccessSnackbar(context, "Generated invitation at $filePath");
-  } catch (exception) {
-    showErrorSnackbar(context, "Unable to generate invitation: $exception");
-  }
+  Navigator.of(context, rootNavigator: true).pushNamed('/generateInvite');
 }
 
 Future<void> loadInvite(BuildContext context) async {

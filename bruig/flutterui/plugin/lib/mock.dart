@@ -263,7 +263,11 @@ class MockPlugin with NtfStreams /*implements PluginPlatform*/ {
 
   Future<Invitation> decodeInvite(String filepath) async {
     return Invitation(
-        RemoteUser("xx-xx-xx-xx-xx-xx", "User to Confirm", "user"),
+        OOBPublicIdentityInvite(
+            PublicIdentity("user", "User to Confirm", "xx-xx-xx-xx-xx-xx"),
+            "",
+            "",
+            null),
         Uint8List(5));
   }
 

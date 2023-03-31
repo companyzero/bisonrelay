@@ -523,15 +523,44 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 
 	switch cmd.Type {
 	case CTInvite:
+		var args WriteInvite
+		if err := cmd.decode(&args); err != nil {
+			return nil, err
+		}
+
+		var funds *rpc.InviteFunds
+		if args.FundAmount > 0 {
+			if lnc == nil {
+				return nil, fmt.Errorf("LN wallet not initialized")
+			}
+			var err error
+			funds, err = cc.lnpc.CreateInviteFunds(cc.ctx,
+				args.FundAmount, args.FundAccount)
+			if err != nil {
+				return nil, fmt.Errorf("unable to create invite funds: %v", err)
+			}
+		}
+
 		b := &bytes.Buffer{}
-		_, err := c.WriteNewInvite(b, nil)
+		pii, err := c.WriteNewInvite(b, funds)
 		if err != nil {
 			return nil, err
 		}
 
+		if args.GCID != nil && !args.GCID.IsEmpty() {
+			err := c.AddInviteOnKX(pii.InitialRendezvous, *args.GCID)
+			if err != nil {
+				return nil, fmt.Errorf("unable to setup post-kx "+
+					"action to invite to GC: %v", err)
+			}
+		}
+
 		// Return the invite blob.
-		bts := b.Bytes()
-		return bts, nil
+		res := GeneratedKXInvite{
+			Blob:  b.Bytes(),
+			Funds: funds,
+		}
+		return res, nil
 
 	case CTDecodeInvite:
 		var blob []byte
@@ -546,7 +575,7 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		}
 
 		// Return the decoded invite.
-		return remoteUserFromPII(&invite.Public), nil
+		return invite, nil
 
 	case CTAcceptInvite:
 		var blob []byte
@@ -1448,6 +1477,20 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		}
 		res, err := lnc.SendCoins(cc.ctx, req)
 		return res, err
+
+	case CTRedeeemInviteFunds:
+		var args rpc.InviteFunds
+		if err := cmd.decode(&args); err != nil {
+			return nil, err
+		}
+
+		total, txh, err := cc.lnpc.RedeemInviteFunds(cc.ctx, &args)
+		if err != nil {
+			return nil, err
+		}
+		res := RedeemedInviteFunds{Txid: rpc.TxHash(txh), Total: total}
+		return res, nil
+
 	}
 	return nil, nil
 }

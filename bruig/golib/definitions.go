@@ -333,3 +333,19 @@ type SendOnChain struct {
 	Amount      dcrutil.Amount `json:"amount"`
 	FromAccount string         `json:"from_account"`
 }
+
+type WriteInvite struct {
+	FundAmount  dcrutil.Amount      `json:"fund_amount"`
+	FundAccount string              `json:"fund_account"`
+	GCID        *zkidentity.ShortID `json:"gc_id"`
+}
+
+type GeneratedKXInvite struct {
+	Blob  []byte           `json:"blob"`
+	Funds *rpc.InviteFunds `json:"funds"`
+}
+
+type RedeemedInviteFunds struct {
+	Txid  rpc.TxHash     `json:"txid"`
+	Total dcrutil.Amount `json:"total"`
+}
