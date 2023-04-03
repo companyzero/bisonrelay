@@ -1001,6 +1001,89 @@ class GCAdminsChangedW extends StatelessWidget {
   }
 }
 
+class KXSuggestedW extends StatefulWidget {
+  final ChatEventModel event;
+  final KXSuggested suggest;
+  final ClientModel client;
+  const KXSuggestedW(this.event, this.suggest, this.client, {Key? key})
+      : super(key: key);
+
+  @override
+  State<KXSuggestedW> createState() => _KXSuggestedWState();
+}
+
+class _KXSuggestedWState extends State<KXSuggestedW> {
+  ChatEventModel get event => widget.event;
+  KXSuggested get suggest => widget.suggest;
+  ClientModel get client => widget.client;
+
+  void acceptSuggestion() async {
+    try {
+      event.sentState = Suggestion_accepted;
+      setState(() {});
+      client.requestMediateID(suggest.inviteeid, suggest.targetid);
+      event.sentState = Suggestion_confirmed;
+      setState(() {});
+    } catch (exception) {
+      event.sentState = Suggestion_errored;
+
+      setState(() {});
+    }
+  }
+
+  void cancelSuggestion() {
+    event.sentState = Suggestion_canceled;
+    setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    var theme = Theme.of(context);
+    var textColor = theme.dividerColor;
+    switch (event.sentState) {
+      case Suggestion_accepted:
+        return ServerEvent(
+            child: Text(
+                "Accepting suggestion to KX from '${suggest.inviteenick}' to '${suggest.targetnick}'",
+                style: TextStyle(fontSize: 9, color: textColor)));
+      case Suggestion_errored:
+        return ServerEvent(
+            child: SelectableText(
+                "Unable to accept suggestion from  '${suggest.inviteenick}' to '${suggest.targetnick}'",
+                style: TextStyle(fontSize: 9, color: textColor)));
+      case Suggestion_canceled:
+        return ServerEvent(
+            child: Text(
+                "Canceled suggestion to KX from '${suggest.inviteenick}' to '${suggest.targetnick}'",
+                style: TextStyle(fontSize: 9, color: textColor)));
+      case Suggestion_confirmed:
+        return ServerEvent(
+            child: Text(
+                "Confirmed suggestion to KX from '${suggest.inviteenick}' to '${suggest.targetnick}'",
+                style: TextStyle(fontSize: 9, color: textColor)));
+    }
+
+    return suggest.alreadyknown
+        ? ServerEvent(
+            child: Text(
+                "Received already known suggestion to KX from '${suggest.inviteenick}' to '${suggest.targetnick}'",
+                style: TextStyle(fontSize: 9, color: textColor)))
+        : ServerEvent(
+            child: Column(children: [
+            Text(
+                "Received suggestion to KX from '${suggest.inviteenick}' to '${suggest.targetnick}'",
+                style: TextStyle(fontSize: 9, color: textColor)),
+            const SizedBox(height: 20),
+            Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+              ElevatedButton(
+                  onPressed: acceptSuggestion, child: const Text("Accept")),
+              const SizedBox(width: 10),
+              CancelButton(onPressed: cancelSuggestion),
+            ]),
+          ]));
+  }
+}
+
 class Event extends StatelessWidget {
   final ChatEventModel event;
   final ChatModel chat;
@@ -1077,6 +1160,10 @@ class Event extends StatelessWidget {
 
     if (event.event is GCAdminsChanged) {
       return GCAdminsChangedW(event.event as GCAdminsChanged, client);
+    }
+
+    if (event.event is KXSuggested) {
+      return KXSuggestedW(event, event.event as KXSuggested, client);
     }
 
     var theme = Theme.of(context);

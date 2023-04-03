@@ -1,5 +1,6 @@
 import 'package:bruig/components/pay_tip.dart';
 import 'package:bruig/components/rename_chat.dart';
+import 'package:bruig/components/suggest_kx.dart';
 import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/models/log.dart';
@@ -207,6 +208,10 @@ List<ChatMenuItem> buildUserChatMenu(ChatModel chat) {
     ChatMenuItem(
       "Rename User",
       (context, chats) => showRenameModalBottom(context, chats.active!),
+    ),
+    ChatMenuItem(
+      "Suggest User to KX",
+      (context, chats) => showSuggestKXModalBottom(context, chats.active!),
     ),
   ];
 }

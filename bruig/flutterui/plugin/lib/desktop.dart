@@ -2,11 +2,9 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:ffi/ffi.dart';
-import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/mock.dart';
 import 'dart:ffi';
-import 'dart:io';
 import 'dart:isolate';
 import 'desktop_dynlib.dart';
 
@@ -293,6 +291,11 @@ mixin BaseDesktopPlatform on NtfStreams {
 
       case NTGCAdminsChanged:
         var event = GCAdminsChanged.fromJson(payload);
+        ntfChatEvents.add(event);
+        break;
+
+      case NTKXCSuggested:
+        var event = KXSuggested.fromJson(payload);
         ntfChatEvents.add(event);
         break;
 

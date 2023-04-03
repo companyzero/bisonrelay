@@ -557,6 +557,8 @@ func (c *Client) handleKXSuggestion(ru *RemoteUser, kxsg rpc.RMKXSuggestion) err
 	if c.cfg.KXSuggestion != nil {
 		c.cfg.KXSuggestion(ru, kxsg.Target)
 	}
+
+	c.ntfns.notifyOnKXSuggested(ru, kxsg.Target)
 	return nil
 }
 

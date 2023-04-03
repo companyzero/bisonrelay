@@ -310,3 +310,11 @@ type SubscribeToPosts struct {
 	Target    clientintf.UserID  `json:"target"`
 	FetchPost *clientintf.PostID `json:"fetch_post"`
 }
+
+type SuggestKX struct {
+	AlreadyKnown bool               `json:"alreadyknown"`
+	InviteeNick  string             `json:"inviteenick"`
+	Invitee      zkidentity.ShortID `json:"inviteeid"`
+	TargetNick   string             `json:"targetnick"`
+	Target       zkidentity.ShortID `json:"targetid"`
+}

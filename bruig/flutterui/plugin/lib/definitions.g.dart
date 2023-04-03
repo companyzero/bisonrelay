@@ -1515,3 +1515,30 @@ Map<String, dynamic> _$KXSearchToJson(KXSearch instance) => <String, dynamic>{
       'search': instance.search,
       'queries': instance.queries,
     };
+
+SuggestKX _$SuggestKXFromJson(Map<String, dynamic> json) => SuggestKX(
+      json['invitee'] as String,
+      json['target'] as String,
+    );
+
+Map<String, dynamic> _$SuggestKXToJson(SuggestKX instance) => <String, dynamic>{
+      'invitee': instance.inviteeID,
+      'target': instance.targetID,
+    };
+
+KXSuggested _$KXSuggestedFromJson(Map<String, dynamic> json) => KXSuggested(
+      json['alreadyknown'] as bool,
+      json['inviteenick'] as String,
+      json['inviteeid'] as String,
+      json['targetnick'] as String,
+      json['targetid'] as String,
+    );
+
+Map<String, dynamic> _$KXSuggestedToJson(KXSuggested instance) =>
+    <String, dynamic>{
+      'alreadyknown': instance.alreadyknown,
+      'inviteenick': instance.inviteenick,
+      'inviteeid': instance.inviteeid,
+      'targetnick': instance.targetnick,
+      'targetid': instance.targetid,
+    };

@@ -104,6 +104,7 @@ const (
 	CTGCUpgradeVersion                = 0x68
 	CTGCModifyAdmins                  = 0x69
 	CTGetKXSearch                     = 0x6a
+	CTSuggestKX                       = 0x6b
 
 	NTInviteReceived         = 0x1001
 	NTInviteAccepted         = 0x1002
@@ -139,6 +140,7 @@ const (
 	NTGCUpgradedVersion      = 0x1020
 	NTGCMemberParted         = 0x1021
 	NTGCAdminsChanged        = 0x1022
+	NTKXSuggested            = 0x1023
 )
 
 type cmd struct {

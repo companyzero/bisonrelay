@@ -38,6 +38,13 @@ const int CMS_sent = 2;
 const int CMS_errored = 3;
 const int CMS_canceled = 4;
 
+const int Suggestion_received = 0;
+const int Suggestion_accepted = 1;
+const int Suggestion_confirmed = 2;
+const int Suggestion_canceled = 3;
+const int Suggestion_errored = 4;
+const int Suggestion_alreadyKnown = 5;
+
 class ChatEventModel extends ChangeNotifier {
   final ChatEvent event;
   final ChatModel? source; // null if it's from the local client.
