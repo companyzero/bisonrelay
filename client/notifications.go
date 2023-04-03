@@ -83,7 +83,7 @@ const onKXSuggested = "onKXSuggested"
 // with another remote user.
 type OnKXSuggested func(*RemoteUser, zkidentity.PublicIdentity)
 
-func (_ OnKXSuggested) typ() string { return onKXCompleted }
+func (_ OnKXSuggested) typ() string { return onKXSuggested }
 
 const onInvoiceGenFailedNtfnType = "onInvoiceGenFailed"
 
@@ -396,7 +396,7 @@ func NewNotificationManager() *NotificationManager {
 			onPMNtfnType:             &handlersFor[OnPMNtfn]{},
 			onGCMNtfnType:            &handlersFor[OnGCMNtfn]{},
 			onKXCompleted:            &handlersFor[OnKXCompleted]{},
-			onKXSuggested:            &handlersFor[OnKXCompleted]{},
+			onKXSuggested:            &handlersFor[OnKXSuggested]{},
 			onPostRcvdNtfnType:       &handlersFor[OnPostRcvdNtfn]{},
 			onPostStatusRcvdNtfnType: &handlersFor[OnPostStatusRcvdNtfn]{},
 

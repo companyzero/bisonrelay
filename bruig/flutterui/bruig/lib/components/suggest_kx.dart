@@ -33,8 +33,10 @@ class _RenameChatModalState extends State<SuggestKXModal> {
     try {
       await Golib.suggestKX(chat.id, userToSuggest!.id);
       showSuccessSnackbar(context, 'Sent KX suggestion to ${chat.nick}');
+      Navigator.of(context).pop();
     } catch (exception) {
       showErrorSnackbar(context, 'Unable to suggest KX: $exception');
+      Navigator.of(context).pop();
     } finally {
       setState(() => loading = false);
     }

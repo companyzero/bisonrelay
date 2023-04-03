@@ -1527,16 +1527,18 @@ Map<String, dynamic> _$SuggestKXToJson(SuggestKX instance) => <String, dynamic>{
     };
 
 KXSuggested _$KXSuggestedFromJson(Map<String, dynamic> json) => KXSuggested(
-      json['inviteeNick'] as String,
-      json['inviteeID'] as String,
-      json['targetNick'] as String,
-      json['targetID'] as String,
+      json['alreadyknown'] as bool,
+      json['inviteenick'] as String,
+      json['inviteeid'] as String,
+      json['targetnick'] as String,
+      json['targetid'] as String,
     );
 
 Map<String, dynamic> _$KXSuggestedToJson(KXSuggested instance) =>
     <String, dynamic>{
-      'inviteeNick': instance.inviteeNick,
-      'inviteeID': instance.inviteeID,
-      'targetNick': instance.targetNick,
-      'targetID': instance.targetID,
+      'alreadyknown': instance.alreadyknown,
+      'inviteenick': instance.inviteenick,
+      'inviteeid': instance.inviteeid,
+      'targetnick': instance.targetnick,
+      'targetid': instance.targetid,
     };

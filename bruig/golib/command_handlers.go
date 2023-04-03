@@ -181,11 +181,19 @@ func handleInitClient(handle uint32, args InitClient) error {
 	}))
 
 	ntfns.Register(client.OnKXSuggested(func(invitee *client.RemoteUser, target zkidentity.PublicIdentity) {
+		alreadyKnown := false
+		_, err := c.UserByID(target.Identity)
+		if err == nil {
+			// Already KX'd with this user.
+			alreadyKnown = true
+		}
 		ipii := invitee.PublicIdentity()
-
 		skx := SuggestKX{
-			Invitee: ipii.Identity,
-			Target:  target.Identity,
+			AlreadyKnown: alreadyKnown,
+			InviteeNick:  ipii.Nick,
+			Invitee:      ipii.Identity,
+			Target:       target.Identity,
+			TargetNick:   target.Nick,
 		}
 		notify(NTKXSuggested, skx, nil)
 	}))

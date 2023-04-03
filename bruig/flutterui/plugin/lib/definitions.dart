@@ -1503,14 +1503,16 @@ class SuggestKX {
 
 @JsonSerializable()
 class KXSuggested extends ChatEvent {
-  final String inviteeNick;
-  final String inviteeID;
-  final String targetNick;
-  final String targetID;
+  final bool alreadyknown;
+  final String inviteenick;
+  final String inviteeid;
+  final String targetnick;
+  final String targetid;
 
-  KXSuggested(this.inviteeNick, this.inviteeID, this.targetNick, this.targetID)
-      : super(inviteeID,
-            "User $inviteeNick has suggested you KX with $targetNick");
+  KXSuggested(this.alreadyknown, this.inviteenick, this.inviteeid,
+      this.targetnick, this.targetid)
+      : super(inviteeid,
+            "User $inviteenick has suggested you KX with $targetnick");
   factory KXSuggested.fromJson(Map<String, dynamic> json) =>
       _$KXSuggestedFromJson(json);
 }
