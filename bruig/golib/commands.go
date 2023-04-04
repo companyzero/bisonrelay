@@ -141,6 +141,7 @@ const (
 	NTGCMemberParted         = 0x1021
 	NTGCAdminsChanged        = 0x1022
 	NTKXSuggested            = 0x1023
+	NTTipUserProgress        = 0x1024
 )
 
 type cmd struct {

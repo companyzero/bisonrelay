@@ -12,6 +12,7 @@ import 'package:bruig/models/client.dart';
 import 'package:bruig/models/downloads.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:golib_plugin/util.dart';
 import 'package:intl/intl.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
@@ -721,7 +722,8 @@ class _InflightTipState extends State<InflightTipW> {
     var theme = Theme.of(context);
     var textColor = theme.dividerColor;
     if (tip.state == ITS_completed) {
-      child = Text("✓ Sent ${tip.amount} DCR to ${source.nick}!",
+      child = Text(
+          "✓ Requesting invoice for ${formatDCR(tip.amount)} to tip ${source.nick}!",
           style: TextStyle(fontSize: 9, color: textColor));
     } else if (tip.state == ITS_errored) {
       child = Text("✗ Failed to send tip: ${tip.error}",
@@ -730,7 +732,8 @@ class _InflightTipState extends State<InflightTipW> {
       child = Text("\$ Received ${tip.amount} DCR from ${source.nick}!",
           style: TextStyle(fontSize: 9, color: textColor));
     } else {
-      child = Text("… Sending ${tip.amount} DCR to ${source.nick}...",
+      child = Text(
+          "… Requesting invoice for ${formatDCR(tip.amount)} DCR to tip ${source.nick}...",
           style: TextStyle(fontSize: 9, color: textColor));
     }
     return ServerEvent(child: child);
@@ -1040,6 +1043,7 @@ class _KXSuggestedWState extends State<KXSuggestedW> {
   Widget build(BuildContext context) {
     var theme = Theme.of(context);
     var textColor = theme.dividerColor;
+
     switch (event.sentState) {
       case Suggestion_accepted:
         return ServerEvent(
@@ -1081,6 +1085,33 @@ class _KXSuggestedWState extends State<KXSuggestedW> {
               CancelButton(onPressed: cancelSuggestion),
             ]),
           ]));
+  }
+}
+
+class TipUserProgressW extends StatelessWidget {
+  final TipProgressEvent event;
+  const TipUserProgressW(this.event, {Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    var theme = Theme.of(context);
+    var textColor = theme.dividerColor;
+
+    var dcrAmount = formatDCR(milliatomsToDCR(event.amountMAtoms));
+    String msg;
+    if (event.completed) {
+      msg = "Tip attempt of $dcrAmount completed successfully!";
+    } else if (event.willRetry) {
+      msg =
+          "Tip attempt of $dcrAmount failed due to ${event.attemptErr}. Will try to tip again automatically.";
+    } else {
+      msg =
+          "Tip attempt of $dcrAmount failed due to ${event.attemptErr}. Given up on attempting to tip.";
+    }
+
+    return ServerEvent(
+        child: SelectableText(msg,
+            style: TextStyle(fontSize: 9, color: textColor)));
   }
 }
 
@@ -1164,6 +1195,10 @@ class Event extends StatelessWidget {
 
     if (event.event is KXSuggested) {
       return KXSuggestedW(event, event.event as KXSuggested, client);
+    }
+
+    if (event.event is TipProgressEvent) {
+      return TipUserProgressW(event.event as TipProgressEvent);
     }
 
     var theme = Theme.of(context);

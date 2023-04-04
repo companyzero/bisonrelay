@@ -1517,6 +1517,29 @@ class KXSuggested extends ChatEvent {
       _$KXSuggestedFromJson(json);
 }
 
+@JsonSerializable()
+class TipProgressEvent extends ChatEvent {
+  @JsonKey(fromJson: base64ToHex)
+  final String uid;
+  final String nick;
+  @JsonKey(defaultValue: 0)
+  final int attempt;
+  @JsonKey(defaultValue: false)
+  final bool completed;
+  @JsonKey(name: "amount_matoms", defaultValue: 0)
+  final int amountMAtoms;
+  @JsonKey(name: "attempt_err", defaultValue: "")
+  final String attemptErr;
+  @JsonKey(name: "will_retry", defaultValue: false)
+  final bool willRetry;
+
+  TipProgressEvent(this.uid, this.nick, this.attempt, this.completed,
+      this.amountMAtoms, this.attemptErr, this.willRetry)
+      : super(uid, "TipProgress Event");
+  factory TipProgressEvent.fromJson(Map<String, dynamic> json) =>
+      _$TipProgressEventFromJson(json);
+}
+
 mixin NtfStreams {
   StreamController<RemoteUser> ntfAcceptedInvites =
       StreamController<RemoteUser>();
@@ -2210,3 +2233,4 @@ const int NTGCUpgradedVersion = 0x1020;
 const int NTGCMemberParted = 0x1021;
 const int NTGCAdminsChanged = 0x1022;
 const int NTKXCSuggested = 0x1023;
+const int NTTipUserProgress = 0x1024;

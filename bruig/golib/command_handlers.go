@@ -16,6 +16,7 @@ import (
 	"github.com/companyzero/bisonrelay/client"
 	"github.com/companyzero/bisonrelay/client/clientdb"
 	"github.com/companyzero/bisonrelay/client/clientintf"
+	"github.com/companyzero/bisonrelay/clientrpc/types"
 	"github.com/companyzero/bisonrelay/embeddeddcrlnd"
 	"github.com/companyzero/bisonrelay/lockfile"
 	"github.com/companyzero/bisonrelay/rpc"
@@ -283,6 +284,23 @@ func handleInitClient(handle uint32, args InitClient) error {
 			Removed: removed,
 		}
 		notify(NTGCAdminsChanged, ntfn, nil)
+	}))
+
+	ntfns.Register(client.OnTipAttemptProgressNtfn(func(ru *client.RemoteUser, amtMAtoms int64, completed bool, attempt int, attemptErr error, willRetry bool) {
+		var errMsg string
+		if attemptErr != nil {
+			errMsg = attemptErr.Error()
+		}
+		ntfn := &types.TipProgressEvent{
+			Uid:          ru.ID().Bytes(),
+			Nick:         ru.Nick(),
+			AmountMatoms: amtMAtoms,
+			Completed:    completed,
+			Attempt:      int32(attempt),
+			AttemptErr:   errMsg,
+			WillRetry:    willRetry,
+		}
+		notify(NTTipUserProgress, ntfn, nil)
 	}))
 
 	cfg := client.Config{
