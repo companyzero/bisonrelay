@@ -1542,3 +1542,25 @@ Map<String, dynamic> _$KXSuggestedToJson(KXSuggested instance) =>
       'targetnick': instance.targetnick,
       'targetid': instance.targetid,
     };
+
+TipProgressEvent _$TipProgressEventFromJson(Map<String, dynamic> json) =>
+    TipProgressEvent(
+      base64ToHex(json['uid'] as String),
+      json['nick'] as String,
+      json['attempt'] as int? ?? 0,
+      json['completed'] as bool? ?? false,
+      json['amount_matoms'] as int? ?? 0,
+      json['attempt_err'] as String? ?? '',
+      json['will_retry'] as bool? ?? false,
+    );
+
+Map<String, dynamic> _$TipProgressEventToJson(TipProgressEvent instance) =>
+    <String, dynamic>{
+      'uid': instance.uid,
+      'nick': instance.nick,
+      'attempt': instance.attempt,
+      'completed': instance.completed,
+      'amount_matoms': instance.amountMAtoms,
+      'attempt_err': instance.attemptErr,
+      'will_retry': instance.willRetry,
+    };

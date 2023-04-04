@@ -299,6 +299,11 @@ mixin BaseDesktopPlatform on NtfStreams {
         ntfChatEvents.add(event);
         break;
 
+      case NTTipUserProgress:
+        var event = TipProgressEvent.fromJson(payload);
+        ntfChatEvents.add(event);
+        break;
+
       default:
         print("Received unknown notification ${cmd.toRadixString(16)}");
     }
