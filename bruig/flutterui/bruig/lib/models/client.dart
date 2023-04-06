@@ -299,6 +299,7 @@ class ClientModel extends ChangeNotifier {
 
   ServerSessionState _connState = ServerSessionState.empty();
   ServerSessionState get connState => _connState;
+  bool get isOnline => _connState.state == connStateOnline;
 
   String _network = "";
   String get network => _network;

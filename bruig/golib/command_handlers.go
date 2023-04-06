@@ -542,7 +542,7 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		}
 
 		b := &bytes.Buffer{}
-		pii, err := c.WriteNewInvite(b, funds)
+		pii, pik, err := c.CreatePrepaidInvite(b, funds)
 		if err != nil {
 			return nil, err
 		}
@@ -559,6 +559,7 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		res := GeneratedKXInvite{
 			Blob:  b.Bytes(),
 			Funds: funds,
+			Key:   pik,
 		}
 		return res, nil
 
@@ -1491,6 +1492,28 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		res := RedeemedInviteFunds{Txid: rpc.TxHash(txh), Total: total}
 		return res, nil
 
+	case CTFetchInvite:
+		var args string
+		if err := cmd.decode(&args); err != nil {
+			return nil, err
+		}
+
+		pik, err := clientintf.DecodePaidInviteKey(args)
+		if err != nil {
+			return nil, err
+		}
+
+		b := bytes.NewBuffer(nil)
+		invite, err := c.FetchPrepaidInvite(cc.ctx, pik, b)
+		if err != nil {
+			return nil, err
+		}
+
+		res := Invitation{
+			Blob:   b.Bytes(),
+			Invite: invite,
+		}
+		return res, nil
 	}
 	return nil, nil
 }

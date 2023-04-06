@@ -171,10 +171,14 @@ class OOBPublicIdentityInvite {
       _$OOBPublicIdentityInviteFromJson(json);
 }
 
+@JsonSerializable()
 class Invitation {
   final OOBPublicIdentityInvite invite;
-  final Uint8List inviteBlob;
-  Invitation(this.invite, this.inviteBlob);
+  @JsonKey(fromJson: base64ToUint8list)
+  final Uint8List? blob;
+  Invitation(this.invite, this.blob);
+  factory Invitation.fromJson(Map<String, dynamic> json) =>
+      _$InvitationFromJson(json);
 }
 
 @JsonSerializable()
@@ -182,8 +186,9 @@ class GeneratedKXInvite {
   @JsonKey(fromJson: base64Decode)
   final Uint8List blob;
   final InviteFunds? funds;
+  final String key;
 
-  GeneratedKXInvite(this.blob, this.funds);
+  GeneratedKXInvite(this.blob, this.funds, this.key);
   factory GeneratedKXInvite.fromJson(Map<String, dynamic> json) =>
       _$GeneratedKXInviteFromJson(json);
 }
@@ -1769,7 +1774,7 @@ abstract class PluginPlatform {
   }
 
   Future<RemoteUser> acceptInvite(Invitation invite) async {
-    var res = await asyncCall(CTAcceptInvite, invite.inviteBlob);
+    var res = await asyncCall(CTAcceptInvite, invite.blob);
     return RemoteUser.fromJson(res);
   }
 
@@ -2228,6 +2233,13 @@ abstract class PluginPlatform {
   Future<RedeemedInviteFunds> redeemInviteFunds(InviteFunds funds) async =>
       RedeemedInviteFunds.fromJson(
           await asyncCall(CTRedeeemInviteFunds, funds));
+
+  Future<Invitation> fetchInvite(String key, String filepath) async {
+    var res = Invitation.fromJson(await asyncCall(CTFetchInvite, key));
+    var f = File(filepath);
+    await f.writeAsBytes(res.blob!);
+    return res;
+  }
 }
 
 const int CTUnknown = 0x00;
@@ -2330,7 +2342,7 @@ const int CTListAccounts = 0x6c;
 const int CTCreateAccount = 0x6d;
 const int CTSendOnchain = 0x6e;
 const int CTRedeeemInviteFunds = 0x6f;
-
+const int CTFetchInvite = 0x70;
 
 const int notificationsStartID = 0x1000;
 

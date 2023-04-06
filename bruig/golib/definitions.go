@@ -341,11 +341,17 @@ type WriteInvite struct {
 }
 
 type GeneratedKXInvite struct {
-	Blob  []byte           `json:"blob"`
-	Funds *rpc.InviteFunds `json:"funds"`
+	Blob  []byte                   `json:"blob"`
+	Funds *rpc.InviteFunds         `json:"funds"`
+	Key   clientintf.PaidInviteKey `json:"key"`
 }
 
 type RedeemedInviteFunds struct {
 	Txid  rpc.TxHash     `json:"txid"`
 	Total dcrutil.Amount `json:"total"`
+}
+
+type Invitation struct {
+	Blob   []byte                      `json:"blob"`
+	Invite rpc.OOBPublicIdentityInvite `json:"invite"`
 }

@@ -155,18 +155,31 @@ Map<String, dynamic> _$OOBPublicIdentityInviteToJson(
       'funds': instance.funds,
     };
 
+Invitation _$InvitationFromJson(Map<String, dynamic> json) => Invitation(
+      OOBPublicIdentityInvite.fromJson(json['invite'] as Map<String, dynamic>),
+      base64ToUint8list(json['blob'] as String),
+    );
+
+Map<String, dynamic> _$InvitationToJson(Invitation instance) =>
+    <String, dynamic>{
+      'invite': instance.invite,
+      'blob': instance.blob,
+    };
+
 GeneratedKXInvite _$GeneratedKXInviteFromJson(Map<String, dynamic> json) =>
     GeneratedKXInvite(
       base64Decode(json['blob'] as String),
       json['funds'] == null
           ? null
           : InviteFunds.fromJson(json['funds'] as Map<String, dynamic>),
+      json['key'] as String,
     );
 
 Map<String, dynamic> _$GeneratedKXInviteToJson(GeneratedKXInvite instance) =>
     <String, dynamic>{
       'blob': instance.blob,
       'funds': instance.funds,
+      'key': instance.key,
     };
 
 PM _$PMFromJson(Map<String, dynamic> json) => PM(

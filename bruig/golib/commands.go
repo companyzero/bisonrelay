@@ -109,6 +109,7 @@ const (
 	CTCreateAccount                   = 0x6d
 	CTSendOnchain                     = 0x6e
 	CTRedeeemInviteFunds              = 0x6f
+	CTFetchInvite                     = 0x70
 
 	NTInviteReceived         = 0x1001
 	NTInviteAccepted         = 0x1002

@@ -1,9 +1,11 @@
 import 'package:bruig/components/accounts_dropdown.dart';
+import 'package:bruig/components/copyable.dart';
 import 'package:bruig/components/dcr_input.dart';
 import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/components/snackbars.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:golib_plugin/util.dart';
 
@@ -14,20 +16,6 @@ class GenerateInviteScreen extends StatefulWidget {
   State<GenerateInviteScreen> createState() => _GenerateInviteScreenState();
 }
 
-/*
-  var filePath = await FilePicker.platform.saveFile(
-    dialogTitle: "Select invitation file location",
-    fileName: "invite.bin",
-  );
-  if (filePath == null) return;
-  try {
-    await Golib.generateInvite(filePath);
-    showSuccessSnackbar(context, "Generated invitation at $filePath");
-  } catch (exception) {
-    showErrorSnackbar(context, "Unable to generate invitation: $exception");
-  }
-  */
-
 class _GenerateInviteScreenState extends State<GenerateInviteScreen> {
   String path = "";
   List<bool> selFunding = [true, false];
@@ -36,6 +24,7 @@ class _GenerateInviteScreenState extends State<GenerateInviteScreen> {
   String account = "";
   bool hasExtraAccounts = false;
   bool loading = false;
+  GeneratedKXInvite? generated;
 
   void checkExtraAccounts() async {
     var accts = await Golib.listAccounts();
@@ -62,11 +51,7 @@ class _GenerateInviteScreenState extends State<GenerateInviteScreen> {
   }
 
   Widget buildSendFundsWidget(BuildContext context) {
-    var theme = Theme.of(context);
-    var backgroundColor = const Color(0xFF19172C);
-    var cardColor = const Color(0xFF05031A);
     var textColor = const Color(0xFF8E8D98);
-    var secondaryTextColor = const Color(0xFFE4E3E6);
     var darkTextColor = const Color(0xFF5A5968);
 
     if (!hasExtraAccounts) {
@@ -122,13 +107,9 @@ class _GenerateInviteScreenState extends State<GenerateInviteScreen> {
     });
     try {
       var res = await Golib.generateInvite(path, amount, account, null);
-      if (res.funds != null) {
-        showSuccessSnackbar(context,
-            "Generated invitation at $path. Funds sent on tx ${res.funds?.txid}");
-      } else {
-        showSuccessSnackbar(context, "Generated invitation at $path");
-      }
-      Navigator.pop(context);
+      setState(() {
+        generated = res;
+      });
     } catch (exception) {
       showErrorSnackbar(context, "Unable to generate invitation: $exception");
     }
@@ -137,14 +118,78 @@ class _GenerateInviteScreenState extends State<GenerateInviteScreen> {
     });
   }
 
+  List<Widget> buildGeneratedInvite(BuildContext context) {
+    var textColor = const Color(0xFF8E8D98);
+    var ts = TextStyle(color: textColor);
+    var gen = generated!;
+    return [
+      Text("Generated invite with key", style: ts),
+      Copyable(gen.key, ts),
+      ...(gen.funds != null
+          ? [
+              const SizedBox(height: 20),
+              Text("Invite funds available after the following TX is confirmed",
+                  style: ts),
+              Copyable(gen.funds!.txid, ts),
+            ]
+          : []),
+      const Expanded(child: Empty()),
+      ElevatedButton(
+          onPressed: () => Navigator.pop(context), child: const Text("Done"))
+    ];
+  }
+
+  List<Widget> buildGeneratePanel(BuildContext context) {
+    var theme = Theme.of(context);
+    var textColor = const Color(0xFF8E8D98);
+    return [
+      SizedBox(
+          width: 400,
+          child: path != ""
+              ? Center(
+                  child: Text(
+                  "Path: $path",
+                  style: TextStyle(color: textColor),
+                ))
+              : ElevatedButton(
+                  onPressed: selectPath, child: const Text("Select Path"))),
+      const SizedBox(height: 20),
+      ToggleButtons(
+          borderRadius: const BorderRadius.all(Radius.circular(8)),
+          constraints: const BoxConstraints(minHeight: 40, minWidth: 100),
+          isSelected: selFunding,
+          onPressed: (int index) {
+            setState(() {
+              for (int i = 0; i < selFunding.length; i++) {
+                selFunding[i] = i == index;
+              }
+            });
+          },
+          children: const [
+            Text("No Funds"),
+            Text("Send Funds"),
+          ]),
+      const SizedBox(height: 20),
+      sendFunds
+          ? buildSendFundsWidget(context)
+          : const SizedBox(width: 400, height: 70),
+      const SizedBox(height: 20),
+      ElevatedButton(
+          onPressed: !loading && path != "" ? generateInvite : null,
+          child: const Text("Generate invite")),
+      const Expanded(child: Empty()),
+      ElevatedButton(
+          style: ElevatedButton.styleFrom(backgroundColor: theme.errorColor),
+          onPressed: () => Navigator.pop(context),
+          child: const Text("Cancel"))
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
-    var theme = Theme.of(context);
     var backgroundColor = const Color(0xFF19172C);
     var cardColor = const Color(0xFF05031A);
     var textColor = const Color(0xFF8E8D98);
-    var secondaryTextColor = const Color(0xFFE4E3E6);
-    var darkTextColor = const Color(0xFF5A5968);
     return Scaffold(
         body: Container(
             color: backgroundColor,
@@ -181,53 +226,9 @@ class _GenerateInviteScreenState extends State<GenerateInviteScreen> {
                                     fontSize: 34,
                                     fontWeight: FontWeight.w200)),
                             const SizedBox(height: 20),
-                            SizedBox(
-                                width: 400,
-                                child: path != ""
-                                    ? Center(
-                                        child: Text(
-                                        "Path: $path",
-                                        style: TextStyle(color: textColor),
-                                      ))
-                                    : ElevatedButton(
-                                        onPressed: selectPath,
-                                        child: const Text("Select Path"))),
-                            const SizedBox(height: 20),
-                            ToggleButtons(
-                                borderRadius:
-                                    const BorderRadius.all(Radius.circular(8)),
-                                constraints: const BoxConstraints(
-                                    minHeight: 40, minWidth: 100),
-                                isSelected: selFunding,
-                                onPressed: (int index) {
-                                  setState(() {
-                                    for (int i = 0;
-                                        i < selFunding.length;
-                                        i++) {
-                                      selFunding[i] = i == index;
-                                    }
-                                  });
-                                },
-                                children: const [
-                                  Text("No Funds"),
-                                  Text("Send Funds"),
-                                ]),
-                            const SizedBox(height: 20),
-                            sendFunds
-                                ? buildSendFundsWidget(context)
-                                : const SizedBox(width: 400, height: 70),
-                            const SizedBox(height: 20),
-                            ElevatedButton(
-                                onPressed: !loading && path != ""
-                                    ? generateInvite
-                                    : null,
-                                child: const Text("Generate invite")),
-                            const Expanded(child: Empty()),
-                            ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                    backgroundColor: theme.errorColor),
-                                onPressed: () => Navigator.pop(context),
-                                child: const Text("Cancel"))
+                            ...(generated == null
+                                ? buildGeneratePanel(context)
+                                : buildGeneratedInvite(context)),
                           ])))
             ])));
   }
