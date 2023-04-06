@@ -666,7 +666,7 @@ func TestBlockIgnore(t *testing.T) {
 func TestVersion1GCs(t *testing.T) {
 	t.Parallel()
 
-	tcfg := testScaffoldCfg{showLog: true}
+	tcfg := testScaffoldCfg{}
 	ts := newTestScaffold(t, tcfg)
 	alice := ts.newClient("alice")
 	bob := ts.newClient("bob")
