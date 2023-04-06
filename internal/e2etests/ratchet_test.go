@@ -17,6 +17,8 @@ import (
 // unacknowledged RMs inflight works as expected and does not cause a busted
 // ratchet.
 func TestResendsUnackedRM(t *testing.T) {
+	t.Parallel()
+
 	// Setup Alice and Bob and have them KX.
 	tcfg := testScaffoldCfg{}
 	ts := newTestScaffold(t, tcfg)
@@ -58,17 +60,15 @@ func TestResendsUnackedRM(t *testing.T) {
 	alice.conn.startFailing(fmt.Errorf("forced read failure"), nil)
 	wantMsg2 := "test PM 2"
 	aliceConnClosed := make(chan (struct{}))
-	alice.modifyHandlers(func() {
-		alice.onConnChanged = func(connected bool, pushRate, subRate uint64) {
-			if !connected {
-				select {
-				case <-aliceConnClosed:
-				default:
-					close(aliceConnClosed)
-				}
+	regServerChanged := alice.handleSync(client.OnServerSessionChangedNtfn(func(connected bool, _, _, _ uint64) {
+		if !connected {
+			select {
+			case <-aliceConnClosed:
+			default:
+				close(aliceConnClosed)
 			}
 		}
-	})
+	}))
 
 	// Attempt to send the PM, which will cause an error. The error from
 	// the alice.PM() call is only returned once Alice starts the shutdown
@@ -106,17 +106,16 @@ func TestResendsUnackedRM(t *testing.T) {
 	alice.preventFutureConns(fmt.Errorf("forced conn failure"))
 	alice.conn.startFailing(nil, fmt.Errorf("forced write failure"))
 	aliceConnClosed = make(chan (struct{}))
-	alice.modifyHandlers(func() {
-		alice.onConnChanged = func(connected bool, pushRate, subRate uint64) {
-			if !connected {
-				select {
-				case <-aliceConnClosed:
-				default:
-					close(aliceConnClosed)
-				}
+	regServerChanged.Unregister()
+	alice.handleSync(client.OnServerSessionChangedNtfn(func(connected bool, _, _, _ uint64) {
+		if !connected {
+			select {
+			case <-aliceConnClosed:
+			default:
+				close(aliceConnClosed)
 			}
 		}
-	})
+	}))
 
 	// Attempt to send the message and wait until Alice's conn is closed.
 	wantMsg5 := "test PM 5"
@@ -154,6 +153,8 @@ func TestResendsUnackedRM(t *testing.T) {
 // longer than the server's message retention policy, the client attempts to
 // reset KX with all its known users.
 func TestLongOfflineClientResetsAllKX(t *testing.T) {
+	t.Parallel()
+
 	// Setup Alice and Bob and have them KX.
 	tcfg := testScaffoldCfg{}
 	ts := newTestScaffold(t, tcfg)
@@ -198,4 +199,123 @@ func TestLongOfflineClientResetsAllKX(t *testing.T) {
 	}
 
 	t.Fatalf("Timeout waiting for Bob's reset KX to appear")
+}
+
+// TestRemoteOfflineMsgs ensures that attempting to send messages while the
+// remote peer is offline works.
+func TestRemoteOfflineMsgs(t *testing.T) {
+	t.Parallel()
+
+	tcfg := testScaffoldCfg{}
+	ts := newTestScaffold(t, tcfg)
+	alice := ts.newClient("alice")
+	bob := ts.newClient("bob")
+
+	// Baseline test.
+	ts.kxUsers(alice, bob)
+	assertClientsCanPM(t, alice, bob)
+
+	// Hook and helper to check on Alice connected state.
+	aliceSess := make(chan bool, 3)
+	alice.handle(client.OnServerSessionChangedNtfn(func(connected bool, _, _, _ uint64) {
+		aliceSess <- connected
+	}))
+	assertAliceSess := func(wantSess bool) {
+		t.Helper()
+		assert.ChanWrittenWithVal(t, aliceSess, wantSess)
+	}
+
+	// Send a pm from alice. This advances the ratchet and is used to test
+	// an old bug scenario where alice would listen on incorrect RV points.
+	assert.NilErr(t, alice.PM(bob.PublicID(), ""))
+
+	// Let alice go offline.
+	alice.RemainOffline()
+	assertAliceSess(false)
+
+	// Hook into Alice's PM events for next set of tests.
+	alicePMs := make(chan string, 10)
+	alice.handle(client.OnPMNtfn(func(ru *client.RemoteUser, pm rpc.RMPrivateMessage, ts time.Time) {
+		alicePMs <- pm.Message
+	}))
+
+	// Send PMs from bob.
+	nbMsgs := 5
+	testMsg := "bob msg while alice offline"
+	for i := 0; i < nbMsgs; i++ {
+		assert.NilErr(t, bob.PM(alice.PublicID(), testMsg))
+	}
+
+	// Alice does _not_ get them.
+	assert.ChanNotWritten(t, alicePMs, time.Second)
+
+	// Alice goes online.
+	alice.GoOnline()
+	assertAliceSess(true)
+
+	// Alice gets the messages.
+	for i := 0; i < nbMsgs; i++ {
+		assert.ChanWrittenWithVal(t, alicePMs, testMsg)
+	}
+}
+
+// TestLocalOfflineMsgs ensures that attempting to send messages while local
+// client is offline works.
+func TestLocalOfflineMsgs(t *testing.T) {
+	t.Parallel()
+
+	tcfg := testScaffoldCfg{}
+	ts := newTestScaffold(t, tcfg)
+	alice := ts.newClient("alice")
+	bob := ts.newClient("bob")
+
+	// Baseline test.
+	ts.kxUsers(alice, bob)
+	assertClientsCanPM(t, alice, bob)
+
+	// Hook and helper to check on Alice connected state.
+	aliceSess := make(chan bool, 3)
+	alice.handle(client.OnServerSessionChangedNtfn(func(connected bool, _, _, _ uint64) {
+		aliceSess <- connected
+	}))
+	assertAliceSess := func(wantSess bool) {
+		t.Helper()
+		assert.ChanWrittenWithVal(t, aliceSess, wantSess)
+	}
+
+	// Let Alice go offline.
+	alice.RemainOffline()
+	assertAliceSess(false)
+
+	// Hook into Bob's PM events for next set of tests.
+	bobPMs := make(chan string, 10)
+	bob.handle(client.OnPMNtfn(func(ru *client.RemoteUser, pm rpc.RMPrivateMessage, ts time.Time) {
+		bobPMs <- pm.Message
+	}))
+
+	// Send PMs from Alice.
+	nbMsgs := 5
+	testMsg := "alice msg while alice offline"
+	errChan := make(chan error, nbMsgs+1)
+	for i := 0; i < nbMsgs; i++ {
+		go func() {
+			errChan <- alice.PM(bob.PublicID(), testMsg)
+		}()
+	}
+
+	// Messages are not sent yet.
+	assert.ChanNotWritten(t, errChan, time.Second)
+
+	// Bob does _not_ get them.
+	assert.ChanNotWritten(t, bobPMs, time.Second)
+
+	// Alice goes online.
+	alice.GoOnline()
+	assertAliceSess(true)
+
+	// Alice sends the messages and Bob gets them.
+	for i := 0; i < nbMsgs; i++ {
+		assert.NilErrFromChan(t, errChan)
+		assert.ChanWrittenWithVal(t, bobPMs, testMsg)
+	}
 }

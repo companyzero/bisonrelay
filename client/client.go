@@ -68,9 +68,10 @@ type Config struct {
 	LogPings bool
 
 	// CheckServerSession is called after a server session is established
-	// but before ServerSessionChanged is called and allows clients to check
-	// whether the connection is acceptable or if other preconditions are
-	// met before continuing to connect with the specified server.
+	// but before the OnServerSessionChangedNtfn notification is called and
+	// allows clients to check whether the connection is acceptable or if
+	// other preconditions are met before continuing to connect with the
+	// specified server.
 	//
 	// If this callback is non nil and returns an error, the connection
 	// is dropped and another attempt at the connection is made.
@@ -80,12 +81,6 @@ type Config struct {
 	CheckServerSession func(connCtx context.Context, lnNode string) error
 
 	Notifications *NotificationManager
-
-	// ServerSessionChanged is called indicating that the connection to the
-	// server changed to the specified state (either connected or not).
-	//
-	// The push and subscription rates are specified in milliatoms/byte.
-	ServerSessionChanged func(connected bool, pushRate, subRate, expirationDays uint64)
 
 	// GCWithUnkxdMember is called when an attempt to send a GC message
 	// failed due to a GC member being unkxd with the local client.
@@ -887,10 +882,8 @@ func (c *Client) Run(ctx context.Context) error {
 
 			c.rmgr.BindToSession(nextSess)
 			c.q.BindToSession(nextSess)
-			if c.cfg.ServerSessionChanged != nil {
-				connected := nextSess != nil
-				go c.cfg.ServerSessionChanged(connected, pushRate, subRate, uint64(expDays))
-			}
+			connected := nextSess != nil
+			c.ntfns.notifyServerSessionChanged(connected, pushRate, subRate, uint64(expDays))
 			if canceled(gctx) {
 				return nil
 			}

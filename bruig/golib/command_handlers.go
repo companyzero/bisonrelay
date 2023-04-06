@@ -287,6 +287,15 @@ func handleInitClient(handle uint32, args InitClient) error {
 		notify(NTGCAdminsChanged, ntfn, nil)
 	}))
 
+	ntfns.Register(client.OnServerSessionChangedNtfn(func(connected bool, pushRate, subRate, expDays uint64) {
+		state := ConnStateOffline
+		if connected {
+			state = ConnStateOnline
+		}
+		st := ServerSessState{State: state}
+		notify(NTServerSessChanged, st, nil)
+	}))
+
 	ntfns.Register(client.OnTipAttemptProgressNtfn(func(ru *client.RemoteUser, amtMAtoms int64, completed bool, attempt int, attemptErr error, willRetry bool) {
 		var errMsg string
 		if attemptErr != nil {
@@ -385,15 +394,6 @@ func handleInitClient(handle uint32, args InitClient) error {
 				}
 
 			}
-		},
-
-		ServerSessionChanged: func(connected bool, pushRate, subRate, expDays uint64) {
-			state := ConnStateOffline
-			if connected {
-				state = ConnStateOnline
-			}
-			st := ServerSessState{State: state}
-			notify(NTServerSessChanged, st, nil)
 		},
 
 		TipReceived: func(user *client.RemoteUser, dcrAmount float64) {

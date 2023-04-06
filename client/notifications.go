@@ -184,6 +184,16 @@ type OnBlockNtfn func(user *RemoteUser)
 
 func (_ OnBlockNtfn) typ() string { return onBlockNtfnType }
 
+const onServerSessionChangedNtfnType = "onServerSessionChanged"
+
+// OnServerSessionChangedNtfn is called indicating that the connection to the
+// server changed to the specified state (either connected or not).
+//
+// The push and subscription rates are specified in milliatoms/byte.
+type OnServerSessionChangedNtfn func(connected bool, pushRate, subRate, expirationDays uint64)
+
+func (_ OnServerSessionChangedNtfn) typ() string { return onServerSessionChangedNtfnType }
+
 // The following is used only in tests.
 
 const onTestNtfnType = "testNtfnType"
@@ -413,6 +423,11 @@ func (nmgr *NotificationManager) notifyOnBlock(ru *RemoteUser) {
 		visit(func(h OnBlockNtfn) { h(ru) })
 }
 
+func (nmgr *NotificationManager) notifyServerSessionChanged(connected bool, pushRate, subRate, expDays uint64) {
+	nmgr.handlers[onServerSessionChangedNtfnType].(*handlersFor[OnServerSessionChangedNtfn]).
+		visit(func(h OnServerSessionChangedNtfn) { h(connected, pushRate, subRate, expDays) })
+}
+
 func NewNotificationManager() *NotificationManager {
 	return &NotificationManager{
 		handlers: map[string]handlersRegistry{
@@ -442,6 +457,7 @@ func NewNotificationManager() *NotificationManager {
 			onRemoteSubscriptionErrorNtfnType: &handlersFor[OnRemoteSubscriptionErrorNtfn]{},
 			onLocalClientOfflineTooLong:       &handlersFor[OnLocalClientOfflineTooLong]{},
 			onTipAttemptProgressNtfnType:      &handlersFor[OnTipAttemptProgressNtfn]{},
+			onServerSessionChangedNtfnType:    &handlersFor[OnServerSessionChangedNtfn]{},
 		},
 	}
 }

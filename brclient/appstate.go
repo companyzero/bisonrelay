@@ -2718,6 +2718,37 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		as.repaintIfActive(cw)
 	}))
 
+	ntfns.Register(client.OnServerSessionChangedNtfn(func(connected bool, pushRate, subRate, expDays uint64) {
+		state := connStateOffline
+		if connected {
+			state = connStateOnline
+		}
+		as.connectedMtx.Lock()
+		as.connected = state
+		showRates := as.pushRate != pushRate || as.subRate != subRate
+		showExpDays := as.expirationDays != expDays
+		if connected {
+			as.pushRate = pushRate
+			as.subRate = subRate
+			as.expirationDays = expDays
+		}
+		as.connectedMtx.Unlock()
+		as.sendMsg(state)
+
+		if connected {
+			if showRates {
+				as.diagMsg("Push Rate: %.8f DCR/kB, Sub Rate: %.8f DCR/sub",
+					float64(pushRate)/1e8, float64(subRate)/1e11)
+			}
+			if showExpDays {
+				as.diagMsg("Days to Expire Data: %d", expDays)
+			}
+			as.diagMsg("Client ready!")
+		} else {
+			as.diagMsg("Connection to server closed")
+		}
+	}))
+
 	// Initialize client config.
 	cfg := client.Config{
 		DB:             db,
@@ -2850,37 +2881,6 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 						backoff = maxBackoff
 					}
 				}
-			}
-		},
-
-		ServerSessionChanged: func(connected bool, pushRate, subRate, expDays uint64) {
-			state := connStateOffline
-			if connected {
-				state = connStateOnline
-			}
-			as.connectedMtx.Lock()
-			as.connected = state
-			showRates := as.pushRate != pushRate || as.subRate != subRate
-			showExpDays := as.expirationDays != expDays
-			if connected {
-				as.pushRate = pushRate
-				as.subRate = subRate
-				as.expirationDays = expDays
-			}
-			as.connectedMtx.Unlock()
-			as.sendMsg(state)
-
-			if connected {
-				if showRates {
-					as.diagMsg("Push Rate: %.8f DCR/kB, Sub Rate: %.8f DCR/sub",
-						float64(pushRate)/1e8, float64(subRate)/1e11)
-				}
-				if showExpDays {
-					as.diagMsg("Days to Expire Data: %d", expDays)
-				}
-				as.diagMsg("Client ready!")
-			} else {
-				as.diagMsg("Connection to server closed")
 			}
 		},
 

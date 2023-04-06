@@ -84,18 +84,9 @@ type testClient struct {
 	mpc     *testutils.MockPayClient
 	cfg     *client.Config
 
-	mtx           sync.Mutex
-	conn          *testConn
-	preventConn   error
-	onConnChanged func(connected bool, pushRate, subRate uint64)
-}
-
-// modifyHandlers calls f with the mutex held, so that the client handlers can
-// be freely modified.
-func (tc *testClient) modifyHandlers(f func()) {
-	tc.mtx.Lock()
-	f()
-	tc.mtx.Unlock()
+	mtx         sync.Mutex
+	conn        *testConn
+	preventConn error
 }
 
 // preventFutureConns stops all future conns of this client from succeeding.
@@ -254,15 +245,6 @@ func (ts *testScaffold) newClientWithOpts(name string, rootDir string,
 		GCMQUpdtDelay:    100 * time.Millisecond,
 		GCMQMaxLifetime:  time.Second,
 		GCMQInitialDelay: time.Second,
-
-		ServerSessionChanged: func(connected bool, pushRate, subRate, expDays uint64) {
-			tc.mtx.Lock()
-			f := tc.onConnChanged
-			tc.mtx.Unlock()
-			if f != nil {
-				f(connected, pushRate, subRate)
-			}
-		},
 	}
 	c, err := client.New(cfg)
 	assert.NilErr(ts.t, err)
@@ -341,7 +323,6 @@ func (ts *testScaffold) kxUsersWithInvite(inviter, invitee *testClient, gcID zki
 	ts.t.Helper()
 	invite, err := inviter.WriteNewInvite(io.Discard, nil)
 	assert.NilErr(ts.t, err)
-	ts.t.Logf("%s alice:%s bob:%s\n", invite.InitialRendezvous.String(), inviter.id.Public.String(), invitee.id.Public.String())
 	assert.NilErr(ts.t, inviter.AddInviteOnKX(invite.InitialRendezvous, gcID))
 	assert.NilErr(ts.t, invitee.AcceptInvite(invite))
 	assertClientsKXd(ts.t, inviter, invitee)
