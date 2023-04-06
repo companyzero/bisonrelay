@@ -400,7 +400,8 @@ func (z *ZKS) areSubsPaid(ctx context.Context, r *rpc.SubscribeRoutedMessages, s
 	}
 
 	// Store in DB the new unpaid items.
-	for _, rv := range r.AddRendezvous {
+	needsPay := append(r.AddRendezvous, r.MarkPaid...)
+	for _, rv := range needsPay {
 		if paid, err := z.db.IsSubscriptionPaid(ctx, rv); err != nil {
 			return err
 		} else if paid {
