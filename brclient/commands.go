@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -2676,6 +2677,52 @@ var commands = []tuicmd{
 					as.cwHelpMsg("Unable to accept invite: %v", err)
 				}
 			}()
+			return nil
+		},
+	}, {
+		cmd:   "fetchinvite",
+		usage: "<key> <filename>",
+		descr: "Fetches a prepaid invite from the server",
+		handler: func(args []string, as *appState) error {
+			// TODO: go online if needed and make usableOffline=true
+
+			if len(args) < 1 {
+				return usageError{msg: "key cannot be empty"}
+			}
+			if len(args) < 2 {
+				return usageError{msg: "filename cannot be empty"}
+			}
+
+			key, err := clientintf.DecodePaidInviteKey(args[0])
+			if err != nil {
+				return err
+			}
+
+			filename, err := homedir.Expand(args[1])
+			if err != nil {
+				return err
+			}
+			f, err := os.Create(filename)
+			if err != nil {
+				return err
+			}
+			defer f.Close()
+
+			ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+			defer cancel()
+			_, err = as.c.FetchPrepaidInvite(ctx, key, f)
+			if err != nil {
+				return err
+			}
+
+			as.diagMsg("Fetched invite stored in RV %s and saved "+
+				"in file %s", key.RVPoint(), filename)
+			return nil
+		},
+		completer: func(args []string, arg string, as *appState) []string {
+			if len(args) == 1 {
+				return fileCompleter(arg)
+			}
 			return nil
 		},
 	}, {
