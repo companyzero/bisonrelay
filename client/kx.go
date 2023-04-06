@@ -121,6 +121,84 @@ func (kx *kxList) createInvite(w io.Writer, invitee *zkidentity.PublicIdentity,
 	return pii, nil
 }
 
+// createPrepaidInvite creates an invite that is pushed to the server and
+// pre-paid.
+func (kx *kxList) createPrepaidInvite(w io.Writer, funds *rpc.InviteFunds) (
+	invite rpc.OOBPublicIdentityInvite, key clientintf.PaidInviteKey,
+	err error) {
+
+	// Create the invite.
+	var b bytes.Buffer
+	invite, err = kx.createInvite(&b, nil, nil, false, funds)
+	if err != nil {
+		return
+	}
+
+	// Encrypt the invite.
+	plainInvite := b.Bytes()
+	key = clientintf.GeneratePaidInviteKey()
+	var encrypted []byte
+	encrypted, err = key.Encrypt(plainInvite)
+	if err != nil {
+		return
+	}
+
+	// Determine the invite RV.
+	inviteRV := key.RVPoint()
+
+	// Prepay the invite.
+	err = kx.rmgr.PrepayRVSub(inviteRV, nil)
+	if err != nil {
+		return
+	}
+
+	// Push the invite data.
+	rm := rawRM{
+		rv:  inviteRV,
+		msg: encrypted,
+	}
+	err = kx.q.SendRM(rm)
+	if err != nil {
+		return
+	}
+
+	// Copy to the external writer.
+	if _, err = w.Write(plainInvite); err != nil {
+		return
+	}
+
+	return
+}
+
+// fetchPrepaidInvite attempts to fetch a prepaid invite with the server.
+func (kx *kxList) fetchPrepaidInvite(ctx context.Context, key clientintf.PaidInviteKey, w io.Writer) (rpc.OOBPublicIdentityInvite, error) {
+	// Fetch the data from the server.
+	var invite rpc.OOBPublicIdentityInvite
+	blob, err := kx.rmgr.FetchPrepaidRV(ctx, key.RVPoint())
+	if err != nil {
+		return invite, err
+	}
+
+	// Decrypt blob data.
+	decrypted, err := key.Decrypt(blob.Decoded)
+	if err != nil {
+		return invite, fmt.Errorf("unable to decrypt: %v", err)
+	}
+
+	// Decode OOBPI.
+	err = json.Unmarshal(decrypted, &invite)
+	if err != nil {
+		return invite, fmt.Errorf("unable to decode OOBPI: %v", err)
+	}
+
+	// Copy to writer.
+	if _, err := w.Write(decrypted); err != nil {
+		return invite, err
+	}
+
+	return invite, nil
+}
+
 // decodeInvite decodes an invite from an io.Reader.
 func (kx *kxList) decodeInvite(r io.Reader) (rpc.OOBPublicIdentityInvite, error) {
 	var pii rpc.OOBPublicIdentityInvite

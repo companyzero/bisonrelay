@@ -1,6 +1,8 @@
 package client
 
 import (
+	"context"
+
 	"github.com/companyzero/bisonrelay/client/internal/lowlevel"
 )
 
@@ -16,6 +18,8 @@ type rmqIntf interface {
 type rdzvManagerIntf interface {
 	Sub(rdzv lowlevel.RVID, handler lowlevel.RVHandler, paidHandler lowlevel.SubPaidHandler) error
 	Unsub(rdzv lowlevel.RVID) error
+	PrepayRVSub(rdzv lowlevel.RVID, subPaid lowlevel.SubPaidHandler) error
+	FetchPrepaidRV(ctx context.Context, rdzv lowlevel.RVID) (lowlevel.RVBlob, error)
 }
 
 // lnNodeSession fulfilled by the actual serverSession to return the ln node of

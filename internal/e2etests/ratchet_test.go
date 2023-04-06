@@ -1,6 +1,7 @@
 package e2etests
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/companyzero/bisonrelay/client"
 	"github.com/companyzero/bisonrelay/client/clientdb"
+	"github.com/companyzero/bisonrelay/client/clientintf"
 	"github.com/companyzero/bisonrelay/internal/assert"
 	"github.com/companyzero/bisonrelay/rpc"
 )
@@ -318,4 +320,42 @@ func TestLocalOfflineMsgs(t *testing.T) {
 		assert.NilErrFromChan(t, errChan)
 		assert.ChanWrittenWithVal(t, bobPMs, testMsg)
 	}
+}
+
+// TestPrepaidInvites asserts that using prepaid invites works.
+func TestPrepaidInvites(t *testing.T) {
+	t.Parallel()
+
+	tcfg := testScaffoldCfg{}
+	ts := newTestScaffold(t, tcfg)
+	alice := ts.newClient("alice")
+	bob := ts.newClient("bob")
+
+	// Create the paid invite on Alice.
+	srcInvite := bytes.NewBuffer(nil)
+	_, srcPik, err := alice.CreatePrepaidInvite(srcInvite, nil)
+	assert.NilErr(t, err)
+
+	// Assert going from->to the string encoding of the paid invite key
+	// works.
+	srcPikEncoded, err := srcPik.Encode()
+	assert.NilErr(t, err)
+	dstPik, err := clientintf.DecodePaidInviteKey(srcPikEncoded)
+	assert.NilErr(t, err)
+
+	// Fetch the paid invite on Bob.
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	dstInvite := bytes.NewBuffer(nil)
+	decodedInvite, err := bob.FetchPrepaidInvite(ctx, dstPik, dstInvite)
+	assert.NilErr(t, err)
+
+	// Assert both are equal.
+	if !bytes.Equal(srcInvite.Bytes(), dstInvite.Bytes()) {
+		t.Fatal("source and dest invites are not equal")
+	}
+
+	// Attempt to KX using the fetched invite.
+	assert.NilErr(t, bob.AcceptInvite(decodedInvite))
+	assertClientsKXd(t, alice, bob)
 }

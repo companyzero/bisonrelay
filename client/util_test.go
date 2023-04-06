@@ -332,6 +332,14 @@ func (rmgr *mockRMServerRMgr) Unsub(rdzv lowlevel.RVID) error {
 	return nil
 }
 
+func (rmgr *mockRMServerRMgr) PrepayRVSub(rdzv lowlevel.RVID, subPaid lowlevel.SubPaidHandler) error {
+	return nil
+}
+
+func (rmgr *mockRMServerRMgr) FetchPrepaidRV(ctx context.Context, rdzv lowlevel.RVID) (lowlevel.RVBlob, error) {
+	panic("not working")
+}
+
 func (rmgr *mockRMServerRMgr) hasSub(rdzv lowlevel.RVID) bool {
 	ms := rmgr.ms
 	ms.Lock()

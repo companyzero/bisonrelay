@@ -1,6 +1,7 @@
 package client
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -275,6 +276,12 @@ func (c *Client) WriteNewInvite(w io.Writer, funds *rpc.InviteFunds) (rpc.OOBPub
 	return c.kxl.createInvite(w, nil, nil, false, funds)
 }
 
+// CreatePrepaidInvite creates a new invite and pushes it to the server,
+// pre-paying for the remote user to download it.
+func (c *Client) CreatePrepaidInvite(w io.Writer, funds *rpc.InviteFunds) (rpc.OOBPublicIdentityInvite, clientintf.PaidInviteKey, error) {
+	return c.kxl.createPrepaidInvite(w, funds)
+}
+
 // ReadInvite decodes an invite from the given reader. Note the invite is not
 // acted upon until AcceptInvite is called.
 func (c *Client) ReadInvite(r io.Reader) (rpc.OOBPublicIdentityInvite, error) {
@@ -285,6 +292,12 @@ func (c *Client) ReadInvite(r io.Reader) (rpc.OOBPublicIdentityInvite, error) {
 // remote party's invitation. The invite should've been created by ReadInvite.
 func (c *Client) AcceptInvite(invite rpc.OOBPublicIdentityInvite) error {
 	return c.kxl.acceptInvite(invite, false)
+}
+
+// FetchPrepaidInvite fetches a pre-paid invite from the server, using the
+// specified key as decryption key.
+func (c *Client) FetchPrepaidInvite(ctx context.Context, key clientintf.PaidInviteKey, w io.Writer) (rpc.OOBPublicIdentityInvite, error) {
+	return c.kxl.fetchPrepaidInvite(ctx, key, w)
 }
 
 // ResetRatchet requests a ratchet reset with the given user.
