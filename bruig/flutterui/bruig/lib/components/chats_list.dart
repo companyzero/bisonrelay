@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:bruig/screens/feed/feed_posts.dart';
 import 'package:golib_plugin/golib_plugin.dart';
-import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/components/interactive_avatar.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:bruig/components/user_context_menu.dart';
@@ -162,6 +161,10 @@ Future<void> loadInvite(BuildContext context) async {
       .pushNamed('/verifyInvite', arguments: invite);
 }
 
+Future<void> fetchInvite(BuildContext context) async {
+  Navigator.of(context, rootNavigator: true).pushNamed('/fetchInvite');
+}
+
 void gotoContactsLastMsgTimeScreen(BuildContext context) {
   Navigator.of(context, rootNavigator: true)
       .pushNamed(ContactsLastMsgTimesScreen.routeName);
@@ -311,9 +314,30 @@ class _ChatsListState extends State<_ChatsList> {
                       hoverColor: selectedBackgroundColor,
                       splashRadius: 15,
                       iconSize: 15,
-                      tooltip: "Load Invite",
-                      onPressed: () => loadInvite(context),
+                      tooltip: chats.isOnline
+                          ? "Load Invite"
+                          : "Cannot load invite while client is offline",
+                      onPressed:
+                          chats.isOnline ? () => loadInvite(context) : null,
                       icon: Icon(size: 15, color: darkTextColor, Icons.add)))),
+          Positioned(
+              bottom: 5,
+              right: 25,
+              child: Material(
+                  color: selectedBackgroundColor.withOpacity(0),
+                  child: IconButton(
+                      hoverColor: selectedBackgroundColor,
+                      splashRadius: 15,
+                      iconSize: 15,
+                      tooltip: chats.isOnline
+                          ? "Fetch invite using key"
+                          : "Cannot fetch invite while client is offline",
+                      onPressed:
+                          chats.isOnline ? () => fetchInvite(context) : null,
+                      icon: Icon(
+                          size: 15,
+                          color: darkTextColor,
+                          Icons.get_app_sharp)))),
           Positioned(
               bottom: 5,
               left: 30,
@@ -338,8 +362,10 @@ class _ChatsListState extends State<_ChatsList> {
                       hoverColor: selectedBackgroundColor,
                       splashRadius: 15,
                       iconSize: 15,
-                      tooltip: "Generate Invite",
-                      onPressed: () => genInvite(),
+                      tooltip: chats.isOnline
+                          ? "Generate Invite"
+                          : "Cannot generate invite while offline",
+                      onPressed: chats.isOnline ? genInvite : null,
                       icon:
                           Icon(size: 15, color: darkTextColor, Icons.people))))
         ]),
