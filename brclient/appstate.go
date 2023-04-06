@@ -2712,6 +2712,12 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		}
 	}))
 
+	ntfns.Register(client.OnBlockNtfn(func(ru *client.RemoteUser) {
+		cw := as.findOrNewChatWindow(ru.ID(), strescape.Nick(ru.Nick()))
+		cw.newInternalMsg("User requested us to block them from further messages")
+		as.repaintIfActive(cw)
+	}))
+
 	// Initialize client config.
 	cfg := client.Config{
 		DB:             db,
@@ -3075,12 +3081,6 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 					event, srcRU.Nick(), dstRU.Nick())
 			}
 			as.diagMsg(msg)
-		},
-
-		UserBlocked: func(ru *client.RemoteUser) {
-			cw := as.findOrNewChatWindow(ru.ID(), strescape.Nick(ru.Nick()))
-			cw.newInternalMsg("User requested us to block them from further messages")
-			as.repaintIfActive(cw)
 		},
 
 		KXSuggestion: func(user *client.RemoteUser, pii zkidentity.PublicIdentity) {
