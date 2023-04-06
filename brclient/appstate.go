@@ -1258,7 +1258,7 @@ func (as *appState) handleRcvdText(s string, nick string) string {
 func (as *appState) writeInvite(filename string, gcID zkidentity.ShortID, funds *rpc.InviteFunds) {
 	as.cwHelpMsg("Attempting to create and subscribe to new invite")
 	w := new(bytes.Buffer)
-	pii, err := as.c.WriteNewInvite(w, funds)
+	pii, inviteKey, err := as.c.CreatePrepaidInvite(w, funds)
 	if err != nil {
 		as.cwHelpMsg("Unable to create invite: %v", err)
 		return
@@ -1276,9 +1276,19 @@ func (as *appState) writeInvite(filename string, gcID zkidentity.ShortID, funds 
 		}
 	}
 
-	as.cwHelpMsg("Created invite at RV %s", pii.InitialRendezvous)
-	as.cwHelpMsg("Send file %q to other client and type /add %s",
-		filename, filepath.Base(filename))
+	encodedKey, err := inviteKey.Encode()
+	if err != nil {
+		as.cwHelpMsg("Unable to encode invite key: %v", err)
+		return
+	}
+
+	as.cwHelpMsgs(func(pf printf) {
+		pf("Listening for invite request at RV %s", pii.InitialRendezvous)
+		pf("Send file %q to other client and type /add %s",
+			filename, filepath.Base(filename))
+		pf("Prepaid invite written to RV %s", inviteKey.RVPoint())
+		pf("Key for fetching invite: %s", encodedKey)
+	})
 }
 
 // pm sends the given pm message in the specified window. Blocks until the
