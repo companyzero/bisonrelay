@@ -111,6 +111,7 @@ type RouteMessageReply struct {
 type SubscribeRoutedMessages struct {
 	AddRendezvous []ratchet.RVPoint // Add to subscribed RVs
 	DelRendezvous []ratchet.RVPoint // Del from subscribed RVs
+	MarkPaid      []ratchet.RVPoint // Mark paid but do not subscribe
 }
 
 type SubscribeRoutedMessagesReply struct {
