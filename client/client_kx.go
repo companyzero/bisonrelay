@@ -495,9 +495,7 @@ func (c *Client) handleRMBlock(ru *RemoteUser, bl rpc.RMBlock) error {
 		return err
 	}
 
-	if c.cfg.UserBlocked != nil {
-		c.cfg.UserBlocked(ru)
-	}
+	c.ntfns.notifyOnBlock(ru)
 	return nil
 }
 

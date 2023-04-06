@@ -17,6 +17,8 @@ import (
 
 // TestInviteGCOnKX performs tests for inviting new users to GC's
 func TestInviteGCOnKX(t *testing.T) {
+	t.Parallel()
+
 	// Setup Alice and Bob.
 	tcfg := testScaffoldCfg{}
 	ts := newTestScaffold(t, tcfg)
@@ -53,6 +55,8 @@ func TestInviteGCOnKX(t *testing.T) {
 
 // TestBasicGCFeatures performs tests for the basic GC features.
 func TestBasicGCFeatures(t *testing.T) {
+	t.Parallel()
+
 	// Setup Alice and Bob.
 	tcfg := testScaffoldCfg{}
 	ts := newTestScaffold(t, tcfg)
@@ -216,6 +220,7 @@ func TestBasicGCFeatures(t *testing.T) {
 
 // TestGCKicks tests scenarios where users are leaving or being kicked from GC.
 func TestGCKicks(t *testing.T) {
+	t.Parallel()
 	tcfg := testScaffoldCfg{}
 	ts := newTestScaffold(t, tcfg)
 	alice := ts.newClient("alice")
@@ -312,6 +317,7 @@ func TestGCKicks(t *testing.T) {
 // TestGCBlockList tests scenarios where a user blocks another in a specific
 // GC.
 func TestGCBlockList(t *testing.T) {
+	t.Parallel()
 	tcfg := testScaffoldCfg{}
 	ts := newTestScaffold(t, tcfg)
 	alice := ts.newClient("alice")
@@ -373,6 +379,8 @@ func TestGCBlockList(t *testing.T) {
 // TestGCKickBlockedUser tests that the gc admin can kick an user from a gc,
 // even after this user was blocked by the admin.
 func TestGCKickBlockedUser(t *testing.T) {
+	t.Parallel()
+
 	// Setup Alice, Bob and Charlie have them KX with Alice.
 	tcfg := testScaffoldCfg{}
 	ts := newTestScaffold(t, tcfg)
@@ -436,6 +444,8 @@ func TestGCKickBlockedUser(t *testing.T) {
 // TestInviteToTwoGCsConcurrentAccept tests an old buggy scenario where the
 // client could not accept two GC invites at the same time.
 func TestInviteToTwoGCsConcurrentAccept(t *testing.T) {
+	t.Parallel()
+
 	tcfg := testScaffoldCfg{}
 	ts := newTestScaffold(t, tcfg)
 	alice := ts.newClient("alice")
@@ -494,6 +504,8 @@ func TestInviteToTwoGCsConcurrentAccept(t *testing.T) {
 // TestInviteToTwoGCsConcurrentAccept tests an old buggy scenario where the
 // client could not accept a GC after it had joined a second one.
 func TestInviteToTwoGCsAcceptAfterJoin(t *testing.T) {
+	t.Parallel()
+
 	tcfg := testScaffoldCfg{}
 	ts := newTestScaffold(t, tcfg)
 	alice := ts.newClient("alice")
@@ -559,11 +571,101 @@ func TestInviteToTwoGCsAcceptAfterJoin(t *testing.T) {
 	gotGCName2, err := bob.GetGCAlias(gcID2)
 	assert.NilErr(t, err)
 	assert.DeepEqual(t, gotGCName2, gcName2)
+}
 
+// TestBlockIgnore ensures that the block and ignore features work as
+// intended.
+func TestBlockIgnore(t *testing.T) {
+	t.Parallel()
+
+	tcfg := testScaffoldCfg{}
+	ts := newTestScaffold(t, tcfg)
+	alice := ts.newClient("alice")
+	bob := ts.newClient("bob")
+	charlie := ts.newClient("charlie")
+
+	// Hook needed handlers.
+	bobBlockedChan := make(chan struct{}, 1)
+	bob.handle(client.OnBlockNtfn(func(user *client.RemoteUser) {
+		bobBlockedChan <- struct{}{}
+	}))
+
+	ts.kxUsers(alice, bob)
+	ts.kxUsers(alice, charlie)
+	ts.kxUsers(bob, charlie)
+
+	gcName := "testGC"
+	var gcID zkidentity.ShortID
+
+	// Sleep until initial gc delay elapses.
+	time.Sleep(alice.cfg.GCMQInitialDelay + alice.cfg.GCMQMaxLifetime*2)
+
+	// Test base case of Alice and Bob chatting.
+	assertClientsCanPM(t, alice, bob)
+
+	// Alice ignores bob.
+	assert.NilErr(t, alice.Ignore(bob.PublicID(), true))
+
+	// Alice can msg Bob, Bob cannot msg Alice.
+	assertClientsCanPMOneWay(t, alice, bob)
+	assertClientsCannotPMOneWay(t, bob, alice)
+
+	// Alice un-ignores Bob. Bob can now msg Alice again.
+	assert.NilErr(t, alice.Ignore(bob.PublicID(), false))
+	assertClientsCanPM(t, alice, bob)
+
+	// Alice blocks Bob.
+	assert.NilErr(t, alice.Block(bob.PublicID()))
+	assert.ChanWritten(t, bobBlockedChan)
+
+	// Attempting to send a message from either Bob or Alice errors.
+	assert.NonNilErr(t, alice.PM(bob.PublicID(), ""))
+	assert.NonNilErr(t, bob.PM(alice.PublicID(), ""))
+
+	// Charlie knows Alice and Bob. Create a new GC, and invite both. It
+	// should _not_ trigger a new autokx between Alice and Bob.
+	bobKXdChan, aliceKXdChan := make(chan struct{}, 1), make(chan struct{}, 1)
+	bob.handle(client.OnKXCompleted(func(*clientintf.RawRVID, *client.RemoteUser) {
+		bobKXdChan <- struct{}{}
+	}))
+	alice.handle(client.OnKXCompleted(func(*clientintf.RawRVID, *client.RemoteUser) {
+		aliceKXdChan <- struct{}{}
+	}))
+	gcID, err := charlie.NewGroupChat(gcName)
+	assert.NilErr(t, err)
+
+	// Invite Alice and Bob to it and ensure they joined.
+	assertClientJoinsGC(t, gcID, charlie, alice)
+	assertClientJoinsGC(t, gcID, charlie, bob)
+
+	// Ensure they did not KX with each other.
+	assert.ChanNotWritten(t, aliceKXdChan, 500*time.Millisecond)
+	assert.ChanNotWritten(t, bobKXdChan, 500*time.Millisecond)
+
+	// Ensure a GCM sent by charlie is received by both Alice and Bob.
+	assertClientsCanSeeGCM(t, gcID, charlie, alice, bob)
+
+	// Ensure a GCM sent by Alice is seen by Charlie, but not Bob.
+	assertClientsCanSeeGCM(t, gcID, alice, charlie)
+	assertClientCannotSeeGCM(t, gcID, alice, bob)
+
+	// Ensure a GCM sent by Bob is seen by Charlie, but not Alice.
+	assertClientsCanSeeGCM(t, gcID, bob, charlie)
+	assertClientCannotSeeGCM(t, gcID, bob, alice)
+
+	// Ensure Alice and Bob are not kx'd together.
+	if alice.UserExists(bob.PublicID()) {
+		t.Fatal("Alice knows Bob (but shouldn't)")
+	}
+	if bob.UserExists(alice.PublicID()) {
+		t.Fatal("Bob knows Alice (but shouldn't)")
+	}
 }
 
 // TestVersion1GCs tests version 1 GC features (extra admins).
 func TestVersion1GCs(t *testing.T) {
+	t.Parallel()
+
 	tcfg := testScaffoldCfg{showLog: true}
 	ts := newTestScaffold(t, tcfg)
 	alice := ts.newClient("alice")

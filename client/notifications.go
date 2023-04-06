@@ -176,6 +176,14 @@ type OnTipAttemptProgressNtfn func(ru *RemoteUser, amtMAtoms int64, completed bo
 
 func (_ OnTipAttemptProgressNtfn) typ() string { return onTipAttemptProgressNtfnType }
 
+const onBlockNtfnType = "onBlock"
+
+// OnBlockNtfn is called when we blocked the specified user due to their
+// request. Note that the passed user cannot be used for messaging anymore.
+type OnBlockNtfn func(user *RemoteUser)
+
+func (_ OnBlockNtfn) typ() string { return onBlockNtfnType }
+
 // The following is used only in tests.
 
 const onTestNtfnType = "testNtfnType"
@@ -400,6 +408,11 @@ func (nmgr *NotificationManager) notifyTipAttemptProgress(ru *RemoteUser, amtMAt
 		visit(func(h OnTipAttemptProgressNtfn) { h(ru, amtMAtoms, completed, attempt, attemptErr, willRetry) })
 }
 
+func (nmgr *NotificationManager) notifyOnBlock(ru *RemoteUser) {
+	nmgr.handlers[onBlockNtfnType].(*handlersFor[OnBlockNtfn]).
+		visit(func(h OnBlockNtfn) { h(ru) })
+}
+
 func NewNotificationManager() *NotificationManager {
 	return &NotificationManager{
 		handlers: map[string]handlersRegistry{
@@ -408,6 +421,7 @@ func NewNotificationManager() *NotificationManager {
 			onGCMNtfnType:            &handlersFor[OnGCMNtfn]{},
 			onKXCompleted:            &handlersFor[OnKXCompleted]{},
 			onKXSuggested:            &handlersFor[OnKXSuggested]{},
+			onBlockNtfnType:          &handlersFor[OnBlockNtfn]{},
 			onPostRcvdNtfnType:       &handlersFor[OnPostRcvdNtfn]{},
 			onPostStatusRcvdNtfnType: &handlersFor[OnPostStatusRcvdNtfn]{},
 

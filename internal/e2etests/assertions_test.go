@@ -109,6 +109,48 @@ func assertClientsCanPM(t testing.TB, alice, bob *testClient) {
 	assert.ChanWrittenWithVal(t, bobChan, aliceMsg)
 }
 
+// assertClientsCanPMOneWay asserts that Alice can send a message that is seen
+// by Bob.
+func assertClientsCanPMOneWay(t testing.TB, alice, bob *testClient) {
+	t.Helper()
+	bobChan := make(chan string, 1)
+	bobReg := bob.NotificationManager().RegisterSync(client.OnPMNtfn(func(user *client.RemoteUser, msg rpc.RMPrivateMessage, ts time.Time) {
+		bobChan <- msg.Message
+	}))
+
+	// Cleanup afterwards so we can do it multiple times.
+	defer bobReg.Unregister()
+
+	aliceMsg := alice.name + "->" + bob.name
+	assert.NilErr(t, alice.PM(bob.PublicID(), aliceMsg))
+	assert.ChanWrittenWithVal(t, bobChan, aliceMsg)
+}
+
+// assertClientsCannotPMOneWay asserts that a message sent from Alice is NOT
+// seen by Bob.
+func assertClientsCannotPMOneWay(t testing.TB, alice, bob *testClient) {
+	t.Helper()
+	bobChan := make(chan string, 1)
+	bobReg := bob.NotificationManager().RegisterSync(client.OnPMNtfn(func(user *client.RemoteUser, msg rpc.RMPrivateMessage, ts time.Time) {
+		bobChan <- msg.Message
+	}))
+
+	// Cleanup afterwards so we can do it multiple times.
+	defer bobReg.Unregister()
+
+	aliceMsg := alice.name + "->" + bob.name
+	assert.NilErr(t, alice.PM(bob.PublicID(), aliceMsg))
+	assert.ChanNotWritten(t, bobChan, 100*time.Millisecond)
+}
+
+// assertClientJoinsGC asserts that the admin of the GC can invite and the
+// invitee joins the GC.
+func assertClientJoinsGC(t testing.TB, gcID zkidentity.ShortID, admin, invitee *testClient) {
+	invitee.acceptNextGCInvite(gcID)
+	assert.NilErr(t, admin.InviteToGroupChat(gcID, invitee.PublicID()))
+	assertClientInGC(t, invitee, gcID)
+}
+
 // assertClientsCanGCM asserts that the clients can send GC messages to each
 // other inside a GC.
 func assertClientsCanGCM(t testing.TB, gcID zkidentity.ShortID, clients ...*testClient) {
@@ -141,6 +183,35 @@ func assertClientsCanGCM(t testing.TB, gcID zkidentity.ShortID, clients ...*test
 
 	// Teardown the handlers.
 	for i := range clients {
+		regs[i].Unregister()
+	}
+}
+
+// assertClientsCanSeeGCM asserts that one client sends and all the other clients
+// receive a GCM.
+func assertClientsCanSeeGCM(t testing.TB, gcID zkidentity.ShortID, src *testClient, targets ...*testClient) {
+	regs := make([]client.NotificationRegistration, len(targets))
+	chans := make([]chan string, len(targets))
+
+	// Setup all handlers.
+	for i := range targets {
+		i := i
+		chans[i] = make(chan string, 1)
+		regs[i] = targets[i].handle(client.OnGCMNtfn(func(_ *client.RemoteUser, msg rpc.RMGroupMessage, _ time.Time) {
+			chans[i] <- msg.Message
+		}))
+	}
+
+	// Send one message from src and see it on all targets.
+	wantMsg := fmt.Sprintf("msg from %s", src.name)
+	err := src.GCMessage(gcID, wantMsg, 0, nil)
+	assert.NilErr(t, err)
+	for i := range targets {
+		assert.ChanWrittenWithVal(t, chans[i], wantMsg)
+	}
+
+	// Teardown the handlers.
+	for i := range targets {
 		regs[i].Unregister()
 	}
 }

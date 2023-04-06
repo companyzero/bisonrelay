@@ -251,6 +251,10 @@ func (ts *testScaffold) newClientWithOpts(name string, rootDir string,
 		TipUserReRequestInvoiceDelay: time.Second,
 		TipUserMaxLifetime:           10 * time.Second,
 
+		GCMQUpdtDelay:    100 * time.Millisecond,
+		GCMQMaxLifetime:  time.Second,
+		GCMQInitialDelay: time.Second,
+
 		ServerSessionChanged: func(connected bool, pushRate, subRate, expDays uint64) {
 			tc.mtx.Lock()
 			f := tc.onConnChanged

@@ -126,11 +126,6 @@ type Config struct {
 	// the local client to forward a message to dst.
 	TransitiveEvent func(src, dst UserID, event TransitiveEvent)
 
-	// UserBlocked is called when we blocked the specified user due to their
-	// request. Note that the passed user cannot be used for messaging
-	// anymore.
-	UserBlocked func(user *RemoteUser)
-
 	// TipUserRestartDelay is how long to wait after client start and
 	// initial server connection to restart TipUser attempts. If unset,
 	// a default value of 1 minute is used.
@@ -148,6 +143,24 @@ type Config struct {
 	//
 	// If unspecified, a default value of 72 hours is used.
 	TipUserMaxLifetime time.Duration
+
+	// GCMQMaxLifetime is how long to wait for a message from an user,
+	// after which the GCMQ considers no other messages from this user
+	// will be received.
+	//
+	// If unspecified, a default value of 10 seconds is used.
+	GCMQMaxLifetime time.Duration
+
+	// GCMQUpdtDelay is how often to check for GCMQ rules to emit messages.
+	//
+	// If unspecified, a default value of 1 second is used.
+	GCMQUpdtDelay time.Duration
+
+	// GCMQInitialDelay is how long to wait after the initial subscriptions
+	// are done on the server to start processing GCMQ messages.
+	//
+	// If unspecified, a default value of 10 seconds is used.
+	GCMQInitialDelay time.Duration
 }
 
 // logger creates a logger for the given subsystem in the configured backend.
@@ -169,6 +182,19 @@ func (cfg *Config) setDefaults() {
 	}
 	if cfg.TipUserMaxLifetime == 0 {
 		cfg.TipUserMaxLifetime = time.Hour * 72
+	}
+
+	// These following GCMQ times were obtained by profiling a client
+	// connected over tor to the server and may need tweaking from time to
+	// time.
+	if cfg.GCMQMaxLifetime == 0 {
+		cfg.GCMQMaxLifetime = time.Second * 10
+	}
+	if cfg.GCMQUpdtDelay == 0 {
+		cfg.GCMQUpdtDelay = time.Second
+	}
+	if cfg.GCMQInitialDelay == 0 {
+		cfg.GCMQInitialDelay = time.Second * 10
 	}
 }
 
@@ -310,13 +336,7 @@ func New(cfg Config) (*Client, error) {
 	// after restarting so that messages are displayed in the order they
 	// were received by the server (vs in arbitrary order based on which
 	// ratchets are updated first).
-	//
-	// These times were obtained by profiling a client connected over tor
-	// to the server and may need tweaking from time to time.
-	gcmqMaxLifetime := time.Second * 10
-	gcmqUpdtDelay := time.Second
-	gcmqInitialDelay := time.Second * 10
-	c.gcmq = gcmcacher.New(gcmqMaxLifetime, gcmqUpdtDelay, gcmqInitialDelay,
+	c.gcmq = gcmcacher.New(cfg.GCMQMaxLifetime, cfg.GCMQUpdtDelay, cfg.GCMQInitialDelay,
 		cfg.logger("GCMQ"), c.handleDelayedGCMessages)
 
 	rmgrdb.c = c
