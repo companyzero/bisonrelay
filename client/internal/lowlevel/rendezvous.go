@@ -28,10 +28,12 @@ type RVHandler func(blob RVBlob) error
 type SubPaidHandler func(amount, fees int64)
 
 type rdzvSub struct {
-	id          RVID
-	handler     RVHandler
-	subPaid     SubPaidHandler
-	subDoneChan chan error
+	id           RVID
+	handler      RVHandler
+	subPaid      SubPaidHandler
+	subDoneChan  chan error
+	onlyMarkPaid bool // Do not actually subscribe, only mark as paid.
+	prepaid      bool // Consider it already paid in the server.
 }
 
 func (sub rdzvSub) replySubDone(err error, runDone chan struct{}) {
@@ -167,6 +169,91 @@ func (rmgr *RVManager) Unsub(rdzv RVID) error {
 		return err
 	case <-rmgr.runDone:
 		return errRdvzMgrExiting
+	}
+}
+
+// PrepayRVSub pays for the specified RV in the server but does not subscribe
+// to it.
+func (rmgr *RVManager) PrepayRVSub(rdzv RVID, subPaid SubPaidHandler) error {
+	sub := rdzvSub{
+		id:           rdzv,
+		subPaid:      subPaid,
+		subDoneChan:  make(chan error),
+		onlyMarkPaid: true,
+	}
+	select {
+	case rmgr.subChan <- sub:
+	case <-rmgr.runDone:
+		return errRdvzMgrExiting
+	}
+	select {
+	case err := <-sub.subDoneChan:
+		return err
+	case <-rmgr.runDone:
+		return errRdvzMgrExiting
+	}
+}
+
+// FetchPrepaidRV attempts to fetch the specified RV from the server without
+// paying for it. For this to work with a server that expects payment, the
+// RV must have been pre-paid already.
+//
+// The provided ctx can be canceled to account for the fact that the RV may not
+// actually exist in the server.
+func (rmgr *RVManager) FetchPrepaidRV(ctx context.Context, rdzv RVID) (RVBlob, error) {
+	c := make(chan RVBlob, 1)
+	handler := func(blob RVBlob) error {
+		c <- blob
+		return nil
+	}
+	sub := rdzvSub{
+		id:          rdzv,
+		handler:     handler,
+		subDoneChan: make(chan error),
+		prepaid:     true,
+	}
+
+	// Ask Run() to make the sub.
+	select {
+	case rmgr.subChan <- sub:
+	case <-rmgr.runDone:
+		return RVBlob{}, errRdvzMgrExiting
+	case <-ctx.Done():
+		return RVBlob{}, ctx.Err()
+	}
+
+	// Wait for the confirmation that the sub was done.
+	select {
+	case err := <-sub.subDoneChan:
+		if err != nil {
+			return RVBlob{}, err
+		}
+	case <-rmgr.runDone:
+		return RVBlob{}, errRdvzMgrExiting
+	case <-ctx.Done():
+		// Ensure we drain subDoneChan and then unsub.
+		go func() {
+			select {
+			case err := <-sub.subDoneChan:
+				if err == nil {
+					rmgr.Unsub(rdzv)
+				}
+			case <-rmgr.runDone:
+			}
+		}()
+		return RVBlob{}, ctx.Err()
+	}
+
+	// By this point, sub was done in server. Wait for the data.
+	select {
+	case blob := <-c:
+		go rmgr.Unsub(rdzv)
+		return blob, nil
+	case <-rmgr.runDone:
+		return RVBlob{}, errRdvzMgrExiting
+	case <-ctx.Done():
+		go rmgr.Unsub(rdzv)
+		return RVBlob{}, ctx.Err()
 	}
 }
 
@@ -364,21 +451,25 @@ func (rmgr *RVManager) payForSubs(ctx context.Context, rlist []ratchet.RVPoint,
 // updatePayloadSubscriptions (re-)subscribes to all rendezvous points in subs on
 // the given server session.
 func (rmgr *RVManager) updatePayloadSubscriptions(ctx context.Context,
-	add, del []ratchet.RVPoint, subs map[RVID]rdzvSub, sess clientintf.ServerSessionIntf) error {
+	add, del, mark []ratchet.RVPoint, subs map[RVID]rdzvSub, sess clientintf.ServerSessionIntf) error {
 
-	// Pay for the subs we haven't paid yet.
-	unpaidRVs, err := rmgr.payForSubs(ctx, add, subs, sess)
+	// Pay for the subs we haven't paid yet. This includes both
+	// subscriptions to add and to mark as paid in the server and excludes
+	// subs that have been prepaid.
+	needsPay := removePrepaidSubs(append(add, mark...), subs)
+	unpaidRVs, err := rmgr.payForSubs(ctx, needsPay, subs, sess)
 	if err != nil {
 		return err
 	}
 
-	rmgr.log.Debugf("Updating server subscription with +%d-%d RVs", len(add),
-		len(del))
+	rmgr.log.Debugf("Updating server subscription with +%d-%d$%d RVs", len(add),
+		len(del), len(mark))
 
 	msg := rpc.Message{Command: rpc.TaggedCmdSubscribeRoutedMessages}
 	payload := &rpc.SubscribeRoutedMessages{
 		AddRendezvous: add,
 		DelRendezvous: del,
+		MarkPaid:      mark,
 	}
 
 	replyChan := make(chan interface{})
@@ -479,7 +570,7 @@ func (rmgr *RVManager) handleInSub(rprm recvdPRM, sub rdzvSub, ok bool) {
 func (rmgr *RVManager) Run(ctx context.Context) error {
 
 	subs := make(map[RVID]rdzvSub)
-	var toAdd, toDel []RVID
+	var toAdd, toDel, toMark []RVID
 	var unsubs, requestedUnsubs []rdzvUnsub
 	var sess clientintf.ServerSessionIntf
 	var err error
@@ -526,7 +617,7 @@ loop:
 			for _, unsub := range requestedUnsubs {
 				toDel = append(toDel, unsub.id)
 			}
-			toAdd = rvMapKeys(subs)
+			toAdd, toMark = rvMapKeys(subs)
 
 		case sub := <-rmgr.subChan:
 			if _, ok := subs[sub.id]; ok {
@@ -539,7 +630,11 @@ loop:
 
 			rmgr.log.Tracef("New subscription for RV %s", sub.id)
 
-			toAdd = append(toAdd, sub.id)
+			if sub.onlyMarkPaid {
+				toMark = append(toMark, sub.id)
+			} else {
+				toAdd = append(toAdd, sub.id)
+			}
 			subs[sub.id] = sub
 			if delayChan == nil {
 				delayChan = rmgr.subsDelayer()
@@ -577,6 +672,7 @@ loop:
 			continue loop
 
 		case updateErr := <-updateResChan:
+			// Received reply to latest subscription attempt.
 			lastUpdateDone = true
 			lastUpdateSuccess = updateErr == nil
 			if updateErr != nil {
@@ -630,6 +726,12 @@ loop:
 				rmgr.subDoneCB()
 			}
 
+			// Remove the onlyMarkPaid subs from the main map, as
+			// they are no longer needed.
+			for _, id := range toMark {
+				delete(subs, id)
+			}
+
 			continue loop
 
 		case replyC := <-rmgr.isUpToDate:
@@ -652,14 +754,15 @@ loop:
 		unsubs = nil
 		delayChan = nil
 		needsUpdate = false
-		go func(add, del []ratchet.RVPoint, sess clientintf.ServerSessionIntf) {
+		go func(add, del, mark []ratchet.RVPoint, sess clientintf.ServerSessionIntf) {
 			select {
-			case updateResChan <- rmgr.updatePayloadSubscriptions(ctx, add, del, subs, sess):
+			case updateResChan <- rmgr.updatePayloadSubscriptions(ctx, add, del, mark, subs, sess):
 			case <-ctx.Done():
 			}
-		}(toAdd, toDel, sess)
+		}(toAdd, toDel, toMark, sess)
 		toAdd = nil
 		toDel = nil
+		toMark = nil
 	}
 
 	close(rmgr.runDone)
