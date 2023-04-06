@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/companyzero/bisonrelay/client/clientintf"
+	"github.com/companyzero/bisonrelay/internal/testutils"
 	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/companyzero/bisonrelay/session"
 	"github.com/companyzero/bisonrelay/zkidentity"
@@ -318,6 +319,7 @@ type mockServerSession struct {
 	sendErrChan chan wireMsg
 	rpcChan     chan wireMsg
 	policy      clientintf.ServerPolicy
+	mpc         *testutils.MockPayClient
 }
 
 func newMockServerSession() *mockServerSession {
@@ -328,6 +330,7 @@ func newMockServerSession() *mockServerSession {
 			MaxPushInvoices:     1,
 			PushPaymentLifetime: time.Second,
 		},
+		mpc: &testutils.MockPayClient{},
 	}
 }
 
@@ -365,14 +368,26 @@ func (m *mockServerSession) replyNextPRPC(t testing.TB, reply interface{}) inter
 	return nil
 }
 
-func (m *mockServerSession) RequestClose(err error) {}
-func (m *mockServerSession) PayClient() clientintf.PaymentClient {
-	return clientintf.FreePaymentClient{}
+func (m *mockServerSession) assertNoMessages(t testing.TB, timeout time.Duration) {
+	t.Helper()
+	msg := rpc.Message{}
+	payload := rpc.Pong{}
+	reply := make(chan interface{}, 1)
+	select {
+	case m.rpcChan <- wireMsg{msg: msg, payload: payload, replyChan: reply}:
+		t.Fatalf("write in RPCChan")
+	case m.sendErrChan <- wireMsg{msg: msg, payload: payload, replyChan: reply}:
+		t.Fatalf("write in sendErrChan")
+	case <-time.After(timeout):
+	}
 }
-func (m *mockServerSession) PaymentRates() (uint64, uint64)  { return 0, 0 }
-func (m *mockServerSession) ExpirationDays() int             { return 7 }
-func (m *mockServerSession) Context() context.Context        { return context.Background() }
-func (m *mockServerSession) Policy() clientintf.ServerPolicy { return m.policy }
+
+func (m *mockServerSession) RequestClose(err error)              {}
+func (m *mockServerSession) PayClient() clientintf.PaymentClient { return m.mpc }
+func (m *mockServerSession) PaymentRates() (uint64, uint64)      { return 0, 0 }
+func (m *mockServerSession) ExpirationDays() int                 { return 7 }
+func (m *mockServerSession) Context() context.Context            { return context.Background() }
+func (m *mockServerSession) Policy() clientintf.ServerPolicy     { return m.policy }
 
 type mockRM string
 

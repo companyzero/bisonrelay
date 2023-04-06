@@ -90,13 +90,34 @@ func joinRVList(rvs []ratchet.RVPoint) string {
 	return b.String()
 }
 
-// rvMapKeys returns all the keys in the given rv map.
-func rvMapKeys(m map[RVID]rdzvSub) []ratchet.RVPoint {
-	rlist := make([]ratchet.RVPoint, 0, len(m))
-	for id := range m {
-		rlist = append(rlist, id)
+// rvMapKeys returns all the keys in the given rv map, split into 2 groups:
+// keys where onlyMarkPaid is false and ones where it is true.
+func rvMapKeys(m map[RVID]rdzvSub) ([]ratchet.RVPoint, []ratchet.RVPoint) {
+	toAdd := make([]ratchet.RVPoint, 0, len(m))
+	var toMark []ratchet.RVPoint
+	for id, sub := range m {
+		if sub.onlyMarkPaid {
+			toMark = append(toMark, id)
+		} else {
+			toAdd = append(toAdd, id)
+		}
 	}
-	return rlist
+	return toAdd, toMark
+}
+
+// removePrepaidSubs removes RVs from needsPay where the corresponding sub is
+// marked as prepaid.
+func removePrepaidSubs(needsPay []ratchet.RVPoint, subs map[RVID]rdzvSub) []ratchet.RVPoint {
+	for i := 0; i < len(needsPay); {
+		if !subs[needsPay[i]].prepaid {
+			i += 1
+			continue
+		}
+
+		needsPay[i] = needsPay[len(needsPay)-1]
+		needsPay = needsPay[:len(needsPay)-1]
+	}
+	return needsPay
 }
 
 // multiCtx returns a context that is canceled once any one of the passed

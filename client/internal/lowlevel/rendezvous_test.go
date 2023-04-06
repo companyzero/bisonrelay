@@ -8,8 +8,26 @@ import (
 	"testing"
 	"time"
 
+	"github.com/companyzero/bisonrelay/internal/assert"
 	"github.com/companyzero/bisonrelay/rpc"
+	"golang.org/x/exp/slices"
 )
+
+func assertSubAdded(t testing.TB, msg interface{}, id RVID) {
+	subMsg := msg.(*rpc.SubscribeRoutedMessages)
+	idx := slices.Index(subMsg.AddRendezvous, id)
+	if idx == -1 {
+		t.Fatalf("RV %d not included in added rendezvous", id)
+	}
+}
+
+func assertSubDeleted(t testing.TB, msg interface{}, id RVID) {
+	subMsg := msg.(*rpc.SubscribeRoutedMessages)
+	idx := slices.Index(subMsg.DelRendezvous, id)
+	if idx == -1 {
+		t.Fatalf("RV %d not included in deleted rendezvous", id)
+	}
+}
 
 // TestSuccessRendezvousManager asserts the rendezvous manager works when
 // receiving messages about the subscription.
@@ -410,4 +428,179 @@ func TestRendezvousManagerNilSession(t *testing.T) {
 	case <-time.After(time.Second):
 		t.Fatal("timeout")
 	}
+}
+
+// TestRendezvousManagerPrepaysWorks asserts that prepaying for an RV
+// does not cause the manager to subscribe to that RV, and (erroneously)
+// receiving the message does not cause any errors.
+func TestRendezvousManagerPrepaysWorks(t *testing.T) {
+	t.Parallel()
+
+	rmgr := NewRVManager(nil, &mockRvMgrDB{}, nil, nil)
+	//rmgr.log = testutils.TestLoggerSys(t, "XXXX")
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	runErr := make(chan error, 1)
+	go func() { runErr <- rmgr.Run(ctx) }()
+
+	sess := newMockServerSession()
+	rmgr.BindToSession(sess)
+
+	// Hook into the mock pay client to catch any attempts at paying.
+	gotPayInvoice := make(chan struct{}, 1)
+	sess.mpc.HookPayInvoice(func(_ string) (int64, error) {
+		gotPayInvoice <- struct{}{}
+		return 0, nil
+	})
+
+	// Prepay.
+	id := rvidFromStr("test-id")
+	errChan := make(chan error, 1)
+	go func() { errChan <- rmgr.PrepayRVSub(id, nil) }()
+
+	// RV manager asks for invoice and attempts to pay it.
+	sess.replyNextPRPC(t, &rpc.GetInvoiceReply{})
+	assert.ChanWritten(t, gotPayInvoice)
+
+	// Finish subscription.
+	gotMsg := sess.replyNextPRPC(t, &rpc.SubscribeRoutedMessagesReply{})
+	assert.NilErrFromChan(t, errChan)
+	gotSubMsg := gotMsg.(*rpc.SubscribeRoutedMessages)
+	if len(gotSubMsg.MarkPaid) != 1 {
+		t.Fatalf("wrong nb of MarkPaid elements: got %d, want 1", len(gotSubMsg.MarkPaid))
+	}
+	if len(gotSubMsg.AddRendezvous) != 0 {
+		t.Fatalf("wrong nb of AddRendezvous elements: got %d, want 0", len(gotSubMsg.AddRendezvous))
+	}
+	assert.DeepEqual(t, gotSubMsg.MarkPaid[0], id)
+
+	// Push a routed message using the id. It should not error the manager.
+	msg := &rpc.PushRoutedMessage{
+		Payload: []byte("payload"),
+		RV:      id,
+	}
+	assert.NilErr(t, rmgr.HandlePushedRMs(msg))
+	assert.ChanNotWritten(t, runErr, 100*time.Millisecond)
+}
+
+// TestRendezvousManagerFetchPrepaidCancellable tests that attempting to fetch
+// a prepaid RV is cancellable.
+func TestRendezvousManagerFetchPrepaidCancellable(t *testing.T) {
+	t.Parallel()
+
+	ctxb := context.Background()
+	rmgr := NewRVManager(nil, &mockRvMgrDB{alwaysPaid: true}, nil, nil)
+	delayChan := make(chan time.Time)
+	rmgr.subsDelayer = func() <-chan time.Time { return delayChan }
+	//rmgr.log = testutils.TestLoggerSys(t, "XXXX")
+	runCtx, cancelRun := context.WithCancel(ctxb)
+	defer cancelRun()
+
+	sess := newMockServerSession()
+
+	// Helper to ask to fetch an id.
+	var ctx context.Context
+	var cancel func()
+	id := rvidFromStr("test-id")
+	errChan := make(chan error, 3)
+	fetchPrepaidRV := func() {
+		go func() {
+			_, gotErr := rmgr.FetchPrepaidRV(ctx, id)
+			errChan <- gotErr
+		}()
+	}
+
+	// Ask to fetch before run() starts, but cancel it.
+	ctx, cancel = context.WithCancel(ctxb)
+	cancel()
+	fetchPrepaidRV()
+	assert.ChanWrittenWithVal(t, errChan, context.Canceled)
+
+	// Run. No messages sent yet.
+	runErr := make(chan error, 1)
+	go func() { runErr <- rmgr.Run(runCtx) }()
+	rmgr.BindToSession(sess)
+	select {
+	case delayChan <- time.Now():
+		t.Fatal("messages were scheduled for sending")
+	case <-time.After(100 * time.Millisecond):
+	}
+	sess.assertNoMessages(t, 100*time.Millisecond)
+
+	// Ask to fetch but cancel before the sub is sent to server. The sub
+	// is still sent but is canceled afterwards.
+	ctx, cancel = context.WithCancel(ctxb)
+	fetchPrepaidRV()
+	assert.ChanNotWritten(t, errChan, 100*time.Millisecond)
+	cancel()
+	assert.ChanWrittenWithVal(t, errChan, context.Canceled)
+	select {
+	case delayChan <- time.Now():
+	case <-time.After(100 * time.Millisecond):
+		t.Fatal("message to sub was not scheduled")
+	}
+	gotMsg := sess.replyNextPRPC(t, &rpc.SubscribeRoutedMessagesReply{}) // Sub done
+	assertSubAdded(t, gotMsg, id)
+	select {
+	case delayChan <- time.Now():
+	case <-time.After(100 * time.Millisecond):
+		t.Fatal("message to sub was not scheduled")
+	}
+	gotMsg = sess.replyNextPRPC(t, &rpc.SubscribeRoutedMessagesReply{}) // Unsub done
+	assertSubDeleted(t, gotMsg, id)
+	assert.ChanNotWritten(t, runErr, 100*time.Millisecond)
+}
+
+// TestRendezvousManagerFetchPrepaidWorks asserts that fetching a prepaid RV
+// works as intended.
+func TestRendezvousManagerFetchPrepaidWorks(t *testing.T) {
+	t.Parallel()
+
+	rmgr := NewRVManager(nil, &mockRvMgrDB{}, nil, nil)
+	//rmgr.log = testutils.TestLoggerSys(t, "XXXX")
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	runErr := make(chan error, 1)
+	go func() { runErr <- rmgr.Run(ctx) }()
+	sess := newMockServerSession()
+	rmgr.BindToSession(sess)
+
+	// Hook into the mock pay client to catch any attempts at paying.
+	gotPayInvoice := make(chan error, 1)
+	sess.mpc.HookPayInvoice(func(_ string) (int64, error) {
+		gotPayInvoice <- fmt.Errorf("got attempt at paying invoice")
+		return 0, fmt.Errorf("not allowed")
+	})
+
+	id := rvidFromStr("test-id")
+	errChan := make(chan error, 1)
+	wantPayload := []byte("payload")
+	go func() {
+		gotBlob, gotErr := rmgr.FetchPrepaidRV(ctx, id)
+		if gotErr != nil {
+			errChan <- gotErr
+		} else if !bytes.Equal(gotBlob.Decoded, wantPayload) {
+			errChan <- fmt.Errorf("got incorrect blob payload")
+		} else {
+			errChan <- nil
+		}
+	}()
+
+	// Complete the subscription.
+	gotMsg := sess.replyNextPRPC(t, &rpc.SubscribeRoutedMessagesReply{}) // Sub done
+	assertSubAdded(t, gotMsg, id)
+
+	// No errors yet.
+	assert.ChanNotWritten(t, gotPayInvoice, 100*time.Millisecond)
+	assert.ChanNotWritten(t, errChan, 100*time.Millisecond)
+
+	// Push the blob.
+	msg := &rpc.PushRoutedMessage{
+		Payload: wantPayload,
+		RV:      id,
+	}
+	assert.NilErr(t, rmgr.HandlePushedRMs(msg))
+
+	// Got the correct blob.
+	assert.NilErrFromChan(t, errChan)
 }
