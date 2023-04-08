@@ -209,34 +209,35 @@ class _EditLineState extends State<EditLine> {
   }
 
   void handleKeyPress(event) {
-    // TODO: debounce event.
-    () async {
-      if (event is RawKeyUpEvent) {
-        bool modPressed = event.isShiftPressed || event.isControlPressed;
-        final val = controller.value;
-        final trimmed = val.text.trim();
-        if (event.data.logicalKey.keyLabel == "Enter" && !modPressed) {
-          controller.value = const TextEditingValue(
-              text: "", selection: TextSelection.collapsed(offset: 0));
-          final String withEmbeds =
-              embeds.fold(trimmed, (s, e) => e.replaceInString(s));
-          /*
+    if (event is RawKeyUpEvent) {
+      bool modPressed = event.isShiftPressed || event.isControlPressed;
+      final val = controller.value;
+      if (event.data.logicalKey.keyLabel == "Enter" && !modPressed) {
+        final messageWithoutNewLine =
+            controller.text.substring(0, val.selection.start - 1) +
+                controller.text.substring(val.selection.start);
+        controller.value = const TextEditingValue(
+            text: "", selection: TextSelection.collapsed(offset: 0));
+        final String withEmbeds = embeds.fold(
+            messageWithoutNewLine.trim(), (s, e) => e.replaceInString(s));
+        /*
           if (withEmbeds.length > 1024 * 1024) {
             showErrorSnackbar(context,
                 "Message is larger than maximum allowed (limit: 1MiB)");
             return;
           }
           */
+        if (withEmbeds != "") {
           widget._send(withEmbeds);
           widget.chat.workingMsg = "";
           setState(() {
             embeds = [];
           });
-        } else {
-          widget.chat.workingMsg = trimmed;
         }
+      } else {
+        widget.chat.workingMsg = val.text.trim();
       }
-    }();
+    }
   }
 
   void attachFile() async {
