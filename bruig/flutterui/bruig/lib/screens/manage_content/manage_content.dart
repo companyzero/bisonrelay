@@ -273,7 +273,16 @@ class _AddContentPanelState extends State<AddContentPanel> {
               FilteringTextInputFormatter.allow(RegExp(r'[0-9]+\.?[0-9]*'))
             ],
           ),
-        )
+        ),
+        const SizedBox(width: 10),
+        Tooltip(
+          message: "How much others will pay for this content",
+          child: Icon(
+            Icons.help,
+            size: 16,
+            color: textColor,
+          ),
+        ),
       ]),
       const SizedBox(height: 20),
       Row(children: [
