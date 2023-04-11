@@ -10,6 +10,7 @@ import 'package:bruig/components/md_elements.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:bruig/components/user_context_menu.dart';
 
 // return a consistent color for each nick. Pretty dumb so far.
 Color colorFromNick(String nick) {
@@ -39,23 +40,13 @@ class FeedPostW extends StatelessWidget {
   Widget build(BuildContext context) {
     var authorNick = author?.nick ?? "";
     var authorID = post.summ.authorID;
-    if (authorID == client.publicID) {
+    var mine = authorID == client.publicID;
+    if (mine) {
       authorNick = "me";
     } else if (authorNick == "") {
       authorNick = post.summ.authorNick;
       if (authorNick == "") {
         authorNick = "[${post.summ.authorID}]";
-      }
-    }
-
-    var fromNick = "";
-    if (post.summ.from != authorID) {
-      if (post.summ.from == client.publicID) {
-        fromNick = "me";
-      } else if (from != null) {
-        fromNick = from!.nick;
-      } else {
-        fromNick = post.summ.from;
       }
     }
 
@@ -93,11 +84,16 @@ class FeedPostW extends StatelessWidget {
                 width: 28,
                 margin:
                     const EdgeInsets.only(top: 0, bottom: 0, left: 5, right: 0),
-                child: CircleAvatar(
-                    backgroundColor: avatarColor,
-                    child: Text(authorNick[0].toUpperCase(),
-                        style:
-                            TextStyle(color: avatarTextColor, fontSize: 20))),
+                child: UserContextMenu(
+                  client: client,
+                  targetUserChat: author,
+                  disabled: mine,
+                  child: CircleAvatar(
+                      backgroundColor: avatarColor,
+                      child: Text(authorNick[0].toUpperCase(),
+                          style:
+                              TextStyle(color: avatarTextColor, fontSize: 20))),
+                ),
               ),
               const SizedBox(width: 6),
               Expanded(

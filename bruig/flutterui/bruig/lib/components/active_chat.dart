@@ -22,6 +22,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:bruig/components/empty_widget.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:file_icon/file_icon.dart';
+import 'package:bruig/components/interactive_avatar.dart';
 
 class ActiveChat extends StatefulWidget {
   final ClientModel client;
@@ -365,9 +366,6 @@ class _ReceivedSentPMState extends State<ReceivedSentPM> {
     }
   }
 
-  String nickCapitalLetter() =>
-      widget.nick.isNotEmpty ? widget.nick[0].toUpperCase() : "";
-
   @override
   Widget build(BuildContext context) {
     var prefix = "";
@@ -435,23 +433,21 @@ class _ReceivedSentPMState extends State<ReceivedSentPM> {
           ? const Empty()
           : Row(children: [
               Container(
-                  width: 28,
-                  margin: const EdgeInsets.only(
-                      top: 0, bottom: 0, left: 5, right: 0),
-                  child: IconButton(
-                    splashRadius: 20,
-                    hoverColor: selectedBackgroundColor,
-                    icon: CircleAvatar(
-                        backgroundColor: avatarColor,
-                        child: Text(nickCapitalLetter(),
-                            style: TextStyle(
-                                color: avatarTextColor, fontSize: 20))),
-                    padding: const EdgeInsets.all(0),
-                    tooltip: widget.nick,
-                    onPressed: () {
+                width: 28,
+                margin:
+                    const EdgeInsets.only(top: 0, bottom: 0, left: 5, right: 0),
+                child: InteractiveAvatar(
+                    bgColor: selectedBackgroundColor,
+                    chatNick: widget.nick,
+                    onTap: () {
                       widget.showSubMenu(widget.id);
                     },
-                  )),
+                    onSecondaryTap: () {
+                      widget.showSubMenu(widget.id);
+                    },
+                    avatarColor: avatarColor,
+                    avatarTextColor: avatarTextColor),
+              ),
               const SizedBox(width: 10),
               Text(
                 widget.nick,
