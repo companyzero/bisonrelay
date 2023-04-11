@@ -23,6 +23,7 @@ import 'package:bruig/components/empty_widget.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:file_icon/file_icon.dart';
 import 'package:bruig/components/interactive_avatar.dart';
+import 'package:bruig/components/user_context_menu.dart';
 
 class ActiveChat extends StatefulWidget {
   final ClientModel client;
@@ -328,9 +329,10 @@ class ReceivedSentPM extends StatefulWidget {
   final ShowSubMenuCB showSubMenu;
   final String id;
   final String userNick;
+  final bool isGC;
 
   const ReceivedSentPM(this.evnt, this.nick, this.timestamp, this.showSubMenu,
-      this.id, this.userNick,
+      this.id, this.userNick, this.isGC,
       {Key? key})
       : super(key: key);
 
@@ -436,17 +438,26 @@ class _ReceivedSentPMState extends State<ReceivedSentPM> {
                 width: 28,
                 margin:
                     const EdgeInsets.only(top: 0, bottom: 0, left: 5, right: 0),
-                child: InteractiveAvatar(
-                    bgColor: selectedBackgroundColor,
-                    chatNick: widget.nick,
-                    onTap: () {
-                      widget.showSubMenu(widget.id);
-                    },
-                    onSecondaryTap: () {
-                      widget.showSubMenu(widget.id);
-                    },
-                    avatarColor: avatarColor,
-                    avatarTextColor: avatarTextColor),
+                child: widget.isGC
+                    ? UserContextMenu(
+                        targetUserChat: widget.evnt.source,
+                        child: InteractiveAvatar(
+                            bgColor: selectedBackgroundColor,
+                            chatNick: widget.nick,
+                            avatarColor: avatarColor,
+                            avatarTextColor: avatarTextColor),
+                      )
+                    : InteractiveAvatar(
+                        bgColor: selectedBackgroundColor,
+                        chatNick: widget.nick,
+                        onTap: () {
+                          widget.showSubMenu(widget.id);
+                        },
+                        onSecondaryTap: () {
+                          widget.showSubMenu(widget.id);
+                        },
+                        avatarColor: avatarColor,
+                        avatarTextColor: avatarTextColor),
               ),
               const SizedBox(width: 10),
               Text(
@@ -508,7 +519,7 @@ class PMW extends StatelessWidget {
           evnt.source?.nick == null ? event.timestamp : event.timestamp * 1000;
     }
     return ReceivedSentPM(evnt, evnt.source?.nick ?? nick, timestamp,
-        showSubMenu, evnt.source?.id ?? "", nick);
+        showSubMenu, evnt.source?.id ?? "", nick, false);
   }
 }
 
@@ -528,7 +539,7 @@ class GCMW extends StatelessWidget {
           evnt.source?.nick == null ? event.timestamp : event.timestamp * 1000;
     }
     return ReceivedSentPM(evnt, evnt.source?.nick ?? nick, timestamp,
-        showSubMenu, evnt.source?.id ?? "", nick);
+        showSubMenu, evnt.source?.id ?? "", nick, true);
   }
 }
 
