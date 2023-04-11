@@ -604,11 +604,18 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
                             width: 28,
                             margin: const EdgeInsets.only(
                                 top: 0, bottom: 0, left: 5, right: 0),
-                            child: CircleAvatar(
-                                backgroundColor: avatarColor,
-                                child: Text(authorNick[0].toUpperCase(),
-                                    style: TextStyle(
-                                        color: avatarTextColor, fontSize: 20))),
+                            child: UserContextMenu(
+                              client: widget.client,
+                              targetUserChat: authorChat,
+                              disabled: myPost,
+                              postFrom: widget.args.post.summ.from,
+                              child: CircleAvatar(
+                                  backgroundColor: avatarColor,
+                                  child: Text(authorNick[0].toUpperCase(),
+                                      style: TextStyle(
+                                          color: avatarTextColor,
+                                          fontSize: 20))),
+                            ),
                           ),
                           const SizedBox(width: 6),
                           Text(authorNick,

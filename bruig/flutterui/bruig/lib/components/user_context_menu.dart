@@ -83,6 +83,9 @@ class UserContextMenu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // If we don't have a target user chat, means we are not KXed
+    // with user. The Context Menu should show option to attempt
+    // to KX.
     if (targetUserChat == null) {
       if (postFrom != null && targetUserId != null) {
         return ContextMenu(
@@ -92,8 +95,12 @@ class UserContextMenu extends StatelessWidget {
           child: child,
         );
       }
+      // If we don't have a target user chat but don't have postFrom
+      // and targetUserId, needed to attempt KX, do nothing and return
+      // the child
       return child;
     }
+    // We do have the target user chat, so show complete context user menu
     return ContextMenu(
       disabled: disabled,
       handleItemTap: _handleItemTap(context),
