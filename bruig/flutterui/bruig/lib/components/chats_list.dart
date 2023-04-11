@@ -1,22 +1,27 @@
 import 'package:bruig/models/client.dart';
-import 'package:bruig/models/menus.dart';
 import 'package:bruig/screens/contacts_msg_times.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:bruig/screens/feed/feed_posts.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:bruig/components/snackbars.dart';
+import 'package:bruig/components/interactive_avatar.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:bruig/components/user_context_menu.dart';
 
 typedef MakeActiveCB = void Function(ChatModel? c);
 typedef ShowSubMenuCB = void Function(String);
 
 class _ChatHeadingW extends StatefulWidget {
   final ChatModel chat;
+  final ClientModel client;
   final MakeActiveCB makeActive;
   final ShowSubMenuCB showSubMenu;
+  final bool isGc;
 
-  const _ChatHeadingW(this.chat, this.makeActive, this.showSubMenu, {Key? key})
+  const _ChatHeadingW(
+      this.chat, this.client, this.makeActive, this.showSubMenu, this.isGc,
+      {Key? key})
       : super(key: key);
 
   @override
@@ -25,6 +30,8 @@ class _ChatHeadingW extends StatefulWidget {
 
 class _ChatHeadingWState extends State<_ChatHeadingW> {
   ChatModel get chat => widget.chat;
+  ClientModel get client => widget.client;
+  bool get isGc => widget.isGc;
 
   void chatUpdated() => setState(() {});
 
@@ -84,38 +91,57 @@ class _ChatHeadingWState extends State<_ChatHeadingW> {
         ThemeData.estimateBrightnessForColor(avatarColor) == Brightness.dark
             ? hightLightTextColor
             : darkTextColor;
-    var popMenuButton = Material(
-        color: selectedBackgroundColor.withOpacity(0),
-        child: IconButton(
-          splashRadius: 20,
-          hoverColor: selectedBackgroundColor,
-          icon: CircleAvatar(
-              backgroundColor: avatarColor,
-              child: Text(chat.nick[0].toUpperCase(),
-                  style: TextStyle(color: avatarTextColor, fontSize: 20))),
-          padding: const EdgeInsets.all(0),
-          tooltip: chat.nick,
-          onPressed: () {
-            widget.makeActive(chat);
-            widget.showSubMenu(chat.id);
-          },
-        ));
+    var popMenuButton = InteractiveAvatar(
+        bgColor: selectedBackgroundColor,
+        chatNick: chat.nick,
+        onTap: () {
+          widget.makeActive(chat);
+          widget.showSubMenu(chat.id);
+        },
+        avatarColor: avatarColor,
+        avatarTextColor: avatarTextColor);
 
     return Container(
-        decoration: BoxDecoration(
-          color: chat.active ? selectedBackgroundColor : null,
-          borderRadius: BorderRadius.circular(3),
-        ),
-        child: ListTile(
-          enabled: true,
-          title:
-              Text(chat.nick, style: TextStyle(fontSize: 11, color: textColor)),
-          leading: popMenuButton,
-          trailing: trailing,
-          onTap: () => widget.makeActive(chat),
-          selected: chat.active,
-          selectedColor: selectedBackgroundColor,
-        ));
+      decoration: BoxDecoration(
+        color: chat.active ? selectedBackgroundColor : null,
+        borderRadius: BorderRadius.circular(3),
+      ),
+      child: isGc
+          ? GestureDetector(
+              onSecondaryTap: () {
+                widget.makeActive(chat);
+                widget.showSubMenu(chat.id);
+              },
+              onLongPress: () {
+                widget.makeActive(chat);
+                widget.showSubMenu(chat.id);
+              },
+              child: ListTile(
+                enabled: true,
+                title: Text(chat.nick,
+                    style: TextStyle(fontSize: 11, color: textColor)),
+                leading: popMenuButton,
+                trailing: trailing,
+                selected: chat.active,
+                onTap: () => widget.makeActive(chat),
+                selectedColor: selectedBackgroundColor,
+              ),
+            )
+          : UserContextMenu(
+              client: client,
+              targetUserChat: chat,
+              child: ListTile(
+                enabled: true,
+                title: Text(chat.nick,
+                    style: TextStyle(fontSize: 11, color: textColor)),
+                leading: popMenuButton,
+                trailing: trailing,
+                selected: chat.active,
+                onTap: () => widget.makeActive(chat),
+                selectedColor: selectedBackgroundColor,
+              ),
+            ),
+    );
   }
 }
 
@@ -236,11 +262,13 @@ class _ChatsListState extends State<_ChatsList> {
           ),
           child: Stack(children: [
             Container(
-                padding: const EdgeInsets.only(bottom: 40),
-                child: ListView.builder(
-                    itemCount: gcList.length,
-                    itemBuilder: (context, index) => _ChatHeadingW(
-                        gcList[index], makeActive, showGCSubMenu))),
+              padding: const EdgeInsets.only(bottom: 40),
+              child: ListView.builder(
+                itemCount: gcList.length,
+                itemBuilder: (context, index) => _ChatHeadingW(
+                    gcList[index], chats, makeActive, showGCSubMenu, true),
+              ),
+            ),
             Positioned(
                 bottom: 5,
                 right: 5,
@@ -279,7 +307,11 @@ class _ChatsListState extends State<_ChatsList> {
               child: ListView.builder(
                   itemCount: chatList.length,
                   itemBuilder: (context, index) => _ChatHeadingW(
-                      chatList[index], makeActive, showUserSubMenu))),
+                      chatList[index],
+                      chats,
+                      makeActive,
+                      showUserSubMenu,
+                      false))),
           Positioned(
               bottom: 5,
               right: 5,

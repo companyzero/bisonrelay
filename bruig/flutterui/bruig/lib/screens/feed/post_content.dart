@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:bruig/components/user_context_menu.dart';
 
 class PostContentScreenArgs {
   final FeedPostModel post;
@@ -141,11 +142,18 @@ class _CommentWState extends State<_CommentW> {
                 width: 28,
                 margin:
                     const EdgeInsets.only(top: 0, bottom: 0, left: 5, right: 0),
-                child: CircleAvatar(
-                    backgroundColor: avatarColor,
-                    child: Text(nick[0].toUpperCase(),
-                        style:
-                            TextStyle(color: avatarTextColor, fontSize: 20))),
+                child: UserContextMenu(
+                  client: widget.client,
+                  targetUserChat: chat,
+                  targetUserId: widget.comment.uid,
+                  disabled: mine,
+                  postFrom: widget.post.summ.from,
+                  child: CircleAvatar(
+                      backgroundColor: avatarColor,
+                      child: Text(nick[0].toUpperCase(),
+                          style:
+                              TextStyle(color: avatarTextColor, fontSize: 20))),
+                ),
               ),
               const SizedBox(width: 6),
               Row(children: [
