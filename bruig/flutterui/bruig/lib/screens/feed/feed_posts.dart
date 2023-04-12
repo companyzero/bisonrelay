@@ -202,6 +202,14 @@ class _FeedPostsState extends State<FeedPosts> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    setState(() {
+      widget.feed.hasUnreadPosts = false;
+    });
+  }
+
+  @override
   void didUpdateWidget(FeedPosts oldWidget) {
     super.didUpdateWidget(oldWidget);
     oldWidget.feed.removeListener(feedChanged);

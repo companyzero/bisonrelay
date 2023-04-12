@@ -5,6 +5,7 @@ import 'package:bruig/components/route_error.dart';
 import 'package:bruig/components/sidebar.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/models/downloads.dart';
+import 'package:bruig/models/feed.dart';
 import 'package:bruig/models/menus.dart';
 import 'package:bruig/models/notifications.dart';
 import 'package:bruig/screens/feed.dart';
@@ -68,8 +69,9 @@ class OverviewScreen extends StatefulWidget {
   final DownloadsModel down;
   final String initialRoute;
   final MainMenuModel mainMenu;
-  const OverviewScreen(
-      this.down, this.client, this.ntfns, this.initialRoute, this.mainMenu,
+  final FeedModel feed;
+  const OverviewScreen(this.down, this.client, this.ntfns, this.initialRoute,
+      this.mainMenu, this.feed,
       {Key? key})
       : super(key: key);
 
@@ -219,7 +221,8 @@ class _OverviewScreenState extends State<OverviewScreen> {
                   ])),
         ),
         body: Row(children: [
-          Sidebar(widget.client, widget.mainMenu, widget.ntfns, navKey),
+          Sidebar(widget.client, widget.mainMenu, widget.ntfns, navKey,
+              widget.feed),
           Expanded(
             child: Navigator(
               key: navKey,

@@ -35,6 +35,13 @@ class FeedPostModel extends ChangeNotifier {
 
   String content = "";
 
+  bool _hasUnreadComments = false;
+  bool get hasUnreadComments => _hasUnreadComments;
+  void set hasUnreadComments(bool b) {
+    _hasUnreadComments = b;
+    notifyListeners();
+  }
+
   Future<void> readPost() async {
     var pm = await Golib.readPost(summ.from, summ.id);
     content = pm.attributes[RMPMain] ?? "";
@@ -161,6 +168,13 @@ class FeedModel extends ChangeNotifier {
   List<FeedPostModel> _posts = [];
   Iterable<FeedPostModel> get posts => UnmodifiableListView(_posts);
 
+  bool _hasUnreadPosts = false;
+  bool get hasUnreadPosts => _hasUnreadPosts;
+  void set hasUnreadPosts(bool b) {
+    _hasUnreadPosts = b;
+    notifyListeners();
+  }
+
   void _handleFeedPosts() async {
     // List existing posts before listening for new posts.
     var oldPosts = await Golib.listPosts();
@@ -174,6 +188,7 @@ class FeedModel extends ChangeNotifier {
     await for (var msg in stream) {
       // Add at the start of the feed so it appears at the top of the feed page.
       _posts.insert(0, FeedPostModel(msg));
+      hasUnreadPosts = true;
 
       // Handle posts that replace a previously relayed post: the client removes
       // the relayed post in favor of the one by the author, so remove such posts
