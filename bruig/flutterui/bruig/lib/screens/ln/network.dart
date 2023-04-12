@@ -1,6 +1,7 @@
 import 'package:bruig/components/dcr_input.dart';
 import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/components/snackbars.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
@@ -60,34 +61,60 @@ class _QueriedRouteW extends StatelessWidget {
   final ScrollController scrollCtrl = ScrollController();
   _QueriedRouteW(this.node, this.res, {Key? key}) : super(key: key);
 
-  Widget buildHop(int route, int hop, Color textColor) {
+  Widget buildHop(
+      int route, int hop, Color textColor, Color secondaryTextColor) {
     var h = res.routes[route].hops[hop];
     var chanID = shortChanIDToStr(h.chanId);
-    return Text("Hop $hop: node ${h.pubkey} channel $chanID",
-        style: TextStyle(color: textColor));
+    return Row(children: [
+      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text("Hop:", style: TextStyle(fontSize: 11, color: secondaryTextColor)),
+        const SizedBox(height: 8),
+        Text("Node:",
+            style: TextStyle(fontSize: 11, color: secondaryTextColor)),
+        const SizedBox(height: 8),
+        Text("Channel ID:",
+            style: TextStyle(fontSize: 11, color: secondaryTextColor)),
+        const SizedBox(height: 8),
+      ]),
+      const SizedBox(width: 8),
+      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text("$hop", style: TextStyle(fontSize: 11, color: textColor)),
+        const SizedBox(height: 8),
+        Text(h.pubkey, style: TextStyle(fontSize: 11, color: textColor)),
+        const SizedBox(height: 8),
+        Text(chanID, style: TextStyle(fontSize: 11, color: textColor)),
+        const SizedBox(height: 8)
+      ])
+    ]);
   }
 
   @override
   Widget build(BuildContext context) {
     var theme = Theme.of(context);
     var textColor = theme.focusColor;
+    var secondaryTextColor = theme.dividerColor;
     var successProb = (res.successProb * 100).toStringAsFixed(2);
-    return Container(
-        margin: const EdgeInsets.only(top: 20),
-        child: Column(children: [
-          Text("Result of querying $node", style: TextStyle(color: textColor)),
-          Text("Success Probability: $successProb%",
-              style: TextStyle(color: textColor)),
-          res.routes.isEmpty
-              ? Text("No routes to node", style: TextStyle(color: textColor))
-              : Expanded(
-                  child: ListView.builder(
-                  controller: scrollCtrl,
-                  itemCount: res.routes[0].hops.length,
-                  itemBuilder: (context, index) =>
-                      buildHop(0, index, textColor),
-                ))
-        ]));
+    return Column(children: [
+      Text(node, style: TextStyle(fontSize: 13, color: textColor)),
+      Text("Success Probability: $successProb%",
+          style: TextStyle(fontSize: 13, color: textColor)),
+      const SizedBox(height: 8),
+      res.routes.isEmpty
+          ? Text("No routes to node",
+              style: TextStyle(fontSize: 13, color: textColor))
+          : Expanded(
+              child: ListView.separated(
+              separatorBuilder: (context, index) => Divider(
+                height: 5,
+                thickness: 1,
+                color: secondaryTextColor,
+              ),
+              controller: scrollCtrl,
+              itemCount: res.routes[0].hops.length,
+              itemBuilder: (context, index) =>
+                  buildHop(0, index, textColor, secondaryTextColor),
+            ))
+    ]);
   }
 }
 
@@ -96,40 +123,81 @@ class _NodeInfo extends StatelessWidget {
   final ScrollController scrollCtrl = ScrollController();
   _NodeInfo(this.nodeInfo, {Key? key}) : super(key: key);
 
-  Widget buildChannel(int channel, Color textColor) {
+  Widget buildChannel(int channel, Color textColor, Color secondaryTextColor) {
     var chan = nodeInfo.channels[channel];
     var chanID = shortChanIDToStr(chan.channelID);
     var capacity = formatDCR(atomsToDCR(chan.capacity));
-    return Text(
-        "Channel $chanID: capacity: $capacity channel point: ${chan.channelPoint} last update: ${chan.lastUpdate} "
-        "  Node 1: ${chan.node1Pub} disbaled: ${chan.node1Policy.disabled} "
-        "  Node 2: ${chan.node2Pub} disbaled: ${chan.node2Policy.disabled} ",
-        style: TextStyle(color: textColor));
+    return Row(children: [
+      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text("Remote Node:",
+            style: TextStyle(fontSize: 11, color: secondaryTextColor)),
+        const SizedBox(height: 8),
+        Text("Last Channel Update:",
+            style: TextStyle(fontSize: 11, color: secondaryTextColor)),
+        const SizedBox(height: 8),
+        Text("Channel Point:",
+            style: TextStyle(fontSize: 11, color: secondaryTextColor)),
+        const SizedBox(height: 8),
+        Text("Channel Capacity:",
+            style: TextStyle(fontSize: 11, color: secondaryTextColor)),
+        const SizedBox(height: 8),
+        Text("Node 1:",
+            style: TextStyle(fontSize: 11, color: secondaryTextColor)),
+        const SizedBox(height: 8),
+        Text("Node 2:",
+            style: TextStyle(fontSize: 11, color: secondaryTextColor))
+      ]),
+      const SizedBox(width: 10),
+      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(chanID, style: TextStyle(fontSize: 11, color: textColor)),
+        const SizedBox(height: 8),
+        Text(
+            DateTime.fromMillisecondsSinceEpoch(chan.lastUpdate * 1000)
+                .toIso8601String(),
+            style: TextStyle(fontSize: 11, color: textColor)),
+        const SizedBox(height: 8),
+        Text(chan.channelPoint,
+            style: TextStyle(fontSize: 11, color: textColor)),
+        const SizedBox(height: 8),
+        Text(capacity, style: TextStyle(fontSize: 11, color: textColor)),
+        const SizedBox(height: 8),
+        Text("${chan.node1Pub} disabled: ${chan.node1Policy.disabled}",
+            style: TextStyle(fontSize: 11, color: textColor)),
+        const SizedBox(height: 8),
+        Text("${chan.node2Pub} disabled: ${chan.node2Policy.disabled}",
+            style: TextStyle(fontSize: 11, color: textColor)),
+      ])
+    ]);
   }
 
   @override
   Widget build(BuildContext context) {
     var theme = Theme.of(context);
     var textColor = theme.focusColor;
-    return Container(
-        margin: const EdgeInsets.only(top: 20),
-        child: Column(children: [
-          Text("Result of querying ${nodeInfo.node}",
-              style: TextStyle(color: textColor)),
-          Text("Number of channels: ${nodeInfo.numChannels}",
-              style: TextStyle(color: textColor)),
-          Text("Total Capacity: ${nodeInfo.totalCapacity}",
-              style: TextStyle(color: textColor)),
-          nodeInfo.channels.isEmpty
-              ? Text("No channels for node", style: TextStyle(color: textColor))
-              : Expanded(
-                  child: ListView.builder(
-                  controller: scrollCtrl,
-                  itemCount: nodeInfo.channels.length,
-                  itemBuilder: (context, index) =>
-                      buildChannel(index, textColor),
-                ))
-        ]));
+    var secondaryTextColor = theme.dividerColor;
+    return Column(children: [
+      Text(nodeInfo.node.pubkey,
+          style: TextStyle(fontSize: 13, color: textColor)),
+      Text("Number of channels: ${nodeInfo.numChannels}",
+          style: TextStyle(fontSize: 13, color: textColor)),
+      Text("Total Capacity: ${formatDCR(atomsToDCR(nodeInfo.totalCapacity))}",
+          style: TextStyle(fontSize: 13, color: textColor)),
+      const SizedBox(height: 8),
+      nodeInfo.channels.isEmpty
+          ? Text("No channels for node", style: TextStyle(color: textColor))
+          : Expanded(
+              child: ListView.separated(
+              separatorBuilder: (context, index) => Divider(
+                height: 5,
+                thickness: 1,
+                color: secondaryTextColor,
+              ),
+              controller: scrollCtrl,
+              itemCount: nodeInfo.channels.length,
+              itemBuilder: (context, index) =>
+                  buildChannel(index, textColor, secondaryTextColor),
+            ))
+    ]);
   }
 }
 
@@ -137,6 +205,7 @@ class _LNNetworkPageState extends State<LNNetworkPage> {
   bool loading = true;
   bool connecting = false;
   bool querying = false;
+  bool closed = true;
   String serverNode = "";
   List<LNPeer> peers = [];
   String lastQueriedNode = "";
@@ -145,6 +214,13 @@ class _LNNetworkPageState extends State<LNNetworkPage> {
   final TextEditingController connectCtrl = TextEditingController();
   final TextEditingController queryRouteCtrl = TextEditingController();
   final AmountEditingController queryAmountCtrl = AmountEditingController();
+
+  void closeNodeInfo() async {
+    setState(() {
+      queryRouteRes = LNQueryRouteResponse.empty();
+      nodeInfo = LNGetNodeInfoResponse.empty();
+    });
+  }
 
   void loadInfo() async {
     setState(() {
@@ -194,6 +270,7 @@ class _LNNetworkPageState extends State<LNNetworkPage> {
       if (amount < 0.00000001) {
         amount = 0.00000001;
       }
+
       var newNodeInfo = await Golib.lnGetNodeInfo(node);
       var newQueryRouteRes = await Golib.lnQueryRoute(amount, node);
       setState(() {
@@ -206,6 +283,7 @@ class _LNNetworkPageState extends State<LNNetworkPage> {
     } finally {
       setState(() {
         querying = false;
+        closed = false;
       });
     }
   }
@@ -236,7 +314,63 @@ class _LNNetworkPageState extends State<LNNetworkPage> {
     if (loading) {
       return Text("Loading...", style: TextStyle(color: textColor));
     }
-
+    if (nodeInfo.node.pubkey != "" &&
+        lastQueriedNode != "" &&
+        queryRouteRes.routes.isNotEmpty) {
+      return Container(
+          margin: const EdgeInsets.all(1),
+          decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(3), color: backgroundColor),
+          padding: const EdgeInsets.all(16),
+          child: Stack(alignment: Alignment.topRight, children: [
+            Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                Text("Node Info",
+                    textAlign: TextAlign.left,
+                    style: TextStyle(color: darkTextColor, fontSize: 15)),
+                Expanded(
+                    child: Divider(
+                  color: dividerColor, //color of divider
+                  height: 10, //height spacing of divider
+                  thickness: 1, //thickness of divier line
+                  indent: 8, //spacing at the start of divider
+                  endIndent: 5, //spacing at the end of divider
+                )),
+              ]),
+              const SizedBox(height: 21),
+              Expanded(child: _NodeInfo(nodeInfo)),
+              const SizedBox(height: 21),
+              Row(children: [
+                Text("Queried Route Results",
+                    textAlign: TextAlign.left,
+                    style: TextStyle(color: darkTextColor, fontSize: 15)),
+                Expanded(
+                    child: Divider(
+                  color: dividerColor, //color of divider
+                  height: 10, //height spacing of divider
+                  thickness: 1, //thickness of divier line
+                  indent: 8, //spacing at the start of divider
+                  endIndent: 5, //spacing at the end of divider
+                )),
+              ]),
+              const SizedBox(height: 21),
+              Expanded(child: _QueriedRouteW(lastQueriedNode, queryRouteRes))
+            ]),
+            Positioned(
+                top: 5,
+                right: 5,
+                child: Material(
+                    color: dividerColor.withOpacity(0),
+                    child: IconButton(
+                        tooltip: "Close",
+                        hoverColor: dividerColor,
+                        splashRadius: 15,
+                        iconSize: 15,
+                        onPressed: () => closeNodeInfo(),
+                        icon:
+                            Icon(color: darkTextColor, Icons.close_outlined))))
+          ]));
+    }
     return Container(
       margin: const EdgeInsets.all(1),
       decoration: BoxDecoration(
@@ -355,16 +489,6 @@ class _LNNetworkPageState extends State<LNNetworkPage> {
             onPressed: !querying ? queryRoute : null,
             child: Text("Search",
                 style: TextStyle(fontSize: 11, color: textColor))),
-        Flexible(
-          flex: 5,
-          child: lastQueriedNode != ""
-              ? _QueriedRouteW(lastQueriedNode, queryRouteRes)
-              : const Empty(),
-        ),
-        Flexible(
-          flex: 5,
-          child: nodeInfo != "" ? _NodeInfo(nodeInfo) : const Empty(),
-        ),
       ]),
     );
   }

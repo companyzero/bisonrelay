@@ -1930,7 +1930,6 @@ abstract class PluginPlatform {
   Future<LNGetNodeInfoResponse> lnGetNodeInfo(String target) async {
     var req = LNGetNodeInfoRequest(target, true);
     var res = await asyncCall(CTLNGetNodeInfo, req);
-    developer.log(res);
     return LNGetNodeInfoResponse.fromJson(res);
   }
 
