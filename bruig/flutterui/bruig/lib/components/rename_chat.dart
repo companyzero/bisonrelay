@@ -46,7 +46,13 @@ class _RenameChatModalState extends State<RenameChatModal> {
         Expanded(
             child: Container(
           margin: const EdgeInsets.only(right: 10),
-          child: TextField(controller: nameCtrl),
+          child: TextField(
+            controller: nameCtrl,
+            autofocus: true,
+            onSubmitted: (_) {
+              rename();
+            },
+          ),
         )),
         CancelButton(onPressed: () => Navigator.pop(context)),
         const SizedBox(width: 10, height: 10),
