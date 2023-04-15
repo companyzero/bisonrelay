@@ -21,6 +21,7 @@ class PayTip extends StatefulWidget {
 class _PayTipState extends State<PayTip> {
   void payTip(ChatModel chat, double amount) {
     if (amount <= 0) return;
+    Navigator.pop(context);
     chat.payTip(amount);
   }
 
@@ -39,6 +40,10 @@ class _PayTipState extends State<PayTip> {
             width: 150,
             margin: const EdgeInsets.only(right: 10),
             child: TextField(
+              autofocus: true,
+              onSubmitted: (_) {
+                payTip(chat, amount);
+              },
               onChanged: (String v) => amount = v != "" ? double.parse(v) : 0,
               keyboardType:
                   const TextInputType.numberWithOptions(decimal: true),
@@ -58,7 +63,6 @@ class _PayTipState extends State<PayTip> {
         const SizedBox(width: 10),
         ElevatedButton(
             onPressed: () {
-              Navigator.pop(context);
               payTip(chat, amount);
             },
             child: const Text("Pay")),
