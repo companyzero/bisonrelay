@@ -21,7 +21,7 @@ Color colorFromNick(String nick) {
   return c.toColor();
 }
 
-class FeedPostW extends StatelessWidget {
+class FeedPostW extends StatefulWidget {
   final FeedPostModel post;
   final ChatModel? author;
   final ChatModel? from;
@@ -32,21 +32,47 @@ class FeedPostW extends StatelessWidget {
       {Key? key})
       : super(key: key);
 
+  @override
+  State<FeedPostW> createState() => _FeedPostWState();
+}
+
+class _FeedPostWState extends State<FeedPostW> {
   showContent(BuildContext context) {
-    onTabChange(0, PostContentScreenArgs(post));
+    widget.onTabChange(0, PostContentScreenArgs(widget.post));
+  }
+
+  void authorUpdated() => setState(() {});
+
+  @override
+  initState() {
+    super.initState();
+    widget.author?.addListener(authorUpdated);
+  }
+
+  @override
+  void didUpdateWidget(FeedPostW oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    oldWidget.author?.removeListener(authorUpdated);
+    widget.author?.addListener(authorUpdated);
+  }
+
+  @override
+  void dispose() {
+    widget.author?.removeListener(authorUpdated);
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    var authorNick = author?.nick ?? "";
-    var authorID = post.summ.authorID;
-    var mine = authorID == client.publicID;
+    var authorNick = widget.author?.nick ?? "";
+    var authorID = widget.post.summ.authorID;
+    var mine = authorID == widget.client.publicID;
     if (mine) {
       authorNick = "me";
     } else if (authorNick == "") {
-      authorNick = post.summ.authorNick;
+      authorNick = widget.post.summ.authorNick;
       if (authorNick == "") {
-        authorNick = "[${post.summ.authorID}]";
+        authorNick = "[${widget.post.summ.authorID}]";
       }
     }
 
@@ -85,8 +111,8 @@ class FeedPostW extends StatelessWidget {
                 margin:
                     const EdgeInsets.only(top: 0, bottom: 0, left: 5, right: 0),
                 child: UserContextMenu(
-                  client: client,
-                  targetUserChat: author,
+                  client: widget.client,
+                  targetUserChat: widget.author,
                   disabled: mine,
                   child: CircleAvatar(
                       backgroundColor: avatarColor,
@@ -103,7 +129,7 @@ class FeedPostW extends StatelessWidget {
               Expanded(
                   child: Align(
                       alignment: Alignment.centerRight,
-                      child: Text(post.summ.date.toIso8601String(),
+                      child: Text(widget.post.summ.date.toIso8601String(),
                           style: TextStyle(fontSize: 9, color: darkTextColor))))
             ],
           ),
@@ -116,8 +142,9 @@ class FeedPostW extends StatelessWidget {
                 child: Align(
                     alignment: Alignment.center,
                     child: Provider<DownloadSource>(
-                        create: (context) => DownloadSource(post.summ.authorID),
-                        child: MarkdownArea(post.summ.title, false))))
+                        create: (context) =>
+                            DownloadSource(widget.post.summ.authorID),
+                        child: MarkdownArea(widget.post.summ.title, false))))
           ]),
           const SizedBox(height: 5),
           Row(children: [
