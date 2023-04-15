@@ -91,6 +91,31 @@ class _CommentWState extends State<_CommentW> {
     widget.client.requestMediateID(widget.post.summ.from, widget.comment.uid);
   }
 
+  void chatUpdated() => setState(() {});
+
+  @override
+  void initState() {
+    super.initState();
+    widget.client.getExistingChat(widget.comment.uid)?.addListener(chatUpdated);
+  }
+
+  @override
+  void didUpdateWidget(_CommentW oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    oldWidget.client
+        .getExistingChat(widget.comment.uid)
+        ?.removeListener(chatUpdated);
+    widget.client.getExistingChat(widget.comment.uid)?.addListener(chatUpdated);
+  }
+
+  @override
+  void dispose() {
+    widget.client
+        .getExistingChat(widget.comment.uid)
+        ?.removeListener(chatUpdated);
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     var nick = widget.comment.nick;
@@ -326,10 +351,14 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
     Golib.relayPostToAll(widget.args.post.summ.from, widget.args.post.summ.id);
   }
 
+  void authorUpdated() => setState(() {});
+
   @override
   void initState() {
     super.initState();
     widget.args.post.addListener(postUpdated);
+    var authorID = widget.args.post.summ.authorID;
+    widget.client.getExistingChat(authorID)?.addListener(authorUpdated);
     loadContent();
   }
 
@@ -338,12 +367,17 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
     super.didUpdateWidget(oldWidget);
     oldWidget.args.post.removeListener(postUpdated);
     widget.args.post.addListener(postUpdated);
+    var authorID = widget.args.post.summ.authorID;
+    oldWidget.client.getExistingChat(authorID)?.removeListener(authorUpdated);
+    widget.client.getExistingChat(authorID)?.addListener(authorUpdated);
   }
 
   @override
   void dispose() {
-    widget.args.post.removeListener(postUpdated);
     super.dispose();
+    widget.args.post.removeListener(postUpdated);
+    var authorID = widget.args.post.summ.authorID;
+    widget.client.getExistingChat(authorID)?.removeListener(authorUpdated);
   }
 
   Future<void> launchUrlAwait(url) async {
