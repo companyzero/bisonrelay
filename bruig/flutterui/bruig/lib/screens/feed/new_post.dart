@@ -262,13 +262,6 @@ class _NewPostScreenState extends State<NewPostScreen> {
                   pickFile(context);
                 },
                 child: const Text("Load File")),
-            const SizedBox(width: 10),
-            Flexible(
-              flex: 5,
-              fit: FlexFit.tight,
-              child: Text(embedMime,
-                  style: TextStyle(color: textColor, fontSize: 15)),
-            ),
             /*  XXX Need to figure out Link to Content button
             const SizedBox(width: 10),
             OutlinedButton(
