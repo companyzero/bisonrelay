@@ -2,13 +2,87 @@ import 'dart:convert';
 
 import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/models/feed.dart';
-import 'package:bruig/screens/manage_content/manage_content.dart';
 import 'package:bruig/screens/feed.dart';
 import 'package:bruig/util.dart';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
+
+void showAltTextModal(BuildContext context, String mime, String id,
+    TextEditingController contentCtrl) {
+  showModalBottomSheet(
+    context: context,
+    builder: (BuildContext context) => AddAltText(mime, id, contentCtrl),
+  );
+}
+
+class AddAltText extends StatefulWidget {
+  final String mime;
+  final String id;
+  final TextEditingController contentCtrl;
+  const AddAltText(this.mime, this.id, this.contentCtrl, {super.key});
+
+  @override
+  State<AddAltText> createState() => _AddAltTextState();
+}
+
+class _AddAltTextState extends State<AddAltText> {
+  TextEditingController embedAlt = TextEditingController();
+
+  String get mime => widget.mime;
+  String get id => widget.id;
+  TextEditingController get contentCtrl => widget.contentCtrl;
+
+  void _addEmbed() {
+    List<String> embed = [];
+    if (mime != "") {
+      embed.add("type=$mime");
+    }
+    if (embedAlt.text != "") {
+      embed.add("alt=${Uri.encodeComponent(embedAlt.text)}");
+    }
+    if (id != "") {
+      embed.add("data=[content $id]");
+    }
+    var embedText = "\n--embed[${embed.join(",")}]--\n";
+    contentCtrl.text += embedText;
+    Navigator.pop(context);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    var theme = Theme.of(context);
+    var textColor = theme.focusColor;
+
+    return Container(
+      padding: const EdgeInsets.all(30),
+      child: Row(
+        children: [
+          Text("Add Alt Text: ",
+              style: TextStyle(color: textColor, fontSize: 15)),
+          Expanded(
+            child: TextField(
+              onSubmitted: (_) {
+                _addEmbed();
+              },
+              controller: embedAlt,
+              autofocus: true,
+            ),
+          ),
+          const SizedBox(width: 30),
+          ElevatedButton(
+            onPressed: () => _addEmbed(),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.grey),
+            child: const Text("No, thanks"),
+          ),
+          const SizedBox(width: 10),
+          ElevatedButton(onPressed: _addEmbed, child: const Text("Add")),
+        ],
+      ),
+    );
+  }
+}
 
 class NewPostScreen extends StatefulWidget {
   final FeedModel feed;
@@ -27,7 +101,6 @@ class _NewPostScreenState extends State<NewPostScreen> {
   String embedData = "";
   String embedMime = "";
   SharedFile? embedLink;
-  TextEditingController embedAlt = TextEditingController();
   int estimatedSize = 0;
 
   void goBack() {
@@ -81,7 +154,7 @@ class _NewPostScreenState extends State<NewPostScreen> {
     }
   }
 
-  void pickFile() async {
+  void pickFile(BuildContext context) async {
     var filePickRes = await FilePicker.platform.pickFiles(
       allowedExtensions: ["png", "jpg", "jpeg", "txt"],
       withData: true,
@@ -123,6 +196,8 @@ class _NewPostScreenState extends State<NewPostScreen> {
       id = generateRandomString(12);
     }
 
+    showAltTextModal(context, mime, id, contentCtrl);
+
     setState(() {
       embedContents[id] = data;
       embedMime = mime;
@@ -131,46 +206,18 @@ class _NewPostScreenState extends State<NewPostScreen> {
     recalcEstimatedSize();
   }
 
-  void addEmbed() {
-    List<String> parms = [];
-    if (embedMime != "") {
-      parms.add("type=$embedMime");
-    }
-    if (embedLink != null) {
-      parms.add("download=${embedLink!.fid}");
-    }
-    if (embedAlt.text != "") {
-      parms.add("alt=${Uri.encodeComponent(embedAlt.text)}");
-    }
-    if (embedData != "") {
-      parms.add("data=[content $embedData]");
-    }
-    var embed = "\n--embed[${parms.join(",")}]--\n";
-    contentCtrl.text += embed;
-    clearEmbed();
-    recalcEstimatedSize();
-  }
-
-  void clearEmbed() {
-    setState(() {
-      embedMime = "";
-      embedData = "";
-      embedAlt.clear();
-      embedLink = null;
-    });
-  }
-
-  void linkToFile() async {
-    var args = ManageContentScreenArgs(true);
-    var fid = await Navigator.of(context, rootNavigator: true)
-        .pushNamed("/manageContent", arguments: args);
-    if (fid == null) {
-      return;
-    }
-    setState(() {
-      embedLink = fid as SharedFile;
-    });
-  }
+  // TODO: Implement together with link to content button
+  // void linkToFile() async {
+  //   var args = ManageContentScreenArgs(true);
+  //   var fid = await Navigator.of(context, rootNavigator: true)
+  //       .pushNamed("/manageContent", arguments: args);
+  //   if (fid == null) {
+  //     return;
+  //   }
+  //   setState(() {
+  //     embedLink = fid as SharedFile;
+  //   });
+  // }
 
   @override
   void initState() {
@@ -210,7 +257,11 @@ class _NewPostScreenState extends State<NewPostScreen> {
             Text("Add embedded",
                 style: TextStyle(color: textColor, fontSize: 15)),
             const SizedBox(width: 10),
-            OutlinedButton(onPressed: pickFile, child: const Text("Load File")),
+            OutlinedButton(
+                onPressed: () {
+                  pickFile(context);
+                },
+                child: const Text("Load File")),
             const SizedBox(width: 10),
             Flexible(
               flex: 5,
@@ -218,26 +269,17 @@ class _NewPostScreenState extends State<NewPostScreen> {
               child: Text(embedMime,
                   style: TextStyle(color: textColor, fontSize: 15)),
             ),
-            const SizedBox(width: 10),
             /*  XXX Need to figure out Link to Content button
+            const SizedBox(width: 10),
             OutlinedButton(
                 onPressed: linkToFile, child: const Text("Link to Content")),
             const SizedBox(width: 10),
-            */
             Flexible(
               flex: 3,
               fit: FlexFit.tight,
               child: Text(embedLink?.filename ?? ""),
             ),
-            const SizedBox(width: 10),
-            Text("Alt Text: ",
-                style: TextStyle(color: textColor, fontSize: 15)),
-            Flexible(
-              flex: 5,
-              child: TextField(controller: embedAlt),
-            ),
-            IconButton(onPressed: addEmbed, icon: const Icon(Icons.add)),
-            IconButton(onPressed: clearEmbed, icon: const Icon(Icons.delete)),
+            */
           ]),
           const SizedBox(height: 20),
           const Divider(thickness: 2),
