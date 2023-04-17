@@ -41,7 +41,7 @@ import 'package:bruig/components/empty_widget.dart';
             ]),
             const SizedBox(height: 20),
             Expanded(
-                child: 
+                child:
             )),
             const SizedBox(height: 20),
           ],
@@ -83,15 +83,25 @@ class _FeedScreenState extends State<FeedScreen> {
         if (showPost == null) {
           return Consumer2<FeedModel, ClientModel>(
               builder: (context, feed, client, child) =>
-                  FeedPosts(feed, client, onItemChanged));
+                  FeedPosts(feed, client, onItemChanged, false));
         } else {
           return PostContentScreen(
               showPost as PostContentScreenArgs, onItemChanged);
         }
       case 1:
+        if (showPost == null) {
+          return Consumer2<FeedModel, ClientModel>(
+            builder: (context, feed, client, child) =>
+                FeedPosts(feed, client, onItemChanged, true),
+          );
+        } else {
+          return PostContentScreen(
+              showPost as PostContentScreenArgs, onItemChanged);
+        }
+      case 2:
         return Consumer<ClientModel>(
             builder: (context, client, child) => PostListsScreen(client));
-      case 2:
+      case 3:
         return Consumer<FeedModel>(
             builder: (context, feed, child) => NewPostScreen(feed));
     }
