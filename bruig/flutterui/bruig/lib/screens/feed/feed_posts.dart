@@ -187,7 +187,9 @@ class FeedPosts extends StatefulWidget {
   final FeedModel feed;
   final ClientModel client;
   final Function tabChange;
-  const FeedPosts(this.feed, this.client, this.tabChange, {Key? key})
+  final bool onlyShowOwnPosts;
+  const FeedPosts(this.feed, this.client, this.tabChange, this.onlyShowOwnPosts,
+      {Key? key})
       : super(key: key);
 
   @override
@@ -216,25 +218,25 @@ class _FeedPostsState extends State<FeedPosts> {
   Widget build(BuildContext context) {
     var theme = Theme.of(context);
     var backgroundColor = theme.backgroundColor;
-
-    return Consumer<ClientModel>(
-        builder: (context, client, child) => Container(
-              margin: const EdgeInsets.all(1),
-              decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(3),
-                  color: backgroundColor),
-              padding: const EdgeInsets.only(
-                  left: 117, right: 117, top: 10, bottom: 10),
-              child: ListView.builder(
-                  itemCount: widget.feed.posts.length,
-                  itemBuilder: (context, index) {
-                    var post = widget.feed.posts.elementAt(index);
-                    var author =
-                        widget.client.getExistingChat(post.summ.authorID);
-                    var from = widget.client.getExistingChat(post.summ.from);
-                    return FeedPostW(
-                        post, author, from, client, widget.tabChange);
-                  }),
-            ));
+    var posts = widget.onlyShowOwnPosts
+        ? widget.feed.posts
+            .where((post) => (post.summ.authorID == widget.client.publicID))
+        : widget.feed.posts;
+    return Container(
+      margin: const EdgeInsets.all(1),
+      decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(3), color: backgroundColor),
+      padding:
+          const EdgeInsets.only(left: 117, right: 117, top: 10, bottom: 10),
+      child: ListView.builder(
+          itemCount: posts.length,
+          itemBuilder: (context, index) {
+            var post = posts.elementAt(index);
+            var author = widget.client.getExistingChat(post.summ.authorID);
+            var from = widget.client.getExistingChat(post.summ.from);
+            return FeedPostW(
+                post, author, from, widget.client, widget.tabChange);
+          }),
+    );
   }
 }

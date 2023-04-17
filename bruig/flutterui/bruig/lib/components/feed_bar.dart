@@ -36,26 +36,27 @@ class _FeedBarState extends State<FeedBar> {
     var sidebarBackground = theme.backgroundColor;
     var hoverColor = theme.hoverColor;
     return Container(
-        margin: const EdgeInsets.all(1),
-        width: 118,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(5),
-          gradient: LinearGradient(
-              begin: Alignment.centerRight,
-              end: Alignment.centerLeft,
-              colors: [
-                hoverColor,
-                sidebarBackground,
-                sidebarBackground,
-              ],
-              stops: const [
-                0,
-                0.51,
-                1
-              ]),
-        ),
-        //color: theme.colorScheme.secondary,
-        child: ListView(children: [
+      margin: const EdgeInsets.all(1),
+      width: 118,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(5),
+        gradient: LinearGradient(
+            begin: Alignment.centerRight,
+            end: Alignment.centerLeft,
+            colors: [
+              hoverColor,
+              sidebarBackground,
+              sidebarBackground,
+            ],
+            stops: const [
+              0,
+              0.51,
+              1
+            ]),
+      ),
+      //color: theme.colorScheme.secondary,
+      child: ListView(
+        children: [
           ListTile(
             title: Text("News Feed",
                 style: TextStyle(
@@ -69,7 +70,7 @@ class _FeedBarState extends State<FeedBar> {
             },
           ),
           ListTile(
-            title: Text("Subscriptions",
+            title: Text("Your Posts",
                 style: TextStyle(
                     color: selectedIndex == 1
                         ? selectedTextColor
@@ -81,7 +82,7 @@ class _FeedBarState extends State<FeedBar> {
             },
           ),
           ListTile(
-            title: Text("New Post",
+            title: Text("Subscriptions",
                 style: TextStyle(
                     color: selectedIndex == 2
                         ? selectedTextColor
@@ -92,6 +93,20 @@ class _FeedBarState extends State<FeedBar> {
               tabChange(2, null);
             },
           ),
-        ]));
+          ListTile(
+            title: Text("New Post",
+                style: TextStyle(
+                    color: selectedIndex == 3
+                        ? selectedTextColor
+                        : unselectedTextColor,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w400)),
+            onTap: () {
+              tabChange(3, null);
+            },
+          ),
+        ],
+      ),
+    );
   }
 }
