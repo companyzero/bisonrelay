@@ -1077,9 +1077,14 @@ func PostsServiceDefn() ServiceDefn {
 // PaymentsServiceClient is the client API for PaymentsService service.
 type PaymentsServiceClient interface {
 	// TipUser attempts to send a tip to a user. The user must be or come online
-	// for this to complete.
+	// for this to complete. The request to tip is persisted and may continue
+	// after a client restart.
 	TipUser(ctx context.Context, in *TipUserRequest, out *TipUserResponse) error
+	// TipProgress starts a stream that receives events about the progress of
+	// TipUser requests. Multiple events for the same request may be received.
 	TipProgress(ctx context.Context, in *TipProgressRequest) (PaymentsService_TipProgressClient, error)
+	// AckTipProgress acknowledges events received up to a given
+	// sequence_id have been processed.
 	AckTipProgress(ctx context.Context, in *AckRequest, out *AckResponse) error
 }
 
@@ -1118,9 +1123,14 @@ func NewPaymentsServiceClient(c ClientConn) PaymentsServiceClient {
 // PaymentsServiceServer is the server API for PaymentsService service.
 type PaymentsServiceServer interface {
 	// TipUser attempts to send a tip to a user. The user must be or come online
-	// for this to complete.
+	// for this to complete. The request to tip is persisted and may continue
+	// after a client restart.
 	TipUser(context.Context, *TipUserRequest, *TipUserResponse) error
+	// TipProgress starts a stream that receives events about the progress of
+	// TipUser requests. Multiple events for the same request may be received.
 	TipProgress(context.Context, *TipProgressRequest, PaymentsService_TipProgressServer) error
+	// AckTipProgress acknowledges events received up to a given
+	// sequence_id have been processed.
 	AckTipProgress(context.Context, *AckRequest, *AckResponse) error
 }
 
@@ -1138,7 +1148,7 @@ func PaymentsServiceDefn() ServiceDefn {
 				NewResponse:  func() proto.Message { return new(TipUserResponse) },
 				RequestDefn:  func() protoreflect.MessageDescriptor { return new(TipUserRequest).ProtoReflect().Descriptor() },
 				ResponseDefn: func() protoreflect.MessageDescriptor { return new(TipUserResponse).ProtoReflect().Descriptor() },
-				Help:         "TipUser attempts to send a tip to a user. The user must be or come online for this to complete.",
+				Help:         "TipUser attempts to send a tip to a user. The user must be or come online for this to complete. The request to tip is persisted and may continue after a client restart.",
 				ServerHandler: func(x interface{}, ctx context.Context, request, response proto.Message) error {
 					return x.(PaymentsServiceServer).TipUser(ctx, request.(*TipUserRequest), response.(*TipUserResponse))
 				},
@@ -1153,7 +1163,7 @@ func PaymentsServiceDefn() ServiceDefn {
 				NewResponse:  func() proto.Message { return new(TipProgressEvent) },
 				RequestDefn:  func() protoreflect.MessageDescriptor { return new(TipProgressRequest).ProtoReflect().Descriptor() },
 				ResponseDefn: func() protoreflect.MessageDescriptor { return new(TipProgressEvent).ProtoReflect().Descriptor() },
-				Help:         "",
+				Help:         "TipProgress starts a stream that receives events about the progress of TipUser requests. Multiple events for the same request may be received.",
 				ServerStreamHandler: func(x interface{}, ctx context.Context, request proto.Message, stream ServerStream) error {
 					return x.(PaymentsServiceServer).TipProgress(ctx, request.(*TipProgressRequest), streamerImpl[*TipProgressEvent]{s: stream})
 				},
@@ -1168,7 +1178,7 @@ func PaymentsServiceDefn() ServiceDefn {
 				NewResponse:  func() proto.Message { return new(AckResponse) },
 				RequestDefn:  func() protoreflect.MessageDescriptor { return new(AckRequest).ProtoReflect().Descriptor() },
 				ResponseDefn: func() protoreflect.MessageDescriptor { return new(AckResponse).ProtoReflect().Descriptor() },
-				Help:         "",
+				Help:         "AckTipProgress acknowledges events received up to a given sequence_id have been processed.",
 				ServerHandler: func(x interface{}, ctx context.Context, request, response proto.Message) error {
 					return x.(PaymentsServiceServer).AckTipProgress(ctx, request.(*AckRequest), response.(*AckResponse))
 				},
@@ -1325,7 +1335,8 @@ var help_messages = map[string]map[string]string{
 		"initial_rendezvous": "initial_rendezvous is the initial random RV the key exchange happened.",
 	},
 	"WriteNewInviteRequest": {
-		"@": "WriteNewInviteRequest is the request to add a new invite.",
+		"@":  "WriteNewInviteRequest is the request to add a new invite.",
+		"gc": "gc is the hex-encoded ID or the alias of the GC in the local client.",
 	},
 	"WriteNewInviteResponse": {
 		"@":            "WriteNewInviteResponse is an invite that can be sent (out-of-band) to an user the local client wishes to KX with.",
@@ -1437,19 +1448,19 @@ var help_messages = map[string]map[string]string{
 		"gc":          "gc is the GC definition.",
 	},
 	"TipProgressRequest": {
-		"@":            "",
+		"@":            "TipProgressRequest is the request to create a stream that receives events about the progress of TipUser requests.",
 		"unacked_from": "unacked_from specifies to the server the sequence_id of the last received tip progress event. Events received by the server that have a higher sequence_id will be streamed back to the client.",
 	},
 	"TipProgressEvent": {
-		"@":             "",
+		"@":             "TipProgressEvent details the progress of a TipUser request.",
 		"sequence_id":   "sequence_id is an opaque sequential ID.",
-		"uid":           "",
-		"nick":          "",
-		"amount_matoms": "",
-		"completed":     "",
-		"attempt":       "",
-		"attempt_err":   "",
-		"will_retry":    "",
+		"uid":           "uid is the User ID of the TipUser target.",
+		"nick":          "nick is the nick of the TipUser target.",
+		"amount_matoms": "amount_matoms is the amount being tipped in milli-atoms.",
+		"completed":     "completed flags whether the TipUser request was successfully completed (i.e. if the tip was paid).",
+		"attempt":       "attempt is the attempt number.",
+		"attempt_err":   "attempt_err is filled when the attempt to fetch an invoice or perform the payment for a received invoice failed.",
+		"will_retry":    "will_retry flags whether a new attempt to request an invoice and perform a payment will be done or if no more attempts will happen.",
 	},
 	"RMPrivateMessage": {
 		"@":       "RMPrivateMessage is the network-level routed private message.",
