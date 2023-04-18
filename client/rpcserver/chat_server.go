@@ -206,7 +206,7 @@ func marshalOOBPublicIDInvite(invite *rpc.OOBPublicIdentityInvite, res *types.OO
 	return res
 }
 
-func (c *chatServer) WriteNewInvite(_ context.Context, _ *types.WriteNewInviteRequest, res *types.WriteNewInviteResponse) error {
+func (c *chatServer) WriteNewInvite(_ context.Context, req *types.WriteNewInviteRequest, res *types.WriteNewInviteResponse) error {
 	b := bytes.NewBuffer(nil)
 	invite, err := c.c.WriteNewInvite(b)
 	if err != nil {
@@ -216,6 +216,16 @@ func (c *chatServer) WriteNewInvite(_ context.Context, _ *types.WriteNewInviteRe
 		InviteBytes: b.Bytes(),
 		Invite:      marshalOOBPublicIDInvite(&invite, res.Invite),
 	}
+	if req.Gc != "" {
+		gcid, err := c.c.GCIDByName(req.Gc)
+		if err != nil {
+			return err
+		}
+		if err = c.c.AddInviteOnKX(invite.InitialRendezvous, gcid); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 

@@ -143,8 +143,8 @@ service PostsService {
 /* PaymentsService is the service to perform payment-related actions. */
 service PaymentsService {
   /* TipUser attempts to send a tip to a user. The user must be or come online
-     for this to complete. The request to tip an user is persisted and may
-     continue after a client restart. */
+     for this to complete. The request to tip is persisted and may continue
+     after a client restart. */
   rpc TipUser(TipUserRequest) returns (TipUserResponse);
 
   /* TipProgress starts a stream that receives events about the progress of
@@ -416,7 +416,10 @@ message KXCompleted {
 }
 
 /* WriteNewInviteRequest is the request to add a new invite. */
-message WriteNewInviteRequest {};
+message WriteNewInviteRequest {
+  /* gc is the hex-encoded ID or the alias of the GC in the local client. */
+  string gc = 1;
+};
 
 /* WriteNewInviteResponse is an invite that can be sent (out-of-band) to an
    user the local client wishes to KX with. */
