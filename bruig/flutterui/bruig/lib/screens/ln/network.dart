@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:golib_plugin/util.dart';
+import 'package:bruig/components/copyable.dart';
 
 class LNNetworkPage extends StatefulWidget {
   const LNNetworkPage({Key? key}) : super(key: key);
@@ -80,7 +81,7 @@ class _QueriedRouteW extends StatelessWidget {
       Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text("$hop", style: TextStyle(fontSize: 11, color: textColor)),
         const SizedBox(height: 8),
-        Text(h.pubkey, style: TextStyle(fontSize: 11, color: textColor)),
+        Copyable(h.pubkey, TextStyle(fontSize: 11, color: textColor)),
         const SizedBox(height: 8),
         Text(chanID, style: TextStyle(fontSize: 11, color: textColor)),
         const SizedBox(height: 8)
@@ -129,7 +130,7 @@ class _NodeInfo extends StatelessWidget {
     var capacity = formatDCR(atomsToDCR(chan.capacity));
     return Row(children: [
       Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text("Remote Node:",
+        Text("Channel ID:",
             style: TextStyle(fontSize: 11, color: secondaryTextColor)),
         const SizedBox(height: 8),
         Text("Last Channel Update:",
@@ -156,8 +157,7 @@ class _NodeInfo extends StatelessWidget {
                 .toIso8601String(),
             style: TextStyle(fontSize: 11, color: textColor)),
         const SizedBox(height: 8),
-        Text(chan.channelPoint,
-            style: TextStyle(fontSize: 11, color: textColor)),
+        Copyable(chan.channelPoint, TextStyle(fontSize: 11, color: textColor)),
         const SizedBox(height: 8),
         Text(capacity, style: TextStyle(fontSize: 11, color: textColor)),
         const SizedBox(height: 8),
@@ -176,8 +176,7 @@ class _NodeInfo extends StatelessWidget {
     var textColor = theme.focusColor;
     var secondaryTextColor = theme.dividerColor;
     return Column(children: [
-      Text(nodeInfo.node.pubkey,
-          style: TextStyle(fontSize: 13, color: textColor)),
+      Copyable(nodeInfo.node.pubkey, TextStyle(fontSize: 13, color: textColor)),
       Text("Number of channels: ${nodeInfo.numChannels}",
           style: TextStyle(fontSize: 13, color: textColor)),
       Text("Total Capacity: ${formatDCR(atomsToDCR(nodeInfo.totalCapacity))}",
