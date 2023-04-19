@@ -42,6 +42,13 @@ class FeedPostModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  int _mostRecentCommentTime = 0;
+  int get mostRecentCommentTime => _mostRecentCommentTime;
+  void set mostRecentCommentTime(int s) {
+    _mostRecentCommentTime = s;
+    notifyListeners();
+  }
+
   bool _unreadPost = false;
   bool get unreadPost => _unreadPost;
   void set unreadPost(bool b) {
@@ -108,6 +115,12 @@ class FeedPostModel extends ChangeNotifier {
       } else {
         children[c.parentID] = [c];
       }
+      if (c.timestamp != "") {
+        var intTimestamp = int.parse(c.timestamp, radix: 16);
+        if (mostRecentCommentTime < intTimestamp) {
+          mostRecentCommentTime = intTimestamp;
+        }
+      }
     });
 
     // Process comment threads, starting with top level comments.
@@ -159,6 +172,7 @@ class FeedPostModel extends ChangeNotifier {
         }
       }
       _comments.insert(insertIdx, c);
+      _mostRecentCommentTime = int.parse(c.timestamp, radix: 16);
     }
 
     // Drop from list of unreplicated comments if this status update is mine.
@@ -216,7 +230,11 @@ class FeedModel extends ChangeNotifier {
     var oldPosts = await Golib.listPosts();
     oldPosts.sort((PostSummary a, b) => b.date.compareTo(a.date));
     oldPosts.forEach((p) {
-      _posts.add(FeedPostModel(p));
+      var newPost = FeedPostModel(p);
+      newPost.readComments();
+      _posts.add(newPost);
+      _posts.sort((FeedPostModel a, b) =>
+          b.mostRecentCommentTime.compareTo(a.mostRecentCommentTime));
     });
     notifyListeners();
 
@@ -255,6 +273,8 @@ class FeedModel extends ChangeNotifier {
         var post = _posts[postIdx];
         unreadPostsComments = true;
         post.addReceivedStatus(msg.status, true);
+        _posts.sort((FeedPostModel a, b) =>
+            b.mostRecentCommentTime.compareTo(a.mostRecentCommentTime));
       }
     }
     notifyListeners();
