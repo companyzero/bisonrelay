@@ -54,7 +54,9 @@ func (pw *lnRequestRecvWindow) request() {
 		server = pw.form.inputs[1].(*textInputHelper).Value()
 		certPath := pw.form.inputs[2].(*textInputHelper).Value()
 
-		cert, pw.requestErr = os.ReadFile(certPath)
+		if certPath != "" {
+			cert, pw.requestErr = os.ReadFile(certPath)
+		}
 	} else if pw.as.network == "mainnet" {
 		server = lp0Server
 		cert = []byte(lp0Cert)
