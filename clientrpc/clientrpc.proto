@@ -419,6 +419,10 @@ message KXCompleted {
 message WriteNewInviteRequest {
   /* gc is the hex-encoded ID or the alias of the GC in the local client. */
   string gc = 1;
+
+  /* fund_amount is how much to send as funds in the invite. If zero, no funds
+     are included. Amount is in atoms. */
+  uint64 fund_amount = 2;
 };
 
 /* WriteNewInviteResponse is an invite that can be sent (out-of-band) to an
@@ -724,6 +728,23 @@ message PublicIdentity {
   bytes signature = 7;
 }
 
+/* InviteFunds is the lowlevel information about funds added to an invite. */
+message InviteFunds {
+  /* tx is the hash of the transaction that includes the funds. */
+  string tx = 1;
+  /* index is the output index of the transaction that includes the funds. */
+  uint32 index = 2;
+  /* tree is the tree of the transaction that includes the funds. */
+  int32 tree = 3;
+  /* private_key is the private key needed to redeem the funds in the transaction. */
+  string private_key = 4 [json_name="private_key"];
+  /* height_hint is a height at or before the transaction that includes the funds
+     is mined in. */
+  uint32 height_hint = 5;
+  /* address is the public address that the funds were sent to. */
+  string address = 6;
+}
+
 /* OOBPublicIdentityInvite is an out-of-band invite to perform a KX. */
 message OOBPublicIdentityInvite {
   /* public is the public identity of the inviter. */
@@ -732,6 +753,10 @@ message OOBPublicIdentityInvite {
   bytes initial_rendezvous = 2 [json_name="initialrendezvous"];
   /* reset_rendezvous is the inviter's reset RV in case of ratchet reset actions. */
   bytes reset_rendezvous = 3 [json_name="resetrendezvous"];
+
+  /* funds are funds that may be included in the invite and are redeemable by
+     the invitee. */
+  InviteFunds funds = 4;
 }
 
 /* RMGroupInvite is the information about an invite to join a GC. */
