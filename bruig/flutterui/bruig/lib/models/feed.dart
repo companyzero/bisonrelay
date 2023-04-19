@@ -42,6 +42,22 @@ class FeedPostModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  bool _unreadPost = false;
+  bool get unreadPost => _unreadPost;
+  void set unreadPost(bool b) {
+    _unreadPost = b;
+    notifyListeners();
+  }
+
+  bool _active = false;
+  bool get active => _active;
+  void _setActive(bool b) {
+    _active = b;
+    _unreadPost = false;
+    _hasUnreadComments = false;
+    notifyListeners();
+  }
+
   Future<void> readPost() async {
     var pm = await Golib.readPost(summ.from, summ.id);
     content = pm.attributes[RMPMain] ?? "";
@@ -124,6 +140,7 @@ class FeedPostModel extends ChangeNotifier {
       // Not a comment. Nothing to do.
       return;
     }
+    _hasUnreadComments = true;
 
     // Figure out where to insert the comment or add a new top-level comment.
     var c = await _statusToComment(ps);
@@ -168,10 +185,29 @@ class FeedModel extends ChangeNotifier {
   List<FeedPostModel> _posts = [];
   Iterable<FeedPostModel> get posts => UnmodifiableListView(_posts);
 
-  bool _hasUnreadPosts = false;
-  bool get hasUnreadPosts => _hasUnreadPosts;
-  void set hasUnreadPosts(bool b) {
-    _hasUnreadPosts = b;
+  bool _unreadPostsComments = false;
+  bool get unreadPostsComments => _unreadPostsComments;
+  void set unreadPostsComments(bool b) {
+    _unreadPostsComments = b;
+    notifyListeners();
+  }
+
+  FeedPostModel? _active;
+  FeedPostModel? get active => _active;
+
+  void set active(FeedPostModel? f) {
+    _active?._setActive(false);
+    _active = f;
+    f?._setActive(true);
+
+    // Check for unreadPostsAndComments so we can turn off sidebar notification
+    bool unread = false;
+    for (int i = 0; i < _posts.length; i++) {
+      if (_posts[i].hasUnreadComments || _posts[i]._unreadPost) {
+        unread = true;
+      }
+    }
+    _unreadPostsComments = unread;
     notifyListeners();
   }
 
@@ -187,8 +223,10 @@ class FeedModel extends ChangeNotifier {
     var stream = Golib.postsFeed();
     await for (var msg in stream) {
       // Add at the start of the feed so it appears at the top of the feed page.
-      _posts.insert(0, FeedPostModel(msg));
-      hasUnreadPosts = true;
+      var newPost = FeedPostModel(msg);
+      newPost.unreadPost = true;
+      unreadPostsComments = true;
+      _posts.insert(0, newPost);
 
       // Handle posts that replace a previously relayed post: the client removes
       // the relayed post in favor of the one by the author, so remove such posts
@@ -215,9 +253,11 @@ class FeedModel extends ChangeNotifier {
           (p) => p.summ.from == msg.postFrom && p.summ.id == msg.pid);
       if (postIdx > -1) {
         var post = _posts[postIdx];
+        unreadPostsComments = true;
         post.addReceivedStatus(msg.status, true);
       }
     }
+    notifyListeners();
   }
 
   Future<void> createPost(String content) async {

@@ -31,6 +31,10 @@ class _SidebarState extends State<Sidebar> {
       SidebarXController(selectedIndex: 0, extended: true);
   FeedModel get feed => widget.feed;
 
+  void feedUpdated() async {
+    setState(() {});
+  }
+
   void clientUpdated() async {
     setState(() {
       connState = client.connState;
@@ -51,15 +55,18 @@ class _SidebarState extends State<Sidebar> {
   void initState() {
     super.initState();
     clientUpdated();
+    feed.addListener(feedUpdated);
     client.addListener(clientUpdated);
     mainMenu.addListener(menuUpdated);
   }
 
   @override
   void didUpdateWidget(Sidebar oldWidget) {
+    oldWidget.feed.removeListener(feedUpdated);
     oldWidget.client.removeListener(clientUpdated);
     oldWidget.mainMenu.removeListener(menuUpdated);
     super.didUpdateWidget(oldWidget);
+    feed.addListener(feedUpdated);
     client.addListener(clientUpdated);
     mainMenu.addListener(menuUpdated);
   }
@@ -175,7 +182,7 @@ class _SidebarState extends State<Sidebar> {
             .map((e) => SidebarXItem(
                   label: e.label,
                   iconWidget: (e.label == "Chats" && client.hasUnreadChats) ||
-                          (e.label == "News Feed" && feed.hasUnreadPosts)
+                          (e.label == "News Feed" && feed.unreadPostsComments)
                       ? e.iconNotification
                       : e.icon,
                   onTap: () => switchScreen(e.routeName),
