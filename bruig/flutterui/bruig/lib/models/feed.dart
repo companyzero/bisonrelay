@@ -99,6 +99,12 @@ class FeedPostModel extends ChangeNotifier {
     var children = Map<String, List<FeedCommentModel>>();
     newComments.forEach((c) {
       cmap[c.id] = c;
+      if (c.timestamp != "") {
+        var intTimestamp = int.parse(c.timestamp, radix: 16);
+        if (mostRecentCommentTime < intTimestamp) {
+          mostRecentCommentTime = intTimestamp;
+        }
+      }
       if (c.parentID == "") {
         roots.add(c);
         return;
@@ -114,12 +120,6 @@ class FeedPostModel extends ChangeNotifier {
         children[c.parentID]!.add(c);
       } else {
         children[c.parentID] = [c];
-      }
-      if (c.timestamp != "") {
-        var intTimestamp = int.parse(c.timestamp, radix: 16);
-        if (mostRecentCommentTime < intTimestamp) {
-          mostRecentCommentTime = intTimestamp;
-        }
       }
     });
 
@@ -233,8 +233,7 @@ class FeedModel extends ChangeNotifier {
       var newPost = FeedPostModel(p);
       newPost.readComments();
       _posts.add(newPost);
-      _posts.sort((FeedPostModel a, b) =>
-          b.mostRecentCommentTime.compareTo(a.mostRecentCommentTime));
+      _posts.sort(mySortComparison);
     });
     notifyListeners();
 
@@ -273,11 +272,22 @@ class FeedModel extends ChangeNotifier {
         var post = _posts[postIdx];
         unreadPostsComments = true;
         post.addReceivedStatus(msg.status, true);
-        _posts.sort((FeedPostModel a, b) =>
-            b.mostRecentCommentTime.compareTo(a.mostRecentCommentTime));
+        _posts.sort(mySortComparison);
       }
     }
     notifyListeners();
+  }
+
+  int mySortComparison(FeedPostModel a, FeedPostModel b) {
+    var firstResult =
+        b.mostRecentCommentTime.compareTo(a.mostRecentCommentTime);
+    var secondResult = b.summ.date.compareTo(a.summ.date);
+    final propertyA = a.mostRecentCommentTime;
+    final propertyB = b.mostRecentCommentTime;
+    if (propertyA == 0 || propertyB == 0) {
+      return secondResult;
+    }
+    return firstResult;
   }
 
   Future<void> createPost(String content) async {
