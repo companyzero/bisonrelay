@@ -1335,8 +1335,9 @@ var help_messages = map[string]map[string]string{
 		"initial_rendezvous": "initial_rendezvous is the initial random RV the key exchange happened.",
 	},
 	"WriteNewInviteRequest": {
-		"@":  "WriteNewInviteRequest is the request to add a new invite.",
-		"gc": "gc is the hex-encoded ID or the alias of the GC in the local client.",
+		"@":           "WriteNewInviteRequest is the request to add a new invite.",
+		"gc":          "gc is the hex-encoded ID or the alias of the GC in the local client.",
+		"fund_amount": "fund_amount is how much to send as funds in the invite. If zero, no funds are included. Amount is in atoms.",
 	},
 	"WriteNewInviteResponse": {
 		"@":            "WriteNewInviteResponse is an invite that can be sent (out-of-band) to an user the local client wishes to KX with.",
@@ -1496,11 +1497,21 @@ var help_messages = map[string]map[string]string{
 		"digest":    "digest is a hash of the user's public information.",
 		"signature": "signature is a signature of the user's public information.",
 	},
+	"InviteFunds": {
+		"@":           "InviteFunds is the lowlevel information about funds added to an invite.",
+		"tx":          "tx is the hash of the transaction that includes the funds.",
+		"index":       "index is the output index of the transaction that includes the funds.",
+		"tree":        "tree is the tree of the transaction that includes the funds.",
+		"private_key": "private_key is the private key needed to redeem the funds in the transaction.",
+		"height_hint": "height_hint is a height at or before the transaction that includes the funds is mined in.",
+		"address":     "address is the public address that the funds were sent to.",
+	},
 	"OOBPublicIdentityInvite": {
 		"@":                  "OOBPublicIdentityInvite is an out-of-band invite to perform a KX.",
 		"public":             "public is the public identity of the inviter.",
 		"initial_rendezvous": "initial_rendezvous is the initial random RV where key exchange will happen.",
 		"reset_rendezvous":   "reset_rendezvous is the inviter's reset RV in case of ratchet reset actions.",
+		"funds":              "funds are funds that may be included in the invite and are redeemable by the invitee.",
 	},
 	"RMGroupInvite": {
 		"@":           "RMGroupInvite is the information about an invite to join a GC.",

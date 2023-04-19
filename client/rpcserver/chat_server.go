@@ -10,6 +10,7 @@ import (
 	"github.com/companyzero/bisonrelay/client/clientintf"
 	"github.com/companyzero/bisonrelay/clientrpc/types"
 	"github.com/companyzero/bisonrelay/rpc"
+	"github.com/decred/dcrd/dcrutil/v4"
 	"github.com/decred/slog"
 )
 
@@ -25,6 +26,14 @@ type ChatServerCfg struct {
 	// RootReplayMsgLogs is the root dir where replaymsglogs are stored for
 	// supported message types.
 	RootReplayMsgLogs string
+
+	// PayClient is the payment client needed to create funded invites.
+	PayClient *client.DcrlnPaymentClient
+
+	// InviteFundsAccount is the account to use to generate invite funds.
+	// Must be a non-default account in order to generate funds for
+	// invites.
+	InviteFundsAccount string
 
 	// The following handlers are called when a corresponding request is
 	// received via the clientrpc interface. They may be used for displaying
@@ -203,12 +212,44 @@ func marshalOOBPublicIDInvite(invite *rpc.OOBPublicIdentityInvite, res *types.OO
 		Digest:    invite.Public.Digest[:],
 		Signature: invite.Public.Signature[:],
 	}
+	if invite.Funds != nil {
+		if res.Funds == nil {
+			res.Funds = &types.InviteFunds{}
+		}
+		*res.Funds = types.InviteFunds{
+			Tx:         invite.Funds.Tx.String(),
+			Index:      invite.Funds.Index,
+			Tree:       int32(invite.Funds.Tree),
+			PrivateKey: invite.Funds.PrivateKey,
+			HeightHint: invite.Funds.HeightHint,
+			Address:    invite.Funds.Address,
+		}
+	} else {
+		res.Funds = nil
+	}
 	return res
 }
 
-func (c *chatServer) WriteNewInvite(_ context.Context, req *types.WriteNewInviteRequest, res *types.WriteNewInviteResponse) error {
+func (c *chatServer) WriteNewInvite(ctx context.Context, req *types.WriteNewInviteRequest, res *types.WriteNewInviteResponse) error {
+	var funds *rpc.InviteFunds
+	if req.FundAmount > 0 {
+		if c.cfg.PayClient == nil {
+			return fmt.Errorf("PayClient is nil in chatServer")
+		}
+		if c.cfg.InviteFundsAccount == "" || c.cfg.InviteFundsAccount == "default" {
+			return fmt.Errorf("cannot generate invite funds in default account")
+		}
+
+		var err error
+		funds, err = c.cfg.PayClient.CreateInviteFunds(ctx,
+			dcrutil.Amount(req.FundAmount), c.cfg.InviteFundsAccount)
+		if err != nil {
+			return fmt.Errorf("unable to create invite funds: %v", err)
+		}
+	}
+
 	b := bytes.NewBuffer(nil)
-	invite, err := c.c.WriteNewInvite(b, nil)
+	invite, err := c.c.WriteNewInvite(b, funds)
 	if err != nil {
 		return err
 	}

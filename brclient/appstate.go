@@ -2340,6 +2340,30 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		pc = lnPC
 		lnRPC = lnPC.LNRPC()
 		lnWallet = lnPC.LNWallet()
+
+		// Create the invite funds account if it is set, non-default and
+		// does not yet exist.
+		if args.InviteFundsAccount != "" && args.InviteFundsAccount != "default" {
+			accounts, err := lnWallet.ListAccounts(ctx, &walletrpc.ListAccountsRequest{})
+			if err != nil {
+				return nil, err
+			}
+
+			hasAccount := false
+			for _, acct := range accounts.Accounts {
+				if acct.Name == args.InviteFundsAccount {
+					hasAccount = true
+					break
+				}
+			}
+			if !hasAccount {
+				_, err := lnWallet.DeriveNextAccount(ctx,
+					&walletrpc.DeriveNextAccountRequest{Name: args.InviteFundsAccount})
+				if err != nil {
+					return nil, fmt.Errorf("unable to create invite funds account: %v", err)
+				}
+			}
+		}
 	}
 
 	var d net.Dialer
@@ -3159,9 +3183,11 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		})
 		rpcServer.InitVersionService(appName, version.Version)
 		chatRPCServerCfg := rpcserver.ChatServerCfg{
-			Log:               logBknd.logger("RPCS"),
-			Client:            c,
-			RootReplayMsgLogs: filepath.Join(args.DBRoot, "replaymsglog"),
+			Log:                logBknd.logger("RPCS"),
+			Client:             c,
+			PayClient:          lnPC,
+			RootReplayMsgLogs:  filepath.Join(args.DBRoot, "replaymsglog"),
+			InviteFundsAccount: args.InviteFundsAccount,
 
 			// Following are handlers called when the rpc server receives
 			// a request to perform an action.
