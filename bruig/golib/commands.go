@@ -110,6 +110,11 @@ const (
 	CTSendOnchain                     = 0x6e
 	CTRedeeemInviteFunds              = 0x6f
 	CTFetchInvite                     = 0x70
+	CTReadOnboard                     = 0x71
+	CTRetryOnboard                    = 0x72
+	CTSkipOnboardStage                = 0x73
+	CTStartOnboard                    = 0x74
+	CTCancelOnboard                   = 0x75
 
 	NTInviteReceived         = 0x1001
 	NTInviteAccepted         = 0x1002
@@ -147,6 +152,7 @@ const (
 	NTGCAdminsChanged        = 0x1022
 	NTKXSuggested            = 0x1023
 	NTTipUserProgress        = 0x1024
+	NTOnboardStateChanged    = 0x1025
 )
 
 type cmd struct {

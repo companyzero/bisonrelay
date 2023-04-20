@@ -355,3 +355,8 @@ type Invitation struct {
 	Blob   []byte                      `json:"blob"`
 	Invite rpc.OOBPublicIdentityInvite `json:"invite"`
 }
+
+type OnboardStateChanged struct {
+	State clientintf.OnboardState `json:"onboard"`
+	Err   error                   `json:"error"`
+}

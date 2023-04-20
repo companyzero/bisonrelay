@@ -1699,3 +1699,39 @@ Map<String, dynamic> _$RedeemedInviteFundsToJson(
       'txid': instance.txid,
       'total': instance.total,
     };
+
+OnboardState _$OnboardStateFromJson(Map<String, dynamic> json) => OnboardState(
+      $enumDecode(_$OnboardStageEnumMap, json['stage']),
+      json['key'] as String?,
+      json['invite'] == null
+          ? null
+          : OOBPublicIdentityInvite.fromJson(
+              json['invite'] as Map<String, dynamic>),
+      json['redeemTx'] as String?,
+      json['redeemAmount'] as int? ?? 0,
+      json['out_channel_id'] as String,
+      json['in_channel_id'] as String,
+    );
+
+Map<String, dynamic> _$OnboardStateToJson(OnboardState instance) =>
+    <String, dynamic>{
+      'stage': _$OnboardStageEnumMap[instance.stage]!,
+      'key': instance.key,
+      'invite': instance.invite,
+      'redeemTx': instance.redeemTx,
+      'redeemAmount': instance.redeemAmount,
+      'out_channel_id': instance.outChannelID,
+      'in_channel_id': instance.inChannelID,
+    };
+
+const _$OnboardStageEnumMap = {
+  OnboardStage.stageFetchingInvite: 'fetching_invite',
+  OnboardStage.stageInviteNoFunds: 'invite_no_funds',
+  OnboardStage.stageRedeemingFunds: 'redeeming_funds',
+  OnboardStage.stageWaitingFundsConfirm: 'waiting_funds_confirm',
+  OnboardStage.stageOpeningOutbound: 'opening_outbound',
+  OnboardStage.stageWaitingOutConfirm: 'waiting_out_confirm',
+  OnboardStage.stageOpeningInbound: 'opening_inbound',
+  OnboardStage.stageInitialKX: 'initial_kx',
+  OnboardStage.stageOnboardDone: 'done',
+};

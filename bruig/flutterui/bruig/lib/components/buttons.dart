@@ -3,7 +3,12 @@ import 'package:flutter/material.dart';
 class CancelButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final bool loading;
-  const CancelButton({required this.onPressed, this.loading = false, Key? key})
+  final String label;
+  const CancelButton(
+      {required this.onPressed,
+      this.loading = false,
+      this.label = "Cancel",
+      Key? key})
       : super(key: key);
 
   @override
@@ -12,7 +17,7 @@ class CancelButton extends StatelessWidget {
     return ElevatedButton(
         style: ElevatedButton.styleFrom(backgroundColor: errorColor),
         onPressed: !loading ? onPressed : null,
-        child: const Text("Cancel"));
+        child: Text(label));
   }
 }
 

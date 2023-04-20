@@ -8,19 +8,21 @@ class Copyable extends StatelessWidget {
   final String text;
   final TextStyle textStyle;
   final bool showSnackbar;
+  final String? textToCopy;
   const Copyable(this.text, this.textStyle,
-      {this.showSnackbar = true, Key? key})
+      {this.showSnackbar = true, this.textToCopy, Key? key})
       : super(key: key);
 
   void copy(BuildContext context) {
-    Clipboard.setData(ClipboardData(text: text));
+    var toCopy = textToCopy ?? text;
+    Clipboard.setData(ClipboardData(text: toCopy));
 
     if (!showSnackbar) {
       return;
     }
 
-    var textMsg = text.substring(0, min(text.length, 36));
-    if (textMsg.length < text.length) {
+    var textMsg = toCopy.substring(0, min(toCopy.length, 36));
+    if (textMsg.length < toCopy.length) {
       textMsg += "...";
     }
     showSuccessSnackbar(context, "Copied \"$textMsg\" to clipboard");

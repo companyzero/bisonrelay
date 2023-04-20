@@ -313,6 +313,16 @@ func handleInitClient(handle uint32, args InitClient) error {
 		notify(NTTipUserProgress, ntfn, nil)
 	}))
 
+	ntfns.Register(client.OnOnboardStateChangedNtfn(func(ostate clientintf.OnboardState, oerr error) {
+		/*
+			ntfn := &OnboardStateChanged{
+				State: ostate,
+				Err:   oerr,
+			}
+		*/
+		notify(NTOnboardStateChanged, ostate, oerr)
+	}))
+
 	cfg := client.Config{
 		DB:             db,
 		Dialer:         clientintf.NetDialer(args.ServerAddr, logBknd.logger("CONN")),
@@ -364,6 +374,13 @@ func handleInitClient(handle uint32, args InitClient) error {
 			backoff := 10 * time.Second
 			maxBackoff := 60 * time.Second
 			for {
+				// When Onboarding, force-accept connection so
+				// that the onboarding steps may proceed.
+				if ostate, _ := c.ReadOnboard(); ostate != nil {
+					cctx.log.Infof("Skipping LN wallet checks due to onboarding still happening")
+					return nil
+				}
+
 				err := client.CheckLNWalletUsable(connCtx, lnpc.LNRPC(), lnNode)
 				if err == nil {
 					// All good.
@@ -1514,6 +1531,28 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 			Invite: invite,
 		}
 		return res, nil
+
+	case CTReadOnboard:
+		return c.ReadOnboard()
+
+	case CTRetryOnboard:
+		return nil, c.RetryOnboarding()
+
+	case CTSkipOnboardStage:
+		return nil, c.SkipOnboardingStage()
+
+	case CTStartOnboard:
+		var args clientintf.PaidInviteKey
+		if err := cmd.decode(&args); err != nil {
+			return nil, err
+		}
+		go func() { cc.skipWalletCheckChan <- struct{}{} }()
+
+		return nil, c.StartOnboarding(args)
+
+	case CTCancelOnboard:
+		return nil, c.CancelOnboarding()
+
 	}
 	return nil, nil
 }
