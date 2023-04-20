@@ -47,6 +47,7 @@ const (
 	unackedRMsDir      = "unackedrms"
 	lastConnDateFile   = "lastconndate.json"
 	tipsDir            = "tips"
+	onboardStateFile   = "onboard.json"
 )
 
 func (db *DB) LocalID(tx ReadTx) (*zkidentity.FullIdentity, error) {

@@ -194,6 +194,12 @@ type OnServerSessionChangedNtfn func(connected bool, pushRate, subRate, expirati
 
 func (_ OnServerSessionChangedNtfn) typ() string { return onServerSessionChangedNtfnType }
 
+const onOnboardStateChangedNtfnType = "onOnboardStateChanged"
+
+type OnOnboardStateChangedNtfn func(state clientintf.OnboardState, err error)
+
+func (_ OnOnboardStateChangedNtfn) typ() string { return onOnboardStateChangedNtfnType }
+
 // The following is used only in tests.
 
 const onTestNtfnType = "testNtfnType"
@@ -428,6 +434,11 @@ func (nmgr *NotificationManager) notifyServerSessionChanged(connected bool, push
 		visit(func(h OnServerSessionChangedNtfn) { h(connected, pushRate, subRate, expDays) })
 }
 
+func (nmgr *NotificationManager) notifyOnOnboardStateChanged(state clientintf.OnboardState, err error) {
+	nmgr.handlers[onOnboardStateChangedNtfnType].(*handlersFor[OnOnboardStateChangedNtfn]).
+		visit(func(h OnOnboardStateChangedNtfn) { h(state, err) })
+}
+
 func NewNotificationManager() *NotificationManager {
 	return &NotificationManager{
 		handlers: map[string]handlersRegistry{
@@ -458,6 +469,7 @@ func NewNotificationManager() *NotificationManager {
 			onLocalClientOfflineTooLong:       &handlersFor[OnLocalClientOfflineTooLong]{},
 			onTipAttemptProgressNtfnType:      &handlersFor[OnTipAttemptProgressNtfn]{},
 			onServerSessionChangedNtfnType:    &handlersFor[OnServerSessionChangedNtfn]{},
+			onOnboardStateChangedNtfnType:     &handlersFor[OnOnboardStateChangedNtfn]{},
 		},
 	}
 }

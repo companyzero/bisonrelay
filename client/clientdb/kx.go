@@ -8,9 +8,16 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/companyzero/bisonrelay/client/clientintf"
 	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/companyzero/bisonrelay/zkidentity"
 )
+
+// KXExists returns true if there's a KX procedure with the specified RV.
+func (db *DB) KXExists(tx ReadTx, initialRV RawRVID) bool {
+	fname := filepath.Join(db.root, kxDir, initialRV.String())
+	return fileExists(fname)
+}
 
 func (db *DB) SaveKX(tx ReadWriteTx, kx KXData) error {
 	dir := filepath.Join(db.root, kxDir)
@@ -359,4 +366,31 @@ func (db *DB) RemovePostKXActions(tx ReadWriteTx, target UserID) error {
 		return nil
 	}
 	return err
+}
+
+// ReadOnboardState fetches the existing onboard state of the client. It
+// returns an error if there is no onboard state.
+func (db *DB) ReadOnboardState(tx ReadTx) (clientintf.OnboardState, error) {
+	filename := filepath.Join(db.root, onboardStateFile)
+	var res clientintf.OnboardState
+	err := db.readJsonFile(filename, &res)
+	return res, err
+}
+
+// UpdateOnboardState updates the client onboard state.
+func (db *DB) UpdateOnboardState(tx ReadWriteTx, st *clientintf.OnboardState) error {
+	filename := filepath.Join(db.root, onboardStateFile)
+	return db.saveJsonFile(filename, st)
+}
+
+// RemoveOnboardState removes any existing onboard state.
+func (db *DB) RemoveOnboardState(tx ReadWriteTx) error {
+	filename := filepath.Join(db.root, onboardStateFile)
+	return removeIfExists(filename)
+}
+
+// HasOnboardState returns true if there is an existing onboard state.
+func (db *DB) HasOnboardState(tx ReadTx) bool {
+	filename := filepath.Join(db.root, onboardStateFile)
+	return fileExists(filename)
 }

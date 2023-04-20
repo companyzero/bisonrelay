@@ -236,6 +236,11 @@ type Client struct {
 	// gcWarnedVersions tracks GCs for which the warning about an
 	// incompatible version has been issued.
 	gcWarnedVersions *singlesetmap.Map[zkidentity.ShortID]
+
+	// onboardRunning tracks whether there's a running onboard instance.
+	onboardMtx        sync.Mutex
+	onboardRunning    bool
+	onboardCancelChan chan struct{}
 }
 
 // New creates a new CR client with the given config.
@@ -325,6 +330,8 @@ func New(cfg Config) (*Client, error) {
 		firstSubDone:     make(chan struct{}),
 		newUsersChan:     make(chan *RemoteUser),
 		gcWarnedVersions: &singlesetmap.Map[zkidentity.ShortID]{},
+
+		onboardCancelChan: make(chan struct{}, 1),
 	}
 
 	// Use the GC message cacher to collect gc messages for a few seconds
@@ -983,6 +990,9 @@ func (c *Client) Run(ctx context.Context) error {
 
 	// Restart tip payments.
 	g.Go(func() error { return c.restartTipUserAttempts(gctx) })
+
+	// Restart client onboarding.
+	g.Go(func() error { return c.restartOnboarding(gctx) })
 
 	return g.Wait()
 }
