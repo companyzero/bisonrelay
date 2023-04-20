@@ -10,11 +10,13 @@ require (
 	github.com/charmbracelet/lipgloss v0.6.0
 	github.com/companyzero/sntrup4591761 v0.0.0-20220309191932-9e0f3af2f07a
 	github.com/davecgh/go-spew v1.1.1
+	github.com/decred/dcrd/bech32 v1.1.2
 	github.com/decred/dcrd/certgen v1.1.1
 	github.com/decred/dcrd/chaincfg/chainhash v1.0.3
 	github.com/decred/dcrd/crypto/blake256 v1.0.0
 	github.com/decred/dcrd/dcrutil/v4 v4.0.0
-	github.com/decred/dcrlnd v0.3.8-0.20230406111948-0169038129ff
+	github.com/decred/dcrd/wire v1.5.0
+	github.com/decred/dcrlnd v0.3.8-0.20230418120521-23aecb168158
 	github.com/decred/dcrlnlpd v0.0.0-20230322170740-0a76ced98d80
 	github.com/decred/go-socks v1.1.0
 	github.com/decred/slog v1.2.0
@@ -28,7 +30,7 @@ require (
 	github.com/muesli/reflow v0.3.0
 	github.com/rogpeppe/go-internal v1.3.0
 	github.com/vaughan0/go-ini v0.0.0-20130923145212-a98ad7ee00ec
-	golang.org/x/crypto v0.1.0
+	golang.org/x/crypto v0.6.0
 	golang.org/x/exp v0.0.0-20230321023759-10a507213a29
 	golang.org/x/mobile v0.0.0-20190719004257-d2bd2a29d028
 	golang.org/x/net v0.8.0
@@ -42,7 +44,7 @@ require (
 
 require (
 	decred.org/cspp/v2 v2.0.0 // indirect
-	decred.org/dcrwallet/v2 v2.0.11 // indirect
+	decred.org/dcrwallet/v2 v2.1.1 // indirect
 	git.schwanenlied.me/yawning/bsaes.git v0.0.0-20180720073208-c0276d75487e // indirect
 	github.com/NebulousLabs/go-upnp v0.0.0-20181203152547-b32978b8ccbf // indirect
 	github.com/Yawning/aez v0.0.0-20180408160647-ec7426b44926 // indirect
@@ -60,7 +62,6 @@ require (
 	github.com/decred/base58 v1.0.3 // indirect
 	github.com/decred/dcrd v1.2.1-0.20220120180802-74a67dce2480 // indirect
 	github.com/decred/dcrd/addrmgr/v2 v2.0.1 // indirect
-	github.com/decred/dcrd/bech32 v1.1.2 // indirect
 	github.com/decred/dcrd/blockchain/stake/v4 v4.0.0 // indirect
 	github.com/decred/dcrd/blockchain/standalone/v2 v2.1.0 // indirect
 	github.com/decred/dcrd/blockchain/v4 v4.0.2 // indirect
@@ -80,7 +81,6 @@ require (
 	github.com/decred/dcrd/rpc/jsonrpc/types/v3 v3.0.0 // indirect
 	github.com/decred/dcrd/rpcclient/v7 v7.0.0 // indirect
 	github.com/decred/dcrd/txscript/v4 v4.0.0 // indirect
-	github.com/decred/dcrd/wire v1.5.0 // indirect
 	github.com/decred/lightning-onion/v4 v4.0.0 // indirect
 	github.com/dustin/go-humanize v1.0.0 // indirect
 	github.com/go-errors/errors v1.0.1 // indirect
