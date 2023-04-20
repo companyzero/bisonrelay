@@ -388,13 +388,14 @@ cNPr8Y+sSs2MHf6xMNBQzV4KuIlPIg==
 		return "", fmt.Errorf("network %q does not have default LPD", info.Chains[0].Network)
 	}
 
-	// Size the requested channel so that 5% of the outgoing channel
-	// capacity is used to acquire the channel, or at most a 1 DCR channel
+	// Size the requested channel so that 66% of the outgoing channel
+	// capacity is used to acquire the channel, or at most a 2 DCR channel
 	// is requested. Assume the fee rate is 1%.
-	maxToPay := balance.MaxOutboundAmount * 5 / 100
+	const maxChanSize = 2e8
+	maxToPay := balance.MaxOutboundAmount * 66 / 100
 	chanAmt := dcrutil.Amount(maxToPay) * 100 // 1% fee rate
-	if chanAmt > 1e8 {
-		chanAmt = 1e8
+	if chanAmt > maxChanSize {
+		chanAmt = maxChanSize
 	}
 	chanSize := uint64(chanAmt)
 	pendingChan := make(chan string, 1)
