@@ -1343,6 +1343,7 @@ var help_messages = map[string]map[string]string{
 		"@":            "WriteNewInviteResponse is an invite that can be sent (out-of-band) to an user the local client wishes to KX with.",
 		"invite_bytes": "invite_bytes is the raw invite.",
 		"invite":       "invite is the data contained in the raw invite.",
+		"invite_key":   "invite_key is the pre-paid invite key string that can be used to fetch the invite from the server.",
 	},
 	"AcceptInviteRequest": {
 		"@":            "AcceptInviteRequest is the request to accept an invite to KX with an user.",
