@@ -89,11 +89,27 @@ func (ins initStepState) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			// Initial connection to server!
 			//
+			// Check if there's an ongoing onboarding.
+			ostate, _ := ins.as.onboardingState()
+			if ostate != nil {
+				return newOnboardScreen(ins.as)
+			}
+
 			// Skip fund and channel stages in a restored wallet
 			// to allow a chance for using an SCB.
 			isRestore := ins.as.isRestore
 			needsFunds, needsSendChan := ins.as.setupNeedsFlags()
+
+			if !isRestore && len(ins.as.c.AddressBook()) == 0 {
+				// Client has no addressbook entries,
+				// therefore this is likely a new, empty
+				// client. Send to the onboarding screen.
+				return newStartOnboardScreen(ins.as)
+			}
 			if !isRestore && needsFunds {
+				// Client has entries, so it's likely just a
+				// wallet that emptied its funds. Send to the
+				// request fund screen.
 				return newLNFundWalletWindow(ins.as)
 			}
 			if !isRestore && needsSendChan {
