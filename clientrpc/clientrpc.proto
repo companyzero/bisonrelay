@@ -433,6 +433,10 @@ message WriteNewInviteResponse {
 
   /* invite is the data contained in the raw invite. */
   OOBPublicIdentityInvite invite = 2;
+
+  /* invite_key is the pre-paid invite key string that can be used to fetch the
+     invite from the server. */
+  string invite_key = 3;
 };
 
 /* AcceptInviteRequest is the request to accept an invite to KX with an user. */

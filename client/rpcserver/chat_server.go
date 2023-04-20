@@ -249,13 +249,18 @@ func (c *chatServer) WriteNewInvite(ctx context.Context, req *types.WriteNewInvi
 	}
 
 	b := bytes.NewBuffer(nil)
-	invite, err := c.c.WriteNewInvite(b, funds)
+	invite, key, err := c.c.CreatePrepaidInvite(b, funds)
+	if err != nil {
+		return err
+	}
+	encKey, err := key.Encode()
 	if err != nil {
 		return err
 	}
 	*res = types.WriteNewInviteResponse{
 		InviteBytes: b.Bytes(),
 		Invite:      marshalOOBPublicIDInvite(&invite, res.Invite),
+		InviteKey:   encKey,
 	}
 	if req.Gc != "" {
 		gcid, err := c.c.GCIDByName(req.Gc)
