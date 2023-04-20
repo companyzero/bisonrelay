@@ -381,3 +381,18 @@ func stringsCommonPrefix(src []string) string {
 	}
 	return res
 }
+
+// channelBalanceDisplay generates a balance display for a channel.
+func channelBalanceDisplay(local, remote int64) string {
+	var max int = 10
+	var c = "·"
+	plocal := int(float64(local) / float64(local+remote) * 10)
+	sep := "|"
+	if plocal == 0 {
+		sep = "<"
+	} else if plocal == max-1 {
+		sep = ">"
+	}
+	return fmt.Sprintf("[%s%s%s]", strings.Repeat(c, plocal), sep,
+		strings.Repeat(c, max-plocal-1))
+}
