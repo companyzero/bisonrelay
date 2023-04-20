@@ -60,13 +60,15 @@ const (
 	activeCWLog    = -3             // log window
 	activeCWLndLog = -4             // lnd log window
 	lastCWWindow   = activeCWLndLog // Must *ALWAYS* match the last item.
+)
 
+const (
 	connStateOffline connState = iota
 	connStateCheckingWallet
 	connStateOnline
-
-	urlExchangeRate = "https://explorer.dcrdata.org/api/exchangerate"
 )
+
+const urlExchangeRate = "https://explorer.dcrdata.org/api/exchangerate"
 
 type exchangeRate struct {
 	DCRPrice float64 `json:"dcrPrice"`
@@ -189,6 +191,8 @@ type appState struct {
 	setupMtx           sync.Mutex
 	setupNeedsFunds    bool
 	setupNeedsSendChan bool
+	onboardState       *clientintf.OnboardState
+	onboardErr         error
 
 	// window pinning on startup
 	winpin []string
@@ -1274,6 +1278,7 @@ func (as *appState) writeInvite(filename string, gcID zkidentity.ShortID, funds 
 			as.cwHelpMsg("Unable to add KX action: %v", err)
 			return
 		}
+		as.cwHelpMsg("Will invite to GC %s after KX", gcID)
 	}
 
 	encodedKey, err := inviteKey.Encode()
@@ -1287,7 +1292,8 @@ func (as *appState) writeInvite(filename string, gcID zkidentity.ShortID, funds 
 		pf("Send file %q to other client and type /add %s",
 			filename, filepath.Base(filename))
 		pf("Prepaid invite written to RV %s", inviteKey.RVPoint())
-		pf("Key for fetching invite: %s", encodedKey)
+		pf("Key for fetching invite: %s", as.styles.nick.Render(encodedKey))
+
 	})
 }
 
@@ -2098,6 +2104,17 @@ func (as *appState) setupNeedsFlags() (needsFunds, needsOpenChan bool) {
 	return
 }
 
+func (as *appState) onboardingState() (*clientintf.OnboardState, error) {
+	as.setupMtx.Lock()
+	os, osErr := as.onboardState, as.onboardErr
+	if os == nil {
+		os, _ = as.c.ReadOnboard()
+		as.onboardState = os
+	}
+	as.setupMtx.Unlock()
+	return os, osErr
+}
+
 func (as *appState) kxSearchPostAuthor(from clientintf.UserID, pid clientintf.PostID) error {
 	err := as.c.KXSearchPostAuthor(from, pid)
 	if err != nil {
@@ -2759,6 +2776,22 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		}
 	}))
 
+	ntfns.Register(client.OnOnboardStateChangedNtfn(func(state clientintf.OnboardState, err error) {
+		as.setupMtx.Lock()
+		as.onboardState = &state
+		as.onboardErr = err
+		as.setupMtx.Unlock()
+
+		if err != nil {
+			if !errors.Is(err, context.Canceled) {
+				as.diagMsg("Onboarding errored at stage %s: %v", state.Stage, err)
+			}
+		} else {
+			as.diagMsg("Onboarding stage advanced to %s", state.Stage)
+		}
+		as.sendMsg(msgOnboardStateChanged{})
+	}))
+
 	// Initialize client config.
 	cfg := client.Config{
 		DB:             db,
@@ -2851,6 +2884,14 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 			backoff := 10 * time.Second
 			maxBackoff := 60 * time.Second
 			for {
+
+				// When Onboarding, force-accept connection so
+				// that the onboarding steps may proceed.
+				if ostate, _ := as.onboardingState(); ostate != nil {
+					as.log.Infof("Skipping LN wallet checks due to onboarding still happening")
+					return nil
+				}
+
 				// Check the basic LN requirements.
 				err := client.CheckLNWalletUsable(ctx, lnRPC, lnNode)
 				if err == nil {

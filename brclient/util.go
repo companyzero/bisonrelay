@@ -94,6 +94,10 @@ func appendCmd(cmds []tea.Cmd, cmd ...tea.Cmd) []tea.Cmd {
 	return cmds
 }
 
+func countNewLines(s string) int {
+	return strings.Count(s, "\n")
+}
+
 // batchCmds maybe batches the list of cmds if needed.
 func batchCmds(cmds []tea.Cmd) tea.Cmd {
 	switch len(cmds) {

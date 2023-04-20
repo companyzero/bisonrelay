@@ -62,6 +62,8 @@ type msgNewRecvdMsg struct{}
 
 type msgCancelForm struct{}
 type msgSubmitForm struct{}
+type msgRetryAction struct{}
+type msgSkipAction struct{}
 
 type msgShowSharedFilesForLink struct{}
 
@@ -70,6 +72,9 @@ type msgProcessEsc struct{}
 type msgDownloadCompleted clientdb.FileID
 
 type msgActiveWindowChanged struct{}
+
+type msgOnboardStateChanged struct{}
+type msgStartOnboardErr error
 
 func paste() tea.Msg {
 	str, err := clipboard.ReadAll()
