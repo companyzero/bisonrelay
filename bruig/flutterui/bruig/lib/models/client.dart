@@ -107,6 +107,17 @@ class ChatModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  // return the first unread msg index and -1 if there aren't
+  // unread msgs
+  int firstUnreadIndex() {
+    for (int i = 0; i < _msgs.length; i++) {
+      if (_msgs[i].firstUnread) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
   List<ChatEventModel> _msgs = [];
   UnmodifiableListView<ChatEventModel> get msgs => UnmodifiableListView(_msgs);
   void append(ChatEventModel msg) {

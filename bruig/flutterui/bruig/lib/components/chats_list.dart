@@ -7,9 +7,7 @@ import 'package:golib_plugin/golib_plugin.dart';
 import 'package:bruig/components/interactive_avatar.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:bruig/components/user_context_menu.dart';
-
-typedef MakeActiveCB = void Function(ChatModel? c);
-typedef ShowSubMenuCB = void Function(String);
+import 'package:bruig/components/chat/types.dart';
 
 class _ChatHeadingW extends StatefulWidget {
   final ChatModel chat;

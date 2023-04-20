@@ -9,7 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:provider/provider.dart';
-import '../components/active_chat.dart';
+import 'package:bruig/components/chat/active_chat.dart';
 
 class ChatsScreenTitle extends StatelessWidget {
   const ChatsScreenTitle({super.key});
@@ -130,7 +130,7 @@ class _InviteNeededPage extends StatelessWidget {
             const SizedBox(height: 34),
             Text('''
 Bison Relay does not rely on a central server for user accounts, so to chat
-with someone else you need to exchange an invitation with them. This is 
+with someone else you need to exchange an invitation with them. This is
 just a file that should be sent via some other secure transfer method.
 
 After the invitation is accepted, you'll be able to chat with them, and if they

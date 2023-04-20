@@ -167,6 +167,7 @@ class UserContentListW extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListView.builder(
       shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
       itemCount: content.files.length,
       itemBuilder: (BuildContext context, int index) {
         return Container(
