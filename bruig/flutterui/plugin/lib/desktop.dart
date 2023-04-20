@@ -304,6 +304,12 @@ mixin BaseDesktopPlatform on NtfStreams {
         ntfChatEvents.add(event);
         break;
 
+      case NTOnboardStateChanged:
+        isError
+            ? ntfnOnboardStateChanged.addError(payload)
+            : ntfnOnboardStateChanged.add(OnboardState.fromJson(payload));
+        break;
+
       default:
         print("Received unknown notification ${cmd.toRadixString(16)}");
     }

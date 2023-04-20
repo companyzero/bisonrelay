@@ -1653,6 +1653,46 @@ class RedeemedInviteFunds {
       _$RedeemedInviteFundsFromJson(json);
 }
 
+enum OnboardStage {
+  @JsonValue("fetching_invite")
+  stageFetchingInvite,
+  @JsonValue("invite_no_funds")
+  stageInviteNoFunds,
+  @JsonValue("redeeming_funds")
+  stageRedeemingFunds,
+  @JsonValue("waiting_funds_confirm")
+  stageWaitingFundsConfirm,
+  @JsonValue("opening_outbound")
+  stageOpeningOutbound,
+  @JsonValue("waiting_out_confirm")
+  stageWaitingOutConfirm,
+  @JsonValue("opening_inbound")
+  stageOpeningInbound,
+  @JsonValue("initial_kx")
+  stageInitialKX,
+  @JsonValue("done")
+  stageOnboardDone,
+}
+
+@JsonSerializable()
+class OnboardState {
+  final OnboardStage stage;
+  final String? key;
+  final OOBPublicIdentityInvite? invite;
+  final String? redeemTx;
+  @JsonKey(defaultValue: 0)
+  final int redeemAmount;
+  @JsonKey(name: "out_channel_id")
+  final String outChannelID;
+  @JsonKey(name: "in_channel_id")
+  final String inChannelID;
+
+  OnboardState(this.stage, this.key, this.invite, this.redeemTx,
+      this.redeemAmount, this.outChannelID, this.inChannelID);
+  factory OnboardState.fromJson(Map<String, dynamic> json) =>
+      _$OnboardStateFromJson(json);
+}
+
 mixin NtfStreams {
   StreamController<RemoteUser> ntfAcceptedInvites =
       StreamController<RemoteUser>();
@@ -1695,6 +1735,10 @@ mixin NtfStreams {
       StreamController<LNInitialChainSyncUpdate>();
   Stream<LNInitialChainSyncUpdate> lnInitChainSyncProgress() =>
       ntfLNInitChainSync.stream;
+
+  StreamController<OnboardState> ntfnOnboardStateChanged =
+      StreamController<OnboardState>();
+  Stream<OnboardState> onboardStateChanged() => ntfnOnboardStateChanged.stream;
 }
 
 abstract class PluginPlatform {
@@ -1723,6 +1767,7 @@ abstract class PluginPlatform {
   Stream<FileDownloadProgress> downloadProgress() => throw "unimplemented";
   Stream<LNInitialChainSyncUpdate> lnInitChainSyncProgress() =>
       throw "unimplemented";
+  Stream<OnboardState> onboardStateChanged() => throw "unimplemented";
 
   Future<bool> hasServer() async => throw "unimplemented";
 
@@ -2240,6 +2285,15 @@ abstract class PluginPlatform {
     await f.writeAsBytes(res.blob!);
     return res;
   }
+
+  Future<OnboardState> readOnboard() async =>
+      OnboardState.fromJson(await asyncCall(CTReadOnboard, null));
+  Future<void> retryOnboard() async => await asyncCall(CTRetryOnboard, null);
+  Future<void> skipOnboardStage() async =>
+      await asyncCall(CTSkipOnboardStage, null);
+  Future<void> startOnboard(String key) async =>
+      await asyncCall(CTStartOnboard, key);
+  Future<void> cancelOnboard() async => await asyncCall(CTCancelOnboard, null);
 }
 
 const int CTUnknown = 0x00;
@@ -2343,6 +2397,11 @@ const int CTCreateAccount = 0x6d;
 const int CTSendOnchain = 0x6e;
 const int CTRedeeemInviteFunds = 0x6f;
 const int CTFetchInvite = 0x70;
+const int CTReadOnboard = 0x71;
+const int CTRetryOnboard = 0x72;
+const int CTSkipOnboardStage = 0x73;
+const int CTStartOnboard = 0x74;
+const int CTCancelOnboard = 0x75;
 
 const int notificationsStartID = 0x1000;
 
@@ -2382,3 +2441,4 @@ const int NTGCMemberParted = 0x1021;
 const int NTGCAdminsChanged = 0x1022;
 const int NTKXCSuggested = 0x1023;
 const int NTTipUserProgress = 0x1024;
+const int NTOnboardStateChanged = 0x1025;

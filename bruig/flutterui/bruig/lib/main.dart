@@ -10,6 +10,7 @@ import 'package:bruig/screens/about.dart';
 import 'package:bruig/screens/contacts_msg_times.dart';
 import 'package:bruig/screens/fetch_invite.dart';
 import 'package:bruig/screens/generate_invite.dart';
+import 'package:bruig/screens/onboarding.dart';
 import 'package:bruig/theme_manager.dart';
 import 'package:bruig/config.dart';
 import 'package:bruig/models/downloads.dart';
@@ -164,6 +165,22 @@ class _AppState extends State<App> with WindowListener {
     try {
       var balances = await Golib.lnGetBalances();
       var pushed = false;
+      bool hasOnboard = false;
+      try {
+        await Golib.readOnboard();
+        hasOnboard = true;
+      } catch (exception) {
+        // Ignore because hasOnboard will be false.
+      }
+
+      var emptyAddressBook = (await Golib.addressBook()).isEmpty;
+
+      if (emptyAddressBook || hasOnboard) {
+        navkey.currentState!.pushNamed("/onboarding");
+
+        // Do not perform other checks because they'll be taken care of during onboarding.
+        return;
+      }
       if (balances.wallet.totalBalance == 0) {
         ntfns.addNtfn(AppNtfn(AppNtfnType.walletNeedsFunds));
         navkey.currentState!.pushNamed("/needsFunds");
@@ -281,6 +298,7 @@ class _AppState extends State<App> with WindowListener {
                     Consumer2<AppNotifications, ClientModel>(
                         builder: (context, ntfns, client, child) =>
                             NeedsInChannelScreen(ntfns, client)),
+                '/onboarding': (context) => const OnboardingScreen(),
                 ContactsLastMsgTimesScreen.routeName: (context) =>
                     Consumer<ClientModel>(
                         builder: (context, client, child) =>
