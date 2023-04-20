@@ -167,6 +167,7 @@ func (kx *kxList) createPrepaidInvite(w io.Writer, funds *rpc.InviteFunds) (
 		return
 	}
 
+	kx.log.Infof("Pushed paid invite at RV %s", inviteRV)
 	return
 }
 
@@ -195,6 +196,9 @@ func (kx *kxList) fetchPrepaidInvite(ctx context.Context, key clientintf.PaidInv
 	if _, err := w.Write(decrypted); err != nil {
 		return invite, err
 	}
+
+	kx.log.Infof("Fetched prepaid invite from RV %s (hasFunds=%v)",
+		key.RVPoint(), invite.Funds != nil)
 
 	return invite, nil
 }

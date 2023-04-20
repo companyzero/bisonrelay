@@ -12,6 +12,8 @@ import (
 
 	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/companyzero/bisonrelay/zkidentity"
+	"github.com/decred/dcrd/chaincfg/chainhash"
+	"github.com/decred/dcrd/dcrutil/v4"
 )
 
 // ID is a 32-byte global ID. This is used as an alias for all 32-byte arrays
@@ -133,7 +135,34 @@ func (pc FreePaymentClient) DecodeInvoice(_ context.Context, invoice string) (De
 	return DecodedInvoice{ExpiryTime: farFutureExpiryTime, ID: id[:]}, nil
 }
 
+// OnboardStage tracks stages of the client onboarding process.
+type OnboardStage string
+
+const (
+	StageFetchingInvite      OnboardStage = "fetching_invite"
+	StageInviteNoFunds       OnboardStage = "invite_no_funds"
+	StageRedeemingFunds      OnboardStage = "redeeming_funds"
+	StageWaitingFundsConfirm OnboardStage = "waiting_funds_confirm"
+	StageOpeningOutbound     OnboardStage = "opening_outbound"
+	StageWaitingOutConfirm   OnboardStage = "waiting_out_confirm"
+	StageOpeningInbound      OnboardStage = "opening_inbound"
+	StageInitialKX           OnboardStage = "initial_kx"
+	StageOnboardDone         OnboardStage = "done"
+)
+
+// OnboardState tracks a state of the client onboarding process.
+type OnboardState struct {
+	Stage        OnboardStage                 `json:"stage"`
+	Key          *PaidInviteKey               `json:"key"`
+	Invite       *rpc.OOBPublicIdentityInvite `json:"invite"`
+	RedeemTx     *chainhash.Hash              `json:"redeem_tx"`
+	RedeemAmount dcrutil.Amount               `json:"redeem_amount"`
+	OutChannelID string                       `json:"out_channel_id"`
+	InChannelID  string                       `json:"in_channel_id"`
+}
+
 var (
 	ErrSubsysExiting             = errors.New("subsys exiting")
 	ErrInvoiceInsufficientlyPaid = errors.New("invoice insufficiently paid")
+	ErrOnboardNoFunds            = errors.New("onboarding invite does not have any funds")
 )

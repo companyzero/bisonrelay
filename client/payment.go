@@ -14,7 +14,9 @@ import (
 	"github.com/decred/dcrd/chaincfg/chainhash"
 	"github.com/decred/dcrd/dcrutil/v4"
 	"github.com/decred/dcrd/wire"
+	"github.com/decred/dcrlnd"
 	"github.com/decred/dcrlnd/lnrpc"
+	"github.com/decred/dcrlnd/lnrpc/chainrpc"
 	"github.com/decred/dcrlnd/lnrpc/invoicesrpc"
 	"github.com/decred/dcrlnd/lnrpc/routerrpc"
 	"github.com/decred/dcrlnd/lnrpc/walletrpc"
@@ -41,6 +43,7 @@ type DcrlnPaymentClient struct {
 	lnUnlocker lnrpc.WalletUnlockerClient
 	lnRouter   routerrpc.RouterClient
 	lnWallet   walletrpc.WalletKitClient
+	lnChain    chainrpc.ChainNotifierClient
 	log        slog.Logger
 	payTiming  *timestats.Tracker
 }
@@ -82,6 +85,7 @@ func NewDcrlndPaymentClient(ctx context.Context, cfg DcrlnPaymentClientCfg) (*Dc
 	lnUnlocker := lnrpc.NewWalletUnlockerClient(conn)
 	lnRouter := routerrpc.NewRouterClient(conn)
 	lnWallet := walletrpc.NewWalletKitClient(conn)
+	lnChain := chainrpc.NewChainNotifierClient(conn)
 
 	log := slog.Disabled
 	if cfg.Log != nil {
@@ -94,6 +98,7 @@ func NewDcrlndPaymentClient(ctx context.Context, cfg DcrlnPaymentClientCfg) (*Dc
 		lnUnlocker: lnUnlocker,
 		lnRouter:   lnRouter,
 		lnWallet:   lnWallet,
+		lnChain:    lnChain,
 		log:        log,
 		payTiming:  timestats.NewTracker(250),
 	}, nil
@@ -464,6 +469,66 @@ func (pc *DcrlnPaymentClient) RedeemInviteFunds(ctx context.Context, funds *rpc.
 	return dcrutil.Amount(total), *txh, nil
 }
 
+// WaitNextBlock blocks until the next block is received.
+func (pc *DcrlnPaymentClient) WaitNextBlock(ctx context.Context) (chainhash.Hash, uint32, error) {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	blockStream, err := pc.lnChain.RegisterBlockEpochNtfn(ctx, &chainrpc.BlockEpoch{})
+	if err != nil {
+		return chainhash.Hash{}, 0, err
+	}
+
+	// The first recv() is the current block.
+	if _, err := blockStream.Recv(); err != nil {
+		return chainhash.Hash{}, 0, err
+	}
+
+	// The second recv() is the next block.
+	block, err := blockStream.Recv()
+	if err != nil {
+		return chainhash.Hash{}, 0, err
+	}
+	bh, err := chainhash.NewHash(block.Hash)
+	if err != nil {
+		return chainhash.Hash{}, 0, err
+	}
+	return *bh, block.Height, err
+}
+
+// WaitTxConfirmed blocks until the given transaction (which must be a wallet
+// tx) is confirmed onchain.
+func (pc *DcrlnPaymentClient) WaitTxConfirmed(ctx context.Context, tx chainhash.Hash) error {
+	reqWalletTx := &walletrpc.GetWalletTxRequest{Txid: tx[:]}
+	var blockStream chainrpc.ChainNotifier_RegisterBlockEpochNtfnClient
+	for {
+		// See if wallet tx is confirmed.
+		res, err := pc.lnWallet.GetWalletTx(ctx, reqWalletTx)
+		if err != nil {
+			return err
+		}
+
+		if res.Confirmations > 0 {
+			return nil
+		}
+
+		if blockStream == nil {
+			// Initialize stream for fetching blocks.
+			ctx, cancel := context.WithCancel(ctx)
+			defer cancel()
+			blockStream, err = pc.lnChain.RegisterBlockEpochNtfn(ctx, &chainrpc.BlockEpoch{})
+			if err != nil {
+				return err
+			}
+		}
+
+		// Wait until a block is received to check again.
+		_, err = blockStream.Recv()
+		if err != nil {
+			return err
+		}
+	}
+}
+
 const (
 	ErrUnableToQueryNode  = WalletUsableErrorKind("ErrUnableToQueryNode")
 	ErrNoPeers            = WalletUsableErrorKind("ErrNoPeers")
@@ -590,4 +655,12 @@ func PaymentFeeLimit(amountMAtoms uint64) *lnrpc.FeeLimit {
 	}
 
 	return feeLimit
+}
+
+func chanPointToStr(cp *lnrpc.ChannelPoint) string {
+	tx, err := dcrlnd.GetChanPointFundingTxid(cp)
+	if err != nil {
+		return fmt.Sprintf("[%v]", err)
+	}
+	return fmt.Sprintf("%s:%d", tx, cp.OutputIndex)
 }

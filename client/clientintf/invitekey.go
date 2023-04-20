@@ -81,7 +81,7 @@ func (u *PaidInviteKey) UnmarshalJSON(b []byte) error {
 }
 
 // String returns the encoded paid invite key or an error string.
-func (u *PaidInviteKey) String() string {
+func (u PaidInviteKey) String() string {
 	enc, err := u.Encode()
 	if err != nil {
 		return fmt.Sprintf("[invalid PaidInviteKey: %v]", err)
