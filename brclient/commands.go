@@ -2000,12 +2000,15 @@ var lnCommands = []tuicmd{
 	},
 	{
 		cmd:           "channels",
+		usage:         "[<debug>]",
 		usableOffline: true,
 		descr:         "Show list of active channels",
+		long:          []string{"If 'debug' is specified, then additional info for the channels is presented"},
 		handler: func(args []string, as *appState) error {
 			if as.lnRPC == nil {
 				return fmt.Errorf("LN client not configured")
 			}
+			debug := len(args) > 0 && args[0] == "debug"
 
 			chans, err := as.lnRPC.ListChannels(as.ctx,
 				&lnrpc.ListChannelsRequest{})
@@ -2013,26 +2016,61 @@ var lnCommands = []tuicmd{
 				return err
 			}
 
+			// Fetch list of aliases.
+			nodeAlias := make(map[string]string)
+			for _, c := range chans.Channels {
+				if _, ok := nodeAlias[c.RemotePubkey]; ok {
+					continue
+				}
+				nodeInfo, _ := as.lnRPC.GetNodeInfo(as.ctx, &lnrpc.NodeInfoRequest{
+					PubKey: c.RemotePubkey,
+				})
+				var alias string
+				if nodeInfo != nil {
+					alias = nodeInfo.Node.Alias
+					if len(alias) > 32 {
+						alias = alias[:32]
+					}
+				} else if len(c.RemotePubkey) > 32 {
+					alias = c.RemotePubkey[:32]
+				} else {
+					nodeAlias[c.RemotePubkey] = c.RemotePubkey
+				}
+				nodeAlias[c.RemotePubkey] = strescape.Nick(alias)
+			}
+
 			as.cwHelpMsgs(func(pf printf) {
 				pf("LN Channels: %d", len(chans.Channels))
+				if !debug {
+					pf("          send                    recv node")
+				}
 				for _, c := range chans.Channels {
 					active := "✓"
 					if !c.Active {
 						active = "✗"
 					}
-					sid := lnwire.NewShortChanIDFromInt(c.ChanId)
-					pf("  %scp:%s sid:%s cap:%.8f", active,
-						c.ChannelPoint,
-						sid,
-						dcrutil.Amount(c.Capacity).ToCoin())
-					pf("    %s   localBal:%.8f remoteBal:%.8f",
-						c.RemotePubkey,
-						dcrutil.Amount(c.LocalBalance).ToCoin(),
-						dcrutil.Amount(c.RemoteBalance).ToCoin())
-					pf("    unsettled:%.8f updts:%d htlcs:%d",
-						dcrutil.Amount(c.UnsettledBalance).ToCoin(),
-						c.NumUpdates,
-						len(c.PendingHtlcs))
+					local := fmt.Sprintf("%.8f", float64(c.LocalBalance)/1e8)
+					remote := fmt.Sprintf("%.8f", float64(c.RemoteBalance)/1e8)
+					balDisplay := channelBalanceDisplay(c.LocalBalance, c.RemoteBalance)
+					pf("  %s %s %s %s %s", active, local, balDisplay, remote,
+						nodeAlias[c.RemotePubkey])
+
+					if debug {
+						sid := lnwire.NewShortChanIDFromInt(c.ChanId)
+						pf("  cp:%s sid:%s cap:%.8f",
+							c.ChannelPoint,
+							sid,
+							dcrutil.Amount(c.Capacity).ToCoin())
+						pf("   pub:%s   localBal:%.8f remoteBal:%.8f",
+							c.RemotePubkey,
+							dcrutil.Amount(c.LocalBalance).ToCoin(),
+							dcrutil.Amount(c.RemoteBalance).ToCoin())
+						pf("    unsettled:%.8f updts:%d htlcs:%d",
+							dcrutil.Amount(c.UnsettledBalance).ToCoin(),
+							c.NumUpdates,
+							len(c.PendingHtlcs))
+						pf("")
+					}
 				}
 			})
 			return nil
