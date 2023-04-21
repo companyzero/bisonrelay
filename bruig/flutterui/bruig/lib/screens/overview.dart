@@ -101,7 +101,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
   }
 
   void goToNewPost() {
-    navKey.currentState!.pushReplacementNamed('/feed', arguments: PageTabs(2));
+    navKey.currentState!.pushReplacementNamed('/feed', arguments: PageTabs(3));
   }
 
   void goToAbout() {
