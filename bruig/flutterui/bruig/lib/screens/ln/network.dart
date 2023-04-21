@@ -177,6 +177,7 @@ class _NodeInfo extends StatelessWidget {
     var secondaryTextColor = theme.dividerColor;
     return Column(children: [
       Copyable(nodeInfo.node.pubkey, TextStyle(fontSize: 13, color: textColor)),
+      Copyable(nodeInfo.node.alias, TextStyle(fontSize: 13, color: textColor)),
       Text("Number of channels: ${nodeInfo.numChannels}",
           style: TextStyle(fontSize: 13, color: textColor)),
       Text("Total Capacity: ${formatDCR(atomsToDCR(nodeInfo.totalCapacity))}",
