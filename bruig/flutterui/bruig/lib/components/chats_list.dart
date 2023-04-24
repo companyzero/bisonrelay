@@ -221,7 +221,7 @@ class _ChatsListState extends State<_ChatsList> {
     var theme = Theme.of(context);
     var sidebarBackground = theme.backgroundColor;
     var hoverColor = theme.hoverColor;
-    var darkTextColor = theme.indicatorColor;
+    var darkTextColor = theme.focusColor;
     var selectedBackgroundColor = theme.highlightColor;
 
     var gcList = chats.gcChats.toList();
