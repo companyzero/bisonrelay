@@ -12,6 +12,13 @@ class FeedCommentModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  bool _unreadComment = false;
+  bool get unreadComment => _unreadComment;
+  void set unreadComment(bool v) {
+    _unreadComment = v;
+    notifyListeners();
+  }
+
   int _level = 0;
   int get level => _level;
   void set level(int v) {
@@ -39,13 +46,6 @@ class FeedPostModel extends ChangeNotifier {
   bool get hasUnreadComments => _hasUnreadComments;
   void set hasUnreadComments(bool b) {
     _hasUnreadComments = b;
-    notifyListeners();
-  }
-
-  int _mostRecentCommentTime = 0;
-  int get mostRecentCommentTime => _mostRecentCommentTime;
-  void set mostRecentCommentTime(int s) {
-    _mostRecentCommentTime = s;
     notifyListeners();
   }
 
@@ -99,12 +99,6 @@ class FeedPostModel extends ChangeNotifier {
     var children = Map<String, List<FeedCommentModel>>();
     newComments.forEach((c) {
       cmap[c.id] = c;
-      if (c.timestamp != "") {
-        var intTimestamp = int.parse(c.timestamp, radix: 16);
-        if (mostRecentCommentTime < intTimestamp) {
-          mostRecentCommentTime = intTimestamp;
-        }
-      }
       if (c.parentID == "") {
         roots.add(c);
         return;
@@ -158,6 +152,7 @@ class FeedPostModel extends ChangeNotifier {
     // Figure out where to insert the comment or add a new top-level comment.
     var c = await _statusToComment(ps);
     var idx = _comments.indexWhere((e) => e.id == c.parentID);
+    c.unreadComment = true;
     if (idx < 0) {
       _comments.add(c);
     } else {
@@ -172,7 +167,6 @@ class FeedPostModel extends ChangeNotifier {
         }
       }
       _comments.insert(insertIdx, c);
-      _mostRecentCommentTime = int.parse(c.timestamp, radix: 16);
     }
 
     // Drop from list of unreplicated comments if this status update is mine.
@@ -233,7 +227,6 @@ class FeedModel extends ChangeNotifier {
       var newPost = FeedPostModel(p);
       newPost.readComments();
       _posts.add(newPost);
-      _posts.sort(mySortComparison);
     });
     notifyListeners();
 
@@ -272,22 +265,9 @@ class FeedModel extends ChangeNotifier {
         var post = _posts[postIdx];
         unreadPostsComments = true;
         post.addReceivedStatus(msg.status, true);
-        _posts.sort(mySortComparison);
       }
     }
     notifyListeners();
-  }
-
-  int mySortComparison(FeedPostModel a, FeedPostModel b) {
-    var firstResult =
-        b.mostRecentCommentTime.compareTo(a.mostRecentCommentTime);
-    var secondResult = b.summ.date.compareTo(a.summ.date);
-    final propertyA = a.mostRecentCommentTime;
-    final propertyB = b.mostRecentCommentTime;
-    if (propertyA == 0 || propertyB == 0) {
-      return secondResult;
-    }
-    return firstResult;
   }
 
   Future<void> createPost(String content) async {

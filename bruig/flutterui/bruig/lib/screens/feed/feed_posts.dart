@@ -164,9 +164,23 @@ class _FeedPostWState extends State<FeedPostW> {
           ]),
           const SizedBox(height: 5),
           Row(children: [
-            unReadPost ? Expanded(child: Text("Unread Post!")) : Empty(),
+            unReadPost
+                ? Expanded(
+                    child: Text("New Post",
+                        style: TextStyle(
+                          fontStyle: FontStyle.italic,
+                          fontSize: 12,
+                          color: hightLightTextColor,
+                        )))
+                : Empty(),
             hasUnreadComments
-                ? Expanded(child: Text("Unread Comments!"))
+                ? Expanded(
+                    child: Text("New Comments",
+                        style: TextStyle(
+                          fontStyle: FontStyle.italic,
+                          fontSize: 12,
+                          color: hightLightTextColor,
+                        )))
                 : Empty(),
             Expanded(
                 child: Align(
