@@ -391,6 +391,7 @@ func channelBalanceDisplay(local, remote int64) string {
 	var max int = 10
 	var c = "·"
 	plocal := int(float64(local) / float64(local+remote) * 10)
+	plocal = clamp(plocal, 0, 9)
 	sep := "|"
 	if plocal == 0 {
 		sep = "<"
