@@ -315,12 +315,12 @@ class _AppState extends State<App> with WindowListener {
                 if (settings.name!.startsWith(OverviewScreen.routeName)) {
                   var initialRoute =
                       settings.name!.substring(OverviewScreen.routeName.length);
-                  page = Consumer4<DownloadsModel, ClientModel,
-                          AppNotifications, MainMenuModel>(
-                      builder:
-                          (context, down, client, ntfns, mainMenu, child) =>
-                              OverviewScreen(
-                                  down, client, ntfns, initialRoute, mainMenu));
+                  page = Consumer5<DownloadsModel, ClientModel,
+                          AppNotifications, MainMenuModel, FeedModel>(
+                      builder: (context, down, client, ntfns, mainMenu, feed,
+                              child) =>
+                          OverviewScreen(down, client, ntfns, initialRoute,
+                              mainMenu, feed));
                 } else if (settings.name!
                     .startsWith(NeedsOutChannelScreen.routeName)) {
                   page = Consumer2<AppNotifications, ClientModel>(

@@ -7,8 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:crypto/crypto.dart';
 import 'package:provider/provider.dart';
 import 'package:bruig/components/md_elements.dart';
-import 'package:golib_plugin/definitions.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:bruig/components/empty_widget.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:bruig/components/user_context_menu.dart';
 
@@ -22,13 +21,14 @@ Color colorFromNick(String nick) {
 }
 
 class FeedPostW extends StatefulWidget {
+  final FeedModel feed;
   final FeedPostModel post;
   final ChatModel? author;
   final ChatModel? from;
   final ClientModel client;
   final Function onTabChange;
-  const FeedPostW(
-      this.post, this.author, this.from, this.client, this.onTabChange,
+  const FeedPostW(this.feed, this.post, this.author, this.from, this.client,
+      this.onTabChange,
       {Key? key})
       : super(key: key);
 
@@ -37,7 +37,10 @@ class FeedPostW extends StatefulWidget {
 }
 
 class _FeedPostWState extends State<FeedPostW> {
+  FeedModel get feed => widget.feed;
+  FeedPostModel get post => widget.post;
   showContent(BuildContext context) {
+    feed.active = post;
     widget.onTabChange(0, PostContentScreenArgs(widget.post));
   }
 
@@ -64,6 +67,8 @@ class _FeedPostWState extends State<FeedPostW> {
 
   @override
   Widget build(BuildContext context) {
+    var hasUnreadComments = post.hasUnreadComments;
+    var unReadPost = post.unreadPost;
     var authorNick = widget.author?.nick ?? "";
     var authorID = widget.post.summ.authorID;
     var mine = authorID == widget.client.publicID;
@@ -159,6 +164,24 @@ class _FeedPostWState extends State<FeedPostW> {
           ]),
           const SizedBox(height: 5),
           Row(children: [
+            unReadPost
+                ? Expanded(
+                    child: Text("New Post",
+                        style: TextStyle(
+                          fontStyle: FontStyle.italic,
+                          fontSize: 12,
+                          color: hightLightTextColor,
+                        )))
+                : Empty(),
+            hasUnreadComments
+                ? Expanded(
+                    child: Text("New Comments",
+                        style: TextStyle(
+                          fontStyle: FontStyle.italic,
+                          fontSize: 12,
+                          color: hightLightTextColor,
+                        )))
+                : Empty(),
             Expanded(
                 child: Align(
                     alignment: Alignment.centerRight,
@@ -234,8 +257,8 @@ class _FeedPostsState extends State<FeedPosts> {
             var post = posts.elementAt(index);
             var author = widget.client.getExistingChat(post.summ.authorID);
             var from = widget.client.getExistingChat(post.summ.from);
-            return FeedPostW(
-                post, author, from, widget.client, widget.tabChange);
+            return FeedPostW(widget.feed, post, author, from, widget.client,
+                widget.tabChange);
           }),
     );
   }

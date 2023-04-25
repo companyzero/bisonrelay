@@ -137,6 +137,7 @@ class _CommentWState extends State<_CommentW> {
     var mine = widget.comment.uid == widget.client.publicID;
     var kxing = widget.client.requestedMediateID(widget.comment.uid);
 
+    var unreadComment = widget.comment.unreadComment;
     var theme = Theme.of(context);
     var hightLightTextColor = theme.dividerColor;
     var textColor = theme.focusColor;
@@ -220,7 +221,7 @@ class _CommentWState extends State<_CommentW> {
           Row(
             children: [
               Expanded(
-                child: MarkdownArea(widget.comment.comment, false),
+                child: MarkdownArea(widget.comment.comment, unreadComment),
               ),
             ],
           ),
@@ -272,7 +273,7 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
 
     try {
       await widget.args.post.readPost();
-      await widget.args.post.readComments();
+      //await widget.args.post.readComments();
 
       bool newIsKxSearching = false;
       var summ = widget.args.post.summ;
@@ -304,7 +305,7 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
       if (post != null) {
         (() async {
           await post.readPost();
-          await post.readComments();
+          //await post.readComments();
           widget.tabChange(0, PostContentScreenArgs(post));
         })();
       }
@@ -376,6 +377,11 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
   void dispose() {
     super.dispose();
     widget.args.post.removeListener(postUpdated);
+    for (int i = 0; i < widget.args.post.comments.length; i++) {
+      if (widget.args.post.comments[i].unreadComment) {
+        widget.args.post.comments[i].unreadComment = false;
+      }
+    }
     var authorID = widget.args.post.summ.authorID;
     widget.client.getExistingChat(authorID)?.removeListener(authorUpdated);
   }

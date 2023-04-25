@@ -1,5 +1,6 @@
 import 'package:bruig/components/app_notifications.dart';
 import 'package:bruig/models/client.dart';
+import 'package:bruig/models/feed.dart';
 import 'package:bruig/models/menus.dart';
 import 'package:bruig/models/notifications.dart';
 import 'package:flutter/material.dart';
@@ -12,8 +13,10 @@ class Sidebar extends StatefulWidget {
   final MainMenuModel mainMenu;
   final AppNotifications ntfns;
   final GlobalKey<NavigatorState> navKey;
+  final FeedModel feed;
 
-  const Sidebar(this.client, this.mainMenu, this.ntfns, this.navKey, {Key? key})
+  const Sidebar(this.client, this.mainMenu, this.ntfns, this.navKey, this.feed,
+      {Key? key})
       : super(key: key);
 
   @override
@@ -26,6 +29,11 @@ class _SidebarState extends State<Sidebar> {
   ServerSessionState connState = ServerSessionState.empty();
   SidebarXController ctrl =
       SidebarXController(selectedIndex: 0, extended: true);
+  FeedModel get feed => widget.feed;
+
+  void feedUpdated() async {
+    setState(() {});
+  }
 
   void clientUpdated() async {
     setState(() {
@@ -47,15 +55,18 @@ class _SidebarState extends State<Sidebar> {
   void initState() {
     super.initState();
     clientUpdated();
+    feed.addListener(feedUpdated);
     client.addListener(clientUpdated);
     mainMenu.addListener(menuUpdated);
   }
 
   @override
   void didUpdateWidget(Sidebar oldWidget) {
+    oldWidget.feed.removeListener(feedUpdated);
     oldWidget.client.removeListener(clientUpdated);
     oldWidget.mainMenu.removeListener(menuUpdated);
     super.didUpdateWidget(oldWidget);
+    feed.addListener(feedUpdated);
     client.addListener(clientUpdated);
     mainMenu.addListener(menuUpdated);
   }
@@ -170,7 +181,8 @@ class _SidebarState extends State<Sidebar> {
         items: mainMenu.menus
             .map((e) => SidebarXItem(
                   label: e.label,
-                  iconWidget: e.label == "Chats" && client.hasUnreadChats
+                  iconWidget: (e.label == "Chats" && client.hasUnreadChats) ||
+                          (e.label == "News Feed" && feed.unreadPostsComments)
                       ? e.iconNotification
                       : e.icon,
                   onTap: () => switchScreen(e.routeName),
