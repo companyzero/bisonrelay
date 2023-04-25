@@ -50,6 +50,7 @@ dependencies:
   package_info_plus: ^3.0.3
   open_filex: ^4.3.2
   scrollable_positioned_list: ^0.3.5
+  loading_animation_widget: ^1.2.0
 
 msix_config:
   display_name: Bison Relay GUI

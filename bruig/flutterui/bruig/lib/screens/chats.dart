@@ -10,6 +10,7 @@ import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:provider/provider.dart';
 import 'package:bruig/components/chat/active_chat.dart';
+import 'package:loading_animation_widget/loading_animation_widget.dart';
 
 class ChatsScreenTitle extends StatelessWidget {
   const ChatsScreenTitle({super.key});
@@ -102,6 +103,34 @@ messages to the server.
             ),
           ],
         )));
+  }
+}
+
+class _LoadingAddressBookPage extends StatelessWidget {
+  const _LoadingAddressBookPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    var theme = Theme.of(context);
+    var backgroundColor = theme.backgroundColor;
+    var textColor = const Color(0xFF8E8D98);
+    var secondaryTextColor = const Color(0xFFE4E3E6);
+
+    return Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(color: backgroundColor),
+        child: Center(
+            child: Column(children: [
+          const SizedBox(height: 34),
+          Text("Loading Address Book",
+              style: TextStyle(
+                  color: textColor, fontSize: 34, fontWeight: FontWeight.w200)),
+          const SizedBox(height: 20),
+          LoadingAnimationWidget.waveDots(
+            color: textColor,
+            size: 50,
+          ),
+        ])));
   }
 }
 
@@ -237,12 +266,15 @@ class _ChatsScreenState extends State<ChatsScreen> {
     var theme = Theme.of(context);
     var backgroundColor = theme.backgroundColor;
 
-    if (client.userChats.isEmpty) {
+    if (client.userChats.isEmpty && !client.loadingAddressBook) {
       if (!hasLNBalance) {
         // Only show f user never had any contacts.
         return const _FundsNeededPage();
       }
       return const _InviteNeededPage();
+    }
+    if (client.loadingAddressBook) {
+      return const _LoadingAddressBookPage();
     }
 
     return Row(children: [

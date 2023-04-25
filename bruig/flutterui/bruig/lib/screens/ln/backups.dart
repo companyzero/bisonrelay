@@ -85,7 +85,7 @@ class _LNBackupsPageState extends State<LNBackupsPage> {
 Static Channel Backup (SCB) files are needed to request that remote hosts 
 close channels with the local wallet after the wallet is restored from
 seed. This backup file needs to be updated every time a channel is opened or
-closed, or users are under risk of losing access to their funds.
+closed, or users are at risk of losing access to their funds.
 ''',
               style: TextStyle(color: darkTextColor),
             ),

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:collection';
 import 'package:bruig/models/menus.dart';
 import 'package:flutter/foundation.dart';
@@ -261,6 +262,13 @@ class ClientModel extends ChangeNotifier {
 
   void set userChats(List<ChatModel> us) {
     _userChats = us;
+    notifyListeners();
+  }
+
+  bool _loadingAddressBook = true;
+  bool get loadingAddressBook => _loadingAddressBook;
+  void set loadingAddressBook(bool b) {
+    _loadingAddressBook = b;
     notifyListeners();
   }
 
@@ -547,6 +555,8 @@ class ClientModel extends ChangeNotifier {
         userChats = sortedUserList;
       }
     });
+
+    loadingAddressBook = false;
   }
 
   void acceptInvite(Invitation invite) async {
