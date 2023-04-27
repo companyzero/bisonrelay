@@ -153,9 +153,11 @@ minimumsendbalance = 0.01
 # "pages:<path>" offers static pages stored in the local <path>.
 # "simplestore:<path>" uses the internal 'simplestore' subsystem; if <path> does
 #   not exist, then it will be created and fill with a sample, minimal store.
+# "clientrpc": sends request events and waits for responses via clientrpc.
 # Examples:
 # resourcesupstream = pages:/path/to/static/pages
 # resourcesupstream = smplestore:/path/to/simple/store
+# resourcesupstream = clientrpc
 
 # How to charge for purchases done in simplestore. Either empty (local user
 # will manually charge) or "onchain" (generates an on-chain address). Only used

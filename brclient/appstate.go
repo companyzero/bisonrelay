@@ -3436,6 +3436,18 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		if err != nil {
 			return nil, err
 		}
+
+		resServerCfg := rpcserver.ResourcesServerCfg{
+			Log:    logBknd.logger("RPCS"),
+			Client: c,
+		}
+		if args.ResourcesUpstream == "clientrpc" {
+			resServerCfg.Router = resRouter
+		}
+		err = rpcServer.InitResourcesService(resServerCfg)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
