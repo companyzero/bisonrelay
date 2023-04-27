@@ -5,6 +5,7 @@ import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/models/log.dart';
 import 'package:bruig/models/notifications.dart';
+import 'package:bruig/models/resources.dart';
 import 'package:bruig/screens/chats.dart';
 import 'package:bruig/screens/feed.dart';
 import 'package:bruig/screens/ln_management.dart';
@@ -12,6 +13,7 @@ import 'package:bruig/screens/log.dart';
 import 'package:bruig/screens/manage_content_screen.dart';
 import 'package:bruig/screens/paystats.dart';
 import 'package:bruig/screens/settings.dart';
+import 'package:bruig/screens/viewpage_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:provider/provider.dart';
@@ -63,6 +65,16 @@ final List<MainMenuItem> mainMenu = [
     (context) => const LNScreenTitle(),
     const SidebarIcon(Icons.device_hub, false),
     const SidebarIcon(Icons.device_hub, false),
+  ),
+  MainMenuItem(
+    "Pages Browser",
+    ViewPageScreen.routeName,
+    (context) => Consumer2<ClientModel, ResourcesModel>(
+        builder: (context, client, resources, child) =>
+            ViewPageScreen(resources, client)),
+    (context) => const ViewPagesScreenTitle(),
+    const SidebarIcon(Icons.web, false),
+    const SidebarIcon(Icons.web, false),
   ),
   MainMenuItem(
     "Manage Content",
@@ -177,6 +189,20 @@ List<ChatMenuItem> buildUserChatMenu(ChatModel chat) {
     }
   }
 
+  void viewPages(BuildContext context, ChatModel chat) async {
+    var path = ["index.md"];
+    try {
+      var resources = Provider.of<ResourcesModel>(context, listen: false);
+      var sess = await resources.fetchPage(chat.id, path, 0, 0);
+      var event = RequestedResourceEvent(chat.id, sess);
+      chat.append(ChatEventModel(event, null));
+    } catch (exception) {
+      var event = SynthChatEvent("", SCE_sending);
+      event.error = Exception("Unable to fetch page: $exception");
+      chat.append(ChatEventModel(event, null));
+    }
+  }
+
   return <ChatMenuItem>[
     ChatMenuItem(
         "User Profile", (context, chats) => chats.profile = chats.active),
@@ -204,6 +230,10 @@ List<ChatMenuItem> buildUserChatMenu(ChatModel chat) {
     ChatMenuItem(
       "Send File",
       (context, chats) => sendFile(context, chats.active!),
+    ),
+    ChatMenuItem(
+      "View Pages",
+      (context, chats) => viewPages(context, chats.active!),
     ),
     ChatMenuItem(
       "Rename User",

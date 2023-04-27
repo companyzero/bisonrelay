@@ -6,6 +6,7 @@ import 'dart:developer' as developer;
 import 'package:bruig/components/attach_file.dart';
 import 'package:bruig/components/route_error.dart';
 import 'package:bruig/models/menus.dart';
+import 'package:bruig/models/resources.dart';
 import 'package:bruig/screens/about.dart';
 import 'package:bruig/screens/contacts_msg_times.dart';
 import 'package:bruig/screens/fetch_invite.dart';
@@ -90,7 +91,8 @@ Future<void> runMainApp(Config cfg) async {
       ChangeNotifierProvider(create: (c) => DownloadsModel()),
       ChangeNotifierProvider(create: (c) => AppNotifications()),
       ChangeNotifierProvider(create: (c) => ThemeNotifier()),
-      ChangeNotifierProvider(create: (c) => MainMenuModel())
+      ChangeNotifierProvider(create: (c) => MainMenuModel()),
+      ChangeNotifierProvider(create: (c) => ResourcesModel()),
     ],
     child: App(cfg),
   ));
@@ -149,7 +151,9 @@ class _AppState extends State<App> with WindowListener {
           cfg.logFile,
           cfg.msgRoot,
           cfg.debugLevel,
-          true);
+          true,
+          cfg.resourcesUpstream,
+          cfg.simpleStorePayType);
       await Golib.initClient(initArgs);
 
       navkey.currentState!.pushReplacementNamed(OverviewScreen.routeName);

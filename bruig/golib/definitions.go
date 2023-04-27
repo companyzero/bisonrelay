@@ -356,7 +356,10 @@ type Invitation struct {
 	Invite rpc.OOBPublicIdentityInvite `json:"invite"`
 }
 
-type OnboardStateChanged struct {
-	State clientintf.OnboardState `json:"onboard"`
-	Err   error                   `json:"error"`
+type FetchResourceArgs struct {
+	UID        clientintf.UserID         `json:"uid"`
+	Path       []string                  `json:"path"`
+	Metadata   map[string]string         `json:"metadata,omitempty"`
+	SessionID  clientintf.PagesSessionID `json:"session_id"`
+	ParentPage clientintf.PagesSessionID `json:"parent_page"`
 }

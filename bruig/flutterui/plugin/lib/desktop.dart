@@ -310,6 +310,11 @@ mixin BaseDesktopPlatform on NtfStreams {
             : ntfnOnboardStateChanged.add(OnboardState.fromJson(payload));
         break;
 
+      case NTResourceFetched:
+        var event = FetchedResource.fromJson(payload);
+        ntfFetchedResources.add(event);
+        break;
+
       default:
         print("Received unknown notification ${cmd.toRadixString(16)}");
     }

@@ -157,7 +157,7 @@ Map<String, dynamic> _$OOBPublicIdentityInviteToJson(
 
 Invitation _$InvitationFromJson(Map<String, dynamic> json) => Invitation(
       OOBPublicIdentityInvite.fromJson(json['invite'] as Map<String, dynamic>),
-      base64ToUint8list(json['blob'] as String),
+      base64ToUint8list(json['blob'] as String?),
     );
 
 Map<String, dynamic> _$InvitationToJson(Invitation instance) =>
@@ -1183,7 +1183,7 @@ LNInitDcrlnd _$LNInitDcrlndFromJson(Map<String, dynamic> json) => LNInitDcrlnd(
       json['network'] as String,
       json['password'] as String,
       (json['existingSeed'] as List<dynamic>).map((e) => e as String).toList(),
-      base64ToUint8list(json['multiChanBackup'] as String),
+      base64ToUint8list(json['multiChanBackup'] as String?),
     );
 
 Map<String, dynamic> _$LNInitDcrlndToJson(LNInitDcrlnd instance) =>
@@ -1735,3 +1735,93 @@ const _$OnboardStageEnumMap = {
   OnboardStage.stageInitialKX: 'initial_kx',
   OnboardStage.stageOnboardDone: 'done',
 };
+
+FetchResourceArgs _$FetchResourceArgsFromJson(Map<String, dynamic> json) =>
+    FetchResourceArgs(
+      json['uid'] as String,
+      (json['path'] as List<dynamic>).map((e) => e as String).toList(),
+      (json['metadata'] as Map<String, dynamic>?)?.map(
+        (k, e) => MapEntry(k, e as String),
+      ),
+      json['session_id'] as int? ?? 0,
+      json['parent_page'] as int? ?? 0,
+    );
+
+Map<String, dynamic> _$FetchResourceArgsToJson(FetchResourceArgs instance) =>
+    <String, dynamic>{
+      'uid': instance.uid,
+      'path': instance.path,
+      'metadata': instance.metadata,
+      'session_id': instance.sessionID,
+      'parent_page': instance.parentPage,
+    };
+
+RMFetchResource _$RMFetchResourceFromJson(Map<String, dynamic> json) =>
+    RMFetchResource(
+      (json['path'] as List<dynamic>).map((e) => e as String).toList(),
+      (json['meta'] as Map<String, dynamic>?)?.map(
+        (k, e) => MapEntry(k, e as String),
+      ),
+      hexToUint64(json['tag'] as String),
+      base64ToUint8list(json['data'] as String?),
+      json['index'] as int,
+      json['count'] as int,
+    );
+
+Map<String, dynamic> _$RMFetchResourceToJson(RMFetchResource instance) =>
+    <String, dynamic>{
+      'path': instance.path,
+      'meta': instance.meta,
+      'tag': instance.tag,
+      'data': uint8listToBase64(instance.data),
+      'index': instance.index,
+      'count': instance.count,
+    };
+
+RMFetchResourceReply _$RMFetchResourceReplyFromJson(
+        Map<String, dynamic> json) =>
+    RMFetchResourceReply(
+      hexToUint64(json['tag'] as String),
+      json['status'] as int,
+      (json['meta'] as Map<String, dynamic>?)?.map(
+        (k, e) => MapEntry(k, e as String),
+      ),
+      base64ToUint8list(json['data'] as String?),
+      json['index'] as int,
+      json['count'] as int,
+    );
+
+Map<String, dynamic> _$RMFetchResourceReplyToJson(
+        RMFetchResourceReply instance) =>
+    <String, dynamic>{
+      'tag': instance.tag,
+      'status': instance.status,
+      'meta': instance.meta,
+      'data': instance.data,
+      'index': instance.index,
+      'count': instance.count,
+    };
+
+FetchedResource _$FetchedResourceFromJson(Map<String, dynamic> json) =>
+    FetchedResource(
+      json['uid'] as String,
+      json['session_id'] as int,
+      json['parent_page'] as int,
+      json['page_id'] as int,
+      DateTime.parse(json['request_ts'] as String),
+      DateTime.parse(json['response_ts'] as String),
+      RMFetchResource.fromJson(json['request'] as Map<String, dynamic>),
+      RMFetchResourceReply.fromJson(json['response'] as Map<String, dynamic>),
+    );
+
+Map<String, dynamic> _$FetchedResourceToJson(FetchedResource instance) =>
+    <String, dynamic>{
+      'uid': instance.uid,
+      'session_id': instance.sessionID,
+      'parent_page': instance.parentPage,
+      'page_id': instance.pageID,
+      'request_ts': instance.requestTS.toIso8601String(),
+      'response_ts': instance.responseTS.toIso8601String(),
+      'request': instance.request,
+      'response': instance.response,
+    };

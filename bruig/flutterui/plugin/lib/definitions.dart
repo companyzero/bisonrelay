@@ -1088,7 +1088,10 @@ class LNPeer {
 String hexToBase64(String? s) => s != null ? base64Encode(hex.decode(s)) : "";
 String base64ToHex(String s) => s != null ? hex.encode(base64Decode(s)) : "";
 String uint8listToBase64(Uint8List? b) => b != null ? base64Encode(b) : "";
-Uint8List? base64ToUint8list(String s) => s != "" ? base64Decode(s) : null;
+Uint8List? base64ToUint8list(String? s) =>
+    s != null && s != "" ? base64Decode(s) : null;
+int hexToUint64(String s) =>
+    s != "" ? BigInt.parse(s, radix: 16).toSigned(64).toInt() : 0;
 
 @JsonSerializable()
 class LNOpenChannelRequest {
@@ -1693,6 +1696,82 @@ class OnboardState {
       _$OnboardStateFromJson(json);
 }
 
+@JsonSerializable()
+class FetchResourceArgs {
+  final String uid;
+  final List<String> path;
+  final Map<String, String>? metadata;
+  @JsonKey(name: "session_id", defaultValue: 0)
+  final int sessionID;
+  @JsonKey(name: "parent_page", defaultValue: 0)
+  final int parentPage;
+
+  FetchResourceArgs(
+      this.uid, this.path, this.metadata, this.sessionID, this.parentPage);
+  Map<String, dynamic> toJson() => _$FetchResourceArgsToJson(this);
+}
+
+typedef ResourceTag = int;
+typedef ResourceStatus = int;
+
+@JsonSerializable()
+class RMFetchResource {
+  final List<String> path;
+  final Map<String, String>? meta;
+  @JsonKey(fromJson: hexToUint64)
+  final ResourceTag tag;
+  @JsonKey(fromJson: base64ToUint8list, toJson: uint8listToBase64)
+  final Uint8List? data;
+  final int index;
+  final int count;
+
+  RMFetchResource(
+      this.path, this.meta, this.tag, this.data, this.index, this.count);
+  factory RMFetchResource.fromJson(Map<String, dynamic> json) =>
+      _$RMFetchResourceFromJson(json);
+}
+
+@JsonSerializable()
+class RMFetchResourceReply {
+  @JsonKey(fromJson: hexToUint64)
+  final ResourceTag tag;
+  final ResourceStatus status;
+  final Map<String, String>? meta;
+  @JsonKey(fromJson: base64ToUint8list)
+  final Uint8List? data;
+  final int index;
+  final int count;
+
+  RMFetchResourceReply(
+      this.tag, this.status, this.meta, this.data, this.index, this.count);
+  factory RMFetchResourceReply.fromJson(Map<String, dynamic> json) =>
+      _$RMFetchResourceReplyFromJson(json);
+}
+
+@JsonSerializable()
+class FetchedResource {
+  final String uid;
+  @JsonKey(name: "session_id")
+  final int sessionID;
+  @JsonKey(name: "parent_page")
+  final int parentPage;
+  @JsonKey(name: "page_id")
+  final int pageID;
+  @JsonKey(name: "request_ts")
+  final DateTime requestTS;
+  @JsonKey(name: "response_ts")
+  final DateTime responseTS;
+
+  final RMFetchResource request;
+  final RMFetchResourceReply response;
+
+  factory FetchedResource.fromJson(Map<String, dynamic> json) =>
+      _$FetchedResourceFromJson(json);
+
+  FetchedResource(this.uid, this.sessionID, this.parentPage, this.pageID,
+      this.requestTS, this.responseTS, this.request, this.response);
+}
+
 mixin NtfStreams {
   StreamController<RemoteUser> ntfAcceptedInvites =
       StreamController<RemoteUser>();
@@ -1739,6 +1818,10 @@ mixin NtfStreams {
   StreamController<OnboardState> ntfnOnboardStateChanged =
       StreamController<OnboardState>();
   Stream<OnboardState> onboardStateChanged() => ntfnOnboardStateChanged.stream;
+
+  StreamController<FetchedResource> ntfFetchedResources =
+      StreamController<FetchedResource>();
+  Stream<FetchedResource> fetchedResources() => ntfFetchedResources.stream;
 }
 
 abstract class PluginPlatform {
@@ -1768,6 +1851,7 @@ abstract class PluginPlatform {
   Stream<LNInitialChainSyncUpdate> lnInitChainSyncProgress() =>
       throw "unimplemented";
   Stream<OnboardState> onboardStateChanged() => throw "unimplemented";
+  Stream<FetchedResource> fetchedResources() => throw "unimplemented";
 
   Future<bool> hasServer() async => throw "unimplemented";
 
@@ -2293,6 +2377,12 @@ abstract class PluginPlatform {
   Future<void> startOnboard(String key) async =>
       await asyncCall(CTStartOnboard, key);
   Future<void> cancelOnboard() async => await asyncCall(CTCancelOnboard, null);
+
+  Future<int> fetchResource(String uid, List<String> path,
+      Map<String, String>? metadata, int sessionID, int parentPage) async {
+    var args = FetchResourceArgs(uid, path, metadata, sessionID, parentPage);
+    return await asyncCall(CTFetchResource, args);
+  }
 }
 
 const int CTUnknown = 0x00;
@@ -2401,6 +2491,7 @@ const int CTRetryOnboard = 0x72;
 const int CTSkipOnboardStage = 0x73;
 const int CTStartOnboard = 0x74;
 const int CTCancelOnboard = 0x75;
+const int CTFetchResource = 0x76;
 
 const int notificationsStartID = 0x1000;
 
@@ -2441,3 +2532,4 @@ const int NTGCAdminsChanged = 0x1022;
 const int NTKXCSuggested = 0x1023;
 const int NTTipUserProgress = 0x1024;
 const int NTOnboardStateChanged = 0x1025;
+const int NTResourceFetched = 0x1026;
