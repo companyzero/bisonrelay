@@ -41,6 +41,13 @@ func (pmv protoMessageValue) Set(s string) error {
 		}
 		pmv.m.Set(pmv.f, protoreflect.ValueOfInt32(int32(v)))
 
+	case protoreflect.Uint32Kind:
+		v, err := strconv.ParseUint(s, 10, 32)
+		if err != nil {
+			return err
+		}
+		pmv.m.Set(pmv.f, protoreflect.ValueOfUint32(uint32(v)))
+
 	case protoreflect.Int64Kind, protoreflect.Sint64Kind, protoreflect.Fixed64Kind, protoreflect.Sfixed64Kind:
 		v, err := strconv.ParseInt(s, 10, 64)
 		if err != nil {
@@ -61,6 +68,9 @@ func (pmv protoMessageValue) Set(s string) error {
 			return err
 		}
 		pmv.m.Set(pmv.f, protoreflect.ValueOfFloat64(v))
+
+	case protoreflect.BytesKind:
+		pmv.m.Set(pmv.f, protoreflect.ValueOfBytes([]byte(s)))
 
 	default:
 		return fmt.Errorf("unsupported kind %s in field %s", kind, pmv.f.Name())
@@ -244,6 +254,10 @@ func parseCmdFlags(cmdName string, args []string) (proto.Message, error) {
 				continue
 			}
 			parentName += string(f.Name()) + "."
+			if f.IsMap() {
+				// TODO: support passing map arguments.
+				continue
+			}
 			if v, ok := subFields[parentName]; !ok {
 				newm := m.Get(f).Message().New()
 				m.Set(f, protoreflect.ValueOf(newm))
@@ -385,6 +399,7 @@ func loadConfig() (*config, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	cfg.resProducer, err = responseProducer(cfg.cmdName)
 	if err != nil {
 		return nil, err
