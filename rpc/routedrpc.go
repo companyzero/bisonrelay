@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"strconv"
 	"time"
 
 	"github.com/companyzero/bisonrelay/ratchet"
@@ -141,6 +142,68 @@ const RMCKXSuggestion = "kxsuggestion"
 
 type RMKXSuggestion struct {
 	Target zkidentity.PublicIdentity
+}
+
+type ResourceTag uint64
+
+func (tag ResourceTag) String() string {
+	return strconv.FormatUint(uint64(tag), 16)
+}
+
+func (tag *ResourceTag) FromString(s string) error {
+	v, err := strconv.ParseUint(s, 16, 64)
+	if err != nil {
+		return err
+	}
+	*tag = ResourceTag(v)
+	return nil
+}
+
+// MarshalJSON marshals the id into a json string.
+func (tag ResourceTag) MarshalJSON() ([]byte, error) {
+	return json.Marshal(tag.String())
+}
+
+// UnmarshalJSON unmarshals the json representation of a ShortID.
+func (tag *ResourceTag) UnmarshalJSON(b []byte) error {
+	var s string
+	if err := json.Unmarshal(b, &s); err != nil {
+		return err
+	}
+	return tag.FromString(s)
+}
+
+type ResourceStatus uint16
+
+func (rs ResourceStatus) String() string {
+	return strconv.FormatUint(uint64(rs), 10)
+}
+
+const (
+	ResourceStatusOk       = 200
+	ResourceStatusNotFound = 404
+)
+
+const RMCFetchResource = "fetchresource"
+
+type RMFetchResource struct {
+	Path  []string          `json:"path"`
+	Meta  map[string]string `json:"meta"`
+	Tag   ResourceTag       `json:"tag"`
+	Data  []byte            `json:"data"`
+	Index uint32            `json:"index"`
+	Count uint32            `json:"count"`
+}
+
+const RMCFetchResourceReply = "fetchresourcereply"
+
+type RMFetchResourceReply struct {
+	Tag    ResourceTag       `json:"tag"`
+	Status ResourceStatus    `json:"status"`
+	Meta   map[string]string `json:"meta"`
+	Data   []byte            `json:"data"`
+	Index  uint32            `json:"index"`
+	Count  uint32            `json:"count"`
 }
 
 // ComposeCompressedRM creates a blobified message that has a header and a
@@ -293,6 +356,13 @@ func ComposeCompressedRM(from *zkidentity.FullIdentity, rm interface{}, zlibLeve
 
 	case RMPostStatusReply:
 		h.Command = RMCPostStatusReply
+
+	// Resources
+	case RMFetchResource:
+		h.Command = RMCFetchResource
+
+	case RMFetchResourceReply:
+		h.Command = RMCFetchResourceReply
 
 	// Purely transitive commands
 
@@ -615,6 +685,17 @@ func DecomposeRM(id *zkidentity.PublicIdentity, mb []byte) (*RMHeader, interface
 		var postStatusReply RMPostStatusReply
 		err = pmd.Decode(&postStatusReply)
 		payload = postStatusReply
+
+	// Resources
+	case RMCFetchResource:
+		var fetchRes RMFetchResource
+		err = pmd.Decode(&fetchRes)
+		payload = fetchRes
+
+	case RMCFetchResourceReply:
+		var fetchResReply RMFetchResourceReply
+		err = pmd.Decode(&fetchResReply)
+		payload = fetchResReply
 
 	// Purely transitive commands
 

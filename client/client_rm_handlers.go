@@ -235,6 +235,12 @@ func (c *Client) innerHandleUserRM(ru *RemoteUser, h *rpc.RMHeader,
 	case rpc.RMKXSuggestion:
 		return c.handleKXSuggestion(ru, p)
 
+	case rpc.RMFetchResource:
+		return c.handleFetchResource(ru, p)
+
+	case rpc.RMFetchResourceReply:
+		return c.handleFetchResourceReply(ru, p)
+
 	default:
 		return fmt.Errorf("Received unknown command %q payload %T",
 			h.Command, p)

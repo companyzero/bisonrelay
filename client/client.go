@@ -12,6 +12,7 @@ import (
 	"github.com/companyzero/bisonrelay/client/internal/gcmcacher"
 	"github.com/companyzero/bisonrelay/client/internal/lowlevel"
 	"github.com/companyzero/bisonrelay/client/internal/singlesetmap"
+	"github.com/companyzero/bisonrelay/client/resources"
 	"github.com/companyzero/bisonrelay/client/timestats"
 	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/companyzero/bisonrelay/zkidentity"
@@ -145,6 +146,10 @@ type Config struct {
 	//
 	// If unspecified, a default value of 10 seconds is used.
 	GCMQMaxLifetime time.Duration
+
+	// ResourcesProvider if filled is used to respond to fetch resource
+	// requests.
+	ResourcesProvider resources.Provider
 
 	// GCMQUpdtDelay is how often to check for GCMQ rules to emit messages.
 	//

@@ -14,6 +14,7 @@ import (
 	"github.com/companyzero/bisonrelay/zkidentity"
 	"github.com/decred/dcrd/chaincfg/chainhash"
 	"github.com/decred/dcrd/dcrutil/v4"
+	"golang.org/x/exp/slices"
 )
 
 // ID is a 32-byte global ID. This is used as an alias for all 32-byte arrays
@@ -159,6 +160,43 @@ type OnboardState struct {
 	RedeemAmount dcrutil.Amount               `json:"redeem_amount"`
 	OutChannelID string                       `json:"out_channel_id"`
 	InChannelID  string                       `json:"in_channel_id"`
+}
+
+// PagesSessionID is a type that represents a page navigation session.
+type PagesSessionID uint64
+
+func (id PagesSessionID) String() string {
+	return fmt.Sprintf("%08d", id)
+}
+
+// PageSessionNode is one node of a page navigation session.
+type PageSessionNode struct {
+	ID       PagesSessionID     `json:"id"`
+	Children []*PageSessionNode `json:"children"`
+}
+
+// Find attempts to recursively find a child that has the specified id. It
+// assumes there are no two children with the same id.
+func (node *PageSessionNode) Find(id PagesSessionID) *PageSessionNode {
+	if node.ID == id {
+		return node
+	}
+
+	stack := slices.Clone(node.Children)
+	for len(stack) > 0 {
+		i := len(stack) - 1
+		n := stack[i]
+		if n.ID == id {
+			return n
+		}
+		stack = append(stack[:i], n.Children...)
+	}
+
+	return nil
+}
+
+func (node *PageSessionNode) Append(id PagesSessionID) {
+	node.Children = append(node.Children, &PageSessionNode{ID: id})
 }
 
 var (
