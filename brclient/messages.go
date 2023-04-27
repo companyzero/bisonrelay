@@ -9,6 +9,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/companyzero/bisonrelay/client/clientdb"
 	"github.com/companyzero/bisonrelay/client/clientintf"
+	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/companyzero/bisonrelay/zkidentity"
 	"github.com/decred/dcrd/dcrutil/v4"
 	"github.com/decred/dcrlnd/lnrpc/initchainsyncrpc"
@@ -167,6 +168,13 @@ type lnChainSyncUpdate struct {
 }
 
 type rmqLenChanged int
+
+type msgPageFetched struct {
+	uid  clientintf.UserID
+	nick string
+	req  *rpc.RMFetchResource
+	res  *rpc.RMFetchResourceReply
+}
 
 var errQuitRequested = errors.New("")
 

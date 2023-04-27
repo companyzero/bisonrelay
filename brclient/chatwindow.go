@@ -11,6 +11,7 @@ import (
 
 	genericlist "github.com/bahlo/generic-list-go"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/companyzero/bisonrelay/client/clientdb"
 	"github.com/companyzero/bisonrelay/client/clientintf"
 	"github.com/companyzero/bisonrelay/internal/mdembeds"
 	"github.com/companyzero/bisonrelay/internal/strescape"
@@ -25,6 +26,7 @@ type chatMsgEl struct {
 	embed   *mdembeds.EmbeddedArgs
 	mention *string
 	url     *string
+	link    *string
 }
 
 type chatMsgElLine struct {
@@ -126,10 +128,55 @@ func (l *chatMsgElLine) splitURLs() {
 	}
 }
 
+var (
+	// linksRegexp is a regexp that detects markdown links.
+	linksRegexp = regexp.MustCompile(`\[[^\[\]]*\]\([^()]*\)`)
+
+	// descrPathRegexp is a regexp that splits markdown links into both
+	// link and description.
+	descrPathRegexp = regexp.MustCompile(`\[([^\[\]]*)\]\(([^()]*)\)`)
+)
+
+func (l *chatMsgElLine) splitLinks() {
+	for el := l.Front(); el != nil; el = el.Next() {
+		s := el.Value.text
+		if s == "" {
+			continue
+		}
+
+		positions := linksRegexp.FindAllStringIndex(s, -1)
+		if len(positions) == 0 {
+			continue
+		}
+
+		// Replace el with new elements.
+		lastEnd := 0
+		for _, pos := range positions {
+			prefix := s[lastEnd:pos[0]]
+			l.InsertBefore(chatMsgEl{text: prefix}, el)
+
+			rawLink := s[pos[0]:pos[1]]
+			link := descrPathRegexp.FindAllStringSubmatch(rawLink, -1)
+			cmel := chatMsgEl{
+				text: ">" + link[0][1] + "<",
+				link: &(link[0][2]),
+			}
+
+			l.InsertBefore(cmel, el)
+			lastEnd = pos[1]
+		}
+		suffix := s[lastEnd:]
+		newEl := l.InsertBefore(chatMsgEl{text: suffix}, el)
+		l.Remove(el)
+		el = newEl
+	}
+}
+
 func (l *chatMsgElLine) parseLine(line, mention string) {
 	l.PushBack(chatMsgEl{text: line})
 	l.splitEmbeds()
 	l.splitURLs()
+	l.splitLinks()
 	if mention != "" {
 		l.splitMentions(mention)
 	}
@@ -166,16 +213,21 @@ type chatMsg struct {
 
 type chatWindow struct {
 	sync.Mutex
-	uid          clientintf.UserID
-	isGC         bool
-	msgs         []*chatMsg
-	alias        string
-	me           string // nick of the local user
-	gc           zkidentity.ShortID
-	selEmbedArgs mdembeds.EmbeddedArgs
-	selEmbed     int
-	maxEmbeds    int
-	unreadIdx    int
+	uid   clientintf.UserID
+	isGC  bool
+	msgs  []*chatMsg
+	alias string
+	me    string // nick of the local user
+	gc    zkidentity.ShortID
+
+	pageSess clientintf.PagesSessionID
+	page     *clientdb.FetchedResource
+
+	selEl         *chatMsgEl
+	selElIndex    int
+	maxSelectable int
+
+	unreadIdx int
 }
 
 func (cw *chatWindow) empty() bool {
@@ -259,6 +311,22 @@ func (cw *chatWindow) newRecvdMsg(from, msg string, fromUID *zkidentity.ShortID,
 	return m
 }
 
+func (cw *chatWindow) replacePage(fr clientdb.FetchedResource) {
+	cw.Lock()
+	var msg *chatMsg
+	if len(cw.msgs) == 0 {
+		msg = &chatMsg{}
+		cw.msgs = []*chatMsg{msg}
+	} else {
+		msg = cw.msgs[0]
+	}
+	msg.elements = parseMsgIntoElements(string(fr.Response.Data), "")
+	msg.fromUID = &fr.UID
+	cw.page = &fr
+	cw.selElIndex = 0
+	cw.Unlock()
+}
+
 func (cw *chatWindow) setMsgSent(msg *chatMsg) {
 	cw.Lock()
 	msg.sent = true
@@ -295,18 +363,18 @@ func (cw *chatWindow) renderPost(winW int, styles *theme, b *strings.Builder, ms
 	b.WriteString("\n")
 }
 
-func (cw *chatWindow) changeSelectedEmbed(delta int) bool {
+func (cw *chatWindow) changeSelected(delta int) bool {
 	cw.Lock()
 	defer cw.Unlock()
 
-	if cw.selEmbed == 0 && delta < 0 {
+	if cw.selElIndex == 0 && delta < 0 {
 		return false
 	}
-	if cw.selEmbed >= cw.maxEmbeds-1 && delta > 0 {
+	if cw.selElIndex >= cw.maxSelectable-1 && delta > 0 {
 		return false
 	}
 
-	cw.selEmbed += delta
+	cw.selElIndex += delta
 	return true
 }
 
@@ -348,36 +416,13 @@ func writeWrappedURL(b *strings.Builder, offset, winW int, url string) int {
 	return offset
 }
 
-func (cw *chatWindow) renderMsg(winW int, styles *theme, b *strings.Builder, as *appState, msg *chatMsg) {
-	prefix := styles.timestamp.Render(msg.ts.Format("15:04:05 "))
-	if msg.help {
-		prefix += " "
-	} else if msg.internal {
-		prefix += "* "
-	} else {
-		prefix += "<"
-		if msg.mine {
-			prefix += styles.nickMe.Render(cw.me)
-		} else if cw.isGC {
-			prefix += styles.nickGC.Render(msg.from)
-		} else {
-			prefix += styles.nick.Render(msg.from)
-		}
-		prefix += "> "
-	}
+func (cw *chatWindow) renderMsgElements(winW int, as *appState, elements []*chatMsgElLine,
+	fromUID *clientintf.UserID, style lipgloss.Style, b *strings.Builder, offset int) {
 
-	style := styles.msg
-	if msg.help {
-		style = styles.help
-	} else if (msg.mine || msg.internal) && !msg.sent {
-		style = styles.unsent
-	}
-
-	b.WriteString(prefix)
-	offset := lipgloss.Width(prefix)
+	styles := as.styles
 
 	// Loop through hard newlines.
-	for _, line := range msg.elements {
+	for _, line := range elements {
 		// Style each element.
 		for elel := line.Front(); elel != nil; elel = elel.Next() {
 			el := elel.Value
@@ -420,12 +465,21 @@ func (cw *chatWindow) renderMsg(winW int, styles *theme, b *strings.Builder, as 
 				}
 
 				style := as.styles.embed
-				if cw.maxEmbeds == cw.selEmbed {
+				if cw.maxSelectable == cw.selElIndex {
 					style = as.styles.focused
-					args.Uid = msg.fromUID
-					cw.selEmbedArgs = *args
+					args.Uid = fromUID
+					cw.selEl = &el
 				}
-				cw.maxEmbeds += 1
+				cw.maxSelectable += 1
+				offset = writeWrappedWithStyle(b, offset, winW, style, s)
+			} else if el.link != nil {
+				style := as.styles.embed
+				if cw.maxSelectable == cw.selElIndex {
+					style = as.styles.focused
+					cw.selEl = &el
+				}
+				cw.maxSelectable += 1
+				s := el.text
 				offset = writeWrappedWithStyle(b, offset, winW, style, s)
 			} else if el.mention != nil {
 				style := styles.mention
@@ -445,14 +499,70 @@ func (cw *chatWindow) renderMsg(winW int, styles *theme, b *strings.Builder, as 
 		b.WriteRune('\n')
 		offset = 0
 	}
+
+}
+
+func (cw *chatWindow) renderMsg(winW int, styles *theme, b *strings.Builder, as *appState, msg *chatMsg) {
+	prefix := styles.timestamp.Render(msg.ts.Format("15:04:05 "))
+	if msg.help {
+		prefix += " "
+	} else if msg.internal {
+		prefix += "* "
+	} else {
+		prefix += "<"
+		if msg.mine {
+			prefix += styles.nickMe.Render(cw.me)
+		} else if cw.isGC {
+			prefix += styles.nickGC.Render(msg.from)
+		} else {
+			prefix += styles.nick.Render(msg.from)
+		}
+		prefix += "> "
+	}
+
+	style := styles.msg
+	if msg.help {
+		style = styles.help
+	} else if (msg.mine || msg.internal) && !msg.sent {
+		style = styles.unsent
+	}
+
+	b.WriteString(prefix)
+	offset := lipgloss.Width(prefix)
+
+	cw.renderMsgElements(winW, as, msg.elements, msg.fromUID, style, b, offset)
+}
+
+func (cw *chatWindow) renderPage(winW int, as *appState, b *strings.Builder) {
+	style := as.styles.msg
+
+	if cw.page != nil {
+		nick, _ := as.c.UserNick(cw.page.UID)
+		fmt.Fprintf(b, "Source: %s (%s)\n", strescape.Nick(nick), cw.page.UID)
+		fmt.Fprintf(b, "Path: %s\n", strescape.Nick(strings.Join(cw.page.Request.Path, "/")))
+		fmt.Fprintf(b, strings.Repeat("―", winW))
+		b.WriteRune('\n')
+	}
+
+	if len(cw.msgs) > 0 {
+		// msg[0] is the parsed contents of the page.
+		cw.renderMsgElements(winW, as, cw.msgs[0].elements, cw.msgs[0].fromUID, style, b, 0)
+	}
 }
 
 func (cw *chatWindow) renderContent(winW int, styles *theme, as *appState) string {
 	cw.Lock()
 
 	// TODO: estimate total length to perform only a single alloc.
-	cw.maxEmbeds = 0
+	cw.maxSelectable = 0
 	b := new(strings.Builder)
+
+	if cw.page != nil {
+		cw.renderPage(winW, as, b)
+		cw.Unlock()
+		return b.String()
+	}
+
 	for i, msg := range cw.msgs {
 		if i == cw.unreadIdx {
 			unreadMsg := []byte(" unread ――――――――")

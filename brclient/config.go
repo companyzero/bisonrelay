@@ -94,6 +94,8 @@ type config struct {
 	RPCKeyPath         string
 	RPCClientCAPath    string
 	RPCIssueClientCert bool
+
+	ResourcesUpstream string
 }
 
 func defaultAppDataDir(homeDir string) string {
@@ -250,6 +252,7 @@ func loadConfig() (*config, error) {
 	flagRPCKeyPath := fs.String("rpckeypath", defaultRPCKeyPath, "")
 	flagRPCClientCAPath := fs.String("rpcclientcapath", defaultRPCClientCA, "")
 	flagRPCIssueClientCert := fs.Bool("rpcissueclientcert", true, "")
+	flagResourcesUpstream := fs.String("resourcesupstream", "", "Upstream processor of resource requests")
 
 	flagProxyAddr := fs.String("proxyaddr", "", "")
 	flagProxyUser := fs.String("proxyuser", "", "")
@@ -273,8 +276,19 @@ func loadConfig() (*config, error) {
 		return nil, fmt.Errorf("flag 'root' cannot be empty")
 	}
 
-	// Clean the root dir.
+	// Clean paths.
 	*flagRootDir = cleanAndExpandPath(homeDir, *flagRootDir)
+	switch {
+	case *flagResourcesUpstream == "":
+		// Valid, and no more processing needed.
+	case strings.HasPrefix(*flagResourcesUpstream, "pages:"):
+		path := (*flagResourcesUpstream)[len("pages:"):]
+		path = cleanAndExpandPath(homeDir, path)
+		*flagResourcesUpstream = "pages:" + path
+	default:
+		return nil, fmt.Errorf("unknown resources upstream provider %q", *flagResourcesUpstream)
+
+	}
 
 	// Reconfigure dirs that are based on the root dir when they are not
 	// specified.
@@ -386,6 +400,7 @@ func loadConfig() (*config, error) {
 		RPCClientCAPath:    *flagRPCClientCAPath,
 		RPCIssueClientCert: *flagRPCIssueClientCert,
 		InviteFundsAccount: *flagInviteFundsAccount,
+		ResourcesUpstream:  *flagResourcesUpstream,
 	}, nil
 }
 
