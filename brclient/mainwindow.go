@@ -11,6 +11,7 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/companyzero/bisonrelay/internal/mdembeds"
 )
 
 type mainWindowState struct {
@@ -106,11 +107,11 @@ func (mws *mainWindowState) onTextInputAction() {
 	} else {
 
 		// Replace pseudo-data with data.
-		text = replaceEmbeds(text, func(args embeddedArgs) string {
-			data := string(args.data)
+		text = mdembeds.ReplaceEmbeds(text, func(args mdembeds.EmbeddedArgs) string {
+			data := string(args.Data)
 			if strings.HasPrefix(data, "[content ") {
-				id := data[9 : len(args.data)-1]
-				args.data = mws.embedContent[id]
+				id := data[9 : len(args.Data)-1]
+				args.Data = mws.embedContent[id]
 			}
 
 			return args.String()
@@ -370,10 +371,10 @@ func (mws mainWindowState) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			cw := mws.as.activeChatWindow()
 			if cw != nil && cw.selEmbed < cw.maxEmbeds {
 				embedded := cw.selEmbedArgs
-				if embedded.uid != nil {
-					err := mws.as.downloadEmbed(*embedded.uid, embedded)
+				if embedded.Uid != nil {
+					err := mws.as.downloadEmbed(*embedded.Uid, embedded)
 					if err == nil {
-						cw.newHelpMsg("Starting to download file %s", embedded.uid)
+						cw.newHelpMsg("Starting to download file %s", embedded.Uid)
 						mws.updateViewportContent()
 						return mws, nil
 					}

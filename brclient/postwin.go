@@ -12,6 +12,7 @@ import (
 	"github.com/companyzero/bisonrelay/client"
 	"github.com/companyzero/bisonrelay/client/clientdb"
 	"github.com/companyzero/bisonrelay/client/clientintf"
+	"github.com/companyzero/bisonrelay/internal/mdembeds"
 	"github.com/companyzero/bisonrelay/internal/strescape"
 	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/decred/dcrd/dcrutil/v4"
@@ -64,7 +65,7 @@ type postWindow struct {
 	startCommentsLine int
 	selComment        int
 	selEmbed          int
-	embeds            []embeddedArgs
+	embeds            []mdembeds.EmbeddedArgs
 	commenting        bool
 	replying          bool
 	relaying          bool
@@ -337,28 +338,28 @@ func (pw *postWindow) renderPost() {
 
 	// Replace embedded data tags.
 	idx := 0
-	embeds := make([]embeddedArgs, 0)
-	content = replaceEmbeds(content, func(args embeddedArgs) string {
+	embeds := make([]mdembeds.EmbeddedArgs, 0)
+	content = mdembeds.ReplaceEmbeds(content, func(args mdembeds.EmbeddedArgs) string {
 		// TODO: support showing embedded images/text?
 		var s string
 
-		if args.alt != "" {
-			s = strescape.Content(args.alt)
+		if args.Alt != "" {
+			s = strescape.Content(args.Alt)
 			s += " "
 		}
 
 		switch {
-		case args.download.IsEmpty() && (len(args.data) == 0):
+		case args.Download.IsEmpty() && (len(args.Data) == 0):
 			s += "[Empty link and data]"
-		case args.download.IsEmpty() && args.typ == "":
+		case args.Download.IsEmpty() && args.Typ == "":
 			s += "[Embedded untyped data]"
-		case args.download.IsEmpty():
-			s += fmt.Sprintf("[Embedded data of type %q]", args.typ)
+		case args.Download.IsEmpty():
+			s += fmt.Sprintf("[Embedded data of type %q]", args.Typ)
 		default:
-			downloadedFilePath, err := pw.as.c.HasDownloadedFile(args.download)
-			filename := strescape.PathElement(args.filename)
+			downloadedFilePath, err := pw.as.c.HasDownloadedFile(args.Download)
+			filename := strescape.PathElement(args.Filename)
 			if filename == "" {
-				filename = args.download.ShortLogID()
+				filename = args.Download.ShortLogID()
 			}
 			if err != nil {
 				s += fmt.Sprintf("[Error checking file: %v", err)
@@ -366,11 +367,11 @@ func (pw *postWindow) renderPost() {
 				s += fmt.Sprintf("[File %s]", filename)
 			} else {
 				eRate := pw.as.exchangeRate()
-				dcrCost := dcrutil.Amount(int64(args.cost))
+				dcrCost := dcrutil.Amount(int64(args.Cost))
 				usdCost := eRate.DCRPrice * dcrCost.ToCoin()
 				s += fmt.Sprintf("[Download File %s (size:%s cost:%0.8f DCR / %0.8f USD)]",
 					filename,
-					hbytes(int64(args.size)),
+					hbytes(int64(args.Size)),
 					dcrCost.ToCoin(), usdCost)
 			}
 		}

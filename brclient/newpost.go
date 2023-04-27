@@ -7,6 +7,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/companyzero/bisonrelay/client/clientintf"
+	"github.com/companyzero/bisonrelay/internal/mdembeds"
 	"github.com/companyzero/bisonrelay/rpc"
 )
 
@@ -48,11 +49,11 @@ func (pw *newPostWindow) addEmbedCB(id string, data []byte, embedStr string) err
 
 func (pw *newPostWindow) createPost(post string) {
 	// Replace pseudo-data with data.
-	fullPost := replaceEmbeds(post, func(args embeddedArgs) string {
-		data := string(args.data)
+	fullPost := mdembeds.ReplaceEmbeds(post, func(args mdembeds.EmbeddedArgs) string {
+		data := string(args.Data)
 		if strings.HasPrefix(data, "[content ") {
-			id := data[9 : len(args.data)-1]
-			args.data = pw.embedContent[id]
+			id := data[9 : len(args.Data)-1]
+			args.Data = pw.embedContent[id]
 		}
 
 		return args.String()
