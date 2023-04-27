@@ -35,6 +35,10 @@ class InitClient {
   final String debugLevel;
   @JsonKey(name: 'wants_log_ntfns')
   final bool wantsLogNtfns;
+  @JsonKey(name: 'resources_upstream')
+  final String resourcesUpstream;
+  @JsonKey(name: 'simplestore_pay_type')
+  final String simpleStorePayType;
 
   InitClient(
       this.dbRoot,
@@ -46,7 +50,9 @@ class InitClient {
       this.logFile,
       this.msgsRoot,
       this.debugLevel,
-      this.wantsLogNtfns);
+      this.wantsLogNtfns,
+      this.resourcesUpstream,
+      this.simpleStorePayType);
 
   Map<String, dynamic> toJson() => _$InitClientToJson(this);
 }
@@ -1749,6 +1755,72 @@ class RMFetchResourceReply {
 }
 
 @JsonSerializable()
+class SSProduct {
+  final String title;
+  final String sku;
+  final String description;
+  @JsonKey(defaultValue: [])
+  final List<String> tags;
+  final double price;
+  @JsonKey(defaultValue: false)
+  final bool disabled;
+
+  SSProduct(this.title, this.sku, this.description, this.tags, this.price,
+      this.disabled);
+  factory SSProduct.empty() => SSProduct("", "", "", [], 0, true);
+  factory SSProduct.fromJson(Map<String, dynamic> json) =>
+      _$SSProductFromJson(json);
+}
+
+@JsonSerializable()
+class SSCartItem {
+  final SSProduct product;
+  final int quantity;
+
+  SSCartItem(this.product, this.quantity);
+  factory SSCartItem.fromJson(Map<String, dynamic> json) =>
+      _$SSCartItemFromJson(json);
+}
+
+@JsonSerializable()
+class SSCart {
+  final List<SSCartItem> items;
+  final DateTime updated;
+
+  SSCart(this.items, this.updated);
+  factory SSCart.fromJson(Map<String, dynamic> json) => _$SSCartFromJson(json);
+}
+
+@JsonSerializable()
+class SSOrder {
+  final int id;
+  final String user;
+  final SSCart cart;
+
+  SSOrder(this.id, this.user, this.cart);
+  factory SSOrder.fromJson(Map<String, dynamic> json) =>
+      _$SSOrderFromJson(json);
+}
+
+@JsonSerializable()
+class SSPlacedOrder {
+  final SSOrder order;
+  @JsonKey(name: "onchain_addr", defaultValue: "")
+  final String onchainAddr;
+  @JsonKey(name: "ln_invoice", defaultValue: "")
+  final String lnInvoice;
+  @JsonKey(name: "dcr_amount")
+  final int dcrAmount;
+  @JsonKey(name: "exchange_rate")
+  final double exchangeRate;
+
+  SSPlacedOrder(this.order, this.onchainAddr, this.lnInvoice, this.dcrAmount,
+      this.exchangeRate);
+  factory SSPlacedOrder.fromJson(Map<String, dynamic> json) =>
+      _$SSPlacedOrderFromJson(json);
+}
+
+@JsonSerializable()
 class FetchedResource {
   final String uid;
   @JsonKey(name: "session_id")
@@ -1822,6 +1894,10 @@ mixin NtfStreams {
   StreamController<FetchedResource> ntfFetchedResources =
       StreamController<FetchedResource>();
   Stream<FetchedResource> fetchedResources() => ntfFetchedResources.stream;
+
+  StreamController<SSPlacedOrder> ntfSimpleStoreOrders =
+      StreamController<SSPlacedOrder>();
+  Stream<SSPlacedOrder> simpleStoreOrders() => ntfSimpleStoreOrders.stream;
 }
 
 abstract class PluginPlatform {
@@ -1852,6 +1928,7 @@ abstract class PluginPlatform {
       throw "unimplemented";
   Stream<OnboardState> onboardStateChanged() => throw "unimplemented";
   Stream<FetchedResource> fetchedResources() => throw "unimplemented";
+  Stream<SSPlacedOrder> simpleStoreOrders() => throw "unimplemented";
 
   Future<bool> hasServer() async => throw "unimplemented";
 
@@ -2533,3 +2610,4 @@ const int NTKXCSuggested = 0x1023;
 const int NTTipUserProgress = 0x1024;
 const int NTOnboardStateChanged = 0x1025;
 const int NTResourceFetched = 0x1026;
+const int NTSimpleStoreOrderPlaced = 0x1027;

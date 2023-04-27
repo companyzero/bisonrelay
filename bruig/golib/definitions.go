@@ -3,6 +3,7 @@ package golib
 import (
 	"github.com/companyzero/bisonrelay/client/clientdb"
 	"github.com/companyzero/bisonrelay/client/clientintf"
+	"github.com/companyzero/bisonrelay/client/resources/simplestore"
 	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/companyzero/bisonrelay/zkidentity"
 	"github.com/decred/dcrd/dcrutil/v4"
@@ -11,16 +12,18 @@ import (
 )
 
 type InitClient struct {
-	ServerAddr     string `json:"server_addr"`
-	DBRoot         string `json:"dbroot"`
-	DownloadsDir   string `json:"downloads_dir"`
-	LNRPCHost      string `json:"ln_rpc_host"`
-	LNTLSCertPath  string `json:"ln_tls_cert_path"`
-	LNMacaroonPath string `json:"ln_macaroon_path"`
-	LogFile        string `json:"log_file"`
-	MsgsRoot       string `json:"msgs_root"`
-	DebugLevel     string `json:"debug_level"`
-	WantsLogNtfns  bool   `json:"wants_log_ntfns"`
+	ServerAddr         string `json:"server_addr"`
+	DBRoot             string `json:"dbroot"`
+	DownloadsDir       string `json:"downloads_dir"`
+	LNRPCHost          string `json:"ln_rpc_host"`
+	LNTLSCertPath      string `json:"ln_tls_cert_path"`
+	LNMacaroonPath     string `json:"ln_macaroon_path"`
+	LogFile            string `json:"log_file"`
+	MsgsRoot           string `json:"msgs_root"`
+	DebugLevel         string `json:"debug_level"`
+	WantsLogNtfns      bool   `json:"wants_log_ntfns"`
+	ResourcesUpstream  string `json:"resources_upstream"`
+	SimpleStorePayType string `json:"simplestore_pay_type"`
 }
 
 type IDInit struct {
@@ -362,4 +365,12 @@ type FetchResourceArgs struct {
 	Metadata   map[string]string         `json:"metadata,omitempty"`
 	SessionID  clientintf.PagesSessionID `json:"session_id"`
 	ParentPage clientintf.PagesSessionID `json:"parent_page"`
+}
+
+type SimpleStoreOrder struct {
+	Order        simplestore.Order `json:"order"`
+	OnchainAddr  string            `json:"onchain_addr"`
+	DCRAmount    dcrutil.Amount    `json:"dcr_amount"`
+	ExchangeRate float64           `json:"exchange_rate"`
+	LNInvoice    string            `json:"ln_invoice"`
 }

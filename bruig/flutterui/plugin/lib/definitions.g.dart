@@ -17,6 +17,8 @@ InitClient _$InitClientFromJson(Map<String, dynamic> json) => InitClient(
       json['msgs_root'] as String,
       json['debug_level'] as String,
       json['wants_log_ntfns'] as bool,
+      json['resources_upstream'] as String,
+      json['simplestore_pay_type'] as String,
     );
 
 Map<String, dynamic> _$InitClientToJson(InitClient instance) =>
@@ -31,6 +33,8 @@ Map<String, dynamic> _$InitClientToJson(InitClient instance) =>
       'msgs_root': instance.msgsRoot,
       'debug_level': instance.debugLevel,
       'wants_log_ntfns': instance.wantsLogNtfns,
+      'resources_upstream': instance.resourcesUpstream,
+      'simplestore_pay_type': instance.simpleStorePayType,
     };
 
 IDInit _$IDInitFromJson(Map<String, dynamic> json) => IDInit(
@@ -1800,6 +1804,77 @@ Map<String, dynamic> _$RMFetchResourceReplyToJson(
       'data': instance.data,
       'index': instance.index,
       'count': instance.count,
+    };
+
+SSProduct _$SSProductFromJson(Map<String, dynamic> json) => SSProduct(
+      json['title'] as String,
+      json['sku'] as String,
+      json['description'] as String,
+      (json['tags'] as List<dynamic>?)?.map((e) => e as String).toList() ?? [],
+      (json['price'] as num).toDouble(),
+      json['disabled'] as bool? ?? false,
+    );
+
+Map<String, dynamic> _$SSProductToJson(SSProduct instance) => <String, dynamic>{
+      'title': instance.title,
+      'sku': instance.sku,
+      'description': instance.description,
+      'tags': instance.tags,
+      'price': instance.price,
+      'disabled': instance.disabled,
+    };
+
+SSCartItem _$SSCartItemFromJson(Map<String, dynamic> json) => SSCartItem(
+      SSProduct.fromJson(json['product'] as Map<String, dynamic>),
+      json['quantity'] as int,
+    );
+
+Map<String, dynamic> _$SSCartItemToJson(SSCartItem instance) =>
+    <String, dynamic>{
+      'product': instance.product,
+      'quantity': instance.quantity,
+    };
+
+SSCart _$SSCartFromJson(Map<String, dynamic> json) => SSCart(
+      (json['items'] as List<dynamic>)
+          .map((e) => SSCartItem.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      DateTime.parse(json['updated'] as String),
+    );
+
+Map<String, dynamic> _$SSCartToJson(SSCart instance) => <String, dynamic>{
+      'items': instance.items,
+      'updated': instance.updated.toIso8601String(),
+    };
+
+SSOrder _$SSOrderFromJson(Map<String, dynamic> json) => SSOrder(
+      json['id'] as int,
+      json['user'] as String,
+      SSCart.fromJson(json['cart'] as Map<String, dynamic>),
+    );
+
+Map<String, dynamic> _$SSOrderToJson(SSOrder instance) => <String, dynamic>{
+      'id': instance.id,
+      'user': instance.user,
+      'cart': instance.cart,
+    };
+
+SSPlacedOrder _$SSPlacedOrderFromJson(Map<String, dynamic> json) =>
+    SSPlacedOrder(
+      SSOrder.fromJson(json['order'] as Map<String, dynamic>),
+      json['onchain_addr'] as String? ?? '',
+      json['ln_invoice'] as String? ?? '',
+      json['dcr_amount'] as int,
+      (json['exchange_rate'] as num).toDouble(),
+    );
+
+Map<String, dynamic> _$SSPlacedOrderToJson(SSPlacedOrder instance) =>
+    <String, dynamic>{
+      'order': instance.order,
+      'onchain_addr': instance.onchainAddr,
+      'ln_invoice': instance.lnInvoice,
+      'dcr_amount': instance.dcrAmount,
+      'exchange_rate': instance.exchangeRate,
     };
 
 FetchedResource _$FetchedResourceFromJson(Map<String, dynamic> json) =>

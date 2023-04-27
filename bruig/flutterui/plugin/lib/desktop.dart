@@ -315,6 +315,11 @@ mixin BaseDesktopPlatform on NtfStreams {
         ntfFetchedResources.add(event);
         break;
 
+      case NTSimpleStoreOrderPlaced:
+        var event = SSPlacedOrder.fromJson(payload);
+        ntfSimpleStoreOrders.add(event);
+        break;
+
       default:
         print("Received unknown notification ${cmd.toRadixString(16)}");
     }

@@ -69,6 +69,8 @@ class Config {
   late final String walletType;
   late final String network;
   late final String internalWalletDir;
+  late final String resourcesUpstream;
+  late final String simpleStorePayType;
 
   Config();
   Config.filled(
@@ -84,7 +86,9 @@ class Config {
       this.debugLevel: "",
       this.walletType: "",
       this.network: "",
-      this.internalWalletDir: ""});
+      this.internalWalletDir: "",
+      this.resourcesUpstream: "",
+      this.simpleStorePayType: ""});
   factory Config.newWithRPCHost(
           Config cfg, String rpcHost, String tlsCert, String macaroonPath) =>
       Config.filled(
@@ -101,6 +105,8 @@ class Config {
         walletType: cfg.walletType,
         network: cfg.network,
         internalWalletDir: cfg.internalWalletDir,
+        resourcesUpstream: cfg.resourcesUpstream,
+        simpleStorePayType: cfg.simpleStorePayType,
       );
 
   Future<void> saveConfig(String filepath) async {
@@ -202,6 +208,20 @@ Future<Config> loadConfig(String filepath) async {
     c.lnTLSCert = "";
     c.lnMacaroonPath = "";
   }
+
+  var resUpstream = f.get("resources", "resourcesupstream") ?? "";
+  if (resUpstream.startsWith("pages:")) {
+    var path = resUpstream.substring("pages:".length);
+    path = cleanAndExpandPath(path);
+    resUpstream = "pages:$path";
+  } else if (resUpstream.startsWith("simplestore:")) {
+    var path = resUpstream.substring("simplestore:".length);
+    path = cleanAndExpandPath(path);
+    resUpstream = "simplestore:$path";
+  }
+
+  c.resourcesUpstream = resUpstream;
+  c.simpleStorePayType = f.get("resources", "simplestorepaytype") ?? "";
 
   return c;
 }
