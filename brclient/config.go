@@ -297,7 +297,8 @@ func loadConfig() (*config, error) {
 	// Clean paths.
 	*flagRootDir = cleanAndExpandPath(homeDir, *flagRootDir)
 	switch {
-	case *flagResourcesUpstream == "":
+	case *flagResourcesUpstream == "",
+		*flagResourcesUpstream == "clientrpc":
 		// Valid, and no more processing needed.
 	case strings.HasPrefix(*flagResourcesUpstream, "pages:"):
 		path := (*flagResourcesUpstream)[len("pages:"):]
