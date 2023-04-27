@@ -1,0 +1,36 @@
+[[products]]
+title = "Third Product"
+sku = "239102388"
+description = """
+A longish product description. Features:
+- One
+- Two
+- Three
+"""
+tags = ["second-type"]
+price = 329.99
+
+
+[[products]]
+disabled = true
+title = "[Disabled] Fourth Product"
+sku = "94909234098"
+description = """
+This is a product that is disabled and not shown in listings.
+"""
+price = 349.99
+
+
+[[products]]
+title = "Fifth Product"
+sku = "102394838"
+description = """
+A longish product description. Features:
+- One
+- Two
+- Three
+"""
+tags = ["othertag"]
+price = 229.99
+
+

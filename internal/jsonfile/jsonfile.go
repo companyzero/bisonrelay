@@ -86,3 +86,21 @@ func Read(fname string, data interface{}) error {
 	dec := json.NewDecoder(f)
 	return dec.Decode(data)
 }
+
+// Exists returns true if the specified file exists.
+func Exists(fname string) bool {
+	if _, err := os.Stat(fname); err != nil {
+		return false
+	}
+	return true
+}
+
+// RemoveIfExists removes the filename if it exists. If it does not exist, this
+// doesn't return an error.
+func RemoveIfExists(fname string) error {
+	err := os.Remove(fname)
+	if os.IsNotExist(err) {
+		return nil
+	}
+	return err
+}

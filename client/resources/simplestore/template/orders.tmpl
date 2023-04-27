@@ -1,0 +1,12 @@
+# Order Listing
+
+{{if eq (len .Orders) 0 }}
+User has not placed any orders!
+{{end}}
+
+{{range .Orders}}
+## Order {{.ID}}
+{{- template "cart-listing.tmpl" .Cart}}
+{{end}}
+
+[Back to Index](/index.md)

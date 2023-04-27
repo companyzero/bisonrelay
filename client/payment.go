@@ -12,7 +12,9 @@ import (
 	"github.com/companyzero/bisonrelay/client/timestats"
 	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/decred/dcrd/chaincfg/chainhash"
+	"github.com/decred/dcrd/chaincfg/v3"
 	"github.com/decred/dcrd/dcrutil/v4"
+	"github.com/decred/dcrd/txscript/v4/stdaddr"
 	"github.com/decred/dcrd/wire"
 	"github.com/decred/dcrlnd"
 	"github.com/decred/dcrlnd/lnrpc"
@@ -38,14 +40,15 @@ type DcrlnPaymentClientCfg struct {
 // DcrlnPaymentClient implements the PaymentClient interface for servers that
 // offer the "dcrln" payment scheme.
 type DcrlnPaymentClient struct {
-	lnRpc      lnrpc.LightningClient
-	lnInvoices invoicesrpc.InvoicesClient
-	lnUnlocker lnrpc.WalletUnlockerClient
-	lnRouter   routerrpc.RouterClient
-	lnWallet   walletrpc.WalletKitClient
-	lnChain    chainrpc.ChainNotifierClient
-	log        slog.Logger
-	payTiming  *timestats.Tracker
+	lnRpc       lnrpc.LightningClient
+	lnInvoices  invoicesrpc.InvoicesClient
+	lnUnlocker  lnrpc.WalletUnlockerClient
+	lnRouter    routerrpc.RouterClient
+	lnWallet    walletrpc.WalletKitClient
+	lnChain     chainrpc.ChainNotifierClient
+	log         slog.Logger
+	payTiming   *timestats.Tracker
+	chainParams *chaincfg.Params
 }
 
 // NewDcrlndPaymentClient creates a new payment client that can send payments
@@ -525,6 +528,101 @@ func (pc *DcrlnPaymentClient) WaitTxConfirmed(ctx context.Context, tx chainhash.
 		_, err = blockStream.Recv()
 		if err != nil {
 			return err
+		}
+	}
+}
+
+// getChainParams returns a chain params instance that matches the network of the
+// dcrlnd instance.
+func (pc *DcrlnPaymentClient) getChainParams(ctx context.Context) (*chaincfg.Params, error) {
+	infoRes, err := pc.lnRpc.GetInfo(ctx, &lnrpc.GetInfoRequest{})
+	if err != nil {
+		return nil, err
+	}
+
+	if len(infoRes.Chains) < 1 {
+		return nil, fmt.Errorf("getInfo did not return any chains")
+	}
+
+	switch infoRes.Chains[0].Network {
+	case "mainnet":
+		return chaincfg.MainNetParams(), nil
+	case "testnet":
+		return chaincfg.TestNet3Params(), nil
+	case "simnet":
+		return chaincfg.SimNetParams(), nil
+	case "regnet":
+		return chaincfg.RegNetParams(), nil
+	default:
+		return nil, fmt.Errorf("unknown network %s", infoRes.Chains[0].Network)
+	}
+}
+
+func (pc *DcrlnPaymentClient) ChainParams(ctx context.Context) (*chaincfg.Params, error) {
+	var err error
+	if pc.chainParams == nil {
+		pc.chainParams, err = pc.getChainParams(ctx)
+	}
+	return pc.chainParams, err
+}
+
+// NewReceiveAddress returns a new on-chain address from the underlying wallet.
+func (pc *DcrlnPaymentClient) NewReceiveAddress(ctx context.Context) (stdaddr.Address, error) {
+	req := &lnrpc.NewAddressRequest{
+		Type: lnrpc.AddressType_PUBKEY_HASH,
+	}
+	addrRes, err := pc.lnRpc.NewAddress(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if pc.chainParams == nil {
+		pc.chainParams, err = pc.getChainParams(ctx)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return stdaddr.DecodeAddress(addrRes.Address, pc.chainParams)
+}
+
+// WatchTransactions watches transactions until the given context is closed.
+func (pc *DcrlnPaymentClient) WatchTransactions(ctx context.Context, handler func(tx *lnrpc.Transaction)) {
+	ctxCanceled := func() bool {
+		select {
+		case <-ctx.Done():
+			return true
+		default:
+			return false
+		}
+	}
+
+nextStream:
+	for {
+		stream, err := pc.lnRpc.SubscribeTransactions(ctx, &lnrpc.GetTransactionsRequest{})
+		if ctxCanceled() {
+			return
+		}
+		if err != nil {
+			select {
+			case <-time.After(time.Second):
+				continue nextStream
+			case <-ctx.Done():
+				return
+			}
+		}
+
+		for {
+			tx, err := stream.Recv()
+			if ctxCanceled() {
+				return
+			}
+			if err != nil {
+				continue nextStream
+			}
+			if handler != nil {
+				handler(tx)
+			}
 		}
 	}
 }

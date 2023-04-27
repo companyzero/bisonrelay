@@ -1,0 +1,20 @@
+# My Simple Store
+
+This is my simple store. See all the stuff I have.
+
+Here's an example of an embedded file.
+
+--embed[alt=some+alt,type=image/png,localfilename=test.png]--
+
+Following this, a download link.
+
+--embed[download=8741e9e6367668ee50ab4019ed2294fe5f55c1e401fac46d755fa637851817bb,type=image/png,localfilename=test.png]--
+
+## And now, my product list.
+
+{{range .Products -}}
+  - [{{.Title}}](product/{{.SKU}})
+{{end}}
+
+[Cart](/cart)   [Orders](/orders)
+

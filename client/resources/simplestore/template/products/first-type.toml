@@ -1,0 +1,24 @@
+[[products]]
+title = "First product"
+sku = "1209391282"
+description = """
+A longish product description. Features:
+- One
+- Two
+- Three
+"""
+tags = ["first-type", "othertag"]
+price = 659.99
+
+
+[[products]]
+title = "Second product"
+sku = "8293728913"
+description = """
+A longish product description. Features:
+- One
+- Two
+- Three
+"""
+tags = ["first-type", "secondtag"]
+price = 399.00
