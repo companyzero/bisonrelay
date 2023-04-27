@@ -147,5 +147,11 @@ minimumsendbalance = 0.01
 # over the clientrpc interfaces. If set to false, then the user is responsible
 # for generating the client CA, and cert files.
 # rpcissueclientcert = true
+
+[resources]
+# Use an upstream processor for handling resource requests. Options:
+# "pages:<path>" offers static pages stored in the local <path>.
+# Examples:
+# resourcesupstream = pages:/path/to/static/pages
 `
 )

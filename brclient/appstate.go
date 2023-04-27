@@ -30,6 +30,7 @@ import (
 	"github.com/companyzero/bisonrelay/client"
 	"github.com/companyzero/bisonrelay/client/clientdb"
 	"github.com/companyzero/bisonrelay/client/clientintf"
+	"github.com/companyzero/bisonrelay/client/resources"
 	"github.com/companyzero/bisonrelay/client/rpcserver"
 	"github.com/companyzero/bisonrelay/clientrpc/types"
 	"github.com/companyzero/bisonrelay/internal/mdembeds"
@@ -1188,6 +1189,32 @@ func (as *appState) openChatWindow(nick string) error {
 	return nil
 }
 
+func (as *appState) findOrNewPagesChatWindow(sessID clientintf.PagesSessionID) *chatWindow {
+	as.chatWindowsMtx.Lock()
+	var cw *chatWindow
+	for i, acw := range as.chatWindows {
+		if acw.pageSess == sessID {
+			if i != as.activeCW {
+				as.updatedCW[i] = false
+			}
+			cw = acw
+			break
+		}
+	}
+	if cw == nil {
+		cw = &chatWindow{
+			alias:    fmt.Sprintf("page session %d", sessID),
+			me:       as.c.LocalNick(),
+			pageSess: sessID,
+		}
+		as.chatWindows = append(as.chatWindows, cw)
+		as.updatedCW[len(as.chatWindows)-1] = false
+	}
+	as.chatWindowsMtx.Unlock()
+	as.footerInvalidate()
+	return cw
+}
+
 // markWindowUpdated marks the window as updated.
 //
 // If mentioned is specified, the window is noted as updated with a local user
@@ -2177,6 +2204,39 @@ func (as *appState) downloadEmbed(source clientintf.UserID, embedded mdembeds.Em
 	return nil
 }
 
+// fetchPage requests the given page from the user.
+func (as *appState) fetchPage(uid clientintf.UserID, pagePath string, session,
+	parent clientintf.PagesSessionID) error {
+	if len(pagePath) < 1 {
+		return fmt.Errorf("page path is empty")
+	}
+	path := strings.Split(pagePath, "/")
+	for len(path) > 0 && path[0] == "" {
+		path = path[1:]
+	}
+	if len(path) == 0 {
+		return fmt.Errorf("path is empty")
+	}
+
+	// If it's for a local page, fetch it directly.
+	if as.c.PublicID() == uid {
+		return as.c.FetchLocalResource(path, nil)
+	}
+
+	userNick, err := as.c.UserNick(uid)
+	if err != nil {
+		return err
+	}
+
+	tag, err := as.c.FetchResource(uid, path, nil, session, parent)
+	if err != nil {
+		return err
+	}
+	as.cwHelpMsg("Attempting to fetch %s from %s (session %s, tag %s)",
+		strescape.ResourcesPath(path), userNick, session, tag)
+	return nil
+}
+
 func (as *appState) modifyGCAdmins(gcID zkidentity.ShortID, add, del clientintf.UserID) error {
 	if add.IsEmpty() && del.IsEmpty() {
 		return fmt.Errorf("no modifications")
@@ -2793,16 +2853,55 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		as.sendMsg(msgOnboardStateChanged{})
 	}))
 
+	ntfns.Register(client.OnResourceFetchedNtfn(func(user *client.RemoteUser,
+		fr clientdb.FetchedResource, sess *clientintf.PageSessionNode) {
+
+		uid := as.c.PublicID()
+		nick := "me"
+		if user != nil {
+			uid = user.ID()
+			nick = strescape.Nick(user.Nick())
+		}
+
+		// TODO: disambiguate other types of resources?
+		if fr.Response.Status != rpc.ResourceStatusOk {
+			as.diagMsg("Error fetching resource %s/%s: %s",
+				nick,
+				strescape.ResourcesPath(fr.Request.Path),
+				fr.Response.Status)
+			return
+		}
+
+		cw := as.findOrNewPagesChatWindow(fr.SessionID)
+		cw.replacePage(fr)
+		sendMsg(msgPageFetched{
+			uid:  uid,
+			nick: nick,
+			req:  &fr.Request,
+			res:  &fr.Response,
+		})
+	}))
+
+	// Initialize resources router.
+	resRouter := resources.NewRouter()
+	switch {
+	case strings.HasPrefix(args.ResourcesUpstream, "pages:"):
+		path := args.ResourcesUpstream[len("pages:"):]
+		p := resources.NewFilesystemResource(path, logBknd.logger("PAGE"))
+		resRouter.BindPrefixPath([]string{}, p)
+	}
+
 	// Initialize client config.
 	cfg := client.Config{
-		DB:             db,
-		Dialer:         dialer,
-		PayClient:      pc,
-		Logger:         logBknd.logger,
-		LogPings:       args.LogPings,
-		ReconnectDelay: 5 * time.Second,
-		CompressLevel:  args.CompressLevel,
-		Notifications:  ntfns,
+		DB:                db,
+		Dialer:            dialer,
+		PayClient:         pc,
+		Logger:            logBknd.logger,
+		LogPings:          args.LogPings,
+		ReconnectDelay:    5 * time.Second,
+		CompressLevel:     args.CompressLevel,
+		Notifications:     ntfns,
+		ResourcesProvider: resRouter,
 
 		CertConfirmer: func(ctx context.Context, cs *tls.ConnectionState,
 			svrID *zkidentity.PublicIdentity) error {

@@ -2402,6 +2402,55 @@ var lnCommands = []tuicmd{
 	},
 }
 
+var pagesCommands = []tuicmd{
+	{
+		cmd:   "view",
+		descr: "View user page",
+		usage: "<nick> [<path/to/page>]",
+		handler: func(args []string, as *appState) error {
+			if len(args) < 1 {
+				return usageError{msg: "nick cannot be empty"}
+			}
+			uid, err := as.c.UIDByNick(args[0])
+			if err != nil {
+				return err
+			}
+
+			nextSess, err := as.c.NewPagesSession()
+			if err != nil {
+				return err
+			}
+
+			pagePath := "index.md"
+			if len(args) > 1 {
+				pagePath = strings.TrimSpace(args[1])
+			}
+			return as.fetchPage(uid, pagePath, nextSess, 0)
+		},
+		completer: func(args []string, arg string, as *appState) []string {
+			if len(args) == 0 {
+				return nickCompleter(arg, as)
+			}
+			return nil
+		},
+	}, {
+		cmd:   "local",
+		descr: "View local user page",
+		usage: "[<path/to/page>]",
+		handler: func(args []string, as *appState) error {
+			pagePath := "index.md"
+			if len(args) > 1 {
+				pagePath = strings.TrimSpace(args[1])
+			}
+
+			// Always use the same session ID for convenience when
+			// fetching a local page.
+			nextSess := clientintf.PagesSessionID(0)
+			return as.fetchPage(as.c.PublicID(), pagePath, nextSess, 0)
+		},
+	},
+}
+
 var commands = []tuicmd{
 	{
 		cmd:           "online",
@@ -3298,6 +3347,18 @@ var commands = []tuicmd{
 			go as.skipNextWalletCheck()
 			return nil
 		},
+	}, {
+		cmd:           "pages",
+		usableOffline: true,
+		descr:         "Page and resource related commands",
+		sub:           pagesCommands,
+		completer: func(args []string, arg string, as *appState) []string {
+			if len(args) == 0 {
+				return cmdCompleter(pagesCommands, arg, false)
+			}
+			return nil
+		},
+		handler: subcmdNeededHandler,
 	}, {
 		cmd:           "quit",
 		usableOffline: true,

@@ -32,6 +32,9 @@ type mainWindowState struct {
 	embedContent map[string][]byte
 	ew           *embedWidget
 
+	isPage bool
+	isChat bool
+
 	header string
 
 	debug string
@@ -64,7 +67,10 @@ func (mws *mainWindowState) updateHeader() {
 func (mws *mainWindowState) updateViewportContent() {
 	wasAtBottom := mws.viewport.AtBottom()
 	mws.viewport.SetContent(mws.as.activeWindowMsgs())
-	if wasAtBottom {
+	cw := mws.as.activeChatWindow()
+	mws.isPage = cw != nil && cw.page != nil
+	mws.isChat = !mws.isPage
+	if wasAtBottom && !mws.isPage {
 		mws.viewport.GotoBottom()
 	}
 }
@@ -210,7 +216,7 @@ func (mws mainWindowState) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			msg.Type = tea.KeyEnter
 			fallthrough
 
-		case msg.Type == tea.KeyEnter && msg.Alt:
+		case mws.isChat && (msg.Type == tea.KeyEnter && msg.Alt):
 			// Alt+Enter: Add a new line to multiline edit.
 			msg.Alt = false
 			mws.textArea, cmd = mws.textArea.Update(msg)
@@ -254,7 +260,7 @@ func (mws mainWindowState) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case msg.Type == tea.KeyCtrlP:
 			mws.as.changeActiveWindowPrev()
 
-		case msg.Type == tea.KeyUp, msg.Type == tea.KeyDown:
+		case !mws.isPage && msg.Type == tea.KeyUp, !mws.isPage && msg.Type == tea.KeyDown:
 			up := msg.Type == tea.KeyUp
 			down := !up
 			afterHistory := mws.as.cmdHistoryIdx >= len(mws.as.cmdHistory)
@@ -332,6 +338,11 @@ func (mws mainWindowState) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				cmds = appendCmd(cmds, textarea.Blink)
 			}
 
+		case mws.isPage && (msg.Type == tea.KeyUp || msg.Type == tea.KeyDown):
+			// send to viewport
+			mws.viewport, cmd = mws.viewport.Update(msg)
+			cmds = appendCmd(cmds, cmd)
+
 		case mws.escMode && len(msg.Runes) == 1:
 			mws.escStr += msg.String()
 			return mws, func() tea.Msg {
@@ -349,15 +360,15 @@ func (mws mainWindowState) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if msg.Type == tea.KeyCtrlDown {
 					delta = 1
 				}
-				if cw.changeSelectedEmbed(delta) {
+				if cw.changeSelected(delta) {
 					mws.updateViewportContent()
 				}
 			}
 
 		case msg.Type == tea.KeyCtrlV:
 			cw := mws.as.activeChatWindow()
-			if cw != nil && cw.selEmbed < cw.maxEmbeds {
-				embedded := cw.selEmbedArgs
+			if cw != nil && cw.selEl != nil && cw.selEl.embed != nil {
+				embedded := *cw.selEl.embed
 				cmd, err := mws.as.viewEmbed(embedded)
 				if err == nil {
 					return mws, cmd
@@ -365,12 +376,20 @@ func (mws mainWindowState) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					cw.newHelpMsg("Unable to view embed: %v", err)
 					mws.updateViewportContent()
 				}
+			} else if cw != nil && cw.selEl != nil && cw.selEl.link != nil {
+				// TODO: absolute links to UID?
+				uid := cw.page.UID
+				// handle err
+				err := mws.as.fetchPage(uid, *cw.selEl.link, cw.page.SessionID, cw.page.PageID)
+				if err != nil {
+					mws.as.diagMsg("Unable to fetch page: %v", err)
+				}
 			}
 
 		case msg.Type == tea.KeyCtrlD:
 			cw := mws.as.activeChatWindow()
-			if cw != nil && cw.selEmbed < cw.maxEmbeds {
-				embedded := cw.selEmbedArgs
+			if cw != nil && cw.selEl != nil && cw.selEl.embed != nil {
+				embedded := *cw.selEl.embed
 				if embedded.Uid != nil {
 					err := mws.as.downloadEmbed(*embedded.Uid, embedded)
 					if err == nil {
@@ -488,6 +507,10 @@ func (mws mainWindowState) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case msgDownloadCompleted:
 		mws.updateViewportContent()
+
+	case msgPageFetched:
+		mws.updateViewportContent()
+		// return newUserPagesScreen(mws.as, msg.uid, msg.nick, msg.req, msg.res)
 
 	default:
 		// Handle other messages.
