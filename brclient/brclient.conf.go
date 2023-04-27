@@ -155,10 +155,12 @@ minimumsendbalance = 0.01
 # "simplestore:<path>" uses the internal 'simplestore' subsystem; if <path> does
 #   not exist, then it will be created and fill with a sample, minimal store.
 # "clientrpc": sends request events and waits for responses via clientrpc.
-# Examples:
+# "http://...": sends request events and waits for the responses to an HTTP(S)
+#   server.
 # resourcesupstream = pages:/path/to/static/pages
 # resourcesupstream = smplestore:/path/to/simple/store
 # resourcesupstream = clientrpc
+# resourcesupstream = https://example.com
 
 # How to charge for purchases done in simplestore. Either empty (local user
 # will manually charge) or "onchain" (generates an on-chain address). Only used
