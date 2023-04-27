@@ -2907,6 +2907,10 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 	var sstore *simplestore.Store
 	resRouter := resources.NewRouter()
 	switch {
+	case strings.HasPrefix(args.ResourcesUpstream, "http://"),
+		strings.HasPrefix(args.ResourcesUpstream, "https://"):
+		p := resources.NewHttpProvider(args.ResourcesUpstream)
+		resRouter.BindPrefixPath([]string{}, p)
 	case strings.HasPrefix(args.ResourcesUpstream, "simplestore:"):
 		// Generate the template store if the path does not exist.
 		path := args.ResourcesUpstream[len("simplestore:"):]
