@@ -2,12 +2,12 @@ import 'package:bruig/models/client.dart';
 import 'package:bruig/screens/contacts_msg_times.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:bruig/screens/feed/feed_posts.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:bruig/components/interactive_avatar.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:bruig/components/user_context_menu.dart';
 import 'package:bruig/components/chat/types.dart';
+import 'package:bruig/util.dart';
 
 class _ChatHeadingW extends StatefulWidget {
   final ChatModel chat;
@@ -170,8 +170,8 @@ void gotoContactsLastMsgTimeScreen(BuildContext context) {
 
 class _ChatsList extends StatefulWidget {
   final ClientModel chats;
-  final FocusNode editLineFocusNode;
-  const _ChatsList(this.chats, this.editLineFocusNode, {Key? key})
+  final FocusNode inputFocusNode;
+  const _ChatsList(this.chats, this.inputFocusNode, {Key? key})
       : super(key: key);
 
   @override
@@ -180,7 +180,7 @@ class _ChatsList extends StatefulWidget {
 
 class _ChatsListState extends State<_ChatsList> {
   ClientModel get chats => widget.chats;
-  FocusNode get editLineFocusNode => widget.editLineFocusNode;
+  FocusNode get inputFocusNode => widget.inputFocusNode;
 
   void chatsUpdated() => setState(() {});
 
@@ -211,11 +211,11 @@ class _ChatsListState extends State<_ChatsList> {
 
     void genInvite() async {
       await generateInvite(context);
-      editLineFocusNode.requestFocus();
+      inputFocusNode.requestFocus();
     }
 
     void closeMenus(ClientModel client) {
-      editLineFocusNode.requestFocus();
+      inputFocusNode.requestFocus();
     }
 
     var theme = Theme.of(context);
@@ -373,14 +373,14 @@ class _ChatsListState extends State<_ChatsList> {
 }
 
 class ChatDrawerMenu extends StatelessWidget {
-  final FocusNode editLineFocusNode;
-  const ChatDrawerMenu(this.editLineFocusNode, {Key? key}) : super(key: key);
+  final FocusNode inputFocusNode;
+  const ChatDrawerMenu(this.inputFocusNode, {Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return Consumer<ClientModel>(builder: (context, chats, child) {
       return Column(
-          children: [Expanded(child: _ChatsList(chats, editLineFocusNode))]);
+          children: [Expanded(child: _ChatsList(chats, inputFocusNode))]);
     });
   }
 }

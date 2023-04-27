@@ -193,7 +193,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
   ClientModel get client => widget.client;
   AppNotifications get ntfns => widget.ntfns;
   ServerSessionState connState = ServerSessionState.empty();
-  FocusNode editLineFocusNode = FocusNode();
+  FocusNode inputFocusNode = FocusNode();
   bool hasLNBalance = false;
   Timer? checkLNTimer;
 
@@ -278,7 +278,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
     }
 
     return Row(children: [
-      Container(width: 163, child: ChatDrawerMenu(editLineFocusNode)),
+      Container(width: 163, child: ChatDrawerMenu(inputFocusNode)),
       Expanded(
           child: Container(
         margin: const EdgeInsets.all(1),
@@ -286,7 +286,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
           color: backgroundColor,
           borderRadius: BorderRadius.circular(3),
         ),
-        child: ActiveChat(client, editLineFocusNode),
+        child: ActiveChat(client, inputFocusNode),
       )),
     ]);
   }

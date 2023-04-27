@@ -1,19 +1,18 @@
-import 'package:bruig/components/attach_file.dart';
 import 'package:bruig/components/manage_gc.dart';
 import 'package:bruig/components/snackbars.dart';
-import 'package:bruig/screens/feed/feed_posts.dart';
+import 'package:bruig/util.dart';
 import 'package:bruig/models/client.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:bruig/components/profile.dart';
-import 'package:bruig/components/chat/types.dart';
 import 'package:bruig/components/chat/messages.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
+import 'package:bruig/components/chat/input.dart';
 
 class ActiveChat extends StatefulWidget {
   final ClientModel client;
-  final FocusNode editLineFocusNode;
-  ActiveChat(this.client, this.editLineFocusNode, {Key? key}) : super(key: key);
+  final FocusNode inputFocusNode;
+  const ActiveChat(this.client, this.inputFocusNode, {Key? key})
+      : super(key: key);
 
   @override
   State<ActiveChat> createState() => _ActiveChatState();
@@ -23,7 +22,7 @@ class ActiveChat extends StatefulWidget {
 /// this way we can get rid of the "initial jump flicker"
 class _ActiveChatState extends State<ActiveChat> {
   ClientModel get client => widget.client;
-  FocusNode get editLineFocusNode => widget.editLineFocusNode;
+  FocusNode get inputFocusNode => widget.inputFocusNode;
   ChatModel? chat;
   late ItemScrollController _itemScrollController;
   late ItemPositionsListener _itemPositionsListener;
@@ -78,7 +77,7 @@ class _ActiveChatState extends State<ActiveChat> {
   @override
   void dispose() {
     client.removeListener(clientChanged);
-    editLineFocusNode.dispose();
+    inputFocusNode.dispose();
     super.dispose();
   }
 
@@ -98,7 +97,7 @@ class _ActiveChatState extends State<ActiveChat> {
         return UserProfile(client, profile);
       }
     }
-    //editLineFocusNode.requestFocus();
+    //inputFocusNode.requestFocus();
     var theme = Theme.of(context);
     var textColor = theme.dividerColor;
     var darkTextColor = theme.indicatorColor;
@@ -118,7 +117,7 @@ class _ActiveChatState extends State<ActiveChat> {
             child: Messages(chat, client.nick, client, _itemScrollController,
                 _itemPositionsListener),
           ),
-          EditLine(sendMsg, chat, editLineFocusNode)
+          Input(sendMsg, chat, inputFocusNode)
         ]),
       ),
       Visibility(
@@ -182,136 +181,5 @@ class _ActiveChatState extends State<ActiveChat> {
         ),
       )
     ]);
-  }
-}
-
-class EditLine extends StatefulWidget {
-  final SendMsg _send;
-  final ChatModel chat;
-  final FocusNode editLineFocusNode;
-  EditLine(this._send, this.chat, this.editLineFocusNode, {Key? key})
-      : super(key: key);
-
-  @override
-  State<EditLine> createState() => _EditLineState();
-}
-
-class _EditLineState extends State<EditLine> {
-  final controller = TextEditingController();
-
-  final FocusNode node = FocusNode();
-  List<AttachmentEmbed> embeds = [];
-
-  @override
-  void initState() {
-    super.initState();
-    controller.text = widget.chat.workingMsg;
-  }
-
-  @override
-  void didUpdateWidget(EditLine oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    var workingMsg = widget.chat.workingMsg;
-    if (workingMsg != controller.text) {
-      controller.text = workingMsg;
-      controller.selection = TextSelection(
-          baseOffset: workingMsg.length, extentOffset: workingMsg.length);
-      widget.editLineFocusNode.requestFocus();
-    }
-  }
-
-  void handleKeyPress(event) {
-    if (event is RawKeyUpEvent) {
-      bool modPressed = event.isShiftPressed || event.isControlPressed;
-      final val = controller.value;
-      if (event.data.logicalKey.keyLabel == "Enter" && !modPressed) {
-        final messageWithoutNewLine =
-            controller.text.substring(0, val.selection.start - 1) +
-                controller.text.substring(val.selection.start);
-        controller.value = const TextEditingValue(
-            text: "", selection: TextSelection.collapsed(offset: 0));
-        final String withEmbeds = embeds.fold(
-            messageWithoutNewLine.trim(), (s, e) => e.replaceInString(s));
-        /*
-          if (withEmbeds.length > 1024 * 1024) {
-            showErrorSnackbar(context,
-                "Message is larger than maximum allowed (limit: 1MiB)");
-            return;
-          }
-          */
-        if (withEmbeds != "") {
-          widget._send(withEmbeds);
-          widget.chat.workingMsg = "";
-          setState(() {
-            embeds = [];
-          });
-        }
-      } else {
-        widget.chat.workingMsg = val.text.trim();
-      }
-    }
-  }
-
-  void attachFile() async {
-    var res = await Navigator.of(context, rootNavigator: true)
-        .pushNamed(AttachFileScreen.routeName);
-    if (res == null) {
-      return;
-    }
-    var embed = res as AttachmentEmbed;
-    embeds.add(embed);
-    setState(() {
-      controller.text = controller.text + embed.displayString() + " ";
-      widget.chat.workingMsg = controller.text;
-      widget.editLineFocusNode.requestFocus();
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    var theme = Theme.of(context);
-    var textColor = theme.focusColor; // MESSAGE TEXT COLOR
-    var hoverColor = theme.hoverColor;
-    var backgroundColor = theme.highlightColor;
-    var hintTextColor = theme.dividerColor;
-    return RawKeyboardListener(
-      focusNode: node,
-      onKey: handleKeyPress,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 5),
-        child: Row(
-          children: [
-            IconButton(onPressed: attachFile, icon: Icon(Icons.attach_file)),
-            Expanded(
-                child: TextField(
-              autofocus: true,
-              focusNode: widget.editLineFocusNode,
-              style: TextStyle(
-                fontSize: 11,
-                color: textColor,
-              ),
-              controller: controller,
-              minLines: 1,
-              maxLines: null,
-              //textInputAction: TextInputAction.done,
-              //style: normalTextStyle,
-              keyboardType: TextInputType.multiline,
-              decoration: InputDecoration(
-                filled: true,
-                fillColor: backgroundColor,
-                hoverColor: hoverColor,
-                isDense: true,
-                hintText: 'Type a message',
-                hintStyle: TextStyle(
-                  fontSize: 11,
-                  color: hintTextColor,
-                ),
-                border: InputBorder.none,
-              ),
-            )),
-          ],
-        ),
-      ),
-    );
   }
 }

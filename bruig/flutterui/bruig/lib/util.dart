@@ -1,4 +1,17 @@
 import 'dart:math';
+import 'dart:convert';
+
+import 'package:crypto/crypto.dart';
+import 'package:flutter/material.dart';
+
+// return a consistent color for each nick. Pretty dumb so far.
+Color colorFromNick(String nick) {
+  var buff = md5.convert(utf8.encode(nick)).bytes;
+  var i = (buff[0] << 16) + (buff[1] << 8) + buff[2];
+  // var h = (i / 0xffffff) * 360;
+  var c = HSVColor.fromAHSV(1, (i / 0xffffff) * 360, 0.5, 1);
+  return c.toColor();
+}
 
 String generateRandomString(int len) {
   var r = Random();

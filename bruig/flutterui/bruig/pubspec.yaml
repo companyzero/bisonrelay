@@ -24,7 +24,6 @@ dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.2
-  flutter_markdown: ^0.6.6
   #dart_vlc: 0.1.8
   #dart_vlc_ffi: 0.1.5
   golib_plugin:
@@ -40,7 +39,7 @@ dependencies:
   shared_preferences: ^2.0.15
   intl: ^0.17.0
   sidebarx: ^0.12.0
-  markdown: ^6.0.1
+  markdown: ^7.0.0
   file_picker: ^5.2.6
   path_provider: ^2.0.11
   url_launcher: ^6.1.6
@@ -49,8 +48,16 @@ dependencies:
   file_icon: ^1.0.0
   package_info_plus: ^3.0.3
   open_filex: ^4.3.2
-  scrollable_positioned_list: ^0.3.5
   loading_animation_widget: ^1.2.0
+  scrollable_positioned_list:
+    git:
+      url: https://github.com/tiagoalvesdulce/flutter.widgets
+      path: packages/scrollable_positioned_list
+  flutter_markdown:
+    git:
+      url: https://github.com/tiagoalvesdulce/packages
+      ref: main
+      path: packages/flutter_markdown
 
 msix_config:
   display_name: Bison Relay GUI
