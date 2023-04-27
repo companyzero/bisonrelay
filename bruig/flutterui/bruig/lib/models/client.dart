@@ -145,8 +145,8 @@ class ChatModel extends ChangeNotifier {
       } else {
         _unreadEventCount += 1;
       }
-      notifyListeners();
     }
+    notifyListeners();
   }
 
   void removeFirstUnread() {
