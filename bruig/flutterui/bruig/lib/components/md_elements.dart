@@ -3,6 +3,7 @@ import 'dart:typed_data';
 // import 'package:dart_vlc/dart_vlc.dart' as vlc;
 import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/models/downloads.dart';
+import 'package:bruig/models/resources.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:golib_plugin/definitions.dart';
@@ -15,6 +16,14 @@ class DownloadSource {
   final String uid;
 
   DownloadSource(this.uid);
+}
+
+class PagesSource {
+  final String uid;
+  final int sessionID;
+  final int pageID;
+
+  PagesSource(this.uid, this.sessionID, this.pageID);
 }
 
 class VideoInlineSyntax extends md.InlineSyntax {
@@ -266,8 +275,20 @@ class MarkdownArea extends StatelessWidget {
   final bool hasNick;
   const MarkdownArea(this.text, this.hasNick, {Key? key}) : super(key: key);
 
-  Future<void> launchUrlAwait(url) async {
-    if (!await launchUrl(Uri.parse(url))) {
+  Future<void> launchUrlAwait(context, url) async {
+    var parsed = Uri.parse(url);
+    var downSource = Provider.of<DownloadSource?>(context, listen: false);
+    var pageSource = Provider.of<PagesSource?>(context, listen: false);
+    var uid = downSource?.uid ?? pageSource?.uid ?? "";
+
+    // TODO: handle br:// absolute links.
+    if (!parsed.isAbsolute && uid != "") {
+      var resources = Provider.of<ResourcesModel>(context, listen: false);
+      var sessionID = pageSource?.sessionID ?? 0;
+      var parentPageID = pageSource?.pageID ?? 0;
+
+      resources.fetchPage(uid, parsed.pathSegments, sessionID, parentPageID);
+    } else if (!await launchUrl(Uri.parse(url))) {
       throw 'Could not launch $url';
     }
   }
@@ -317,7 +338,7 @@ class MarkdownArea extends StatelessWidget {
                   DownloadLinkElementBuilder(TextStyle(color: darkTextColor)),
             },
             onTapLink: (text, url, blah) {
-              launchUrlAwait(url);
+              launchUrlAwait(context, url);
             },
             inlineSyntaxes: [
               //VideoInlineSyntax(),
@@ -335,10 +356,15 @@ class Downloadable extends StatelessWidget {
       : super(key: key);
 
   void download(BuildContext context) async {
-    var downloads = Provider.of<DownloadsModel>(context, listen: false);
-    var source = Provider.of<DownloadSource>(context, listen: false);
     try {
-      await downloads.getUnknownUserFile(source.uid, fid);
+      var downloads = Provider.of<DownloadsModel>(context, listen: false);
+      var source = Provider.of<DownloadSource?>(context, listen: false);
+      var page = Provider.of<PagesSource?>(context, listen: false);
+      var uid = source?.uid ?? page?.uid ?? "";
+      if (uid == "") {
+        throw "UID in parent DownloadsSource/PagesSource not found";
+      }
+      await downloads.getUnknownUserFile(uid, fid);
       showSuccessSnackbar(context, "Added $fid to download queue");
     } catch (exception) {
       showErrorSnackbar(context, "Unable to start download: $exception");

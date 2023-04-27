@@ -115,6 +115,7 @@ const (
 	CTSkipOnboardStage                = 0x73
 	CTStartOnboard                    = 0x74
 	CTCancelOnboard                   = 0x75
+	CTFetchResource                   = 0x76
 
 	NTInviteReceived         = 0x1001
 	NTInviteAccepted         = 0x1002
@@ -153,6 +154,7 @@ const (
 	NTKXSuggested            = 0x1023
 	NTTipUserProgress        = 0x1024
 	NTOnboardStateChanged    = 0x1025
+	NTResourceFetched        = 0x1026
 )
 
 type cmd struct {

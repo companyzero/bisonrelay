@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:collection';
 import 'package:bruig/models/menus.dart';
+import 'package:bruig/models/resources.dart';
 import 'package:flutter/foundation.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
@@ -31,6 +32,13 @@ class SynthChatEvent extends ChatEvent with ChangeNotifier {
     _state = SCE_errored;
     notifyListeners();
   }
+}
+
+class RequestedResourceEvent extends ChatEvent {
+  final PagesSession session;
+
+  RequestedResourceEvent(String uid, this.session)
+      : super(uid, "Fetching user resources");
 }
 
 const int CMS_unknown = 0;
@@ -156,6 +164,12 @@ class ChatModel extends ChangeNotifier {
   }
 
   Future<void> sendMsg(String msg) async {
+    // This may be triggered by autmation sending messages when the chat window
+    // is not focused (for example, simplestore placed orders).
+    if (!active) {
+      _unreadMsgCount += 1;
+    }
+
     if (isGC) {
       var m = GCMsg(id, nick, msg, DateTime.now().millisecondsSinceEpoch);
       var evnt = ChatEventModel(m, null);

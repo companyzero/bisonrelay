@@ -314,13 +314,11 @@ func handleInitClient(handle uint32, args InitClient) error {
 	}))
 
 	ntfns.Register(client.OnOnboardStateChangedNtfn(func(ostate clientintf.OnboardState, oerr error) {
-		/*
-			ntfn := &OnboardStateChanged{
-				State: ostate,
-				Err:   oerr,
-			}
-		*/
 		notify(NTOnboardStateChanged, ostate, oerr)
+	}))
+
+	ntfns.Register(client.OnResourceFetchedNtfn(func(ru *client.RemoteUser, fr clientdb.FetchedResource, sess *clientintf.PageSessionNode) {
+		notify(NTResourceFetched, fr, nil)
 	}))
 
 	cfg := client.Config{
@@ -1552,6 +1550,30 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 
 	case CTCancelOnboard:
 		return nil, c.CancelOnboarding()
+
+	case CTFetchResource:
+		var args FetchResourceArgs
+		if err := cmd.decode(&args); err != nil {
+			return nil, err
+
+		}
+
+		// If it's for a local page, fetch it directly.
+		if c.PublicID() == args.UID {
+			return 0, c.FetchLocalResource(args.Path, args.Metadata)
+
+		}
+
+		if args.SessionID == 0 {
+			var err error
+			args.SessionID, err = c.NewPagesSession()
+			if err != nil {
+				return 0, err
+			}
+		}
+
+		_, err := c.FetchResource(args.UID, args.Path, args.Metadata, args.SessionID, args.ParentPage)
+		return args.SessionID, err
 
 	}
 	return nil, nil

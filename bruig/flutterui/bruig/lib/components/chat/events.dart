@@ -5,9 +5,12 @@ import 'package:bruig/models/client.dart';
 import 'package:bruig/components/chat/types.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:bruig/components/buttons.dart';
+import 'package:bruig/models/resources.dart';
+import 'package:bruig/screens/feed/feed_posts.dart';
 import 'package:bruig/components/md_elements.dart';
 import 'package:bruig/components/user_content_list.dart';
 import 'package:bruig/models/downloads.dart';
+import 'package:bruig/screens/viewpage_screen.dart';
 import 'package:golib_plugin/util.dart';
 import 'package:intl/intl.dart';
 import 'package:golib_plugin/golib_plugin.dart';
@@ -18,8 +21,6 @@ import 'package:file_icon/file_icon.dart';
 import 'package:bruig/components/interactive_avatar.dart';
 import 'package:bruig/components/user_context_menu.dart';
 import 'package:bruig/components/empty_widget.dart';
-// TODO: isolate
-import 'package:bruig/screens/feed/feed_posts.dart';
 
 class ServerEvent extends StatelessWidget {
   final Widget child;
@@ -863,6 +864,73 @@ class TipUserProgressW extends StatelessWidget {
   }
 }
 
+class FetchedResourceW extends StatefulWidget {
+  final RequestedResourceEvent event;
+  const FetchedResourceW(this.event, {super.key});
+
+  @override
+  State<FetchedResourceW> createState() => _FetchedResourceWState();
+}
+
+class _FetchedResourceWState extends State<FetchedResourceW> {
+  PagesSession get sess => widget.event.session;
+
+  void requestUpdated() {
+    setState(() {});
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    sess.addListener(requestUpdated);
+  }
+
+  @override
+  void didUpdateWidget(FetchedResourceW oldWidget) {
+    oldWidget.event.session.removeListener(requestUpdated);
+    super.didUpdateWidget(oldWidget);
+    sess.addListener(requestUpdated);
+  }
+
+  @override
+  void dispose() {
+    sess.removeListener(requestUpdated);
+    super.dispose();
+  }
+
+  void viewPage() {
+    Provider.of<ResourcesModel>(context, listen: false).mostRecent = sess;
+    Navigator.of(context).pushReplacementNamed(ViewPageScreen.routeName);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    var theme = Theme.of(context);
+    var textColor = theme.dividerColor;
+    var backgroundColor = theme.highlightColor;
+
+    if (sess.loading) {
+      return ServerEvent(
+          child: Container(
+              decoration: BoxDecoration(
+                  color: backgroundColor,
+                  borderRadius: const BorderRadius.all(Radius.circular(5))),
+              child: Text("Requested page",
+                  style: TextStyle(fontSize: 9, color: textColor))));
+    } else {
+      return ServerEvent(
+          child: Container(
+              decoration: BoxDecoration(
+                  color: backgroundColor,
+                  borderRadius: const BorderRadius.all(Radius.circular(5))),
+              child: ElevatedButton(
+                onPressed: viewPage,
+                child: const Text("View Page"),
+              )));
+    }
+  }
+}
+
 class Event extends StatelessWidget {
   final ChatEventModel event;
   final ChatModel chat;
@@ -949,6 +1017,10 @@ class Event extends StatelessWidget {
 
     if (event.event is TipProgressEvent) {
       return TipUserProgressW(event.event as TipProgressEvent);
+    }
+
+    if (event.event is RequestedResourceEvent) {
+      return FetchedResourceW(event.event as RequestedResourceEvent);
     }
 
     var theme = Theme.of(context);
