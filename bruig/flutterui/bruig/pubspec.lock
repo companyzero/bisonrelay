@@ -185,11 +185,12 @@ packages:
   flutter_markdown:
     dependency: "direct main"
     description:
-      name: flutter_markdown
-      sha256: "981442432b632237ffc1cf8092b4173b9e9f2278b5740637287c3069b51c8f09"
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.6.13"
+      path: "packages/flutter_markdown"
+      ref: main
+      resolved-ref: ef6b5a380e0d6fa2705c1b19e5613c60db01bfd0
+      url: "https://github.com/tiagoalvesdulce/packages"
+    source: git
+    version: "0.6.14+1"
   flutter_plugin_android_lifecycle:
     dependency: transitive
     description:
@@ -315,10 +316,10 @@ packages:
     dependency: "direct main"
     description:
       name: markdown
-      sha256: c2b81e184067b41d0264d514f7cdaa2c02d38511e39d6521a1ccc238f6d7b3f2
+      sha256: d95a9d12954aafc97f984ca29baaa7690ed4d9ec4140a23ad40580bcdb6c87f5
       url: "https://pub.dev"
     source: hosted
-    version: "6.0.1"
+    version: "7.0.2"
   matcher:
     dependency: transitive
     description:
@@ -530,10 +531,11 @@ packages:
   scrollable_positioned_list:
     dependency: "direct main"
     description:
-      name: scrollable_positioned_list
-      sha256: ca7fcaa743db712d4f7b1580526f494d0093c77a721a65705ee51fbeac7a2bd3
-      url: "https://pub.dev"
-    source: hosted
+      path: "packages/scrollable_positioned_list"
+      ref: HEAD
+      resolved-ref: f4981ba61c491955cca7b73916aa05c9fbf2056f
+      url: "https://github.com/tiagoalvesdulce/flutter.widgets"
+    source: git
     version: "0.3.5"
   shared_preferences:
     dependency: "direct main"
@@ -845,5 +847,5 @@ packages:
     source: hosted
     version: "3.1.1"
 sdks:
-  dart: ">=2.18.0 <3.0.0"
-  flutter: ">=3.0.0"
+  dart: ">=2.19.0 <3.0.0"
+  flutter: ">=3.3.0"

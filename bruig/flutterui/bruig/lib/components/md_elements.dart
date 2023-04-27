@@ -6,7 +6,6 @@ import 'package:bruig/models/downloads.dart';
 import 'package:bruig/models/resources.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
-import 'package:golib_plugin/definitions.dart';
 import 'package:markdown/markdown.dart' as md;
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -314,6 +313,7 @@ class MarkdownArea extends StatelessWidget {
     var textColor = theme.focusColor;
     return Consumer<ThemeNotifier>(
         builder: (context, theme, _) => MarkdownBody(
+            codeBlockMaxHeight: 200,
             styleSheet: MarkdownStyleSheet(
               p: TextStyle(
                   fontSize: 8 + theme.getFontSize() * 7,
@@ -335,10 +335,18 @@ class MarkdownArea extends StatelessWidget {
               tableBody: TextStyle(color: textColor),
               tableHead: TextStyle(color: textColor),
               blockquoteDecoration: BoxDecoration(color: darkTextColor),
-              codeblockDecoration: BoxDecoration(color: darkTextColor),
-              code: TextStyle(color: textColor),
+              codeblockDecoration: BoxDecoration(
+                  color: Colors.black87,
+                  borderRadius: BorderRadius.circular(2),
+                  border: Border.all(width: 0.5, color: Colors.white24)),
+              code: TextStyle(
+                  color: textColor,
+                  backgroundColor: Colors.black87,
+                  height: 1.2,
+                  fontSize: 8 + theme.getFontSize() * 7,
+                  fontFamily: 'Inter',
+                  textBaseline: TextBaseline.alphabetic),
             ),
-            selectable: true,
             data: text.trim(),
             extensionSet: md.ExtensionSet(
                 md.ExtensionSet.gitHubFlavored.blockSyntaxes, [
@@ -347,6 +355,7 @@ class MarkdownArea extends StatelessWidget {
             ]),
             builders: {
               //"video": VideoMarkdownElementBuilder(basedir),
+              "codeblock": CodeblockMarkdownElementBuilder(),
               "image": ImageMarkdownElementBuilder(),
               "download":
                   DownloadLinkElementBuilder(TextStyle(color: darkTextColor)),
@@ -387,14 +396,29 @@ class Downloadable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Tooltip(
-      message: tip,
-      child: InkWell(
+        message: tip,
+        child: InkWell(
           hoverColor: Theme.of(context).hoverColor,
           onTap: fid != "" ? () => download(context) : null,
           child: Container(
             margin: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
             child: child,
-          )));
+          ),
+        ),
+      );
+}
+
+class CodeblockMarkdownElementBuilder extends MarkdownElementBuilder {
+  @override
+  Widget visitText(md.Text text, TextStyle? preferredStyle) {
+    var style = preferredStyle!.copyWith(
+      backgroundColor: Colors.transparent,
+    );
+    return Text.rich(
+      TextSpan(text: text.text),
+      style: style,
+    );
+  }
 }
 
 class DownloadLinkElementBuilder extends MarkdownElementBuilder {

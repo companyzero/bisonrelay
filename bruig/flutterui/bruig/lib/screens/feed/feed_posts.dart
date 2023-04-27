@@ -1,24 +1,13 @@
-import 'dart:convert';
-
 import 'package:bruig/models/client.dart';
 import 'package:bruig/models/feed.dart';
 import 'package:bruig/screens/feed/post_content.dart';
 import 'package:flutter/material.dart';
-import 'package:crypto/crypto.dart';
 import 'package:provider/provider.dart';
 import 'package:bruig/components/md_elements.dart';
 import 'package:bruig/components/empty_widget.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:bruig/components/user_context_menu.dart';
-
-// return a consistent color for each nick. Pretty dumb so far.
-Color colorFromNick(String nick) {
-  var buff = md5.convert(utf8.encode(nick)).bytes;
-  var i = (buff[0] << 16) + (buff[1] << 8) + buff[2];
-  // var h = (i / 0xffffff) * 360;
-  var c = HSVColor.fromAHSV(1, (i / 0xffffff) * 360, 0.5, 1);
-  return c.toColor();
-}
+import 'package:bruig/util.dart';
 
 class FeedPostW extends StatefulWidget {
   final FeedModel feed;

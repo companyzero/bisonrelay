@@ -125,14 +125,16 @@ class _MessagesState extends State<Messages> {
 
   @override
   Widget build(BuildContext context) {
-    return ScrollablePositionedList.builder(
-      itemCount: chat.msgs.length,
-      physics: const ClampingScrollPhysics(),
-      itemBuilder: (context, index) {
-        return Event(chat, chat.msgs[index], nick, client, _scrollToBottom);
-      },
-      itemScrollController: widget.itemScrollController,
-      itemPositionsListener: widget.itemPositionsListener,
+    return SelectionArea(
+      child: ScrollablePositionedList.builder(
+        itemCount: chat.msgs.length,
+        physics: const ClampingScrollPhysics(),
+        itemBuilder: (context, index) {
+          return Event(chat, chat.msgs[index], nick, client, _scrollToBottom);
+        },
+        itemScrollController: widget.itemScrollController,
+        itemPositionsListener: widget.itemPositionsListener,
+      ),
     );
   }
 }

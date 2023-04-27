@@ -21,6 +21,7 @@ import 'package:file_icon/file_icon.dart';
 import 'package:bruig/components/interactive_avatar.dart';
 import 'package:bruig/components/user_context_menu.dart';
 import 'package:bruig/components/empty_widget.dart';
+import 'package:bruig/util.dart';
 
 class ServerEvent extends StatelessWidget {
   final Widget child;
@@ -152,30 +153,32 @@ class _ReceivedSentPMState extends State<ReceivedSentPM> {
       widget.evnt.sameUser
           ? const Empty()
           : Row(children: [
-              Container(
-                width: 28,
-                margin:
-                    const EdgeInsets.only(top: 0, bottom: 0, left: 5, right: 0),
-                child: widget.isGC
-                    ? UserContextMenu(
-                        targetUserChat: widget.evnt.source,
-                        child: InteractiveAvatar(
-                            bgColor: selectedBackgroundColor,
-                            chatNick: widget.nick,
-                            avatarColor: avatarColor,
-                            avatarTextColor: avatarTextColor),
-                      )
-                    : InteractiveAvatar(
-                        bgColor: selectedBackgroundColor,
-                        chatNick: widget.nick,
-                        onTap: () {
-                          widget.showSubMenu(widget.id);
-                        },
-                        onSecondaryTap: () {
-                          widget.showSubMenu(widget.id);
-                        },
-                        avatarColor: avatarColor,
-                        avatarTextColor: avatarTextColor),
+              SelectionContainer.disabled(
+                child: Container(
+                  width: 28,
+                  margin: const EdgeInsets.only(
+                      top: 0, bottom: 0, left: 5, right: 0),
+                  child: widget.isGC
+                      ? UserContextMenu(
+                          targetUserChat: widget.evnt.source,
+                          child: InteractiveAvatar(
+                              bgColor: selectedBackgroundColor,
+                              chatNick: widget.nick,
+                              avatarColor: avatarColor,
+                              avatarTextColor: avatarTextColor),
+                        )
+                      : InteractiveAvatar(
+                          bgColor: selectedBackgroundColor,
+                          chatNick: widget.nick,
+                          onTap: () {
+                            widget.showSubMenu(widget.id);
+                          },
+                          onSecondaryTap: () {
+                            widget.showSubMenu(widget.id);
+                          },
+                          avatarColor: avatarColor,
+                          avatarTextColor: avatarTextColor),
+                ),
               ),
               const SizedBox(width: 10),
               Text(
@@ -187,20 +190,21 @@ class _ReceivedSentPMState extends State<ReceivedSentPM> {
                 ),
               ),
             ]),
-      //const SizedBox(height: 10),
       Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           const SizedBox(width: 13),
-          SizedBox(
-              width: 5,
-              child: Text(
-                prefix,
-                style: TextStyle(
-                    fontSize: 12,
-                    color: hightLightTextColor, // NAME TEXT COLOR,
-                    fontWeight: FontWeight.bold,
-                    fontStyle: FontStyle.italic),
-              )),
+          SelectionContainer.disabled(
+            child: SizedBox(
+                width: 5,
+                child: Text(
+                  prefix,
+                  style: TextStyle(
+                      fontSize: 12,
+                      color: hightLightTextColor, // NAME TEXT COLOR,
+                      fontWeight: FontWeight.bold,
+                      fontStyle: FontStyle.italic),
+                )),
+          ),
           const SizedBox(width: 24),
           Expanded(
               child: Provider<DownloadSource>(
@@ -209,9 +213,15 @@ class _ReceivedSentPMState extends State<ReceivedSentPM> {
                       msg,
                       widget.userNick != widget.nick &&
                           msg.contains(widget.userNick)))),
-          Text(
-            date,
-            style: TextStyle(fontSize: 9, color: darkTextColor), // DATE COLOR
+          SelectionContainer.disabled(
+            child: Padding(
+              padding: const EdgeInsets.all(4.0),
+              child: Text(
+                date,
+                style:
+                    TextStyle(fontSize: 9, color: darkTextColor), // DATE COLOR
+              ),
+            ),
           ),
           const SizedBox(width: 10)
         ]),

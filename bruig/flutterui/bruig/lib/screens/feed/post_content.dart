@@ -1,5 +1,5 @@
 import 'package:bruig/components/empty_widget.dart';
-import 'package:bruig/screens/feed/feed_posts.dart';
+import 'package:bruig/util.dart';
 import 'package:bruig/components/md_elements.dart';
 import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/models/client.dart';
