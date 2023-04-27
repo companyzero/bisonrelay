@@ -13,14 +13,17 @@ require (
 	github.com/decred/dcrd/bech32 v1.1.2
 	github.com/decred/dcrd/certgen v1.1.1
 	github.com/decred/dcrd/chaincfg/chainhash v1.0.3
+	github.com/decred/dcrd/chaincfg/v3 v3.1.1
 	github.com/decred/dcrd/crypto/blake256 v1.0.0
 	github.com/decred/dcrd/dcrutil/v4 v4.0.0
+	github.com/decred/dcrd/txscript/v4 v4.0.0
 	github.com/decred/dcrd/wire v1.5.0
 	github.com/decred/dcrlnd v0.3.8-0.20230418120521-23aecb168158
 	github.com/decred/dcrlnlpd v0.0.0-20230322170740-0a76ced98d80
 	github.com/decred/go-socks v1.1.0
 	github.com/decred/slog v1.2.0
 	github.com/erikgeiser/promptkit v0.7.0
+	github.com/fsnotify/fsnotify v1.5.4
 	github.com/gorilla/websocket v1.5.0
 	github.com/jrick/flagfile v0.0.0-20200906235446-2904c79186c7
 	github.com/jrick/logrotate v1.0.0
@@ -28,6 +31,7 @@ require (
 	github.com/mattn/go-runewidth v0.0.14
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/muesli/reflow v0.3.0
+	github.com/pelletier/go-toml v1.9.5
 	github.com/rogpeppe/go-internal v1.3.0
 	github.com/vaughan0/go-ini v0.0.0-20130923145212-a98ad7ee00ec
 	golang.org/x/crypto v0.6.0
@@ -66,7 +70,6 @@ require (
 	github.com/decred/dcrd/blockchain/standalone/v2 v2.1.0 // indirect
 	github.com/decred/dcrd/blockchain/v4 v4.0.2 // indirect
 	github.com/decred/dcrd/chaincfg v1.5.2 // indirect
-	github.com/decred/dcrd/chaincfg/v3 v3.1.1 // indirect
 	github.com/decred/dcrd/connmgr v1.1.0 // indirect
 	github.com/decred/dcrd/connmgr/v3 v3.1.0 // indirect
 	github.com/decred/dcrd/crypto/ripemd160 v1.0.1 // indirect
@@ -80,7 +83,6 @@ require (
 	github.com/decred/dcrd/lru v1.1.1 // indirect
 	github.com/decred/dcrd/rpc/jsonrpc/types/v3 v3.0.0 // indirect
 	github.com/decred/dcrd/rpcclient/v7 v7.0.0 // indirect
-	github.com/decred/dcrd/txscript/v4 v4.0.0 // indirect
 	github.com/decred/lightning-onion/v4 v4.0.0 // indirect
 	github.com/dustin/go-humanize v1.0.0 // indirect
 	github.com/go-errors/errors v1.0.1 // indirect
