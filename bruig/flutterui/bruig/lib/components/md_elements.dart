@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:ui';
 import 'dart:typed_data';
 // import 'package:dart_vlc/dart_vlc.dart' as vlc;
 import 'package:bruig/components/snackbars.dart';
@@ -340,6 +341,7 @@ class MarkdownArea extends StatelessWidget {
                   borderRadius: BorderRadius.circular(2),
                   border: Border.all(width: 0.5, color: Colors.white24)),
               code: TextStyle(
+                  fontFeatures: const [FontFeature.tabularFigures()],
                   color: textColor,
                   backgroundColor: Colors.black87,
                   height: 1.2,
