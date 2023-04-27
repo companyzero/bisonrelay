@@ -200,6 +200,17 @@ type OnOnboardStateChangedNtfn func(state clientintf.OnboardState, err error)
 
 func (_ OnOnboardStateChangedNtfn) typ() string { return onOnboardStateChangedNtfnType }
 
+const onResourceFetchedNtfnType = "onResourceFetched"
+
+// OnResourceFetchedNtfn is called when a reply to a fetched resource is
+// received.
+//
+// Note that the user may be nil if the resource was fetched locally, such as
+// through the FetchLocalResource call.
+type OnResourceFetchedNtfn func(ru *RemoteUser, fr clientdb.FetchedResource, sess *clientintf.PageSessionNode)
+
+func (_ OnResourceFetchedNtfn) typ() string { return onResourceFetchedNtfnType }
+
 // The following is used only in tests.
 
 const onTestNtfnType = "testNtfnType"
@@ -439,6 +450,11 @@ func (nmgr *NotificationManager) notifyOnOnboardStateChanged(state clientintf.On
 		visit(func(h OnOnboardStateChangedNtfn) { h(state, err) })
 }
 
+func (nmgr *NotificationManager) notifyResourceFetched(ru *RemoteUser,
+	fr clientdb.FetchedResource, sess *clientintf.PageSessionNode) {
+	nmgr.handlers[onResourceFetchedNtfnType].(*handlersFor[OnResourceFetchedNtfn]).
+		visit(func(h OnResourceFetchedNtfn) { h(ru, fr, sess) })
+}
 func NewNotificationManager() *NotificationManager {
 	return &NotificationManager{
 		handlers: map[string]handlersRegistry{
@@ -470,6 +486,7 @@ func NewNotificationManager() *NotificationManager {
 			onTipAttemptProgressNtfnType:      &handlersFor[OnTipAttemptProgressNtfn]{},
 			onServerSessionChangedNtfnType:    &handlersFor[OnServerSessionChangedNtfn]{},
 			onOnboardStateChangedNtfnType:     &handlersFor[OnOnboardStateChangedNtfn]{},
+			onResourceFetchedNtfnType:         &handlersFor[OnResourceFetchedNtfn]{},
 		},
 	}
 }

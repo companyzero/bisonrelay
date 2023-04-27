@@ -15,6 +15,7 @@ import (
 	"github.com/companyzero/bisonrelay/client"
 	"github.com/companyzero/bisonrelay/client/clientdb"
 	"github.com/companyzero/bisonrelay/client/clientintf"
+	"github.com/companyzero/bisonrelay/client/resources"
 	"github.com/companyzero/bisonrelay/internal/assert"
 	"github.com/companyzero/bisonrelay/internal/testutils"
 	"github.com/companyzero/bisonrelay/rpc"
@@ -24,9 +25,7 @@ import (
 	"github.com/decred/slog"
 )
 
-type testScaffoldCfg struct {
-	showLog bool
-}
+type testScaffoldCfg struct{}
 
 type testConn struct {
 	sync.Mutex
@@ -84,9 +83,18 @@ type testClient struct {
 	mpc     *testutils.MockPayClient
 	cfg     *client.Config
 
-	mtx         sync.Mutex
-	conn        *testConn
-	preventConn error
+	mtx               sync.Mutex
+	conn              *testConn
+	preventConn       error
+	resourcesProvider resources.Provider
+}
+
+// modifyHandlers calls f with the mutex held, so that the client handlers can
+// be freely modified.
+func (tc *testClient) modifyHandlers(f func()) {
+	tc.mtx.Lock()
+	f()
+	tc.mtx.Unlock()
 }
 
 // preventFutureConns stops all future conns of this client from succeeding.
@@ -245,6 +253,21 @@ func (ts *testScaffold) newClientWithOpts(name string, rootDir string,
 		GCMQUpdtDelay:    100 * time.Millisecond,
 		GCMQMaxLifetime:  time.Second,
 		GCMQInitialDelay: time.Second,
+
+		ResourcesProvider: resources.ProviderFunc(func(ctx context.Context,
+			uid clientintf.UserID,
+			request *rpc.RMFetchResource) (*rpc.RMFetchResourceReply, error) {
+
+			tc.mtx.Lock()
+			rp := tc.resourcesProvider
+			tc.mtx.Unlock()
+			if rp == nil {
+				return nil, fmt.Errorf("test client was not setup with resources provider")
+
+			}
+
+			return rp.Fulfill(ctx, uid, request)
+		}),
 	}
 	c, err := client.New(cfg)
 	assert.NilErr(ts.t, err)
@@ -345,8 +368,11 @@ func (ts *testScaffold) run() {
 	}()
 }
 
-func newTestServer(t testing.TB, showLog bool) *server.ZKS {
+func newTestServer(t testing.TB) *server.ZKS {
 	t.Helper()
+
+	logEnv := os.Getenv("BR_E2E_LOG")
+	showLog := logEnv == "1" || logEnv == t.Name()
 
 	cfg := settings.New()
 	dir, err := os.MkdirTemp("", "br-server")
@@ -384,14 +410,17 @@ func newTestScaffold(t *testing.T, cfg testScaffoldCfg) *testScaffold {
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
 
+	logEnv := os.Getenv("BR_E2E_LOG")
+	showLog := logEnv == "1" || logEnv == t.Name()
+
 	ts := &testScaffold{
 		t:       t,
 		cfg:     cfg,
 		ctx:     ctx,
 		cancel:  cancel,
-		svr:     newTestServer(t, cfg.showLog),
+		svr:     newTestServer(t),
 		svrRunC: make(chan error, 1),
-		showLog: cfg.showLog,
+		showLog: showLog,
 	}
 	go ts.run()
 

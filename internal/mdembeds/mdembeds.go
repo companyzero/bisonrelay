@@ -25,6 +25,9 @@ type EmbeddedArgs struct {
 	Size     uint64
 	Cost     uint64
 
+	// processed locally
+	LocalFilename string
+
 	// May be set externally, not on the link.
 	Uid *clientintf.UserID
 }
@@ -112,6 +115,8 @@ func ParseEmbedArgs(rawEmbedStr string) EmbeddedArgs {
 			args.Size, _ = strconv.ParseUint(v, 10, 64)
 		case "cost":
 			args.Cost, _ = strconv.ParseUint(v, 10, 64)
+		case "localfilename":
+			args.LocalFilename = v
 		}
 	}
 

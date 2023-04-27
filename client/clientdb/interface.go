@@ -310,6 +310,26 @@ type TipUserAttempt struct {
 	Completed        *time.Time `json:"completed,omitempty"`
 }
 
+// ResourceRequest is a serialized request for a resource.
+type ResourceRequest struct {
+	UID        UserID                    `json:"uid"`
+	Timestamp  time.Time                 `json:"timestamp"`
+	Request    rpc.RMFetchResource       `json:"request"`
+	SesssionID clientintf.PagesSessionID `json:"session_id"`
+	ParentPage clientintf.PagesSessionID `json:"parent_page"`
+}
+
+type FetchedResource struct {
+	UID        UserID                    `json:"uid"`
+	SessionID  clientintf.PagesSessionID `json:"session_id"`
+	ParentPage clientintf.PagesSessionID `json:"parent_page"`
+	PageID     clientintf.PagesSessionID `json:"page_id"`
+	RequestTS  time.Time                 `json:"request_ts"`
+	ResponseTS time.Time                 `json:"response_ts"`
+	Request    rpc.RMFetchResource       `json:"request"`
+	Response   rpc.RMFetchResourceReply  `json:"response"`
+}
+
 var (
 	LocalIDEmptyError       = errors.New("local ID is not initialized")
 	ServerIDEmptyError      = errors.New("server ID is not known")

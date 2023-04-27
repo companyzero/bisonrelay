@@ -160,6 +160,14 @@ func TestPathElement(t *testing.T) {
 		s:    "../../foo/bar",
 		want: "....foobar",
 	}, {
+		name: "current dir",
+		s:    ".",
+		want: "dot",
+	}, {
+		name: "parent dir",
+		s:    "..",
+		want: "dotdot",
+	}, {
 		name: "null char",
 		s:    "null\x00char",
 		want: "nullchar",
@@ -236,6 +244,69 @@ func TestCannonicalizeNLs(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			got := CannonicalizeNL(tc.s)
+			if got != tc.want {
+				t.Fatalf("Unexpected result: got %q, want %q",
+					got, tc.want)
+			}
+		})
+	}
+}
+
+func TestResourcesPath(t *testing.T) {
+	tests := []struct {
+		name string
+		path []string
+		want string
+	}{{
+		name: "nil path",
+		path: nil,
+		want: "",
+	}, {
+		name: "empty path",
+		path: []string{},
+		want: "",
+	}, {
+		name: "single path element",
+		path: []string{"first"},
+		want: "first",
+	}, {
+		name: "multiple path element",
+		path: []string{"first", "second", "third"},
+		want: "first/second/third",
+	}, {
+		name: "unprintable path element",
+		path: []string{"start", "ansi \x1b escape", "end"},
+		want: `start/ansi \x1b escape/end`,
+	}, {
+		name: "null char in path element",
+		path: []string{"start", "null \x00 char", "end"},
+		want: `start/null \x00 char/end`,
+	}, {
+		name: "graphical unicode path element",
+		path: []string{"start", "∀x∈ℝ ⌈x⌉", "end"},
+		want: "start/∀x∈ℝ ⌈x⌉/end",
+	}, {
+		name: "newline in path element",
+		path: []string{"start", "new \n line", "end"},
+		want: `start/new \n line/end`,
+	}, {
+		name: "invalid utf-8 in path element",
+		path: []string{"start", "invalid \xa0\xa1 utf8", "end"},
+		want: `start/invalid \xa0\xa1 utf8/end`,
+	}, {
+		name: "escape sequence in path element",
+		path: []string{"start", `escape \x01 sequence`, "end"},
+		want: `start/escape \\x01 sequence/end`,
+	}, {
+		name: "path separator in path element",
+		path: []string{"start", "path / separator", "end"},
+		want: `start/path \x2f separator/end`,
+	}}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			got := ResourcesPath(tc.path)
 			if got != tc.want {
 				t.Fatalf("Unexpected result: got %q, want %q",
 					got, tc.want)
