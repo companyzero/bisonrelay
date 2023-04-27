@@ -12,6 +12,7 @@ import (
 	genericlist "github.com/bahlo/generic-list-go"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/companyzero/bisonrelay/client/clientintf"
+	"github.com/companyzero/bisonrelay/internal/mdembeds"
 	"github.com/companyzero/bisonrelay/internal/strescape"
 	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/companyzero/bisonrelay/zkidentity"
@@ -21,7 +22,7 @@ import (
 // chatMsgEl is one element of a chat msg AST.
 type chatMsgEl struct {
 	text    string
-	embed   *embeddedArgs
+	embed   *mdembeds.EmbeddedArgs
 	mention *string
 	url     *string
 }
@@ -70,7 +71,7 @@ func (l *chatMsgElLine) splitEmbeds() {
 			continue
 		}
 
-		embedPositions := embedRegexp.FindAllStringIndex(s, -1)
+		embedPositions := mdembeds.FindAllStringIndex(s)
 		if len(embedPositions) == 0 {
 			continue
 		}
@@ -81,7 +82,7 @@ func (l *chatMsgElLine) splitEmbeds() {
 			prefix := s[lastEnd:embedPos[0]]
 			l.InsertBefore(chatMsgEl{text: prefix}, el)
 
-			args := parseEmbedArgs(s[embedPos[0]:embedPos[1]])
+			args := mdembeds.ParseEmbedArgs(s[embedPos[0]:embedPos[1]])
 			l.InsertBefore(chatMsgEl{embed: &args}, el)
 
 			lastEnd = embedPos[1]
@@ -171,7 +172,7 @@ type chatWindow struct {
 	alias        string
 	me           string // nick of the local user
 	gc           zkidentity.ShortID
-	selEmbedArgs embeddedArgs
+	selEmbedArgs mdembeds.EmbeddedArgs
 	selEmbed     int
 	maxEmbeds    int
 	unreadIdx    int
@@ -383,25 +384,25 @@ func (cw *chatWindow) renderMsg(winW int, styles *theme, b *strings.Builder, as 
 			var s string
 			if el.embed != nil {
 				args := el.embed
-				if args.alt != "" {
-					s = strescape.Content(args.alt)
+				if args.Alt != "" {
+					s = strescape.Content(args.Alt)
 					s += " "
 				}
 
 				switch {
-				case args.download.IsEmpty() && (len(args.data) == 0):
+				case args.Download.IsEmpty() && (len(args.Data) == 0):
 					s += "[Empty link and data]"
-				case args.download.IsEmpty() && args.typ == "":
+				case args.Download.IsEmpty() && args.Typ == "":
 					s += "[Embedded untyped data]"
-				case args.download.IsEmpty():
-					s += fmt.Sprintf("[Embedded data of type %q]", args.typ)
+				case args.Download.IsEmpty():
+					s += fmt.Sprintf("[Embedded data of type %q]", args.Typ)
 				default:
-					filePath, err := as.c.HasDownloadedFile(args.download)
-					filename := strescape.PathElement(args.filename)
+					filePath, err := as.c.HasDownloadedFile(args.Download)
+					filename := strescape.PathElement(args.Filename)
 					if filePath != "" {
 						filename = filepath.Base(filePath)
 					} else if filename == "" {
-						filename = args.download.ShortLogID()
+						filename = args.Download.ShortLogID()
 					}
 					if err != nil {
 						s += fmt.Sprintf("[Error checking file: %v", err)
@@ -409,11 +410,11 @@ func (cw *chatWindow) renderMsg(winW int, styles *theme, b *strings.Builder, as 
 						s += fmt.Sprintf("[File %s]", filename)
 					} else {
 						eRate := as.exchangeRate()
-						dcrCost := dcrutil.Amount(int64(args.cost))
+						dcrCost := dcrutil.Amount(int64(args.Cost))
 						usdCost := eRate.DCRPrice * dcrCost.ToCoin()
 						s += fmt.Sprintf("[Download File %s (size:%s cost:%0.8f DCR / %0.8f USD)]",
 							filename,
-							hbytes(int64(args.size)),
+							hbytes(int64(args.Size)),
 							dcrCost.ToCoin(), usdCost)
 					}
 				}
@@ -421,7 +422,7 @@ func (cw *chatWindow) renderMsg(winW int, styles *theme, b *strings.Builder, as 
 				style := as.styles.embed
 				if cw.maxEmbeds == cw.selEmbed {
 					style = as.styles.focused
-					args.uid = msg.fromUID
+					args.Uid = msg.fromUID
 					cw.selEmbedArgs = *args
 				}
 				cw.maxEmbeds += 1

@@ -32,6 +32,7 @@ import (
 	"github.com/companyzero/bisonrelay/client/clientintf"
 	"github.com/companyzero/bisonrelay/client/rpcserver"
 	"github.com/companyzero/bisonrelay/clientrpc/types"
+	"github.com/companyzero/bisonrelay/internal/mdembeds"
 	"github.com/companyzero/bisonrelay/internal/strescape"
 	"github.com/companyzero/bisonrelay/internal/tlsconn"
 	"github.com/companyzero/bisonrelay/rpc"
@@ -2126,13 +2127,13 @@ func (as *appState) kxSearchPostAuthor(from clientintf.UserID, pid clientintf.Po
 	return err
 }
 
-func (as *appState) viewEmbed(embedded embeddedArgs) (tea.Cmd, error) {
-	if len(embedded.data) == 0 {
+func (as *appState) viewEmbed(embedded mdembeds.EmbeddedArgs) (tea.Cmd, error) {
+	if len(embedded.Data) == 0 {
 		return nil, fmt.Errorf("no embedded file")
 	}
-	prog := programByMimeType(as.mimeMap, embedded.typ)
+	prog := programByMimeType(as.mimeMap, embedded.Typ)
 	if prog == "" {
-		return nil, fmt.Errorf("no external viewer configured for %v", embedded.typ)
+		return nil, fmt.Errorf("no external viewer configured for %v", embedded.Typ)
 	}
 
 	// Save to downloads/users/file?
@@ -2140,7 +2141,7 @@ func (as *appState) viewEmbed(embedded embeddedArgs) (tea.Cmd, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create temp file: %v", err)
 	}
-	if _, err = f.Write(embedded.data); err != nil {
+	if _, err = f.Write(embedded.Data); err != nil {
 		return nil, fmt.Errorf("failed to write temp file: %v", err)
 	}
 	f.Close()
@@ -2152,16 +2153,16 @@ func (as *appState) viewEmbed(embedded embeddedArgs) (tea.Cmd, error) {
 	return cmd, nil
 }
 
-func (as *appState) downloadEmbed(source clientintf.UserID, embedded embeddedArgs) error {
+func (as *appState) downloadEmbed(source clientintf.UserID, embedded mdembeds.EmbeddedArgs) error {
 
 	if source == as.c.PublicID() {
 		return fmt.Errorf("cannot download file from self")
 	}
 
-	if embedded.download.IsEmpty() {
+	if embedded.Download.IsEmpty() {
 		return fmt.Errorf("nothing to download")
 	}
-	filePath, err := as.c.HasDownloadedFile(embedded.download)
+	filePath, err := as.c.HasDownloadedFile(embedded.Download)
 	if err != nil {
 		return fmt.Errorf("failed to check download: %v", err)
 	}
@@ -2169,7 +2170,7 @@ func (as *appState) downloadEmbed(source clientintf.UserID, embedded embeddedArg
 		return fmt.Errorf("already have file %s", filePath)
 	}
 	// TODO - validate current cost
-	err = as.c.GetUserContent(source, embedded.download)
+	err = as.c.GetUserContent(source, embedded.Download)
 	if err != nil {
 		return fmt.Errorf("unable to fetch user content: %v", err)
 	}

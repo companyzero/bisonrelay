@@ -10,6 +10,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/companyzero/bisonrelay/client/clientdb"
+	"github.com/companyzero/bisonrelay/internal/mdembeds"
 	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/decred/dcrd/chaincfg/chainhash"
 	"github.com/decred/dcrd/dcrutil/v4"
@@ -82,9 +83,9 @@ func (ew *embedWidget) activate() []tea.Cmd {
 
 // tryEmbed tries to create the embed and calls the addEmbedCB.
 func (ew *embedWidget) tryEmbed() error {
-	var args embeddedArgs
+	var args mdembeds.EmbeddedArgs
 
-	args.alt = url.PathEscape(ew.formEmbed.inputs[1].(*textInputHelper).Value())
+	args.Alt = url.PathEscape(ew.formEmbed.inputs[1].(*textInputHelper).Value())
 
 	filename, err := homedir.Expand(ew.formEmbed.inputs[0].(*textInputHelper).Value())
 	if err != nil {
@@ -104,17 +105,17 @@ func (ew *embedWidget) tryEmbed() error {
 			return fmt.Errorf("file too big to embed")
 		}
 
-		args.typ = mime.TypeByExtension(filepath.Ext(filename))
+		args.Typ = mime.TypeByExtension(filepath.Ext(filename))
 		id = chainhash.HashH(data).String()[:8]
 		pseudoData := fmt.Sprintf("[content %s]", id)
-		args.data = []byte(pseudoData)
+		args.Data = []byte(pseudoData)
 	}
 
 	if ew.idxSharedFile > -1 && ew.idxSharedFile < len(ew.sharedFiles) {
 		sf := ew.sharedFiles[ew.idxSharedFile]
-		args.download = sf.SF.FID
-		args.cost = sf.Cost
-		args.size = sf.Size
+		args.Download = sf.SF.FID
+		args.Cost = sf.Cost
+		args.Size = sf.Size
 	}
 
 	embedStr := args.String()
