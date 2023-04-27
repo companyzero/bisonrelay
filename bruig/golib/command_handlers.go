@@ -8,6 +8,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
+	"net/http"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -16,6 +19,8 @@ import (
 	"github.com/companyzero/bisonrelay/client"
 	"github.com/companyzero/bisonrelay/client/clientdb"
 	"github.com/companyzero/bisonrelay/client/clientintf"
+	"github.com/companyzero/bisonrelay/client/resources"
+	"github.com/companyzero/bisonrelay/client/resources/simplestore"
 	"github.com/companyzero/bisonrelay/clientrpc/types"
 	"github.com/companyzero/bisonrelay/embeddeddcrlnd"
 	"github.com/companyzero/bisonrelay/lockfile"
@@ -50,6 +55,12 @@ type clientCtx struct {
 	// confirmPayReqRecvChan is written to by the user to confirm or deny
 	// paying to open a chan.
 	confirmPayReqRecvChan chan bool
+
+	// Exchange rate.
+	erMtx sync.RWMutex
+	eRate exchangeRate
+
+	httpClient *http.Client
 
 	// downloadConfChans tracks confirmation channels about downloads that
 	// are about to be initiated.
@@ -86,6 +97,8 @@ func handleInitClient(handle uint32, args InitClient) error {
 		return err
 	}
 	logBknd.notify = args.WantsLogNtfns
+
+	ctx := context.Background()
 
 	// Initialize DB.
 	db, err := clientdb.New(clientdb.Config{
@@ -321,14 +334,80 @@ func handleInitClient(handle uint32, args InitClient) error {
 		notify(NTResourceFetched, fr, nil)
 	}))
 
+	// Initialize resources router.
+	var sstore *simplestore.Store
+	resRouter := resources.NewRouter()
+	switch {
+	case strings.HasPrefix(args.ResourcesUpstream, "http://"),
+		strings.HasPrefix(args.ResourcesUpstream, "https://"):
+		p := resources.NewHttpProvider(args.ResourcesUpstream)
+		resRouter.BindPrefixPath([]string{}, p)
+	case strings.HasPrefix(args.ResourcesUpstream, "simplestore:"):
+		// Generate the template store if the path does not exist.
+		path := args.ResourcesUpstream[len("simplestore:"):]
+		if _, err := os.Stat(path); os.IsNotExist(err) {
+			err := simplestore.WriteTemplate(path)
+			if err != nil {
+				return fmt.Errorf("unable to write simplestore"+
+					" template: %v", err)
+			}
+		}
+
+		scfg := simplestore.Config{
+			Root:       path,
+			Log:        logBknd.logger("SSTR"),
+			LiveReload: true, // FIXME: parametrize
+			OrderPlaced: func(order *simplestore.Order) {
+				erate := cctx.exchangeRate()
+
+				var dcrTotal dcrutil.Amount
+				if erate.DCRPrice > 0 {
+					usdTotal := float64(order.TotalCents()) / 100
+					floatTotal := usdTotal / erate.DCRPrice
+					dcrTotal, _ = dcrutil.NewAmount(floatTotal)
+				}
+				event := SimpleStoreOrder{
+					Order:        *order,
+					ExchangeRate: erate.DCRPrice,
+					DCRAmount:    dcrTotal,
+				}
+				var err error
+				switch args.SimpleStorePayType {
+				case "onchain":
+					event.OnchainAddr, err = c.OnchainRecvAddrForUser(order.User)
+				case "ln":
+					if lnpc != nil {
+						event.LNInvoice, err = lnpc.GetInvoice(cctx.ctx, int64(dcrTotal*1000), nil)
+					} else {
+						err = fmt.Errorf("ln not setup")
+					}
+				}
+				if err != nil {
+					cctx.log.Errorf("Error while processing order: %v", err)
+				}
+				notify(NTSimpleStoreOrderPlaced, event, nil)
+			},
+		}
+		sstore, err = simplestore.New(scfg)
+		if err != nil {
+			return fmt.Errorf("unable to initialize simple store: %v", err)
+		}
+		resRouter.BindPrefixPath([]string{}, sstore)
+	case strings.HasPrefix(args.ResourcesUpstream, "pages:"):
+		path := args.ResourcesUpstream[len("pages:"):]
+		p := resources.NewFilesystemResource(path, logBknd.logger("PAGE"))
+		resRouter.BindPrefixPath([]string{}, p)
+	}
+
 	cfg := client.Config{
-		DB:             db,
-		Dialer:         clientintf.NetDialer(args.ServerAddr, logBknd.logger("CONN")),
-		PayClient:      pc,
-		Logger:         logBknd.logger,
-		ReconnectDelay: 5 * time.Second,
-		CompressLevel:  4,
-		Notifications:  ntfns,
+		DB:                db,
+		Dialer:            clientintf.NetDialer(args.ServerAddr, logBknd.logger("CONN")),
+		PayClient:         pc,
+		Logger:            logBknd.logger,
+		ReconnectDelay:    5 * time.Second,
+		CompressLevel:     4,
+		Notifications:     ntfns,
+		ResourcesProvider: resRouter,
 
 		CertConfirmer: func(ctx context.Context, cs *tls.ConnectionState,
 			svrID *zkidentity.PublicIdentity) error {
@@ -496,7 +575,14 @@ func handleInitClient(handle uint32, args InitClient) error {
 	if err != nil {
 		return err
 	}
-	ctx, cancel := context.WithCancel(context.Background())
+
+	var cancel func()
+	ctx, cancel = context.WithCancel(ctx)
+
+	// TODO: support dialer with proxy.
+	var d net.Dialer
+	httpDialerFunc := d.DialContext
+
 	cctx = &clientCtx{
 		c:      c,
 		lnpc:   lnpc,
@@ -510,8 +596,21 @@ func handleInitClient(handle uint32, args InitClient) error {
 
 		confirmPayReqRecvChan: make(chan bool),
 		downloadConfChans:     make(map[zkidentity.ShortID]chan bool),
+
+		httpClient: &http.Client{
+			Transport: &http.Transport{
+				DialContext:           httpDialerFunc,
+				ForceAttemptHTTP2:     true,
+				MaxIdleConns:          100,
+				IdleConnTimeout:       90 * time.Second,
+				TLSHandshakeTimeout:   10 * time.Second,
+				ExpectContinueTimeout: 1 * time.Second,
+			},
+		},
 	}
 	cs[handle] = cctx
+
+	go cctx.trackExchangeRate()
 
 	go func() {
 		err := c.Run(ctx)

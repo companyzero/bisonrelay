@@ -155,6 +155,7 @@ const (
 	NTTipUserProgress        = 0x1024
 	NTOnboardStateChanged    = 0x1025
 	NTResourceFetched        = 0x1026
+	NTSimpleStoreOrderPlaced = 0x1027
 )
 
 type cmd struct {

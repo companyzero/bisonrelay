@@ -5,6 +5,7 @@ import 'package:bruig/models/resources.dart';
 import 'package:flutter/foundation.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
+import 'package:golib_plugin/util.dart';
 import '../storage_manager.dart';
 
 const SCE_unknown = 0;
@@ -204,6 +205,13 @@ class ChatModel extends ChangeNotifier {
         evnt.sendError = "$exception";
       }
     }
+
+    // This may be triggered by autmation sending messages when the chat window
+    // is not focused (for example, simplestore placed orders).
+    if (!active) {
+      _unreadMsgCount += 1;
+      notifyListeners();
+    }
   }
 
   String workingMsg = "";
@@ -260,6 +268,7 @@ class ClientModel extends ChangeNotifier {
     _handleServerSessChanged();
     _handleGCListUpdates();
     _fetchInfo();
+    _handleSSOrders();
   }
 
   List<ChatModel> _gcChats = [];
@@ -618,6 +627,52 @@ class ClientModel extends ChangeNotifier {
     await for (var update in stream) {
       // Force creating the chat if it doesn't exist.
       _newChat(update.id, update.name, true);
+    }
+  }
+
+  void _handleSSOrderPlaced(SSPlacedOrder po) async {
+    try {
+      var order = po.order;
+      var chat = getExistingChat(order.user);
+      if (chat == null) {
+        throw "user ${order.user} not found in placed simplestore order";
+      }
+
+      int totalCents = 0;
+      var msg = """Thank you for placing your order #${order.id}
+The following were the items in your order:
+""";
+      for (var item in order.cart.items) {
+        var price = item.product.price.toStringAsFixed(2);
+        var itemCents = (item.product.price * 100).toInt() * item.quantity;
+        var itemUSD = (itemCents.toDouble() / 100).toStringAsFixed(2);
+        totalCents += itemCents;
+        msg +=
+            "  SKU ${item.product.sku} - ${item.product.title} - ${item.quantity} units - $price/item - $itemUSD\n";
+      }
+
+      var totalUSD = (totalCents.toDouble() / 100).toStringAsFixed(2);
+      msg += "Total amount: \$$totalUSD\n";
+      msg += "Total DCR Amount: ${formatDCR(atomsToDCR(po.dcrAmount))}\n";
+      msg += "Exchange Rate: ${po.exchangeRate} USD/DCR\n";
+      if (po.onchainAddr != "") {
+        msg += "OnChain payment address: ${po.onchainAddr}\n";
+      } else if (po.lnInvoice != "") {
+        msg += "LN Invoice: ${po.lnInvoice}";
+      } else {
+        msg += "You will be contacted with payment details shortly\n";
+      }
+      chat.sendMsg(msg);
+    } catch (exception) {
+      // TODO: send to snackbar model.
+      print("Error while processing SimpleStore order: $exception");
+    }
+  }
+
+  void _handleSSOrders() async {
+    var stream = Golib.simpleStoreOrders();
+    await for (var order in stream) {
+      _handleSSOrderPlaced(order);
     }
   }
 }
