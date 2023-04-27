@@ -136,12 +136,12 @@ class _CommentWState extends State<_CommentW> {
 
     var mine = widget.comment.uid == widget.client.publicID;
     var kxing = widget.client.requestedMediateID(widget.comment.uid);
-
+    print(widget.comment.level);
     var unreadComment = widget.comment.unreadComment;
     var theme = Theme.of(context);
     var hightLightTextColor = theme.dividerColor;
-    var textColor = theme.focusColor;
-    var backgroundColor = theme.highlightColor;
+    var backgroundColor = theme.backgroundColor;
+    var commentBorderColor = theme.dialogBackgroundColor;
     var avatarColor = colorFromNick(nick);
     var darkTextColor = theme.indicatorColor;
     var avatarTextColor =
@@ -152,14 +152,14 @@ class _CommentWState extends State<_CommentW> {
     return Container(
         decoration: BoxDecoration(
             border: Border(
-          left: BorderSide(
-              width: 2.0,
-              color: widget.comment.level != 0
-                  ? const Color(0xFF3A384B)
-                  : backgroundColor),
-        )),
+                left: widget.comment.level != 0
+                    ? BorderSide(width: 2.0, color: commentBorderColor)
+                    : BorderSide.none)),
         margin: EdgeInsets.only(
-            top: 5, left: 144 + widget.comment.level * 20, right: 108),
+            top: 5,
+            left:
+                widget.comment.level != 0 ? 50 + widget.comment.level * 25 : 50,
+            right: 50),
         padding: const EdgeInsets.all(10),
         child: Column(children: [
           Row(
@@ -207,6 +207,19 @@ class _CommentWState extends State<_CommentW> {
                         icon: Icon(!sendingReply
                             ? Icons.reply
                             : Icons.hourglass_bottom))),
+                unreadComment
+                    ? Row(children: const [
+                        SizedBox(width: 10),
+                        Icon(Icons.new_releases_outlined, color: Colors.amber),
+                        SizedBox(width: 10),
+                        Text("New Comment",
+                            style: TextStyle(
+                              fontStyle: FontStyle.italic,
+                              fontSize: 12,
+                              color: Colors.amber,
+                            ))
+                      ])
+                    : const Empty(),
               ]),
               strTimestamp != ""
                   ? Expanded(
@@ -221,7 +234,7 @@ class _CommentWState extends State<_CommentW> {
           Row(
             children: [
               Expanded(
-                child: MarkdownArea(widget.comment.comment, unreadComment),
+                child: MarkdownArea(widget.comment.comment, false),
               ),
             ],
           ),
@@ -631,7 +644,7 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
                 Container(
                   // Post area
                   margin: const EdgeInsets.only(
-                      left: 114, right: 108, top: 0, bottom: 0),
+                      left: 50, right: 50, top: 0, bottom: 0),
                   decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(3),
                       color: postBackgroundColor),
@@ -706,7 +719,7 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
                                           fontSize: 16,
                                           fontStyle: FontStyle.italic)))
                             ]),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 10),
                       Container(
                           padding: const EdgeInsets.all(15),
                           child: Provider<DownloadSource>(

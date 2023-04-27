@@ -49,10 +49,10 @@ class FeedPostModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  bool _unreadPost = false;
-  bool get unreadPost => _unreadPost;
-  void set unreadPost(bool b) {
-    _unreadPost = b;
+  bool _hasUnreadPost = false;
+  bool get hasUnreadPost => _hasUnreadPost;
+  void set hasUnreadPost(bool b) {
+    _hasUnreadPost = b;
     notifyListeners();
   }
 
@@ -60,7 +60,7 @@ class FeedPostModel extends ChangeNotifier {
   bool get active => _active;
   void _setActive(bool b) {
     _active = b;
-    _unreadPost = false;
+    _hasUnreadPost = false;
     _hasUnreadComments = false;
     notifyListeners();
   }
@@ -193,10 +193,10 @@ class FeedModel extends ChangeNotifier {
   List<FeedPostModel> _posts = [];
   Iterable<FeedPostModel> get posts => UnmodifiableListView(_posts);
 
-  bool _unreadPostsComments = false;
-  bool get unreadPostsComments => _unreadPostsComments;
-  void set unreadPostsComments(bool b) {
-    _unreadPostsComments = b;
+  bool _hasUnreadPostsComments = false;
+  bool get hasUnreadPostsComments => _hasUnreadPostsComments;
+  void set hasUnreadPostsComments(bool b) {
+    _hasUnreadPostsComments = b;
     notifyListeners();
   }
 
@@ -211,11 +211,11 @@ class FeedModel extends ChangeNotifier {
     // Check for unreadPostsAndComments so we can turn off sidebar notification
     bool unread = false;
     for (int i = 0; i < _posts.length; i++) {
-      if (_posts[i].hasUnreadComments || _posts[i]._unreadPost) {
+      if (_posts[i].hasUnreadComments || _posts[i]._hasUnreadPost) {
         unread = true;
       }
     }
-    _unreadPostsComments = unread;
+    _hasUnreadPostsComments = unread;
     notifyListeners();
   }
 
@@ -234,8 +234,8 @@ class FeedModel extends ChangeNotifier {
     await for (var msg in stream) {
       // Add at the start of the feed so it appears at the top of the feed page.
       var newPost = FeedPostModel(msg);
-      newPost.unreadPost = true;
-      unreadPostsComments = true;
+      newPost.hasUnreadPost = true;
+      hasUnreadPostsComments = true;
       _posts.insert(0, newPost);
 
       // Handle posts that replace a previously relayed post: the client removes
@@ -263,7 +263,7 @@ class FeedModel extends ChangeNotifier {
           (p) => p.summ.from == msg.postFrom && p.summ.id == msg.pid);
       if (postIdx > -1) {
         var post = _posts[postIdx];
-        unreadPostsComments = true;
+        hasUnreadPostsComments = true;
         post.addReceivedStatus(msg.status, true);
       }
     }

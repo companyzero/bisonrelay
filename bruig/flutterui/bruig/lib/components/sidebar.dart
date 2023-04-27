@@ -182,7 +182,8 @@ class _SidebarState extends State<Sidebar> {
             .map((e) => SidebarXItem(
                   label: e.label,
                   iconWidget: (e.label == "Chats" && client.hasUnreadChats) ||
-                          (e.label == "News Feed" && feed.unreadPostsComments)
+                          (e.label == "News Feed" &&
+                              feed.hasUnreadPostsComments)
                       ? e.iconNotification
                       : e.icon,
                   onTap: () => switchScreen(e.routeName),

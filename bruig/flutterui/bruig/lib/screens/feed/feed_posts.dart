@@ -68,7 +68,7 @@ class _FeedPostWState extends State<FeedPostW> {
   @override
   Widget build(BuildContext context) {
     var hasUnreadComments = post.hasUnreadComments;
-    var unReadPost = post.unreadPost;
+    var hasUnreadPost = post.hasUnreadPost;
     var authorNick = widget.author?.nick ?? "";
     var authorID = widget.post.summ.authorID;
     var mine = authorID == widget.client.publicID;
@@ -119,11 +119,14 @@ class _FeedPostWState extends State<FeedPostW> {
                   client: widget.client,
                   targetUserChat: widget.author,
                   disabled: mine,
-                  child: CircleAvatar(
-                      backgroundColor: avatarColor,
-                      child: Text(authorNick[0].toUpperCase(),
-                          style:
-                              TextStyle(color: avatarTextColor, fontSize: 20))),
+                  child: hasUnreadPost
+                      ? const Icon(Icons.new_releases_outlined,
+                          color: Colors.amber)
+                      : CircleAvatar(
+                          backgroundColor: avatarColor,
+                          child: Text(authorNick[0].toUpperCase(),
+                              style: TextStyle(
+                                  color: avatarTextColor, fontSize: 20))),
                 ),
               ),
               const SizedBox(width: 6),
@@ -164,24 +167,18 @@ class _FeedPostWState extends State<FeedPostW> {
           ]),
           const SizedBox(height: 5),
           Row(children: [
-            unReadPost
-                ? Expanded(
-                    child: Text("New Post",
-                        style: TextStyle(
-                          fontStyle: FontStyle.italic,
-                          fontSize: 12,
-                          color: hightLightTextColor,
-                        )))
-                : Empty(),
             hasUnreadComments
-                ? Expanded(
-                    child: Text("New Comments",
+                ? Row(children: const [
+                    Icon(Icons.new_releases_outlined, color: Colors.amber),
+                    SizedBox(width: 10),
+                    Text("New Comments",
                         style: TextStyle(
                           fontStyle: FontStyle.italic,
                           fontSize: 12,
-                          color: hightLightTextColor,
-                        )))
-                : Empty(),
+                          color: Colors.amber,
+                        ))
+                  ])
+                : const Empty(),
             Expanded(
                 child: Align(
                     alignment: Alignment.centerRight,
