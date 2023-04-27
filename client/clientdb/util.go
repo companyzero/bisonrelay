@@ -14,6 +14,7 @@ import (
 	"sync"
 
 	"github.com/companyzero/bisonrelay/client/clientintf"
+	"github.com/companyzero/bisonrelay/internal/jsonfile"
 )
 
 // multiCtx returns a context that gets canceled when any one of the passed
@@ -114,59 +115,7 @@ func (db *DB) randomIDInDir(dir string) (clientintf.ID, error) {
 // saveJsonFile saves the data to a temp file, then renames the temp file to
 // the passed filename.
 func (db *DB) saveJsonFile(fname string, data interface{}) error {
-	dir := filepath.Dir(fname)
-	base := filepath.Base(fname)
-	tempFname := filepath.Join(dir, "."+base+".new")
-
-	if err := os.MkdirAll(dir, 0o700); err != nil {
-		return fmt.Errorf("unable to create dest dir: %w", err)
-	}
-
-	f, err := os.Create(tempFname)
-	if err != nil {
-		return fmt.Errorf("unable to create temp file: %w", err)
-	}
-
-	// From this point on, there are no more early returns, so that the
-	// temp file is removed in case of errors.
-
-	enc := json.NewEncoder(f)
-	err = enc.Encode(data)
-	if err != nil {
-		err = fmt.Errorf("unable to encode json contents: %w", err)
-	}
-	if err == nil {
-		err = f.Sync()
-		if err != nil {
-			err = fmt.Errorf("unable to fsync temp file: %w", err)
-		}
-	}
-	if err == nil {
-		err = f.Close()
-		f = nil
-		if err != nil {
-			err = fmt.Errorf("unable to close temp file: %w", err)
-		}
-	}
-	if err == nil {
-		err = os.Rename(tempFname, fname)
-		if err != nil {
-			err = fmt.Errorf("unable to rename temp file to final file: %w", err)
-		}
-	}
-	if err != nil {
-		if f != nil {
-			closeErr := f.Close()
-			if closeErr != nil {
-				db.log.Warnf("Unable to close temp file prior to cleanup: %v", err)
-			}
-		}
-		if remErr := os.Remove(tempFname); remErr != nil {
-			db.log.Warnf("Unable to remove temp file %s: %v", tempFname, err)
-		}
-	}
-
-	return err
+	return jsonfile.Write(fname, data, db.log)
 }
 
 // dirExistsEmpty returs true if the given dir exists and is empty.
@@ -186,16 +135,11 @@ func dirExistsEmpty(dir string) bool {
 // readJsonFile reads the first json message from the given filename and
 // decodes it into data.
 func (db *DB) readJsonFile(fname string, data interface{}) error {
-	f, err := os.Open(fname)
-	if os.IsNotExist(err) {
+	err := jsonfile.Read(fname, data)
+	if errors.Is(err, jsonfile.ErrNotFound) {
 		return ErrNotFound
-	} else if err != nil {
-		return err
 	}
-
-	defer f.Close()
-	dec := json.NewDecoder(f)
-	return dec.Decode(data)
+	return err
 }
 
 // appendToJsonFile appends the given data to the file as a json entry.
