@@ -75,6 +75,7 @@ class _MessagesState extends State<Messages> {
     _maybeScrollToFirstUnread();
     _maybeScrollToBottom();
     lastChat = chat;
+    onChatChanged();
   }
 
   @override
