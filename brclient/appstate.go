@@ -31,6 +31,7 @@ import (
 	"github.com/companyzero/bisonrelay/client/clientdb"
 	"github.com/companyzero/bisonrelay/client/clientintf"
 	"github.com/companyzero/bisonrelay/client/resources"
+	"github.com/companyzero/bisonrelay/client/resources/simplestore"
 	"github.com/companyzero/bisonrelay/client/rpcserver"
 	"github.com/companyzero/bisonrelay/clientrpc/types"
 	"github.com/companyzero/bisonrelay/internal/mdembeds"
@@ -104,8 +105,8 @@ type appState struct {
 	isRestore   bool
 	rpcServer   *rpcserver.Server
 
-	lnRPC      lnrpc.LightningClient
 	lnPC       *client.DcrlnPaymentClient
+	lnRPC      lnrpc.LightningClient
 	lnWallet   walletrpc.WalletKitClient
 	httpClient *http.Client
 
@@ -219,6 +220,9 @@ type appState struct {
 	inboundMsgsChan chan struct{}
 
 	inviteFundsAccount string
+
+	sstore    *simplestore.Store
+	ssPayType simpleStorePayType
 }
 
 type appStateErr struct {
@@ -302,6 +306,18 @@ func (as *appState) run() error {
 			err := as.rpcServer.Run(as.ctx)
 			if err != nil && !errors.Is(err, context.Canceled) {
 				as.log.Errorf("RPCServer Run() error: %v", err)
+			}
+			as.wg.Done()
+		}()
+	}
+
+	// Run the simple store if set.
+	if as.sstore != nil {
+		as.wg.Add(1)
+		go func() {
+			err := as.sstore.Run(as.ctx)
+			if err != nil && !errors.Is(err, context.Canceled) {
+				as.log.Errorf("Error running simple store: %v", err)
 			}
 			as.wg.Done()
 		}()
@@ -1135,7 +1151,7 @@ func (as *appState) findOrNewChatWindow(id clientintf.UserID, alias string) *cha
 
 	cw := &chatWindow{
 		uid:   id,
-		alias: alias,
+		alias: strescape.Nick(alias),
 		me:    as.c.LocalNick(),
 	}
 	as.chatWindows = append(as.chatWindows, cw)
@@ -2214,9 +2230,6 @@ func (as *appState) fetchPage(uid clientintf.UserID, pagePath string, session,
 	for len(path) > 0 && path[0] == "" {
 		path = path[1:]
 	}
-	if len(path) == 0 {
-		return fmt.Errorf("path is empty")
-	}
 
 	// If it's for a local page, fetch it directly.
 	if as.c.PublicID() == uid {
@@ -2452,6 +2465,14 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 				}
 			}
 		}
+
+		go lnPC.WatchTransactions(ctx, func(tx *lnrpc.Transaction) {
+			err := handleNewTransaction(as, tx)
+			if err != nil {
+				as.diagMsg("Unable to process new tx %s: %v",
+					tx.TxHash, err)
+			}
+		})
 	}
 
 	var d net.Dialer
@@ -2883,8 +2904,33 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 	}))
 
 	// Initialize resources router.
+	var sstore *simplestore.Store
 	resRouter := resources.NewRouter()
 	switch {
+	case strings.HasPrefix(args.ResourcesUpstream, "simplestore:"):
+		// Generate the template store if the path does not exist.
+		path := args.ResourcesUpstream[len("simplestore:"):]
+		if _, err := os.Stat(path); os.IsNotExist(err) {
+			err := simplestore.WriteTemplate(path)
+			if err != nil {
+				return nil, fmt.Errorf("unable to write simplestore"+
+					" template: %v", err)
+			}
+		}
+
+		scfg := simplestore.Config{
+			Root:       path,
+			Log:        logBknd.logger("SSTR"),
+			LiveReload: true, // FIXME: parametrize
+			OrderPlaced: func(order *simplestore.Order) {
+				handleCompletedSimpleStoreOrder(as, order)
+			},
+		}
+		sstore, err = simplestore.New(scfg)
+		if err != nil {
+			return nil, fmt.Errorf("unable to initialize simple store: %v", err)
+		}
+		resRouter.BindPrefixPath([]string{}, sstore)
 	case strings.HasPrefix(args.ResourcesUpstream, "pages:"):
 		path := args.ResourcesUpstream[len("pages:"):]
 		p := resources.NewFilesystemResource(path, logBknd.logger("PAGE"))
@@ -3403,8 +3449,8 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		lndLogLines: lndLogLines,
 		styles:      theme,
 		serverAddr:  args.ServerAddr,
-		lnRPC:       lnRPC,
 		lnPC:        lnPC,
+		lnRPC:       lnRPC,
 		lnWallet:    lnWallet,
 		httpClient: &http.Client{
 			Transport: &http.Transport{
@@ -3453,6 +3499,9 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 
 		inboundMsgs:     &genericlist.List[inboundRemoteMsg]{},
 		inboundMsgsChan: make(chan struct{}, 8),
+
+		sstore:    sstore,
+		ssPayType: args.SimpleStorePayType,
 	}
 
 	as.diagMsg("%s version %s", appName, version.String())

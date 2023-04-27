@@ -47,6 +47,22 @@ func (c *cfgStringArray) Set(value string) error {
 	return nil
 }
 
+type simpleStorePayType string
+
+const (
+	ssPayTypeNone    simpleStorePayType = ""
+	ssPayTypeLN      simpleStorePayType = "ln"
+	ssPayTypeOnChain simpleStorePayType = "onchain"
+)
+
+func (sspt simpleStorePayType) isValid() bool {
+	// NOTE: ssPayTypeLN is disabled here because brclient does not
+	// wrap long lines that do not contain a wrapping character,
+	// which make it impossible for users to pay for such payments.
+	return (sspt == ssPayTypeNone) || /*(sspt == ssPayTypeLN) ||*/
+		(sspt == ssPayTypeOnChain)
+}
+
 type config struct {
 	ServerAddr     string
 	Root           string
@@ -95,7 +111,8 @@ type config struct {
 	RPCClientCAPath    string
 	RPCIssueClientCert bool
 
-	ResourcesUpstream string
+	ResourcesUpstream  string
+	SimpleStorePayType simpleStorePayType
 }
 
 func defaultAppDataDir(homeDir string) string {
@@ -253,6 +270,7 @@ func loadConfig() (*config, error) {
 	flagRPCClientCAPath := fs.String("rpcclientcapath", defaultRPCClientCA, "")
 	flagRPCIssueClientCert := fs.Bool("rpcissueclientcert", true, "")
 	flagResourcesUpstream := fs.String("resourcesupstream", "", "Upstream processor of resource requests")
+	flagSimpleStorePayType := fs.String("simplestorepaytype", "", "How to charge for paystore purchases")
 
 	flagProxyAddr := fs.String("proxyaddr", "", "")
 	flagProxyUser := fs.String("proxyuser", "", "")
@@ -285,6 +303,10 @@ func loadConfig() (*config, error) {
 		path := (*flagResourcesUpstream)[len("pages:"):]
 		path = cleanAndExpandPath(homeDir, path)
 		*flagResourcesUpstream = "pages:" + path
+	case strings.HasPrefix(*flagResourcesUpstream, "simplestore:"):
+		path := (*flagResourcesUpstream)[len("simplestore:"):]
+		path = cleanAndExpandPath(homeDir, path)
+		*flagResourcesUpstream = "simplestore:" + path
 	default:
 		return nil, fmt.Errorf("unknown resources upstream provider %q", *flagResourcesUpstream)
 
@@ -356,6 +378,12 @@ func loadConfig() (*config, error) {
 		}
 	}
 
+	ssPayType := simpleStorePayType(*flagSimpleStorePayType)
+	if !ssPayType.isValid() {
+		return nil, fmt.Errorf("invalid simple store payment type %q",
+			ssPayType)
+	}
+
 	// Return the final cfg object.
 	return &config{
 		ServerAddr:         *flagServerAddr,
@@ -401,6 +429,7 @@ func loadConfig() (*config, error) {
 		RPCIssueClientCert: *flagRPCIssueClientCert,
 		InviteFundsAccount: *flagInviteFundsAccount,
 		ResourcesUpstream:  *flagResourcesUpstream,
+		SimpleStorePayType: ssPayType,
 	}, nil
 }
 
