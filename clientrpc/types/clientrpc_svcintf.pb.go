@@ -1191,6 +1191,102 @@ func PaymentsServiceDefn() ServiceDefn {
 	}
 }
 
+// ResourcesServiceClient is the client API for ResourcesService service.
+type ResourcesServiceClient interface {
+	// RequestsStream streams requests made to the local client by remote clients
+	// for resources and pages. A clientrpc client may send the responses by using
+	// the FulfillRequest call.
+	RequestsStream(ctx context.Context, in *ResourceRequestsStreamRequest) (ResourcesService_RequestsStreamClient, error)
+	// FulfillRequest fulfills a previous request received from an user for a
+	// local client resource.
+	FulfillRequest(ctx context.Context, in *FulfillResourceRequest, out *FulfillResourceRequestResponse) error
+}
+
+type client_ResourcesService struct {
+	c    ClientConn
+	defn ServiceDefn
+}
+type ResourcesService_RequestsStreamClient interface {
+	Recv(*ResourceRequestsStreamResponse) error
+}
+
+func (c *client_ResourcesService) RequestsStream(ctx context.Context, in *ResourceRequestsStreamRequest) (ResourcesService_RequestsStreamClient, error) {
+	const method = "RequestsStream"
+	inner, err := c.defn.Methods[method].ClientStreamHandler(c.c, ctx, in)
+	if err != nil {
+		return nil, err
+	}
+	return streamerImpl[*ResourceRequestsStreamResponse]{c: inner}, nil
+}
+
+func (c *client_ResourcesService) FulfillRequest(ctx context.Context, in *FulfillResourceRequest, out *FulfillResourceRequestResponse) error {
+	const method = "FulfillRequest"
+	return c.defn.Methods[method].ClientHandler(c.c, ctx, in, out)
+}
+
+func NewResourcesServiceClient(c ClientConn) ResourcesServiceClient {
+	return &client_ResourcesService{c: c, defn: ResourcesServiceDefn()}
+}
+
+// ResourcesServiceServer is the server API for ResourcesService service.
+type ResourcesServiceServer interface {
+	// RequestsStream streams requests made to the local client by remote clients
+	// for resources and pages. A clientrpc client may send the responses by using
+	// the FulfillRequest call.
+	RequestsStream(context.Context, *ResourceRequestsStreamRequest, ResourcesService_RequestsStreamServer) error
+	// FulfillRequest fulfills a previous request received from an user for a
+	// local client resource.
+	FulfillRequest(context.Context, *FulfillResourceRequest, *FulfillResourceRequestResponse) error
+}
+
+type ResourcesService_RequestsStreamServer interface {
+	Send(m *ResourceRequestsStreamResponse) error
+}
+
+func ResourcesServiceDefn() ServiceDefn {
+	return ServiceDefn{
+		Name: "ResourcesService",
+		Methods: map[string]MethodDefn{
+			"RequestsStream": {
+				IsStreaming: true,
+				NewRequest:  func() proto.Message { return new(ResourceRequestsStreamRequest) },
+				NewResponse: func() proto.Message { return new(ResourceRequestsStreamResponse) },
+				RequestDefn: func() protoreflect.MessageDescriptor {
+					return new(ResourceRequestsStreamRequest).ProtoReflect().Descriptor()
+				},
+				ResponseDefn: func() protoreflect.MessageDescriptor {
+					return new(ResourceRequestsStreamResponse).ProtoReflect().Descriptor()
+				},
+				Help: "RequestsStream streams requests made to the local client by remote clients for resources and pages. A clientrpc client may send the responses by using the FulfillRequest call.",
+				ServerStreamHandler: func(x interface{}, ctx context.Context, request proto.Message, stream ServerStream) error {
+					return x.(ResourcesServiceServer).RequestsStream(ctx, request.(*ResourceRequestsStreamRequest), streamerImpl[*ResourceRequestsStreamResponse]{s: stream})
+				},
+				ClientStreamHandler: func(conn ClientConn, ctx context.Context, request proto.Message) (ClientStream, error) {
+					method := "ResourcesService.RequestsStream"
+					return conn.Stream(ctx, method, request)
+				},
+			},
+			"FulfillRequest": {
+				IsStreaming: false,
+				NewRequest:  func() proto.Message { return new(FulfillResourceRequest) },
+				NewResponse: func() proto.Message { return new(FulfillResourceRequestResponse) },
+				RequestDefn: func() protoreflect.MessageDescriptor { return new(FulfillResourceRequest).ProtoReflect().Descriptor() },
+				ResponseDefn: func() protoreflect.MessageDescriptor {
+					return new(FulfillResourceRequestResponse).ProtoReflect().Descriptor()
+				},
+				Help: "FulfillRequest fulfills a previous request received from an user for a local client resource.",
+				ServerHandler: func(x interface{}, ctx context.Context, request, response proto.Message) error {
+					return x.(ResourcesServiceServer).FulfillRequest(ctx, request.(*FulfillResourceRequest), response.(*FulfillResourceRequestResponse))
+				},
+				ClientHandler: func(conn ClientConn, ctx context.Context, request, response proto.Message) error {
+					method := "ResourcesService.FulfillRequest"
+					return conn.Request(ctx, method, request, response)
+				},
+			},
+		},
+	}
+}
+
 var help_messages = map[string]map[string]string{
 	"VersionRequest": {
 		"@": "",
@@ -1464,6 +1560,25 @@ var help_messages = map[string]map[string]string{
 		"attempt_err":   "attempt_err is filled when the attempt to fetch an invoice or perform the payment for a received invoice failed.",
 		"will_retry":    "will_retry flags whether a new attempt to request an invoice and perform a payment will be done or if no more attempts will happen.",
 	},
+	"ResourceRequestsStreamRequest": {
+		"@": "ResourceRequestsStreamRequest is the request for a stream to receive resource requests.",
+	},
+	"ResourceRequestsStreamResponse": {
+		"@":       "ResourceRequestsStreamResponse is the a request made by a remote client for one of the local client's resources.",
+		"id":      "id is an opaque ID to link requests and responses made through the clientrpc interface.",
+		"uid":     "uid is the User ID of the client that requested the resource.",
+		"nick":    "nick is the nick of the client that requested the resource.",
+		"request": "request is the actual request made by the remote client.",
+	},
+	"FulfillResourceRequest": {
+		"@":         "FulfillResourceRequest fulfills a remote request for a local client resource.",
+		"id":        "id must be the corresponding request received by the clientrpc client.",
+		"error_msg": "error_msg is an optional error message to fail the request with.",
+		"response":  "response is the actual resource that should be sent to the remote client.",
+	},
+	"FulfillResourceRequestResponse": {
+		"@": "FulfillResourceRequestResponse is the response to a FulfillResourceResquest call.",
+	},
 	"RMPrivateMessage": {
 		"@":       "RMPrivateMessage is the network-level routed private message.",
 		"message": "message is the private message payload.",
@@ -1532,5 +1647,23 @@ var help_messages = map[string]map[string]string{
 		"version":      "version is the GC rules version.",
 		"members":      "members is the list of user IDs that are in the GC.",
 		"extra_admins": "extra_admins is the list of user IDs that are additional admins of the GC.",
+	},
+	"RMFetchResource": {
+		"@":     "RMFetchResource is the lowlevel request to fetch a resource.",
+		"path":  "path is the resource's path (already split into segments).",
+		"meta":  "meta is metadata associated with the request.",
+		"tag":   "tag is a unique tag that should be relayed back on the reply.",
+		"data":  "data is raw request data.",
+		"index": "index is used in chunked/multipart requests.",
+		"count": "count is the total number of chunks in multipart requests.",
+	},
+	"RMFetchResourceReply": {
+		"@":      "RMFetchResourceReply is the lowlevel resource response.",
+		"tag":    "tag is the same as the request tag.",
+		"status": "status is the general status of the response.",
+		"meta":   "meta is additional response metadata.",
+		"data":   "data is the raw response data.",
+		"index":  "index is used in chunked/multipart responses.",
+		"count":  "count is the total number of chunks in multipart responses.",
 	},
 }

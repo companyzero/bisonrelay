@@ -156,6 +156,18 @@ service PaymentsService {
   rpc AckTipProgress(AckRequest) returns (AckResponse);
 }
 
+/* ResourcesService is the service to perform resource and page related actions. */
+service ResourcesService {
+  /* RequestsStream streams requests made to the local client by remote clients
+     for resources and pages. A clientrpc client may send the responses by using
+     the FulfillRequest call. */
+  rpc RequestsStream (ResourceRequestsStreamRequest) returns (stream ResourceRequestsStreamResponse);
+
+  /* FulfillRequest fulfills a previous request received from an user for a
+     local client resource. */
+  rpc FulfillRequest(FulfillResourceRequest) returns (FulfillResourceRequestResponse);
+}
+
 /******************************************************************************
   *                           Messages
   *****************************************************************************/
@@ -655,6 +667,38 @@ message TipProgressEvent{
   bool will_retry = 8;
 };
 
+/* ResourceRequestsStreamRequest is the request for a stream to receive resource
+   requests. */
+message ResourceRequestsStreamRequest {}
+
+/* ResourceRequestsStreamResponse is the a request made by a remote client for
+   one of the local client's resources. */
+message ResourceRequestsStreamResponse {
+  /* id is an opaque ID to link requests and responses made through the clientrpc
+     interface. */
+  uint64 id = 1;
+  /* uid is the User ID of the client that requested the resource. */
+  bytes uid = 2;
+  /* nick is the nick of the client that requested the resource. */
+  string nick = 3;
+  /* request is the actual request made by the remote client. */
+  RMFetchResource request = 4;
+}
+
+/* FulfillResourceRequest fulfills a remote request for a local client resource. */
+message FulfillResourceRequest {
+  /* id must be the corresponding request received by the clientrpc client. */
+  uint64 id = 1;
+  /* error_msg is an optional error message to fail the request with. */
+  string error_msg = 2;
+  /* response is the actual resource that should be sent to the remote client. */
+  RMFetchResourceReply response = 3;
+}
+
+/* FulfillResourceRequestResponse is the response to a FulfillResourceResquest
+   call. */
+message FulfillResourceRequestResponse{
+}
 
 /******************************************************************************
   *                          Routed RPC Compat
@@ -795,4 +839,36 @@ message RMGroupList {
   repeated bytes members = 6;
   /* extra_admins is the list of user IDs that are additional admins of the GC. */
   repeated bytes extra_admins = 7 [json_name="extra_admins"];
+}
+
+/* RMFetchResource is the lowlevel request to fetch a resource. */
+message RMFetchResource {
+  /* path is the resource's path (already split into segments). */
+  repeated string path = 1;
+  /* meta is metadata associated with the request. */
+  map<string,string> meta  = 2;
+  /* tag is a unique tag that should be relayed back on the reply. */
+  uint64 tag  = 3;
+  /* data is raw request data. */
+  bytes data = 4;
+  /* index is used in chunked/multipart requests. */
+  uint32 index = 5;
+  /* count is the total number of chunks in multipart requests. */
+  uint32 count  = 6;
+}
+
+/* RMFetchResourceReply is the lowlevel resource response. */
+message RMFetchResourceReply {
+  /* tag is the same as the request tag. */
+  uint64 tag  = 1;
+  /* status is the general status of the response. */
+  uint32 status = 2;
+  /* meta is additional response metadata. */
+  map<string,string> meta  = 3;
+  /* data is the raw response data. */
+  bytes data = 4;
+  /* index is used in chunked/multipart responses. */
+  uint32 index = 5;
+  /* count is the total number of chunks in multipart responses. */
+  uint32 count  = 6;
 }
