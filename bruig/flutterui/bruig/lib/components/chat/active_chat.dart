@@ -149,7 +149,8 @@ class _ActiveChatState extends State<ActiveChat> {
                     style: TextStyle(fontSize: 15, color: textColor)),
               ),
               Text(chat.nick, style: TextStyle(fontSize: 15, color: textColor)),
-              ListView.builder(
+              Expanded(
+                  child: ListView.builder(
                 shrinkWrap: true,
                 itemCount: client.activeSubMenu.length,
                 itemBuilder: (context, index) => ListTile(
@@ -160,7 +161,7 @@ class _ActiveChatState extends State<ActiveChat> {
                       client.hideSubMenu();
                     },
                     hoverColor: Colors.black),
-              )
+              )),
             ]),
             Positioned(
               top: 5,
