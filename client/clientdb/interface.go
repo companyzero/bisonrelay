@@ -11,6 +11,7 @@ import (
 	"github.com/companyzero/bisonrelay/ratchet/disk"
 	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/companyzero/bisonrelay/zkidentity"
+	"golang.org/x/exp/slices"
 )
 
 type UserID = clientintf.UserID
@@ -319,6 +320,8 @@ type ResourceRequest struct {
 	ParentPage clientintf.PagesSessionID `json:"parent_page"`
 }
 
+// FetchedResource is the full information about a fetched resource from a
+// remote client.
 type FetchedResource struct {
 	UID        UserID                    `json:"uid"`
 	SessionID  clientintf.PagesSessionID `json:"session_id"`
@@ -328,6 +331,45 @@ type FetchedResource struct {
 	ResponseTS time.Time                 `json:"response_ts"`
 	Request    rpc.RMFetchResource       `json:"request"`
 	Response   rpc.RMFetchResourceReply  `json:"response"`
+}
+
+// PageSessionOverviewRequest is the overview of a fetch resource request.
+type PageSessionOverviewRequest struct {
+	UID clientintf.UserID `json:"uid"`
+	Tag rpc.ResourceTag   `json:"tag"`
+}
+
+// PageSessionOverviewResponse is the overview of a fetch resurce response.
+type PageSessionOverviewResponse struct {
+	ID     clientintf.PagesSessionID `json:"id"`
+	Parent clientintf.PagesSessionID `json:"parent"`
+}
+
+// PageSessionOverview stores the overview of a pages session navigation.
+type PageSessionOverview struct {
+	Requests       []PageSessionOverviewRequest  `json:"requests"`
+	Responses      []PageSessionOverviewResponse `json:"responses"`
+	LastResponseTS time.Time                     `json:"last_response_ts"`
+	LastRequestTS  time.Time                     `json:"last_request_ts"`
+}
+
+func (o *PageSessionOverview) append(parent, id clientintf.PagesSessionID) {
+	o.Responses = append(o.Responses, PageSessionOverviewResponse{Parent: parent, ID: id})
+	o.LastResponseTS = time.Now()
+}
+
+func (o *PageSessionOverview) removeRequest(uid clientintf.UserID, tag rpc.ResourceTag) {
+	i := slices.IndexFunc(o.Requests, func(v PageSessionOverviewRequest) bool {
+		return v.UID == uid && v.Tag == tag
+	})
+	if i > -1 {
+		o.Requests = slices.Delete(o.Requests, i, i+1)
+	}
+}
+
+func (o *PageSessionOverview) appendRequest(uid clientintf.UserID, tag rpc.ResourceTag) {
+	o.Requests = append(o.Requests, PageSessionOverviewRequest{UID: uid, Tag: tag})
+	o.LastRequestTS = time.Now()
 }
 
 var (

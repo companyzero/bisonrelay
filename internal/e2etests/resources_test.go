@@ -6,7 +6,6 @@ import (
 
 	"github.com/companyzero/bisonrelay/client"
 	"github.com/companyzero/bisonrelay/client/clientdb"
-	"github.com/companyzero/bisonrelay/client/clientintf"
 	"github.com/companyzero/bisonrelay/client/resources"
 	"github.com/companyzero/bisonrelay/internal/assert"
 	"github.com/companyzero/bisonrelay/rpc"
@@ -35,7 +34,7 @@ func TestFetchesFixedResource(t *testing.T) {
 	// Setup Bob's fetched resource handler.
 	chanResReply := make(chan rpc.RMFetchResourceReply, 1)
 	bob.handle(client.OnResourceFetchedNtfn(func(user *client.RemoteUser,
-		fr clientdb.FetchedResource, sess *clientintf.PageSessionNode) {
+		fr clientdb.FetchedResource, sess clientdb.PageSessionOverview) {
 		chanResReply <- fr.Response
 	}))
 

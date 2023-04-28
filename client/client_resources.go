@@ -56,8 +56,9 @@ func (c *Client) FetchLocalResource(path []string, meta map[string]string) error
 		Request:    rm,
 		Response:   *res,
 	}
+	var overv clientdb.PageSessionOverview
 
-	c.ntfns.notifyResourceFetched(nil, fr, nil)
+	c.ntfns.notifyResourceFetched(nil, fr, overv)
 	return nil
 }
 
@@ -154,7 +155,7 @@ func (c *Client) handleFetchResourceReply(ru *RemoteUser, frr rpc.RMFetchResourc
 
 	var req rpc.RMFetchResource
 	var fr clientdb.FetchedResource
-	var sess *clientintf.PageSessionNode
+	var sess clientdb.PageSessionOverview
 	err := c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
 		var err error
 		fr, sess, err = c.db.StoreFetchedResource(tx, ru.ID(), frr.Tag, frr)

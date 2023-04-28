@@ -11,6 +11,7 @@ import (
 	"github.com/companyzero/bisonrelay/rpc"
 )
 
+// NewPagesSession starts a new session for fetching related pages.
 func (db *DB) NewPagesSession(tx ReadWriteTx) (clientintf.PagesSessionID, error) {
 	baseDir := filepath.Join(db.root, pageSessionsDir)
 	last, err := pageSessDirPattern.Last(baseDir)
@@ -46,12 +47,25 @@ func (db *DB) StoreResourceRequest(tx ReadWriteTx, uid UserID,
 		Request:    *req,
 		Timestamp:  time.Now(),
 	}
-	return db.saveJsonFile(filename, rr)
+	if err := db.saveJsonFile(filename, rr); err != nil {
+		return err
+	}
+
+	// Update the overview of the session with the new request.
+	overv, err := db.readResourcesSessionOverview(sess)
+	if err != nil {
+		return err
+	}
+	overv.appendRequest(uid, tag)
+	if err := db.saveResourcesSessionOverview(sess, &overv); err != nil {
+		return err
+	}
+	return nil
 }
 
-// ReadResourceRequest returns the resource request corresponding to the
+// readResourceRequest returns the resource request corresponding to the
 // specified tag.
-func (db *DB) ReadResourceRequest(tx ReadTx, uid UserID,
+func (db *DB) readResourceRequest(tx ReadTx, uid UserID,
 	tag rpc.ResourceTag) (ResourceRequest, error) {
 
 	dir := filepath.Join(db.root, inboundDir, uid.String(), reqResourcesDir)
@@ -61,38 +75,42 @@ func (db *DB) ReadResourceRequest(tx ReadTx, uid UserID,
 	return res, err
 }
 
-// RemoveResourceRequest deletes the request with the corresponding tag.
-func (db *DB) RemoveResourceRequest(tx ReadWriteTx, uid UserID, tag rpc.ResourceTag) error {
+// removeResourceRequest deletes the request with the corresponding tag.
+func (db *DB) removeResourceRequest(tx ReadWriteTx, uid UserID, tag rpc.ResourceTag) error {
 	dir := filepath.Join(db.root, inboundDir, uid.String(), reqResourcesDir)
 	filename := path.Join(dir, tag.String())
 	return removeIfExists(filename)
 }
 
-func (db *DB) readResourcesSessionOverview(sessID clientintf.PagesSessionID) (*clientintf.PageSessionNode, error) {
+// readResourcesSessionOverview reads the overview data of a pages session. It
+// returns a new, empty overview if one does not exist for the session.
+func (db *DB) readResourcesSessionOverview(sessID clientintf.PagesSessionID) (PageSessionOverview, error) {
 	sessionDir := filepath.Join(db.root, pageSessionsDir, sessID.String())
 	fname := filepath.Join(sessionDir, pageSessionOverviewFile)
-	res := &clientintf.PageSessionNode{}
-	err := db.readJsonFile(fname, res)
+	var res PageSessionOverview
+	err := db.readJsonFile(fname, &res)
 	if err != nil && !errors.Is(err, ErrNotFound) {
-		return nil, err
+		return res, err
 	}
 	return res, nil
 }
 
-func (db *DB) saveResourcesSessionOverview(sessID clientintf.PagesSessionID, overview *clientintf.PageSessionNode) error {
+func (db *DB) saveResourcesSessionOverview(sessID clientintf.PagesSessionID, overview *PageSessionOverview) error {
 	sessionDir := filepath.Join(db.root, pageSessionsDir, sessID.String())
 	fname := filepath.Join(sessionDir, pageSessionOverviewFile)
 	return db.saveJsonFile(fname, overview)
 }
 
+// StoreFetchedResource removes an existing request sent to the specified
+// user with the tag, and stores the resulting fetched response.
 func (db *DB) StoreFetchedResource(tx ReadWriteTx, uid UserID, tag rpc.ResourceTag,
-	reply rpc.RMFetchResourceReply) (FetchedResource, *clientintf.PageSessionNode, error) {
+	reply rpc.RMFetchResourceReply) (FetchedResource, PageSessionOverview, error) {
 
 	var fr FetchedResource
-	var sess *clientintf.PageSessionNode
+	var sess PageSessionOverview
 
 	// Double check request exists.
-	req, err := db.ReadResourceRequest(tx, uid, tag)
+	req, err := db.readResourceRequest(tx, uid, tag)
 	if err != nil {
 		return fr, sess, err
 	}
@@ -127,17 +145,14 @@ func (db *DB) StoreFetchedResource(tx ReadWriteTx, uid UserID, tag rpc.ResourceT
 	if err != nil {
 		return fr, sess, err
 	}
-	parent := sess.Find(req.ParentPage)
-	if parent == nil {
-		parent = sess
-	}
-	parent.Append(clientintf.PagesSessionID(pageID))
-	if err := db.saveResourcesSessionOverview(req.SesssionID, sess); err != nil {
+	sess.removeRequest(uid, tag)
+	sess.append(req.ParentPage, clientintf.PagesSessionID(pageID))
+	if err := db.saveResourcesSessionOverview(req.SesssionID, &sess); err != nil {
 		return fr, sess, err
 	}
 
 	// Finally, remove the old request.
-	if err := db.RemoveResourceRequest(tx, uid, tag); err != nil {
+	if err := db.removeResourceRequest(tx, uid, tag); err != nil {
 		return fr, sess, err
 	}
 

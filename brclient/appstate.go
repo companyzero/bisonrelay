@@ -1205,11 +1205,22 @@ func (as *appState) openChatWindow(nick string) error {
 	return nil
 }
 
+func (as *appState) findPagesChatWindow(sessID clientintf.PagesSessionID) *chatWindow {
+	as.chatWindowsMtx.Lock()
+	defer as.chatWindowsMtx.Unlock()
+	for _, acw := range as.chatWindows {
+		if acw.isPage && acw.pageSess == sessID {
+			return acw
+		}
+	}
+	return nil
+}
+
 func (as *appState) findOrNewPagesChatWindow(sessID clientintf.PagesSessionID) *chatWindow {
 	as.chatWindowsMtx.Lock()
 	var cw *chatWindow
 	for i, acw := range as.chatWindows {
-		if acw.pageSess == sessID {
+		if acw.isPage && acw.pageSess == sessID {
 			if i != as.activeCW {
 				as.updatedCW[i] = false
 			}
@@ -1222,6 +1233,7 @@ func (as *appState) findOrNewPagesChatWindow(sessID clientintf.PagesSessionID) *
 			alias:    fmt.Sprintf("page session %d", sessID),
 			me:       as.c.LocalNick(),
 			pageSess: sessID,
+			isPage:   true,
 		}
 		as.chatWindows = append(as.chatWindows, cw)
 		as.updatedCW[len(as.chatWindows)-1] = false
@@ -2245,7 +2257,20 @@ func (as *appState) fetchPage(uid clientintf.UserID, pagePath string, session,
 	if err != nil {
 		return err
 	}
-	as.cwHelpMsg("Attempting to fetch %s from %s (session %s, tag %s)",
+
+	// Mark session making a new request (if it already exists).
+	cw := as.findPagesChatWindow(session)
+	if cw != nil {
+		cw.Lock()
+		cw.pageRequested = true
+		cw.Unlock()
+
+		if as.activeChatWindow() == cw {
+			as.sendMsg(msgActiveCWRequestedPage{})
+		}
+	}
+
+	as.diagMsg("Attempting to fetch %s from %s (session %s, tag %s)",
 		strescape.ResourcesPath(path), userNick, session, tag)
 	return nil
 }
@@ -2875,7 +2900,7 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 	}))
 
 	ntfns.Register(client.OnResourceFetchedNtfn(func(user *client.RemoteUser,
-		fr clientdb.FetchedResource, sess *clientintf.PageSessionNode) {
+		fr clientdb.FetchedResource, sess clientdb.PageSessionOverview) {
 
 		uid := as.c.PublicID()
 		nick := "me"
