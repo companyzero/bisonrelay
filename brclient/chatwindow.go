@@ -220,8 +220,10 @@ type chatWindow struct {
 	me    string // nick of the local user
 	gc    zkidentity.ShortID
 
-	pageSess clientintf.PagesSessionID
-	page     *clientdb.FetchedResource
+	pageSess      clientintf.PagesSessionID
+	page          *clientdb.FetchedResource
+	isPage        bool
+	pageRequested bool
 
 	selEl         *chatMsgEl
 	selElIndex    int
@@ -324,6 +326,7 @@ func (cw *chatWindow) replacePage(fr clientdb.FetchedResource) {
 	msg.fromUID = &fr.UID
 	cw.page = &fr
 	cw.selElIndex = 0
+	cw.pageRequested = false
 	cw.Unlock()
 }
 
@@ -537,9 +540,13 @@ func (cw *chatWindow) renderPage(winW int, as *appState, b *strings.Builder) {
 	style := as.styles.msg
 
 	if cw.page != nil {
+		loadingTxt := "  "
+		if cw.pageRequested {
+			loadingTxt = "⌛"
+		}
 		nick, _ := as.c.UserNick(cw.page.UID)
-		fmt.Fprintf(b, "Source: %s (%s)\n", strescape.Nick(nick), cw.page.UID)
-		fmt.Fprintf(b, "Path: %s\n", strescape.Nick(strings.Join(cw.page.Request.Path, "/")))
+		fmt.Fprintf(b, "Source : %s (%s)\n", strescape.Nick(nick), cw.page.UID)
+		fmt.Fprintf(b, "Path %s: %s\n", loadingTxt, strescape.Nick(strings.Join(cw.page.Request.Path, "/")))
 		fmt.Fprintf(b, strings.Repeat("―", winW))
 		b.WriteRune('\n')
 	}

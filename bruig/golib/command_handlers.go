@@ -330,7 +330,7 @@ func handleInitClient(handle uint32, args InitClient) error {
 		notify(NTOnboardStateChanged, ostate, oerr)
 	}))
 
-	ntfns.Register(client.OnResourceFetchedNtfn(func(ru *client.RemoteUser, fr clientdb.FetchedResource, sess *clientintf.PageSessionNode) {
+	ntfns.Register(client.OnResourceFetchedNtfn(func(ru *client.RemoteUser, fr clientdb.FetchedResource, sess clientdb.PageSessionOverview) {
 		notify(NTResourceFetched, fr, nil)
 	}))
 

@@ -65,7 +65,6 @@ class _ActivePageScreenState extends State<_ActivePageScreen> {
     var theme = Theme.of(context);
     var textColor = theme.focusColor;
     var backgroundColor = theme.backgroundColor;
-    var dividerColor = theme.highlightColor;
     var ts = TextStyle(color: textColor);
 
     if (session.currentPage == null) {
@@ -82,23 +81,31 @@ class _ActivePageScreenState extends State<_ActivePageScreen> {
     var path = page.request.path.join("/");
     var nick = widget.client.getNick(page.uid);
 
+    var loading = "";
+    if (session.loading) {
+      loading = "⌛";
+    }
+
     return Container(
-        alignment: Alignment.topLeft,
-        margin: const EdgeInsets.all(1),
-        decoration: BoxDecoration(borderRadius: BorderRadius.circular(3)),
-        padding: const EdgeInsets.all(16),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text("Page Source: $nick (${page.uid})", style: ts),
-          const SizedBox(height: 10),
-          Text("Page Path: $path", style: ts),
-          const SizedBox(height: 20),
-          Expanded(
-            child: Provider<PagesSource>(
-                create: (context) =>
-                    PagesSource(page.uid, page.sessionID, page.pageID),
-                builder: (context, child) => MarkdownArea(markdownData, false)),
-          )
-        ]));
+      alignment: Alignment.topLeft,
+      margin: const EdgeInsets.all(1),
+      decoration: BoxDecoration(borderRadius: BorderRadius.circular(3)),
+      padding: const EdgeInsets.all(16),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text("Page Source: $nick (${page.uid})", style: ts),
+        const SizedBox(height: 10),
+        Text("Page Path: $loading $path", style: ts),
+        const SizedBox(height: 20),
+        Expanded(
+            child: ListView(children: [
+          Provider<PagesSource>(
+            create: (context) =>
+                PagesSource(page.uid, page.sessionID, page.pageID),
+            builder: (context, child) => MarkdownArea(markdownData, false),
+          ),
+        ])),
+      ]),
+    );
   }
 }
 
@@ -210,7 +217,7 @@ class _ViewPageScreenState extends State<ViewPageScreen> {
             ]),
           ])),
       activeSess != null
-          ? _ActivePageScreen(activeSess, widget.client)
+          ? Expanded(child: _ActivePageScreen(activeSess, widget.client))
           : const Empty(),
     ]);
   }

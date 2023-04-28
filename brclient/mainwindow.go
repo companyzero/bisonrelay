@@ -510,7 +510,9 @@ func (mws mainWindowState) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case msgPageFetched:
 		mws.updateViewportContent()
-		// return newUserPagesScreen(mws.as, msg.uid, msg.nick, msg.req, msg.res)
+
+	case msgActiveCWRequestedPage:
+		mws.updateViewportContent()
 
 	default:
 		// Handle other messages.

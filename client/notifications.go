@@ -207,7 +207,7 @@ const onResourceFetchedNtfnType = "onResourceFetched"
 //
 // Note that the user may be nil if the resource was fetched locally, such as
 // through the FetchLocalResource call.
-type OnResourceFetchedNtfn func(ru *RemoteUser, fr clientdb.FetchedResource, sess *clientintf.PageSessionNode)
+type OnResourceFetchedNtfn func(ru *RemoteUser, fr clientdb.FetchedResource, sess clientdb.PageSessionOverview)
 
 func (_ OnResourceFetchedNtfn) typ() string { return onResourceFetchedNtfnType }
 
@@ -451,10 +451,11 @@ func (nmgr *NotificationManager) notifyOnOnboardStateChanged(state clientintf.On
 }
 
 func (nmgr *NotificationManager) notifyResourceFetched(ru *RemoteUser,
-	fr clientdb.FetchedResource, sess *clientintf.PageSessionNode) {
+	fr clientdb.FetchedResource, sess clientdb.PageSessionOverview) {
 	nmgr.handlers[onResourceFetchedNtfnType].(*handlersFor[OnResourceFetchedNtfn]).
 		visit(func(h OnResourceFetchedNtfn) { h(ru, fr, sess) })
 }
+
 func NewNotificationManager() *NotificationManager {
 	return &NotificationManager{
 		handlers: map[string]handlersRegistry{
