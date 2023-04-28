@@ -4,9 +4,9 @@ import 'package:bruig/components/buttons.dart';
 import 'package:bruig/components/dcr_input.dart';
 import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/components/info_grid.dart';
-import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/models/notifications.dart';
+import 'package:bruig/models/snackbar.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:golib_plugin/util.dart';
@@ -16,7 +16,9 @@ class NeedsOutChannelScreen extends StatefulWidget {
   static const routeName = "/needsOutChannel";
   final AppNotifications ntfns;
   final ClientModel client;
-  const NeedsOutChannelScreen(this.ntfns, this.client, {Key? key})
+  final SnackBarModel snackBar;
+  const NeedsOutChannelScreen(this.ntfns, this.client, this.snackBar,
+      {Key? key})
       : super(key: key);
 
   @override
@@ -24,6 +26,7 @@ class NeedsOutChannelScreen extends StatefulWidget {
 }
 
 class _NeedsOutChannelScreenState extends State<NeedsOutChannelScreen> {
+  SnackBarModel get snackBar => widget.snackBar;
   ClientModel get client => widget.client;
 
   String addr = "";
@@ -46,7 +49,7 @@ class _NeedsOutChannelScreenState extends State<NeedsOutChannelScreen> {
         addr = res;
       });
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to load deposit address: $exception");
+      snackBar.error("Unable to load deposit address: $exception");
     }
   }
 
@@ -96,7 +99,7 @@ open channels to other LN nodes.''';
         }
       }
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to update wallet balance: $exception");
+      snackBar.error("Unable to update wallet balance: $exception");
     } finally {
       updateTimer = Timer(const Duration(seconds: 5), updateBalance);
     }
@@ -125,9 +128,9 @@ open channels to other LN nodes.''';
         peerCtrl.clear();
         amountCtrl.clear();
       });
-      showSuccessSnackbar(context, "Opening channel...");
+      snackBar.success("Opening channel...");
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to open channel: $exception");
+      snackBar.error("Unable to open channel: $exception");
       return;
     } finally {
       setState(() => loading = false);
@@ -144,7 +147,7 @@ open channels to other LN nodes.''';
         });
       }
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to verify network: $exception");
+      snackBar.error("Unable to verify network: $exception");
     }
   }
 

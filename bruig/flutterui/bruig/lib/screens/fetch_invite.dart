@@ -1,19 +1,20 @@
 import 'package:bruig/components/empty_widget.dart';
-import 'package:bruig/components/snackbars.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
+import 'package:bruig/models/snackbar.dart';
 
 class FetchInviteScreen extends StatefulWidget {
-  const FetchInviteScreen({super.key});
+  final SnackBarModel snackBar;
+  const FetchInviteScreen(this.snackBar, {super.key});
 
   @override
   State<FetchInviteScreen> createState() => _FetchInviteScreenState();
 }
 
 class _FetchInviteScreenState extends State<FetchInviteScreen> {
+  SnackBarModel get snackBar => widget.snackBar;
   String path = "";
   TextEditingController keyCtrl = TextEditingController();
   bool loading = false;
@@ -60,7 +61,7 @@ class _FetchInviteScreenState extends State<FetchInviteScreen> {
       }
     } catch (exception) {
       if (mounted) {
-        showErrorSnackbar(context, "Unable to fetch invite: $exception");
+        snackBar.error("Unable to fetch invite: $exception");
         setState(() => loading = false);
       }
     }

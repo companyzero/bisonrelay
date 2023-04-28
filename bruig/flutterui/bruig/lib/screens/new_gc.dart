@@ -1,11 +1,12 @@
-import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/models/client.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:provider/provider.dart';
+import 'package:bruig/models/snackbar.dart';
 
 class NewGCScreen extends StatefulWidget {
-  const NewGCScreen({Key? key}) : super(key: key);
+  final SnackBarModel snackBar;
+  const NewGCScreen(this.snackBar, {Key? key}) : super(key: key);
 
   @override
   NewGCScreenState createState() {
@@ -14,6 +15,7 @@ class NewGCScreen extends StatefulWidget {
 }
 
 class NewGCScreenState extends State<NewGCScreen> {
+  SnackBarModel get snackBar => widget.snackBar;
   final _formKey = GlobalKey<FormState>();
   bool loading = false;
   String gcName = "";
@@ -30,7 +32,7 @@ class NewGCScreenState extends State<NewGCScreen> {
       await client.readAddressBook();
       Navigator.pop(context);
     } catch (exception) {
-      showErrorSnackbar(context, 'Unable to create GC: $exception');
+      snackBar.error('Unable to create GC: $exception');
     } finally {
       setState(() => loading = false);
     }

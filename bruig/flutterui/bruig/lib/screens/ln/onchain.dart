@@ -2,18 +2,20 @@ import 'package:bruig/components/accounts_dropdown.dart';
 import 'package:bruig/components/copyable.dart';
 import 'package:bruig/components/dcr_input.dart';
 import 'package:bruig/components/empty_widget.dart';
-import 'package:bruig/components/snackbars.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/golib_plugin.dart';
+import 'package:bruig/models/snackbar.dart';
 
 class LNOnChainPage extends StatefulWidget {
-  const LNOnChainPage({super.key});
+  final SnackBarModel snackBar;
+  const LNOnChainPage(this.snackBar, {super.key});
 
   @override
   State<LNOnChainPage> createState() => _LNOnChainPageState();
 }
 
 class _LNOnChainPageState extends State<LNOnChainPage> {
+  SnackBarModel get snackBar => widget.snackBar;
   String? recvAddr;
   String? recvAccount;
   String? sendAccount;
@@ -30,7 +32,7 @@ class _LNOnChainPageState extends State<LNOnChainPage> {
         recvAddr = newAddr;
       });
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to generate address: $exception");
+      snackBar.error("Unable to generate address: $exception");
     }
   }
 
@@ -41,23 +43,23 @@ class _LNOnChainPageState extends State<LNOnChainPage> {
     });
     try {
       await Golib.sendOnChain(addr, amount, fromAccount);
-      showSuccessSnackbar(context, "Sent on-chain transaction");
+      snackBar.success("Sent on-chain transaction");
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to send coins: $exception");
+      snackBar.error("Unable to send coins: $exception");
     }
   }
 
   void confirmSend() async {
     if (sendAddrCtrl.text.isEmpty) {
-      showErrorSnackbar(context, "Address cannot be empty");
+      snackBar.error("Address cannot be empty");
       return;
     }
     if (amountCtrl.amount <= 0) {
-      showErrorSnackbar(context, "Amount must be positive");
+      snackBar.error("Amount must be positive");
       return;
     }
     if (sendAccount == null) {
-      showErrorSnackbar(context, "Source account cannot be empty");
+      snackBar.error("Source account cannot be empty");
       return;
     }
 
@@ -123,7 +125,7 @@ class _LNOnChainPageState extends State<LNOnChainPage> {
             Text("Account: ", style: TextStyle(color: darkTextColor)),
             const SizedBox(width: 10),
             Expanded(
-                child: AccountsDropDown(
+                child: AccountsDropDown(snackBar,
                     onChanged: (value) => setState(() {
                           recvAccount = value;
                           recvAddr = null;
@@ -159,7 +161,7 @@ class _LNOnChainPageState extends State<LNOnChainPage> {
                     style: TextStyle(color: darkTextColor))),
             const SizedBox(width: 10),
             Expanded(
-                child: AccountsDropDown(
+                child: AccountsDropDown(snackBar,
                     onChanged: (value) => setState(() {
                           sendAccount = value;
                         }))),

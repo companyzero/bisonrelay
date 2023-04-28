@@ -1,14 +1,16 @@
-import 'package:bruig/components/snackbars.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
+import 'package:bruig/models/snackbar.dart';
 
 typedef void OnAccountChanged(String);
 
 class AccountsDropDown extends StatefulWidget {
   final OnAccountChanged? onChanged;
   final bool excludeDefault;
-  const AccountsDropDown(
+  final SnackBarModel snackBar;
+
+  const AccountsDropDown(this.snackBar,
       {this.onChanged, this.excludeDefault = false, super.key});
 
   @override
@@ -16,6 +18,7 @@ class AccountsDropDown extends StatefulWidget {
 }
 
 class _AccountsDropDownState extends State<AccountsDropDown> {
+  SnackBarModel get snackBar => widget.snackBar;
   String? selected;
   List<Account> accounts = [];
 
@@ -35,7 +38,7 @@ class _AccountsDropDownState extends State<AccountsDropDown> {
         }
       });
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to load accounts: $exception");
+      snackBar.error("Unable to load accounts: $exception");
     }
   }
 

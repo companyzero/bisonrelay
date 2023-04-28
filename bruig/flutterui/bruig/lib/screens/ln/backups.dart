@@ -1,18 +1,20 @@
 import 'dart:io';
 
-import 'package:bruig/components/snackbars.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/golib_plugin.dart';
+import 'package:bruig/models/snackbar.dart';
 
 class LNBackupsPage extends StatefulWidget {
-  const LNBackupsPage({Key? key}) : super(key: key);
+  final SnackBarModel snackBar;
+  const LNBackupsPage(this.snackBar, {Key? key}) : super(key: key);
 
   @override
   State<LNBackupsPage> createState() => _LNBackupsPageState();
 }
 
 class _LNBackupsPageState extends State<LNBackupsPage> {
+  SnackBarModel get snackBar => widget.snackBar;
   @override
   void initState() {
     super.initState();
@@ -27,9 +29,9 @@ class _LNBackupsPageState extends State<LNBackupsPage> {
     try {
       var data = await Golib.lnSaveMultiSCB();
       await File(filePath).writeAsBytes(data);
-      showSuccessSnackbar(context, "Saved SCB file to $filePath");
+      snackBar.success("Saved SCB file to $filePath");
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to save SCB file: $exception");
+      snackBar.error("Unable to save SCB file: $exception");
     }
   }
 
@@ -43,9 +45,9 @@ class _LNBackupsPageState extends State<LNBackupsPage> {
       if (filePath == "") return;
       var scb = await File(filePath).readAsBytes();
       await Golib.lnRestoreMultiSCB(scb);
-      showSuccessSnackbar(context, "Restored SCB file");
+      snackBar.success("Restored SCB file");
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to restore SCB file: $exception");
+      snackBar.error("Unable to restore SCB file: $exception");
     }
   }
 
@@ -53,7 +55,6 @@ class _LNBackupsPageState extends State<LNBackupsPage> {
   Widget build(BuildContext context) {
     var theme = Theme.of(context);
     var textColor = theme.focusColor;
-    var secondaryTextColor = theme.dividerColor;
     var darkTextColor = theme.indicatorColor;
     var dividerColor = theme.highlightColor;
     var backgroundColor = theme.backgroundColor;

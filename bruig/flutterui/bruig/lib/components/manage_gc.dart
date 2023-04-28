@@ -1,19 +1,20 @@
 import 'package:bruig/components/copyable.dart';
 import 'package:bruig/components/empty_widget.dart';
-import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/components/users_dropdown.dart';
 import 'package:bruig/models/client.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:provider/provider.dart';
+import 'package:bruig/models/snackbar.dart';
 
 class ManageGCScreen extends StatelessWidget {
   const ManageGCScreen({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<ClientModel>(builder: (context, client, child) {
+    return Consumer2<ClientModel, SnackBarModel>(
+        builder: (context, client, snackBar, child) {
       var activeHeading = client.active;
       if (activeHeading == null) return Container();
       var chat = client.getExistingChat(activeHeading.id);
@@ -22,7 +23,7 @@ class ManageGCScreen extends StatelessWidget {
             child: const Text("Done"), onPressed: () => Navigator.pop(context));
       }
 
-      return ManageGCScreenForChat(chat, client);
+      return ManageGCScreenForChat(chat, client, snackBar);
     });
   }
 }
@@ -30,7 +31,8 @@ class ManageGCScreen extends StatelessWidget {
 class ManageGCScreenForChat extends StatefulWidget {
   final ChatModel chat;
   final ClientModel client;
-  const ManageGCScreenForChat(this.chat, this.client, {Key? key})
+  final SnackBarModel snackBar;
+  const ManageGCScreenForChat(this.chat, this.client, this.snackBar, {Key? key})
       : super(key: key);
 
   @override
@@ -40,13 +42,15 @@ class ManageGCScreenForChat extends StatefulWidget {
 
 class _InviteUserPanel extends StatefulWidget {
   final String gcID;
-  const _InviteUserPanel(this.gcID, {super.key});
+  final SnackBarModel snackBar;
+  const _InviteUserPanel(this.gcID, this.snackBar, {super.key});
 
   @override
   State<_InviteUserPanel> createState() => _InviteUserPanelState();
 }
 
 class _InviteUserPanelState extends State<_InviteUserPanel> {
+  SnackBarModel get snackBar => widget.snackBar;
   bool loading = false;
   ChatModel? userToInvite;
 
@@ -57,10 +61,9 @@ class _InviteUserPanelState extends State<_InviteUserPanel> {
 
     try {
       await Golib.inviteToGC(InviteToGC(widget.gcID, userToInvite!.id));
-      showSuccessSnackbar(
-          context, 'Sent invitation to "${userToInvite!.nick}"');
+      snackBar.success('Sent invitation to "${userToInvite!.nick}"');
     } catch (exception) {
-      showErrorSnackbar(context, 'Unable to invite: $exception');
+      snackBar.error('Unable to invite: $exception');
     } finally {
       setState(() => loading = false);
     }
@@ -89,6 +92,7 @@ class _InviteUserPanelState extends State<_InviteUserPanel> {
 }
 
 class ManageGCScreenState extends State<ManageGCScreenForChat> {
+  SnackBarModel get snackBar => widget.snackBar;
   // This must be updated every time a new GC version is deployed and its features
   // implemented in bruig.
   final MAXGCVERSION = 1;
@@ -136,7 +140,7 @@ class ManageGCScreenState extends State<ManageGCScreenForChat> {
       await Golib.addToGCBlockList(gcID, uid);
       reloadUsers();
     } catch (exception) {
-      showErrorSnackbar(context, 'Unable to add to GC block list: $exception');
+      snackBar.error('Unable to add to GC block list: $exception');
     } finally {
       setState(() => loading = false);
     }
@@ -147,8 +151,7 @@ class ManageGCScreenState extends State<ManageGCScreenForChat> {
       await Golib.removeFromGCBlockList(gcID, uid);
       reloadUsers();
     } catch (exception) {
-      showErrorSnackbar(
-          context, 'Unable to remove from GC block list: $exception');
+      snackBar.error('Unable to remove from GC block list: $exception');
     } finally {
       setState(() => loading = false);
     }
@@ -181,7 +184,7 @@ class ManageGCScreenState extends State<ManageGCScreenForChat> {
         blockedUsers = newBlocked;
       });
     } catch (exception) {
-      showErrorSnackbar(context, 'Unable to reload gc: $exception');
+      snackBar.error('Unable to reload gc: $exception');
     } finally {
       firstLoading = false;
     }
@@ -193,7 +196,7 @@ class ManageGCScreenState extends State<ManageGCScreenForChat> {
       await Golib.removeGcUser(gcID, user.id);
       reloadUsers();
     } catch (exception) {
-      showErrorSnackbar(context, 'Unable to remove user: $exception');
+      snackBar.error('Unable to remove user: $exception');
     } finally {
       setState(() => loading = false);
     }
@@ -234,10 +237,9 @@ class ManageGCScreenState extends State<ManageGCScreenForChat> {
     setState(() => loading = true);
     try {
       await Golib.modifyGCAdmins(gcID, newAdmins);
-      showSuccessSnackbar(context, "Added ${user.nick} as admin");
+      snackBar.success("Added ${user.nick} as admin");
     } catch (exception) {
-      showErrorSnackbar(
-          context, "Unable add ${user.nick} as admin: $exception");
+      snackBar.error("Unable add ${user.nick} as admin: $exception");
     } finally {
       setState(() => loading = false);
       reloadUsers();
@@ -250,10 +252,9 @@ class ManageGCScreenState extends State<ManageGCScreenForChat> {
     setState(() => loading = true);
     try {
       await Golib.modifyGCAdmins(gcID, newAdmins);
-      showSuccessSnackbar(context, "Removed ${user.nick} as admin");
+      snackBar.success("Removed ${user.nick} as admin");
     } catch (exception) {
-      showErrorSnackbar(
-          context, "Unable remove ${user.nick} as admin: $exception");
+      snackBar.error("Unable remove ${user.nick} as admin: $exception");
     } finally {
       setState(() => loading = false);
       reloadUsers();
@@ -267,7 +268,7 @@ class ManageGCScreenState extends State<ManageGCScreenForChat> {
       widget.client.removeChat(widget.chat);
       widget.client.active = null;
     } catch (exception) {
-      showErrorSnackbar(context, 'Unable to kill GC: $exception');
+      snackBar.error('Unable to kill GC: $exception');
     } finally {
       setState(() => loading = false);
     }
@@ -280,7 +281,7 @@ class ManageGCScreenState extends State<ManageGCScreenForChat> {
       widget.client.removeChat(widget.chat);
       widget.client.active = null;
     } catch (exception) {
-      showErrorSnackbar(context, 'Unable to part from GC: $exception');
+      snackBar.error('Unable to part from GC: $exception');
     } finally {
       setState(() => loading = false);
     }
@@ -290,9 +291,9 @@ class ManageGCScreenState extends State<ManageGCScreenForChat> {
     setState(() => loading = true);
     try {
       await Golib.upgradeGC(gcID);
-      showSuccessSnackbar(context, "Upgraded GC!");
+      snackBar.success("Upgraded GC!");
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to upgrade GC: $exception");
+      snackBar.error("Unable to upgrade GC: $exception");
     } finally {
       setState(() => loading = false);
       reloadUsers();
@@ -397,7 +398,7 @@ class ManageGCScreenState extends State<ManageGCScreenForChat> {
           localIsAdmin
               ? Container(
                   margin: const EdgeInsets.only(top: 10, bottom: 10),
-                  child: _InviteUserPanel(gcID))
+                  child: _InviteUserPanel(gcID, snackBar))
               : const Empty(),
           Divider(height: 10, color: textColor),
           const SizedBox(height: 10),

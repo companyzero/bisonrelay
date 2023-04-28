@@ -4,9 +4,9 @@ import 'package:bruig/components/buttons.dart';
 import 'package:bruig/components/copyable.dart';
 import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/components/recent_log.dart';
-import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/models/log.dart';
 import 'package:bruig/models/notifications.dart';
+import 'package:bruig/models/snackbar.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
@@ -47,13 +47,15 @@ Map<OnboardStage, String> _stageTips = {
 };
 
 class OnboardingScreen extends StatefulWidget {
-  const OnboardingScreen({super.key});
+  final SnackBarModel snackBar;
+  const OnboardingScreen(this.snackBar, {super.key});
 
   @override
   State<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
+  SnackBarModel get snackBar => widget.snackBar;
   OnboardState? ostate;
   String oerror = "";
   TextEditingController keyCtrl = TextEditingController();
@@ -106,7 +108,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     try {
       await Golib.startOnboard(keyCtrl.text);
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to start onboarding: $exception");
+      snackBar.error("Unable to start onboarding: $exception");
     } finally {
       setState(() => starting = false);
     }
@@ -130,7 +132,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       await Golib.cancelOnboard();
       skipOnboarding();
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to cancel onboarding: $exception");
+      snackBar.error("Unable to cancel onboarding: $exception");
     }
   }
 
@@ -138,7 +140,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     try {
       await Golib.retryOnboard();
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to retry onboarding: $exception");
+      snackBar.error("Unable to retry onboarding: $exception");
     }
   }
 
@@ -146,7 +148,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     try {
       await Golib.skipOnboardStage();
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to skip onboarding stage: $exception");
+      snackBar.error("Unable to skip onboarding stage: $exception");
     }
   }
 

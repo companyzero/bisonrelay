@@ -1,6 +1,6 @@
 import 'package:bruig/components/empty_widget.dart';
-import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/models/client.dart';
+import 'package:bruig/models/snackbar.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 
@@ -17,7 +17,9 @@ class PostListsScreenTitle extends StatelessWidget {
 class PostListsScreen extends StatefulWidget {
   static String routeName = "/postsLists";
   final ClientModel client;
-  const PostListsScreen(this.client, {Key? key}) : super(key: key);
+  final SnackBarModel snackBar;
+  const PostListsScreen(this.client, this.snackBar, {Key? key})
+      : super(key: key);
 
   @override
   State<PostListsScreen> createState() => _PostListsScreenState();
@@ -76,6 +78,7 @@ class _SubItem extends StatelessWidget {
 }
 
 class _PostListsScreenState extends State<PostListsScreen> {
+  SnackBarModel get snackBar => widget.snackBar;
   bool firstLoading = true;
   ScrollController subcribersCtrl = ScrollController();
   ScrollController subscriptnsCtrl = ScrollController();
@@ -93,7 +96,7 @@ class _PostListsScreenState extends State<PostListsScreen> {
         subscriptions = newSubscriptions;
       });
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to load post lists: $exception");
+      snackBar.error("Unable to load post lists: $exception");
     } finally {
       setState(() {
         firstLoading = false;

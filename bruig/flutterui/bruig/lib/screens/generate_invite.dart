@@ -2,21 +2,23 @@ import 'package:bruig/components/accounts_dropdown.dart';
 import 'package:bruig/components/copyable.dart';
 import 'package:bruig/components/dcr_input.dart';
 import 'package:bruig/components/empty_widget.dart';
-import 'package:bruig/components/snackbars.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:golib_plugin/util.dart';
+import 'package:bruig/models/snackbar.dart';
 
 class GenerateInviteScreen extends StatefulWidget {
-  const GenerateInviteScreen({super.key});
+  final SnackBarModel snackBar;
+  const GenerateInviteScreen(this.snackBar, {super.key});
 
   @override
   State<GenerateInviteScreen> createState() => _GenerateInviteScreenState();
 }
 
 class _GenerateInviteScreenState extends State<GenerateInviteScreen> {
+  SnackBarModel get snackBar => widget.snackBar;
   String path = "";
   List<bool> selFunding = [true, false];
   bool get sendFunds => selFunding[1];
@@ -80,6 +82,7 @@ class _GenerateInviteScreenState extends State<GenerateInviteScreen> {
           SizedBox(
               width: 110,
               child: AccountsDropDown(
+                snackBar,
                 excludeDefault: true,
                 onChanged: (v) => setState(() {
                   account = v;
@@ -92,11 +95,11 @@ class _GenerateInviteScreenState extends State<GenerateInviteScreen> {
     int amount = 0;
     if (sendFunds) {
       if (fundAmountCtrl.amount <= 0) {
-        showErrorSnackbar(context, "Amount to fund in invite cannot be <= 0");
+        snackBar.error("Amount to fund in invite cannot be <= 0");
         return;
       }
       if (account == "") {
-        showErrorSnackbar(context, "Account cannot be empty");
+        snackBar.error("Account cannot be empty");
         return;
       }
       amount = dcrToAtoms(fundAmountCtrl.amount);
@@ -111,7 +114,7 @@ class _GenerateInviteScreenState extends State<GenerateInviteScreen> {
         generated = res;
       });
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to generate invitation: $exception");
+      snackBar.error("Unable to generate invitation: $exception");
     }
     setState(() {
       loading = false;

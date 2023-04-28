@@ -104,7 +104,8 @@ class _FeedScreenState extends State<FeedScreen> {
         }
       case 2:
         return Consumer<ClientModel>(
-            builder: (context, client, child) => PostListsScreen(client));
+            builder: (context, client, child) =>
+                PostListsScreen(client, snackBar));
       case 3:
         return Consumer<FeedModel>(
             builder: (context, feed, child) => NewPostScreen(feed, snackBar));

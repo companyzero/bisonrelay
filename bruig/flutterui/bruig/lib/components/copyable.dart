@@ -1,8 +1,9 @@
 import 'dart:math';
 
-import 'package:bruig/components/snackbars.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
+import 'package:bruig/models/snackbar.dart';
 
 class Copyable extends StatelessWidget {
   final String text;
@@ -14,6 +15,7 @@ class Copyable extends StatelessWidget {
       : super(key: key);
 
   void copy(BuildContext context) {
+    var snackBar = Provider.of<SnackBarModel>(context);
     var toCopy = textToCopy ?? text;
     Clipboard.setData(ClipboardData(text: toCopy));
 
@@ -25,7 +27,7 @@ class Copyable extends StatelessWidget {
     if (textMsg.length < toCopy.length) {
       textMsg += "...";
     }
-    showSuccessSnackbar(context, "Copied \"$textMsg\" to clipboard");
+    snackBar.success("Copied \"$textMsg\" to clipboard");
   }
 
   @override

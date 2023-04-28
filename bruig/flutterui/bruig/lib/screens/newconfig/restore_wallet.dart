@@ -2,21 +2,22 @@ import 'dart:io';
 
 import 'package:bruig/components/buttons.dart';
 import 'package:bruig/components/empty_widget.dart';
-import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/models/newconfig.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:bruig/models/snackbar.dart';
 
 class RestoreWalletPage extends StatefulWidget {
   final NewConfigModel newconf;
-  const RestoreWalletPage(this.newconf, {super.key});
+  final SnackBarModel snackBar;
+  const RestoreWalletPage(this.newconf, this.snackBar, {super.key});
 
   @override
   State<RestoreWalletPage> createState() => _RestoreWalletPageState();
 }
 
 class _RestoreWalletPageState extends State<RestoreWalletPage> {
+  SnackBarModel get snackBar => widget.snackBar;
   NewConfigModel get newconf => widget.newconf;
   TextEditingController seedCtrl = TextEditingController();
   String scbFilename = "";
@@ -31,7 +32,7 @@ class _RestoreWalletPageState extends State<RestoreWalletPage> {
     var split = seedCtrl.text.split(' ').map((s) => s.trim()).toList();
     split.removeWhere((s) => s.isEmpty);
     if (split.length != 24) {
-      showErrorSnackbar(context,
+      snackBar.error(
           "Seed contains ${split.length} words instead of the required 24");
       return;
     }
@@ -56,7 +57,7 @@ class _RestoreWalletPageState extends State<RestoreWalletPage> {
       });
       newconf.multichanBackupRestore = scb;
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to load SCB file: $exception");
+      snackBar.error("Unable to load SCB file: $exception");
     }
   }
 

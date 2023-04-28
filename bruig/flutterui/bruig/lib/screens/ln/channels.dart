@@ -1,17 +1,18 @@
 import 'dart:async';
 
 import 'package:bruig/components/copyable.dart';
-import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/screens/needs_out_channel.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:golib_plugin/util.dart';
+import 'package:bruig/models/snackbar.dart';
 
 typedef CloseChanCB = Future<void> Function(LNChannel chan);
 
 class LNChannelsPage extends StatefulWidget {
-  const LNChannelsPage({Key? key}) : super(key: key);
+  final SnackBarModel snackBar;
+  const LNChannelsPage(this.snackBar, {Key? key}) : super(key: key);
 
   @override
   State<LNChannelsPage> createState() => _LNChannelsPageState();
@@ -189,6 +190,7 @@ class _PendingForceCloseChanW extends StatelessWidget {
 }
 
 class _LNChannelsPageState extends State<LNChannelsPage> {
+  SnackBarModel get snackBar => widget.snackBar;
   bool loading = true;
   List<dynamic> channels = List.empty();
   ScrollController channelsCtrl = ScrollController();
@@ -208,7 +210,7 @@ class _LNChannelsPageState extends State<LNChannelsPage> {
         ];
       });
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to load LN channels: $exception");
+      snackBar.error("Unable to load LN channels: $exception");
     } finally {
       setState(() => loading = false);
     }
@@ -219,7 +221,7 @@ class _LNChannelsPageState extends State<LNChannelsPage> {
     try {
       await Golib.lnCloseChannel(chan.channelPoint, !chan.active);
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to close channel: $exception");
+      snackBar.error("Unable to close channel: $exception");
       return;
     } finally {
       setState(() => loading = false);

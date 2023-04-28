@@ -1,7 +1,6 @@
 import 'package:bruig/components/pay_tip.dart';
 import 'package:bruig/components/rename_chat.dart';
 import 'package:bruig/components/suggest_kx.dart';
-import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/models/log.dart';
 import 'package:bruig/models/notifications.dart';
@@ -54,8 +53,9 @@ final List<MainMenuItem> mainMenu = [
   MainMenuItem(
     "Chats",
     ChatsScreen.routeName,
-    (context) => Consumer2<ClientModel, AppNotifications>(
-        builder: (context, client, ntfns, child) => ChatsScreen(client, ntfns)),
+    (context) => Consumer3<ClientModel, AppNotifications, SnackBarModel>(
+        builder: (context, client, ntfns, snackBar, child) =>
+            ChatsScreen(client, ntfns, snackBar)),
     (context) => const ChatsScreenTitle(),
     const SidebarIcon(Icons.chat_bubble_outline, false),
     const SidebarIcon(Icons.new_releases_outlined, true),
@@ -63,7 +63,8 @@ final List<MainMenuItem> mainMenu = [
   MainMenuItem(
     "LN Management",
     LNScreen.routeName,
-    (context) => const LNScreen(),
+    (context) => Consumer<SnackBarModel>(
+        builder: (context, snackBar, child) => LNScreen(snackBar)),
     (context) => const LNScreenTitle(),
     const SidebarIcon(Icons.device_hub, false),
     const SidebarIcon(Icons.device_hub, false),
@@ -81,7 +82,8 @@ final List<MainMenuItem> mainMenu = [
   MainMenuItem(
     "Manage Content",
     ManageContentScreen.routeName,
-    (context) => const ManageContentScreen(),
+    (context) => Consumer<SnackBarModel>(
+        builder: (context, snackBar, child) => ManageContentScreen(snackBar)),
     (context) => const ManageContentScreenTitle(),
     const SidebarIcon(Icons.file_download, false),
     const SidebarIcon(Icons.file_download, false),
@@ -89,8 +91,9 @@ final List<MainMenuItem> mainMenu = [
   MainMenuItem(
     "Payment Stats",
     PayStatsScreen.routeName,
-    (context) => Consumer<ClientModel>(
-        builder: (context, client, child) => PayStatsScreen(client)),
+    (context) => Consumer2<ClientModel, SnackBarModel>(
+        builder: (context, client, snackBar, child) =>
+            PayStatsScreen(client, snackBar)),
     (context) => const PayStatsScreenTitle(),
     const SidebarIcon(Icons.wallet_outlined, false),
     const SidebarIcon(Icons.wallet_outlined, false),
@@ -152,6 +155,7 @@ class ChatMenuItem {
 
 List<ChatMenuItem> buildUserChatMenu(ChatModel chat) {
   void sendFile(BuildContext context, ChatModel chat) async {
+    var snackBar = Provider.of<SnackBarModel>(context);
     var filePickRes = await FilePicker.platform.pickFiles();
     if (filePickRes == null) return;
     var filePath = filePickRes.files.first.path;
@@ -165,7 +169,7 @@ List<ChatMenuItem> buildUserChatMenu(ChatModel chat) {
       chat.append(ChatEventModel(
           SynthChatEvent("Sending file \"$fname\" to user", SCE_sent), null));
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to send file: $exception");
+      snackBar.error("Unable to send file: $exception");
     }
   }
 

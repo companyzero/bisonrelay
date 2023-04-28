@@ -5,11 +5,11 @@ import 'dart:math';
 import 'package:bruig/components/buttons.dart';
 import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/components/local_content_dropdown.dart';
-import 'package:bruig/components/snackbars.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:golib_plugin/definitions.dart';
+import 'package:bruig/models/snackbar.dart';
 
 class AttachmentEmbed {
   String? mime;
@@ -54,14 +54,16 @@ class AttachmentEmbed {
 }
 
 class AttachFileScreen extends StatefulWidget {
+  final SnackBarModel snackBar;
   static String routeName = "/attachFile";
-  const AttachFileScreen({super.key});
+  const AttachFileScreen(this.snackBar, {super.key});
 
   @override
   State<AttachFileScreen> createState() => _AttachFileScreenState();
 }
 
 class _AttachFileScreenState extends State<AttachFileScreen> {
+  SnackBarModel get snackBar => widget.snackBar;
   String filePath = "";
   Uint8List? fileData;
   String mime = "";
@@ -107,7 +109,7 @@ class _AttachFileScreenState extends State<AttachFileScreen> {
         this.mime = mime;
       });
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to attach file: $exception");
+      snackBar.error("Unable to attach file: $exception");
     }
   }
 

@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'dart:collection';
 
+import 'package:flutter/material.dart';
+
 class SnackBarMessage {
   final String msg;
   final bool error;
@@ -14,8 +16,13 @@ class SnackBarModel extends ChangeNotifier {
   List<SnackBarMessage> _snackBars = [];
   UnmodifiableListView<SnackBarMessage> get snackBars =>
       UnmodifiableListView(_snackBars);
-  void append(SnackBarMessage snackBarMessage) {
-    _snackBars.add(snackBarMessage);
+  void success(String msg) {
+    _snackBars.add(SnackBarMessage(msg, false, DateTime.now()));
+    notifyListeners();
+  }
+
+  void error(String msg) {
+    _snackBars.add(SnackBarMessage(msg, true, DateTime.now()));
     notifyListeners();
   }
 }

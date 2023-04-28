@@ -1,26 +1,30 @@
 import 'package:bruig/components/buttons.dart';
-import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/models/client.dart';
+import 'package:bruig/models/snackbar.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:bruig/components/users_dropdown.dart';
+import 'package:provider/provider.dart';
 
 void showSuggestKXModalBottom(BuildContext context, ChatModel chat) {
+  var snackBar = Provider.of<SnackBarModel>(context);
   showModalBottomSheet(
     context: context,
-    builder: (BuildContext context) => SuggestKXModal(chat),
+    builder: (BuildContext context) => SuggestKXModal(chat, snackBar),
   );
 }
 
 class SuggestKXModal extends StatefulWidget {
   final ChatModel chat;
-  const SuggestKXModal(this.chat, {Key? key}) : super(key: key);
+  final SnackBarModel snackBar;
+  const SuggestKXModal(this.chat, this.snackBar, {Key? key}) : super(key: key);
 
   @override
-  State<SuggestKXModal> createState() => _RenameChatModalState();
+  State<SuggestKXModal> createState() => _SuggestKXModalState();
 }
 
-class _RenameChatModalState extends State<SuggestKXModal> {
+class _SuggestKXModalState extends State<SuggestKXModal> {
+  SnackBarModel get snackBar => widget.snackBar;
   ChatModel get chat => widget.chat;
   bool loading = false;
   ChatModel? userToSuggest;
@@ -32,10 +36,10 @@ class _RenameChatModalState extends State<SuggestKXModal> {
 
     try {
       await Golib.suggestKX(chat.id, userToSuggest!.id);
-      showSuccessSnackbar(context, 'Sent KX suggestion to ${chat.nick}');
+      snackBar.success('Sent KX suggestion to ${chat.nick}');
       Navigator.of(context).pop();
     } catch (exception) {
-      showErrorSnackbar(context, 'Unable to suggest KX: $exception');
+      snackBar.error('Unable to suggest KX: $exception');
       Navigator.of(context).pop();
     } finally {
       setState(() => loading = false);

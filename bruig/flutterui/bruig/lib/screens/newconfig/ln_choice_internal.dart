@@ -1,18 +1,21 @@
 import 'package:bruig/components/empty_widget.dart';
-import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/components/buttons.dart';
 import 'package:bruig/models/newconfig.dart';
 import 'package:flutter/material.dart';
+import 'package:bruig/models/snackbar.dart';
 
 class LNInternalWalletPage extends StatefulWidget {
   final NewConfigModel newconf;
-  const LNInternalWalletPage(this.newconf, {Key? key}) : super(key: key);
+  final SnackBarModel snackBar;
+  const LNInternalWalletPage(this.newconf, this.snackBar, {Key? key})
+      : super(key: key);
 
   @override
   State<LNInternalWalletPage> createState() => _LNInternalWalletPageState();
 }
 
 class _LNInternalWalletPageState extends State<LNInternalWalletPage> {
+  SnackBarModel get snackBar => widget.snackBar;
   NewConfigModel get newconf => widget.newconf;
   TextEditingController passCtrl = TextEditingController();
   TextEditingController passRepeatCtrl = TextEditingController();
@@ -20,15 +23,15 @@ class _LNInternalWalletPageState extends State<LNInternalWalletPage> {
 
   Future<void> createWallet() async {
     if (passCtrl.text == "") {
-      showErrorSnackbar(context, "Password cannot be empty");
+      snackBar.error("Password cannot be empty");
       return;
     }
     if (passCtrl.text != passRepeatCtrl.text) {
-      showErrorSnackbar(context, "Passwords are different");
+      snackBar.error("Passwords are different");
       return;
     }
     if (passCtrl.text.length < 8) {
-      showErrorSnackbar(context, "Password cannot have less then 8 chars");
+      snackBar.error("Password cannot have less then 8 chars");
       return;
     }
     setState(() {
@@ -39,7 +42,7 @@ class _LNInternalWalletPageState extends State<LNInternalWalletPage> {
           .createNewWallet(passCtrl.text, newconf.seedToRestore);
       Navigator.of(context).pushNamed("/newconf/seed");
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to create new LN wallet: $exception");
+      snackBar.error("Unable to create new LN wallet: $exception");
       if (newconf.seedToRestore.isNotEmpty) {
         // This assumes if there was a previously existing wallet, the user was
         // already given the choice to delete it.

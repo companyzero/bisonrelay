@@ -1,20 +1,22 @@
 import 'package:bruig/components/copyable.dart';
-import 'package:bruig/components/snackbars.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:golib_plugin/util.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:bruig/components/empty_widget.dart';
+import 'package:bruig/models/snackbar.dart';
 
 class LNInfoPage extends StatefulWidget {
-  const LNInfoPage({Key? key}) : super(key: key);
+  final SnackBarModel snackBar;
+  const LNInfoPage(this.snackBar, {Key? key}) : super(key: key);
 
   @override
   State<LNInfoPage> createState() => _LNInfoPageState();
 }
 
 class _LNInfoPageState extends State<LNInfoPage> {
+  SnackBarModel get snackBar => widget.snackBar;
   bool loading = true;
   LNInfo info = LNInfo.empty();
   LNBalances balances = LNBalances.empty();
@@ -30,7 +32,7 @@ class _LNInfoPageState extends State<LNInfoPage> {
         balances = newBalances;
       });
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to load LN info: $exception");
+      snackBar.error("Unable to load LN info: $exception");
     } finally {
       setState(() => loading = false);
     }
@@ -43,7 +45,7 @@ class _LNInfoPageState extends State<LNInfoPage> {
         depositAddr = newAddr;
       });
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to fetch deposit address: $exception");
+      snackBar.error("Unable to fetch deposit address: $exception");
     }
   }
 

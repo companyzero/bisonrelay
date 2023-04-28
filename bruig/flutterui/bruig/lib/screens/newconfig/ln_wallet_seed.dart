@@ -1,7 +1,5 @@
 import 'package:bruig/components/empty_widget.dart';
-import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/models/newconfig.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:bruig/components/buttons.dart';
 import 'package:flutter/services.dart';
@@ -12,7 +10,6 @@ class NewLNWalletSeedPage extends StatelessWidget {
 
   void copySeedToClipboard(BuildContext context) async {
     Clipboard.setData(ClipboardData(text: newconf.newWalletSeed));
-    // showSuccessSnackbar(context, "Copied seed to clipboard!");
   }
 
   @override

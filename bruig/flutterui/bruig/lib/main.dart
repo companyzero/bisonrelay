@@ -288,13 +288,21 @@ class _AppState extends State<App> with WindowListener {
               routes: {
                 '/': (context) => const AppStartingLoadScreen(),
                 '/about': (context) => const AboutScreen(),
-                '/initLocalID': (context) => const InitLocalIDScreen(),
+                '/initLocalID': (context) => Consumer<SnackBarModel>(
+                    builder: (context, snackBar, child) =>
+                        InitLocalIDScreen(snackBar)),
                 '/startup/verifyServer': (context) =>
                     const VerifyServerScreen(),
-                '/generateInvite': (context) => const GenerateInviteScreen(),
+                '/generateInvite': (context) => Consumer<SnackBarModel>(
+                    builder: (context, snackBar, child) =>
+                        GenerateInviteScreen(snackBar)),
                 '/verifyInvite': (context) => const VerifyInviteScreen(),
-                '/fetchInvite': (context) => const FetchInviteScreen(),
-                '/newGC': (context) => const NewGCScreen(),
+                '/fetchInvite': (context) => Consumer<SnackBarModel>(
+                    builder: (context, snackBar, child) =>
+                        FetchInviteScreen(snackBar)),
+                '/newGC': (context) => Consumer<SnackBarModel>(
+                    builder: (context, snackBar, child) =>
+                        NewGCScreen(snackBar)),
                 '/ln/confirmRecvChannelPay': (context) =>
                     const LNConfirmRecvChanPaymentScreen(),
                 '/confirmFileDownload': (context) =>
@@ -302,21 +310,25 @@ class _AppState extends State<App> with WindowListener {
                         builder: (context, client, downloads, child) =>
                             ConfirmFileDownloadScreen(client, downloads)),
                 AttachFileScreen.routeName: (context) =>
-                    Consumer2<ClientModel, DownloadsModel>(
-                        builder: (context, client, downloads, child) =>
-                            AttachFileScreen()),
-                '/needsFunds': (context) => Consumer<AppNotifications>(
-                    builder: (context, ntfns, child) =>
-                        NeedsFundsScreen(ntfns)),
+                    Consumer3<ClientModel, DownloadsModel, SnackBarModel>(
+                        builder:
+                            (context, client, downloads, snackBar, child) =>
+                                AttachFileScreen(snackBar)),
+                '/needsFunds': (context) =>
+                    Consumer2<AppNotifications, SnackBarModel>(
+                        builder: (context, ntfns, snackBar, child) =>
+                            NeedsFundsScreen(ntfns, snackBar)),
                 '/needsInChannel': (context) =>
-                    Consumer2<AppNotifications, ClientModel>(
-                        builder: (context, ntfns, client, child) =>
-                            NeedsInChannelScreen(ntfns, client)),
-                '/onboarding': (context) => const OnboardingScreen(),
+                    Consumer3<AppNotifications, ClientModel, SnackBarModel>(
+                        builder: (context, ntfns, client, snackBar, child) =>
+                            NeedsInChannelScreen(ntfns, client, snackBar)),
+                '/onboarding': (context) => Consumer<SnackBarModel>(
+                    builder: (context, snackBar, child) =>
+                        OnboardingScreen(snackBar)),
                 ContactsLastMsgTimesScreen.routeName: (context) =>
-                    Consumer<ClientModel>(
-                        builder: (context, client, child) =>
-                            ContactsLastMsgTimesScreen(client)),
+                    Consumer2<ClientModel, SnackBarModel>(
+                        builder: (context, client, snackBar, child) =>
+                            ContactsLastMsgTimesScreen(client, snackBar)),
                 '/fatalError': (context) => const FatalErrorScreen(),
                 '/shutdown': (context) => Consumer<LogModel>(
                     builder: (context, log, child) => ShutdownScreen(
@@ -342,9 +354,10 @@ class _AppState extends State<App> with WindowListener {
                               mainMenu, feed, snackBar));
                 } else if (settings.name!
                     .startsWith(NeedsOutChannelScreen.routeName)) {
-                  page = Consumer2<AppNotifications, ClientModel>(
-                      builder: (context, ntfns, client, child) =>
-                          NeedsOutChannelScreen(ntfns, client));
+                  page =
+                      Consumer3<AppNotifications, ClientModel, SnackBarModel>(
+                          builder: (context, ntfns, client, snackBar, child) =>
+                              NeedsOutChannelScreen(ntfns, client, snackBar));
                 } else {
                   page = RouteErrorPage(
                       settings.name ?? "", OverviewScreen.routeName);

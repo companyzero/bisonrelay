@@ -1,18 +1,22 @@
 import 'package:bruig/components/recent_log.dart';
-import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/components/buttons.dart';
 import 'package:bruig/screens/about.dart';
 import 'package:bruig/config.dart';
 import 'package:bruig/main.dart';
 import 'package:bruig/models/log.dart';
+import 'package:bruig/models/snackbar.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:path/path.dart' as path;
+import 'package:bruig/models/snackbar.dart';
+import 'package:provider/provider.dart';
 
 class UnlockLNApp extends StatefulWidget {
   Config cfg;
   final String initialRoute;
-  UnlockLNApp(this.cfg, this.initialRoute, {Key? key}) : super(key: key);
+  final SnackBarModel snackBar;
+  UnlockLNApp(this.cfg, this.initialRoute, this.snackBar, {Key? key})
+      : super(key: key);
 
   void setCfg(Config c) {
     cfg = c;
@@ -23,6 +27,7 @@ class UnlockLNApp extends StatefulWidget {
 }
 
 class _UnlockLNAppState extends State<UnlockLNApp> {
+  SnackBarModel get snackBar => widget.snackBar;
   Config get cfg => widget.cfg;
   @override
   Widget build(BuildContext context) {
@@ -30,8 +35,8 @@ class _UnlockLNAppState extends State<UnlockLNApp> {
       title: "Connect to Bison Relay",
       initialRoute: widget.initialRoute,
       routes: {
-        "/": (context) => _LNUnlockPage(widget.cfg, widget.setCfg),
-        "/sync": (context) => _LNChainSyncPage(widget.cfg),
+        "/": (context) => _LNUnlockPage(widget.cfg, widget.setCfg, snackBar),
+        "/sync": (context) => _LNChainSyncPage(widget.cfg, snackBar),
         '/about': (context) => const AboutScreen(),
       },
       builder: (BuildContext context, Widget? child) => Scaffold(
@@ -44,13 +49,16 @@ class _UnlockLNAppState extends State<UnlockLNApp> {
 class _LNUnlockPage extends StatefulWidget {
   final Config cfg;
   final Function(Config) setCfg;
-  const _LNUnlockPage(this.cfg, this.setCfg, {Key? key}) : super(key: key);
+  final SnackBarModel snackBar;
+  const _LNUnlockPage(this.cfg, this.setCfg, this.snackBar, {Key? key})
+      : super(key: key);
 
   @override
   State<_LNUnlockPage> createState() => __LNUnlockPageState();
 }
 
 class __LNUnlockPageState extends State<_LNUnlockPage> {
+  SnackBarModel get snackBar => widget.snackBar;
   bool loading = false;
   final TextEditingController passCtrl = TextEditingController();
   String _validate = "";
@@ -83,7 +91,7 @@ class __LNUnlockPageState extends State<_LNUnlockPage> {
       if (exception.toString().contains("invalid passphrase")) {
         _validate = "Incorrect password, please try again.";
       } else {
-        showErrorSnackbar(context, "Unable to unlock wallet: $exception");
+        snackBar.error("Unable to unlock wallet: $exception");
       }
       // Catch error and show error in errorText?
     } finally {
@@ -218,13 +226,15 @@ class __LNUnlockPageState extends State<_LNUnlockPage> {
 
 class _LNChainSyncPage extends StatefulWidget {
   final Config cfg;
-  const _LNChainSyncPage(this.cfg, {Key? key}) : super(key: key);
+  final SnackBarModel snackBar;
+  const _LNChainSyncPage(this.cfg, this.snackBar, {Key? key}) : super(key: key);
 
   @override
   State<_LNChainSyncPage> createState() => _LNChainSyncPageState();
 }
 
 class _LNChainSyncPageState extends State<_LNChainSyncPage> {
+  SnackBarModel get snackBar => widget.snackBar;
   int blockHeight = 0;
   String blockHash = "";
   DateTime blockTimestamp = DateTime.fromMicrosecondsSinceEpoch(0);
@@ -252,8 +262,7 @@ class _LNChainSyncPageState extends State<_LNChainSyncPage> {
         }
       }
     } catch (exception) {
-      showErrorSnackbar(
-          context, "Unable to read chain sync updates: $exception");
+      snackBar.error("Unable to read chain sync updates: $exception");
     }
   }
 
@@ -408,9 +417,21 @@ class _LNChainSyncPageState extends State<_LNChainSyncPage> {
 }
 
 Future<void> runUnlockDcrlnd(Config cfg) async {
-  runApp(UnlockLNApp(cfg, "/"));
+  runApp(MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (c) => SnackBarModel()),
+      ],
+      child: Consumer<SnackBarModel>(
+          builder: (context, snackBar, child) =>
+              UnlockLNApp(cfg, "/", snackBar))));
 }
 
 Future<void> runChainSyncDcrlnd(Config cfg) async {
-  runApp(UnlockLNApp(cfg, "/sync"));
+  runApp(MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (c) => SnackBarModel()),
+      ],
+      child: Consumer<SnackBarModel>(
+          builder: (context, snackBar, child) =>
+              UnlockLNApp(cfg, "/sync", snackBar))));
 }
