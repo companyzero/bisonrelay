@@ -31,12 +31,22 @@ class _ActivePageScreen extends StatefulWidget {
 class _ActivePageScreenState extends State<_ActivePageScreen> {
   PagesSession get session => widget.session;
   String markdownData = "";
+  Key pageKey = UniqueKey();
 
   void updateSession() {
     var data = session.currentPage?.response.data ?? Uint8List(0);
     var newMdData = utf8.decode(data);
     newMdData += "\n";
-    setState(() => markdownData = newMdData);
+    setState(() {
+      if (newMdData != markdownData) {
+        markdownData = newMdData;
+
+        // Bump pageKey so that the Provider<PageSource> is recreated with the new
+        // page. This is needed so that navigating pages across different UIDs
+        // work.
+        pageKey = UniqueKey();
+      }
+    });
   }
 
   @override
@@ -99,6 +109,7 @@ class _ActivePageScreenState extends State<_ActivePageScreen> {
         Expanded(
             child: ListView(children: [
           Provider<PagesSource>(
+            key: pageKey,
             create: (context) =>
                 PagesSource(page.uid, page.sessionID, page.pageID),
             builder: (context, child) => MarkdownArea(markdownData, false),
