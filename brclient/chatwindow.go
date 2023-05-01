@@ -158,7 +158,7 @@ func (l *chatMsgElLine) splitLinks() {
 			rawLink := s[pos[0]:pos[1]]
 			link := descrPathRegexp.FindAllStringSubmatch(rawLink, -1)
 			cmel := chatMsgEl{
-				text: ">" + link[0][1] + "<",
+				text: link[0][1],
 				link: &(link[0][2]),
 			}
 

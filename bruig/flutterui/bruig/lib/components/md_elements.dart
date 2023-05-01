@@ -281,15 +281,29 @@ class MarkdownArea extends StatelessWidget {
     var pageSource = Provider.of<PagesSource?>(context, listen: false);
     var uid = downSource?.uid ?? pageSource?.uid ?? "";
 
-    // TODO: handle br:// absolute links.
-    if (!parsed.isAbsolute && uid != "") {
-      var resources = Provider.of<ResourcesModel>(context, listen: false);
-      var sessionID = pageSource?.sessionID ?? 0;
-      var parentPageID = pageSource?.pageID ?? 0;
+    if (parsed.scheme != "" && parsed.scheme == "br") {
+      if (!await launchUrl(Uri.parse(url))) {
+        showErrorSnackbar(context, "Could not launch $url");
+      }
+    }
 
-      resources.fetchPage(uid, parsed.pathSegments, sessionID, parentPageID);
-    } else if (!await launchUrl(Uri.parse(url))) {
-      throw 'Could not launch $url';
+    // Handle absolute br:// link.
+    if (parsed.host != "") {
+      uid = parsed.host;
+    }
+
+    if (uid == "") {
+      throw "Cannot follow br:// link without target UID";
+    }
+
+    var resources = Provider.of<ResourcesModel>(context, listen: false);
+    var sessionID = pageSource?.sessionID ?? 0;
+    var parentPageID = pageSource?.pageID ?? 0;
+    try {
+      await resources.fetchPage(
+          uid, parsed.pathSegments, sessionID, parentPageID);
+    } catch (exception) {
+      showErrorSnackbar(context, "Unable to fetch page: $exception");
     }
   }
 

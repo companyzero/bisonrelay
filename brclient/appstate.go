@@ -12,6 +12,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -2238,9 +2239,31 @@ func (as *appState) fetchPage(uid clientintf.UserID, pagePath string, session,
 	if len(pagePath) < 1 {
 		return fmt.Errorf("page path is empty")
 	}
-	path := strings.Split(pagePath, "/")
+
+	pageURL, err := url.Parse(pagePath)
+	if err != nil {
+		return fmt.Errorf("unable to parse URL: %v", err)
+	}
+
+	if pageURL.Scheme == "http" || pageURL.Scheme == "https" {
+		// TODO: open external viewer?
+		return fmt.Errorf("http[s] links not supported")
+	}
+
+	if pageURL.Scheme != "" && pageURL.Scheme != "br" {
+		return fmt.Errorf("unsupported scheme %q", pageURL.Scheme)
+	}
+
+	path := strings.Split(pageURL.Path, "/")
 	for len(path) > 0 && path[0] == "" {
 		path = path[1:]
+	}
+
+	// Handle absolute links to other users.
+	if pageURL.Host != "" {
+		if err := uid.FromString(pageURL.Host); err != nil {
+			return fmt.Errorf("invalid host in link: %q", pageURL.Host)
+		}
 	}
 
 	// If it's for a local page, fetch it directly.
@@ -2248,6 +2271,7 @@ func (as *appState) fetchPage(uid clientintf.UserID, pagePath string, session,
 		return as.c.FetchLocalResource(path, nil)
 	}
 
+	// Check we know the user.
 	userNick, err := as.c.UserNick(uid)
 	if err != nil {
 		return err
