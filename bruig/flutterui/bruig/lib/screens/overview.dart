@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/components/route_error.dart';
 import 'package:bruig/components/sidebar.dart';
+import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/models/downloads.dart';
 import 'package:bruig/models/feed.dart';
@@ -137,33 +138,27 @@ class _OverviewScreenState extends State<OverviewScreen> {
   void goOnline() async {
     try {
       await Golib.goOnline();
-      snackBar
-          .append(SnackBarMessage("Going online...", false, DateTime.now()));
+      showSuccessSnackbar(context, "Going online...");
     } catch (exception) {
-      snackBar.append(SnackBarMessage(
-          "Unable to go online: $exception", true, DateTime.now()));
+      showErrorSnackbar(context, "Unable to go online: $exception");
     }
   }
 
   void remainOffline() async {
     try {
       await Golib.remainOffline();
-      snackBar
-          .append(SnackBarMessage("Going offline...", false, DateTime.now()));
+      showSuccessSnackbar(context, "Going offline...");
     } catch (exception) {
-      snackBar.append(SnackBarMessage(
-          "Unable to go offline: $exception", true, DateTime.now()));
+      showErrorSnackbar(context, "Unable to go offline: $exception");
     }
   }
 
   void skipWalletCheck() async {
     try {
       await Golib.skipWalletCheck();
-      snackBar.append(SnackBarMessage(
-          "Skipping next wallet check...", false, DateTime.now()));
+      showSuccessSnackbar(context, "Skipping next wallet check...");
     } catch (exception) {
-      snackBar.append(SnackBarMessage(
-          "Unable to skip wallet check: $exception", true, DateTime.now()));
+      showErrorSnackbar(context, "Unable to skip wallet check: $exception");
     }
   }
 

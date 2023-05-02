@@ -1,13 +1,13 @@
 import 'dart:convert';
 
 import 'package:bruig/models/feed.dart';
-import 'package:bruig/models/snackbar.dart';
 import 'package:bruig/screens/feed.dart';
 import 'package:bruig/util.dart';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
+import 'package:bruig/components/snackbars.dart';
 
 void showAltTextModal(BuildContext context, String mime, String id,
     TextEditingController contentCtrl) {
@@ -86,15 +86,13 @@ class _AddAltTextState extends State<AddAltText> {
 
 class NewPostScreen extends StatefulWidget {
   final FeedModel feed;
-  final SnackBarModel snackBar;
-  const NewPostScreen(this.feed, this.snackBar, {Key? key}) : super(key: key);
+  const NewPostScreen(this.feed, {Key? key}) : super(key: key);
 
   @override
   State<NewPostScreen> createState() => _NewPostScreenState();
 }
 
 class _NewPostScreenState extends State<NewPostScreen> {
-  SnackBarModel get snackBar => widget.snackBar;
   TextEditingController contentCtrl = TextEditingController();
   bool loading = false;
 
@@ -134,12 +132,10 @@ class _NewPostScreenState extends State<NewPostScreen> {
         contentCtrl.clear();
         estimatedSize = 0;
       });
-      snackBar
-          .append(SnackBarMessage("Created new post", false, DateTime.now()));
+      showSuccessSnackbar(context, "Created new post");
       Navigator.of(context).pushNamed(FeedScreen.routeName);
     } catch (exception) {
-      snackBar.append(SnackBarMessage(
-          "Unable to create post: $exception", true, DateTime.now()));
+      showErrorSnackbar(context, "Unable to create post: $exception");
     } finally {
       setState(() {
         loading = false;
@@ -154,8 +150,7 @@ class _NewPostScreenState extends State<NewPostScreen> {
         estimatedSize = estSize;
       });
     } catch (exception) {
-      snackBar.append(SnackBarMessage(
-          "Unable to estimate post size: $exception", true, DateTime.now()));
+      showErrorSnackbar(context, "Unable to estimate post size: $exception");
     }
   }
 
@@ -172,8 +167,8 @@ class _NewPostScreenState extends State<NewPostScreen> {
     if (filePath == "") return;
 
     if (f.size > 1024 * 1024) {
-      snackBar.append(
-          SnackBarMessage("File size is too large", true, DateTime.now()));
+      showErrorSnackbar(
+          context, "File size is too large ${f.size} > ${1024 * 1024}");
       return;
     }
 
@@ -192,8 +187,7 @@ class _NewPostScreenState extends State<NewPostScreen> {
         mime = "image/png";
         break;
       default:
-        snackBar.append(SnackBarMessage(
-            "Unable to recognize type of embed", true, DateTime.now()));
+        showErrorSnackbar(context, "Unable to recognize type of embed");
         return;
     }
 

@@ -45,8 +45,7 @@ final List<MainMenuItem> mainMenu = [
   MainMenuItem(
     "News Feed",
     FeedScreen.routeName,
-    (context) => Consumer<SnackBarModel>(
-        builder: (context, snackBar, child) => FeedScreen(snackBar)),
+    (context) => const FeedScreen(),
     (context) => const FeedScreenTitle(),
     const SidebarIcon(Icons.list_alt, false),
     const SidebarIcon(Icons.new_releases_outlined, true),
