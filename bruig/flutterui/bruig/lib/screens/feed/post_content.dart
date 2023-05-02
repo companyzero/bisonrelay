@@ -1,6 +1,7 @@
 import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/util.dart';
 import 'package:bruig/components/md_elements.dart';
+import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/models/feed.dart';
 import 'package:flutter/material.dart';
@@ -8,7 +9,6 @@ import 'package:golib_plugin/golib_plugin.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:bruig/components/user_context_menu.dart';
-import 'package:bruig/models/snackbar.dart';
 
 class PostContentScreenArgs {
   final FeedPostModel post;
@@ -23,9 +23,9 @@ class PostContentScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer3<ClientModel, FeedModel, SnackBarModel>(
-        builder: (context, client, feed, snackBar, child) =>
-            _PostContentScreenForArgs(args, client, tabChange, feed, snackBar));
+    return Consumer2<ClientModel, FeedModel>(
+        builder: (context, client, feed, child) =>
+            _PostContentScreenForArgs(args, client, tabChange, feed));
   }
 }
 
@@ -34,9 +34,8 @@ class _PostContentScreenForArgs extends StatefulWidget {
   final ClientModel client;
   final Function tabChange;
   final FeedModel feed;
-  final SnackBarModel snackBar;
   const _PostContentScreenForArgs(
-      this.args, this.client, this.tabChange, this.feed, this.snackBar,
+      this.args, this.client, this.tabChange, this.feed,
       {Key? key})
       : super(key: key);
 
@@ -271,7 +270,6 @@ class _CommentWState extends State<_CommentW> {
 }
 
 class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
-  SnackBarModel get snackBar => widget.snackBar;
   bool loading = false;
   String markdownData = "";
   Iterable<FeedCommentModel> comments = [];
@@ -306,7 +304,7 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
         isKXSearchingAuthor = newIsKxSearching;
       });
     } catch (exception) {
-      snackBar.error('Unable to load content: $exception');
+      showErrorSnackbar(context, 'Unable to load content: $exception');
     } finally {
       setState(() => loading = false);
     }
@@ -359,7 +357,7 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
         return;
       }
 
-      snackBar.error("Unable to KX search post author: $exception");
+      showErrorSnackbar(context, "Unable to KX search post author: $exception");
     }
   }
 
@@ -413,7 +411,7 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
       await Golib.subscribeToPostsAndFetch(summ.authorID, summ.id);
       setState(() => sentSubscribeAttempt = true);
     } catch (exception) {
-      snackBar.error("Unable to subscribe to posts: $exception");
+      showErrorSnackbar(context, "Unable to subscribe to posts: $exception");
     }
   }
 

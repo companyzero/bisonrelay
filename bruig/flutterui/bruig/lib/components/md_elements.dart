@@ -2,10 +2,10 @@ import 'dart:convert';
 import 'dart:ui';
 import 'dart:typed_data';
 // import 'package:dart_vlc/dart_vlc.dart' as vlc;
-import 'package:bruig/components/dcr_input.dart';
 import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/components/info_grid.dart';
 import 'package:bruig/components/inputs.dart';
+import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/models/downloads.dart';
 import 'package:bruig/models/resources.dart';
 import 'package:flutter/foundation.dart';
@@ -17,7 +17,6 @@ import 'package:tuple/tuple.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:bruig/theme_manager.dart';
 import 'package:bruig/components/image_dialog.dart';
-import 'package:bruig/models/snackbar.dart';
 
 class DownloadSource {
   final String uid;
@@ -467,15 +466,14 @@ class Downloadable extends StatelessWidget {
       var downloads = Provider.of<DownloadsModel>(context, listen: false);
       var source = Provider.of<DownloadSource?>(context, listen: false);
       var page = Provider.of<PagesSource?>(context, listen: false);
-      var snackBar = Provider.of<SnackBarModel>(context);
       var uid = source?.uid ?? page?.uid ?? "";
       if (uid == "") {
         throw "UID in parent DownloadsSource/PagesSource not found";
       }
       await downloads.getUnknownUserFile(uid, fid);
-      snackBar.success("Added $fid to download queue");
+      showSuccessSnackbar(context, "Added $fid to download queue");
     } catch (exception) {
-      snackBar.error("Unable to start download: $exception");
+      showErrorSnackbar(context, "Unable to start download: $exception");
     }
   }
 

@@ -1,19 +1,17 @@
+import 'package:bruig/components/snackbars.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:golib_plugin/util.dart';
-import 'package:bruig/models/snackbar.dart';
 
 class LNAccountsPage extends StatefulWidget {
-  final SnackBarModel snackBar;
-  const LNAccountsPage(this.snackBar, {super.key});
+  const LNAccountsPage({super.key});
 
   @override
   State<LNAccountsPage> createState() => _LNAccountsPageState();
 }
 
 class _LNAccountsPageState extends State<LNAccountsPage> {
-  SnackBarModel get snackBar => widget.snackBar;
   TextEditingController nameCtrl = TextEditingController();
   List<Account> accounts = [];
 
@@ -24,14 +22,14 @@ class _LNAccountsPageState extends State<LNAccountsPage> {
         accounts = newAccounts;
       });
     } catch (exception) {
-      snackBar.error("Unable to load accounts: $exception");
+      showErrorSnackbar(context, "Unable to load accounts: $exception");
     }
   }
 
   void createAccount() async {
     var name = nameCtrl.text.trim();
     if (name.isEmpty) {
-      snackBar.error("New account name cannot be empty");
+      showErrorSnackbar(context, "New account name cannot be empty");
       return;
     }
 
@@ -40,7 +38,7 @@ class _LNAccountsPageState extends State<LNAccountsPage> {
       await Golib.createAccount(name);
       reloadAccounts();
     } catch (exception) {
-      snackBar.error("Unable to create new account: $exception");
+      showErrorSnackbar(context, "Unable to create new account: $exception");
     }
   }
 
@@ -53,6 +51,7 @@ class _LNAccountsPageState extends State<LNAccountsPage> {
   @override
   Widget build(BuildContext context) {
     var theme = Theme.of(context);
+    var textColor = theme.focusColor;
     var secondaryTextColor = theme.dividerColor;
     var darkTextColor = theme.indicatorColor;
     var dividerColor = theme.highlightColor;

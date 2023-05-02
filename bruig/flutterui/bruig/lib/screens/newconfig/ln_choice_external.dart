@@ -1,22 +1,19 @@
 import 'dart:io';
 
+import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/components/buttons.dart';
 import 'package:bruig/models/newconfig.dart';
 import 'package:flutter/material.dart';
-import 'package:bruig/models/snackbar.dart';
 
 class LNExternalWalletPage extends StatefulWidget {
   final NewConfigModel newconf;
-  final SnackBarModel snackBar;
-  const LNExternalWalletPage(this.newconf, this.snackBar, {Key? key})
-      : super(key: key);
+  const LNExternalWalletPage(this.newconf, {Key? key}) : super(key: key);
 
   @override
   State<LNExternalWalletPage> createState() => _LNExternalWalletPageState();
 }
 
 class _LNExternalWalletPageState extends State<LNExternalWalletPage> {
-  SnackBarModel get snackBar => widget.snackBar;
   final TextEditingController hostCtrl = TextEditingController();
   final TextEditingController tlsCtrl = TextEditingController();
   final TextEditingController macaroonCtrl = TextEditingController();
@@ -27,15 +24,15 @@ class _LNExternalWalletPageState extends State<LNExternalWalletPage> {
     var tls = tlsCtrl.text.trim();
     var macaroon = macaroonCtrl.text.trim();
     if (host == "") {
-      snackBar.error("Host cannot be empty");
+      showErrorSnackbar(context, "Host cannot be empty");
       return;
     }
     if (!File(tls).existsSync()) {
-      snackBar.error("TLS path $tls does not exist");
+      showErrorSnackbar(context, "TLS path $tls does not exist");
       return;
     }
     if (!File(macaroon).existsSync()) {
-      snackBar.error("Macaroon path $macaroon does not exist");
+      showErrorSnackbar(context, "Macaroon path $macaroon does not exist");
       return;
     }
     setState(() {
@@ -44,7 +41,8 @@ class _LNExternalWalletPageState extends State<LNExternalWalletPage> {
     try {
       var res = await widget.newconf.tryExternalDcrlnd(host, tls, macaroon);
       if (res.chains.length != 1) {
-        snackBar.error("Wrong number of chains ($res.chains.length)");
+        showErrorSnackbar(
+            context, "Wrong number of chains ($res.chains.length)");
         return;
       }
       String wantNetwork = "";
@@ -60,13 +58,14 @@ class _LNExternalWalletPageState extends State<LNExternalWalletPage> {
           break;
       }
       if (res.chains[0].network != wantNetwork) {
-        snackBar.error(
+        showErrorSnackbar(context,
             "LN running in the wrong network (${res.chains[0].network} vs $wantNetwork)");
         return;
       }
       Navigator.of(context).pushNamed("/newconf/server");
     } catch (exception) {
-      snackBar.error("Unable to connect to external dcrlnd: $exception");
+      showErrorSnackbar(
+          context, "Unable to connect to external dcrlnd: $exception");
     } finally {
       setState(() {
         loading = false;

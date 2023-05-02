@@ -1,12 +1,11 @@
 import 'package:bruig/components/buttons.dart';
+import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/models/client.dart';
-import 'package:bruig/models/snackbar.dart';
 import 'package:bruig/models/downloads.dart';
 import 'package:bruig/util.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/util.dart';
-import 'package:provider/provider.dart';
 
 class ConfirmFileDownloadScreen extends StatelessWidget {
   final ClientModel client;
@@ -23,7 +22,6 @@ class ConfirmFileDownloadScreen extends StatelessWidget {
     var size = humanReadableSize(fd.metadata.size);
     var theme = Theme.of(context);
     var textColor = theme.focusColor;
-    var snackBar = Provider.of<SnackBarModel>(context);
 
     reply(bool res) async {
       try {
@@ -32,7 +30,8 @@ class ConfirmFileDownloadScreen extends StatelessWidget {
         }
         await downloads.confirmFileDownload(fd.uid, fd.fid, res);
       } catch (exception) {
-        snackBar.error("Unable to confirm file download: $exception");
+        showErrorSnackbar(
+            context, "Unable to confirm file download: $exception");
       } finally {
         Navigator.pop(context);
       }

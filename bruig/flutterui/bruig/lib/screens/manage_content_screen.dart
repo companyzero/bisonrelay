@@ -4,7 +4,49 @@ import 'package:provider/provider.dart';
 import 'package:bruig/models/downloads.dart';
 import 'package:bruig/screens/manage_content/downloads.dart';
 import 'package:bruig/components/manage_bar.dart';
-import 'package:bruig/models/snackbar.dart';
+
+/*
+
+  @override
+  Widget build(BuildContext context) {
+    var theme = Theme.of(context);
+    var backgroundColor = theme.backgroundColor;
+    return Consumer<ThemeNotifier>(
+      builder: (context, theme, _) => Container(
+        margin: const EdgeInsets.all(1),
+        decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(3), color: backgroundColor),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Row(children: [
+              const Expanded(
+                child: Text("News Feed",
+                    style: TextStyle(
+                      fontSize: 20,
+                    )),
+              ),
+              ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(context, rootNavigator: true)
+                        .pushNamed('/newPost');
+                  },
+                  child: const Text("New Post")),
+              const SizedBox(width: 20)
+            ]),
+            const SizedBox(height: 20),
+            Expanded(
+                child: 
+            )),
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+*/
 
 class ManageContentScreenTitle extends StatelessWidget {
   const ManageContentScreenTitle({super.key});
@@ -18,23 +60,21 @@ class ManageContentScreenTitle extends StatelessWidget {
 
 class ManageContentScreen extends StatefulWidget {
   static const routeName = '/manageContent';
-  final SnackBarModel snackBar;
-  const ManageContentScreen(this.snackBar, {Key? key}) : super(key: key);
+  const ManageContentScreen({Key? key}) : super(key: key);
 
   @override
   State<ManageContentScreen> createState() => _ManageContentScreenState();
 }
 
 class _ManageContentScreenState extends State<ManageContentScreen> {
-  SnackBarModel get snackBar => widget.snackBar;
   int tabIndex = 0;
 
   Widget activeTab() {
     switch (tabIndex) {
       case 0:
-        return ManageContent(0, snackBar);
+        return const ManageContent(0);
       case 1:
-        return ManageContent(1, snackBar);
+        return const ManageContent(1);
       case 2:
         return Consumer<DownloadsModel>(
             builder: (context, downloads, child) => DownloadsScreen(downloads));

@@ -1,7 +1,8 @@
 import 'package:bruig/components/buttons.dart';
+import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/models/newconfig.dart';
 import 'package:flutter/material.dart';
-import 'package:bruig/models/snackbar.dart';
+import 'package:path/path.dart';
 
 const _warnMsg = "There is an existing, incomplete install of"
     "the wallet. If this really was an unusued wallet, delete "
@@ -10,15 +11,13 @@ const _warnMsg = "There is an existing, incomplete install of"
 
 class DeleteOldWalletPage extends StatefulWidget {
   final NewConfigModel newconf;
-  final SnackBarModel snackBar;
-  const DeleteOldWalletPage(this.newconf, this.snackBar, {super.key});
+  const DeleteOldWalletPage(this.newconf, {super.key});
 
   @override
   State<DeleteOldWalletPage> createState() => _DeleteOldWalletPageState();
 }
 
 class _DeleteOldWalletPageState extends State<DeleteOldWalletPage> {
-  SnackBarModel get snackBar => widget.snackBar;
   NewConfigModel get newconf => widget.newconf;
   bool deleteAccepted = false;
   bool deleting = false;
@@ -30,7 +29,7 @@ class _DeleteOldWalletPageState extends State<DeleteOldWalletPage> {
     try {
       await newconf.deleteLNWalletDir();
     } catch (exception) {
-      snackBar.error("Unable to delete wallet dir: $exception");
+      showErrorSnackbar(context, "Unable to delete wallet dir: $exception");
       return;
     }
     Navigator.of(context).pushReplacementNamed("/newconf/lnChoice/internal");

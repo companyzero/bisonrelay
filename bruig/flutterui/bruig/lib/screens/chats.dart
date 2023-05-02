@@ -11,7 +11,6 @@ import 'package:golib_plugin/golib_plugin.dart';
 import 'package:provider/provider.dart';
 import 'package:bruig/components/chat/active_chat.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
-import 'package:bruig/models/snackbar.dart';
 
 class ChatsScreenTitle extends StatelessWidget {
   const ChatsScreenTitle({super.key});
@@ -48,9 +47,7 @@ class ChatsScreen extends StatefulWidget {
   static const routeName = '/chat';
   final ClientModel client;
   final AppNotifications ntfns;
-  final SnackBarModel snackBar;
-  const ChatsScreen(this.client, this.ntfns, this.snackBar, {Key? key})
-      : super(key: key);
+  const ChatsScreen(this.client, this.ntfns, {Key? key}) : super(key: key);
 
   @override
   State<ChatsScreen> createState() => _ChatsScreenState();
@@ -193,7 +190,6 @@ know other people, they'll be able to connect you with them.
 }
 
 class _ChatsScreenState extends State<ChatsScreen> {
-  SnackBarModel get snackBar => widget.snackBar;
   ClientModel get client => widget.client;
   AppNotifications get ntfns => widget.ntfns;
   ServerSessionState connState = ServerSessionState.empty();
@@ -290,7 +286,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
           color: backgroundColor,
           borderRadius: BorderRadius.circular(3),
         ),
-        child: ActiveChat(client, inputFocusNode, snackBar),
+        child: ActiveChat(client, inputFocusNode),
       )),
     ]);
   }

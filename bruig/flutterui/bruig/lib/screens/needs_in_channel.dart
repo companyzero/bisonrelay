@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:bruig/components/dcr_input.dart';
 import 'package:bruig/components/buttons.dart';
 import 'package:bruig/components/info_grid.dart';
+import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/models/notifications.dart';
 import 'package:flutter/material.dart';
@@ -10,13 +11,11 @@ import 'package:golib_plugin/golib_plugin.dart';
 import 'package:golib_plugin/util.dart';
 import 'package:tuple/tuple.dart';
 import 'package:bruig/components/empty_widget.dart';
-import 'package:bruig/models/snackbar.dart';
 
 class NeedsInChannelScreen extends StatefulWidget {
   final AppNotifications ntfns;
   final ClientModel client;
-  final SnackBarModel snackBar;
-  const NeedsInChannelScreen(this.ntfns, this.client, this.snackBar, {Key? key})
+  const NeedsInChannelScreen(this.ntfns, this.client, {Key? key})
       : super(key: key);
 
   @override
@@ -24,7 +23,6 @@ class NeedsInChannelScreen extends StatefulWidget {
 }
 
 class _NeedsInChannelScreenState extends State<NeedsInChannelScreen> {
-  SnackBarModel get snackBar => widget.snackBar;
   ClientModel get client => widget.client;
 
   String addr = "";
@@ -49,7 +47,7 @@ class _NeedsInChannelScreenState extends State<NeedsInChannelScreen> {
         addr = res;
       });
     } catch (exception) {
-      snackBar.error("Unable to load deposit address: $exception");
+      showErrorSnackbar(context, "Unable to load deposit address: $exception");
     }
   }
 
@@ -91,7 +89,7 @@ channel is confirmed to request a new inbound channel''';
         }
       }
     } catch (exception) {
-      snackBar.error("Unable to update wallet balance: $exception");
+      showErrorSnackbar(context, "Unable to update wallet balance: $exception");
     } finally {
       if (resetTimer) {
         updateTimer =
@@ -102,12 +100,13 @@ channel is confirmed to request a new inbound channel''';
 
   void requestRecvCapacity() async {
     if (serverCtrl.text == "") {
-      snackBar.error("Liquidity provider server cannot be empty");
+      showErrorSnackbar(context, "Liquidity provider server cannot be empty");
       return;
     }
 
     if (amountCtrl.amount < 0.00001) {
-      snackBar.error("Channel size to request liquidity is too low");
+      showErrorSnackbar(
+          context, "Channel size to request liquidity is too low");
       return;
     }
 
@@ -120,7 +119,8 @@ channel is confirmed to request a new inbound channel''';
         amountCtrl.clear();
       });
     } catch (exception) {
-      snackBar.error("Unable to request receive capacity: $exception");
+      showErrorSnackbar(
+          context, "Unable to request receive capacity: $exception");
     } finally {
       setState(() => loading = false);
       updateBalance(false);
@@ -152,7 +152,7 @@ cNPr8Y+sSs2MHf6xMNBQzV4KuIlPIg==
         });
       }
     } catch (exception) {
-      snackBar.error("Unable to verify network: $exception");
+      showErrorSnackbar(context, "Unable to verify network: $exception");
     }
   }
 

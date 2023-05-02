@@ -1,3 +1,4 @@
+import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/components/users_dropdown.dart';
 import 'package:bruig/models/client.dart';
 import 'package:flutter/material.dart';
@@ -6,7 +7,6 @@ import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:provider/provider.dart';
-import 'package:bruig/models/snackbar.dart';
 
 typedef RemoveContentCB = Future<void> Function(String fid, String? uid);
 
@@ -14,9 +14,7 @@ class SharedContentFile extends StatefulWidget {
   final SharedFileAndShares file;
   final RemoveContentCB removeContentCB;
   final ClientModel client;
-  final SnackBarModel snackBar;
-  const SharedContentFile(
-      this.file, this.removeContentCB, this.client, this.snackBar,
+  const SharedContentFile(this.file, this.removeContentCB, this.client,
       {Key? key})
       : super(key: key);
 
@@ -25,7 +23,6 @@ class SharedContentFile extends StatefulWidget {
 }
 
 class _SharedContentFileState extends State<SharedContentFile> {
-  SnackBarModel get snackBar => widget.snackBar;
   bool loading = false;
 
   removeContent(BuildContext context, String? uid) async {
@@ -33,7 +30,7 @@ class _SharedContentFileState extends State<SharedContentFile> {
     try {
       await widget.removeContentCB(widget.file.sf.fid, uid);
     } catch (exception) {
-      snackBar.error('Unable to unshare content: $exception');
+      showErrorSnackbar(context, 'Unable to unshare content: $exception');
     } finally {
       setState(() => loading = false);
     }
@@ -118,7 +115,6 @@ class SharedContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    var snackBar = Provider.of<SnackBarModel>(context);
     var theme = Theme.of(context);
     var backgroundColor = theme.backgroundColor;
     var otherBackgroundColor = theme.indicatorColor;
@@ -134,8 +130,8 @@ class SharedContent extends StatelessWidget {
                     padding: const EdgeInsets.only(
                         left: 8, top: 0, right: 8, bottom: 0),
                     color: index.isOdd ? backgroundColor : otherBackgroundColor,
-                    child: SharedContentFile(
-                        files[index], removeContent, client, snackBar)),
+                    child:
+                        SharedContentFile(files[index], removeContent, client)),
                 onTap: fileSelectedCB != null
                     ? () => fileSelectedCB!(files[index].sf)
                     : null);
@@ -149,16 +145,13 @@ typedef AddContentCB = Future<void> Function(
 
 class AddContentPanel extends StatefulWidget {
   final AddContentCB addContentCB;
-  final SnackBarModel snackBar;
-  const AddContentPanel(this.addContentCB, this.snackBar, {Key? key})
-      : super(key: key);
+  const AddContentPanel(this.addContentCB, {Key? key}) : super(key: key);
 
   @override
   State<AddContentPanel> createState() => _AddContentPanelState();
 }
 
 class _AddContentPanelState extends State<AddContentPanel> {
-  SnackBarModel get snackBar => widget.snackBar;
   bool loading = false;
   TextEditingController fnameCtrl = TextEditingController();
   TextEditingController toCtrl = TextEditingController();
@@ -193,7 +186,7 @@ class _AddContentPanelState extends State<AddContentPanel> {
         toCtrl.clear();
       });
     } catch (exception) {
-      snackBar.error('Unable to share content: $exception');
+      showErrorSnackbar(context, 'Unable to share content: $exception');
     } finally {
       setState(() => loading = false);
     }
@@ -325,15 +318,13 @@ class ManageContentScreenArgs {
 class ManageContent extends StatefulWidget {
   static String routeName = "/manageContent";
   final int view;
-  final SnackBarModel snackBar;
-  const ManageContent(this.view, this.snackBar, {Key? key}) : super(key: key);
+  const ManageContent(this.view, {Key? key}) : super(key: key);
 
   @override
   State<ManageContent> createState() => _ManageContentState();
 }
 
 class _ManageContentState extends State<ManageContent> {
-  SnackBarModel get snackBar => widget.snackBar;
   List<SharedFileAndShares> files = [];
 
   Future<void> loadSharedContent() async {
@@ -393,7 +384,7 @@ class _ManageContentState extends State<ManageContent> {
                       removeContent,
                       fileSelCB,
                     )
-                  : AddContentPanel(addContent, snackBar),
+                  : AddContentPanel(addContent),
             ));
   }
 }

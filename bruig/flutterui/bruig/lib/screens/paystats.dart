@@ -1,6 +1,6 @@
 import 'package:bruig/components/info_grid.dart';
+import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/models/client.dart';
-import 'package:bruig/models/snackbar.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
@@ -20,16 +20,13 @@ class PayStatsScreenTitle extends StatelessWidget {
 class PayStatsScreen extends StatefulWidget {
   static String routeName = "/payStats";
   final ClientModel client;
-  final SnackBarModel snackBar;
-  const PayStatsScreen(this.client, this.snackBar, {Key? key})
-      : super(key: key);
+  const PayStatsScreen(this.client, {Key? key}) : super(key: key);
 
   @override
   State<PayStatsScreen> createState() => _PayStatsScreenState();
 }
 
 class _PayStatsScreenState extends State<PayStatsScreen> {
-  SnackBarModel get snackBar => widget.snackBar;
   ClientModel get client => widget.client;
   List<Tuple3<String, String, UserPayStats>> stats = []; // UID,nick,stat
   int selectedIndex = -1;
@@ -58,7 +55,7 @@ class _PayStatsScreenState extends State<PayStatsScreen> {
         }
       });
     } catch (exception) {
-      snackBar.error("Unable to list payment stats: $exception");
+      showErrorSnackbar(context, "Unable to list payment stats: $exception");
     }
   }
 
@@ -81,7 +78,7 @@ class _PayStatsScreenState extends State<PayStatsScreen> {
         }
       });
     } catch (exception) {
-      snackBar.error("Unable to fetch user pay stats: $exception");
+      showErrorSnackbar(context, "Unable to fetch user pay stats: $exception");
     }
   }
 
@@ -90,7 +87,7 @@ class _PayStatsScreenState extends State<PayStatsScreen> {
       //var newUserStats = await Golib.clearPayStats(stats[index].item1);
       listPayStats();
     } catch (exception) {
-      snackBar.error("Unable to clear stats: $exception");
+      showErrorSnackbar(context, "Unable to clear stats: $exception");
     }
   }
 

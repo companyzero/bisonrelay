@@ -1,12 +1,12 @@
 import 'package:bruig/components/copyable.dart';
 import 'package:bruig/components/empty_widget.dart';
+import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/models/client.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:golib_plugin/util.dart';
 import 'package:provider/provider.dart';
-import 'package:bruig/models/snackbar.dart';
 
 class VerifyInviteScreen extends StatefulWidget {
   const VerifyInviteScreen({Key? key}) : super(key: key);
@@ -48,8 +48,7 @@ class _VerifyInviteScreenState extends State<VerifyInviteScreen> {
         redeemed = res;
       });
     } catch (exception) {
-      var snackBar = Provider.of<SnackBarModel>(context);
-      snackBar.error("Unable to redeem funds: $exception");
+      showErrorSnackbar(context, "Unable to redeem funds: $exception");
       setState(() => redeeming = false);
     }
   }

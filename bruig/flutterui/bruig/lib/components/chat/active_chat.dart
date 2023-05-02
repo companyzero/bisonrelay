@@ -6,14 +6,12 @@ import 'package:flutter/material.dart';
 import 'package:bruig/components/profile.dart';
 import 'package:bruig/components/chat/messages.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
-import 'package:bruig/models/snackbar.dart';
 import 'package:bruig/components/chat/input.dart';
 
 class ActiveChat extends StatefulWidget {
   final ClientModel client;
   final FocusNode inputFocusNode;
-  final SnackBarModel snackBar;
-  const ActiveChat(this.client, this.inputFocusNode, this.snackBar, {Key? key})
+  const ActiveChat(this.client, this.inputFocusNode, {Key? key})
       : super(key: key);
 
   @override
@@ -23,7 +21,6 @@ class ActiveChat extends StatefulWidget {
 /// TODO: Figure out a way to estimate list size to set initialOffset.
 /// this way we can get rid of the "initial jump flicker"
 class _ActiveChatState extends State<ActiveChat> {
-  SnackBarModel get snackBar => widget.snackBar;
   ClientModel get client => widget.client;
   FocusNode get inputFocusNode => widget.inputFocusNode;
   ChatModel? chat;
@@ -59,7 +56,7 @@ class _ActiveChatState extends State<ActiveChat> {
         });
       } catch (exception) {
         if (mounted) {
-          snackBar.error("Unable to send message: $exception");
+          showErrorSnackbar(context, "Unable to send message: $exception");
         }
       }
     });
@@ -102,7 +99,7 @@ class _ActiveChatState extends State<ActiveChat> {
       if (chat.isGC) {
         return const ManageGCScreen();
       } else {
-        return UserProfile(client, profile, snackBar);
+        return UserProfile(client, profile);
       }
     }
     //inputFocusNode.requestFocus();

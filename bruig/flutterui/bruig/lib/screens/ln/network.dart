@@ -1,14 +1,15 @@
 import 'package:bruig/components/dcr_input.dart';
+import 'package:bruig/components/empty_widget.dart';
+import 'package:bruig/components/snackbars.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:golib_plugin/util.dart';
 import 'package:bruig/components/copyable.dart';
-import 'package:bruig/models/snackbar.dart';
 
 class LNNetworkPage extends StatefulWidget {
-  final SnackBarModel snackBar;
-  const LNNetworkPage(this.snackBar, {Key? key}) : super(key: key);
+  const LNNetworkPage({Key? key}) : super(key: key);
 
   @override
   State<LNNetworkPage> createState() => _LNNetworkPageState();
@@ -201,7 +202,6 @@ class _NodeInfo extends StatelessWidget {
 }
 
 class _LNNetworkPageState extends State<LNNetworkPage> {
-  SnackBarModel get snackBar => widget.snackBar;
   bool loading = true;
   bool connecting = false;
   bool querying = false;
@@ -234,7 +234,7 @@ class _LNNetworkPageState extends State<LNNetworkPage> {
         serverNode = newServerNode;
       });
     } catch (exception) {
-      snackBar.error("Unable to load network info: $exception");
+      showErrorSnackbar(context, "Unable to load network info: $exception");
     } finally {
       setState(() {
         loading = false;
@@ -254,7 +254,7 @@ class _LNNetworkPageState extends State<LNNetworkPage> {
         peers = newPeers;
       });
     } catch (exception) {
-      snackBar.error("Unable to connect to peer: $exception");
+      showErrorSnackbar(context, "Unable to connect to peer: $exception");
     } finally {
       setState(() {
         connecting = false;
@@ -279,7 +279,7 @@ class _LNNetworkPageState extends State<LNNetworkPage> {
         queryRouteRes = newQueryRouteRes;
       });
     } catch (exception) {
-      snackBar.error("Unable to query route: $exception");
+      showErrorSnackbar(context, "Unable to query route: $exception");
     } finally {
       setState(() {
         querying = false;

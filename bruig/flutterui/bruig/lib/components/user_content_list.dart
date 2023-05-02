@@ -1,9 +1,8 @@
+import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/models/client.dart';
-import 'package:bruig/models/snackbar.dart';
 import 'package:bruig/models/downloads.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
-import 'package:provider/provider.dart';
 
 typedef DownloadContentCB = Future<FileDownloadModel> Function(
     ReceivedFile file);
@@ -13,9 +12,7 @@ class SharedContentFile extends StatefulWidget {
   final ChatModel chat;
   final DownloadContentCB downloadContentCB;
   final FileDownloadModel? fd;
-  final SnackBarModel snackBar;
-  const SharedContentFile(
-      this.file, this.chat, this.fd, this.downloadContentCB, this.snackBar,
+  const SharedContentFile(this.file, this.chat, this.fd, this.downloadContentCB,
       {Key? key})
       : super(key: key);
 
@@ -24,7 +21,6 @@ class SharedContentFile extends StatefulWidget {
 }
 
 class _SharedContentFileState extends State<SharedContentFile> {
-  SnackBarModel get snackBar => widget.snackBar;
   bool loading = false;
   FileDownloadModel? fd;
 
@@ -34,7 +30,7 @@ class _SharedContentFileState extends State<SharedContentFile> {
       fd = await widget.downloadContentCB(widget.file);
       fd!.addListener(fdUpdated);
     } catch (exception) {
-      snackBar.error('Unable to download content: $exception');
+      showErrorSnackbar(context, 'Unable to download content: $exception');
     } finally {
       setState(() => loading = false);
     }
@@ -50,7 +46,7 @@ class _SharedContentFileState extends State<SharedContentFile> {
       */
     } else {
       // FIXME: externally open file.
-      snackBar.error(
+      showErrorSnackbar(context,
           "Don't know how to open file '${widget.file.metadata.filename}'");
     }
   }
@@ -58,7 +54,7 @@ class _SharedContentFileState extends State<SharedContentFile> {
   void fdUpdated() {
     setState(() {});
     if ((fd?.diskPath ?? "") != "") {
-      snackBar.success("Download ${fd!.diskPath} completed!");
+      showSuccessSnackbar(context, "Download ${fd!.diskPath} completed!");
     }
   }
 
@@ -169,7 +165,6 @@ class UserContentListW extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    var snackBar = Provider.of<SnackBarModel>(context);
     return ListView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -183,8 +178,7 @@ class UserContentListW extends StatelessWidget {
                 chat,
                 downloads.getDownload(
                     content.files[index].uid, content.files[index].fid),
-                downloadContent,
-                snackBar));
+                downloadContent));
       },
     );
   }

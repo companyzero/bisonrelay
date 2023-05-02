@@ -11,7 +11,6 @@ import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:golib_plugin/util.dart';
 import 'package:bruig/components/ln_management_bar.dart';
-import 'package:bruig/models/snackbar.dart';
 
 class LNScreenTitle extends StatelessWidget {
   const LNScreenTitle({super.key});
@@ -25,33 +24,31 @@ class LNScreenTitle extends StatelessWidget {
 
 class LNScreen extends StatefulWidget {
   static String routeName = "/ln";
-  final SnackBarModel snackBar;
-  const LNScreen(this.snackBar, {Key? key}) : super(key: key);
+  const LNScreen({Key? key}) : super(key: key);
 
   @override
   State<LNScreen> createState() => _LNScreenState();
 }
 
 class _LNScreenState extends State<LNScreen> {
-  SnackBarModel get snackBar => widget.snackBar;
   int tabIndex = 0;
 
   Widget activeTab() {
     switch (tabIndex) {
       case 0:
-        return LNInfoPage(snackBar);
+        return const LNInfoPage();
       case 1:
-        return LNAccountsPage(snackBar);
+        return const LNAccountsPage();
       case 2:
-        return LNOnChainPage(snackBar);
+        return const LNOnChainPage();
       case 3:
-        return LNChannelsPage(snackBar);
+        return const LNChannelsPage();
       case 4:
-        return LNPaymentsPage(snackBar);
+        return const LNPaymentsPage();
       case 5:
-        return LNNetworkPage(snackBar);
+        return const LNNetworkPage();
       case 6:
-        return LNBackupsPage(snackBar);
+        return const LNBackupsPage();
     }
     return Text("Active is $tabIndex");
   }

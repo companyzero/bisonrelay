@@ -1,15 +1,14 @@
+import 'package:bruig/components/empty_widget.dart';
+import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/models/client.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
-import 'package:provider/provider.dart';
-import 'package:bruig/models/snackbar.dart';
 
 class ContactsLastMsgTimesScreen extends StatefulWidget {
   static const routeName = "contactsLastMsgTimes";
   ClientModel client;
-  final SnackBarModel snackBar;
-  ContactsLastMsgTimesScreen(this.client, this.snackBar, {super.key});
+  ContactsLastMsgTimesScreen(this.client, {super.key});
 
   @override
   State<ContactsLastMsgTimesScreen> createState() =>
@@ -22,9 +21,8 @@ class _UserLastMsgTime extends StatelessWidget {
   _UserLastMsgTime(this.info, this.chat, {super.key});
 
   void requestRatchetReset(BuildContext context) async {
-    var snackBar = Provider.of<SnackBarModel>(context);
     chat.requestKXReset();
-    snackBar.success("Attempting to reset ratchet with user");
+    showSuccessSnackbar(context, "Attempting to reset ratchet with user");
   }
 
   @override
@@ -68,7 +66,6 @@ class _UserLastMsgTime extends StatelessWidget {
 
 class _ContactsLastMsgTimesScreenState
     extends State<ContactsLastMsgTimesScreen> {
-  SnackBarModel get snackBar => widget.snackBar;
   ClientModel get client => widget.client;
   List<LastUserReceivedTime> users = [];
 
@@ -79,8 +76,8 @@ class _ContactsLastMsgTimesScreenState
         users = newList;
       });
     } catch (exception) {
-      snackBar
-          .error("Unable to fetch list of contact's last msg time: $exception");
+      showErrorSnackbar(context,
+          "Unable to fetch list of contact's last msg time: $exception");
     }
   }
 

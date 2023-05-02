@@ -3,8 +3,8 @@ import 'dart:async';
 import 'package:bruig/components/copyable.dart';
 import 'package:bruig/components/buttons.dart';
 import 'package:bruig/components/empty_widget.dart';
+import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/models/notifications.dart';
-import 'package:bruig/models/snackbar.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
@@ -14,16 +14,13 @@ import 'package:qr_flutter/qr_flutter.dart';
 
 class NeedsFundsScreen extends StatefulWidget {
   final AppNotifications ntfns;
-  final SnackBarModel snackBar;
-  const NeedsFundsScreen(this.ntfns, this.snackBar, {Key? key})
-      : super(key: key);
+  const NeedsFundsScreen(this.ntfns, {Key? key}) : super(key: key);
 
   @override
   State<NeedsFundsScreen> createState() => _NeedsFundsScreenState();
 }
 
 class _NeedsFundsScreenState extends State<NeedsFundsScreen> {
-  SnackBarModel get snackBar => widget.snackBar;
   String addr = "";
   int confirmedBalance = 0;
   int unconfirmedBalance = 0;
@@ -40,7 +37,7 @@ class _NeedsFundsScreenState extends State<NeedsFundsScreen> {
         addr = res;
       });
     } catch (exception) {
-      snackBar.error("Unable to load deposit address: $exception");
+      showErrorSnackbar(context, "Unable to load deposit address: $exception");
     }
   }
 
@@ -72,7 +69,7 @@ class _NeedsFundsScreenState extends State<NeedsFundsScreen> {
         forwardIfBalance = true;
       }
     } catch (exception) {
-      snackBar.error("Unable to update wallet balance: $exception");
+      showErrorSnackbar(context, "Unable to update wallet balance: $exception");
     } finally {
       if (!done) {
         updateTimer = Timer(const Duration(seconds: 5), updateBalance);
@@ -98,7 +95,7 @@ class _NeedsFundsScreenState extends State<NeedsFundsScreen> {
       setState(() => redeemed = res);
     } catch (exception) {
       setState(() => redeeming = false);
-      snackBar.error("Unable to redeem invite funds: $exception");
+      showErrorSnackbar(context, "Unable to redeem invite funds: $exception");
     }
   }
 

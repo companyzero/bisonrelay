@@ -1,29 +1,25 @@
 import 'package:bruig/components/buttons.dart';
+import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/models/client.dart';
-import 'package:bruig/models/snackbar.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/golib_plugin.dart';
-import 'package:provider/provider.dart';
 
 void showRenameModalBottom(BuildContext context, ChatModel chat) {
-  var snackBar = Provider.of<SnackBarModel>(context);
   showModalBottomSheet(
     context: context,
-    builder: (BuildContext context) => RenameChatModal(chat, snackBar),
+    builder: (BuildContext context) => RenameChatModal(chat),
   );
 }
 
 class RenameChatModal extends StatefulWidget {
   final ChatModel chat;
-  final SnackBarModel snackBar;
-  const RenameChatModal(this.chat, this.snackBar, {Key? key}) : super(key: key);
+  const RenameChatModal(this.chat, {Key? key}) : super(key: key);
 
   @override
   State<RenameChatModal> createState() => _RenameChatModalState();
 }
 
 class _RenameChatModalState extends State<RenameChatModal> {
-  SnackBarModel get snackBar => widget.snackBar;
   ChatModel get chat => widget.chat;
   TextEditingController nameCtrl = TextEditingController();
 
@@ -35,7 +31,7 @@ class _RenameChatModalState extends State<RenameChatModal> {
       chat.nick = newName;
     } catch (exception) {
       Navigator.pop(context);
-      snackBar.error("Unable to rename: $exception");
+      showErrorSnackbar(context, "Unable to rename: $exception");
     }
   }
 

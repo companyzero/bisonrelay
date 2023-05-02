@@ -134,10 +134,12 @@ class _NewPostScreenState extends State<NewPostScreen> {
         contentCtrl.clear();
         estimatedSize = 0;
       });
-      snackBar.success("Created new post");
+      snackBar
+          .append(SnackBarMessage("Created new post", false, DateTime.now()));
       Navigator.of(context).pushNamed(FeedScreen.routeName);
     } catch (exception) {
-      snackBar.error("Unable to create post: $exception");
+      snackBar.append(SnackBarMessage(
+          "Unable to create post: $exception", true, DateTime.now()));
     } finally {
       setState(() {
         loading = false;
@@ -152,7 +154,8 @@ class _NewPostScreenState extends State<NewPostScreen> {
         estimatedSize = estSize;
       });
     } catch (exception) {
-      snackBar.error("Unable to estimate post size: $exception");
+      snackBar.append(SnackBarMessage(
+          "Unable to estimate post size: $exception", true, DateTime.now()));
     }
   }
 
@@ -169,7 +172,8 @@ class _NewPostScreenState extends State<NewPostScreen> {
     if (filePath == "") return;
 
     if (f.size > 1024 * 1024) {
-      snackBar.error("File size is too large");
+      snackBar.append(
+          SnackBarMessage("File size is too large", true, DateTime.now()));
       return;
     }
 
@@ -188,7 +192,8 @@ class _NewPostScreenState extends State<NewPostScreen> {
         mime = "image/png";
         break;
       default:
-        snackBar.error("Unable to recognize type of embed");
+        snackBar.append(SnackBarMessage(
+            "Unable to recognize type of embed", true, DateTime.now()));
         return;
     }
 

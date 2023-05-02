@@ -1,21 +1,19 @@
+import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/components/buttons.dart';
 import 'package:bruig/main.dart';
 import 'package:bruig/models/newconfig.dart';
 import 'package:bruig/screens/unlock_ln.dart';
 import 'package:flutter/material.dart';
-import 'package:bruig/models/snackbar.dart';
 
 class ServerPage extends StatefulWidget {
   final NewConfigModel newconf;
-  final SnackBarModel snackBar;
-  const ServerPage(this.newconf, this.snackBar, {Key? key}) : super(key: key);
+  const ServerPage(this.newconf, {Key? key}) : super(key: key);
 
   @override
   State<ServerPage> createState() => _ServerPageState();
 }
 
 class _ServerPageState extends State<ServerPage> {
-  SnackBarModel get snackBar => widget.snackBar;
   TextEditingController serverCtrl = TextEditingController();
 
   @override
@@ -45,7 +43,7 @@ class _ServerPageState extends State<ServerPage> {
         runMainApp(cfg);
       }
     } catch (exception) {
-      snackBar.error("Unable to generate config: $exception");
+      showErrorSnackbar(context, "Unable to generate config: $exception");
     }
   }
 

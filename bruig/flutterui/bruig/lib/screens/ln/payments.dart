@@ -2,15 +2,14 @@ import 'dart:async';
 
 import 'package:bruig/components/dcr_input.dart';
 import 'package:bruig/components/empty_widget.dart';
+import 'package:bruig/components/snackbars.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
-import 'package:bruig/models/snackbar.dart';
 
 class LNPaymentsPage extends StatefulWidget {
-  final SnackBarModel snackBar;
-  const LNPaymentsPage(this.snackBar, {Key? key}) : super(key: key);
+  const LNPaymentsPage({Key? key}) : super(key: key);
 
   @override
   State<LNPaymentsPage> createState() => _LNPaymentsPageState();
@@ -90,7 +89,6 @@ class _DecodedInvoice extends StatelessWidget {
 }
 
 class _LNPaymentsPageState extends State<LNPaymentsPage> {
-  SnackBarModel get snackBar => widget.snackBar;
   TextEditingController memoCtrl = TextEditingController();
   TextEditingController payCtrl = TextEditingController();
   AmountEditingController genAmountCtrl = AmountEditingController();
@@ -111,13 +109,13 @@ class _LNPaymentsPageState extends State<LNPaymentsPage> {
         genAmountCtrl.clear();
       });
     } catch (exception) {
-      snackBar.error("Unable to generate invoice: $exception");
+      showErrorSnackbar(context, "Unable to generate invoice: $exception");
     }
   }
 
   void copyInvoiceToClipboard() async {
     Clipboard.setData(ClipboardData(text: generatedInvoice));
-    snackBar.success("Copied generated invoice to clipboard");
+    showSuccessSnackbar(context, "Copied generated invoice to clipboard");
   }
 
   void decodeInvoice() async {
@@ -128,7 +126,7 @@ class _LNPaymentsPageState extends State<LNPaymentsPage> {
         decoded = newDecoded;
       });
     } catch (exception) {
-      snackBar.error("Unable to decode invoice: $exception");
+      showErrorSnackbar(context, "Unable to decode invoice: $exception");
     }
   }
 
@@ -158,9 +156,9 @@ class _LNPaymentsPageState extends State<LNPaymentsPage> {
         payAmountCtrl.clear();
       });
       await Golib.lnPayInvoice(invoiceToDecode, amount);
-      snackBar.success("Invoice Paid!");
+      showSuccessSnackbar(context, "Invoice Paid!");
     } catch (exception) {
-      snackBar.error("Unable to pay invoice: $exception");
+      showErrorSnackbar(context, "Unable to pay invoice: $exception");
     } finally {
       setState(() {
         paying = false;

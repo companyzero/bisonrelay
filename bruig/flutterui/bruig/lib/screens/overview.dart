@@ -137,29 +137,33 @@ class _OverviewScreenState extends State<OverviewScreen> {
   void goOnline() async {
     try {
       await Golib.goOnline();
-      snackBar.success("Going online...");
+      snackBar
+          .append(SnackBarMessage("Going online...", false, DateTime.now()));
     } catch (exception) {
-      snackBar.error(
-        "Unable to go online: $exception",
-      );
+      snackBar.append(SnackBarMessage(
+          "Unable to go online: $exception", true, DateTime.now()));
     }
   }
 
   void remainOffline() async {
     try {
       await Golib.remainOffline();
-      snackBar.success("Going offline...");
+      snackBar
+          .append(SnackBarMessage("Going offline...", false, DateTime.now()));
     } catch (exception) {
-      snackBar.error("Unable to go offline: $exception");
+      snackBar.append(SnackBarMessage(
+          "Unable to go offline: $exception", true, DateTime.now()));
     }
   }
 
   void skipWalletCheck() async {
     try {
       await Golib.skipWalletCheck();
-      snackBar.success("Skipping next wallet check...");
+      snackBar.append(SnackBarMessage(
+          "Skipping next wallet check...", false, DateTime.now()));
     } catch (exception) {
-      snackBar.error("Unable to skip wallet check: $exception");
+      snackBar.append(SnackBarMessage(
+          "Unable to skip wallet check: $exception", true, DateTime.now()));
     }
   }
 
@@ -168,21 +172,21 @@ class _OverviewScreenState extends State<OverviewScreen> {
     super.initState();
     connState = widget.client.connState;
     widget.client.addListener(clientChanged);
-    widget.snackBar.addListener(snackBarChanged);
+    widget.client.addListener(snackBarChanged);
   }
 
   @override
   void didUpdateWidget(OverviewScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-    oldWidget.snackBar.removeListener(snackBarChanged);
-    widget.snackBar.addListener(snackBarChanged);
+    oldWidget.client.removeListener(snackBarChanged);
+    widget.client.addListener(snackBarChanged);
     oldWidget.client.removeListener(clientChanged);
     widget.client.addListener(clientChanged);
   }
 
   @override
   void dispose() {
-    widget.snackBar.removeListener(snackBarChanged);
+    widget.client.removeListener(snackBarChanged);
     widget.client.removeListener(clientChanged);
     super.dispose();
   }
