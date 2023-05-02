@@ -71,6 +71,8 @@ class Config {
   late final String internalWalletDir;
   late final String resourcesUpstream;
   late final String simpleStorePayType;
+  late final String simpleStoreAccount;
+  late final double simpleStoreShipCharge;
 
   Config();
   Config.filled(
@@ -88,7 +90,9 @@ class Config {
       this.network: "",
       this.internalWalletDir: "",
       this.resourcesUpstream: "",
-      this.simpleStorePayType: ""});
+      this.simpleStorePayType: "",
+      this.simpleStoreAccount: "",
+      this.simpleStoreShipCharge: 0});
   factory Config.newWithRPCHost(
           Config cfg, String rpcHost, String tlsCert, String macaroonPath) =>
       Config.filled(
@@ -107,6 +111,8 @@ class Config {
         internalWalletDir: cfg.internalWalletDir,
         resourcesUpstream: cfg.resourcesUpstream,
         simpleStorePayType: cfg.simpleStorePayType,
+        simpleStoreAccount: cfg.simpleStoreAccount,
+        simpleStoreShipCharge: cfg.simpleStoreShipCharge,
       );
 
   Future<void> saveConfig(String filepath) async {
@@ -222,6 +228,9 @@ Future<Config> loadConfig(String filepath) async {
 
   c.resourcesUpstream = resUpstream;
   c.simpleStorePayType = f.get("resources", "simplestorepaytype") ?? "";
+  c.simpleStoreAccount = f.get("resources", "simplestoreaccount") ?? "";
+  c.simpleStoreShipCharge =
+      double.tryParse(f.get("resources", "simplestoreshipcharge") ?? "0") ?? 0;
 
   return c;
 }

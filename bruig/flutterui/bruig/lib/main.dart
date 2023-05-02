@@ -153,7 +153,9 @@ class _AppState extends State<App> with WindowListener {
           cfg.debugLevel,
           true,
           cfg.resourcesUpstream,
-          cfg.simpleStorePayType);
+          cfg.simpleStorePayType,
+          cfg.simpleStoreAccount,
+          cfg.simpleStoreShipCharge);
       await Golib.initClient(initArgs);
 
       navkey.currentState!.pushReplacementNamed(OverviewScreen.routeName);

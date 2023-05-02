@@ -567,9 +567,10 @@ func (pc *DcrlnPaymentClient) ChainParams(ctx context.Context) (*chaincfg.Params
 }
 
 // NewReceiveAddress returns a new on-chain address from the underlying wallet.
-func (pc *DcrlnPaymentClient) NewReceiveAddress(ctx context.Context) (stdaddr.Address, error) {
+func (pc *DcrlnPaymentClient) NewReceiveAddress(ctx context.Context, acct string) (stdaddr.Address, error) {
 	req := &lnrpc.NewAddressRequest{
-		Type: lnrpc.AddressType_PUBKEY_HASH,
+		Type:    lnrpc.AddressType_PUBKEY_HASH,
+		Account: acct,
 	}
 	addrRes, err := pc.lnRpc.NewAddress(ctx, req)
 	if err != nil {

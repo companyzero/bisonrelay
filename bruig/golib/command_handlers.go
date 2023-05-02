@@ -337,67 +337,6 @@ func handleInitClient(handle uint32, args InitClient) error {
 	// Initialize resources router.
 	var sstore *simplestore.Store
 	resRouter := resources.NewRouter()
-	switch {
-	case strings.HasPrefix(args.ResourcesUpstream, "http://"),
-		strings.HasPrefix(args.ResourcesUpstream, "https://"):
-		p := resources.NewHttpProvider(args.ResourcesUpstream)
-		resRouter.BindPrefixPath([]string{}, p)
-	case strings.HasPrefix(args.ResourcesUpstream, "simplestore:"):
-		// Generate the template store if the path does not exist.
-		path := args.ResourcesUpstream[len("simplestore:"):]
-		if _, err := os.Stat(path); os.IsNotExist(err) {
-			err := simplestore.WriteTemplate(path)
-			if err != nil {
-				return fmt.Errorf("unable to write simplestore"+
-					" template: %v", err)
-			}
-		}
-
-		scfg := simplestore.Config{
-			Root:       path,
-			Log:        logBknd.logger("SSTR"),
-			LiveReload: true, // FIXME: parametrize
-			OrderPlaced: func(order *simplestore.Order) {
-				erate := cctx.exchangeRate()
-
-				var dcrTotal dcrutil.Amount
-				if erate.DCRPrice > 0 {
-					usdTotal := float64(order.TotalCents()) / 100
-					floatTotal := usdTotal / erate.DCRPrice
-					dcrTotal, _ = dcrutil.NewAmount(floatTotal)
-				}
-				event := SimpleStoreOrder{
-					Order:        *order,
-					ExchangeRate: erate.DCRPrice,
-					DCRAmount:    dcrTotal,
-				}
-				var err error
-				switch args.SimpleStorePayType {
-				case "onchain":
-					event.OnchainAddr, err = c.OnchainRecvAddrForUser(order.User)
-				case "ln":
-					if lnpc != nil {
-						event.LNInvoice, err = lnpc.GetInvoice(cctx.ctx, int64(dcrTotal*1000), nil)
-					} else {
-						err = fmt.Errorf("ln not setup")
-					}
-				}
-				if err != nil {
-					cctx.log.Errorf("Error while processing order: %v", err)
-				}
-				notify(NTSimpleStoreOrderPlaced, event, nil)
-			},
-		}
-		sstore, err = simplestore.New(scfg)
-		if err != nil {
-			return fmt.Errorf("unable to initialize simple store: %v", err)
-		}
-		resRouter.BindPrefixPath([]string{}, sstore)
-	case strings.HasPrefix(args.ResourcesUpstream, "pages:"):
-		path := args.ResourcesUpstream[len("pages:"):]
-		p := resources.NewFilesystemResource(path, logBknd.logger("PAGE"))
-		resRouter.BindPrefixPath([]string{}, p)
-	}
 
 	cfg := client.Config{
 		DB:                db,
@@ -574,6 +513,55 @@ func handleInitClient(handle uint32, args InitClient) error {
 	c, err = client.New(cfg)
 	if err != nil {
 		return err
+	}
+
+	// Bind the selected upstream resource provider.
+	switch {
+	case strings.HasPrefix(args.ResourcesUpstream, "http://"),
+		strings.HasPrefix(args.ResourcesUpstream, "https://"):
+		p := resources.NewHttpProvider(args.ResourcesUpstream)
+		resRouter.BindPrefixPath([]string{}, p)
+	case strings.HasPrefix(args.ResourcesUpstream, "simplestore:"):
+		// Generate the template store if the path does not exist.
+		path := args.ResourcesUpstream[len("simplestore:"):]
+		if _, err := os.Stat(path); os.IsNotExist(err) {
+			err := simplestore.WriteTemplate(path)
+			if err != nil {
+				return fmt.Errorf("unable to write simplestore"+
+					" template: %v", err)
+			}
+		}
+
+		scfg := simplestore.Config{
+			Root:       path,
+			Log:        logBknd.logger("SSTR"),
+			LiveReload: true, // FIXME: parametrize
+			Client:     c,
+			PayType:    simplestore.PayType(args.SimpleStorePayType),
+			Account:    args.SimpleStoreAccount,
+			ShipCharge: args.SimpleStoreShipCharge,
+
+			ExchangeRateProvider: func() float64 {
+				return cctx.exchangeRate().DCRPrice
+			},
+
+			OrderPlaced: func(order *simplestore.Order, msg string) {
+				event := SimpleStoreOrder{
+					Order: *order,
+					Msg:   msg,
+				}
+				notify(NTSimpleStoreOrderPlaced, event, nil)
+			},
+		}
+		sstore, err = simplestore.New(scfg)
+		if err != nil {
+			return fmt.Errorf("unable to initialize simple store: %v", err)
+		}
+		resRouter.BindPrefixPath([]string{}, sstore)
+	case strings.HasPrefix(args.ResourcesUpstream, "pages:"):
+		path := args.ResourcesUpstream[len("pages:"):]
+		p := resources.NewFilesystemResource(path, logBknd.logger("PAGE"))
+		resRouter.BindPrefixPath([]string{}, p)
 	}
 
 	var cancel func()

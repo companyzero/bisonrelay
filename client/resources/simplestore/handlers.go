@@ -8,11 +8,14 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/companyzero/bisonrelay/client/clientintf"
 	"github.com/companyzero/bisonrelay/internal/jsonfile"
+	"github.com/companyzero/bisonrelay/internal/strescape"
 	"github.com/companyzero/bisonrelay/rpc"
+	"github.com/decred/dcrd/dcrutil/v4"
 )
 
 func (s *Store) handleNotFound(ctx context.Context, uid clientintf.UserID,
@@ -194,8 +197,94 @@ func (s *Store) handlePlaceOrder(ctx context.Context, uid clientintf.UserID,
 		return nil, fmt.Errorf("unable to execute product template: %v", err)
 	}
 
+	// Build the message to send to the remote user, and present it to the
+	// UI.
+	var b strings.Builder
+	wpm := func(f string, args ...interface{}) {
+		b.WriteString(fmt.Sprintf(f, args...))
+	}
+
+	ru, err := s.c.UserByID(order.User)
+	if err != nil {
+		return nil, fmt.Errorf("Order #%d placed by unknown user %s",
+			order.ID, order.User)
+	} else {
+		wpm("Thank you for placing your order #%d\n", order.ID)
+		wpm("The following were the items in your order:\n")
+		var totalUSDCents int64
+		for _, item := range order.Cart.Items {
+			totalItemUSDCents := int64(item.Quantity) * int64(item.Product.Price*100)
+			wpm("  SKU %s - %s - %d units - $%.2f/item - $%.2f\n",
+				item.Product.SKU, item.Product.Title,
+				item.Quantity, item.Product.Price,
+				float64(totalItemUSDCents)/100)
+			totalUSDCents += totalItemUSDCents
+		}
+
+		if totalUSDCents > 0 && s.cfg.ShipCharge > 0 {
+			wpm("Total item amount: $%.2f USD\n", float64(totalUSDCents)/100)
+			wpm("Shipping and handling charge: $%.2f USD\n", s.cfg.ShipCharge)
+			totalUSDCents += int64(s.cfg.ShipCharge * 100)
+			wpm("Total amount: $%.2f USD\n", float64(totalUSDCents)/100)
+		} else {
+			wpm("Total amount: $%.2f USD\n", float64(totalUSDCents)/100)
+		}
+
+		var dcrPriceCents int64
+		var totalDCR dcrutil.Amount
+		if s.cfg.ExchangeRateProvider != nil {
+			dcrPrice := s.cfg.ExchangeRateProvider()
+			dcrPriceCents = int64(dcrPrice * 100)
+			if dcrPriceCents > 0 {
+				totalDCR, _ = dcrutil.NewAmount(float64(totalUSDCents) / float64(dcrPriceCents))
+			}
+		}
+
+		if totalDCR > 0 {
+			wpm("Using the current exchange rate of %.2f USD/DCR, your order is "+
+				"%s, valid for the next 60 minutes\n", float64(dcrPriceCents)/100, totalDCR)
+		}
+
+		pt := s.cfg.PayType
+		switch {
+		case s.cfg.ExchangeRateProvider == nil:
+			s.log.Warnf("No exchange rate provider setup in simplestore config")
+		case dcrPriceCents <= 0:
+			s.log.Warnf("Invalid exchange rate to charge user %s for order %s",
+				strescape.Nick(ru.Nick()), order.ID)
+		case totalDCR == 0:
+			s.log.Warnf("Order has zero total dcr amount")
+		case pt == PayTypeOnChain:
+			addr, err := s.c.OnchainRecvAddrForUser(order.User, s.cfg.Account)
+			if err != nil {
+				s.log.Errorf("Unable to generate on-chain addr for user %s: %v",
+					strescape.Nick(ru.Nick()), err)
+			} else {
+				wpm("On-chain Payment Address: %s\n", addr)
+			}
+		case pt == PayTypeLN:
+			if s.lnpc == nil {
+				s.log.Warnf("Unable to generate LN invoice for user %s "+
+					"for order %s: LN not setup", strescape.Nick(ru.Nick()),
+					order.ID)
+			} else {
+				invoice, err := s.lnpc.GetInvoice(ctx, int64(totalDCR*1000), nil)
+				if err != nil {
+					s.log.Warnf("Unable to generate LN invoice for user %s "+
+						"for order %s: %v", strescape.Nick(ru.Nick()),
+						order.ID, err)
+				} else {
+					wpm("LN Invoice for payment: %s\n", invoice)
+				}
+			}
+
+		default:
+			wpm("\nYou will be contacted with payment details shortly")
+		}
+	}
+
 	if s.cfg.OrderPlaced != nil {
-		s.cfg.OrderPlaced(order)
+		s.cfg.OrderPlaced(order, b.String())
 	}
 
 	return &rpc.RMFetchResourceReply{

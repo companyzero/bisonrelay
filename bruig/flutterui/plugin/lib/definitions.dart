@@ -39,6 +39,10 @@ class InitClient {
   final String resourcesUpstream;
   @JsonKey(name: 'simplestore_pay_type')
   final String simpleStorePayType;
+  @JsonKey(name: 'simplestore_account')
+  final String simpleStoreAccount;
+  @JsonKey(name: 'simplestore_ship_charge')
+  final double simpleStoreShipCharge;
 
   InitClient(
       this.dbRoot,
@@ -52,7 +56,9 @@ class InitClient {
       this.debugLevel,
       this.wantsLogNtfns,
       this.resourcesUpstream,
-      this.simpleStorePayType);
+      this.simpleStorePayType,
+      this.simpleStoreAccount,
+      this.simpleStoreShipCharge);
 
   Map<String, dynamic> toJson() => _$InitClientToJson(this);
 }
@@ -1805,17 +1811,9 @@ class SSOrder {
 @JsonSerializable()
 class SSPlacedOrder {
   final SSOrder order;
-  @JsonKey(name: "onchain_addr", defaultValue: "")
-  final String onchainAddr;
-  @JsonKey(name: "ln_invoice", defaultValue: "")
-  final String lnInvoice;
-  @JsonKey(name: "dcr_amount")
-  final int dcrAmount;
-  @JsonKey(name: "exchange_rate")
-  final double exchangeRate;
+  final String msg;
 
-  SSPlacedOrder(this.order, this.onchainAddr, this.lnInvoice, this.dcrAmount,
-      this.exchangeRate);
+  SSPlacedOrder(this.order, this.msg);
   factory SSPlacedOrder.fromJson(Map<String, dynamic> json) =>
       _$SSPlacedOrderFromJson(json);
 }

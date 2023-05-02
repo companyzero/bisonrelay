@@ -222,8 +222,10 @@ type appState struct {
 
 	inviteFundsAccount string
 
-	sstore    *simplestore.Store
-	ssPayType simpleStorePayType
+	sstore       *simplestore.Store
+	ssPayType    simpleStorePayType
+	ssAcct       string
+	ssShipCharge float64
 }
 
 type appStateErr struct {
@@ -2955,40 +2957,6 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 	// Initialize resources router.
 	var sstore *simplestore.Store
 	resRouter := resources.NewRouter()
-	switch {
-	case strings.HasPrefix(args.ResourcesUpstream, "http://"),
-		strings.HasPrefix(args.ResourcesUpstream, "https://"):
-		p := resources.NewHttpProvider(args.ResourcesUpstream)
-		resRouter.BindPrefixPath([]string{}, p)
-	case strings.HasPrefix(args.ResourcesUpstream, "simplestore:"):
-		// Generate the template store if the path does not exist.
-		path := args.ResourcesUpstream[len("simplestore:"):]
-		if _, err := os.Stat(path); os.IsNotExist(err) {
-			err := simplestore.WriteTemplate(path)
-			if err != nil {
-				return nil, fmt.Errorf("unable to write simplestore"+
-					" template: %v", err)
-			}
-		}
-
-		scfg := simplestore.Config{
-			Root:       path,
-			Log:        logBknd.logger("SSTR"),
-			LiveReload: true, // FIXME: parametrize
-			OrderPlaced: func(order *simplestore.Order) {
-				handleCompletedSimpleStoreOrder(as, order)
-			},
-		}
-		sstore, err = simplestore.New(scfg)
-		if err != nil {
-			return nil, fmt.Errorf("unable to initialize simple store: %v", err)
-		}
-		resRouter.BindPrefixPath([]string{}, sstore)
-	case strings.HasPrefix(args.ResourcesUpstream, "pages:"):
-		path := args.ResourcesUpstream[len("pages:"):]
-		p := resources.NewFilesystemResource(path, logBknd.logger("PAGE"))
-		resRouter.BindPrefixPath([]string{}, p)
-	}
 
 	// Initialize client config.
 	cfg := client.Config{
@@ -3503,6 +3471,51 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		}
 	}
 
+	// Bind the selected upstream resource provider.
+	switch {
+	case strings.HasPrefix(args.ResourcesUpstream, "http://"),
+		strings.HasPrefix(args.ResourcesUpstream, "https://"):
+		p := resources.NewHttpProvider(args.ResourcesUpstream)
+		resRouter.BindPrefixPath([]string{}, p)
+	case strings.HasPrefix(args.ResourcesUpstream, "simplestore:"):
+		// Generate the template store if the path does not exist.
+		path := args.ResourcesUpstream[len("simplestore:"):]
+		if _, err := os.Stat(path); os.IsNotExist(err) {
+			err := simplestore.WriteTemplate(path)
+			if err != nil {
+				return nil, fmt.Errorf("unable to write simplestore"+
+					" template: %v", err)
+			}
+		}
+
+		scfg := simplestore.Config{
+			Root:       path,
+			Log:        logBknd.logger("SSTR"),
+			LiveReload: true, // FIXME: parametrize
+			Client:     c,
+			PayType:    simplestore.PayType(args.SimpleStorePayType),
+			Account:    args.SimpleStoreAccount,
+			ShipCharge: args.SimpleStoreShipCharge,
+
+			ExchangeRateProvider: func() float64 {
+				return as.exchangeRate().DCRPrice
+			},
+
+			OrderPlaced: func(order *simplestore.Order, msg string) {
+				handleCompletedSimpleStoreOrder(as, order, msg)
+			},
+		}
+		sstore, err = simplestore.New(scfg)
+		if err != nil {
+			return nil, fmt.Errorf("unable to initialize simple store: %v", err)
+		}
+		resRouter.BindPrefixPath([]string{}, sstore)
+	case strings.HasPrefix(args.ResourcesUpstream, "pages:"):
+		path := args.ResourcesUpstream[len("pages:"):]
+		p := resources.NewFilesystemResource(path, logBknd.logger("PAGE"))
+		resRouter.BindPrefixPath([]string{}, p)
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	as = &appState{
 		ctx:         ctx,
@@ -3565,8 +3578,10 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		inboundMsgs:     &genericlist.List[inboundRemoteMsg]{},
 		inboundMsgsChan: make(chan struct{}, 8),
 
-		sstore:    sstore,
-		ssPayType: args.SimpleStorePayType,
+		sstore:       sstore,
+		ssPayType:    args.SimpleStorePayType,
+		ssAcct:       args.SimpleStoreAccount,
+		ssShipCharge: args.SimpleStoreShipCharge,
 	}
 
 	as.diagMsg("%s version %s", appName, version.String())

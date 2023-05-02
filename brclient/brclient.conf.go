@@ -166,5 +166,13 @@ minimumsendbalance = 0.01
 # will manually charge) or "onchain" (generates an on-chain address). Only used
 # if the upstream resource processor is of type "simplestore:".
 # simplestorepaytype =
+
+# Which account to use when generating an onchain address for simplestore orders.
+# If empty, the default account is used.
+# simplestoreaccount =
+
+# simplestoreshipcharge is a surcharge (in USD) added to simplestore orders to
+# cover shipping and handling.
+# simplestoreshipcharge = 0.0
 `
 )
