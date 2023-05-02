@@ -12,18 +12,21 @@ import (
 )
 
 type InitClient struct {
-	ServerAddr         string `json:"server_addr"`
-	DBRoot             string `json:"dbroot"`
-	DownloadsDir       string `json:"downloads_dir"`
-	LNRPCHost          string `json:"ln_rpc_host"`
-	LNTLSCertPath      string `json:"ln_tls_cert_path"`
-	LNMacaroonPath     string `json:"ln_macaroon_path"`
-	LogFile            string `json:"log_file"`
-	MsgsRoot           string `json:"msgs_root"`
-	DebugLevel         string `json:"debug_level"`
-	WantsLogNtfns      bool   `json:"wants_log_ntfns"`
-	ResourcesUpstream  string `json:"resources_upstream"`
-	SimpleStorePayType string `json:"simplestore_pay_type"`
+	ServerAddr        string `json:"server_addr"`
+	DBRoot            string `json:"dbroot"`
+	DownloadsDir      string `json:"downloads_dir"`
+	LNRPCHost         string `json:"ln_rpc_host"`
+	LNTLSCertPath     string `json:"ln_tls_cert_path"`
+	LNMacaroonPath    string `json:"ln_macaroon_path"`
+	LogFile           string `json:"log_file"`
+	MsgsRoot          string `json:"msgs_root"`
+	DebugLevel        string `json:"debug_level"`
+	WantsLogNtfns     bool   `json:"wants_log_ntfns"`
+	ResourcesUpstream string `json:"resources_upstream"`
+
+	SimpleStorePayType    string  `json:"simplestore_pay_type"`
+	SimpleStoreAccount    string  `json:"simplestore_account"`
+	SimpleStoreShipCharge float64 `json:"simplestore_ship_charge"`
 }
 
 type IDInit struct {
@@ -368,9 +371,6 @@ type FetchResourceArgs struct {
 }
 
 type SimpleStoreOrder struct {
-	Order        simplestore.Order `json:"order"`
-	OnchainAddr  string            `json:"onchain_addr"`
-	DCRAmount    dcrutil.Amount    `json:"dcr_amount"`
-	ExchangeRate float64           `json:"exchange_rate"`
-	LNInvoice    string            `json:"ln_invoice"`
+	Order simplestore.Order `json:"order"`
+	Msg   string            `json:"msg"`
 }

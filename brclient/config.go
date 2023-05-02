@@ -111,8 +111,10 @@ type config struct {
 	RPCClientCAPath    string
 	RPCIssueClientCert bool
 
-	ResourcesUpstream  string
-	SimpleStorePayType simpleStorePayType
+	ResourcesUpstream     string
+	SimpleStorePayType    simpleStorePayType
+	SimpleStoreAccount    string
+	SimpleStoreShipCharge float64
 }
 
 func defaultAppDataDir(homeDir string) string {
@@ -271,6 +273,8 @@ func loadConfig() (*config, error) {
 	flagRPCIssueClientCert := fs.Bool("rpcissueclientcert", true, "")
 	flagResourcesUpstream := fs.String("resourcesupstream", "", "Upstream processor of resource requests")
 	flagSimpleStorePayType := fs.String("simplestorepaytype", "", "How to charge for paystore purchases")
+	flagSimpleStoreAccount := fs.String("simplestoreaccount", "", "Account to use for on-chain adresses")
+	flagSimpleStoreShipCharge := fs.Float64("simplestoreshipcharge", 0, "How much to charge for s&h")
 
 	flagProxyAddr := fs.String("proxyaddr", "", "")
 	flagProxyUser := fs.String("proxyuser", "", "")
@@ -430,7 +434,10 @@ func loadConfig() (*config, error) {
 		RPCIssueClientCert: *flagRPCIssueClientCert,
 		InviteFundsAccount: *flagInviteFundsAccount,
 		ResourcesUpstream:  *flagResourcesUpstream,
-		SimpleStorePayType: ssPayType,
+
+		SimpleStorePayType:    ssPayType,
+		SimpleStoreAccount:    *flagSimpleStoreAccount,
+		SimpleStoreShipCharge: *flagSimpleStoreShipCharge,
 	}, nil
 }
 

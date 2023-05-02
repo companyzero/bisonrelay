@@ -19,6 +19,8 @@ InitClient _$InitClientFromJson(Map<String, dynamic> json) => InitClient(
       json['wants_log_ntfns'] as bool,
       json['resources_upstream'] as String,
       json['simplestore_pay_type'] as String,
+      json['simplestore_account'] as String,
+      (json['simplestore_ship_charge'] as num).toDouble(),
     );
 
 Map<String, dynamic> _$InitClientToJson(InitClient instance) =>
@@ -35,6 +37,8 @@ Map<String, dynamic> _$InitClientToJson(InitClient instance) =>
       'wants_log_ntfns': instance.wantsLogNtfns,
       'resources_upstream': instance.resourcesUpstream,
       'simplestore_pay_type': instance.simpleStorePayType,
+      'simplestore_account': instance.simpleStoreAccount,
+      'simplestore_ship_charge': instance.simpleStoreShipCharge,
     };
 
 IDInit _$IDInitFromJson(Map<String, dynamic> json) => IDInit(
@@ -1862,19 +1866,13 @@ Map<String, dynamic> _$SSOrderToJson(SSOrder instance) => <String, dynamic>{
 SSPlacedOrder _$SSPlacedOrderFromJson(Map<String, dynamic> json) =>
     SSPlacedOrder(
       SSOrder.fromJson(json['order'] as Map<String, dynamic>),
-      json['onchain_addr'] as String? ?? '',
-      json['ln_invoice'] as String? ?? '',
-      json['dcr_amount'] as int,
-      (json['exchange_rate'] as num).toDouble(),
+      json['msg'] as String,
     );
 
 Map<String, dynamic> _$SSPlacedOrderToJson(SSPlacedOrder instance) =>
     <String, dynamic>{
       'order': instance.order,
-      'onchain_addr': instance.onchainAddr,
-      'ln_invoice': instance.lnInvoice,
-      'dcr_amount': instance.dcrAmount,
-      'exchange_rate': instance.exchangeRate,
+      'msg': instance.msg,
     };
 
 FetchedResource _$FetchedResourceFromJson(Map<String, dynamic> json) =>

@@ -9,6 +9,7 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/companyzero/bisonrelay/client"
 	"github.com/companyzero/bisonrelay/client/clientintf"
 	"github.com/companyzero/bisonrelay/client/resources"
 	"github.com/companyzero/bisonrelay/rpc"
@@ -30,20 +31,35 @@ const (
 	orderPlacedTmplFile = "orderplaced.tmpl"
 )
 
+type PayType string
+
+const (
+	PayTypeOnChain PayType = "onchain"
+	PayTypeLN      PayType = "LN"
+)
+
 // Config holds the configuration for a simple store.
 type Config struct {
 	Root        string
 	Log         slog.Logger
 	LiveReload  bool
-	OrderPlaced func(order *Order)
+	OrderPlaced func(order *Order, msg string)
+	PayType     PayType
+	Account     string
+	ShipCharge  float64
+	Client      *client.Client
+
+	ExchangeRateProvider func() float64
 }
 
 // Store is a simple store instance. A simple store can render a front page
 // (index) and individual product pages.
 type Store struct {
 	cfg  Config
+	c    *client.Client
 	log  slog.Logger
 	root string
+	lnpc *client.DcrlnPaymentClient
 
 	mtx      sync.Mutex
 	products map[string]*Product
@@ -59,6 +75,7 @@ func New(cfg Config) (*Store, error) {
 
 	s := &Store{
 		cfg:      cfg,
+		c:        cfg.Client,
 		log:      log,
 		root:     cfg.Root,
 		products: make(map[string]*Product),

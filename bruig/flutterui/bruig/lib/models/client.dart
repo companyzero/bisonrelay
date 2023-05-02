@@ -637,32 +637,7 @@ class ClientModel extends ChangeNotifier {
       if (chat == null) {
         throw "user ${order.user} not found in placed simplestore order";
       }
-
-      int totalCents = 0;
-      var msg = """Thank you for placing your order #${order.id}
-The following were the items in your order:
-""";
-      for (var item in order.cart.items) {
-        var price = item.product.price.toStringAsFixed(2);
-        var itemCents = (item.product.price * 100).toInt() * item.quantity;
-        var itemUSD = (itemCents.toDouble() / 100).toStringAsFixed(2);
-        totalCents += itemCents;
-        msg +=
-            "  SKU ${item.product.sku} - ${item.product.title} - ${item.quantity} units - $price/item - $itemUSD\n";
-      }
-
-      var totalUSD = (totalCents.toDouble() / 100).toStringAsFixed(2);
-      msg += "Total amount: \$$totalUSD\n";
-      msg += "Total DCR Amount: ${formatDCR(atomsToDCR(po.dcrAmount))}\n";
-      msg += "Exchange Rate: ${po.exchangeRate} USD/DCR\n";
-      if (po.onchainAddr != "") {
-        msg += "OnChain payment address: ${po.onchainAddr}\n";
-      } else if (po.lnInvoice != "") {
-        msg += "LN Invoice: ${po.lnInvoice}";
-      } else {
-        msg += "You will be contacted with payment details shortly\n";
-      }
-      chat.sendMsg(msg);
+      chat.sendMsg(po.msg);
     } catch (exception) {
       // TODO: send to snackbar model.
       print("Error while processing SimpleStore order: $exception");
