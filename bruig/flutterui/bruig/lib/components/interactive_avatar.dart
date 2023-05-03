@@ -27,13 +27,10 @@ class InteractiveAvatar extends StatelessWidget {
         child: GestureDetector(
           onTap: onTap,
           onSecondaryTap: onSecondaryTap,
-          child: Tooltip(
-            message: chatNick,
-            child: CircleAvatar(
-                backgroundColor: avatarColor,
-                child: Text(chatNick[0].toUpperCase(),
-                    style: TextStyle(color: avatarTextColor, fontSize: 20))),
-          ),
+          child: CircleAvatar(
+              backgroundColor: avatarColor,
+              child: Text(chatNick[0].toUpperCase(),
+                  style: TextStyle(color: avatarTextColor, fontSize: 20))),
         ),
       ),
     );

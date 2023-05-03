@@ -167,17 +167,17 @@ class _ReceivedSentPMState extends State<ReceivedSentPM> {
                               avatarColor: avatarColor,
                               avatarTextColor: avatarTextColor),
                         )
-                      : InteractiveAvatar(
-                          bgColor: selectedBackgroundColor,
-                          chatNick: widget.nick,
-                          onTap: () {
-                            widget.showSubMenu(widget.id);
-                          },
-                          onSecondaryTap: () {
-                            widget.showSubMenu(widget.id);
-                          },
-                          avatarColor: avatarColor,
-                          avatarTextColor: avatarTextColor),
+                      : UserContextMenu(
+                          targetUserChat: widget.evnt.source,
+                          child: InteractiveAvatar(
+                              bgColor: selectedBackgroundColor,
+                              chatNick: widget.nick,
+                              onTap: () {
+                                widget.showSubMenu(widget.id);
+                              },
+                              avatarColor: avatarColor,
+                              avatarTextColor: avatarTextColor),
+                        ),
                 ),
               ),
               const SizedBox(width: 10),
