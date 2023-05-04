@@ -6,6 +6,7 @@ import 'package:golib_plugin/golib_plugin.dart';
 import 'package:bruig/components/interactive_avatar.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:bruig/components/user_context_menu.dart';
+import 'package:bruig/components/gc_context_menu.dart';
 import 'package:bruig/components/chat/types.dart';
 import 'package:bruig/util.dart';
 
@@ -104,15 +105,9 @@ class _ChatHeadingWState extends State<_ChatHeadingW> {
         borderRadius: BorderRadius.circular(3),
       ),
       child: isGc
-          ? GestureDetector(
-              onSecondaryTap: () {
-                widget.makeActive(chat);
-                widget.showSubMenu(chat.id);
-              },
-              onLongPress: () {
-                widget.makeActive(chat);
-                widget.showSubMenu(chat.id);
-              },
+          ? GcContexMenu(
+              client: client,
+              targetGcChat: chat,
               child: ListTile(
                 enabled: true,
                 title: Text(chat.nick,
