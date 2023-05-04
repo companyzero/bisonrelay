@@ -1708,8 +1708,28 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		err := c.Handshake(args)
 		return nil, err
 
+	case CTLoadUserHistory:
+		var uid clientintf.UserID
+		if err := cmd.decode(&uid); err != nil {
+			return nil, err
+		}
+		chatHistory, err := c.ReadUserHistoryMessages(uid)
+		if err != nil {
+			return nil, err
+		}
+		res := make([]ChatLogEntry, 0)
+		for _, chatLog := range chatHistory {
+			res = append(res, ChatLogEntry{
+				Message:   chatLog.Message,
+				From:      chatLog.From,
+				Internal:  chatLog.Internal,
+				Timestamp: chatLog.Timestamp,
+			})
+		}
+		return res, nil
 	}
 	return nil, nil
+
 }
 
 func handleLNTryExternalDcrlnd(args LNTryExternalDcrlnd) (*lnrpc.GetInfoResponse, error) {

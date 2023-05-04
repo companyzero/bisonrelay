@@ -165,6 +165,12 @@ type PostStatusReceived struct {
 	Mine       bool                   `json:"mine"`
 }
 
+type ChatLogEntry struct {
+	Message   string `json:"message"`
+	From      string `json:"from"`
+	Timestamp int64  `json:"timestamp"`
+	Internal  bool   `json:"internal"`
+}
 type MediateIDArgs struct {
 	Mediator clientintf.UserID `json:"mediator"`
 	Target   clientintf.UserID `json:"target"`

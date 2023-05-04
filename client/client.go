@@ -741,6 +741,37 @@ func (c *Client) Handshake(uid UserID) error {
 	return c.sendWithSendQ("syn", rpc.RMHandshakeSYN{}, ru.ID())
 }
 
+type ChatHistoryEntry struct {
+	Message   string `json:"message"`
+	From      string `json:"from"`
+	Timestamp int64  `json:"timestamp"`
+	Internal  bool   `json:"internal"`
+}
+
+func (c *Client) ReadUserHistoryMessages(uid UserID) ([]ChatHistoryEntry, error) {
+	_, err := c.rul.byID(uid)
+	if err != nil {
+		c.log.Error(err)
+		return nil, nil
+		//return nil, err
+	}
+
+	messages, err := c.db.ReadLogPM(uid)
+	if err != nil {
+		return nil, err
+	}
+	chatHistory := make([]ChatHistoryEntry, 0, len(messages))
+	for _, entry := range messages {
+		chatHistory = append(chatHistory, ChatHistoryEntry{
+			Message:   entry.Message,
+			From:      entry.From,
+			Internal:  entry.Internal,
+			Timestamp: entry.Timestamp})
+	}
+
+	return chatHistory, nil
+}
+
 // maybeResetAllKXAfterConn checks whether it's needed to reset KX with all
 // existing users due to the local client being offline for too long.
 func (c *Client) maybeResetAllKXAfterConn(expDays int) {

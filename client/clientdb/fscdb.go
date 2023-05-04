@@ -1,6 +1,7 @@
 package clientdb
 
 import (
+	"bufio"
 	"bytes"
 	"crypto/rand"
 	"encoding/base64"
@@ -8,8 +9,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/companyzero/bisonrelay/inidb"
@@ -417,6 +420,60 @@ func (db *DB) DeleteTransResetHalfKX(tx ReadWriteTx, id UserID) error {
 	return os.Remove(filename)
 }
 
+func (db *DB) readLogMsg(logFname string) ([]PMLogEntry, error) {
+	if db.cfg.MsgsRoot == "" {
+		return nil, nil
+	}
+
+	filename := filepath.Join(db.cfg.MsgsRoot, logFname)
+	f, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0600)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	loggedMessages := make([]PMLogEntry, 0)
+	scanner := bufio.NewScanner(f)
+	// optionally, resize scanner's capacity for lines over 64K, see next example
+	for scanner.Scan() {
+
+		line := scanner.Text()
+		lineSplit := strings.Split(line, " ")
+		// Try to read timestamp
+		ts := lineSplit[0]
+		t, err := time.Parse("2006-01-02T15:04:04", ts)
+		if err != nil {
+			db.log.Errorf("Unable to parse log '%s': %v", line, err)
+			// Don't just return error here, since it could be a new line?
+			//return nil, err
+			continue
+		}
+
+		name := lineSplit[1]
+		internal := false
+		message := ""
+		if strings.Contains(name, "<") {
+			name = strings.Replace(name, "<", "", -1)
+			name = strings.Replace(name, ">", "", -1)
+			message = strings.TrimSpace(strings.Split(line, ">")[1])
+		} else if strings.Contains(name, "*") {
+			internal = true
+			message = strings.TrimSpace(strings.Split(line, "*")[1])
+		}
+
+		db.log.Infof("%s <%s> %s", t.Format("2006-01-02T15:04:04"), name, message)
+		loggedMessages = append(loggedMessages, PMLogEntry{Message: message,
+			From: name, Timestamp: t.Unix(), Internal: internal})
+	}
+
+	if err := scanner.Err(); err != nil {
+		log.Fatal(err)
+		return nil, err
+	}
+
+	return loggedMessages, nil
+}
+
 func (db *DB) logMsg(logFname string, internal bool, from, msg string, ts time.Time) error {
 	if db.cfg.MsgsRoot == "" {
 		return nil
@@ -486,7 +543,7 @@ func (db *DB) RemoveUser(tx ReadWriteTx, id UserID, block bool) error {
 }
 
 // LogPM logs a PM message from the given user.
-func (db *DB) LogPM(tx ReadWriteTx, uid UserID, internal bool, from, msg string, ts time.Time) error {
+func (db *DB) LogPM(tx ReadTx, uid UserID, internal bool, from, msg string, ts time.Time) error {
 	entry, err := db.getBaseABEntry(uid)
 	if err != nil {
 		return err
@@ -498,11 +555,30 @@ func (db *DB) LogPM(tx ReadWriteTx, uid UserID, internal bool, from, msg string,
 }
 
 // LogGCMsg logs a GC message sent in the given GC.
-func (db *DB) LogGCMsg(tx ReadWriteTx, gcName string, gcID zkidentity.ShortID,
+func (db *DB) LogGCMsg(tx ReadTx, gcName string, gcID zkidentity.ShortID,
 	internal bool, from, msg string, ts time.Time) error {
 
 	logFname := fmt.Sprintf("groupchat.%s.%s.log", strescape.PathElement(gcName), gcID)
 	return db.logMsg(logFname, internal, from, msg, ts)
+}
+
+// ReadLogPM reads the log of PM messages from the given user.
+func (db *DB) ReadLogPM(uid UserID) ([]PMLogEntry, error) {
+	entry, err := db.getBaseABEntry(uid)
+	if err != nil {
+		return nil, err
+	}
+
+	nick := entry.ID.Nick
+	logFname := fmt.Sprintf("%s.%s.log", strescape.PathElement(nick), uid)
+	return db.readLogMsg(logFname)
+}
+
+// ReadLogGCMsg reads the log a GC messages sent in the given GC.
+func (db *DB) ReadLogGCMsg(gcName string, gcID zkidentity.ShortID) ([]PMLogEntry, error) {
+
+	logFname := fmt.Sprintf("groupchat.%s.%s.log", strescape.PathElement(gcName), gcID)
+	return db.readLogMsg(logFname)
 }
 
 // ReplaceLastConnDate replaces the last connection date of the local client to

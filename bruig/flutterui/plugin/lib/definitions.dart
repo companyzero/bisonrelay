@@ -1652,6 +1652,18 @@ class Account {
 }
 
 @JsonSerializable()
+class LogEntry {
+  final String from;
+  final String message;
+  final bool internal;
+  final int timestamp;
+  LogEntry(this.from, this.message, this.internal, this.timestamp);
+
+  factory LogEntry.fromJson(Map<String, dynamic> json) =>
+      _$LogEntryFromJson(json);
+}
+
+@JsonSerializable()
 class SendOnChain {
   final String addr;
   final int amount;
@@ -2453,6 +2465,14 @@ abstract class PluginPlatform {
     return (res as List).map<Account>((v) => Account.fromJson(v)).toList();
   }
 
+  Future<List<LogEntry>> readChatHistory(String uid) async {
+    var res = await asyncCall(CTLoadUserHistory, uid);
+    if (res == null) {
+      return List.empty();
+    }
+    return (res as List).map<LogEntry>((v) => LogEntry.fromJson(v)).toList();
+  }
+
   Future<void> createAccount(String name) async =>
       await asyncCall(CTCreateAccount, name);
 
@@ -2605,6 +2625,7 @@ const int CTStartOnboard = 0x74;
 const int CTCancelOnboard = 0x75;
 const int CTFetchResource = 0x76;
 const int CTHandshake = 0x77;
+const int CTLoadUserHistory = 0x78;
 
 const int notificationsStartID = 0x1000;
 

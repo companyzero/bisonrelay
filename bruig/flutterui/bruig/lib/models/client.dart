@@ -7,6 +7,7 @@ import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:golib_plugin/util.dart';
 import '../storage_manager.dart';
+import 'package:intl/intl.dart';
 
 const SCE_unknown = 0;
 const SCE_sending = 1;
@@ -397,7 +398,7 @@ class ClientModel extends ChangeNotifier {
   Map<String, ChatModel> _activeChats = Map<String, ChatModel>();
   ChatModel? getExistingChat(String uid) => _activeChats[uid];
 
-  ChatModel _newChat(String id, String alias, bool isGC) {
+  Future<ChatModel> _newChat(String id, String alias, bool isGC) async {
     alias = alias.trim();
 
     var c = _activeChats[id];
@@ -412,6 +413,31 @@ class ClientModel extends ChangeNotifier {
     alias = alias == "" ? "[blank]" : alias;
     c = ChatModel(id, alias, isGC);
     _activeChats[id] = c;
+
+    var chatHistory = await Golib.readChatHistory(id);
+
+    for (int i = 0; i < chatHistory.length; i++) {
+      ChatEventModel evnt;
+      if (chatHistory[i].internal) {
+        print("synth event ${chatHistory[i].message}");
+        evnt = ChatEventModel(
+            SynthChatEvent(chatHistory[i].message, SCE_sending), null);
+      } else if (isGC) {
+        var m = GCMsg(chatHistory[i].from, chatHistory[i].message, true,
+            chatHistory[i].timestamp * 1000);
+        evnt = ChatEventModel(m, null);
+      } else {
+        var m = PM(chatHistory[i].from, chatHistory[i].message, true,
+            chatHistory[i].timestamp * 1000);
+        evnt = ChatEventModel(m, null);
+      }
+      c.append(evnt);
+      var now =
+          DateTime.fromMillisecondsSinceEpoch(chatHistory[i].timestamp * 1000);
+      var formatter = DateFormat('yyyy-MM-dd HH:mm:ss');
+      var date = formatter.format(now);
+      print("$date ${chatHistory[i].from} ${chatHistory[i].message}");
+    }
 
     // TODO: this test should be superflous.
     if (isGC) {
@@ -462,16 +488,16 @@ class ClientModel extends ChangeNotifier {
 
       var isGC = (evnt is GCMsg) || (evnt is GCUserEvent);
 
-      var chat = _newChat(evnt.sid, "", isGC);
+      var chat = await _newChat(evnt.sid, "", isGC);
       ChatModel? source = null;
       if (evnt is PM) {
         if (!evnt.mine) {
           source = chat;
         }
       } else if (evnt is GCMsg) {
-        source = _newChat(evnt.senderUID, "", false);
+        source = await _newChat(evnt.senderUID, "", false);
       } else if (evnt is GCUserEvent) {
-        source = _newChat(evnt.uid, "", false);
+        source = await _newChat(evnt.uid, "", false);
       } else {
         source = chat;
       }
@@ -584,7 +610,7 @@ class ClientModel extends ChangeNotifier {
 
   void acceptInvite(Invitation invite) async {
     var user = await Golib.acceptInvite(invite);
-    active = _newChat(user.uid, user.nick, false);
+    active = await _newChat(user.uid, user.nick, false);
   }
 
   List<String> _mediating = [];
@@ -608,7 +634,7 @@ class ClientModel extends ChangeNotifier {
       if (requestedMediateID(remoteUser.uid)) {
         _mediating.remove(remoteUser.uid);
       }
-      var chat = _newChat(remoteUser.uid, remoteUser.nick, false);
+      var chat = await _newChat(remoteUser.uid, remoteUser.nick, false);
       chat.append(
           ChatEventModel(SynthChatEvent("KX Completed", SCE_received), null));
     }

@@ -1683,6 +1683,20 @@ Map<String, dynamic> _$AccountToJson(Account instance) => <String, dynamic>{
       'external_key_count': instance.externalKeyCount,
     };
 
+LogEntry _$LogEntryFromJson(Map<String, dynamic> json) => LogEntry(
+      json['from'] as String,
+      json['message'] as String,
+      json['internal'] as bool,
+      json['timestamp'] as int,
+    );
+
+Map<String, dynamic> _$LogEntryToJson(LogEntry instance) => <String, dynamic>{
+      'from': instance.from,
+      'message': instance.message,
+      'internal': instance.internal,
+      'timestamp': instance.timestamp,
+    };
+
 SendOnChain _$SendOnChainFromJson(Map<String, dynamic> json) => SendOnChain(
       json['addr'] as String,
       json['amount'] as int,
