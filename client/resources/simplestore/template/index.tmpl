@@ -1,5 +1,10 @@
 # My Simple Store
 
+{{ if .IsAdmin -}}
+	[Admin Area](/admin)
+
+{{ end -}}
+
 This is my simple store. See all the stuff I have.
 
 Here's an example of an embedded file.

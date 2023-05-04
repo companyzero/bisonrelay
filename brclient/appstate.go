@@ -3504,6 +3504,10 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 			OrderPlaced: func(order *simplestore.Order, msg string) {
 				handleCompletedSimpleStoreOrder(as, order, msg)
 			},
+
+			StatusChanged: func(order *simplestore.Order, msg string) {
+				handleSimpleStoreOrderStatusChanged(as, order, msg)
+			},
 		}
 		sstore, err = simplestore.New(scfg)
 		if err != nil {

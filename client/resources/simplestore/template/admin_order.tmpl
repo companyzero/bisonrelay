@@ -1,0 +1,25 @@
+# Order Information
+
+Order : {{ .Order.User.ShortLogID }}/{{ .Order.ID }}  
+Placed: {{ .Order.PlacedTS.Format  "2006-01-02 15:04:05 MST" }}  
+By    : {{ .UserNick }} - {{ .Order.User }}  
+Status: {{ .Order.Status }}  
+
+## Cart
+{{- template "cart-listing.tmpl" .Order.Cart }}
+
+Cart Total   : ${{ .Order.Cart.Total }}  
+Shipping     : ${{ .Order.ShipCharge }}  
+Exchange Rate: {{ .Order.ExchangeRate }} DCR/USD  
+DCR Amount   : {{ .Order.TotalDCR.String }}  
+Invoice      : {{ .Order.Invoice }}  
+
+{{ if eq .Order.Status "placed" }}
+Switch status to [shipped](/admin/orderstatusto/{{.Order.User}}/{{.Order.ID}}/shipped) [completed](/admin/orderstatusto/{{.Order.User}}/{{.Order.ID}}/completed) [canceled](/admin/orderstatusto/{{.Order.User}}/{{.Order.ID}}/canceled)
+{{ else if eq .Order.Status "shipped" }}
+Switch status to [completed](/admin/orderstatusto/{{.Order.User}}/{{.Order.ID}}/completed) [canceled](/admin/orderstatusto/{{.Order.User}}/{{.Order.ID}}/canceled)
+{{ end }}
+
+
+[back to order listing](/admin/orders)
+

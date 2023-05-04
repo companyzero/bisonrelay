@@ -1,0 +1,8 @@
+# List of Orders
+
+[back to admin index](/admin)
+
+{{ range .Orders }}
+  - [{{ .User.ShortLogID }}/{{ .ID }}](/admin/order/{{.User}}/{{.ID}}) - {{ .PlacedTS.Format "2006-01-02 15:04:05" }} - {{ .UserNick }}
+{{- end }}
+

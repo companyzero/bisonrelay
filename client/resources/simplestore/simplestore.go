@@ -29,6 +29,8 @@ const (
 	cartTmplFile        = "cart.tmpl"
 	ordersTmplFile      = "orders.tmpl"
 	orderPlacedTmplFile = "orderplaced.tmpl"
+	adminOrdersTmplFile = "admin_orders.tmpl"
+	adminOrderTmplFile  = "admin_order.tmpl"
 )
 
 type PayType string
@@ -40,14 +42,15 @@ const (
 
 // Config holds the configuration for a simple store.
 type Config struct {
-	Root        string
-	Log         slog.Logger
-	LiveReload  bool
-	OrderPlaced func(order *Order, msg string)
-	PayType     PayType
-	Account     string
-	ShipCharge  float64
-	Client      *client.Client
+	Root          string
+	Log           slog.Logger
+	LiveReload    bool
+	OrderPlaced   func(order *Order, msg string)
+	StatusChanged func(order *Order, msg string)
+	PayType       PayType
+	Account       string
+	ShipCharge    float64
+	Client        *client.Client
 
 	ExchangeRateProvider func() float64
 }
@@ -162,6 +165,25 @@ func (s *Store) reloadStore() error {
 func (s *Store) Fulfill(ctx context.Context, uid clientintf.UserID,
 	request *rpc.RMFetchResource) (*rpc.RMFetchResourceReply, error) {
 
+	// Admin handlers.
+	if len(request.Path) > 0 && request.Path[0] == "admin" {
+		if uid != s.c.PublicID() {
+			return s.handleNotFound(ctx, uid, request)
+		}
+		switch {
+		case pathEquals(request.Path, "admin"):
+			return s.handleAdminIndex(ctx, uid, request)
+		case pathEquals(request.Path, "admin", "orders"):
+			return s.handleAdminOrders(ctx, uid, request)
+		case pathHasPrefix(request.Path, "admin", "order"):
+			return s.handleAdminViewOrder(ctx, uid, request)
+		case pathHasPrefix(request.Path, "admin", "orderstatusto"):
+			return s.handleAdminUpdateOrderStatus(ctx, uid, request)
+		default:
+			return s.handleNotFound(ctx, uid, request)
+		}
+	}
+
 	switch {
 	case len(request.Path) == 0 || request.Path[0] == "index.md":
 		return s.handleIndex(ctx, uid, request)
@@ -209,6 +231,7 @@ func (s *Store) runFSWatcher(ctx context.Context, watcher *fsnotify.Watcher) {
 	// once when multiple events happen in sequence.
 	var chanReload <-chan time.Time
 
+	s.log.Debugf("Starting FS watcher")
 	for {
 		select {
 		case <-ctx.Done():

@@ -1,10 +1,12 @@
 package simplestore
 
 import (
+	"fmt"
 	"strconv"
 	"time"
 
 	"github.com/companyzero/bisonrelay/client/clientintf"
+	"github.com/decred/dcrd/dcrutil/v4"
 )
 
 type Product struct {
@@ -30,24 +32,79 @@ type Cart struct {
 	Updated time.Time   `json:"updated"`
 }
 
-type OrderID uint32
-
-func (id OrderID) String() string {
-	return strconv.FormatUint(uint64(id), 10)
-}
-
-type Order struct {
-	ID   OrderID           `json:"id"`
-	User clientintf.UserID `json:"user"`
-	Cart Cart              `json:"cart"`
-}
-
 // Total returns the total amount, with 2 decimal places accuracy.
-func (order *Order) TotalCents() int64 {
+func (cart *Cart) TotalCents() int64 {
 	var totalUSDCents int64
-	for _, item := range order.Cart.Items {
+	for _, item := range cart.Items {
 		totalItemUSDCents := int64(item.Quantity) * int64(item.Product.Price*100)
 		totalUSDCents += totalItemUSDCents
 	}
 	return totalUSDCents
+}
+
+// Total returns the total cart amount in USD.
+func (cart *Cart) Total() float64 {
+	return float64(cart.TotalCents()) / 100
+}
+
+type OrderID uint32
+
+func (id OrderID) String() string {
+	return fmt.Sprintf("%08d", id)
+}
+
+func (id *OrderID) FromString(s string) error {
+	i, err := strconv.ParseUint(s, 10, 32)
+	if err != nil {
+		return err
+	}
+	*id = OrderID(i)
+	return nil
+}
+
+type OrderStatus string
+
+const (
+	StatusPlaced    OrderStatus = "placed"
+	StatusShipped   OrderStatus = "shipped"
+	StatusCompleted OrderStatus = "completed"
+	StatusCanceled  OrderStatus = "canceled"
+)
+
+type Order struct {
+	ID           OrderID           `json:"id"`
+	User         clientintf.UserID `json:"user"`
+	Cart         Cart              `json:"cart"`
+	Status       OrderStatus       `json:"status"`
+	PlacedTS     time.Time         `json:"placed_ts"`
+	ResolvedTS   *time.Time        `json:"resolved_ts"`
+	ShipCharge   float64           `json:"ship_charge"`
+	ExchangeRate float64           `json:"exchange_rate"`
+	PayType      PayType           `json:"pay_type"`
+	Invoice      string            `json:"invoice"`
+}
+
+// Total returns the total amount, with 2 decimal places accuracy.
+func (order *Order) TotalCents() int64 {
+	totalUSDCents := order.Cart.TotalCents()
+	if order.ShipCharge > 0 {
+		totalUSDCents += int64(order.ShipCharge * 100)
+	}
+	return totalUSDCents
+}
+
+// Total returns the total amount as a float USD.
+func (order *Order) Total() float64 {
+	return float64(order.TotalCents()) / 100
+}
+
+// TotalDCR returns the total order amount in DCR, given the configured exchange
+// rate.
+func (order *Order) TotalDCR() dcrutil.Amount {
+	if order.ExchangeRate == 0 {
+		return 0
+	}
+	totalDCR := order.Total() / order.ExchangeRate
+	amount, _ := dcrutil.NewAmount(totalDCR)
+	return amount
 }
