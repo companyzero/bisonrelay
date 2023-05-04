@@ -552,6 +552,14 @@ func handleInitClient(handle uint32, args InitClient) error {
 				}
 				notify(NTSimpleStoreOrderPlaced, event, nil)
 			},
+
+			StatusChanged: func(order *simplestore.Order, msg string) {
+				event := SimpleStoreOrder{
+					Order: *order,
+					Msg:   msg,
+				}
+				notify(NTSimpleStoreOrderPlaced, event, nil)
+			},
 		}
 		sstore, err = simplestore.New(scfg)
 		if err != nil {
@@ -599,6 +607,10 @@ func handleInitClient(handle uint32, args InitClient) error {
 	cs[handle] = cctx
 
 	go cctx.trackExchangeRate()
+
+	if sstore != nil {
+		go sstore.Run(ctx)
+	}
 
 	go func() {
 		err := c.Run(ctx)

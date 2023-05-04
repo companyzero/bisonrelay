@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"math"
 	"os"
 	"path/filepath"
 	"strings"
@@ -15,8 +14,9 @@ import (
 	"github.com/companyzero/bisonrelay/internal/jsonfile"
 	"github.com/companyzero/bisonrelay/internal/strescape"
 	"github.com/companyzero/bisonrelay/rpc"
-	"github.com/decred/dcrd/dcrutil/v4"
 )
+
+var orderFnamePattern = jsonfile.MakeDecimalFilePattern("order-", ".json", false)
 
 func (s *Store) handleNotFound(ctx context.Context, uid clientintf.UserID,
 	request *rpc.RMFetchResource) (*rpc.RMFetchResourceReply, error) {
@@ -30,8 +30,12 @@ func (s *Store) handleIndex(ctx context.Context, uid clientintf.UserID,
 	request *rpc.RMFetchResource) (*rpc.RMFetchResourceReply, error) {
 
 	s.mtx.Lock()
+	tmplCtx := &indexContext{
+		Products: s.products,
+		IsAdmin:  uid == s.c.PublicID(),
+	}
 	w := &bytes.Buffer{}
-	err := s.tmpl.ExecuteTemplate(w, indexTmplFile, &indexContext{Products: s.products})
+	err := s.tmpl.ExecuteTemplate(w, indexTmplFile, tmplCtx)
 	s.mtx.Unlock()
 	if err != nil {
 		return nil, fmt.Errorf("unable to execute index template: %v", err)
@@ -165,36 +169,27 @@ func (s *Store) handlePlaceOrder(ctx context.Context, uid clientintf.UserID,
 		return nil, err
 	}
 
+	if len(cart.Items) == 0 {
+		return &rpc.RMFetchResourceReply{
+			Data:   []byte("No items in order"),
+			Status: rpc.ResourceStatusOk,
+		}, nil
+	}
+
 	// Create the order.
-	order := &Order{
-		User: uid,
-		Cart: cart,
-	}
-
-	if len(cart.Items) > 0 {
-		var filename string
-		for order.ID = 1; order.ID < math.MaxUint32; order.ID++ {
-			filename = filepath.Join(s.root, ordersDir, uid.String(),
-				order.ID.String())
-			if !jsonfile.Exists(filename) {
-				break
-			}
-		}
-
-		err = jsonfile.Write(filename, order, s.log)
-		if err != nil {
-			return nil, err
-		}
-
-		if err := jsonfile.RemoveIfExists(cartFname); err != nil {
-			return nil, err
-		}
-	}
-
-	w := &bytes.Buffer{}
-	err = s.tmpl.ExecuteTemplate(w, orderPlacedTmplFile, &order)
+	orderDir := filepath.Join(s.root, ordersDir, uid.String())
+	lastID, err := orderFnamePattern.Last(orderDir)
 	if err != nil {
-		return nil, fmt.Errorf("unable to execute product template: %v", err)
+		return nil, err
+	}
+	id := lastID.ID + 1
+	order := &Order{
+		User:       uid,
+		Cart:       cart,
+		ID:         OrderID(id),
+		Status:     StatusPlaced,
+		PlacedTS:   time.Now(),
+		ShipCharge: s.cfg.ShipCharge,
 	}
 
 	// Build the message to send to the remote user, and present it to the
@@ -211,16 +206,15 @@ func (s *Store) handlePlaceOrder(ctx context.Context, uid clientintf.UserID,
 	} else {
 		wpm("Thank you for placing your order #%d\n", order.ID)
 		wpm("The following were the items in your order:\n")
-		var totalUSDCents int64
 		for _, item := range order.Cart.Items {
 			totalItemUSDCents := int64(item.Quantity) * int64(item.Product.Price*100)
 			wpm("  SKU %s - %s - %d units - $%.2f/item - $%.2f\n",
 				item.Product.SKU, item.Product.Title,
 				item.Quantity, item.Product.Price,
 				float64(totalItemUSDCents)/100)
-			totalUSDCents += totalItemUSDCents
 		}
 
+		totalUSDCents := order.Cart.TotalCents()
 		if totalUSDCents > 0 && s.cfg.ShipCharge > 0 {
 			wpm("Total item amount: $%.2f USD\n", float64(totalUSDCents)/100)
 			wpm("Shipping and handling charge: $%.2f USD\n", s.cfg.ShipCharge)
@@ -230,26 +224,21 @@ func (s *Store) handlePlaceOrder(ctx context.Context, uid clientintf.UserID,
 			wpm("Total amount: $%.2f USD\n", float64(totalUSDCents)/100)
 		}
 
-		var dcrPriceCents int64
-		var totalDCR dcrutil.Amount
 		if s.cfg.ExchangeRateProvider != nil {
-			dcrPrice := s.cfg.ExchangeRateProvider()
-			dcrPriceCents = int64(dcrPrice * 100)
-			if dcrPriceCents > 0 {
-				totalDCR, _ = dcrutil.NewAmount(float64(totalUSDCents) / float64(dcrPriceCents))
-			}
+			order.ExchangeRate = s.cfg.ExchangeRateProvider()
 		}
 
+		totalDCR := order.TotalDCR()
 		if totalDCR > 0 {
 			wpm("Using the current exchange rate of %.2f USD/DCR, your order is "+
-				"%s, valid for the next 60 minutes\n", float64(dcrPriceCents)/100, totalDCR)
+				"%s, valid for the next 60 minutes\n", order.ExchangeRate, totalDCR)
 		}
 
 		pt := s.cfg.PayType
 		switch {
 		case s.cfg.ExchangeRateProvider == nil:
 			s.log.Warnf("No exchange rate provider setup in simplestore config")
-		case dcrPriceCents <= 0:
+		case order.ExchangeRate <= 0:
 			s.log.Warnf("Invalid exchange rate to charge user %s for order %s",
 				strescape.Nick(ru.Nick()), order.ID)
 		case totalDCR == 0:
@@ -261,7 +250,10 @@ func (s *Store) handlePlaceOrder(ctx context.Context, uid clientintf.UserID,
 					strescape.Nick(ru.Nick()), err)
 			} else {
 				wpm("On-chain Payment Address: %s\n", addr)
+				order.PayType = PayTypeOnChain
+				order.Invoice = addr
 			}
+
 		case pt == PayTypeLN:
 			if s.lnpc == nil {
 				s.log.Warnf("Unable to generate LN invoice for user %s "+
@@ -275,6 +267,8 @@ func (s *Store) handlePlaceOrder(ctx context.Context, uid clientintf.UserID,
 						order.ID, err)
 				} else {
 					wpm("LN Invoice for payment: %s\n", invoice)
+					order.PayType = PayTypeLN
+					order.Invoice = invoice
 				}
 			}
 
@@ -287,6 +281,24 @@ func (s *Store) handlePlaceOrder(ctx context.Context, uid clientintf.UserID,
 		s.cfg.OrderPlaced(order, b.String())
 	}
 
+	// Save order.
+	orderFname := filepath.Join(orderDir, orderFnamePattern.FilenameFor(id))
+	err = jsonfile.Write(orderFname, order, s.log)
+	if err != nil {
+		return nil, err
+	}
+
+	// Clear cart.
+	if err := jsonfile.RemoveIfExists(cartFname); err != nil {
+		return nil, err
+	}
+
+	// Render result.
+	w := &bytes.Buffer{}
+	err = s.tmpl.ExecuteTemplate(w, orderPlacedTmplFile, &order)
+	if err != nil {
+		return nil, fmt.Errorf("unable to execute product template: %v", err)
+	}
 	return &rpc.RMFetchResourceReply{
 		Data:   w.Bytes(),
 		Status: rpc.ResourceStatusOk,
@@ -332,5 +344,4 @@ func (s *Store) handleOrders(ctx context.Context, uid clientintf.UserID,
 		Data:   w.Bytes(),
 		Status: rpc.ResourceStatusOk,
 	}, nil
-
 }

@@ -24,6 +24,18 @@ func handleCompletedSimpleStoreOrder(as *appState, order *simplestore.Order, msg
 	as.pm(cw, msg)
 }
 
+func handleSimpleStoreOrderStatusChanged(as *appState, order *simplestore.Order, msg string) {
+	ru, err := as.c.UserByID(order.User)
+	if err != nil {
+		as.diagMsg("Order #%d placed by unknown user %s",
+			order.ID, order.User)
+		return
+	}
+
+	cw := as.findOrNewChatWindow(ru.ID(), ru.Nick())
+	as.pm(cw, msg)
+}
+
 func handleNewTransaction(as *appState, tx *lnrpc.Transaction) error {
 	b, err := hex.DecodeString(tx.RawTxHex)
 	if err != nil {

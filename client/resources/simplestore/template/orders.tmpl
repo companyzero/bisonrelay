@@ -5,7 +5,7 @@ User has not placed any orders!
 {{end}}
 
 {{range .Orders}}
-## Order {{.ID}}
+## Order {{.User.ShortLogID}}/{{.ID}}
 {{- template "cart-listing.tmpl" .Cart}}
 {{end}}
 
