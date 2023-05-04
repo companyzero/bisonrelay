@@ -1675,6 +1675,16 @@ class SendOnChain {
 }
 
 @JsonSerializable()
+class LoadUserHistory {
+  final String uid;
+  @JsonKey(name: "gc_name")
+  final String? gcName;
+
+  LoadUserHistory(this.uid, this.gcName);
+  Map<String, dynamic> toJson() => _$LoadUserHistoryToJson(this);
+}
+
+@JsonSerializable()
 class WriteInvite {
   @JsonKey(name: "fund_amount")
   final int fundAmount;
@@ -2465,8 +2475,8 @@ abstract class PluginPlatform {
     return (res as List).map<Account>((v) => Account.fromJson(v)).toList();
   }
 
-  Future<List<LogEntry>> readChatHistory(String uid) async {
-    var res = await asyncCall(CTLoadUserHistory, uid);
+  Future<List<LogEntry>> readChatHistory(String uid, String gcName) async {
+    var res = await asyncCall(CTLoadUserHistory, LoadUserHistory(uid, gcName));
     if (res == null) {
       return List.empty();
     }

@@ -396,3 +396,8 @@ type HandshakeStage struct {
 	UID   clientintf.UserID `json:"uid"`
 	Stage string            `json:"stage"`
 }
+
+type LoadUserHistory struct {
+	UID    clientintf.UserID `json:"uid"`
+	GcName string            `json:"gc_name"`
+}

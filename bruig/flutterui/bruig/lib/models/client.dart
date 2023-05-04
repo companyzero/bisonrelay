@@ -150,6 +150,15 @@ class ChatModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  void appendHistory(ChatEventModel msg) {
+    if (_msgs.isNotEmpty &&
+        _msgs[_msgs.length - 1].source?.id == msg.source?.id) {
+      msg.sameUser = true;
+    }
+    _msgs.add(msg);
+    notifyListeners();
+  }
+
   void removeFirstUnread() {
     for (int i = 0; i < _msgs.length; i++) {
       if (_msgs[i].firstUnread) {
@@ -414,29 +423,36 @@ class ClientModel extends ChangeNotifier {
     c = ChatModel(id, alias, isGC);
     _activeChats[id] = c;
 
-    var chatHistory = await Golib.readChatHistory(id);
+    var chatHistory = await Golib.readChatHistory(id, isGC ? alias : "");
 
     for (int i = 0; i < chatHistory.length; i++) {
       ChatEventModel evnt;
-      if (chatHistory[i].internal) {
-        print("synth event ${chatHistory[i].message}");
+      if (isGC) {
+        var m = GCMsg(
+            id,
+            chatHistory[i].from,
+            chatHistory[i].message,
+            chatHistory[i].timestamp *
+                (chatHistory[i].from == _nick ? 1000 : 1));
         evnt = ChatEventModel(
-            SynthChatEvent(chatHistory[i].message, SCE_sending), null);
-      } else if (isGC) {
-        var m = GCMsg(chatHistory[i].from, chatHistory[i].message, true,
-            chatHistory[i].timestamp * 1000);
-        evnt = ChatEventModel(m, null);
+            m,
+            chatHistory[i].from != _nick
+                ? ChatModel(id, chatHistory[i].from, false)
+                : null);
       } else {
-        var m = PM(chatHistory[i].from, chatHistory[i].message, true,
-            chatHistory[i].timestamp * 1000);
-        evnt = ChatEventModel(m, null);
+        var m = PM(
+            id,
+            chatHistory[i].message,
+            chatHistory[i].from == _nick,
+            chatHistory[i].timestamp *
+                (chatHistory[i].from == _nick ? 1000 : 1));
+        evnt = ChatEventModel(
+            m,
+            chatHistory[i].from != _nick
+                ? ChatModel(id, chatHistory[i].from, false)
+                : null);
       }
-      c.append(evnt);
-      var now =
-          DateTime.fromMillisecondsSinceEpoch(chatHistory[i].timestamp * 1000);
-      var formatter = DateFormat('yyyy-MM-dd HH:mm:ss');
-      var date = formatter.format(now);
-      print("$date ${chatHistory[i].from} ${chatHistory[i].message}");
+      c.appendHistory(evnt);
     }
 
     // TODO: this test should be superflous.

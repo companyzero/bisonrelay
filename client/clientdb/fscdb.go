@@ -450,20 +450,18 @@ func (db *DB) readLogMsg(logFname string) ([]PMLogEntry, error) {
 		}
 
 		name := lineSplit[1]
-		internal := false
 		message := ""
 		if strings.Contains(name, "<") {
 			name = strings.Replace(name, "<", "", -1)
 			name = strings.Replace(name, ">", "", -1)
 			message = strings.TrimSpace(strings.Split(line, ">")[1])
 		} else if strings.Contains(name, "*") {
-			internal = true
-			message = strings.TrimSpace(strings.Split(line, "*")[1])
+			continue
 		}
 
-		db.log.Infof("%s <%s> %s", t.Format("2006-01-02T15:04:04"), name, message)
+		//db.log.Infof("%s <%s> %s", t.Format("2006-01-02T15:04:04"), name, message)
 		loggedMessages = append(loggedMessages, PMLogEntry{Message: message,
-			From: name, Timestamp: t.Unix(), Internal: internal})
+			From: name, Timestamp: t.Unix()})
 	}
 
 	if err := scanner.Err(); err != nil {

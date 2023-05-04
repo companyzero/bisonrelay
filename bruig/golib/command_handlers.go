@@ -1709,11 +1709,11 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		return nil, err
 
 	case CTLoadUserHistory:
-		var uid clientintf.UserID
-		if err := cmd.decode(&uid); err != nil {
+		var args LoadUserHistory
+		if err := cmd.decode(&args); err != nil {
 			return nil, err
 		}
-		chatHistory, err := c.ReadUserHistoryMessages(uid)
+		chatHistory, err := c.ReadUserHistoryMessages(args.UID, args.GcName)
 		if err != nil {
 			return nil, err
 		}

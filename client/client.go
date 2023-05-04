@@ -748,17 +748,27 @@ type ChatHistoryEntry struct {
 	Internal  bool   `json:"internal"`
 }
 
-func (c *Client) ReadUserHistoryMessages(uid UserID) ([]ChatHistoryEntry, error) {
-	_, err := c.rul.byID(uid)
-	if err != nil {
-		c.log.Error(err)
-		return nil, nil
-		//return nil, err
+func (c *Client) ReadUserHistoryMessages(uid UserID, gcName string) ([]ChatHistoryEntry, error) {
+	var err error
+	if gcName == "" {
+		_, err := c.rul.byID(uid)
+		if err != nil {
+			c.log.Error(err)
+			return nil, nil
+			//return nil, err
+		}
 	}
-
-	messages, err := c.db.ReadLogPM(uid)
-	if err != nil {
-		return nil, err
+	var messages []clientdb.PMLogEntry
+	if gcName != "" {
+		messages, err = c.db.ReadLogGCMsg(gcName, uid)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		messages, err = c.db.ReadLogPM(uid)
+		if err != nil {
+			return nil, err
+		}
 	}
 	chatHistory := make([]ChatHistoryEntry, 0, len(messages))
 	for _, entry := range messages {

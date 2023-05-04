@@ -1710,6 +1710,18 @@ Map<String, dynamic> _$SendOnChainToJson(SendOnChain instance) =>
       'from_account': instance.fromAccount,
     };
 
+LoadUserHistory _$LoadUserHistoryFromJson(Map<String, dynamic> json) =>
+    LoadUserHistory(
+      json['uid'] as String,
+      json['gc_name'] as String?,
+    );
+
+Map<String, dynamic> _$LoadUserHistoryToJson(LoadUserHistory instance) =>
+    <String, dynamic>{
+      'uid': instance.uid,
+      'gc_name': instance.gcName,
+    };
+
 WriteInvite _$WriteInviteFromJson(Map<String, dynamic> json) => WriteInvite(
       json['fund_amount'] as int,
       json['fund_account'] as String,
