@@ -162,21 +162,23 @@ class _ReceivedSentPMState extends State<ReceivedSentPM> {
                       ? UserContextMenu(
                           targetUserChat: widget.evnt.source,
                           child: InteractiveAvatar(
-                              bgColor: selectedBackgroundColor,
-                              chatNick: widget.nick,
-                              avatarColor: avatarColor,
-                              avatarTextColor: avatarTextColor),
+                            bgColor: selectedBackgroundColor,
+                            chatNick: widget.nick,
+                            avatarColor: avatarColor,
+                            avatarTextColor: avatarTextColor,
+                          ),
                         )
                       : UserContextMenu(
                           targetUserChat: widget.evnt.source,
                           child: InteractiveAvatar(
-                              bgColor: selectedBackgroundColor,
-                              chatNick: widget.nick,
-                              onTap: () {
-                                widget.showSubMenu(widget.id);
-                              },
-                              avatarColor: avatarColor,
-                              avatarTextColor: avatarTextColor),
+                            bgColor: selectedBackgroundColor,
+                            chatNick: widget.nick,
+                            onTap: () {
+                              widget.showSubMenu(widget.id);
+                            },
+                            avatarColor: avatarColor,
+                            avatarTextColor: avatarTextColor,
+                          ),
                         ),
                 ),
               ),
