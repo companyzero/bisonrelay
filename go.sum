@@ -32,8 +32,8 @@ cloud.google.com/go/storage v1.8.0/go.mod h1:Wv1Oy7z6Yz3DshWRJFhqM/UCfaWIRTdp0RX
 cloud.google.com/go/storage v1.10.0/go.mod h1:FLPqc6j+Ki4BU591ie1oL6qBQGu2Bl/tZ9ullr3+Kg0=
 decred.org/cspp/v2 v2.0.0 h1:b4fZrElRufz30rYnBZ2shhC8AjNVTN4i6TMzDi+hk44=
 decred.org/cspp/v2 v2.0.0/go.mod h1:0shJWKTWY3LxZEWGxtbER1Y45+HVjC0WZtj4bctSzCI=
-decred.org/dcrwallet/v2 v2.1.1 h1:QZdm51WbNAq2CruOjdA5HZp0cFtUatu79BHeyaRLG/U=
-decred.org/dcrwallet/v2 v2.1.1/go.mod h1:dpE2wTMZiNoyjt9f5rZGytrz+HbZep91lHFFneVIOJI=
+decred.org/dcrwallet/v2 v2.2.0 h1:/fdUDdNUFP46WCeTX5wfBC2SOujrqMrhTp4rT6TUguc=
+decred.org/dcrwallet/v2 v2.2.0/go.mod h1:dpE2wTMZiNoyjt9f5rZGytrz+HbZep91lHFFneVIOJI=
 dmitri.shuralyov.com/gpu/mtl v0.0.0-20190408044501-666a987793e9/go.mod h1:H6x//7gZCb22OMCxBHrMx7a5I7Hp++hsVxbQ4BYO7hU=
 git.schwanenlied.me/yawning/bsaes.git v0.0.0-20180720073208-c0276d75487e h1:F2x1bq7RaNCIuqYpswggh1+c1JmwdnkHNC9wy1KDip0=
 git.schwanenlied.me/yawning/bsaes.git v0.0.0-20180720073208-c0276d75487e/go.mod h1:BWqTsj8PgcPriQJGl7el20J/7TuT1d/hSyFDXMEpoEo=
@@ -176,8 +176,8 @@ github.com/decred/dcrd/wire v1.2.0/go.mod h1:/JKOsLInOJu6InN+/zH5AyCq3YDIOW/Eqcf
 github.com/decred/dcrd/wire v1.4.0/go.mod h1:WxC/0K+cCAnBh+SKsRjIX9YPgvrjhmE+6pZlel1G7Ro=
 github.com/decred/dcrd/wire v1.5.0 h1:3SgcEzSjqAMQvOugP0a8iX7yQSpiVT1yNi9bc4iOXVg=
 github.com/decred/dcrd/wire v1.5.0/go.mod h1:fzAjVqw32LkbAZIt5mnrvBR751GTa3e0rRQdOIhPY3w=
-github.com/decred/dcrlnd v0.3.8-0.20230418120521-23aecb168158 h1:FUvSyrXxAZ1Ukm4dIM6pL/DE5SGR1kt3q22gIdA1VU8=
-github.com/decred/dcrlnd v0.3.8-0.20230418120521-23aecb168158/go.mod h1:dpq3iJKByuz9OHci/dKyVNxB3nAjvAEbuBdnFGUunfk=
+github.com/decred/dcrlnd v0.3.9-0.20230505162926-6de2955f07fd h1:EvYHmtS3bQmcgx1QRDLu/ogMUxqJU7v7CMJHk3VZjhI=
+github.com/decred/dcrlnd v0.3.9-0.20230505162926-6de2955f07fd/go.mod h1:Bc8qoY6VWENd4bRebJyAZplfkygiXue9IKrqzyxGdb4=
 github.com/decred/dcrlnlpd v0.0.0-20230322170740-0a76ced98d80 h1:VYCMmcb7ja2NdvkVtFw5pmiknkdXofC4LTEkuqfqGxQ=
 github.com/decred/dcrlnlpd v0.0.0-20230322170740-0a76ced98d80/go.mod h1:SgBov4TVytr+Kr5On1FQPV4q88Fle1UrCPjIgEF0PCw=
 github.com/decred/go-socks v1.1.0 h1:dnENcc0KIqQo3HSXdgboXAHgqsCIutkqq6ntQjYtm2U=

@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"os"
 	"path/filepath"
 	"strings"
@@ -49,6 +50,9 @@ type Config struct {
 	// first address MUST be one accessible for the local host (e.g.
 	// 127.0.0.1:<port>), otherwise initialization may hang forever.
 	RPCAddresses []string
+
+	// DialFunc can be set to specify a non standard dialer.
+	DialFunc func(context.Context, string, string) (net.Conn, error)
 }
 
 // Dcrlnd is a running instance of an embedded dcrlnd instance.
@@ -356,7 +360,8 @@ func RunDcrlnd(ctx context.Context, cfg Config) (*Dcrlnd, error) {
 	conf.SubRPCServers.WatchtowerRPC = &watchtowerrpc.Config{}
 	conf.SubRPCServers.WatchtowerClientRPC = &wtclientrpc.Config{}
 	conf.Dcrwallet = &lncfg.DcrwalletConfig{
-		SPV: true,
+		SPV:      true,
+		DialFunc: cfg.DialFunc,
 	}
 	switch network {
 	case "mainnet":
