@@ -255,6 +255,7 @@ func loadConfig() (*config, error) {
 	flagProxyUser := fs.String("proxyuser", "", "")
 	flagProxyPass := fs.String("proxypass", "", "")
 	flagTorIsolation := fs.Bool("torisolation", false, "")
+	flagCircuitLimit := fs.Uint("circuitlimit", 32, "max number of open connections per proxy connection")
 
 	var mimetypes cfgStringArray
 	fs.Var(&mimetypes, "mimetype", "List of mimetypes with viewer")
@@ -373,6 +374,7 @@ func loadConfig() (*config, error) {
 		ProxyUser:          *flagProxyUser,
 		ProxyPass:          *flagProxyPass,
 		TorIsolation:       *flagTorIsolation,
+		CircuitLimit:       uint32(*flagCircuitLimit),
 		MinWalletBal:       minWalletBal,
 		MinRecvBal:         minRecvBal,
 		MinSendBal:         minSendBal,

@@ -2412,7 +2412,7 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 			TorIsolation: args.TorIsolation,
 			ServerAddr:   args.ServerAddr,
 			Log:          logBknd.logger("CONN"),
-			CircuitLimit: 32,
+			CircuitLimit: args.CircuitLimit,
 		}
 		dialer = clientintf.NewProxiedDialer(dialCfg)
 	} else {
