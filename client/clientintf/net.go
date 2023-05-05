@@ -10,12 +10,11 @@ import (
 	"github.com/decred/slog"
 )
 
+type DialFunc func(context.Context, string, string) (net.Conn, error)
+
 // tlsDialer creates the inner TLS client dialer, based on the outer network
 // dialer.
-func tlsDialer(addr string, log slog.Logger,
-	dial func(context.Context, string, string) (net.Conn, error),
-) func(context.Context) (Conn, *tls.ConnectionState, error) {
-
+func tlsDialer(addr string, log slog.Logger, dialFunc DialFunc) func(context.Context) (Conn, *tls.ConnectionState, error) {
 	tlsConfig := &tls.Config{
 		MinVersion: tls.VersionTLS12,
 		CipherSuites: []uint16{
@@ -25,7 +24,7 @@ func tlsDialer(addr string, log slog.Logger,
 	}
 
 	return func(ctx context.Context) (Conn, *tls.ConnectionState, error) {
-		nconn, err := dial(ctx, "tcp", addr)
+		nconn, err := dialFunc(ctx, "tcp", addr)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -54,6 +53,11 @@ func tlsDialer(addr string, log slog.Logger,
 func NetDialer(addr string, log slog.Logger) func(context.Context) (Conn, *tls.ConnectionState, error) {
 	netDialer := &net.Dialer{}
 	return tlsDialer(addr, log, netDialer.DialContext)
+}
+
+// WithDialer returns a client dialer function that uses the given dialer.
+func WithDialer(addr string, log slog.Logger, dialFunc DialFunc) func(context.Context) (Conn, *tls.ConnectionState, error) {
+	return tlsDialer(addr, log, dialFunc)
 }
 
 // ProxyDialerConfig holds config fields for dialing to the server using a
