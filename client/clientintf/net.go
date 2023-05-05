@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/decred/go-socks/socks"
 	"github.com/decred/slog"
 )
 
@@ -58,36 +57,4 @@ func NetDialer(addr string, log slog.Logger) func(context.Context) (Conn, *tls.C
 // WithDialer returns a client dialer function that uses the given dialer.
 func WithDialer(addr string, log slog.Logger, dialFunc DialFunc) func(context.Context) (Conn, *tls.ConnectionState, error) {
 	return tlsDialer(addr, log, dialFunc)
-}
-
-// ProxyDialerConfig holds config fields for dialing to the server using a
-// proxy.
-type ProxyDialerConfig struct {
-	ServerAddr   string
-	ProxyAddr    string
-	ProxyUser    string
-	ProxyPass    string
-	TorIsolation bool
-	CircuitLimit uint32
-	Log          slog.Logger
-}
-
-// NewProxiedDialer creates a client dialer function when a SOCKS proxy
-// connection is necessary.
-func NewProxiedDialer(cfg ProxyDialerConfig) func(context.Context) (Conn, *tls.ConnectionState, error) {
-	proxy := socks.Proxy{
-		Addr:         cfg.ProxyAddr,
-		Username:     cfg.ProxyUser,
-		Password:     cfg.ProxyPass,
-		TorIsolation: cfg.TorIsolation,
-	}
-
-	var proxyDialer func(context.Context, string, string) (net.Conn, error)
-	if cfg.TorIsolation {
-		proxyDialer = socks.NewPool(proxy, cfg.CircuitLimit).DialContext
-	} else {
-		proxyDialer = proxy.DialContext
-	}
-
-	return tlsDialer(cfg.ServerAddr, cfg.Log, proxyDialer)
 }
