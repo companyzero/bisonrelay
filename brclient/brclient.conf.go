@@ -22,6 +22,7 @@ root = {{ .Root }}
 # proxyuser =
 # proxypass =
 # torisolation = 0
+# circuitlimit = 32
 
 # external viewer for mimetypes
 # mimetype=image/*,ristretto
