@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -46,7 +45,6 @@ import (
 	"github.com/decred/dcrlnd/lnrpc/walletrpc"
 	"github.com/decred/dcrlnd/lnwire"
 	lpclient "github.com/decred/dcrlnlpd/client"
-	"github.com/decred/go-socks/socks"
 	"github.com/decred/slog"
 	"github.com/muesli/reflow/wordwrap"
 	"golang.org/x/exp/maps"
@@ -2526,31 +2524,8 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		})
 	}
 
-	var d net.Dialer
-	httpDialerFunc := d.DialContext
-	var dialer clientintf.Dialer
-	if args.ProxyAddr != "" {
-		proxy := &socks.Proxy{
-			Addr:         args.ProxyAddr,
-			Username:     args.ProxyUser,
-			Password:     args.ProxyPass,
-			TorIsolation: args.TorIsolation,
-		}
-		httpDialerFunc = proxy.DialContext
-
-		dialCfg := clientintf.ProxyDialerConfig{
-			ProxyAddr:    args.ProxyAddr,
-			ProxyUser:    args.ProxyUser,
-			ProxyPass:    args.ProxyPass,
-			TorIsolation: args.TorIsolation,
-			ServerAddr:   args.ServerAddr,
-			Log:          logBknd.logger("CONN"),
-			CircuitLimit: args.CircuitLimit,
-		}
-		dialer = clientintf.NewProxiedDialer(dialCfg)
-	} else {
-		dialer = clientintf.NetDialer(args.ServerAddr, logBknd.logger("CONN"))
-	}
+	connLog := logBknd.logger("CONN")
+	dialer := clientintf.WithDialer(args.ServerAddr, connLog, args.dialFunc)
 
 	// Setup notification handlers.
 	ntfns := client.NewNotificationManager()
@@ -3536,7 +3511,7 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		lnWallet:    lnWallet,
 		httpClient: &http.Client{
 			Transport: &http.Transport{
-				DialContext:           httpDialerFunc,
+				DialContext:           args.dialFunc,
 				ForceAttemptHTTP2:     true,
 				MaxIdleConns:          100,
 				IdleConnTimeout:       90 * time.Second,
