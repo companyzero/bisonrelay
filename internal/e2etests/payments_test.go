@@ -14,6 +14,78 @@ import (
 	"github.com/companyzero/bisonrelay/rpc"
 )
 
+// TestTipUserExceedsLifetime asserts that if the max lifetime of the tip
+// expires, the tip attempt is dropped.
+func TestTipUserExceedsLifetime(t *testing.T) {
+	t.Parallel()
+	tcfg := testScaffoldCfg{}
+	ts := newTestScaffold(t, tcfg)
+	alice := ts.newClient("alice")
+	bob := ts.newClient("bob")
+
+	ts.kxUsers(alice, bob)
+
+	// Setup tip progress handler.
+	const maxAttempts = 3
+	progressErrChan := make(chan error, 1)
+	alice.handle(client.OnTipAttemptProgressNtfn(func(ru *client.RemoteUser, amtMAtoms int64, completed bool, attempt int, attemptErr error, willRetry bool) {
+		if willRetry {
+			progressErrChan <- fmt.Errorf("progress should not have failed with willRetry set")
+		} else if attempt != 1 {
+			progressErrChan <- fmt.Errorf("attempt %d != %d",
+				attempt, 1)
+		} else {
+			progressErrChan <- attemptErr
+
+		}
+	}))
+
+	// Generate a custom test invoice.
+	var mtx sync.Mutex
+	payMAtoms := int64(4321000)
+	bob.mpc.HookGetInvoice(func(amt int64, cb func(int64)) (string, error) {
+		// Delay invoice generation until the max lifetime elapses on
+		// Alice.
+		time.Sleep(alice.cfg.TipUserMaxLifetime)
+		if amt == payMAtoms {
+			return "custom invoice", nil
+		}
+		return fmt.Sprintf("invoice for %d", amt), nil
+	})
+	alice.mpc.HookDecodeInvoice(func(invoice string) (clientintf.DecodedInvoice, error) {
+		mtx.Lock()
+		defer mtx.Unlock()
+		if invoice == "custom invoice" {
+			inv, _ := alice.mpc.DefaultDecodeInvoice(invoice)
+			inv.MAtoms = payMAtoms
+			return inv, nil
+		}
+		return alice.mpc.DefaultDecodeInvoice(invoice)
+	})
+	payInvoiceChan := make(chan struct{}, 10)
+	alice.mpc.HookPayInvoice(func(string) (int64, error) {
+		payInvoiceChan <- struct{}{}
+		return 0, nil
+	})
+
+	// Send a tip from Alice to Bob. Sending should fail because the invoice
+	// will take too long to be generated/received.
+	err := alice.TipUser(bob.PublicID(), float64(payMAtoms)/1e11, maxAttempts)
+	assert.NilErr(t, err)
+
+	// Check for correct error. Needs to be done as a string because the
+	// message is variable.
+	gotErr := assert.ChanWritten(t, progressErrChan)
+	if gotErr == nil {
+		t.Fatalf("nil error on progressErrChan")
+	}
+	errRe := regexp.MustCompile(`expired [0-9.nmus]+ after creation`)
+	if !errRe.MatchString(gotErr.Error()) {
+		t.Fatalf("unexpected error: %v", gotErr)
+	}
+	assert.ChanNotWritten(t, payInvoiceChan, time.Millisecond*500)
+}
+
 // TestTipUser asserts that attempting to tip an user works when payments go
 // through.
 func TestTipUser(t *testing.T) {
@@ -490,78 +562,6 @@ func TestTipUserRestartNoDoublePay(t *testing.T) {
 	assert.ChanNotWritten(t, alicePayChan, resendDelay)
 	assert.NilErrFromChan(t, progressErrChan)
 	assert.ChanNotWritten(t, progressErrChan, resendDelay)
-}
-
-// TestTipUserExceedsLifetime asserts that if the max lifetime of the tip
-// expires, the tip attempt is dropped.
-func TestTipUserExceedsLifetime(t *testing.T) {
-	t.Parallel()
-	tcfg := testScaffoldCfg{}
-	ts := newTestScaffold(t, tcfg)
-	alice := ts.newClient("alice")
-	bob := ts.newClient("bob")
-
-	ts.kxUsers(alice, bob)
-
-	// Setup tip progress handler.
-	const maxAttempts = 3
-	progressErrChan := make(chan error, 1)
-	alice.handle(client.OnTipAttemptProgressNtfn(func(ru *client.RemoteUser, amtMAtoms int64, completed bool, attempt int, attemptErr error, willRetry bool) {
-		if willRetry {
-			progressErrChan <- fmt.Errorf("progress should not have failed with willRetry set")
-		} else if attempt != 1 {
-			progressErrChan <- fmt.Errorf("attempt %d != %d",
-				attempt, 1)
-		} else {
-			progressErrChan <- attemptErr
-
-		}
-	}))
-
-	// Generate a custom test invoice.
-	var mtx sync.Mutex
-	payMAtoms := int64(4321000)
-	bob.mpc.HookGetInvoice(func(amt int64, cb func(int64)) (string, error) {
-		// Delay invoice generation until the max lifetime elapses on
-		// Alice.
-		time.Sleep(alice.cfg.TipUserMaxLifetime)
-		if amt == payMAtoms {
-			return "custom invoice", nil
-		}
-		return fmt.Sprintf("invoice for %d", amt), nil
-	})
-	alice.mpc.HookDecodeInvoice(func(invoice string) (clientintf.DecodedInvoice, error) {
-		mtx.Lock()
-		defer mtx.Unlock()
-		if invoice == "custom invoice" {
-			inv, _ := alice.mpc.DefaultDecodeInvoice(invoice)
-			inv.MAtoms = payMAtoms
-			return inv, nil
-		}
-		return alice.mpc.DefaultDecodeInvoice(invoice)
-	})
-	payInvoiceChan := make(chan struct{}, 10)
-	alice.mpc.HookPayInvoice(func(string) (int64, error) {
-		payInvoiceChan <- struct{}{}
-		return 0, nil
-	})
-
-	// Send a tip from Alice to Bob. Sending should fail because the invoice
-	// will take too long to be generated/received.
-	err := alice.TipUser(bob.PublicID(), float64(payMAtoms)/1e11, maxAttempts)
-	assert.NilErr(t, err)
-
-	// Check for correct error. Needs to be done as a string because the
-	// message is variable.
-	gotErr := assert.ChanWritten(t, progressErrChan)
-	if gotErr == nil {
-		t.Fatalf("nil error on progressErrChan")
-	}
-	errRe := regexp.MustCompile(`expired [0-9.nmus]+ after creation`)
-	if !errRe.MatchString(gotErr.Error()) {
-		t.Fatalf("unexpected error: %v", gotErr)
-	}
-	assert.ChanNotWritten(t, payInvoiceChan, time.Millisecond*500)
 }
 
 // TestTipUserPaysOnceWithSlowPayment tests that only a single payment is
