@@ -156,6 +156,13 @@ func (tc *testClient) handleSync(handler client.NotificationHandler) client.Noti
 	return tc.NotificationManager().RegisterSync(handler)
 }
 
+// testInterface returns a filled unsafe test interface for this client.
+func (tc *testClient) testInterface() *testutils.UnsafeTestInterface {
+	i := &testutils.UnsafeTestInterface{}
+	tc.FillTestInterface(i)
+	return i
+}
+
 // testScaffold holds all scaffolding needed to run an E2E test that involves
 // an instance of a BR server and client.
 type testScaffold struct {
