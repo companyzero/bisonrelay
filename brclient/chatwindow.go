@@ -434,6 +434,15 @@ func (cw *chatWindow) appendMsg(msg *chatMsg) {
 	cw.Unlock()
 }
 
+func (cw *chatWindow) appendHistoryMsg(msg *chatMsg) {
+	if msg == nil {
+		return
+	}
+	cw.Lock()
+	cw.msgs = append(cw.msgs, msg)
+	cw.Unlock()
+}
+
 func (cw *chatWindow) newUnsentPM(msg string) *chatMsg {
 	m := &chatMsg{
 		mine:     true,
@@ -509,6 +518,19 @@ func (cw *chatWindow) replacePage(fr clientdb.FetchedResource) {
 	cw.selElIndex = 0
 	cw.pageRequested = false
 	cw.Unlock()
+}
+
+func (cw *chatWindow) newHistoryMsg(from, msg string, fromUID *zkidentity.ShortID, ts time.Time, mine bool) *chatMsg {
+	m := &chatMsg{
+		mine: mine,
+		//msg: msg,
+		elements: parseMsgIntoElements(msg, cw.me),
+		ts:       ts,
+		from:     from,
+		fromUID:  fromUID,
+	}
+	cw.appendHistoryMsg(m)
+	return m
 }
 
 func (cw *chatWindow) setMsgSent(msg *chatMsg) {

@@ -1065,6 +1065,15 @@ func (as *appState) findOrNewGCWindow(gcID zkidentity.ShortID) *chatWindow {
 	as.updatedCW[len(as.chatWindows)-1] = false
 	as.chatWindowsMtx.Unlock()
 
+	chatHistory, err := as.c.ReadUserHistoryMessages(gcID, gcName, 500, 0)
+	if err != nil {
+		cw.newInternalMsg("Unable to read history messages")
+	}
+	for _, chatLog := range chatHistory {
+		var empty *zkidentity.ShortID
+		cw.newHistoryMsg(chatLog.From, chatLog.Message, empty, time.Unix(chatLog.Timestamp, 0), chatLog.From == cw.me)
+	}
+
 	as.footerInvalidate()
 	as.diagMsg("Started Group Chat %s", gcName)
 	return cw
@@ -1097,6 +1106,14 @@ func (as *appState) findOrNewChatWindow(id clientintf.UserID, alias string) *cha
 	as.updatedCW[len(as.chatWindows)-1] = false
 	as.chatWindowsMtx.Unlock()
 
+	chatHistory, err := as.c.ReadUserHistoryMessages(id, "", 500, 0)
+	if err != nil {
+		cw.newInternalMsg("Unable to read history messages")
+	}
+	for _, chatLog := range chatHistory {
+		var empty *zkidentity.ShortID
+		cw.newHistoryMsg(chatLog.From, chatLog.Message, empty, time.Unix(chatLog.Timestamp, 0), chatLog.From == cw.me)
+	}
 	as.footerInvalidate()
 	as.diagMsg("Started chat with %s", alias)
 	return cw
