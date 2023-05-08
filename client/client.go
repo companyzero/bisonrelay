@@ -246,6 +246,10 @@ type Client struct {
 	onboardMtx        sync.Mutex
 	onboardRunning    bool
 	onboardCancelChan chan struct{}
+
+	tipAttemptsChan            chan *clientdb.TipUserAttempt
+	listRunningTipAttemptsChan chan chan []RunningTipUserAttempt
+	tipAttemptsRunning         chan struct{}
 }
 
 // New creates a new CR client with the given config.
@@ -337,6 +341,10 @@ func New(cfg Config) (*Client, error) {
 		gcWarnedVersions: &singlesetmap.Map[zkidentity.ShortID]{},
 
 		onboardCancelChan: make(chan struct{}, 1),
+
+		tipAttemptsChan:            make(chan *clientdb.TipUserAttempt),
+		listRunningTipAttemptsChan: make(chan chan []RunningTipUserAttempt),
+		tipAttemptsRunning:         make(chan struct{}),
 	}
 
 	// Use the GC message cacher to collect gc messages for a few seconds
@@ -993,8 +1001,8 @@ func (c *Client) Run(ctx context.Context) error {
 		return nil
 	})
 
-	// Restart tip payments.
-	g.Go(func() error { return c.restartTipUserAttempts(gctx) })
+	// Run tip user payments.
+	g.Go(func() error { return c.runTipAttempts(gctx) })
 
 	// Restart client onboarding.
 	g.Go(func() error { return c.restartOnboarding(gctx) })

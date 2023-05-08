@@ -61,6 +61,8 @@ func newTestClient(t testing.TB, rnd io.Reader, name string) *Client {
 		ReconnectDelay: 5 * time.Second,
 		DB:             testDB(t, id, logger("FSDB")),
 		Notifications:  NewNotificationManager(),
+
+		TipUserRestartDelay: time.Millisecond,
 	}
 
 	cli, err := New(cfg)
