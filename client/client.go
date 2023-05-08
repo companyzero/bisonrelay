@@ -140,6 +140,13 @@ type Config struct {
 	// If unspecified, a default value of 72 hours is used.
 	TipUserMaxLifetime time.Duration
 
+	// TipUserPayRetryDelayFactor is the factor of the exponential delay
+	// for retrying a payment when the payment error indicates a retry may
+	// be possible.
+	//
+	// If unspecified, a default value of 12 seconds (1/5 minute) is used.
+	TipUserPayRetryDelayFactor time.Duration
+
 	// GCMQMaxLifetime is how long to wait for a message from an user,
 	// after which the GCMQ considers no other messages from this user
 	// will be received.
@@ -182,6 +189,10 @@ func (cfg *Config) setDefaults() {
 	}
 	if cfg.TipUserMaxLifetime == 0 {
 		cfg.TipUserMaxLifetime = time.Hour * 72
+	}
+
+	if cfg.TipUserPayRetryDelayFactor == 0 {
+		cfg.TipUserPayRetryDelayFactor = time.Minute / 5
 	}
 
 	// These following GCMQ times were obtained by profiling a client

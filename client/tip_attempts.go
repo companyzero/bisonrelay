@@ -31,14 +31,16 @@ type runningTipAttempt struct {
 type tipAttemptsList struct {
 	requestInvoiceDeadline time.Duration
 	maxLifetimeDuration    time.Duration
+	payRetryDelayFactor    time.Duration
 
 	m map[clientintf.UserID]runningTipAttempt
 }
 
-func newTipAttemptsList(requestInvoiceDeadline, maxLifetimeDuration time.Duration) *tipAttemptsList {
+func newTipAttemptsList(requestInvoiceDeadline, maxLifetimeDuration, payRetryDelayFactor time.Duration) *tipAttemptsList {
 	return &tipAttemptsList{
 		requestInvoiceDeadline: requestInvoiceDeadline,
 		maxLifetimeDuration:    maxLifetimeDuration,
+		payRetryDelayFactor:    payRetryDelayFactor,
 		m:                      map[clientintf.UserID]runningTipAttempt{},
 	}
 }
@@ -131,6 +133,8 @@ func (tal *tipAttemptsList) timeToNextAction() (time.Duration, bool) {
 
 // determineTipAttemptAction determines what is the next action and the time
 // to take it for a given TipUserAttempt.
+//
+//nolint:durationcheck
 func (tal *tipAttemptsList) determineTipAttemptAction(ta *clientdb.TipUserAttempt,
 	paying bool) (tipUserAttemptAction, time.Time) {
 
@@ -167,8 +171,15 @@ func (tal *tipAttemptsList) determineTipAttemptAction(ta *clientdb.TipUserAttemp
 
 	if ta.LastInvoice != "" {
 		if ta.PaymentAttempt == nil {
-			// No previous payment attempt, try paying now.
-			return actionAttemptPayment, actNow()
+			if ta.PaymentAttemptFailed == nil {
+				// First payment attempt, act immediately.
+				return actionAttemptPayment, actNow()
+			}
+
+			// Exponential delay for repeated retriable payment attempts.
+			expDelay := time.Duration(1 << ta.PaymentAttemptCount)
+			delay := expDelay * tal.payRetryDelayFactor
+			return actionAttemptPayment, (*ta.PaymentAttemptFailed).Add(delay)
 		}
 
 		// Check payment attempt.

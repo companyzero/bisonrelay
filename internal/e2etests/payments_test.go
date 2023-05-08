@@ -827,3 +827,118 @@ func TestTipUserSerialSameUserAttempts(t *testing.T) {
 	assert.ChanWritten(t, alicePaidChan)      // Successful payment
 	assert.NilErrFromChan(t, progressErrChan) // Success ntfn
 }
+
+// TestTipUserRetriesRetriablePayFailure asserts that when the error that caused
+// a tip failure is retriable, the payment will be retried.
+func TestTipUserRetriesRetriablePayFailure(t *testing.T) {
+	t.Parallel()
+	tcfg := testScaffoldCfg{}
+	ts := newTestScaffold(t, tcfg)
+	alice := ts.newClient("alice")
+	bob := ts.newClient("bob")
+
+	ts.kxUsers(alice, bob)
+
+	const maxAttempts = 1
+	var mtx sync.Mutex
+	payMAtoms := int64(4321000)
+
+	// Setup Bob hook helper func.
+	bobSentInvoice := make(chan struct{}, 10)
+	bob.mpc.HookGetInvoice(func(amt int64, cb func(int64)) (string, error) {
+		if amt == payMAtoms {
+			return "custom invoice", nil
+		}
+		return fmt.Sprintf("invoice for %d", amt), nil
+	})
+	bob.handleSync(client.OnTipUserInvoiceGeneratedNtfn(func(ru *client.RemoteUser, tag uint32, inv string) {
+		bobSentInvoice <- struct{}{}
+	}))
+
+	// Setup Alice hook helper func.
+	var payInvoiceErr error
+	progressErrChan := make(chan error, 10)
+	alicePaidChan, alicePayFailedChan := make(chan struct{}, 10), make(chan struct{}, 10)
+	hookAlice := func() {
+		alice.handleSync(client.OnTipAttemptProgressNtfn(func(ru *client.RemoteUser, amtMAtoms int64, completed bool, attempt int, attemptErr error, willRetry bool) {
+			progressErrChan <- attemptErr
+		}))
+
+		alice.mpc.HookPayInvoice(func(invoice string) (int64, error) {
+			mtx.Lock()
+			defer mtx.Unlock()
+			if invoice == "custom invoice" {
+				if payInvoiceErr == nil {
+					alicePaidChan <- struct{}{}
+				} else {
+					alicePayFailedChan <- struct{}{}
+				}
+				return 0, payInvoiceErr
+			}
+			return 0, nil
+		})
+		alice.mpc.HookIsPayCompleted(func(invoice string) (int64, error) {
+			mtx.Lock()
+			defer mtx.Unlock()
+			if invoice == "custom invoice" {
+				return 0, payInvoiceErr
+			}
+			return 0, nil
+		})
+		alice.mpc.HookDecodeInvoice(func(invoice string) (clientintf.DecodedInvoice, error) {
+			if invoice == "custom invoice" {
+				inv, _ := alice.mpc.DefaultDecodeInvoice(invoice)
+				inv.MAtoms = payMAtoms
+				return inv, nil
+			}
+			return alice.mpc.DefaultDecodeInvoice(invoice)
+		})
+	}
+
+	resendDelay := alice.cfg.TipUserRestartDelay + alice.cfg.TipUserReRequestInvoiceDelay +
+		time.Millisecond*250
+
+	// Test scenario.
+	//   1. Alice asks for invoice
+	//   2. Bob sends correct invoice
+	//   3. Alice accepts and starts payment
+	//   4. 2x Payment fails with retriable error
+	//   5. Alice restarts
+	//   6. 2x Payment fails with retriable error
+	//   7. Payment succeeds.
+
+	// (1)
+	hookAlice()
+	mtx.Lock()
+	payInvoiceErr = fmt.Errorf("test error: %w", clientintf.ErrRetriablePayment)
+	mtx.Unlock()
+	err := alice.TipUser(bob.PublicID(), float64(payMAtoms)/1e11, maxAttempts)
+	assert.NilErr(t, err)
+
+	// (2)
+	assert.ChanWritten(t, bobSentInvoice)
+
+	// (3) (4)
+	assert.ChanWritten(t, alicePayFailedChan)
+	assert.ChanWritten(t, alicePayFailedChan)
+
+	// (5)
+	assert.ChanNotWritten(t, alicePayFailedChan, 100*time.Millisecond)
+	ts.stopClient(alice)
+	alice = ts.recreateStoppedClient(alice)
+	hookAlice()
+
+	// (6)
+	assert.ChanWritten(t, alicePayFailedChan)
+	assert.ChanWritten(t, alicePayFailedChan)
+	assert.ChanNotWritten(t, progressErrChan, time.Second)
+
+	// (7)
+	mtx.Lock()
+	payInvoiceErr = nil
+	mtx.Unlock()
+	assert.ChanWritten(t, alicePaidChan)
+	assert.ChanNotWritten(t, alicePaidChan, resendDelay)   // No more payments attempted
+	assert.NilErrFromChan(t, progressErrChan)              // Success ntfn
+	assert.ChanNotWritten(t, progressErrChan, resendDelay) // No more ntfns
+}

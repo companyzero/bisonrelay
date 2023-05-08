@@ -297,18 +297,20 @@ type UnackedRM struct {
 }
 
 type TipUserAttempt struct {
-	UID              UserID     `json:"uid"`
-	Tag              int32      `json:"tag"`
-	MilliAtoms       uint64     `json:"milli_atoms"`
-	Created          time.Time  `json:"created"`
-	Attempts         int32      `json:"attempts"`
-	MaxAttempts      int32      `json:"max_attempts"`
-	InvoiceRequested *time.Time `json:"invoice_requested"`
-	PaymentAttempt   *time.Time `json:"payment_attempt"`
-	LastInvoice      string     `json:"last_invoice"`
-	PrevInvoices     []string   `json:"prev_invoices"`
-	LastInvoiceError *string    `json:"last_invoice_error,omitempty"`
-	Completed        *time.Time `json:"completed,omitempty"`
+	UID                  UserID     `json:"uid"`
+	Tag                  int32      `json:"tag"`
+	MilliAtoms           uint64     `json:"milli_atoms"`
+	Created              time.Time  `json:"created"`
+	Attempts             int32      `json:"attempts"`
+	MaxAttempts          int32      `json:"max_attempts"`
+	InvoiceRequested     *time.Time `json:"invoice_requested"`
+	PaymentAttempt       *time.Time `json:"payment_attempt"`
+	PaymentAttemptCount  uint32     `json:"payment_attempt_count"`
+	PaymentAttemptFailed *time.Time `json:"payment_attempt_failed"`
+	LastInvoice          string     `json:"last_invoice"`
+	PrevInvoices         []string   `json:"prev_invoices"`
+	LastInvoiceError     *string    `json:"last_invoice_error,omitempty"`
+	Completed            *time.Time `json:"completed,omitempty"`
 }
 
 // ResourceRequest is a serialized request for a resource.
