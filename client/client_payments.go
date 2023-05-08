@@ -27,62 +27,6 @@ import (
 //   handleInvoice()
 //     (out-of-band payment)
 
-// requestTipInvoice sends a request to the remote user to send back an invoice.
-func (c *Client) requestTipInvoice(ru *RemoteUser, milliAmt uint64, tag int32) error {
-	var ta clientdb.TipUserAttempt
-	err := c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
-		var err error
-		ta, err = c.db.ReadTipAttempt(tx, ru.ID(), tag)
-		if err != nil {
-			return err
-		}
-
-		// Double check the invoice is still needed.
-		if ta.LastInvoice != "" {
-			return fmt.Errorf("already have invoice")
-		}
-		if ta.Attempts > ta.MaxAttempts {
-			return fmt.Errorf("max attempts at tipping user reached")
-		}
-		if ta.Completed != nil {
-			return fmt.Errorf("user already tipped")
-		}
-
-		ta.Attempts += 1
-		ta.InvoiceRequested = time.Now()
-		return c.db.StoreTipUserAttempt(tx, ta)
-	})
-	if err != nil {
-		return err
-	}
-
-	if ta.Attempts > ta.MaxAttempts {
-		// Notify giving up on attempting to tip user.
-		err := fmt.Errorf("attempt %d > max attempts %d to fetch invoice",
-			ta.Attempts, ta.MaxAttempts)
-		ru.log.Infof("Tip attempt (tag %d) failed to request invoice due to %v. Giving up.",
-			ta.Tag, err)
-		c.ntfns.notifyTipAttemptProgress(ru, int64(ta.MilliAtoms), false,
-			int(ta.Attempts), err, false)
-
-		// Consider this as handled, so don't return an error.
-		return nil
-	}
-
-	getInvoice := rpc.RMGetInvoice{
-		PayScheme:  c.pc.PayScheme(),
-		MilliAtoms: milliAmt,
-		Tag:        uint32(tag),
-	}
-
-	ru.log.Debugf("Attempt %d/%d at requesting invoice for tip payment of "+
-		"%.8f DCR (tag %d)", ta.Attempts, ta.MaxAttempts,
-		float64(milliAmt)/1e11, tag)
-
-	payEvent := "gettipinvoice"
-	return ru.sendRM(getInvoice, payEvent)
-}
-
 // TipUser starts an attempt to tip the user some amount of dcr. This dispatches
 // a request for an invoice to the remote user, which once received will be
 // paid.
@@ -99,6 +43,14 @@ func (c *Client) TipUser(uid UserID, dcrAmount float64, maxAttempts int32) error
 		return fmt.Errorf("maxAttempts %d <= 0", maxAttempts)
 	}
 
+	// Wait until the main tip processing goroutine has performed its
+	// startup.
+	select {
+	case <-c.ctx.Done():
+		return fmt.Errorf("client is quitting")
+	case <-c.tipAttemptsRunning:
+	}
+
 	ru, err := c.rul.byID(uid)
 	if err != nil {
 		return err
@@ -111,16 +63,16 @@ func (c *Client) TipUser(uid UserID, dcrAmount float64, maxAttempts int32) error
 	milliAmt := uint64(amt) * 1e3
 
 	var tag int32
+	var ta clientdb.TipUserAttempt
 	err = c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
 		tag = c.db.UnusedTipUserTag(tx, uid)
-		ta := clientdb.TipUserAttempt{
-			UID:              uid,
-			Tag:              tag,
-			MilliAtoms:       milliAmt,
-			Created:          time.Now(),
-			Attempts:         0,
-			MaxAttempts:      maxAttempts,
-			InvoiceRequested: time.Now(),
+		ta = clientdb.TipUserAttempt{
+			UID:         uid,
+			Tag:         tag,
+			MilliAtoms:  milliAmt,
+			Created:     time.Now(),
+			Attempts:    0,
+			MaxAttempts: maxAttempts,
 		}
 		return c.db.StoreTipUserAttempt(tx, ta)
 	})
@@ -129,14 +81,20 @@ func (c *Client) TipUser(uid UserID, dcrAmount float64, maxAttempts int32) error
 	}
 
 	if ru.log.Level() <= slog.LevelDebug {
-		ru.log.Infof("Requesting invoice to tip user %d MAtoms (tag %d)", milliAmt,
+		ru.log.Infof("Starting tip attempt of %d MAtoms (tag %d)", milliAmt,
 			tag)
 	} else {
-		ru.log.Infof("Requesting invoice to tip user %.8f DCR (tag %d)", dcrAmount,
+		ru.log.Infof("Starting tip attempt of %.8f DCR (tag %d)", dcrAmount,
 			tag)
 	}
 
-	return c.requestTipInvoice(ru, milliAmt, tag)
+	// Send for the main tip attempts run() goroutine for scheduling.
+	select {
+	case c.tipAttemptsChan <- &ta:
+	case <-c.ctx.Done():
+		return fmt.Errorf("cannot send tip when client is shutting down")
+	}
+	return nil
 }
 
 func (c *Client) handleGetInvoice(ru *RemoteUser, getInvoice rpc.RMGetInvoice) error {
@@ -199,43 +157,14 @@ func (c *Client) handleGetInvoice(ru *RemoteUser, getInvoice rpc.RMGetInvoice) e
 			dcrAmount)
 	}
 
+	c.ntfns.notifyTipUserInvoiceGenerated(ru, getInvoice.Tag, inv)
+
 	// Send reply.
 	reply := rpc.RMInvoice{
 		Invoice: inv,
 		Tag:     getInvoice.Tag,
 	}
 	return ru.sendRM(reply, "getinvoicereply")
-}
-
-// scheduleRequestTipAttemptInvoice schedules a new attempt at requesting
-// an invoice to complete the specified tip attempt.
-func (c *Client) scheduleRequestTipAttemptInvoice(ta clientdb.TipUserAttempt) {
-	// TODO: schedule this better, instead of using a goroutine per tip
-	// attempt.
-	go func() {
-		now := time.Now()
-		delay := c.cfg.TipUserReRequestInvoiceDelay - now.Sub(ta.InvoiceRequested)
-		c.log.Debugf("Scheduling re-request for invoice to tip user "+
-			"(tag %d) after %s", ta.Tag, delay)
-
-		select {
-		case <-time.After(delay):
-		case <-c.ctx.Done():
-			return
-		}
-
-		ru, err := c.UserByID(ta.UID)
-		if err != nil {
-			// Blocked user during this delay.
-			c.log.Warnf("Unable to fetch user to request tip invoice: %v", err)
-			return
-		}
-
-		err = c.requestTipInvoice(ru, ta.MilliAtoms, ta.Tag)
-		if err != nil {
-			ru.log.Errorf("Unable to request rescheduled tip invoice: %v", err)
-		}
-	}()
 }
 
 // handleTipUserPaymentResult takes the appropriate action after a payment
@@ -282,29 +211,23 @@ func (c *Client) handleTipUserPaymentResult(ru *RemoteUser, tag int32, payErr er
 
 	if dbErr != nil {
 		ru.log.Errorf("Unable to store tip payment update: %v", dbErr)
+		return
 	}
 
-	if ta.Completed != nil {
-		// Notify tip completed successfully.
-		ru.log.Infof("Completed tip user attempt (tag %d) for %.8f DCR",
-			ta.Tag, float64(ta.MilliAtoms)/1e11)
-		c.ntfns.notifyTipAttemptProgress(ru, int64(ta.MilliAtoms), true,
-			int(ta.Attempts), nil, false)
-	} else if ta.Attempts < ta.MaxAttempts {
-		// Notify tip attempt failed and will be tried again.
-		ru.log.Infof("Tip attempt (tag %d) %d/%d failed payment due to %q. Requesting new invoice.",
-			ta.Tag, ta.Attempts, ta.MaxAttempts, *ta.LastInvoiceError)
+	// When there's an error and it's not yet the last attempt, notify
+	// the UI.
+	if ta.LastInvoiceError != nil && ta.Attempts < ta.MaxAttempts {
+		invoiceErr := errors.New(*ta.LastInvoiceError)
+		ru.log.Debugf("Attempt %d/%d at tip tag %d failed payment "+
+			"due to %v", ta.Attempts, ta.MaxAttempts, ta.Tag, invoiceErr)
 		c.ntfns.notifyTipAttemptProgress(ru, int64(ta.MilliAtoms), false,
-			int(ta.Attempts), payErr, true)
+			int(ta.Attempts), invoiceErr, true)
+	}
 
-		// Schedule request for a new invoice.
-		c.scheduleRequestTipAttemptInvoice(ta)
-	} else {
-		// Notify giving up on attempting to tip user.
-		ru.log.Infof("Tip attempt (tag %d) %d/%d failed payment due to %q. Giving up.",
-			ta.Tag, ta.Attempts, ta.MaxAttempts, *ta.LastInvoiceError)
-		c.ntfns.notifyTipAttemptProgress(ru, int64(ta.MilliAtoms), false,
-			int(ta.Attempts), payErr, false)
+	// Send to main tip goroutine for handling.
+	select {
+	case c.tipAttemptsChan <- &ta:
+	case <-c.ctx.Done():
 	}
 }
 
@@ -345,13 +268,14 @@ func (c *Client) handleInvoice(ru *RemoteUser, invoice rpc.RMInvoice) error {
 			return fmt.Errorf("still waiting for payment attempt from %s "+
 				"to complete%w", *ta.PaymentAttempt, errIgnore)
 		}
+		if ta.LastInvoice != "" {
+			return fmt.Errorf("already have previous invoice for this same tip attempt%w",
+				errIgnore)
+		}
 
 		// Determine if invoice is good to attempt payment.
 		if invoice.Error != nil {
 			invoiceErr = errors.New(*invoice.Error)
-		}
-		if invoiceErr == nil && ta.LastInvoice != "" {
-			invoiceErr = fmt.Errorf("already have previous invoice for this same tip attempt")
 		}
 		if invoiceErr == nil && decodedErr != nil {
 			invoiceErr = decodedErr
@@ -365,16 +289,11 @@ func (c *Client) handleInvoice(ru *RemoteUser, invoice rpc.RMInvoice) error {
 			invoiceErr = fmt.Errorf("invoice received is already expired")
 		}
 		now := time.Now()
-		if ta.Created.Before(now.Add(-c.cfg.TipUserMaxLifetime)) {
-			// Modify so that no more attempts are made, as the
-			// max lifetime for payment was reached.
-			if invoiceErr == nil {
-				invoiceErr = fmt.Errorf("invoice created %s ago "+
-					"which is greater than max lifetime %s",
-					now.Sub(ta.Created).Truncate(time.Second),
-					c.cfg.TipUserMaxLifetime)
-			}
-			ta.Attempts = ta.MaxAttempts
+		if invoiceErr == nil && ta.Created.Before(now.Add(-c.cfg.TipUserMaxLifetime)) {
+			invoiceErr = fmt.Errorf("invoice created %s ago "+
+				"which is greater than max lifetime %s",
+				now.Sub(ta.Created).Truncate(time.Second),
+				c.cfg.TipUserMaxLifetime)
 		}
 
 		if invoiceErr == nil {
@@ -383,7 +302,7 @@ func (c *Client) handleInvoice(ru *RemoteUser, invoice rpc.RMInvoice) error {
 			}
 
 			ta.LastInvoice = invoice.Invoice
-			ta.PaymentAttempt = &now
+			ta.PaymentAttempt = nil
 		} else {
 			ta.LastInvoice = ""
 			errMsg := invoiceErr.Error()
@@ -404,27 +323,22 @@ func (c *Client) handleInvoice(ru *RemoteUser, invoice rpc.RMInvoice) error {
 		return err
 	}
 
-	if invoiceErr != nil && ta.Attempts < ta.MaxAttempts {
-		// Notify this attempt failed and will be tried again.
-		ru.log.Infof("Tip attempt (tag %d) %d/%d failed to obtain "+
-			"invoice due to %q. Requesting new invoice.",
-			ta.Tag, ta.Attempts, ta.MaxAttempts, invoiceErr)
+	// When there's an error and it's not yet the last attempt, notify
+	// the UI.
+	if ta.LastInvoiceError != nil && ta.Attempts < ta.MaxAttempts {
+		invoiceErr := errors.New(*ta.LastInvoiceError)
+		ru.log.Debugf("Attempt %d/%d at tip tag %d failed to fetch invoice "+
+			"due to %v", ta.Attempts, ta.MaxAttempts, ta.Tag, invoiceErr)
 		c.ntfns.notifyTipAttemptProgress(ru, int64(ta.MilliAtoms), false,
 			int(ta.Attempts), invoiceErr, true)
-
-		c.scheduleRequestTipAttemptInvoice(ta)
-	} else if invoiceErr != nil {
-		// Notify giving up on attempting to tip user.
-		ru.log.Warnf("Tip attempt (tag %d) %d/%d failed to obtain invoice "+
-			"due to %q. Giving up.", ta.Tag, ta.Attempts,
-			ta.MaxAttempts, *ta.LastInvoiceError)
-		c.ntfns.notifyTipAttemptProgress(ru, int64(ta.MilliAtoms), false,
-			int(ta.Attempts), invoiceErr, false)
-	} else {
-		// Pay for invoice.
-		go c.payTipInvoice(ru, invoice.Invoice, decoded.MAtoms, int32(invoice.Tag))
 	}
 
+	// Send to main tip payment run() goroutine.
+	select {
+	case c.tipAttemptsChan <- &ta:
+	case <-c.ctx.Done():
+		return c.ctx.Err()
+	}
 	return nil
 }
 
@@ -438,6 +352,33 @@ func (c *Client) ListTipUserAttempts(uid UserID) ([]clientdb.TipUserAttempt, err
 	return res, err
 }
 
+// RunningTipUserAttempt tracks information about a running attempt at tipping
+// a user.
+type RunningTipUserAttempt struct {
+	Tag            int32
+	UID            clientintf.UserID
+	NextAction     string
+	NextActionTime time.Time
+}
+
+// ListRunningTipUserAttempts lists the currently running attempts at tipping
+// remote users.
+func (c *Client) ListRunningTipUserAttempts() []RunningTipUserAttempt {
+	ch := make(chan []RunningTipUserAttempt, 1)
+	select {
+	case c.listRunningTipAttemptsChan <- ch:
+	case <-c.ctx.Done():
+		return nil
+	}
+
+	select {
+	case res := <-ch:
+		return res
+	case <-c.ctx.Done():
+		return nil
+	}
+}
+
 // restartTipUserPayment picks up the payment status for a payment that was
 // initiated on a prior client run.
 func (c *Client) restartTipUserPayment(ctx context.Context, ru *RemoteUser, ta clientdb.TipUserAttempt) {
@@ -446,77 +387,303 @@ func (c *Client) restartTipUserPayment(ctx context.Context, ru *RemoteUser, ta c
 	c.handleTipUserPaymentResult(ru, ta.Tag, payErr, fees)
 }
 
-// restartTipUserAttempts restarts all existing TipUser requests, checking on
-// their progress.
-func (c *Client) restartTipUserAttempts(ctx context.Context) error {
+// takeTipAttemptAction executes the TipUser action specified in rta. This is
+// the main dispatcher for the individual actions needed to tip an user.
+func (c *Client) takeTipAttemptAction(ctx context.Context, attempts *tipAttemptsList,
+	rta runningTipAttempt) error {
 
-	// Any tip attempts already restarted between now and the loop below
-	// were done so in response to an RMInvoice received, so we should
-	// ignore those for the purposes of restarting.
-	startTime := time.Now()
-	c.log.Tracef("Will restart TipUser attempts with start time %s", startTime)
-	<-c.abLoaded
-
-	// This is called on client start, so wait until the first set of RV
-	// subscriptions is done, then sleep for a bit to allow any invoices
-	// sent while the client was offline to be fetched.
-	select {
-	case <-c.firstSubDone:
-	case <-ctx.Done():
-		return ctx.Err()
-	}
-	select {
-	case <-time.After(c.cfg.TipUserRestartDelay):
-	case <-ctx.Done():
-		return ctx.Err()
+	ru, err := c.UserByID(rta.uid)
+	if err != nil {
+		return err
 	}
 
-	c.log.Debugf("Restarting TipUser attempts with start time %s", startTime)
+	// Update the DB with the status of the action being in progress.
+	var ta clientdb.TipUserAttempt
+	err = c.dbUpdate(func(tx clientdb.ReadWriteTx) (runErr error) {
 
-	requestInvoiceDeadline := time.Now().Add(-c.cfg.TipUserReRequestInvoiceDelay)
+		// Helper function that will load the next tip user attempt
+		// stored in the db for the user of the passed rta.
+		loadNextTipUserAttempt := func() {
+			// The action to take is final (cancel, complete, expire). So
+			// look for the next tip attempt for this user.
+			nextTA, err := c.db.NextTipAttemptToRetryForUser(tx, rta.uid,
+				c.cfg.TipUserMaxLifetime)
+			if errors.Is(err, clientdb.ErrNotFound) {
+				// No more attempts to add for this user.
+				ru.log.Trace("No more tip attempts for user to progress")
+				return
+			}
+			if err != nil {
+				ru.log.Errorf("Unable to load next user tip attempt: %v", err)
+				return
+			}
 
-	// Restart any lingering attempts.
-	return c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
-		oldAttempts, err := c.db.ListTipUserAttemptsToRetry(tx, startTime,
-			c.cfg.TipUserMaxLifetime)
+			nextRTA := attempts.addTipAttempt(&nextTA)
+			ru.log.Debugf("Switching to tip attempt %d action %s", nextRTA.tag,
+				nextRTA.nextAction)
+		}
+
+		// Load this tip attempt.
+		var err error
+		ta, err = c.db.ReadTipAttempt(tx, rta.uid, rta.tag)
+		if errors.Is(err, clientdb.ErrNotFound) {
+			// Attempt was removed. Try next one.
+			attempts.delTipAttempt(rta.uid, rta.tag)
+			loadNextTipUserAttempt()
+			return nil
+		}
 		if err != nil {
 			return err
 		}
 
-		for _, ta := range oldAttempts {
-			ta := ta
-			ru, err := c.UserByID(ta.UID)
-			if err != nil {
-				continue
-			}
+		// Double check the action to take is still the same one.
+		checkAction, checkTime := attempts.determineTipAttemptAction(&ta, false)
+		if checkAction != rta.nextAction || !checkTime.Before(time.Now()) {
+			// Something happened that changed the action to take.
+			// Update in the list of attempts and rely on the run()
+			// loop to take the appropriate action.
+			attempts.modifyTipAttempt(&ta, false)
+			ru.log.Debugf("Skipping tip attempt %d action %s due to having "+
+				"changed to %s", rta.tag, rta.nextAction, checkAction)
+			rta.nextAction = "" // Prevent action after dbUpdate() returns.
+			return nil
+		}
 
-			if ta.LastInvoice != "" {
-				// Pickup the payment.
-				go c.restartTipUserPayment(ctx, ru, ta)
-			} else if ta.Attempts >= ta.MaxAttempts {
-				// No payment and already sent all invoice
-				// requests. Nothing else to do but wait if
-				// a valid invoice will still arrive.
-				ru.log.Debugf("Already sent %d/%d attempts to "+
-					"request invoice for tipping user (tag %d)",
-					ta.Attempts, ta.MaxAttempts, ta.Tag)
-			} else if ta.InvoiceRequested.Before(requestInvoiceDeadline) {
-				// Enough time passed to request a new invoice.
-				go func() {
-					err := c.requestTipInvoice(ru, ta.MilliAtoms, ta.Tag)
-					if err != nil {
-						ru.log.Errorf("Unable to send request tip RM: %v", err)
-					}
-				}()
-			} else {
-				// Not enough time passed to re-request this
-				// invoice, so schedule it for the future.
-				c.scheduleRequestTipAttemptInvoice(ta)
+		ru.log.Debugf("Taking tip attempt %d action %s", rta.tag, rta.nextAction)
+
+		switch rta.nextAction {
+		case actionCancel, actionComplete, actionExpire:
+			// Final action, load next tip user attempt.
+			attempts.delTipAttempt(rta.uid, rta.tag)
+			loadNextTipUserAttempt()
+
+		case actionRequestInvoice:
+			// Record the attempt to request invoice.
+			ta.Attempts += 1
+			now := time.Now()
+			ta.InvoiceRequested = &now
+			ta.LastInvoiceError = nil
+			if err := c.db.StoreTipUserAttempt(tx, ta); err != nil {
+				return err
 			}
+			nextRTA := attempts.modifyTipAttempt(&ta, false)
+			ru.log.Tracef("Next tip attempt %d action %s at time %s",
+				ta.Tag, nextRTA.nextAction, nextRTA.nextActionTime)
+			return nil
+
+		case actionAttemptPayment:
+			// Record the attempt to pay the invoice.
+			now := time.Now()
+			ta.PaymentAttempt = &now
+			ta.LastInvoiceError = nil
+			if err := c.db.StoreTipUserAttempt(tx, ta); err != nil {
+				return err
+			}
+			nextRTA := attempts.modifyTipAttempt(&ta, true)
+			ru.log.Tracef("Next tip attempt %d action %s at time %s",
+				ta.Tag, nextRTA.nextAction, nextRTA.nextActionTime)
+			return nil
+
+		case actionCheckPayment:
+			// Will check for payment after dbUpdate() returns.
+			nextRTA := attempts.modifyTipAttempt(&ta, true)
+			ru.log.Tracef("Next tip attempt %d action %s at time %s",
+				ta.Tag, nextRTA.nextAction, nextRTA.nextActionTime)
+			return nil
+
+		default:
+			return fmt.Errorf("unknown next tip attempt action %s", rta.nextAction)
 		}
 
 		return nil
 	})
+	if err != nil {
+		return err
+	}
+
+	// Take the action.
+	switch rta.nextAction {
+	case "":
+		// Skip doing any actions.
+
+	case actionCancel:
+		// Notify giving up on attempting to tip user.
+		var err error
+		if ta.LastInvoiceError != nil {
+			err = errors.New(*ta.LastInvoiceError)
+		} else {
+			err = fmt.Errorf("attempt %d >= max attempts %d to fetch invoice",
+				ta.Attempts, ta.MaxAttempts)
+		}
+		ru.log.Infof("Tip attempt (tag %d) failed after %d attempts "+
+			"to request invoice due to %v. Giving up.",
+			ta.Tag, ta.Attempts, err)
+		c.ntfns.notifyTipAttemptProgress(ru, int64(ta.MilliAtoms), false,
+			int(ta.Attempts), err, false)
+
+	case actionExpire:
+		// Notify tip attempt expired.
+		lifetime := time.Since(ta.Created)
+		err := fmt.Errorf("expired %s after creation", lifetime)
+		ru.log.Infof("Tip attempt (tag %d) expired %s after creation "+
+			"with %d/%d attempts", ta.Tag, lifetime, ta.Attempts,
+			ta.MaxAttempts)
+		c.ntfns.notifyTipAttemptProgress(ru, int64(ta.MilliAtoms), false,
+			int(ta.Attempts), err, false)
+
+	case actionComplete:
+		// Notify tip completed successfully.
+		ru.log.Infof("Completed tip user attempt (tag %d) for %.8f DCR",
+			ta.Tag, float64(ta.MilliAtoms)/1e11)
+		c.ntfns.notifyTipAttemptProgress(ru, int64(ta.MilliAtoms), true,
+			int(ta.Attempts), nil, false)
+
+	case actionRequestInvoice:
+		// Request a new invoice from remote user.
+		getInvoice := rpc.RMGetInvoice{
+			PayScheme:  c.pc.PayScheme(),
+			MilliAtoms: ta.MilliAtoms,
+			Tag:        uint32(ta.Tag),
+		}
+
+		ru.log.Debugf("Attempt %d/%d at requesting invoice for tip payment of "+
+			"%.8f DCR (tag %d)", ta.Attempts, ta.MaxAttempts,
+			float64(ta.MilliAtoms)/1e11, ta.Tag)
+
+		payEvent := "gettipinvoice"
+		return c.sendWithSendQ(payEvent, getInvoice, ru.ID())
+
+	case actionAttemptPayment:
+		// Attempt to pay fetched invoice.
+		ru.log.Debugf("Attempt %d/%d at paying tip user invoice of "+
+			"%.8f DCR (tag %d)", ta.Attempts, ta.MaxAttempts,
+			float64(ta.MilliAtoms)/1e11, ta.Tag)
+		go c.payTipInvoice(ru, ta.LastInvoice, int64(ta.MilliAtoms), ta.Tag)
+
+	case actionCheckPayment:
+		// Check if payment was completed.
+		ru.log.Debugf("Verifying tip user pay attempt %d/%d of invoice of "+
+			"%.8f DCR (tag %d) completed or failed", ta.Attempts,
+			ta.MaxAttempts, float64(ta.MilliAtoms)/1e11, ta.Tag)
+		go c.restartTipUserPayment(ctx, ru, ta)
+
+	default:
+		return fmt.Errorf("unknown action to take %s", rta.nextAction)
+	}
+
+	return nil
+}
+
+// runTipAttempts is the main goroutine that coordinates TipUser attempts.
+func (c *Client) runTipAttempts(ctx context.Context) error {
+	<-c.abLoaded
+
+	attempts := newTipAttemptsList(c.cfg.TipUserReRequestInvoiceDelay,
+		c.cfg.TipUserMaxLifetime)
+
+	// This is called on client start, so wait until the first set of RV
+	// subscriptions is done, then sleep for a bit to allow any invoices
+	// sent while the client was offline to be fetched.
+	//
+	// Ignore any tip attempts sent to the channel during this wait, because
+	// they will be loaded from the db directly.
+	var timeCh <-chan time.Time
+	restartDelayDone := false
+	firstSubDone := c.firstSubDone
+	for !restartDelayDone {
+		select {
+		case <-firstSubDone:
+			timeCh = time.After(c.cfg.TipUserRestartDelay)
+			firstSubDone = nil
+		case <-timeCh:
+			restartDelayDone = true
+		case <-c.tipAttemptsChan:
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
+
+	// Reload existing attempts
+	var oldestTAs []clientdb.TipUserAttempt
+	err := c.dbView(func(tx clientdb.ReadTx) error {
+		var err error
+		oldestTAs, err = c.db.ListOldestValidTipUserAttempts(tx, c.cfg.TipUserMaxLifetime)
+		return err
+	})
+	if err != nil {
+		return err
+	}
+	for _, ta := range oldestTAs {
+		attempts.addTipAttempt(&ta)
+	}
+	delayToAction, _ := attempts.timeToNextAction()
+	actionTimer := time.NewTimer(delayToAction)
+
+	if len(oldestTAs) > 0 && c.log.Level() >= slog.LevelInfo {
+		c.log.Infof("Restarting %d tip attempts", len(oldestTAs))
+	} else {
+		c.log.Debugf("Restarting %d tip attempts. Delay to next action: %s",
+			len(oldestTAs), delayToAction)
+	}
+
+	// Signal that TipUser() calls may start proceeding.
+	close(c.tipAttemptsRunning)
+
+	for {
+		select {
+		case ch := <-c.listRunningTipAttemptsChan:
+			ch <- attempts.currentAttempts()
+
+		case ta := <-c.tipAttemptsChan:
+			switch {
+
+			case attempts.currentAttemptForUserIs(ta.UID, ta.Tag):
+				rta := attempts.modifyTipAttempt(ta, false)
+				c.log.Tracef("Modifying running tip attempt for user %s tag %d "+
+					"action %s action time %s", ta.UID, ta.Tag, rta.nextAction,
+					rta.nextActionTime)
+
+			case attempts.hasAttemptForUser(ta.UID):
+				c.log.Tracef("Skipping tip attempt for user %s tag %d "+
+					"due to already running attempt for same user",
+					ta.UID, ta.Tag)
+			default:
+				rta := attempts.addTipAttempt(ta)
+				c.log.Tracef("Received new tip attempt for user %s tag %d "+
+					"action %s action time %s", ta.UID, ta.Tag, rta.nextAction,
+					rta.nextActionTime)
+			}
+
+		case <-actionTimer.C:
+			// Time to take actions.
+			actions := attempts.actionsForNow()
+			for _, rta := range actions {
+				err := c.takeTipAttemptAction(ctx, attempts, rta)
+				if err != nil {
+					attempts.delTipAttempt(rta.uid, rta.tag)
+					c.log.Errorf("Unable to take tip action for user %s"+
+						" tag %d: %v", rta.uid, rta.tag, err)
+				}
+			}
+
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+
+		delayToAction, hasActions := attempts.timeToNextAction()
+		if hasActions {
+			if !actionTimer.Stop() {
+				select {
+				case <-actionTimer.C:
+				default:
+				}
+			}
+			actionTimer.Reset(delayToAction)
+			c.log.Tracef("Next tip user action in %s", delayToAction)
+		} else {
+			c.log.Trace("Idling tip user actions")
+		}
+	}
 }
 
 // ListPaymentStats returns the general payment stats for all users.

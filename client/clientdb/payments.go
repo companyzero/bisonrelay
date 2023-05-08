@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/companyzero/bisonrelay/client/clientintf"
+	"github.com/syndtr/goleveldb/leveldb/errors"
 )
 
 // UnusedTipUserTag generates a new, random, unused tag to use when asking
@@ -75,18 +76,22 @@ func (db *DB) ListTipUserAttempts(tx ReadTx, uid UserID) ([]TipUserAttempt, erro
 	return res, nil
 }
 
-// ListTipUserAttemptsToRetry lists attempts to tip remote users that should
-// be restarted/retried.
-func (db *DB) ListTipUserAttemptsToRetry(tx ReadTx, ignoreAfter time.Time, maxLifetime time.Duration) ([]TipUserAttempt, error) {
-	pattern := filepath.Join(db.root, inboundDir, "*", tipsDir, "*")
+// NextTipAttemptToRetryForUser returns the oldest non-completed, non-expired
+// tip attempt for a given user.
+func (db *DB) NextTipAttemptToRetryForUser(tx ReadTx, uid UserID, maxLifetime time.Duration) (TipUserAttempt, error) {
+	var res TipUserAttempt
+	pattern := filepath.Join(db.root, inboundDir, uid.String(), tipsDir, "*")
 	files, err := filepath.Glob(pattern)
 	if err != nil {
-		return nil, err
+		return res, err
+	}
+
+	if len(files) == 0 {
+		return res, errors.ErrNotFound
 	}
 
 	lifetimeLimit := time.Now().Add(-maxLifetime)
-
-	var res []TipUserAttempt
+	gotRes := false
 	for _, fname := range files {
 		var ta TipUserAttempt
 		err := db.readJsonFile(fname, &ta)
@@ -102,14 +107,79 @@ func (db *DB) ListTipUserAttemptsToRetry(tx ReadTx, ignoreAfter time.Time, maxLi
 		if ta.Attempts > ta.MaxAttempts {
 			continue
 		}
-		if ta.InvoiceRequested.After(ignoreAfter) {
+		if ta.Attempts == ta.MaxAttempts && ta.LastInvoiceError != nil {
 			continue
 		}
 		if ta.Created.Before(lifetimeLimit) {
 			continue
 		}
+		if res.Created.IsZero() || ta.Created.Before(res.Created) {
+			res = ta
+			gotRes = true
+		}
+	}
 
-		res = append(res, ta)
+	if !gotRes {
+		return res, ErrNotFound
+	}
+
+	return res, nil
+}
+
+// ListOldestValidTipUserAttempts returns the oldest tip user attempts (at most
+// one per user) which have not expired yet.
+func (db *DB) ListOldestValidTipUserAttempts(tx ReadTx, maxLifetime time.Duration) ([]TipUserAttempt, error) {
+	dirPattern := filepath.Join(db.root, inboundDir, "*", tipsDir)
+	dirs, err := filepath.Glob(dirPattern)
+	if err != nil {
+		return nil, err
+	}
+
+	lifetimeLimit := time.Now().Add(-maxLifetime)
+
+	var res []TipUserAttempt
+	for _, dir := range dirs {
+		files, err := os.ReadDir(dir)
+		if err != nil {
+			db.log.Warnf("Unable to list tips dir %s: %v", dir, err)
+			continue
+		}
+
+		var oldest TipUserAttempt
+		gotOldest := false
+		for _, file := range files {
+			var ta TipUserAttempt
+			fname := filepath.Join(dir, file.Name())
+			err := db.readJsonFile(fname, &ta)
+			if err != nil {
+				db.log.Warnf("Unable to read tip user attempt file %s: %v",
+					file, err)
+				continue
+			}
+
+			if ta.Completed != nil {
+				continue
+			}
+			if ta.Attempts > ta.MaxAttempts {
+				continue
+			}
+			if ta.Attempts == ta.MaxAttempts && ta.LastInvoiceError != nil {
+				continue
+			}
+			if ta.Created.Before(lifetimeLimit) {
+				continue
+			}
+			if gotOldest && ta.Created.Before(oldest.Created) {
+				continue
+			}
+
+			oldest = ta
+			gotOldest = true
+		}
+
+		if gotOldest {
+			res = append(res, oldest)
+		}
 	}
 
 	return res, nil

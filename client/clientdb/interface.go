@@ -303,7 +303,7 @@ type TipUserAttempt struct {
 	Created          time.Time  `json:"created"`
 	Attempts         int32      `json:"attempts"`
 	MaxAttempts      int32      `json:"max_attempts"`
-	InvoiceRequested time.Time  `json:"invoice_requested"`
+	InvoiceRequested *time.Time `json:"invoice_requested"`
 	PaymentAttempt   *time.Time `json:"payment_attempt"`
 	LastInvoice      string     `json:"last_invoice"`
 	PrevInvoices     []string   `json:"prev_invoices"`

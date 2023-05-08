@@ -3,7 +3,7 @@ package e2etests
 import (
 	"errors"
 	"fmt"
-	"strings"
+	"regexp"
 	"sync"
 	"testing"
 	"time"
@@ -128,7 +128,6 @@ func TestTipUserRejectsWrongInvoiceAmount(t *testing.T) {
 	assert.NilErr(t, err)
 	assertAliceProgrChanErrored(errors.New("milliatoms requested in " +
 		"invoice (4321001) different than milliatoms originally requested (4321000)"))
-
 	assert.ChanNotWritten(t, payInvoiceChan, time.Millisecond*500)
 }
 
@@ -173,9 +172,8 @@ func TestTipUserMultipleAttempts(t *testing.T) {
 			attemptErr = errors.New("got attempts == maxAttempts with will flag")
 		}
 		if !completed && attempt < maxAttempts && !willRetry {
-			attemptErr = errors.New("got attempts < maxAttempts without willRetry flag")
+			attemptErr = errors.New("got attempts <= maxAttempts without willRetry flag")
 		}
-
 		progressErrChan <- attemptErr
 	}))
 
@@ -317,7 +315,7 @@ func TestTipUserWithRestarts(t *testing.T) {
 		}
 	}
 
-	// Test restart scenarios now.
+	// Test scenario.
 	//   1. Bob goes offline
 	//   2. Alice asks for invoice. Alice goes offline.
 	//   3. Bob comes online. Fails invoice generation. Goes offline.
@@ -335,6 +333,8 @@ func TestTipUserWithRestarts(t *testing.T) {
 
 	// (2)
 	err := alice.TipUser(bob.PublicID(), float64(payMAtoms)/1e11, maxAttempts)
+	time.Sleep(50 * time.Millisecond)
+	assertEmptyRMQ(t, alice)
 	assert.NilErr(t, err)
 	ts.stopClient(alice)
 
@@ -349,7 +349,7 @@ func TestTipUserWithRestarts(t *testing.T) {
 	alice = ts.recreateStoppedClient(alice)
 	hookAlice()
 	assertAliceProgrChanErrored(rpc.ErrUnableToGenerateInvoice)
-	time.Sleep(alice.cfg.TipUserReRequestInvoiceDelay + 250*time.Millisecond) // Wait to ask for new invoice
+	alice.waitTippingSubsysRunning(alice.cfg.TipUserReRequestInvoiceDelay + 250*time.Millisecond) // Wait to ask for new invoice
 	ts.stopClient(alice)
 
 	// (5)
@@ -366,7 +366,7 @@ func TestTipUserWithRestarts(t *testing.T) {
 	alice = ts.recreateStoppedClient(alice)
 	hookAlice()
 	assertAliceProgrChanErrored(payInvoiceErr)
-	time.Sleep(alice.cfg.TipUserReRequestInvoiceDelay + 250*time.Millisecond) // Wait to ask for new invoice
+	alice.waitTippingSubsysRunning(alice.cfg.TipUserReRequestInvoiceDelay + 250*time.Millisecond) // Wait to ask for new invoice
 	ts.stopClient(alice)
 
 	// (7)
@@ -383,7 +383,6 @@ func TestTipUserWithRestarts(t *testing.T) {
 	alice = ts.recreateStoppedClient(alice)
 	hookAlice()
 	assert.NilErrFromChan(t, progressErrChan)
-	time.Sleep(alice.cfg.TipUserReRequestInvoiceDelay + 250*time.Millisecond) // Wait to ask for new invoice
 }
 
 // TestTipUserRestartNoDoublePay checks that even if multiple attempts to fetch
@@ -401,22 +400,23 @@ func TestTipUserRestartNoDoublePay(t *testing.T) {
 	const maxAttempts = 3
 	var mtx sync.Mutex
 	payMAtoms := int64(4321000)
+	var invoiceTag uint32
 
 	// Setup Bob hook helper func.
-	bobSentInvoice := make(chan struct{}, 10)
-	hookBob := func() {
-		bob.mpc.HookGetInvoice(func(amt int64, cb func(int64)) (string, error) {
-			mtx.Lock()
-			defer mtx.Unlock()
-			if amt == payMAtoms {
-				if bobSentInvoice != nil {
-					bobSentInvoice <- struct{}{}
-				}
-				return "custom invoice", nil
-			}
-			return fmt.Sprintf("invoice for %d", amt), nil
-		})
-	}
+	bobRecvInvoiceReq, bobSendInvoice := make(chan struct{}, 10), make(chan struct{}, 10)
+	bob.mpc.HookGetInvoice(func(amt int64, cb func(int64)) (string, error) {
+		if amt == payMAtoms {
+			return "custom invoice", nil
+		}
+		return fmt.Sprintf("invoice for %d", amt), nil
+	})
+	bob.handleSync(client.OnTipUserInvoiceGeneratedNtfn(func(ru *client.RemoteUser, tag uint32, inv string) {
+		mtx.Lock()
+		invoiceTag = tag
+		mtx.Unlock()
+		bobRecvInvoiceReq <- struct{}{}
+		<-bobSendInvoice
+	}))
 
 	// Setup Alice hook helper func.
 	progressErrChan := make(chan error, 10)
@@ -456,39 +456,34 @@ func TestTipUserRestartNoDoublePay(t *testing.T) {
 	resendDelay := alice.cfg.TipUserRestartDelay + alice.cfg.TipUserReRequestInvoiceDelay +
 		time.Millisecond*250
 
-	// Test restart scenarios now.
-	//   1. Bob goes offline
-	//   2. Alice asks for invoice. Alice goes offline.
-	//   3. (2x) Alice comes online, sends request for new invoice, goes offline.
-	//   4. Bob comes online, sends multiple invoices, goes offline.
-	//   5. Alice comes online, only pays a single invoice.
+	// Test scenario.
+	//   1. Alice asks for invoice. Alice goes offline.
+	//   2. Bob sends invoice
+	//   3. Simulate bob sending multiple invoices (erroneously). Bob goes offline.
+	//   4. Alice comes online, only pays a single invoice.
 
 	// (1)
-	ts.stopClient(bob)
-
-	// (2)
 	err := alice.TipUser(bob.PublicID(), float64(payMAtoms)/1e11, maxAttempts)
 	assert.NilErr(t, err)
+	aliceID := alice.PublicID()
+
+	// (2)
+	assert.ChanWritten(t, bobRecvInvoiceReq)
 	ts.stopClient(alice)
+	bobSendInvoice <- struct{}{}
 
 	// (3)
-	for i := 0; i < 2; i++ {
-		alice = ts.recreateStoppedClient(alice)
-		hookAlice()
-		time.Sleep(resendDelay) // Wait to ask for new invoice
-		ts.stopClient(alice)
-	}
-
-	// (4)
-	bob = ts.recreateStoppedClient(bob)
-	hookBob()
-	assert.ChanWritten(t, bobSentInvoice)
-	assert.ChanWritten(t, bobSentInvoice)
-	assert.ChanWritten(t, bobSentInvoice)
+	mtx.Lock()
+	rm := rpc.RMInvoice{Tag: invoiceTag, Invoice: "custom invoice"}
+	mtx.Unlock()
+	bobTI := bob.testInterface()
+	bobTI.SendUserRM(aliceID, rm)
+	bobTI.SendUserRM(aliceID, rm)
 	time.Sleep(time.Millisecond * 250) // Wait msgs to be sent
+	assertEmptyRMQ(t, bob)
 	ts.stopClient(bob)
 
-	// (5)
+	// (4)
 	alice = ts.recreateStoppedClient(alice)
 	hookAlice()
 	assert.ChanWritten(t, alicePayChan)
@@ -497,6 +492,8 @@ func TestTipUserRestartNoDoublePay(t *testing.T) {
 	assert.ChanNotWritten(t, progressErrChan, resendDelay)
 }
 
+// TestTipUserExceedsLifetime asserts that if the max lifetime of the tip
+// expires, the tip attempt is dropped.
 func TestTipUserExceedsLifetime(t *testing.T) {
 	t.Parallel()
 	tcfg := testScaffoldCfg{}
@@ -512,9 +509,9 @@ func TestTipUserExceedsLifetime(t *testing.T) {
 	alice.handle(client.OnTipAttemptProgressNtfn(func(ru *client.RemoteUser, amtMAtoms int64, completed bool, attempt int, attemptErr error, willRetry bool) {
 		if willRetry {
 			progressErrChan <- fmt.Errorf("progress should not have failed with willRetry set")
-		} else if attempt != maxAttempts {
-			progressErrChan <- fmt.Errorf("attempt %d != max attempts %d",
-				attempt, maxAttempts)
+		} else if attempt != 1 {
+			progressErrChan <- fmt.Errorf("attempt %d != %d",
+				attempt, 1)
 		} else {
 			progressErrChan <- attemptErr
 
@@ -560,7 +557,8 @@ func TestTipUserExceedsLifetime(t *testing.T) {
 	if gotErr == nil {
 		t.Fatalf("nil error on progressErrChan")
 	}
-	if !strings.HasSuffix(gotErr.Error(), "which is greater than max lifetime 10s") {
+	errRe := regexp.MustCompile(`expired [0-9.nmus]+ after creation`)
+	if !errRe.MatchString(gotErr.Error()) {
 		t.Fatalf("unexpected error: %v", gotErr)
 	}
 	assert.ChanNotWritten(t, payInvoiceChan, time.Millisecond*500)
@@ -581,103 +579,251 @@ func TestTipUserPaysOnceWithSlowPayment(t *testing.T) {
 	const maxAttempts = 3
 	var mtx sync.Mutex
 	payMAtoms := int64(4321000)
+	var invoiceTag uint32
 
 	// Setup Bob hook helper func.
-	bobSentInvoice := make(chan struct{}, 10)
-	hookBob := func() {
-		bob.mpc.HookGetInvoice(func(amt int64, cb func(int64)) (string, error) {
-			mtx.Lock()
-			defer mtx.Unlock()
-			if amt == payMAtoms {
-				if bobSentInvoice != nil {
-					bobSentInvoice <- struct{}{}
-				}
-				return "custom invoice", nil
-			}
-			return fmt.Sprintf("invoice for %d", amt), nil
-		})
-	}
+	bobSentInvoice := make(chan struct{})
+	bob.mpc.HookGetInvoice(func(amt int64, cb func(int64)) (string, error) {
+		if amt == payMAtoms {
+			return "custom invoice", nil
+		}
+		return fmt.Sprintf("invoice for %d", amt), nil
+	})
+	bob.handleSync(client.OnTipUserInvoiceGeneratedNtfn(func(ru *client.RemoteUser, tag uint32, inv string) {
+		mtx.Lock()
+		invoiceTag = tag
+		mtx.Unlock()
+		bobSentInvoice <- struct{}{}
+	}))
 
 	// Setup Alice hook helper func.
 	progressErrChan := make(chan error, 10)
-	alicePayChan := make(chan struct{}, 10)
-	hookAlice := func() {
-		alice.handleSync(client.OnTipAttemptProgressNtfn(func(ru *client.RemoteUser, amtMAtoms int64, completed bool, attempt int, attemptErr error, willRetry bool) {
-			progressErrChan <- attemptErr
-		}))
+	alicePayingChan, alicePaidChan := make(chan struct{}, 10), make(chan struct{}, 10)
+	alice.handleSync(client.OnTipAttemptProgressNtfn(func(ru *client.RemoteUser, amtMAtoms int64, completed bool, attempt int, attemptErr error, willRetry bool) {
+		progressErrChan <- attemptErr
+	}))
 
-		alice.mpc.HookPayInvoice(func(invoice string) (int64, error) {
-			// This payment will take a while to complete. This is
-			// timed so that alice will start processing all three
-			// RMInvoice requests before the first payment completes,
-			// if in fact multiple payments are attempted.
-			time.Sleep(time.Millisecond * 500)
-			mtx.Lock()
-			defer mtx.Unlock()
-			if invoice == "custom invoice" {
-				alicePayChan <- struct{}{}
-				return 0, nil
-			}
+	alice.mpc.HookPayInvoice(func(invoice string) (int64, error) {
+		// This payment will take a while to complete. This is
+		// timed so that alice will start processing all three
+		// RMInvoice requests before the first payment completes,
+		// if in fact multiple payments are attempted.
+		if invoice == "custom invoice" {
+			alicePayingChan <- struct{}{}
+		}
+		time.Sleep(time.Millisecond * 500)
+		if invoice == "custom invoice" {
+			alicePaidChan <- struct{}{}
 			return 0, nil
-		})
-		alice.mpc.HookIsPayCompleted(func(invoice string) (int64, error) {
-			mtx.Lock()
-			defer mtx.Unlock()
-			if invoice == "custom invoice" {
-				return 0, fmt.Errorf("pay is not completed")
-			}
-			return 0, nil
-		})
-		alice.mpc.HookDecodeInvoice(func(invoice string) (clientintf.DecodedInvoice, error) {
-			if invoice == "custom invoice" {
-				inv, _ := alice.mpc.DefaultDecodeInvoice(invoice)
-				inv.MAtoms = payMAtoms
-				return inv, nil
-			}
-			return alice.mpc.DefaultDecodeInvoice(invoice)
-		})
-	}
+		}
+		return 0, nil
+	})
+	alice.mpc.HookDecodeInvoice(func(invoice string) (clientintf.DecodedInvoice, error) {
+		if invoice == "custom invoice" {
+			inv, _ := alice.mpc.DefaultDecodeInvoice(invoice)
+			inv.MAtoms = payMAtoms
+			return inv, nil
+		}
+		return alice.mpc.DefaultDecodeInvoice(invoice)
+	})
 
 	resendDelay := alice.cfg.TipUserRestartDelay + alice.cfg.TipUserReRequestInvoiceDelay +
 		time.Millisecond*250
 
-	// Test restart scenarios now.
-	//   1. Bob goes offline
-	//   2. Alice asks for invoice. Alice goes offline.
-	//   3. (2x) Alice comes online, sends request for new invoice, goes offline.
-	//   4. Bob comes online, sends multiple invoices, goes offline.
-	//   5. Alice comes online, attempts only a single payment.
+	// Test scenario.
+	//   1. Alice asks for invoice
+	//   2. Bob sends correct invoice
+	//   3. Alice accepts and starts payment
+	//   4. Bob sends multiple additional invoices
+	//   5. Alice completes payment but does not attempt others
 
 	// (1)
-	ts.stopClient(bob)
-
-	// (2)
 	err := alice.TipUser(bob.PublicID(), float64(payMAtoms)/1e11, maxAttempts)
 	assert.NilErr(t, err)
-	ts.stopClient(alice)
+
+	// (2)
+	assert.ChanWritten(t, bobSentInvoice)
 
 	// (3)
-	for i := 0; i < 2; i++ {
-		alice = ts.recreateStoppedClient(alice)
-		hookAlice()
-		time.Sleep(resendDelay) // Wait to ask for new invoice
-		ts.stopClient(alice)
-	}
+	assert.ChanWritten(t, alicePayingChan)
 
 	// (4)
-	bob = ts.recreateStoppedClient(bob)
-	hookBob()
-	assert.ChanWritten(t, bobSentInvoice)
-	assert.ChanWritten(t, bobSentInvoice)
-	assert.ChanWritten(t, bobSentInvoice)
-	time.Sleep(time.Millisecond * 250) // Wait msgs to be sent
-	ts.stopClient(bob)
+	mtx.Lock()
+	rm := rpc.RMInvoice{Tag: invoiceTag, Invoice: "custom invoice"}
+	mtx.Unlock()
+	bobTI := bob.testInterface()
+	bobTI.SendUserRM(alice.PublicID(), rm)
+	bobTI.SendUserRM(alice.PublicID(), rm)
 
 	// (5)
-	alice = ts.recreateStoppedClient(alice)
-	hookAlice()
-	assert.ChanWritten(t, alicePayChan)                    // Successful payment
-	assert.ChanNotWritten(t, alicePayChan, resendDelay)    // No more payments attempted
+	assert.ChanWritten(t, alicePaidChan)                   // Successful payment
+	assert.ChanNotWritten(t, alicePaidChan, resendDelay)   // No more payments attempted
 	assert.NilErrFromChan(t, progressErrChan)              // Success ntfn
 	assert.ChanNotWritten(t, progressErrChan, resendDelay) // No more ntfns
+}
+
+// TestTipUserInvoiceAfterPayment asserts that sending and invoice for the same
+// tip attempt after the payment completes does not trigger a new payment.
+func TestTipUserInvoiceAfterPayment(t *testing.T) {
+	t.Parallel()
+	tcfg := testScaffoldCfg{}
+	ts := newTestScaffold(t, tcfg)
+	alice := ts.newClient("alice")
+	bob := ts.newClient("bob")
+
+	ts.kxUsers(alice, bob)
+
+	const maxAttempts = 3
+	var mtx sync.Mutex
+	payMAtoms := int64(4321000)
+	var invoiceTag uint32
+
+	// Setup Bob hook helper func.
+	bobSentInvoice := make(chan struct{})
+	bob.mpc.HookGetInvoice(func(amt int64, cb func(int64)) (string, error) {
+		if amt == payMAtoms {
+			return "custom invoice", nil
+		}
+		return fmt.Sprintf("invoice for %d", amt), nil
+	})
+	bob.handleSync(client.OnTipUserInvoiceGeneratedNtfn(func(ru *client.RemoteUser, tag uint32, inv string) {
+		mtx.Lock()
+		invoiceTag = tag
+		mtx.Unlock()
+		bobSentInvoice <- struct{}{}
+	}))
+
+	// Setup Alice hook helper func.
+	progressErrChan := make(chan error, 10)
+	alicePaidChan := make(chan struct{}, 10)
+	alice.handleSync(client.OnTipAttemptProgressNtfn(func(ru *client.RemoteUser, amtMAtoms int64, completed bool, attempt int, attemptErr error, willRetry bool) {
+		progressErrChan <- attemptErr
+	}))
+
+	alice.mpc.HookPayInvoice(func(invoice string) (int64, error) {
+		if invoice == "custom invoice" {
+			alicePaidChan <- struct{}{}
+			return 0, nil
+		}
+		return 0, nil
+	})
+	alice.mpc.HookDecodeInvoice(func(invoice string) (clientintf.DecodedInvoice, error) {
+		if invoice == "custom invoice" {
+			inv, _ := alice.mpc.DefaultDecodeInvoice(invoice)
+			inv.MAtoms = payMAtoms
+			return inv, nil
+		}
+		return alice.mpc.DefaultDecodeInvoice(invoice)
+	})
+
+	resendDelay := alice.cfg.TipUserRestartDelay + alice.cfg.TipUserReRequestInvoiceDelay +
+		time.Millisecond*250
+
+	// Test scenario.
+	//   1. Alice asks for invoice
+	//   2. Bob sends correct invoice
+	//   3. Alice accepts and completes payment
+	//   4. Bob sends additional invoice
+	//   5. Alice does not attempt second payment
+
+	// (1)
+	err := alice.TipUser(bob.PublicID(), float64(payMAtoms)/1e11, maxAttempts)
+	assert.NilErr(t, err)
+
+	// (2)
+	assert.ChanWritten(t, bobSentInvoice)
+
+	// (3)
+	assert.ChanWritten(t, alicePaidChan)      // Successful payment
+	assert.NilErrFromChan(t, progressErrChan) // Success ntfn
+
+	// (4)
+	mtx.Lock()
+	rm := rpc.RMInvoice{Tag: invoiceTag, Invoice: "custom invoice"}
+	mtx.Unlock()
+	bobTI := bob.testInterface()
+	bobTI.SendUserRM(alice.PublicID(), rm)
+
+	// (5)
+	assert.ChanNotWritten(t, alicePaidChan, resendDelay)   // No more payments attempted
+	assert.ChanNotWritten(t, progressErrChan, resendDelay) // No more ntfns
+}
+
+// TestTipUserSerialSameUserAttempts asserts that sending multiple TipUser
+// attempts to the same user happen in series instead of in parallel.
+func TestTipUserSerialSameUserAttempts(t *testing.T) {
+	t.Parallel()
+	tcfg := testScaffoldCfg{}
+	ts := newTestScaffold(t, tcfg)
+	alice := ts.newClient("alice")
+	bob := ts.newClient("bob")
+
+	ts.kxUsers(alice, bob)
+
+	const maxAttempts = 3
+	payMAtoms := int64(4321000)
+
+	// Setup Bob hook helper func.
+	bobSentInvoice := make(chan struct{})
+	bob.mpc.HookGetInvoice(func(amt int64, cb func(int64)) (string, error) {
+		if amt == payMAtoms {
+			return "custom invoice", nil
+		}
+		return fmt.Sprintf("invoice for %d", amt), nil
+	})
+	bob.handleSync(client.OnTipUserInvoiceGeneratedNtfn(func(ru *client.RemoteUser, tag uint32, inv string) {
+		bobSentInvoice <- struct{}{}
+	}))
+
+	// Setup Alice hook helper func.
+	progressErrChan := make(chan error, 10)
+	alicePaidChan := make(chan struct{})
+	alice.handleSync(client.OnTipAttemptProgressNtfn(func(ru *client.RemoteUser, amtMAtoms int64, completed bool, attempt int, attemptErr error, willRetry bool) {
+		progressErrChan <- attemptErr
+	}))
+
+	alice.mpc.HookPayInvoice(func(invoice string) (int64, error) {
+		if invoice == "custom invoice" {
+			alicePaidChan <- struct{}{}
+			return 0, nil
+		}
+		return 0, nil
+	})
+
+	alice.mpc.HookDecodeInvoice(func(invoice string) (clientintf.DecodedInvoice, error) {
+		if invoice == "custom invoice" {
+			inv, _ := alice.mpc.DefaultDecodeInvoice(invoice)
+			inv.MAtoms = payMAtoms
+			return inv, nil
+		}
+		return alice.mpc.DefaultDecodeInvoice(invoice)
+	})
+
+	// Test scenario.
+	//   1. 2x Alice starts tip attempt.
+	//   2. Bob sends correct invoice
+	//   3. Alice accepts and completes payment
+	//   4. Bob sends second invoice
+	//   5. Alice accepts and completes payment
+
+	// (1)
+	err := alice.TipUser(bob.PublicID(), float64(payMAtoms)/1e11, maxAttempts)
+	assert.NilErr(t, err)
+	err = alice.TipUser(bob.PublicID(), float64(payMAtoms)/1e11, maxAttempts)
+	assert.NilErr(t, err)
+
+	// (2) (only one invoice received so far)
+	assert.ChanWritten(t, bobSentInvoice)
+	assert.ChanNotWritten(t, bobSentInvoice, time.Second)
+
+	// (3)
+	assert.ChanWritten(t, alicePaidChan)
+	assert.NilErrFromChan(t, progressErrChan) // Success ntfn
+
+	// (4) (second invoice received)
+	assert.ChanWritten(t, bobSentInvoice)
+
+	// (5)
+	assert.ChanWritten(t, alicePaidChan)      // Successful payment
+	assert.NilErrFromChan(t, progressErrChan) // Success ntfn
 }

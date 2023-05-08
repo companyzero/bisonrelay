@@ -211,6 +211,14 @@ type OnResourceFetchedNtfn func(ru *RemoteUser, fr clientdb.FetchedResource, ses
 
 func (_ OnResourceFetchedNtfn) typ() string { return onResourceFetchedNtfnType }
 
+const onTipUserInvoiceGeneratedNtfnType = "onTipUserInvoiceGenerated"
+
+// OnTipUserInvoiceGeneratedNtfn is called when the local client generates an
+// invoice to send to a remote user, for tipping purposes.
+type OnTipUserInvoiceGeneratedNtfn func(ru *RemoteUser, tag uint32, invoice string)
+
+func (_ OnTipUserInvoiceGeneratedNtfn) typ() string { return onTipUserInvoiceGeneratedNtfnType }
+
 // The following is used only in tests.
 
 const onTestNtfnType = "testNtfnType"
@@ -435,6 +443,11 @@ func (nmgr *NotificationManager) notifyTipAttemptProgress(ru *RemoteUser, amtMAt
 		visit(func(h OnTipAttemptProgressNtfn) { h(ru, amtMAtoms, completed, attempt, attemptErr, willRetry) })
 }
 
+func (nmgr *NotificationManager) notifyTipUserInvoiceGenerated(ru *RemoteUser, tag uint32, invoice string) {
+	nmgr.handlers[onTipUserInvoiceGeneratedNtfnType].(*handlersFor[OnTipUserInvoiceGeneratedNtfn]).
+		visit(func(h OnTipUserInvoiceGeneratedNtfn) { h(ru, tag, invoice) })
+}
+
 func (nmgr *NotificationManager) notifyOnBlock(ru *RemoteUser) {
 	nmgr.handlers[onBlockNtfnType].(*handlersFor[OnBlockNtfn]).
 		visit(func(h OnBlockNtfn) { h(ru) })
@@ -485,6 +498,7 @@ func NewNotificationManager() *NotificationManager {
 			onRemoteSubscriptionErrorNtfnType: &handlersFor[OnRemoteSubscriptionErrorNtfn]{},
 			onLocalClientOfflineTooLong:       &handlersFor[OnLocalClientOfflineTooLong]{},
 			onTipAttemptProgressNtfnType:      &handlersFor[OnTipAttemptProgressNtfn]{},
+			onTipUserInvoiceGeneratedNtfnType: &handlersFor[OnTipUserInvoiceGeneratedNtfn]{},
 			onServerSessionChangedNtfnType:    &handlersFor[OnServerSessionChangedNtfn]{},
 			onOnboardStateChangedNtfnType:     &handlersFor[OnOnboardStateChangedNtfn]{},
 			onResourceFetchedNtfnType:         &handlersFor[OnResourceFetchedNtfn]{},

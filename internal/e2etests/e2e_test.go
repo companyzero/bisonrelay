@@ -156,6 +156,15 @@ func (tc *testClient) handleSync(handler client.NotificationHandler) client.Noti
 	return tc.NotificationManager().RegisterSync(handler)
 }
 
+// waitTippingSubsysRunning waits until the tipping subsystem is running tipping
+// attempts (plus an additional time for its actions to possibly complete).
+func (tc *testClient) waitTippingSubsysRunning(extra time.Duration) {
+	tc.ListRunningTipUserAttempts()
+
+	// Sleep additional time for actions to start.
+	time.Sleep(extra)
+}
+
 // testInterface returns a filled unsafe test interface for this client.
 func (tc *testClient) testInterface() *testutils.UnsafeTestInterface {
 	i := &testutils.UnsafeTestInterface{}
@@ -255,7 +264,7 @@ func (ts *testScaffold) newClientWithOpts(name string, rootDir string,
 
 		TipUserRestartDelay:          2 * time.Second,
 		TipUserReRequestInvoiceDelay: time.Second,
-		TipUserMaxLifetime:           10 * time.Second,
+		TipUserMaxLifetime:           20 * time.Second,
 
 		GCMQUpdtDelay:    100 * time.Millisecond,
 		GCMQMaxLifetime:  time.Second,

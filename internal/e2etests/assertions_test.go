@@ -263,6 +263,22 @@ func assertRelaysPost(t testing.TB, src, dst *testClient, postFrom clientintf.Us
 	reg.Unregister()
 }
 
+// assertEmptyRMQ asserts the RMQ of the passed client is or becomes empty.
+func assertEmptyRMQ(t testing.TB, c *testClient) {
+	// Wait until the queues are empty.
+	maxCheck := 12000
+	for i := 0; i < maxCheck; i++ {
+		qlen, acklen := c.RMQLen()
+		if qlen+acklen == 0 {
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+		if i == maxCheck-1 {
+			t.Fatal("timeout waiting for queue to drain")
+		}
+	}
+}
+
 func testRand(t testing.TB) *rand.Rand {
 	seed := time.Now().UnixNano()
 	rnd := rand.New(rand.NewSource(seed))
