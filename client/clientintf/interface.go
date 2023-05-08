@@ -172,4 +172,5 @@ var (
 	ErrSubsysExiting             = errors.New("subsys exiting")
 	ErrInvoiceInsufficientlyPaid = errors.New("invoice insufficiently paid")
 	ErrOnboardNoFunds            = errors.New("onboarding invite does not have any funds")
+	ErrRetriablePayment          = errors.New("retriable payment error")
 )

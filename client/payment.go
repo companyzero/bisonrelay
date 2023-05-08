@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/companyzero/bisonrelay/client/clientintf"
@@ -166,6 +167,11 @@ func (pc *DcrlnPaymentClient) PayInvoice(ctx context.Context, invoice string) (i
 			"invoice. hash=%s, target=%s numMAtoms=%d",
 			sendPayRes.PaymentError, payReq.PaymentHash,
 			payReq.Destination, payReq.NumMAtoms)
+
+		if strings.Contains(sendPayRes.PaymentError, "no_route") {
+			return 0, fmt.Errorf("LN %w: %s", clientintf.ErrRetriablePayment,
+				sendPayRes.PaymentError)
+		}
 		return 0, fmt.Errorf("LN payment error: %s", sendPayRes.PaymentError)
 	}
 	pc.payTiming.Add(time.Since(start))

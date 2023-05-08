@@ -265,6 +265,7 @@ func (ts *testScaffold) newClientWithOpts(name string, rootDir string,
 		TipUserRestartDelay:          2 * time.Second,
 		TipUserReRequestInvoiceDelay: time.Second,
 		TipUserMaxLifetime:           20 * time.Second,
+		TipUserPayRetryDelayFactor:   100 * time.Millisecond,
 
 		GCMQUpdtDelay:    100 * time.Millisecond,
 		GCMQMaxLifetime:  time.Second,

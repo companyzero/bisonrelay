@@ -188,7 +188,8 @@ func (c *Client) handleTipUserPaymentResult(ru *RemoteUser, tag int32, payErr er
 				"trying to handle payment result")
 		}
 
-		if payErr == nil {
+		switch {
+		case payErr == nil:
 			// Amount is negative because we're paying an invoice.
 			payEvent := "paytip"
 			amount := -int64(ta.MilliAtoms)
@@ -199,7 +200,15 @@ func (c *Client) handleTipUserPaymentResult(ru *RemoteUser, tag int32, payErr er
 			now := time.Now()
 			ta.Completed = &now
 			ta.LastInvoiceError = nil
-		} else {
+
+		case errors.Is(payErr, clientintf.ErrRetriablePayment):
+			// Will try the payment again after a delay.
+			now := time.Now()
+			ta.PaymentAttempt = nil
+			ta.PaymentAttemptFailed = &now
+			ta.PaymentAttemptCount += 1
+
+		default:
 			errMsg := payErr.Error()
 			ta.LastInvoiceError = &errMsg
 			ta.LastInvoice = ""
@@ -218,10 +227,16 @@ func (c *Client) handleTipUserPaymentResult(ru *RemoteUser, tag int32, payErr er
 	// the UI.
 	if ta.LastInvoiceError != nil && ta.Attempts < ta.MaxAttempts {
 		invoiceErr := errors.New(*ta.LastInvoiceError)
-		ru.log.Debugf("Attempt %d/%d at tip tag %d failed payment "+
-			"due to %v", ta.Attempts, ta.MaxAttempts, ta.Tag, invoiceErr)
+		ru.log.Debugf("Attempt %d/%d (pay retry #%d) at tip tag %d failed payment "+
+			"due to %v", ta.Attempts, ta.MaxAttempts, ta.PaymentAttemptCount-1,
+			ta.Tag, invoiceErr)
 		c.ntfns.notifyTipAttemptProgress(ru, int64(ta.MilliAtoms), false,
 			int(ta.Attempts), invoiceErr, true)
+	} else if errors.Is(payErr, clientintf.ErrRetriablePayment) {
+		ru.log.Debugf("Attempt %d/%d (pay retry #%d) at tip tag %d failed payment "+
+			"due to %v. Will retry payment of the same invoice.",
+			ta.Attempts, ta.MaxAttempts, ta.PaymentAttemptCount-1,
+			ta.Tag, payErr)
 	}
 
 	// Send to main tip goroutine for handling.
@@ -303,6 +318,7 @@ func (c *Client) handleInvoice(ru *RemoteUser, invoice rpc.RMInvoice) error {
 
 			ta.LastInvoice = invoice.Invoice
 			ta.PaymentAttempt = nil
+			ta.PaymentAttemptCount = 0
 		} else {
 			ta.LastInvoice = ""
 			errMsg := invoiceErr.Error()
@@ -556,8 +572,8 @@ func (c *Client) takeTipAttemptAction(ctx context.Context, attempts *tipAttempts
 	case actionAttemptPayment:
 		// Attempt to pay fetched invoice.
 		ru.log.Debugf("Attempt %d/%d at paying tip user invoice of "+
-			"%.8f DCR (tag %d)", ta.Attempts, ta.MaxAttempts,
-			float64(ta.MilliAtoms)/1e11, ta.Tag)
+			"%.8f DCR (tag %d, pay retry #%d)", ta.Attempts, ta.MaxAttempts,
+			float64(ta.MilliAtoms)/1e11, ta.Tag, ta.PaymentAttemptCount)
 		go c.payTipInvoice(ru, ta.LastInvoice, int64(ta.MilliAtoms), ta.Tag)
 
 	case actionCheckPayment:
@@ -579,7 +595,7 @@ func (c *Client) runTipAttempts(ctx context.Context) error {
 	<-c.abLoaded
 
 	attempts := newTipAttemptsList(c.cfg.TipUserReRequestInvoiceDelay,
-		c.cfg.TipUserMaxLifetime)
+		c.cfg.TipUserMaxLifetime, c.cfg.TipUserPayRetryDelayFactor)
 
 	// This is called on client start, so wait until the first set of RV
 	// subscriptions is done, then sleep for a bit to allow any invoices
