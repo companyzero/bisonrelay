@@ -526,6 +526,26 @@ var listCommands = []tuicmd{
 			})
 			return nil
 		},
+	}, {
+		cmd:           "runningtips",
+		descr:         "List the currently running tip user attempts",
+		usableOffline: true,
+		handler: func(args []string, as *appState) error {
+			attempts := as.c.ListRunningTipUserAttempts()
+			as.cwHelpMsgs(func(pf printf) {
+				if len(attempts) == 0 {
+					pf("No running tip attempts")
+				}
+				for _, rta := range attempts {
+					nick, _ := as.c.UserNick(rta.UID)
+					nick = strescape.Nick(nick)
+					pf("%s - tag %d - %s - %s", nick,
+						rta.Tag, rta.NextAction,
+						rta.NextActionTime.Format(ISO8601DateTimeMs))
+				}
+			})
+			return nil
+		},
 	},
 }
 
