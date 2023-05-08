@@ -1713,11 +1713,15 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		if err := cmd.decode(&args); err != nil {
 			return nil, err
 		}
-		chatHistory, err := c.ReadUserHistoryMessages(args.UID, args.GcName)
+		chatHistory, err := c.ReadUserHistoryMessages(args.UID, args.GcName, args.Page, args.PageNum)
 		if err != nil {
 			return nil, err
 		}
-		res := make([]ChatLogEntry, 0)
+		chatLen := args.Page
+		if len(chatHistory) < args.Page {
+			chatLen = len(chatHistory)
+		}
+		res := make([]ChatLogEntry, 0, chatLen)
 		for _, chatLog := range chatHistory {
 			res = append(res, ChatLogEntry{
 				Message:   chatLog.Message,

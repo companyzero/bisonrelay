@@ -153,6 +153,8 @@ class ChatModel extends ChangeNotifier {
   void appendHistory(ChatEventModel msg) {
     if (_msgs.isNotEmpty &&
         _msgs[_msgs.length - 1].source?.id == msg.source?.id) {
+      print(
+          "${_msgs[_msgs.length - 1].source?.id} ${msg.source?.id} Same user ");
       msg.sameUser = true;
     }
     _msgs.add(msg);
@@ -423,8 +425,10 @@ class ClientModel extends ChangeNotifier {
     c = ChatModel(id, alias, isGC);
     _activeChats[id] = c;
 
-    var chatHistory = await Golib.readChatHistory(id, isGC ? alias : "");
-
+// Start with 500 messages and first page (0). We can load more with a scrolling
+// mechanism in the future
+    var chatHistory =
+        await Golib.readChatHistory(id, isGC ? alias : "", 500, 0);
     for (int i = 0; i < chatHistory.length; i++) {
       ChatEventModel evnt;
       if (isGC) {
@@ -437,7 +441,7 @@ class ClientModel extends ChangeNotifier {
         evnt = ChatEventModel(
             m,
             chatHistory[i].from != _nick
-                ? ChatModel(id, chatHistory[i].from, false)
+                ? ChatModel(chatHistory[i].from, chatHistory[i].from, true)
                 : null);
       } else {
         var m = PM(

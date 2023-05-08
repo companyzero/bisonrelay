@@ -1713,13 +1713,17 @@ Map<String, dynamic> _$SendOnChainToJson(SendOnChain instance) =>
 LoadUserHistory _$LoadUserHistoryFromJson(Map<String, dynamic> json) =>
     LoadUserHistory(
       json['uid'] as String,
-      json['gc_name'] as String?,
+      json['gc_name'] as String,
+      json['page'] as int,
+      json['page_num'] as int,
     );
 
 Map<String, dynamic> _$LoadUserHistoryToJson(LoadUserHistory instance) =>
     <String, dynamic>{
       'uid': instance.uid,
       'gc_name': instance.gcName,
+      'page': instance.page,
+      'page_num': instance.pageNum,
     };
 
 WriteInvite _$WriteInviteFromJson(Map<String, dynamic> json) => WriteInvite(

@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -420,7 +419,7 @@ func (db *DB) DeleteTransResetHalfKX(tx ReadWriteTx, id UserID) error {
 	return os.Remove(filename)
 }
 
-func (db *DB) readLogMsg(logFname string) ([]PMLogEntry, error) {
+func (db *DB) readLogMsg(logFname string, page, pageNum int) ([]PMLogEntry, error) {
 	if db.cfg.MsgsRoot == "" {
 		return nil, nil
 	}
@@ -433,21 +432,40 @@ func (db *DB) readLogMsg(logFname string) ([]PMLogEntry, error) {
 	defer f.Close()
 
 	loggedMessages := make([]PMLogEntry, 0)
-	scanner := bufio.NewScanner(f)
-	// optionally, resize scanner's capacity for lines over 64K, see next example
-	for scanner.Scan() {
+	//scanner := bufio.NewScanner(f)
+	reader := bufio.NewReader(f)
+	prevLine := ""
+	prevLineTimestamp := int64(0)
+	prevName := ""
+	for {
+		line, err := reader.ReadString('\n')
+		if err != nil {
+			// Log any left over message if we're at the end
+			if prevLine != "" && prevName != "" && prevLineTimestamp != 0 {
+				loggedMessages = append(loggedMessages, PMLogEntry{Message: prevLine,
+					From: prevName, Timestamp: prevLineTimestamp})
+			}
+			break
+		}
 
-		line := scanner.Text()
+		//line := scanner.Text()
 		lineSplit := strings.Split(line, " ")
 		// Try to read timestamp
 		ts := lineSplit[0]
 		t, err := time.Parse("2006-01-02T15:04:04", ts)
 		if err != nil {
-			db.log.Errorf("Unable to parse log '%s': %v", line, err)
-			// Don't just return error here, since it could be a new line?
-			//return nil, err
+			// No new time to parse at the front of the line so just add the
+			// message to the previous line, then go to the next line.
+			prevLine += "\n" + line
 			continue
 		}
+		// This means there was a new timestamp in the current line so
+		if prevLine != "" && prevName != "" && prevLineTimestamp != 0 {
+			loggedMessages = append(loggedMessages, PMLogEntry{Message: prevLine,
+				From: prevName, Timestamp: prevLineTimestamp})
+		}
+
+		// This surely means there is a new log line if there is a parsable timestamp at the front.
 
 		name := lineSplit[1]
 		message := ""
@@ -456,20 +474,28 @@ func (db *DB) readLogMsg(logFname string) ([]PMLogEntry, error) {
 			name = strings.Replace(name, ">", "", -1)
 			message = strings.TrimSpace(strings.Split(line, ">")[1])
 		} else if strings.Contains(name, "*") {
+			// Not a message to pass through, so reset prev info and move on.
+			prevLine = ""
+			prevName = ""
+			prevLineTimestamp = 0
 			continue
 		}
 
-		//db.log.Infof("%s <%s> %s", t.Format("2006-01-02T15:04:04"), name, message)
-		loggedMessages = append(loggedMessages, PMLogEntry{Message: message,
-			From: name, Timestamp: t.Unix()})
-	}
+		prevLine = message
+		prevName = name
+		prevLineTimestamp = t.Unix()
 
-	if err := scanner.Err(); err != nil {
-		log.Fatal(err)
-		return nil, err
 	}
-
-	return loggedMessages, nil
+	// Return only the requested page/pageNum
+	pageEnd := len(loggedMessages) - page*pageNum
+	pageStart := pageEnd - page
+	if pageEnd < 0 || pageEnd > len(loggedMessages) {
+		pageEnd = len(loggedMessages)
+	}
+	if pageStart < 0 {
+		pageStart = 0
+	}
+	return loggedMessages[pageStart:pageEnd], nil
 }
 
 func (db *DB) logMsg(logFname string, internal bool, from, msg string, ts time.Time) error {
@@ -561,7 +587,7 @@ func (db *DB) LogGCMsg(tx ReadTx, gcName string, gcID zkidentity.ShortID,
 }
 
 // ReadLogPM reads the log of PM messages from the given user.
-func (db *DB) ReadLogPM(uid UserID) ([]PMLogEntry, error) {
+func (db *DB) ReadLogPM(uid UserID, page, pageNum int) ([]PMLogEntry, error) {
 	entry, err := db.getBaseABEntry(uid)
 	if err != nil {
 		return nil, err
@@ -569,14 +595,14 @@ func (db *DB) ReadLogPM(uid UserID) ([]PMLogEntry, error) {
 
 	nick := entry.ID.Nick
 	logFname := fmt.Sprintf("%s.%s.log", strescape.PathElement(nick), uid)
-	return db.readLogMsg(logFname)
+	return db.readLogMsg(logFname, page, pageNum)
 }
 
 // ReadLogGCMsg reads the log a GC messages sent in the given GC.
-func (db *DB) ReadLogGCMsg(gcName string, gcID zkidentity.ShortID) ([]PMLogEntry, error) {
+func (db *DB) ReadLogGCMsg(gcName string, gcID zkidentity.ShortID, page, pageNum int) ([]PMLogEntry, error) {
 
 	logFname := fmt.Sprintf("groupchat.%s.%s.log", strescape.PathElement(gcName), gcID)
-	return db.readLogMsg(logFname)
+	return db.readLogMsg(logFname, page, pageNum)
 }
 
 // ReplaceLastConnDate replaces the last connection date of the local client to

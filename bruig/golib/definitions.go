@@ -398,6 +398,8 @@ type HandshakeStage struct {
 }
 
 type LoadUserHistory struct {
-	UID    clientintf.UserID `json:"uid"`
-	GcName string            `json:"gc_name"`
+	UID     clientintf.UserID `json:"uid"`
+	GcName  string            `json:"gc_name"`
+	Page    int               `json:"page"`
+	PageNum int               `json:"page_num"`
 }

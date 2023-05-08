@@ -748,7 +748,7 @@ type ChatHistoryEntry struct {
 	Internal  bool   `json:"internal"`
 }
 
-func (c *Client) ReadUserHistoryMessages(uid UserID, gcName string) ([]ChatHistoryEntry, error) {
+func (c *Client) ReadUserHistoryMessages(uid UserID, gcName string, page, pageNum int) ([]ChatHistoryEntry, error) {
 	var err error
 	if gcName == "" {
 		_, err := c.rul.byID(uid)
@@ -760,12 +760,12 @@ func (c *Client) ReadUserHistoryMessages(uid UserID, gcName string) ([]ChatHisto
 	}
 	var messages []clientdb.PMLogEntry
 	if gcName != "" {
-		messages, err = c.db.ReadLogGCMsg(gcName, uid)
+		messages, err = c.db.ReadLogGCMsg(gcName, uid, page, pageNum)
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		messages, err = c.db.ReadLogPM(uid)
+		messages, err = c.db.ReadLogPM(uid, page, pageNum)
 		if err != nil {
 			return nil, err
 		}
