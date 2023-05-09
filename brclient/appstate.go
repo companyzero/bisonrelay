@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"os"
@@ -37,6 +36,7 @@ import (
 	"github.com/companyzero/bisonrelay/internal/mdembeds"
 	"github.com/companyzero/bisonrelay/internal/strescape"
 	"github.com/companyzero/bisonrelay/internal/tlsconn"
+	"github.com/companyzero/bisonrelay/rates"
 	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/companyzero/bisonrelay/zkidentity"
 	"github.com/decred/dcrd/chaincfg/chainhash"
@@ -70,13 +70,6 @@ const (
 	connStateOnline
 )
 
-const urlExchangeRate = "https://explorer.dcrdata.org/api/exchangerate"
-
-type exchangeRate struct {
-	DCRPrice float64 `json:"dcrPrice"`
-	BTCPrice float64 `json:"btcPrice"`
-}
-
 type balance struct {
 	total dcrutil.Amount
 	conf  dcrutil.Amount
@@ -108,7 +101,7 @@ type appState struct {
 	lnRPC      lnrpc.LightningClient
 	lnWallet   walletrpc.WalletKitClient
 	httpClient *http.Client
-
+	rates      *rates.Rates
 	winW, winH int
 
 	// History of commands.
@@ -186,10 +179,6 @@ type appState struct {
 	// balances
 	balMtx sync.RWMutex
 	bal    balance
-
-	// exchange rate
-	erMtx sync.RWMutex
-	eRate exchangeRate
 
 	setupMtx           sync.Mutex
 	setupNeedsFunds    bool
@@ -274,7 +263,6 @@ func (as *appState) run() error {
 		}
 	}()
 
-	go as.trackExchangeRate()
 	go as.trackLNBalances()
 	go as.trackLNChannelEvents()
 	go as.processInboundMsgs()
@@ -341,63 +329,6 @@ func (as *appState) run() error {
 
 	as.log.Infof("App is exiting")
 	return err
-}
-
-func (as *appState) exchangeRate() exchangeRate {
-	as.erMtx.RLock()
-	eRate := as.eRate
-	as.erMtx.RUnlock()
-
-	return eRate
-}
-
-func (as *appState) fetchExchangeRate(ctx context.Context) (exchangeRate, error) {
-	var eRate exchangeRate
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet,
-		urlExchangeRate, nil)
-	if err != nil {
-		return eRate, fmt.Errorf("failed to create new http request: %v", err)
-	}
-	req.Header.Del("User-Agent")
-
-	resp, err := as.httpClient.Do(req)
-	if err != nil {
-		return eRate, fmt.Errorf("failed to get exchange rate: %v", err)
-	}
-	b, err := io.ReadAll(resp.Body)
-	resp.Body.Close()
-	if err != nil {
-		return eRate, fmt.Errorf("failed to read exchange rate response: %v", err)
-	}
-	if err = json.Unmarshal(b, &eRate); err != nil {
-		return eRate, fmt.Errorf("failed to decode exchange rate: %v", err)
-	}
-	return eRate, nil
-}
-
-func (as *appState) trackExchangeRate() {
-	const shortTimeout = time.Second * 30
-	const longTimeout = time.Minute * 10
-
-	var timeout time.Duration
-	for {
-		select {
-		case <-as.ctx.Done():
-			return
-		case <-time.After(timeout):
-			eRate, err := as.fetchExchangeRate(as.ctx)
-			if err != nil {
-				as.log.Warnf("Unable to fetch exchange rate: %v", err)
-				timeout = shortTimeout
-			} else {
-				as.erMtx.Lock()
-				as.eRate = eRate
-				as.erMtx.Unlock()
-
-				timeout = longTimeout
-			}
-		}
-	}
 }
 
 func (as *appState) trackLNBalances() {
@@ -3082,8 +3013,8 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 				err := client.CheckLNWalletUsable(ctx, lnRPC, lnNode)
 				if err == nil {
 					// Check for a valid exchange rate.
-					eRate := as.exchangeRate()
-					if eRate.DCRPrice == 0 {
+					dcrPrice, _ := as.rates.Get()
+					if dcrPrice == 0 {
 						err = fmt.Errorf("Exchange rate is zero")
 					}
 				}
@@ -3234,11 +3165,11 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 			cw.manyHelpMsgs(func(pf printf) {
 				pf("")
 				pf("Received file list")
-				eRate := as.exchangeRate()
+				dcrPrice, _ := as.rates.Get()
 				for _, f := range files {
 					meta := f.Metadata
 					dcrCost := float64(meta.Cost) / 1e8
-					usdCost := eRate.DCRPrice * dcrCost
+					usdCost := dcrPrice * dcrCost
 
 					pf("ID         : %x", meta.MetadataHash())
 					pf("Filename   : %q", meta.Filename)
@@ -3517,7 +3448,8 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 			ShipCharge: args.SimpleStoreShipCharge,
 
 			ExchangeRateProvider: func() float64 {
-				return as.exchangeRate().DCRPrice
+				dcrPrice, _ := as.rates.Get()
+				return dcrPrice
 			},
 
 			OrderPlaced: func(order *simplestore.Order, msg string) {
@@ -3539,6 +3471,23 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		resRouter.BindPrefixPath([]string{}, p)
 	}
 
+	httpClient := http.Client{
+		Transport: &http.Transport{
+			DialContext:           args.dialFunc,
+			ForceAttemptHTTP2:     true,
+			MaxIdleConns:          100,
+			IdleConnTimeout:       90 * time.Second,
+			TLSHandshakeTimeout:   10 * time.Second,
+			ExpectContinueTimeout: 1 * time.Second,
+		},
+	}
+
+	r := rates.New(rates.Config{
+		HTTPClient: &httpClient,
+		Log:        logBknd.logger("RATE"),
+	})
+	go r.Run(ctx)
+
 	ctx, cancel := context.WithCancel(context.Background())
 	as = &appState{
 		ctx:         ctx,
@@ -3553,16 +3502,9 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		lnPC:        lnPC,
 		lnRPC:       lnRPC,
 		lnWallet:    lnWallet,
-		httpClient: &http.Client{
-			Transport: &http.Transport{
-				DialContext:           args.dialFunc,
-				ForceAttemptHTTP2:     true,
-				MaxIdleConns:          100,
-				IdleConnTimeout:       90 * time.Second,
-				TLSHandshakeTimeout:   10 * time.Second,
-				ExpectContinueTimeout: 1 * time.Second,
-			},
-		},
+		httpClient:  &httpClient,
+		rates:       r,
+
 		gcInvites: make(map[string]uint64),
 		network:   args.Network,
 		isRestore: isRestore,

@@ -24,6 +24,7 @@ import (
 	"github.com/companyzero/bisonrelay/clientrpc/types"
 	"github.com/companyzero/bisonrelay/embeddeddcrlnd"
 	"github.com/companyzero/bisonrelay/lockfile"
+	"github.com/companyzero/bisonrelay/rates"
 	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/companyzero/bisonrelay/zkidentity"
 	"github.com/davecgh/go-spew/spew"
@@ -57,11 +58,8 @@ type clientCtx struct {
 	// paying to open a chan.
 	confirmPayReqRecvChan chan bool
 
-	// Exchange rate.
-	erMtx sync.RWMutex
-	eRate exchangeRate
-
 	httpClient *http.Client
+	rates      *rates.Rates
 
 	// downloadConfChans tracks confirmation channels about downloads that
 	// are about to be initiated.
@@ -561,7 +559,8 @@ func handleInitClient(handle uint32, args InitClient) error {
 			ShipCharge: args.SimpleStoreShipCharge,
 
 			ExchangeRateProvider: func() float64 {
-				return cctx.exchangeRate().DCRPrice
+				dcrPrice, _ := cctx.rates.Get()
+				return dcrPrice
 			},
 
 			OrderPlaced: func(order *simplestore.Order, msg string) {
@@ -594,6 +593,22 @@ func handleInitClient(handle uint32, args InitClient) error {
 	var cancel func()
 	ctx, cancel = context.WithCancel(ctx)
 
+	httpClient := http.Client{
+		Transport: &http.Transport{
+			DialContext:           dialFunc,
+			ForceAttemptHTTP2:     true,
+			MaxIdleConns:          100,
+			IdleConnTimeout:       90 * time.Second,
+			TLSHandshakeTimeout:   10 * time.Second,
+			ExpectContinueTimeout: 1 * time.Second,
+		},
+	}
+	r := rates.New(rates.Config{
+		HTTPClient: &httpClient,
+		Log:        logBknd.logger("RATE"),
+	})
+	go r.Run(ctx)
+
 	cctx = &clientCtx{
 		c:      c,
 		lnpc:   lnpc,
@@ -608,20 +623,10 @@ func handleInitClient(handle uint32, args InitClient) error {
 		confirmPayReqRecvChan: make(chan bool),
 		downloadConfChans:     make(map[zkidentity.ShortID]chan bool),
 
-		httpClient: &http.Client{
-			Transport: &http.Transport{
-				DialContext:           dialFunc,
-				ForceAttemptHTTP2:     true,
-				MaxIdleConns:          100,
-				IdleConnTimeout:       90 * time.Second,
-				TLSHandshakeTimeout:   10 * time.Second,
-				ExpectContinueTimeout: 1 * time.Second,
-			},
-		},
+		httpClient: &httpClient,
+		rates:      r,
 	}
 	cs[handle] = cctx
-
-	go cctx.trackExchangeRate()
 
 	if sstore != nil {
 		go sstore.Run(ctx)

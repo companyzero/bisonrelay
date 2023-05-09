@@ -638,9 +638,9 @@ func (cw *chatWindow) renderMsgElements(winW int, as *appState, elements []*chat
 					} else if filePath != "" {
 						s += fmt.Sprintf("[File %s]", filename)
 					} else {
-						eRate := as.exchangeRate()
+						dcrPrice, _ := as.rates.Get()
 						dcrCost := dcrutil.Amount(int64(args.Cost))
-						usdCost := eRate.DCRPrice * dcrCost.ToCoin()
+						usdCost := dcrPrice * dcrCost.ToCoin()
 						s += fmt.Sprintf("[Download File %s (size:%s cost:%0.8f DCR / %0.8f USD)]",
 							filename,
 							hbytes(int64(args.Size)),
