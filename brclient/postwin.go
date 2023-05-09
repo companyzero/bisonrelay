@@ -366,9 +366,9 @@ func (pw *postWindow) renderPost() {
 			} else if downloadedFilePath != "" {
 				s += fmt.Sprintf("[File %s]", filename)
 			} else {
-				eRate := pw.as.exchangeRate()
+				dcrPrice, _ := pw.as.rates.Get()
 				dcrCost := dcrutil.Amount(int64(args.Cost))
-				usdCost := eRate.DCRPrice * dcrCost.ToCoin()
+				usdCost := dcrPrice * dcrCost.ToCoin()
 				s += fmt.Sprintf("[Download File %s (size:%s cost:%0.8f DCR / %0.8f USD)]",
 					filename,
 					hbytes(int64(args.Size)),
