@@ -155,13 +155,19 @@ class _AppState extends State<App> with WindowListener {
           cfg.resourcesUpstream,
           cfg.simpleStorePayType,
           cfg.simpleStoreAccount,
-          cfg.simpleStoreShipCharge);
+          cfg.simpleStoreShipCharge,
+          cfg.proxyaddr,
+          cfg.torisolation,
+          cfg.proxyUsername,
+          cfg.proxyPassword,
+          cfg.circuitLimit);
       await Golib.initClient(initArgs);
 
       navkey.currentState!.pushReplacementNamed(OverviewScreen.routeName);
 
       doWalletChecks();
     } catch (exception) {
+      print("XXXXXX $exception");
       navkey.currentState!.pushNamed('/fatalError', arguments: exception);
     }
   }

@@ -43,6 +43,16 @@ class InitClient {
   final String simpleStoreAccount;
   @JsonKey(name: 'simplestore_ship_charge')
   final double simpleStoreShipCharge;
+  @JsonKey(name: 'proxyaddr')
+  final String proxyaddr;
+  @JsonKey(name: 'proxy_username')
+  final String proxyUsername;
+  @JsonKey(name: 'proxy_password')
+  final String proxyPassword;
+  @JsonKey(name: 'torisolation')
+  final bool torisolation;
+  @JsonKey(name: 'circuit_limit')
+  final int circuitLimit;
 
   InitClient(
       this.dbRoot,
@@ -58,7 +68,12 @@ class InitClient {
       this.resourcesUpstream,
       this.simpleStorePayType,
       this.simpleStoreAccount,
-      this.simpleStoreShipCharge);
+      this.simpleStoreShipCharge,
+      this.proxyaddr,
+      this.torisolation,
+      this.proxyUsername,
+      this.proxyPassword,
+      this.circuitLimit);
 
   Map<String, dynamic> toJson() => _$InitClientToJson(this);
 }
@@ -1190,9 +1205,11 @@ class LNInitDcrlnd {
   final List<String> existingSeed;
   @JsonKey(toJson: uint8listToBase64, fromJson: base64ToUint8list)
   final Uint8List? multiChanBackup;
+  final String proxyaddr;
+  final bool torisolation;
 
   LNInitDcrlnd(this.rootDir, this.network, this.password, this.existingSeed,
-      this.multiChanBackup);
+      this.multiChanBackup, this.proxyaddr, this.torisolation);
   Map<String, dynamic> toJson() => _$LNInitDcrlndToJson(this);
 }
 
@@ -2302,16 +2319,19 @@ abstract class PluginPlatform {
       String network,
       String password,
       List<String> existingSeed,
-      Uint8List? multiChanBackup) async {
-    var req = LNInitDcrlnd(
-        rootPath, network, password, existingSeed, multiChanBackup);
+      Uint8List? multiChanBackup,
+      String proxyaddr,
+      bool torisolation) async {
+    var req = LNInitDcrlnd(rootPath, network, password, existingSeed,
+        multiChanBackup, proxyaddr, torisolation);
     var res = await asyncCall(CTLNInitDcrlnd, req);
     return LNNewWalletSeed.fromJson(res);
   }
 
-  Future<String> lnRunDcrlnd(
-      String rootPath, String network, String password) async {
-    var req = LNInitDcrlnd(rootPath, network, password, [], null);
+  Future<String> lnRunDcrlnd(String rootPath, String network, String password,
+      String proxyaddr, bool torisolation) async {
+    var req = LNInitDcrlnd(
+        rootPath, network, password, [], null, proxyaddr, torisolation);
     var res = await asyncCall(CTLNRunDcrlnd, req);
     return res;
   }
