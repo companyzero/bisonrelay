@@ -12,15 +12,8 @@ var (
 	currentLndc    *embeddeddcrlnd.Dcrlnd
 )
 
-func runDcrlnd(rootDir string, network string) (*embeddeddcrlnd.Dcrlnd, error) {
-
-	debugLevel := "info"
-	cfg := embeddeddcrlnd.Config{
-		RootDir:    rootDir,
-		Network:    network,
-		DebugLevel: debugLevel,
-	}
-	lndc, err := embeddeddcrlnd.RunDcrlnd(context.Background(), cfg)
+func runDcrlnd(ctx context.Context, cfg embeddeddcrlnd.Config) (*embeddeddcrlnd.Dcrlnd, error) {
+	lndc, err := embeddeddcrlnd.RunDcrlnd(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}

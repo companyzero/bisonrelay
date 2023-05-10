@@ -1698,13 +1698,16 @@ func dcrlndSyncNotifier(update *initchainsyncrpc.ChainSyncUpdate, err error) {
 	notify(NTLNInitialChainSyncUpdt, update, err)
 }
 
-func handleLNInitDcrlnd(args LNInitDcrlnd) (*LNNewWalletSeed, error) {
-	lndc, err := runDcrlnd(args.RootDir, args.Network)
+func handleLNInitDcrlnd(ctx context.Context, args LNInitDcrlnd) (*LNNewWalletSeed, error) {
+	lndCfg := embeddeddcrlnd.Config{
+		RootDir:    args.RootDir,
+		Network:    args.Network,
+		DebugLevel: "info", // XXX
+	}
+	lndc, err := runDcrlnd(ctx, lndCfg)
 	if err != nil {
 		return nil, err
 	}
-
-	ctx := context.Background()
 
 	// Try to unlock the wallet. We expect to get a errLNWalletNotFound
 	// here.
@@ -1730,20 +1733,22 @@ func handleLNInitDcrlnd(args LNInitDcrlnd) (*LNNewWalletSeed, error) {
 	}, nil
 }
 
-func handleLNRunDcrlnd(args LNInitDcrlnd) (string, error) {
-	var err error
-
-	ctx := context.Background()
+func handleLNRunDcrlnd(ctx context.Context, args LNInitDcrlnd) (string, error) {
 	currentLndcMtx.Lock()
 	lndc := currentLndc
 	currentLndcMtx.Unlock()
 	if lndc == nil {
-		lndc, err = runDcrlnd(args.RootDir, args.Network)
+		var err error
+		lndCfg := embeddeddcrlnd.Config{
+			RootDir:    args.RootDir,
+			Network:    args.Network,
+			DebugLevel: "info", // XXX
+		}
+		lndc, err = runDcrlnd(ctx, lndCfg)
+		if err != nil {
+			return "", err
+		}
 	}
-	if err != nil {
-		return "", err
-	}
-
 	if err := lndc.TryUnlock(ctx, args.Password); err != nil {
 		return "", err
 	}
