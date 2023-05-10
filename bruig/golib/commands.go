@@ -1,6 +1,7 @@
 package golib
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -191,6 +192,7 @@ func call(cmd *cmd) *CmdResult {
 		return err == nil
 	}
 
+	ctx := context.Background()
 	// Handle calls that do not need a client.
 	switch cmd.Type {
 	case CTHello:
@@ -213,13 +215,13 @@ func call(cmd *cmd) *CmdResult {
 	case CTLNInitDcrlnd:
 		var args LNInitDcrlnd
 		if decode(&args) {
-			v, err = handleLNInitDcrlnd(args)
+			v, err = handleLNInitDcrlnd(ctx, args)
 		}
 
 	case CTLNRunDcrlnd:
 		var args LNInitDcrlnd
 		if decode(&args) {
-			v, err = handleLNRunDcrlnd(args)
+			v, err = handleLNRunDcrlnd(ctx, args)
 		}
 
 	case CTCaptureDcrlndLog:
