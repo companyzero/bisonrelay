@@ -40,7 +40,7 @@ class _ActiveChatState extends State<ActiveChat> {
 
   void sendMsg(String msg) {
     if (_debounce?.isActive ?? false) _debounce!.cancel();
-    _debounce = Timer(const Duration(milliseconds: 300), () async {
+    _debounce = Timer(const Duration(milliseconds: 100), () async {
       try {
         await chat?.sendMsg(msg);
         WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -51,7 +51,7 @@ class _ActiveChatState extends State<ActiveChat> {
               alignment: 0.0,
               curve: Curves.easeOut,
               duration:
-                  const Duration(milliseconds: 250), // a little bit smoother
+                  const Duration(milliseconds: 100), // a little bit smoother
             );
           }
         });
