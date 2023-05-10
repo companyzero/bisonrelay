@@ -21,6 +21,11 @@ InitClient _$InitClientFromJson(Map<String, dynamic> json) => InitClient(
       json['simplestore_pay_type'] as String,
       json['simplestore_account'] as String,
       (json['simplestore_ship_charge'] as num).toDouble(),
+      json['proxyaddr'] as String,
+      json['torisolation'] as bool,
+      json['proxy_username'] as String,
+      json['proxy_password'] as String,
+      json['circuit_limit'] as int,
     );
 
 Map<String, dynamic> _$InitClientToJson(InitClient instance) =>
@@ -39,6 +44,11 @@ Map<String, dynamic> _$InitClientToJson(InitClient instance) =>
       'simplestore_pay_type': instance.simpleStorePayType,
       'simplestore_account': instance.simpleStoreAccount,
       'simplestore_ship_charge': instance.simpleStoreShipCharge,
+      'proxyaddr': instance.proxyaddr,
+      'proxy_username': instance.proxyUsername,
+      'proxy_password': instance.proxyPassword,
+      'torisolation': instance.torisolation,
+      'circuit_limit': instance.circuitLimit,
     };
 
 IDInit _$IDInitFromJson(Map<String, dynamic> json) => IDInit(
@@ -1192,6 +1202,8 @@ LNInitDcrlnd _$LNInitDcrlndFromJson(Map<String, dynamic> json) => LNInitDcrlnd(
       json['password'] as String,
       (json['existingSeed'] as List<dynamic>).map((e) => e as String).toList(),
       base64ToUint8list(json['multiChanBackup'] as String?),
+      json['proxyaddr'] as String,
+      json['torisolation'] as bool,
     );
 
 Map<String, dynamic> _$LNInitDcrlndToJson(LNInitDcrlnd instance) =>
@@ -1201,6 +1213,8 @@ Map<String, dynamic> _$LNInitDcrlndToJson(LNInitDcrlnd instance) =>
       'password': instance.password,
       'existingSeed': instance.existingSeed,
       'multiChanBackup': uint8listToBase64(instance.multiChanBackup),
+      'proxyaddr': instance.proxyaddr,
+      'torisolation': instance.torisolation,
     };
 
 LNNewWalletSeed _$LNNewWalletSeedFromJson(Map<String, dynamic> json) =>

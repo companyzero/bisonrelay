@@ -73,6 +73,11 @@ class Config {
   late final String simpleStorePayType;
   late final String simpleStoreAccount;
   late final double simpleStoreShipCharge;
+  late final String proxyaddr;
+  late final bool torisolation;
+  late final String proxyUsername;
+  late final String proxyPassword;
+  late final int circuitLimit;
 
   Config();
   Config.filled(
@@ -92,7 +97,12 @@ class Config {
       this.resourcesUpstream: "",
       this.simpleStorePayType: "",
       this.simpleStoreAccount: "",
-      this.simpleStoreShipCharge: 0});
+      this.simpleStoreShipCharge: 0,
+      this.proxyaddr: "",
+      this.torisolation: false,
+      this.proxyUsername: "",
+      this.proxyPassword: "",
+      this.circuitLimit: 32});
   factory Config.newWithRPCHost(
           Config cfg, String rpcHost, String tlsCert, String macaroonPath) =>
       Config.filled(
@@ -113,6 +123,11 @@ class Config {
         simpleStorePayType: cfg.simpleStorePayType,
         simpleStoreAccount: cfg.simpleStoreAccount,
         simpleStoreShipCharge: cfg.simpleStoreShipCharge,
+        proxyaddr: cfg.proxyaddr,
+        torisolation: cfg.torisolation,
+        proxyUsername: cfg.proxyUsername,
+        proxyPassword: cfg.proxyPassword,
+        circuitLimit: cfg.circuitLimit,
       );
 
   Future<void> saveConfig(String filepath) async {
@@ -150,12 +165,15 @@ Future<Config> loadConfig(String filepath) async {
     return cleanAndExpandPath(iniVal);
   }
 
-  /*
   var getBool = (String section, String opt) {
     var v = f.get(section, opt);
     return v == "yes" || v == "true" || v == "1" ? true : false;
   };
-  */
+
+  var getInt = (String section, String opt) {
+    var v = f.get(section, opt);
+    return v != null && v != "" ? int.tryParse(v) : null;
+  };
 
   var iniLogFile = f.get("log", "logfile");
   String logfile = path.join(appDataDir, "applogs", "${APPNAME}.log");
@@ -199,6 +217,12 @@ Future<Config> loadConfig(String filepath) async {
   c.walletType = f.get("payment", "wallettype") ?? "disabled";
   c.network = f.get("payment", "network") ?? "mainnet";
   c.internalWalletDir = path.join(appDataDir, "ln-wallet");
+
+  c.proxyaddr = f.get("default", "proxyaddr") ?? "";
+  c.proxyUsername = f.get("default", "proxyuser") ?? "";
+  c.proxyPassword = f.get("default", "proxypass") ?? "";
+  c.torisolation = getBool("default", "torisolation");
+  c.circuitLimit = getInt("default", "circuitlimit") ?? 32;
 
   if (c.walletType != "disabled") {
     c.lnRPCHost = f.get("payment", "lnrpchost") ?? "localhost:10009";

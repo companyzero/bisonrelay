@@ -33,6 +33,7 @@ import (
 	"github.com/decred/dcrlnd/lnrpc/initchainsyncrpc"
 	"github.com/decred/dcrlnd/lnrpc/walletrpc"
 	lpclient "github.com/decred/dcrlnlpd/client"
+	"github.com/decred/go-socks/socks"
 	"github.com/decred/slog"
 )
 
@@ -338,9 +339,27 @@ func handleInitClient(handle uint32, args InitClient) error {
 	var sstore *simplestore.Store
 	resRouter := resources.NewRouter()
 
+	// Initialize dialer
+	var d net.Dialer
+	dialFunc := d.DialContext
+	if args.ProxyAddr != "" {
+		proxy := socks.Proxy{
+			Addr:         args.ProxyAddr,
+			TorIsolation: args.TorIsolation,
+			Username:     args.ProxyUsername,
+			Password:     args.ProxyPassword,
+		}
+		if args.TorIsolation && args.CircuitLimit > 0 {
+			dialFunc = socks.NewPool(proxy, args.CircuitLimit).DialContext
+		} else {
+			dialFunc = proxy.DialContext
+		}
+	}
+	brDialer := clientintf.WithDialer(args.ServerAddr, logBknd.logger("CONN"), dialFunc)
+
 	cfg := client.Config{
 		DB:                db,
-		Dialer:            clientintf.NetDialer(args.ServerAddr, logBknd.logger("CONN")),
+		Dialer:            brDialer,
 		PayClient:         pc,
 		Logger:            logBknd.logger,
 		ReconnectDelay:    5 * time.Second,
@@ -575,10 +594,6 @@ func handleInitClient(handle uint32, args InitClient) error {
 	var cancel func()
 	ctx, cancel = context.WithCancel(ctx)
 
-	// TODO: support dialer with proxy.
-	var d net.Dialer
-	httpDialerFunc := d.DialContext
-
 	cctx = &clientCtx{
 		c:      c,
 		lnpc:   lnpc,
@@ -595,7 +610,7 @@ func handleInitClient(handle uint32, args InitClient) error {
 
 		httpClient: &http.Client{
 			Transport: &http.Transport{
-				DialContext:           httpDialerFunc,
+				DialContext:           dialFunc,
 				ForceAttemptHTTP2:     true,
 				MaxIdleConns:          100,
 				IdleConnTimeout:       90 * time.Second,
@@ -1699,10 +1714,23 @@ func dcrlndSyncNotifier(update *initchainsyncrpc.ChainSyncUpdate, err error) {
 }
 
 func handleLNInitDcrlnd(ctx context.Context, args LNInitDcrlnd) (*LNNewWalletSeed, error) {
+	var d net.Dialer
+	dialFunc := d.DialContext
+	if args.ProxyAddr != "" {
+		proxy := socks.Proxy{
+			Addr:         args.ProxyAddr,
+			TorIsolation: args.TorIsolation,
+		}
+		dialFunc = proxy.DialContext
+	}
+
 	lndCfg := embeddeddcrlnd.Config{
-		RootDir:    args.RootDir,
-		Network:    args.Network,
-		DebugLevel: "info", // XXX
+		RootDir:      args.RootDir,
+		Network:      args.Network,
+		DebugLevel:   "info", // XXX
+		TorAddr:      args.ProxyAddr,
+		TorIsolation: args.TorIsolation,
+		DialFunc:     dialFunc,
 	}
 	lndc, err := runDcrlnd(ctx, lndCfg)
 	if err != nil {
@@ -1738,11 +1766,24 @@ func handleLNRunDcrlnd(ctx context.Context, args LNInitDcrlnd) (string, error) {
 	lndc := currentLndc
 	currentLndcMtx.Unlock()
 	if lndc == nil {
+		var d net.Dialer
+		dialFunc := d.DialContext
+		if args.ProxyAddr != "" {
+			proxy := socks.Proxy{
+				Addr:         args.ProxyAddr,
+				TorIsolation: args.TorIsolation,
+			}
+			dialFunc = proxy.DialContext
+		}
+
 		var err error
 		lndCfg := embeddeddcrlnd.Config{
-			RootDir:    args.RootDir,
-			Network:    args.Network,
-			DebugLevel: "info", // XXX
+			RootDir:      args.RootDir,
+			Network:      args.Network,
+			DebugLevel:   "info", // XXX
+			TorAddr:      args.ProxyAddr,
+			TorIsolation: args.TorIsolation,
+			DialFunc:     dialFunc,
 		}
 		lndc, err = runDcrlnd(ctx, lndCfg)
 		if err != nil {

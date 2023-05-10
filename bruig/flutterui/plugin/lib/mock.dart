@@ -204,7 +204,7 @@ class MockPlugin with NtfStreams /*implements PluginPlatform*/ {
           String rootPath, String network, String password) async =>
       throw "unimplemented";
   Future<String> lnRunDcrlnd(
-          String rootPath, String network, String password) async =>
+          String rootPath, String network, String password, String proxyaddr, bool torisolation) async =>
       throw "unimplemented";
   void captureDcrlndLog() => throw "unimplemented";
   Future<String> lnGetDepositAddr() async => throw "unimplemented";

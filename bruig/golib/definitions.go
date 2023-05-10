@@ -29,6 +29,12 @@ type InitClient struct {
 	SimpleStorePayType    string  `json:"simplestore_pay_type"`
 	SimpleStoreAccount    string  `json:"simplestore_account"`
 	SimpleStoreShipCharge float64 `json:"simplestore_ship_charge"`
+
+	ProxyAddr     string `json:"proxyaddr"`
+	ProxyUsername string `json:"proxy_username"`
+	ProxyPassword string `json:"proxy_password"`
+	TorIsolation  bool   `json:"torisolation"`
+	CircuitLimit  uint32 `json:"circuit_limit"`
 }
 
 type IDInit struct {
@@ -208,6 +214,8 @@ type LNInitDcrlnd struct {
 	Password        string   `json:"password"`
 	ExistingSeed    []string `json:"existingseed"`
 	MultiChanBackup []byte   `json:"multichanbackup"`
+	ProxyAddr       string   `json:"proxyaddr"`
+	TorIsolation    bool     `json:"torisolation"`
 }
 
 type LNNewWalletSeed struct {
