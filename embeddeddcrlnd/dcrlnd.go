@@ -53,6 +53,12 @@ type Config struct {
 
 	// DialFunc can be set to specify a non standard dialer.
 	DialFunc func(context.Context, string, string) (net.Conn, error)
+
+	// TorAddr is the host:port the Tor's SOCKS5 proxy is listening on.
+	TorAddr string
+
+	// TorIsolation enables Tor stream isolation.
+	TorIsolation bool
 }
 
 // Dcrlnd is a running instance of an embedded dcrlnd instance.
@@ -362,6 +368,16 @@ func RunDcrlnd(ctx context.Context, cfg Config) (*Dcrlnd, error) {
 	conf.Dcrwallet = &lncfg.DcrwalletConfig{
 		SPV:      true,
 		DialFunc: cfg.DialFunc,
+	}
+	if cfg.TorAddr != "" {
+		if _, _, err := net.SplitHostPort(cfg.TorAddr); err != nil {
+			return nil, err
+		}
+		conf.Tor = &lncfg.Tor{
+			Active:          true,
+			SOCKS:           cfg.TorAddr,
+			StreamIsolation: cfg.TorIsolation,
+		}
 	}
 	switch network {
 	case "mainnet":
