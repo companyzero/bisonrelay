@@ -47,6 +47,8 @@ func (ulns unlockLNScreen) Init() tea.Cmd {
 			MaxLogFiles:  ulns.cfg.LNMaxLogFiles,
 			RPCAddresses: ulns.cfg.LNRPCListen,
 			DialFunc:     ulns.cfg.dialFunc,
+			TorAddr:      ulns.cfg.ProxyAddr,
+			TorIsolation: ulns.cfg.TorIsolation,
 		}
 
 		cmd := func() tea.Msg {
