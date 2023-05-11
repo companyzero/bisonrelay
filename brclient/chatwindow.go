@@ -528,6 +528,7 @@ func (cw *chatWindow) newHistoryMsg(from, msg string, fromUID *zkidentity.ShortI
 		ts:       ts,
 		from:     from,
 		fromUID:  fromUID,
+		sent:     true,
 	}
 	cw.appendHistoryMsg(m)
 	return m
