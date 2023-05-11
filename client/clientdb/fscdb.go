@@ -432,7 +432,6 @@ func (db *DB) readLogMsg(logFname string, page, pageNum int) ([]PMLogEntry, erro
 	defer f.Close()
 
 	loggedMessages := make([]PMLogEntry, 0)
-	//scanner := bufio.NewScanner(f)
 	reader := bufio.NewReader(f)
 	prevLine := ""
 	prevLineTimestamp := int64(0)
@@ -448,11 +447,10 @@ func (db *DB) readLogMsg(logFname string, page, pageNum int) ([]PMLogEntry, erro
 			break
 		}
 
-		//line := scanner.Text()
 		lineSplit := strings.Split(line, " ")
 		// Try to read timestamp
 		ts := lineSplit[0]
-		t, err := time.Parse("2006-01-02T15:04:05 ", ts)
+		t, err := time.ParseInLocation("2006-01-02T15:04:05 ", ts, time.Local)
 		if err != nil {
 			// No new time to parse at the front of the line so just add the
 			// message to the previous line, then go to the next line.
@@ -461,6 +459,7 @@ func (db *DB) readLogMsg(logFname string, page, pageNum int) ([]PMLogEntry, erro
 		}
 		// This means there was a new timestamp in the current line so
 		if prevLine != "" && prevName != "" && prevLineTimestamp != 0 {
+			db.log.Infof("%v %v %v", ts, t, t.Unix(), time.Unix(t.Unix(), 0))
 			loggedMessages = append(loggedMessages, PMLogEntry{Message: prevLine,
 				From: prevName, Timestamp: prevLineTimestamp})
 		}
