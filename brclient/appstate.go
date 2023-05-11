@@ -1069,8 +1069,14 @@ func (as *appState) findOrNewGCWindow(gcID zkidentity.ShortID) *chatWindow {
 	if err != nil {
 		cw.newInternalMsg("Unable to read history messages")
 	}
-	for _, chatLog := range chatHistory {
+	for i, chatLog := range chatHistory {
 		var empty *zkidentity.ShortID
+		if i == 0 ||
+			(i > 0 &&
+				time.Unix(chatLog.Timestamp, 0).Format("2006-01-02") !=
+					time.Unix(chatHistory[i-1].Timestamp, 0).Format("2006-01-02")) {
+			cw.newInternalMsg(fmt.Sprintf("Day changed to %s", time.Unix(chatLog.Timestamp, 0).Format("2006-01-02")))
+		}
 		cw.newHistoryMsg(chatLog.From, chatLog.Message, empty, time.Unix(chatLog.Timestamp, 0), chatLog.From == cw.me)
 	}
 
@@ -1110,7 +1116,13 @@ func (as *appState) findOrNewChatWindow(id clientintf.UserID, alias string) *cha
 	if err != nil {
 		cw.newInternalMsg("Unable to read history messages")
 	}
-	for _, chatLog := range chatHistory {
+	for i, chatLog := range chatHistory {
+		if i == 0 ||
+			(i > 0 &&
+				time.Unix(chatLog.Timestamp, 0).Format("2006-01-02") !=
+					time.Unix(chatHistory[i-1].Timestamp, 0).Format("2006-01-02")) {
+			cw.newInternalMsg(fmt.Sprintf("Day changed to %s", time.Unix(chatLog.Timestamp, 0).Format("2006-01-02")))
+		}
 		var empty *zkidentity.ShortID
 		cw.newHistoryMsg(chatLog.From, chatLog.Message, empty, time.Unix(chatLog.Timestamp, 0), chatLog.From == cw.me)
 	}
