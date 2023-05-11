@@ -452,7 +452,7 @@ func (db *DB) readLogMsg(logFname string, page, pageNum int) ([]PMLogEntry, erro
 		lineSplit := strings.Split(line, " ")
 		// Try to read timestamp
 		ts := lineSplit[0]
-		t, err := time.Parse("2006-01-02T15:04:04", ts)
+		t, err := time.Parse("2006-01-02T15:04:05 ", ts)
 		if err != nil {
 			// No new time to parse at the front of the line so just add the
 			// message to the previous line, then go to the next line.
@@ -513,17 +513,17 @@ func (db *DB) logMsg(logFname string, internal bool, from, msg string, ts time.T
 	b := new(bytes.Buffer)
 	lastMsgTs, ok := db.lastMsgTS[logFname]
 	if !ok {
-		b.WriteString(ts.Format("2006-01-02T15:04:04 "))
+		b.WriteString(ts.Format("2006-01-02T15:04:05 "))
 		b.WriteString(fmt.Sprintf("* Conversation started %s", ts.Format("2006-01-02")))
 		b.WriteRune('\n')
 	} else if lastMsgTs.Day() != ts.Day() {
-		b.WriteString(ts.Format("2006-01-02T15:04:04 "))
+		b.WriteString(ts.Format("2006-01-02T15:04:05 "))
 		b.WriteString(fmt.Sprintf("* Day Changed to %s", ts.Format("2006-01-02")))
 		b.WriteRune('\n')
 	}
 	db.lastMsgTS[logFname] = ts
 
-	b.WriteString(ts.Format("2006-01-02T15:04:04 "))
+	b.WriteString(ts.Format("2006-01-02T15:04:05 "))
 
 	if internal {
 		b.WriteString("* ")
