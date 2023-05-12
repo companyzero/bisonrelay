@@ -65,10 +65,10 @@ class ResourcesModel extends ChangeNotifier {
     }
   }
 
-  Future<PagesSession> fetchPage(
-      String uid, List<String> path, int sessionID, int parentPage) async {
+  Future<PagesSession> fetchPage(String uid, List<String> path, int sessionID,
+      int parentPage, dynamic data) async {
     sessionID =
-        await Golib.fetchResource(uid, path, null, sessionID, parentPage);
+        await Golib.fetchResource(uid, path, null, sessionID, parentPage, data);
 
     var sess = session(sessionID);
     sess._setLoading(true);
