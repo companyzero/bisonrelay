@@ -1671,7 +1671,8 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 			}
 		}
 
-		_, err := c.FetchResource(args.UID, args.Path, args.Metadata, args.SessionID, args.ParentPage)
+		_, err := c.FetchResource(args.UID, args.Path, args.Metadata,
+			args.SessionID, args.ParentPage, args.Data)
 		return args.SessionID, err
 
 	}

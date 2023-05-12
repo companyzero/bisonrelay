@@ -3,6 +3,7 @@ package simplestore
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -73,14 +74,31 @@ func (s *Store) handleProduct(ctx context.Context, uid clientintf.UserID,
 func (s *Store) handleAddToCart(ctx context.Context, uid clientintf.UserID,
 	request *rpc.RMFetchResource) (*rpc.RMFetchResourceReply, error) {
 
-	sku := request.Path[1]
+	if request.Data == nil {
+		return &rpc.RMFetchResourceReply{
+			Status: rpc.ResourceStatusBadRequest,
+			Data:   []byte("request data is empty"),
+		}, nil
+	}
+
+	formData := struct {
+		SKU string `json:"sku"`
+		Qty uint32 `json:"qty"`
+	}{}
+
+	if err := json.Unmarshal(request.Data, &formData); err != nil {
+		return &rpc.RMFetchResourceReply{
+			Status: rpc.ResourceStatusBadRequest,
+			Data:   []byte("request data not valid json"),
+		}, nil
+	}
 	fname := filepath.Join(s.root, cartsDir, uid.String())
 	var cart Cart
 
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 
-	prod, ok := s.products[sku]
+	prod, ok := s.products[formData.SKU]
 	if !ok {
 		return nil, fmt.Errorf("product does not exist")
 	}
@@ -93,7 +111,7 @@ func (s *Store) handleAddToCart(ctx context.Context, uid clientintf.UserID,
 	hasItem := false
 	for _, item := range cart.Items {
 		if item.Product.SKU == prod.SKU {
-			item.Quantity += 1
+			item.Quantity += formData.Qty
 			hasItem = true
 			break
 		}
@@ -102,7 +120,7 @@ func (s *Store) handleAddToCart(ctx context.Context, uid clientintf.UserID,
 	if !hasItem {
 		newItem := &CartItem{
 			Product:  prod,
-			Quantity: 1,
+			Quantity: formData.Qty,
 		}
 		cart.Items = append(cart.Items, newItem)
 	}

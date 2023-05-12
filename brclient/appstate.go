@@ -2305,7 +2305,7 @@ func (as *appState) fetchPage(uid clientintf.UserID, pagePath string, session,
 		return err
 	}
 
-	tag, err := as.c.FetchResource(uid, path, nil, session, parent)
+	tag, err := as.c.FetchResource(uid, path, nil, session, parent, data)
 	if err != nil {
 		return err
 	}

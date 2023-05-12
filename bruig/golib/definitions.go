@@ -1,6 +1,8 @@
 package golib
 
 import (
+	"encoding/json"
+
 	"github.com/companyzero/bisonrelay/client/clientdb"
 	"github.com/companyzero/bisonrelay/client/clientintf"
 	"github.com/companyzero/bisonrelay/client/resources/simplestore"
@@ -368,6 +370,7 @@ type FetchResourceArgs struct {
 	Metadata   map[string]string         `json:"metadata,omitempty"`
 	SessionID  clientintf.PagesSessionID `json:"session_id"`
 	ParentPage clientintf.PagesSessionID `json:"parent_page"`
+	Data       json.RawMessage           `json:"data"`
 }
 
 type SimpleStoreOrder struct {
