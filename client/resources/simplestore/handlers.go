@@ -129,6 +129,27 @@ func (s *Store) handleAddToCart(ctx context.Context, uid clientintf.UserID,
 	}, nil
 }
 
+func (s *Store) handleClearCart(ctx context.Context, uid clientintf.UserID) (*rpc.RMFetchResourceReply, error) {
+	fname := filepath.Join(s.root, cartsDir, uid.String())
+
+	err := os.Remove(fname)
+	if err != nil && !os.IsNotExist(err) {
+		return nil, err
+	}
+
+	var cart Cart
+	w := &bytes.Buffer{}
+	err = s.tmpl.ExecuteTemplate(w, cartTmplFile, &cart)
+	if err != nil {
+		return nil, fmt.Errorf("unable to execute product template: %v", err)
+	}
+
+	return &rpc.RMFetchResourceReply{
+		Data:   w.Bytes(),
+		Status: rpc.ResourceStatusOk,
+	}, nil
+}
+
 func (s *Store) handleCart(ctx context.Context, uid clientintf.UserID,
 	request *rpc.RMFetchResource) (*rpc.RMFetchResourceReply, error) {
 
