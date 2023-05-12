@@ -1,15 +1,19 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
 	"unicode/utf8"
 
 	genericlist "github.com/bahlo/generic-list-go"
+	"github.com/charmbracelet/bubbles/textinput"
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/companyzero/bisonrelay/client/clientdb"
 	"github.com/companyzero/bisonrelay/client/clientintf"
@@ -20,13 +24,160 @@ import (
 	"github.com/decred/dcrd/dcrutil/v4"
 )
 
+type formField struct {
+	typ   string
+	name  string
+	label string
+	value interface{}
+}
+
+func (ff *formField) inputable() bool {
+	switch ff.typ {
+	case "intinput":
+		return true
+	default:
+		return false
+	}
+
+}
+
+func (ff *formField) viewable() bool {
+	switch ff.typ {
+	case "intinput", "submit":
+		return true
+	default:
+		return false
+	}
+}
+
+func (ff *formField) resetInputModel(m *textinput.Model) {
+	switch ff.typ {
+	case "intinput":
+		m.SetValue(fmt.Sprintf("%d", ff.value))
+	}
+}
+
+func (ff *formField) updateInputModel(m *textinput.Model, msg tea.Msg) bool {
+	oldVal := m.Value()
+	switch ff.typ {
+	case "intinput":
+		*m, _ = m.Update(msg)
+		newVal := m.Value()
+		if newVal == "" {
+			ff.value = int64(0)
+		} else if i, err := strconv.ParseInt(newVal, 10, 64); err == nil {
+			ff.value = i
+		} else {
+			m.SetValue(oldVal)
+			newVal = oldVal
+		}
+		return newVal != oldVal
+	default:
+	}
+
+	return false
+}
+
+func (ff *formField) view() string {
+	var b strings.Builder
+	if ff.label != "" {
+		b.WriteString(ff.label)
+		if ff.inputable() {
+			b.WriteString(": ")
+		}
+	}
+	switch ff.typ {
+	case "intinput":
+		b.WriteString(fmt.Sprintf("%d", ff.value))
+	default:
+		if ff.value != nil {
+			b.WriteString(fmt.Sprintf("%v", ff.value))
+		}
+	}
+
+	return b.String()
+}
+
+var formFieldPattern = regexp.MustCompile(`([\w]+)="([^"]*)"`)
+
+func parseFormField(line string) *formField {
+	matches := formFieldPattern.FindAllStringSubmatch(line, -1)
+
+	ff := &formField{}
+	var value string
+	hasValue := false
+	for _, m := range matches {
+		if len(m) < 3 {
+			continue
+		}
+		switch m[1] {
+		case "type":
+			ff.typ = m[2]
+		case "name":
+			ff.name = m[2]
+		case "value":
+			value = m[2]
+			hasValue = true
+		case "label":
+			ff.label = m[2]
+		}
+	}
+
+	if ff.typ == "" {
+		return nil
+	}
+
+	switch ff.typ {
+	case "intinput":
+		ff.value, _ = strconv.ParseInt(value, 10, 64)
+	default:
+		if hasValue {
+			ff.value = value
+		}
+	}
+
+	return ff
+}
+
+type formEl struct {
+	fields []*formField
+}
+
+func (f *formEl) action() string {
+	for _, ff := range f.fields {
+		if ff.typ == "action" && ff.value != nil {
+			action, _ := ff.value.(string)
+			return action
+		}
+	}
+	return ""
+}
+
+func (f *formEl) toJson() (json.RawMessage, error) {
+	m := make(map[string]interface{})
+	for _, ff := range f.fields {
+		if ff.name == "" || ff.value == nil {
+			continue
+		}
+		m[ff.name] = ff.value
+	}
+
+	res, err := json.Marshal(m)
+	if err != nil {
+		return nil, err
+	}
+	return json.RawMessage(res), nil
+}
+
 // chatMsgEl is one element of a chat msg AST.
 type chatMsgEl struct {
-	text    string
-	embed   *mdembeds.EmbeddedArgs
-	mention *string
-	url     *string
-	link    *string
+	text      string
+	embed     *mdembeds.EmbeddedArgs
+	mention   *string
+	url       *string
+	link      *string
+	form      *formEl
+	formField *formField
 }
 
 type chatMsgElLine struct {
@@ -192,8 +343,27 @@ func parseMsgIntoElements(msg string, mention string) []*chatMsgElLine {
 	// First, break into lines.
 	lines := strings.Split(msg, "\n")
 	res := make([]*chatMsgElLine, 0, len(lines))
+	var form *formEl
 	for _, line := range lines {
-		res = append(res, parseMsgLine(line, mention))
+		switch {
+		case line == "--form--":
+			form = &formEl{}
+		case line == "--/form--":
+			form = nil
+		case form != nil:
+			ff := parseFormField(line)
+			if ff != nil {
+				form.fields = append(form.fields, ff)
+			}
+			if ff != nil && ff.viewable() {
+				msgEl := chatMsgEl{form: form, formField: ff}
+				el := &chatMsgElLine{}
+				el.PushBack(msgEl)
+				res = append(res, el)
+			}
+		default:
+			res = append(res, parseMsgLine(line, mention))
+		}
 	}
 	return res
 }
@@ -490,6 +660,15 @@ func (cw *chatWindow) renderMsgElements(winW int, as *appState, elements []*chat
 				offset = writeWrappedWithStyle(b, offset, winW, style, s)
 			} else if el.url != nil {
 				offset = writeWrappedURL(b, offset, winW, *el.url)
+			} else if el.formField != nil && el.formField.label != "" {
+				style := as.styles.embed
+				if cw.maxSelectable == cw.selElIndex {
+					style = as.styles.focused
+					cw.selEl = &el
+				}
+				cw.maxSelectable += 1
+				s := el.formField.view()
+				offset = writeWrappedWithStyle(b, offset, winW, style, s)
 			} else {
 				s = el.text
 				offset = writeWrappedWithStyle(b, offset, winW, style, s)

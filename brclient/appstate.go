@@ -2263,7 +2263,7 @@ func (as *appState) downloadEmbed(source clientintf.UserID, embedded mdembeds.Em
 
 // fetchPage requests the given page from the user.
 func (as *appState) fetchPage(uid clientintf.UserID, pagePath string, session,
-	parent clientintf.PagesSessionID) error {
+	parent clientintf.PagesSessionID, form *formEl) error {
 	if len(pagePath) < 1 {
 		return fmt.Errorf("page path is empty")
 	}
@@ -2303,6 +2303,15 @@ func (as *appState) fetchPage(uid clientintf.UserID, pagePath string, session,
 	userNick, err := as.c.UserNick(uid)
 	if err != nil {
 		return err
+	}
+
+	// Serialize form data.
+	var data json.RawMessage
+	if form != nil {
+		data, err = form.toJson()
+		if err != nil {
+			return err
+		}
 	}
 
 	tag, err := as.c.FetchResource(uid, path, nil, session, parent, data)
