@@ -1753,6 +1753,7 @@ FetchResourceArgs _$FetchResourceArgsFromJson(Map<String, dynamic> json) =>
       ),
       json['session_id'] as int? ?? 0,
       json['parent_page'] as int? ?? 0,
+      json['data'],
     );
 
 Map<String, dynamic> _$FetchResourceArgsToJson(FetchResourceArgs instance) =>
@@ -1762,6 +1763,7 @@ Map<String, dynamic> _$FetchResourceArgsToJson(FetchResourceArgs instance) =>
       'metadata': instance.metadata,
       'session_id': instance.sessionID,
       'parent_page': instance.parentPage,
+      'data': instance.data,
     };
 
 RMFetchResource _$RMFetchResourceFromJson(Map<String, dynamic> json) =>
@@ -1771,7 +1773,7 @@ RMFetchResource _$RMFetchResourceFromJson(Map<String, dynamic> json) =>
         (k, e) => MapEntry(k, e as String),
       ),
       hexToUint64(json['tag'] as String),
-      base64ToUint8list(json['data'] as String?),
+      json['data'],
       json['index'] as int,
       json['count'] as int,
     );
@@ -1781,7 +1783,7 @@ Map<String, dynamic> _$RMFetchResourceToJson(RMFetchResource instance) =>
       'path': instance.path,
       'meta': instance.meta,
       'tag': instance.tag,
-      'data': uint8listToBase64(instance.data),
+      'data': instance.data,
       'index': instance.index,
       'count': instance.count,
     };

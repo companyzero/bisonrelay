@@ -2,13 +2,19 @@ import 'dart:convert';
 import 'dart:ui';
 import 'dart:typed_data';
 // import 'package:dart_vlc/dart_vlc.dart' as vlc;
+import 'package:bruig/components/dcr_input.dart';
+import 'package:bruig/components/empty_widget.dart';
+import 'package:bruig/components/info_grid.dart';
+import 'package:bruig/components/inputs.dart';
 import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/models/downloads.dart';
 import 'package:bruig/models/resources.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:markdown/markdown.dart' as md;
 import 'package:provider/provider.dart';
+import 'package:tuple/tuple.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:bruig/theme_manager.dart';
 
@@ -142,6 +148,75 @@ class EmbedInlineSyntax extends md.InlineSyntax {
 
     parser.addNode(el);
     return true;
+  }
+}
+
+class _FormField {
+  final String type;
+  final String name;
+  final String label;
+  dynamic value;
+
+  _FormField(this.type, {this.name = "", this.label = "", this.value});
+}
+
+class _FormElement extends md.Element {
+  final List<_FormField> fields;
+
+  _FormElement(this.fields) : super("form", [md.Text("")]);
+}
+
+class _FormBlockSyntax extends md.BlockSyntax {
+  static String closeTag = r'--/form--';
+  static RegExp tagPattern = RegExp(r'^--form--$');
+  static RegExp fieldPattern = RegExp(r'([\w]+)="([^"]*)"');
+
+  @override
+  RegExp get pattern => tagPattern;
+
+  @override
+  bool canEndBlock(md.BlockParser parser) => parser.current == "--/form--";
+
+  @override
+  md.Node? parse(md.BlockParser parser) {
+    parser.advance();
+
+    List<_FormField> children = [];
+
+    while (!parser.isDone && !md.BlockSyntax.isAtBlockEnd(parser)) {
+      if (parser.current == closeTag) {
+        parser.advance();
+        continue;
+      }
+
+      var matches = fieldPattern.allMatches(parser.current.content);
+      String type = "";
+      Map<Symbol, dynamic> args = {};
+      for (var m in matches) {
+        if (m.groupCount < 2) {
+          continue;
+        }
+        String name = m.group(1)!;
+        String value = m.group(2)!;
+        switch (name) {
+          case "type":
+            type = value;
+            break;
+          case "value":
+          case "label":
+          case "name":
+            args[Symbol(name)] = value;
+            break;
+        }
+      }
+
+      _FormField field = Function.apply(_FormField.new, [type], args);
+      children.add(field);
+      parser.advance();
+    }
+
+    var res = md.Element("p", [_FormElement(children)]);
+    return res;
   }
 }
 
@@ -301,7 +376,7 @@ class MarkdownArea extends StatelessWidget {
     var parentPageID = pageSource?.pageID ?? 0;
     try {
       await resources.fetchPage(
-          uid, parsed.pathSegments, sessionID, parentPageID);
+          uid, parsed.pathSegments, sessionID, parentPageID, null);
     } catch (exception) {
       showErrorSnackbar(context, "Unable to fetch page: $exception");
     }
@@ -314,62 +389,68 @@ class MarkdownArea extends StatelessWidget {
     var textColor = theme.focusColor;
     return Consumer<ThemeNotifier>(
         builder: (context, theme, _) => MarkdownBody(
-            codeBlockMaxHeight: 200,
-            styleSheet: MarkdownStyleSheet(
-              p: TextStyle(
-                  fontSize: 8 + theme.getFontSize() * 7,
-                  color: textColor,
-                  fontWeight: hasNick ? FontWeight.w700 : FontWeight.w300,
-                  letterSpacing: 0.44),
-              h1: TextStyle(color: textColor),
-              h2: TextStyle(color: textColor),
-              h3: TextStyle(color: textColor),
-              h4: TextStyle(color: textColor),
-              h5: TextStyle(color: textColor),
-              h6: TextStyle(color: textColor),
-              em: TextStyle(color: textColor),
-              strong: TextStyle(color: textColor),
-              del: TextStyle(color: textColor),
-              listBullet: TextStyle(color: textColor),
-              blockquote: TextStyle(color: textColor),
-              checkbox: TextStyle(color: textColor),
-              tableBody: TextStyle(color: textColor),
-              tableHead: TextStyle(color: textColor),
-              blockquoteDecoration: BoxDecoration(color: darkTextColor),
-              codeblockDecoration: BoxDecoration(
-                  color: Colors.black87,
-                  borderRadius: BorderRadius.circular(2),
-                  border: Border.all(width: 0.5, color: Colors.white24)),
-              code: TextStyle(
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                  color: textColor,
-                  backgroundColor: Colors.black87,
-                  height: 1.2,
-                  fontSize: 8 + theme.getFontSize() * 7,
-                  fontFamily: 'Inter',
-                  textBaseline: TextBaseline.alphabetic),
-            ),
-            data: text.trim(),
-            extensionSet: md.ExtensionSet(
-                md.ExtensionSet.gitHubFlavored.blockSyntaxes, [
-              md.EmojiSyntax(),
-              ...md.ExtensionSet.gitHubFlavored.inlineSyntaxes
-            ]),
-            builders: {
-              //"video": VideoMarkdownElementBuilder(basedir),
-              "codeblock": CodeblockMarkdownElementBuilder(),
-              "image": ImageMarkdownElementBuilder(),
-              "download":
-                  DownloadLinkElementBuilder(TextStyle(color: darkTextColor)),
-            },
-            onTapLink: (text, url, blah) {
-              launchUrlAwait(context, url);
-            },
-            inlineSyntaxes: [
-              //VideoInlineSyntax(),
-              //ImageInlineSyntax()
-              EmbedInlineSyntax(),
-            ]));
+              codeBlockMaxHeight: 200,
+              styleSheet: MarkdownStyleSheet(
+                p: TextStyle(
+                    fontSize: 8 + theme.getFontSize() * 7,
+                    color: textColor,
+                    fontWeight: hasNick ? FontWeight.w700 : FontWeight.w300,
+                    letterSpacing: 0.44),
+                h1: TextStyle(color: textColor),
+                h2: TextStyle(color: textColor),
+                h3: TextStyle(color: textColor),
+                h4: TextStyle(color: textColor),
+                h5: TextStyle(color: textColor),
+                h6: TextStyle(color: textColor),
+                em: TextStyle(color: textColor),
+                strong: TextStyle(color: textColor),
+                del: TextStyle(color: textColor),
+                listBullet: TextStyle(color: textColor),
+                blockquote: TextStyle(color: textColor),
+                checkbox: TextStyle(color: textColor),
+                tableBody: TextStyle(color: textColor),
+                tableHead: TextStyle(color: textColor),
+                blockquoteDecoration: BoxDecoration(color: darkTextColor),
+                codeblockDecoration: BoxDecoration(
+                    color: Colors.black87,
+                    borderRadius: BorderRadius.circular(2),
+                    border: Border.all(width: 0.5, color: Colors.white24)),
+                code: TextStyle(
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                    color: textColor,
+                    backgroundColor: Colors.black87,
+                    height: 1.2,
+                    fontSize: 8 + theme.getFontSize() * 7,
+                    fontFamily: 'Inter',
+                    textBaseline: TextBaseline.alphabetic),
+              ),
+              data: text.trim(),
+              extensionSet: md.ExtensionSet(
+                  md.ExtensionSet.gitHubFlavored.blockSyntaxes, [
+                md.EmojiSyntax(),
+                ...md.ExtensionSet.gitHubFlavored.inlineSyntaxes
+              ]),
+              builders: {
+                //"video": VideoMarkdownElementBuilder(basedir),
+                "codeblock": CodeblockMarkdownElementBuilder(),
+                "image": ImageMarkdownElementBuilder(),
+                "download":
+                    DownloadLinkElementBuilder(TextStyle(color: darkTextColor)),
+                "form": _FormElementBuilder(
+                    labelStyle: TextStyle(color: textColor)),
+              },
+              onTapLink: (text, url, blah) {
+                launchUrlAwait(context, url);
+              },
+              inlineSyntaxes: [
+                //VideoInlineSyntax(),
+                //ImageInlineSyntax()
+                EmbedInlineSyntax(),
+              ],
+              blockSyntaxes: [
+                _FormBlockSyntax(),
+              ],
+            ));
   }
 }
 
@@ -474,5 +555,106 @@ class ImageMarkdownElementBuilder extends MarkdownElementBuilder {
     }
 
     return Downloadable(tip, download, img);
+  }
+}
+
+class _FormSubmitButton extends StatelessWidget {
+  final _FormElement form;
+  final _FormField submit;
+  const _FormSubmitButton(this.form, this.submit, {super.key});
+
+  void doSubmit(BuildContext context, _FormElement form) async {
+    Map<String, dynamic> formData = {};
+    String action = "";
+    for (var field in form.fields) {
+      if (field.type == "action") {
+        action = field.value ?? "";
+      }
+      if (field.name == "" || field.value == null) {
+        continue;
+      }
+      formData[field.name] = field.value;
+    }
+
+    if (action == "") {
+      return;
+    }
+
+    var parsed = Uri.parse(action);
+
+    var downSource = Provider.of<DownloadSource?>(context, listen: false);
+    var pageSource = Provider.of<PagesSource?>(context, listen: false);
+    var uid = downSource?.uid ?? pageSource?.uid ?? "";
+
+    var resources = Provider.of<ResourcesModel>(context, listen: false);
+    var sessionID = pageSource?.sessionID ?? 0;
+    var parentPageID = pageSource?.pageID ?? 0;
+
+    try {
+      await resources.fetchPage(
+          uid, parsed.pathSegments, sessionID, parentPageID, formData);
+    } catch (exception) {
+      showErrorSnackbar(context, "Unable to fetch page: $exception");
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ElevatedButton(
+        onPressed: () => doSubmit(context, form), child: Text(submit.label));
+  }
+}
+
+class _FormElementBuilder extends MarkdownElementBuilder {
+  final TextStyle? labelStyle;
+  _FormElementBuilder({this.labelStyle = null});
+
+  @override
+  Widget visitElementAfter(md.Element element, TextStyle? preferredStyle) {
+    if (element is! _FormElement) {
+      return const Text("not-a-form-element",
+          style: TextStyle(color: Colors.amber));
+    }
+
+    _FormElement form = element;
+    _FormField? submit;
+
+    List<Tuple2<Widget, Widget>> fieldWidgets = [];
+    form.fields.forEach((field) {
+      switch (field.type) {
+        case "intinput":
+          IntEditingController ctrl = IntEditingController();
+          if (field.value is int) {
+            ctrl.intvalue = field.value;
+          } else if (field.value is double) {
+            ctrl.intvalue = (field.value as double).truncate();
+          } else if (field.value is String) {
+            ctrl.intvalue = int.tryParse(field.value as String) ?? 0;
+          }
+          field.value = ctrl.intvalue;
+          fieldWidgets.add(Tuple2(
+              Text(field.label, style: labelStyle),
+              intInput(
+                  controller: ctrl,
+                  onChanged: (int val) {
+                    field.value = val;
+                  })));
+          break;
+        case "submit":
+          submit = field;
+          break;
+        case "hidden":
+        case "action":
+          break;
+        default:
+          print("Unknown field type ${field.type}");
+      }
+    });
+
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      SimpleInfoGrid(fieldWidgets),
+      const SizedBox(height: 10),
+      submit != null ? _FormSubmitButton(form, submit!) : const Empty(),
+    ]);
   }
 }

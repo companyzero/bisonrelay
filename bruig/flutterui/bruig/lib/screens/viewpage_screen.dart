@@ -144,7 +144,7 @@ class _ViewPageScreenState extends State<ViewPageScreen> {
     var uid = widget.client.publicID;
     var path = ["index.md"];
     try {
-      var sess = await resources.fetchPage(uid, path, 0, 0);
+      var sess = await resources.fetchPage(uid, path, 0, 0, null);
       resources.mostRecent = sess;
     } catch (exception) {
       showErrorSnackbar(context, "Unable to fetch local page: $exception");

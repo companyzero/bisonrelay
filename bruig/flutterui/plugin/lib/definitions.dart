@@ -1717,9 +1717,10 @@ class FetchResourceArgs {
   final int sessionID;
   @JsonKey(name: "parent_page", defaultValue: 0)
   final int parentPage;
+  final dynamic data;
 
-  FetchResourceArgs(
-      this.uid, this.path, this.metadata, this.sessionID, this.parentPage);
+  FetchResourceArgs(this.uid, this.path, this.metadata, this.sessionID,
+      this.parentPage, this.data);
   Map<String, dynamic> toJson() => _$FetchResourceArgsToJson(this);
 }
 
@@ -1732,8 +1733,7 @@ class RMFetchResource {
   final Map<String, String>? meta;
   @JsonKey(fromJson: hexToUint64)
   final ResourceTag tag;
-  @JsonKey(fromJson: base64ToUint8list, toJson: uint8listToBase64)
-  final Uint8List? data;
+  final dynamic data;
   final int index;
   final int count;
 
@@ -2453,9 +2453,15 @@ abstract class PluginPlatform {
       await asyncCall(CTStartOnboard, key);
   Future<void> cancelOnboard() async => await asyncCall(CTCancelOnboard, null);
 
-  Future<int> fetchResource(String uid, List<String> path,
-      Map<String, String>? metadata, int sessionID, int parentPage) async {
-    var args = FetchResourceArgs(uid, path, metadata, sessionID, parentPage);
+  Future<int> fetchResource(
+      String uid,
+      List<String> path,
+      Map<String, String>? metadata,
+      int sessionID,
+      int parentPage,
+      dynamic data) async {
+    var args =
+        FetchResourceArgs(uid, path, metadata, sessionID, parentPage, data);
     return await asyncCall(CTFetchResource, args);
   }
 }
