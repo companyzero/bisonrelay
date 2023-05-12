@@ -180,8 +180,9 @@ func (rs ResourceStatus) String() string {
 }
 
 const (
-	ResourceStatusOk       = 200
-	ResourceStatusNotFound = 404
+	ResourceStatusOk         = 200
+	ResourceStatusBadRequest = 400
+	ResourceStatusNotFound   = 404
 )
 
 const RMCFetchResource = "fetchresource"
@@ -190,7 +191,7 @@ type RMFetchResource struct {
 	Path  []string          `json:"path"`
 	Meta  map[string]string `json:"meta"`
 	Tag   ResourceTag       `json:"tag"`
-	Data  []byte            `json:"data"`
+	Data  json.RawMessage   `json:"data"`
 	Index uint32            `json:"index"`
 	Count uint32            `json:"count"`
 }
