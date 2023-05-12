@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'package:bruig/components/empty_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/components/chat/events.dart';
@@ -31,7 +33,9 @@ class _MessagesState extends State<Messages> {
   String get nick => widget.nick;
   bool shouldHoldPosition = false;
   int _maxItem = 0;
-  late ChatModel lastChat;
+  bool _showFAB = false;
+  late ChatModel _lastChat;
+  Timer? _debounce;
 
   void onChatChanged() {
     setState(() {});
@@ -41,20 +45,32 @@ class _MessagesState extends State<Messages> {
   initState() {
     super.initState();
     widget.itemPositionsListener.itemPositions.addListener(() {
-      _maxItem = widget.itemPositionsListener.itemPositions.value.isNotEmpty
-          ? widget.itemPositionsListener.itemPositions.value
-              .where((ItemPosition position) => position.itemLeadingEdge < 1)
-              .reduce((ItemPosition max, ItemPosition position) =>
-                  position.itemLeadingEdge > max.itemLeadingEdge
-                      ? position
-                      : max)
-              .index
-          : 0;
+      if (_debounce?.isActive ?? false) _debounce!.cancel();
+      _debounce = Timer(const Duration(milliseconds: 50), () {
+        _maxItem = widget.itemPositionsListener.itemPositions.value.isNotEmpty
+            ? widget.itemPositionsListener.itemPositions.value
+                .where((ItemPosition position) => position.itemLeadingEdge < 1)
+                .reduce((ItemPosition max, ItemPosition position) =>
+                    position.itemLeadingEdge > max.itemLeadingEdge
+                        ? position
+                        : max)
+                .index
+            : 0;
+        if (_maxItem < chat.msgs.length - 5) {
+          setState(() {
+            _showFAB = true;
+          });
+        } else {
+          setState(() {
+            _showFAB = false;
+          });
+        }
+      });
     });
     chat.addListener(onChatChanged);
     _maybeScrollToFirstUnread();
     _maybeScrollToBottom();
-    lastChat = chat;
+    _lastChat = chat;
   }
 
   @override
@@ -62,24 +78,25 @@ class _MessagesState extends State<Messages> {
     super.didUpdateWidget(oldWidget);
     oldWidget.chat.removeListener(onChatChanged);
     chat.addListener(onChatChanged);
-    var isSameChat = chat.id == lastChat.id;
+    var isSameChat = chat.id == _lastChat.id;
     var anotherSender =
         chat.msgs.isNotEmpty && chat.msgs.last.source?.id != client.publicID;
     var receivedNewMsg = isSameChat && anotherSender;
     // user received a msg and is reading history (not on scroll maxExtent)
-    if (receivedNewMsg && _maxItem < lastChat.msgs.length - 2) {
+    if (receivedNewMsg && _maxItem < _lastChat.msgs.length - 2) {
       shouldHoldPosition = true;
     } else {
       shouldHoldPosition = false;
     }
     _maybeScrollToFirstUnread();
     _maybeScrollToBottom();
-    lastChat = chat;
     onChatChanged();
+    _lastChat = chat;
   }
 
   @override
   dispose() {
+    _debounce?.cancel();
     chat.removeListener(onChatChanged);
     super.dispose();
   }
@@ -123,10 +140,33 @@ class _MessagesState extends State<Messages> {
     }
   }
 
+  Widget _getFAB(Color textColor, Color backgroundColor) {
+    if (_showFAB) {
+      return FloatingActionButton(
+        onPressed: _scrollToBottom,
+        tooltip: "Scroll to most recent messages",
+        foregroundColor: textColor,
+        backgroundColor: backgroundColor,
+        elevation: 0,
+        hoverElevation: 0,
+        mini: true,
+        shape: RoundedRectangleBorder(
+            side: BorderSide(width: 2, color: textColor),
+            borderRadius: BorderRadius.circular(100)),
+        child: const Icon(Icons.keyboard_arrow_down),
+      );
+    }
+    return const Empty();
+  }
+
   @override
   Widget build(BuildContext context) {
-    return SelectionArea(
-      child: ScrollablePositionedList.builder(
+    var theme = Theme.of(context);
+    var textColor = theme.dividerColor;
+    var backgroundColor = theme.backgroundColor;
+    return Scaffold(
+      floatingActionButton: _getFAB(textColor, backgroundColor),
+      body: ScrollablePositionedList.builder(
         itemCount: chat.msgs.length,
         physics: const ClampingScrollPhysics(),
         itemBuilder: (context, index) {

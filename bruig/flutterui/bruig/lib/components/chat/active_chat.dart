@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:bruig/components/manage_gc.dart';
 import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/util.dart';
@@ -26,6 +27,7 @@ class _ActiveChatState extends State<ActiveChat> {
   ChatModel? chat;
   late ItemScrollController _itemScrollController;
   late ItemPositionsListener _itemPositionsListener;
+  Timer? _debounce;
 
   void clientChanged() {
     var newChat = client.active;
@@ -36,26 +38,29 @@ class _ActiveChatState extends State<ActiveChat> {
     }
   }
 
-  void sendMsg(String msg) async {
-    try {
-      await chat?.sendMsg(msg);
-      WidgetsBinding.instance.addPostFrameCallback((_) async {
-        if (mounted && chat != null) {
-          var len = chat?.msgs.length;
-          _itemScrollController.scrollTo(
-            index: len! - 1,
-            alignment: 0.0,
-            curve: Curves.easeOut,
-            duration:
-                const Duration(milliseconds: 250), // a little bit smoother
-          );
+  void sendMsg(String msg) {
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    _debounce = Timer(const Duration(milliseconds: 100), () async {
+      try {
+        await chat?.sendMsg(msg);
+        WidgetsBinding.instance.addPostFrameCallback((_) async {
+          if (mounted && chat != null) {
+            var len = chat?.msgs.length;
+            _itemScrollController.scrollTo(
+              index: len! - 1,
+              alignment: 0.0,
+              curve: Curves.easeOut,
+              duration:
+                  const Duration(milliseconds: 100), // a little bit smoother
+            );
+          }
+        });
+      } catch (exception) {
+        if (mounted) {
+          showErrorSnackbar(context, "Unable to send message: $exception");
         }
-      });
-    } catch (exception) {
-      if (mounted) {
-        showErrorSnackbar(context, "Unable to send message: $exception");
       }
-    }
+    });
   }
 
   @override
@@ -76,6 +81,7 @@ class _ActiveChatState extends State<ActiveChat> {
 
   @override
   void dispose() {
+    _debounce?.cancel();
     client.removeListener(clientChanged);
     inputFocusNode.dispose();
     super.dispose();
