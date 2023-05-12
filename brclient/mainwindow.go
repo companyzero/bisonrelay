@@ -8,6 +8,7 @@ import (
 	"unicode"
 
 	"github.com/charmbracelet/bubbles/textarea"
+	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -31,6 +32,8 @@ type mainWindowState struct {
 	// embedded data for images/files/links
 	embedContent map[string][]byte
 	ew           *embedWidget
+
+	formInput textinput.Model
 
 	isPage bool
 	isChat bool
@@ -99,6 +102,23 @@ func (mws *mainWindowState) addEmbedCB(id string, data []byte, embedStr string) 
 
 	mws.textArea.InsertString(embedStr)
 	return nil
+}
+
+// resetFormInput reset the currently selected form input to the form field's
+// value.
+//
+// This must be called _after_ an updateViewportWindow(), otherwise the currently
+// selected form field might be wrong.
+func (mws *mainWindowState) resetFormInput() {
+	cw := mws.as.activeChatWindow()
+	if cw == nil || cw.selEl == nil || cw.selEl.formField == nil {
+		return
+	}
+	cw.selEl.formField.resetInputModel(&mws.formInput)
+
+	// It's really crappy to udpate the viewport after having just upadted
+	// it. This design needs to be improved.
+	mws.updateViewportContent()
 }
 
 func (mws *mainWindowState) onTextInputAction() {
@@ -205,6 +225,7 @@ func (mws mainWindowState) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		// mws.debug = fmt.Sprintf("%q %v", msg.String(), msg.Type)
+		cw := mws.as.activeChatWindow()
 
 		switch {
 		case msg.Type == tea.KeyEsc:
@@ -260,7 +281,7 @@ func (mws mainWindowState) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case msg.Type == tea.KeyCtrlP:
 			mws.as.changeActiveWindowPrev()
 
-		case !mws.isPage && msg.Type == tea.KeyUp, !mws.isPage && msg.Type == tea.KeyDown:
+		case mws.isChat && msg.Type == tea.KeyUp, mws.isChat && msg.Type == tea.KeyDown:
 			up := msg.Type == tea.KeyUp
 			down := !up
 			afterHistory := mws.as.cmdHistoryIdx >= len(mws.as.cmdHistory)
@@ -353,41 +374,52 @@ func (mws mainWindowState) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case msg.Type == tea.KeyF2:
 			cmds = mws.ew.activate()
 
-		case msg.Type == tea.KeyCtrlUp, msg.Type == tea.KeyCtrlDown:
-			cw := mws.as.activeChatWindow()
-			if cw != nil {
-				delta := -1
-				if msg.Type == tea.KeyCtrlDown {
-					delta = 1
-				}
-				if cw.changeSelected(delta) {
-					mws.updateViewportContent()
-				}
+		case cw != nil && msg.Type == tea.KeyCtrlUp, cw != nil && msg.Type == tea.KeyCtrlDown:
+			delta := -1
+			if msg.Type == tea.KeyCtrlDown {
+				delta = 1
+			}
+			if cw.changeSelected(delta) {
+				mws.updateViewportContent()
+				mws.resetFormInput()
 			}
 
-		case msg.Type == tea.KeyCtrlV:
-			cw := mws.as.activeChatWindow()
-			if cw != nil && cw.selEl != nil && cw.selEl.embed != nil {
-				embedded := *cw.selEl.embed
-				cmd, err := mws.as.viewEmbed(embedded)
-				if err == nil {
-					return mws, cmd
-				} else {
-					cw.newHelpMsg("Unable to view embed: %v", err)
-					mws.updateViewportContent()
-				}
-			} else if cw != nil && cw.selEl != nil && cw.selEl.link != nil {
-				// TODO: absolute links to UID?
-				uid := cw.page.UID
-				// handle err
-				err := mws.as.fetchPage(uid, *cw.selEl.link, cw.page.SessionID, cw.page.PageID)
-				if err != nil {
-					mws.as.diagMsg("Unable to fetch page: %v", err)
-				}
+		case cw != nil && cw.selEl != nil && cw.selEl.embed != nil && msg.Type == tea.KeyCtrlV:
+			// View selected embed.
+			embedded := *cw.selEl.embed
+			cmd, err := mws.as.viewEmbed(embedded)
+			if err == nil {
+				return mws, cmd
+			} else {
+				cw.newHelpMsg("Unable to view embed: %v", err)
+				mws.updateViewportContent()
+			}
+
+		case cw != nil && cw.selEl != nil && cw.selEl.link != nil && msg.Type == tea.KeyCtrlV:
+			// Navigate to other page.
+			uid := cw.page.UID
+			err := mws.as.fetchPage(uid, *cw.selEl.link,
+				cw.page.SessionID, cw.page.PageID, nil)
+			if err != nil {
+				mws.as.diagMsg("Unable to fetch page: %v", err)
+			}
+
+		case cw != nil && cw.selEl != nil && cw.selEl.formField != nil && cw.selEl.formField.typ == "submit" && cw.selEl.form != nil && msg.Type == tea.KeyCtrlV:
+			// Submit form.
+			uid := cw.page.UID
+			action := cw.selEl.form.action()
+
+			for _, ff := range cw.selEl.form.fields {
+				mws.as.diagMsg("%s - %v", ff.typ, ff.value)
+			}
+
+			err := mws.as.fetchPage(uid, action,
+				cw.page.SessionID, cw.page.PageID, cw.selEl.form)
+			if err != nil {
+				mws.as.diagMsg("Unable to fetch page: %v", err)
 			}
 
 		case msg.Type == tea.KeyCtrlD:
-			cw := mws.as.activeChatWindow()
 			if cw != nil && cw.selEl != nil && cw.selEl.embed != nil {
 				embedded := *cw.selEl.embed
 				if embedded.Uid != nil {
@@ -401,6 +433,16 @@ func (mws mainWindowState) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					mws.updateViewportContent()
 				}
 			}
+
+		case mws.isPage && cw != nil && cw.selEl != nil && cw.selEl.formField != nil:
+			// Process form input in page.
+			if cw.selEl.formField.updateInputModel(&mws.formInput, msg) {
+				mws.updateViewportContent()
+			}
+
+		case mws.isPage:
+			// Do not process command input when a page is active
+			// (to capture form input).
 
 		default:
 			// Process line input.
@@ -434,8 +476,10 @@ func (mws mainWindowState) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if cw != nil {
 			if cw.unreadCount() < mws.as.winH {
 				cmds = appendCmd(cmds, markAllRead(cw))
-				mws.updateViewportContent()
 			}
+
+			mws.updateViewportContent()
+			mws.resetFormInput()
 		}
 
 	case msgNewRecvdMsg:
@@ -510,6 +554,7 @@ func (mws mainWindowState) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case msgPageFetched:
 		mws.updateViewportContent()
+		mws.resetFormInput()
 
 	case msgActiveCWRequestedPage:
 		mws.updateViewportContent()
@@ -569,6 +614,7 @@ func newMainWindowState(as *appState) (mainWindowState, tea.Cmd) {
 	mws := mainWindowState{
 		as:           as,
 		embedContent: make(map[string][]byte),
+		formInput:    textinput.NewModel(),
 	}
 	mws.textArea = newTextAreaModel(as.styles)
 	mws.textArea.Prompt = ""
@@ -578,6 +624,8 @@ func newMainWindowState(as *appState) (mainWindowState, tea.Cmd) {
 	mws.textArea.CharLimit = 1024 * 1024
 	mws.textArea.SetValue(as.workingCmd)
 	mws.textArea.Focus()
+
+	mws.formInput.Focus()
 
 	mws.ew = newEmbedWidget(as, mws.addEmbedCB)
 	mws.updateHeader()
