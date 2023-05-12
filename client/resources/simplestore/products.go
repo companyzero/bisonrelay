@@ -82,6 +82,7 @@ type Order struct {
 	ExchangeRate float64           `json:"exchange_rate"`
 	PayType      PayType           `json:"pay_type"`
 	Invoice      string            `json:"invoice"`
+	ShipAddr     string            `json:"ship_addr"`
 }
 
 // Total returns the total amount, with 2 decimal places accuracy.

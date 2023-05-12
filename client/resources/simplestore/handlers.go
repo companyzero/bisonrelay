@@ -215,6 +215,17 @@ func (s *Store) handlePlaceOrder(ctx context.Context, uid clientintf.UserID,
 		}, nil
 	}
 
+	// Process form data.
+	formData := struct {
+		Addr string `json:"addr"`
+	}{}
+	if err := json.Unmarshal(request.Data, &formData); err != nil {
+		return &rpc.RMFetchResourceReply{
+			Status: rpc.ResourceStatusBadRequest,
+			Data:   []byte("request data not valid json"),
+		}, nil
+	}
+
 	// Create the order.
 	orderDir := filepath.Join(s.root, ordersDir, uid.String())
 	lastID, err := orderFnamePattern.Last(orderDir)
@@ -229,6 +240,7 @@ func (s *Store) handlePlaceOrder(ctx context.Context, uid clientintf.UserID,
 		Status:     StatusPlaced,
 		PlacedTS:   time.Now(),
 		ShipCharge: s.cfg.ShipCharge,
+		ShipAddr:   formData.Addr,
 	}
 
 	// Build the message to send to the remote user, and present it to the
@@ -244,6 +256,9 @@ func (s *Store) handlePlaceOrder(ctx context.Context, uid clientintf.UserID,
 			order.ID, order.User)
 	} else {
 		wpm("Thank you for placing your order #%d\n", order.ID)
+		if order.ShipAddr != "" {
+			wpm("Shipping address: %q\n", order.ShipAddr)
+		}
 		wpm("The following were the items in your order:\n")
 		for _, item := range order.Cart.Items {
 			totalItemUSDCents := int64(item.Quantity) * int64(item.Product.Price*100)

@@ -13,6 +13,7 @@ Shipping     : ${{ .Order.ShipCharge }}
 Exchange Rate: {{ .Order.ExchangeRate }} DCR/USD  
 DCR Amount   : {{ .Order.TotalDCR.String }}  
 Invoice      : {{ .Order.Invoice }}  
+Shipping Addr: {{ .Order.ShipAddr }}  
 
 {{ if eq .Order.Status "placed" }}
 Switch status to [shipped](/admin/orderstatusto/{{.Order.User}}/{{.Order.ID}}/shipped) [completed](/admin/orderstatusto/{{.Order.User}}/{{.Order.ID}}/completed) [canceled](/admin/orderstatusto/{{.Order.User}}/{{.Order.ID}}/canceled)
