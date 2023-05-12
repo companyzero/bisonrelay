@@ -1,6 +1,7 @@
 package client
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -66,7 +67,7 @@ func (c *Client) FetchLocalResource(path []string, meta map[string]string) error
 // resource is returned the ResourceFetched handler will be called with
 // the response using the returned tag.
 func (c *Client) FetchResource(uid UserID, path []string, meta map[string]string,
-	sess, parentPage clientintf.PagesSessionID) (rpc.ResourceTag, error) {
+	sess, parentPage clientintf.PagesSessionID, data json.RawMessage) (rpc.ResourceTag, error) {
 	ru, err := c.UserByID(uid)
 	if err != nil {
 		return 0, err
@@ -75,6 +76,7 @@ func (c *Client) FetchResource(uid UserID, path []string, meta map[string]string
 	rm := rpc.RMFetchResource{
 		Path: path,
 		Meta: meta,
+		Data: data,
 	}
 
 	err = c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
@@ -105,7 +107,7 @@ func (c *Client) FetchResource(uid UserID, path []string, meta map[string]string
 // remote client.
 func (c *Client) handleFetchResource(ru *RemoteUser, fr rpc.RMFetchResource) error {
 	// TODO: support chunked data request.
-	if len(fr.Data) != 0 || fr.Index != 0 || fr.Count != 0 {
+	if fr.Index != 0 || fr.Count != 0 {
 		return fmt.Errorf("chunked request not implemented")
 	}
 

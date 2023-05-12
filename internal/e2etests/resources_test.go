@@ -39,7 +39,7 @@ func TestFetchesFixedResource(t *testing.T) {
 	}))
 
 	// Have Bob ask for the resource.
-	tag, err := bob.FetchResource(alice.PublicID(), resourcePath, nil, 0, 0)
+	tag, err := bob.FetchResource(alice.PublicID(), resourcePath, nil, 0, 0, nil)
 	assert.NilErr(t, err)
 
 	// Bob receives the resource.
@@ -49,7 +49,7 @@ func TestFetchesFixedResource(t *testing.T) {
 
 	// Have Bob ask for a resource that does not exist.
 	bogusPath := []string{"does", "not", "exist"}
-	_, err = bob.FetchResource(alice.PublicID(), bogusPath, nil, 0, 0)
+	_, err = bob.FetchResource(alice.PublicID(), bogusPath, nil, 0, 0, nil)
 	assert.NilErr(t, err)
 
 	// Bob does not receive a reply.
