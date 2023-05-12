@@ -654,6 +654,16 @@ class _FormElementBuilder extends MarkdownElementBuilder {
     List<Tuple2<Widget, Widget>> fieldWidgets = [];
     form.fields.forEach((field) {
       switch (field.type) {
+        case "txtinput":
+          TextEditingController ctrl = TextEditingController();
+          if (field.value is String) {
+            ctrl.value = field.value;
+          }
+          fieldWidgets.add(Tuple2(Text(field.label, style: labelStyle),
+              TextField(onChanged: (String val) {
+            field.value = val;
+          })));
+          break;
         case "intinput":
           IntEditingController ctrl = IntEditingController();
           if (field.value is int) {
