@@ -33,7 +33,7 @@ type formField struct {
 
 func (ff *formField) inputable() bool {
 	switch ff.typ {
-	case "intinput":
+	case "intinput", "txtinput":
 		return true
 	default:
 		return false
@@ -43,7 +43,7 @@ func (ff *formField) inputable() bool {
 
 func (ff *formField) viewable() bool {
 	switch ff.typ {
-	case "intinput", "submit":
+	case "intinput", "submit", "txtinput":
 		return true
 	default:
 		return false
@@ -52,6 +52,8 @@ func (ff *formField) viewable() bool {
 
 func (ff *formField) resetInputModel(m *textinput.Model) {
 	switch ff.typ {
+	case "txtinput":
+		m.SetValue(fmt.Sprintf("%s", ff.value))
 	case "intinput":
 		m.SetValue(fmt.Sprintf("%d", ff.value))
 	}
@@ -60,6 +62,11 @@ func (ff *formField) resetInputModel(m *textinput.Model) {
 func (ff *formField) updateInputModel(m *textinput.Model, msg tea.Msg) bool {
 	oldVal := m.Value()
 	switch ff.typ {
+	case "txtinput":
+		*m, _ = m.Update(msg)
+		newVal := m.Value()
+		ff.value = newVal
+		return newVal != oldVal
 	case "intinput":
 		*m, _ = m.Update(msg)
 		newVal := m.Value()
@@ -87,6 +94,8 @@ func (ff *formField) view() string {
 		}
 	}
 	switch ff.typ {
+	case "txtinput":
+		b.WriteString(fmt.Sprintf("%s", ff.value))
 	case "intinput":
 		b.WriteString(fmt.Sprintf("%d", ff.value))
 	default:
@@ -128,6 +137,8 @@ func parseFormField(line string) *formField {
 	}
 
 	switch ff.typ {
+	case "txtinput":
+		ff.value = value
 	case "intinput":
 		ff.value, _ = strconv.ParseInt(value, 10, 64)
 	default:
