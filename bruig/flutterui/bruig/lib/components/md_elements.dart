@@ -11,6 +11,7 @@ import 'package:markdown/markdown.dart' as md;
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:bruig/theme_manager.dart';
+import 'package:bruig/components/image_dialog.dart';
 
 class DownloadSource {
   final String uid;
@@ -410,6 +411,37 @@ class Downloadable extends StatelessWidget {
       );
 }
 
+class ImageMd extends StatelessWidget {
+  final String tip;
+  final Uint8List imgContent;
+  const ImageMd(this.tip, this.imgContent, {Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) => Tooltip(
+        message: tip,
+        child: InkWell(
+          borderRadius: const BorderRadius.all(Radius.circular(30)),
+          hoverColor: Theme.of(context).hoverColor,
+          onTap: () {
+            showDialog(
+                context: context, builder: (_) => ImageDialog(imgContent));
+          },
+          child: Container(
+            width: 300,
+            height: 300,
+            margin: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
+            decoration: BoxDecoration(
+              borderRadius: const BorderRadius.all(Radius.circular(8.0)),
+              image: DecorationImage(
+                image: MemoryImage(imgContent),
+                fit: BoxFit.cover,
+              ),
+            ),
+          ),
+        ),
+      );
+}
+
 class CodeblockMarkdownElementBuilder extends MarkdownElementBuilder {
   @override
   Widget visitText(md.Text text, TextStyle? preferredStyle) {
@@ -465,14 +497,16 @@ class ImageMarkdownElementBuilder extends MarkdownElementBuilder {
       tip += "Click to download file $download";
     }
 
-    Image img;
     try {
-      img = Image.memory(imgBytes);
+      return ImageMd(tip, imgBytes);
     } catch (exception) {
       print("Unable to decode image: $exception");
-      img = Image.asset("assets/images/invalidimg.png");
+      return Image.asset(
+        "assets/images/invalidimg.png",
+        width: 300,
+        height: 300,
+        fit: BoxFit.cover,
+      );
     }
-
-    return Downloadable(tip, download, img);
   }
 }
