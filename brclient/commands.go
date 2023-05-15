@@ -3380,6 +3380,22 @@ var commands = []tuicmd{
 		},
 		handler: subcmdNeededHandler,
 	}, {
+		cmd:           "testcolor",
+		usableOffline: true,
+		descr:         "Test a color spec",
+		usage:         "<attr>:<fg>:<bg>",
+		handler: func(args []string, as *appState) error {
+			if len(args) < 1 {
+				return usageError{msg: "color <attr>:<fg>:<bg> must be specified"}
+			}
+			style, err := colorDefnToLGStyle(args[0])
+			if err != nil {
+				return err
+			}
+			as.diagMsg(style.Render("On sangen hauskaa, että polkupyörä on maanteiden jokapäiväinen ilmiö."))
+			return nil
+		},
+	}, {
 		cmd:           "quit",
 		usableOffline: true,
 		descr:         "Quit the app",

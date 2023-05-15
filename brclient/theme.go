@@ -23,6 +23,7 @@ type theme struct {
 	nick           lipgloss.Style
 	nickMe         lipgloss.Style
 	nickGC         lipgloss.Style
+	unreadPost     lipgloss.Style
 	msg            lipgloss.Style
 	unsent         lipgloss.Style
 	online         lipgloss.Style
@@ -37,6 +38,10 @@ type theme struct {
 
 func textToColor(in string) (lipgloss.Color, error) {
 	var c lipgloss.Color
+	if len(in) > 0 && in[0] == '#' {
+		return lipgloss.Color(in), nil
+	}
+
 	switch strings.ToLower(in) {
 	case "na":
 	case "black":
@@ -80,6 +85,7 @@ func colorDefnToLGStyle(color string) (lipgloss.Style, error) {
 			style = style.Underline(true)
 		case "reverse":
 			style = style.Reverse(true)
+		case "", "na":
 		default:
 			return style, fmt.Errorf("invalid attribute: %v", k)
 		}
@@ -87,15 +93,16 @@ func colorDefnToLGStyle(color string) (lipgloss.Style, error) {
 
 	fg, err := textToColor(s[1])
 	if err != nil {
-		return style, err
+		// return style, err
+		return style, fmt.Errorf("invalid foreground color: %v", err)
 	}
-	style.Foreground(fg)
+	style = style.Foreground(fg)
 
 	bg, err := textToColor(s[2])
 	if err != nil {
-		return style, err
+		return style, fmt.Errorf("invalid background color: %v", err)
 	}
-	style.Background(bg)
+	style = style.Background(bg)
 
 	return style, nil
 }
@@ -158,6 +165,8 @@ func newTheme(args *config) (*theme, error) {
 		timestampHelp: lipgloss.NewStyle().
 			Bold(false).
 			Foreground(lipgloss.Color("#6b6b6b")),
+		unreadPost: lipgloss.NewStyle().
+			Foreground(lipgloss.Color("6")),
 
 		/*
 			nick: lipgloss.NewStyle().
