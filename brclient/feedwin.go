@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"sort"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/viewport"
@@ -16,9 +15,10 @@ import (
 // feedWindow tracks what needs to be initialized before the app can
 // properly start.
 type feedWindow struct {
-	as    *appState
-	posts []clientdb.PostSummary
-	idx   int
+	as     *appState
+	posts  []clientdb.PostSummary
+	unread map[clientintf.PostID]struct{}
+	idx    int
 
 	viewport viewport.Model
 }
@@ -56,6 +56,8 @@ func (fw *feedWindow) renderPostSumm(post clientdb.PostSummary,
 
 	if fw.idx == i {
 		b.WriteString(st.focused.Render(pf("%s %s by %s", date, title, author)))
+	} else if _, ok := fw.unread[post.ID]; ok {
+		b.WriteString(st.unreadPost.Render(pf("%s %s by %s", date, title, author)))
 	} else {
 		b.WriteString(st.timestamp.Render(date))
 		b.WriteString(" ")
@@ -83,13 +85,17 @@ func (fw *feedWindow) renderPostSumm(post clientdb.PostSummary,
 }
 
 func (fw *feedWindow) listPosts() {
-	fw.posts = fw.as.allPosts()
-	sort.Slice(fw.posts, func(i, j int) bool {
-		return fw.posts[i].Date.Sub(fw.posts[j].Date) < 0
-	})
-	fw.idx = len(fw.posts) - 1
-	if fw.idx < 0 {
-		fw.idx = 0
+	fw.posts, fw.unread = fw.as.allPosts()
+	_, summ, _, _ := fw.as.activePost()
+	if fw.idx == -1 {
+		idx := 0
+		for i := range fw.posts {
+			if fw.posts[i].ID == summ.ID {
+				idx = i
+				break
+			}
+		}
+		fw.idx = idx
 	}
 }
 
@@ -213,7 +219,7 @@ func (fw feedWindow) View() string {
 func newFeedWindow(as *appState, feedActiveIdx, yOffsetHint int) (feedWindow, tea.Cmd) {
 	as.loadPosts()
 	as.markWindowSeen(activeCWFeed)
-	fw := feedWindow{as: as}
+	fw := feedWindow{as: as, idx: -1}
 	fw.listPosts()
 	if feedActiveIdx > -1 && feedActiveIdx < len(fw.posts) {
 		fw.idx = feedActiveIdx

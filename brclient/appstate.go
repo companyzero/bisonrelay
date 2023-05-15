@@ -146,12 +146,13 @@ type appState struct {
 	canPayServer         bool
 	canPayServerTestTime time.Time
 
-	postsMtx   sync.Mutex
-	posts      []clientdb.PostSummary
-	post       *rpc.PostMetadata
-	postSumm   clientdb.PostSummary
-	myComments []string // Unreplicated comments
-	postStatus []rpc.PostMetadataStatus
+	postsMtx    sync.Mutex
+	posts       []clientdb.PostSummary
+	post        *rpc.PostMetadata
+	postSumm    clientdb.PostSummary
+	myComments  []string // Unreplicated comments
+	postStatus  []rpc.PostMetadataStatus
+	unreadPosts map[clientintf.PostID]struct{}
 
 	contentMtx  sync.Mutex
 	remoteFiles map[clientintf.UserID]map[clientdb.FileID]clientdb.RemoteFile
@@ -233,6 +234,12 @@ type appStateErr struct {
 func (as *appState) run() error {
 	as.wg.Add(1)
 	var err error
+
+	go func() {
+		// Initial loading of posts.
+		as.loadPosts()
+	}()
+
 	go func() {
 		as.log.Infof("Starting %s version %s", appName, version.String())
 		err = as.c.Run(as.ctx)
@@ -1867,7 +1874,6 @@ func (as *appState) requestRecv(amount, server, key string, caCert []byte) error
 }
 
 func (as *appState) createPost(post string) {
-	as.loadPosts()
 	summ, err := as.c.CreatePost(post, "")
 	if err != nil {
 		as.cwHelpMsg("Unable to create post: %v", err)
@@ -1875,6 +1881,7 @@ func (as *appState) createPost(post string) {
 		as.cwHelpMsg("Created post %s", summ.ID)
 		as.postsMtx.Lock()
 		as.posts = append(as.posts, summ)
+		as.sortPosts()
 		as.postsMtx.Unlock()
 		as.sendMsg(summ)
 	}
@@ -1887,15 +1894,17 @@ func (as *appState) loadPosts() {
 	} else {
 		as.postsMtx.Lock()
 		as.posts = posts
+		as.sortPosts()
 		as.postsMtx.Unlock()
 	}
 }
 
-func (as *appState) allPosts() []clientdb.PostSummary {
+func (as *appState) allPosts() ([]clientdb.PostSummary, map[clientintf.PostID]struct{}) {
 	as.postsMtx.Lock()
 	res := as.posts
+	m := maps.Clone(as.unreadPosts)
 	as.postsMtx.Unlock()
-	return res
+	return res, m
 }
 
 func (as *appState) activePost() (rpc.PostMetadata, clientdb.PostSummary,
@@ -1905,6 +1914,7 @@ func (as *appState) activePost() (rpc.PostMetadata, clientdb.PostSummary,
 	as.postsMtx.Lock()
 	if as.post != nil {
 		res = *as.post
+		delete(as.unreadPosts, as.postSumm.ID)
 	}
 	summ := as.postSumm
 	status := as.postStatus
@@ -1929,6 +1939,7 @@ func (as *appState) activatePost(summ *clientdb.PostSummary) {
 	as.post = &post
 	as.postSumm = *summ
 	as.postStatus = postStatus
+	delete(as.unreadPosts, summ.ID)
 	as.postsMtx.Unlock()
 }
 
@@ -1937,6 +1948,7 @@ func (as *appState) commentPost(from clientintf.UserID, pid clientintf.PostID,
 
 	as.postsMtx.Lock()
 	as.myComments = append(as.myComments, comment)
+	as.sortPosts()
 	as.postsMtx.Unlock()
 	as.sendMsg(sentPostComment{})
 
@@ -1944,6 +1956,22 @@ func (as *appState) commentPost(from clientintf.UserID, pid clientintf.PostID,
 	if err != nil {
 		as.diagMsg("Unable to comment post: %v", err.Error())
 	}
+}
+
+// sortPosts sorts the posts in as.posts. MUST be called with the postsMtx
+// locked.
+func (as *appState) sortPosts() {
+	sort.Slice(as.posts, func(i, j int) bool {
+		idt := as.posts[i].LastStatusTS
+		if idt.IsZero() {
+			idt = as.posts[i].Date
+		}
+		jdt := as.posts[j].LastStatusTS
+		if jdt.IsZero() {
+			jdt = as.posts[j].Date
+		}
+		return jdt.Before(idt)
+	})
 }
 
 func (as *appState) getUserPost(cw *chatWindow, pid clientintf.PostID) {
@@ -2573,7 +2601,11 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 			summ.Title, summ.ID, nick)
 
 		// Store new post.
-		as.loadPosts()
+		as.postsMtx.Lock()
+		as.posts = append(as.posts, summ)
+		as.sortPosts()
+		as.unreadPosts[summ.ID] = struct{}{}
+		as.postsMtx.Unlock()
 
 		// Signal updated feed window.
 		as.chatWindowsMtx.Lock()
@@ -2626,6 +2658,9 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 			// status update.
 			as.postStatus = append(as.postStatus, status)
 		}
+
+		as.unreadPosts[pid] = struct{}{}
+		as.sortPosts()
 
 		as.postsMtx.Unlock()
 
@@ -3551,6 +3586,8 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		inviteFundsAccount: args.InviteFundsAccount,
 
 		collator: collate.New(language.Und),
+
+		unreadPosts: make(map[clientintf.PostID]struct{}),
 
 		missingKXUsers: make(map[client.UserID]time.Time),
 
