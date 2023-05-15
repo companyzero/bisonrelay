@@ -427,14 +427,12 @@ class ImageMd extends StatelessWidget {
                 context: context, builder: (_) => ImageDialog(imgContent));
           },
           child: Container(
-            width: 300,
-            height: 300,
+            constraints: const BoxConstraints(maxHeight: 250, maxWidth: 250),
             margin: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
             decoration: BoxDecoration(
               borderRadius: const BorderRadius.all(Radius.circular(8.0)),
               image: DecorationImage(
                 image: MemoryImage(imgContent),
-                fit: BoxFit.cover,
               ),
             ),
           ),

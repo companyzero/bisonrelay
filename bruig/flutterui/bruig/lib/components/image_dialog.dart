@@ -8,12 +8,13 @@ class ImageDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      child: Image.memory(
-        imgContent,
-        width: 1000,
-        height: 1000,
-        fit: BoxFit.cover,
-        filterQuality: FilterQuality.high,
+      child: Container(
+        constraints: const BoxConstraints(maxHeight: 1000, maxWidth: 1000),
+        decoration: BoxDecoration(
+          image: DecorationImage(
+            image: MemoryImage(imgContent),
+          ),
+        ),
       ),
     );
   }
