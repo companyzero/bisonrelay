@@ -56,14 +56,16 @@ class _MessagesState extends State<Messages> {
                         : max)
                 .index
             : 0;
-        if (_maxItem < chat.msgs.length - 5) {
-          setState(() {
-            _showFAB = true;
-          });
-        } else {
-          setState(() {
-            _showFAB = false;
-          });
+        if (mounted) {
+          if (_maxItem < chat.msgs.length - 5) {
+            setState(() {
+              _showFAB = true;
+            });
+          } else {
+            setState(() {
+              _showFAB = false;
+            });
+          }
         }
       });
     });
