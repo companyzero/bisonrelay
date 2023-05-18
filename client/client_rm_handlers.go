@@ -15,6 +15,29 @@ import (
 	"github.com/decred/slog"
 )
 
+// handleRMHandshake handles all handshake messages.
+func (c *Client) handleRMHandshake(ru *RemoteUser, msg interface{}) error {
+	switch msg.(type) {
+	case rpc.RMHandshakeSYN:
+		ru.log.Infof("Received handshake SYN. Replying with SYN/ACK.")
+		c.ntfns.notifyHandshakeStage(ru, "SYN")
+		return c.sendWithSendQ("synack", rpc.RMHandshakeSYNACK{}, ru.ID())
+
+	case rpc.RMHandshakeSYNACK:
+		ru.log.Infof("Received handshake SYN/ACK. Replying with ACK. User ratchet is fully synced.")
+		c.ntfns.notifyHandshakeStage(ru, "SYNACK")
+		return c.sendWithSendQ("synack", rpc.RMHandshakeACK{}, ru.ID())
+
+	case rpc.RMHandshakeACK:
+		ru.log.Infof("Received handshake ACK. User ratchet is fully synced.")
+		c.ntfns.notifyHandshakeStage(ru, "ACK")
+		return nil
+
+	default:
+		return fmt.Errorf("wrong msg payload sent to handleRMHandshake: %T", msg)
+	}
+}
+
 func (c *Client) handleTransitiveMsg(ru *RemoteUser, tm rpc.RMTransitiveMessage) error {
 	if c.cfg.TransitiveEvent != nil {
 		c.cfg.TransitiveEvent(ru.ID(), tm.For, TEMsgForward)
@@ -119,6 +142,9 @@ func (c *Client) innerHandleUserRM(ru *RemoteUser, h *rpc.RMHeader,
 		ru.log.Debugf("Received private message of length %d", len(p.Message))
 
 		c.ntfns.notifyOnPM(ru, p, ts)
+
+	case rpc.RMHandshakeSYN, rpc.RMHandshakeACK, rpc.RMHandshakeSYNACK:
+		return c.handleRMHandshake(ru, p)
 
 	case rpc.RMGroupInvite:
 		return c.handleGCInvite(ru, p)

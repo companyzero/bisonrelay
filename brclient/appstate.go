@@ -2904,6 +2904,20 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		})
 	}))
 
+	ntfns.Register(client.OnHandshakeStageNtfn(func(ru *client.RemoteUser, msgtype string) {
+		nick := strescape.Nick(ru.Nick())
+		switch msgtype {
+		case "SYN":
+			// Do not log, as this is an intermediate state.
+		case "SYNACK", "ACK":
+			as.diagMsg("Completed handshake with %s (due to receiving %s)",
+				nick, msgtype)
+		default:
+			as.diagMsg("Unknown handshake stage %q with user %s (%s)",
+				msgtype, nick, ru.ID())
+		}
+	}))
+
 	// Initialize resources router.
 	var sstore *simplestore.Store
 	resRouter := resources.NewRouter()
