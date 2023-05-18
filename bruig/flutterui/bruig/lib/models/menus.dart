@@ -203,6 +203,19 @@ List<ChatMenuItem> buildUserChatMenu(ChatModel chat) {
     }
   }
 
+  void handshake(BuildContext context, ChatModel chat) async {
+    try {
+      await Golib.handshake(chat.id);
+      var event =
+          SynthChatEvent("Requested 3-way handshake with user", SCE_sent);
+      chat.append(ChatEventModel(event, null));
+    } catch (exception) {
+      var event = SynthChatEvent("", SCE_sending);
+      event.error = Exception("Unable to perform handshake: $exception");
+      chat.append(ChatEventModel(event, null));
+    }
+  }
+
   return <ChatMenuItem>[
     ChatMenuItem(
         "User Profile", (context, chats) => chats.profile = chats.active),
@@ -242,6 +255,10 @@ List<ChatMenuItem> buildUserChatMenu(ChatModel chat) {
     ChatMenuItem(
       "Suggest User to KX",
       (context, chats) => showSuggestKXModalBottom(context, chats.active!),
+    ),
+    ChatMenuItem(
+      "Perform Handshake",
+      (context, chats) => handshake(context, chats.active!),
     ),
   ];
 }

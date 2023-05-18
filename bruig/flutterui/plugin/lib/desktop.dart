@@ -320,6 +320,14 @@ mixin BaseDesktopPlatform on NtfStreams {
         ntfSimpleStoreOrders.add(event);
         break;
 
+      case NTHandshakeStage:
+        var event = HandshakeStage.fromJson(payload);
+        if (event.stage == "SYNACK" || event.stage == "ACK") {
+          // Limit to events that determine ratchet is working.
+          ntfChatEvents.add(event);
+        }
+        break;
+
       default:
         print("Received unknown notification ${cmd.toRadixString(16)}");
     }

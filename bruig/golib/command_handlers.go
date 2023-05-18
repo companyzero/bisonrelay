@@ -335,6 +335,11 @@ func handleInitClient(handle uint32, args InitClient) error {
 		notify(NTResourceFetched, fr, nil)
 	}))
 
+	ntfns.Register(client.OnHandshakeStageNtfn(func(ru *client.RemoteUser, msgtype string) {
+		event := HandshakeStage{UID: ru.ID(), Stage: msgtype}
+		notify(NTHandshakeStage, event, nil)
+	}))
+
 	// Initialize resources router.
 	var sstore *simplestore.Store
 	resRouter := resources.NewRouter()
@@ -1689,6 +1694,14 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		_, err := c.FetchResource(args.UID, args.Path, args.Metadata,
 			args.SessionID, args.ParentPage, args.Data)
 		return args.SessionID, err
+
+	case CTHandshake:
+		var args clientintf.UserID
+		if err := cmd.decode(&args); err != nil {
+			return nil, err
+		}
+		err := c.Handshake(args)
+		return nil, err
 
 	}
 	return nil, nil

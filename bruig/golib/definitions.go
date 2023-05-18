@@ -385,3 +385,8 @@ type SimpleStoreOrder struct {
 	Order simplestore.Order `json:"order"`
 	Msg   string            `json:"msg"`
 }
+
+type HandshakeStage struct {
+	UID   clientintf.UserID `json:"uid"`
+	Stage string            `json:"stage"`
+}

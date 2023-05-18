@@ -1914,3 +1914,15 @@ Map<String, dynamic> _$FetchedResourceToJson(FetchedResource instance) =>
       'request': instance.request,
       'response': instance.response,
     };
+
+HandshakeStage _$HandshakeStageFromJson(Map<String, dynamic> json) =>
+    HandshakeStage(
+      json['uid'] as String,
+      json['stage'] as String,
+    );
+
+Map<String, dynamic> _$HandshakeStageToJson(HandshakeStage instance) =>
+    <String, dynamic>{
+      'uid': instance.uid,
+      'stage': instance.stage,
+    };

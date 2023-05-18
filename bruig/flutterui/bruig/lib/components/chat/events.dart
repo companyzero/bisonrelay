@@ -943,6 +943,29 @@ class _FetchedResourceWState extends State<FetchedResourceW> {
   }
 }
 
+class HandshakeStageW extends StatelessWidget {
+  final HandshakeStage event;
+  const HandshakeStageW(this.event, {super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    var theme = Theme.of(context);
+    var textColor = theme.dividerColor;
+    var backgroundColor = theme.highlightColor;
+
+    return ServerEvent(
+      child: Container(
+        decoration: BoxDecoration(
+            color: backgroundColor,
+            borderRadius: const BorderRadius.all(Radius.circular(5))),
+        child: Text(
+            "Completed 3-way handshake (due to receiving msg ${event.stage})",
+            style: TextStyle(color: textColor, fontSize: 9)),
+      ),
+    );
+  }
+}
+
 class Event extends StatelessWidget {
   final ChatEventModel event;
   final ChatModel chat;
@@ -1033,6 +1056,10 @@ class Event extends StatelessWidget {
 
     if (event.event is RequestedResourceEvent) {
       return FetchedResourceW(event.event as RequestedResourceEvent);
+    }
+
+    if (event.event is HandshakeStage) {
+      return HandshakeStageW(event.event as HandshakeStage);
     }
 
     var theme = Theme.of(context);
