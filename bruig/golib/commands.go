@@ -117,6 +117,7 @@ const (
 	CTStartOnboard                    = 0x74
 	CTCancelOnboard                   = 0x75
 	CTFetchResource                   = 0x76
+	CTHandshake                       = 0x77
 
 	NTInviteReceived         = 0x1001
 	NTInviteAccepted         = 0x1002
@@ -157,6 +158,7 @@ const (
 	NTOnboardStateChanged    = 0x1025
 	NTResourceFetched        = 0x1026
 	NTSimpleStoreOrderPlaced = 0x1027
+	NTHandshakeStage         = 0x1028
 )
 
 type cmd struct {

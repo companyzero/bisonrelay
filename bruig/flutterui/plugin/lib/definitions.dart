@@ -1859,6 +1859,15 @@ class FetchedResource {
       this.requestTS, this.responseTS, this.request, this.response);
 }
 
+@JsonSerializable()
+class HandshakeStage extends ChatEvent {
+  final String uid;
+  final String stage;
+  HandshakeStage(this.uid, this.stage) : super(uid, "Handshake stage $stage");
+  factory HandshakeStage.fromJson(Map<String, dynamic> json) =>
+      _$HandshakeStageFromJson(json);
+}
+
 mixin NtfStreams {
   StreamController<RemoteUser> ntfAcceptedInvites =
       StreamController<RemoteUser>();
@@ -2484,6 +2493,8 @@ abstract class PluginPlatform {
         FetchResourceArgs(uid, path, metadata, sessionID, parentPage, data);
     return await asyncCall(CTFetchResource, args);
   }
+
+  Future<void> handshake(String uid) async => await asyncCall(CTHandshake, uid);
 }
 
 const int CTUnknown = 0x00;
@@ -2593,6 +2604,7 @@ const int CTSkipOnboardStage = 0x73;
 const int CTStartOnboard = 0x74;
 const int CTCancelOnboard = 0x75;
 const int CTFetchResource = 0x76;
+const int CTHandshake = 0x77;
 
 const int notificationsStartID = 0x1000;
 
@@ -2635,3 +2647,4 @@ const int NTTipUserProgress = 0x1024;
 const int NTOnboardStateChanged = 0x1025;
 const int NTResourceFetched = 0x1026;
 const int NTSimpleStoreOrderPlaced = 0x1027;
+const int NTHandshakeStage = 0x1028;
