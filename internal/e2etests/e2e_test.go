@@ -71,17 +71,28 @@ func (tc *testConn) RemoteAddr() net.Addr {
 	return tc.netConn.RemoteAddr()
 }
 
+// clientCfg holds config for an E2E test client.
+type clientCfg struct {
+	name     string
+	rootDir  string
+	id       *zkidentity.FullIdentity
+	idIniter func(context.Context) (*zkidentity.FullIdentity, error)
+}
+
+type newClientOpt func(*clientCfg)
+
 type testClient struct {
 	*client.Client
 	db      *clientdb.DB
 	name    string
-	id      *zkidentity.FullIdentity
 	rootDir string
 	ctx     context.Context
 	cancel  func()
 	runC    chan error
 	mpc     *testutils.MockPayClient
+	nccfg   *clientCfg
 	cfg     *client.Config
+	log     slog.Logger
 
 	mtx               sync.Mutex
 	conn              *testConn
@@ -187,10 +198,37 @@ type testScaffold struct {
 	svrAddr string
 }
 
-func (ts *testScaffold) newClientWithOpts(name string, rootDir string,
-	id *zkidentity.FullIdentity) *testClient {
+func (ts *testScaffold) defaultNewClientCfg(name string) *clientCfg {
+	rootDir, err := os.MkdirTemp("", "br-client-"+name+"-*")
+	assert.NilErr(ts.t, err)
+	ts.t.Cleanup(func() {
+		if ts.t.Failed() {
+			ts.t.Logf("%s DB dir: %s", name, rootDir)
+		} else {
+			os.RemoveAll(rootDir)
+		}
+	})
 
+	id, err := zkidentity.New(name, name)
+	assert.NilErr(ts.t, err)
+	return &clientCfg{
+		name:    name,
+		rootDir: rootDir,
+		id:      id,
+		idIniter: func(context.Context) (*zkidentity.FullIdentity, error) {
+			c := new(zkidentity.FullIdentity)
+			*c = *id
+			return c, nil
+		},
+	}
+}
+
+func (ts *testScaffold) newClientWithCfg(nccfg *clientCfg) *testClient {
 	ts.t.Helper()
+
+	name := nccfg.name
+	rootDir := nccfg.rootDir
+
 	if name == "" {
 		ts.t.Fatal("name cannot be empty")
 	}
@@ -212,12 +250,6 @@ func (ts *testScaffold) newClientWithOpts(name string, rootDir string,
 		ts.t.Cleanup(func() { logf.Close() })
 	}
 	dbLog := logBknd("FSDB")
-
-	idIniter := func(context.Context) (*zkidentity.FullIdentity, error) {
-		c := new(zkidentity.FullIdentity)
-		*c = *id
-		return c, nil
-	}
 
 	var tc *testClient
 
@@ -258,7 +290,7 @@ func (ts *testScaffold) newClientWithOpts(name string, rootDir string,
 			return nil
 		},
 		DB:            db,
-		LocalIDIniter: idIniter,
+		LocalIDIniter: nccfg.idIniter,
 		Logger:        logBknd,
 		PayClient:     mpc,
 
@@ -295,47 +327,43 @@ func (ts *testScaffold) newClientWithOpts(name string, rootDir string,
 		Client:  c,
 		ctx:     ctx,
 		cancel:  cancel,
-		id:      id,
 		rootDir: rootDir,
 		runC:    make(chan error, 1),
 		db:      db,
 		mpc:     mpc,
 		cfg:     &cfg,
+		nccfg:   nccfg,
+		log:     logBknd("TEST"),
 	}
 	go func() { tc.runC <- c.Run(ctx) }()
 
 	// Wait until address book is loaded.
 	tc.AddressBook()
+	tc.log.Infof("Test client ready for use as instance %p", tc)
 
 	return tc
 }
 
 // newClient instantiates a new client that can connect to the scaffold's
 // server. This MUST be called only from the main test goroutine.
-func (ts *testScaffold) newClient(name string) *testClient {
+func (ts *testScaffold) newClient(name string, opts ...newClientOpt) *testClient {
 	ts.t.Helper()
 
-	rootDir, err := os.MkdirTemp("", "br-client-"+name+"-*")
-	assert.NilErr(ts.t, err)
-	ts.t.Cleanup(func() {
-		if ts.t.Failed() {
-			ts.t.Logf("%s DB dir: %s", name, rootDir)
-		} else {
-			os.RemoveAll(rootDir)
-		}
-	})
-
-	id, err := zkidentity.New(name, name)
-	assert.NilErr(ts.t, err)
-	return ts.newClientWithOpts(name, rootDir, id)
+	nccfg := ts.defaultNewClientCfg(name)
+	for _, opt := range opts {
+		opt(nccfg)
+	}
+	return ts.newClientWithCfg(nccfg)
 }
 
 // stopClient stops this client. It can't be used after this.
 func (ts *testScaffold) stopClient(tc *testClient) {
 	ts.t.Helper()
+	time.Sleep(10 * time.Millisecond) // Wait for any final queued ops before stop.
 	tc.cancel()
 	err := assert.ChanWritten(ts.t, tc.runC)
 	assert.ErrorIs(ts.t, err, context.Canceled)
+	tc.log.Infof("Test client shut down instance %p", tc)
 }
 
 // recreateClient stops the specified client and re-creates it using the same
@@ -347,14 +375,14 @@ func (ts *testScaffold) recreateClient(tc *testClient) *testClient {
 	ts.stopClient(tc)
 
 	// Recreate client.
-	return ts.newClientWithOpts(tc.name, tc.rootDir, tc.id)
+	return ts.newClientWithCfg(tc.nccfg)
 }
 
 // recreateStoppedClient recreates a client that was previously stopped. If
 // the client was not stopped, results are undefined.
 func (ts *testScaffold) recreateStoppedClient(tc *testClient) *testClient {
 	ts.t.Helper()
-	return ts.newClientWithOpts(tc.name, tc.rootDir, tc.id)
+	return ts.newClientWithCfg(tc.nccfg)
 }
 
 // kxUsers performs a kx between the two users with an additional gc invite.

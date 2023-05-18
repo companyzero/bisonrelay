@@ -1,10 +1,11 @@
 run:
   deadline: 15m
-
-linters:
   build-tags:
     - e2elegacylntest
+    - dcrlnde2e
 
+
+linters:
   disable-all: true
   enable:
     - asciicheck
