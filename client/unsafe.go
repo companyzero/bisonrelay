@@ -15,4 +15,12 @@ func (c *Client) FillTestInterface(i *testutils.UnsafeTestInterface) {
 		}
 		return ru.sendRM(msg, "testinterface")
 	}
+
+	i.QueueUserRM = func(uid clientintf.UserID, msg interface{}) error {
+		ru, err := c.UserByID(uid)
+		if err != nil {
+			return err
+		}
+		return ru.queueRMPriority(msg, priorityDefault, nil, "testinterface")
+	}
 }
