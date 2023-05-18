@@ -25,7 +25,9 @@ import (
 	"github.com/decred/slog"
 )
 
-type testScaffoldCfg struct{}
+type testScaffoldCfg struct {
+	skipNewServer bool
+}
 
 type testConn struct {
 	sync.Mutex
@@ -71,15 +73,51 @@ func (tc *testConn) RemoteAddr() net.Addr {
 	return tc.netConn.RemoteAddr()
 }
 
+type loggerSubsysIniter func(subsys string) slog.Logger
+
 // clientCfg holds config for an E2E test client.
 type clientCfg struct {
-	name     string
-	rootDir  string
-	id       *zkidentity.FullIdentity
-	idIniter func(context.Context) (*zkidentity.FullIdentity, error)
+	name      string
+	rootDir   string
+	id        *zkidentity.FullIdentity
+	idIniter  func(context.Context) (*zkidentity.FullIdentity, error)
+	netDialer func(context.Context) (clientintf.Conn, *tls.ConnectionState, error)
+	pcIniter  func(loggerSubsysIniter) clientintf.PaymentClient
 }
 
 type newClientOpt func(*clientCfg)
+
+func withPCIniter(pcIniter func(loggerSubsysIniter) clientintf.PaymentClient) newClientOpt {
+	return func(cfg *clientCfg) {
+		cfg.pcIniter = pcIniter
+	}
+}
+
+func withSimnetEnvDcrlndPayClient(t testing.TB, alt bool) newClientOpt {
+	pcIniter := func(logBknd loggerSubsysIniter) clientintf.PaymentClient {
+		t.Helper()
+		homeDir, err := os.UserHomeDir()
+		assert.NilErr(t, err)
+
+		dcrlndDir := filepath.Join(homeDir, "dcrlndsimnetnodes", "dcrlnd2")
+		dcrlndAddr := "localhost:20200"
+		if alt {
+			dcrlndDir = filepath.Join(homeDir, "dcrlndsimnetnodes", "dcrlnd1")
+			dcrlndAddr = "localhost:20100"
+		}
+
+		pc, err := client.NewDcrlndPaymentClient(context.Background(), client.DcrlnPaymentClientCfg{
+			TLSCertPath: filepath.Join(dcrlndDir, "tls.cert"),
+			MacaroonPath: filepath.Join(dcrlndDir, "chain", "decred", "simnet",
+				"admin.macaroon"),
+			Address: dcrlndAddr,
+			Log:     logBknd("LNPY"),
+		})
+		assert.NilErr(t, err)
+		return pc
+	}
+	return withPCIniter(pcIniter)
+}
 
 type testClient struct {
 	*client.Client
@@ -215,6 +253,10 @@ func (ts *testScaffold) defaultNewClientCfg(name string) *clientCfg {
 		name:    name,
 		rootDir: rootDir,
 		id:      id,
+		pcIniter: func(loggerSubsysIniter) clientintf.PaymentClient {
+			return &testutils.MockPayClient{}
+		},
+		netDialer: clientintf.NetDialer(ts.svrAddr, slog.Disabled),
 		idIniter: func(context.Context) (*zkidentity.FullIdentity, error) {
 			c := new(zkidentity.FullIdentity)
 			*c = *id
@@ -255,9 +297,8 @@ func (ts *testScaffold) newClientWithCfg(nccfg *clientCfg) *testClient {
 
 	// Intercepting dialer: this allows arbitrarily breaking the connection
 	// between the client and server.
-	netDialer := clientintf.NetDialer(ts.svrAddr, slog.Disabled)
 	dialer := func(ctx context.Context) (clientintf.Conn, *tls.ConnectionState, error) {
-		netConn, tlsState, err := netDialer(ctx)
+		netConn, tlsState, err := nccfg.netDialer(ctx)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -280,7 +321,8 @@ func (ts *testScaffold) newClientWithCfg(nccfg *clientCfg) *testClient {
 	db, err := clientdb.New(dbCfg)
 	assert.NilErr(ts.t, err)
 
-	mpc := &testutils.MockPayClient{}
+	pc := nccfg.pcIniter(logBknd)
+	mpc, _ := pc.(*testutils.MockPayClient)
 
 	cfg := client.Config{
 		ReconnectDelay: 500 * time.Millisecond,
@@ -292,7 +334,7 @@ func (ts *testScaffold) newClientWithCfg(nccfg *clientCfg) *testClient {
 		DB:            db,
 		LocalIDIniter: nccfg.idIniter,
 		Logger:        logBknd,
-		PayClient:     mpc,
+		PayClient:     pc,
 
 		TipUserRestartDelay:          2 * time.Second,
 		TipUserReRequestInvoiceDelay: time.Second,
@@ -408,9 +450,11 @@ func (ts *testScaffold) kxUsers(inviter, invitee *testClient) {
 
 func (ts *testScaffold) run() {
 	// Run the server.
-	go func() {
-		ts.svrRunC <- ts.svr.Run(ts.ctx)
-	}()
+	if ts.svr != nil {
+		go func() {
+			ts.svrRunC <- ts.svr.Run(ts.ctx)
+		}()
+	}
 }
 
 func newTestServer(t testing.TB) *server.ZKS {
@@ -458,29 +502,36 @@ func newTestScaffold(t *testing.T, cfg testScaffoldCfg) *testScaffold {
 	logEnv := os.Getenv("BR_E2E_LOG")
 	showLog := logEnv == "1" || logEnv == t.Name()
 
+	var svr *server.ZKS
+	if !cfg.skipNewServer {
+		svr = newTestServer(t)
+	}
+
 	ts := &testScaffold{
 		t:       t,
 		cfg:     cfg,
 		ctx:     ctx,
 		cancel:  cancel,
-		svr:     newTestServer(t),
+		svr:     svr,
 		svrRunC: make(chan error, 1),
 		showLog: showLog,
 	}
 	go ts.run()
 
-	// Figure out the actual server address.
-	for i := 0; i <= 100; i++ {
-		addrs := ts.svr.BoundAddrs()
-		if len(addrs) == 0 {
-			if i == 100 {
-				ts.t.Fatal("Timeout waiting for server address")
-				return ts
+	if !cfg.skipNewServer {
+		// Figure out the actual server address.
+		for i := 0; i <= 100; i++ {
+			addrs := ts.svr.BoundAddrs()
+			if len(addrs) == 0 {
+				if i == 100 {
+					ts.t.Fatal("Timeout waiting for server address")
+					return ts
+				}
+				time.Sleep(10 * time.Millisecond)
+				continue
 			}
-			time.Sleep(10 * time.Millisecond)
-			continue
+			ts.svrAddr = addrs[0].String()
 		}
-		ts.svrAddr = addrs[0].String()
 	}
 
 	return ts

@@ -10,4 +10,7 @@ import "github.com/companyzero/bisonrelay/client/clientintf"
 type UnsafeTestInterface struct {
 	// SendUserRM send a custom RM to a remote user.
 	SendUserRM func(uid clientintf.UserID, msg interface{}) error
+
+	// QueueUserRM queues a custom RM to a remote user.
+	QueueUserRM func(uid clientintf.UserID, msg interface{}) error
 }
