@@ -3396,6 +3396,37 @@ var commands = []tuicmd{
 			return nil
 		},
 	}, {
+		cmd:           "handshake",
+		usableOffline: false,
+		descr:         "Perform a 3-way handshake with an user",
+		long:          []string{"This command is useful to check if the ratchet operations with the user are still working."},
+		usage:         "<ID or nick>",
+		completer: func(args []string, arg string, as *appState) []string {
+			if len(args) == 0 {
+				return nickCompleter(arg, as)
+			}
+			return nil
+		},
+		handler: func(args []string, as *appState) error {
+			if len(args) < 1 {
+				return usageError{"user cannot be empty"}
+			}
+
+			ru, err := as.c.UserByNick(args[0])
+			if err != nil {
+				return err
+			}
+
+			err = as.c.Handshake(ru.ID())
+			if err != nil {
+				return err
+			}
+
+			as.cwHelpMsg("Starting 3-way handshake with %s",
+				strescape.Nick(ru.Nick()))
+			return nil
+		},
+	}, {
 		cmd:           "quit",
 		usableOffline: true,
 		descr:         "Quit the app",

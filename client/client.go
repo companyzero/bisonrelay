@@ -730,6 +730,17 @@ func (c *Client) PM(uid UserID, msg string) error {
 	return ru.sendPM(msg)
 }
 
+// Handshake starts a 3-way handshake with the specified user. When the local
+// client receives a SYNACK, it means the ratchet with the user is fully
+// operational.
+func (c *Client) Handshake(uid UserID) error {
+	ru, err := c.rul.byID(uid)
+	if err != nil {
+		return nil
+	}
+	return c.sendWithSendQ("syn", rpc.RMHandshakeSYN{}, ru.ID())
+}
+
 // maybeResetAllKXAfterConn checks whether it's needed to reset KX with all
 // existing users due to the local client being offline for too long.
 func (c *Client) maybeResetAllKXAfterConn(expDays int) {

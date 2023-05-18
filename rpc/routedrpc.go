@@ -207,6 +207,16 @@ type RMFetchResourceReply struct {
 	Count  uint32            `json:"count"`
 }
 
+const (
+	RMCHandshakeSYN    = "handshakesyn"
+	RMCHandshakeSYNACK = "handshakesynack"
+	RMCHandshakeACK    = "handshakeack"
+)
+
+type RMHandshakeSYN struct{}
+type RMHandshakeSYNACK struct{}
+type RMHandshakeACK struct{}
+
 // ComposeCompressedRM creates a blobified message that has a header and a
 // payload that can then be encrypted and transmitted to the other side. The
 // contents are zlib compressed with the specified level.
@@ -260,6 +270,14 @@ func ComposeCompressedRM(from *zkidentity.FullIdentity, rm interface{}, zlibLeve
 
 	case RMKXSuggestion:
 		h.Command = RMCKXSuggestion
+
+	// Handshake
+	case RMHandshakeSYN:
+		h.Command = RMCHandshakeSYN
+	case RMHandshakeSYNACK:
+		h.Command = RMCHandshakeSYNACK
+	case RMHandshakeACK:
+		h.Command = RMCHandshakeACK
 
 	// Group chat
 	case RMGroupInvite:
@@ -528,7 +546,23 @@ func DecomposeRM(id *zkidentity.PublicIdentity, mb []byte) (*RMHeader, interface
 		err = pmd.Decode(&kxsg)
 		payload = kxsg
 
-		// Group vhat
+	// Handshake
+	case RMCHandshakeSYN:
+		var hshk RMHandshakeSYN
+		err = pmd.Decode(&hshk)
+		payload = hshk
+
+	case RMCHandshakeSYNACK:
+		var hshk RMHandshakeSYNACK
+		err = pmd.Decode(&hshk)
+		payload = hshk
+
+	case RMCHandshakeACK:
+		var hshk RMHandshakeACK
+		err = pmd.Decode(&hshk)
+		payload = hshk
+
+	// Group vhat
 	case RMCGroupInvite:
 		var groupInvite RMGroupInvite
 		err = pmd.Decode(&groupInvite)

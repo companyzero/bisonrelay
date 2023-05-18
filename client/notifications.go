@@ -219,6 +219,15 @@ type OnTipUserInvoiceGeneratedNtfn func(ru *RemoteUser, tag uint32, invoice stri
 
 func (_ OnTipUserInvoiceGeneratedNtfn) typ() string { return onTipUserInvoiceGeneratedNtfnType }
 
+const onHandshakeStageNtfnType = "onHandshakeStage"
+
+// OnHandshakeStageNtfn is called during a 3-way handshake with a remote client.
+// mstype may be SYN, SYNACK or ACK. The SYNACK and ACK types allow the
+// respective clients to infer that the ratchet operations are working.
+type OnHandshakeStageNtfn func(ru *RemoteUser, msgtype string)
+
+func (_ OnHandshakeStageNtfn) typ() string { return onHandshakeStageNtfnType }
+
 // The following is used only in tests.
 
 const onTestNtfnType = "testNtfnType"
@@ -469,6 +478,11 @@ func (nmgr *NotificationManager) notifyResourceFetched(ru *RemoteUser,
 		visit(func(h OnResourceFetchedNtfn) { h(ru, fr, sess) })
 }
 
+func (nmgr *NotificationManager) notifyHandshakeStage(ru *RemoteUser, msgtype string) {
+	nmgr.handlers[onHandshakeStageNtfnType].(*handlersFor[OnHandshakeStageNtfn]).
+		visit(func(h OnHandshakeStageNtfn) { h(ru, msgtype) })
+}
+
 func NewNotificationManager() *NotificationManager {
 	return &NotificationManager{
 		handlers: map[string]handlersRegistry{
@@ -480,6 +494,7 @@ func NewNotificationManager() *NotificationManager {
 			onBlockNtfnType:          &handlersFor[OnBlockNtfn]{},
 			onPostRcvdNtfnType:       &handlersFor[OnPostRcvdNtfn]{},
 			onPostStatusRcvdNtfnType: &handlersFor[OnPostStatusRcvdNtfn]{},
+			onHandshakeStageNtfnType: &handlersFor[OnHandshakeStageNtfn]{},
 
 			onGCVersionWarningType:     &handlersFor[OnGCVersionWarning]{},
 			onJoinedGCNtfnType:         &handlersFor[OnJoinedGCNtfn]{},
