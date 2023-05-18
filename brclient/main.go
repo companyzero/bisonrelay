@@ -142,6 +142,17 @@ func realMain() error {
 		defer f.Close()
 		defer pprof.StopCPUProfile()
 	}
+	if args.MemProfile != "" {
+		defer func() {
+			f, err := os.Create(args.MemProfile)
+			if err == nil {
+				err = pprof.WriteHeapProfile(f)
+			}
+			if err == nil {
+				f.Close()
+			}
+		}()
+	}
 
 	// At this point, we know the db root, so use an app-wide lockfile to
 	// handle the case where dcrlnd is internal.

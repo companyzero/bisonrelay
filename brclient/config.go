@@ -93,6 +93,7 @@ type config struct {
 	Network        string
 	CPUProfile     string
 	CPUProfileHz   int
+	MemProfile     string
 	LogPings       bool
 
 	ProxyAddr    string
@@ -208,6 +209,7 @@ func loadConfig() (*config, error) {
 	flagProfile := fs.String("profile", "", "ip:port of where to run the go profiler")
 	flagCPUProfile := fs.String("cpuprofile", "", "filename to dump CPU profiling")
 	flagCPUProfileHz := fs.Int("cpuprofilehz", 0, "Frequency to sample cpu profiling")
+	flagMemProfile := fs.String("memprofile", "", "filename to dump mem profiling")
 	if err := fs.Parse(os.Args[1:]); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			return nil, errCmdDone
@@ -441,6 +443,7 @@ func loadConfig() (*config, error) {
 		Network:            *flagNetwork,
 		CPUProfile:         *flagCPUProfile,
 		CPUProfileHz:       *flagCPUProfileHz,
+		MemProfile:         *flagMemProfile,
 		LogPings:           *flagLogPings,
 		ProxyAddr:          *flagProxyAddr,
 		ProxyUser:          *flagProxyUser,
