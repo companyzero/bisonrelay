@@ -167,21 +167,21 @@ class _OverviewScreenState extends State<OverviewScreen> {
     super.initState();
     connState = widget.client.connState;
     widget.client.addListener(clientChanged);
-    widget.client.addListener(snackBarChanged);
+    widget.snackBar.addListener(snackBarChanged);
   }
 
   @override
   void didUpdateWidget(OverviewScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-    oldWidget.client.removeListener(snackBarChanged);
-    widget.client.addListener(snackBarChanged);
+    oldWidget.snackBar.removeListener(snackBarChanged);
+    widget.snackBar.addListener(snackBarChanged);
     oldWidget.client.removeListener(clientChanged);
     widget.client.addListener(clientChanged);
   }
 
   @override
   void dispose() {
-    widget.client.removeListener(snackBarChanged);
+    widget.snackBar.removeListener(snackBarChanged);
     widget.client.removeListener(clientChanged);
     super.dispose();
   }
