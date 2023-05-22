@@ -14,6 +14,7 @@ class SimpleInfoGrid extends StatelessWidget {
         shrinkWrap: true,
         controller: controller,
         itemCount: items.length,
+        physics: const NeverScrollableScrollPhysics(),
         itemBuilder: (context, index) => Container(
             margin: const EdgeInsets.only(bottom: 3),
             child: Row(

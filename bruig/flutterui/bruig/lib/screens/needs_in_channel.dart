@@ -64,8 +64,8 @@ class _NeedsInChannelScreenState extends State<NeedsInChannelScreen> {
         numChannels = resInfo.numActiveChannels;
         if (maxOutAmount == 0) {
           preventMsg =
-              '''The client cannot open an inbound channel without having channels 
-with outbound capacity. Please open new outbound channels before 
+              '''The client cannot open an inbound channel without having channels
+with outbound capacity. Please open new outbound channels before
 requesting  inbound capacity.''';
         } else if (numPendingChannels > 0) {
           preventMsg =
@@ -133,7 +133,7 @@ channel is confirmed to request a new inbound channel''';
       if (res.chains[0].network == "mainnet") {
         setState(() {
           serverCtrl.text = "https://lp0.bisonrelay.org:9130";
-          certCtrl.text = """-----BEGIN CERTIFICATE-----             
+          certCtrl.text = """-----BEGIN CERTIFICATE-----
 MIIBwjCCAWmgAwIBAgIQA78YKmDt+ffFJmAN5EZmejAKBggqhkjOPQQDAjAyMRMw
 EQYDVQQKEwpiaXNvbnJlbGF5MRswGQYDVQQDExJscDAuYmlzb25yZWxheS5vcmcw
 HhcNMjIwOTE4MTMzNjA4WhcNMzIwOTE2MTMzNjA4WjAyMRMwEQYDVQQKEwpiaXNv
@@ -143,7 +143,7 @@ UwCBu4klh+VmpN1kCzcR6HJHSx5Cctxn7Smw/w+6o2EwXzAOBgNVHQ8BAf8EBAMC
 AoQwDwYDVR0TAQH/BAUwAwEB/zAdBgNVHQ4EFgQUqqlcDx8e+XgXXU9cXAGQEhS8
 59kwHQYDVR0RBBYwFIISbHAwLmJpc29ucmVsYXkub3JnMAoGCCqGSM49BAMCA0cA
 MEQCIGtLFLIVMnU2EloN+gI+uuGqqqeBIDSNhP9+bznnZL/JAiABsLKKtaTllCSM
-cNPr8Y+sSs2MHf6xMNBQzV4KuIlPIg==                                
+cNPr8Y+sSs2MHf6xMNBQzV4KuIlPIg==
 -----END CERTIFICATE-----""";
         });
       } else if (res.chains[0].network == "simnet") {
@@ -191,226 +191,228 @@ cNPr8Y+sSs2MHf6xMNBQzV4KuIlPIg==
     var darkTextColor = const Color(0xFF5A5968);
 
     return Scaffold(
-        body: Container(
-            color: backgroundColor,
-            child: Stack(children: [
-              Container(
-                  decoration: const BoxDecoration(
-                      image: DecorationImage(
-                          fit: BoxFit.fill,
-                          image: AssetImage("assets/images/loading-bg.png")))),
-              Container(
-                  decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                          begin: Alignment.bottomLeft,
-                          end: Alignment.topRight,
-                          colors: [
-                        cardColor,
-                        const Color(0xFF07051C),
-                        backgroundColor.withOpacity(0.34),
-                      ],
-                          stops: const [
-                        0,
-                        0.17,
-                        1
-                      ])),
-                  padding: const EdgeInsets.all(10),
-                  child: Column(
-                    children: [
-                      const SizedBox(height: 89),
-                      Text("Setting up Bison Relay",
-                          style: TextStyle(
-                              color: textColor,
-                              fontSize: 34,
-                              fontWeight: FontWeight.w200)),
-                      const SizedBox(height: 20),
-                      Text("Add Inbound Capacity",
-                          style: TextStyle(
-                              color: secondaryTextColor,
-                              fontSize: 21,
-                              fontWeight: FontWeight.w300)),
-                      const SizedBox(height: 34),
-                      Text('''
-The wallet requires LN channels with inbound capacity to receive funds
-to be able to receive payments from other users.
+      body: Container(
+        color: backgroundColor,
+        child: Stack(children: [
+          Container(
+              decoration: const BoxDecoration(
+                  image: DecorationImage(
+                      fit: BoxFit.fill,
+                      image: AssetImage("assets/images/loading-bg.png")))),
+          Container(
+            decoration: BoxDecoration(
+                gradient: LinearGradient(
+                    begin: Alignment.bottomLeft,
+                    end: Alignment.topRight,
+                    colors: [
+                  cardColor,
+                  const Color(0xFF07051C),
+                  backgroundColor.withOpacity(0.34),
+                ],
+                    stops: const [
+                  0,
+                  0.17,
+                  1
+                ])),
+            padding: const EdgeInsets.all(10),
+            child: ListView(
+              physics: const ClampingScrollPhysics(),
+              children: [
+                const SizedBox(height: 89),
+                Center(
+                  child: Text("Setting up Bison Relay",
+                      style: TextStyle(
+                          color: textColor,
+                          fontSize: 34,
+                          fontWeight: FontWeight.w200)),
+                ),
+                const SizedBox(height: 20),
+                Center(
+                  child: Text("Add Inbound Capacity",
+                      style: TextStyle(
+                          color: secondaryTextColor,
+                          fontSize: 21,
+                          fontWeight: FontWeight.w300)),
+                ),
+                const SizedBox(height: 34),
+                Center(
+                  child: Text('''
+                The wallet requires LN channels with inbound capacity to receive funds
+                to be able to receive payments from other users.
 
-One way of opening a channel with inbound capacity is to pay for a node to open
-a channel back to your LN wallet. This is done through a "Liquidity Provider"
-service.
+                One way of opening a channel with inbound capacity is to pay for a node to open
+                a channel back to your LN wallet. This is done through a "Liquidity Provider"
+                service.
 
-Note that having a channel with inbound capacity is not for sending or receiving 
-messages. It is only required in order to receive payments from other users.
+                Note that having a channel with inbound capacity is not for sending or receiving
+                messages. It is only required in order to receive payments from other users.
 
-After the channel is opened, it may take up to 6 confirmations for it to be broadcast
-through the network. Individual peers may take longer to detect and to consider
-the channel to send payments.
-''',
-                          style: TextStyle(
-                              color: secondaryTextColor,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w300)),
-                      const SizedBox(height: 21),
-                      Container(
-                          margin: const EdgeInsets.only(
-                              left: 324 + 22, right: 324 + 20),
-                          child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                    textAlign: TextAlign.left,
-                                    "Outbound Channel Capacity:",
-                                    style: TextStyle(
-                                        color: darkTextColor,
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w300)),
-                                Text(
-                                    textAlign: TextAlign.right,
-                                    formatDCR(atomsToDCR(maxOutAmount)),
-                                    style: TextStyle(
-                                        color: darkTextColor,
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w300)),
-                              ])),
-                      const SizedBox(height: 3),
-                      Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                                textAlign: TextAlign.left,
-                                "Inbound Channel Capacity:",
-                                style: TextStyle(
-                                    color: darkTextColor,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w300)),
-                            Text(
-                                textAlign: TextAlign.right,
-                                formatDCR(atomsToDCR(maxInAmount)),
-                                style: TextStyle(
-                                    color: darkTextColor,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w300))
-                          ]),
-                      Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                                textAlign: TextAlign.left,
-                                "Pending Channels:",
-                                style: TextStyle(
-                                    color: darkTextColor,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w300)),
-                            Text(
-                                textAlign: TextAlign.right,
-                                "$numPendingChannels",
-                                style: TextStyle(
-                                    color: darkTextColor,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w300))
-                          ]),
-                      Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                                textAlign: TextAlign.left,
-                                "Active Channels:",
-                                style: TextStyle(
-                                    color: darkTextColor,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w300)),
-                            Text(
-                                textAlign: TextAlign.right,
-                                "$numChannels",
-                                style: TextStyle(
-                                    color: darkTextColor,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w300))
-                          ]),
-                      const SizedBox(height: 10),
-                      preventMsg == ""
-                          ? LoadingScreenButton(
-                              empty: true,
-                              onPressed: showAdvanced
-                                  ? hideAdvancedArea
-                                  : showAdvancedArea,
-                              text: showAdvanced
-                                  ? "Hide Advanced"
-                                  : "Show Advanced",
-                            )
-                          : Empty(),
-                      const SizedBox(height: 10),
-                      preventMsg == ""
-                          ? Expanded(
-                              child: ListView(
-                                  shrinkWrap: true,
-                                  padding: const EdgeInsets.all(15.0),
-                                  children: <Widget>[
-                                  SimpleInfoGrid([
+                After the channel is opened, it may take up to 6 confirmations for it to be broadcast
+                through the network. Individual peers may take longer to detect and to consider
+                the channel to send payments.
+                ''',
+                      style: TextStyle(
+                          color: secondaryTextColor,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w300)),
+                ),
+                const SizedBox(height: 21),
+                Container(
+                    margin:
+                        const EdgeInsets.only(left: 324 + 22, right: 324 + 20),
+                    child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                              textAlign: TextAlign.left,
+                              "Outbound Channel Capacity:",
+                              style: TextStyle(
+                                  color: darkTextColor,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w300)),
+                          Text(
+                              textAlign: TextAlign.right,
+                              formatDCR(atomsToDCR(maxOutAmount)),
+                              style: TextStyle(
+                                  color: darkTextColor,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w300)),
+                        ])),
+                const SizedBox(height: 3),
+                Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                  Text(
+                      textAlign: TextAlign.left,
+                      "Inbound Channel Capacity:",
+                      style: TextStyle(
+                          color: darkTextColor,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w300)),
+                  Text(
+                      textAlign: TextAlign.right,
+                      formatDCR(atomsToDCR(maxInAmount)),
+                      style: TextStyle(
+                          color: darkTextColor,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w300))
+                ]),
+                Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                  Text(
+                      textAlign: TextAlign.left,
+                      "Pending Channels:",
+                      style: TextStyle(
+                          color: darkTextColor,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w300)),
+                  Text(
+                      textAlign: TextAlign.right,
+                      "$numPendingChannels",
+                      style: TextStyle(
+                          color: darkTextColor,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w300))
+                ]),
+                Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                  Text(
+                      textAlign: TextAlign.left,
+                      "Active Channels:",
+                      style: TextStyle(
+                          color: darkTextColor,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w300)),
+                  Text(
+                      textAlign: TextAlign.right,
+                      "$numChannels",
+                      style: TextStyle(
+                          color: darkTextColor,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w300))
+                ]),
+                const SizedBox(height: 10),
+                preventMsg == ""
+                    ? Center(
+                        child: LoadingScreenButton(
+                          empty: true,
+                          onPressed: showAdvanced
+                              ? hideAdvancedArea
+                              : showAdvancedArea,
+                          text:
+                              showAdvanced ? "Hide Advanced" : "Show Advanced",
+                        ),
+                      )
+                    : Empty(),
+                const SizedBox(height: 10),
+                preventMsg == ""
+                    ? ListView(
+                        physics: const NeverScrollableScrollPhysics(),
+                        shrinkWrap: true,
+                        padding: const EdgeInsets.all(15.0),
+                        children: <Widget>[
+                            SimpleInfoGrid([
+                              Tuple2(
+                                  Text("Amount",
+                                      style: TextStyle(
+                                          color: darkTextColor,
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w300)),
+                                  SizedBox(
+                                    width: 150,
+                                    child: dcrInput(controller: amountCtrl),
+                                  )),
+                              Tuple2(
+                                  const SizedBox(height: 50),
+                                  LoadingScreenButton(
+                                    onPressed:
+                                        !loading ? requestRecvCapacity : null,
+                                    text: "Request Inbound Channel",
+                                  ))
+                            ]),
+                            showAdvanced
+                                ? SimpleInfoGrid([
                                     Tuple2(
-                                        Text("Amount",
+                                        Text("LP Server Address",
                                             style: TextStyle(
                                                 color: darkTextColor,
                                                 fontSize: 13,
                                                 fontWeight: FontWeight.w300)),
-                                        SizedBox(
-                                          width: 150,
-                                          child:
-                                              dcrInput(controller: amountCtrl),
+                                        TextField(
+                                          controller: serverCtrl,
+                                          decoration: const InputDecoration(
+                                              hintText:
+                                                  "https://lpd-server:port"),
                                         )),
                                     Tuple2(
-                                        const SizedBox(height: 50),
-                                        LoadingScreenButton(
-                                          onPressed: !loading
-                                              ? requestRecvCapacity
-                                              : null,
-                                          text: "Request Inbound Channel",
-                                        ))
-                                  ]),
-                                  showAdvanced
-                                      ? SimpleInfoGrid([
-                                          Tuple2(
-                                              Text("LP Server Address",
-                                                  style: TextStyle(
-                                                      color: darkTextColor,
-                                                      fontSize: 13,
-                                                      fontWeight:
-                                                          FontWeight.w300)),
-                                              TextField(
-                                                controller: serverCtrl,
-                                                decoration: const InputDecoration(
-                                                    hintText:
-                                                        "https://lpd-server:port"),
-                                              )),
-                                          Tuple2(
-                                              Text("LP Server Cert",
-                                                  style: TextStyle(
-                                                      color: darkTextColor,
-                                                      fontSize: 13,
-                                                      fontWeight:
-                                                          FontWeight.w300)),
-                                              TextField(
-                                                controller: certCtrl,
-                                                maxLines: null,
-                                                keyboardType:
-                                                    TextInputType.multiline,
-                                              )),
-                                        ])
-                                      : const Empty(),
-                                ]))
-                          : Expanded(
-                              child: Column(children: [
-                              const SizedBox(height: 30),
-                              Text(
-                                preventMsg,
-                                style: TextStyle(color: textColor),
-                              )
-                            ])),
-                      LoadingScreenButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        text: "Skip",
-                      )
-                    ],
-                  )),
-            ])));
+                                        Text("LP Server Cert",
+                                            style: TextStyle(
+                                                color: darkTextColor,
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.w300)),
+                                        TextField(
+                                          controller: certCtrl,
+                                          maxLines: null,
+                                          keyboardType: TextInputType.multiline,
+                                        )),
+                                  ])
+                                : const Empty(),
+                          ])
+                    : Expanded(
+                        child: Column(children: [
+                        const SizedBox(height: 30),
+                        Text(
+                          preventMsg,
+                          style: TextStyle(color: textColor),
+                        )
+                      ])),
+                Center(
+                  child: LoadingScreenButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    text: "Skip",
+                  ),
+                )
+              ],
+            ),
+          ),
+        ]),
+      ),
+    );
   }
 }
