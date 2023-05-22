@@ -8,6 +8,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sync"
 	"testing"
 	"time"
@@ -23,6 +24,7 @@ import (
 	"github.com/companyzero/bisonrelay/server/settings"
 	"github.com/companyzero/bisonrelay/zkidentity"
 	"github.com/decred/slog"
+	"golang.org/x/exp/slices"
 )
 
 type testScaffoldCfg struct {
@@ -221,6 +223,31 @@ func (tc *testClient) testInterface() *testutils.UnsafeTestInterface {
 	i := &testutils.UnsafeTestInterface{}
 	tc.FillTestInterface(i)
 	return i
+}
+
+// testLogLineScanner looks for the regexp on every write to the log and
+// collects the matches.
+type testLogLineScanner struct {
+	mtx   sync.Mutex
+	re    regexp.Regexp
+	found []string
+}
+
+func (scanner *testLogLineScanner) Write(b []byte) (int, error) {
+	if scanner.re.Match(b) {
+		b := slices.Clone(b)
+		scanner.mtx.Lock()
+		scanner.found = append(scanner.found, string(b))
+		scanner.mtx.Unlock()
+	}
+	return len(b), nil
+}
+
+func (scanner *testLogLineScanner) hasMatches() bool {
+	scanner.mtx.Lock()
+	res := len(scanner.found) > 0
+	scanner.mtx.Unlock()
+	return res
 }
 
 // testScaffold holds all scaffolding needed to run an E2E test that involves

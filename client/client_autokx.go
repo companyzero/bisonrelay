@@ -131,11 +131,15 @@ func (c *Client) handleTransitiveIDInvite(ru *RemoteUser, pii rpc.OOBPublicIdent
 		c.cfg.TransitiveEvent(ru.ID(), pii.Public.Identity, TEReceivedInvite)
 	}
 
-	err = c.kxl.acceptInvite(pii, false)
+	err = c.kxl.acceptInvite(pii, false, true)
 	if errors.Is(err, errUserBlocked) {
 		ru.log.Infof("Canceled invite from blocked identity %s (%q)", pii.Public.Identity,
 			pii.Public.Nick)
 		return nil
+	} else if errKX := new(errHasOngoingKX); errors.As(err, errKX) {
+		ru.log.Infof("Skipping accepting invite for kx %s from %s (%q) due to "+
+			"already ongoing kx (RV %s)", pii.InitialRendezvous,
+			pii.Public.Identity, pii.Public.Nick, errKX.otherRV)
 	} else if err != nil {
 		return err
 	}

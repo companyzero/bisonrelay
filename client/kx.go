@@ -213,7 +213,7 @@ func (kx *kxList) decodeInvite(r io.Reader) (rpc.OOBPublicIdentityInvite, error)
 
 // acceptInvite accepts the given invite from a remote party. It sends a
 // message on the initial RV and waits for a reply.
-func (kx *kxList) acceptInvite(pii rpc.OOBPublicIdentityInvite, isForReset bool) error {
+func (kx *kxList) acceptInvite(pii rpc.OOBPublicIdentityInvite, isForReset, isAutoKX bool) error {
 	// Make sure we don't add ourselves
 	identity := pii.Public.Identity
 	if bytes.Equal(kx.id.Public.Identity[:], identity[:]) {
@@ -223,6 +223,46 @@ func (kx *kxList) acceptInvite(pii rpc.OOBPublicIdentityInvite, isForReset bool)
 		if kx.db.IsBlocked(tx, identity) {
 			return fmt.Errorf("%s: %w", identity, errUserBlocked)
 		}
+
+		// When accepting an autoKX, do not proceed when there's an
+		// outstanding KX with the same user and the existing kx
+		// initial RV is less than the passed one. This breaks the
+		// symmetry when both parties are accepting auto kx requests
+		// simultaneously, thus causing broken ratchets (due to each
+		// party using a different ratchet).
+		if !isAutoKX {
+			return nil
+		}
+		otherKXs, err := kx.db.HasKXWithUser(tx, identity)
+		if err != nil {
+			return err
+		}
+		timeLimit := time.Now().Add(-time.Hour * 24 * 30)
+		for _, other := range otherKXs {
+			if other.Timestamp.Before(timeLimit) {
+				continue
+			}
+			if other.InitialRV.IsEmpty() {
+				continue
+			}
+			if other.IsForReset {
+				continue
+			}
+			if other.MediatorID == nil {
+				// Skip if this was not a transitive kx.
+				continue
+			}
+
+			// Each party (local and remote) will make the
+			// comparison with switched RVs (the
+			// pii.InitialRendezvous for one will be the
+			// other.InitialRV for the other), therefore this will
+			// return true only for one of the parties (at random).
+			if pii.InitialRendezvous.Less(&other.InitialRV) {
+				return errHasOngoingKX{otherRV: other.InitialRV}
+			}
+		}
+
 		return nil
 	})
 	if err != nil {
@@ -479,7 +519,7 @@ func (kx *kxList) listenInvite(kxd *clientdb.KXData) error {
 	}
 
 	kx.log.Debugf("KX %s: Listening at stage %s in RV %s",
-		rv.ShortLogID(), kxd.Stage, rv)
+		kxd.InitialRV.ShortLogID(), kxd.Stage, rv)
 
 	return kx.rmgr.Sub(rv, handler, subPaidHandler)
 }
@@ -587,7 +627,7 @@ func (kx *kxList) handleReset(id *zkidentity.PublicIdentity, blob lowlevel.RVBlo
 		blob.ID, id.Identity, id.Nick)
 
 	// Kickstart a new kx process.
-	return kx.acceptInvite(*pii, true)
+	return kx.acceptInvite(*pii, true, false)
 }
 
 // listenReset listens for a reset invite from the given user in the specified

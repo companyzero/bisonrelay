@@ -135,7 +135,8 @@ func (c *Client) initRemoteUser(id *zkidentity.PublicIdentity, r *ratchet.Ratche
 	oldRU, err := c.rul.add(ru)
 	oldUser := false
 	if errors.Is(err, alreadyHaveUserError{}) && oldRU != nil {
-		oldRU.log.Tracef("Reusing old remote user and replacing ratchet")
+		oldRU.log.Tracef("Reusing old remote user and replacing ratchet "+
+			"(initial RV %s)", initialRV)
 
 		// Already have this user running. Replace the ratchet with the
 		// new one.
@@ -145,7 +146,7 @@ func (c *Client) initRemoteUser(id *zkidentity.PublicIdentity, r *ratchet.Ratche
 	} else if err != nil {
 		return nil, err
 	} else {
-		ru.log.Debugf("Initializing remote user")
+		ru.log.Debugf("Initializing remote user (initial RV %s)", initialRV)
 	}
 
 	// Save the newly formed address book entry to the DB.
@@ -291,7 +292,7 @@ func (c *Client) ReadInvite(r io.Reader) (rpc.OOBPublicIdentityInvite, error) {
 // AcceptInvite blocks until the remote party reponds with us accepting the
 // remote party's invitation. The invite should've been created by ReadInvite.
 func (c *Client) AcceptInvite(invite rpc.OOBPublicIdentityInvite) error {
-	return c.kxl.acceptInvite(invite, false)
+	return c.kxl.acceptInvite(invite, false, false)
 }
 
 // FetchPrepaidInvite fetches a pre-paid invite from the server, using the

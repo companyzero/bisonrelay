@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/companyzero/bisonrelay/client/clientintf"
+	"github.com/companyzero/bisonrelay/zkidentity"
 )
 
 var (
@@ -83,4 +84,26 @@ func (err ErrKXSearchNeeded) Is(target error) bool {
 		return true
 	}
 	return false
+}
+
+type errHasOngoingKX struct {
+	otherRV zkidentity.ShortID
+}
+
+func (err errHasOngoingKX) Error() string {
+	return fmt.Sprintf("already has ongoing KX %s", err.otherRV)
+}
+
+func (err errHasOngoingKX) Is(target error) bool {
+	_, ok := target.(errHasOngoingKX)
+	return ok
+}
+
+func (err errHasOngoingKX) As(target interface{}) bool {
+	other, ok := target.(*errHasOngoingKX)
+	if !ok {
+		return false
+	}
+	other.otherRV = err.otherRV
+	return true
 }
