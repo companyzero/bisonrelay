@@ -451,8 +451,6 @@ func NewServer(cfg *settings.Settings) (*ZKS, error) {
 		dbCtxCancel: dbCtxCancel,
 	}
 
-	z.log.Infof("Settings %v", spew.Sdump(z.settings))
-
 	// Init db.
 	if cfg.PGEnabled {
 		opts := []brpgdb.Option{
