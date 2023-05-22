@@ -27,6 +27,8 @@ import (
 
 type testScaffoldCfg struct {
 	skipNewServer bool
+	logScanner    io.Writer
+	rootDir       string
 }
 
 type testConn struct {
@@ -227,17 +229,18 @@ type testScaffold struct {
 	t       testing.TB
 	cfg     testScaffoldCfg
 	showLog bool
+	tlb     *testutils.TestLogBackend
+	log     slog.Logger
 
 	ctx    context.Context
 	cancel func()
 
 	svr     *server.ZKS
-	svrRunC chan error
 	svrAddr string
 }
 
 func (ts *testScaffold) defaultNewClientCfg(name string) *clientCfg {
-	rootDir, err := os.MkdirTemp("", "br-client-"+name+"-*")
+	rootDir, err := os.MkdirTemp(ts.cfg.rootDir, "br-client-"+name+"-*")
 	assert.NilErr(ts.t, err)
 	ts.t.Cleanup(func() {
 		if ts.t.Failed() {
@@ -275,22 +278,12 @@ func (ts *testScaffold) newClientWithCfg(nccfg *clientCfg) *testClient {
 		ts.t.Fatal("name cannot be empty")
 	}
 
-	var logBknd func(subsys string) slog.Logger
-	if ts.showLog {
-		logBknd = testutils.TestLoggerBackend(ts.t, name)
-	} else {
-		logf, err := os.Create(filepath.Join(rootDir, "applog.log"))
-		if err != nil {
-			ts.t.Fatalf("unable to create log file: %v", err)
-		}
-		bknd := slog.NewBackend(logf)
-		logBknd = func(subsys string) slog.Logger {
-			logger := bknd.Logger(subsys)
-			logger.SetLevel(slog.LevelTrace)
-			return logger
-		}
-		ts.t.Cleanup(func() { logf.Close() })
+	logf, err := os.Create(filepath.Join(rootDir, "applog.log"))
+	if err != nil {
+		ts.t.Fatalf("unable to create log file: %v", err)
 	}
+	ts.t.Cleanup(func() { logf.Close() })
+	logBknd := ts.tlb.NamedSubLogger(name, logf)
 	dbLog := logBknd("FSDB")
 
 	var tc *testClient
@@ -448,23 +441,12 @@ func (ts *testScaffold) kxUsers(inviter, invitee *testClient) {
 	assertClientsKXd(ts.t, inviter, invitee)
 }
 
-func (ts *testScaffold) run() {
-	// Run the server.
-	if ts.svr != nil {
-		go func() {
-			ts.svrRunC <- ts.svr.Run(ts.ctx)
-		}()
-	}
-}
-
-func newTestServer(t testing.TB) *server.ZKS {
+func (ts *testScaffold) newTestServer() {
+	t := ts.t
 	t.Helper()
 
-	logEnv := os.Getenv("BR_E2E_LOG")
-	showLog := logEnv == "1" || logEnv == t.Name()
-
 	cfg := settings.New()
-	dir, err := os.MkdirTemp("", "br-server")
+	dir, err := os.MkdirTemp(ts.cfg.rootDir, "br-server-*")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -482,17 +464,16 @@ func newTestServer(t testing.TB) *server.ZKS {
 	cfg.Listen = []string{"127.0.0.1:0"}
 	cfg.InitSessTimeout = time.Second
 	cfg.DebugLevel = "debug"
-	if showLog {
-		cfg.LogStdOut = testutils.NewTestLogBackend(t)
-	} else {
-		cfg.LogStdOut = nil
-	}
+	cfg.LogStdOut = ts.tlb
 
 	s, err := server.NewServer(cfg)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return s
+	ts.svr = s
+
+	// Run the server.
+	go ts.svr.Run(ts.ctx)
 }
 
 func newTestScaffold(t *testing.T, cfg testScaffoldCfg) *testScaffold {
@@ -502,23 +483,36 @@ func newTestScaffold(t *testing.T, cfg testScaffoldCfg) *testScaffold {
 	logEnv := os.Getenv("BR_E2E_LOG")
 	showLog := logEnv == "1" || logEnv == t.Name()
 
-	var svr *server.ZKS
-	if !cfg.skipNewServer {
-		svr = newTestServer(t)
+	if cfg.rootDir == "" {
+		rootDir, err := os.MkdirTemp("", "br-e2etest-*")
+		assert.NilErr(t, err)
+		cfg.rootDir = rootDir
+		t.Cleanup(func() {
+			if t.Failed() {
+				t.Logf("Root test dir: %s", rootDir)
+			} else {
+				os.RemoveAll(rootDir)
+			}
+		})
 	}
+
+	tlb := testutils.NewTestLogBackend(t, testutils.WithShowLog(showLog),
+		testutils.WithMiddlewareWriter(cfg.logScanner))
+	log := tlb.NamedSubLogger("XXXXXXX", nil)("XXXX")
 
 	ts := &testScaffold{
 		t:       t,
+		tlb:     tlb,
 		cfg:     cfg,
 		ctx:     ctx,
 		cancel:  cancel,
-		svr:     svr,
-		svrRunC: make(chan error, 1),
 		showLog: showLog,
+		log:     log,
 	}
-	go ts.run()
 
 	if !cfg.skipNewServer {
+		ts.newTestServer()
+
 		// Figure out the actual server address.
 		for i := 0; i <= 100; i++ {
 			addrs := ts.svr.BoundAddrs()
