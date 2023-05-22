@@ -101,6 +101,45 @@ func (db *DB) ListKXs(tx ReadTx) ([]KXData, error) {
 	return res, nil
 }
 
+// HasKXWithUser returns any outstanding KX attempt with the given user. This
+// will return KXs which were created with an invitee filled to the target
+// ID or when they were accepted and the remote user has the target ID.
+func (db *DB) HasKXWithUser(tx ReadTx, target UserID) ([]KXData, error) {
+	dir := filepath.Join(db.root, kxDir)
+	dirEntries, err := os.ReadDir(dir)
+	if err != nil && !os.IsNotExist(err) {
+		return nil, fmt.Errorf("unable to read content dir: %v", err)
+	}
+
+	var testID UserID
+	var res []KXData
+	for _, f := range dirEntries {
+		if f.IsDir() {
+			continue
+		}
+
+		fname := filepath.Join(dir, f.Name())
+		if err := testID.FromString(filepath.Base(fname)); err != nil {
+			db.log.Warnf("Filename %q is not a KX file", fname)
+			continue
+		}
+
+		var kxd KXData
+		if err := db.readJsonFile(fname, &kxd); err != nil {
+			db.log.Warnf("Unable to unmarshal %s as a KX file: %v",
+				fname, err)
+			continue
+		}
+
+		if (kxd.Invitee != nil && kxd.Invitee.Identity == target) ||
+			kxd.Public.Identity == target {
+			res = append(res, kxd)
+		}
+	}
+
+	return res, nil
+}
+
 // StoreMediateIDRequested marks that a mediate id request was made on mediator
 // to invite us to target.
 func (db *DB) StoreMediateIDRequested(tx ReadWriteTx, mediator, target UserID) error {

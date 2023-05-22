@@ -266,6 +266,7 @@ func assertRelaysPost(t testing.TB, src, dst *testClient, postFrom clientintf.Us
 // assertEmptyRMQ asserts the RMQ of the passed client is or becomes empty.
 func assertEmptyRMQ(t testing.TB, c *testClient) {
 	// Wait until the queues are empty.
+	t.Helper()
 	maxCheck := 12000
 	for i := 0; i < maxCheck; i++ {
 		qlen, acklen := c.RMQLen()
@@ -277,6 +278,30 @@ func assertEmptyRMQ(t testing.TB, c *testClient) {
 			t.Fatal("timeout waiting for queue to drain")
 		}
 	}
+}
+
+// assertGoesOffline verifies that the client switches to offline status.
+func assertGoesOffline(t testing.TB, c *testClient) {
+	t.Helper()
+	ch := make(chan bool, 10)
+	reg := c.handle(client.OnServerSessionChangedNtfn(func(connected bool, _, _, _ uint64) {
+		ch <- connected
+	}))
+	c.RemainOffline()
+	assert.ChanWrittenWithVal(t, ch, false)
+	reg.Unregister()
+}
+
+// assertGoesOnline verifies that the client switches to onlne status.
+func assertGoesOnline(t testing.TB, c *testClient) {
+	t.Helper()
+	ch := make(chan bool, 10)
+	reg := c.handle(client.OnServerSessionChangedNtfn(func(connected bool, _, _, _ uint64) {
+		ch <- connected
+	}))
+	c.GoOnline()
+	assert.ChanWrittenWithVal(t, ch, true)
+	reg.Unregister()
 }
 
 func testRand(t testing.TB) *rand.Rand {

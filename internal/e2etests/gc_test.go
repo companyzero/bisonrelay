@@ -3,6 +3,7 @@ package e2etests
 import (
 	"fmt"
 	"math/rand"
+	"regexp"
 	"strconv"
 	"sync"
 	"testing"
@@ -787,4 +788,175 @@ func TestVersion1GCs(t *testing.T) {
 	// Charlie cannot kick Alice.
 	err = charlie.GCKick(gcID, alice.PublicID(), "")
 	assert.NonNilErr(t, err)
+}
+
+// TestGCCrossedMediatedKX tests a scenario that could cause broken ratchets
+// when two users are added simultaneously to GCs where both will attempt
+// to KX with each other.
+//
+// One of the users should skip attempting the KX in order not to cause the
+// broken ratchet.
+func TestGCCrossedMediatedKX(t *testing.T) {
+	t.Parallel()
+
+	// During this test Alice, Bob and Charlie are kept offline at various
+	// stages in order to guarantee concurrent processing of the messages
+	// by Charlie and Bob and cause both to launch parallel KX attempts.
+	//
+	// In order to verify that one of the KXs was skipped, track the log
+	// lines for the pattern of the log indicating the skip.
+	skipLogMsgPattern := `Skipping accepting invite for kx .* due to already ongoing kx [^\n]*\n$`
+	tls := &testLogLineScanner{re: *regexp.MustCompile(skipLogMsgPattern)}
+
+	// Test scaffold setup.
+	tcfg := testScaffoldCfg{logScanner: tls}
+	ts := newTestScaffold(t, tcfg)
+	alice := ts.newClient("alice")
+	bob := ts.newClient("bob")
+	charlie := ts.newClient("charlie")
+
+	// Alice will be the GC admin.
+	aliceAcceptedInvitesChan := make(chan clientintf.UserID, 1)
+	alice.handle(client.OnGCInviteAcceptedNtfn(func(user *client.RemoteUser, _ rpc.RMGroupList) {
+		aliceAcceptedInvitesChan <- user.ID()
+	}))
+
+	// Bob and Charlie will join the GCs.
+	bobJoinedChan, bobUpdatedChan := make(chan struct{}, 2), make(chan struct{}, 2)
+	bob.handle(client.OnJoinedGCNtfn(func(_ rpc.RMGroupList) { bobJoinedChan <- struct{}{} }))
+	bob.handle(client.OnAddedGCMembersNtfn(func(_ rpc.RMGroupList, _ []clientintf.UserID) { bobUpdatedChan <- struct{}{} }))
+	charlieJoinedChan, charlieUpdatedChan := make(chan struct{}, 2), make(chan struct{}, 2)
+	charlie.handle(client.OnJoinedGCNtfn(func(_ rpc.RMGroupList) { charlieJoinedChan <- struct{}{} }))
+	charlie.handle(client.OnAddedGCMembersNtfn(func(_ rpc.RMGroupList, _ []clientintf.UserID) { charlieUpdatedChan <- struct{}{} }))
+
+	// KX Alice to Bob and Charlie.
+	ts.kxUsers(alice, bob)
+	ts.kxUsers(alice, charlie)
+
+	// Track the additional KX between Bob and Charlie.
+	bobKXCompletedChan := make(chan struct{}, 10)
+	bob.handle(client.OnKXCompleted(func(_ *clientintf.RawRVID, ru *client.RemoteUser) {
+		bobKXCompletedChan <- struct{}{}
+	}))
+
+	// Create the test GCs. Each user will first be added to one, then
+	// to the other.
+	gcID1, err := alice.NewGroupChat("gc01")
+	assert.NilErr(t, err)
+	gcID2, err := alice.NewGroupChat("gc02")
+	assert.NilErr(t, err)
+
+	// Invite Bob to GC1 and Charlie to GC2.
+	bobAcceptedChan := bob.acceptNextGCInvite(gcID1)
+	charlieAcceptedChan := charlie.acceptNextGCInvite(gcID2)
+	assert.NilErr(t, alice.InviteToGroupChat(gcID1, bob.PublicID()))
+	assert.NilErr(t, alice.InviteToGroupChat(gcID2, charlie.PublicID()))
+	assert.NilErrFromChan(t, bobAcceptedChan)
+	assert.NilErrFromChan(t, charlieAcceptedChan)
+	for i := 0; i < 2; i++ {
+		assert.ChanWritten(t, aliceAcceptedInvitesChan)
+	}
+	assert.ChanWritten(t, bobJoinedChan)
+	assert.ChanWritten(t, charlieJoinedChan)
+	assertEmptyRMQ(t, bob)
+	assertEmptyRMQ(t, charlie)
+	assertEmptyRMQ(t, alice)
+	ts.log.Infof("Test setup done")
+
+	// Bob and Charlie go offline.
+	assertGoesOffline(t, bob)
+	assertGoesOffline(t, charlie)
+
+	// Invite Bob to GC2 and Charlie to GC1 (crossed invites).
+	bobAcceptedChan = bob.acceptNextGCInvite(gcID2)
+	charlieAcceptedChan = charlie.acceptNextGCInvite(gcID1)
+	assert.NilErr(t, alice.InviteToGroupChat(gcID2, bob.PublicID()))
+	assert.NilErr(t, alice.InviteToGroupChat(gcID1, charlie.PublicID()))
+	assertEmptyRMQ(t, alice)
+	ts.log.Infof("Bob and Charlie cross-invited")
+
+	// Alice goes offline to prevent sending the GC lists just yet. Bob
+	// and Charlie come online and accept the invite.
+	assertGoesOffline(t, alice)
+	assertGoesOnline(t, bob)
+	assertGoesOnline(t, charlie)
+	assert.NilErrFromChan(t, bobAcceptedChan)
+	assert.NilErrFromChan(t, charlieAcceptedChan)
+	assertEmptyRMQ(t, bob)
+	assertEmptyRMQ(t, charlie)
+	ts.log.Infof("Bob and Charlie accepted invites")
+
+	// Bob and Charlie go offline to prevent the mediate kx to be requested
+	// immediately. Alice comes online and sends the GC lists.
+	assertGoesOffline(t, bob)
+	assertGoesOffline(t, charlie)
+	assertGoesOnline(t, alice)
+	for i := 0; i < 2; i++ {
+		assert.ChanWritten(t, aliceAcceptedInvitesChan)
+	}
+	time.Sleep(200 * time.Millisecond)
+	assertEmptyRMQ(t, alice)
+	ts.log.Infof("Alice sent GC lists")
+
+	// Alice goes offline to prevent the mediate kx to be processed. Bob
+	// and Charlie come online, receive the GC lists for the GC just joined
+	// and an update for the GC they were already in. They send the request
+	// to Alice for a transitive KX with each other (each one sends one
+	// request to the other).
+	assertGoesOffline(t, alice)
+	assertGoesOnline(t, bob)
+	assertGoesOnline(t, charlie)
+	assert.ChanWritten(t, bobJoinedChan)
+	assert.ChanWritten(t, charlieJoinedChan)
+	assert.ChanWritten(t, bobUpdatedChan)
+	assert.ChanWritten(t, charlieUpdatedChan)
+	time.Sleep(200 * time.Millisecond)
+	assertEmptyRMQ(t, bob)
+	assertEmptyRMQ(t, charlie)
+	ts.log.Infof("Bob and Charlie sent RMMediateIdentity")
+
+	// Charlie and Bob go offline. Alice comes online, receives the
+	// RMMediateIdentity, sends RMInvite towards the target.
+	assertGoesOffline(t, bob)
+	assertGoesOffline(t, charlie)
+	assertGoesOnline(t, alice)
+	time.Sleep(200 * time.Millisecond)
+	assertEmptyRMQ(t, alice)
+	ts.log.Infof("Alice sent RMInvites")
+
+	// Alice goes offline. Charlie and Bob come online, receive the
+	// RMInvite, send the RMTransitiveMessage to Alice.
+	assertGoesOffline(t, alice)
+	assertGoesOnline(t, bob)
+	assertGoesOnline(t, charlie)
+	time.Sleep(200 * time.Millisecond)
+	assertEmptyRMQ(t, bob)
+	assertEmptyRMQ(t, charlie)
+	ts.log.Infof("Bob and Charlie sent RMTransitiveMessage")
+
+	// Charlie and Bob go offline. Alice comes online, sends the
+	// RMTransitiveMessageFwd messages.
+	assertGoesOffline(t, bob)
+	assertGoesOffline(t, charlie)
+	assertGoesOnline(t, alice)
+	time.Sleep(200 * time.Millisecond)
+	assertEmptyRMQ(t, alice)
+	ts.log.Infof("Alice sent RMTransitiveMessageFwds")
+
+	// Alice goes offline. Charlie and Bob come online, receive the
+	// forwarded invites. Both will attempt to accept the corresponding
+	// invite, but one will skip it due to both also having created one
+	// invite.
+	assertGoesOffline(t, alice)
+	go bob.GoOnline()
+	go charlie.GoOnline()
+
+	// Ensure transitive KX completes.
+	assertClientsKXd(t, bob, charlie)
+	assert.ChanWritten(t, bobKXCompletedChan)
+	assertClientsCanPM(t, bob, charlie)
+
+	// Ensure one of the KXs was skipped.
+	assert.ChanNotWritten(t, bobKXCompletedChan, time.Second)
+	assert.DeepEqual(t, tls.hasMatches(), true)
 }
