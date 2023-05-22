@@ -72,6 +72,9 @@ func (u *ShortID) Less(other *ShortID) bool {
 		if u[i] < other[i] {
 			return true
 		}
+		if u[i] > other[i] {
+			return false
+		}
 	}
 	return false
 }
