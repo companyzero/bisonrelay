@@ -216,14 +216,16 @@ func (s *Store) handlePlaceOrder(ctx context.Context, uid clientintf.UserID,
 	}
 
 	// Process form data.
-	formData := struct {
-		Addr string `json:"addr"`
-	}{}
+	var formData ShippingAddress
 	if err := json.Unmarshal(request.Data, &formData); err != nil {
 		return &rpc.RMFetchResourceReply{
 			Status: rpc.ResourceStatusBadRequest,
 			Data:   []byte("request data not valid json"),
 		}, nil
+	}
+	var shipping *ShippingAddress
+	if formData.Address1 != "" {
+		shipping = &formData
 	}
 
 	// Create the order.
@@ -232,6 +234,7 @@ func (s *Store) handlePlaceOrder(ctx context.Context, uid clientintf.UserID,
 	if err != nil {
 		return nil, err
 	}
+
 	id := lastID.ID + 1
 	order := &Order{
 		User:       uid,
@@ -240,7 +243,7 @@ func (s *Store) handlePlaceOrder(ctx context.Context, uid clientintf.UserID,
 		Status:     StatusPlaced,
 		PlacedTS:   time.Now(),
 		ShipCharge: s.cfg.ShipCharge,
-		ShipAddr:   formData.Addr,
+		ShipAddr:   shipping,
 	}
 
 	// Build the message to send to the remote user, and present it to the
@@ -256,8 +259,17 @@ func (s *Store) handlePlaceOrder(ctx context.Context, uid clientintf.UserID,
 			order.ID, order.User)
 	} else {
 		wpm("Thank you for placing your order #%d\n", order.ID)
-		if order.ShipAddr != "" {
-			wpm("Shipping address: %q\n", order.ShipAddr)
+		if order.ShipAddr != nil {
+			wpm("Shipping address:\n")
+			wpm("   Name: %s\n", order.ShipAddr.Name)
+			wpm("   Addr: %s\n", order.ShipAddr.Address1)
+			if order.ShipAddr.Address2 != "" {
+				wpm("   Addr: %s\n", order.ShipAddr.Address2)
+			}
+			wpm("   City: %s\n", order.ShipAddr.City)
+			wpm("  State: %s\n", order.ShipAddr.State)
+			wpm("    Zip: %s\n", order.ShipAddr.PostalCode)
+			wpm("  Phone: %s\n", order.ShipAddr.Phone)
 		}
 		wpm("The following were the items in your order:\n")
 		for _, item := range order.Cart.Items {

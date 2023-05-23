@@ -8,7 +8,13 @@ Last Updated: {{.Updated.Format "2006-01-02 15:04:05" }}
 ## Place Order
 --form--
 type="action" value="/placeOrder"
-type="txtinput" label="Shipping Address" name="addr"
+type="txtinput" label="Name" name="name"
+type="txtinput" label="Address" name="address1"
+type="txtinput" label="Address (optional)" name="address2"
+type="txtinput" label="City" name="city"
+type="txtinput" label="State" name="state"
+type="txtinput" label="PostalCode" name="postalCode"
+type="txtinput" label="Phone" name="phone"
 type="submit" label="Place Order"
 --/form--
 

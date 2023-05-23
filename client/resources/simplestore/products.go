@@ -71,6 +71,17 @@ const (
 	StatusCanceled  OrderStatus = "canceled"
 )
 
+type ShippingAddress struct {
+	Name        string `json:"name"`
+	Address1    string `json:"address1"`
+	Address2    string `json:"address2"`
+	City        string `json:"city"`
+	State       string `json:"state"`
+	PostalCode  string `json:"postalCode"`
+	Phone       string `json:"phone"`
+	CountryCode string `json:"countrycode"`
+}
+
 type Order struct {
 	ID           OrderID           `json:"id"`
 	User         clientintf.UserID `json:"user"`
@@ -82,7 +93,7 @@ type Order struct {
 	ExchangeRate float64           `json:"exchange_rate"`
 	PayType      PayType           `json:"pay_type"`
 	Invoice      string            `json:"invoice"`
-	ShipAddr     string            `json:"ship_addr"`
+	ShipAddr     *ShippingAddress  `json:"ship_addr"`
 }
 
 // Total returns the total amount, with 2 decimal places accuracy.
