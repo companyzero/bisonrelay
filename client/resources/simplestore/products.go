@@ -16,6 +16,7 @@ type Product struct {
 	Tags        []string `json:"tags"`
 	Price       float64  `json:"price"`
 	Disabled    bool     `json:"disabled,omitempty"`
+	Shipping    bool     `json:"shipping"`
 }
 
 type productsFile struct {
