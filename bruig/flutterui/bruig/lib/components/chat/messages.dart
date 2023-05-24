@@ -168,14 +168,16 @@ class _MessagesState extends State<Messages> {
     var backgroundColor = theme.backgroundColor;
     return Scaffold(
       floatingActionButton: _getFAB(textColor, backgroundColor),
-      body: ScrollablePositionedList.builder(
-        itemCount: chat.msgs.length,
-        physics: const ClampingScrollPhysics(),
-        itemBuilder: (context, index) {
-          return Event(chat, chat.msgs[index], nick, client, _scrollToBottom);
-        },
-        itemScrollController: widget.itemScrollController,
-        itemPositionsListener: widget.itemPositionsListener,
+      body: SelectionArea(
+        child: ScrollablePositionedList.builder(
+          itemCount: chat.msgs.length,
+          physics: const ClampingScrollPhysics(),
+          itemBuilder: (context, index) {
+            return Event(chat, chat.msgs[index], nick, client, _scrollToBottom);
+          },
+          itemScrollController: widget.itemScrollController,
+          itemPositionsListener: widget.itemPositionsListener,
+        ),
       ),
     );
   }
