@@ -18,6 +18,7 @@ class NetworkChoicePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
     var backgroundColor = const Color(0xFF19172C);
     var cardColor = const Color(0xFF05031A);
     var textColor = const Color(0xFF8E8D98);
@@ -62,7 +63,7 @@ class NetworkChoicePage extends StatelessWidget {
                         "assets/images/icon.png",
                       )),
                 ]),
-                const SizedBox(height: 208),
+                //const SizedBox(height: 208),
                 Text("Setting up Bison Relay",
                     style: TextStyle(
                         color: textColor,
@@ -75,22 +76,33 @@ class NetworkChoicePage extends StatelessWidget {
                         fontSize: 21,
                         fontWeight: FontWeight.w300)),
                 const SizedBox(height: 34),
-                Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                  LoadingScreenButton(
-                      onPressed: () => setChoice(context, NetworkType.mainnet),
-                      text: "Mainnet",
-                      empty: true),
-                  const SizedBox(width: 13),
-                  LoadingScreenButton(
-                      onPressed: () => setChoice(context, NetworkType.testnet),
-                      text: "Testnet",
-                      empty: true),
-                  const SizedBox(width: 13),
-                  LoadingScreenButton(
-                      onPressed: () => setChoice(context, NetworkType.simnet),
-                      text: "Simnet",
-                      empty: true),
-                ])
+                Flex(
+                    direction: isScreenSmall ? Axis.vertical : Axis.horizontal,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      LoadingScreenButton(
+                          onPressed: () =>
+                              setChoice(context, NetworkType.mainnet),
+                          text: "Mainnet",
+                          empty: true),
+                      isScreenSmall
+                          ? const SizedBox(height: 13)
+                          : const SizedBox(width: 13),
+                      LoadingScreenButton(
+                          onPressed: () =>
+                              setChoice(context, NetworkType.testnet),
+                          text: "Testnet",
+                          empty: true),
+                      isScreenSmall
+                          ? const SizedBox(height: 13)
+                          : const SizedBox(width: 13),
+                      LoadingScreenButton(
+                          onPressed: () =>
+                              setChoice(context, NetworkType.simnet),
+                          text: "Simnet",
+                          empty: true),
+                    ])
               ])),
           Row(mainAxisAlignment: MainAxisAlignment.center, children: [
             TextButton(

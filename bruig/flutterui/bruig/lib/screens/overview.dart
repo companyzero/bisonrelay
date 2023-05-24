@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:bruig/components/route_error.dart';
 import 'package:bruig/components/sidebar.dart';
 import 'package:bruig/components/snackbars.dart';
+import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/models/downloads.dart';
 import 'package:bruig/models/feed.dart';
@@ -103,6 +104,14 @@ class _OverviewScreenState extends State<OverviewScreen> {
     }
   }
 
+  void goToSubMenuPage(String route, int pageTab) {
+    navKey.currentState!
+        .pushReplacementNamed(route, arguments: PageTabs(pageTab));
+    Timer(const Duration(milliseconds: 1),
+        () async => widget.mainMenu.activePageTab = pageTab);
+    Navigator.pop(context);
+  }
+
   void goToNewPost() {
     navKey.currentState!.pushReplacementNamed('/feed', arguments: PageTabs(3));
   }
@@ -158,9 +167,18 @@ class _OverviewScreenState extends State<OverviewScreen> {
     super.dispose();
   }
 
+  void switchScreen(String route) {
+    navKey.currentState!.pushReplacementNamed(route);
+  }
+
   @override
   Widget build(BuildContext context) {
     var theme = Theme.of(context);
+    var selectedColor = theme.dividerColor;
+    var unselectedTextColor = theme.focusColor;
+    var sidebarBackground = theme.backgroundColor;
+    var scaffoldBackgroundColor = theme.canvasColor;
+    var hoverColor = theme.hoverColor;
 
     var connectedIcon = Icons.cloud;
     String connStateLabel;
@@ -183,44 +201,110 @@ class _OverviewScreenState extends State<OverviewScreen> {
         break;
     }
 
+    bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
     return Scaffold(
         backgroundColor: theme.canvasColor,
-        appBar: AppBar(
-          title: Row(children: [
-            const SizedBox(width: 10),
-            IconButton(
-                splashRadius: 20,
-                tooltip: "Create a new post",
-                onPressed: goToNewPost,
-                color: Colors.red,
-                iconSize: 20,
-                icon: Icon(color: theme.dividerColor, size: 20, Icons.mode)),
-            IconButton(
-                splashRadius: 20,
-                tooltip: connStateLabel,
-                onPressed: connStateAction,
-                color: theme.dividerColor,
-                iconSize: 20,
-                icon: Icon(color: theme.dividerColor, size: 20, connectedIcon)),
-            const SizedBox(width: 20),
-            _OverviewScreenTitle(widget.mainMenu),
-          ]),
-          leading: Builder(
-              builder: (BuildContext context) => Row(children: [
-                    IconButton(
-                        tooltip: "About Bison Relay",
-                        iconSize: 40,
-                        onPressed: goToAbout,
-                        icon: Image.asset(
-                          "assets/images/icon.png",
-                        )),
-                  ])),
+        appBar: isScreenSmall
+            ? AppBar(
+                title: _OverviewScreenTitle(widget.mainMenu),
+              )
+            : AppBar(
+                title: Row(children: [
+                  const SizedBox(width: 10),
+                  IconButton(
+                      splashRadius: 20,
+                      tooltip: "Create a new post",
+                      onPressed: goToNewPost,
+                      color: Colors.red,
+                      iconSize: 20,
+                      icon: Icon(
+                          color: theme.dividerColor, size: 20, Icons.mode)),
+                  IconButton(
+                      splashRadius: 20,
+                      tooltip: connStateLabel,
+                      onPressed: connStateAction,
+                      color: theme.dividerColor,
+                      iconSize: 20,
+                      icon: Icon(
+                          color: theme.dividerColor, size: 20, connectedIcon)),
+                  const SizedBox(width: 20),
+                  _OverviewScreenTitle(widget.mainMenu),
+                ]),
+                leading: Builder(
+                    builder: (BuildContext context) => Row(children: [
+                          IconButton(
+                              tooltip: "About Bison Relay",
+                              iconSize: 40,
+                              onPressed: goToAbout,
+                              icon: Image.asset(
+                                "assets/images/icon.png",
+                              )),
+                        ])),
+              ),
+        drawer: Drawer(
+          backgroundColor: sidebarBackground,
+          child: ListView.separated(
+              separatorBuilder: (context, index) =>
+                  Divider(height: 3, color: unselectedTextColor),
+              itemCount: widget.mainMenu.menus.length,
+              itemBuilder: (context, index) {
+                var menuItem = widget.mainMenu.menus.elementAt(index);
+                return menuItem.subMenuInfo.isEmpty
+                    ? ListTile(
+                        hoverColor: scaffoldBackgroundColor,
+                        selected:
+                            widget.mainMenu.activeMenu.label == menuItem.label,
+                        selectedColor: selectedColor,
+                        iconColor: unselectedTextColor,
+                        textColor: unselectedTextColor,
+                        selectedTileColor: hoverColor,
+                        onTap: () {
+                          switchScreen(menuItem.routeName);
+                          Navigator.pop(context);
+                        },
+                        leading: (menuItem.label == "Chats" &&
+                                    client.hasUnreadChats) ||
+                                (menuItem.label == "News Feed" &&
+                                    widget.feed.hasUnreadPostsComments)
+                            ? menuItem.iconNotification
+                            : menuItem.icon,
+                        title: Text(menuItem.label,
+                            style: const TextStyle(fontSize: 15)))
+                    : Theme(
+                        data: Theme.of(context)
+                            .copyWith(dividerColor: Colors.transparent),
+                        child: ExpansionTile(
+                          title: Text(menuItem.label),
+                          initiallyExpanded: widget.mainMenu.activeMenu.label ==
+                              menuItem.label,
+                          leading: (menuItem.label == "Chats" &&
+                                      client.hasUnreadChats) ||
+                                  (menuItem.label == "News Feed" &&
+                                      widget.feed.hasUnreadPostsComments)
+                              ? menuItem.iconNotification
+                              : menuItem.icon,
+                          children: (menuItem.subMenuInfo.map((e) => ListTile(
+                              hoverColor: scaffoldBackgroundColor,
+                              selected: widget.mainMenu.activeMenu.label ==
+                                      menuItem.label &&
+                                  widget.mainMenu.activePageTab == e.pageTab,
+                              selectedColor: selectedColor,
+                              iconColor: unselectedTextColor,
+                              textColor: unselectedTextColor,
+                              selectedTileColor: hoverColor,
+                              title: Text(e.label),
+                              onTap: () => goToSubMenuPage(
+                                  menuItem.routeName, e.pageTab)))).toList(),
+                        ));
+              }),
         ),
         body: SnackbarDisplayer(
             widget.snackBar,
             Row(children: [
-              Sidebar(widget.client, widget.mainMenu, widget.ntfns, navKey,
-                  widget.feed),
+              isScreenSmall
+                  ? const Empty()
+                  : Sidebar(widget.client, widget.mainMenu, widget.ntfns,
+                      navKey, widget.feed),
               Expanded(
                 child: Navigator(
                   key: navKey,

@@ -145,6 +145,7 @@ class QuestionArea extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
     var textColor = const Color(0xFF8E8D98);
     return Column(children: [
       Center(
@@ -156,17 +157,19 @@ class QuestionArea extends StatelessWidget {
       const SizedBox(height: 20),
       SizedBox(
           width: 600,
-          child:
-              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-            for (var i in currentWords.seedWordChoices)
-              Container(
-                  margin: const EdgeInsets.all(5),
-                  child: LoadingScreenButton(
-                    onPressed: () =>
-                        checkAnswersCB(currentWords.correctSeedWord == i),
-                    text: i,
-                  )),
-          ]))
+          child: Flex(
+              direction: isScreenSmall ? Axis.vertical : Axis.horizontal,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                for (var i in currentWords.seedWordChoices)
+                  Container(
+                      margin: const EdgeInsets.all(5),
+                      child: LoadingScreenButton(
+                        onPressed: () =>
+                            checkAnswersCB(currentWords.correctSeedWord == i),
+                        text: i,
+                      )),
+              ]))
     ]);
   }
 }
@@ -180,6 +183,7 @@ class IncorrectArea extends StatelessWidget {
     return Column(children: [
       Center(
           child: Text("Incorrect, please go back and copy the seed again.",
+              textAlign: TextAlign.center,
               style: TextStyle(
                   color: textColor,
                   fontSize: 20,

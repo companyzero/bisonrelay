@@ -28,9 +28,10 @@ class MainMenuItem {
   final WidgetBuilder titleBuilder;
   final Widget? icon;
   final Widget? iconNotification;
+  final List<SubMenuInfo> subMenuInfo;
 
   MainMenuItem(this.label, this.routeName, this.builder, this.titleBuilder,
-      this.icon, this.iconNotification);
+      this.icon, this.iconNotification, this.subMenuInfo);
 }
 
 MainMenuItem _emptyMenu = MainMenuItem(
@@ -39,79 +40,112 @@ MainMenuItem _emptyMenu = MainMenuItem(
     (context) => const Text(""),
     (context) => const Text(""),
     const SidebarIcon(Icons.question_mark, false),
-    null);
+    null, <SubMenuInfo>[]);
+
+class SubMenuInfo {
+  final int pageTab;
+  final String label;
+  SubMenuInfo(this.pageTab, this.label);
+}
+
+final List<SubMenuInfo> FeedScreenSub = [
+  SubMenuInfo(0, "News Feed"),
+  SubMenuInfo(1, "Your Posts"),
+  SubMenuInfo(2, "Subscriptions"),
+  SubMenuInfo(3, "New Post")
+];
+
+final List<SubMenuInfo> ManageContentScreenSub = [
+  SubMenuInfo(0, "Add"),
+  SubMenuInfo(1, "Shared"),
+  SubMenuInfo(2, "Downloads"),
+];
+
+final List<SubMenuInfo> LnScreenSub = [
+  SubMenuInfo(0, "Overview"),
+  SubMenuInfo(1, "Accounts"),
+  SubMenuInfo(2, "On-Chain"),
+  SubMenuInfo(3, "Channels"),
+  SubMenuInfo(4, "Payments"),
+  SubMenuInfo(5, "Network"),
+  SubMenuInfo(6, "Backups")
+];
 
 final List<MainMenuItem> mainMenu = [
   MainMenuItem(
-    "News Feed",
-    FeedScreen.routeName,
-    (context) => const FeedScreen(),
-    (context) => const FeedScreenTitle(),
-    const SidebarIcon(Icons.list_alt, false),
-    const SidebarIcon(Icons.new_releases_outlined, true),
-  ),
+      "News Feed",
+      FeedScreen.routeName,
+      (context) => Consumer<MainMenuModel>(
+          builder: (context, menu, child) => FeedScreen(menu)),
+      (context) => const FeedScreenTitle(),
+      const SidebarIcon(Icons.list_alt, false),
+      const SidebarIcon(Icons.new_releases_outlined, true),
+      FeedScreenSub),
   MainMenuItem(
-    "Chats",
-    ChatsScreen.routeName,
-    (context) => Consumer2<ClientModel, AppNotifications>(
-        builder: (context, client, ntfns, child) => ChatsScreen(client, ntfns)),
-    (context) => const ChatsScreenTitle(),
-    const SidebarIcon(Icons.chat_bubble_outline, false),
-    const SidebarIcon(Icons.new_releases_outlined, true),
-  ),
+      "Chats",
+      ChatsScreen.routeName,
+      (context) => Consumer2<ClientModel, AppNotifications>(
+          builder: (context, client, ntfns, child) =>
+              ChatsScreen(client, ntfns)),
+      (context) => const ChatsScreenTitle(),
+      const SidebarIcon(Icons.chat_bubble_outline, false),
+      const SidebarIcon(Icons.new_releases_outlined, true),
+      <SubMenuInfo>[]),
   MainMenuItem(
-    "LN Management",
-    LNScreen.routeName,
-    (context) => const LNScreen(),
-    (context) => const LNScreenTitle(),
-    const SidebarIcon(Icons.device_hub, false),
-    const SidebarIcon(Icons.device_hub, false),
-  ),
+      "LN Management",
+      LNScreen.routeName,
+      (context) => Consumer<MainMenuModel>(
+          builder: (context, menu, child) => LNScreen(menu)),
+      (context) => const LNScreenTitle(),
+      const SidebarIcon(Icons.device_hub, false),
+      const SidebarIcon(Icons.device_hub, false),
+      LnScreenSub),
   MainMenuItem(
-    "Pages Browser",
-    ViewPageScreen.routeName,
-    (context) => Consumer2<ClientModel, ResourcesModel>(
-        builder: (context, client, resources, child) =>
-            ViewPageScreen(resources, client)),
-    (context) => const ViewPagesScreenTitle(),
-    const SidebarIcon(Icons.web, false),
-    const SidebarIcon(Icons.web, false),
-  ),
+      "Pages Browser",
+      ViewPageScreen.routeName,
+      (context) => Consumer2<ClientModel, ResourcesModel>(
+          builder: (context, client, resources, child) =>
+              ViewPageScreen(resources, client)),
+      (context) => const ViewPagesScreenTitle(),
+      const SidebarIcon(Icons.web, false),
+      const SidebarIcon(Icons.web, false),
+      <SubMenuInfo>[]),
   MainMenuItem(
-    "Manage Content",
-    ManageContentScreen.routeName,
-    (context) => const ManageContentScreen(),
-    (context) => const ManageContentScreenTitle(),
-    const SidebarIcon(Icons.file_download, false),
-    const SidebarIcon(Icons.file_download, false),
-  ),
+      "Manage Content",
+      ManageContentScreen.routeName,
+      (context) => Consumer<MainMenuModel>(
+          builder: (context, menu, child) => ManageContentScreen(menu)),
+      (context) => const ManageContentScreenTitle(),
+      const SidebarIcon(Icons.file_download, false),
+      const SidebarIcon(Icons.file_download, false),
+      ManageContentScreenSub),
   MainMenuItem(
-    "Payment Stats",
-    PayStatsScreen.routeName,
-    (context) => Consumer<ClientModel>(
-        builder: (context, client, child) => PayStatsScreen(client)),
-    (context) => const PayStatsScreenTitle(),
-    const SidebarIcon(Icons.wallet_outlined, false),
-    const SidebarIcon(Icons.wallet_outlined, false),
-  ),
+      "Payment Stats",
+      PayStatsScreen.routeName,
+      (context) => Consumer<ClientModel>(
+          builder: (context, client, child) => PayStatsScreen(client)),
+      (context) => const PayStatsScreenTitle(),
+      const SidebarIcon(Icons.wallet_outlined, false),
+      const SidebarIcon(Icons.wallet_outlined, false),
+      <SubMenuInfo>[]),
   MainMenuItem(
-    "Settings",
-    SettingsScreen.routeName,
-    (context) => Consumer<ClientModel>(
-        builder: (context, client, child) => SettingsScreen(client)),
-    (context) => const SettingsScreenTitle(),
-    const SidebarIcon(Icons.settings_rounded, false),
-    const SidebarIcon(Icons.settings_rounded, false),
-  ),
+      "Settings",
+      SettingsScreen.routeName,
+      (context) => Consumer<ClientModel>(
+          builder: (context, client, child) => SettingsScreen(client)),
+      (context) => const SettingsScreenTitle(),
+      const SidebarIcon(Icons.settings_rounded, false),
+      const SidebarIcon(Icons.settings_rounded, false),
+      <SubMenuInfo>[]),
   MainMenuItem(
-    "Logs",
-    LogScreen.routeName,
-    (context) =>
-        Consumer<LogModel>(builder: (context, log, child) => LogScreen(log)),
-    (context) => const LogScreenTitle(),
-    const SidebarIcon(Icons.list_rounded, false),
-    const SidebarIcon(Icons.list_rounded, false),
-  ),
+      "Logs",
+      LogScreen.routeName,
+      (context) =>
+          Consumer<LogModel>(builder: (context, log, child) => LogScreen(log)),
+      (context) => const LogScreenTitle(),
+      const SidebarIcon(Icons.list_rounded, false),
+      const SidebarIcon(Icons.list_rounded, false),
+      <SubMenuInfo>[]),
 ];
 
 class MainMenuModel extends ChangeNotifier {
@@ -119,6 +153,7 @@ class MainMenuModel extends ChangeNotifier {
 
   String _activeRoute = "";
   MainMenuItem _activeMenu = _emptyMenu;
+  int _activePageTab = 0;
   int _activeIndex = 0;
   int get activeIndex => _activeIndex;
   MainMenuItem get activeMenu => _activeMenu;
@@ -131,6 +166,13 @@ class MainMenuModel extends ChangeNotifier {
     _activeMenu = menus[idx];
     _activeRoute = newRoute;
     _activeIndex = idx;
+    _activePageTab = 0;
+    notifyListeners();
+  }
+
+  int get activePageTab => _activePageTab;
+  set activePageTab(int pageTab) {
+    _activePageTab = pageTab;
     notifyListeners();
   }
 

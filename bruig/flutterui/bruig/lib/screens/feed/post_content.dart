@@ -136,11 +136,9 @@ class _CommentWState extends State<_CommentW> {
 
     var mine = widget.comment.uid == widget.client.publicID;
     var kxing = widget.client.requestedMediateID(widget.comment.uid);
-    print(widget.comment.level);
     var unreadComment = widget.comment.unreadComment;
     var theme = Theme.of(context);
     var hightLightTextColor = theme.dividerColor;
-    var backgroundColor = theme.backgroundColor;
     var commentBorderColor = theme.dialogBackgroundColor;
     var avatarColor = colorFromNick(nick);
     var darkTextColor = theme.indicatorColor;
@@ -425,7 +423,6 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
 
     var theme = Theme.of(context);
 
-    var inverseBackgroundColor = theme.focusColor;
     var hightLightTextColor = theme.dividerColor; // NAME TEXT COLOR
     var dividerColor = theme.indicatorColor; // DIVIDER COLOR
     var textColor = theme.focusColor;
@@ -433,7 +430,6 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
     var postBackgroundColor = theme.highlightColor;
     var darkAddCommentColor = theme.hoverColor;
 
-    var pid = widget.args.post.summ.id;
     var authorNick = widget.args.post.summ.authorNick;
     var authorID = widget.args.post.summ.authorID;
     var relayer = "";
@@ -632,6 +628,7 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
       ]);
     }
 
+    bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
     return Container(
         margin: const EdgeInsets.all(1),
         decoration: BoxDecoration(
@@ -643,8 +640,11 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
               children: [
                 Container(
                   // Post area
-                  margin: const EdgeInsets.only(
-                      left: 50, right: 50, top: 0, bottom: 0),
+                  margin: isScreenSmall
+                      ? const EdgeInsets.only(
+                          left: 19, right: 10, top: 0, bottom: 0)
+                      : const EdgeInsets.only(
+                          left: 50, right: 50, top: 0, bottom: 0),
                   decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(3),
                       color: postBackgroundColor),

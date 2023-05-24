@@ -107,20 +107,22 @@ class _ServerPageState extends State<ServerPage> {
                         fontWeight: FontWeight.w300)),
                 const SizedBox(height: 34),
                 Row(children: [
-                  const SizedBox(width: 323),
-                  Expanded(
-                      child: TextField(
-                          cursorColor: secondaryTextColor,
-                          decoration: InputDecoration(
-                              border: InputBorder.none,
-                              hintText: "RPC Host",
-                              hintStyle:
-                                  TextStyle(fontSize: 13, color: textColor),
-                              filled: true,
-                              fillColor: cardColor),
-                          style: TextStyle(color: textColor, fontSize: 13),
-                          controller: serverCtrl)),
-                  const SizedBox(width: 323),
+                  Flexible(
+                      child: Align(
+                          child: SizedBox(
+                              width: 300,
+                              child: TextField(
+                                  cursorColor: secondaryTextColor,
+                                  decoration: InputDecoration(
+                                      border: InputBorder.none,
+                                      hintText: "RPC Host",
+                                      hintStyle: TextStyle(
+                                          fontSize: 13, color: textColor),
+                                      filled: true,
+                                      fillColor: cardColor),
+                                  style:
+                                      TextStyle(color: textColor, fontSize: 13),
+                                  controller: serverCtrl)))),
                 ]),
                 const SizedBox(height: 34),
                 LoadingScreenButton(

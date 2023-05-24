@@ -37,13 +37,16 @@ class _SubItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
     var theme = Theme.of(context);
     var textColor = theme.focusColor;
     var highlightColor = theme.highlightColor;
     var backgroundColor = theme.backgroundColor;
     return Container(
       color: index.isEven ? highlightColor : backgroundColor,
-      margin: const EdgeInsets.only(left: 117, right: 108, top: 8),
+      margin: isScreenSmall
+          ? const EdgeInsets.only(left: 10, right: 10, top: 8)
+          : const EdgeInsets.only(left: 117, right: 108, top: 8),
       padding: const EdgeInsets.only(top: 4, bottom: 4, left: 8, right: 8),
       child: Row(
         children: [

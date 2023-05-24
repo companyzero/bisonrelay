@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bruig/components/buttons.dart';
 import 'package:bruig/screens/ln/accounts.dart';
 import 'package:bruig/screens/ln/backups.dart';
@@ -11,20 +13,34 @@ import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:golib_plugin/util.dart';
 import 'package:bruig/components/ln_management_bar.dart';
+import 'package:bruig/screens/overview.dart';
+import 'package:bruig/components/empty_widget.dart';
+import 'package:bruig/models/menus.dart';
+import 'package:provider/provider.dart';
 
 class LNScreenTitle extends StatelessWidget {
   const LNScreenTitle({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Text("Bison Relay / LN",
-        style: TextStyle(fontSize: 15, color: Theme.of(context).focusColor));
+    return Consumer<MainMenuModel>(builder: (context, menu, child) {
+      if (menu.activePageTab <= 0) {
+        return Text("Bison Relay / LN",
+            style:
+                TextStyle(fontSize: 15, color: Theme.of(context).focusColor));
+      }
+      var idx = LnScreenSub.indexWhere((e) => e.pageTab == menu.activePageTab);
+
+      return Text("Bison Relay / LN / ${LnScreenSub[idx].label}",
+          style: TextStyle(fontSize: 15, color: Theme.of(context).focusColor));
+    });
   }
 }
 
 class LNScreen extends StatefulWidget {
   static String routeName = "/ln";
-  const LNScreen({Key? key}) : super(key: key);
+  final MainMenuModel mainMenu;
+  const LNScreen(this.mainMenu, {Key? key}) : super(key: key);
 
   @override
   State<LNScreen> createState() => _LNScreenState();
@@ -55,6 +71,8 @@ class _LNScreenState extends State<LNScreen> {
 
   void onItemChanged(int index) {
     setState(() => tabIndex = index);
+    Timer(const Duration(milliseconds: 1),
+        () async => widget.mainMenu.activePageTab = index);
   }
 
   @override
@@ -74,8 +92,18 @@ class _LNScreenState extends State<LNScreen> {
 
   @override
   Widget build(BuildContext context) {
+    bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
+    if (ModalRoute.of(context)!.settings.arguments != null) {
+      final args = ModalRoute.of(context)!.settings.arguments as PageTabs;
+      tabIndex = args.tabIndex;
+    }
+
     return Row(children: [
-      LNManagementBar(onItemChanged, tabIndex),
+      ModalRoute.of(context)!.settings.arguments == null
+          ? isScreenSmall
+              ? const Empty()
+              : LNManagementBar(onItemChanged, tabIndex)
+          : const Empty(),
       Expanded(child: activeTab())
     ]);
   }

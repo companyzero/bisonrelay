@@ -280,6 +280,7 @@ class _LNChainSyncPageState extends State<_LNChainSyncPage> {
     var cardColor = const Color(0xFF05031A);
     var textColor = const Color(0xFF8E8D98);
     var secondaryTextColor = const Color(0xFFE4E3E6);
+    bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
 
     void goToAbout() {
       Navigator.of(context).pushNamed("/about");
@@ -368,40 +369,62 @@ class _LNChainSyncPageState extends State<_LNChainSyncPage> {
                       padding: const EdgeInsets.all(10),
                       color: cardColor,
                       child: Column(children: [
-                        Row(children: [
-                          Text("Block Height: ",
-                              style: TextStyle(
-                                  color: textColor,
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.w300)),
-                          Text("$blockHeight",
-                              style: TextStyle(
-                                  color: textColor,
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.w300)),
-                          const SizedBox(width: 21),
-                          Text("Block Hash: ",
-                              style: TextStyle(
-                                  color: textColor,
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.w300)),
-                          Text("$blockHeight",
-                              style: TextStyle(
-                                  color: textColor,
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.w300)),
-                          const SizedBox(width: 21),
-                          Text("Block Time: ",
-                              style: TextStyle(
-                                  color: textColor,
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.w300)),
-                          Text(blockTimestamp.toString(),
-                              style: TextStyle(
-                                  color: textColor,
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.w300))
-                        ]),
+                        Flex(
+                            direction:
+                                isScreenSmall ? Axis.vertical : Axis.horizontal,
+                            children: [
+                              RichText(
+                                  text: TextSpan(children: [
+                                TextSpan(
+                                    text: "Block Height: ",
+                                    style: TextStyle(
+                                        color: textColor,
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.w300)),
+                                TextSpan(
+                                    text: "$blockHeight",
+                                    style: TextStyle(
+                                        color: textColor,
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.w300))
+                              ])),
+                              isScreenSmall
+                                  ? const SizedBox(height: 5)
+                                  : const SizedBox(width: 21),
+                              RichText(
+                                  text: TextSpan(children: [
+                                TextSpan(
+                                    text: "Block Hash: ",
+                                    style: TextStyle(
+                                        color: textColor,
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.w300)),
+                                TextSpan(
+                                    text: "$blockHeight",
+                                    style: TextStyle(
+                                        color: textColor,
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.w300))
+                              ])),
+                              isScreenSmall
+                                  ? const SizedBox(height: 5)
+                                  : const SizedBox(width: 21),
+                              RichText(
+                                  text: TextSpan(children: [
+                                TextSpan(
+                                    text: "Block Time: ",
+                                    style: TextStyle(
+                                        color: textColor,
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.w300)),
+                                TextSpan(
+                                    text: blockTimestamp.toString(),
+                                    style: TextStyle(
+                                        color: textColor,
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.w300))
+                              ]))
+                            ]),
                         Expanded(
                             child: LogLines(globalLogModel,
                                 maxLines: 15, optionalTextColor: textColor))

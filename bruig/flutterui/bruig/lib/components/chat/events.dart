@@ -6,7 +6,6 @@ import 'package:bruig/components/chat/types.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:bruig/components/buttons.dart';
 import 'package:bruig/models/resources.dart';
-import 'package:bruig/screens/feed/feed_posts.dart';
 import 'package:bruig/components/md_elements.dart';
 import 'package:bruig/components/user_content_list.dart';
 import 'package:bruig/models/downloads.dart';
@@ -116,7 +115,6 @@ class _ReceivedSentPMState extends State<ReceivedSentPM> {
     msg = msg.replaceAll("\n",
         "  \n"); // Replace newlines with <space space newline> for proper md render
     var theme = Theme.of(context);
-    var bgColor = theme.backgroundColor;
     var darkTextColor = theme.indicatorColor;
     var hightLightTextColor = theme.dividerColor; // NAME TEXT COLOR
     var avatarColor = colorFromNick(widget.nick);
@@ -650,7 +648,6 @@ class GCVersionWarnW extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    var theme = Theme.of(context);
     var bgColor = Colors.red[600];
     var textColor = Colors.white;
     return Container(

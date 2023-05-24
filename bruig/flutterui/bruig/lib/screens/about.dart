@@ -34,6 +34,7 @@ class _AboutScreenState extends State<AboutScreen> {
     var textColor = const Color(0xFFE4E3E6);
     var backgroundColor = const Color(0xFF19172C);
     var cardColor = const Color(0xFF05031A);
+    bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
 
     return Scaffold(
         body: Container(
@@ -66,53 +67,79 @@ class _AboutScreenState extends State<AboutScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Container(
-                              padding: EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                borderRadius:
-                                    BorderRadius.all(Radius.circular(30)),
-                                border: Border.all(color: textColor),
-                              ),
-                              width: 600,
-                              height: 300,
-                              child: Row(children: [
-                                Image.asset(
-                                  "assets/images/icon.png",
-                                  width: 200,
-                                  height: 200,
-                                ),
-                                Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Text(
-                                        textAlign: TextAlign.left,
-                                        "Bison Relay",
-                                        style: TextStyle(
-                                            color: textColor,
-                                            fontSize: 34,
-                                            fontWeight: FontWeight.w200)),
-                                    const SizedBox(height: 10),
-                                    Text("Version $version",
-                                        style: TextStyle(
-                                            color: textColor,
-                                            fontSize: 20,
-                                            fontWeight: FontWeight.w200)),
-                                    const SizedBox(height: 10),
-                                    Row(children: [
-                                      Icon(
-                                          color: textColor,
-                                          size: 20,
-                                          Icons.copyright),
-                                      const SizedBox(width: 5),
-                                      Text("2022-2023, Company 0, LLC",
-                                          style: TextStyle(
-                                              color: textColor,
-                                              fontSize: 20,
-                                              fontWeight: FontWeight.w200))
-                                    ])
-                                  ],
-                                )
-                              ])),
+                          Flexible(
+                              child: Align(
+                                  child: SizedBox(
+                                      width: 600,
+                                      height: 300,
+                                      child: Container(
+                                          padding: const EdgeInsets.all(10),
+                                          decoration: BoxDecoration(
+                                            borderRadius:
+                                                const BorderRadius.all(
+                                                    Radius.circular(30)),
+                                            border:
+                                                Border.all(color: textColor),
+                                          ),
+                                          child: Flex(
+                                              direction: isScreenSmall
+                                                  ? Axis.vertical
+                                                  : Axis.horizontal,
+                                              children: [
+                                                Image.asset(
+                                                  "assets/images/icon.png",
+                                                  width:
+                                                      isScreenSmall ? 100 : 200,
+                                                  height:
+                                                      isScreenSmall ? 100 : 200,
+                                                ),
+                                                Column(
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment.center,
+                                                  children: [
+                                                    Text(
+                                                        textAlign:
+                                                            TextAlign.left,
+                                                        "Bison Relay",
+                                                        style: TextStyle(
+                                                            color: textColor,
+                                                            fontSize: 34,
+                                                            fontWeight:
+                                                                FontWeight
+                                                                    .w200)),
+                                                    const SizedBox(height: 10),
+                                                    Text("Version $version",
+                                                        style: TextStyle(
+                                                            color: textColor,
+                                                            fontSize: 20,
+                                                            fontWeight:
+                                                                FontWeight
+                                                                    .w200)),
+                                                    const SizedBox(height: 10),
+                                                    RichText(
+                                                        text:
+                                                            TextSpan(children: [
+                                                      WidgetSpan(
+                                                          alignment:
+                                                              PlaceholderAlignment
+                                                                  .middle,
+                                                          child: Icon(
+                                                              color: textColor,
+                                                              size: 16,
+                                                              Icons.copyright)),
+                                                      TextSpan(
+                                                          text:
+                                                              "2022-2023 Company 0, LLC",
+                                                          style: TextStyle(
+                                                              color: textColor,
+                                                              fontSize: 20,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .w200))
+                                                    ]))
+                                                  ],
+                                                )
+                                              ]))))),
                         ],
                       ),
                       const SizedBox(height: 89),

@@ -12,6 +12,7 @@ import 'package:golib_plugin/golib_plugin.dart';
 import 'package:provider/provider.dart';
 import 'package:bruig/components/chat/active_chat.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
+import 'package:bruig/components/empty_widget.dart';
 
 class ChatsScreenTitle extends StatelessWidget {
   const ChatsScreenTitle({super.key});
@@ -120,7 +121,6 @@ class _LoadingAddressBookPage extends StatelessWidget {
     var theme = Theme.of(context);
     var backgroundColor = theme.backgroundColor;
     var textColor = const Color(0xFF8E8D98);
-    var secondaryTextColor = const Color(0xFFE4E3E6);
 
     return Container(
         padding: const EdgeInsets.all(20),
@@ -305,17 +305,23 @@ class _ChatsScreenState extends State<ChatsScreen> {
       return const _LoadingAddressBookPage();
     }
 
-    return Row(children: [
-      SizedBox(width: 163, child: ChatDrawerMenu(inputFocusNode)),
-      Expanded(
-          child: Container(
-        margin: const EdgeInsets.all(1),
-        decoration: BoxDecoration(
-          color: backgroundColor,
-          borderRadius: BorderRadius.circular(3),
-        ),
-        child: ActiveChat(client, inputFocusNode),
-      )),
-    ]);
+    bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
+
+    return Flex(
+        direction: isScreenSmall ? Axis.vertical : Axis.horizontal,
+        children: [
+          isScreenSmall
+              ? SizedBox(height: 100, child: ChatRibbonMenu(inputFocusNode))
+              : SizedBox(width: 163, child: ChatDrawerMenu(inputFocusNode)),
+          Expanded(
+              child: Container(
+            margin: const EdgeInsets.all(1),
+            decoration: BoxDecoration(
+              color: backgroundColor,
+              borderRadius: BorderRadius.circular(3),
+            ),
+            child: ActiveChat(client, inputFocusNode),
+          )),
+        ]);
   }
 }
