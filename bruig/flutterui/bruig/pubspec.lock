@@ -187,7 +187,7 @@ packages:
     description:
       path: "packages/flutter_markdown"
       ref: main
-      resolved-ref: ef6b5a380e0d6fa2705c1b19e5613c60db01bfd0
+      resolved-ref: b98386c14fef19537a8b45a232c6b04c8cf49acd
       url: "https://github.com/tiagoalvesdulce/packages"
     source: git
     version: "0.6.14+1"
@@ -531,12 +531,11 @@ packages:
   scrollable_positioned_list:
     dependency: "direct main"
     description:
-      path: "packages/scrollable_positioned_list"
-      ref: HEAD
-      resolved-ref: f4981ba61c491955cca7b73916aa05c9fbf2056f
-      url: "https://github.com/tiagoalvesdulce/flutter.widgets"
-    source: git
-    version: "0.3.5"
+      name: scrollable_positioned_list
+      sha256: "1b54d5f1329a1e263269abc9e2543d90806131aa14fe7c6062a8054d57249287"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.3.8"
   shared_preferences:
     dependency: "direct main"
     description:
