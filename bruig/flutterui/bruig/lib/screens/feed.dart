@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bruig/models/client.dart';
 import 'package:bruig/screens/overview.dart';
 import 'package:flutter/material.dart';
@@ -9,64 +11,33 @@ import 'package:bruig/screens/feed/post_content.dart';
 import 'package:bruig/screens/feed/new_post.dart';
 import 'package:bruig/screens/feed/post_lists.dart';
 import 'package:bruig/components/empty_widget.dart';
-
-/*
-
-  @override
-  Widget build(BuildContext context) {
-    var theme = Theme.of(context);
-    var backgroundColor = theme.backgroundColor;
-    return Consumer<ThemeNotifier>(
-      builder: (context, theme, _) => Container(
-        margin: const EdgeInsets.all(1),
-        decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(3), color: backgroundColor),
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Row(children: [
-              const Expanded(
-                child: Text("News Feed",
-                    style: TextStyle(
-                      fontSize: 20,
-                    )),
-              ),
-              ElevatedButton(
-                  onPressed: () {
-                    Navigator.of(context, rootNavigator: true)
-                        .pushNamed('/newPost');
-                  },
-                  child: const Text("New Post")),
-              const SizedBox(width: 20)
-            ]),
-            const SizedBox(height: 20),
-            Expanded(
-                child:
-            )),
-            const SizedBox(height: 20),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-*/
+import 'package:bruig/models/menus.dart';
 
 class FeedScreenTitle extends StatelessWidget {
   const FeedScreenTitle({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Text("Bison Relay / News Feed",
-        style: TextStyle(fontSize: 15, color: Theme.of(context).focusColor));
+    return Consumer<MainMenuModel>(builder: (context, menu, child) {
+      if (menu.activePageTab <= 0) {
+        return Text("Bison Relay / News Feed",
+            style:
+                TextStyle(fontSize: 15, color: Theme.of(context).focusColor));
+      }
+      var idx = LnScreenSub.indexWhere((e) => e.pageTab == menu.activePageTab);
+
+      return Text("Bison Relay / News Feed / ${FeedScreenSub[idx].label}",
+          style: TextStyle(fontSize: 15, color: Theme.of(context).focusColor));
+    });
   }
 }
 
 class FeedScreen extends StatefulWidget {
   static const routeName = '/feed';
   final int tabIndex;
-  const FeedScreen({Key? key, this.tabIndex = 0}) : super(key: key);
+  final MainMenuModel mainMenu;
+  const FeedScreen(this.mainMenu, {Key? key, this.tabIndex = 0})
+      : super(key: key);
 
   @override
   State<FeedScreen> createState() => _FeedScreenState();
@@ -110,6 +81,8 @@ class _FeedScreenState extends State<FeedScreen> {
 
   void onItemChanged(int index, PostContentScreenArgs? args) {
     setState(() => {showPost = args, tabIndex = index});
+    Timer(const Duration(milliseconds: 1),
+        () async => widget.mainMenu.activePageTab = index);
   }
 
   @override
@@ -129,6 +102,7 @@ class _FeedScreenState extends State<FeedScreen> {
 
   @override
   Widget build(BuildContext context) {
+    bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
     if (ModalRoute.of(context)!.settings.arguments != null) {
       final args = ModalRoute.of(context)!.settings.arguments as PageTabs;
       tabIndex = args.tabIndex;
@@ -136,7 +110,9 @@ class _FeedScreenState extends State<FeedScreen> {
 
     return Row(children: [
       ModalRoute.of(context)!.settings.arguments == null
-          ? FeedBar(onItemChanged, tabIndex)
+          ? isScreenSmall
+              ? const Empty()
+              : FeedBar(onItemChanged, tabIndex)
           : const Empty(),
       Expanded(child: activeTab())
     ]);

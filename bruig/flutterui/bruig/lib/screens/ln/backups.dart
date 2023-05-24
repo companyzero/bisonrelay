@@ -53,7 +53,6 @@ class _LNBackupsPageState extends State<LNBackupsPage> {
   Widget build(BuildContext context) {
     var theme = Theme.of(context);
     var textColor = theme.focusColor;
-    var secondaryTextColor = theme.dividerColor;
     var darkTextColor = theme.indicatorColor;
     var dividerColor = theme.highlightColor;
     var backgroundColor = theme.backgroundColor;

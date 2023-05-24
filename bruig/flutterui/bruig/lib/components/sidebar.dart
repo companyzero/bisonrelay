@@ -73,6 +73,7 @@ class _SidebarState extends State<Sidebar> {
 
   @override
   void dispose() {
+    feed.removeListener(feedUpdated);
     client.removeListener(clientUpdated);
     mainMenu.removeListener(menuUpdated);
     super.dispose();

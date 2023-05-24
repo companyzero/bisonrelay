@@ -1,5 +1,3 @@
-import 'dart:collection';
-
 import 'package:flutter/cupertino.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';

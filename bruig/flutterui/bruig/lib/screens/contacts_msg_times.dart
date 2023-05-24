@@ -1,4 +1,3 @@
-import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/models/client.dart';
 import 'package:flutter/material.dart';
@@ -7,8 +6,8 @@ import 'package:golib_plugin/golib_plugin.dart';
 
 class ContactsLastMsgTimesScreen extends StatefulWidget {
   static const routeName = "contactsLastMsgTimes";
-  ClientModel client;
-  ContactsLastMsgTimesScreen(this.client, {super.key});
+  final ClientModel client;
+  const ContactsLastMsgTimesScreen(this.client, {super.key});
 
   @override
   State<ContactsLastMsgTimesScreen> createState() =>
@@ -16,9 +15,9 @@ class ContactsLastMsgTimesScreen extends StatefulWidget {
 }
 
 class _UserLastMsgTime extends StatelessWidget {
-  LastUserReceivedTime info;
-  ChatModel chat;
-  _UserLastMsgTime(this.info, this.chat, {super.key});
+  final LastUserReceivedTime info;
+  final ChatModel chat;
+  const _UserLastMsgTime(this.info, this.chat);
 
   void requestRatchetReset(BuildContext context) async {
     chat.requestKXReset();
@@ -29,7 +28,7 @@ class _UserLastMsgTime extends StatelessWidget {
   Widget build(BuildContext context) {
     var textColor = const Color(0xFF8E8D98);
     return Container(
-      margin: EdgeInsets.only(top: 5),
+      margin: const EdgeInsets.only(top: 5),
       child: Row(children: [
         Flexible(
             flex: 1,
@@ -93,7 +92,6 @@ class _ContactsLastMsgTimesScreenState
 
   @override
   Widget build(BuildContext context) {
-    var theme = Theme.of(context);
     var textColor = const Color(0xFF8E8D98);
     return Scaffold(
       body: Center(

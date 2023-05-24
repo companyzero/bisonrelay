@@ -51,7 +51,6 @@ class _LNAccountsPageState extends State<LNAccountsPage> {
   @override
   Widget build(BuildContext context) {
     var theme = Theme.of(context);
-    var textColor = theme.focusColor;
     var secondaryTextColor = theme.dividerColor;
     var darkTextColor = theme.indicatorColor;
     var dividerColor = theme.highlightColor;

@@ -1,66 +1,34 @@
+import 'dart:async';
+
 import 'package:bruig/screens/manage_content/manage_content.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:bruig/models/downloads.dart';
 import 'package:bruig/screens/manage_content/downloads.dart';
 import 'package:bruig/components/manage_bar.dart';
-
-/*
-
-  @override
-  Widget build(BuildContext context) {
-    var theme = Theme.of(context);
-    var backgroundColor = theme.backgroundColor;
-    return Consumer<ThemeNotifier>(
-      builder: (context, theme, _) => Container(
-        margin: const EdgeInsets.all(1),
-        decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(3), color: backgroundColor),
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Row(children: [
-              const Expanded(
-                child: Text("News Feed",
-                    style: TextStyle(
-                      fontSize: 20,
-                    )),
-              ),
-              ElevatedButton(
-                  onPressed: () {
-                    Navigator.of(context, rootNavigator: true)
-                        .pushNamed('/newPost');
-                  },
-                  child: const Text("New Post")),
-              const SizedBox(width: 20)
-            ]),
-            const SizedBox(height: 20),
-            Expanded(
-                child: 
-            )),
-            const SizedBox(height: 20),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-*/
+import 'package:bruig/screens/overview.dart';
+import 'package:bruig/components/empty_widget.dart';
+import 'package:bruig/models/menus.dart';
 
 class ManageContentScreenTitle extends StatelessWidget {
   const ManageContentScreenTitle({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Text("Bison Relay / Manage Content",
-        style: TextStyle(fontSize: 15, color: Theme.of(context).focusColor));
+    return Consumer<MainMenuModel>(builder: (context, menu, child) {
+      var idx = LnScreenSub.indexWhere((e) => e.pageTab == menu.activePageTab);
+
+      return Text(
+          "Bison Relay / Manage Content / ${ManageContentScreenSub[idx].label}",
+          style: TextStyle(fontSize: 15, color: Theme.of(context).focusColor));
+    });
   }
 }
 
 class ManageContentScreen extends StatefulWidget {
   static const routeName = '/manageContent';
-  const ManageContentScreen({Key? key}) : super(key: key);
+  final MainMenuModel menu;
+  const ManageContentScreen(this.menu, {Key? key}) : super(key: key);
 
   @override
   State<ManageContentScreen> createState() => _ManageContentScreenState();
@@ -84,6 +52,8 @@ class _ManageContentScreenState extends State<ManageContentScreen> {
 
   void onItemChanged(int index) {
     setState(() => tabIndex = index);
+    Timer(const Duration(milliseconds: 1),
+        () async => widget.menu.activePageTab = index);
   }
 
   @override
@@ -103,8 +73,18 @@ class _ManageContentScreenState extends State<ManageContentScreen> {
 
   @override
   Widget build(BuildContext context) {
+    bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
+    if (ModalRoute.of(context)!.settings.arguments != null) {
+      final args = ModalRoute.of(context)!.settings.arguments as PageTabs;
+      tabIndex = args.tabIndex;
+    }
+
     return Row(children: [
-      ManageContentBar(onItemChanged, tabIndex),
+      ModalRoute.of(context)!.settings.arguments == null
+          ? isScreenSmall
+              ? const Empty()
+              : ManageContentBar(onItemChanged, tabIndex)
+          : const Empty(),
       Expanded(child: activeTab())
     ]);
   }

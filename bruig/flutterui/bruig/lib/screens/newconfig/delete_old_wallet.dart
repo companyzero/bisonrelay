@@ -2,7 +2,6 @@ import 'package:bruig/components/buttons.dart';
 import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/models/newconfig.dart';
 import 'package:flutter/material.dart';
-import 'package:path/path.dart';
 
 const _warnMsg = "There is an existing, incomplete install of"
     "the wallet. If this really was an unusued wallet, delete "

@@ -27,8 +27,6 @@ class _VerifyServerScreen extends StatelessWidget {
     var backgroundColor = const Color(0xFF19172C);
     var cardColor = const Color(0xFF05031A);
     var textColor = const Color(0xFF8E8D98);
-    var secondaryTextColor = const Color(0xFFE4E3E6);
-    var darkTextColor = const Color(0xFF5A5968);
     return Scaffold(
         body: Container(
             color: backgroundColor,
