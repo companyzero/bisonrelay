@@ -13,7 +13,15 @@ Shipping     : ${{ .Order.ShipCharge }}
 Exchange Rate: {{ .Order.ExchangeRate }} DCR/USD  
 DCR Amount   : {{ .Order.TotalDCR.String }}  
 Invoice      : {{ .Order.Invoice }}  
-Shipping Addr: {{ .Order.ShipAddr }}  
+{{if .Order.ShipAddr ne nil }}
+Shipping Addr:
+  {{ .Order.ShipAddr.Name }}
+  {{ .Order.ShipAddr.Address1 }}
+  {{ .Order.ShipAddr.Address2 }}
+  {{ .Order.ShipAddr.City }} {{ .Order.ShipAddr.State }} {{ .Order.ShipAddr.PostalCode }}
+  {{ .Order.ShipAddr.CountryCode }}
+  {{ .Order.ShipAddr.Phone }}
+{{end}}
 
 {{ if eq .Order.Status "placed" }}
 Switch status to [shipped](/admin/orderstatusto/{{.Order.User}}/{{.Order.ID}}/shipped) [completed](/admin/orderstatusto/{{.Order.User}}/{{.Order.ID}}/completed) [canceled](/admin/orderstatusto/{{.Order.User}}/{{.Order.ID}}/canceled)
