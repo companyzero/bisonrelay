@@ -215,17 +215,40 @@ func (s *Store) handlePlaceOrder(ctx context.Context, uid clientintf.UserID,
 		}, nil
 	}
 
-	// Process form data.
-	var formData ShippingAddress
-	if err := json.Unmarshal(request.Data, &formData); err != nil {
-		return &rpc.RMFetchResourceReply{
-			Status: rpc.ResourceStatusBadRequest,
-			Data:   []byte("request data not valid json"),
-		}, nil
-	}
 	var shipping *ShippingAddress
-	if formData.Address1 != "" {
-		shipping = &formData
+	// Verify the items
+	for _, item := range cart.Items {
+		prod, ok := s.products[item.Product.SKU]
+		if !ok {
+			return &rpc.RMFetchResourceReply{
+				Status: rpc.ResourceStatusBadRequest,
+				Data:   []byte(fmt.Sprintf("SKU %q does not exist", item.Product.SKU)),
+			}, nil
+		}
+		// If a product requires shipping, ensure a shipping address
+		// was sent.
+		if shipping == nil && prod.Shipping {
+			// Process form data.
+			var formData ShippingAddress
+			if err := json.Unmarshal(request.Data, &formData); err != nil {
+				return &rpc.RMFetchResourceReply{
+					Status: rpc.ResourceStatusBadRequest,
+					Data:   []byte("request data not valid json"),
+				}, nil
+			}
+			shipping = &formData
+
+			if shipping.Name == "" || shipping.Address1 == "" ||
+				shipping.City == "" || shipping.State == "" ||
+				shipping.PostalCode == "" {
+				return &rpc.RMFetchResourceReply{
+					Status: rpc.ResourceStatusBadRequest,
+					Data:   []byte("incomplete shipping address"),
+				}, nil
+			}
+			// TODO: proper address validation, optional phone
+			// number validation.
+		}
 	}
 
 	// Create the order.
