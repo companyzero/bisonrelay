@@ -1864,9 +1864,37 @@ var lnCommands = []tuicmd{
 				force = true
 			}
 
-			chanPoint, err := strToChanPoint(args[0])
-			if err != nil {
-				return err
+			var chanPoint *lnrpc.ChannelPoint
+			if len(args) < 64 {
+				// Try to find by the prefix of the channel point.
+				chans, err := as.lnRPC.ListChannels(as.ctx,
+					&lnrpc.ListChannelsRequest{})
+				if err != nil {
+					return err
+				}
+				for _, c := range chans.Channels {
+					if strings.HasPrefix(c.ChannelPoint, args[0]) {
+						cp, err := strToChanPoint(c.ChannelPoint)
+						if err != nil {
+							return err
+						} else if chanPoint != nil {
+							return fmt.Errorf("channel prefix %q "+
+								"matches multiple channels", args[0])
+						}
+						chanPoint = cp
+					}
+				}
+				if chanPoint == nil {
+					return fmt.Errorf("channel with "+
+						"ChannelPoint prefix %s not found",
+						args[0])
+				}
+			} else {
+				var err error
+				chanPoint, err = strToChanPoint(args[0])
+				if err != nil {
+					return err
+				}
 			}
 
 			as.cwHelpMsg("Requesting channel %s to be closed",
@@ -2072,17 +2100,18 @@ var lnCommands = []tuicmd{
 			as.cwHelpMsgs(func(pf printf) {
 				pf("LN Channels: %d", len(chans.Channels))
 				if !debug {
-					pf("          send                    recv node")
+					pf("      chan       send                    recv node")
 				}
 				for _, c := range chans.Channels {
 					active := "✓"
 					if !c.Active {
 						active = "✗"
 					}
+					shortCP := c.ChannelPoint[:6]
 					local := fmt.Sprintf("%.8f", float64(c.LocalBalance)/1e8)
 					remote := fmt.Sprintf("%.8f", float64(c.RemoteBalance)/1e8)
 					balDisplay := channelBalanceDisplay(c.LocalBalance, c.RemoteBalance)
-					pf("  %s %s %s %s %s", active, local, balDisplay, remote,
+					pf("  %s %s %s %s %s %s", active, shortCP, local, balDisplay, remote,
 						nodeAlias[c.RemotePubkey])
 
 					if debug {
@@ -2091,11 +2120,11 @@ var lnCommands = []tuicmd{
 							c.ChannelPoint,
 							sid,
 							dcrutil.Amount(c.Capacity).ToCoin())
-						pf("   pub:%s   localBal:%.8f remoteBal:%.8f",
+						pf("  pub:%s   localBal:%.8f remoteBal:%.8f",
 							c.RemotePubkey,
 							dcrutil.Amount(c.LocalBalance).ToCoin(),
 							dcrutil.Amount(c.RemoteBalance).ToCoin())
-						pf("    unsettled:%.8f updts:%d htlcs:%d",
+						pf("  unsettled:%.8f updts:%d htlcs:%d",
 							dcrutil.Amount(c.UnsettledBalance).ToCoin(),
 							c.NumUpdates,
 							len(c.PendingHtlcs))
