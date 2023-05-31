@@ -566,7 +566,7 @@ func (db *DB) RemoveUser(tx ReadWriteTx, id UserID, block bool) error {
 }
 
 // LogPM logs a PM message from the given user.
-func (db *DB) LogPM(tx ReadTx, uid UserID, internal bool, from, msg string, ts time.Time) error {
+func (db *DB) LogPM(tx ReadWriteTx, uid UserID, internal bool, from, msg string, ts time.Time) error {
 	entry, err := db.getBaseABEntry(uid)
 	if err != nil {
 		return err
@@ -578,7 +578,7 @@ func (db *DB) LogPM(tx ReadTx, uid UserID, internal bool, from, msg string, ts t
 }
 
 // LogGCMsg logs a GC message sent in the given GC.
-func (db *DB) LogGCMsg(tx ReadTx, gcName string, gcID zkidentity.ShortID,
+func (db *DB) LogGCMsg(tx ReadWriteTx, gcName string, gcID zkidentity.ShortID,
 	internal bool, from, msg string, ts time.Time) error {
 
 	logFname := fmt.Sprintf("groupchat.%s.%s.log", strescape.PathElement(gcName), gcID)
