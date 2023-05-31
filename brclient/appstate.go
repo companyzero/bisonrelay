@@ -2142,6 +2142,47 @@ func (as *appState) kxSearchPostAuthor(from clientintf.UserID, pid clientintf.Po
 	return err
 }
 
+// editExternalTextFile launches $EDITOR and returns the edited text. Blocks
+// until the $EDITOR process exits.
+func (as *appState) editExternalTextFile() (string, error) {
+	f, err := os.CreateTemp("", "br-text-")
+	if err != nil {
+		return "", fmt.Errorf("failed to create temp file: %v", err)
+	}
+	fname := f.Name()
+	if err := f.Close(); err != nil {
+		return "", err
+	}
+
+	editor := os.Getenv("EDITOR")
+	if editor == "" {
+		return "", fmt.Errorf("$EDITOR env var is empty")
+	}
+
+	c := exec.Command(editor, f.Name())
+	ch := make(chan error, 1)
+	cmd := tea.ExecProcess(c, func(err error) tea.Msg {
+		ch <- err
+		return nil
+	})
+
+	as.sendMsg(msgRunCmd(cmd))
+	select {
+	case err := <-ch:
+		if err != nil {
+			return "", err
+		}
+	case <-as.ctx.Done():
+		return "", as.ctx.Err()
+	}
+
+	data, err := os.ReadFile(fname)
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
+}
+
 func (as *appState) viewEmbed(embedded mdembeds.EmbeddedArgs) (tea.Cmd, error) {
 	if len(embedded.Data) == 0 {
 		return nil, fmt.Errorf("no embedded file")

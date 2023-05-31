@@ -1527,6 +1527,26 @@ var postCommands = []tuicmd{
 			return nil
 		},
 	}, {
+		cmd:     "external",
+		aliases: []string{"ext", "newext"},
+		descr:   "Launch $EDITOR to edit a new post",
+		handler: func(args []string, as *appState) error {
+			go func() {
+				post, err := as.editExternalTextFile()
+				if err != nil {
+					as.cwHelpMsg("Unable to open external editor: %v", err)
+					return
+				}
+
+				if strings.TrimSpace(post) == "" {
+					return
+				}
+
+				as.createPost(post)
+			}()
+			return nil
+		},
+	}, {
 		cmd:     "subscribe",
 		aliases: []string{"sub"},
 		usage:   "<nick>",
