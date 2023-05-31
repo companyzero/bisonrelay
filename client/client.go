@@ -760,7 +760,6 @@ type ChatHistoryEntry struct {
 // saved logs.
 func (c *Client) ReadUserHistoryMessages(uid UserID, gcName string, page, pageNum int) ([]ChatHistoryEntry, error) {
 	if c.cfg.NoLoadChatHistory {
-		c.log.Infof("cfg is false")
 		return nil, nil
 	}
 	var err error
