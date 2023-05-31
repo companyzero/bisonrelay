@@ -3117,7 +3117,7 @@ var commands = []tuicmd{
 		sub:   postCommands,
 		completer: func(args []string, arg string, as *appState) []string {
 			if len(args) == 0 {
-				return cmdCompleter(ftCommands, arg, false)
+				return cmdCompleter(postCommands, arg, false)
 			}
 			return nil
 		},
