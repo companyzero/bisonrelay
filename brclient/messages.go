@@ -185,6 +185,8 @@ func emitMsg(msg tea.Msg) tea.Cmd {
 	}
 }
 
+type msgRunCmd func() tea.Msg
+
 // isQuitMsg returns true if the app should quit as a response to the given
 // msg. It returns an error with the reason for quitting.
 func isQuitMsg(msg tea.Msg) error {

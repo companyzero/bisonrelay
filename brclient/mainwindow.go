@@ -559,6 +559,9 @@ func (mws mainWindowState) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case msgActiveCWRequestedPage:
 		mws.updateViewportContent()
 
+	case msgRunCmd:
+		return mws, tea.Cmd(msg)
+
 	default:
 		// Handle other messages.
 		mws.textArea, cmd = mws.textArea.Update(msg)
