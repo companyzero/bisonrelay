@@ -153,8 +153,6 @@ class ChatModel extends ChangeNotifier {
   void appendHistory(ChatEventModel msg) {
     if (_msgs.isNotEmpty &&
         _msgs[_msgs.length - 1].source?.id == msg.source?.id) {
-      print(
-          "${_msgs[_msgs.length - 1].source?.id} ${msg.source?.id} Same user ");
       msg.sameUser = true;
     }
     _msgs.add(msg);
