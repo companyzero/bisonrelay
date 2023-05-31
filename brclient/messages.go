@@ -187,6 +187,12 @@ func emitMsg(msg tea.Msg) tea.Cmd {
 
 type msgRunCmd func() tea.Msg
 
+type msgExternalCommentResult struct {
+	err    error
+	data   string
+	parent *zkidentity.ShortID
+}
+
 // isQuitMsg returns true if the app should quit as a response to the given
 // msg. It returns an error with the reason for quitting.
 func isQuitMsg(msg tea.Msg) error {

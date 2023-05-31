@@ -40,6 +40,10 @@ root = {{ .Root }}
 # Show a desktop notification.
 # bellcmd = notify-send -i mail-unread "[$src]> $msg"
 
+# Set externaleditorforcomments to true to launch $EDITOR to write new comments
+# in the posts window.
+# externaleditorforcomments = false
+
 # logging and debug
 [log]
 

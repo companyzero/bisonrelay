@@ -210,6 +210,8 @@ type appState struct {
 
 	inviteFundsAccount string
 
+	extenalEditorForComments bool
+
 	sstore       *simplestore.Store
 	ssPayType    simpleStorePayType
 	ssAcct       string
@@ -1887,6 +1889,15 @@ func (as *appState) activatePost(summ *clientdb.PostSummary) {
 
 func (as *appState) commentPost(from clientintf.UserID, pid clientintf.PostID,
 	comment string, parentComment *clientintf.ID) {
+
+	// Process local data.
+	comment = resources.RemoveEndOfPostMarker(comment)
+	root, _ := os.Getwd()
+	comment = resources.ProcessEmbeds(comment, root, as.log)
+
+	if strings.TrimSpace(comment) == "" {
+		return
+	}
 
 	as.postsMtx.Lock()
 	as.myComments = append(as.myComments, comment)
@@ -3599,6 +3610,8 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 
 		inboundMsgs:     &genericlist.List[inboundRemoteMsg]{},
 		inboundMsgsChan: make(chan struct{}, 8),
+
+		extenalEditorForComments: args.ExtenalEditorForComments,
 
 		sstore:       sstore,
 		ssPayType:    args.SimpleStorePayType,

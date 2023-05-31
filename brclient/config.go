@@ -115,6 +115,8 @@ type config struct {
 	RPCClientCAPath    string
 	RPCIssueClientCert bool
 
+	ExtenalEditorForComments bool
+
 	ResourcesUpstream     string
 	SimpleStorePayType    simpleStorePayType
 	SimpleStoreAccount    string
@@ -289,6 +291,8 @@ func loadConfig() (*config, error) {
 	flagTorIsolation := fs.Bool("torisolation", false, "")
 	flagCircuitLimit := fs.Uint("circuitlimit", 32, "max number of open connections per proxy connection")
 
+	flagExternalEditorForComments := fs.Bool("externaleditorforcomments", false, "")
+
 	var mimetypes cfgStringArray
 	fs.Var(&mimetypes, "mimetype", "List of mimetypes with viewer")
 
@@ -461,6 +465,8 @@ func loadConfig() (*config, error) {
 		RPCIssueClientCert: *flagRPCIssueClientCert,
 		InviteFundsAccount: *flagInviteFundsAccount,
 		ResourcesUpstream:  *flagResourcesUpstream,
+
+		ExtenalEditorForComments: *flagExternalEditorForComments,
 
 		SimpleStorePayType:    ssPayType,
 		SimpleStoreAccount:    *flagSimpleStoreAccount,

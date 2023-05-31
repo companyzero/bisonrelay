@@ -15,6 +15,7 @@ import (
 	"github.com/companyzero/bisonrelay/internal/mdembeds"
 	"github.com/companyzero/bisonrelay/internal/strescape"
 	"github.com/companyzero/bisonrelay/rpc"
+	"github.com/companyzero/bisonrelay/zkidentity"
 	"github.com/decred/dcrd/dcrutil/v4"
 	"github.com/muesli/reflow/wordwrap"
 	"github.com/muesli/reflow/wrap"
@@ -806,27 +807,38 @@ func (pw postWindow) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return pw, cmd
 
-		case msg.String() == "c":
-			pw.debug = ""
-			pw.cmdErr = ""
-			pw.commenting = true
-			pw.replying = false
-			pw.textArea.Placeholder = "Type top-level comment"
-			cmd = pw.textArea.Focus()
-			pw.textArea.SetWidth(pw.as.winW)
-			pw.recalcViewportSize()
-			return pw, cmd
-
-		case msg.String() == "r":
-			pw.debug = ""
-			pw.cmdErr = ""
-			pw.commenting = true
-			pw.replying = true
-			pw.textArea.Placeholder = "Type reply to comment"
-			cmd = pw.textArea.Focus()
-			pw.textArea.SetWidth(pw.as.winW)
-			pw.recalcViewportSize()
-			return pw, cmd
+		case msg.String() == "c", msg.String() == "r":
+			replying := msg.String() == "r"
+			if pw.as.extenalEditorForComments {
+				var parent *zkidentity.ShortID
+				if replying && pw.selComment < len(pw.comments) {
+					selComment := pw.comments[pw.selComment]
+					parent = &selComment.id
+				}
+				go func() {
+					res, err := pw.as.editExternalTextFile("")
+					msg := msgExternalCommentResult{
+						err:    err,
+						data:   res,
+						parent: parent,
+					}
+					pw.as.sendMsg(msg)
+				}()
+			} else {
+				pw.debug = ""
+				pw.cmdErr = ""
+				pw.commenting = true
+				pw.replying = replying
+				if replying {
+					pw.textArea.Placeholder = "Type reply to comment"
+				} else {
+					pw.textArea.Placeholder = "Type top-level comment"
+				}
+				cmd = pw.textArea.Focus()
+				pw.textArea.SetWidth(pw.as.winW)
+				pw.recalcViewportSize()
+				return pw, cmd
+			}
 
 		case msg.String() == "I":
 			pw.debug = ""
@@ -931,6 +943,20 @@ func (pw postWindow) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// Switch to it.
 			pw.as.activatePost(&msg.summ)
 			pw.renderPost()
+		}
+
+	case msgRunCmd:
+		return pw, tea.Cmd(msg)
+
+	case msgExternalCommentResult:
+		if msg.err != nil {
+			pw.cmdErr = msg.err.Error()
+		} else {
+			go pw.as.commentPost(pw.summ.From, pw.summ.ID,
+				msg.data, msg.parent)
+			pw.textArea.SetValue("")
+			pw.recalcViewportSize()
+			pw.commenting = false
 		}
 
 	default:
