@@ -118,6 +118,7 @@ const (
 	CTCancelOnboard                   = 0x75
 	CTFetchResource                   = 0x76
 	CTHandshake                       = 0x77
+	CTLoadUserHistory                 = 0x78
 
 	NTInviteReceived         = 0x1001
 	NTInviteAccepted         = 0x1002

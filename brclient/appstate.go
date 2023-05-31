@@ -1065,6 +1065,21 @@ func (as *appState) findOrNewGCWindow(gcID zkidentity.ShortID) *chatWindow {
 	as.updatedCW[len(as.chatWindows)-1] = false
 	as.chatWindowsMtx.Unlock()
 
+	chatHistory, err := as.c.ReadUserHistoryMessages(gcID, gcName, 500, 0)
+	if err != nil {
+		cw.newInternalMsg("Unable to read history messages")
+	}
+	for i, chatLog := range chatHistory {
+		var empty *zkidentity.ShortID
+		if i == 0 ||
+			(i > 0 &&
+				time.Unix(chatLog.Timestamp, 0).Format("2006-01-02") !=
+					time.Unix(chatHistory[i-1].Timestamp, 0).Format("2006-01-02")) {
+			cw.newInternalMsg(fmt.Sprintf("Day changed to %s", time.Unix(chatLog.Timestamp, 0).Format("2006-01-02")))
+		}
+		cw.newHistoryMsg(chatLog.From, chatLog.Message, empty, time.Unix(chatLog.Timestamp, 0), chatLog.From == cw.me)
+	}
+
 	as.footerInvalidate()
 	as.diagMsg("Started Group Chat %s", gcName)
 	return cw
@@ -1097,6 +1112,20 @@ func (as *appState) findOrNewChatWindow(id clientintf.UserID, alias string) *cha
 	as.updatedCW[len(as.chatWindows)-1] = false
 	as.chatWindowsMtx.Unlock()
 
+	chatHistory, err := as.c.ReadUserHistoryMessages(id, "", 500, 0)
+	if err != nil {
+		cw.newInternalMsg("Unable to read history messages")
+	}
+	for i, chatLog := range chatHistory {
+		if i == 0 ||
+			(i > 0 &&
+				time.Unix(chatLog.Timestamp, 0).Format("2006-01-02") !=
+					time.Unix(chatHistory[i-1].Timestamp, 0).Format("2006-01-02")) {
+			cw.newInternalMsg(fmt.Sprintf("Day changed to %s", time.Unix(chatLog.Timestamp, 0).Format("2006-01-02")))
+		}
+		var empty *zkidentity.ShortID
+		cw.newHistoryMsg(chatLog.From, chatLog.Message, empty, time.Unix(chatLog.Timestamp, 0), chatLog.From == cw.me)
+	}
 	as.footerInvalidate()
 	as.diagMsg("Started chat with %s", alias)
 	return cw
@@ -2933,6 +2962,7 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		CompressLevel:     args.CompressLevel,
 		Notifications:     ntfns,
 		ResourcesProvider: resRouter,
+		NoLoadChatHistory: args.NoLoadChatHistory,
 
 		CertConfirmer: func(ctx context.Context, cs *tls.ConnectionState,
 			svrID *zkidentity.PublicIdentity) error {

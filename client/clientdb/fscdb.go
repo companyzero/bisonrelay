@@ -1,6 +1,7 @@
 package clientdb
 
 import (
+	"bufio"
 	"bytes"
 	"crypto/rand"
 	"encoding/base64"
@@ -10,6 +11,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/companyzero/bisonrelay/inidb"
@@ -417,6 +419,83 @@ func (db *DB) DeleteTransResetHalfKX(tx ReadWriteTx, id UserID) error {
 	return os.Remove(filename)
 }
 
+func (db *DB) readLogMsg(logFname string, page, pageNum int) ([]PMLogEntry, error) {
+	if db.cfg.MsgsRoot == "" {
+		return nil, nil
+	}
+
+	filename := filepath.Join(db.cfg.MsgsRoot, logFname)
+	f, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0600)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	loggedMessages := make([]PMLogEntry, 0)
+	reader := bufio.NewReader(f)
+	prevLine := ""
+	prevLineTimestamp := int64(0)
+	prevName := ""
+	for {
+		line, err := reader.ReadString('\n')
+		if err != nil {
+			// Log any left over message if we're at the end
+			if prevLine != "" && prevName != "" && prevLineTimestamp != 0 {
+				loggedMessages = append(loggedMessages, PMLogEntry{Message: prevLine,
+					From: prevName, Timestamp: prevLineTimestamp})
+			}
+			break
+		}
+
+		lineSplit := strings.Split(line, " ")
+		// Try to read timestamp
+		ts := lineSplit[0]
+		t, err := time.ParseInLocation("2006-01-02T15:04:05 ", ts, time.Local)
+		if err != nil {
+			// No new time to parse at the front of the line so just add the
+			// message to the previous line, then go to the next line.
+			prevLine += "\n" + line
+			continue
+		}
+		// This means there was a new timestamp in the current line so
+		if prevLine != "" && prevName != "" && prevLineTimestamp != 0 {
+			loggedMessages = append(loggedMessages, PMLogEntry{Message: prevLine,
+				From: prevName, Timestamp: prevLineTimestamp})
+		}
+
+		// This surely means there is a new log line if there is a parsable timestamp at the front.
+
+		name := lineSplit[1]
+		message := ""
+		if strings.Contains(name, "<") {
+			name = strings.Replace(name, "<", "", -1)
+			name = strings.Replace(name, ">", "", -1)
+			message = strings.TrimSpace(strings.Split(line, ">")[1])
+		} else if strings.Contains(name, "*") {
+			// Not a message to pass through, so reset prev info and move on.
+			prevLine = ""
+			prevName = ""
+			prevLineTimestamp = 0
+			continue
+		}
+
+		prevLine = message
+		prevName = name
+		prevLineTimestamp = t.Unix()
+
+	}
+	// Return only the requested page/pageNum
+	pageEnd := len(loggedMessages) - page*pageNum
+	pageStart := pageEnd - page
+	if pageEnd < 0 || pageEnd > len(loggedMessages) {
+		pageEnd = len(loggedMessages)
+	}
+	if pageStart < 0 {
+		pageStart = 0
+	}
+	return loggedMessages[pageStart:pageEnd], nil
+}
+
 func (db *DB) logMsg(logFname string, internal bool, from, msg string, ts time.Time) error {
 	if db.cfg.MsgsRoot == "" {
 		return nil
@@ -432,17 +511,17 @@ func (db *DB) logMsg(logFname string, internal bool, from, msg string, ts time.T
 	b := new(bytes.Buffer)
 	lastMsgTs, ok := db.lastMsgTS[logFname]
 	if !ok {
-		b.WriteString(ts.Format("2006-01-02T15:04:04 "))
+		b.WriteString(ts.Format("2006-01-02T15:04:05 "))
 		b.WriteString(fmt.Sprintf("* Conversation started %s", ts.Format("2006-01-02")))
 		b.WriteRune('\n')
 	} else if lastMsgTs.Day() != ts.Day() {
-		b.WriteString(ts.Format("2006-01-02T15:04:04 "))
+		b.WriteString(ts.Format("2006-01-02T15:04:05 "))
 		b.WriteString(fmt.Sprintf("* Day Changed to %s", ts.Format("2006-01-02")))
 		b.WriteRune('\n')
 	}
 	db.lastMsgTS[logFname] = ts
 
-	b.WriteString(ts.Format("2006-01-02T15:04:04 "))
+	b.WriteString(ts.Format("2006-01-02T15:04:05 "))
 
 	if internal {
 		b.WriteString("* ")
@@ -503,6 +582,25 @@ func (db *DB) LogGCMsg(tx ReadWriteTx, gcName string, gcID zkidentity.ShortID,
 
 	logFname := fmt.Sprintf("groupchat.%s.%s.log", strescape.PathElement(gcName), gcID)
 	return db.logMsg(logFname, internal, from, msg, ts)
+}
+
+// ReadLogPM reads the log of PM messages from the given user.
+func (db *DB) ReadLogPM(uid UserID, page, pageNum int) ([]PMLogEntry, error) {
+	entry, err := db.getBaseABEntry(uid)
+	if err != nil {
+		return nil, err
+	}
+
+	nick := entry.ID.Nick
+	logFname := fmt.Sprintf("%s.%s.log", strescape.PathElement(nick), uid)
+	return db.readLogMsg(logFname, page, pageNum)
+}
+
+// ReadLogGCMsg reads the log a GC messages sent in the given GC.
+func (db *DB) ReadLogGCMsg(gcName string, gcID zkidentity.ShortID, page, pageNum int) ([]PMLogEntry, error) {
+
+	logFname := fmt.Sprintf("groupchat.%s.%s.log", strescape.PathElement(gcName), gcID)
+	return db.readLogMsg(logFname, page, pageNum)
 }
 
 // ReplaceLastConnDate replaces the last connection date of the local client to

@@ -53,6 +53,8 @@ class InitClient {
   final bool torisolation;
   @JsonKey(name: 'circuit_limit')
   final int circuitLimit;
+  @JsonKey(name: 'no_load_chat_history')
+  final bool noLoadChatHistory;
 
   InitClient(
       this.dbRoot,
@@ -73,7 +75,8 @@ class InitClient {
       this.torisolation,
       this.proxyUsername,
       this.proxyPassword,
-      this.circuitLimit);
+      this.circuitLimit,
+      this.noLoadChatHistory);
 
   Map<String, dynamic> toJson() => _$InitClientToJson(this);
 }
@@ -1652,6 +1655,18 @@ class Account {
 }
 
 @JsonSerializable()
+class LogEntry {
+  final String from;
+  final String message;
+  final bool internal;
+  final int timestamp;
+  LogEntry(this.from, this.message, this.internal, this.timestamp);
+
+  factory LogEntry.fromJson(Map<String, dynamic> json) =>
+      _$LogEntryFromJson(json);
+}
+
+@JsonSerializable()
 class SendOnChain {
   final String addr;
   final int amount;
@@ -1660,6 +1675,19 @@ class SendOnChain {
 
   SendOnChain(this.addr, this.amount, this.fromAccount);
   Map<String, dynamic> toJson() => _$SendOnChainToJson(this);
+}
+
+@JsonSerializable()
+class LoadUserHistory {
+  final String uid;
+  @JsonKey(name: "gc_name")
+  final String gcName;
+  final int page;
+  @JsonKey(name: "page_num")
+  final int pageNum;
+
+  LoadUserHistory(this.uid, this.gcName, this.page, this.pageNum);
+  Map<String, dynamic> toJson() => _$LoadUserHistoryToJson(this);
 }
 
 @JsonSerializable()
@@ -2453,6 +2481,16 @@ abstract class PluginPlatform {
     return (res as List).map<Account>((v) => Account.fromJson(v)).toList();
   }
 
+  Future<List<LogEntry>> readChatHistory(
+      String uid, String gcName, int page, int pageNum) async {
+    var res = await asyncCall(
+        CTLoadUserHistory, LoadUserHistory(uid, gcName, page, pageNum));
+    if (res == null) {
+      return List.empty();
+    }
+    return (res as List).map<LogEntry>((v) => LogEntry.fromJson(v)).toList();
+  }
+
   Future<void> createAccount(String name) async =>
       await asyncCall(CTCreateAccount, name);
 
@@ -2605,6 +2643,7 @@ const int CTStartOnboard = 0x74;
 const int CTCancelOnboard = 0x75;
 const int CTFetchResource = 0x76;
 const int CTHandshake = 0x77;
+const int CTLoadUserHistory = 0x78;
 
 const int notificationsStartID = 0x1000;
 

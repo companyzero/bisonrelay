@@ -162,7 +162,8 @@ class _AppState extends State<App> with WindowListener {
           cfg.torisolation,
           cfg.proxyUsername,
           cfg.proxyPassword,
-          cfg.circuitLimit);
+          cfg.circuitLimit,
+          cfg.noLoadChatHistory);
       await Golib.initClient(initArgs);
 
       navkey.currentState!.pushReplacementNamed(OverviewScreen.routeName);

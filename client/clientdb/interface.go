@@ -374,6 +374,13 @@ func (o *PageSessionOverview) appendRequest(uid clientintf.UserID, tag rpc.Resou
 	o.LastRequestTS = time.Now()
 }
 
+type PMLogEntry struct {
+	Message   string `json:"message"`
+	From      string `json:"from"`
+	Timestamp int64  `json:"timestamp"`
+	Internal  bool   `json:"internal"`
+}
+
 var (
 	LocalIDEmptyError       = errors.New("local ID is not initialized")
 	ServerIDEmptyError      = errors.New("server ID is not known")

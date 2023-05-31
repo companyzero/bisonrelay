@@ -26,6 +26,7 @@ InitClient _$InitClientFromJson(Map<String, dynamic> json) => InitClient(
       json['proxy_username'] as String,
       json['proxy_password'] as String,
       json['circuit_limit'] as int,
+      json['no_load_chat_history'] as bool,
     );
 
 Map<String, dynamic> _$InitClientToJson(InitClient instance) =>
@@ -49,6 +50,7 @@ Map<String, dynamic> _$InitClientToJson(InitClient instance) =>
       'proxy_password': instance.proxyPassword,
       'torisolation': instance.torisolation,
       'circuit_limit': instance.circuitLimit,
+      'no_load_chat_history': instance.noLoadChatHistory,
     };
 
 IDInit _$IDInitFromJson(Map<String, dynamic> json) => IDInit(
@@ -1683,6 +1685,20 @@ Map<String, dynamic> _$AccountToJson(Account instance) => <String, dynamic>{
       'external_key_count': instance.externalKeyCount,
     };
 
+LogEntry _$LogEntryFromJson(Map<String, dynamic> json) => LogEntry(
+      json['from'] as String,
+      json['message'] as String,
+      json['internal'] as bool,
+      json['timestamp'] as int,
+    );
+
+Map<String, dynamic> _$LogEntryToJson(LogEntry instance) => <String, dynamic>{
+      'from': instance.from,
+      'message': instance.message,
+      'internal': instance.internal,
+      'timestamp': instance.timestamp,
+    };
+
 SendOnChain _$SendOnChainFromJson(Map<String, dynamic> json) => SendOnChain(
       json['addr'] as String,
       json['amount'] as int,
@@ -1694,6 +1710,22 @@ Map<String, dynamic> _$SendOnChainToJson(SendOnChain instance) =>
       'addr': instance.addr,
       'amount': instance.amount,
       'from_account': instance.fromAccount,
+    };
+
+LoadUserHistory _$LoadUserHistoryFromJson(Map<String, dynamic> json) =>
+    LoadUserHistory(
+      json['uid'] as String,
+      json['gc_name'] as String,
+      json['page'] as int,
+      json['page_num'] as int,
+    );
+
+Map<String, dynamic> _$LoadUserHistoryToJson(LoadUserHistory instance) =>
+    <String, dynamic>{
+      'uid': instance.uid,
+      'gc_name': instance.gcName,
+      'page': instance.page,
+      'page_num': instance.pageNum,
     };
 
 WriteInvite _$WriteInviteFromJson(Map<String, dynamic> json) => WriteInvite(

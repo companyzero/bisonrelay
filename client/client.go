@@ -68,6 +68,10 @@ type Config struct {
 	// the client and the server.
 	LogPings bool
 
+	// NoLoadChatHistory indicates whether to load existing chat history from
+	// chat log files.
+	NoLoadChatHistory bool
+
 	// CheckServerSession is called after a server session is established
 	// but before the OnServerSessionChangedNtfn notification is called and
 	// allows clients to check whether the connection is acceptable or if
@@ -739,6 +743,54 @@ func (c *Client) Handshake(uid UserID) error {
 		return nil
 	}
 	return c.sendWithSendQ("syn", rpc.RMHandshakeSYN{}, ru.ID())
+}
+
+// ChatHistoryEntry contains information parsed from a single line in a chat
+// log.
+type ChatHistoryEntry struct {
+	Message   string `json:"message"`
+	From      string `json:"from"`
+	Timestamp int64  `json:"timestamp"`
+	Internal  bool   `json:"internal"`
+}
+
+// ReadUserHistoryMessages determines which log parsing to use based on whether
+// a group chat name was provided in the arguments.  This function will return
+// an array of ChatHistoryEntry's that contain information from each line of
+// saved logs.
+func (c *Client) ReadUserHistoryMessages(uid UserID, gcName string, page, pageNum int) ([]ChatHistoryEntry, error) {
+	if c.cfg.NoLoadChatHistory {
+		return nil, nil
+	}
+	var err error
+	if gcName == "" {
+		_, err := c.rul.byID(uid)
+		if err != nil {
+			return nil, err
+		}
+	}
+	var messages []clientdb.PMLogEntry
+	if gcName != "" {
+		messages, err = c.db.ReadLogGCMsg(gcName, uid, page, pageNum)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		messages, err = c.db.ReadLogPM(uid, page, pageNum)
+		if err != nil {
+			return nil, err
+		}
+	}
+	chatHistory := make([]ChatHistoryEntry, 0, len(messages))
+	for _, entry := range messages {
+		chatHistory = append(chatHistory, ChatHistoryEntry{
+			Message:   entry.Message,
+			From:      entry.From,
+			Internal:  entry.Internal,
+			Timestamp: entry.Timestamp})
+	}
+
+	return chatHistory, nil
 }
 
 // maybeResetAllKXAfterConn checks whether it's needed to reset KX with all

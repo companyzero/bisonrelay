@@ -369,6 +369,7 @@ func handleInitClient(handle uint32, args InitClient) error {
 		CompressLevel:     4,
 		Notifications:     ntfns,
 		ResourcesProvider: resRouter,
+		NoLoadChatHistory: args.NoLoadChatHistory,
 
 		CertConfirmer: func(ctx context.Context, cs *tls.ConnectionState,
 			svrID *zkidentity.PublicIdentity) error {
@@ -1708,8 +1709,32 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		err := c.Handshake(args)
 		return nil, err
 
+	case CTLoadUserHistory:
+		var args LoadUserHistory
+		if err := cmd.decode(&args); err != nil {
+			return nil, err
+		}
+		chatHistory, err := c.ReadUserHistoryMessages(args.UID, args.GcName, args.Page, args.PageNum)
+		if err != nil {
+			return nil, err
+		}
+		chatLen := args.Page
+		if len(chatHistory) < args.Page {
+			chatLen = len(chatHistory)
+		}
+		res := make([]ChatLogEntry, 0, chatLen)
+		for _, chatLog := range chatHistory {
+			res = append(res, ChatLogEntry{
+				Message:   chatLog.Message,
+				From:      chatLog.From,
+				Internal:  chatLog.Internal,
+				Timestamp: chatLog.Timestamp,
+			})
+		}
+		return res, nil
 	}
 	return nil, nil
+
 }
 
 func handleLNTryExternalDcrlnd(args LNTryExternalDcrlnd) (*lnrpc.GetInfoResponse, error) {

@@ -7,6 +7,7 @@ import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:golib_plugin/util.dart';
 import '../storage_manager.dart';
+import 'package:intl/intl.dart';
 
 const SCE_unknown = 0;
 const SCE_sending = 1;
@@ -146,6 +147,15 @@ class ChatModel extends ChangeNotifier {
         _unreadEventCount += 1;
       }
     }
+    notifyListeners();
+  }
+
+  void appendHistory(ChatEventModel msg) {
+    if (_msgs.isNotEmpty &&
+        _msgs[_msgs.length - 1].source?.id == msg.source?.id) {
+      msg.sameUser = true;
+    }
+    _msgs.add(msg);
     notifyListeners();
   }
 
@@ -397,7 +407,7 @@ class ClientModel extends ChangeNotifier {
   Map<String, ChatModel> _activeChats = Map<String, ChatModel>();
   ChatModel? getExistingChat(String uid) => _activeChats[uid];
 
-  ChatModel _newChat(String id, String alias, bool isGC) {
+  Future<ChatModel> _newChat(String id, String alias, bool isGC) async {
     alias = alias.trim();
 
     var c = _activeChats[id];
@@ -412,6 +422,40 @@ class ClientModel extends ChangeNotifier {
     alias = alias == "" ? "[blank]" : alias;
     c = ChatModel(id, alias, isGC);
     _activeChats[id] = c;
+
+// Start with 500 messages and first page (0). We can load more with a scrolling
+// mechanism in the future
+    var chatHistory =
+        await Golib.readChatHistory(id, isGC ? alias : "", 500, 0);
+    for (int i = 0; i < chatHistory.length; i++) {
+      ChatEventModel evnt;
+      if (isGC) {
+        var m = GCMsg(
+            id,
+            chatHistory[i].from,
+            chatHistory[i].message,
+            chatHistory[i].timestamp *
+                (chatHistory[i].from == _nick ? 1000 : 1));
+        evnt = ChatEventModel(
+            m,
+            chatHistory[i].from != _nick
+                ? ChatModel(chatHistory[i].from, chatHistory[i].from, true)
+                : null);
+      } else {
+        var m = PM(
+            id,
+            chatHistory[i].message,
+            chatHistory[i].from == _nick,
+            chatHistory[i].timestamp *
+                (chatHistory[i].from == _nick ? 1000 : 1));
+        evnt = ChatEventModel(
+            m,
+            chatHistory[i].from != _nick
+                ? ChatModel(id, chatHistory[i].from, false)
+                : null);
+      }
+      c.appendHistory(evnt);
+    }
 
     // TODO: this test should be superflous.
     if (isGC) {
@@ -462,16 +506,16 @@ class ClientModel extends ChangeNotifier {
 
       var isGC = (evnt is GCMsg) || (evnt is GCUserEvent);
 
-      var chat = _newChat(evnt.sid, "", isGC);
+      var chat = await _newChat(evnt.sid, "", isGC);
       ChatModel? source = null;
       if (evnt is PM) {
         if (!evnt.mine) {
           source = chat;
         }
       } else if (evnt is GCMsg) {
-        source = _newChat(evnt.senderUID, "", false);
+        source = await _newChat(evnt.senderUID, "", false);
       } else if (evnt is GCUserEvent) {
-        source = _newChat(evnt.uid, "", false);
+        source = await _newChat(evnt.uid, "", false);
       } else {
         source = chat;
       }
@@ -584,7 +628,7 @@ class ClientModel extends ChangeNotifier {
 
   void acceptInvite(Invitation invite) async {
     var user = await Golib.acceptInvite(invite);
-    active = _newChat(user.uid, user.nick, false);
+    active = await _newChat(user.uid, user.nick, false);
   }
 
   List<String> _mediating = [];
@@ -608,7 +652,7 @@ class ClientModel extends ChangeNotifier {
       if (requestedMediateID(remoteUser.uid)) {
         _mediating.remove(remoteUser.uid);
       }
-      var chat = _newChat(remoteUser.uid, remoteUser.nick, false);
+      var chat = await _newChat(remoteUser.uid, remoteUser.nick, false);
       chat.append(
           ChatEventModel(SynthChatEvent("KX Completed", SCE_received), null));
     }

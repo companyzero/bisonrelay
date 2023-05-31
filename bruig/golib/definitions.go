@@ -25,6 +25,7 @@ type InitClient struct {
 	DebugLevel        string `json:"debug_level"`
 	WantsLogNtfns     bool   `json:"wants_log_ntfns"`
 	ResourcesUpstream string `json:"resources_upstream"`
+	NoLoadChatHistory bool   `json:"no_load_chat_history"`
 
 	SimpleStorePayType    string  `json:"simplestore_pay_type"`
 	SimpleStoreAccount    string  `json:"simplestore_account"`
@@ -165,6 +166,12 @@ type PostStatusReceived struct {
 	Mine       bool                   `json:"mine"`
 }
 
+type ChatLogEntry struct {
+	Message   string `json:"message"`
+	From      string `json:"from"`
+	Timestamp int64  `json:"timestamp"`
+	Internal  bool   `json:"internal"`
+}
 type MediateIDArgs struct {
 	Mediator clientintf.UserID `json:"mediator"`
 	Target   clientintf.UserID `json:"target"`
@@ -389,4 +396,11 @@ type SimpleStoreOrder struct {
 type HandshakeStage struct {
 	UID   clientintf.UserID `json:"uid"`
 	Stage string            `json:"stage"`
+}
+
+type LoadUserHistory struct {
+	UID     clientintf.UserID `json:"uid"`
+	GcName  string            `json:"gc_name"`
+	Page    int               `json:"page"`
+	PageNum int               `json:"page_num"`
 }
