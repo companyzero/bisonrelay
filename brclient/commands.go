@@ -1499,11 +1499,31 @@ var ftCommands = []tuicmd{
 var postCommands = []tuicmd{
 	{
 		cmd:   "new",
-		usage: "[<post>]",
+		usage: "[<filename>]",
 		descr: "Create a new post",
-		long:  []string{"If called without arguments, opens the create post window. Otherwise, it creates the given post."},
+		long:  []string{"If called without arguments, opens the create post window. Otherwise, it creates the post based on the contents of the file."},
 		handler: func(args []string, as *appState) error {
+			if len(args) > 0 {
+				fname, err := homedir.Expand(args[0])
+				if err != nil {
+					return err
+				}
+
+				data, err := os.ReadFile(fname)
+				if err != nil {
+					return err
+				}
+
+				go as.createPost(string(data))
+				return nil
+			}
 			as.sendMsg(showNewPostWindow{})
+			return nil
+		},
+		completer: func(args []string, arg string, as *appState) []string {
+			if len(args) == 0 {
+				return fileCompleter(arg)
+			}
 			return nil
 		},
 	}, {
