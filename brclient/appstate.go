@@ -2962,6 +2962,7 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		CompressLevel:     args.CompressLevel,
 		Notifications:     ntfns,
 		ResourcesProvider: resRouter,
+		NoLoadChatHistory: args.NoLoadChatHistory,
 
 		CertConfirmer: func(ctx context.Context, cs *tls.ConnectionState,
 			svrID *zkidentity.PublicIdentity) error {

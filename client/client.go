@@ -68,6 +68,10 @@ type Config struct {
 	// the client and the server.
 	LogPings bool
 
+	// NoLoadChatHistory indicates whether to load existing chat history from
+	// chat log files.
+	NoLoadChatHistory bool
+
 	// CheckServerSession is called after a server session is established
 	// but before the OnServerSessionChangedNtfn notification is called and
 	// allows clients to check whether the connection is acceptable or if
@@ -741,6 +745,8 @@ func (c *Client) Handshake(uid UserID) error {
 	return c.sendWithSendQ("syn", rpc.RMHandshakeSYN{}, ru.ID())
 }
 
+// ChatHistoryEntry contains information parsed from a single line in a chat
+// log.
 type ChatHistoryEntry struct {
 	Message   string `json:"message"`
 	From      string `json:"from"`
@@ -748,14 +754,20 @@ type ChatHistoryEntry struct {
 	Internal  bool   `json:"internal"`
 }
 
+// ReadUserHistoryMessages determines which log parsing to use based on whether
+// a group chat name was provided in the arguments.  This function will return
+// an array of ChatHistoryEntry's that contain information from each line of
+// saved logs.
 func (c *Client) ReadUserHistoryMessages(uid UserID, gcName string, page, pageNum int) ([]ChatHistoryEntry, error) {
+	if c.cfg.NoLoadChatHistory {
+		c.log.Infof("cfg is false")
+		return nil, nil
+	}
 	var err error
 	if gcName == "" {
 		_, err := c.rul.byID(uid)
 		if err != nil {
-			c.log.Error(err)
-			return nil, nil
-			//return nil, err
+			return nil, err
 		}
 	}
 	var messages []clientdb.PMLogEntry

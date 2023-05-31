@@ -68,33 +68,34 @@ func (sspt simpleStorePayType) isValid() bool {
 }
 
 type config struct {
-	ServerAddr     string
-	Root           string
-	DBRoot         string
-	MsgRoot        string
-	DownloadsRoot  string
-	LNRPCHost      string
-	LNTLSCertPath  string
-	LNMacaroonPath string
-	LNDebugLevel   string
-	LNMaxLogFiles  int
-	LNRPCListen    []string
-	LogFile        string
-	MaxLogFiles    int
-	DebugLevel     string
-	WalletType     string
-	CompressLevel  int
-	CmdHistoryPath string
-	NickColor      string
-	GCOtherColor   string
-	PMOtherColor   string
-	BlinkCursor    bool
-	BellCmd        string
-	Network        string
-	CPUProfile     string
-	CPUProfileHz   int
-	MemProfile     string
-	LogPings       bool
+	ServerAddr        string
+	Root              string
+	DBRoot            string
+	MsgRoot           string
+	DownloadsRoot     string
+	LNRPCHost         string
+	LNTLSCertPath     string
+	LNMacaroonPath    string
+	LNDebugLevel      string
+	LNMaxLogFiles     int
+	LNRPCListen       []string
+	LogFile           string
+	MaxLogFiles       int
+	DebugLevel        string
+	WalletType        string
+	CompressLevel     int
+	CmdHistoryPath    string
+	NickColor         string
+	GCOtherColor      string
+	PMOtherColor      string
+	BlinkCursor       bool
+	BellCmd           string
+	Network           string
+	CPUProfile        string
+	CPUProfileHz      int
+	MemProfile        string
+	LogPings          bool
+	NoLoadChatHistory bool
 
 	ProxyAddr    string
 	ProxyUser    string
@@ -266,6 +267,7 @@ func loadConfig() (*config, error) {
 	flagWalletType := fs.String("wallettype", defaultWalletType, "Wallet type to use")
 	flagNetwork := fs.String("network", "mainnet", "Network to connect")
 	flagLogPings := fs.Bool("logpings", false, "Whether to log pings")
+	flagNoLoadChatHistory := fs.Bool("noloadchathistory", false, "Whether to read chat logs to build chat history")
 	flagMinWalletBal := fs.Float64("minimumwalletbalance", 1.0, "Minimum wallet balance before warn")
 	flagMinRecvBal := fs.Float64("minimumrecvbalance", 0.01, "Minimum receive balance before warn")
 	flagMinSendBal := fs.Float64("minimumsendbalance", 0.01, "Minimum send balance before warn")
@@ -445,6 +447,7 @@ func loadConfig() (*config, error) {
 		CPUProfileHz:       *flagCPUProfileHz,
 		MemProfile:         *flagMemProfile,
 		LogPings:           *flagLogPings,
+		NoLoadChatHistory:  *flagNoLoadChatHistory,
 		ProxyAddr:          *flagProxyAddr,
 		ProxyUser:          *flagProxyUser,
 		ProxyPass:          *flagProxyPass,

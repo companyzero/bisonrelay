@@ -25,6 +25,7 @@ type InitClient struct {
 	DebugLevel        string `json:"debug_level"`
 	WantsLogNtfns     bool   `json:"wants_log_ntfns"`
 	ResourcesUpstream string `json:"resources_upstream"`
+	NoLoadChatHistory bool   `json:"no_load_chat_history"`
 
 	SimpleStorePayType    string  `json:"simplestore_pay_type"`
 	SimpleStoreAccount    string  `json:"simplestore_account"`

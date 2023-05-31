@@ -369,6 +369,7 @@ func handleInitClient(handle uint32, args InitClient) error {
 		CompressLevel:     4,
 		Notifications:     ntfns,
 		ResourcesProvider: resRouter,
+		NoLoadChatHistory: args.NoLoadChatHistory,
 
 		CertConfirmer: func(ctx context.Context, cs *tls.ConnectionState,
 			svrID *zkidentity.PublicIdentity) error {

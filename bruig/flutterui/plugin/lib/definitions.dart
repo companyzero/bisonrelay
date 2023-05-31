@@ -53,6 +53,8 @@ class InitClient {
   final bool torisolation;
   @JsonKey(name: 'circuit_limit')
   final int circuitLimit;
+  @JsonKey(name: 'no_load_chat_history')
+  final bool noLoadChatHistory;
 
   InitClient(
       this.dbRoot,
@@ -73,7 +75,8 @@ class InitClient {
       this.torisolation,
       this.proxyUsername,
       this.proxyPassword,
-      this.circuitLimit);
+      this.circuitLimit,
+      this.noLoadChatHistory);
 
   Map<String, dynamic> toJson() => _$InitClientToJson(this);
 }

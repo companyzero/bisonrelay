@@ -26,6 +26,7 @@ InitClient _$InitClientFromJson(Map<String, dynamic> json) => InitClient(
       json['proxy_username'] as String,
       json['proxy_password'] as String,
       json['circuit_limit'] as int,
+      json['no_load_chat_history'] as bool,
     );
 
 Map<String, dynamic> _$InitClientToJson(InitClient instance) =>
@@ -49,6 +50,7 @@ Map<String, dynamic> _$InitClientToJson(InitClient instance) =>
       'proxy_password': instance.proxyPassword,
       'torisolation': instance.torisolation,
       'circuit_limit': instance.circuitLimit,
+      'no_load_chat_history': instance.noLoadChatHistory,
     };
 
 IDInit _$IDInitFromJson(Map<String, dynamic> json) => IDInit(

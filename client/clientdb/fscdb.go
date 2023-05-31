@@ -459,7 +459,6 @@ func (db *DB) readLogMsg(logFname string, page, pageNum int) ([]PMLogEntry, erro
 		}
 		// This means there was a new timestamp in the current line so
 		if prevLine != "" && prevName != "" && prevLineTimestamp != 0 {
-			db.log.Infof("%v %v %v", ts, t, t.Unix(), time.Unix(t.Unix(), 0))
 			loggedMessages = append(loggedMessages, PMLogEntry{Message: prevLine,
 				From: prevName, Timestamp: prevLineTimestamp})
 		}

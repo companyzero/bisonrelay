@@ -78,6 +78,7 @@ class Config {
   late final String proxyUsername;
   late final String proxyPassword;
   late final int circuitLimit;
+  late final bool noLoadChatHistory;
 
   Config();
   Config.filled(
@@ -102,7 +103,8 @@ class Config {
       this.torisolation: false,
       this.proxyUsername: "",
       this.proxyPassword: "",
-      this.circuitLimit: 32});
+      this.circuitLimit: 32,
+      this.noLoadChatHistory: true});
   factory Config.newWithRPCHost(
           Config cfg, String rpcHost, String tlsCert, String macaroonPath) =>
       Config.filled(
@@ -128,6 +130,7 @@ class Config {
         proxyUsername: cfg.proxyUsername,
         proxyPassword: cfg.proxyPassword,
         circuitLimit: cfg.circuitLimit,
+        noLoadChatHistory: cfg.noLoadChatHistory,
       );
 
   Future<void> saveConfig(String filepath) async {
@@ -223,6 +226,7 @@ Future<Config> loadConfig(String filepath) async {
   c.proxyPassword = f.get("default", "proxypass") ?? "";
   c.torisolation = getBool("default", "torisolation");
   c.circuitLimit = getInt("default", "circuitlimit") ?? 32;
+  c.noLoadChatHistory = getBool("default", "noloadchathistory");
 
   if (c.walletType != "disabled") {
     c.lnRPCHost = f.get("payment", "lnrpchost") ?? "localhost:10009";
