@@ -1514,7 +1514,7 @@ var postCommands = []tuicmd{
 					return err
 				}
 
-				go as.createPost(string(data))
+				go as.createPost(string(data), filepath.Dir(fname))
 				return nil
 			}
 			as.sendMsg(showNewPostWindow{})
@@ -1532,17 +1532,13 @@ var postCommands = []tuicmd{
 		descr:   "Launch $EDITOR to edit a new post",
 		handler: func(args []string, as *appState) error {
 			go func() {
-				post, err := as.editExternalTextFile()
+				post, err := as.editExternalTextFile(baseExternalNewPostContent)
 				if err != nil {
 					as.cwHelpMsg("Unable to open external editor: %v", err)
 					return
 				}
 
-				if strings.TrimSpace(post) == "" {
-					return
-				}
-
-				as.createPost(post)
+				as.createPost(post, "")
 			}()
 			return nil
 		},

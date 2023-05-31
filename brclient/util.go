@@ -23,6 +23,26 @@ const (
 	ISO8601Date       = "2006-01-02"
 )
 
+const baseExternalNewPostContent = `
+
+--endofpost--
+
+Everything after the first "--endofpost--" line will be removed by brclient
+before creating the post.
+
+To include an embedded content, include the following snippet:
+
+--embed[alt=some+alt,type=image/png,localfilename=test.png]--
+
+Replace the "alt=" attribute with an URL-encoded description of the image. Set
+the "type=" attribute to the image type, and set "localfilename=" to the
+filename of the image to embed.
+
+Use absolute file paths. Relative paths are based on either the post file
+(when using /post new <filename>) or on the CWD of brclient (usually the dir
+from which brclient was executed).
+`
+
 // Helper mixin to avoid having to add an Init() function everywhere.
 type initless struct{}
 
