@@ -70,6 +70,7 @@ type postWindow struct {
 	commenting        bool
 	replying          bool
 	relaying          bool
+	confirmingComment bool
 	cmdErr            string
 
 	viewport viewport.Model
@@ -628,7 +629,7 @@ func (pw *postWindow) recalcViewportSize() {
 	// First, update the edit line height. This is not entirely accurate
 	// because textArea does its own wrapping.
 	editHeight := 1
-	if pw.commenting || pw.relaying {
+	if (pw.commenting || pw.relaying) && !pw.confirmingComment {
 		editHeight = pw.textArea.recalcDynHeight(pw.as.winW, pw.as.winH)
 	} else {
 		pw.textArea.SetHeight(1)
@@ -669,6 +670,33 @@ func (pw postWindow) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.KeyMsg:
 		switch {
+		case pw.confirmingComment && (msg.Type == tea.KeyUp || msg.Type == tea.KeyDown):
+			pw.viewport, cmd = pw.viewport.Update(msg)
+			cmds = appendCmd(cmds, cmd)
+
+		case pw.confirmingComment && msg.Type == tea.KeyEsc:
+			pw.confirmingComment = false
+			pw.renderPost()
+			pw.recalcViewportSize()
+
+		case pw.confirmingComment && msg.Type == tea.KeyEnter:
+			var parent *clientintf.ID
+			if pw.replying && pw.selComment < len(pw.comments) {
+				selComment := pw.comments[pw.selComment]
+				parent = &selComment.id
+			}
+			text := pw.textArea.Value()
+			go pw.as.commentPost(pw.summ.From, pw.summ.ID,
+				text, parent)
+			pw.textArea.SetValue("")
+			pw.recalcViewportSize()
+			pw.commenting = false
+			pw.confirmingComment = false
+			pw.renderPost()
+
+		case pw.confirmingComment:
+			// Ignore all other msgs when confirming comment.
+
 		case msg.Type == tea.KeyEsc:
 			pw.cmdErr = ""
 			if pw.commenting {
@@ -774,17 +802,18 @@ func (pw postWindow) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			pw.recalcViewportSize()
 
 		case msg.Type == tea.KeyEnter && pw.commenting:
-			var parent *clientintf.ID
-			if pw.replying && pw.selComment < len(pw.comments) {
-				selComment := pw.comments[pw.selComment]
-				parent = &selComment.id
-			}
-			text := pw.textArea.Value()
-			go pw.as.commentPost(pw.summ.From, pw.summ.ID,
-				text, parent)
-			pw.textArea.SetValue("")
+			pw.confirmingComment = true
+			var b strings.Builder
+			b.WriteString("Really send the following comment\n\n")
+			b.WriteString(strings.Repeat("-", pw.as.winW))
+			b.WriteString("\n")
+			b.WriteString(pw.textArea.Value())
+			b.WriteString("\n")
+			b.WriteString(strings.Repeat("-", pw.as.winW))
+			b.WriteString("\n\n")
+			b.WriteString("Press <ENTER> to submit, <ESC> to cancel\n")
+			pw.viewport.SetContent(b.String())
 			pw.recalcViewportSize()
-			pw.commenting = false
 
 		case msg.Type == tea.KeyEnter && pw.relaying:
 			pw.relaying = false
@@ -996,7 +1025,9 @@ func (pw postWindow) View() string {
 	write("\n")
 	write(pw.footerView())
 	write("\n")
-	if pw.commenting || pw.relaying {
+	if pw.confirmingComment {
+		// Skip text area.
+	} else if pw.commenting || pw.relaying {
 		write(pw.textArea.View())
 	} else if pw.cmdErr != "" {
 		write(pw.as.styles.err.Render(pw.cmdErr))
