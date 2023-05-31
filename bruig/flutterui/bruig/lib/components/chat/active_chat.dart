@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:bruig/components/manage_gc.dart';
-import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/util.dart';
 import 'package:bruig/models/client.dart';
 import 'package:flutter/material.dart';
@@ -8,6 +7,7 @@ import 'package:bruig/components/profile.dart';
 import 'package:bruig/components/chat/messages.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import 'package:bruig/components/chat/input.dart';
+import 'package:bruig/components/snackbars.dart';
 
 class ActiveChat extends StatefulWidget {
   final ClientModel client;

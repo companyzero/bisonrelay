@@ -3,16 +3,18 @@ import 'dart:async';
 import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/components/route_error.dart';
 import 'package:bruig/components/sidebar.dart';
+import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/models/downloads.dart';
 import 'package:bruig/models/feed.dart';
 import 'package:bruig/models/menus.dart';
 import 'package:bruig/models/notifications.dart';
+import 'package:bruig/models/snackbar.dart';
 import 'package:bruig/screens/feed.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
-import 'package:bruig/components/snackbars.dart';
+import 'package:bruig/components/copyable.dart';
 
 class _OverviewScreenTitle extends StatefulWidget {
   final MainMenuModel mainMenu;
@@ -70,8 +72,9 @@ class OverviewScreen extends StatefulWidget {
   final String initialRoute;
   final MainMenuModel mainMenu;
   final FeedModel feed;
+  final SnackBarModel snackBar;
   const OverviewScreen(this.down, this.client, this.ntfns, this.initialRoute,
-      this.mainMenu, this.feed,
+      this.mainMenu, this.feed, this.snackBar,
       {Key? key})
       : super(key: key);
 
@@ -85,6 +88,8 @@ class _OverviewScreenState extends State<OverviewScreen> {
   DownloadsModel get down => widget.down;
   ServerSessionState connState = ServerSessionState.empty();
   GlobalKey<NavigatorState> navKey = GlobalKey(debugLabel: "overview nav key");
+  SnackBarModel get snackBar => widget.snackBar;
+  SnackBarMessage snackBarMsg = SnackBarMessage.empty();
 
   void clientChanged() {
     var newConnState = client.connState;
@@ -98,6 +103,26 @@ class _OverviewScreenState extends State<OverviewScreen> {
           newConnState.checkWalletErr != null) {
         var msg = "LN wallet check failed: ${newConnState.checkWalletErr}";
         ntfns.addNtfn(AppNtfn(AppNtfnType.walletCheckFailed, msg: msg));
+      }
+    }
+  }
+
+  void snackBarChanged() {
+    if (snackBar.snackBars.isNotEmpty) {
+      var newSnackbarMessage =
+          snackBar.snackBars[snackBar.snackBars.length - 1];
+      if (newSnackbarMessage.msg != snackBarMsg.msg ||
+          newSnackbarMessage.error != snackBarMsg.error ||
+          newSnackbarMessage.timestamp != snackBarMsg.timestamp) {
+        setState(() {
+          snackBarMsg = newSnackbarMessage;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            backgroundColor:
+                snackBarMsg.error ? Colors.red[300] : Colors.green[300],
+            content: Copyable(
+                snackBarMsg.msg, const TextStyle(color: Color(0xFFE4E3E6)),
+                showSnackbar: false)));
       }
     }
   }
@@ -142,17 +167,21 @@ class _OverviewScreenState extends State<OverviewScreen> {
     super.initState();
     connState = widget.client.connState;
     widget.client.addListener(clientChanged);
+    widget.snackBar.addListener(snackBarChanged);
   }
 
   @override
   void didUpdateWidget(OverviewScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
+    oldWidget.snackBar.removeListener(snackBarChanged);
+    widget.snackBar.addListener(snackBarChanged);
     oldWidget.client.removeListener(clientChanged);
     widget.client.addListener(clientChanged);
   }
 
   @override
   void dispose() {
+    widget.snackBar.removeListener(snackBarChanged);
     widget.client.removeListener(clientChanged);
     super.dispose();
   }

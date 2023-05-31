@@ -8,6 +8,7 @@ import 'package:bruig/components/route_error.dart';
 import 'package:bruig/models/menus.dart';
 import 'package:bruig/models/resources.dart';
 import 'package:bruig/screens/about.dart';
+import 'package:bruig/models/snackbar.dart';
 import 'package:bruig/screens/contacts_msg_times.dart';
 import 'package:bruig/screens/fetch_invite.dart';
 import 'package:bruig/screens/generate_invite.dart';
@@ -93,6 +94,7 @@ Future<void> runMainApp(Config cfg) async {
       ChangeNotifierProvider(create: (c) => ThemeNotifier()),
       ChangeNotifierProvider(create: (c) => MainMenuModel()),
       ChangeNotifierProvider(create: (c) => ResourcesModel()),
+      ChangeNotifierProvider(create: (c) => SnackBarModel())
     ],
     child: App(cfg),
   ));
@@ -327,12 +329,17 @@ class _AppState extends State<App> with WindowListener {
                 if (settings.name!.startsWith(OverviewScreen.routeName)) {
                   var initialRoute =
                       settings.name!.substring(OverviewScreen.routeName.length);
-                  page = Consumer5<DownloadsModel, ClientModel,
-                          AppNotifications, MainMenuModel, FeedModel>(
+                  page = Consumer6<
+                          DownloadsModel,
+                          ClientModel,
+                          AppNotifications,
+                          MainMenuModel,
+                          FeedModel,
+                          SnackBarModel>(
                       builder: (context, down, client, ntfns, mainMenu, feed,
-                              child) =>
+                              snackBar, child) =>
                           OverviewScreen(down, client, ntfns, initialRoute,
-                              mainMenu, feed));
+                              mainMenu, feed, snackBar));
                 } else if (settings.name!
                     .startsWith(NeedsOutChannelScreen.routeName)) {
                   page = Consumer2<AppNotifications, ClientModel>(

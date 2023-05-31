@@ -278,7 +278,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
     }
 
     return Row(children: [
-      Container(width: 163, child: ChatDrawerMenu(inputFocusNode)),
+      SizedBox(width: 163, child: ChatDrawerMenu(inputFocusNode)),
       Expanded(
           child: Container(
         margin: const EdgeInsets.all(1),

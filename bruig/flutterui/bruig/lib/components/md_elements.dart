@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:ui';
 import 'dart:typed_data';
 // import 'package:dart_vlc/dart_vlc.dart' as vlc;
-import 'package:bruig/components/dcr_input.dart';
 import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/components/info_grid.dart';
 import 'package:bruig/components/inputs.dart';

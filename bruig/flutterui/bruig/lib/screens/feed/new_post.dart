@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/models/feed.dart';
 import 'package:bruig/screens/feed.dart';
 import 'package:bruig/util.dart';
@@ -8,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
+import 'package:bruig/components/snackbars.dart';
 
 void showAltTextModal(BuildContext context, String mime, String id,
     TextEditingController contentCtrl) {
@@ -150,7 +150,7 @@ class _NewPostScreenState extends State<NewPostScreen> {
         estimatedSize = estSize;
       });
     } catch (exception) {
-      showSuccessSnackbar(context, "Unable to estimate post size: $exception");
+      showErrorSnackbar(context, "Unable to estimate post size: $exception");
     }
   }
 
@@ -167,7 +167,8 @@ class _NewPostScreenState extends State<NewPostScreen> {
     if (filePath == "") return;
 
     if (f.size > 1024 * 1024) {
-      showErrorSnackbar(context, "File size is too large");
+      showErrorSnackbar(
+          context, "File size is too large ${f.size} > ${1024 * 1024}");
       return;
     }
 
