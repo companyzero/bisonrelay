@@ -1804,7 +1804,18 @@ func (as *appState) requestRecv(amount, server, key string, caCert []byte) error
 	}
 }
 
-func (as *appState) createPost(post string) {
+func (as *appState) createPost(post string, root string) {
+	// Process local data.
+	post = resources.RemoveEndOfPostMarker(post)
+	if root == "" {
+		root, _ = os.Getwd()
+	}
+	post = resources.ProcessEmbeds(post, root, as.log)
+
+	if strings.TrimSpace(post) == "" {
+		return
+	}
+
 	summ, err := as.c.CreatePost(post, "")
 	if err != nil {
 		as.cwHelpMsg("Unable to create post: %v", err)
@@ -2144,12 +2155,15 @@ func (as *appState) kxSearchPostAuthor(from clientintf.UserID, pid clientintf.Po
 
 // editExternalTextFile launches $EDITOR and returns the edited text. Blocks
 // until the $EDITOR process exits.
-func (as *appState) editExternalTextFile() (string, error) {
+func (as *appState) editExternalTextFile(baseContent string) (string, error) {
 	f, err := os.CreateTemp("", "br-text-")
 	if err != nil {
 		return "", fmt.Errorf("failed to create temp file: %v", err)
 	}
 	fname := f.Name()
+	if _, err := f.Write([]byte(baseContent)); err != nil {
+		return "", err
+	}
 	if err := f.Close(); err != nil {
 		return "", err
 	}

@@ -59,7 +59,7 @@ func (pw *newPostWindow) createPost(post string) {
 		return args.String()
 
 	})
-	go pw.as.createPost(fullPost)
+	go pw.as.createPost(fullPost, "")
 }
 
 func (pw newPostWindow) Update(msg tea.Msg) (tea.Model, tea.Cmd) {

@@ -3,6 +3,7 @@ package resources
 import (
 	"os"
 	"path/filepath"
+	"regexp"
 
 	"github.com/companyzero/bisonrelay/internal/mdembeds"
 	"github.com/decred/slog"
@@ -33,4 +34,16 @@ func ProcessEmbeds(s string, root string, log slog.Logger) string {
 		args.Data = embedData
 		return args.String()
 	})
+}
+
+var endPostMarkerRegex = regexp.MustCompile(`(^|\n)--endofpost--[\n]?`)
+
+// RemoveEndOfPostMarker removes all text after a standard --endofpost-- marker
+// line.
+func RemoveEndOfPostMarker(s string) string {
+	loc := endPostMarkerRegex.FindStringIndex(s)
+	if loc == nil {
+		return s
+	}
+	return s[:loc[0]]
 }
