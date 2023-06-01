@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:bruig/components/buttons.dart';
 import 'package:bruig/components/chats_list.dart';
+import 'package:bruig/components/addressbook.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/models/notifications.dart';
 import 'package:bruig/screens/needs_out_channel.dart';
@@ -21,6 +22,11 @@ class ChatsScreenTitle extends StatelessWidget {
       var activeHeading = client.active;
       if (activeHeading == null) {
         return Text("Bison Relay / Chat",
+            style:
+                TextStyle(fontSize: 15, color: Theme.of(context).focusColor));
+      }
+      if (client.showAddressBook) {
+        return Text("Bison Relay / Chat / Address Book",
             style:
                 TextStyle(fontSize: 15, color: Theme.of(context).focusColor));
       }

@@ -5,9 +5,6 @@ import 'package:bruig/models/resources.dart';
 import 'package:flutter/foundation.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
-import 'package:golib_plugin/util.dart';
-import '../storage_manager.dart';
-import 'package:intl/intl.dart';
 
 const SCE_unknown = 0;
 const SCE_sending = 1;
@@ -115,6 +112,13 @@ class ChatModel extends ChangeNotifier {
     _active = b;
     _unreadMsgCount = 0;
     _unreadEventCount = 0;
+    notifyListeners();
+  }
+
+  bool _showChatListing = true; // Nick or GC name
+  bool get showChatListing => _showChatListing;
+  set showChatListing(bool b) {
+    _showChatListing = b;
     notifyListeners();
   }
 
@@ -298,6 +302,24 @@ class ClientModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  List<ChatModel> _hiddenGCs = [];
+  UnmodifiableListView<ChatModel> get hiddenGCs =>
+      UnmodifiableListView(_hiddenGCs);
+
+  set hiddenGCs(List<ChatModel> us) {
+    _hiddenGCs = us;
+    notifyListeners();
+  }
+
+  List<ChatModel> _hiddenUsers = [];
+  UnmodifiableListView<ChatModel> get hiddenUsers =>
+      UnmodifiableListView(_hiddenUsers);
+
+  set hiddenUsers(List<ChatModel> us) {
+    _hiddenUsers = us;
+    notifyListeners();
+  }
+
   bool _loadingAddressBook = true;
   bool get loadingAddressBook => _loadingAddressBook;
   void set loadingAddressBook(bool b) {
@@ -309,6 +331,45 @@ class ClientModel extends ChangeNotifier {
   bool get hasUnreadChats => _hasUnreadChats;
   void set hasUnreadChats(bool b) {
     _hasUnreadChats = b;
+    notifyListeners();
+  }
+
+  bool _showAddressBook = false;
+  bool get showAddressBook => _showAddressBook;
+  set showAddressBook(bool b) {
+    _showAddressBook = b;
+    notifyListeners();
+  }
+
+  void showAddressBookScreen() {
+    showAddressBook = true;
+  }
+
+  void hideAddressBookScreen() {
+    showAddressBook = false;
+  }
+
+  void startChat(ChatModel chat) {
+    if (chat.isGC) {
+      _hiddenGCs.remove(chat);
+      List<ChatModel> newGcChats = [];
+      newGcChats.add(chat);
+      for (int i = 0; i < _gcChats.length; i++) {
+        newGcChats.add(_gcChats[i]);
+      }
+      _gcChats = newGcChats;
+      _subGCMenus[chat.id] = buildGCMenu(chat);
+    } else {
+      _hiddenUsers.remove(chat);
+      List<ChatModel> newUserChats = [];
+      newUserChats.add(chat);
+      for (int i = 0; i < userChats.length; i++) {
+        newUserChats.add(_userChats[i]);
+      }
+      _userChats = newUserChats;
+      _subUserMenus[chat.id] = buildUserChatMenu(chat);
+    }
+    active = chat;
     notifyListeners();
   }
 
@@ -365,6 +426,7 @@ class ClientModel extends ChangeNotifier {
     _active?.removeFirstUnread();
     _active?._setActive(false);
     _active = c;
+    showAddressBook = false;
     c?._setActive(true);
 
     // Check for unreadMessages so we can turn off sidebar notification
@@ -404,10 +466,34 @@ class ClientModel extends ChangeNotifier {
     }
   }
 
+  Future<void> newSentMsg(ChatModel? chat) async {
+    if (chat != null) {
+      if (chat.isGC) {
+        _gcChats.remove(chat);
+        List<ChatModel> newGcChats = [];
+        newGcChats.add(chat);
+        for (int i = 0; i < _gcChats.length; i++) {
+          newGcChats.add(_gcChats[i]);
+        }
+        _gcChats = newGcChats;
+      } else {
+        _userChats.remove(chat);
+        List<ChatModel> newUserChats = [];
+        newUserChats.add(chat);
+        for (int i = 0; i < _userChats.length; i++) {
+          newUserChats.add(_userChats[i]);
+        }
+        _userChats = newUserChats;
+      }
+    }
+    notifyListeners();
+  }
+
   Map<String, ChatModel> _activeChats = Map<String, ChatModel>();
   ChatModel? getExistingChat(String uid) => _activeChats[uid];
 
-  Future<ChatModel> _newChat(String id, String alias, bool isGC) async {
+  Future<ChatModel> _newChat(
+      String id, String alias, bool isGC, bool startup) async {
     alias = alias.trim();
 
     var c = _activeChats[id];
@@ -457,18 +543,77 @@ class ClientModel extends ChangeNotifier {
       c.appendHistory(evnt);
     }
 
+    // Sorting algo to attempt to retain order
+    int sortUsedChats(ChatModel a, ChatModel b) {
+      // First check if either is empty, if so prioritize the non-empty one.
+      if (b._msgs.isEmpty) {
+        if (a._msgs.isEmpty) {
+          return 0;
+        } else {
+          return -1;
+        }
+      } else if (a._msgs.isEmpty) {
+        return 1;
+      }
+      // If both are not empty, then check to see if unreadMsgCount is > 0 for
+      // either.
+      if (b.unreadMsgCount > 0 || a.unreadMsgCount > 0) {
+        return b.unreadMsgCount.compareTo(a.unreadMsgCount);
+      }
+      // If unreadMsgCount are both 0, then check last message timestamps;
+      var bTimeStamp = 0;
+      var aTimeStamp = 0;
+      var bLastMessage = b._msgs[b._msgs.length - 1];
+      var bLastMessageEvent = b._msgs[b._msgs.length - 1].event;
+      if (bLastMessageEvent is PM) {
+        bTimeStamp = bLastMessage.source?.nick == null
+            ? bLastMessageEvent.timestamp
+            : bLastMessageEvent.timestamp * 1000;
+      } else if (bLastMessageEvent is GCMsg) {
+        bTimeStamp = bLastMessage.source?.nick == null
+            ? bLastMessageEvent.timestamp
+            : bLastMessageEvent.timestamp * 1000;
+      }
+
+      var aLastMessage = a._msgs[a._msgs.length - 1];
+      var aLastMessageEvent = a._msgs[a._msgs.length - 1].event;
+      if (aLastMessageEvent is PM) {
+        aTimeStamp = aLastMessage.source?.nick == null
+            ? aLastMessageEvent.timestamp
+            : aLastMessageEvent.timestamp * 1000;
+      } else if (aLastMessageEvent is GCMsg) {
+        aTimeStamp = aLastMessage.source?.nick == null
+            ? aLastMessageEvent.timestamp
+            : aLastMessageEvent.timestamp * 1000;
+      }
+      return bTimeStamp.compareTo(aTimeStamp);
+    }
+
     // TODO: this test should be superflous.
     if (isGC) {
-      if (_gcChats.indexWhere((c) => c.id == id) == -1) {
-        // Add to list of chats.
+      if (_gcChats.indexWhere((c) => c.id == id) == -1 &&
+          (c._msgs.isNotEmpty || (c._msgs.isEmpty && !startup))) {
+        // Add to list of chats if not empty or the chat is empty and
+        // not being create via readAddressBook call.
         _gcChats.add(c);
+        _gcChats.sort(sortUsedChats);
         _subGCMenus[c.id] = buildGCMenu(c);
+      } else if (c._msgs.isEmpty && startup) {
+        // Add all empty chats on startup to hiddenGCs list.
+        _hiddenGCs.add(c);
+        _hiddenGCs.sort((a, b) => b.nick.compareTo(a.nick));
       }
     } else {
-      if (_userChats.indexWhere((c) => c.id == id) == -1) {
+      if (_userChats.indexWhere((c) => c.id == id) == -1 &&
+          (c._msgs.isNotEmpty || (c._msgs.isEmpty && !startup))) {
         // Add to list of chats.
         _userChats.add(c);
+        _userChats.sort(sortUsedChats);
         _subUserMenus[c.id] = buildUserChatMenu(c);
+      } else if (c._msgs.isEmpty && startup) {
+        // Add all empty chats on startup to hiddenGCs list.
+        _hiddenUsers.add(c);
+        _hiddenUsers.sort((a, b) => b.nick.compareTo(a.nick));
       }
     }
 
@@ -503,54 +648,41 @@ class ClientModel extends ChangeNotifier {
           continue;
         }
       }
-
       var isGC = (evnt is GCMsg) || (evnt is GCUserEvent);
 
-      var chat = await _newChat(evnt.sid, "", isGC);
-      ChatModel? source = null;
+      var chat = await _newChat(evnt.sid, "", isGC, false);
+      ChatModel? source;
       if (evnt is PM) {
         if (!evnt.mine) {
           source = chat;
         }
       } else if (evnt is GCMsg) {
-        source = await _newChat(evnt.senderUID, "", false);
+        source = await _newChat(evnt.senderUID, "", false, false);
       } else if (evnt is GCUserEvent) {
-        source = await _newChat(evnt.uid, "", false);
+        source = await _newChat(evnt.uid, "", false, false);
       } else {
         source = chat;
       }
       chat.append(ChatEventModel(evnt, source));
-      // Sorting algo to attempt to retain order
+
       if (chat.isGC) {
-        _gcChats.sort((a, b) => b.unreadMsgCount.compareTo(a.unreadMsgCount));
-
-        String gcChatOrder = "";
+        _gcChats.remove(chat);
+        List<ChatModel> newGcChats = [];
+        newGcChats.add(chat);
         for (int i = 0; i < _gcChats.length; i++) {
-          if (_gcChats[i].unreadMsgCount > 0) {
-            hasUnreadChats = true;
-          }
-          if (i == _gcChats.length - 1) {
-            gcChatOrder += _gcChats[i].nick;
-          } else {
-            gcChatOrder += "${_gcChats[i].nick},";
-          }
+          newGcChats.add(_gcChats[i]);
         }
-        StorageManager.saveData('gcListOrder', gcChatOrder);
+        _gcChats = newGcChats;
+        //StorageManager.saveData('gcHiddenList', gcHiddenList);
       } else {
-        _userChats.sort((a, b) => b.unreadMsgCount.compareTo(a.unreadMsgCount));
-
-        String userChatOrder = "";
-        for (int i = 0; i < _userChats.length; i++) {
-          if (_userChats[i].unreadMsgCount > 0) {
-            hasUnreadChats = true;
-          }
-          if (i == _userChats.length - 1) {
-            userChatOrder += _userChats[i].nick;
-          } else {
-            userChatOrder += "${_userChats[i].nick},";
-          }
+        _userChats.remove(chat);
+        List<ChatModel> newUserChats = [];
+        newUserChats.add(chat);
+        for (int i = 0; i < _gcChats.length; i++) {
+          newUserChats.add(_userChats[i]);
         }
-        StorageManager.saveData('userListOrder', userChatOrder);
+        _userChats = newUserChats;
+        //StorageManager.saveData('userHiddenList', userHiddenList);
       }
       notifyListeners();
     }
@@ -561,14 +693,16 @@ class ClientModel extends ChangeNotifier {
     _publicID = info.id;
     _nick = info.nick;
     var ab = await Golib.addressBook();
-    ab.forEach((v) => _newChat(v.id, v.nick, false));
+    ab.forEach((v) => _newChat(v.id, v.nick, false, true));
     var gcs = await Golib.listGCs();
-    gcs.forEach((v) => _newChat(v.id, v.name, true));
+    gcs.forEach((v) => _newChat(v.id, v.name, true, true));
 
-    StorageManager.readData('gcListOrder').then((value) {
+/*
+    StorageManager.readData('gcHiddenList').then((value) {
       if (value != null && value.length > 0) {
         List<ChatModel> sortedGCList = [];
         var gcSplitList = value.split(',');
+        print(gcSplitList);
         for (int i = 0; i < gcSplitList.length; i++) {
           for (int j = 0; j < _gcChats.length; j++) {
             if (gcSplitList[i] == _gcChats[j].nick) {
@@ -592,10 +726,11 @@ class ClientModel extends ChangeNotifier {
         gcChats = sortedGCList;
       }
     });
-    StorageManager.readData('userListOrder').then((value) {
+    StorageManager.readData('userHiddenList').then((value) {
       if (value != null && value.length > 0) {
         List<ChatModel> sortedUserList = [];
         var userSplitList = value.split(',');
+        print(userSplitList);
         // First order existing users from last saved.
         for (int i = 0; i < userSplitList.length; i++) {
           for (int j = 0; j < _userChats.length; j++) {
@@ -622,13 +757,13 @@ class ClientModel extends ChangeNotifier {
         userChats = sortedUserList;
       }
     });
-
+*/
     loadingAddressBook = false;
   }
 
   void acceptInvite(Invitation invite) async {
     var user = await Golib.acceptInvite(invite);
-    active = await _newChat(user.uid, user.nick, false);
+    active = await _newChat(user.uid, user.nick, false, false);
   }
 
   List<String> _mediating = [];
@@ -652,7 +787,7 @@ class ClientModel extends ChangeNotifier {
       if (requestedMediateID(remoteUser.uid)) {
         _mediating.remove(remoteUser.uid);
       }
-      var chat = await _newChat(remoteUser.uid, remoteUser.nick, false);
+      var chat = await _newChat(remoteUser.uid, remoteUser.nick, false, false);
       chat.append(
           ChatEventModel(SynthChatEvent("KX Completed", SCE_received), null));
     }
@@ -670,7 +805,7 @@ class ClientModel extends ChangeNotifier {
     var stream = Golib.gcListUpdates();
     await for (var update in stream) {
       // Force creating the chat if it doesn't exist.
-      _newChat(update.id, update.name, true);
+      _newChat(update.id, update.name, true, false);
     }
   }
 
