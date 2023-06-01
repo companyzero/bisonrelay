@@ -758,39 +758,46 @@ type ChatHistoryEntry struct {
 // a group chat name was provided in the arguments.  This function will return
 // an array of ChatHistoryEntry's that contain information from each line of
 // saved logs.
-func (c *Client) ReadUserHistoryMessages(uid UserID, gcName string, page, pageNum int) ([]ChatHistoryEntry, error) {
+func (c *Client) ReadUserHistoryMessages(uid UserID, gcName string, page, pageNum int) ([]ChatHistoryEntry, time.Time, error) {
+	var now time.Time
 	if c.cfg.NoLoadChatHistory {
-		return nil, nil
+		return nil, now, nil
 	}
 	var err error
 	if gcName == "" {
 		_, err := c.rul.byID(uid)
 		if err != nil {
-			return nil, err
+			return nil, now, err
 		}
-	}
-	var messages []clientdb.PMLogEntry
-	if gcName != "" {
-		messages, err = c.db.ReadLogGCMsg(gcName, uid, page, pageNum)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		messages, err = c.db.ReadLogPM(uid, page, pageNum)
-		if err != nil {
-			return nil, err
-		}
-	}
-	chatHistory := make([]ChatHistoryEntry, 0, len(messages))
-	for _, entry := range messages {
-		chatHistory = append(chatHistory, ChatHistoryEntry{
-			Message:   entry.Message,
-			From:      entry.From,
-			Internal:  entry.Internal,
-			Timestamp: entry.Timestamp})
 	}
 
-	return chatHistory, nil
+	var chatHistory []ChatHistoryEntry
+	err = c.dbView(func(tx clientdb.ReadTx) error {
+		var messages []clientdb.PMLogEntry
+		if gcName != "" {
+			messages, err = c.db.ReadLogGCMsg(tx, gcName, uid, page, pageNum)
+			if err != nil {
+				return err
+			}
+		} else {
+			messages, err = c.db.ReadLogPM(tx, uid, page, pageNum)
+			if err != nil {
+				return err
+			}
+		}
+		chatHistory = make([]ChatHistoryEntry, 0, len(messages))
+		for _, entry := range messages {
+			chatHistory = append(chatHistory, ChatHistoryEntry{
+				Message:   entry.Message,
+				From:      entry.From,
+				Internal:  entry.Internal,
+				Timestamp: entry.Timestamp})
+		}
+		now = time.Now()
+		return nil
+	})
+
+	return chatHistory, now, err
 }
 
 // maybeResetAllKXAfterConn checks whether it's needed to reset KX with all

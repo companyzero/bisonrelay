@@ -1714,7 +1714,7 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		if err := cmd.decode(&args); err != nil {
 			return nil, err
 		}
-		chatHistory, err := c.ReadUserHistoryMessages(args.UID, args.GcName, args.Page, args.PageNum)
+		chatHistory, _, err := c.ReadUserHistoryMessages(args.UID, args.GcName, args.Page, args.PageNum)
 		if err != nil {
 			return nil, err
 		}

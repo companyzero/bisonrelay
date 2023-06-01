@@ -585,7 +585,7 @@ func (db *DB) LogGCMsg(tx ReadWriteTx, gcName string, gcID zkidentity.ShortID,
 }
 
 // ReadLogPM reads the log of PM messages from the given user.
-func (db *DB) ReadLogPM(uid UserID, page, pageNum int) ([]PMLogEntry, error) {
+func (db *DB) ReadLogPM(tx ReadTx, uid UserID, page, pageNum int) ([]PMLogEntry, error) {
 	entry, err := db.getBaseABEntry(uid)
 	if err != nil {
 		return nil, err
@@ -597,7 +597,7 @@ func (db *DB) ReadLogPM(uid UserID, page, pageNum int) ([]PMLogEntry, error) {
 }
 
 // ReadLogGCMsg reads the log a GC messages sent in the given GC.
-func (db *DB) ReadLogGCMsg(gcName string, gcID zkidentity.ShortID, page, pageNum int) ([]PMLogEntry, error) {
+func (db *DB) ReadLogGCMsg(tx ReadTx, gcName string, gcID zkidentity.ShortID, page, pageNum int) ([]PMLogEntry, error) {
 
 	logFname := fmt.Sprintf("groupchat.%s.%s.log", strescape.PathElement(gcName), gcID)
 	return db.readLogMsg(logFname, page, pageNum)
