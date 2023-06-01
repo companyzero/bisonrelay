@@ -401,6 +401,8 @@ type chatWindow struct {
 	me    string // nick of the local user
 	gc    zkidentity.ShortID
 
+	initTime time.Time // When the cw was created and history read.
+
 	pageSess      clientintf.PagesSessionID
 	page          *clientdb.FetchedResource
 	isPage        bool
@@ -440,6 +442,7 @@ func (cw *chatWindow) appendHistoryMsg(msg *chatMsg) {
 	}
 	cw.Lock()
 	cw.msgs = append(cw.msgs, msg)
+	cw.unreadIdx = len(cw.msgs)
 	cw.Unlock()
 }
 

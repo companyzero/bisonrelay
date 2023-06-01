@@ -78,9 +78,10 @@ type balance struct {
 }
 
 type inboundRemoteMsg struct {
-	user *client.RemoteUser
-	rm   interface{}
-	ts   time.Time
+	user   *client.RemoteUser
+	rm     interface{}
+	ts     time.Time
+	recvts time.Time
 }
 
 type appState struct {
@@ -207,6 +208,7 @@ type appState struct {
 	inboundMsgsMtx  sync.Mutex
 	inboundMsgs     *genericlist.List[inboundRemoteMsg]
 	inboundMsgsChan chan struct{}
+	logsMsgs        bool
 
 	inviteFundsAccount string
 
@@ -531,22 +533,40 @@ loop:
 			fromNick := strescape.Nick(user.Nick())
 			fromUID := user.ID()
 
-			var msgContent string
+			var beepNick, rawMsg string
 			var cw *chatWindow
 			switch msg := inmsg.rm.(type) {
 			case rpc.RMPrivateMessage:
 				cw = as.findOrNewChatWindow(user.ID(), fromNick)
-				msgContent = as.handleRcvdText(msg.Message, fromNick)
+				beepNick = fromNick
+				rawMsg = msg.Message
 
 			case rpc.RMGroupMessage:
 				cw = as.findOrNewGCWindow(msg.ID)
-				msgContent = as.handleRcvdText(msg.Message, cw.alias)
+				beepNick = cw.alias
+				rawMsg = msg.Message
 			default:
 				panic("unimplemented")
 			}
 
-			cw.newRecvdMsg(fromNick, msgContent, &fromUID, ts)
-			cwActive := as.markWindowUpdated(cw, hasMention(as.c.LocalNick(), msgContent))
+			msgContent := as.handleRcvdText(rawMsg, beepNick)
+			mentioned := hasMention(as.c.LocalNick(), msgContent)
+
+			// Only add the message if the ntfn was received after
+			// the cw was initialized (otherwise the message is
+			// already in the log, and would be duplicated).
+			//
+			// Otherwise, rewind the index of unread msgs, because
+			// this is a history message that hasn't been read.
+			if !inmsg.recvts.Before(cw.initTime) || !as.logsMsgs {
+				cw.newRecvdMsg(fromNick, msgContent, &fromUID, ts)
+			} else {
+				cw.Lock()
+				cw.unreadIdx -= 1
+				cw.Unlock()
+			}
+
+			cwActive := as.markWindowUpdated(cw, mentioned)
 			msgInActiveWin = msgInActiveWin || cwActive
 		}
 		repaintChan = time.After(5 * time.Millisecond) // debounce repaints
@@ -1065,10 +1085,11 @@ func (as *appState) findOrNewGCWindow(gcID zkidentity.ShortID) *chatWindow {
 	as.updatedCW[len(as.chatWindows)-1] = false
 	as.chatWindowsMtx.Unlock()
 
-	chatHistory, err := as.c.ReadUserHistoryMessages(gcID, gcName, 500, 0)
+	chatHistory, initTime, err := as.c.ReadUserHistoryMessages(gcID, gcName, 500, 0)
 	if err != nil {
 		cw.newInternalMsg("Unable to read history messages")
 	}
+	cw.initTime = initTime
 	for i, chatLog := range chatHistory {
 		var empty *zkidentity.ShortID
 		if i == 0 ||
@@ -1112,10 +1133,11 @@ func (as *appState) findOrNewChatWindow(id clientintf.UserID, alias string) *cha
 	as.updatedCW[len(as.chatWindows)-1] = false
 	as.chatWindowsMtx.Unlock()
 
-	chatHistory, err := as.c.ReadUserHistoryMessages(id, "", 500, 0)
+	chatHistory, initTime, err := as.c.ReadUserHistoryMessages(id, "", 500, 0)
 	if err != nil {
 		cw.newInternalMsg("Unable to read history messages")
 	}
+	cw.initTime = initTime
 	for i, chatLog := range chatHistory {
 		if i == 0 ||
 			(i > 0 &&
@@ -2527,7 +2549,7 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 	// Setup notification handlers.
 	ntfns := client.NewNotificationManager()
 	ntfns.RegisterSync(client.OnPMNtfn(func(user *client.RemoteUser, msg rpc.RMPrivateMessage, ts time.Time) {
-		inmsg := inboundRemoteMsg{user: user, rm: msg, ts: ts}
+		inmsg := inboundRemoteMsg{user: user, rm: msg, ts: ts, recvts: time.Now()}
 		as.inboundMsgsMtx.Lock()
 		as.inboundMsgs.PushBack(inmsg)
 		as.inboundMsgsMtx.Unlock()
@@ -2542,7 +2564,7 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 	// onGCM needs to be sync, otherwise during startup when fetching
 	// multiple initial messages we might inadvertedly reorder them.
 	ntfns.RegisterSync(client.OnGCMNtfn(func(user *client.RemoteUser, msg rpc.RMGroupMessage, ts time.Time) {
-		inmsg := inboundRemoteMsg{user: user, rm: msg, ts: ts}
+		inmsg := inboundRemoteMsg{user: user, rm: msg, ts: ts, recvts: time.Now()}
 		as.inboundMsgsMtx.Lock()
 		as.inboundMsgs.PushBack(inmsg)
 		as.inboundMsgsMtx.Unlock()
@@ -3588,6 +3610,7 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 
 		inboundMsgs:     &genericlist.List[inboundRemoteMsg]{},
 		inboundMsgsChan: make(chan struct{}, 8),
+		logsMsgs:        args.MsgRoot != "",
 
 		sstore:       sstore,
 		ssPayType:    args.SimpleStorePayType,
