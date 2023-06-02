@@ -215,7 +215,7 @@ func (s *Store) handlePlaceOrder(ctx context.Context, uid clientintf.UserID,
 		}, nil
 	}
 
-	var shipping *ShippingAddress
+	var shipping *Shipping
 	// Verify the items
 	for _, item := range cart.Items {
 		prod, ok := s.products[item.Product.SKU]
@@ -236,18 +236,22 @@ func (s *Store) handlePlaceOrder(ctx context.Context, uid clientintf.UserID,
 					Data:   []byte("request data not valid json"),
 				}, nil
 			}
-			shipping = &formData
 
-			if shipping.Name == "" || shipping.Address1 == "" ||
-				shipping.City == "" || shipping.State == "" ||
-				shipping.PostalCode == "" {
+			if formData.Name == "" || formData.Address1 == "" ||
+				formData.City == "" || formData.State == "" ||
+				formData.PostalCode == "" {
 				return &rpc.RMFetchResourceReply{
 					Status: rpc.ResourceStatusBadRequest,
 					Data:   []byte("incomplete shipping address"),
 				}, nil
 			}
+
 			// TODO: proper address validation, optional phone
 			// number validation.
+			shipping = &Shipping{
+				Address:  formData,
+				Tracking: "",
+			}
 		}
 	}
 
@@ -266,7 +270,7 @@ func (s *Store) handlePlaceOrder(ctx context.Context, uid clientintf.UserID,
 		Status:     StatusPlaced,
 		PlacedTS:   time.Now(),
 		ShipCharge: s.cfg.ShipCharge,
-		ShipAddr:   shipping,
+		Shipping:   shipping,
 	}
 
 	// Build the message to send to the remote user, and present it to the
@@ -282,17 +286,18 @@ func (s *Store) handlePlaceOrder(ctx context.Context, uid clientintf.UserID,
 			order.ID, order.User)
 	} else {
 		wpm("Thank you for placing your order #%d\n", order.ID)
-		if order.ShipAddr != nil {
+		if order.Shipping != nil {
+			shipAddr := order.Shipping.Address
 			wpm("Shipping address:\n")
-			wpm("   Name: %s\n", order.ShipAddr.Name)
-			wpm("   Addr: %s\n", order.ShipAddr.Address1)
-			if order.ShipAddr.Address2 != "" {
-				wpm("   Addr: %s\n", order.ShipAddr.Address2)
+			wpm("   Name: %s\n", shipAddr.Name)
+			wpm("   Addr: %s\n", shipAddr.Address1)
+			if shipAddr.Address2 != "" {
+				wpm("   Addr: %s\n", shipAddr.Address2)
 			}
-			wpm("   City: %s\n", order.ShipAddr.City)
-			wpm("  State: %s\n", order.ShipAddr.State)
-			wpm("    Zip: %s\n", order.ShipAddr.PostalCode)
-			wpm("  Phone: %s\n", order.ShipAddr.Phone)
+			wpm("   City: %s\n", shipAddr.City)
+			wpm("  State: %s\n", shipAddr.State)
+			wpm("    Zip: %s\n", shipAddr.PostalCode)
+			wpm("  Phone: %s\n", shipAddr.Phone)
 		}
 		wpm("The following were the items in your order:\n")
 		for _, item := range order.Cart.Items {
