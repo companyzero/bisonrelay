@@ -16,6 +16,10 @@ type addToCartContext struct {
 	Cart    *Cart
 }
 
+type orderContext struct {
+	Order Order
+}
+
 type ordersContext struct {
 	Orders []*Order
 }

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -432,6 +433,51 @@ func (s *Store) handleOrders(ctx context.Context, uid clientintf.UserID,
 	err = s.tmpl.ExecuteTemplate(w, ordersTmplFile, tmplCtx)
 	if err != nil {
 		return nil, fmt.Errorf("unable to execute product template: %v", err)
+	}
+
+	return &rpc.RMFetchResourceReply{
+		Data:   w.Bytes(),
+		Status: rpc.ResourceStatusOk,
+	}, nil
+}
+
+func (s *Store) handleOrderStatus(ctx context.Context, uid clientintf.UserID,
+	request *rpc.RMFetchResource) (*rpc.RMFetchResourceReply, error) {
+
+	s.mtx.Lock()
+	defer s.mtx.Unlock()
+
+	id, err := strconv.ParseUint(request.Path[1], 10, 64)
+	if err != nil {
+		return &rpc.RMFetchResourceReply{
+			Data:   []byte("invalid order id"),
+			Status: rpc.ResourceStatusBadRequest,
+		}, nil
+	}
+
+	fname := filepath.Join(s.root, ordersDir, uid.String(), orderFnamePattern.FilenameFor(id))
+
+	var order Order
+	err = jsonfile.Read(fname, &order)
+	if err != nil {
+		if errors.Is(err, jsonfile.ErrNotFound) {
+			return &rpc.RMFetchResourceReply{
+				Data:   []byte("order not found"),
+				Status: rpc.ResourceStatusBadRequest,
+			}, nil
+		}
+		return nil, fmt.Errorf("Unable to read order %s: %v",
+			fname, err)
+	}
+
+	tmplCtx := &orderContext{
+		Order: order,
+	}
+
+	w := &bytes.Buffer{}
+	err = s.tmpl.ExecuteTemplate(w, orderTmplFile, tmplCtx)
+	if err != nil {
+		return nil, fmt.Errorf("unable to execute order template: %v", err)
 	}
 
 	return &rpc.RMFetchResourceReply{
