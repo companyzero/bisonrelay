@@ -27,6 +27,7 @@ const (
 	prodTmplFile        = "product.tmpl"
 	addToCartTmplFile   = "addtocart.tmpl"
 	cartTmplFile        = "cart.tmpl"
+	orderTmplFile       = "order.tmpl"
 	ordersTmplFile      = "orders.tmpl"
 	orderPlacedTmplFile = "orderplaced.tmpl"
 	adminOrdersTmplFile = "admin_orders.tmpl"
@@ -199,6 +200,8 @@ func (s *Store) Fulfill(ctx context.Context, uid clientintf.UserID,
 		return s.handlePlaceOrder(ctx, uid, request)
 	case len(request.Path) == 1 && request.Path[0] == "orders":
 		return s.handleOrders(ctx, uid, request)
+	case len(request.Path) == 2 && request.Path[0] == "order":
+		return s.handleOrderStatus(ctx, uid, request)
 	default:
 		return s.handleNotFound(ctx, uid, request)
 	}
