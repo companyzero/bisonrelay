@@ -8,6 +8,7 @@ import (
 	"github.com/companyzero/bisonrelay/client/clientintf"
 	"github.com/companyzero/bisonrelay/internal/assert"
 	"github.com/companyzero/bisonrelay/rpc"
+	"github.com/companyzero/bisonrelay/zkidentity"
 	"github.com/decred/slog"
 	"golang.org/x/net/context"
 )
@@ -19,9 +20,9 @@ const (
 )
 
 // testCacher creates a test gcm cacher.
-func testCacher(t testing.TB) (*Cacher, chan Msg) {
-	ch := make(chan Msg, 10)
-	handler := func(msg Msg) {
+func testCacher(t testing.TB) (*Cacher, chan clientintf.ReceivedGCMsg) {
+	ch := make(chan clientintf.ReceivedGCMsg, 10)
+	handler := func(msg clientintf.ReceivedGCMsg) {
 		ch <- msg
 	}
 	log := slog.Disabled
@@ -46,7 +47,8 @@ func TestGCMSortsMessages(t *testing.T) {
 	ts := time.Now()
 	for i := 0; i < nbMsgs; i++ {
 		gcm := rpc.RMGroupMessage{Message: fmt.Sprintf("%d", i)}
-		c.GCMessageReceived(uid, gcm, ts)
+		rgcm := clientintf.ReceivedGCMsg{UID: uid, GCM: gcm, TS: ts}
+		c.GCMessageReceived(rgcm)
 		ts = ts.Add(-time.Second)
 	}
 
@@ -63,11 +65,10 @@ func TestGCMSortsMessages(t *testing.T) {
 func TestGCMCMessagesOffline(t *testing.T) {
 	t.Parallel()
 	c, ch := testCacher(t)
-	uid := clientintf.UserID{}
 
 	// Receive a message and immediately go offline.
 	c.SessionChanged(true)
-	c.GCMessageReceived(uid, rpc.RMGroupMessage{}, time.Now())
+	c.GCMessageReceived(clientintf.ReceivedGCMsg{TS: time.Now()})
 	c.SessionChanged(false)
 
 	// We expect to still receive callback after some delay.
@@ -102,7 +103,7 @@ func TestSlowServerConn(t *testing.T) {
 	c.RMReceived(uid3, testTime())
 	c.RMReceived(uid2, testTime())
 	wantMsg03 := "msg03"
-	c.GCMessageReceived(uid2, rpc.RMGroupMessage{Message: wantMsg03}, basetime)
+	c.GCMessageReceived(clientintf.ReceivedGCMsg{UID: uid2, GCM: rpc.RMGroupMessage{Message: wantMsg03}, TS: basetime})
 
 	// Wait until just before the initial delay is about to elapse.
 	time.Sleep(testInitialDelay - testMaxLifetime)
@@ -118,7 +119,7 @@ func TestSlowServerConn(t *testing.T) {
 	// msg01 appears, which is older than msg02.
 	wantMsg01 := "msg01"
 	c.RMReceived(uid1, oldTime)
-	c.GCMessageReceived(uid1, rpc.RMGroupMessage{Message: wantMsg01}, oldTime)
+	c.GCMessageReceived(clientintf.ReceivedGCMsg{UID: uid1, GCM: rpc.RMGroupMessage{Message: wantMsg01}, TS: oldTime})
 
 	// msg01 is immediately dispatched (because we can receive no message
 	// older than that).
@@ -134,11 +135,56 @@ func TestSlowServerConn(t *testing.T) {
 	// msg02 appears, which is older than msg03 but newer than msg01.
 	wantMsg02 := "msg02"
 	c.RMReceived(uid1, midTime)
-	c.GCMessageReceived(uid1, rpc.RMGroupMessage{Message: wantMsg02}, midTime)
+	c.GCMessageReceived(clientintf.ReceivedGCMsg{UID: uid1, GCM: rpc.RMGroupMessage{Message: wantMsg02}, TS: midTime})
 
 	// Wait for the timeouts to elapse and verify correct ordering.
 	gotMsg02 := assert.ChanWritten(t, ch)
 	assert.DeepEqual(t, gotMsg02.GCM.Message, wantMsg02)
 	gotMsg03 := assert.ChanWritten(t, ch)
 	assert.DeepEqual(t, gotMsg03.GCM.Message, wantMsg03)
+}
+
+// TestEmitsReloadedWhileOffline asserts that messages reloaded while the
+// cacher was offline are eventually emitted.
+func TestEmitsReloadedWhileOffline(t *testing.T) {
+	t.Parallel()
+	c, ch := testCacher(t)
+
+	// Reload a cached message before the session is online.
+	rgcm := clientintf.ReceivedGCMsg{
+		MsgID: zkidentity.ShortID{0: 0x01},
+		UID:   clientintf.UserID{0: 0x02},
+		GCM:   rpc.RMGroupMessage{Message: "test"},
+		TS:    time.Now(),
+	}
+	c.ReloadCachedMessages([]clientintf.ReceivedGCMsg{rgcm})
+
+	// Session goes online.
+	c.SessionChanged(true)
+
+	// We expect to still receive the callback after some delay.
+	assert.ChanWrittenWithVal(t, ch, rgcm)
+}
+
+// TestEmitsReloadedWhenOnline asserts that messages reloaded while the
+// cacher was online are eventually emitted.
+func TestEmitsReloadedWhenOnline(t *testing.T) {
+	t.Parallel()
+	c, ch := testCacher(t)
+
+	// Session goes online.
+	c.SessionChanged(true)
+	time.Sleep(testInitialDelay + time.Millisecond*10)
+
+	// Reload a cached message before the session is online.
+	rgcm := clientintf.ReceivedGCMsg{
+		MsgID: zkidentity.ShortID{0: 0x01},
+		UID:   clientintf.UserID{0: 0x02},
+		GCM:   rpc.RMGroupMessage{Message: "test"},
+		TS:    time.Now(),
+	}
+	c.ReloadCachedMessages([]clientintf.ReceivedGCMsg{rgcm})
+
+	// We expect to still receive the callback after some delay.
+	assert.ChanWrittenWithVal(t, ch, rgcm)
 }

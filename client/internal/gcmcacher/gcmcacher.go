@@ -49,20 +49,12 @@ import (
 	"time"
 
 	"github.com/companyzero/bisonrelay/client/clientintf"
-	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/decred/slog"
 )
 
-// Msg is an individual message stored by the GC Message cacher.
-type Msg struct {
-	UID clientintf.UserID
-	GCM rpc.RMGroupMessage
-	TS  time.Time
-}
-
 // gcmq is a priority queue for GCMessages. Sorted by timestamp.
 type gcmq struct {
-	msgs []Msg
+	msgs []clientintf.ReceivedGCMsg
 }
 
 func (gc *gcmq) Len() int {
@@ -78,7 +70,7 @@ func (gc *gcmq) Swap(i, j int) {
 }
 
 func (gc *gcmq) Push(v any) {
-	gc.msgs = append(gc.msgs, v.(Msg))
+	gc.msgs = append(gc.msgs, v.(clientintf.ReceivedGCMsg))
 }
 
 func (gc *gcmq) Pop() any {
@@ -88,8 +80,8 @@ func (gc *gcmq) Pop() any {
 	return r
 }
 
-func (gc *gcmq) nextGCM() Msg {
-	return heap.Pop(gc).(Msg)
+func (gc *gcmq) nextGCM() clientintf.ReceivedGCMsg {
+	return heap.Pop(gc).(clientintf.ReceivedGCMsg)
 }
 
 type rmMsg struct {
@@ -174,12 +166,13 @@ type Cacher struct {
 	updateDelay  time.Duration
 	initialDelay time.Duration
 
-	handler func(Msg)
+	handler func(clientintf.ReceivedGCMsg)
 	log     slog.Logger
 
 	quit          chan struct{}
-	msgChan       chan Msg
+	msgChan       chan clientintf.ReceivedGCMsg
 	rmChan        chan rmMsg
+	reloadChan    chan []clientintf.ReceivedGCMsg
 	connectedChan chan bool
 }
 
@@ -188,7 +181,7 @@ type Cacher struct {
 // is a max delay after which messages will be delivered, regardless of being
 // received within delayDuration of each other.
 func New(maxLifetime, updateDelay, initialDelay time.Duration,
-	log slog.Logger, handler func(Msg)) *Cacher {
+	log slog.Logger, handler func(clientintf.ReceivedGCMsg)) *Cacher {
 
 	c := &Cacher{
 		maxLifetime:  maxLifetime,
@@ -199,7 +192,8 @@ func New(maxLifetime, updateDelay, initialDelay time.Duration,
 
 		quit:          make(chan struct{}),
 		rmChan:        make(chan rmMsg),
-		msgChan:       make(chan Msg),
+		msgChan:       make(chan clientintf.ReceivedGCMsg),
+		reloadChan:    make(chan []clientintf.ReceivedGCMsg),
 		connectedChan: make(chan bool),
 	}
 	return c
@@ -215,9 +209,18 @@ func (c *Cacher) RMReceived(uid clientintf.UserID, ts time.Time) {
 
 // GCMessageReceived should be called whenever a new GC message is externally
 // received.
-func (c *Cacher) GCMessageReceived(uid clientintf.UserID, gcm rpc.RMGroupMessage, ts time.Time) {
+func (c *Cacher) GCMessageReceived(msg clientintf.ReceivedGCMsg) {
 	select {
-	case c.msgChan <- Msg{UID: uid, GCM: gcm, TS: ts}:
+	case c.msgChan <- msg:
+	case <-c.quit:
+	}
+}
+
+// ReloadCachedMessages reloads messages that were previously cached by the
+// cacher. This assumes the cacher has been restarted/cleared.
+func (c *Cacher) ReloadCachedMessages(rgcms []clientintf.ReceivedGCMsg) {
+	select {
+	case c.reloadChan <- rgcms:
 	case <-c.quit:
 	}
 }
@@ -300,6 +303,21 @@ loop:
 			// If offline, continue execution of this iteration to
 			// emit currently cached msgs.
 			if online {
+				continue loop
+			}
+
+		case reloadedMsgs := <-c.reloadChan:
+			for i := range reloadedMsgs {
+				heap.Push(msgs, reloadedMsgs[i])
+			}
+
+			c.log.Tracef("Reloaded %d messages into cacher",
+				len(reloadedMsgs))
+
+			// Reloading only loads old messages but still waits
+			// for the online event to make sure messages were
+			// received in order.
+			if !doneCaching {
 				continue loop
 			}
 
