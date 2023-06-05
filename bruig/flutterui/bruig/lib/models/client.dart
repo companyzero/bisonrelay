@@ -678,7 +678,7 @@ class ClientModel extends ChangeNotifier {
         _userChats.remove(chat);
         List<ChatModel> newUserChats = [];
         newUserChats.add(chat);
-        for (int i = 0; i < _gcChats.length; i++) {
+        for (int i = 0; i < _userChats.length; i++) {
           newUserChats.add(_userChats[i]);
         }
         _userChats = newUserChats;
