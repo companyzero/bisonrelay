@@ -201,7 +201,7 @@ class _LNInfoPageState extends State<LNInfoPage> {
                 ? Container(
                     margin: const EdgeInsets.all(10),
                     color: Colors.white,
-                    child: QrImageView(
+                    child: QrImage(
                       data: depositAddr,
                       version: QrVersions.auto,
                       size: 200.0,
