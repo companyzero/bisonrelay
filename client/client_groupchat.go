@@ -1,6 +1,7 @@
 package client
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
@@ -11,7 +12,6 @@ import (
 
 	"github.com/companyzero/bisonrelay/client/clientdb"
 	"github.com/companyzero/bisonrelay/client/clientintf"
-	"github.com/companyzero/bisonrelay/client/internal/gcmcacher"
 	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/companyzero/bisonrelay/zkidentity"
 	"golang.org/x/exp/slices"
@@ -776,13 +776,33 @@ func (c *Client) handleGCList(ru *RemoteUser, gl rpc.RMGroupList) error {
 
 // handleDelayedGCMessages is called by the gc message cacher when it's time
 // to let external callers know about new messages.
-func (c *Client) handleDelayedGCMessages(msg gcmcacher.Msg) {
+func (c *Client) handleDelayedGCMessages(msg clientintf.ReceivedGCMsg) {
 	user, err := c.UserByID(msg.UID)
 	if err != nil {
 		// Should only happen if we blocked the user
 		// during the gcm cacher delay.
 		c.log.Warnf("Delayed GC message with unknown user %s", msg.UID)
 		return
+	}
+
+	// Log the message and remove the cached GCM from the db.
+	err = c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
+		if err := c.db.RemoveCachedRGCM(tx, msg); err != nil {
+			c.log.Warnf("Unable to remove cached RGCM: %v", err)
+		}
+
+		gcAlias, _ := c.GetGCAlias(msg.GCM.ID)
+		err := c.db.LogGCMsg(tx, gcAlias, msg.GCM.ID, false, user.Nick(),
+			msg.GCM.Message, msg.TS)
+		if err != nil {
+			c.log.Warnf("Unable to log RGCM: %v", err)
+		}
+
+		return nil
+	})
+	if err != nil {
+		// Not a fatal error, so just log a warning.
+		c.log.Warnf("Unable to handle cached RGCM: %v", err)
 	}
 
 	c.ntfns.notifyOnGCM(user, msg.GCM, msg.TS)
@@ -842,6 +862,16 @@ func (c *Client) handleGCMessage(ru *RemoteUser, gcm rpc.RMGroupMessage, ts time
 	var gc rpc.RMGroupList
 	var found, isBlocked bool
 	var gcAlias string
+
+	// Create the local cached structure for a received GCM. The MsgID is
+	// just a random id used for caching purposes.
+	rgcm := clientintf.ReceivedGCMsg{
+		UID: ru.ID(),
+		GCM: gcm,
+		TS:  ts,
+	}
+	_, _ = rand.Read(rgcm.MsgID[:])
+
 	err := c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
 		// Ensure gc exists.
 		var err error
@@ -868,11 +898,7 @@ func (c *Client) handleGCMessage(ru *RemoteUser, gcm rpc.RMGroupMessage, ts time
 			return nil
 		}
 
-		gcAlias, err = c.GetGCAlias(gcm.ID)
-		if err != nil {
-			gcAlias = gc.Name
-		}
-		return c.db.LogGCMsg(tx, gcAlias, gcm.ID, false, ru.Nick(), gcm.Message, ts)
+		return c.db.CacheReceivedGCM(tx, rgcm)
 	})
 	if errors.Is(err, clientdb.ErrNotFound) {
 		// Remote user sent message on group chat we're no longer a
@@ -906,7 +932,7 @@ func (c *Client) handleGCMessage(ru *RemoteUser, gcm rpc.RMGroupMessage, ts time
 	ru.log.Debugf("Received message of len %d in GC %q (%s)", len(gcm.Message),
 		gcAlias, gc.ID)
 
-	c.gcmq.GCMessageReceived(ru.ID(), gcm, ts)
+	c.gcmq.GCMessageReceived(rgcm)
 	return nil
 }
 
@@ -1384,4 +1410,22 @@ func (c *Client) handleGCUpdateAdmins(ru *RemoteUser, gcup rpc.RMGroupUpdateAdmi
 		gcup.NewGroupList.ID, gcup.NewGroupList.ExtraAdmins)
 	c.notifyUpdatedGC(ru, oldGC, gcup.NewGroupList)
 	return err
+}
+
+// loadCachedRGCMs reloads previously persisted cached RGCMs that have not
+// been emitted yet.
+func (c *Client) loadCachedRGCMs(ctx context.Context) error {
+	var rgcms []clientintf.ReceivedGCMsg
+	err := c.db.View(ctx, func(tx clientdb.ReadTx) error {
+		var err error
+		rgcms, err = c.db.ListCachedRGCMs(tx)
+		return err
+	})
+
+	if err != nil {
+		return err
+	}
+
+	c.gcmq.ReloadCachedMessages(rgcms)
+	return nil
 }

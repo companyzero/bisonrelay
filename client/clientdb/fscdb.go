@@ -53,6 +53,7 @@ const (
 	onboardStateFile    = "onboard.json"
 	reqResourcesDir     = "reqresources"
 	recvAddrForUserFile = "onchainrecvaddr.json"
+	cachedGCMsDir       = "cachedgcms"
 
 	pageSessionsDir         = "pagesessions"
 	pageSessionOverviewFile = "overview.json"

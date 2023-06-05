@@ -168,6 +168,14 @@ func (id PagesSessionID) String() string {
 	return fmt.Sprintf("%08d", id)
 }
 
+// ReceivedGCMsg is an individual GC message received by a local client.
+type ReceivedGCMsg struct {
+	MsgID zkidentity.ShortID `json:"msg_id"`
+	UID   UserID             `json:"uid"`
+	GCM   rpc.RMGroupMessage `json:"gcm"`
+	TS    time.Time          `json:"ts"`
+}
+
 var (
 	ErrSubsysExiting             = errors.New("subsys exiting")
 	ErrInvoiceInsufficientlyPaid = errors.New("invoice insufficiently paid")

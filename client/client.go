@@ -555,7 +555,6 @@ func (c *Client) loadInitialDBData(ctx context.Context) error {
 	if err := c.loadGCAliases(ctx); err != nil {
 		return err
 	}
-
 	return nil
 }
 
@@ -1087,6 +1086,9 @@ func (c *Client) Run(ctx context.Context) error {
 
 	// Restart client onboarding.
 	g.Go(func() error { return c.restartOnboarding(gctx) })
+
+	// Reload cached RGCMs.
+	g.Go(func() error { return c.loadCachedRGCMs(gctx) })
 
 	return g.Wait()
 }

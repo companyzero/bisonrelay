@@ -9,7 +9,9 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/companyzero/bisonrelay/client/clientintf"
 	"github.com/companyzero/bisonrelay/inidb"
+	"github.com/companyzero/bisonrelay/internal/jsonfile"
 	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/companyzero/bisonrelay/zkidentity"
 )
@@ -432,4 +434,46 @@ func (db *DB) GetGCBlockList(tx ReadTx, gcid zkidentity.ShortID) (GCBlockList, e
 	}
 	return entries, err
 
+}
+
+// CacheReceivedGCM stores a cached received GC message.
+func (db *DB) CacheReceivedGCM(tx ReadWriteTx, rgcm clientintf.ReceivedGCMsg) error {
+	filename := filepath.Join(db.root, cachedGCMsDir, rgcm.MsgID.String())
+	return db.saveJsonFile(filename, rgcm)
+}
+
+// RemoveCachedRGCM removes a previously cached received GC message if it exists.
+func (db *DB) RemoveCachedRGCM(tx ReadWriteTx, rgcm clientintf.ReceivedGCMsg) error {
+	filename := filepath.Join(db.root, cachedGCMsDir, rgcm.MsgID.String())
+	return jsonfile.RemoveIfExists(filename)
+}
+
+// ListCachedRGCMs returns any existing cached RGCM.
+func (db *DB) ListCachedRGCMs(tx ReadTx) ([]clientintf.ReceivedGCMsg, error) {
+	dir := filepath.Join(db.root, cachedGCMsDir)
+	entries, err := os.ReadDir(dir)
+	if os.IsNotExist(err) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	res := make([]clientintf.ReceivedGCMsg, 0, len(entries))
+	for _, entry := range entries {
+		if !entry.Type().IsRegular() {
+			continue
+		}
+
+		var rgcm clientintf.ReceivedGCMsg
+		fname := filepath.Join(dir, entry.Name())
+		if err := db.readJsonFile(fname, &rgcm); err != nil {
+			db.log.Warnf("Unable to read file %s as a ReceivedGCM file: %v",
+				entry.Name(), err)
+			continue
+		}
+		res = append(res, rgcm)
+	}
+
+	return res, nil
 }
