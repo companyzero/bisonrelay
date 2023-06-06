@@ -16,6 +16,9 @@ func Nick(s string) string {
 		if r == utf8.RuneError {
 			return -1
 		}
+		if r == '<' || r == '>' { // Used as nick delimiter in logs.
+			return -1
+		}
 		return r
 	}, s)
 }
@@ -58,7 +61,7 @@ func PathElement(s string) string {
 		return "dotdot"
 	}
 
-	return strings.Map(func(r rune) rune {
+	s = strings.Map(func(r rune) rune {
 		if !strconv.IsPrint(r) {
 			return -1
 		}
@@ -70,6 +73,14 @@ func PathElement(s string) string {
 		}
 		return r
 	}, s)
+
+	// Max length of a single path element.
+	const maxPathElementLen = 128
+	if len(s) > maxPathElementLen {
+		s = s[:maxPathElementLen]
+	}
+
+	return s
 }
 
 // CannonicalizeNL converts all newline char sequences to \n. Additionally, it

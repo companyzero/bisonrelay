@@ -49,6 +49,10 @@ func TestNick(t *testing.T) {
 		name: "4 byte utf-8 chars",
 		s:    "🀲 🀼 🁏",
 		want: "🀲 🀼 🁏",
+	}, {
+		name: "nick with gt/lt signs",
+		s:    "nick <with> gtlt",
+		want: "nick with gtlt",
 	}}
 
 	for _, tc := range tests {

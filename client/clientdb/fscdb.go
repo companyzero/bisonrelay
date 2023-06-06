@@ -11,7 +11,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
+	"regexp"
 	"time"
 
 	"github.com/companyzero/bisonrelay/inidb"
@@ -62,6 +62,15 @@ const (
 var (
 	pageFnamePattern   = jsonfile.MakeDecimalFilePattern("page-", ".json", false)
 	pageSessDirPattern = jsonfile.MakeDecimalFilePattern("", "", true)
+
+	// logLineRegexp matches the start of log lines. This matches the
+	// following line examples:
+	// 2023-06-01T13:08:47 <some nick> some message
+	// 2023-06-01T13:08:47 * Some internal message
+	//
+	// Note that this uses multiline mode (?m), therefore it matches both
+	// start of line and new lines when the source string is a full message.
+	logLineRegexp = regexp.MustCompile(`(?m)^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}) (\*|<[^>]+>)`)
 )
 
 func (db *DB) LocalID(tx ReadTx) (*zkidentity.FullIdentity, error) {
@@ -420,18 +429,26 @@ func (db *DB) DeleteTransResetHalfKX(tx ReadWriteTx, id UserID) error {
 	return os.Remove(filename)
 }
 
-func (db *DB) readLogMsg(logFname string, page, pageNum int) ([]PMLogEntry, error) {
+func (db *DB) readLogMsg(logFname string, pageSize, pageNum int) ([]PMLogEntry, error) {
 	if db.cfg.MsgsRoot == "" {
 		return nil, nil
 	}
 
 	filename := filepath.Join(db.cfg.MsgsRoot, logFname)
-	f, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0600)
+	f, err := os.Open(filename)
+	if os.IsNotExist(err) {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}
 	defer f.Close()
 
+	// TODO: instead of reading the entire log, track the total nb of
+	// messages read and only start creating the LogEntry elements once the
+	// target page is read.
+	//
+	// TODO: use a streaming regexp impl instead of reading string lines.
 	loggedMessages := make([]PMLogEntry, 0)
 	reader := bufio.NewReader(f)
 	prevLine := ""
@@ -447,17 +464,33 @@ func (db *DB) readLogMsg(logFname string, page, pageNum int) ([]PMLogEntry, erro
 			}
 			break
 		}
+		if len(line) == 0 {
+			// Should not happen, but guard against index out of
+			// range.
+			break
+		}
 
-		lineSplit := strings.Split(line, " ")
+		// Drop newline delimiter.
+		line = line[:len(line)-1]
+
+		matches := logLineRegexp.FindStringSubmatchIndex(line)
+		if len(matches) != 6 {
+			// No new time to parse at the front of the line so just add the
+			// message to the previous line, then go to the next line.
+			prevLine += "\n" + line
+			continue
+		}
+
 		// Try to read timestamp
-		ts := lineSplit[0]
-		t, err := time.ParseInLocation("2006-01-02T15:04:05 ", ts, time.Local)
+		strTimestamp := line[matches[2]:matches[3]]
+		t, err := time.ParseInLocation("2006-01-02T15:04:05", strTimestamp, time.Local)
 		if err != nil {
 			// No new time to parse at the front of the line so just add the
 			// message to the previous line, then go to the next line.
 			prevLine += "\n" + line
 			continue
 		}
+
 		// This means there was a new timestamp in the current line so
 		if prevLine != "" && prevName != "" && prevLineTimestamp != 0 {
 			loggedMessages = append(loggedMessages, PMLogEntry{Message: prevLine,
@@ -465,14 +498,14 @@ func (db *DB) readLogMsg(logFname string, page, pageNum int) ([]PMLogEntry, erro
 		}
 
 		// This surely means there is a new log line if there is a parsable timestamp at the front.
-
-		name := lineSplit[1]
+		name := line[matches[4]:matches[5]]
 		message := ""
-		if strings.Contains(name, "<") {
-			name = strings.Replace(name, "<", "", -1)
-			name = strings.Replace(name, ">", "", -1)
-			message = strings.TrimSpace(strings.Split(line, ">")[1])
-		} else if strings.Contains(name, "*") {
+		if len(name) > 0 && name[0] == '<' {
+			name = name[1 : len(name)-1]
+			if len(line) > matches[5]+1 {
+				message = line[matches[5]+1:]
+			}
+		} else if name == "*" {
 			// Not a message to pass through, so reset prev info and move on.
 			prevLine = ""
 			prevName = ""
@@ -483,11 +516,11 @@ func (db *DB) readLogMsg(logFname string, page, pageNum int) ([]PMLogEntry, erro
 		prevLine = message
 		prevName = name
 		prevLineTimestamp = t.Unix()
-
 	}
+
 	// Return only the requested page/pageNum
-	pageEnd := len(loggedMessages) - page*pageNum
-	pageStart := pageEnd - page
+	pageEnd := len(loggedMessages) - pageSize*pageNum
+	pageStart := pageEnd - pageSize
 	if pageEnd < 0 || pageEnd > len(loggedMessages) {
 		pageEnd = len(loggedMessages)
 	}
@@ -500,6 +533,34 @@ func (db *DB) readLogMsg(logFname string, page, pageNum int) ([]PMLogEntry, erro
 func (db *DB) logMsg(logFname string, internal bool, from, msg string, ts time.Time) error {
 	if db.cfg.MsgsRoot == "" {
 		return nil
+	}
+
+	// Escape lines that match the logLineRegexp, so that when loading the
+	// message back, they won't be erroneously detected as log messages.
+	matches := logLineRegexp.FindAllStringSubmatchIndex(msg, -1)
+	if len(matches) > 0 {
+		b := bytes.NewBuffer(nil)
+		b.Grow(len([]byte(msg)) + len(matches)) // Each match adds 1 byte
+		lastEnd := 0
+		for _, match := range matches {
+			// Copy until start of match.
+			b.WriteString(msg[lastEnd:match[0]])
+
+			// Add a space to escape (unless the match is the start
+			// of the string, in which case the prefix added below
+			// will be sufficient to escape it).
+			if match[0] != 0 {
+				b.WriteRune(' ')
+			}
+
+			// Add the log line prefix.
+			b.WriteString(msg[match[0]:match[1]])
+			lastEnd = match[1]
+		}
+
+		// Copy rest of string (end of last match to end of string)
+		b.WriteString(msg[lastEnd:])
+		msg = b.String()
 	}
 
 	filename := filepath.Join(db.cfg.MsgsRoot, logFname)
@@ -573,7 +634,7 @@ func (db *DB) LogPM(tx ReadWriteTx, uid UserID, internal bool, from, msg string,
 	}
 
 	nick := entry.ID.Nick
-	logFname := fmt.Sprintf("%s.%s.log", strescape.PathElement(nick), uid)
+	logFname := fmt.Sprintf("%s.%s.log", escapeNickForFname(nick), uid)
 	return db.logMsg(logFname, internal, from, msg, ts)
 }
 
@@ -581,7 +642,7 @@ func (db *DB) LogPM(tx ReadWriteTx, uid UserID, internal bool, from, msg string,
 func (db *DB) LogGCMsg(tx ReadWriteTx, gcName string, gcID zkidentity.ShortID,
 	internal bool, from, msg string, ts time.Time) error {
 
-	logFname := fmt.Sprintf("groupchat.%s.%s.log", strescape.PathElement(gcName), gcID)
+	logFname := fmt.Sprintf("groupchat.%s.%s.log", escapeNickForFname(gcName), gcID)
 	return db.logMsg(logFname, internal, from, msg, ts)
 }
 
@@ -593,14 +654,14 @@ func (db *DB) ReadLogPM(tx ReadTx, uid UserID, page, pageNum int) ([]PMLogEntry,
 	}
 
 	nick := entry.ID.Nick
-	logFname := fmt.Sprintf("%s.%s.log", strescape.PathElement(nick), uid)
+	logFname := fmt.Sprintf("%s.%s.log", escapeNickForFname(nick), uid)
 	return db.readLogMsg(logFname, page, pageNum)
 }
 
 // ReadLogGCMsg reads the log a GC messages sent in the given GC.
 func (db *DB) ReadLogGCMsg(tx ReadTx, gcName string, gcID zkidentity.ShortID, page, pageNum int) ([]PMLogEntry, error) {
 
-	logFname := fmt.Sprintf("groupchat.%s.%s.log", strescape.PathElement(gcName), gcID)
+	logFname := fmt.Sprintf("groupchat.%s.%s.log", escapeNickForFname(gcName), gcID)
 	return db.readLogMsg(logFname, page, pageNum)
 }
 
