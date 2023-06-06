@@ -423,10 +423,15 @@ class ClientModel extends ChangeNotifier {
     c = ChatModel(id, alias, isGC);
     _activeChats[id] = c;
 
-// Start with 500 messages and first page (0). We can load more with a scrolling
-// mechanism in the future
-    var chatHistory =
-        await Golib.readChatHistory(id, isGC ? alias : "", 500, 0);
+    // Start with 500 messages and first page (0). We can load more with a scrolling
+    // mechanism in the future
+    List<LogEntry> chatHistory = [];
+    try {
+      chatHistory = await Golib.readChatHistory(id, isGC ? alias : "", 500, 0);
+    } catch (exception) {
+      // Ignore, as we might be opening a chat for a user that hasn't been fully
+      // setup yet.
+    }
     for (int i = 0; i < chatHistory.length; i++) {
       ChatEventModel evnt;
       if (isGC) {
