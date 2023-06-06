@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/screens/contacts_msg_times.dart';
 import 'package:flutter/material.dart';
@@ -140,6 +141,19 @@ Future<void> generateInvite(BuildContext context) async {
   Navigator.of(context, rootNavigator: true).pushNamed('/generateInvite');
 }
 
+void loadInvite(BuildContext context) async {
+  // Decode the invite and send to the user verification screen.
+  var filePickRes = await FilePicker.platform.pickFiles();
+  if (filePickRes == null) return;
+  var filePath = filePickRes.files.first.path;
+  if (filePath == null) return;
+  filePath = filePath.trim();
+  if (filePath == "") return;
+  var invite = await Golib.decodeInvite(filePath);
+  Navigator.of(context, rootNavigator: true)
+      .pushNamed('/verifyInvite', arguments: invite);
+}
+
 Future<void> fetchInvite(BuildContext context) async {
   Navigator.of(context, rootNavigator: true).pushNamed('/fetchInvite');
 }
@@ -162,6 +176,7 @@ class _ChatsList extends StatefulWidget {
 class _ChatsListState extends State<_ChatsList> {
   ClientModel get client => widget.client;
   FocusNode get inputFocusNode => widget.inputFocusNode;
+  Timer? _debounce;
 
   void clientUpdated() => setState(() {});
 
@@ -181,7 +196,15 @@ class _ChatsListState extends State<_ChatsList> {
   @override
   void dispose() {
     client.removeListener(clientUpdated);
+    _debounce?.cancel();
     super.dispose();
+  }
+
+  void debouncedLoadInvite(BuildContext context) {
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    _debounce = Timer(const Duration(milliseconds: 500), () {
+      loadInvite(context);
+    });
   }
 
   @override
@@ -196,10 +219,6 @@ class _ChatsListState extends State<_ChatsList> {
 
     void genInvite() async {
       await generateInvite(context);
-      inputFocusNode.requestFocus();
-    }
-
-    void closeMenus(ClientModel client) {
       inputFocusNode.requestFocus();
     }
 
