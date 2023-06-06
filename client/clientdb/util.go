@@ -15,6 +15,7 @@ import (
 
 	"github.com/companyzero/bisonrelay/client/clientintf"
 	"github.com/companyzero/bisonrelay/internal/jsonfile"
+	"github.com/companyzero/bisonrelay/internal/strescape"
 )
 
 // multiCtx returns a context that gets canceled when any one of the passed
@@ -130,6 +131,11 @@ func dirExistsEmpty(dir string) bool {
 		return false
 	}
 	return len(i) == 0
+}
+
+// escapeNickForFname escapes a nick to be used as part of a filename.
+func escapeNickForFname(nick string) string {
+	return strescape.PathElement(strescape.Nick(nick))
 }
 
 // readJsonFile reads the first json message from the given filename and

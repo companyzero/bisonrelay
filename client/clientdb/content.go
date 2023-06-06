@@ -851,7 +851,7 @@ func (db *DB) SaveFileDownloadChunk(tx ReadWriteTx, user string, fd *FileDownloa
 	}
 
 	// Assemble final file. First: figure out final name.
-	baseDestFileName := filepath.Join(db.downloadsDir, strescape.PathElement(user),
+	baseDestFileName := filepath.Join(db.downloadsDir, escapeNickForFname(user),
 		strescape.PathElement(fd.Metadata.Filename))
 	destFileName := baseDestFileName
 	ext := filepath.Ext(baseDestFileName)
@@ -952,7 +952,7 @@ func (db *DB) HasDownloadedFile(tx ReadTx, fid zkidentity.ShortID) (string, erro
 	fname := fd.CompletedName
 	if fname != "" {
 		fname = filepath.Join(db.downloadsDir,
-			strescape.PathElement(ab.ID.Nick), fd.CompletedName)
+			escapeNickForFname(ab.ID.Nick), fd.CompletedName)
 		if !fileExists(fname) {
 			fname = ""
 		}
@@ -988,7 +988,7 @@ func (db *DB) HasDownloadedFiles(tx ReadTx, user string, uid UserID, files []rpc
 		res[i].UID = fd.UID
 		if fd.CompletedName != "" {
 			res[i].DiskPath = filepath.Join(db.downloadsDir,
-				strescape.PathElement(user), fd.CompletedName)
+				escapeNickForFname(user), fd.CompletedName)
 		}
 	}
 
