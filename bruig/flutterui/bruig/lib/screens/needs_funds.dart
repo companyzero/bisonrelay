@@ -207,7 +207,7 @@ corrupted or lost.
                       Container(
                           margin: const EdgeInsets.all(10),
                           color: Colors.white,
-                          child: QrImage(
+                          child: QrImageView(
                             data: addr,
                             version: QrVersions.auto,
                             size: 200.0,
