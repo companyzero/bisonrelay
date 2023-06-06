@@ -1,0 +1,26 @@
+Order ID: {{.ID}}
+Order Date: {{.PlacedTS}}
+Order Status: {{.Status}}
+Exchange Rate: {{.ExchangeRate}}
+
+{{if .ShipAddr ne nil}}
+Shipping Address:
+{{.ShipAddr.Name}}
+{{.ShipAddr.Address}}
+  {{if .ShipAddr.Address2 ne "" }}
+{{.ShipAddr.Address2}}
+  {{end}}
+{{.ShipAddr.City}}, {{.ShipAddr.State}}, {{.ShipAddr.PostalCode}}
+  {{if .ShipAddr.Phone ne "" }}
+{{.ShipAddr.Phone}}
+  {{end}}
+{{end}}
+
+{{range .Comments}}
+{{.Timestamp}} - {{.Comment}}
+{{end}}
+
+{{range .Cart.Items}}
+  - {{.Product.SKU}} - {{.Product.Title}} - {{.Quantity}} units - {{.Product.Price}}/unit
+{{- end}}
+
