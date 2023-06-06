@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/components/route_error.dart';
 import 'package:bruig/components/sidebar.dart';
 import 'package:bruig/components/snackbars.dart';
@@ -14,7 +13,6 @@ import 'package:bruig/screens/feed.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
-import 'package:bruig/components/copyable.dart';
 
 class _OverviewScreenTitle extends StatefulWidget {
   final MainMenuModel mainMenu;
@@ -88,8 +86,6 @@ class _OverviewScreenState extends State<OverviewScreen> {
   DownloadsModel get down => widget.down;
   ServerSessionState connState = ServerSessionState.empty();
   GlobalKey<NavigatorState> navKey = GlobalKey(debugLabel: "overview nav key");
-  SnackBarModel get snackBar => widget.snackBar;
-  SnackBarMessage snackBarMsg = SnackBarMessage.empty();
 
   void clientChanged() {
     var newConnState = client.connState;
@@ -103,26 +99,6 @@ class _OverviewScreenState extends State<OverviewScreen> {
           newConnState.checkWalletErr != null) {
         var msg = "LN wallet check failed: ${newConnState.checkWalletErr}";
         ntfns.addNtfn(AppNtfn(AppNtfnType.walletCheckFailed, msg: msg));
-      }
-    }
-  }
-
-  void snackBarChanged() {
-    if (snackBar.snackBars.isNotEmpty) {
-      var newSnackbarMessage =
-          snackBar.snackBars[snackBar.snackBars.length - 1];
-      if (newSnackbarMessage.msg != snackBarMsg.msg ||
-          newSnackbarMessage.error != snackBarMsg.error ||
-          newSnackbarMessage.timestamp != snackBarMsg.timestamp) {
-        setState(() {
-          snackBarMsg = newSnackbarMessage;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            backgroundColor:
-                snackBarMsg.error ? Colors.red[300] : Colors.green[300],
-            content: Copyable(
-                snackBarMsg.msg, const TextStyle(color: Color(0xFFE4E3E6)),
-                showSnackbar: false)));
       }
     }
   }
@@ -167,21 +143,17 @@ class _OverviewScreenState extends State<OverviewScreen> {
     super.initState();
     connState = widget.client.connState;
     widget.client.addListener(clientChanged);
-    widget.snackBar.addListener(snackBarChanged);
   }
 
   @override
   void didUpdateWidget(OverviewScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-    oldWidget.snackBar.removeListener(snackBarChanged);
-    widget.snackBar.addListener(snackBarChanged);
     oldWidget.client.removeListener(clientChanged);
     widget.client.addListener(clientChanged);
   }
 
   @override
   void dispose() {
-    widget.snackBar.removeListener(snackBarChanged);
     widget.client.removeListener(clientChanged);
     super.dispose();
   }
@@ -190,11 +162,6 @@ class _OverviewScreenState extends State<OverviewScreen> {
   Widget build(BuildContext context) {
     var theme = Theme.of(context);
 
-    Widget ntfOverlay = const Empty();
-    if (widget.ntfns.count > 0) {
-      ntfOverlay =
-          const Icon(Icons.notifications, size: 15, color: Colors.amber);
-    }
     var connectedIcon = Icons.cloud;
     String connStateLabel;
     GestureTapCallback connStateAction;
@@ -249,37 +216,40 @@ class _OverviewScreenState extends State<OverviewScreen> {
                         )),
                   ])),
         ),
-        body: Row(children: [
-          Sidebar(widget.client, widget.mainMenu, widget.ntfns, navKey,
-              widget.feed),
-          Expanded(
-            child: Navigator(
-              key: navKey,
-              initialRoute: widget.initialRoute == ""
-                  ? FeedScreen.routeName
-                  : widget.initialRoute,
-              onGenerateRoute: (settings) {
-                String routeName = settings.name!;
-                MainMenuItem? menu = widget.mainMenu.menuForRoute(routeName);
+        body: SnackbarDisplayer(
+            widget.snackBar,
+            Row(children: [
+              Sidebar(widget.client, widget.mainMenu, widget.ntfns, navKey,
+                  widget.feed),
+              Expanded(
+                child: Navigator(
+                  key: navKey,
+                  initialRoute: widget.initialRoute == ""
+                      ? FeedScreen.routeName
+                      : widget.initialRoute,
+                  onGenerateRoute: (settings) {
+                    String routeName = settings.name!;
+                    MainMenuItem? menu =
+                        widget.mainMenu.menuForRoute(routeName);
 
-                // This update needs to be on a timer so that it is decoupled to
-                // the widget build stack frame.
-                Timer(const Duration(milliseconds: 1),
-                    () async => widget.mainMenu.activeRoute = routeName);
+                    // This update needs to be on a timer so that it is decoupled to
+                    // the widget build stack frame.
+                    Timer(const Duration(milliseconds: 1),
+                        () async => widget.mainMenu.activeRoute = routeName);
 
-                return PageRouteBuilder(
-                  pageBuilder: (context, animation, secondaryAnimation) =>
-                      menu != null
-                          ? menu.builder(context)
-                          : RouteErrorPage(
-                              settings.name ?? "", OverviewScreen.routeName),
-                  transitionDuration: Duration.zero,
-                  //reverseTransitionDuration: Duration.zero,
-                  settings: settings,
-                );
-              },
-            ),
-          )
-        ]));
+                    return PageRouteBuilder(
+                      pageBuilder: (context, animation, secondaryAnimation) =>
+                          menu != null
+                              ? menu.builder(context)
+                              : RouteErrorPage(settings.name ?? "",
+                                  OverviewScreen.routeName),
+                      transitionDuration: Duration.zero,
+                      //reverseTransitionDuration: Duration.zero,
+                      settings: settings,
+                    );
+                  },
+                ),
+              )
+            ])));
   }
 }

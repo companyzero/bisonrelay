@@ -1,6 +1,8 @@
 import 'dart:async';
 
+import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/models/newconfig.dart';
+import 'package:bruig/models/snackbar.dart';
 import 'package:bruig/screens/newconfig/delete_old_wallet.dart';
 import 'package:bruig/screens/newconfig/initializing.dart';
 import 'package:bruig/screens/newconfig/ln_choice.dart';
@@ -19,6 +21,7 @@ Future<void> runNewConfigApp(List<String> args) async {
   runApp(MultiProvider(
     providers: [
       ChangeNotifierProvider(create: (c) => NewConfigModel(args)),
+      ChangeNotifierProvider(create: (c) => SnackBarModel()),
     ],
     child: NewConfigScreen(args),
   ));
@@ -40,7 +43,8 @@ class _NewConfigScreenState extends State<NewConfigScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<NewConfigModel>(builder: (context, newconf, child) {
+    return Consumer2<NewConfigModel, SnackBarModel>(
+        builder: (context, newconf, snackBar, child) {
       return MaterialApp(
         title: "Setup New Config",
         theme: ThemeData(
@@ -64,7 +68,7 @@ class _NewConfigScreenState extends State<NewConfigScreen> {
           "/newconf/restore": (context) => RestoreWalletPage(newconf),
         },
         builder: (BuildContext context, Widget? child) => Scaffold(
-          body: Center(child: child),
+          body: SnackbarDisplayer(snackBar, Center(child: child)),
         ),
       );
     });
