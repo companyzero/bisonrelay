@@ -3,9 +3,11 @@ package simplestore
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"sort"
+	"time"
 
 	"github.com/companyzero/bisonrelay/client/clientintf"
 	"github.com/companyzero/bisonrelay/internal/jsonfile"
@@ -122,6 +124,64 @@ func (s *Store) handleAdminViewOrder(ctx context.Context, _ clientintf.UserID,
 		Data:   w.Bytes(),
 		Status: rpc.ResourceStatusOk,
 	}, nil
+}
+
+func (s *Store) handleAdminAddOrderComment(ctx context.Context, _ clientintf.UserID,
+	request *rpc.RMFetchResource) (*rpc.RMFetchResourceReply, error) {
+
+	s.mtx.Lock()
+	defer s.mtx.Unlock()
+
+	// Process form data.
+	var formData string
+	if err := json.Unmarshal(request.Data, &formData); err != nil {
+		return nil, err
+	}
+	comment := formData
+
+	// Load Order.
+	if len(request.Path) < 4 {
+		return nil, fmt.Errorf("path has < 4 elements")
+	}
+
+	// Load order.
+	var uid clientintf.UserID
+	if err := uid.FromString(request.Path[2]); err != nil {
+		return nil, err
+	}
+	var oid OrderID
+	if err := oid.FromString(request.Path[3]); err != nil {
+		return nil, err
+	}
+	orderDir := filepath.Join(s.root, ordersDir, uid.String())
+	orderFname := filepath.Join(orderDir, orderFnamePattern.FilenameFor(uint64(oid)))
+	var order Order
+	if err := jsonfile.Read(orderFname, &order); err != nil {
+		return nil, err
+	}
+
+	// Add comment.
+	order.Comments = append(order.Comments, OrderComment{
+		Timestamp: time.Now(),
+		Comment:   comment,
+	})
+
+	// Save order.
+	if err := jsonfile.Write(orderFname, &order, s.log); err != nil {
+		return nil, err
+	}
+
+	// TODO - notify user of new comment?
+
+	// Generate template.
+	w := &bytes.Buffer{}
+	w.WriteString("# Comment added\n\n")
+	w.WriteString(fmt.Sprintf("[Back to Order](/admin/order/%s/%s)\n\n", uid, oid))
+	return &rpc.RMFetchResourceReply{
+		Data:   w.Bytes(),
+		Status: rpc.ResourceStatusOk,
+	}, nil
+
 }
 
 func (s *Store) handleAdminUpdateOrderStatus(ctx context.Context, _ clientintf.UserID,

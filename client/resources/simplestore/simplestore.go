@@ -178,6 +178,8 @@ func (s *Store) Fulfill(ctx context.Context, uid clientintf.UserID,
 			return s.handleAdminOrders(ctx, uid, request)
 		case pathHasPrefix(request.Path, "admin", "order"):
 			return s.handleAdminViewOrder(ctx, uid, request)
+		case pathHasPrefix(request.Path, "admin", "orderaddcomment"):
+			return s.handleAdminAddOrderComment(ctx, uid, request)
 		case pathHasPrefix(request.Path, "admin", "orderstatusto"):
 			return s.handleAdminUpdateOrderStatus(ctx, uid, request)
 		default:

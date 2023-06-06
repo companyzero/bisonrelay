@@ -23,6 +23,17 @@ Shipping Addr:
   {{ .Order.ShipAddr.Phone }}
 {{end}}
 
+{{range .Order.Comments}}
+{{.Timestamp}} - {{.Comment}}
+{{end}} 
+
+## Add Comment 
+--form--
+type="action" value="/admin/orderaddcomment/{{.Order.User}}/{{.Order.ID}}"
+type="txtinput" label="New comment" name="comment" value=""
+type="submit" label="Add Comment"
+--/form--
+
 {{ if eq .Order.Status "placed" }}
 Switch status to [shipped](/admin/orderstatusto/{{.Order.User}}/{{.Order.ID}}/shipped) [completed](/admin/orderstatusto/{{.Order.User}}/{{.Order.ID}}/completed) [canceled](/admin/orderstatusto/{{.Order.User}}/{{.Order.ID}}/canceled)
 {{ else if eq .Order.Status "shipped" }}

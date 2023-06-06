@@ -72,11 +72,6 @@ const (
 	StatusCanceled  OrderStatus = "canceled"
 )
 
-type Shipping struct {
-	Address  ShippingAddress `json:"address"`
-	Tracking string          `json:"tracking"`
-}
-
 type ShippingAddress struct {
 	Name        string `json:"name"`
 	Address1    string `json:"address1"`
@@ -86,6 +81,11 @@ type ShippingAddress struct {
 	PostalCode  string `json:"postalCode"`
 	Phone       string `json:"phone"`
 	CountryCode string `json:"countrycode"`
+}
+
+type OrderComment struct {
+	Timestamp time.Time `json:"ts"`
+	Comment   string    `json:"comment"`
 }
 
 type Order struct {
@@ -99,7 +99,8 @@ type Order struct {
 	ExchangeRate float64           `json:"exchange_rate"`
 	PayType      PayType           `json:"pay_type"`
 	Invoice      string            `json:"invoice"`
-	Shipping     *Shipping         `json:"shipping"`
+	ShipAddr     *ShippingAddress  `json:"shipping"`
+	Comments     []OrderComment    `json:"comments"`
 }
 
 // Total returns the total amount, with 2 decimal places accuracy.

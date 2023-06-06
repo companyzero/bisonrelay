@@ -216,7 +216,7 @@ func (s *Store) handlePlaceOrder(ctx context.Context, uid clientintf.UserID,
 		}, nil
 	}
 
-	var shipping *Shipping
+	var shipAddr *ShippingAddress
 	// Verify the items
 	for _, item := range cart.Items {
 		prod, ok := s.products[item.Product.SKU]
@@ -228,7 +228,7 @@ func (s *Store) handlePlaceOrder(ctx context.Context, uid clientintf.UserID,
 		}
 		// If a product requires shipping, ensure a shipping address
 		// was sent.
-		if shipping == nil && prod.Shipping {
+		if shipAddr == nil && prod.Shipping {
 			// Process form data.
 			var formData ShippingAddress
 			if err := json.Unmarshal(request.Data, &formData); err != nil {
@@ -249,10 +249,7 @@ func (s *Store) handlePlaceOrder(ctx context.Context, uid clientintf.UserID,
 
 			// TODO: proper address validation, optional phone
 			// number validation.
-			shipping = &Shipping{
-				Address:  formData,
-				Tracking: "",
-			}
+			shipAddr = &formData
 		}
 	}
 
@@ -271,7 +268,7 @@ func (s *Store) handlePlaceOrder(ctx context.Context, uid clientintf.UserID,
 		Status:     StatusPlaced,
 		PlacedTS:   time.Now(),
 		ShipCharge: s.cfg.ShipCharge,
-		Shipping:   shipping,
+		ShipAddr:   shipAddr,
 	}
 
 	// Build the message to send to the remote user, and present it to the
@@ -287,8 +284,8 @@ func (s *Store) handlePlaceOrder(ctx context.Context, uid clientintf.UserID,
 			order.ID, order.User)
 	} else {
 		wpm("Thank you for placing your order #%d\n", order.ID)
-		if order.Shipping != nil {
-			shipAddr := order.Shipping.Address
+		if order.ShipAddr != nil {
+			shipAddr := order.ShipAddr
 			wpm("Shipping address:\n")
 			wpm("   Name: %s\n", shipAddr.Name)
 			wpm("   Addr: %s\n", shipAddr.Address1)
