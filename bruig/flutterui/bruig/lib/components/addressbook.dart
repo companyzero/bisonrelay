@@ -129,7 +129,6 @@ class _AddressBookState extends State<AddressBook> {
   @override
   Widget build(BuildContext context) {
     var theme = Theme.of(context);
-    var textColor = theme.focusColor;
     var darkTextColor = theme.indicatorColor;
     var dividerColor = theme.highlightColor;
     return Stack(children: [
@@ -138,9 +137,10 @@ class _AddressBookState extends State<AddressBook> {
           child:
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             client.hiddenGCs.isNotEmpty
-                ? Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
+                ? Expanded(
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
                         Row(children: [
                           Text("Available Group Chats",
                               textAlign: TextAlign.left,
@@ -163,28 +163,36 @@ class _AddressBookState extends State<AddressBook> {
                                     _AddressBookListingW(
                                         client.hiddenGCs[index], client))),
                         const SizedBox(height: 21),
-                      ])
-                : Empty(),
-            Row(children: [
-              Text("Available Users",
-                  textAlign: TextAlign.left,
-                  style: TextStyle(color: darkTextColor, fontSize: 15)),
-              Expanded(
-                  child: Divider(
-                color: dividerColor, //color of divider
-                height: 10, //height spacing of divider
-                thickness: 1, //thickness of divier line
-                indent: 8, //spacing at the start of divider
-                endIndent: 5, //spacing at the end of divider
-              )),
-            ]),
-            const SizedBox(height: 21),
-            Expanded(
-                child: ListView.builder(
-              itemCount: client.hiddenUsers.length,
-              itemBuilder: (context, index) =>
-                  _AddressBookListingW(client.hiddenUsers[index], client),
-            )),
+                      ]))
+                : const Empty(),
+            client.hiddenUsers.isNotEmpty
+                ? Expanded(
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                        Row(children: [
+                          Text("Available Users",
+                              textAlign: TextAlign.left,
+                              style: TextStyle(
+                                  color: darkTextColor, fontSize: 15)),
+                          Expanded(
+                              child: Divider(
+                            color: dividerColor, //color of divider
+                            height: 10, //height spacing of divider
+                            thickness: 1, //thickness of divier line
+                            indent: 8, //spacing at the start of divider
+                            endIndent: 5, //spacing at the end of divider
+                          )),
+                        ]),
+                        const SizedBox(height: 21),
+                        Expanded(
+                            child: ListView.builder(
+                          itemCount: client.hiddenUsers.length,
+                          itemBuilder: (context, index) => _AddressBookListingW(
+                              client.hiddenUsers[index], client),
+                        )),
+                      ]))
+                : const Empty(),
           ])),
       Positioned(
           top: 0,
