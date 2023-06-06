@@ -470,7 +470,12 @@ func (db *DB) readLogMsg(logFname string, page, pageNum int) ([]PMLogEntry, erro
 		if strings.Contains(name, "<") {
 			name = strings.Replace(name, "<", "", -1)
 			name = strings.Replace(name, ">", "", -1)
-			message = strings.TrimSpace(strings.Split(line, ">")[1])
+			messageSplit := strings.Split(line, ">")
+			// In case there are other '>' in the message (like a pasted message)
+			for i := 1; i < len(messageSplit); i++ {
+				message += messageSplit[i]
+			}
+			message = strings.TrimSpace(message)
 		} else if strings.Contains(name, "*") {
 			// Not a message to pass through, so reset prev info and move on.
 			prevLine = ""
