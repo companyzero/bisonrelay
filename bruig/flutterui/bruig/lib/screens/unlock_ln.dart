@@ -1,6 +1,7 @@
 import 'package:bruig/components/recent_log.dart';
 import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/components/buttons.dart';
+import 'package:bruig/models/snackbar.dart';
 import 'package:bruig/screens/about.dart';
 import 'package:bruig/config.dart';
 import 'package:bruig/main.dart';
@@ -8,11 +9,14 @@ import 'package:bruig/models/log.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:path/path.dart' as path;
+import 'package:provider/provider.dart';
 
 class UnlockLNApp extends StatefulWidget {
   Config cfg;
   final String initialRoute;
-  UnlockLNApp(this.cfg, this.initialRoute, {Key? key}) : super(key: key);
+  SnackBarModel snackBar;
+  UnlockLNApp(this.cfg, this.initialRoute, this.snackBar, {Key? key})
+      : super(key: key);
 
   void setCfg(Config c) {
     cfg = c;
@@ -72,8 +76,8 @@ class __LNUnlockPageState extends State<_LNUnlockPage> {
         return;
       }
       var cfg = widget.cfg;
-      var rpcHost = await Golib.lnRunDcrlnd(
-          cfg.internalWalletDir, cfg.network, passCtrl.text, cfg.proxyaddr, cfg.torisolation);
+      var rpcHost = await Golib.lnRunDcrlnd(cfg.internalWalletDir, cfg.network,
+          passCtrl.text, cfg.proxyaddr, cfg.torisolation);
       var tlsCert = path.join(cfg.internalWalletDir, "tls.cert");
       var macaroonPath = path.join(cfg.internalWalletDir, "data", "chain",
           "decred", cfg.network, "admin.macaroon");
@@ -408,9 +412,22 @@ class _LNChainSyncPageState extends State<_LNChainSyncPage> {
 }
 
 Future<void> runUnlockDcrlnd(Config cfg) async {
-  runApp(UnlockLNApp(cfg, "/"));
+  runApp(MultiProvider(
+    providers: [
+      ChangeNotifierProvider(create: (c) => SnackBarModel()),
+    ],
+    child: Consumer<SnackBarModel>(
+        builder: (context, snackBar, child) => UnlockLNApp(cfg, "/", snackBar)),
+  ));
 }
 
 Future<void> runChainSyncDcrlnd(Config cfg) async {
-  runApp(UnlockLNApp(cfg, "/sync"));
+  runApp(MultiProvider(
+    providers: [
+      ChangeNotifierProvider(create: (c) => SnackBarModel()),
+    ],
+    child: Consumer<SnackBarModel>(
+        builder: (context, snackBar, child) =>
+            UnlockLNApp(cfg, "/sync", snackBar)),
+  ));
 }
