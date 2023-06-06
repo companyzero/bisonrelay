@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/components/users_dropdown.dart';
 import 'package:bruig/models/client.dart';
@@ -156,14 +157,25 @@ class _AddContentPanelState extends State<AddContentPanel> {
   TextEditingController fnameCtrl = TextEditingController();
   TextEditingController toCtrl = TextEditingController();
   TextEditingController costCtrl = TextEditingController();
+  Timer? _debounce;
 
-  void pickFile() async {
-    var filePickRes = await FilePicker.platform.pickFiles();
-    if (filePickRes == null) return;
-    var filePath = filePickRes.files.first.path;
+  @override
+  dispose() {
+    _debounce?.cancel();
+    super.dispose();
+  }
+
+  void pickFile() {
+    String? filePath;
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    _debounce = Timer(const Duration(milliseconds: 500), () async {
+      var filePickRes = await FilePicker.platform.pickFiles();
+      if (filePickRes == null) return;
+      var fPath = filePickRes.files.first.path;
+      if (fPath == null) return;
+      filePath = fPath.trim();
+    });
     if (filePath == null) return;
-    filePath = filePath.trim();
-    if (filePath == "") return;
     setState(() {
       fnameCtrl.text = filePath!;
     });
