@@ -134,7 +134,7 @@ class Config {
       );
 
   Future<void> saveConfig(String filepath) async {
-    var f = new ini.Config.fromString("\n[payment]\n");
+    var f = ini.Config.fromString("\n[payment]\n");
     var set = (String section, String opt, String val) =>
         val != "" ? f.set(section, opt, val) : null;
 
@@ -148,12 +148,14 @@ class Config {
       set("payment", "lnmacaroonpath", lnMacaroonPath);
     }
 
+    // Create the dir and write the config file.
+    await File(filepath).parent.create(recursive: true);
     await File(filepath).writeAsString(f.toString());
   }
 }
 
 Future<Config> loadConfig(String filepath) async {
-  var f = new ini.Config.fromStrings(File(filepath).readAsLinesSync());
+  var f = ini.Config.fromStrings(File(filepath).readAsLinesSync());
   var appDataDir = await defaultAppDataDir();
   var iniAppData = f.get("default", "root");
   if (iniAppData != null && iniAppData != "") {
