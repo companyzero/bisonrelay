@@ -302,6 +302,35 @@ class ClientModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  List<ChatModel> _filteredSearch = [];
+  UnmodifiableListView<ChatModel> get filteredSearch =>
+      UnmodifiableListView(_filteredSearch);
+
+  set filteredSearch(List<ChatModel> us) {
+    _filteredSearch = us;
+    notifyListeners();
+  }
+
+  String _filteredSearchString = "";
+  String get filteredSearchString => _filteredSearchString;
+  set filteredSearchString(String b) {
+    _filteredSearch = [];
+    _filteredSearchString = b;
+    if (b != "") {
+      for (int i = 0; i < _hiddenGCs.length; i++) {
+        if (_hiddenGCs[i].nick.toLowerCase().contains(b.toLowerCase())) {
+          _filteredSearch.add(_hiddenGCs[i]);
+        }
+      }
+      for (int i = 0; i < _hiddenUsers.length; i++) {
+        if (_hiddenUsers[i].nick.toLowerCase().contains(b.toLowerCase())) {
+          _filteredSearch.add(_hiddenUsers[i]);
+        }
+      }
+    }
+    notifyListeners();
+  }
+
   List<ChatModel> _hiddenGCs = [];
   UnmodifiableListView<ChatModel> get hiddenGCs =>
       UnmodifiableListView(_hiddenGCs);

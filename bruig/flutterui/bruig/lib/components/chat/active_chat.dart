@@ -5,7 +5,7 @@ import 'package:bruig/util.dart';
 import 'package:bruig/models/client.dart';
 import 'package:flutter/material.dart';
 import 'package:bruig/components/profile.dart';
-import 'package:bruig/components/addressbook.dart';
+import 'package:bruig/components/addressbook/addressbook.dart';
 import 'package:bruig/components/chat/messages.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import 'package:bruig/components/chat/input.dart';
@@ -96,7 +96,7 @@ class _ActiveChatState extends State<ActiveChat> {
   @override
   Widget build(BuildContext context) {
     if (client.showAddressBook) {
-      return AddressBook(client);
+      return AddressBook(client, inputFocusNode);
     }
     if (this.chat == null) return Container();
     var chat = this.chat!;
