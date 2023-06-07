@@ -5,6 +5,7 @@ import 'package:bruig/models/resources.dart';
 import 'package:flutter/foundation.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
+import '../storage_manager.dart';
 
 const SCE_unknown = 0;
 const SCE_sending = 1;
@@ -349,6 +350,20 @@ class ClientModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  String _savedHiddenUsers = "";
+  String get savedHiddenUsers => _savedHiddenUsers;
+  set savedHiddenUsers(String b) {
+    _savedHiddenUsers = b;
+    notifyListeners();
+  }
+
+  String _savedHiddenGCs = "";
+  String get savedHiddenGCs => _savedHiddenGCs;
+  set savedHiddenGCs(String b) {
+    _savedHiddenGCs = b;
+    notifyListeners();
+  }
+
   bool _loadingAddressBook = true;
   bool get loadingAddressBook => _loadingAddressBook;
   void set loadingAddressBook(bool b) {
@@ -388,6 +403,21 @@ class ClientModel extends ChangeNotifier {
       }
       _gcChats = newGcChats;
       _subGCMenus[chat.id] = buildGCMenu(chat);
+      if (_savedHiddenGCs.contains(chat.nick)) {
+        var savedHiddenGCsSplit = _savedHiddenGCs.split(",");
+        var newGCSplitStr = "";
+        for (int i = 0; i < savedHiddenGCsSplit.length; i++) {
+          if (!savedHiddenGCsSplit[i].contains(chat.nick)) {
+            if (newGCSplitStr.isEmpty) {
+              newGCSplitStr = chat.nick;
+            } else {
+              newGCSplitStr += ", ${chat.nick}";
+            }
+          }
+        }
+        _savedHiddenGCs = newGCSplitStr;
+        StorageManager.saveData('gcHiddenList', _savedHiddenGCs);
+      }
     } else {
       _hiddenUsers.remove(chat);
       List<ChatModel> newUserChats = [];
@@ -397,6 +427,21 @@ class ClientModel extends ChangeNotifier {
       }
       _userChats = newUserChats;
       _subUserMenus[chat.id] = buildUserChatMenu(chat);
+      if (_savedHiddenUsers.contains(chat.nick)) {
+        var savedHiddenUsersSplit = _savedHiddenUsers.split(",");
+        var newUserSplitStr = "";
+        for (int i = 0; i < savedHiddenUsersSplit.length; i++) {
+          if (!savedHiddenUsersSplit[i].contains(chat.nick)) {
+            if (newUserSplitStr.isEmpty) {
+              newUserSplitStr = chat.nick;
+            } else {
+              newUserSplitStr += ", ${chat.nick}";
+            }
+          }
+        }
+        _savedHiddenUsers = newUserSplitStr;
+        StorageManager.saveData('userHiddenList', _savedHiddenUsers);
+      }
     }
     active = chat;
     notifyListeners();
@@ -621,25 +666,29 @@ class ClientModel extends ChangeNotifier {
     // TODO: this test should be superflous.
     if (isGC) {
       if (_gcChats.indexWhere((c) => c.id == id) == -1 &&
-          (c._msgs.isNotEmpty || (c._msgs.isEmpty && !startup))) {
+          ((c._msgs.isNotEmpty && !_savedHiddenGCs.contains(c.nick)) ||
+              (c._msgs.isEmpty && !startup))) {
         // Add to list of chats if not empty or the chat is empty and
         // not being create via readAddressBook call.
         _gcChats.add(c);
         _gcChats.sort(sortUsedChats);
         _subGCMenus[c.id] = buildGCMenu(c);
-      } else if (c._msgs.isEmpty && startup) {
+      } else if ((c._msgs.isEmpty || _savedHiddenGCs.contains(c.nick)) &&
+          startup) {
         // Add all empty chats on startup to hiddenGCs list.
         _hiddenGCs.add(c);
         _hiddenGCs.sort((a, b) => b.nick.compareTo(a.nick));
       }
     } else {
       if (_userChats.indexWhere((c) => c.id == id) == -1 &&
-          (c._msgs.isNotEmpty || (c._msgs.isEmpty && !startup))) {
+          ((c._msgs.isNotEmpty && !_savedHiddenUsers.contains(c.nick)) ||
+              (c._msgs.isEmpty && !startup))) {
         // Add to list of chats.
         _userChats.add(c);
         _userChats.sort(sortUsedChats);
         _subUserMenus[c.id] = buildUserChatMenu(c);
-      } else if (c._msgs.isEmpty && startup) {
+      } else if ((c._msgs.isEmpty || _savedHiddenUsers.contains(c.nick)) &&
+          startup) {
         // Add all empty chats on startup to hiddenGCs list.
         _hiddenUsers.add(c);
         _hiddenUsers.sort((a, b) => b.nick.compareTo(a.nick));
@@ -649,6 +698,33 @@ class ClientModel extends ChangeNotifier {
     notifyListeners();
 
     return c;
+  }
+
+  void hideChat(ChatModel chat) {
+    if (chat.isGC) {
+      _active = null;
+      _gcChats.remove(chat);
+      _hiddenGCs.add(chat);
+      _hiddenUsers.sort((a, b) => b.nick.compareTo(a.nick));
+      if (_savedHiddenGCs.isNotEmpty) {
+        _savedHiddenGCs += ",${chat.nick}";
+      } else {
+        _savedHiddenGCs = chat.nick;
+      }
+      StorageManager.saveData('gcHiddenList', _savedHiddenGCs);
+    } else {
+      _active = null;
+      _userChats.remove(chat);
+      _hiddenUsers.add(chat);
+      _hiddenUsers.sort((a, b) => b.nick.compareTo(a.nick));
+      if (_savedHiddenUsers.isNotEmpty) {
+        _savedHiddenUsers += ",${chat.nick}";
+      } else {
+        _savedHiddenUsers = chat.nick;
+      }
+      StorageManager.saveData('userHiddenList', _savedHiddenUsers);
+    }
+    notifyListeners();
   }
 
   void removeChat(ChatModel chat) {
@@ -702,7 +778,6 @@ class ClientModel extends ChangeNotifier {
           newGcChats.add(_gcChats[i]);
         }
         _gcChats = newGcChats;
-        //StorageManager.saveData('gcHiddenList', gcHiddenList);
       } else {
         _userChats.remove(chat);
         List<ChatModel> newUserChats = [];
@@ -711,13 +786,22 @@ class ClientModel extends ChangeNotifier {
           newUserChats.add(_userChats[i]);
         }
         _userChats = newUserChats;
-        //StorageManager.saveData('userHiddenList', userHiddenList);
       }
       notifyListeners();
     }
   }
 
   Future<void> readAddressBook() async {
+    await StorageManager.readData('gcHiddenList').then((value) {
+      if (value != null && value.length > 0) {
+        _savedHiddenGCs = value;
+      }
+    });
+    await StorageManager.readData('userHiddenList').then((value) {
+      if (value != null && value.length > 0) {
+        _savedHiddenUsers = value;
+      } else {}
+    });
     var info = await Golib.getLocalInfo();
     _publicID = info.id;
     _nick = info.nick;
@@ -726,67 +810,6 @@ class ClientModel extends ChangeNotifier {
     var gcs = await Golib.listGCs();
     gcs.forEach((v) => _newChat(v.id, v.name, true, true));
 
-/*
-    StorageManager.readData('gcHiddenList').then((value) {
-      if (value != null && value.length > 0) {
-        List<ChatModel> sortedGCList = [];
-        var gcSplitList = value.split(',');
-        print(gcSplitList);
-        for (int i = 0; i < gcSplitList.length; i++) {
-          for (int j = 0; j < _gcChats.length; j++) {
-            if (gcSplitList[i] == _gcChats[j].nick) {
-              sortedGCList.add(_gcChats[j]);
-              break;
-            }
-          }
-        }
-        for (int i = 0; i < _gcChats.length; i++) {
-          var found = false;
-          for (int j = 0; j < gcSplitList.length; j++) {
-            if (gcSplitList[j] == _gcChats[i].nick) {
-              found = true;
-              break;
-            }
-          }
-          if (!found) {
-            sortedGCList.add(_gcChats[i]);
-          }
-        }
-        gcChats = sortedGCList;
-      }
-    });
-    StorageManager.readData('userHiddenList').then((value) {
-      if (value != null && value.length > 0) {
-        List<ChatModel> sortedUserList = [];
-        var userSplitList = value.split(',');
-        print(userSplitList);
-        // First order existing users from last saved.
-        for (int i = 0; i < userSplitList.length; i++) {
-          for (int j = 0; j < _userChats.length; j++) {
-            if (userSplitList[i] == _userChats[j].nick) {
-              sortedUserList.add(_userChats[j]);
-              break;
-            }
-          }
-        }
-        // Then try and find any received chats that aren't in the saved list.
-        // Add them on the end.
-        for (int i = 0; i < _userChats.length; i++) {
-          var found = false;
-          for (int j = 0; j < userSplitList.length; j++) {
-            if (userSplitList[j] == _userChats[i].nick) {
-              found = true;
-              break;
-            }
-          }
-          if (!found) {
-            sortedUserList.add(_userChats[i]);
-          }
-        }
-        userChats = sortedUserList;
-      }
-    });
-*/
     loadingAddressBook = false;
   }
 

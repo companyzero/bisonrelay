@@ -69,7 +69,6 @@ class _AddressBookListingWState extends State<_AddressBookListingW> {
 
     return Container(
       decoration: BoxDecoration(
-        color: chat.active ? selectedBackgroundColor : null,
         borderRadius: BorderRadius.circular(3),
       ),
       child: ListTile(
@@ -77,7 +76,6 @@ class _AddressBookListingWState extends State<_AddressBookListingW> {
         title:
             Text(chat.nick, style: TextStyle(fontSize: 11, color: textColor)),
         leading: popMenuButton,
-        selected: chat.active,
         trailing: Material(
             color: textColor.withOpacity(0),
             child: IconButton(
@@ -88,7 +86,6 @@ class _AddressBookListingWState extends State<_AddressBookListingW> {
                 onPressed: () => startChat(),
                 icon: Icon(color: darkTextColor, Icons.add))),
         onTap: () => {},
-        selectedColor: selectedBackgroundColor,
       ),
     );
   }

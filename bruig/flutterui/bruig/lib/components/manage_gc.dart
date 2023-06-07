@@ -286,6 +286,18 @@ class ManageGCScreenState extends State<ManageGCScreenForChat> {
     }
   }
 
+  Future<void> hideGC() async {
+    setState(() => loading = true);
+    try {
+      widget.client.hideChat(widget.chat);
+      widget.client.active = null;
+    } catch (exception) {
+      showErrorSnackbar(context, "Unable to hide GC: $exception");
+    } finally {
+      setState(() => loading = false);
+    }
+  }
+
   Future<void> upgradeGC() async {
     setState(() => loading = true);
     try {
@@ -369,6 +381,10 @@ class ManageGCScreenState extends State<ManageGCScreenForChat> {
                     onPressed: !loading ? upgradeGC : null,
                     child: const Text("Upgrade Version"))
                 : const Empty(),
+            const SizedBox(width: 10),
+            ElevatedButton(
+                onPressed: !loading ? hideGC : null,
+                child: const Text("Hide GC"))
           ]),
           const SizedBox(height: 10),
           Row(children: [
