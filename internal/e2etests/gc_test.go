@@ -677,7 +677,7 @@ func TestVersion1GCs(t *testing.T) {
 	ts.kxUsers(alice, charlie)
 	ts.kxUsers(bob, charlie)
 
-	gcID, err := alice.NewGroupChat("test gc")
+	gcID, err := alice.NewGroupChatVersion("test gc", 0)
 	assert.NilErr(t, err)
 
 	// Sanity check that the GC was originally created to be version 0.
