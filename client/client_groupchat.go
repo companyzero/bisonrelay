@@ -22,6 +22,9 @@ const (
 	// the client code handles for GCs.
 	minSupportedGCVersion = 0
 	maxSupportedGCVersion = 1
+
+	// newGCVersion is the version of newly created GCs.
+	newGCVersion = 1
 )
 
 // The group chat flow is:
@@ -124,8 +127,9 @@ func (c *Client) GCsWithPrefix(prefix string) []string {
 	return res
 }
 
-// NewGroupChat creates a new gc with the local user as admin.
-func (c *Client) NewGroupChat(name string) (zkidentity.ShortID, error) {
+// NewGroupChatVersion creates a new gc with the local user as admin and the
+// specified version.
+func (c *Client) NewGroupChatVersion(name string, version uint8) (zkidentity.ShortID, error) {
 	var id zkidentity.ShortID
 
 	// Ensure we're not trying to duplicate the name.
@@ -150,6 +154,7 @@ func (c *Client) NewGroupChat(name string) (zkidentity.ShortID, error) {
 			ID:         id,
 			Name:       name,
 			Generation: 1,
+			Version:    version,
 			Timestamp:  time.Now().Unix(),
 			Members: []zkidentity.ShortID{
 				c.PublicID(),
@@ -168,6 +173,11 @@ func (c *Client) NewGroupChat(name string) (zkidentity.ShortID, error) {
 		return nil
 	})
 	return id, err
+}
+
+// NewGroupChat creates a group chat with the local client as admin.
+func (c *Client) NewGroupChat(name string) (zkidentity.ShortID, error) {
+	return c.NewGroupChatVersion(name, newGCVersion)
 }
 
 // uidHasGCPerm returns true whether the given UID has permission to modify the
