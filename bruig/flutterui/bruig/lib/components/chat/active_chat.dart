@@ -1,9 +1,11 @@
 import 'dart:async';
+
 import 'package:bruig/components/manage_gc.dart';
 import 'package:bruig/util.dart';
 import 'package:bruig/models/client.dart';
 import 'package:flutter/material.dart';
 import 'package:bruig/components/profile.dart';
+import 'package:bruig/components/addressbook.dart';
 import 'package:bruig/components/chat/messages.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import 'package:bruig/components/chat/input.dart';
@@ -55,6 +57,7 @@ class _ActiveChatState extends State<ActiveChat> {
             );
           }
         });
+        client.newSentMsg(chat);
       } catch (exception) {
         if (mounted) {
           showErrorSnackbar(context, "Unable to send message: $exception");
@@ -92,9 +95,11 @@ class _ActiveChatState extends State<ActiveChat> {
 
   @override
   Widget build(BuildContext context) {
+    if (client.showAddressBook) {
+      return AddressBook(client);
+    }
     if (this.chat == null) return Container();
     var chat = this.chat!;
-
     var profile = client.profile;
     if (profile != null) {
       if (chat.isGC) {

@@ -2,9 +2,7 @@ import 'package:bruig/models/client.dart';
 import 'package:bruig/screens/contacts_msg_times.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:golib_plugin/golib_plugin.dart';
 import 'package:bruig/components/interactive_avatar.dart';
-import 'package:file_picker/file_picker.dart';
 import 'package:bruig/components/user_context_menu.dart';
 import 'package:bruig/components/gc_context_menu.dart';
 import 'package:bruig/components/chat/types.dart';
@@ -141,19 +139,6 @@ Future<void> generateInvite(BuildContext context) async {
   Navigator.of(context, rootNavigator: true).pushNamed('/generateInvite');
 }
 
-Future<void> loadInvite(BuildContext context) async {
-  // Decode the invite and send to the user verification screen.
-  var filePickRes = await FilePicker.platform.pickFiles();
-  if (filePickRes == null) return;
-  var filePath = filePickRes.files.first.path;
-  if (filePath == null) return;
-  filePath = filePath.trim();
-  if (filePath == "") return;
-  var invite = await Golib.decodeInvite(filePath);
-  Navigator.of(context, rootNavigator: true)
-      .pushNamed('/verifyInvite', arguments: invite);
-}
-
 Future<void> fetchInvite(BuildContext context) async {
   Navigator.of(context, rootNavigator: true).pushNamed('/fetchInvite');
 }
@@ -164,9 +149,9 @@ void gotoContactsLastMsgTimeScreen(BuildContext context) {
 }
 
 class _ChatsList extends StatefulWidget {
-  final ClientModel chats;
+  final ClientModel client;
   final FocusNode inputFocusNode;
-  const _ChatsList(this.chats, this.inputFocusNode, {Key? key})
+  const _ChatsList(this.client, this.inputFocusNode, {Key? key})
       : super(key: key);
 
   @override
@@ -174,27 +159,27 @@ class _ChatsList extends StatefulWidget {
 }
 
 class _ChatsListState extends State<_ChatsList> {
-  ClientModel get chats => widget.chats;
+  ClientModel get client => widget.client;
   FocusNode get inputFocusNode => widget.inputFocusNode;
 
-  void chatsUpdated() => setState(() {});
+  void clientUpdated() => setState(() {});
 
   @override
   void initState() {
     super.initState();
-    chats.addListener(chatsUpdated);
+    client.addListener(clientUpdated);
   }
 
   @override
   void didUpdateWidget(_ChatsList oldWidget) {
     super.didUpdateWidget(oldWidget);
-    oldWidget.chats.removeListener(chatsUpdated);
-    chats.addListener(chatsUpdated);
+    oldWidget.client.removeListener(clientUpdated);
+    client.addListener(clientUpdated);
   }
 
   @override
   void dispose() {
-    chats.removeListener(chatsUpdated);
+    client.removeListener(clientUpdated);
     super.dispose();
   }
 
@@ -202,6 +187,10 @@ class _ChatsListState extends State<_ChatsList> {
   Widget build(BuildContext context) {
     void createGC() async {
       Navigator.of(context, rootNavigator: true).pushNamed('/newGC');
+    }
+
+    void showAddressBook() async {
+      client.showAddressBookScreen();
     }
 
     void genInvite() async {
@@ -219,16 +208,16 @@ class _ChatsListState extends State<_ChatsList> {
     var darkTextColor = theme.focusColor;
     var selectedBackgroundColor = theme.highlightColor;
 
-    var gcList = chats.gcChats.toList();
-    var chatList = chats.userChats.toList();
+    var gcList = client.gcChats.toList();
+    var chatList = client.userChats.toList();
 
-    makeActive(ChatModel? c) => {chats.active = c};
+    makeActive(ChatModel? c) => {client.active = c};
 
-    showGCSubMenu(String id) => {chats.showSubMenu(true, id)};
-    showUserSubMenu(String id) => {chats.showSubMenu(false, id)};
+    showGCSubMenu(String id) => {client.showSubMenu(true, id)};
+    showUserSubMenu(String id) => {client.showSubMenu(false, id)};
     return Column(children: [
       Container(
-          height: 209,
+          height: 230,
           margin: const EdgeInsets.all(1),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(3),
@@ -252,7 +241,7 @@ class _ChatsListState extends State<_ChatsList> {
               child: ListView.builder(
                 itemCount: gcList.length,
                 itemBuilder: (context, index) => _ChatHeadingW(
-                    gcList[index], chats, makeActive, showGCSubMenu, true),
+                    gcList[index], client, makeActive, showGCSubMenu, true),
               ),
             ),
             Positioned(
@@ -264,8 +253,8 @@ class _ChatsListState extends State<_ChatsList> {
                         splashRadius: 15,
                         iconSize: 15,
                         hoverColor: selectedBackgroundColor,
-                        tooltip: "Add GC",
-                        onPressed: () => createGC(),
+                        tooltip: "Address Book",
+                        onPressed: () => showAddressBook(),
                         icon: Icon(color: darkTextColor, Icons.add))))
           ])),
       Expanded(
@@ -294,7 +283,7 @@ class _ChatsListState extends State<_ChatsList> {
                   itemCount: chatList.length,
                   itemBuilder: (context, index) => _ChatHeadingW(
                       chatList[index],
-                      chats,
+                      client,
                       makeActive,
                       showUserSubMenu,
                       false))),
@@ -307,11 +296,8 @@ class _ChatsListState extends State<_ChatsList> {
                       hoverColor: selectedBackgroundColor,
                       splashRadius: 15,
                       iconSize: 15,
-                      tooltip: chats.isOnline
-                          ? "Load Invite"
-                          : "Cannot load invite while client is offline",
-                      onPressed:
-                          chats.isOnline ? () => loadInvite(context) : null,
+                      tooltip: "Address Book",
+                      onPressed: () => showAddressBook(),
                       icon: Icon(size: 15, color: darkTextColor, Icons.add)))),
           Positioned(
               bottom: 5,
@@ -322,11 +308,11 @@ class _ChatsListState extends State<_ChatsList> {
                       hoverColor: selectedBackgroundColor,
                       splashRadius: 15,
                       iconSize: 15,
-                      tooltip: chats.isOnline
+                      tooltip: client.isOnline
                           ? "Fetch invite using key"
                           : "Cannot fetch invite while client is offline",
                       onPressed:
-                          chats.isOnline ? () => fetchInvite(context) : null,
+                          client.isOnline ? () => fetchInvite(context) : null,
                       icon: Icon(
                           size: 15,
                           color: darkTextColor,
@@ -355,10 +341,10 @@ class _ChatsListState extends State<_ChatsList> {
                       hoverColor: selectedBackgroundColor,
                       splashRadius: 15,
                       iconSize: 15,
-                      tooltip: chats.isOnline
+                      tooltip: client.isOnline
                           ? "Generate Invite"
                           : "Cannot generate invite while offline",
-                      onPressed: chats.isOnline ? genInvite : null,
+                      onPressed: client.isOnline ? genInvite : null,
                       icon:
                           Icon(size: 15, color: darkTextColor, Icons.people))))
         ]),
@@ -373,9 +359,9 @@ class ChatDrawerMenu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<ClientModel>(builder: (context, chats, child) {
+    return Consumer<ClientModel>(builder: (context, client, child) {
       return Column(
-          children: [Expanded(child: _ChatsList(chats, inputFocusNode))]);
+          children: [Expanded(child: _ChatsList(client, inputFocusNode))]);
     });
   }
 }
