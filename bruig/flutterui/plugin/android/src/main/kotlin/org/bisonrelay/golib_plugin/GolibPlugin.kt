@@ -1,4 +1,4 @@
-package com.example.golib_plugin
+package org.bisonrelay.golib_plugin
 
 import androidx.annotation.NonNull
 
@@ -30,6 +30,7 @@ class GolibPlugin: FlutterPlugin, MethodCallHandler {
     channel = MethodChannel(flutterPluginBinding.binaryMessenger, "golib_plugin")
     channel.setMethodCallHandler(this)
     this.initReadStream(flutterPluginBinding)
+    this.initCmdResultLoop(flutterPluginBinding)
   }
 
   override fun onMethodCall(@NonNull call: MethodCall, @NonNull result: Result) {
@@ -47,7 +48,7 @@ class GolibPlugin: FlutterPlugin, MethodCallHandler {
           val res = Golib.getURL(url);
           handler.post{ result.success(res) }
         } catch (e: Exception) {
-          handler.post{ result.error(e::class.qualifiedName, e.toString(), null); }
+          handler.post{ result.error(e::class.qualifiedName ?: "UnknownClass", e.toString(), null); }
         }
       }
     } else if (call.method == "setTag") {
@@ -64,6 +65,12 @@ class GolibPlugin: FlutterPlugin, MethodCallHandler {
     } else if (call.method == "readStr") {
       val s: String? = Golib.readStr()
       result.success(s);
+    } else if (call.method == "asyncCall") {
+      val typ: Int = call.argument("typ") ?: 0
+      val id: Int = call.argument("id") ?: 0
+      val handle: Int = call.argument("handle") ?: 0
+      val payload: String? = call.argument("payload")
+      Golib.asyncCallStr(typ, id, handle, payload)
     } else {
       result.notImplemented()
     }
@@ -91,6 +98,31 @@ class GolibPlugin: FlutterPlugin, MethodCallHandler {
       }
     })
   }
+
+  fun initCmdResultLoop(@NonNull flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
+    val handler = Handler(Looper.getMainLooper())
+    val channel : EventChannel = EventChannel(flutterPluginBinding.binaryMessenger, "cmdResultLoop")
+    var sink : EventChannel.EventSink? = null;
+
+    channel.setStreamHandler(object : EventChannel.StreamHandler {
+      override fun onListen(listener: Any?, newSink: EventChannel.EventSink?) {
+        // TODO: support multiple readers?
+        sink = newSink;
+      }
+
+      override fun onCancel(listener: Any?) {
+        sink = null;
+      }
+    });
+
+    Golib.cmdResultLoop(object : golib.CmdResultLoopCB {
+      override fun f(id: Int, typ: Int, payload: String, err: String) {
+        val res: Map<String,Any> = mapOf("id" to id, "type" to typ, "payload" to payload, "error" to err)
+        handler.post{ sink?.success(res) }
+      }
+    })
+  }
+
   
   override fun onDetachedFromEngine(@NonNull binding: FlutterPlugin.FlutterPluginBinding) {
     channel.setMethodCallHandler(null)

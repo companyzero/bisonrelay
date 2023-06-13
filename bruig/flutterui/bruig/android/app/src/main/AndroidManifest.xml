@@ -1,12 +1,14 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.example.fd">
+    package="org.bisonrelay.bruig">
    <application
-        android:label="fd"
+        android:name="${applicationName}"
+        android:label="bisonrelay"
         android:icon="@mipmap/launcher_icon">
         <activity
             android:name=".MainActivity"
             android:launchMode="singleTop"
             android:theme="@style/LaunchTheme"
+            android:exported="true"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
             android:hardwareAccelerated="true"
             android:windowSoftInputMode="adjustResize">
@@ -37,6 +39,6 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
-        <uses-permission android:name="android.permission.INTERNET"/>
     </application>
+    <uses-permission android:name="android.permission.INTERNET"/>
 </manifest>
