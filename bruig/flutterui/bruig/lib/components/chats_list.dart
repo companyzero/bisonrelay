@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:bruig/components/interactive_avatar.dart';
 import 'package:bruig/components/user_context_menu.dart';
+import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/components/gc_context_menu.dart';
 import 'package:bruig/components/chat/types.dart';
 import 'package:bruig/util.dart';
@@ -244,18 +245,20 @@ class _ChatsListState extends State<_ChatsList> {
                     gcList[index], client, makeActive, showGCSubMenu, true),
               ),
             ),
-            Positioned(
-                bottom: 5,
-                right: 5,
-                child: Material(
-                    color: selectedBackgroundColor.withOpacity(0),
-                    child: IconButton(
-                        splashRadius: 15,
-                        iconSize: 15,
-                        hoverColor: selectedBackgroundColor,
-                        tooltip: "Address Book",
-                        onPressed: () => showAddressBook(),
-                        icon: Icon(color: darkTextColor, Icons.add))))
+            !client.showAddressBook
+                ? Positioned(
+                    bottom: 5,
+                    right: 5,
+                    child: Material(
+                        color: selectedBackgroundColor.withOpacity(0),
+                        child: IconButton(
+                            splashRadius: 15,
+                            iconSize: 15,
+                            hoverColor: selectedBackgroundColor,
+                            tooltip: "Address Book",
+                            onPressed: () => showAddressBook(),
+                            icon: Icon(color: darkTextColor, Icons.add))))
+                : const Empty()
           ])),
       Expanded(
           child: Container(
@@ -287,18 +290,21 @@ class _ChatsListState extends State<_ChatsList> {
                       makeActive,
                       showUserSubMenu,
                       false))),
-          Positioned(
-              bottom: 5,
-              right: 5,
-              child: Material(
-                  color: selectedBackgroundColor.withOpacity(0),
-                  child: IconButton(
-                      hoverColor: selectedBackgroundColor,
-                      splashRadius: 15,
-                      iconSize: 15,
-                      tooltip: "Address Book",
-                      onPressed: () => showAddressBook(),
-                      icon: Icon(size: 15, color: darkTextColor, Icons.add)))),
+          !client.showAddressBook
+              ? Positioned(
+                  bottom: 5,
+                  right: 5,
+                  child: Material(
+                      color: selectedBackgroundColor.withOpacity(0),
+                      child: IconButton(
+                          hoverColor: selectedBackgroundColor,
+                          splashRadius: 15,
+                          iconSize: 15,
+                          tooltip: "Address Book",
+                          onPressed: () => showAddressBook(),
+                          icon:
+                              Icon(size: 15, color: darkTextColor, Icons.add))))
+              : const Empty(),
           Positioned(
               bottom: 5,
               right: 25,

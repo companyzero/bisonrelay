@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:bruig/components/buttons.dart';
 import 'package:bruig/components/chats_list.dart';
-import 'package:bruig/components/addressbook.dart';
+import 'package:bruig/components/addressbook/addressbook.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/models/notifications.dart';
 import 'package:bruig/screens/needs_out_channel.dart';

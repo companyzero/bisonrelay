@@ -118,6 +118,22 @@ class _UserProfileState extends State<UserProfile> {
     }
   }
 
+  void hide() async {
+    try {
+      setState(() {
+        loading = true;
+      });
+      widget.client.hideChat(chat);
+      widget.client.active = null;
+    } catch (exception) {
+      showErrorSnackbar(context, "Unable to hide user: $exception");
+    } finally {
+      setState(() {
+        loading = false;
+      });
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -160,6 +176,11 @@ class _UserProfileState extends State<UserProfile> {
                 : ElevatedButton(
                     onPressed: !loading ? ignore : null,
                     child: const Text("Ignore user")),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: !loading ? hide : null,
+              child: const Text("Hide Chat"),
+            ),
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: !loading ? confirmBlock : null,
