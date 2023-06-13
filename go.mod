@@ -37,7 +37,7 @@ require (
 	github.com/vaughan0/go-ini v0.0.0-20130923145212-a98ad7ee00ec
 	golang.org/x/crypto v0.6.0
 	golang.org/x/exp v0.0.0-20230321023759-10a507213a29
-	golang.org/x/mobile v0.0.0-20190719004257-d2bd2a29d028
+	golang.org/x/mobile v0.0.0-20230427221453-e8d11dd0ba41
 	golang.org/x/net v0.8.0
 	golang.org/x/sync v0.1.0
 	golang.org/x/term v0.6.0
@@ -134,8 +134,10 @@ require (
 	go.uber.org/atomic v1.6.0 // indirect
 	go.uber.org/multierr v1.5.0 // indirect
 	go.uber.org/zap v1.10.0 // indirect
+	golang.org/x/mod v0.8.0 // indirect
 	golang.org/x/sys v0.6.0 // indirect
 	golang.org/x/time v0.0.0-20191024005414-555d28b269f0 // indirect
+	golang.org/x/tools v0.6.0 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 	google.golang.org/genproto v0.0.0-20230110181048-76db0878b65f // indirect
 	gopkg.in/errgo.v1 v1.0.0 // indirect
