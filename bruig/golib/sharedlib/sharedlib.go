@@ -55,7 +55,7 @@ func ReadStr() *C.char {
 //export AsyncCall
 func AsyncCall(typ uint32, id, client uint32, payload unsafe.Pointer, payloadLen C.int) {
 	p := C.GoBytes(payload, payloadLen)
-	golib.AsyncCall(golib.CmdType(typ), id, client, p)
+	golib.AsyncCall(golib.CmdType(typ), int32(id), int32(client), p)
 }
 
 //export NextCallResult
