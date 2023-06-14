@@ -112,16 +112,25 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     }
   }
 
+  void updateBalances() async {
+    var bal = await Golib.lnGetBalances();
+    setState(() => balances = bal);
+  }
+
   void listenOnboardChanges() async {
     var stream = Golib.onboardStateChanged();
     stream = stream.handleError((err) => setState(() => oerror = err));
-    listenSub = stream.listen((msg) async {
-      var bal = await Golib.lnGetBalances();
+    listenSub = stream.listen((msg) {
+      var changedStage = ostate?.stage != msg.stage;
       setState(() {
         ostate = msg;
-        oerror = "";
-        balances = bal;
+        if (changedStage) {
+          oerror = "";
+        }
       });
+      if (changedStage) {
+        updateBalances();
+      }
     });
   }
 
