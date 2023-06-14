@@ -1,3 +1,4 @@
+import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/components/recent_log.dart';
 import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/components/buttons.dart';
@@ -39,7 +40,7 @@ class _UnlockLNAppState extends State<UnlockLNApp> {
         '/about': (context) => const AboutScreen(),
       },
       builder: (BuildContext context, Widget? child) => Scaffold(
-        body: child,
+        body: SnackbarDisplayer(widget.snackBar, child ?? const Empty()),
       ),
     );
   }
