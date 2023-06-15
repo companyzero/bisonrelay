@@ -3492,6 +3492,32 @@ var commands = []tuicmd{
 			return nil
 		},
 	}, {
+		cmd:           "setexchangerate",
+		aliases:       []string{"setxchange"},
+		usableOffline: true,
+		usage:         "<USD/DCR> <USD/BTC>",
+		descr:         "Manually set the exchange rate of USD/DCR and USD/BTC",
+		handler: func(args []string, as *appState) error {
+			if len(args) < 1 {
+				return usageError{msg: "USD/DCR rate cannot be empty"}
+			}
+			if len(args) < 2 {
+				return usageError{msg: "USD/BTC rate cannot be empty"}
+			}
+			dcrPrice, err := strconv.ParseFloat(args[0], 64)
+			if err != nil {
+				return fmt.Errorf("invalid USD/DCR rate: %v", err)
+			}
+			btcPrice, err := strconv.ParseFloat(args[1], 64)
+			if err != nil {
+				return fmt.Errorf("invalid USD/BTC rate: %v", err)
+			}
+			as.cwHelpMsg("Setting manual exchange rate: DCR:%0.2f BTC:%0.2f",
+				dcrPrice, btcPrice)
+			as.rates.Set(dcrPrice, btcPrice)
+			return nil
+		},
+	}, {
 		cmd:           "quit",
 		usableOffline: true,
 		descr:         "Quit the app",

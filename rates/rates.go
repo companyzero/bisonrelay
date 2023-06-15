@@ -35,9 +35,13 @@ func New(cfg Config) *Rates {
 func (r *Rates) Run(ctx context.Context) {
 	const shortTimeout = time.Second * 30
 	const longTimeout = time.Minute * 10
+	const triesBeforeErr = 20
+	const requestTimeout = shortTimeout
 
 	t := time.NewTicker(1)
 	defer t.Stop()
+
+	var failedTries int
 
 	var err error
 	for {
@@ -46,34 +50,61 @@ func (r *Rates) Run(ctx context.Context) {
 			return
 		case <-t.C:
 			t.Stop()
-			if err = r.dcrData(ctx); err == nil {
-				dcrPrice, btcPrice := r.Get()
-				r.cfg.Log.Infof("dcrdata: DCR:%0.2f BTC:%0.2f", dcrPrice, btcPrice)
-				t.Reset(longTimeout)
 
-				continue
-			}
-			r.cfg.Log.Errorf("dcrdata: %v", err)
-			if err = r.bittrex(ctx); err == nil {
-				dcrPrice, btcPrice := r.Get()
-				r.cfg.Log.Infof("bittrex: DCR:%0.2f BTC:%0.2f", dcrPrice, btcPrice)
-
+			// Try from dcrdata.
+			rctx, cancel := context.WithTimeout(ctx, requestTimeout)
+			if err = r.dcrData(rctx); err == nil {
+				cancel()
+				failedTries = 0
 				t.Reset(longTimeout)
 				continue
 			}
-			r.cfg.Log.Errorf("bittrex: %v", err)
+			cancel()
+			r.cfg.Log.Debugf("Unable to fetch rate from dcrdata: %v", err)
+
+			// Try from bittrex.
+			rctx, cancel = context.WithTimeout(ctx, requestTimeout)
+			if err = r.bittrex(rctx); err == nil {
+				cancel()
+				failedTries = 0
+				t.Reset(longTimeout)
+				continue
+			}
+			cancel()
+			r.cfg.Log.Debugf("Unable to fetch rate from bittrex: %v", err)
+
+			// Only log these at a higher warning level once after
+			// the rate has been successfully fetched. This prevents
+			// spam in the UI.
+			failedTries += 1
+			if failedTries == triesBeforeErr {
+				r.cfg.Log.Warnf("Unable to fetch rate from dcrdata: %v", err)
+				r.cfg.Log.Warnf("Unable to fetch rate from bittrex: %v", err)
+				r.cfg.Log.Errorf("Unable to fetch recent exchange rate. Will keep retrying.")
+			}
 			t.Reset(shortTimeout)
 		}
 	}
 }
 
-// Get returns the last fetched DCR and BTC prices.
+// Get returns the last fetched USD/DCR and USD/BTC prices.
 func (r *Rates) Get() (float64, float64) {
 	r.mtx.Lock()
 	dcrPrice, btcPrice := r.dcrPrice, r.btcPrice
 	r.mtx.Unlock()
 
 	return dcrPrice, btcPrice
+}
+
+// Set manually sets the USD/DCR and USD/BTC prices.
+func (r *Rates) Set(dcrPrice, btcPrice float64) {
+	r.cfg.Log.Infof("Setting manual exchange rate: DCR:%0.2f BTC:%0.2f",
+		dcrPrice, btcPrice)
+
+	r.mtx.Lock()
+	r.dcrPrice = dcrPrice
+	r.btcPrice = btcPrice
+	r.mtx.Unlock()
 }
 
 func (r *Rates) dcrData(ctx context.Context) error {
@@ -90,6 +121,9 @@ func (r *Rates) dcrData(ctx context.Context) error {
 	if err = json.Unmarshal(b, &dcrDataExchange); err != nil {
 		return fmt.Errorf("failed to decode exchange rate: %v", err)
 	}
+
+	r.cfg.Log.Infof("Current dcrdata exchange rate: DCR:%0.2f BTC:%0.2f",
+		dcrDataExchange.DCRPrice, dcrDataExchange.BTCPrice)
 
 	r.mtx.Lock()
 	r.dcrPrice = dcrDataExchange.DCRPrice
@@ -129,6 +163,9 @@ func (r *Rates) bittrex(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to parse exchange rate: %w", err)
 	}
+
+	r.cfg.Log.Infof("Current bittrex exchange rate: DCR:%0.2f BTC:%0.2f",
+		dcrPrice, btcPrice)
 
 	r.mtx.Lock()
 	r.dcrPrice = dcrPrice
