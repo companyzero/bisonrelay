@@ -338,9 +338,9 @@ type SubscribeToPosts struct {
 type SuggestKX struct {
 	AlreadyKnown bool               `json:"alreadyknown"`
 	InviteeNick  string             `json:"inviteenick"`
-	Invitee      zkidentity.ShortID `json:"inviteeid"`
+	Invitee      zkidentity.ShortID `json:"invitee"`
 	TargetNick   string             `json:"targetnick"`
-	Target       zkidentity.ShortID `json:"targetid"`
+	Target       zkidentity.ShortID `json:"target"`
 }
 
 type Account struct {
