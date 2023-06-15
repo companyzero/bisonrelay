@@ -2794,6 +2794,21 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 				pf("Reset KX with user %q ID %s", user.Nick(), user.ID())
 			}
 		})
+
+		// On newly KXd users, go through GCs and inform user has been
+		// KXd with.
+		if isNew {
+			gcs, err := as.c.GCsWithMember(user.ID())
+			if err != nil {
+				as.diagMsg("Unable to list GCs with member: %v", err)
+				return
+			}
+			for _, gc := range gcs {
+				cw := as.findOrNewGCWindow(gc)
+				cw.newInternalMsg("Completed KX with new user %q (%s) in this GC",
+					strescape.Nick(user.Nick()), user.ID())
+			}
+		}
 	}))
 
 	ntfns.Register(client.OnGCVersionWarning(func(user *client.RemoteUser, gc rpc.RMGroupList, minVersion, maxVersion uint8) {

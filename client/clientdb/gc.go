@@ -14,6 +14,7 @@ import (
 	"github.com/companyzero/bisonrelay/internal/jsonfile"
 	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/companyzero/bisonrelay/zkidentity"
+	"golang.org/x/exp/slices"
 )
 
 const (
@@ -360,6 +361,45 @@ func (db *DB) ListGCs(tx ReadTx) ([]rpc.RMGroupList, error) {
 	}
 
 	return groups, nil
+}
+
+// ListGCsWithMember returns IDs for GCs that have the specified user as a
+// member.
+func (db *DB) ListGCsWithMember(tx ReadTx, uid UserID) ([]zkidentity.ShortID, error) {
+	gcDir := filepath.Join(db.root, groupchatDir)
+	entries, err := os.ReadDir(gcDir)
+	if err != nil && os.IsNotExist(err) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	var res []UserID
+	for _, v := range entries {
+		if v.IsDir() {
+			continue
+		}
+
+		fname := filepath.Join(gcDir, v.Name())
+		if strings.HasSuffix(fname, gcBlockListExt) {
+			continue
+		}
+
+		var gc rpc.RMGroupList
+		err := db.readGC(fname, &gc)
+		if err != nil {
+			db.log.Warnf("Unable to read gc file for listing %s: %v",
+				fname, err)
+			continue
+		}
+
+		if slices.Contains(gc.Members, uid) {
+			res = append(res, gc.ID)
+		}
+	}
+
+	return res, nil
 }
 
 type GCBlockList map[string]struct{}
