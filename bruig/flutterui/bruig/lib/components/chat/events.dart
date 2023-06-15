@@ -785,7 +785,7 @@ class _KXSuggestedWState extends State<KXSuggestedW> {
     try {
       event.sentState = Suggestion_accepted;
       setState(() {});
-      client.requestMediateID(suggest.inviteeid, suggest.targetid);
+      client.requestMediateID(suggest.invitee, suggest.target);
       event.sentState = Suggestion_confirmed;
       setState(() {});
     } catch (exception) {

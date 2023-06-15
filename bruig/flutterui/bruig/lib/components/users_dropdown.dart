@@ -24,6 +24,9 @@ class _UsersDropdownState extends State<UsersDropdown> {
     var backgroundColor = theme.backgroundColor;
     return Consumer<ClientModel>(builder: (context, client, child) {
       List<ChatModel?> list = client.userChats.cast<ChatModel?>().toList();
+      list.addAll(client.hiddenUsers.cast<ChatModel?>().toList());
+      list.sort(
+          (a, b) => a!.nick.toLowerCase().compareTo(b!.nick.toLowerCase()));
       if (widget.allowEmpty) {
         list.insert(0, null);
       }

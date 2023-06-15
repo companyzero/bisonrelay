@@ -1633,18 +1633,18 @@ Map<String, dynamic> _$SuggestKXToJson(SuggestKX instance) => <String, dynamic>{
 KXSuggested _$KXSuggestedFromJson(Map<String, dynamic> json) => KXSuggested(
       json['alreadyknown'] as bool,
       json['inviteenick'] as String,
-      json['inviteeid'] as String,
+      json['invitee'] as String,
       json['targetnick'] as String,
-      json['targetid'] as String,
+      json['target'] as String,
     );
 
 Map<String, dynamic> _$KXSuggestedToJson(KXSuggested instance) =>
     <String, dynamic>{
       'alreadyknown': instance.alreadyknown,
       'inviteenick': instance.inviteenick,
-      'inviteeid': instance.inviteeid,
+      'invitee': instance.invitee,
       'targetnick': instance.targetnick,
-      'targetid': instance.targetid,
+      'target': instance.target,
     };
 
 TipProgressEvent _$TipProgressEventFromJson(Map<String, dynamic> json) =>
