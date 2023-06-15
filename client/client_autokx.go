@@ -70,6 +70,67 @@ func (c *Client) RequestMediateIdentity(mediator, target UserID) error {
 	return c.sendWithSendQ(payEvent, mi, mediator)
 }
 
+// maybeRequestMediateID checks if there are outstanding KX or transitive KX
+// attempts for the given target, and if there aren't, starts one using the
+// specified mediator.
+func (c *Client) maybeRequestMediateID(mediator, target UserID) error {
+
+	// Fast check if user exists.
+	_, err := c.rul.byID(target)
+	if err == nil {
+		// User exists.
+		return nil
+	}
+	if !errors.Is(err, userNotFoundError{}) {
+		return fmt.Errorf("unexpected error fetching user: %v", err)
+	}
+
+	// Fast check if mediator exists.
+	mu, err := c.rul.byID(mediator)
+	if err != nil {
+		return fmt.Errorf("cannot request mediate identity: no session "+
+			"with mediator %s: %v", mediator, err)
+	}
+
+	// After 7 days, we allow trying again (possibly with a different
+	// mediator).
+	recentThreshold := time.Hour * 24 * 7
+
+	// User does not exist. Check for outstanding KX/MI requests.
+	errIgnore := errors.New("ignore")
+	err = c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
+		kxs, err := c.db.HasKXWithUser(tx, target)
+		if err != nil {
+			return err
+		}
+		if len(kxs) > 0 {
+			return errIgnore
+		}
+		hasRecent, err := c.db.HasAnyRecentMediateID(tx, target, recentThreshold)
+		if err != nil {
+			return err
+		}
+		if hasRecent {
+			return errIgnore
+		}
+
+		// Will attempt mediate ID. Store attempt.
+		return c.db.StoreMediateIDRequested(tx, mediator, target)
+	})
+	if errors.Is(err, errIgnore) {
+		// Ignore request to attempt MI.
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+
+	mu.log.Infof("Asking to mediate identity to target %s", target)
+	mi := rpc.RMMediateIdentity{Identity: target}
+	payEvent := fmt.Sprintf("mediateid.%s", target)
+	return c.sendWithSendQ(payEvent, mi, mediator)
+}
+
 func (c *Client) handleMediateID(ru *RemoteUser, mi rpc.RMMediateIdentity) error {
 	if c.cfg.TransitiveEvent != nil {
 		c.cfg.TransitiveEvent(ru.ID(), mi.Identity, TEMediateID)

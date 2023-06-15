@@ -782,14 +782,11 @@ func (c *Client) handleGCList(ru *RemoteUser, gl rpc.RMGroupList) error {
 			continue
 		}
 
-		// TODO: check if there are no inflight kx attempts yet.
-		go func() {
-			err := c.RequestMediateIdentity(ru.ID(), v)
-			if err != nil && !errors.Is(err, clientintf.ErrSubsysExiting) {
-				c.log.Errorf("Unable to autokx with %s via %s: %v",
-					v, ru, err)
-			}
-		}()
+		err = c.maybeRequestMediateID(ru.ID(), v)
+		if err != nil && !errors.Is(err, clientintf.ErrSubsysExiting) {
+			c.log.Errorf("Unable to autokx with %s via %s: %v",
+				v, ru, err)
+		}
 	}
 
 	return nil
