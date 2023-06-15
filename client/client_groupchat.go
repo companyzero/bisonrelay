@@ -127,6 +127,17 @@ func (c *Client) GCsWithPrefix(prefix string) []string {
 	return res
 }
 
+// GCsWithMember returns a list of GCs that have the specified UID as a member.
+func (c *Client) GCsWithMember(uid UserID) ([]zkidentity.ShortID, error) {
+	var res []zkidentity.ShortID
+	err := c.dbView(func(tx clientdb.ReadTx) error {
+		var err error
+		res, err = c.db.ListGCsWithMember(tx, uid)
+		return err
+	})
+	return res, err
+}
+
 // NewGroupChatVersion creates a new gc with the local user as admin and the
 // specified version.
 func (c *Client) NewGroupChatVersion(name string, version uint8) (zkidentity.ShortID, error) {
