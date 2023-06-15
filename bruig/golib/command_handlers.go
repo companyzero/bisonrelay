@@ -189,7 +189,7 @@ func handleInitClient(handle uint32, args InitClient) error {
 		notify(NTPostStatusReceived, pr, nil)
 	}))
 
-	ntfns.Register(client.OnKXCompleted(func(_ *clientintf.RawRVID, user *client.RemoteUser) {
+	ntfns.Register(client.OnKXCompleted(func(_ *clientintf.RawRVID, user *client.RemoteUser, _ bool) {
 		pii := user.PublicIdentity()
 		notify(NTKXCompleted, remoteUserFromPII(&pii), nil)
 	}))

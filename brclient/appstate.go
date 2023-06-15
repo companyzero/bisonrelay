@@ -2784,11 +2784,15 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 			"Resetting all KXs", oldConnDate.Format(ISO8601DateTime))
 	}))
 
-	ntfns.Register(client.OnKXCompleted(func(_ *clientintf.RawRVID, user *client.RemoteUser) {
+	ntfns.Register(client.OnKXCompleted(func(_ *clientintf.RawRVID, user *client.RemoteUser, isNew bool) {
 		as.manyDiagMsgsCb(func(pf printf) {
-			pf("Completed KX with user %q ID %s",
-				user.Nick(), user.ID())
-			pf("Type /msg %s to chat", strescape.Nick(user.Nick()))
+			if isNew {
+				pf("Completed KX with user %q ID %s",
+					user.Nick(), user.ID())
+				pf("Type /msg %s to chat", strescape.Nick(user.Nick()))
+			} else {
+				pf("Reset KX with user %q ID %s", user.Nick(), user.ID())
+			}
 		})
 	}))
 

@@ -177,7 +177,7 @@ func (c *chatServer) KXStream(ctx context.Context, req *types.KXStreamRequest, s
 }
 
 // kxNtfnHandler is called by the client when the client completes a KX with a user.
-func (c *chatServer) kxNtfnHandler(ir *clientintf.RawRVID, ru *client.RemoteUser) {
+func (c *chatServer) kxNtfnHandler(ir *clientintf.RawRVID, ru *client.RemoteUser, _ bool) {
 	ntfn := &types.KXCompleted{
 		Uid:  ru.ID().Bytes(),
 		Nick: ru.Nick(),

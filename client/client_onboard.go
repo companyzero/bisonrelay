@@ -451,7 +451,7 @@ cNPr8Y+sSs2MHf6xMNBQzV4KuIlPIg==
 func (c *Client) onboardInitialKX(ctx context.Context, ostate clientintf.OnboardState) error {
 	// Listen for any events.
 	kxCompletedChan := make(chan struct{}, 1)
-	reg := c.ntfns.Register(OnKXCompleted(func(_ *clientintf.RawRVID, ru *RemoteUser) {
+	reg := c.ntfns.Register(OnKXCompleted(func(_ *clientintf.RawRVID, ru *RemoteUser, _ bool) {
 		if ru.ID() == ostate.Invite.Public.Identity {
 			kxCompletedChan <- struct{}{}
 		}

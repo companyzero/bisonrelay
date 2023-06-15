@@ -116,9 +116,10 @@ func (c *Client) takePostKXActions(ru *RemoteUser, actions []clientdb.PostKXActi
 	}
 }
 
-// initRemoteUser inserts the given ratchet as a new remote user.
+// initRemoteUser inserts the given ratchet as a new remote user. The bool
+// returns whether this is a new user.
 func (c *Client) initRemoteUser(id *zkidentity.PublicIdentity, r *ratchet.Ratchet,
-	updateAB bool, initialRV, myResetRV, theirResetRV clientdb.RawRVID, ignored bool) (*RemoteUser, error) {
+	updateAB bool, initialRV, myResetRV, theirResetRV clientdb.RawRVID, ignored bool) (*RemoteUser, bool, error) {
 
 	var postKXActions []clientdb.PostKXAction
 
@@ -144,7 +145,7 @@ func (c *Client) initRemoteUser(id *zkidentity.PublicIdentity, r *ratchet.Ratche
 		go ru.replaceRatchet(r)
 		oldUser = true
 	} else if err != nil {
-		return nil, err
+		return nil, false, err
 	} else {
 		ru.log.Debugf("Initializing remote user (initial RV %s)", initialRV)
 	}
@@ -204,7 +205,7 @@ func (c *Client) initRemoteUser(id *zkidentity.PublicIdentity, r *ratchet.Ratche
 		return nil
 	})
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
 	// Change the reset listening state on a goroutine so we don't block on
@@ -226,9 +227,9 @@ func (c *Client) initRemoteUser(id *zkidentity.PublicIdentity, r *ratchet.Ratche
 		select {
 		case c.newUsersChan <- ru:
 		case <-c.ctx.Done():
-			return nil, errClientExiting
+			return nil, false, errClientExiting
 		case <-c.runDone:
-			return nil, errClientExiting
+			return nil, false, errClientExiting
 		}
 	}
 
@@ -242,18 +243,20 @@ func (c *Client) initRemoteUser(id *zkidentity.PublicIdentity, r *ratchet.Ratche
 		c.ntfns.notifyOnKXSearchCompleted(ru)
 	}
 
-	return ru, nil
+	return ru, !oldUser, nil
 }
 
 func (c *Client) kxCompleted(public *zkidentity.PublicIdentity, r *ratchet.Ratchet,
 	initialRV, myResetRV, theirResetRV clientdb.RawRVID) {
 
-	ru, err := c.initRemoteUser(public, r, true, initialRV, myResetRV, theirResetRV, false)
+	ru, isNew, err := c.initRemoteUser(public, r, true, initialRV, myResetRV, theirResetRV, false)
 	if err != nil && !errors.Is(err, clientintf.ErrSubsysExiting) {
 		c.log.Errorf("unable to init user for completed kx: %v", err)
 	}
 
-	c.ntfns.notifyOnKXCompleted(&initialRV, ru)
+	if err == nil {
+		c.ntfns.notifyOnKXCompleted(&initialRV, ru, isNew)
+	}
 }
 
 // AddInviteOnKX adds a post kx action, based on the initial rv,
