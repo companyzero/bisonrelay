@@ -458,10 +458,10 @@ func (cw *chatWindow) newUnsentPM(msg string) *chatMsg {
 	return m
 }
 
-func (cw *chatWindow) newInternalMsg(msg string) *chatMsg {
+func (cw *chatWindow) newInternalMsg(msg string, args ...interface{}) *chatMsg {
 	m := &chatMsg{
 		internal: true,
-		elements: parseMsgIntoElements(msg, ""),
+		elements: parseMsgIntoElements(fmt.Sprintf(msg, args...), ""),
 		//msg:      msg,
 		ts: time.Now(),
 	}

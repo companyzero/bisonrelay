@@ -626,10 +626,10 @@ func TestBlockIgnore(t *testing.T) {
 	// Charlie knows Alice and Bob. Create a new GC, and invite both. It
 	// should _not_ trigger a new autokx between Alice and Bob.
 	bobKXdChan, aliceKXdChan := make(chan struct{}, 1), make(chan struct{}, 1)
-	bob.handle(client.OnKXCompleted(func(*clientintf.RawRVID, *client.RemoteUser) {
+	bob.handle(client.OnKXCompleted(func(*clientintf.RawRVID, *client.RemoteUser, bool) {
 		bobKXdChan <- struct{}{}
 	}))
-	alice.handle(client.OnKXCompleted(func(*clientintf.RawRVID, *client.RemoteUser) {
+	alice.handle(client.OnKXCompleted(func(*clientintf.RawRVID, *client.RemoteUser, bool) {
 		aliceKXdChan <- struct{}{}
 	}))
 	gcID, err := charlie.NewGroupChat(gcName)
@@ -835,7 +835,7 @@ func TestGCCrossedMediatedKX(t *testing.T) {
 
 	// Track the additional KX between Bob and Charlie.
 	bobKXCompletedChan := make(chan struct{}, 10)
-	bob.handle(client.OnKXCompleted(func(_ *clientintf.RawRVID, ru *client.RemoteUser) {
+	bob.handle(client.OnKXCompleted(func(_ *clientintf.RawRVID, ru *client.RemoteUser, _ bool) {
 		bobKXCompletedChan <- struct{}{}
 	}))
 

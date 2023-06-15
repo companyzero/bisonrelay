@@ -155,7 +155,7 @@ func TestKXSearchFromPosts(t *testing.T) {
 
 	// Setup to track relevant events.
 	eveKXdChan := make(chan clientintf.UserID, 4)
-	eve.handle(client.OnKXCompleted(func(_ *clientintf.RawRVID, ru *client.RemoteUser) {
+	eve.handle(client.OnKXCompleted(func(_ *clientintf.RawRVID, ru *client.RemoteUser, _ bool) {
 		eveKXdChan <- ru.ID()
 	}))
 	eveKXSearched := make(chan clientintf.UserID, 1)

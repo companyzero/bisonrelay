@@ -574,7 +574,7 @@ func (c *Client) loadAddressBook(ctx context.Context) error {
 	c.log.Debugf("Loaded %d entries from the address book", len(ab))
 
 	for _, entry := range ab {
-		_, err := c.initRemoteUser(entry.ID, entry.R, false,
+		_, _, err := c.initRemoteUser(entry.ID, entry.R, false,
 			clientdb.RawRVID{}, entry.MyResetRV, entry.TheirResetRV, entry.Ignored)
 		if err != nil {
 			c.log.Errorf("Unable to init remote user %s: %v",

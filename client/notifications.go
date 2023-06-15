@@ -73,7 +73,7 @@ const onKXCompleted = "onKXCompleted"
 
 // OnKXCompleted is called after KX is completed with a remote user (either a
 // new user or a reset KX).
-type OnKXCompleted func(*clientintf.RawRVID, *RemoteUser)
+type OnKXCompleted func(*clientintf.RawRVID, *RemoteUser, bool)
 
 func (_ OnKXCompleted) typ() string { return onKXCompleted }
 
@@ -381,9 +381,9 @@ func (nmgr *NotificationManager) notifyOnGCVersionWarning(user *RemoteUser, gc r
 		visit(func(h OnGCVersionWarning) { h(user, gc, minVersion, maxVersion) })
 }
 
-func (nmgr *NotificationManager) notifyOnKXCompleted(ir *clientintf.RawRVID, user *RemoteUser) {
+func (nmgr *NotificationManager) notifyOnKXCompleted(ir *clientintf.RawRVID, user *RemoteUser, isNew bool) {
 	nmgr.handlers[onKXCompleted].(*handlersFor[OnKXCompleted]).
-		visit(func(h OnKXCompleted) { h(ir, user) })
+		visit(func(h OnKXCompleted) { h(ir, user, isNew) })
 }
 
 func (nmgr *NotificationManager) notifyOnKXSearchCompleted(user *RemoteUser) {

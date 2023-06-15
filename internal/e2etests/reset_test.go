@@ -18,12 +18,12 @@ func TestDirectReset(t *testing.T) {
 	alice := ts.newClient("alice")
 	bob := ts.newClient("bob")
 
-	aliceKXdChan, bobKXdChan := make(chan struct{}), make(chan struct{})
-	alice.handle(client.OnKXCompleted(func(*clientintf.RawRVID, *client.RemoteUser) {
-		aliceKXdChan <- struct{}{}
+	aliceKXdChan, bobKXdChan := make(chan bool), make(chan bool)
+	alice.handle(client.OnKXCompleted(func(_ *clientintf.RawRVID, _ *client.RemoteUser, isNew bool) {
+		aliceKXdChan <- isNew
 	}))
-	bob.handle(client.OnKXCompleted(func(*clientintf.RawRVID, *client.RemoteUser) {
-		bobKXdChan <- struct{}{}
+	bob.handle(client.OnKXCompleted(func(_ *clientintf.RawRVID, _ *client.RemoteUser, isNew bool) {
+		bobKXdChan <- isNew
 	}))
 
 	alicePMChan, bobPMChan := make(chan string, 1), make(chan string, 1)
@@ -35,28 +35,28 @@ func TestDirectReset(t *testing.T) {
 	}))
 
 	// Helper to consume the KXCompleted events.
-	assertKXCompleted := func() {
+	assertKXCompleted := func(isNew bool) {
 		t.Helper()
-		assert.ChanWritten(t, aliceKXdChan)
-		assert.ChanWritten(t, bobKXdChan)
+		assert.ChanWrittenWithVal(t, aliceKXdChan, isNew)
+		assert.ChanWrittenWithVal(t, bobKXdChan, isNew)
 	}
 
 	ts.kxUsers(alice, bob)
-	assertKXCompleted()
+	assertKXCompleted(true)
 
 	// Perform a reset from Alice to Bob.
 	err := alice.ResetRatchet(bob.PublicID())
 	assert.NilErr(t, err)
 
 	// Ensure we got the new reset events.
-	assertKXCompleted()
+	assertKXCompleted(false)
 
 	// Reset on the other direction.
 	err = bob.ResetRatchet(alice.PublicID())
 	assert.NilErr(t, err)
 
 	// Ensure we got the new reset events.
-	assertKXCompleted()
+	assertKXCompleted(false)
 
 	// Ensure Alice and Bob can message each other.
 	aliceMsg, bobMsg := "i am alice", "i am bob"
@@ -75,12 +75,12 @@ func TestTransitiveReset(t *testing.T) {
 	bob := ts.newClient("bob")
 	charlie := ts.newClient("charlie")
 
-	aliceKXdChan, bobKXdChan := make(chan struct{}), make(chan struct{})
-	alice.handle(client.OnKXCompleted(func(*clientintf.RawRVID, *client.RemoteUser) {
-		aliceKXdChan <- struct{}{}
+	aliceKXdChan, bobKXdChan := make(chan bool), make(chan bool)
+	alice.handle(client.OnKXCompleted(func(_ *clientintf.RawRVID, _ *client.RemoteUser, isNew bool) {
+		aliceKXdChan <- isNew
 	}))
-	bob.handle(client.OnKXCompleted(func(*clientintf.RawRVID, *client.RemoteUser) {
-		bobKXdChan <- struct{}{}
+	bob.handle(client.OnKXCompleted(func(_ *clientintf.RawRVID, _ *client.RemoteUser, isNew bool) {
+		bobKXdChan <- isNew
 	}))
 
 	alicePMChan, bobPMChan := make(chan string, 1), make(chan string, 1)
@@ -92,10 +92,10 @@ func TestTransitiveReset(t *testing.T) {
 	}))
 
 	// Helper to consume the KXCompleted events.
-	assertKXCompleted := func() {
+	assertKXCompleted := func(isNew bool) {
 		t.Helper()
-		assert.ChanWritten(t, aliceKXdChan)
-		assert.ChanWritten(t, bobKXdChan)
+		assert.ChanWrittenWithVal(t, aliceKXdChan, isNew)
+		assert.ChanWrittenWithVal(t, bobKXdChan, isNew)
 	}
 
 	// Helper to verify the Alice -> Bob ratchet works.
@@ -113,8 +113,8 @@ func TestTransitiveReset(t *testing.T) {
 	ts.kxUsers(bob, charlie)
 
 	// We should get two kx events on Alice and Bob.
-	assertKXCompleted()
-	assertKXCompleted()
+	assertKXCompleted(true)
+	assertKXCompleted(true)
 
 	// Verify the Alice-Bob ratchet works.
 	checkAliceBobRatchet()
@@ -124,7 +124,7 @@ func TestTransitiveReset(t *testing.T) {
 	assert.NilErr(t, err)
 
 	// We should get new KX completed events.
-	assertKXCompleted()
+	assertKXCompleted(false)
 
 	// Ensure Alice and Bob can message each other.
 	checkAliceBobRatchet()
