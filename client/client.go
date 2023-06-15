@@ -988,15 +988,23 @@ func (c *Client) Run(ctx context.Context) error {
 				return nil
 			}
 			if nextSess != nil && firstConn {
+				// Take actions that require having info from
+				// the first server connection.
 				close(firstConnChan)
 				firstConn = false
 				kxExpiryLimit := time.Duration(expDays) * time.Hour * 24
 				g.Go(func() error {
-					err := c.kxl.listenAllKXs(kxExpiryLimit)
+					err := c.clearOldMediateIDs(kxExpiryLimit)
+					if err != nil && !errors.Is(err, context.Canceled) {
+						c.log.Errorf("Unable to clear old mediate IDs: %v", err)
+						return err
+					}
+					err = c.kxl.listenAllKXs(kxExpiryLimit)
 					if err != nil && !errors.Is(err, context.Canceled) {
 						c.log.Errorf("Unable to listen to all KXs: %v", err)
+						return err
 					}
-					return err
+					return nil
 				})
 			}
 			if nextSess != nil {
@@ -1073,12 +1081,6 @@ func (c *Client) Run(ctx context.Context) error {
 			return err
 		}
 		return c.restartUploads(gctx)
-	})
-
-	// Clear old mediate id requests.
-	g.Go(func() error {
-		c.clearOldMediateIDs()
-		return nil
 	})
 
 	// Run tip user payments.

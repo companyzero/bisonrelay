@@ -163,14 +163,14 @@ func (c *Client) ListMediateIDs() ([]clientdb.MediateIDRequest, error) {
 
 // clearOldMediateIDs removes all mediate id requests that were requested over 7
 // days ago.
-func (c *Client) clearOldMediateIDs() {
-	err := c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
+func (c *Client) clearOldMediateIDs(miExpiryDuration time.Duration) error {
+	limitDate := time.Now().Add(-miExpiryDuration)
+	return c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
 		mis, err := c.db.ListMediateIDs(tx)
 		if err != nil {
 			return err
 		}
 
-		limitDate := time.Now().Add(-time.Hour * 24 * 7)
 		for _, mi := range mis {
 			if !mi.Date.Before(limitDate) {
 				continue
@@ -185,7 +185,4 @@ func (c *Client) clearOldMediateIDs() {
 
 		return nil
 	})
-	if err != nil {
-		c.log.Errorf("Unable to completely clear old mediate ids: %v", err)
-	}
 }
