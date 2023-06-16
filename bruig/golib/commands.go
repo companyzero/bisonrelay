@@ -204,25 +204,25 @@ func call(cmd *cmd) *CmdResult {
 			v, err = handleHello(name)
 		}
 	case CTInitClient:
-		var initClient InitClient
+		var initClient initClient
 		if decode(&initClient) {
 			err = handleInitClient(cmd.ClientHandle, initClient)
 		}
 
 	case CTLNTryConnect:
-		var args LNTryExternalDcrlnd
+		var args lnTryExternalDcrlnd
 		if decode(&args) {
 			v, err = handleLNTryExternalDcrlnd(args)
 		}
 
 	case CTLNInitDcrlnd:
-		var args LNInitDcrlnd
+		var args lnInitDcrlnd
 		if decode(&args) {
 			v, err = handleLNInitDcrlnd(ctx, args)
 		}
 
 	case CTLNRunDcrlnd:
-		var args LNInitDcrlnd
+		var args lnInitDcrlnd
 		if decode(&args) {
 			v, err = handleLNRunDcrlnd(ctx, args)
 		}
