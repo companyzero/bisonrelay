@@ -229,6 +229,26 @@ func (db *DB) ListMediateIDs(tx ReadTx) ([]MediateIDRequest, error) {
 	return res, nil
 }
 
+// StoreUnkxdUserInfo stores information about an unxked user.
+func (db *DB) StoreUnkxdUserInfo(tx ReadWriteTx, info UnkxdUserInfo) error {
+	fname := filepath.Join(db.root, unkxdUsersDir, info.UID.String())
+	return db.saveJsonFile(fname, &info)
+}
+
+// ReadUnxkdUserInfo returns information about an unkxed user.
+func (db *DB) ReadUnxkdUserInfo(tx ReadTx, uid UserID) (UnkxdUserInfo, error) {
+	fname := filepath.Join(db.root, unkxdUsersDir, uid.String())
+	var info UnkxdUserInfo
+	err := db.readJsonFile(fname, &info)
+	return info, err
+}
+
+// RemoveUnkxUserInfo removes the information about an unkxed user if it exists.
+func (db *DB) RemoveUnkxUserInfo(tx ReadWriteTx, uid UserID) error {
+	fname := filepath.Join(db.root, unkxdUsersDir, uid.String())
+	return removeIfExists(fname)
+}
+
 // AddKXSearchQuery updates the search for a given KX opportunity with the
 // target user and adds the specified query to the list of attempted queries.
 func (db *DB) AddKXSearchQuery(tx ReadWriteTx, target UserID, search rpc.RMKXSearch, query KXSearchQuery) error {

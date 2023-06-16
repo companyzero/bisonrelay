@@ -92,10 +92,6 @@ func (c *Client) maybeRequestMediateID(mediator, target UserID) error {
 			"with mediator %s: %v", mediator, err)
 	}
 
-	// After 7 days, we allow trying again (possibly with a different
-	// mediator).
-	recentThreshold := time.Hour * 24 * 7
-
 	// User does not exist. Check for outstanding KX/MI requests.
 	errIgnore := errors.New("ignore")
 	err = c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
@@ -106,12 +102,26 @@ func (c *Client) maybeRequestMediateID(mediator, target UserID) error {
 		if len(kxs) > 0 {
 			return errIgnore
 		}
-		hasRecent, err := c.db.HasAnyRecentMediateID(tx, target, recentThreshold)
+		hasRecent, err := c.db.HasAnyRecentMediateID(tx, target,
+			c.cfg.RecentMediateIDThreshold)
 		if err != nil {
 			return err
 		}
 		if hasRecent {
 			return errIgnore
+		}
+
+		// Store total nb of MI requests.
+		unkx, err := c.db.ReadUnxkdUserInfo(tx, target)
+		if err != nil {
+			if !errors.Is(err, clientdb.ErrNotFound) {
+				return err
+			}
+			unkx.UID = target
+		}
+		unkx.MIRequests += 1
+		if err := c.db.StoreUnkxdUserInfo(tx, unkx); err != nil {
+			return err
 		}
 
 		// Will attempt mediate ID. Store attempt.
@@ -170,14 +180,23 @@ func (c *Client) handleRMInvite(ru *RemoteUser, iv rpc.RMInvite) error {
 func (c *Client) handleTransitiveIDInvite(ru *RemoteUser, pii rpc.OOBPublicIdentityInvite) error {
 
 	// Double check we actually requested this invitation.
+	errNoMI := errors.New("no mi")
 	err := c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
 		_, err := c.db.HasMediateID(tx, ru.ID(), pii.Public.Identity)
 		if errors.Is(err, clientdb.ErrNotFound) {
-			return fmt.Errorf("local client did not request MI to %s"+
-				"by way of %s", pii.Public.Identity, ru.ID())
+			return errNoMI
 		}
 		return err
 	})
+	if errors.Is(err, errNoMI) {
+		// This happens legitimately when the local client sends
+		// multiple MI requests and the first one completes (thus
+		// removing other requests from the DB). So just log instead of
+		// error.
+		ru.log.Warnf("Received unrequested transitive ID invite from %s"+
+			"by way of %s", pii.Public.Identity, ru.ID())
+		return nil
+	}
 	if err != nil {
 		return err
 	}

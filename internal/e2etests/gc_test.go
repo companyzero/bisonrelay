@@ -960,3 +960,134 @@ func TestGCCrossedMediatedKX(t *testing.T) {
 	assert.ChanNotWritten(t, bobKXCompletedChan, time.Second)
 	assert.DeepEqual(t, tls.hasMatches(), true)
 }
+
+// TestGCUnkxMediateIDRetries asserts that sending a message on a GC with
+// unkxd members causes a mediate ID request to be sent.
+func TestGCUnkxMediateIDRetries(t *testing.T) {
+	t.Parallel()
+
+	tcfg := testScaffoldCfg{}
+	ts := newTestScaffold(t, tcfg)
+	alice := ts.newClient("alice")
+	bob := ts.newClient("bob")
+	charlie := ts.newClient("charlie")
+
+	// KX Alice to Bob and Charlie.
+	ts.kxUsers(alice, bob)
+	ts.kxUsers(alice, charlie)
+
+	// Create the GC and add Bob.
+	gcID, err := alice.NewGroupChat("gc01")
+	assert.NilErr(t, err)
+	assertClientJoinsGC(t, gcID, alice, bob)
+
+	// Setup handlers.
+	aliceInviteAcceptedChan := make(chan clientintf.UserID, 3)
+	alice.handle(client.OnGCInviteAcceptedNtfn(func(ru *client.RemoteUser, gc rpc.RMGroupList) {
+		aliceInviteAcceptedChan <- ru.ID()
+	}))
+	bobNewMembersChan := make(chan clientintf.UserID, 3)
+	bob.handle(client.OnAddedGCMembersNtfn(func(_ rpc.RMGroupList, uids []clientintf.UserID) {
+		for _, uid := range uids {
+			bobNewMembersChan <- uid
+		}
+	}))
+	type gcUnkxdNtfnInfo struct {
+		hasKX   bool
+		hasMI   bool
+		miCount uint32
+		medID   clientintf.UserID
+	}
+	bobGCUnkxdMemberChan := make(chan gcUnkxdNtfnInfo, 10)
+	bob.handle(client.OnGCWithUnkxdMemberNtfn(func(gc zkidentity.ShortID, uid clientintf.UserID,
+		hasKX, hasMI bool, miCount uint32, startedMIMediator *clientintf.UserID) {
+		if gc != gcID || uid != charlie.PublicID() {
+			return
+		}
+		var medID clientintf.UserID
+		if startedMIMediator != nil {
+			medID = *startedMIMediator
+		}
+		bobGCUnkxdMemberChan <- gcUnkxdNtfnInfo{
+			hasKX: hasKX, hasMI: hasMI, miCount: miCount, medID: medID,
+		}
+	}))
+	bobKXCompletedChan := make(chan struct{}, 5)
+	bob.handle(client.OnKXCompleted(func(*clientintf.RawRVID, *client.RemoteUser, bool) {
+		bobKXCompletedChan <- struct{}{}
+	}))
+
+	// Alice invites Charlie, then goes offline to prevent the MI from
+	// completing.
+	assertGoesOffline(t, charlie)
+	assert.NilErr(t, alice.InviteToGroupChat(gcID, charlie.PublicID()))
+	assertGoesOffline(t, alice)
+
+	// Charlie comes online, accepts the invite, then goes offline again to
+	// prevent the MI from completing once Alice processes the join event.
+	charlieAcceptedChan := charlie.acceptNextGCInvite(gcID)
+	assertGoesOnline(t, charlie)
+	assert.NilErrFromChan(t, charlieAcceptedChan)
+	assertGoesOffline(t, charlie)
+
+	// Alice comes online, processes the invite. Bob sees the new GC member.
+	assertGoesOnline(t, alice)
+	assert.ChanWrittenWithVal(t, aliceInviteAcceptedChan, charlie.PublicID())
+	assert.ChanWrittenWithVal(t, bobNewMembersChan, charlie.PublicID())
+
+	// Bob sends a message. We don't expect any notifications yet.
+	assert.NilErr(t, bob.GCMessage(gcID, "msg01", 0, nil))
+	assert.ChanNotWritten(t, bobGCUnkxdMemberChan, 100*time.Millisecond)
+
+	// Wait for the time notifications are sent, then try again. This should
+	// generate a ntfn without MI starting yet.
+	time.Sleep(bob.cfg.UnkxdWarningTimeout)
+	assert.NilErr(t, bob.GCMessage(gcID, "msg02", 0, nil))
+	wantUnkx := gcUnkxdNtfnInfo{}
+	assert.ChanWrittenWithVal(t, bobGCUnkxdMemberChan, wantUnkx)
+
+	// Wait for the time until an MI will be attempted as a result of
+	// an unkxd member. The mediator ID in the ntfn is set to the GC's
+	// owner (Alice), but other fields are cleared.
+	time.Sleep(bob.cfg.RecentMediateIDThreshold)
+	assert.NilErr(t, bob.GCMessage(gcID, "msg03", 0, nil))
+	wantUnkx = gcUnkxdNtfnInfo{medID: alice.PublicID()}
+	assert.ChanWrittenWithVal(t, bobGCUnkxdMemberChan, wantUnkx)
+
+	// Wait for half the time until the next mediate ID attempt. We should
+	// not get a new attempt, but we should get an indication that there are
+	// attempts.
+	time.Sleep(bob.cfg.RecentMediateIDThreshold / 2)
+	assert.NilErr(t, bob.GCMessage(gcID, "msg04", 0, nil))
+	wantUnkx = gcUnkxdNtfnInfo{hasMI: true, miCount: 1}
+	assert.ChanWrittenWithVal(t, bobGCUnkxdMemberChan, wantUnkx)
+
+	// Wait another half time until the next mediate ID attempt. We should
+	// get a new attempt.
+	time.Sleep(bob.cfg.RecentMediateIDThreshold / 2)
+	assert.NilErr(t, bob.GCMessage(gcID, "msg05", 0, nil))
+	wantUnkx = gcUnkxdNtfnInfo{medID: alice.PublicID(), miCount: 1}
+	assert.ChanWrittenWithVal(t, bobGCUnkxdMemberChan, wantUnkx)
+
+	// Wait a third time for the next mediate ID attempt. This should be
+	// the final MI attempt.
+	time.Sleep(bob.cfg.RecentMediateIDThreshold)
+	assert.NilErr(t, bob.GCMessage(gcID, "msg06", 0, nil))
+	wantUnkx = gcUnkxdNtfnInfo{medID: alice.PublicID(), miCount: 2}
+	assert.ChanWrittenWithVal(t, bobGCUnkxdMemberChan, wantUnkx)
+
+	// Wait a fourth time for the next mediate ID attempt. This should
+	// trigger a warning but the field that indicates the MI is being
+	// attempted should be unset.
+	time.Sleep(bob.cfg.RecentMediateIDThreshold)
+	assert.NilErr(t, bob.GCMessage(gcID, "msg07", 0, nil))
+	wantUnkx = gcUnkxdNtfnInfo{miCount: 3}
+	assert.ChanWrittenWithVal(t, bobGCUnkxdMemberChan, wantUnkx)
+
+	// Wait a fifth time for the next mediate ID attempt. This should no
+	// longer trigger a notification.
+	time.Sleep(bob.cfg.RecentMediateIDThreshold)
+	assert.NilErr(t, bob.GCMessage(gcID, "msg07", 0, nil))
+	assert.ChanNotWritten(t, bobGCUnkxdMemberChan, 100*time.Millisecond)
+
+}

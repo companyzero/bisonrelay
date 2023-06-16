@@ -54,6 +54,7 @@ const (
 	reqResourcesDir     = "reqresources"
 	recvAddrForUserFile = "onchainrecvaddr.json"
 	cachedGCMsDir       = "cachedgcms"
+	unkxdUsersDir       = "unkxd"
 
 	pageSessionsDir         = "pagesessions"
 	pageSessionOverviewFile = "overview.json"

@@ -87,10 +87,6 @@ type Config struct {
 
 	Notifications *NotificationManager
 
-	// GCWithUnkxdMember is called when an attempt to send a GC message
-	// failed due to a GC member being unkxd with the local client.
-	GCWithUnkxdMember func(gcid GCID, uid UserID)
-
 	// KXSuggestion is called when a remote user sends a suggestion to KX
 	// with a new user.
 	KXSuggestion func(user *RemoteUser, pii zkidentity.PublicIdentity)
@@ -172,6 +168,25 @@ type Config struct {
 	//
 	// If unspecified, a default value of 10 seconds is used.
 	GCMQInitialDelay time.Duration
+
+	// RecentMediateIDThreshold is how long to wait until attempting a new
+	// mediate ID request for a given target.
+	//
+	// If unspecified, a default value of 7 days is used.
+	RecentMediateIDThreshold time.Duration
+
+	// UnkxdWarningTimeout is how long to wait between warnings about
+	// trying to perform an action with unkxd people (for example, trying
+	// to send a GC message to an unkxd GC member).
+	//
+	// If unspecified, a default value of 24 hours is used.
+	UnkxdWarningTimeout time.Duration
+
+	// MaxAutoKXMediateIDRequests is the max number of autokx mediate ID
+	// requests to make to a particular user id.
+	//
+	// If unspecified, a default value of 3 is used.
+	MaxAutoKXMediateIDRequests int
 }
 
 // logger creates a logger for the given subsystem in the configured backend.
@@ -197,6 +212,18 @@ func (cfg *Config) setDefaults() {
 
 	if cfg.TipUserPayRetryDelayFactor == 0 {
 		cfg.TipUserPayRetryDelayFactor = time.Minute / 5
+	}
+
+	if cfg.RecentMediateIDThreshold == 0 {
+		cfg.RecentMediateIDThreshold = time.Hour * 24 * 7
+	}
+
+	if cfg.UnkxdWarningTimeout == 0 {
+		cfg.UnkxdWarningTimeout = time.Hour * 24
+	}
+
+	if cfg.MaxAutoKXMediateIDRequests == 0 {
+		cfg.MaxAutoKXMediateIDRequests = 3
 	}
 
 	// These following GCMQ times were obtained by profiling a client
@@ -256,6 +283,11 @@ type Client struct {
 	// gcWarnedVersions tracks GCs for which the warning about an
 	// incompatible version has been issued.
 	gcWarnedVersions *singlesetmap.Map[zkidentity.ShortID]
+
+	// unkxdWarnings tracks the time used to warn about unkxd remote clients
+	// (for example, because they are GC members).
+	unkxdWarningsMtx sync.Mutex
+	unkxdWarnings    map[clientintf.UserID]time.Time
 
 	// onboardRunning tracks whether there's a running onboard instance.
 	onboardMtx        sync.Mutex
@@ -354,6 +386,7 @@ func New(cfg Config) (*Client, error) {
 		firstSubDone:     make(chan struct{}),
 		newUsersChan:     make(chan *RemoteUser),
 		gcWarnedVersions: &singlesetmap.Map[zkidentity.ShortID]{},
+		unkxdWarnings:    make(map[clientintf.UserID]time.Time),
 
 		onboardCancelChan: make(chan struct{}, 1),
 

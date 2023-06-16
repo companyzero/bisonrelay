@@ -380,9 +380,36 @@ func (c *Client) sendToGCMembers(gcID zkidentity.ShortID,
 	localID := c.PublicID()
 	payEvent := fmt.Sprintf("gc.%s.%s", gcID.ShortLogID(), payType)
 
+	// missingKXInfo will be used to track information about members that
+	// the local client hasn't KXd with yet.
+	type missingKXInfo struct {
+		uid      clientintf.UserID
+		hasKX    bool
+		hasMI    bool
+		medID    *clientintf.UserID
+		miCount  uint32
+		skipWarn bool
+		skipMI   bool
+	}
+	var missingKX []missingKXInfo
+
+	// Add the set of outbound messages to the sendq.
 	ids := make([]clientintf.UserID, 0, len(members)-1)
 	for _, uid := range members {
 		if uid == localID {
+			continue
+		}
+
+		// If the user isn't KX'd with, and they haven't been warned
+		// recently, add to the missingKX list to perform some actions
+		// later on.
+		_, err := c.rul.byID(uid)
+		if err != nil {
+			c.unkxdWarningsMtx.Lock()
+			if t := c.unkxdWarnings[uid]; time.Since(t) > c.cfg.UnkxdWarningTimeout {
+				missingKX = append(missingKX, missingKXInfo{uid: uid})
+			}
+			c.unkxdWarningsMtx.Unlock()
 			continue
 		}
 
@@ -393,9 +420,11 @@ func (c *Client) sendToGCMembers(gcID zkidentity.ShortID,
 		return fmt.Errorf("Unable to add gc msg to send queue: %v", err)
 	}
 
+	// These will be used to track the sending progress.
 	var progressMtx sync.Mutex
 	var sent, total int
 
+	// Start the sending process for each member.
 	for _, id := range members {
 		if id == localID {
 			continue
@@ -403,17 +432,6 @@ func (c *Client) sendToGCMembers(gcID zkidentity.ShortID,
 
 		ru, err := c.rul.byID(id)
 		if err != nil {
-			// Warn about this error, but keep sending msgs to
-			// other users. When an appropriate handler for this
-			// event exists, log as a warning instead of error.
-			if c.cfg.GCWithUnkxdMember != nil {
-				c.log.Warnf("Error finding gc %q member %s in user list: %v",
-					gcID.String(), id, err)
-				go c.cfg.GCWithUnkxdMember(gcID, id)
-			} else {
-				c.log.Errorf("Error finding gc %q member %s in user list: %v",
-					gcID.String(), id, err)
-			}
 			continue
 		}
 
@@ -436,6 +454,7 @@ func (c *Client) sendToGCMembers(gcID zkidentity.ShortID,
 				return
 			}
 
+			// Alert about progress.
 			if progressChan != nil {
 				progressMtx.Lock()
 				sent += 1
@@ -447,6 +466,132 @@ func (c *Client) sendToGCMembers(gcID zkidentity.ShortID,
 				progressMtx.Unlock()
 			}
 		}()
+	}
+
+	// Early return if there are no members that are missing kx.
+	if len(missingKX) == 0 {
+		return nil
+	}
+
+	// Handle GC members for which we don't have KX. Determine if there
+	// is a KX/MediateID attempt for them, start a new one if needed and
+	// warn the UI about it.
+	//
+	// First: go through the DB to see if they are being KX'd with.
+	err = c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
+		var localID, gcOwner clientintf.UserID
+		var gotGCInfo bool
+		for i := range missingKX {
+			target := missingKX[i].uid
+
+			// Check if already KXing.
+			kxs, err := c.db.HasKXWithUser(tx, target)
+			if err != nil {
+				return err
+			}
+			missingKX[i].hasKX = len(kxs) > 0
+
+			// Check if already has MediateID requests.
+			hasRecent, err := c.db.HasAnyRecentMediateID(tx, target,
+				c.cfg.RecentMediateIDThreshold)
+			if err != nil {
+				return err
+			}
+			missingKX[i].hasMI = hasRecent
+
+			// Check if the attempts to KX with the target crossed
+			// a max attempt count limit or if we're expecting a
+			// KX request from them (because _they_ joined the
+			// GC).
+			if unkx, err := c.db.ReadUnxkdUserInfo(tx, target); err == nil {
+				missingKX[i].miCount = unkx.MIRequests
+				if unkx.MIRequests >= uint32(c.cfg.MaxAutoKXMediateIDRequests) {
+					c.log.Debugf("Skipping autoKX with GC's %s member %s "+
+						"due to MI requests %d >= max %d",
+						gcID, target, unkx.MIRequests,
+						c.cfg.MaxAutoKXMediateIDRequests)
+					missingKX[i].skipMI = true
+					missingKX[i].skipWarn = unkx.MIRequests > uint32(c.cfg.MaxAutoKXMediateIDRequests)
+					if !missingKX[i].skipWarn {
+						// Add one to MIRequests to avoid warning again.
+						unkx.MIRequests += 1
+						err := c.db.StoreUnkxdUserInfo(tx, unkx)
+						if err != nil {
+							return err
+						}
+					}
+				} else if unkx.AddedToGCTime != nil && time.Since(*unkx.AddedToGCTime) < c.cfg.RecentMediateIDThreshold {
+					c.log.Debugf("Skipping autoKX with GC's %s member %s "+
+						"due to interval from GC add %s < recent "+
+						"MI threshold %s", gcID, target,
+						time.Since(*unkx.AddedToGCTime),
+						c.cfg.RecentMediateIDThreshold)
+					missingKX[i].skipMI = true
+				}
+				if unkx.AddedToGCTime != nil && time.Since(*unkx.AddedToGCTime) < c.cfg.UnkxdWarningTimeout {
+					missingKX[i].skipWarn = true
+				}
+			}
+
+			if missingKX[i].skipMI || missingKX[i].hasMI {
+				continue
+			}
+
+			// Fetch the group list if needed.
+			if !gotGCInfo {
+				gcl, err := c.db.GetGC(tx, gcID)
+				if err != nil {
+					return err
+				}
+				localID = c.PublicID()
+				gcOwner = gcl.Members[0]
+				gotGCInfo = true
+			}
+
+			// Determine if we can ask the GC's owner for a mediate
+			// ID request.
+			if gcOwner != localID {
+				missingKX[i].medID = &gcOwner
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	// Next, log a warning and send a ntfn to the UI about each user's
+	// situation.
+	c.unkxdWarningsMtx.Lock()
+	now := time.Now()
+	for _, mkx := range missingKX {
+		if mkx.skipWarn {
+			continue
+		}
+		if t := c.unkxdWarnings[mkx.uid]; now.Sub(t) < c.cfg.UnkxdWarningTimeout {
+			// Already warned.
+			continue
+		}
+		c.unkxdWarnings[mkx.uid] = now
+		c.log.Warnf("Unable to send %T to unKXd member %s in GC %s",
+			msg, mkx.uid, gcID)
+		c.ntfns.notifyGCWithUnxkdMember(gcID, mkx.uid, mkx.hasKX, mkx.hasMI,
+			mkx.miCount, mkx.medID)
+
+	}
+	c.unkxdWarningsMtx.Unlock()
+
+	// Next, start the mediate id requests that are needed.
+	for _, mkx := range missingKX {
+		if mkx.hasKX || mkx.hasMI || mkx.medID == nil || mkx.skipMI {
+			continue
+		}
+
+		err := c.maybeRequestMediateID(*mkx.medID, mkx.uid)
+		if err != nil && !errors.Is(err, clientintf.ErrSubsysExiting) {
+			c.log.Errorf("Unable to request mediate ID of target %s "+
+				"to mediator %s: %v", mkx.uid, mkx.medID, err)
+		}
 	}
 
 	return nil
@@ -477,10 +622,11 @@ func (c *Client) maybeNotifyGCVersionWarning(ru *RemoteUser, gcid zkidentity.Sho
 func (c *Client) maybeUpdateGCFunc(ru *RemoteUser, gcid zkidentity.ShortID, f func(*rpc.RMGroupList) error) (oldGC, newGC rpc.RMGroupList, err error) {
 	var checkVersionWarning bool
 	var updaterID clientintf.UserID
+	localID := c.PublicID()
 	if ru != nil {
 		updaterID = ru.ID()
 	} else {
-		updaterID = c.PublicID()
+		updaterID = localID
 	}
 
 	err = c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
@@ -546,6 +692,38 @@ func (c *Client) maybeUpdateGCFunc(ru *RemoteUser, gcid zkidentity.ShortID, f fu
 				c.setGCAlias(aliasMap)
 			}
 			return nil
+		}
+
+		// This is an update, so any new members added to the GC that
+		// we haven't KX'd with are expected to send a MI to the GC
+		// owner/admin (because _they_ are the ones joining). So add
+		// info to prevent us attempting a crossed MI with them for
+		// some time.
+		if ru != nil && stillMember {
+			for _, uid := range newGC.Members {
+				if uid == localID {
+					continue
+				}
+				if c.db.AddressBookEntryExists(tx, uid) {
+					continue
+				}
+
+				unkx, err := c.db.ReadUnxkdUserInfo(tx, uid)
+				if err != nil {
+					if !errors.Is(err, clientdb.ErrNotFound) {
+						return err
+					}
+					unkx.UID = uid
+				}
+				if unkx.AddedToGCTime != nil {
+					continue
+				}
+				now := time.Now()
+				unkx.AddedToGCTime = &now
+				if err := c.db.StoreUnkxdUserInfo(tx, unkx); err != nil {
+					return err
+				}
+			}
 		}
 
 		return c.db.SaveGC(tx, newGC)

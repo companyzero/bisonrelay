@@ -217,10 +217,6 @@ func (c *Client) handleKXSearchReply(ru *RemoteUser, sr rpc.RMKXSearchReply) err
 		return nil
 	}
 
-	// recentMIThrehold is how long to wait before attempting to perform
-	// a new mediate identity with someone for the same target ID.
-	const recentMIThreshold = time.Hour * 24
-
 	// Track remote users from the reply we already queried or already
 	// requested a mediate identity with.
 	alreadyQueried := make(map[UserID]struct{})
@@ -253,7 +249,7 @@ func (c *Client) handleKXSearchReply(ru *RemoteUser, sr rpc.RMKXSearchReply) err
 		// with.
 		for _, uid := range sr.IDs {
 			hasMI, err := c.db.HasAnyRecentMediateID(tx, uid,
-				recentMIThreshold)
+				c.cfg.RecentMediateIDThreshold)
 			if err != nil {
 				return err
 			}
