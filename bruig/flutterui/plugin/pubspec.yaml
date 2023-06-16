@@ -42,7 +42,7 @@ flutter:
   plugin:
     platforms:
       android:
-        package: com.example.golib_plugin
+        package: org.bisonrelay.golib_plugin
         pluginClass: GolibPlugin
       ios:
         pluginClass: GolibPlugin

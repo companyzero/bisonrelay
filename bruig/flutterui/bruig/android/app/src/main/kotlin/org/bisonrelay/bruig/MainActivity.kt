@@ -1,4 +1,4 @@
-package com.example.fd
+package org.bisonrelay.bruig
 
 import io.flutter.embedding.android.FlutterActivity
 
