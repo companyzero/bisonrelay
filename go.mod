@@ -37,7 +37,7 @@ require (
 	github.com/vaughan0/go-ini v0.0.0-20130923145212-a98ad7ee00ec
 	golang.org/x/crypto v0.8.0
 	golang.org/x/exp v0.0.0-20230321023759-10a507213a29
-	golang.org/x/mobile v0.0.0-20190719004257-d2bd2a29d028
+	golang.org/x/mobile v0.0.0-20230427221453-e8d11dd0ba41
 	golang.org/x/net v0.9.0
 	golang.org/x/sync v0.3.0
 	golang.org/x/term v0.7.0
