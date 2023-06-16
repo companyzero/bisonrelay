@@ -351,6 +351,7 @@ func RunDcrlnd(ctx context.Context, cfg Config) (*Dcrlnd, error) {
 	conf.MaxLogFiles = cfg.MaxLogFiles
 	conf.TLSCertPath = filepath.Join(rootDir, "tls.cert")
 	conf.TLSKeyPath = filepath.Join(rootDir, "tls.key")
+	conf.TLSDisableAutofill = true // FIXME: parametrize
 	conf.RawRPCListeners = rpcAddrs
 	conf.DisableRest = true
 	conf.DisableListen = true
