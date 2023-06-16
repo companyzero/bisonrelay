@@ -51,7 +51,7 @@ type clientCtx struct {
 	// check.
 	skipWalletCheckChan chan struct{}
 
-	initIDChan   chan IDInit
+	initIDChan   chan iDInit
 	certConfChan chan bool
 
 	// confirmPayReqRecvChan is written to by the user to confirm or deny
@@ -80,7 +80,7 @@ func handleHello(name string) (string, error) {
 	return "hello " + name, nil
 }
 
-func handleInitClient(handle uint32, args InitClient) error {
+func handleInitClient(handle uint32, args initClient) error {
 	cmtx.Lock()
 	defer cmtx.Unlock()
 	if cs == nil {
@@ -128,7 +128,7 @@ func handleInitClient(handle uint32, args InitClient) error {
 		pc = lnpc
 	}
 
-	initIDChan := make(chan IDInit)
+	initIDChan := make(chan iDInit)
 	certConfChan := make(chan bool)
 
 	var c *client.Client
@@ -137,7 +137,7 @@ func handleInitClient(handle uint32, args InitClient) error {
 	ntfns := client.NewNotificationManager()
 	ntfns.Register(client.OnPMNtfn(func(user *client.RemoteUser, msg rpc.RMPrivateMessage, ts time.Time) {
 		// TODO: replace PM{} for types.ReceivedPM{}.
-		pm := PM{UID: user.ID(), Msg: msg.Message, TimeStamp: ts.Unix()}
+		pm := pm{UID: user.ID(), Msg: msg.Message, TimeStamp: ts.Unix()}
 		notify(NTPM, pm, nil)
 	},
 	))
@@ -145,7 +145,7 @@ func handleInitClient(handle uint32, args InitClient) error {
 	// GCM must be sync to order correctly on startup.
 	ntfns.RegisterSync(client.OnGCMNtfn(func(user *client.RemoteUser, msg rpc.RMGroupMessage, ts time.Time) {
 		// TODO: replace GCMessage{} for types.ReceivedGCMsg{}.
-		gcm := GCMessage{
+		gcm := gcMessage{
 			SenderUID: user.ID(),
 			ID:        msg.ID.String(),
 			Msg:       msg.Message,
@@ -155,12 +155,12 @@ func handleInitClient(handle uint32, args InitClient) error {
 	}))
 
 	ntfns.Register(client.OnRemoteSubscriptionChangedNtfn(func(user *client.RemoteUser, subscribed bool) {
-		v := PostSubscriptionResult{ID: user.ID(), WasSubRequest: subscribed}
+		v := postSubscriptionResult{ID: user.ID(), WasSubRequest: subscribed}
 		notify(NTRemoteSubChanged, v, nil)
 	}))
 
 	ntfns.Register(client.OnRemoteSubscriptionErrorNtfn(func(user *client.RemoteUser, wasSubscribing bool, errMsg string) {
-		v := PostSubscriptionResult{
+		v := postSubscriptionResult{
 			ID:            user.ID(),
 			WasSubRequest: wasSubscribing,
 			Error:         errMsg,
@@ -175,7 +175,7 @@ func handleInitClient(handle uint32, args InitClient) error {
 
 	ntfns.Register(client.OnPostStatusRcvdNtfn(func(user *client.RemoteUser, pid clientintf.PostID,
 		statusFrom clientintf.UserID, status rpc.PostMetadataStatus) {
-		pr := PostStatusReceived{
+		pr := postStatusReceived{
 			PID:        pid,
 			StatusFrom: statusFrom,
 			Status:     status,
@@ -202,7 +202,7 @@ func handleInitClient(handle uint32, args InitClient) error {
 			alreadyKnown = true
 		}
 		ipii := invitee.PublicIdentity()
-		skx := SuggestKX{
+		skx := suggestKX{
 			AlreadyKnown: alreadyKnown,
 			InviteeNick:  ipii.Nick,
 			Invitee:      ipii.Identity,
@@ -213,7 +213,7 @@ func handleInitClient(handle uint32, args InitClient) error {
 	}))
 
 	ntfns.Register(client.OnInvoiceGenFailedNtfn(func(user *client.RemoteUser, dcrAmount float64, err error) {
-		ntf := InvoiceGenFailed{
+		ntf := invoiceGenFailed{
 			UID:       user.ID(),
 			Nick:      user.Nick(),
 			DcrAmount: dcrAmount,
@@ -224,7 +224,7 @@ func handleInitClient(handle uint32, args InitClient) error {
 
 	ntfns.Register(client.OnGCVersionWarning(func(user *client.RemoteUser, gc rpc.RMGroupList, minVersion, maxVersion uint8) {
 		alias, _ := c.GetGCAlias(gc.ID)
-		warn := GCVersionWarn{
+		warn := gcVersionWarn{
 			ID:         gc.ID,
 			Alias:      alias,
 			Version:    gc.Version,
@@ -236,7 +236,7 @@ func handleInitClient(handle uint32, args InitClient) error {
 
 	ntfns.Register(client.OnInvitedToGCNtfn(func(user *client.RemoteUser, iid uint64, invite rpc.RMGroupInvite) {
 		pubid := user.PublicIdentity()
-		inv := GCInvitation{
+		inv := gcInvitation{
 			Inviter: remoteUserFromPII(&pubid),
 			IID:     iid,
 			Name:    invite.Name,
@@ -245,7 +245,7 @@ func handleInitClient(handle uint32, args InitClient) error {
 	}))
 
 	ntfns.Register(client.OnGCInviteAcceptedNtfn(func(user *client.RemoteUser, gc rpc.RMGroupList) {
-		inv := InviteToGC{GC: gc.ID, UID: user.ID()}
+		inv := inviteToGC{GC: gc.ID, UID: user.ID()}
 		notify(NTUserAcceptedGCInvite, inv, nil)
 	}))
 
@@ -254,7 +254,7 @@ func handleInitClient(handle uint32, args InitClient) error {
 		if err != nil {
 			return
 		}
-		gce := GCAddressBookEntry{
+		gce := gcAddressBookEntry{
 			ID:      gc.ID,
 			Members: gc.Members,
 			Name:    name,
@@ -263,7 +263,7 @@ func handleInitClient(handle uint32, args InitClient) error {
 	}))
 
 	ntfns.Register(client.OnAddedGCMembersNtfn(func(gc rpc.RMGroupList, uids []clientintf.UserID) {
-		ntf := GCAddedMembers{
+		ntf := gcAddedMembers{
 			ID:   gc.ID,
 			UIDs: uids,
 		}
@@ -271,7 +271,7 @@ func handleInitClient(handle uint32, args InitClient) error {
 	}))
 
 	ntfns.Register(client.OnGCUpgradedNtfn(func(gc rpc.RMGroupList, oldVersion uint8) {
-		ntf := GCUpgradedVersion{
+		ntf := gcUpgradedVersion{
 			ID:         gc.ID,
 			OldVersion: oldVersion,
 			NewVersion: gc.Version,
@@ -280,7 +280,7 @@ func handleInitClient(handle uint32, args InitClient) error {
 	}))
 
 	ntfns.Register(client.OnGCUserPartedNtfn(func(gc zkidentity.ShortID, uid clientintf.UserID, reason string, kicked bool) {
-		ntf := GCMemberParted{
+		ntf := gcMemberParted{
 			GCID:   gc,
 			UID:    uid,
 			Reason: reason,
@@ -290,7 +290,7 @@ func handleInitClient(handle uint32, args InitClient) error {
 	}))
 
 	ntfns.Register(client.OnGCAdminsChangedNtfn(func(ru *client.RemoteUser, gc rpc.RMGroupList, added, removed []zkidentity.ShortID) {
-		ntfn := GCAdminsChanged{
+		ntfn := gcAdminsChanged{
 			Source:  ru.ID(),
 			GCID:    gc.ID,
 			Added:   added,
@@ -304,7 +304,7 @@ func handleInitClient(handle uint32, args InitClient) error {
 		if connected {
 			state = ConnStateOnline
 		}
-		st := ServerSessState{State: state}
+		st := serverSessState{State: state}
 		notify(NTServerSessChanged, st, nil)
 	}))
 
@@ -334,7 +334,7 @@ func handleInitClient(handle uint32, args InitClient) error {
 	}))
 
 	ntfns.Register(client.OnHandshakeStageNtfn(func(ru *client.RemoteUser, msgtype string) {
-		event := HandshakeStage{UID: ru.ID(), Stage: msgtype}
+		event := handshakeStage{UID: ru.ID(), Stage: msgtype}
 		notify(NTHandshakeStage, event, nil)
 	}))
 
@@ -375,7 +375,7 @@ func handleInitClient(handle uint32, args InitClient) error {
 			svrID *zkidentity.PublicIdentity) error {
 
 			tlsCert := cs.PeerCertificates[0]
-			sc := ServerCert{
+			sc := serverCert{
 				InnerFingerprint: svrID.Fingerprint(),
 				OuterFingerprint: fingerprintDER(tlsCert),
 			}
@@ -407,7 +407,7 @@ func handleInitClient(handle uint32, args InitClient) error {
 			if lnpc == nil {
 				return fmt.Errorf("ln not initialized")
 			}
-			st := ServerSessState{State: ConnStateCheckingWallet}
+			st := serverSessState{State: ConnStateCheckingWallet}
 			notify(NTServerSessChanged, st, nil)
 
 			backoff := 10 * time.Second
@@ -453,12 +453,12 @@ func handleInitClient(handle uint32, args InitClient) error {
 		},
 
 		TipReceived: func(user *client.RemoteUser, dcrAmount float64) {
-			v := PayTipArgs{UID: user.ID(), Amount: dcrAmount}
+			v := payTipArgs{UID: user.ID(), Amount: dcrAmount}
 			notify(NTTipReceived, v, nil)
 		},
 
 		PostsListReceived: func(user *client.RemoteUser, postList rpc.RMListPostsReply) {
-			v := UserPostList{
+			v := userPostList{
 				UID:   user.ID(),
 				Posts: postList.Posts,
 			}
@@ -466,7 +466,7 @@ func handleInitClient(handle uint32, args InitClient) error {
 		},
 
 		ContentListReceived: func(user *client.RemoteUser, files []clientdb.RemoteFile, listErr error) {
-			data := UserContentList{
+			data := userContentList{
 				UID:   user.ID(),
 				Files: files,
 			}
@@ -488,7 +488,7 @@ func handleInitClient(handle uint32, args InitClient) error {
 			cctx.downloadConfChans[fid] = c
 			cctx.downloadConfMtx.Unlock()
 
-			data := ConfirmFileDownload{
+			data := confirmFileDownload{
 				UID:      user.ID(),
 				FID:      fid,
 				Metadata: fm,
@@ -512,7 +512,7 @@ func handleInitClient(handle uint32, args InitClient) error {
 		},
 
 		FileDownloadProgress: func(user *client.RemoteUser, fm rpc.FileMetadata, nbMissingChunks int) {
-			fdp := FileDownloadProgress{
+			fdp := fileDownloadProgress{
 				UID:             user.ID(),
 				FID:             fm.MetadataHash(),
 				Metadata:        fm,
@@ -570,7 +570,7 @@ func handleInitClient(handle uint32, args InitClient) error {
 			},
 
 			OrderPlaced: func(order *simplestore.Order, msg string) {
-				event := SimpleStoreOrder{
+				event := simpleStoreOrder{
 					Order: *order,
 					Msg:   msg,
 				}
@@ -578,7 +578,7 @@ func handleInitClient(handle uint32, args InitClient) error {
 			},
 
 			StatusChanged: func(order *simplestore.Order, msg string) {
-				event := SimpleStoreOrder{
+				event := simpleStoreOrder{
 					Order: *order,
 					Msg:   msg,
 				}
@@ -663,7 +663,7 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 
 	switch cmd.Type {
 	case CTInvite:
-		var args WriteInvite
+		var args writeInvite
 		if err := cmd.decode(&args); err != nil {
 			return nil, err
 		}
@@ -696,7 +696,7 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		}
 
 		// Return the invite blob.
-		res := GeneratedKXInvite{
+		res := generatedKXInvite{
 			Blob:  b.Bytes(),
 			Funds: funds,
 			Key:   pik,
@@ -739,7 +739,7 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		}
 
 	case CTPM:
-		var pm PM
+		var pm pm
 		if err := cmd.decode(&pm); err != nil {
 			return nil, err
 		}
@@ -751,7 +751,7 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		return c.AddressBook(), nil
 
 	case CTLocalID:
-		var id IDInit
+		var id iDInit
 		if err := cmd.decode(&id); err != nil {
 			return nil, err
 		}
@@ -775,7 +775,7 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		return nil, err
 
 	case CTInviteToGroupChat:
-		var invite InviteToGC
+		var invite inviteToGC
 		if err := cmd.decode(&invite); err != nil {
 			return nil, err
 		}
@@ -807,7 +807,7 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		return gc, nil
 
 	case CTGCMsg:
-		var gcm GCMessageToSend
+		var gcm gcMessageToSend
 		if err := cmd.decode(&gcm); err != nil {
 			return nil, err
 		}
@@ -815,14 +815,14 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 
 	case CTListGCs:
 		gcl, err := c.ListGCs()
-		gcs := make([]GCAddressBookEntry, 0, len(gcl))
+		gcs := make([]gcAddressBookEntry, 0, len(gcl))
 		if err == nil {
 			for _, gc := range gcl {
 				name, err := c.GetGCAlias(gc.ID)
 				if err != nil {
 					continue
 				}
-				gcs = append(gcs, GCAddressBookEntry{
+				gcs = append(gcs, gcAddressBookEntry{
 					ID:      gc.ID,
 					Members: gc.Members,
 					Name:    name,
@@ -832,7 +832,7 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		return gcs, err
 
 	case CTGCRemoveUser:
-		var args GCRemoveUserArgs
+		var args gcRemoveUserArgs
 		if err := cmd.decode(&args); err != nil {
 			return nil, err
 		}
@@ -840,7 +840,7 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		return nil, c.GCKick(args.GC, args.UID, "kicked by user")
 
 	case CTShareFile:
-		var f ShareFileArgs
+		var f shareFileArgs
 		if err := cmd.decode(&f); err != nil {
 			return nil, err
 		}
@@ -855,7 +855,7 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		return nil, err
 
 	case CTUnshareFile:
-		var f UnshareFileArgs
+		var f unshareFileArgs
 		if err := cmd.decode(&f); err != nil {
 			return nil, err
 		}
@@ -874,14 +874,14 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		return nil, c.ListUserContent(uid, dirs, "")
 
 	case CTGetUserContent:
-		var f GetRemoteFileArgs
+		var f getRemoteFileArgs
 		if err := cmd.decode(&f); err != nil {
 			return nil, err
 		}
 		return nil, c.GetUserContent(f.UID, f.FID)
 
 	case CTPayTip:
-		var args PayTipArgs
+		var args payTipArgs
 		if err := cmd.decode(&args); err != nil {
 			return nil, err
 		}
@@ -889,7 +889,7 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		return nil, c.TipUser(args.UID, args.Amount, maxAttempts)
 
 	case CTSubscribeToPosts:
-		var args SubscribeToPosts
+		var args subscribeToPosts
 		if err := cmd.decode(&args); err != nil {
 			return nil, err
 		}
@@ -916,14 +916,14 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		return c.ListPosts()
 
 	case CTReadPost:
-		var args ReadPostArgs
+		var args readPostArgs
 		if err := cmd.decode(&args); err != nil {
 			return nil, err
 		}
 		return c.ReadPost(args.From, args.PID)
 
 	case CTReadPostUpdates:
-		var args ReadPostArgs
+		var args readPostArgs
 		if err := cmd.decode(&args); err != nil {
 			return nil, err
 		}
@@ -937,35 +937,35 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		return c.UserNick(uid)
 
 	case CTCommentPost:
-		var args CommentPostArgs
+		var args commentPostArgs
 		if err := cmd.decode(&args); err != nil {
 			return nil, err
 		}
 		return nil, c.CommentPost(args.From, args.PID, args.Comment, args.Parent)
 
 	case CTGetLocalInfo:
-		res := LocalInfo{
+		res := localInfo{
 			ID:   c.PublicID(),
 			Nick: c.LocalNick(),
 		}
 		return res, nil
 
 	case CTRequestMediateID:
-		var args MediateIDArgs
+		var args mediateIDArgs
 		if err := cmd.decode(&args); err != nil {
 			return nil, err
 		}
 		return nil, c.RequestMediateIdentity(args.Mediator, args.Target)
 
 	case CTKXSearchPostAuthor:
-		var args PostActionArgs
+		var args postActionArgs
 		if err := cmd.decode(&args); err != nil {
 			return nil, err
 		}
 		return nil, c.KXSearchPostAuthor(args.From, args.PID)
 
 	case CTRelayPostToAll:
-		var args PostActionArgs
+		var args postActionArgs
 		if err := cmd.decode(&args); err != nil {
 			return nil, err
 		}
@@ -986,14 +986,14 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		return c.GetGCBlockList(args)
 
 	case CTGCAddToBlockList:
-		var args GCRemoveUserArgs
+		var args gcRemoveUserArgs
 		if err := cmd.decode(&args); err != nil {
 			return nil, err
 		}
 		return nil, c.AddToGCBlockList(args.GC, args.UID)
 
 	case CTGCRemoveFromBlockList:
-		var args GCRemoveUserArgs
+		var args gcRemoveUserArgs
 		if err := cmd.decode(&args); err != nil {
 			return nil, err
 		}
@@ -1105,7 +1105,7 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		if lnc == nil {
 			return nil, fmt.Errorf("LN client not initialized")
 		}
-		var args LNPayInvoiceRequest
+		var args lnPayInvoiceRequest
 		if err := cmd.decode(&args); err != nil {
 			return nil, err
 		}
@@ -1162,7 +1162,7 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		if lnc == nil {
 			return nil, fmt.Errorf("LN client not initialized")
 		}
-		var res LNBalances
+		var res lnBalances
 		var err error
 		res.Channel, err = lnc.ChannelBalance(context.Background(),
 			&lnrpc.ChannelBalanceRequest{})
@@ -1239,7 +1239,7 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		if lnc == nil {
 			return nil, fmt.Errorf("LN client not initialized")
 		}
-		var args LNCloseChannelRequest
+		var args lnCloseChannelRequest
 		if err := cmd.decode(&args); err != nil {
 			return nil, err
 		}
@@ -1285,7 +1285,7 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		if lnc == nil {
 			return nil, fmt.Errorf("LN client not initialized")
 		}
-		var args LNReqChannelArgs
+		var args lnReqChannelArgs
 		if err := cmd.decode(&args); err != nil {
 			return nil, err
 		}
@@ -1306,7 +1306,7 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 				cc.log.Debugf("Full server policy: %#v", policy)
 
 				// Notify UI to confirm.
-				estValue := LNReqChannelEstValue{
+				estValue := lnReqChannelEstValue{
 					Amount:       estInvoice,
 					ServerPolicy: policy,
 				}
@@ -1370,7 +1370,7 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		}
 
 	case CTConfirmFileDownload:
-		var args ConfirmFileDownloadReply
+		var args confirmFileDownloadReply
 		if err := cmd.decode(&args); err != nil {
 			return nil, err
 		}
@@ -1393,7 +1393,7 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		}
 
 	case CTFTSendFile:
-		var args SendFileArgs
+		var args sendFileArgs
 		if err := cmd.decode(&args); err != nil {
 			return nil, err
 		}
@@ -1446,14 +1446,14 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		return nil, c.ListUserPosts(args)
 
 	case CTGetUserPost:
-		var args ReadPostArgs
+		var args readPostArgs
 		if err := cmd.decode(&args); err != nil {
 			return nil, err
 		}
 		return nil, c.GetUserPost(args.From, args.PID, true)
 
 	case CTLocalRename:
-		var args LocalRenameArgs
+		var args localRenameArgs
 		if err := cmd.decode(&args); err != nil {
 			return nil, err
 		}
@@ -1507,9 +1507,9 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 			return nil, err
 		}
 
-		res := make([]LastUserReceivedTime, len(times))
+		res := make([]lastUserReceivedTime, len(times))
 		for i := range times {
-			res[i] = LastUserReceivedTime{
+			res[i] = lastUserReceivedTime{
 				UID:           times[i].UID,
 				LastDecrypted: times[i].LastDecrypted.Unix(),
 			}
@@ -1547,7 +1547,7 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		return nil, c.UpgradeGC(args, gc.Version+1)
 
 	case CTGCModifyAdmins:
-		var args GCModifyAdmins
+		var args gcModifyAdmins
 		if err := cmd.decode(&args); err != nil {
 			return nil, err
 		}
@@ -1562,7 +1562,7 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		return c.GetKXSearch(args)
 
 	case CTSuggestKX:
-		var args SuggestKX
+		var args suggestKX
 		if err := cmd.decode(&args); err != nil {
 			return nil, err
 		}
@@ -1583,10 +1583,10 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 			return nil, err
 		}
 
-		res := make([]Account, 0, len(accts.Accounts))
+		res := make([]account, 0, len(accts.Accounts))
 		for _, acc := range accts.Accounts {
 			accBal := bal.AccountBalance[acc.Name]
-			res = append(res, Account{
+			res = append(res, account{
 				Name:               acc.Name,
 				ConfirmedBalance:   dcrutil.Amount(accBal.ConfirmedBalance),
 				UnconfirmedBalance: dcrutil.Amount(accBal.UnconfirmedBalance),
@@ -1607,7 +1607,7 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		return nil, err
 
 	case CTSendOnchain:
-		var args SendOnChain
+		var args sendOnChain
 		if err := cmd.decode(&args); err != nil {
 			return nil, err
 		}
@@ -1629,7 +1629,7 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		if err != nil {
 			return nil, err
 		}
-		res := RedeemedInviteFunds{Txid: rpc.TxHash(txh), Total: total}
+		res := redeemedInviteFunds{Txid: rpc.TxHash(txh), Total: total}
 		return res, nil
 
 	case CTFetchInvite:
@@ -1649,7 +1649,7 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 			return nil, err
 		}
 
-		res := Invitation{
+		res := invitation{
 			Blob:   b.Bytes(),
 			Invite: invite,
 		}
@@ -1677,7 +1677,7 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		return nil, c.CancelOnboarding()
 
 	case CTFetchResource:
-		var args FetchResourceArgs
+		var args fetchResourceArgs
 		if err := cmd.decode(&args); err != nil {
 			return nil, err
 
@@ -1710,7 +1710,7 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		return nil, err
 
 	case CTLoadUserHistory:
-		var args LoadUserHistory
+		var args loadUserHistory
 		if err := cmd.decode(&args); err != nil {
 			return nil, err
 		}
@@ -1722,9 +1722,9 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		if len(chatHistory) < args.Page {
 			chatLen = len(chatHistory)
 		}
-		res := make([]ChatLogEntry, 0, chatLen)
+		res := make([]chatLogEntry, 0, chatLen)
 		for _, chatLog := range chatHistory {
-			res = append(res, ChatLogEntry{
+			res = append(res, chatLogEntry{
 				Message:   chatLog.Message,
 				From:      chatLog.From,
 				Internal:  chatLog.Internal,
@@ -1737,7 +1737,7 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 
 }
 
-func handleLNTryExternalDcrlnd(args LNTryExternalDcrlnd) (*lnrpc.GetInfoResponse, error) {
+func handleLNTryExternalDcrlnd(args lnTryExternalDcrlnd) (*lnrpc.GetInfoResponse, error) {
 	ctx := context.Background()
 	pcCfg := client.DcrlnPaymentClientCfg{
 		TLSCertPath:  args.TLSCertPath,
@@ -1756,7 +1756,7 @@ func dcrlndSyncNotifier(update *initchainsyncrpc.ChainSyncUpdate, err error) {
 	notify(NTLNInitialChainSyncUpdt, update, err)
 }
 
-func handleLNInitDcrlnd(ctx context.Context, args LNInitDcrlnd) (*LNNewWalletSeed, error) {
+func handleLNInitDcrlnd(ctx context.Context, args lnInitDcrlnd) (*lnNewWalletSeed, error) {
 	var d net.Dialer
 	dialFunc := d.DialContext
 	if args.ProxyAddr != "" {
@@ -1798,13 +1798,13 @@ func handleLNInitDcrlnd(ctx context.Context, args LNInitDcrlnd) (*LNNewWalletSee
 
 	go lndc.NotifyInitialChainSync(ctx, dcrlndSyncNotifier)
 
-	return &LNNewWalletSeed{
+	return &lnNewWalletSeed{
 		Seed:    string(seed),
 		RPCHost: lndc.RPCAddr(),
 	}, nil
 }
 
-func handleLNRunDcrlnd(ctx context.Context, args LNInitDcrlnd) (string, error) {
+func handleLNRunDcrlnd(ctx context.Context, args lnInitDcrlnd) (string, error) {
 	currentLndcMtx.Lock()
 	lndc := currentLndc
 	currentLndcMtx.Unlock()
