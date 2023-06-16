@@ -19,7 +19,7 @@ require (
 	github.com/decred/dcrd/txscript/v4 v4.1.0
 	github.com/decred/dcrd/wire v1.6.0
 	github.com/decred/dcrlnd v0.4.0
-	github.com/decred/dcrlnlpd v0.0.0-20230322170740-0a76ced98d80
+	github.com/decred/dcrlnlpd v0.0.0-20230616144508-d84160568398
 	github.com/decred/go-socks v1.1.0
 	github.com/decred/slog v1.2.0
 	github.com/erikgeiser/promptkit v0.7.0
@@ -39,10 +39,10 @@ require (
 	golang.org/x/exp v0.0.0-20230321023759-10a507213a29
 	golang.org/x/mobile v0.0.0-20190719004257-d2bd2a29d028
 	golang.org/x/net v0.9.0
-	golang.org/x/sync v0.1.0
+	golang.org/x/sync v0.3.0
 	golang.org/x/term v0.7.0
 	golang.org/x/text v0.9.0
-	google.golang.org/grpc v1.54.0
+	google.golang.org/grpc v1.56.0
 	google.golang.org/protobuf v1.30.0
 	gopkg.in/macaroon.v2 v2.1.0
 )
