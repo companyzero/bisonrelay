@@ -99,7 +99,7 @@ func (nfp NumberedFilePattern) FilenameFor(i uint64) string {
 // encoded numbers. It panics if prefix+suffix cannot be made into a valid
 // regexp.
 func MakeHexFilePattern(prefix, suffix string, isDir bool) NumberedFilePattern {
-	pattern := "^" + prefix + `([0-9a-fA-F]+)` + suffix + "$"
+	pattern := "^" + regexp.QuoteMeta(prefix) + `([0-9a-fA-F]+)` + regexp.QuoteMeta(suffix) + "$"
 	re, err := regexp.Compile(pattern)
 	if err != nil {
 		panic(err)
@@ -112,7 +112,7 @@ func MakeHexFilePattern(prefix, suffix string, isDir bool) NumberedFilePattern {
 // encoded numbers. It panics if prefix+suffix cannot be made into a valid
 // regexp.
 func MakeDecimalFilePattern(prefix, suffix string, isDir bool) NumberedFilePattern {
-	pattern := "^" + prefix + `([0-9a-fA-F]+)` + suffix + "$"
+	pattern := "^" + regexp.QuoteMeta(prefix) + `([0-9a-fA-F]+)` + regexp.QuoteMeta(suffix) + "$"
 	re, err := regexp.Compile(pattern)
 	if err != nil {
 		panic(err)
