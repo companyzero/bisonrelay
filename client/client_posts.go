@@ -475,6 +475,7 @@ func (c *Client) handlePostShare(ru *RemoteUser, ps rpc.RMPostShare) error {
 
 	errStatusWithoutPost := errors.New("status without post")
 	errHaveCopyFromAuthor := errors.New("have post copy from author")
+	errFilter := errors.New("filtered post/comment")
 
 	var summ clientdb.PostSummary
 	var isUpdate bool
@@ -504,7 +505,25 @@ func (c *Client) handlePostShare(ru *RemoteUser, ps rpc.RMPostShare) error {
 
 			// Post already exists. Handle as a status update.
 			isUpdate = true
-			statusFrom, update, err = c.db.AddPostStatusUpdate(tx, from, p)
+
+			// Status updates must have a StatusFrom attribute.
+			if s, ok := p.Attributes[rpc.RMPStatusFrom]; !ok {
+				return fmt.Errorf("post status does not have a from field")
+			} else if err := statusFrom.FromString(s); err != nil {
+				return fmt.Errorf("invalid statusfrom field: %v", err)
+			}
+
+			// Check if content should be filtered (don't filter
+			// the client's own contents).
+			comment := p.Attributes[rpc.RMPSComment]
+			if comment != "" && statusFrom != c.PublicID() {
+				filter, _ := c.FilterPostComment(statusFrom, from, pid, comment)
+				if filter {
+					return errFilter
+				}
+			}
+
+			_, update, err = c.db.AddPostStatusUpdate(tx, from, p)
 			return err
 		}
 
@@ -540,6 +559,11 @@ func (c *Client) handlePostShare(ru *RemoteUser, ps rpc.RMPostShare) error {
 			}
 		}
 
+		// Check if content is filtered.
+		if filter, _ := c.FilterPost(ru.ID(), pid, p.Attributes[rpc.RMPMain]); filter {
+			return errFilter
+		}
+
 		// Post does not exist. Save it.
 		pid, summ, err = c.db.SaveReceivedPost(tx, from, p)
 		return err
@@ -565,6 +589,11 @@ func (c *Client) handlePostShare(ru *RemoteUser, ps rpc.RMPostShare) error {
 		if errors.Is(err, errHaveCopyFromAuthor) {
 			ru.log.Debugf("Received relayed copy of post %s which "+
 				"we already have from author", pid)
+			return nil
+		}
+
+		// Ignore when the post's or comment's content is filtered.
+		if errors.Is(err, errFilter) {
 			return nil
 		}
 		return err
@@ -614,24 +643,36 @@ func (c *Client) addStatusToPost(statusFrom clientintf.UserID, pms *rpc.PostMeta
 	var err error
 	var subs []clientintf.UserID
 	postFrom := c.PublicID()
+	statusFromMe := statusFrom == c.PublicID()
 
 	if err = pid.FromString(pms.Link); err != nil {
 		return fmt.Errorf("specified link is not a post ID: %v", err)
-	} else {
-		// Add status to DB (this validates the status udpate against
-		// the DB as well).
-		err = c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
-			if err := c.db.AddPostStatus(tx, postFrom, statusFrom, pid, pms); err != nil {
-				return err
-			}
-			var err error
-			subs, err = c.db.ListPostSubscribers(tx)
-			return err
-		})
-		if err != nil {
-			// Internal error: don't send reply.
+	}
+
+	// Verify if the status is filtered.
+	if !statusFromMe && pms.Attributes[rpc.RMPSComment] != "" {
+		comment := pms.Attributes[rpc.RMPSComment]
+		filter, _ := c.FilterPostComment(statusFrom, postFrom, pid, comment)
+		if filter {
+			// Returning from this point means we don't store and
+			// don't share the post status with subscribers.
+			return nil
+		}
+	}
+
+	// Add status to DB (this validates the status udpate against
+	// the DB as well).
+	err = c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
+		if err := c.db.AddPostStatus(tx, postFrom, statusFrom, pid, pms); err != nil {
 			return err
 		}
+		var err error
+		subs, err = c.db.ListPostSubscribers(tx)
+		return err
+	})
+	if err != nil {
+		// Internal error: don't send reply.
+		return err
 	}
 
 	// Prepare post share msg.
@@ -643,7 +684,7 @@ func (c *Client) addStatusToPost(statusFrom clientintf.UserID, pms *rpc.PostMeta
 
 	// Log received status.
 	fromStr := "me"
-	if statusFrom != c.PublicID() {
+	if !statusFromMe {
 		ru, _ := c.rul.byID(statusFrom)
 		if ru != nil {
 			fromStr = ru.String()

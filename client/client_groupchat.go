@@ -294,6 +294,10 @@ func (c *Client) handleGCInvite(ru *RemoteUser, invite rpc.RMGroupInvite) error 
 			invite.ID, invite.Name, invite.Version)
 	}
 
+	if invite.ID.IsEmpty() {
+		return fmt.Errorf("GC id is empty")
+	}
+
 	// Add this invite to the DB.
 	var iid uint64
 	err := c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
@@ -1122,6 +1126,10 @@ func (c *Client) handleGCMessage(ru *RemoteUser, gcm rpc.RMGroupMessage, ts time
 		// The sender is not in the GC list we have.
 		c.log.Warnf("Received message in GC %q from non-member %s",
 			gcAlias, ru)
+		return nil
+	}
+
+	if filter, _ := c.FilterGCM(ru.ID(), gc.ID, gcm.Message); filter {
 		return nil
 	}
 

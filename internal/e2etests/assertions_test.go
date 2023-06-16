@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"math/rand"
+	"strconv"
 	"testing"
 	"time"
 
@@ -31,6 +32,15 @@ func assertClientsKXd(t testing.TB, alice, bob *testClient) {
 	if !gotAlice || !gotBob {
 		t.Fatalf("KX did not complete %v %v", gotAlice, gotBob)
 	}
+}
+
+// assertJoinsGC asserts that the admin invites and the target accepts the
+// invitation to join a GC.
+func assertJoinsGC(t testing.TB, admin, target *testClient, gcID zkidentity.ShortID) {
+	t.Helper()
+	acceptChan := target.acceptNextGCInvite(gcID)
+	assert.NilErr(t, admin.InviteToGroupChat(gcID, target.PublicID()))
+	assert.NilErrFromChan(t, acceptChan)
 }
 
 // assertClientInGC asserts that `c` sees itself as a member of the GC.
@@ -245,6 +255,46 @@ func assertSubscribeToPosts(t testing.TB, target, subscriber *testClient) {
 	assert.NilErr(t, err)
 	assert.NilErrFromChan(t, subChan)
 	reg.Unregister()
+}
+
+// assertReceivesNewPost creates a new post in poster and asserts all passed
+// subs receive a notification that the post was done. Returns the new post id.
+func assertReceivesNewPost(t testing.TB, poster *testClient, targets ...*testClient) clientintf.PostID {
+	t.Helper()
+
+	regs := make([]client.NotificationRegistration, len(targets))
+	chans := make([]chan struct{}, len(targets))
+
+	postData := "test post **** " + strconv.FormatInt(rand.Int63(), 10)
+
+	// Setup all handlers.
+	for i := range targets {
+		i := i
+		chans[i] = make(chan struct{})
+		regs[i] = targets[i].handle(client.OnPostRcvdNtfn(func(ru *client.RemoteUser, sum clientdb.PostSummary, _ rpc.PostMetadata) {
+			if sum.Title == postData {
+				close(chans[i])
+			}
+		}))
+	}
+
+	// Create the post.
+	post, err := poster.CreatePost(postData, "")
+	assert.NilErr(t, err)
+	for i := range targets {
+		select {
+		case <-chans[i]:
+		case <-time.After(5 * time.Second):
+			t.Fatalf("target %d (%s) did not receive post", i, targets[i].LocalNick())
+		}
+	}
+
+	// Teardown the handlers.
+	for i := range targets {
+		regs[i].Unregister()
+	}
+
+	return post.ID
 }
 
 // assertRelaysPost attempts to relay a post from src to dst and verify that it
