@@ -1,7 +1,7 @@
 name: golib_plugin
 description: A new flutter plugin project.
 version: 0.0.1
-homepage:
+homepage: https://bisonrelay.org
 
 environment:
   sdk: ">=2.17.0 <3.0.0"
