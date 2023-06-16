@@ -9,6 +9,7 @@ import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/components/gc_context_menu.dart';
 import 'package:bruig/components/chat/types.dart';
 import 'package:bruig/util.dart';
+import 'package:bruig/components/addressbook/addressbook.dart';
 
 class _ChatHeadingW extends StatefulWidget {
   final ChatModel chat;
@@ -141,19 +142,6 @@ Future<void> generateInvite(BuildContext context) async {
   Navigator.of(context, rootNavigator: true).pushNamed('/generateInvite');
 }
 
-void loadInvite(BuildContext context) async {
-  // Decode the invite and send to the user verification screen.
-  var filePickRes = await FilePicker.platform.pickFiles();
-  if (filePickRes == null) return;
-  var filePath = filePickRes.files.first.path;
-  if (filePath == null) return;
-  filePath = filePath.trim();
-  if (filePath == "") return;
-  var invite = await Golib.decodeInvite(filePath);
-  Navigator.of(context, rootNavigator: true)
-      .pushNamed('/verifyInvite', arguments: invite);
-}
-
 Future<void> fetchInvite(BuildContext context) async {
   Navigator.of(context, rootNavigator: true).pushNamed('/fetchInvite');
 }
@@ -209,10 +197,6 @@ class _ChatsListState extends State<_ChatsList> {
 
   @override
   Widget build(BuildContext context) {
-    void createGC() async {
-      Navigator.of(context, rootNavigator: true).pushNamed('/newGC');
-    }
-
     void showAddressBook() async {
       client.showAddressBookScreen();
     }

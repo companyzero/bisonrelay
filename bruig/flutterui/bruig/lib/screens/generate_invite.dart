@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bruig/components/accounts_dropdown.dart';
 import 'package:bruig/components/copyable.dart';
 import 'package:bruig/components/dcr_input.dart';
@@ -25,6 +27,7 @@ class _GenerateInviteScreenState extends State<GenerateInviteScreen> {
   bool hasExtraAccounts = false;
   bool loading = false;
   GeneratedKXInvite? generated;
+  Timer? _debounce;
 
   void checkExtraAccounts() async {
     var accts = await Golib.listAccounts();
@@ -39,14 +42,23 @@ class _GenerateInviteScreenState extends State<GenerateInviteScreen> {
     checkExtraAccounts();
   }
 
+  @override
+  void dispose() {
+    super.dispose();
+    _debounce?.cancel();
+  }
+
   void selectPath() async {
-    var filePath = await FilePicker.platform.saveFile(
-      dialogTitle: "Select invitation file location",
-      fileName: "invite.bin",
-    );
-    if (filePath == null) return;
-    setState(() {
-      path = filePath;
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    _debounce = Timer(const Duration(milliseconds: 500), () async {
+      var filePath = await FilePicker.platform.saveFile(
+        dialogTitle: "Select invitation file location",
+        fileName: "invite.bin",
+      );
+      if (filePath == null) return;
+      setState(() {
+        path = filePath;
+      });
     });
   }
 
