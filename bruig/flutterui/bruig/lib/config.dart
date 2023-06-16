@@ -138,7 +138,12 @@ class Config {
     var set = (String section, String opt, String val) =>
         val != "" ? f.set(section, opt, val) : null;
 
-    set("default", "root", appDataDir);
+    // Do not save the root app data path in ios, but rely on defaultAppDataDir()
+    // to return the correct path on every execution, because the root path changes
+    // on every recompilation.
+    if (!Platform.isIOS) {
+      set("default", "root", appDataDir);
+    }
     set("default", "server", serverAddr);
     set("payment", "wallettype", walletType);
     set("payment", "network", network);
