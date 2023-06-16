@@ -244,6 +244,25 @@ type OnTipReceivedNtfn func(ru *RemoteUser, amountMAtoms int64)
 
 func (_ OnTipReceivedNtfn) typ() string { return onTipReceivedNtfnType }
 
+const onMessageContentFilteredNtfType = "onMsgContentFiltered"
+
+// MsgContentFilteredEvent is the data for a message content filter event.
+type MsgContentFilteredEvent struct {
+	UID           UserID
+	GC            *zkidentity.ShortID
+	PID           *clientintf.PostID
+	PostFrom      *clientintf.UserID
+	IsPostComment bool
+	Msg           string
+	Rule          clientdb.ContentFilter
+}
+
+// OnMsgContentFilteredNtfn is called when a message was filtered due to its
+// contents.
+type OnMsgContentFilteredNtfn func(MsgContentFilteredEvent)
+
+func (_ OnMsgContentFilteredNtfn) typ() string { return onMessageContentFilteredNtfType }
+
 // The following is used only in tests.
 
 const onTestNtfnType = "testNtfnType"
@@ -323,8 +342,16 @@ func (hn *handlersFor[T]) Register(v interface{}, async bool) NotificationRegist
 	}
 }
 
+func (hn *handlersFor[T]) AnyRegistered() bool {
+	hn.mtx.Lock()
+	res := len(hn.handlers) > 0
+	hn.mtx.Unlock()
+	return res
+}
+
 type handlersRegistry interface {
 	Register(v interface{}, async bool) NotificationRegistration
+	AnyRegistered() bool
 }
 
 type NotificationManager struct {
@@ -341,12 +368,28 @@ func (nmgr *NotificationManager) register(handler NotificationHandler, async boo
 	return handlers.Register(handler, async)
 }
 
+// Register registers a callback notification function that is called
+// asynchronously to the event (i.e. in a separate goroutine).
 func (nmgr *NotificationManager) Register(handler NotificationHandler) NotificationRegistration {
 	return nmgr.register(handler, true)
 }
 
+// RegisterSync registers a callback notification function that is called
+// synchronously to the event. This callback SHOULD return as soon as possible,
+// otherwise the client might hang.
+//
+// Synchronous callbacks are mostly intended for tests and when external
+// callers need to ensure proper order of multiple sequential events. In
+// general it is preferable to use callbacks registered with the Register call,
+// to ensure the client will not deadlock or hang.
 func (nmgr *NotificationManager) RegisterSync(handler NotificationHandler) NotificationRegistration {
 	return nmgr.register(handler, false)
+}
+
+// AnyRegistered returns true if there are any handlers registered for the given
+// handler type.
+func (ngmr *NotificationManager) AnyRegistered(handler NotificationHandler) bool {
+	return ngmr.handlers[handler.typ()].AnyRegistered()
 }
 
 // Following are the notifyX() calls (one for each type of notification).
@@ -512,6 +555,13 @@ func (nmgr *NotificationManager) notifyTipReceived(ru *RemoteUser, amountMAtoms 
 		visit(func(h OnTipReceivedNtfn) { h(ru, amountMAtoms) })
 }
 
+func (nmgr *NotificationManager) notifyMsgContentFiltered(e MsgContentFilteredEvent) {
+	nmgr.handlers[onMessageContentFilteredNtfType].(*handlersFor[OnMsgContentFilteredNtfn]).
+		visit(func(h OnMsgContentFilteredNtfn) {
+			h(e)
+		})
+}
+
 func NewNotificationManager() *NotificationManager {
 	return &NotificationManager{
 		handlers: map[string]handlersRegistry{
@@ -548,6 +598,7 @@ func NewNotificationManager() *NotificationManager {
 			onOnboardStateChangedNtfnType:     &handlersFor[OnOnboardStateChangedNtfn]{},
 			onResourceFetchedNtfnType:         &handlersFor[OnResourceFetchedNtfn]{},
 			onGCWithUnkxdMemberNtfnType:       &handlersFor[OnGCWithUnkxdMemberNtfn]{},
+			onMessageContentFilteredNtfType:   &handlersFor[OnMsgContentFilteredNtfn]{},
 		},
 	}
 }

@@ -59,6 +59,7 @@ const (
 	recvAddrForUserFile = "onchainrecvaddr.json"
 	cachedGCMsDir       = "cachedgcms"
 	unkxdUsersDir       = "unkxd"
+	filtersDir          = "contentfilters"
 
 	pageSessionsDir         = "pagesessions"
 	pageSessionOverviewFile = "overview.json"
@@ -68,8 +69,9 @@ const (
 )
 
 var (
-	pageFnamePattern   = jsonfile.MakeDecimalFilePattern("page-", ".json", false)
-	pageSessDirPattern = jsonfile.MakeDecimalFilePattern("", "", true)
+	pageFnamePattern    = jsonfile.MakeDecimalFilePattern("page-", ".json", false)
+	pageSessDirPattern  = jsonfile.MakeDecimalFilePattern("", "", true)
+	filtersFnamePattern = jsonfile.MakeDecimalFilePattern("", ".json", false)
 
 	// logLineRegexp matches the start of log lines. This matches the
 	// following line examples:

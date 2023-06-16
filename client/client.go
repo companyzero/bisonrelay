@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
+	"regexp"
 	"sync"
 	"time"
 
@@ -295,6 +296,12 @@ type Client struct {
 	tipAttemptsChan            chan *clientdb.TipUserAttempt
 	listRunningTipAttemptsChan chan chan []RunningTipUserAttempt
 	tipAttemptsRunning         chan struct{}
+
+	// filters are used to filter content so it is not presented
+	// to the user.
+	filtersMtx     sync.Mutex
+	filters        []clientdb.ContentFilter
+	filtersRegexps map[uint64]*regexp.Regexp
 }
 
 // New creates a new CR client with the given config.
@@ -586,6 +593,10 @@ func (c *Client) loadInitialDBData(ctx context.Context) error {
 	if err := c.loadGCAliases(ctx); err != nil {
 		return err
 	}
+	if err := c.loadContentFilters(ctx); err != nil {
+		return err
+	}
+
 	return nil
 }
 

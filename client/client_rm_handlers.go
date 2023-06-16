@@ -133,6 +133,10 @@ func (c *Client) innerHandleUserRM(ru *RemoteUser, h *rpc.RMHeader,
 			return nil
 		}
 
+		if filter, _ := c.FilterPM(ru.ID(), p.Message); filter {
+			return nil
+		}
+
 		err := c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
 			return c.db.LogPM(tx, ru.ID(), false, ru.Nick(), p.Message, ts)
 		})

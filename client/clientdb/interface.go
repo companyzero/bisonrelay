@@ -395,6 +395,34 @@ type GeneratedInvoiceForTip struct {
 	MilliAtoms uint64    `json:"milli_atoms"`
 }
 
+// ContentFilter stores filtering rules for content.
+type ContentFilter struct {
+	// ID is the local ID of the filter.
+	ID uint64
+
+	// UID of the user this filter applies to. If nil, this applies to all
+	// users.
+	UID *UserID
+
+	// GC this filter applies to. If nil, this applies to all GCs.
+	GC *zkidentity.ShortID
+
+	// SkipPMs is true if this does not apply to PMs.
+	SkipPMs bool
+
+	// SkipGCMs is true if this does not apply to GCMs.
+	SkipGCMs bool
+
+	// SkipPosts is true if this is does not apply to posts.
+	SkipPosts bool
+
+	// SkipPostComments is true if this does not apply to post comments.
+	SkipPostComments bool
+
+	// Regexp is the raw filter to apply.
+	Regexp string
+}
+
 var (
 	ErrLocalIDEmpty         = errors.New("local ID is not initialized")
 	ErrServerIDEmpty        = errors.New("server ID is not known")
