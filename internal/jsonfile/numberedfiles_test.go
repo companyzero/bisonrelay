@@ -154,10 +154,12 @@ func TestNumberedFiles(t *testing.T) {
 		{name: "decimal no prefix", suffix: "-pos.ext", base: 10},
 		{name: "decimal no suffix", suffix: "-pos.ext", base: 10},
 		{name: "decimal no extra", base: 10},
+		{name: "decimal only ext suffix", suffix: ".ext", base: 10},
 		{name: "hex", prefix: "pre-", suffix: "-pos.ext", base: 16},
 		{name: "hex no prefix", suffix: "-pos.ext", base: 16},
 		{name: "hex no suffix", prefix: "pre-", base: 16},
 		{name: "hex no extra", base: 16},
+		{name: "hex only ext suffix", suffix: ".ext", base: 16},
 	}
 	for _, isDir := range []bool{false, true} {
 		isDir := isDir
