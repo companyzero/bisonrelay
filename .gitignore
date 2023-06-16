@@ -11,3 +11,5 @@ server.crt
 build/
 .vscode
 *.DS_Store
+*.xcframework/
+golib.dylib

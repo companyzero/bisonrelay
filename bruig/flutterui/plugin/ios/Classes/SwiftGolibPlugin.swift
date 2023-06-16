@@ -27,6 +27,33 @@ extension ReadStreamHandler : GolibReadLoopCBProtocol {
     }
 }
 
+private class CmdResultLoop: NSObject, FlutterStreamHandler {
+    var eventSink: FlutterEventSink?
+
+    override init() {
+        super.init()
+        Golib.GolibCmdResultLoop(self)
+    }
+
+    public func onListen(withArguments args: Any?, eventSink events: @escaping FlutterEventSink) -> FlutterError? {
+        // TODO: support multiple listeners?
+        self.eventSink = events
+        return nil
+        }
+
+    public func onCancel(withArguments args: Any?) -> FlutterError? {
+        return nil
+    }
+}
+
+extension CmdResultLoop : GolibCmdResultLoopCBProtocol {
+    func f(_ s: Int32, typ: Int32, payload: String?, err: String?) {
+      var d: [String: Any] = ["id":s, "type":typ, "payload": payload, "error": err]
+        self.eventSink?(d)
+    }
+}
+
+
 extension DispatchQueue {
     static func background(f: (()->Void)? = nil, done: (()->Void)? = nil) {
         DispatchQueue.global(qos: .background).async {
@@ -43,6 +70,10 @@ public class SwiftGolibPlugin: NSObject, FlutterPlugin {
     let channel = FlutterMethodChannel(name: "golib_plugin", binaryMessenger: registrar.messenger())
     let readStream = FlutterEventChannel(name: "readStream", binaryMessenger: registrar.messenger())
     readStream.setStreamHandler(ReadStreamHandler())
+
+    let cmdResultLoop = FlutterEventChannel(name: "cmdResultLoop", binaryMessenger: registrar.messenger())
+    cmdResultLoop.setStreamHandler(CmdResultLoop())
+
     let instance = SwiftGolibPlugin()
     registrar.addMethodCallDelegate(instance, channel: channel)
   }
@@ -80,6 +111,16 @@ public class SwiftGolibPlugin: NSObject, FlutterPlugin {
       let s = args?["s"] as? String
       Golib.GolibWriteStr(s)
       result(nil) 
+    case "asyncCall":
+      let args = call.arguments as? Dictionary<String, Any>
+      let typ = (args?["typ"] as? Int32) ?? 0
+      let id = (args?["id"] as? Int32) ?? 0
+      let handle = (args?["handle"] as? Int32) ?? 0
+      let payload = (args?["payload"] as? String) ?? ""
+      var err: NSError?
+      var res: Any?
+      Golib.GolibAsyncCallStr(typ, id, handle, payload)
+      result(nil)
     default:
       result(FlutterMethodNotImplemented)
     }
