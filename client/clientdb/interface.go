@@ -381,6 +381,13 @@ type PMLogEntry struct {
 	Internal  bool   `json:"internal"`
 }
 
+// UnkxdUserInfo tracks information about unxked users.
+type UnkxdUserInfo struct {
+	UID           UserID     `json:"uid"`
+	MIRequests    uint32     `json:"mi_requests"`
+	AddedToGCTime *time.Time `json:"added_to_gc_time"`
+}
+
 var (
 	LocalIDEmptyError       = errors.New("local ID is not initialized")
 	ServerIDEmptyError      = errors.New("server ID is not known")

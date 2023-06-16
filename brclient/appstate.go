@@ -199,12 +199,6 @@ type appState struct {
 	// args.
 	bellCmd []string
 
-	// missingKXUsers tracks when a gc msg was not sent to an user due to
-	// being unkxd with them. The time is used so that this is only surfaced
-	// in the UI at most once every 24h to avoid too much spam.
-	missingKXUsersMtx sync.Mutex
-	missingKXUsers    map[client.UserID]time.Time
-
 	inboundMsgsMtx  sync.Mutex
 	inboundMsgs     *genericlist.List[inboundRemoteMsg]
 	inboundMsgsChan chan struct{}
@@ -3054,6 +3048,50 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		}
 	}))
 
+	ntfns.Register(client.OnGCWithUnkxdMemberNtfn(func(gcid zkidentity.ShortID, uid clientintf.UserID,
+		hasKX, hasMI bool, miCount uint32, startedMIMediator *clientintf.UserID) {
+
+		gc, err := as.c.GetGC(gcid)
+		if err != nil {
+			as.diagMsg("Unable to find GC %s to warn about"+
+				"unkxd user %s: %v", gcid, uid, err)
+			return
+		}
+
+		gcAdmin, err := as.c.UserByID(gc.Members[0])
+		if err != nil {
+			as.diagMsg("Unable to find admin %s of GC %s "+
+				"to warn about unkxd user %s: %v", gc.Members[0],
+				gcid, uid, err)
+			return
+		}
+
+		alias, _ := as.c.GetGCAlias(gcid)
+		if alias == "" {
+			alias = gcid.String()
+		} else {
+			alias = strescape.Nick(alias)
+		}
+		adminAlias := strescape.Nick(gcAdmin.Nick())
+		as.manyDiagMsgsCb(func(pf printf) {
+			pf("")
+			pf("Messages to user %s in gc %q", uid, alias)
+			pf("are not being sent due to user not being KXd.")
+			if hasKX || hasMI || startedMIMediator != nil {
+				pf("There are automatic KX attempts under way to attempt to")
+				pf("contact this user (these can be checked by '/ls kx' and '/ls mediateids')")
+			} else if miCount >= 3 {
+				pf("No more automatic attempts to KX with the user will be made.")
+				pf("Manual transitive KX with this user can be attempted " +
+					"again by issuing the following command")
+				pf("/mi %s %s", adminAlias, uid)
+			} else {
+				pf("An automatic attempt to KX will be made in the future, ")
+				pf("after giving the remote user time to initiate a KX themselves.")
+			}
+		})
+	}))
+
 	// Initialize resources router.
 	var sstore *simplestore.Store
 	resRouter := resources.NewRouter()
@@ -3201,56 +3239,6 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 					}
 				}
 			}
-		},
-
-		GCWithUnkxdMember: func(gcid client.GCID, uid client.UserID) {
-			// Alert about missing KX with gc member only once every
-			// 24 hours to avoid spamming win0.
-			as.missingKXUsersMtx.Lock()
-			t := as.missingKXUsers[uid]
-			needsWarn := t.Before(time.Now().Add(-24 * time.Hour))
-			if needsWarn {
-				as.missingKXUsers[uid] = time.Now()
-			}
-			as.missingKXUsersMtx.Unlock()
-
-			if !needsWarn {
-				return
-			}
-
-			gc, err := as.c.GetGC(gcid)
-			if err != nil {
-				as.diagMsg("Unable to find GC %s to warn about"+
-					"unkxd user %s: %v", gcid, uid, err)
-				return
-			}
-
-			gcAdmin, err := as.c.UserByID(gc.Members[0])
-			if err != nil {
-				as.diagMsg("Unable to find admin %s of GC %s "+
-					"to warn about unkxd user %s: %v", gc.Members[0],
-					gcid, uid, err)
-				return
-			}
-
-			alias, _ := as.c.GetGCAlias(gcid)
-			if alias == "" {
-				alias = gcid.String()
-			} else {
-				alias = strescape.Nick(alias)
-			}
-			adminAlias := strescape.Nick(gcAdmin.Nick())
-			as.manyDiagMsgsCb(func(pf printf) {
-				pf("")
-				pf("Messages to user %s in gc %q are "+
-					"not being sent due to user not being KXd",
-					uid, alias)
-				pf("This could happen because the KX process is still " +
-					"in progress or because it failed")
-				pf("A transitive KX with this user can be attempted " +
-					"again by issuing the following command")
-				pf("/mi %s %s", adminAlias, uid)
-			})
 		},
 
 		TipReceived: func(user *client.RemoteUser, dcrAmount float64) {
@@ -3690,8 +3678,6 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		collator: collate.New(language.Und),
 
 		unreadPosts: make(map[clientintf.PostID]struct{}),
-
-		missingKXUsers: make(map[client.UserID]time.Time),
 
 		inboundMsgs:     &genericlist.List[inboundRemoteMsg]{},
 		inboundMsgsChan: make(chan struct{}, 8),

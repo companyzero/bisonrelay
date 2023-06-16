@@ -202,6 +202,11 @@ func (c *Client) initRemoteUser(id *zkidentity.PublicIdentity, r *ratchet.Ratche
 			return err
 		}
 
+		// Remove unkxd data if it exists.
+		if err := c.db.RemoveUnkxUserInfo(tx, id.Identity); err != nil {
+			return err
+		}
+
 		return nil
 	})
 	if err != nil {

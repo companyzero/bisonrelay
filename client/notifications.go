@@ -228,6 +228,15 @@ type OnHandshakeStageNtfn func(ru *RemoteUser, msgtype string)
 
 func (_ OnHandshakeStageNtfn) typ() string { return onHandshakeStageNtfnType }
 
+const onGCWithUnkxdMemberNtfnType = "onGCWithUnkxdMember"
+
+// OnGCWithUnkxdMemberNtfn is called when attempting to send a message to a
+// GC in which there are members that the local client hasn't KX'd with.
+type OnGCWithUnkxdMemberNtfn func(gc zkidentity.ShortID, uid clientintf.UserID,
+	hasKX, hasMI bool, miCount uint32, startedMIMediator *clientintf.UserID)
+
+func (_ OnGCWithUnkxdMemberNtfn) typ() string { return onGCWithUnkxdMemberNtfnType }
+
 // The following is used only in tests.
 
 const onTestNtfnType = "testNtfnType"
@@ -483,6 +492,14 @@ func (nmgr *NotificationManager) notifyHandshakeStage(ru *RemoteUser, msgtype st
 		visit(func(h OnHandshakeStageNtfn) { h(ru, msgtype) })
 }
 
+func (nmgr *NotificationManager) notifyGCWithUnxkdMember(gc zkidentity.ShortID, uid clientintf.UserID,
+	hasKX, hasMI bool, miCount uint32, startedMIMediator *clientintf.UserID) {
+	nmgr.handlers[onGCWithUnkxdMemberNtfnType].(*handlersFor[OnGCWithUnkxdMemberNtfn]).
+		visit(func(h OnGCWithUnkxdMemberNtfn) {
+			h(gc, uid, hasKX, hasMI, miCount, startedMIMediator)
+		})
+}
+
 func NewNotificationManager() *NotificationManager {
 	return &NotificationManager{
 		handlers: map[string]handlersRegistry{
@@ -517,6 +534,7 @@ func NewNotificationManager() *NotificationManager {
 			onServerSessionChangedNtfnType:    &handlersFor[OnServerSessionChangedNtfn]{},
 			onOnboardStateChangedNtfnType:     &handlersFor[OnOnboardStateChangedNtfn]{},
 			onResourceFetchedNtfnType:         &handlersFor[OnResourceFetchedNtfn]{},
+			onGCWithUnkxdMemberNtfnType:       &handlersFor[OnGCWithUnkxdMemberNtfn]{},
 		},
 	}
 }

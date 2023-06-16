@@ -365,6 +365,10 @@ func (ts *testScaffold) newClientWithCfg(nccfg *clientCfg) *testClient {
 		GCMQMaxLifetime:  time.Second,
 		GCMQInitialDelay: time.Second,
 
+		RecentMediateIDThreshold:   time.Second,
+		UnkxdWarningTimeout:        time.Millisecond * 250,
+		MaxAutoKXMediateIDRequests: 3,
+
 		ResourcesProvider: resources.ProviderFunc(func(ctx context.Context,
 			uid clientintf.UserID,
 			request *rpc.RMFetchResource) (*rpc.RMFetchResourceReply, error) {
