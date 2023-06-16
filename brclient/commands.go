@@ -2536,6 +2536,340 @@ var pagesCommands = []tuicmd{
 	},
 }
 
+var filterCommands = []tuicmd{
+	{
+		cmd:           "list",
+		usableOffline: true,
+		aliases:       []string{"ls"},
+		descr:         "Lists content-based filters",
+		handler: func(args []string, as *appState) error {
+			filters := as.c.ListContentFilters()
+			if len(filters) == 0 {
+				as.cwHelpMsg("Client has no content-based filters")
+				return nil
+			}
+
+			as.cwHelpMsgs(func(pf printf) {
+				pf("")
+				pf("Content filters (%d total)", len(filters))
+				for _, cf := range filters {
+					var s string
+					if !cf.SkipPMs {
+						s += "PMs, "
+					}
+					if !cf.SkipGCMs {
+						s += "GCMs"
+						if cf.GC != nil && !cf.GC.IsEmpty() {
+							gc, _ := as.c.GetGCAlias(*cf.GC)
+							s += fmt.Sprintf(" gc=%s", strescape.Nick(gc))
+						}
+						s += ", "
+
+					}
+					if !cf.SkipPosts {
+						s += "posts, "
+					}
+					if !cf.SkipPostComments {
+						s += "post comments, "
+					}
+					if cf.UID != nil {
+						nick, _ := as.c.UserNick(*cf.UID)
+						s += fmt.Sprintf("user=%s, ", strescape.Nick(nick))
+					}
+
+					s += fmt.Sprintf("regexp=\"%s\"", cf.Regexp)
+					pf("%08d - %s", cf.ID, s)
+				}
+			})
+
+			return nil
+		},
+	}, {
+		cmd:           "add",
+		usableOffline: true,
+		descr:         "Add a simple, case-insensitive content filter",
+		usage:         "[filter]",
+		long: []string{
+			"Adding a filter through this command filters content from ",
+			"all users on all contexts. Use the 'addrule' command for ",
+			"specifying more complex rules.",
+		},
+		rawHandler: func(rawCmd string, args []string, as *appState) error {
+			_, expr := popNArgs(rawCmd, 2) // cmd+subcmd
+			if len(expr) == 0 {
+				return usageError{"filter expression cannot be empty"}
+			}
+
+			// Add the case-insensitive flag.
+			expr = "(?i)" + regexp.QuoteMeta(expr)
+
+			cf := &clientdb.ContentFilter{Regexp: expr}
+			err := as.c.StoreContentFilter(cf)
+			if err != nil {
+				return err
+			}
+			as.cwHelpMsg("Added content filter rule %d", cf.ID)
+			return nil
+		},
+	}, {
+		cmd:           "addrule",
+		usableOffline: true,
+		descr:         "Add a content-based filter",
+		usage:         "[user=<user>] [gc=<gc> | noGC] [noPost] [noPC] [noPM] [--] [regexp]",
+		long: []string{
+			"Content-based filters drop received messages before they are ",
+			"presented to the user.",
+			"",
+			"If an incoming message matches any of the existing filters, ",
+			"the message is dropped.",
+			"",
+			"By default, filters apply to all messages, received from any ",
+			"user and on all contexts (PMs, GCMs, posts and post comments). ",
+			"Some attributes allow refining when the filter applies: ",
+			"",
+			"  - user=<user>: only test filter if the message is from a specific user",
+			"  - gc=<gc>: only test filter if GCM is in a specific GC",
+			"  - noGC: do not apply filter for messages in GCs",
+			"  - noPost: do not apply filter for post conent",
+			"  - noPC: do not apply filter for post comments",
+			"  - noPM: do not apply filter for PMs",
+			"",
+			"Everything after the last valid option or after a literal '--'",
+			"is considered part of the regexp.",
+			"",
+			"The regexp follows Go's regexp package rules. As a reminder, ",
+			"it is case-sensitive by default, unless it is started with ",
+			"the '(?i)' flag.",
+			"",
+			"Examples of filters:",
+			"",
+			"- Filter all posts and post comments from user foo that contain ",
+			"the string 'barbaz':",
+			"",
+			"    /filter addrule user=foo nogc nopm -- barbaz",
+			"",
+			"- Filter all messages in GC 'testgc' that contain the string 'barbaz':",
+			"",
+			"    /filter addrule gc=testgc nopm nopost nopc -- barbaz",
+			"",
+			"- Filter any message that begins with the case insensitive string 'barbaz':",
+			"",
+			"    /filter addrule (?i)^barbaz",
+			"",
+			"Use the /filter test* commands to test if the setup filters work as ",
+			"needed.",
+		},
+		rawHandler: func(rawCmd string, args []string, as *appState) error {
+			if len(args) < 1 {
+				return usageError{msg: "filter cannot be empty"}
+			}
+
+			var cf clientdb.ContentFilter
+			nargs := 2 // cmd+subcmd
+		loopArgs:
+			for _, arg := range args {
+				switch {
+				case strings.HasPrefix(arg, "user="):
+					nick := arg[5:]
+					uid, err := as.c.UIDByNick(nick)
+					if err != nil {
+						return err
+					}
+					cf.UID = &uid
+					nargs += 1
+
+				case strings.HasPrefix(arg, "gc="):
+					name := arg[3:]
+					gc, err := as.c.GCIDByName(name)
+					if err != nil {
+						return err
+					}
+					cf.GC = &gc
+					nargs += 1
+
+				case strings.EqualFold(arg, "noPost"):
+					cf.SkipPosts = true
+					nargs += 1
+
+				case strings.EqualFold(arg, "noPC"):
+					cf.SkipPostComments = true
+					nargs += 1
+
+				case strings.EqualFold(arg, "noGC"):
+					cf.SkipGCMs = true
+					nargs += 1
+
+				case strings.EqualFold(arg, "noPM"):
+					cf.SkipPMs = true
+					nargs += 1
+
+				case arg == "--":
+					nargs += 1
+					break loopArgs
+
+				default:
+					break loopArgs
+				}
+			}
+
+			_, cf.Regexp = popNArgs(rawCmd, nargs)
+			if cf.Regexp == "" {
+				return usageError{msg: "regexp cannot be empty"}
+			}
+
+			err := as.c.StoreContentFilter(&cf)
+			if err != nil {
+				return err
+			}
+
+			as.cwHelpMsg("Added content filter rule %d", cf.ID)
+			return nil
+		},
+	}, {
+		cmd:     "del",
+		aliases: []string{"delete", "remove", "rem"},
+		descr:   "Remove a filter rule",
+		usage:   "[id]",
+		handler: func(args []string, as *appState) error {
+			if len(args) < 1 {
+				return usageError{msg: "rule number cannot be empty"}
+			}
+
+			id, err := strconv.ParseUint(args[0], 10, 64)
+			if err != nil {
+				return err
+			}
+
+			if err := as.c.RemoveContentFilter(id); err != nil {
+				return fmt.Errorf("unable to remove rule %d: %v", id, err)
+			}
+
+			as.cwHelpMsg("Removed content filter rule %d", id)
+			return nil
+		},
+	}, {
+		cmd:           "testpm",
+		usableOffline: true,
+		descr:         "Test if a PM would be filtered",
+		usage:         "<user> <pm>",
+		rawHandler: func(rawCmd string, args []string, as *appState) error {
+			if len(args) < 1 {
+				return usageError{msg: "user cannot be empty"}
+			}
+
+			uid, err := as.c.UIDByNick(args[0])
+			if err != nil {
+				return err
+			}
+
+			_, pm := popNArgs(rawCmd, 3) // cmd+subcmd+user
+			filter, id := as.c.FilterPM(uid, pm)
+			as.cwHelpMsgs(func(pf printf) {
+				pf("")
+				pf("Test message: %q", pm)
+				if !filter {
+					pf("Message would NOT be filtered")
+				} else {
+					pf("Message would be filtered by rule %d", id)
+				}
+			})
+			return nil
+		},
+	}, {
+		cmd:           "testgcm",
+		usableOffline: true,
+		descr:         "Test if a GC message would be filtered",
+		usage:         "<user> <gc> <pm>",
+		rawHandler: func(rawCmd string, args []string, as *appState) error {
+			if len(args) < 1 {
+				return usageError{msg: "user cannot be empty"}
+			}
+			if len(args) < 2 {
+				return usageError{msg: "gc cannot be empty"}
+			}
+
+			uid, err := as.c.UIDByNick(args[0])
+			if err != nil {
+				return err
+			}
+			gc, err := as.c.GCIDByName(args[1])
+			if err != nil {
+				return err
+			}
+
+			_, gcm := popNArgs(rawCmd, 4) // cmd+subcmd+user+gc
+			filter, id := as.c.FilterGCM(uid, gc, gcm)
+			as.cwHelpMsgs(func(pf printf) {
+				pf("")
+				pf("Test message: %q", gcm)
+				if !filter {
+					pf("Message would NOT be filtered")
+				} else {
+					pf("Message would be filtered by rule %d", id)
+				}
+			})
+			return nil
+		},
+	}, {
+		cmd:           "testpost",
+		usableOffline: true,
+		descr:         "Test if a post would be filtered",
+		usage:         "<user> <post>",
+		rawHandler: func(rawCmd string, args []string, as *appState) error {
+			if len(args) < 1 {
+				return usageError{msg: "user cannot be empty"}
+			}
+
+			uid, err := as.c.UIDByNick(args[0])
+			if err != nil {
+				return err
+			}
+
+			_, post := popNArgs(rawCmd, 3) // cmd+subcmd+user
+			filter, id := as.c.FilterPost(uid, clientintf.PostID{}, post)
+			as.cwHelpMsgs(func(pf printf) {
+				pf("")
+				pf("Test post: %q", post)
+				if !filter {
+					pf("Post would NOT be filtered")
+				} else {
+					pf("Post would be filtered by rule %d", id)
+				}
+			})
+			return nil
+		},
+	}, {
+		cmd:           "testpostcomment",
+		usableOffline: true,
+		descr:         "Test if a post comment would be filtered",
+		usage:         "<user> <post>",
+		rawHandler: func(rawCmd string, args []string, as *appState) error {
+			if len(args) < 1 {
+				return usageError{msg: "user cannot be empty"}
+			}
+
+			uid, err := as.c.UIDByNick(args[0])
+			if err != nil {
+				return err
+			}
+
+			_, comment := popNArgs(rawCmd, 3) // cmd+subcmd+user
+			postFrom, pid := clientintf.UserID{0: 0x01}, clientintf.UserID{0: 0x02}
+			filter, id := as.c.FilterPostComment(uid, postFrom, pid, comment)
+			as.cwHelpMsgs(func(pf printf) {
+				pf("")
+				pf("Test comment: %q", comment)
+				if !filter {
+					pf("Comment would NOT be filtered")
+				} else {
+					pf("Comment would be filtered by rule %d", id)
+				}
+			})
+			return nil
+		},
+	},
+}
+
 var commands = []tuicmd{
 	{
 		cmd:           "backup",
@@ -3194,6 +3528,19 @@ var commands = []tuicmd{
 		completer: func(args []string, arg string, as *appState) []string {
 			if len(args) == 0 {
 				return cmdCompleter(lnCommands, arg, false)
+			}
+			return nil
+		},
+		handler: subcmdNeededHandler,
+	}, {
+		cmd:           "filters",
+		usableOffline: true,
+		usage:         "[sub]",
+		descr:         "Content filter commands",
+		sub:           filterCommands,
+		completer: func(args []string, arg string, as *appState) []string {
+			if len(args) == 0 {
+				return cmdCompleter(filterCommands, arg, false)
 			}
 			return nil
 		},
