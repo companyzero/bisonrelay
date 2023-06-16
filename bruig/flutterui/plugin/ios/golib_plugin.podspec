@@ -5,13 +5,13 @@
 Pod::Spec.new do |s|
   s.name             = 'golib_plugin'
   s.version          = '0.0.1'
-  s.summary          = 'A new flutter plugin project.'
+  s.summary          = 'Bison Relay golib plugin.'
   s.description      = <<-DESC
-A new flutter plugin project.
+A flutter plugin that links to the ios Bison Relay golib.
                        DESC
-  s.homepage         = 'http://example.com'
+  s.homepage         = 'https://bisonrelay.org'
   s.license          = { :file => '../LICENSE' }
-  s.author           = { 'Your Company' => 'email@example.com' }
+  s.author           = { 'Company Zero' => 'info@companyzero.com' }
   s.source           = { :path => '.' }
   s.source_files = 'Classes/**/*'
   s.dependency 'Flutter'
