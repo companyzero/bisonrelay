@@ -425,7 +425,7 @@ func (c *Client) loadLocalID(ctx context.Context) error {
 		id, err = c.db.LocalID(tx)
 		return err
 	})
-	if errors.Is(err, clientdb.LocalIDEmptyError) {
+	if errors.Is(err, clientdb.ErrLocalIDEmpty) {
 		id, err = c.cfg.LocalIDIniter(ctx)
 
 		// Update the DB.
@@ -449,7 +449,7 @@ func (c *Client) loadLocalID(ctx context.Context) error {
 func (c *Client) loadServerCert(ctx context.Context) error {
 	return c.dbView(func(tx clientdb.ReadTx) error {
 		tlsCert, spid, err := c.db.ServerID(tx)
-		if err != nil && !errors.Is(err, clientdb.ServerIDEmptyError) {
+		if err != nil && !errors.Is(err, clientdb.ErrServerIDEmpty) {
 			return err
 		}
 		c.ck.SetKnownServerID(tlsCert, spid)

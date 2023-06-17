@@ -389,8 +389,8 @@ type UnkxdUserInfo struct {
 }
 
 var (
-	LocalIDEmptyError       = errors.New("local ID is not initialized")
-	ServerIDEmptyError      = errors.New("server ID is not known")
+	ErrLocalIDEmpty         = errors.New("local ID is not initialized")
+	ErrServerIDEmpty        = errors.New("server ID is not known")
 	ErrNotFound             = errors.New("entry not found")
 	ErrAlreadySubscribed    = errors.New("already subscribed")
 	ErrNotSubscribed        = errors.New("not subscribed")
