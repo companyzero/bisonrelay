@@ -603,7 +603,7 @@ func handleInitClient(handle uint32, args InitClient) error {
 		Transport: &http.Transport{
 			DialContext:           dialFunc,
 			ForceAttemptHTTP2:     true,
-			MaxIdleConns:          100,
+			MaxIdleConns:          2,
 			IdleConnTimeout:       90 * time.Second,
 			TLSHandshakeTimeout:   10 * time.Second,
 			ExpectContinueTimeout: 1 * time.Second,
