@@ -78,7 +78,7 @@ func (db *DB) LocalID(tx ReadTx) (*zkidentity.FullIdentity, error) {
 	// myidentity
 	myidb64, err := db.idb.Get("", "myidentity")
 	if errors.Is(err, inidb.ErrNotFound) {
-		return nil, LocalIDEmptyError
+		return nil, ErrLocalIDEmpty
 	} else if err != nil {
 		return nil, fmt.Errorf("could not obtain myidentity record")
 	}
@@ -122,13 +122,13 @@ func (db *DB) ServerID(tx ReadTx) ([]byte, zkidentity.PublicIdentity, error) {
 	// serveridentity
 	pib64, err := db.idb.Get("", "serveridentity")
 	if errors.Is(err, inidb.ErrNotFound) {
-		return fail(ServerIDEmptyError)
+		return fail(ErrServerIDEmpty)
 	} else if err != nil {
 		return fail(err)
 	}
 	pc64, err := db.idb.Get("", "servercert")
 	if errors.Is(err, inidb.ErrNotFound) {
-		return fail(ServerIDEmptyError)
+		return fail(ErrServerIDEmpty)
 	} else if err != nil {
 		return fail(err)
 	}
