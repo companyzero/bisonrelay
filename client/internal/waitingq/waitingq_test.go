@@ -14,7 +14,7 @@ func TestWaitingQueue(t *testing.T) {
 	// error.
 	ctxb := context.Background()
 	q := new(WaitingReplyQueue)
-	var v int = 10
+	var v = 10
 	err := q.ReplyLastSend(ctxb, v)
 	if !errors.Is(err, errReplyBeforeRequest) {
 		t.Fatalf("unexpected error. got %v, want %v", err, errReplyBeforeRequest)

@@ -282,91 +282,90 @@ func (s *Store) handlePlaceOrder(ctx context.Context, uid clientintf.UserID,
 	if err != nil {
 		return nil, fmt.Errorf("Order #%d placed by unknown user %s",
 			order.ID, order.User)
+	}
+	wpm("Thank you for placing your order #%d\n", order.ID)
+	if order.ShipAddr != nil {
+		shipAddr := order.ShipAddr
+		wpm("Shipping address:\n")
+		wpm("   Name: %s\n", shipAddr.Name)
+		wpm("   Addr: %s\n", shipAddr.Address1)
+		if shipAddr.Address2 != "" {
+			wpm("   Addr: %s\n", shipAddr.Address2)
+		}
+		wpm("   City: %s\n", shipAddr.City)
+		wpm("  State: %s\n", shipAddr.State)
+		wpm("    Zip: %s\n", shipAddr.PostalCode)
+		wpm("  Phone: %s\n", shipAddr.Phone)
+	}
+	wpm("The following were the items in your order:\n")
+	for _, item := range order.Cart.Items {
+		totalItemUSDCents := int64(item.Quantity) * int64(item.Product.Price*100)
+		wpm("  SKU %s - %s - %d units - $%.2f/item - $%.2f\n",
+			item.Product.SKU, item.Product.Title,
+			item.Quantity, item.Product.Price,
+			float64(totalItemUSDCents)/100)
+	}
+
+	totalUSDCents := order.Cart.TotalCents()
+	if totalUSDCents > 0 && s.cfg.ShipCharge > 0 {
+		wpm("Total item amount: $%.2f USD\n", float64(totalUSDCents)/100)
+		wpm("Shipping and handling charge: $%.2f USD\n", s.cfg.ShipCharge)
+		totalUSDCents += int64(s.cfg.ShipCharge * 100)
+		wpm("Total amount: $%.2f USD\n", float64(totalUSDCents)/100)
 	} else {
-		wpm("Thank you for placing your order #%d\n", order.ID)
-		if order.ShipAddr != nil {
-			shipAddr := order.ShipAddr
-			wpm("Shipping address:\n")
-			wpm("   Name: %s\n", shipAddr.Name)
-			wpm("   Addr: %s\n", shipAddr.Address1)
-			if shipAddr.Address2 != "" {
-				wpm("   Addr: %s\n", shipAddr.Address2)
-			}
-			wpm("   City: %s\n", shipAddr.City)
-			wpm("  State: %s\n", shipAddr.State)
-			wpm("    Zip: %s\n", shipAddr.PostalCode)
-			wpm("  Phone: %s\n", shipAddr.Phone)
-		}
-		wpm("The following were the items in your order:\n")
-		for _, item := range order.Cart.Items {
-			totalItemUSDCents := int64(item.Quantity) * int64(item.Product.Price*100)
-			wpm("  SKU %s - %s - %d units - $%.2f/item - $%.2f\n",
-				item.Product.SKU, item.Product.Title,
-				item.Quantity, item.Product.Price,
-				float64(totalItemUSDCents)/100)
-		}
+		wpm("Total amount: $%.2f USD\n", float64(totalUSDCents)/100)
+	}
 
-		totalUSDCents := order.Cart.TotalCents()
-		if totalUSDCents > 0 && s.cfg.ShipCharge > 0 {
-			wpm("Total item amount: $%.2f USD\n", float64(totalUSDCents)/100)
-			wpm("Shipping and handling charge: $%.2f USD\n", s.cfg.ShipCharge)
-			totalUSDCents += int64(s.cfg.ShipCharge * 100)
-			wpm("Total amount: $%.2f USD\n", float64(totalUSDCents)/100)
+	if s.cfg.ExchangeRateProvider != nil {
+		order.ExchangeRate = s.cfg.ExchangeRateProvider()
+	}
+
+	totalDCR := order.TotalDCR()
+	if totalDCR > 0 {
+		wpm("Using the current exchange rate of %.2f USD/DCR, your order is "+
+			"%s, valid for the next 60 minutes\n", order.ExchangeRate, totalDCR)
+	}
+
+	pt := s.cfg.PayType
+	switch {
+	case s.cfg.ExchangeRateProvider == nil:
+		s.log.Warnf("No exchange rate provider setup in simplestore config")
+	case order.ExchangeRate <= 0:
+		s.log.Warnf("Invalid exchange rate to charge user %s for order %s",
+			strescape.Nick(ru.Nick()), order.ID)
+	case totalDCR == 0:
+		s.log.Warnf("Order has zero total dcr amount")
+	case pt == PayTypeOnChain:
+		addr, err := s.c.OnchainRecvAddrForUser(order.User, s.cfg.Account)
+		if err != nil {
+			s.log.Errorf("Unable to generate on-chain addr for user %s: %v",
+				strescape.Nick(ru.Nick()), err)
 		} else {
-			wpm("Total amount: $%.2f USD\n", float64(totalUSDCents)/100)
+			wpm("On-chain Payment Address: %s\n", addr)
+			order.PayType = PayTypeOnChain
+			order.Invoice = addr
 		}
 
-		if s.cfg.ExchangeRateProvider != nil {
-			order.ExchangeRate = s.cfg.ExchangeRateProvider()
-		}
-
-		totalDCR := order.TotalDCR()
-		if totalDCR > 0 {
-			wpm("Using the current exchange rate of %.2f USD/DCR, your order is "+
-				"%s, valid for the next 60 minutes\n", order.ExchangeRate, totalDCR)
-		}
-
-		pt := s.cfg.PayType
-		switch {
-		case s.cfg.ExchangeRateProvider == nil:
-			s.log.Warnf("No exchange rate provider setup in simplestore config")
-		case order.ExchangeRate <= 0:
-			s.log.Warnf("Invalid exchange rate to charge user %s for order %s",
-				strescape.Nick(ru.Nick()), order.ID)
-		case totalDCR == 0:
-			s.log.Warnf("Order has zero total dcr amount")
-		case pt == PayTypeOnChain:
-			addr, err := s.c.OnchainRecvAddrForUser(order.User, s.cfg.Account)
+	case pt == PayTypeLN:
+		if s.lnpc == nil {
+			s.log.Warnf("Unable to generate LN invoice for user %s "+
+				"for order %s: LN not setup", strescape.Nick(ru.Nick()),
+				order.ID)
+		} else {
+			invoice, err := s.lnpc.GetInvoice(ctx, int64(totalDCR*1000), nil)
 			if err != nil {
-				s.log.Errorf("Unable to generate on-chain addr for user %s: %v",
-					strescape.Nick(ru.Nick()), err)
-			} else {
-				wpm("On-chain Payment Address: %s\n", addr)
-				order.PayType = PayTypeOnChain
-				order.Invoice = addr
-			}
-
-		case pt == PayTypeLN:
-			if s.lnpc == nil {
 				s.log.Warnf("Unable to generate LN invoice for user %s "+
-					"for order %s: LN not setup", strescape.Nick(ru.Nick()),
-					order.ID)
+					"for order %s: %v", strescape.Nick(ru.Nick()),
+					order.ID, err)
 			} else {
-				invoice, err := s.lnpc.GetInvoice(ctx, int64(totalDCR*1000), nil)
-				if err != nil {
-					s.log.Warnf("Unable to generate LN invoice for user %s "+
-						"for order %s: %v", strescape.Nick(ru.Nick()),
-						order.ID, err)
-				} else {
-					wpm("LN Invoice for payment: %s\n", invoice)
-					order.PayType = PayTypeLN
-					order.Invoice = invoice
-				}
+				wpm("LN Invoice for payment: %s\n", invoice)
+				order.PayType = PayTypeLN
+				order.Invoice = invoice
 			}
-
-		default:
-			wpm("\nYou will be contacted with payment details shortly")
 		}
+
+	default:
+		wpm("\nYou will be contacted with payment details shortly")
 	}
 
 	if s.cfg.OrderPlaced != nil {

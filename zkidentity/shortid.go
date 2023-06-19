@@ -87,6 +87,6 @@ func (u ShortID) ConstantTimeEq(other *ShortID) bool {
 
 // IsEmpty returns true if the short ID is empty (i.e. all zero).
 func (u ShortID) IsEmpty() bool {
-	var empty ShortID = ShortID{}
+	var empty ShortID
 	return u.ConstantTimeEq(&empty)
 }

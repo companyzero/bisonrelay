@@ -65,7 +65,7 @@ import (
 //
 // Cost is in atoms.
 func (c *Client) ShareFile(fname string, uid *UserID,
-	cost uint64, isRef bool, descr string,
+	cost uint64, descr string,
 ) (clientdb.SharedFile, rpc.FileMetadata, error) {
 
 	var f clientdb.SharedFile
@@ -955,7 +955,7 @@ func (c *Client) SendFile(uid UserID, filepath string) error {
 	}
 
 	// Share the file with the user.
-	sf, fm, err := c.ShareFile(filepath, &uid, 0, false, "")
+	sf, fm, err := c.ShareFile(filepath, &uid, 0, "")
 	if err != nil {
 		return err
 	}

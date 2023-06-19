@@ -390,10 +390,9 @@ func (mws mainWindowState) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			cmd, err := mws.as.viewEmbed(embedded)
 			if err == nil {
 				return mws, cmd
-			} else {
-				cw.newHelpMsg("Unable to view embed: %v", err)
-				mws.updateViewportContent()
 			}
+			cw.newHelpMsg("Unable to view embed: %v", err)
+			mws.updateViewportContent()
 
 		case cw != nil && cw.selEl != nil && cw.selEl.link != nil && msg.Type == tea.KeyCtrlV:
 			// Navigate to other page.

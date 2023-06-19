@@ -294,12 +294,12 @@ func TestE2EDcrlnContent(t *testing.T) {
 
 	// Alice will share 2 files (one globally, one with Bob).
 	fGlobal, fShared := testRandomFile(t), testRandomFile(t)
-	sfGlobal, mdGlobal, err := alice.ShareFile(fGlobal, nil, 1, false, "global file")
+	sfGlobal, mdGlobal, err := alice.ShareFile(fGlobal, nil, 1, "global file")
 	if err != nil {
 		t.Fatal(err)
 	}
 	bobUID := bob.PublicID()
-	sfShared, mdShared, err := alice.ShareFile(fShared, &bobUID, 1, false, "user file")
+	sfShared, mdShared, err := alice.ShareFile(fShared, &bobUID, 1, "user file")
 	if err != nil {
 		t.Fatal(err)
 	}

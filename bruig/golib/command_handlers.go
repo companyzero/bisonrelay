@@ -851,7 +851,7 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 				return nil, err
 			}
 		}
-		_, _, err := c.ShareFile(f.Filename, uid, f.Cost, false, f.Description)
+		_, _, err := c.ShareFile(f.Filename, uid, f.Cost, f.Description)
 		return nil, err
 
 	case CTUnshareFile:

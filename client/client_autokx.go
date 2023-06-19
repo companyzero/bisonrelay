@@ -51,9 +51,8 @@ func (c *Client) RequestMediateIdentity(mediator, target UserID) error {
 		if err == nil {
 			return fmt.Errorf("cannot request mediate identity: already have"+
 				"session with target %s", target)
-		} else {
-			return fmt.Errorf("unexpected error fetching user: %v", err)
 		}
+		return fmt.Errorf("unexpected error fetching user: %v", err)
 	}
 
 	// Track that we requested this mediate ID request.

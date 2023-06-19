@@ -587,9 +587,8 @@ func (sess *serverSession) Run(ctx context.Context) error {
 		if err != nil && !errors.Is(err, context.Canceled) {
 			sess.log.Debugf("recvLoop errored: %v", err)
 			return err
-		} else {
-			sess.log.Tracef("recvLoop ending with err: %v", err)
 		}
+		sess.log.Tracef("recvLoop ending with err: %v", err)
 		return nil
 	})
 
@@ -598,10 +597,8 @@ func (sess *serverSession) Run(ctx context.Context) error {
 		if err != nil && !errors.Is(err, context.Canceled) {
 			sess.log.Debugf("taggingLoop errored: %v", err)
 			return err
-		} else {
-			sess.log.Tracef("taggingLoop ending with err: %v", err)
 		}
-
+		sess.log.Tracef("taggingLoop ending with err: %v", err)
 		return nil
 	})
 
@@ -610,10 +607,8 @@ func (sess *serverSession) Run(ctx context.Context) error {
 		if err != nil && !errors.Is(err, context.Canceled) {
 			sess.log.Debugf("sendLoop errored: %v", err)
 			return err
-		} else {
-			sess.log.Tracef("sendLoop ending with err: %v", err)
 		}
-
+		sess.log.Tracef("sendLoop ending with err: %v", err)
 		return nil
 	})
 

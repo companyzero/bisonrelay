@@ -458,13 +458,11 @@ func (db *DB) SaveReceivedPost(tx ReadWriteTx, from UserID, p rpc.PostMetadata) 
 	var pid PostID
 	var summ PostSummary
 
-	if s, ok := p.Attributes[rpc.RMPIdentifier]; !ok {
+	s, ok := p.Attributes[rpc.RMPIdentifier]
+	if !ok {
 		return pid, summ, fmt.Errorf("post does not have an identifier")
-	} else {
-		err := pid.FromString(s)
-		if err != nil {
-			return pid, summ, err
-		}
+	} else if err := pid.FromString(s); err != nil {
+		return pid, summ, err
 	}
 
 	dir := filepath.Join(db.root, postsDir, from.String())

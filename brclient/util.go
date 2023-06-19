@@ -46,7 +46,7 @@ from which brclient was executed).
 // Helper mixin to avoid having to add an Init() function everywhere.
 type initless struct{}
 
-func (_ initless) Init() tea.Cmd { return nil }
+func (initless) Init() tea.Cmd { return nil }
 
 func max(a, b int) int {
 	if a > b {
@@ -93,9 +93,8 @@ func limitStr(s string, maxLen int) string {
 func ltjustify(s string, l int) string {
 	if len(s) >= l {
 		return s[:l]
-	} else {
-		return s + strings.Repeat(" ", l-len(s))
 	}
+	return s + strings.Repeat(" ", l-len(s))
 }
 
 // Helper to only append non nil cmd to cmds.
@@ -295,7 +294,7 @@ func stringsCommonPrefix(src []string) string {
 
 // channelBalanceDisplay generates a balance display for a channel.
 func channelBalanceDisplay(local, remote int64) string {
-	var max int = 10
+	var max = 10
 	var c = "·"
 	plocal := int(float64(local) / float64(local+remote) * 10)
 	plocal = clamp(plocal, 0, 9)

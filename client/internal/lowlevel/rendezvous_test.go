@@ -58,9 +58,9 @@ func TestSuccessRendezvousManager(t *testing.T) {
 			if !bytes.Equal(gotBlob.Decoded, blob) {
 				return fmt.Errorf("unexpected blob: got %x, want %x",
 					gotBlob.Decoded, blob)
-			} else {
-				return nil
 			}
+
+			return nil
 		}
 		go func() { subDoneChan <- rmgr.Sub(id, handler, nil) }()
 	}

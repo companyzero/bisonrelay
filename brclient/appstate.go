@@ -1397,7 +1397,7 @@ func (as *appState) payTip(cw *chatWindow, dcrAmount float64) {
 }
 
 // block blocks a user.
-func (as *appState) block(cw *chatWindow, uid clientintf.UserID) {
+func (as *appState) block(cw *chatWindow) {
 	m := cw.newInternalMsg("Blocked user")
 	as.repaintIfActive(cw)
 	err := as.c.Block(cw.uid)

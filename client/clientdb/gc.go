@@ -130,21 +130,14 @@ func (db *DB) MarkGCInviteAccepted(tx ReadWriteTx, inviteID uint64) error {
 	if err := db.invites.Set(invitesTable, itoa(dbi.ID), blob); err != nil {
 		return err
 	}
-	if err := db.invites.Save(); err != nil {
-		return err
-	}
-
-	return nil
+	return db.invites.Save()
 }
 
 func (db *DB) DelGCInvite(tx ReadWriteTx, inviteID uint64) error {
 	if err := db.invites.Del(invitesTable, itoa(inviteID)); err != nil {
 		return err
 	}
-	if err := db.invites.Save(); err != nil {
-		return err
-	}
-	return nil
+	return db.invites.Save()
 }
 
 // DelAllInvitesToGC removes all invites to the given GC.
