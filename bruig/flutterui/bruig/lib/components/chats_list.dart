@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/screens/contacts_msg_times.dart';
 import 'package:flutter/material.dart';
@@ -8,6 +9,7 @@ import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/components/gc_context_menu.dart';
 import 'package:bruig/components/chat/types.dart';
 import 'package:bruig/util.dart';
+import 'package:bruig/components/addressbook/addressbook.dart';
 
 class _ChatHeadingW extends StatefulWidget {
   final ChatModel chat;
@@ -162,6 +164,7 @@ class _ChatsList extends StatefulWidget {
 class _ChatsListState extends State<_ChatsList> {
   ClientModel get client => widget.client;
   FocusNode get inputFocusNode => widget.inputFocusNode;
+  Timer? _debounce;
 
   void clientUpdated() => setState(() {});
 
@@ -181,25 +184,25 @@ class _ChatsListState extends State<_ChatsList> {
   @override
   void dispose() {
     client.removeListener(clientUpdated);
+    _debounce?.cancel();
     super.dispose();
+  }
+
+  void debouncedLoadInvite(BuildContext context) {
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    _debounce = Timer(const Duration(milliseconds: 500), () {
+      loadInvite(context);
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    void createGC() async {
-      Navigator.of(context, rootNavigator: true).pushNamed('/newGC');
-    }
-
     void showAddressBook() async {
       client.showAddressBookScreen();
     }
 
     void genInvite() async {
       await generateInvite(context);
-      inputFocusNode.requestFocus();
-    }
-
-    void closeMenus(ClientModel client) {
       inputFocusNode.requestFocus();
     }
 

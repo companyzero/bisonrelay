@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:async';
 
 import 'package:bruig/models/feed.dart';
 import 'package:bruig/screens/feed.dart';
@@ -102,6 +103,8 @@ class _NewPostScreenState extends State<NewPostScreen> {
   String embedMime = "";
   SharedFile? embedLink;
   int estimatedSize = 0;
+  Timer? _debounce;
+  Timer? _debounceSizeCalc;
 
   void goBack() {
     Navigator.pop(context);
@@ -144,67 +147,73 @@ class _NewPostScreenState extends State<NewPostScreen> {
   }
 
   void recalcEstimatedSize() async {
-    try {
-      var estSize = await Golib.estimatePostSize(getFullContent());
-      setState(() {
-        estimatedSize = estSize;
-      });
-    } catch (exception) {
-      showErrorSnackbar(context, "Unable to estimate post size: $exception");
-    }
+    if (_debounceSizeCalc?.isActive ?? false) _debounceSizeCalc!.cancel();
+    _debounceSizeCalc = Timer(const Duration(milliseconds: 500), () async {
+      try {
+        var estSize = await Golib.estimatePostSize(getFullContent());
+        setState(() {
+          estimatedSize = estSize;
+        });
+      } catch (exception) {
+        showErrorSnackbar(context, "Unable to estimate post size: $exception");
+      }
+    });
   }
 
   void pickFile(BuildContext context) async {
-    var filePickRes = await FilePicker.platform.pickFiles(
-      allowedExtensions: ["png", "jpg", "jpeg", "txt"],
-      withData: true,
-    );
-    if (filePickRes == null) return;
-    var f = filePickRes.files.first;
-    var filePath = f.path;
-    if (filePath == null) return;
-    filePath = filePath.trim();
-    if (filePath == "") return;
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    _debounce = Timer(const Duration(milliseconds: 500), () async {
+      var filePickRes = await FilePicker.platform.pickFiles(
+        allowedExtensions: ["png", "jpg", "jpeg", "txt"],
+        withData: true,
+      );
+      if (filePickRes == null) return;
+      var f = filePickRes.files.first;
+      var filePath = f.path;
+      if (filePath == null) return;
+      filePath = filePath.trim();
+      if (filePath == "") return;
 
-    if (f.size > 1024 * 1024) {
-      showErrorSnackbar(
-          context, "File size is too large ${f.size} > ${1024 * 1024}");
-      return;
-    }
-
-    var mime = "";
-    switch (f.extension) {
-      case "txt":
-        mime = "text/plain";
-        break;
-      case "jpg":
-        mime = "image/jpeg";
-        break;
-      case "jpeg":
-        mime = "image/jpeg";
-        break;
-      case "png":
-        mime = "image/png";
-        break;
-      default:
-        showErrorSnackbar(context, "Unable to recognize type of embed");
+      if (f.size > 1024 * 1024) {
+        showErrorSnackbar(
+            context, "File size is too large ${f.size} > ${1024 * 1024}");
         return;
-    }
+      }
 
-    var data = const Base64Encoder().convert(f.bytes!);
-    var id = generateRandomString(12);
-    while (embedContents.containsKey(id)) {
-      id = generateRandomString(12);
-    }
+      var mime = "";
+      switch (f.extension) {
+        case "txt":
+          mime = "text/plain";
+          break;
+        case "jpg":
+          mime = "image/jpeg";
+          break;
+        case "jpeg":
+          mime = "image/jpeg";
+          break;
+        case "png":
+          mime = "image/png";
+          break;
+        default:
+          showErrorSnackbar(context, "Unable to recognize type of embed");
+          return;
+      }
 
-    showAltTextModal(context, mime, id, contentCtrl);
+      var data = const Base64Encoder().convert(f.bytes!);
+      var id = generateRandomString(12);
+      while (embedContents.containsKey(id)) {
+        id = generateRandomString(12);
+      }
 
-    setState(() {
-      embedContents[id] = data;
-      embedMime = mime;
-      embedData = id;
+      showAltTextModal(context, mime, id, contentCtrl);
+
+      setState(() {
+        embedContents[id] = data;
+        embedMime = mime;
+        embedData = id;
+      });
+      recalcEstimatedSize();
     });
-    recalcEstimatedSize();
   }
 
   // TODO: Implement together with link to content button
@@ -221,9 +230,16 @@ class _NewPostScreenState extends State<NewPostScreen> {
   // }
 
   @override
+  dispose() {
+    _debounce?.cancel();
+    _debounceSizeCalc?.cancel();
+    super.dispose();
+  }
+
+  @override
   void initState() {
     super.initState();
-    contentCtrl.addListener(recalcEstimatedSize); // TODO: debounce.
+    contentCtrl.addListener(recalcEstimatedSize);
   }
 
   @override
@@ -246,23 +262,26 @@ class _NewPostScreenState extends State<NewPostScreen> {
         children: [
           Text("New Post", style: TextStyle(color: textColor, fontSize: 20)),
           Expanded(
-              child: Container(
-                  margin: const EdgeInsets.only(bottom: 15),
-                  child: TextField(
-                    controller: contentCtrl,
-                    keyboardType: TextInputType.multiline,
-                    maxLines: null,
-                  ))),
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 15),
+              child: TextField(
+                controller: contentCtrl,
+                keyboardType: TextInputType.multiline,
+                maxLines: null,
+              ),
+            ),
+          ),
           const Divider(thickness: 2),
           Row(children: [
             Text("Add embedded",
                 style: TextStyle(color: textColor, fontSize: 15)),
             const SizedBox(width: 10),
             OutlinedButton(
-                onPressed: () {
-                  pickFile(context);
-                },
-                child: const Text("Load File")),
+              onPressed: () {
+                pickFile(context);
+              },
+              child: const Text("Load File"),
+            ),
             /*  XXX Need to figure out Link to Content button
             const SizedBox(width: 10),
             OutlinedButton(

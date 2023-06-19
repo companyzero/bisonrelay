@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
+import 'dart:async';
 
 import 'package:bruig/components/buttons.dart';
 import 'package:bruig/components/empty_widget.dart';
@@ -67,44 +68,54 @@ class _AttachFileScreenState extends State<AttachFileScreen> {
   String mime = "";
   TextEditingController altTxtCtrl = TextEditingController();
   SharedFileAndShares? linkedFile;
+  Timer? _debounce;
+
+  @override
+  dispose() {
+    _debounce?.cancel();
+    super.dispose();
+  }
 
   void loadFile() async {
     try {
-      var filePickRes = await FilePicker.platform.pickFiles();
-      if (filePickRes == null) return;
-      var firstFile = filePickRes.files.first;
-      var filePath = firstFile.path;
-      if (filePath == null) return;
-      filePath = filePath.trim();
-      if (filePath == "") return;
-      var data = await File(filePath).readAsBytes();
+      if (_debounce?.isActive ?? false) _debounce!.cancel();
+      _debounce = Timer(const Duration(milliseconds: 500), () async {
+        var filePickRes = await FilePicker.platform.pickFiles();
+        if (filePickRes == null) return;
+        var firstFile = filePickRes.files.first;
+        var filePath = firstFile.path;
+        if (filePath == null) return;
+        filePath = filePath.trim();
+        if (filePath == "") return;
+        var data = await File(filePath).readAsBytes();
 
-      if (data.length > 1024 * 1024) {
-        throw "File is too large to attach (limit: 1MiB)";
-      }
+        if (data.length > 1024 * 1024) {
+          throw "File is too large to attach (limit: 1MiB)";
+        }
 
-      var mime = "";
-      switch (firstFile.extension) {
-        case "txt":
-          mime = "text/plain";
-          break;
-        case "jpg":
-          mime = "image/jpeg";
-          break;
-        case "jpeg":
-          mime = "image/jpeg";
-          break;
-        case "png":
-          mime = "image/png";
-          break;
-        default:
-          throw "Unable to recognize type of embed";
-      }
+        var mime = "";
+        switch (firstFile.extension) {
+          case "txt":
+            mime = "text/plain";
+            break;
+          case "jpg":
+            mime = "image/jpeg";
+            break;
+          case "jpeg":
+            mime = "image/jpeg";
+            break;
+          case "png":
+            mime = "image/png";
+            break;
+          default:
+            throw "Unable to recognize type of embed";
+        }
 
-      setState(() {
-        this.filePath = filePath!;
-        fileData = data;
-        this.mime = mime;
+        setState(() {
+          this.filePath = filePath!;
+          fileData = data;
+          this.mime = mime;
+        });
       });
     } catch (exception) {
       showErrorSnackbar(context, "Unable to attach file: $exception");
@@ -134,45 +145,52 @@ class _AttachFileScreenState extends State<AttachFileScreen> {
     var textColor = theme.focusColor;
 
     return Scaffold(
-        body: Container(
-            padding: const EdgeInsets.all(40),
-            child: Center(
-                child: Column(children: [
-              Text("Attach File",
-                  style: TextStyle(fontSize: 20, color: textColor)),
-              const SizedBox(height: 20),
-              Row(children: [
-                filePath != ""
-                    ? Expanded(
-                        child: Text("File: $filePath",
-                            style: TextStyle(color: textColor)))
-                    : const Empty(),
-                ElevatedButton(onPressed: loadFile, child: Text("Load File")),
-              ]),
-              const SizedBox(height: 20),
-              Row(children: [
-                Text("Alt Text:", style: TextStyle(color: textColor)),
-                const SizedBox(width: 41),
-                Flexible(child: TextField(controller: altTxtCtrl)),
-              ]),
-              const SizedBox(height: 20),
-              Row(children: [
-                Text("Linking to: ", style: TextStyle(color: textColor)),
-                const SizedBox(width: 20),
-                Flexible(
-                    child: LocalContentDropDown(
-                  true,
-                  onChanged: onLinkChanged,
-                )),
-              ]),
-              const Expanded(child: Empty()),
-              Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                ElevatedButton(onPressed: attach, child: const Text("Attach")),
-                const SizedBox(width: 10),
-                CancelButton(onPressed: () {
-                  Navigator.of(context).pop();
-                }),
-              ]),
-            ]))));
+      body: Container(
+        padding: const EdgeInsets.all(40),
+        child: Center(
+          child: Column(children: [
+            Text("Attach File",
+                style: TextStyle(fontSize: 20, color: textColor)),
+            const SizedBox(height: 20),
+            Row(children: [
+              filePath != ""
+                  ? Expanded(
+                      child: Text(
+                        "File: $filePath",
+                        style: TextStyle(color: textColor),
+                      ),
+                    )
+                  : const Empty(),
+              ElevatedButton(
+                  onPressed: loadFile, child: const Text("Load File")),
+            ]),
+            const SizedBox(height: 20),
+            Row(children: [
+              Text("Alt Text:", style: TextStyle(color: textColor)),
+              const SizedBox(width: 41),
+              Flexible(child: TextField(controller: altTxtCtrl)),
+            ]),
+            const SizedBox(height: 20),
+            Row(children: [
+              Text("Linking to: ", style: TextStyle(color: textColor)),
+              const SizedBox(width: 20),
+              Flexible(
+                  child: LocalContentDropDown(
+                true,
+                onChanged: onLinkChanged,
+              )),
+            ]),
+            const Expanded(child: Empty()),
+            Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+              ElevatedButton(onPressed: attach, child: const Text("Attach")),
+              const SizedBox(width: 10),
+              CancelButton(onPressed: () {
+                Navigator.of(context).pop();
+              }),
+            ]),
+          ]),
+        ),
+      ),
+    );
   }
 }

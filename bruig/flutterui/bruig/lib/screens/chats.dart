@@ -140,8 +140,28 @@ class _LoadingAddressBookPage extends StatelessWidget {
   }
 }
 
-class _InviteNeededPage extends StatelessWidget {
-  const _InviteNeededPage({super.key});
+class _InviteNeededPage extends StatefulWidget {
+  _InviteNeededPage({super.key});
+
+  @override
+  State<_InviteNeededPage> createState() => _InviteNeededPageState();
+}
+
+class _InviteNeededPageState extends State<_InviteNeededPage> {
+  Timer? _debounce;
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    super.dispose();
+  }
+
+  void debouncedLoadInvite(BuildContext context) {
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    _debounce = Timer(const Duration(milliseconds: 500), () async {
+      loadInvite(context);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -180,7 +200,7 @@ know other people, they'll be able to connect you with them.
               child:
                   Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                 LoadingScreenButton(
-                  onPressed: () => loadInvite(context),
+                  onPressed: () => debouncedLoadInvite(context),
                   text: "Load Invitation",
                 ),
                 const SizedBox(width: 34),
@@ -279,7 +299,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
         // Only show f user never had any contacts.
         return const _FundsNeededPage();
       }
-      return const _InviteNeededPage();
+      return _InviteNeededPage();
     }
     if (client.loadingAddressBook) {
       return const _LoadingAddressBookPage();
