@@ -338,6 +338,12 @@ func handleInitClient(handle uint32, args initClient) error {
 		notify(NTHandshakeStage, event, nil)
 	}))
 
+	ntfns.Register(client.OnTipReceivedNtfn(func(user *client.RemoteUser, amountMAtoms int64) {
+		dcrAmount := float64(amountMAtoms) / 1e11
+		v := payTipArgs{UID: user.ID(), Amount: dcrAmount}
+		notify(NTTipReceived, v, nil)
+	}))
+
 	// Initialize resources router.
 	var sstore *simplestore.Store
 	resRouter := resources.NewRouter()
@@ -450,11 +456,6 @@ func handleInitClient(handle uint32, args initClient) error {
 				}
 
 			}
-		},
-
-		TipReceived: func(user *client.RemoteUser, dcrAmount float64) {
-			v := payTipArgs{UID: user.ID(), Amount: dcrAmount}
-			notify(NTTipReceived, v, nil)
 		},
 
 		PostsListReceived: func(user *client.RemoteUser, postList rpc.RMListPostsReply) {

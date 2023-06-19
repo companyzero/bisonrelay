@@ -129,9 +129,7 @@ func (c *Client) handleGetInvoice(ru *RemoteUser, getInvoice rpc.RMGetInvoice) e
 		if err != nil {
 			c.log.Warnf("Error while updating DB to store tip payment status: %v", err)
 		}
-		if c.cfg.TipReceived != nil {
-			c.cfg.TipReceived(ru, dcrAmt)
-		}
+		c.ntfns.notifyTipReceived(ru, receivedMAtoms)
 	}
 
 	amountMAtoms := int64(getInvoice.MilliAtoms)

@@ -237,6 +237,13 @@ type OnGCWithUnkxdMemberNtfn func(gc zkidentity.ShortID, uid clientintf.UserID,
 
 func (_ OnGCWithUnkxdMemberNtfn) typ() string { return onGCWithUnkxdMemberNtfnType }
 
+const onTipReceivedNtfnType = "onTipReceived"
+
+// OnTipReceivedNtfn is called when a tip is received from a remote user.
+type OnTipReceivedNtfn func(ru *RemoteUser, amountMAtoms int64)
+
+func (_ OnTipReceivedNtfn) typ() string { return onTipReceivedNtfnType }
+
 // The following is used only in tests.
 
 const onTestNtfnType = "testNtfnType"
@@ -500,6 +507,11 @@ func (nmgr *NotificationManager) notifyGCWithUnxkdMember(gc zkidentity.ShortID, 
 		})
 }
 
+func (nmgr *NotificationManager) notifyTipReceived(ru *RemoteUser, amountMAtoms int64) {
+	nmgr.handlers[onTipReceivedNtfnType].(*handlersFor[OnTipReceivedNtfn]).
+		visit(func(h OnTipReceivedNtfn) { h(ru, amountMAtoms) })
+}
+
 func NewNotificationManager() *NotificationManager {
 	return &NotificationManager{
 		handlers: map[string]handlersRegistry{
@@ -512,6 +524,7 @@ func NewNotificationManager() *NotificationManager {
 			onPostRcvdNtfnType:       &handlersFor[OnPostRcvdNtfn]{},
 			onPostStatusRcvdNtfnType: &handlersFor[OnPostStatusRcvdNtfn]{},
 			onHandshakeStageNtfnType: &handlersFor[OnHandshakeStageNtfn]{},
+			onTipReceivedNtfnType:    &handlersFor[OnTipReceivedNtfn]{},
 
 			onGCVersionWarningType:     &handlersFor[OnGCVersionWarning]{},
 			onJoinedGCNtfnType:         &handlersFor[OnJoinedGCNtfn]{},
