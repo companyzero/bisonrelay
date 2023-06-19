@@ -50,7 +50,7 @@ func (pik PaidInviteKey) MarshalJSON() ([]byte, error) {
 }
 
 // Decode the key from its string encoding.
-func (u *PaidInviteKey) Decode(s string) error {
+func (pik *PaidInviteKey) Decode(s string) error {
 	hrp, keyBytes, err := bech32.DecodeToBase256(s)
 	if err != nil {
 		return fmt.Errorf("unable to decode paid invite key: %v", err)
@@ -67,22 +67,22 @@ func (u *PaidInviteKey) Decode(s string) error {
 	for i := range keyBytes {
 		keyBytes[i] = 0
 	}
-	u.key = &key
+	pik.key = &key
 	return nil
 }
 
 // UnmarshalJSON unmarshals the json representation of a ShortID.
-func (u *PaidInviteKey) UnmarshalJSON(b []byte) error {
+func (pik *PaidInviteKey) UnmarshalJSON(b []byte) error {
 	var s string
 	if err := json.Unmarshal(b, &s); err != nil {
 		return err
 	}
-	return u.Decode(s)
+	return pik.Decode(s)
 }
 
 // String returns the encoded paid invite key or an error string.
-func (u PaidInviteKey) String() string {
-	enc, err := u.Encode()
+func (pik PaidInviteKey) String() string {
+	enc, err := pik.Encode()
 	if err != nil {
 		return fmt.Sprintf("[invalid PaidInviteKey: %v]", err)
 	}

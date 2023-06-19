@@ -36,18 +36,18 @@ type paymentsServer struct {
 	tipProgressStreams *serverStreams[*types.TipProgressEvent]
 }
 
-func (c *paymentsServer) TipUser(ctx context.Context, req *types.TipUserRequest, _ *types.TipUserResponse) error {
-	user, err := c.c.UserByNick(req.User)
+func (p *paymentsServer) TipUser(ctx context.Context, req *types.TipUserRequest, _ *types.TipUserResponse) error {
+	user, err := p.c.UserByNick(req.User)
 	if err != nil {
 		return err
 	}
-	if c.cfg.OnTipUser != nil {
-		err := c.cfg.OnTipUser(user.ID(), req.DcrAmount)
+	if p.cfg.OnTipUser != nil {
+		err := p.cfg.OnTipUser(user.ID(), req.DcrAmount)
 		if err != nil {
 			return err
 		}
 	}
-	return c.c.TipUser(user.ID(), req.DcrAmount, req.MaxAttempts)
+	return p.c.TipUser(user.ID(), req.DcrAmount, req.MaxAttempts)
 }
 
 func (p *paymentsServer) TipProgress(ctx context.Context, req *types.TipProgressRequest, stream types.PaymentsService_TipProgressServer) error {

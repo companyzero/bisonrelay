@@ -10,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/companyzero/bisonrelay/client/clientintf"
 	"github.com/companyzero/bisonrelay/internal/assert"
 	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/companyzero/bisonrelay/zkidentity"
@@ -22,7 +21,7 @@ func TestRMQSuccessRM(t *testing.T) {
 	t.Parallel()
 
 	mockID := &zkidentity.FullIdentity{}
-	q := NewRMQ(nil, clientintf.FreePaymentClient{}, mockID, newMockRMQDB())
+	q := NewRMQ(nil, mockID, newMockRMQDB())
 	runErr := make(chan error)
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() { runErr <- q.Run(ctx) }()
@@ -73,7 +72,7 @@ func TestRMQAckErrors(t *testing.T) {
 	t.Parallel()
 
 	mockID := &zkidentity.FullIdentity{}
-	q := NewRMQ(nil, clientintf.FreePaymentClient{}, mockID, newMockRMQDB())
+	q := NewRMQ(nil, mockID, newMockRMQDB())
 	runErr := make(chan error)
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() { runErr <- q.Run(ctx) }()
@@ -141,7 +140,7 @@ func TestRMQClearsInvoice(t *testing.T) {
 	t.Parallel()
 
 	mockID := &zkidentity.FullIdentity{}
-	q := NewRMQ(nil, clientintf.FreePaymentClient{}, mockID, newMockRMQDB())
+	q := NewRMQ(nil, mockID, newMockRMQDB())
 	runErr := make(chan error)
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() { runErr <- q.Run(ctx) }()
@@ -209,7 +208,7 @@ func TestRMQMultipleRM(t *testing.T) {
 
 	nb := 10
 	mockID := &zkidentity.FullIdentity{}
-	q := NewRMQ(nil, clientintf.FreePaymentClient{}, mockID, newMockRMQDB())
+	q := NewRMQ(nil, mockID, newMockRMQDB())
 	runErr := make(chan error)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -298,7 +297,7 @@ func TestCanceledRMQErrorsRM(t *testing.T) {
 	t.Parallel()
 
 	mockID := &zkidentity.FullIdentity{}
-	q := NewRMQ(nil, clientintf.FreePaymentClient{}, mockID, newMockRMQDB())
+	q := NewRMQ(nil, mockID, newMockRMQDB())
 	runErr := make(chan error)
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() { runErr <- q.Run(ctx) }()
@@ -343,7 +342,7 @@ func TestCanceledRMQAfterQueuedErrorsRM(t *testing.T) {
 	t.Parallel()
 
 	mockID := &zkidentity.FullIdentity{}
-	q := NewRMQ(nil, clientintf.FreePaymentClient{}, mockID, newMockRMQDB())
+	q := NewRMQ(nil, mockID, newMockRMQDB())
 	runErr := make(chan error)
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() { runErr <- q.Run(ctx) }()
@@ -397,7 +396,7 @@ func TestEnqueueRMBeforeSession(t *testing.T) {
 	t.Parallel()
 
 	mockID := &zkidentity.FullIdentity{}
-	q := NewRMQ(nil, clientintf.FreePaymentClient{}, mockID, newMockRMQDB())
+	q := NewRMQ(nil, mockID, newMockRMQDB())
 	runErr := make(chan error)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -464,7 +463,7 @@ func TestRMQEncryptErrorFailsRM(t *testing.T) {
 	t.Parallel()
 
 	mockID := &zkidentity.FullIdentity{}
-	q := NewRMQ(nil, clientintf.FreePaymentClient{}, mockID, newMockRMQDB())
+	q := NewRMQ(nil, mockID, newMockRMQDB())
 	runErr := make(chan error)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -524,7 +523,7 @@ func TestRMQMaxMsgSizeErrors(t *testing.T) {
 	t.Parallel()
 	const maxMsgSize = rpc.MaxMsgSize
 	mockID := &zkidentity.FullIdentity{}
-	q := NewRMQ(nil, clientintf.FreePaymentClient{}, mockID, newMockRMQDB())
+	q := NewRMQ(nil, mockID, newMockRMQDB())
 	rm := mockRM(strings.Repeat(" ", maxMsgSize+1))
 	err := q.SendRM(rm)
 	if !errors.Is(err, errORMTooLarge) {
@@ -545,7 +544,7 @@ func TestReusesPaidRM(t *testing.T) {
 	db.StoreRVPaymentAttempt(rv, invoice, time.Now())
 
 	mockID := &zkidentity.FullIdentity{}
-	q := NewRMQ(nil, clientintf.FreePaymentClient{}, mockID, db)
+	q := NewRMQ(nil, mockID, db)
 	runErr := make(chan error)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -603,7 +602,7 @@ func TestRequestsInvoiceForOldInvoice(t *testing.T) {
 	db.StoreRVPaymentAttempt(rv, invoice, time.Now().Add(-time.Hour*24*2))
 
 	mockID := &zkidentity.FullIdentity{}
-	q := NewRMQ(nil, clientintf.FreePaymentClient{}, mockID, db)
+	q := NewRMQ(nil, mockID, db)
 	runErr := make(chan error)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -655,7 +654,7 @@ func TestConcurrentRMQSends(t *testing.T) {
 	t.Parallel()
 
 	mockID := &zkidentity.FullIdentity{}
-	q := NewRMQ(nil, clientintf.FreePaymentClient{}, mockID, newMockRMQDB())
+	q := NewRMQ(nil, mockID, newMockRMQDB())
 	runErr := make(chan error)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

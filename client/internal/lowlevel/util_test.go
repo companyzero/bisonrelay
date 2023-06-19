@@ -189,12 +189,10 @@ func (pc *pipedConn) Write(p []byte) (n int, err error) {
 
 func (pc pipedConn) Close() error {
 	if err := pc.reader.Close(); err != nil {
+		pc.writer.Close()
 		return err
 	}
-	if err := pc.writer.Close(); err != nil {
-		return err
-	}
-	return nil
+	return pc.writer.Close()
 }
 
 func (pc pipedConn) RemoteAddr() net.Addr {

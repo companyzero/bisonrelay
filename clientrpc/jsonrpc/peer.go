@@ -212,7 +212,7 @@ func (p *peer) queueNotification(method string, payload proto.Message) error {
 	}
 }
 
-func (p *peer) handleNotfication(ctx context.Context, in inboundMsg) {
+func (p *peer) handleNotfication(_ context.Context, in inboundMsg) {
 	p.mtx.Lock()
 	stream, ok := p.streams[*in.Method]
 	p.mtx.Unlock()

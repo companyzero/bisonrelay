@@ -168,7 +168,7 @@ func gcCompleter(arg string, as *appState) []string {
 
 // subcmdNeededHandler is used on top-level commands that only work with a
 // subcommand.
-func subcmdNeededHandler(args []string, as *appState) error {
+func subcmdNeededHandler(args []string, _ *appState) error {
 	if len(args) == 0 {
 		return usageError{msg: "subcommand not specified"}
 	}
@@ -1299,7 +1299,7 @@ var ftCommands = []tuicmd{
 				with = fmt.Sprintf(" with %q", args[2])
 			}
 			atomCost := uint64(dcrCost * 1e8)
-			sf, _, err := as.c.ShareFile(filename, uid, atomCost, false, "")
+			sf, _, err := as.c.ShareFile(filename, uid, atomCost, "")
 			as.cwHelpMsg("Shared file %q for %.8f DCR (est. cost %.8f DCR)%s. FID: %s",
 				sf.Filename, dcrCost, dcrUploadCost, with,
 				sf.FID)
@@ -2645,7 +2645,7 @@ var commands = []tuicmd{
 				return err
 			}
 			cw := as.findOrNewChatWindow(uid, args[0])
-			go as.block(cw, uid)
+			go as.block(cw)
 			return nil
 		},
 		completer: func(args []string, arg string, as *appState) []string {

@@ -602,10 +602,7 @@ func (db *DB) logMsg(logFname string, internal bool, from, msg string, ts time.T
 		return err
 	}
 
-	if err := f.Sync(); err != nil {
-		return err
-	}
-	return nil
+	return f.Sync()
 }
 
 func (db *DB) IsBlocked(tx ReadTx, id UserID) bool {

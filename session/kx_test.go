@@ -22,19 +22,19 @@ import (
 func loadIdentities(t *testing.T) (alice, bob *zkidentity.FullIdentity) {
 	blob, err := os.ReadFile("testdata/alice.json")
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 	err = json.Unmarshal(blob, &alice)
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 	blob, err = os.ReadFile("testdata/bob.json")
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 	err = json.Unmarshal(blob, &bob)
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 	return alice, bob
 }
@@ -42,11 +42,11 @@ func loadIdentities(t *testing.T) (alice, bob *zkidentity.FullIdentity) {
 func newIdentities(t *testing.T) (alice, bob *zkidentity.FullIdentity) {
 	alice, err := zkidentity.New("Alice The Malice", "alice")
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 	bob, err = zkidentity.New("Bob The Builder", "bob")
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 	return alice, bob
 }

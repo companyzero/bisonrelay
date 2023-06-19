@@ -76,7 +76,7 @@ func (r *Rates) Run(ctx context.Context) {
 			// Only log these at a higher warning level once after
 			// the rate has been successfully fetched. This prevents
 			// spam in the UI.
-			failedTries += 1
+			failedTries++
 			if failedTries == triesBeforeErr {
 				r.cfg.Log.Warnf("Unable to fetch rate from dcrdata: %v", err)
 				r.cfg.Log.Warnf("Unable to fetch rate from bittrex: %v", err)

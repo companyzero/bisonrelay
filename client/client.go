@@ -348,7 +348,7 @@ func New(cfg Config) (*Client, error) {
 	ck := lowlevel.NewConnKeeper(ckCfg)
 
 	rmqdb := &rmqDBAdapter{}
-	q := lowlevel.NewRMQ(cfg.logger("RMQU"), cfg.PayClient, id, rmqdb)
+	q := lowlevel.NewRMQ(cfg.logger("RMQU"), id, rmqdb)
 	ctx, cancel := context.WithCancel(context.Background())
 
 	dbCtx, dbCtxCancel := context.WithCancel(context.Background())

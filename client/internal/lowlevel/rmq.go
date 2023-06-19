@@ -82,8 +82,7 @@ type RMQ struct {
 	sendDoneChan chan struct{}
 }
 
-func NewRMQ(log slog.Logger, payClient clientintf.PaymentClient,
-	localID *zkidentity.FullIdentity, db RMQDB) *RMQ {
+func NewRMQ(log slog.Logger, localID *zkidentity.FullIdentity, db RMQDB) *RMQ {
 	if log == nil {
 		log = slog.Disabled
 	}

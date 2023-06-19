@@ -39,11 +39,11 @@ func newLogBackend(sendMsg func(tea.Msg), errMsg func(string),
 		logDir, _ := filepath.Split(logFile)
 		err := os.MkdirAll(logDir, 0700)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create log directory: %v\n", err)
+			return nil, fmt.Errorf("failed to create log directory: %w", err)
 		}
 		logRotator, err = rotator.New(logFile, 1024, false, maxLogFiles)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create file rotator: %v\n", err)
+			return nil, fmt.Errorf("failed to create file rotator: %w", err)
 		}
 	}
 

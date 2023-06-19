@@ -109,11 +109,10 @@ func (ulns unlockLNScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.err != nil {
 			ulns.unlockErr = msg.err.Error()
 			return ulns, nil
-		} else {
-			ulns.needsUnlock = false
-			ulns.runNotifier()
-			return ulns, nil
 		}
+		ulns.needsUnlock = false
+		ulns.runNotifier()
+		return ulns, nil
 
 	case lnChainSyncUpdate:
 		if msg.err != nil {

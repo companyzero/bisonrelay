@@ -159,10 +159,9 @@ func (pw lnRequestRecvWindow) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				pw.form.inputs[2].(*textInputHelper).SetValue("")
 			}
 			return pw, cmd
-		} else {
-			pw.form, cmd = pw.form.Update(msg)
-			return pw, cmd
 		}
+		pw.form, cmd = pw.form.Update(msg)
+		return pw, cmd
 	}
 
 	return pw, nil

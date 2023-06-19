@@ -25,7 +25,7 @@ func (v *versionServer) Version(_ context.Context, _ *types.VersionRequest, res 
 	return nil
 }
 
-func (s *versionServer) KeepaliveStream(ctx context.Context, req *types.KeepaliveStreamRequest,
+func (v *versionServer) KeepaliveStream(ctx context.Context, req *types.KeepaliveStreamRequest,
 	stream types.VersionService_KeepaliveStreamServer) error {
 
 	interval := time.Duration(req.Interval * int64(time.Millisecond))
