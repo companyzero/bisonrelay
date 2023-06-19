@@ -95,8 +95,6 @@ type Config struct {
 	// a remote user.
 	PostsListReceived func(user *RemoteUser, postList rpc.RMListPostsReply)
 
-	TipReceived func(user *RemoteUser, amount float64)
-
 	// SubscriptionChanged is called whenever the given user changes its
 	// subscription status with the local client (either subscribed or
 	// unsubscribed).

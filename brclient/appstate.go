@@ -3092,6 +3092,14 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		})
 	}))
 
+	ntfns.Register(client.OnTipReceivedNtfn(func(user *client.RemoteUser, amountMAtoms int64) {
+		dcrAmount := float64(amountMAtoms) / 1e11
+		cw := as.findOrNewChatWindow(user.ID(), strescape.Nick(user.Nick()))
+		msg := fmt.Sprintf("Received tip of %.8f DCR", dcrAmount)
+		cw.newInternalMsg(msg)
+		as.repaintIfActive(cw)
+	}))
+
 	// Initialize resources router.
 	var sstore *simplestore.Store
 	resRouter := resources.NewRouter()
@@ -3239,13 +3247,6 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 					}
 				}
 			}
-		},
-
-		TipReceived: func(user *client.RemoteUser, dcrAmount float64) {
-			cw := as.findOrNewChatWindow(user.ID(), strescape.Nick(user.Nick()))
-			msg := fmt.Sprintf("Received tip of %.8f DCR", dcrAmount)
-			cw.newInternalMsg(msg)
-			as.repaintIfActive(cw)
 		},
 
 		PostsListReceived: func(user *client.RemoteUser, postList rpc.RMListPostsReply) {
