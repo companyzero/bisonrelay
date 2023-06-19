@@ -16,11 +16,22 @@ Shipping Address:
   {{end}}
 {{end}}
 
-{{range .Comments}}
-{{.Timestamp}} - {{.Comment}}
-{{end}}
-
 {{range .Cart.Items}}
   - {{.Product.SKU}} - {{.Product.Title}} - {{.Quantity}} units - {{.Product.Price}}/unit
 {{- end}}
+
+{{range .Comments}}
+{{if .FromAdmin}}
+<- {{.Timestamp}} - {{.Comment}}
+{{else}}
+-> {{.Timestamp}} - {{.Comment}}
+{{end}}
+{{end}}
+
+## Add Comment
+--form--
+type="action" value="/orderaddcomment/{{.ID}}"
+type="txtinput" label="New comment" name="comment" value=""
+type="submit" label="Add Comment"
+--/form--
 

@@ -482,3 +482,62 @@ func (s *Store) handleOrderStatus(ctx context.Context, uid clientintf.UserID,
 		Status: rpc.ResourceStatusOk,
 	}, nil
 }
+
+func (s *Store) handleOrderAddComment(ctx context.Context, uid clientintf.UserID,
+	request *rpc.RMFetchResource) (*rpc.RMFetchResourceReply, error) {
+
+	s.mtx.Lock()
+	defer s.mtx.Unlock()
+
+	// Process form data.
+	var formData string
+	if err := json.Unmarshal(request.Data, &formData); err != nil {
+		return nil, err
+	}
+	comment := formData
+
+	id, err := strconv.ParseUint(request.Path[1], 10, 64)
+	if err != nil {
+		return &rpc.RMFetchResourceReply{
+			Data:   []byte("invalid order id"),
+			Status: rpc.ResourceStatusBadRequest,
+		}, nil
+	}
+
+	fname := filepath.Join(s.root, ordersDir, uid.String(), orderFnamePattern.FilenameFor(id))
+
+	var order Order
+	err = jsonfile.Read(fname, &order)
+	if err != nil {
+		if errors.Is(err, jsonfile.ErrNotFound) {
+			return &rpc.RMFetchResourceReply{
+				Data:   []byte("order not found"),
+				Status: rpc.ResourceStatusBadRequest,
+			}, nil
+		}
+		return nil, fmt.Errorf("Unable to read order %s: %v",
+			fname, err)
+	}
+
+	// Add comment.
+	order.Comments = append(order.Comments, OrderComment{
+		Timestamp: time.Now(),
+		FromAdmin: false,
+		Comment:   comment,
+	})
+
+	// Save order.
+	if err := jsonfile.Write(fname, &order, s.log); err != nil {
+		return nil, err
+	}
+
+	// Generate template.
+	w := &bytes.Buffer{}
+	w.WriteString("# Comment added\n\n")
+	w.WriteString(fmt.Sprintf("[Back to Order](/order/%d)\n\n", id))
+	return &rpc.RMFetchResourceReply{
+		Data:   w.Bytes(),
+		Status: rpc.ResourceStatusOk,
+	}, nil
+
+}
