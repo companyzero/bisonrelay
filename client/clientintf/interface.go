@@ -102,6 +102,7 @@ type PaymentClient interface {
 	GetInvoice(context.Context, int64, func(int64)) (string, error)
 	DecodeInvoice(context.Context, string) (DecodedInvoice, error)
 	IsInvoicePaid(context.Context, int64, string) error
+	TrackInvoice(context.Context, string, int64) (int64, error)
 	IsPaymentCompleted(context.Context, string) (int64, error)
 }
 
@@ -122,6 +123,9 @@ func (pc FreePaymentClient) IsInvoicePaid(context.Context, int64, string) error 
 	return nil
 }
 func (pc FreePaymentClient) IsPaymentCompleted(context.Context, string) (int64, error) {
+	return 0, nil
+}
+func (pc FreePaymentClient) TrackInvoice(ctx context.Context, inv string, minMAtoms int64) (int64, error) {
 	return 0, nil
 }
 
@@ -179,6 +183,7 @@ type ReceivedGCMsg struct {
 var (
 	ErrSubsysExiting             = errors.New("subsys exiting")
 	ErrInvoiceInsufficientlyPaid = errors.New("invoice insufficiently paid")
+	ErrInvoiceExpired            = errors.New("invoice expired")
 	ErrOnboardNoFunds            = errors.New("onboarding invite does not have any funds")
 	ErrRetriablePayment          = errors.New("retriable payment error")
 )

@@ -11,6 +11,7 @@ import (
 	"github.com/companyzero/bisonrelay/client"
 	"github.com/companyzero/bisonrelay/client/clientintf"
 	"github.com/companyzero/bisonrelay/internal/assert"
+	"github.com/companyzero/bisonrelay/internal/testutils"
 	"github.com/companyzero/bisonrelay/rpc"
 )
 
@@ -941,4 +942,148 @@ func TestTipUserRetriesRetriablePayFailure(t *testing.T) {
 	assert.ChanNotWritten(t, alicePaidChan, resendDelay)   // No more payments attempted
 	assert.NilErrFromChan(t, progressErrChan)              // Success ntfn
 	assert.ChanNotWritten(t, progressErrChan, resendDelay) // No more ntfns
+}
+
+// TestRecvTipPersistsSuccess asserts that receiving tips are notified across
+// client restarts.
+func TestRecvTipPersistsSuccess(t *testing.T) {
+	t.Parallel()
+
+	tcfg := testScaffoldCfg{}
+	ts := newTestScaffold(t, tcfg)
+	alice := ts.newClient("alice")
+	bob := ts.newClient("bob")
+	ts.kxUsers(alice, bob)
+
+	payMAtoms, payDcr := int64(1e11), 1.0
+	customInvoice := "custom invoice"
+	bob.mpc.HookGetInvoice(func(amt int64, cb func(int64)) (string, error) {
+		if amt == payMAtoms {
+			return customInvoice, nil
+		}
+		return fmt.Sprintf("invoice for %d", amt), nil
+	})
+
+	// The first execution will not return until bob is done.
+	bob.mpc.HookTrackInvoice(func(inv string, _ int64) (int64, error) {
+		if inv == customInvoice {
+			<-bob.ctx.Done()
+		}
+		return 0, bob.ctx.Err()
+	})
+
+	// The first hook to Bob's OnTipReceivedNtfn should not be triggered.
+	bobTipRecvChan := make(chan error, 3)
+	bob.handle(client.OnTipReceivedNtfn(func(_ *client.RemoteUser, amt int64) {
+		if amt != payMAtoms {
+			bobTipRecvChan <- fmt.Errorf("unexpected amount %d", amt)
+		} else {
+			bobTipRecvChan <- nil
+		}
+	}))
+
+	assert.NilErr(t, alice.TipUser(bob.PublicID(), payDcr, 1))
+	assert.ChanNotWritten(t, bobTipRecvChan, time.Second)
+
+	// Setup next Bob's mpc hooked to track payments so that on restart,
+	// Bob will attempt to track the data correctly.
+	trackInvoiceChan := make(chan struct{})
+	bobPCIniter := func(loggerSubsysIniter) clientintf.PaymentClient {
+		mpc := &testutils.MockPayClient{}
+		mpc.HookTrackInvoice(func(inv string, amt int64) (int64, error) {
+			if inv == customInvoice {
+				trackInvoiceChan <- struct{}{}
+				return amt, nil
+			}
+			return 0, nil
+		})
+		return mpc
+	}
+
+	// Shutdown and recreate Bob.
+	bob = ts.recreateClient(bob, withPCIniter(bobPCIniter))
+
+	// The hook on Bob's second instance should be triggered after the
+	// payment is completed.
+	bob.handle(client.OnTipReceivedNtfn(func(_ *client.RemoteUser, amt int64) {
+		if amt != payMAtoms {
+			bobTipRecvChan <- fmt.Errorf("unexpected amount %d", amt)
+		} else {
+			bobTipRecvChan <- nil
+		}
+	}))
+
+	// Bob should be tracking the custom invoice, and after that is
+	// acknowledged as paid, Bob should get a notification that tipping
+	// completed.
+	assert.ChanWritten(t, trackInvoiceChan)
+	assert.NilErrFromChan(t, bobTipRecvChan)
+}
+
+// TestRecvTipExpired asserts that if a tip payment expires, then it's not
+// tracked anymore even after a restart.
+func TestRecvTipExpired(t *testing.T) {
+	t.Parallel()
+
+	tcfg := testScaffoldCfg{}
+	ts := newTestScaffold(t, tcfg)
+	alice := ts.newClient("alice")
+	bob := ts.newClient("bob")
+	ts.kxUsers(alice, bob)
+
+	payMAtoms, payDcr := int64(1e11), 1.0
+	customInvoice := "custom invoice"
+	bob.mpc.HookGetInvoice(func(amt int64, cb func(int64)) (string, error) {
+		if amt == payMAtoms {
+			return customInvoice, nil
+		}
+		return fmt.Sprintf("invoice for %d", amt), nil
+	})
+
+	// Return an expiration error for the invoice.
+	bobExpireInvoiceChan := make(chan struct{})
+	bob.mpc.HookTrackInvoice(func(inv string, _ int64) (int64, error) {
+		if inv == customInvoice {
+			bobExpireInvoiceChan <- struct{}{}
+			return 0, clientintf.ErrInvoiceExpired
+		}
+		return 0, nil
+	})
+
+	// The first hook to Bob's OnTipReceivedNtfn should not be triggered.
+	bobTipRecvChan := make(chan error, 3)
+	bob.handle(client.OnTipReceivedNtfn(func(_ *client.RemoteUser, amt int64) {
+		if amt != payMAtoms {
+			bobTipRecvChan <- fmt.Errorf("unexpected amount %d", amt)
+		} else {
+			bobTipRecvChan <- nil
+		}
+	}))
+
+	assert.NilErr(t, alice.TipUser(bob.PublicID(), payDcr, 1))
+	assert.ChanNotWritten(t, bobTipRecvChan, time.Second)
+
+	// Expire invoice.
+	assert.ChanWritten(t, bobExpireInvoiceChan)
+
+	// Setup next Bob's mpc hooked to track payments so that on restart,
+	// Bob will attempt to track the data correctly.
+	trackInvoiceChan := make(chan struct{})
+	bobPCIniter := func(loggerSubsysIniter) clientintf.PaymentClient {
+		mpc := &testutils.MockPayClient{}
+		mpc.HookTrackInvoice(func(inv string, amt int64) (int64, error) {
+			if inv == customInvoice {
+				trackInvoiceChan <- struct{}{}
+				return amt, nil
+			}
+			return 0, nil
+		})
+		return mpc
+	}
+
+	// Shutdown and recreate Bob.
+	ts.recreateClient(bob, withPCIniter(bobPCIniter))
+
+	// Bob should not be attempting to track an expired invoice.
+	assert.ChanNotWritten(t, trackInvoiceChan, time.Second)
 }

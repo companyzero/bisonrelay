@@ -1,6 +1,7 @@
 package clientdb
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -183,4 +184,141 @@ func (db *DB) ListOldestValidTipUserAttempts(tx ReadTx, maxLifetime time.Duratio
 	}
 
 	return res, nil
+}
+
+// StoreGeneratedTipInvoice stores the specified invoice as one generated for
+// the remote client to pay the local client for a tip.
+func (db *DB) StoreGeneratedTipInvoice(tx ReadWriteTx, uid UserID, invoice string, amountMAtoms int64) error {
+	fname := filepath.Join(db.root, inboundDir, uid.String(), genTipInvoicesFile)
+	data := GeneratedInvoiceForTip{
+		UID:        uid,
+		Created:    time.Now(),
+		Invoice:    invoice,
+		MilliAtoms: uint64(amountMAtoms),
+	}
+	return db.appendToJsonFile(fname, data)
+}
+
+// ListGeneratedTipInvoices lists all invoices generated for tipping from all
+// users.
+func (db *DB) ListGeneratedTipInvoices(tx ReadTx) ([]GeneratedInvoiceForTip, error) {
+	pattern := filepath.Join(db.root, inboundDir, "*", genTipInvoicesFile)
+	files, err := filepath.Glob(pattern)
+	if err != nil {
+		return nil, err
+	}
+
+	var res []GeneratedInvoiceForTip
+	for _, fname := range files {
+		f, err := os.Open(fname)
+		if err != nil {
+			db.log.Warnf("Unable to open file %s for reading "+
+				"generated tip invoices: %v", fname, err)
+			continue
+		}
+
+		dec := json.NewDecoder(f)
+		for {
+			var inv GeneratedInvoiceForTip
+			err := dec.Decode(&inv)
+			if err != nil {
+				break
+			}
+			res = append(res, inv)
+		}
+		_ = f.Close()
+	}
+
+	return res, nil
+}
+
+// removeFromGeneratedTipInvoice removes the invoice from the list of invoices
+// generated for the remote user to tip the local client.
+//
+// Returns the data corresponding to the invoice.
+func (db *DB) removeFromGeneratedTipInvoice(uid UserID, invoice string) (GeneratedInvoiceForTip, error) {
+	var data GeneratedInvoiceForTip
+
+	// Open file.
+	genFname := filepath.Join(db.root, inboundDir, uid.String(), genTipInvoicesFile)
+	f, err := os.Open(genFname)
+	if os.IsNotExist(err) {
+		return data, ErrNotFound
+	}
+	if err != nil {
+		return data, err
+	}
+
+	// Read list of existing generated invoices, adding to res[] all but
+	// the target one.
+	var res []GeneratedInvoiceForTip
+	found := false
+	dec := json.NewDecoder(f)
+	for {
+		var inv GeneratedInvoiceForTip
+		err := dec.Decode(&inv)
+		if err != nil {
+			break
+		}
+		if inv.Invoice == invoice {
+			found = true
+			data = inv
+		} else {
+			res = append(res, inv)
+		}
+	}
+	if err := f.Close(); err != nil {
+		return data, err
+	}
+
+	if !found {
+		return data, ErrNotFound
+	}
+
+	// Either remove the file (if no other invoices remain) or rewrite the
+	// file with the remaining invoices.
+	if len(res) == 0 {
+		err := removeIfExists(genFname)
+		if err != nil {
+			return data, err
+		}
+	} else {
+		f, err := os.Create(genFname)
+		if err != nil {
+			return data, err
+		}
+		enc := json.NewEncoder(f)
+		for _, inv := range res {
+			if err := enc.Encode(inv); err != nil {
+				return data, err
+			}
+		}
+		if err := f.Close(); err != nil {
+			return data, err
+		}
+	}
+
+	return data, nil
+}
+
+// MarkGeneratedTipInvoiceExpired marks an invoice generated for tipping as
+// having expired.
+func (db *DB) MarkGeneratedTipInvoiceExpired(tx ReadWriteTx, uid UserID, invoice string) error {
+	data, err := db.removeFromGeneratedTipInvoice(uid, invoice)
+	if err != nil {
+		return err
+	}
+	expiredFname := filepath.Join(db.root, inboundDir, uid.String(), expiredTipInvoicesFile)
+	return db.appendToJsonFile(expiredFname, data)
+}
+
+// MarkGeneratedTipInvoiceReceived marks an invoice generated for tipping as
+// having been received (i.e. invoice was paid).
+func (db *DB) MarkGeneratedTipInvoiceReceived(tx ReadWriteTx, uid UserID, invoice string, receivedMAtoms int64) error {
+	data, err := db.removeFromGeneratedTipInvoice(uid, invoice)
+	if err != nil {
+		return err
+	}
+	recvFname := filepath.Join(db.root, inboundDir, uid.String(), recvTipInvoicesFile)
+	return db.appendToJsonFile(recvFname, data)
 }

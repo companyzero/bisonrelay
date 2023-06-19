@@ -20,6 +20,7 @@ type MockPayClient struct {
 	isPayCompleted func(string) (int64, error)
 	getInvoice     func(int64, func(int64)) (string, error)
 	decodeInvoice  func(string) (clientintf.DecodedInvoice, error)
+	trackInvoice   func(string, int64) (int64, error)
 }
 
 func (pc *MockPayClient) PayScheme() string {
@@ -118,4 +119,20 @@ func (pc *MockPayClient) DecodeInvoice(_ context.Context, invoice string) (clien
 	}
 
 	return pc.DefaultDecodeInvoice(invoice)
+}
+
+func (pc *MockPayClient) HookTrackInvoice(hook func(string, int64) (int64, error)) {
+	pc.mtx.Lock()
+	pc.trackInvoice = hook
+	pc.mtx.Unlock()
+}
+
+func (pc *MockPayClient) TrackInvoice(ctx context.Context, inv string, minMAtoms int64) (int64, error) {
+	pc.mtx.Lock()
+	hook := pc.trackInvoice
+	pc.mtx.Unlock()
+	if hook != nil {
+		return hook(inv, minMAtoms)
+	}
+	return 0, nil
 }

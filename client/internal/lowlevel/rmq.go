@@ -289,7 +289,7 @@ func (q *RMQ) isRVInvoicePaid(ctx context.Context, rv RVID, amt int64, pc client
 	// Check invoice payment actually completed.
 	fees, err := pc.IsPaymentCompleted(ctx, payInvoice)
 	if err != nil {
-		q.log.Warnf("Push payment attempt stored failed IsInvoicePaid "+
+		q.log.Warnf("Push payment attempt stored failed IsPaymentCompleted"+
 			"check: %v", err)
 		return 0, nil
 	}

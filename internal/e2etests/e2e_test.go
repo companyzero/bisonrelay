@@ -295,8 +295,12 @@ func (ts *testScaffold) defaultNewClientCfg(name string) *clientCfg {
 	}
 }
 
-func (ts *testScaffold) newClientWithCfg(nccfg *clientCfg) *testClient {
+func (ts *testScaffold) newClientWithCfg(nccfg *clientCfg, opts ...newClientOpt) *testClient {
 	ts.t.Helper()
+
+	for _, opt := range opts {
+		opt(nccfg)
+	}
 
 	name := nccfg.name
 	rootDir := nccfg.rootDir
@@ -416,10 +420,7 @@ func (ts *testScaffold) newClient(name string, opts ...newClientOpt) *testClient
 	ts.t.Helper()
 
 	nccfg := ts.defaultNewClientCfg(name)
-	for _, opt := range opts {
-		opt(nccfg)
-	}
-	return ts.newClientWithCfg(nccfg)
+	return ts.newClientWithCfg(nccfg, opts...)
 }
 
 // stopClient stops this client. It can't be used after this.
@@ -434,21 +435,21 @@ func (ts *testScaffold) stopClient(tc *testClient) {
 
 // recreateClient stops the specified client and re-creates it using the same
 // database.
-func (ts *testScaffold) recreateClient(tc *testClient) *testClient {
+func (ts *testScaffold) recreateClient(tc *testClient, opts ...newClientOpt) *testClient {
 	ts.t.Helper()
 
 	// Stop existing client.
 	ts.stopClient(tc)
 
 	// Recreate client.
-	return ts.newClientWithCfg(tc.nccfg)
+	return ts.newClientWithCfg(tc.nccfg, opts...)
 }
 
 // recreateStoppedClient recreates a client that was previously stopped. If
 // the client was not stopped, results are undefined.
-func (ts *testScaffold) recreateStoppedClient(tc *testClient) *testClient {
+func (ts *testScaffold) recreateStoppedClient(tc *testClient, opts ...newClientOpt) *testClient {
 	ts.t.Helper()
-	return ts.newClientWithCfg(tc.nccfg)
+	return ts.newClientWithCfg(tc.nccfg, opts...)
 }
 
 // kxUsers performs a kx between the two users with an additional gc invite.
