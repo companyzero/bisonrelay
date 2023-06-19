@@ -85,6 +85,7 @@ type ShippingAddress struct {
 
 type OrderComment struct {
 	Timestamp time.Time `json:"ts"`
+	FromAdmin bool      `json:"fromAdmin"`
 	Comment   string    `json:"comment"`
 }
 

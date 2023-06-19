@@ -163,6 +163,7 @@ func (s *Store) handleAdminAddOrderComment(ctx context.Context, _ clientintf.Use
 	// Add comment.
 	order.Comments = append(order.Comments, OrderComment{
 		Timestamp: time.Now(),
+		FromAdmin: true,
 		Comment:   comment,
 	})
 
