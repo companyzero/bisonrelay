@@ -204,6 +204,8 @@ func (s *Store) Fulfill(ctx context.Context, uid clientintf.UserID,
 		return s.handleOrders(ctx, uid, request)
 	case len(request.Path) == 2 && request.Path[0] == "order":
 		return s.handleOrderStatus(ctx, uid, request)
+	case len(request.Path) == 2 && request.Path[0] == "orderaddcomment":
+		return s.handleOrderAddComment(ctx, uid, request)
 	default:
 		return s.handleNotFound(ctx, uid, request)
 	}
