@@ -18,6 +18,11 @@ jobs:
         uses: arduino/setup-protoc@64c0c85d18e984422218383b81c52f8b077404d3 #v1.1.2
         with:
           version: '3.19.x'
+      - name: Install protolint
+        run: go install github.com/yoheimuta/protolint/cmd/protolint@v0.42.2
+      - name: Lint proto files
+        run: protolint lint .
+        working-directory: clientrpc
       - name: Rebuild the bindings
         run:  ./regen-clientrpc.sh
         working-directory: clientrpc
