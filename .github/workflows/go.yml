@@ -4,6 +4,21 @@ permissions:
   contents: read
 
 jobs:
+  lint:
+    name: Lint Go files
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Go
+        uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 #v4.0.1
+        with:
+          go-version: "1.20"
+      - name: Check out source
+        uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab #v3.5.2
+      - name: Install Linters
+        run: "curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.53.2"
+      - name: Lint
+        run: golangci-lint run
+
   build:
     name: Go CI
     runs-on: ubuntu-latest
@@ -17,15 +32,10 @@ jobs:
           go-version: ${{ matrix.go }}
       - name: Check out source
         uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab #v3.5.2
-      - name: Install Linters
-        run: "curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.53.2"
-      - name: Install protolint
-        run: go install github.com/yoheimuta/protolint/cmd/protolint@v0.42.2
       - name: Build
         run: go build ./...
       - name: Test
-        run: |
-          ./goclean.sh
+        run: go test ./...
       - name: Upload logs if tests failed
         if: failure()
         uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
