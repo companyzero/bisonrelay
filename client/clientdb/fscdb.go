@@ -58,6 +58,9 @@ const (
 
 	pageSessionsDir         = "pagesessions"
 	pageSessionOverviewFile = "overview.json"
+	genTipInvoicesFile      = "generated-tip-invoices.json"
+	recvTipInvoicesFile     = "received-tip-invoices.json"
+	expiredTipInvoicesFile  = "expired-tip-invoices.json"
 )
 
 var (

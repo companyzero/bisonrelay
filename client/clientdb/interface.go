@@ -388,6 +388,13 @@ type UnkxdUserInfo struct {
 	AddedToGCTime *time.Time `json:"added_to_gc_time"`
 }
 
+type GeneratedInvoiceForTip struct {
+	UID        UserID    `json:"uid"`
+	Created    time.Time `json:"created"`
+	Invoice    string    `json:"invoice"`
+	MilliAtoms uint64    `json:"milli_atoms"`
+}
+
 var (
 	ErrLocalIDEmpty         = errors.New("local ID is not initialized")
 	ErrServerIDEmpty        = errors.New("server ID is not known")

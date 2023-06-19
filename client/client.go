@@ -1123,5 +1123,8 @@ func (c *Client) Run(ctx context.Context) error {
 	// Reload cached RGCMs.
 	g.Go(func() error { return c.loadCachedRGCMs(gctx) })
 
+	// Restart tracking tip receiving.
+	g.Go(func() error { return c.restartTrackGeneratedTipInvoices(gctx) })
+
 	return g.Wait()
 }

@@ -278,6 +278,7 @@ func (pc *DcrlnPaymentClient) GetInvoice(ctx context.Context, mat int64, cb func
 }
 
 func (pc *DcrlnPaymentClient) IsInvoicePaid(ctx context.Context, minMatAmt int64, invoice string) error {
+
 	payReq, err := pc.lnRpc.DecodePayReq(ctx, &lnrpc.PayReqString{PayReq: invoice})
 	if err != nil {
 		return fmt.Errorf("unable to decode pay req")
@@ -368,6 +369,88 @@ func (pc *DcrlnPaymentClient) IsPaymentCompleted(ctx context.Context, invoice st
 			pc.log.Tracef("Payment %x is inflight", payHash)
 		default:
 			return 0, fmt.Errorf("unknown payment tracking status %s", event.Status)
+		}
+	}
+}
+
+func (pc *DcrlnPaymentClient) TrackInvoice(ctx context.Context, invoice string, minMAtoms int64) (int64, error) {
+	payReq, err := pc.lnRpc.DecodePayReq(ctx, &lnrpc.PayReqString{PayReq: invoice})
+	if err != nil {
+		return 0, fmt.Errorf("unable to decode pay req")
+	}
+
+	payHash, err := hex.DecodeString(payReq.PaymentHash)
+	if err != nil {
+		return 0, fmt.Errorf("unable to decode payment hash: %v", err)
+	}
+
+	rctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	req := &invoicesrpc.SubscribeSingleInvoiceRequest{RHash: payHash}
+	stream, err := pc.lnInvoices.SubscribeSingleInvoice(rctx, req)
+	if err != nil {
+		return 0, err
+	}
+
+	// Read from stream in goroutine and send in either errChan or resChan.
+	errChan := make(chan error, 1)
+	resChan := make(chan *lnrpc.Invoice, 1)
+	go func() {
+		for {
+			res, err := stream.Recv()
+			if err != nil {
+				errChan <- err
+				return
+			} else {
+				resChan <- res
+			}
+		}
+	}()
+
+	// Setup timer that elapses after invoice expires.
+	durationToExpiry := time.Until(time.Unix(payReq.Timestamp+payReq.Expiry, 0))
+	timer := time.NewTimer(durationToExpiry)
+	cancelTimer := func() {
+		if !timer.Stop() {
+			<-timer.C
+		}
+	}
+
+	// Read invoice updates.
+	for {
+		select {
+		case err := <-errChan:
+			cancelTimer()
+			return 0, err
+
+		case <-timer.C:
+			// Invoice expired.
+			return 0, clientintf.ErrInvoiceExpired
+
+		case res := <-resChan:
+			switch {
+			case res.State == lnrpc.Invoice_SETTLED:
+				if res.AmtPaidMAtoms < minMAtoms {
+					return 0, fmt.Errorf("received %d < wanted %d: %w",
+						res.AmtPaidMAtoms,
+						minMAtoms, clientintf.ErrInvoiceInsufficientlyPaid)
+				}
+				cancelTimer()
+				return res.AmtPaidMAtoms, nil
+
+			case res.State == lnrpc.Invoice_CANCELED:
+				cancelTimer()
+				return 0, fmt.Errorf("LN invoice canceled")
+
+			case res.State == lnrpc.Invoice_OPEN:
+				// Continue waiting for payment or expiration.
+
+			default:
+				cancelTimer()
+				return 0, fmt.Errorf("Unexpected LN state: %d",
+					res.State)
+			}
 		}
 	}
 }
