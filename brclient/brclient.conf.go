@@ -47,6 +47,10 @@ root = {{ .Root }}
 # Set whether to read chat logs to build chat history
 # noloadchathistory = false
 
+# Whether to enable or disable bbolt's syncfreelist option. Setting to false
+# improves running performance while worsening startup performance.
+# syncfreelist = true
+
 # logging and debug
 [log]
 

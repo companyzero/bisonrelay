@@ -97,6 +97,8 @@ type config struct {
 	LogPings          bool
 	NoLoadChatHistory bool
 
+	SyncFreeList bool
+
 	ProxyAddr    string
 	ProxyUser    string
 	ProxyPass    string
@@ -262,6 +264,8 @@ func loadConfig() (*config, error) {
 	fs.Var(&mimetypes, "mimetype", "List of mimetypes with viewer")
 
 	flagBellCmd := fs.String("bellcmd", "", "Bell command on new msgs")
+	flagSyncFreeList := fs.Bool("syncfreelist", true, "")
+
 	flagExternalEditorForComments := fs.Bool("externaleditorforcomments", false, "")
 	flagNoLoadChatHistory := fs.Bool("noloadchathistory", false, "Whether to read chat logs to build chat history")
 
@@ -482,6 +486,7 @@ func loadConfig() (*config, error) {
 		InviteFundsAccount: *flagInviteFundsAccount,
 		ResourcesUpstream:  *flagResourcesUpstream,
 
+		SyncFreeList:             *flagSyncFreeList,
 		ExtenalEditorForComments: *flagExternalEditorForComments,
 
 		SimpleStorePayType:    ssPayType,

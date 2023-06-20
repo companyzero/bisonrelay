@@ -1206,6 +1206,7 @@ LNInitDcrlnd _$LNInitDcrlndFromJson(Map<String, dynamic> json) => LNInitDcrlnd(
       base64ToUint8list(json['multiChanBackup'] as String?),
       json['proxyaddr'] as String,
       json['torisolation'] as bool,
+      json['sync_free_list'] as bool,
     );
 
 Map<String, dynamic> _$LNInitDcrlndToJson(LNInitDcrlnd instance) =>
@@ -1216,7 +1217,8 @@ Map<String, dynamic> _$LNInitDcrlndToJson(LNInitDcrlnd instance) =>
       'existingSeed': instance.existingSeed,
       'multiChanBackup': uint8listToBase64(instance.multiChanBackup),
       'proxyaddr': instance.proxyaddr,
-      'torisolation': instance.torisolation,
+      'torisolation': instance.torIsolation,
+      'sync_free_list': instance.syncFreeList,
     };
 
 LNNewWalletSeed _$LNNewWalletSeedFromJson(Map<String, dynamic> json) =>

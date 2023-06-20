@@ -74,11 +74,12 @@ class Config {
   late final String simpleStoreAccount;
   late final double simpleStoreShipCharge;
   late final String proxyaddr;
-  late final bool torisolation;
+  late final bool torIsolation;
   late final String proxyUsername;
   late final String proxyPassword;
   late final int circuitLimit;
   late final bool noLoadChatHistory;
+  late final bool syncFreeList;
 
   Config();
   Config.filled(
@@ -100,11 +101,12 @@ class Config {
       this.simpleStoreAccount: "",
       this.simpleStoreShipCharge: 0,
       this.proxyaddr: "",
-      this.torisolation: false,
+      this.torIsolation: false,
       this.proxyUsername: "",
       this.proxyPassword: "",
       this.circuitLimit: 32,
-      this.noLoadChatHistory: true});
+      this.noLoadChatHistory: true,
+      this.syncFreeList: true});
   factory Config.newWithRPCHost(
           Config cfg, String rpcHost, String tlsCert, String macaroonPath) =>
       Config.filled(
@@ -126,11 +128,12 @@ class Config {
         simpleStoreAccount: cfg.simpleStoreAccount,
         simpleStoreShipCharge: cfg.simpleStoreShipCharge,
         proxyaddr: cfg.proxyaddr,
-        torisolation: cfg.torisolation,
+        torIsolation: cfg.torIsolation,
         proxyUsername: cfg.proxyUsername,
         proxyPassword: cfg.proxyPassword,
         circuitLimit: cfg.circuitLimit,
         noLoadChatHistory: cfg.noLoadChatHistory,
+        syncFreeList: cfg.syncFreeList,
       );
 
   Future<void> saveConfig(String filepath) async {
@@ -178,6 +181,11 @@ Future<Config> loadConfig(String filepath) async {
   var getBool = (String section, String opt) {
     var v = f.get(section, opt);
     return v == "yes" || v == "true" || v == "1" ? true : false;
+  };
+
+  var getBoolDefaultTrue = (String section, String opt) {
+    var v = f.get(section, opt);
+    return v == "no" || v == "false" || v == "0" ? false : true;
   };
 
   var getInt = (String section, String opt) {
@@ -231,9 +239,10 @@ Future<Config> loadConfig(String filepath) async {
   c.proxyaddr = f.get("default", "proxyaddr") ?? "";
   c.proxyUsername = f.get("default", "proxyuser") ?? "";
   c.proxyPassword = f.get("default", "proxypass") ?? "";
-  c.torisolation = getBool("default", "torisolation");
+  c.torIsolation = getBool("default", "torisolation");
   c.circuitLimit = getInt("default", "circuitlimit") ?? 32;
   c.noLoadChatHistory = getBool("default", "noloadchathistory");
+  c.syncFreeList = getBoolDefaultTrue("default", "syncfreelist");
 
   if (c.walletType != "disabled") {
     c.lnRPCHost = f.get("payment", "lnrpchost") ?? "localhost:10009";

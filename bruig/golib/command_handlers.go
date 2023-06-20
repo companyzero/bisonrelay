@@ -1785,6 +1785,7 @@ func handleLNInitDcrlnd(ctx context.Context, args lnInitDcrlnd) (*lnNewWalletSee
 		TorAddr:      args.ProxyAddr,
 		TorIsolation: args.TorIsolation,
 		DialFunc:     dialFunc,
+		SyncFreeList: args.SyncFreeList,
 	}
 	lndc, err := runDcrlnd(ctx, lndCfg)
 	if err != nil {
@@ -1838,6 +1839,7 @@ func handleLNRunDcrlnd(ctx context.Context, args lnInitDcrlnd) (string, error) {
 			TorAddr:      args.ProxyAddr,
 			TorIsolation: args.TorIsolation,
 			DialFunc:     dialFunc,
+			SyncFreeList: args.SyncFreeList,
 		}
 		lndc, err = runDcrlnd(ctx, lndCfg)
 		if err != nil {

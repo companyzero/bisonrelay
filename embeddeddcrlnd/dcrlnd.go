@@ -59,6 +59,9 @@ type Config struct {
 
 	// TorIsolation enables Tor stream isolation.
 	TorIsolation bool
+
+	// SyncFreeList sets the SyncFreeList flag in the DB.
+	SyncFreeList bool
 }
 
 // Dcrlnd is a running instance of an embedded dcrlnd instance.
@@ -357,6 +360,7 @@ func RunDcrlnd(ctx context.Context, cfg Config) (*Dcrlnd, error) {
 	conf.DisableListen = true
 	conf.BackupFilePath = filepath.Join(rootDir, "channels.backup")
 	conf.Node = "dcrw"
+	conf.DB.Bolt.SyncFreelist = cfg.SyncFreeList
 	conf.DebugLevel = cfg.DebugLevel
 	conf.ProtocolOptions = &lncfg.ProtocolOptions{}
 	conf.WtClient = &lncfg.WtClient{}

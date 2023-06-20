@@ -219,6 +219,7 @@ type lnInitDcrlnd struct {
 	MultiChanBackup []byte   `json:"multichanbackup"`
 	ProxyAddr       string   `json:"proxyaddr"`
 	TorIsolation    bool     `json:"torisolation"`
+	SyncFreeList    bool     `json:"sync_free_list"`
 }
 
 type lnNewWalletSeed struct {
