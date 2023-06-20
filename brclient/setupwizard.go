@@ -376,10 +376,11 @@ func (sws setupWizardScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		rootDir := defaultLNWalletDir(defaultRootDir(sws.cfgFilePath))
 		return sws, func() tea.Msg {
 			cfg := embeddeddcrlnd.Config{
-				RootDir:     rootDir,
-				Network:     sws.net,
-				DebugLevel:  "info",
-				MaxLogFiles: 3,
+				RootDir:      rootDir,
+				Network:      sws.net,
+				DebugLevel:   "info",
+				MaxLogFiles:  3,
+				SyncFreeList: true,
 			}
 			return cmdRunDcrlnd(sws.connCtx, cfg)
 		}

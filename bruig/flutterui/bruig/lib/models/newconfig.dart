@@ -133,7 +133,7 @@ class NewConfigModel extends ChangeNotifier {
     var rootPath = await lnWalletDir();
     await Directory(rootPath).create(recursive: true);
     var res = await Golib.lnInitDcrlnd(rootPath, NetworkTypeStr(netType),
-        password, existingSeed, multichanBackupRestore, "", false);
+        password, existingSeed, multichanBackupRestore, "", false, true);
     tlsCertPath = path.join(rootPath, "tls.cert");
     macaroonPath = path.join(rootPath, "data", "chain", "decred",
         NetworkTypeStr(netType), "admin.macaroon");

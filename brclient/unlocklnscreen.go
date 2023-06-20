@@ -49,6 +49,7 @@ func (ulns unlockLNScreen) Init() tea.Cmd {
 			DialFunc:     ulns.cfg.dialFunc,
 			TorAddr:      ulns.cfg.ProxyAddr,
 			TorIsolation: ulns.cfg.TorIsolation,
+			SyncFreeList: ulns.cfg.SyncFreeList,
 		}
 
 		cmd := func() tea.Msg {

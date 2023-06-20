@@ -1209,10 +1209,20 @@ class LNInitDcrlnd {
   @JsonKey(toJson: uint8listToBase64, fromJson: base64ToUint8list)
   final Uint8List? multiChanBackup;
   final String proxyaddr;
-  final bool torisolation;
+  @JsonKey(name: "torisolation")
+  final bool torIsolation;
+  @JsonKey(name: "sync_free_list")
+  final bool syncFreeList;
 
-  LNInitDcrlnd(this.rootDir, this.network, this.password, this.existingSeed,
-      this.multiChanBackup, this.proxyaddr, this.torisolation);
+  LNInitDcrlnd(
+      this.rootDir,
+      this.network,
+      this.password,
+      this.existingSeed,
+      this.multiChanBackup,
+      this.proxyaddr,
+      this.torIsolation,
+      this.syncFreeList);
   Map<String, dynamic> toJson() => _$LNInitDcrlndToJson(this);
 }
 
@@ -2563,17 +2573,18 @@ abstract class PluginPlatform {
       List<String> existingSeed,
       Uint8List? multiChanBackup,
       String proxyaddr,
-      bool torisolation) async {
+      bool torIsolation,
+      bool syncFreeList) async {
     var req = LNInitDcrlnd(rootPath, network, password, existingSeed,
-        multiChanBackup, proxyaddr, torisolation);
+        multiChanBackup, proxyaddr, torIsolation, syncFreeList);
     var res = await asyncCall(CTLNInitDcrlnd, req);
     return LNNewWalletSeed.fromJson(res);
   }
 
   Future<String> lnRunDcrlnd(String rootPath, String network, String password,
-      String proxyaddr, bool torisolation) async {
-    var req = LNInitDcrlnd(
-        rootPath, network, password, [], null, proxyaddr, torisolation);
+      String proxyaddr, bool torIsolation, bool syncFreeList) async {
+    var req = LNInitDcrlnd(rootPath, network, password, [], null, proxyaddr,
+        torIsolation, syncFreeList);
     var res = await asyncCall(CTLNRunDcrlnd, req);
     return res;
   }

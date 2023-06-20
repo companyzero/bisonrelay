@@ -159,7 +159,7 @@ class _AppState extends State<App> with WindowListener {
           cfg.simpleStoreAccount,
           cfg.simpleStoreShipCharge,
           cfg.proxyaddr,
-          cfg.torisolation,
+          cfg.torIsolation,
           cfg.proxyUsername,
           cfg.proxyPassword,
           cfg.circuitLimit,
