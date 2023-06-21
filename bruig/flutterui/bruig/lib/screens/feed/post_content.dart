@@ -136,7 +136,6 @@ class _CommentWState extends State<_CommentW> {
 
     var mine = widget.comment.uid == widget.client.publicID;
     var kxing = widget.client.requestedMediateID(widget.comment.uid);
-    print(widget.comment.level);
     var unreadComment = widget.comment.unreadComment;
     var theme = Theme.of(context);
     var hightLightTextColor = theme.dividerColor;
@@ -703,6 +702,7 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
                                   alignment: Alignment.centerRight,
                                   child: Text(
                                       widget.args.post.summ.date
+                                          .toLocal()
                                           .toIso8601String(),
                                       style: TextStyle(
                                           fontSize: 9, color: darkTextColor))))

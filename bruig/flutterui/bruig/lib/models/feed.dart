@@ -142,7 +142,7 @@ class FeedPostModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  void addReceivedStatus(PostMetadataStatus ps, bool mine) async {
+  Future<void> addReceivedStatus(PostMetadataStatus ps, bool mine) async {
     if (ps.attributes[RMPSComment] == "") {
       // Not a comment. Nothing to do.
       return;
@@ -223,11 +223,12 @@ class FeedModel extends ChangeNotifier {
     // List existing posts before listening for new posts.
     var oldPosts = await Golib.listPosts();
     oldPosts.sort((PostSummary a, b) => b.date.compareTo(a.date));
-    oldPosts.forEach((p) {
+    for (var p in oldPosts) {
       var newPost = FeedPostModel(p);
-      newPost.readComments();
+      await newPost.readComments();
       _posts.add(newPost);
-    });
+    }
+    _posts.sort(sortFeedPosts);
     notifyListeners();
 
     var stream = Golib.postsFeed();
@@ -264,8 +265,9 @@ class FeedModel extends ChangeNotifier {
       if (postIdx > -1) {
         var post = _posts[postIdx];
         hasUnreadPostsComments = true;
-        post.addReceivedStatus(msg.status, true);
+        await post.addReceivedStatus(msg.status, true);
       }
+      _posts.sort(sortFeedPosts);
     }
     notifyListeners();
   }
@@ -280,6 +282,63 @@ class FeedModel extends ChangeNotifier {
     var idx =
         _posts.indexWhere((e) => e.summ.from == fromID && e.summ.id == pid);
     return idx == -1 ? null : _posts[idx];
+  }
+
+  // Sorting algo to attempt to organize posts
+
+  int sortFeedPosts(FeedPostModel a, FeedPostModel b) {
+    // First check if either is empty, if so prioritize the non-empty one.
+    if (b._comments.isEmpty) {
+      if (a._comments.isEmpty) {
+        // If both posts have no comments then just compare the post dates
+        return b.summ.date.toLocal().compareTo(a.summ.date.toLocal());
+      } else {
+        // If either post has no comments, but one does, compare the
+        // most recent comment (of the one that has comments), to the other's
+        // post date.
+        var aTimestamp = 0;
+        var aTimestampStr = a._comments[a._comments.length - 1].timestamp;
+        try {
+          if (aTimestampStr != "") {
+            aTimestamp = int.parse(aTimestampStr, radix: 16) * 1000;
+          }
+        } on FormatException {
+          print("sorting timestamp parse format exception: a:$aTimestampStr");
+        }
+        return b.summ.date
+            .toLocal()
+            .millisecondsSinceEpoch
+            .compareTo(aTimestamp);
+      }
+    } else if (a._comments.isEmpty) {
+      var bTimestamp = 0;
+      var bTimestampStr = b._comments[b._comments.length - 1].timestamp;
+      try {
+        if (bTimestampStr != "") {
+          bTimestamp = int.parse(bTimestampStr, radix: 16) * 1000;
+        }
+      } on FormatException {
+        print("sorting timestamp format exception: b:$bTimestampStr");
+      }
+      return bTimestamp.compareTo(a.summ.date.toLocal().millisecondsSinceEpoch);
+    }
+    // If both posts have comments just order them by most recent comments
+    var bTimestamp = 0;
+    var bTimestampStr = b._comments[b._comments.length - 1].timestamp;
+    var aTimestamp = 0;
+    var aTimestampStr = a._comments[a._comments.length - 1].timestamp;
+    try {
+      if (bTimestampStr != "") {
+        bTimestamp = int.parse(bTimestampStr, radix: 16) * 1000;
+      }
+      if (aTimestampStr != "") {
+        aTimestamp = int.parse(aTimestampStr, radix: 16) * 1000;
+      }
+    } on FormatException {
+      print(
+          "sorting timestamp format exception: a: $aTimestampStr and b: $bTimestampStr");
+    }
+    return bTimestamp.compareTo(aTimestamp);
   }
 
   FeedModel() {

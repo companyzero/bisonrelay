@@ -126,7 +126,8 @@ class _FeedPostWState extends State<FeedPostW> {
               Expanded(
                   child: Align(
                       alignment: Alignment.centerRight,
-                      child: Text(widget.post.summ.date.toIso8601String(),
+                      child: Text(
+                          widget.post.summ.date.toLocal().toIso8601String(),
                           style: TextStyle(fontSize: 9, color: darkTextColor))))
             ],
           ),
