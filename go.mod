@@ -25,7 +25,7 @@ require (
 	github.com/erikgeiser/promptkit v0.7.0
 	github.com/fsnotify/fsnotify v1.5.4
 	github.com/gorilla/websocket v1.5.0
-	github.com/jrick/flagfile v0.0.0-20200906235446-2904c79186c7
+	github.com/jrick/flagfile v1.0.0
 	github.com/jrick/logrotate v1.0.0
 	github.com/lib/pq v1.10.7
 	github.com/mattn/go-runewidth v0.0.14
