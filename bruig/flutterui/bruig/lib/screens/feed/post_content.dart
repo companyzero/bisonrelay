@@ -703,6 +703,7 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
                                   alignment: Alignment.centerRight,
                                   child: Text(
                                       widget.args.post.summ.date
+                                          .toLocal()
                                           .toIso8601String(),
                                       style: TextStyle(
                                           fontSize: 9, color: darkTextColor))))
