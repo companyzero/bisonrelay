@@ -44,6 +44,9 @@ root = {{ .Root }}
 # in the posts window.
 # externaleditorforcomments = false
 
+# Set whether to read chat logs to build chat history
+# noloadchathistory = false
+
 # logging and debug
 [log]
 
@@ -62,6 +65,9 @@ debuglevel = info
 
 # Whether to save command history to a file.
 savehistory = false
+
+# Whether to log pings.
+# pings = false
 
 # Valid ui colors: na, black, red, green, yellow, blue, magenta, cyan and white
 # Valid attributes are: none, underline and bold
@@ -161,22 +167,23 @@ minimumsendbalance = 0.01
 # "clientrpc": sends request events and waits for responses via clientrpc.
 # "http://...": sends request events and waits for the responses to an HTTP(S)
 #   server.
-# resourcesupstream = pages:/path/to/static/pages
-# resourcesupstream = smplestore:/path/to/simple/store
-# resourcesupstream = clientrpc
-# resourcesupstream = https://example.com
+# upstream = pages:/path/to/static/pages
+# upstream = smplestore:/path/to/simple/store
+# upstream = clientrpc
+# upstream = https://example.com
 
+[simplestore]
 # How to charge for purchases done in simplestore. Either empty (local user
 # will manually charge) or "onchain" (generates an on-chain address). Only used
 # if the upstream resource processor is of type "simplestore:".
-# simplestorepaytype =
+# paytype =
 
 # Which account to use when generating an onchain address for simplestore orders.
 # If empty, the default account is used.
-# simplestoreaccount =
+# account =
 
 # simplestoreshipcharge is a surcharge (in USD) added to simplestore orders to
 # cover shipping and handling.
-# simplestoreshipcharge = 0.0
+# shipcharge = 0.0
 `
 )

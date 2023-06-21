@@ -251,55 +251,68 @@ func loadConfig() (*config, error) {
 	fs = flag.NewFlagSet("Config Options", flag.ContinueOnError)
 	flagServerAddr := fs.String("server", "127.0.0.1:12345", "Address and port of the CR server")
 	flagRootDir := fs.String("root", defaultAppDir, "Root of all app data")
-	flagSaveHistory := fs.Bool("savehistory", false, "Whether to save history to a file")
-	flagMsgRoot := fs.String("msglog", defaultMsgRoot, "Root for message log files")
-	flagLogFile := fs.String("logfile", defaultLogFile, "Log file location")
-	flagMaxLogFiles := fs.Int("maxlogfiles", 0, "Max log files")
-	flagDebugLevel := fs.String("debuglevel", defaultDebugLevel, "Debug Level")
-	flagCompressLevel := fs.Int("compresslevel", defaultCompressLevel, "Compression level")
-	flagLNHost := fs.String("lnrpchost", "127.0.0.1:10009", "dcrlnd network address")
-	flagLNMacaroonPath := fs.String("lnmacaroonpath", "", "path do dcrlnd admin.macaroon")
-	flagLNTLSCert := fs.String("lntlscert", "~/.dcrlnd/tls.cert", "path to dcrlnd tls.cert")
-	flagLNDebugLevel := fs.String("lndebuglevel", "info", "LN log level")
-	flagLNMaxLogFiles := fs.Int("lnmaxlogfiles", 3, "LN Max Log Files")
-	flagLNRPCListen := fs.String("lnrpclisten", "", "list of addrs for the embedded ln to listen on")
-	flagNickColor := fs.String("nickcolor", "bold:white:na", "color of the nick")
-	flagGCOtherColor := fs.String("gcothercolor", "bold:green:na", "color of other nicks in gc")
-	flagPMOtherColor := fs.String("pmothercolor", "bold:cyan:na", "color of other nicks in pms")
-	flagWalletType := fs.String("wallettype", defaultWalletType, "Wallet type to use")
-	flagNetwork := fs.String("network", "mainnet", "Network to connect")
-	flagLogPings := fs.Bool("logpings", false, "Whether to log pings")
-	flagNoLoadChatHistory := fs.Bool("noloadchathistory", false, "Whether to read chat logs to build chat history")
-	flagMinWalletBal := fs.Float64("minimumwalletbalance", 1.0, "Minimum wallet balance before warn")
-	flagMinRecvBal := fs.Float64("minimumrecvbalance", 0.01, "Minimum receive balance before warn")
-	flagMinSendBal := fs.Float64("minimumsendbalance", 0.01, "Minimum send balance before warn")
 	flagWinPin := fs.String("winpin", "", "Comma delimited list of DM and GC windows to launch on start")
-	flagBlinkCursor := fs.Bool("blinkcursor", true, "Blink cursor")
-	flagBellCmd := fs.String("bellcmd", "", "Bell command on new msgs")
-	flagInviteFundsAccount := fs.String("invitefundsaccount", "", "")
-	flagJSONRPCListen := fs.String("jsonrpclisten", "", "Comma delimited list of JSON-RPC server binding addresses")
-	flagRPCCertPath := fs.String("rpccertpath", defaultRPCCertPath, "")
-	flagRPCKeyPath := fs.String("rpckeypath", defaultRPCKeyPath, "")
-	flagRPCClientCAPath := fs.String("rpcclientcapath", defaultRPCClientCA, "")
-	flagRPCIssueClientCert := fs.Bool("rpcissueclientcert", true, "")
-	flagResourcesUpstream := fs.String("resourcesupstream", "", "Upstream processor of resource requests")
-	flagSimpleStorePayType := fs.String("simplestorepaytype", "", "How to charge for paystore purchases")
-	flagSimpleStoreAccount := fs.String("simplestoreaccount", "", "Account to use for on-chain adresses")
-	flagSimpleStoreShipCharge := fs.Float64("simplestoreshipcharge", 0, "How much to charge for s&h")
-
+	flagCompressLevel := fs.Int("compresslevel", defaultCompressLevel, "Compression level")
 	flagProxyAddr := fs.String("proxyaddr", "", "")
 	flagProxyUser := fs.String("proxyuser", "", "")
 	flagProxyPass := fs.String("proxypass", "", "")
 	flagTorIsolation := fs.Bool("torisolation", false, "")
 	flagCircuitLimit := fs.Uint("circuitlimit", 32, "max number of open connections per proxy connection")
-
-	flagExternalEditorForComments := fs.Bool("externaleditorforcomments", false, "")
-
 	var mimetypes cfgStringArray
 	fs.Var(&mimetypes, "mimetype", "List of mimetypes with viewer")
 
+	flagBellCmd := fs.String("bellcmd", "", "Bell command on new msgs")
+	flagExternalEditorForComments := fs.Bool("externaleditorforcomments", false, "")
+	flagNoLoadChatHistory := fs.Bool("noloadchathistory", false, "Whether to read chat logs to build chat history")
+
+	// log
+	flagMsgRoot := fs.String("log.msglog", defaultMsgRoot, "Root for message log files")
+	flagLogFile := fs.String("log.logfile", defaultLogFile, "Log file location")
+	flagMaxLogFiles := fs.Int("log.maxlogfiles", 0, "Max log files")
+	flagDebugLevel := fs.String("log.debuglevel", defaultDebugLevel, "Debug Level")
+	flagSaveHistory := fs.Bool("log.savehistory", false, "Whether to save history to a file")
+	flagLogPings := fs.Bool("log.pings", false, "Whether to log pings")
+
+	// theme
+	flagNickColor := fs.String("theme.nickcolor", "bold:white:na", "color of the nick")
+	flagGCOtherColor := fs.String("theme.gcothercolor", "bold:green:na", "color of other nicks in gc")
+	flagPMOtherColor := fs.String("theme.pmothercolor", "bold:cyan:na", "color of other nicks in pms")
+	flagBlinkCursor := fs.Bool("theme.blinkcursor", true, "Blink cursor")
+
+	// payment
+	flagWalletType := fs.String("payment.wallettype", defaultWalletType, "Wallet type to use")
+	flagNetwork := fs.String("payment.network", "mainnet", "Network to connect")
+	flagLNHost := fs.String("payment.lnrpchost", "127.0.0.1:10009", "dcrlnd network address")
+	flagLNTLSCert := fs.String("payment.lntlscert", "~/.dcrlnd/tls.cert", "path to dcrlnd tls.cert")
+	flagLNMacaroonPath := fs.String("payment.lnmacaroonpath", "", "path do dcrlnd admin.macaroon")
+	flagLNDebugLevel := fs.String("payment.lndebuglevel", "info", "LN log level")
+	flagLNMaxLogFiles := fs.Int("payment.lnmaxlogfiles", 3, "LN Max Log Files")
+	flagMinWalletBal := fs.Float64("payment.minimumwalletbalance", 1.0, "Minimum wallet balance before warn")
+	flagMinRecvBal := fs.Float64("payment.minimumrecvbalance", 0.01, "Minimum receive balance before warn")
+	flagMinSendBal := fs.Float64("payment.minimumsendbalance", 0.01, "Minimum send balance before warn")
+	flagLNRPCListen := fs.String("payment.lnrpclisten", "", "list of addrs for the embedded ln to listen on")
+	flagInviteFundsAccount := fs.String("payment.invitefundsaccount", "", "")
+
+	// clientrpc
+	flagJSONRPCListen := fs.String("clientrpc.jsonrpclisten", "", "Comma delimited list of JSON-RPC server binding addresses")
+	flagRPCCertPath := fs.String("clientrpc.rpccertpath", defaultRPCCertPath, "")
+	flagRPCKeyPath := fs.String("clientrpc.rpckeypath", defaultRPCKeyPath, "")
+	flagRPCClientCAPath := fs.String("clientrpc.rpcclientcapath", defaultRPCClientCA, "")
+	flagRPCIssueClientCert := fs.Bool("clientrpc.rpcissueclientcert", true, "")
+
+	// resources
+	flagResourcesUpstream := fs.String("resources.upstream", "", "Upstream processor of resource requests")
+
+	// simplestore
+	flagSimpleStorePayType := fs.String("simplestore.paytype", "", "How to charge for paystore purchases")
+	flagSimpleStoreAccount := fs.String("simplestore.account", "", "Account to use for on-chain adresses")
+	flagSimpleStoreShipCharge := fs.Float64("simplestore.shipcharge", 0, "How much to charge for s&h")
+
 	// Load config from file.
-	if err := flagfile.Parse(f, fs); err != nil {
+	parser := flagfile.Parser{
+		ParseSections: true,
+	}
+	if err := parser.Parse(f, fs); err != nil {
 		return nil, err
 	}
 
