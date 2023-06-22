@@ -44,6 +44,8 @@ class _PostContentScreenForArgs extends StatefulWidget {
       _PostContentScreenForArgsState();
 }
 
+typedef ShowingReplyCB = Future<void> Function(String id);
+
 typedef SendReplyCB = Future<void> Function(
     FeedCommentModel comment, String reply);
 
@@ -52,7 +54,9 @@ class _CommentW extends StatefulWidget {
   final FeedCommentModel comment;
   final SendReplyCB sendReply;
   final ClientModel client;
-  const _CommentW(this.post, this.comment, this.sendReply, this.client,
+  final ShowingReplyCB showReply;
+  const _CommentW(
+      this.post, this.comment, this.sendReply, this.client, this.showReply,
       {Key? key})
       : super(key: key);
 
@@ -69,6 +73,7 @@ class _CommentWState extends State<_CommentW> {
     setState(() {
       _replying = v;
     });
+    widget.showReply(widget.comment.id);
   }
 
   bool sendingReply = false;
@@ -146,6 +151,8 @@ class _CommentWState extends State<_CommentW> {
         ThemeData.estimateBrightnessForColor(avatarColor) == Brightness.dark
             ? hightLightTextColor
             : darkTextColor;
+    var textColor = theme.focusColor;
+    var darkAddCommentColor = theme.hoverColor;
 
     return Container(
         decoration: BoxDecoration(
@@ -206,7 +213,7 @@ class _CommentWState extends State<_CommentW> {
                             ? Icons.reply
                             : Icons.hourglass_bottom))),
                 unreadComment
-                    ? Row(children: const [
+                    ? const Row(children: [
                         SizedBox(width: 10),
                         Icon(Icons.new_releases_outlined, color: Colors.amber),
                         SizedBox(width: 10),
@@ -239,11 +246,20 @@ class _CommentWState extends State<_CommentW> {
           replying && !sendingReply
               ? Column(
                   children: [
-                    TextField(
-                      keyboardType: TextInputType.multiline,
-                      maxLines: null,
-                      onChanged: (v) => reply = v,
-                    ),
+                    const SizedBox(height: 20),
+                    Container(
+                        padding: const EdgeInsets.all(10),
+                        color: darkAddCommentColor,
+                        child: TextField(
+                          minLines: 3,
+                          style: TextStyle(
+                              color: textColor,
+                              fontSize: 13,
+                              letterSpacing: 0.44),
+                          keyboardType: TextInputType.multiline,
+                          maxLines: null,
+                          onChanged: (v) => reply = v,
+                        )),
                     const SizedBox(height: 20),
                     Row(
                       children: [
@@ -275,6 +291,7 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
   bool knowsAuthor = false;
   bool isKXSearchingAuthor = false;
   bool sentSubscribeAttempt = false;
+  bool showingReply = false;
 
   void loadContent() async {
     setState(() {
@@ -327,6 +344,26 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
     });
   }
 
+  bool _replying = false;
+  bool get replying => _replying;
+  set replying(bool v) {
+    setState(() {
+      _replying = v;
+    });
+  }
+
+  void showReply() {
+    setState(() {
+      replying = true;
+    });
+  }
+
+  Future<void> showingReplyCB(String id) async {
+    setState(() {
+      replying = false;
+    });
+  }
+
   Future<void> sendReply(FeedCommentModel comment, String reply) async {
     widget.args.post.addNewComment(reply);
     await Golib.commentPost(widget.args.post.summ.from,
@@ -334,6 +371,7 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
   }
 
   Future<void> addComment() async {
+    replying = false;
     var newComment = newCommentCtrl.text;
     setState(() {
       newCommentCtrl.clear();
@@ -493,8 +531,62 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
           )),
         ]),
         const SizedBox(height: 20),
-        ...comments.map(
-            (e) => _CommentW(widget.args.post, e, sendReply, widget.client)),
+        !replying
+            ? Container(
+                margin: const EdgeInsets.only(left: 55),
+                child: Row(children: [
+                  ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                          textStyle: TextStyle(
+                              color: textColor, fontSize: 11, letterSpacing: 1),
+                          padding: const EdgeInsets.only(
+                              bottom: 4, top: 4, left: 8, right: 8)),
+                      onPressed: showReply,
+                      child: Text(
+                        "Add Comment",
+                        style: TextStyle(
+                            color: textColor, fontSize: 11, letterSpacing: 1),
+                      ))
+                ]))
+            : Container(
+                padding: const EdgeInsets.only(
+                    left: 13, right: 13, top: 11, bottom: 11),
+                margin: const EdgeInsets.only(
+                    left: 55, right: 108, top: 0, bottom: 0),
+                child: Column(children: [
+                  Container(
+                      padding: const EdgeInsets.all(10),
+                      color: darkAddCommentColor,
+                      child: TextField(
+                        minLines: 3,
+                        style: TextStyle(
+                            color: textColor,
+                            fontSize: 13,
+                            letterSpacing: 0.44),
+                        controller: newCommentCtrl,
+                        keyboardType: TextInputType.multiline,
+                        maxLines: null,
+                      )),
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      ElevatedButton(
+                          onPressed: addComment,
+                          child: const Text("Add Comment")),
+                      const SizedBox(width: 20),
+                      ElevatedButton(
+                        onPressed: () {
+                          replying = false;
+                        },
+                        style: ElevatedButton.styleFrom(
+                            backgroundColor: theme.errorColor),
+                        child: const Text("Cancel"),
+                      )
+                    ],
+                  )
+                ])),
+        ...comments.map((e) => _CommentW(
+            widget.args.post, e, sendReply, widget.client, showingReplyCB)),
         const SizedBox(height: 20),
         newComments.isNotEmpty
             ? Column(children: [
@@ -536,36 +628,6 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
               ])
             : const Empty(),
         const SizedBox(height: 20),
-        Container(
-            color: darkAddCommentColor,
-            padding:
-                const EdgeInsets.only(left: 13, right: 13, top: 11, bottom: 11),
-            margin:
-                const EdgeInsets.only(left: 114, right: 108, top: 0, bottom: 0),
-            child: TextField(
-              minLines: 3,
-              style: TextStyle(
-                  color: textColor, fontSize: 13, letterSpacing: 0.44),
-              controller: newCommentCtrl,
-              keyboardType: TextInputType.multiline,
-              maxLines: null,
-            )),
-        const SizedBox(height: 20),
-        Row(children: [
-          const SizedBox(width: 114),
-          ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                  textStyle: TextStyle(
-                      color: textColor, fontSize: 11, letterSpacing: 1),
-                  padding: const EdgeInsets.only(
-                      bottom: 4, top: 4, left: 8, right: 8)),
-              onPressed: addComment,
-              child: Text(
-                "Add Comment",
-                style:
-                    TextStyle(color: textColor, fontSize: 11, letterSpacing: 1),
-              ))
-        ]),
       ]);
     } else {
       commentsWidgets.addAll([
