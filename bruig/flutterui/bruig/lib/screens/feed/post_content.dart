@@ -698,7 +698,7 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
         child: Stack(alignment: Alignment.topLeft, children: [
           ListView(
               padding:
-                  const EdgeInsets.only(left: 0, right: 0, top: 44, bottom: 37),
+                  const EdgeInsets.only(left: 0, right: 0, top: 10, bottom: 37),
               children: [
                 Container(
                   // Post area
