@@ -845,6 +845,85 @@ func PaymentFeeLimit(amountMAtoms uint64) *lnrpc.FeeLimit {
 	return feeLimit
 }
 
+// TrackWalletCheckEvents tracks events of the lightnint wallet that are
+// relevant for wallet checks. Once an event is detected, the chan is written
+// to. The checks are tracked until the context is done.
+func TrackWalletCheckEvents(ctx context.Context, lnRPC lnrpc.LightningClient) (chan struct{}, error) {
+	chanEvents, err := lnRPC.SubscribeChannelEvents(ctx, &lnrpc.ChannelEventSubscription{})
+	if err != nil {
+		return nil, fmt.Errorf("Unable to track channel events: %v", err)
+	}
+
+	peerEvents, err := lnRPC.SubscribePeerEvents(ctx, &lnrpc.PeerEventSubscription{})
+	if err != nil {
+		return nil, fmt.Errorf("unable to track peer events: %v", err)
+	}
+
+	innerChan := make(chan struct{}, 10)
+
+	// Trach chan events.
+	go func() {
+		for {
+			event, err := chanEvents.Recv()
+			if err != nil {
+				return
+			}
+
+			switch event.Channel.(type) {
+			case *lnrpc.ChannelEventUpdate_OpenChannel,
+				*lnrpc.ChannelEventUpdate_ActiveChannel:
+
+				select {
+				case innerChan <- struct{}{}:
+				case <-ctx.Done():
+					return
+				}
+			}
+		}
+	}()
+
+	// Track peer events.
+	go func() {
+		for {
+			event, err := peerEvents.Recv()
+			if err != nil {
+				return
+			}
+
+			if event.Type == lnrpc.PeerEvent_PEER_ONLINE {
+				select {
+				case innerChan <- struct{}{}:
+				case <-ctx.Done():
+					return
+				}
+			}
+		}
+	}()
+
+	// Debounce inner chan.
+	resChan := make(chan struct{}, 10)
+	go func() {
+		var timerChan <-chan time.Time
+		for {
+			select {
+			case <-innerChan:
+				timerChan = time.After(time.Second)
+			case <-timerChan:
+				go func() {
+					select {
+					case resChan <- struct{}{}:
+					case <-ctx.Done():
+					}
+				}()
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+
+	return resChan, nil
+}
+
 func chanPointToStr(cp *lnrpc.ChannelPoint) string {
 	tx, err := dcrlnd.GetChanPointFundingTxid(cp)
 	if err != nil {

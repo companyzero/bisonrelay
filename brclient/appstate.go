@@ -3148,6 +3148,13 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		},
 
 		CheckServerSession: func(connCtx context.Context, lnNode string) (exitErr error) {
+			trackCtx, cancel := context.WithCancel(connCtx)
+			defer cancel()
+			trackLNEventsChan, err := client.TrackWalletCheckEvents(trackCtx, as.lnRPC)
+			if err != nil {
+				return err
+			}
+
 			as.connectedMtx.Lock()
 			as.connected = connStateCheckingWallet
 			as.connectedMtx.Unlock()
@@ -3234,6 +3241,8 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 					as.log.Warnf("Skipping next wallet check as requested")
 					as.diagMsg("Skipping next wallet check as requested")
 					return nil
+				case <-trackLNEventsChan:
+					// Force recheck.
 				case <-connCtx.Done():
 					exitErr = connCtx.Err()
 					return

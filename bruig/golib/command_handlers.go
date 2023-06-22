@@ -413,6 +413,14 @@ func handleInitClient(handle uint32, args initClient) error {
 			if lnpc == nil {
 				return fmt.Errorf("ln not initialized")
 			}
+
+			trackCtx, cancel := context.WithCancel(connCtx)
+			defer cancel()
+			trackLNEventsChan, err := client.TrackWalletCheckEvents(trackCtx, lnpc.LNRPC())
+			if err != nil {
+				return err
+			}
+
 			st := serverSessState{State: ConnStateCheckingWallet}
 			notify(NTServerSessChanged, st, nil)
 
@@ -449,6 +457,8 @@ func handleInitClient(handle uint32, args initClient) error {
 					// connection.
 					cctx.log.Infof("Skipping wallet check as requested")
 					return nil
+				case <-trackLNEventsChan:
+					// Force recheck.
 				case <-connCtx.Done():
 					return connCtx.Err()
 				case <-cctx.ctx.Done():
