@@ -543,8 +543,6 @@ class _ChatsRibbonListState extends State<_ChatsRibbonList> {
     }
 
     var theme = Theme.of(context);
-    var sidebarBackground = theme.backgroundColor;
-    var hoverColor = theme.hoverColor;
     var darkTextColor = theme.focusColor;
     var selectedBackgroundColor = theme.highlightColor;
 
