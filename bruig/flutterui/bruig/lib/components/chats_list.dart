@@ -96,7 +96,7 @@ class _ChatHeadingWState extends State<_ChatHeadingW> {
         chatNick: chat.nick,
         onTap: () {
           widget.makeActive(chat);
-          widget.showSubMenu(chat.id);
+          widget.showSubMenu(chat.isGC, chat.id);
         },
         avatarColor: avatarColor,
         avatarTextColor: avatarTextColor);
@@ -223,7 +223,7 @@ class _ChatHeadingRibbonWState extends State<_ChatHeadingRibbonW> {
         chatNick: chat.nick,
         onTap: () {
           widget.makeActive(chat);
-          widget.showSubMenu(chat.id);
+          widget.showSubMenu(chat.isGC, chat.id);
         },
         avatarColor: avatarColor,
         avatarTextColor: avatarTextColor);
@@ -345,8 +345,7 @@ class _ChatsListState extends State<_ChatsList> {
 
     makeActive(ChatModel? c) => {client.active = c};
 
-    showGCSubMenu(String id) => {client.showSubMenu(true, id)};
-    showUserSubMenu(String id) => {client.showSubMenu(false, id)};
+    showSubMenu(bool isGC, String id) => {client.showSubMenu(isGC, id)};
     return Column(children: [
       Container(
           height: 230,
@@ -373,7 +372,7 @@ class _ChatsListState extends State<_ChatsList> {
               child: ListView.builder(
                 itemCount: gcList.length,
                 itemBuilder: (context, index) => _ChatHeadingW(
-                    gcList[index], client, makeActive, showGCSubMenu, true),
+                    gcList[index], client, makeActive, showSubMenu, true),
               ),
             ),
             !client.showAddressBook
@@ -419,7 +418,7 @@ class _ChatsListState extends State<_ChatsList> {
                       chatList[index],
                       client,
                       makeActive,
-                      showUserSubMenu,
+                      showSubMenu,
                       false))),
           !client.showAddressBook
               ? Positioned(
@@ -554,8 +553,7 @@ class _ChatsRibbonListState extends State<_ChatsRibbonList> {
 
     makeActive(ChatModel? c) => {chats.active = c};
 
-    showGCSubMenu(String id) => {chats.showSubMenu(true, id)};
-    showUserSubMenu(String id) => {chats.showSubMenu(false, id)};
+    showSubMenu(bool isGC, String id) => {chats.showSubMenu(isGC, id)};
     return Expanded(
         child: Listener(
             onPointerSignal: (event) {
@@ -578,7 +576,7 @@ class _ChatsRibbonListState extends State<_ChatsRibbonList> {
                         height: 100,
                         width: 100,
                         child: _ChatHeadingRibbonW(gcList[index], chats,
-                            makeActive, showGCSubMenu, true)),
+                            makeActive, showSubMenu, true)),
                   ),
                   Material(
                       color: selectedBackgroundColor.withOpacity(0),
@@ -597,7 +595,7 @@ class _ChatsRibbonListState extends State<_ChatsRibbonList> {
                           height: 100,
                           width: 100,
                           child: _ChatHeadingRibbonW(chatList[index], chats,
-                              makeActive, showUserSubMenu, false))),
+                              makeActive, showSubMenu, false))),
                   Material(
                       color: selectedBackgroundColor.withOpacity(0),
                       child: IconButton(
