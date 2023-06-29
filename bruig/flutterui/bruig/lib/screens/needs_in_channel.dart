@@ -236,26 +236,22 @@ cNPr8Y+sSs2MHf6xMNBQzV4KuIlPIg==
                 ),
                 const SizedBox(height: 34),
                 Center(
+                    child: SizedBox(
+                  width: 650,
                   child: Text('''
-                The wallet requires LN channels with inbound capacity to receive funds
-                to be able to receive payments from other users.
+The wallet requires LN channels with inbound capacity to receive funds to be able to receive payments from other users.
 
-                One way of opening a channel with inbound capacity is to pay for a node to open
-                a channel back to your LN wallet. This is done through a "Liquidity Provider"
-                service.
+One way of opening a channel with inbound capacity is to pay for a node to open a channel back to your LN wallet. This is done through a "Liquidity Provider" service.
 
-                Note that having a channel with inbound capacity is not for sending or receiving
-                messages. It is only required in order to receive payments from other users.
+Note that having a channel with inbound capacity is not for sending or receiving messages. It is only required in order to receive payments from other users.
 
-                After the channel is opened, it may take up to 6 confirmations for it to be broadcast
-                through the network. Individual peers may take longer to detect and to consider
-                the channel to send payments.
+After the channel is opened, it may take up to 6 confirmations for it to be broadcast through the network. Individual peers may take longer to detect and to consider the channel to send payments.
                 ''',
                       style: TextStyle(
                           color: secondaryTextColor,
                           fontSize: 13,
                           fontWeight: FontWeight.w300)),
-                ),
+                )),
                 const SizedBox(height: 21),
                 Container(
                     margin:

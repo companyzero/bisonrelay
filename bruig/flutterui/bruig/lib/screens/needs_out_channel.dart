@@ -228,22 +228,21 @@ open channels to other LN nodes.''';
                 ),
                 const SizedBox(height: 34),
                 Center(
-                  child: Text(
-                    '''
-                      The wallet requires LN channels with outbound capacity to send funds ("bandwidth")
-                      in order to pay for messages to and from the server and to pay other users for
-                      their content.
+                  child: SizedBox(
+                      width: 650,
+                      child: Text(
+                        '''
+The wallet requires LN channels with outbound capacity to send funds ("bandwidth") in order to pay for messages to and from the server and to pay other users for their content.
 
-                      Open a channel to an existing LN node, by entering its details below.
+Open a channel to an existing LN node, by entering its details below.
 
-                      Note that Lightning Network channels require managing off-chain data, and as such
-                      the wallet seed is NOT sufficient to restore their state.
+Note that Lightning Network channels require managing off-chain data, and as such the wallet seed is NOT sufficient to restore their state.
                       ''',
-                    style: TextStyle(
-                        color: secondaryTextColor,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w300),
-                  ),
+                        style: TextStyle(
+                            color: secondaryTextColor,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w300),
+                      )),
                 ),
                 const SizedBox(height: 21),
                 Container(
