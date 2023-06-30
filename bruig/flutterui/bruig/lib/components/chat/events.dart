@@ -172,7 +172,7 @@ class _ReceivedSentPMState extends State<ReceivedSentPM> {
                             bgColor: selectedBackgroundColor,
                             chatNick: widget.nick,
                             onTap: () {
-                              widget.showSubMenu(widget.id);
+                              widget.showSubMenu(widget.isGC, widget.id);
                             },
                             avatarColor: avatarColor,
                             avatarTextColor: avatarTextColor,
@@ -974,8 +974,7 @@ class Event extends StatelessWidget {
       {Key? key})
       : super(key: key);
 
-  showSubMenu(String id) =>
-      chat.isGC ? client.showSubMenu(true, id) : client.showSubMenu(false, id);
+  showSubMenu(bool isGC, String id) => client.showSubMenu(isGC, id);
 
   @override
   Widget build(BuildContext context) {

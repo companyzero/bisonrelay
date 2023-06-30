@@ -17,10 +17,8 @@ class _ChatHeadingW extends StatefulWidget {
   final ClientModel client;
   final MakeActiveCB makeActive;
   final ShowSubMenuCB showSubMenu;
-  final bool isGc;
 
-  const _ChatHeadingW(
-      this.chat, this.client, this.makeActive, this.showSubMenu, this.isGc,
+  const _ChatHeadingW(this.chat, this.client, this.makeActive, this.showSubMenu,
       {Key? key})
       : super(key: key);
 
@@ -31,7 +29,6 @@ class _ChatHeadingW extends StatefulWidget {
 class _ChatHeadingWState extends State<_ChatHeadingW> {
   ChatModel get chat => widget.chat;
   ClientModel get client => widget.client;
-  bool get isGc => widget.isGc;
 
   void chatUpdated() => setState(() {});
 
@@ -96,7 +93,7 @@ class _ChatHeadingWState extends State<_ChatHeadingW> {
         chatNick: chat.nick,
         onTap: () {
           widget.makeActive(chat);
-          widget.showSubMenu(chat.id);
+          widget.showSubMenu(chat.isGC, chat.id);
         },
         avatarColor: avatarColor,
         avatarTextColor: avatarTextColor);
@@ -106,7 +103,7 @@ class _ChatHeadingWState extends State<_ChatHeadingW> {
         color: chat.active ? selectedBackgroundColor : null,
         borderRadius: BorderRadius.circular(3),
       ),
-      child: isGc
+      child: chat.isGC
           ? GcContexMenu(
               client: client,
               targetGcChat: chat,
@@ -223,7 +220,7 @@ class _ChatHeadingRibbonWState extends State<_ChatHeadingRibbonW> {
         chatNick: chat.nick,
         onTap: () {
           widget.makeActive(chat);
-          widget.showSubMenu(chat.id);
+          widget.showSubMenu(chat.isGC, chat.id);
         },
         avatarColor: avatarColor,
         avatarTextColor: avatarTextColor);
@@ -293,6 +290,10 @@ class _ChatsListState extends State<_ChatsList> {
   ClientModel get client => widget.client;
   FocusNode get inputFocusNode => widget.inputFocusNode;
   Timer? _debounce;
+  bool expandRooms = true;
+  bool expandUsers = true;
+  bool showAddressbookRoomsButton = false;
+  bool showAddressbookUsersButton = false;
 
   void clientUpdated() => setState(() {});
 
@@ -325,6 +326,10 @@ class _ChatsListState extends State<_ChatsList> {
 
   @override
   Widget build(BuildContext context) {
+    void createGC() async {
+      Navigator.of(context, rootNavigator: true).pushNamed('/newGC');
+    }
+
     void showAddressBook() async {
       client.showAddressBookScreen();
     }
@@ -345,148 +350,195 @@ class _ChatsListState extends State<_ChatsList> {
 
     makeActive(ChatModel? c) => {client.active = c};
 
-    showGCSubMenu(String id) => {client.showSubMenu(true, id)};
-    showUserSubMenu(String id) => {client.showSubMenu(false, id)};
-    return Column(children: [
-      Container(
-          height: 230,
-          margin: const EdgeInsets.all(1),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(3),
-            gradient: LinearGradient(
-                begin: Alignment.centerRight,
-                end: Alignment.centerLeft,
-                colors: [
-                  hoverColor,
-                  sidebarBackground,
-                  sidebarBackground,
-                ],
-                stops: const [
-                  0,
-                  0.51,
-                  1
+    showSubMenu(bool isGC, String id) => {client.showSubMenu(isGC, id)};
+    return Container(
+      margin: const EdgeInsets.all(1),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(3),
+        gradient: LinearGradient(
+            begin: Alignment.centerRight,
+            end: Alignment.centerLeft,
+            colors: [
+              hoverColor,
+              sidebarBackground,
+              sidebarBackground,
+            ],
+            stops: const [
+              0,
+              0.51,
+              1
+            ]),
+      ),
+      child: Stack(children: [
+        Container(
+            margin: const EdgeInsets.only(bottom: 50),
+            child: ListView(children: [
+              Column(children: [
+                Row(children: [
+                  Expanded(
+                      child: TextButton(
+                    onPressed: () => setState(() {
+                      expandRooms = !expandRooms;
+                    }),
+                    onHover: (show) => setState(() {
+                      showAddressbookRoomsButton = show;
+                    }),
+                    child: Row(children: [
+                      RichText(
+                          text: TextSpan(children: [
+                        WidgetSpan(
+                            alignment: PlaceholderAlignment.middle,
+                            child: Icon(
+                                color: darkTextColor,
+                                size: 15,
+                                expandRooms
+                                    ? Icons.arrow_drop_down_sharp
+                                    : Icons.arrow_drop_up_sharp)),
+                        TextSpan(
+                            text: "  Rooms",
+                            style: TextStyle(
+                                color: darkTextColor,
+                                fontSize: 15,
+                                fontWeight: FontWeight.w200)),
+                      ])),
+                    ]),
+                  )),
+                  showAddressbookRoomsButton
+                      ? TextButton(
+                          onPressed: () => createGC(),
+                          onHover: (show) => setState(() {
+                                showAddressbookRoomsButton = show;
+                              }),
+                          child: Tooltip(
+                              message: 'Create a new group chat',
+                              child: Icon(
+                                  color: darkTextColor,
+                                  size: 15,
+                                  Icons.more_vert)))
+                      : const SizedBox(height: 20, width: 15)
                 ]),
-          ),
-          child: Stack(children: [
-            Container(
-              padding: const EdgeInsets.only(bottom: 40),
-              child: ListView.builder(
-                itemCount: gcList.length,
-                itemBuilder: (context, index) => _ChatHeadingW(
-                    gcList[index], client, makeActive, showGCSubMenu, true),
-              ),
-            ),
-            !client.showAddressBook
-                ? Positioned(
-                    bottom: 5,
-                    right: 5,
-                    child: Material(
-                        color: selectedBackgroundColor.withOpacity(0),
-                        child: IconButton(
-                            splashRadius: 15,
-                            iconSize: 15,
-                            hoverColor: selectedBackgroundColor,
-                            tooltip: "Address Book",
-                            onPressed: () => showAddressBook(),
-                            icon: Icon(color: darkTextColor, Icons.add))))
-                : const Empty()
-          ])),
-      Expanded(
-          child: Container(
-        margin: const EdgeInsets.all(1),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(3),
-          gradient: LinearGradient(
-              begin: Alignment.centerRight,
-              end: Alignment.centerLeft,
-              colors: [
-                hoverColor,
-                sidebarBackground,
-                sidebarBackground,
-              ],
-              stops: const [
-                0,
-                0.51,
-                1
+                expandRooms
+                    ? ListView.builder(
+                        scrollDirection: Axis.vertical,
+                        shrinkWrap: true,
+                        itemCount: gcList.length,
+                        itemBuilder: (context, index) => _ChatHeadingW(
+                            gcList[index], client, makeActive, showSubMenu))
+                    : const Empty()
               ]),
-        ),
-        child: Stack(children: [
-          Container(
-              padding: const EdgeInsets.only(bottom: 40),
-              child: ListView.builder(
-                  itemCount: chatList.length,
-                  itemBuilder: (context, index) => _ChatHeadingW(
-                      chatList[index],
-                      client,
-                      makeActive,
-                      showUserSubMenu,
-                      false))),
-          !client.showAddressBook
-              ? Positioned(
-                  bottom: 5,
-                  right: 5,
-                  child: Material(
-                      color: selectedBackgroundColor.withOpacity(0),
-                      child: IconButton(
-                          hoverColor: selectedBackgroundColor,
-                          splashRadius: 15,
-                          iconSize: 15,
-                          tooltip: "Address Book",
+              Column(children: [
+                Row(children: [
+                  Expanded(
+                      child: TextButton(
+                    onPressed: () => setState(() {
+                      expandUsers = !expandUsers;
+                    }),
+                    onHover: (show) => setState(() {
+                      showAddressbookUsersButton = show;
+                    }),
+                    child: Row(children: [
+                      RichText(
+                          text: TextSpan(children: [
+                        WidgetSpan(
+                            alignment: PlaceholderAlignment.middle,
+                            child: Icon(
+                                color: darkTextColor,
+                                size: 15,
+                                expandUsers
+                                    ? Icons.arrow_drop_down_sharp
+                                    : Icons.arrow_drop_up_sharp)),
+                        TextSpan(
+                            text: "  Users",
+                            style: TextStyle(
+                                color: darkTextColor,
+                                fontSize: 15,
+                                fontWeight: FontWeight.w200)),
+                      ])),
+                    ]),
+                  )),
+                  showAddressbookUsersButton
+                      ? TextButton(
                           onPressed: () => showAddressBook(),
-                          icon:
-                              Icon(size: 15, color: darkTextColor, Icons.add))))
-              : const Empty(),
-          Positioned(
-              bottom: 5,
-              right: 25,
-              child: Material(
-                  color: selectedBackgroundColor.withOpacity(0),
-                  child: IconButton(
-                      hoverColor: selectedBackgroundColor,
-                      splashRadius: 15,
-                      iconSize: 15,
-                      tooltip: client.isOnline
-                          ? "Fetch invite using key"
-                          : "Cannot fetch invite while client is offline",
-                      onPressed:
-                          client.isOnline ? () => fetchInvite(context) : null,
-                      icon: Icon(
-                          size: 15,
-                          color: darkTextColor,
-                          Icons.get_app_sharp)))),
-          Positioned(
-              bottom: 5,
-              left: 30,
-              child: Material(
-                  color: selectedBackgroundColor.withOpacity(0),
-                  child: IconButton(
-                      hoverColor: selectedBackgroundColor,
-                      splashRadius: 15,
-                      iconSize: 15,
-                      tooltip: "List last received message time",
-                      onPressed: () => gotoContactsLastMsgTimeScreen(context),
-                      icon: Icon(
-                          size: 15,
-                          color: darkTextColor,
-                          Icons.list_rounded)))),
-          Positioned(
-              bottom: 5,
-              left: 5,
-              child: Material(
-                  color: selectedBackgroundColor.withOpacity(0),
-                  child: IconButton(
-                      hoverColor: selectedBackgroundColor,
-                      splashRadius: 15,
-                      iconSize: 15,
-                      tooltip: client.isOnline
-                          ? "Generate Invite"
-                          : "Cannot generate invite while offline",
-                      onPressed: client.isOnline ? genInvite : null,
-                      icon:
-                          Icon(size: 15, color: darkTextColor, Icons.people))))
-        ]),
-      ))
-    ]);
+                          onHover: (show) => setState(() {
+                                showAddressbookUsersButton = show;
+                              }),
+                          child: Tooltip(
+                              message: 'Start a new chat',
+                              child: Icon(
+                                  color: darkTextColor,
+                                  size: 15,
+                                  Icons.more_vert)))
+                      : const SizedBox(height: 20, width: 15)
+                ]),
+                expandUsers
+                    ? ListView.builder(
+                        scrollDirection: Axis.vertical,
+                        shrinkWrap: true,
+                        itemCount: chatList.length,
+                        itemBuilder: (context, index) => _ChatHeadingW(
+                            chatList[index], client, makeActive, showSubMenu))
+                    : const Empty()
+              ]),
+            ])),
+        !client.showAddressBook
+            ? Positioned(
+                bottom: 5,
+                right: 5,
+                child: Material(
+                    color: selectedBackgroundColor.withOpacity(0),
+                    child: IconButton(
+                        hoverColor: selectedBackgroundColor,
+                        splashRadius: 15,
+                        iconSize: 15,
+                        tooltip: "Address Book",
+                        onPressed: () => showAddressBook(),
+                        icon: Icon(size: 15, color: darkTextColor, Icons.add))))
+            : const Empty(),
+        Positioned(
+            bottom: 5,
+            right: 25,
+            child: Material(
+                color: selectedBackgroundColor.withOpacity(0),
+                child: IconButton(
+                    hoverColor: selectedBackgroundColor,
+                    splashRadius: 15,
+                    iconSize: 15,
+                    tooltip: client.isOnline
+                        ? "Fetch invite using key"
+                        : "Cannot fetch invite while client is offline",
+                    onPressed:
+                        client.isOnline ? () => fetchInvite(context) : null,
+                    icon: Icon(
+                        size: 15, color: darkTextColor, Icons.get_app_sharp)))),
+        Positioned(
+            bottom: 5,
+            left: 30,
+            child: Material(
+                color: selectedBackgroundColor.withOpacity(0),
+                child: IconButton(
+                    hoverColor: selectedBackgroundColor,
+                    splashRadius: 15,
+                    iconSize: 15,
+                    tooltip: "List last received message time",
+                    onPressed: () => gotoContactsLastMsgTimeScreen(context),
+                    icon: Icon(
+                        size: 15, color: darkTextColor, Icons.list_rounded)))),
+        Positioned(
+            bottom: 5,
+            left: 5,
+            child: Material(
+                color: selectedBackgroundColor.withOpacity(0),
+                child: IconButton(
+                    hoverColor: selectedBackgroundColor,
+                    splashRadius: 15,
+                    iconSize: 15,
+                    tooltip: client.isOnline
+                        ? "Generate Invite"
+                        : "Cannot generate invite while offline",
+                    onPressed: client.isOnline ? genInvite : null,
+                    icon: Icon(size: 15, color: darkTextColor, Icons.people))))
+      ]),
+    );
   }
 }
 
@@ -544,8 +596,6 @@ class _ChatsRibbonListState extends State<_ChatsRibbonList> {
     }
 
     var theme = Theme.of(context);
-    var sidebarBackground = theme.backgroundColor;
-    var hoverColor = theme.hoverColor;
     var darkTextColor = theme.focusColor;
     var selectedBackgroundColor = theme.highlightColor;
 
@@ -554,8 +604,7 @@ class _ChatsRibbonListState extends State<_ChatsRibbonList> {
 
     makeActive(ChatModel? c) => {chats.active = c};
 
-    showGCSubMenu(String id) => {chats.showSubMenu(true, id)};
-    showUserSubMenu(String id) => {chats.showSubMenu(false, id)};
+    showSubMenu(bool isGC, String id) => {chats.showSubMenu(isGC, id)};
     return Expanded(
         child: Listener(
             onPointerSignal: (event) {
@@ -578,7 +627,7 @@ class _ChatsRibbonListState extends State<_ChatsRibbonList> {
                         height: 100,
                         width: 100,
                         child: _ChatHeadingRibbonW(gcList[index], chats,
-                            makeActive, showGCSubMenu, true)),
+                            makeActive, showSubMenu, true)),
                   ),
                   Material(
                       color: selectedBackgroundColor.withOpacity(0),
@@ -597,7 +646,7 @@ class _ChatsRibbonListState extends State<_ChatsRibbonList> {
                           height: 100,
                           width: 100,
                           child: _ChatHeadingRibbonW(chatList[index], chats,
-                              makeActive, showUserSubMenu, false))),
+                              makeActive, showSubMenu, false))),
                   Material(
                       color: selectedBackgroundColor.withOpacity(0),
                       child: IconButton(

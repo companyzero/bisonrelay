@@ -46,7 +46,7 @@ class _SubItem extends StatelessWidget {
       color: index.isEven ? highlightColor : backgroundColor,
       margin: isScreenSmall
           ? const EdgeInsets.only(left: 10, right: 10, top: 8)
-          : const EdgeInsets.only(left: 117, right: 108, top: 8),
+          : const EdgeInsets.only(left: 50, right: 50, top: 8),
       padding: const EdgeInsets.only(top: 4, bottom: 4, left: 8, right: 8),
       child: Row(
         children: [
