@@ -86,7 +86,14 @@ class _FeedPostWState extends State<FeedPostW> {
         ThemeData.estimateBrightnessForColor(avatarColor) == Brightness.dark
             ? hightLightTextColor
             : darkTextColor;
-
+    var markdownData = widget.post.summ.title;
+    if (widget.post.summ.title.contains("--embed[type=")) {
+      // This will pluck the first embed in a post.  Then we can display just
+      // that in feedposts without the rest of the post content.
+      var firstIndex = widget.post.content.indexOf("--");
+      var nextIndex = widget.post.content.indexOf("--", firstIndex + 1);
+      markdownData = widget.post.content.substring(firstIndex, nextIndex + 2);
+    }
     return Container(
       //height: 100,
       width: 470,
@@ -141,7 +148,7 @@ class _FeedPostWState extends State<FeedPostW> {
                     child: Provider<DownloadSource>(
                         create: (context) =>
                             DownloadSource(widget.post.summ.authorID),
-                        child: MarkdownArea(widget.post.summ.title, false))))
+                        child: MarkdownArea(markdownData, false))))
           ]),
           const SizedBox(height: 5),
           Row(children: [
