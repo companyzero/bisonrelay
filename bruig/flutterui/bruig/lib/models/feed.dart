@@ -267,6 +267,7 @@ class FeedModel extends ChangeNotifier {
       var newPost = FeedPostModel(p);
       await newPost.readComments();
       newPost.lastStatusTS = newPost.summ.lastStatusTS;
+      await newPost.readPost();
       _posts.add(newPost);
     }
     _posts.sort(sortFeedPosts);
@@ -279,6 +280,7 @@ class FeedModel extends ChangeNotifier {
       newPost.hasUnreadPost = true;
       hasUnreadPostsComments = true;
       newPost.lastStatusTS = newPost.summ.lastStatusTS;
+      await newPost.readPost();
       _posts.insert(0, newPost);
 
       // Handle posts that replace a previously relayed post: the client removes
