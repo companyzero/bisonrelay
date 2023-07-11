@@ -2538,6 +2538,24 @@ var pagesCommands = []tuicmd{
 
 var commands = []tuicmd{
 	{
+		cmd:           "backup",
+		usableOffline: true,
+		descr:         "Create a backup of brclient",
+		usage:         "<backup-directory>",
+		handler: func(args []string, as *appState) error {
+			if len(args) < 1 {
+				return usageError{msg: "backup directory cannot be empty"}
+			}
+			destPath := filepath.Clean(args[0])
+
+			backupFile, err := as.c.Backup(as.ctx, as.rootDir, destPath)
+			if err != nil {
+				return err
+			}
+			as.log.Infof("Successfully backed up to %v", backupFile)
+			return nil
+		},
+	}, {
 		cmd:           "online",
 		usableOffline: true,
 		descr:         "Attempt to connect and remain connected to the server",

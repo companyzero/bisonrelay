@@ -873,6 +873,17 @@ func (c *Client) maybeResetAllKXAfterConn(expDays int) {
 		"local client", len(res))
 }
 
+// Backup
+func (c *Client) Backup(_ context.Context, rootDir, destPath string) (string, error) {
+	var backupFile string
+	err := c.dbView(func(tx clientdb.ReadTx) error {
+		var err error
+		backupFile, err = c.db.Backup(tx, rootDir, destPath)
+		return err
+	})
+	return backupFile, err
+}
+
 // Run runs all client goroutines until the given context is canceled.
 //
 // Must only be called once.

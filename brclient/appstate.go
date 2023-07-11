@@ -89,6 +89,7 @@ type appState struct {
 	cancel      func()
 	wg          sync.WaitGroup
 	c           *client.Client
+	rootDir     string
 	sendMsg     func(tea.Msg)
 	logBknd     *logBackend
 	log         slog.Logger
@@ -3642,6 +3643,7 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		ctx:         ctx,
 		cancel:      cancel,
 		c:           c,
+		rootDir:     args.Root,
 		sendMsg:     sendMsg,
 		logBknd:     logBknd,
 		log:         logBknd.logger("ZTUI"),
