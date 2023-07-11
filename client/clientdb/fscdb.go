@@ -1,17 +1,21 @@
 package clientdb
 
 import (
+	"archive/tar"
 	"bufio"
 	"bytes"
+	"compress/gzip"
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/companyzero/bisonrelay/inidb"
@@ -678,4 +682,83 @@ func (db *DB) ReplaceLastConnDate(tx ReadWriteTx, date time.Time) (time.Time, er
 
 	err = db.saveJsonFile(fname, date)
 	return oldDate, err
+}
+
+// Backup
+func (db *DB) Backup(_ ReadTx, rootDir, destPath string) (string, error) {
+	f, err := os.CreateTemp(destPath, "brclient-backup")
+	if err != nil {
+		return "", err
+	}
+
+	rootDir = filepath.Clean(rootDir)
+	lnWalletDir := filepath.Join(rootDir, "ln-wallet")
+	channelBackup := filepath.Join(lnWalletDir, "channels.backup")
+	appLogDir := filepath.Join(rootDir, "applogs")
+	logDir := filepath.Join(rootDir, "logs")
+
+	gz := gzip.NewWriter(f)
+	tw := tar.NewWriter(gz)
+	err = filepath.Walk(rootDir, func(filePath string, info os.FileInfo, err error) error {
+		// Skip applogs and logs directories.
+		if strings.HasPrefix(filePath, appLogDir) ||
+			strings.HasPrefix(filePath, logDir) {
+			return nil
+		}
+		if strings.HasPrefix(filePath, lnWalletDir) {
+			// skip all files in ln-wallet except the directory itself
+			// and the channel backup file.
+			if filePath != lnWalletDir && filePath != channelBackup {
+				return nil
+			}
+		}
+		hdr, err := tar.FileInfoHeader(info, filePath)
+		if err != nil {
+			return err
+		}
+		hdr.Name = filepath.ToSlash(filePath)
+
+		if err := tw.WriteHeader(hdr); err != nil {
+			return fmt.Errorf("%v - %v", filePath, err)
+		}
+		if info.IsDir() {
+			return nil
+		}
+
+		fd, err := os.Open(filePath)
+		if err != nil {
+			return err
+		}
+		if _, err := io.Copy(tw, fd); err != nil {
+			fd.Close()
+			return err
+		}
+		return fd.Close()
+	})
+	if err != nil {
+		tw.Close()
+		gz.Close()
+		f.Close()
+		os.Remove(f.Name())
+		return "", err
+	}
+	if err = tw.Close(); err != nil {
+		gz.Close()
+		f.Close()
+		os.Remove(f.Name())
+		return "", err
+	}
+	if err = gz.Close(); err != nil {
+		f.Close()
+		os.Remove(f.Name())
+		return "", err
+	}
+	if f.Close(); err != nil {
+		os.Remove(f.Name())
+		return "", err
+	}
+
+	fileName := fmt.Sprintf("bisonrelay-%v.tar.gz", time.Now().Unix())
+	destPath = filepath.Join(destPath, fileName)
+	return destPath, os.Rename(f.Name(), destPath)
 }
