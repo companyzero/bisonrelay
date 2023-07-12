@@ -154,6 +154,16 @@ class FeedPostModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  FeedCommentModel? _findParent(String id, List<FeedCommentModel> comments) {
+    var idx = _comments.where((e) => e.id == id);
+    if (idx.isNotEmpty) {
+      return idx.first;
+    }
+    for (FeedCommentModel el in comments) {
+      return _findParent(id, el.children);
+    }
+  }
+
   Future<void> addReceivedStatus(PostMetadataStatus ps, bool mine) async {
     if (ps.attributes[RMPSComment] == "") {
       // Not a comment. Nothing to do.
@@ -163,8 +173,20 @@ class FeedPostModel extends ChangeNotifier {
 
     // Figure out where to insert the comment or add a new top-level comment.
     var c = await _statusToComment(ps);
-    var idx = _comments.indexWhere((e) => e.id == c.parentID);
     c.unreadComment = true;
+    if (c.parentID == "") {
+      _comments.add(c);
+    }
+    var parent = _findParent(c.parentID, _comments);
+    if (parent != null) {
+      c.level = parent.level + 1;
+      parent._children.add(c);
+    } else {
+      _comments.add(c);
+    }
+    /*
+    var idx = _comments.indexWhere((e) => e.id == c.parentID);
+
     if (idx < 0) {
       _comments.add(c);
     } else {
@@ -180,6 +202,7 @@ class FeedPostModel extends ChangeNotifier {
       }
       _comments.insert(insertIdx, c);
     }
+    */
 
     // Drop from list of unreplicated comments if this status update is mine.
     if (mine) {
