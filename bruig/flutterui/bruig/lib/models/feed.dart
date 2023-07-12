@@ -26,6 +26,10 @@ class FeedCommentModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  List<FeedCommentModel> _children = [];
+  UnmodifiableListView<FeedCommentModel> get children =>
+      UnmodifiableListView(_children);
+
   final String comment;
   final String uid;
   final String parentID;
@@ -129,14 +133,30 @@ class FeedPostModel extends ChangeNotifier {
     var stack = roots;
     for (stack = roots.reversed.toList(); stack.isNotEmpty;) {
       var el = stack.removeLast();
-      sorted.add(el);
+      if (el.level == 0) sorted.add(el);
       var cs = children[el.id];
       if (cs == null) {
         continue;
       }
+      el._children.addAll(cs);
+
       stack.addAll(cs.reversed);
     }
-
+    for (int i = 0; i < sorted.length; i++) {
+      var el = sorted[i];
+      print(
+          "${el.id} ${el.comment.substring(0, el.comment.length > 9 ? 10 : el.comment.length)} ${el.nick} ${el.level} ${el.parentID}");
+      for (int j = 0; j < el.children.length; j++) {
+        var subEl = el.children[j];
+        print(
+            "${subEl.id} ${subEl.comment.substring(0, subEl.comment.length > 9 ? 10 : subEl.comment.length)} ${subEl.nick} ${subEl.level} ${subEl.parentID}");
+        for (int k = 0; k < subEl.children.length; k++) {
+          var subSubEl = subEl.children[k];
+          print(
+              "${subSubEl.id} ${subSubEl.comment.substring(0, subSubEl.comment.length > 9 ? 10 : subSubEl.comment.length)} ${subSubEl.nick} ${subSubEl.level} ${subSubEl.parentID}");
+        }
+      }
+    }
     _comments = sorted;
     notifyListeners();
   }

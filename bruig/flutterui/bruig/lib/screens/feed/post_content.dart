@@ -497,6 +497,23 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
       }
     }
 
+    Widget _renderComments(List<FeedCommentModel> comments) {
+      return ExpansionPanelList.radio(
+        children: comments.map<ExpansionPanelRadio>((FeedCommentModel comment) {
+          return ExpansionPanelRadio(
+              headerBuilder: (BuildContext context, bool isExpanded) {
+                return ListTile(
+                  title: Text(comment.nick),
+                );
+              },
+              body: ListTile(
+                  title: Text(comment.comment),
+                  subtitle: _renderComments(comment.children)),
+              value: comment.id);
+        }).toList(),
+      );
+    }
+
     var avatarColor = colorFromNick(authorNick);
     var darkTextColor = theme.indicatorColor;
     var avatarTextColor =
@@ -585,8 +602,10 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
                     ],
                   )
                 ])),
+        Container(child: _renderComments(comments.toList())),
+        /*
         ...comments.map((e) => _CommentW(
-            widget.args.post, e, sendReply, widget.client, showingReplyCB)),
+            widget.args.post, e, sendReply, widget.client, showingReplyCB)),*/
         const SizedBox(height: 20),
         newComments.isNotEmpty
             ? Column(children: [
