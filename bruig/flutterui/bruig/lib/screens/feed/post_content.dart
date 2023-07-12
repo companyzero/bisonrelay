@@ -77,6 +77,7 @@ class _CommentWState extends State<_CommentW> {
   }
 
   bool sendingReply = false;
+  bool showChildren = true;
 
   void sendReply() async {
     replying = false;
@@ -90,6 +91,12 @@ class _CommentWState extends State<_CommentW> {
         sendingReply = false;
       });
     }
+  }
+
+  void toggleChildren() async {
+    setState(() {
+      showChildren = !showChildren;
+    });
   }
 
   void requestMediateID() {
@@ -153,133 +160,163 @@ class _CommentWState extends State<_CommentW> {
             : darkTextColor;
     var textColor = theme.focusColor;
     var darkAddCommentColor = theme.hoverColor;
+    var selectedBackgroundColor = theme.highlightColor;
 
-    return Container(
-        decoration: BoxDecoration(
-            border: Border(
-                left: widget.comment.level != 0
-                    ? BorderSide(width: 2.0, color: commentBorderColor)
-                    : BorderSide.none)),
-        margin: EdgeInsets.only(
-            top: 5,
-            left:
-                widget.comment.level != 0 ? 50 + widget.comment.level * 25 : 50,
-            right: 50),
-        padding: const EdgeInsets.all(10),
-        child: Column(children: [
-          Row(
-            children: [
-              Container(
-                width: 28,
-                margin:
-                    const EdgeInsets.only(top: 0, bottom: 0, left: 5, right: 0),
-                child: UserContextMenu(
-                  client: widget.client,
-                  targetUserChat: chat,
-                  targetUserId: widget.comment.uid,
-                  disabled: mine,
-                  postFrom: widget.post.summ.from,
-                  child: CircleAvatar(
-                      backgroundColor: avatarColor,
-                      child: Text(nick[0].toUpperCase(),
-                          style:
-                              TextStyle(color: avatarTextColor, fontSize: 20))),
-                ),
-              ),
-              const SizedBox(width: 6),
-              Row(children: [
-                Text(nick,
-                    style: TextStyle(color: hightLightTextColor, fontSize: 11)),
-                const SizedBox(width: 8),
-                !mine && !hasChat && !kxing
-                    ? SizedBox(
-                        width: 20,
-                        child: IconButton(
-                            padding: const EdgeInsets.all(0),
-                            iconSize: 15,
-                            tooltip:
-                                "Attempt to KX with the author of this comment",
-                            onPressed: requestMediateID,
-                            icon: const Icon(Icons.connect_without_contact)))
-                    : const Text(""),
-                SizedBox(
+    return Column(children: [
+      Row(
+        children: [
+          SizedBox(width: widget.comment.level == 0 ? 30 : 0),
+          Container(
+            width: 28,
+            margin: const EdgeInsets.only(top: 0, bottom: 0, left: 5),
+            child: UserContextMenu(
+              client: widget.client,
+              targetUserChat: chat,
+              targetUserId: widget.comment.uid,
+              disabled: mine,
+              postFrom: widget.post.summ.from,
+              child: CircleAvatar(
+                  backgroundColor: avatarColor,
+                  child: Text(nick[0].toUpperCase(),
+                      style: TextStyle(color: avatarTextColor, fontSize: 20))),
+            ),
+          ),
+          const SizedBox(width: 6),
+          Row(children: [
+            Text(nick,
+                style: TextStyle(color: hightLightTextColor, fontSize: 11)),
+            const SizedBox(width: 8),
+            !mine && !hasChat && !kxing
+                ? SizedBox(
                     width: 20,
                     child: IconButton(
                         padding: const EdgeInsets.all(0),
                         iconSize: 15,
-                        tooltip: "Reply to this comment",
-                        onPressed: !sendingReply ? () => replying = true : null,
-                        icon: Icon(!sendingReply
-                            ? Icons.reply
-                            : Icons.hourglass_bottom))),
-                unreadComment
-                    ? const Row(children: [
-                        SizedBox(width: 10),
-                        Icon(Icons.new_releases_outlined, color: Colors.amber),
-                        SizedBox(width: 10),
-                        Text("New Comment",
-                            style: TextStyle(
-                              fontStyle: FontStyle.italic,
-                              fontSize: 12,
-                              color: Colors.amber,
-                            ))
-                      ])
-                    : const Empty(),
-              ]),
-              strTimestamp != ""
-                  ? Expanded(
-                      child: Align(
-                          alignment: Alignment.centerRight,
-                          child: Text(strTimestamp,
-                              style: TextStyle(
-                                  fontSize: 9, color: darkTextColor))))
-                  : const Empty()
-            ],
-          ),
-          Row(
-            children: [
-              Expanded(
-                child: MarkdownArea(widget.comment.comment, false),
+                        tooltip:
+                            "Attempt to KX with the author of this comment",
+                        onPressed: requestMediateID,
+                        icon: const Icon(Icons.connect_without_contact)))
+                : const Text(""),
+            SizedBox(
+                width: 20,
+                child: IconButton(
+                    padding: const EdgeInsets.all(0),
+                    iconSize: 15,
+                    tooltip: "Reply to this comment",
+                    onPressed: !sendingReply ? () => replying = true : null,
+                    icon: Icon(
+                        !sendingReply ? Icons.reply : Icons.hourglass_bottom))),
+            unreadComment
+                ? const Row(children: [
+                    SizedBox(width: 10),
+                    Icon(Icons.new_releases_outlined, color: Colors.amber),
+                    SizedBox(width: 10),
+                    Text("New Comment",
+                        style: TextStyle(
+                          fontStyle: FontStyle.italic,
+                          fontSize: 12,
+                          color: Colors.amber,
+                        ))
+                  ])
+                : const Empty()
+          ]),
+          strTimestamp != ""
+              ? Expanded(
+                  child: Align(
+                      alignment: Alignment.centerRight,
+                      child: Text(strTimestamp,
+                          style: TextStyle(fontSize: 9, color: darkTextColor))))
+              : const Empty(),
+          const SizedBox(width: 10)
+        ],
+      ),
+      Stack(children: [
+        Container(
+            decoration: BoxDecoration(
+                border: Border(
+                    left: BorderSide(width: 2.0, color: commentBorderColor))),
+            margin: EdgeInsets.only(
+                top: 0, left: widget.comment.level == 0 ? 48 : 18, bottom: 20),
+            padding: const EdgeInsets.only(top: 10, bottom: 10, left: 10),
+            child: Column(children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: MarkdownArea(widget.comment.comment, false),
+                  ),
+                ],
               ),
-            ],
-          ),
-          replying && !sendingReply
-              ? Column(
-                  children: [
-                    const SizedBox(height: 20),
-                    Container(
-                        padding: const EdgeInsets.all(10),
-                        color: darkAddCommentColor,
-                        child: TextField(
-                          minLines: 3,
-                          style: TextStyle(
-                              color: textColor,
-                              fontSize: 13,
-                              letterSpacing: 0.44),
-                          keyboardType: TextInputType.multiline,
-                          maxLines: null,
-                          onChanged: (v) => reply = v,
-                        )),
-                    const SizedBox(height: 20),
-                    Row(
+              replying && !sendingReply
+                  ? Column(
                       children: [
-                        ElevatedButton(
-                            onPressed: sendReply, child: const Text("Reply")),
-                        const SizedBox(width: 20),
-                        ElevatedButton(
-                          onPressed: () {
-                            replying = false;
-                          },
-                          style: ElevatedButton.styleFrom(
-                              backgroundColor: theme.errorColor),
-                          child: const Text("Cancel"),
+                        const SizedBox(height: 20),
+                        Container(
+                            padding: const EdgeInsets.all(10),
+                            color: darkAddCommentColor,
+                            child: TextField(
+                              minLines: 3,
+                              style: TextStyle(
+                                  color: textColor,
+                                  fontSize: 13,
+                                  letterSpacing: 0.44),
+                              keyboardType: TextInputType.multiline,
+                              maxLines: null,
+                              onChanged: (v) => reply = v,
+                            )),
+                        const SizedBox(height: 20),
+                        Row(
+                          children: [
+                            ElevatedButton(
+                                onPressed: sendReply,
+                                child: const Text("Reply")),
+                            const SizedBox(width: 20),
+                            ElevatedButton(
+                              onPressed: () {
+                                replying = false;
+                              },
+                              style: ElevatedButton.styleFrom(
+                                  backgroundColor: theme.errorColor),
+                              child: const Text("Cancel"),
+                            )
+                          ],
                         )
                       ],
                     )
-                  ],
-                )
-              : const Text(""),
-        ]));
+                  : const Text(""),
+            ])),
+        widget.comment.children.isNotEmpty
+            ? Positioned(
+                left: widget.comment.level == 0 ? 29 : -1,
+                bottom: -10,
+                child: Material(
+                    color: textColor.withOpacity(0),
+                    child: IconButton(
+                        splashRadius: 9,
+                        iconSize: 22,
+                        hoverColor: selectedBackgroundColor,
+                        onPressed: () => toggleChildren(),
+                        icon: Icon(
+                            color: darkTextColor,
+                            showChildren
+                                ? Icons.do_disturb_on_outlined
+                                : Icons.add_circle_outline))))
+            : const Empty(),
+      ]),
+      showChildren && widget.comment.children.isNotEmpty
+          ? Container(
+              decoration: BoxDecoration(
+                  border: Border(
+                      left: BorderSide(width: 2.0, color: commentBorderColor))),
+              margin: EdgeInsets.only(
+                  top: 0, left: widget.comment.level == 0 ? 48 : 18),
+              padding: const EdgeInsets.only(top: 10, bottom: 10, left: 10),
+              child: Column(children: [
+                ...widget.comment.children.map((e) => _CommentW(widget.post, e,
+                    widget.sendReply, widget.client, widget.showReply))
+              ]),
+            )
+          : const Empty(),
+    ]);
   }
 }
 
@@ -602,10 +639,8 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
                     ],
                   )
                 ])),
-        Container(child: _renderComments(comments.toList())),
-        /*
         ...comments.map((e) => _CommentW(
-            widget.args.post, e, sendReply, widget.client, showingReplyCB)),*/
+            widget.args.post, e, sendReply, widget.client, showingReplyCB)),
         const SizedBox(height: 20),
         newComments.isNotEmpty
             ? Column(children: [

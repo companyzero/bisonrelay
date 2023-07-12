@@ -142,21 +142,6 @@ class FeedPostModel extends ChangeNotifier {
 
       stack.addAll(cs.reversed);
     }
-    for (int i = 0; i < sorted.length; i++) {
-      var el = sorted[i];
-      print(
-          "${el.id} ${el.comment.substring(0, el.comment.length > 9 ? 10 : el.comment.length)} ${el.nick} ${el.level} ${el.parentID}");
-      for (int j = 0; j < el.children.length; j++) {
-        var subEl = el.children[j];
-        print(
-            "${subEl.id} ${subEl.comment.substring(0, subEl.comment.length > 9 ? 10 : subEl.comment.length)} ${subEl.nick} ${subEl.level} ${subEl.parentID}");
-        for (int k = 0; k < subEl.children.length; k++) {
-          var subSubEl = subEl.children[k];
-          print(
-              "${subSubEl.id} ${subSubEl.comment.substring(0, subSubEl.comment.length > 9 ? 10 : subSubEl.comment.length)} ${subSubEl.nick} ${subSubEl.level} ${subSubEl.parentID}");
-        }
-      }
-    }
     _comments = sorted;
     notifyListeners();
   }
