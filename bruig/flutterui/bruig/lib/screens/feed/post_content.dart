@@ -163,6 +163,7 @@ class _CommentWState extends State<_CommentW> {
     var selectedBackgroundColor = theme.highlightColor;
 
     return Column(children: [
+      const SizedBox(height: 10),
       Row(
         children: [
           SizedBox(width: widget.comment.level == 0 ? 30 : 0),

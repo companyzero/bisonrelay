@@ -155,13 +155,17 @@ class FeedPostModel extends ChangeNotifier {
   }
 
   FeedCommentModel? _findParent(String id, List<FeedCommentModel> comments) {
-    var idx = _comments.where((e) => e.id == id);
+    var idx = comments.where((e) => e.id == id);
     if (idx.isNotEmpty) {
       return idx.first;
     }
     for (FeedCommentModel el in comments) {
-      return _findParent(id, el.children);
+      var parent = _findParent(id, el.children);
+      if (parent != null) {
+        return parent;
+      }
     }
+    return null;
   }
 
   Future<void> addReceivedStatus(PostMetadataStatus ps, bool mine) async {
@@ -176,13 +180,14 @@ class FeedPostModel extends ChangeNotifier {
     c.unreadComment = true;
     if (c.parentID == "") {
       _comments.add(c);
-    }
-    var parent = _findParent(c.parentID, _comments);
-    if (parent != null) {
-      c.level = parent.level + 1;
-      parent._children.add(c);
     } else {
-      _comments.add(c);
+      var parent = _findParent(c.parentID, _comments);
+      if (parent != null) {
+        c.level = parent.level + 1;
+        parent._children.add(c);
+      } else {
+        _comments.add(c);
+      }
     }
     /*
     var idx = _comments.indexWhere((e) => e.id == c.parentID);
