@@ -56,8 +56,9 @@ class _OverviewScreenTitleState extends State<_OverviewScreenTitle> {
 
 class PageTabs {
   final int tabIndex;
+  final List<PostListItem> userPostList;
 
-  PageTabs(this.tabIndex);
+  PageTabs(this.tabIndex, this.userPostList);
 }
 
 class OverviewScreen extends StatefulWidget {
@@ -106,14 +107,15 @@ class _OverviewScreenState extends State<OverviewScreen> {
 
   void goToSubMenuPage(String route, int pageTab) {
     navKey.currentState!
-        .pushReplacementNamed(route, arguments: PageTabs(pageTab));
+        .pushReplacementNamed(route, arguments: PageTabs(pageTab, []));
     Timer(const Duration(milliseconds: 1),
         () async => widget.mainMenu.activePageTab = pageTab);
     Navigator.pop(context);
   }
 
   void goToNewPost() {
-    navKey.currentState!.pushReplacementNamed('/feed', arguments: PageTabs(3));
+    navKey.currentState!
+        .pushReplacementNamed('/feed', arguments: PageTabs(3, []));
   }
 
   void goToAbout() {

@@ -12,10 +12,12 @@ import 'package:golib_plugin/golib_plugin.dart';
 import 'package:provider/provider.dart';
 import 'package:bruig/components/chat/active_chat.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
+
 import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/util.dart';
 import 'package:bruig/components/user_context_menu.dart';
 import 'package:bruig/components/interactive_avatar.dart';
+import 'package:bruig/screens/overview.dart';
 
 class ChatsScreenTitle extends StatelessWidget {
   const ChatsScreenTitle({super.key});
@@ -275,6 +277,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
   ServerSessionState connState = ServerSessionState.empty();
   FocusNode inputFocusNode = FocusNode();
   bool hasLNBalance = false;
+  List<PostListItem> userPostList = [];
   Timer? checkLNTimer;
 
   // check if ln wallet has balance. busywait, needs to be changed into a ntf.
@@ -304,6 +307,16 @@ class _ChatsScreenState extends State<ChatsScreen> {
   }
 
   void clientChanged() {
+    var newUserPostList = client.userPostList;
+    if (newUserPostList != userPostList) {
+      if (newUserPostList.isNotEmpty) {
+        Navigator.of(context, rootNavigator: true).pushReplacementNamed('/feed',
+            arguments: PageTabs(4, newUserPostList));
+      }
+      setState(() {
+        userPostList = newUserPostList;
+      });
+    }
     var newConnState = client.connState;
     if (newConnState.state != connState.state ||
         newConnState.checkWalletErr != connState.checkWalletErr) {
@@ -348,7 +361,6 @@ class _ChatsScreenState extends State<ChatsScreen> {
     }
     var theme = Theme.of(context);
     var backgroundColor = theme.backgroundColor;
-
     if (client.userChats.isEmpty &&
         client.hiddenUsers.isEmpty &&
         !client.loadingAddressBook) {

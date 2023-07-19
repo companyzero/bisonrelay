@@ -1,8 +1,10 @@
 import 'dart:async';
 
 import 'package:bruig/models/client.dart';
+import 'package:bruig/screens/feed/user_posts.dart';
 import 'package:bruig/screens/overview.dart';
 import 'package:flutter/material.dart';
+import 'package:golib_plugin/definitions.dart';
 import 'package:provider/provider.dart';
 import 'package:bruig/models/feed.dart';
 import 'package:bruig/screens/feed/feed_posts.dart';
@@ -44,6 +46,7 @@ class FeedScreen extends StatefulWidget {
 }
 
 class _FeedScreenState extends State<FeedScreen> {
+  List<PostListItem> userPostList = [];
   int tabIndex = 0;
   PostContentScreenArgs? showPost;
   GlobalKey<NavigatorState> navKey = GlobalKey(debugLabel: "overview nav key");
@@ -75,6 +78,10 @@ class _FeedScreenState extends State<FeedScreen> {
       case 3:
         return Consumer<FeedModel>(
             builder: (context, feed, child) => NewPostScreen(feed));
+      case 4:
+        return Consumer<ClientModel>(
+            builder: (context, client, child) =>
+                UserPosts(userPostList, client, onItemChanged));
     }
     return Text("Active is $tabIndex");
   }
@@ -106,6 +113,7 @@ class _FeedScreenState extends State<FeedScreen> {
     if (ModalRoute.of(context)!.settings.arguments != null) {
       final args = ModalRoute.of(context)!.settings.arguments as PageTabs;
       tabIndex = args.tabIndex;
+      userPostList = args.userPostList;
     }
 
     return Row(children: [

@@ -405,6 +405,22 @@ class ClientModel extends ChangeNotifier {
     showAddressBook = false;
   }
 
+  String _userPostListID = "";
+  String get userPostListID => _userPostListID;
+  set userPostListID(String b) {
+    _userPostListID = b;
+    notifyListeners();
+  }
+
+  List<PostListItem> _userPostList = [];
+  UnmodifiableListView<PostListItem> get userPostList =>
+      UnmodifiableListView(_userPostList);
+
+  set userPostList(List<PostListItem> us) {
+    _userPostList = us;
+    notifyListeners();
+  }
+
   void startChat(ChatModel chat, bool alreadyOpened) {
     if (!alreadyOpened) {
       if (chat.isGC) {
@@ -766,6 +782,19 @@ class ClientModel extends ChangeNotifier {
   void _handleChatMsgs() async {
     var stream = Golib.chatEvents();
     await for (var evnt in stream) {
+      if (evnt is UserPostList) {
+        if (evnt.posts.isNotEmpty) {
+          userPostList = evnt.posts;
+          notifyListeners();
+        }
+        continue;
+      }
+      if (evnt is FeedPostEvent) {
+        if (evnt.sid == publicID) {
+          // Ignore own relays.
+          continue;
+        }
+      }
       if (evnt is FeedPostEvent) {
         if (evnt.sid == publicID) {
           // Ignore own relays.

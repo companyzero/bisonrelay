@@ -197,10 +197,12 @@ List<ChatMenuItem> buildUserChatMenu(ChatModel chat) {
     }
   }
 
-  void listUserPosts(BuildContext context, ChatModel chat) async {
+  void listUserPosts(
+      BuildContext context, ClientModel client, ChatModel chat) async {
     var event = SynthChatEvent("Listing user posts", SCE_sending);
     try {
       chat.append(ChatEventModel(event, null));
+      client.userPostListID = chat.id;
       await Golib.listUserPosts(chat.id);
       event.state = SCE_sent;
     } catch (exception) {
@@ -268,7 +270,7 @@ List<ChatMenuItem> buildUserChatMenu(ChatModel chat) {
     ),
     ChatMenuItem(
       "List Posts",
-      (context, chats) => listUserPosts(context, chats.active!),
+      (context, chats) => listUserPosts(context, chats, chats.active!),
     ),
     ChatMenuItem(
       "Send File",

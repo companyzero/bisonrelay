@@ -1009,11 +1009,11 @@ class Event extends StatelessWidget {
     if (event.event is GCInvitation) {
       return JoinGCEventW(event, event.event as GCInvitation);
     }
-
+/*
     if (event.event is UserPostList) {
       return PostsListW(chat, event.event as UserPostList, scrollToBottom);
     }
-
+*/
     if (event.event is UserContentList) {
       return UserContentEventW(event.event as UserContentList, chat);
     }
