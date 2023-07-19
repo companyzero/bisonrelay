@@ -264,12 +264,17 @@ List<ChatMenuItem> buildUserChatMenu(ChatModel chat) {
       "Show Content",
       (context, chats) => listUserContent(context, chats.active!),
     ),
+    chat.isSubscribed
+        ? ChatMenuItem(
+            "Unsubscribe to Posts",
+            (context, chats) => chats.active!.unsubscribeToPosts(),
+          )
+        : ChatMenuItem(
+            "Subscribe to Posts",
+            (context, chats) => chats.active!.subscribeToPosts(),
+          ),
     ChatMenuItem(
-      "Subscribe to Posts",
-      (context, chats) => chats.active!.subscribeToPosts(),
-    ),
-    ChatMenuItem(
-      "List Posts",
+      chat.isSubscribed ? "List Posts" : "",
       (context, chats) => listUserPosts(context, chats, chats.active!),
     ),
     ChatMenuItem(

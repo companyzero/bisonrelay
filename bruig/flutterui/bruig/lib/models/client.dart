@@ -93,6 +93,13 @@ class ChatModel extends ChangeNotifier {
   final String id; // RemoteUID or GC ID
   final bool isGC;
 
+  bool _isSubscribed = false;
+  bool get isSubscribed => _isSubscribed;
+  void set isSubscribed(bool b) {
+    _isSubscribed = b;
+    //notifyListeners();
+  }
+
   String _nick; // Nick or GC name
   String get nick => _nick;
   void set nick(String nn) {
@@ -489,6 +496,11 @@ class ClientModel extends ChangeNotifier {
   UnmodifiableListView<ChatMenuItem> get activeSubMenu =>
       UnmodifiableListView(_activeSubMenu);
 
+  void updateUserMenu(String id, List<ChatMenuItem> menu) {
+    _subUserMenus[id] = menu;
+    //notifyListeners();
+  }
+
   void set activeSubMenu(List<ChatMenuItem> sm) {
     _activeSubMenu = sm;
     notifyListeners();
@@ -570,6 +582,14 @@ class ClientModel extends ChangeNotifier {
     }
   }
 
+  Future<void> handleSubscriptions() async {
+    var newSubscriptions = await Golib.listSubscriptions();
+    for (var subscription in newSubscriptions) {
+      var chat = getExistingChat(subscription);
+      chat?.isSubscribed = true;
+    }
+  }
+
   Future<void> newSentMsg(ChatModel? chat) async {
     if (chat != null) {
       if (chat.isGC) {
@@ -611,6 +631,10 @@ class ClientModel extends ChangeNotifier {
 
     alias = alias == "" ? "[blank]" : alias;
     c = ChatModel(id, alias, isGC);
+    if (!isGC) {
+      var subscriptions = await Golib.listSubscriptions();
+      c.isSubscribed = subscriptions.contains(id);
+    }
     _activeChats[id] = c;
 
     // Start with 500 messages and first page (0). We can load more with a scrolling

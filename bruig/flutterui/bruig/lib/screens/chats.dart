@@ -310,7 +310,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
     var newUserPostList = client.userPostList;
     if (newUserPostList != userPostList) {
       if (newUserPostList.isNotEmpty) {
-        Navigator.of(context, rootNavigator: true).pushReplacementNamed('/feed',
+        Navigator.of(context).pushReplacementNamed('/feed',
             arguments: PageTabs(4, newUserPostList));
       }
       setState(() {
