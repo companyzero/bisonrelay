@@ -79,9 +79,9 @@ class _FeedScreenState extends State<FeedScreen> {
         return Consumer<FeedModel>(
             builder: (context, feed, child) => NewPostScreen(feed));
       case 4:
-        return Consumer<ClientModel>(
-            builder: (context, client, child) =>
-                UserPosts(userPostList, client, onItemChanged));
+        return Consumer2<FeedModel, ClientModel>(
+            builder: (context, feed, client, child) =>
+                UserPosts(userPostList, feed, client, onItemChanged));
     }
     return Text("Active is $tabIndex");
   }

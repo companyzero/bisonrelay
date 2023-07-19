@@ -1,10 +1,9 @@
 import 'package:bruig/models/client.dart';
 import 'package:bruig/models/feed.dart';
-import 'package:bruig/screens/feed/post_content.dart';
+import 'package:bruig/screens/feed/feed_posts.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:bruig/components/md_elements.dart';
-import 'package:bruig/components/empty_widget.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:bruig/components/user_context_menu.dart';
@@ -148,7 +147,7 @@ class _UserPostWState extends State<UserPostW> {
                                   const BorderRadius.all(Radius.circular(3)),
                               side: BorderSide(color: borderDividerColor))),
                       onPressed: () => showContent(context),
-                      child: const Text("Read More"),
+                      child: const Text("Download"),
                     )))
           ]),
         ],
@@ -158,11 +157,12 @@ class _UserPostWState extends State<UserPostW> {
 }
 
 class UserPosts extends StatefulWidget {
-  //final FeedModel feed;
   final List<PostListItem> posts;
+  final FeedModel feed;
   final ClientModel client;
   final Function tabChange;
-  const UserPosts(this.posts, this.client, this.tabChange, {Key? key})
+  const UserPosts(this.posts, this.feed, this.client, this.tabChange,
+      {Key? key})
       : super(key: key);
 
   @override
@@ -170,6 +170,15 @@ class UserPosts extends StatefulWidget {
 }
 
 class _UserPostsState extends State<UserPosts> {
+  FeedModel get feed => widget.feed;
+  ClientModel get client => widget.client;
+
+  @override
+  initState() {
+    super.initState();
+    widget.feed.addListener(feedChanged);
+  }
+
   void feedChanged() async {
     setState(() {});
   }
@@ -177,10 +186,13 @@ class _UserPostsState extends State<UserPosts> {
   @override
   void didUpdateWidget(UserPosts oldWidget) {
     super.didUpdateWidget(oldWidget);
+    oldWidget.feed.removeListener(feedChanged);
+    widget.feed.addListener(feedChanged);
   }
 
   @override
   void dispose() {
+    widget.feed.removeListener(feedChanged);
     super.dispose();
   }
 
@@ -189,8 +201,25 @@ class _UserPostsState extends State<UserPosts> {
     bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
     var theme = Theme.of(context);
     var backgroundColor = theme.backgroundColor;
-    var posts = widget.posts;
     var authorID = widget.client.userPostListID;
+    var alreadyReceivedUserPosts =
+        widget.feed.posts.where((post) => (post.summ.authorID == authorID));
+    var posts = widget.posts.where((post) => false);
+    List<PostListItem> notReceived = [];
+
+    for (var post in posts) {
+      var found = false;
+      for (var alreadyReceivedPost in alreadyReceivedUserPosts) {
+        if (post.id == alreadyReceivedPost.summ.id) {
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        notReceived.add(post);
+      }
+    }
+
     return Container(
       margin: const EdgeInsets.all(1),
       decoration: BoxDecoration(
@@ -198,13 +227,28 @@ class _UserPostsState extends State<UserPosts> {
       padding: isScreenSmall
           ? const EdgeInsets.only(left: 10, right: 10, top: 10, bottom: 10)
           : const EdgeInsets.only(left: 50, right: 50, top: 10, bottom: 10),
-      child: ListView.builder(
-          itemCount: posts.length,
-          itemBuilder: (context, index) {
-            var post = posts.elementAt(index);
-            var author = widget.client.getExistingChat(authorID);
-            return UserPostW(post, author, widget.client, widget.tabChange);
-          }),
+      child: Column(children: [
+        Expanded(
+            child: ListView.builder(
+                itemCount: notReceived.length,
+                itemBuilder: (context, index) {
+                  var post = notReceived.elementAt(index);
+                  var author = widget.client.getExistingChat(authorID);
+                  return UserPostW(
+                      post, author, widget.client, widget.tabChange);
+                })),
+        Expanded(
+            child: ListView.builder(
+                itemCount: posts.length,
+                itemBuilder: (context, index) {
+                  var post = alreadyReceivedUserPosts.elementAt(index);
+                  var author =
+                      widget.client.getExistingChat(post.summ.authorID);
+                  var from = widget.client.getExistingChat(post.summ.from);
+                  return FeedPostW(widget.feed, post, author, from,
+                      widget.client, widget.tabChange);
+                }))
+      ]),
     );
   }
 }
