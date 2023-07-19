@@ -26,6 +26,10 @@ class FeedCommentModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  List<FeedCommentModel> _children = [];
+  UnmodifiableListView<FeedCommentModel> get children =>
+      UnmodifiableListView(_children);
+
   final String comment;
   final String uid;
   final String parentID;
@@ -129,14 +133,15 @@ class FeedPostModel extends ChangeNotifier {
     var stack = roots;
     for (stack = roots.reversed.toList(); stack.isNotEmpty;) {
       var el = stack.removeLast();
-      sorted.add(el);
+      if (el.level == 0) sorted.add(el);
       var cs = children[el.id];
       if (cs == null) {
         continue;
       }
+      el._children.addAll(cs);
+
       stack.addAll(cs.reversed);
     }
-
     _comments = sorted;
     notifyListeners();
   }
@@ -149,6 +154,20 @@ class FeedPostModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  FeedCommentModel? _findParent(String id, List<FeedCommentModel> comments) {
+    var idx = comments.where((e) => e.id == id);
+    if (idx.isNotEmpty) {
+      return idx.first;
+    }
+    for (FeedCommentModel el in comments) {
+      var parent = _findParent(id, el.children);
+      if (parent != null) {
+        return parent;
+      }
+    }
+    return null;
+  }
+
   Future<void> addReceivedStatus(PostMetadataStatus ps, bool mine) async {
     if (ps.attributes[RMPSComment] == "") {
       // Not a comment. Nothing to do.
@@ -158,8 +177,21 @@ class FeedPostModel extends ChangeNotifier {
 
     // Figure out where to insert the comment or add a new top-level comment.
     var c = await _statusToComment(ps);
-    var idx = _comments.indexWhere((e) => e.id == c.parentID);
     c.unreadComment = true;
+    if (c.parentID == "") {
+      _comments.add(c);
+    } else {
+      var parent = _findParent(c.parentID, _comments);
+      if (parent != null) {
+        c.level = parent.level + 1;
+        parent._children.add(c);
+      } else {
+        _comments.add(c);
+      }
+    }
+    /*
+    var idx = _comments.indexWhere((e) => e.id == c.parentID);
+
     if (idx < 0) {
       _comments.add(c);
     } else {
@@ -175,6 +207,7 @@ class FeedPostModel extends ChangeNotifier {
       }
       _comments.insert(insertIdx, c);
     }
+    */
 
     // Drop from list of unreplicated comments if this status update is mine.
     if (mine) {
