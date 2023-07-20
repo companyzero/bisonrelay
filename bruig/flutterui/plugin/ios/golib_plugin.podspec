@@ -16,6 +16,7 @@ A flutter plugin that links to the ios Bison Relay golib.
   s.source_files = 'Classes/**/*'
   s.dependency 'Flutter'
   s.platform = :ios, '8.0'
+  s.libraries = 'resolv.9'
 
   s.ios.vendored_frameworks = 'Frameworks/Golib.xcframework'
 
