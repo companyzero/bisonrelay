@@ -71,6 +71,11 @@ client is fully setup. Further information about a command be obtained by typing
 Automation (bots, integrations, etc) of a `brclient` instance can be done by
 using the [clientrpc](clientrpc) interface.
 
+#### Simple Store
+
+More information about running a simple store can be found in
+the [/doc](/doc/simplestore.md) subdir.
+
 ### Server
 
 A private server can be executed by running:
