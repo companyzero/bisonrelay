@@ -63,13 +63,13 @@ IDI_APP_ICON            ICON                    "resources\\app_icon.ico"
 #ifdef FLUTTER_BUILD_NUMBER
 #define VERSION_AS_NUMBER FLUTTER_BUILD_NUMBER
 #else
-#define VERSION_AS_NUMBER 0,1,7
+#define VERSION_AS_NUMBER 0,1,8
 #endif
 
 #ifdef FLUTTER_BUILD_NAME
 #define VERSION_AS_STRING #FLUTTER_BUILD_NAME
 #else
-#define VERSION_AS_STRING "0.1.7"
+#define VERSION_AS_STRING "0.1.8"
 #endif
 
 VS_VERSION_INFO VERSIONINFO
@@ -91,12 +91,12 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "com.example" "\0"
             VALUE "FileDescription", "A new Flutter project." "\0"
-            VALUE "FileVersion", VERSION_AS_STRING "\0"
+            VALUE "FileVersion", VERSION_AS_STRING "0.1.8"
             VALUE "InternalName", "bisonrelay" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2023 Comapany Zero. All rights reserved." "\0"
             VALUE "OriginalFilename", "bisonrelay.exe" "\0"
             VALUE "ProductName", "bisonrelay" "\0"
-            VALUE "ProductVersion", VERSION_AS_STRING "\0"
+            VALUE "ProductVersion", VERSION_AS_STRING "0.1.8"
         END
     END
     BLOCK "VarFileInfo"
