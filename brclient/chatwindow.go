@@ -21,7 +21,18 @@ import (
 	"github.com/companyzero/bisonrelay/internal/strescape"
 	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/companyzero/bisonrelay/zkidentity"
+	"github.com/decred/dcrd/chaincfg/v3"
 	"github.com/decred/dcrd/dcrutil/v4"
+	"github.com/decred/dcrlnd/lnrpc"
+	"github.com/decred/dcrlnd/zpay32"
+)
+
+var (
+	// The following parameters are only used during invoice decoding
+	// when rendering chat items.
+	mainnetParams = chaincfg.MainNetParams()
+	testnetParams = chaincfg.TestNet3Params()
+	simnetParams  = chaincfg.SimNetParams()
 )
 
 type formField struct {
@@ -185,6 +196,7 @@ type chatMsgEl struct {
 	text      string
 	embed     *mdembeds.EmbeddedArgs
 	mention   *string
+	payReq    *zpay32.Invoice
 	url       *string
 	link      *string
 	form      *formEl
@@ -259,7 +271,7 @@ func (l *chatMsgElLine) splitEmbeds() {
 	}
 }
 
-var urlRegexp = regexp.MustCompile(`\bhttps?[^\s]*\b`)
+var urlRegexp = regexp.MustCompile(`\b(https?|lnpay)://[^\s]*\b`)
 
 func (l *chatMsgElLine) splitURLs() {
 	for el := l.Front(); el != nil; el = el.Next() {
@@ -280,7 +292,28 @@ func (l *chatMsgElLine) splitURLs() {
 			l.InsertBefore(chatMsgEl{text: prefix}, el)
 
 			url := s[pos[0]:pos[1]]
-			l.InsertBefore(chatMsgEl{url: &url}, el)
+
+			var inv *zpay32.Invoice
+			var err error
+			if strings.HasPrefix(url, "lnpay://lnsdcr") {
+				inv, err = zpay32.Decode(url[8:], simnetParams)
+			} else if strings.HasPrefix(url, "lnpay://lntdcr") {
+				inv, err = zpay32.Decode(url[8:], testnetParams)
+			} else if strings.HasPrefix(url, "lnpay://lndcr") {
+				inv, err = zpay32.Decode(url[8:], mainnetParams)
+			}
+			if err != nil {
+				internalLog.Warnf("Unable to decode invoice %q: %v", s, err)
+			}
+			if inv != nil && inv.PaymentHash == nil {
+				// Ignore when paymentHash is nil as there's nothing to pay.
+				inv = nil
+			}
+			if inv != nil {
+				url = url[8:]
+			}
+
+			l.InsertBefore(chatMsgEl{url: &url, payReq: inv}, el)
 			lastEnd = pos[1]
 		}
 		suffix := s[lastEnd:]
@@ -612,6 +645,7 @@ func writeWrappedURL(b *strings.Builder, offset, winW int, url string) int {
 		b.WriteRune('\n')
 		offset = 0
 	}
+
 	// This is supposed to work, but doesn't. Bubbletea bug? see:
 	// https://gist.github.com/egmontkob/eb114294efbcd5adb1944c9f3cb5feda
 	//
@@ -624,6 +658,37 @@ func writeWrappedURL(b *strings.Builder, offset, winW int, url string) int {
 		offset = 0
 	}
 	return offset
+}
+
+func writePayReq(b *strings.Builder, offset, winW int, payReq *zpay32.Invoice, style lipgloss.Style, as *appState) int {
+	amt := payReqStrAmount(payReq)
+
+	status, ok := as.payReqStatuses.Load(*payReq.PaymentHash)
+	if ok && status == lnrpc.Payment_IN_FLIGHT {
+		s := fmt.Sprintf("[ %s payment in-flight ]", amt)
+		return writeWrappedWithStyle(b, offset, winW, style, s)
+	}
+	if ok && status == lnrpc.Payment_FAILED {
+		s := fmt.Sprintf("[ %s payment failed ]", amt)
+		return writeWrappedWithStyle(b, offset, winW, style, s)
+	}
+	if ok && status == lnrpc.Payment_SUCCEEDED {
+		s := fmt.Sprintf("[ %s payment succeeded ]", amt)
+		return writeWrappedWithStyle(b, offset, winW, style, s)
+	}
+
+	if isPayReqExpired(payReq) {
+		s := fmt.Sprintf("[ %s invoice expired ]", amt)
+		return writeWrappedWithStyle(b, offset, winW, style, s)
+	}
+
+	var descr string
+	if payReq.Description != nil && (*payReq.Description != "") {
+		descr = fmt.Sprintf(" (%q)", *payReq.Description)
+	}
+
+	s := fmt.Sprintf("[ Pay %s invoice%s ]", amt, descr)
+	return writeWrappedWithStyle(b, offset, winW, style, s)
 }
 
 func (cw *chatWindow) renderMsgElements(winW int, as *appState, elements []*chatMsgElLine,
@@ -695,6 +760,14 @@ func (cw *chatWindow) renderMsgElements(winW int, as *appState, elements []*chat
 				style := styles.mention
 				s = *el.mention
 				offset = writeWrappedWithStyle(b, offset, winW, style, s)
+			} else if el.payReq != nil {
+				style := as.styles.embed
+				if cw.maxSelectable == cw.selElIndex {
+					style = as.styles.focused
+					cw.selEl = &el
+				}
+				cw.maxSelectable += 1
+				offset = writePayReq(b, offset, winW, el.payReq, style, as)
 			} else if el.url != nil {
 				offset = writeWrappedURL(b, offset, winW, *el.url)
 			} else if el.formField != nil && el.formField.label != "" {

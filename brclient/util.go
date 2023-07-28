@@ -5,14 +5,19 @@ import (
 	"crypto/x509"
 	"encoding/hex"
 	"fmt"
+	"hash/maphash"
 	"net"
 	"runtime"
 	"strconv"
 	"strings"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/decred/dcrd/chaincfg/chainhash"
+	"github.com/decred/dcrd/dcrutil/v4"
 	"github.com/decred/dcrlnd"
 	"github.com/decred/dcrlnd/lnrpc"
+	"github.com/decred/dcrlnd/zpay32"
 )
 
 const (
@@ -306,4 +311,35 @@ func channelBalanceDisplay(local, remote int64) string {
 	}
 	return fmt.Sprintf("[%s%s%s]", strings.Repeat(c, plocal), sep,
 		strings.Repeat(c, max-plocal-1))
+}
+
+// chainHashMapHashHasher is a hasher function to use with xsync typed maps.
+func chainHashMapHashHasher(seed maphash.Seed, k chainhash.Hash) uint64 {
+	var h maphash.Hash
+	h.SetSeed(seed)
+	h.Write(k[:])
+	return h.Sum64()
+}
+
+// isPayReqExpired returns true if the payreq has been expired.
+func isPayReqExpired(payReq *zpay32.Invoice) bool {
+	return payReq.Timestamp.Add(payReq.Expiry()).Before(time.Now())
+}
+
+// payReqStrAmount returns a string with a description of the amount of the
+// given payreq.
+func payReqStrAmount(payReq *zpay32.Invoice) string {
+	if payReq.MilliAt == nil || *payReq.MilliAt == 0 {
+		return "0 DCR"
+	}
+
+	if *payReq.MilliAt < 0 {
+		return fmt.Sprintf("negative amount (%d atoms)", *payReq.MilliAt)
+	}
+
+	if *payReq.MilliAt < 1000 {
+		return fmt.Sprintf("%d milliatoms", *payReq.MilliAt)
+	}
+
+	return dcrutil.Amount(*payReq.MilliAt / 1000).String()
 }

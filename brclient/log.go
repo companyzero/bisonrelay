@@ -17,6 +17,8 @@ import (
 // errMsgRE is a regexp that matches error log msgs.
 var errMsgRE = regexp.MustCompile(`^\d{4}-\d\d-\d\d \d\d:\d\d:\d\d\.\d{3} \[ERR] `)
 
+var internalLog = slog.Disabled
+
 type logBackend struct {
 	logRotator      *rotator.Rotator
 	bknd            *slog.Backend

@@ -211,7 +211,7 @@ func (s *Store) handlePlaceOrder(ctx context.Context, uid clientintf.UserID,
 
 	if len(cart.Items) == 0 {
 		return &rpc.RMFetchResourceReply{
-			Data:   []byte("No items in order"),
+			Data:   []byte("No items in order.\n\n[Back to Index](/index.md)"),
 			Status: rpc.ResourceStatusOk,
 		}, nil
 	}
@@ -358,7 +358,8 @@ func (s *Store) handlePlaceOrder(ctx context.Context, uid clientintf.UserID,
 					"for order %s: %v", strescape.Nick(ru.Nick()),
 					order.ID, err)
 			} else {
-				wpm("LN Invoice for payment: %s\n", invoice)
+				urlInvoice := "lnpay://" + invoice
+				wpm("LN Invoice for payment: %s\n", urlInvoice)
 				order.PayType = PayTypeLN
 				order.Invoice = invoice
 			}

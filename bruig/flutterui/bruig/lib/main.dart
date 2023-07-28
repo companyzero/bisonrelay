@@ -6,6 +6,7 @@ import 'dart:developer' as developer;
 import 'package:bruig/components/attach_file.dart';
 import 'package:bruig/components/route_error.dart';
 import 'package:bruig/models/menus.dart';
+import 'package:bruig/models/payments.dart';
 import 'package:bruig/models/resources.dart';
 import 'package:bruig/screens/about.dart';
 import 'package:bruig/models/snackbar.dart';
@@ -94,7 +95,8 @@ Future<void> runMainApp(Config cfg) async {
       ChangeNotifierProvider(create: (c) => ThemeNotifier()),
       ChangeNotifierProvider(create: (c) => MainMenuModel()),
       ChangeNotifierProvider(create: (c) => ResourcesModel()),
-      ChangeNotifierProvider(create: (c) => SnackBarModel())
+      ChangeNotifierProvider(create: (c) => SnackBarModel()),
+      ChangeNotifierProvider(create: (c) => PaymentsModel()),
     ],
     child: App(cfg),
   ));

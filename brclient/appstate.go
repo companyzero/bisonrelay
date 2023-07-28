@@ -44,9 +44,11 @@ import (
 	"github.com/decred/dcrlnd/lnrpc"
 	"github.com/decred/dcrlnd/lnrpc/walletrpc"
 	"github.com/decred/dcrlnd/lnwire"
+	"github.com/decred/dcrlnd/zpay32"
 	lpclient "github.com/decred/dcrlnlpd/client"
 	"github.com/decred/slog"
 	"github.com/muesli/reflow/wordwrap"
+	"github.com/puzpuzpuz/xsync/v2"
 	"golang.org/x/exp/maps"
 	"golang.org/x/exp/slices"
 	"golang.org/x/text/collate"
@@ -208,6 +210,8 @@ type appState struct {
 	inviteFundsAccount string
 
 	extenalEditorForComments bool
+
+	payReqStatuses *xsync.MapOf[chainhash.Hash, lnrpc.Payment_PaymentStatus]
 
 	sstore       *simplestore.Store
 	ssPayType    simpleStorePayType
@@ -1397,6 +1401,28 @@ func (as *appState) payTip(cw *chatWindow, dcrAmount float64) {
 	}
 }
 
+func (as *appState) payPayReq(cw *chatWindow, invoice string, payReq *zpay32.Invoice) {
+	if isPayReqExpired(payReq) {
+		return
+	}
+
+	_, loaded := as.payReqStatuses.LoadOrStore(*payReq.PaymentHash, lnrpc.Payment_IN_FLIGHT)
+	if loaded {
+		// Already attempting to pay.
+		return
+	}
+
+	fees, err := as.lnPC.PayInvoice(as.ctx, invoice)
+	if err != nil {
+		as.diagMsg(as.styles.err.Render(fmt.Sprintf("Unable to pay invoice: %v", err)))
+		as.payReqStatuses.Store(*payReq.PaymentHash, lnrpc.Payment_FAILED)
+		return
+	}
+
+	as.payReqStatuses.Store(*payReq.PaymentHash, lnrpc.Payment_SUCCEEDED)
+	as.diagMsg(fmt.Sprintf("Paid %s invoice (%d milliatoms as fees)", payReqStrAmount(payReq), fees))
+}
+
 // block blocks a user.
 func (as *appState) block(cw *chatWindow) {
 	m := cw.newInternalMsg("Blocked user")
@@ -2536,6 +2562,7 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 	}
 
 	rpc.SetLog(logBknd.logger("RRPC"))
+	internalLog = logBknd.logger("INTR")
 
 	// Initialize DB.
 	db, err := clientdb.New(clientdb.Config{
@@ -3697,6 +3724,8 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		logsMsgs:        args.MsgRoot != "",
 
 		extenalEditorForComments: args.ExtenalEditorForComments,
+
+		payReqStatuses: xsync.NewTypedMapOf[chainhash.Hash, lnrpc.Payment_PaymentStatus](chainHashMapHashHasher),
 
 		sstore:       sstore,
 		ssPayType:    args.SimpleStorePayType,

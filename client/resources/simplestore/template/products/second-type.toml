@@ -31,6 +31,6 @@ A longish product description. Features:
 - Three
 """
 tags = ["othertag"]
-price = 0.99
+price = 0.01
 
 
