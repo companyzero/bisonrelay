@@ -387,6 +387,27 @@ func (s *Store) invoiceSettled(ctx context.Context, order *Order) {
 	wpm("Your order %s/%s has been identified as paid",
 		order.User.ShortLogID(), order.ID)
 
+	// If the order has files attached to it, send them to the user.
+	for _, item := range order.Cart.Items {
+		fname := item.Product.SendFilename
+		if item.Product.SendFilename == "" {
+			continue
+		}
+
+		// Relative paths are set to be from the root of the simplestore.
+		if !filepath.IsAbs(fname) {
+			fname = filepath.Join(s.root, fname)
+		}
+		wpm("\nSending you the file %s included in your order",
+			filepath.Base(fname))
+		go func() {
+			err := s.c.SendFile(order.User, fname)
+			s.log.Errorf("Unable to send file %s to user %s due to order %s/%s: %v",
+				fname, strescape.Nick(ru.Nick()),
+				order.User.ShortLogID(), order.ID, err)
+		}()
+	}
+
 	if s.cfg.StatusChanged != nil {
 		s.cfg.StatusChanged(order, b.String())
 	}

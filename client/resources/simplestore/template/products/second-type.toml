@@ -32,5 +32,6 @@ A longish product description. Features:
 """
 tags = ["othertag"]
 price = 0.01
+sendfilename = "test.png"
 
 
