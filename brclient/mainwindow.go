@@ -418,6 +418,10 @@ func (mws mainWindowState) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				mws.as.diagMsg("Unable to fetch page: %v", err)
 			}
 
+		case cw != nil && cw.selEl != nil && cw.selEl.url != nil && cw.selEl.payReq != nil && msg.Type == tea.KeyCtrlV:
+			// Pay invoice.
+			mws.as.payPayReq(cw, *cw.selEl.url, cw.selEl.payReq)
+
 		case msg.Type == tea.KeyCtrlD:
 			if cw != nil && cw.selEl != nil && cw.selEl.embed != nil {
 				embedded := *cw.selEl.embed

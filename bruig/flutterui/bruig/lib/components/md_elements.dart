@@ -7,10 +7,12 @@ import 'package:bruig/components/info_grid.dart';
 import 'package:bruig/components/inputs.dart';
 import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/models/downloads.dart';
+import 'package:bruig/models/payments.dart';
 import 'package:bruig/models/resources.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:golib_plugin/util.dart';
 import 'package:markdown/markdown.dart' as md;
 import 'package:provider/provider.dart';
 import 'package:tuple/tuple.dart';
@@ -60,6 +62,22 @@ class ImageInlineSyntax extends md.InlineSyntax {
     final imageURL = match.group(1);
 
     md.Element el = md.Element.text("image", imageURL!.toString());
+
+    parser.addNode(el);
+    return true;
+  }
+}
+
+class LnpayURLSyntax extends md.InlineSyntax {
+  LnpayURLSyntax({
+    String pattern = r'lnpay:\/\/(ln[td]?\w*)',
+  }) : super(pattern);
+
+  @override
+  bool onMatch(md.InlineParser parser, Match match) {
+    final url = match.group(1) ?? "";
+
+    md.Element el = md.Element.text("lnpay", url);
 
     parser.addNode(el);
     return true;
@@ -387,8 +405,8 @@ class MarkdownArea extends StatelessWidget {
     var theme = Theme.of(context);
     var darkTextColor = theme.indicatorColor;
     var textColor = theme.focusColor;
-    return Consumer<ThemeNotifier>(
-        builder: (context, theme, _) => MarkdownBody(
+    return Consumer2<ThemeNotifier, PaymentsModel>(
+        builder: (context, theme, payments, _) => MarkdownBody(
               codeBlockMaxHeight: 200,
               styleSheet: MarkdownStyleSheet(
                 p: TextStyle(
@@ -438,6 +456,7 @@ class MarkdownArea extends StatelessWidget {
                     DownloadLinkElementBuilder(TextStyle(color: darkTextColor)),
                 "form": _FormElementBuilder(
                     labelStyle: TextStyle(color: textColor)),
+                "lnpay": _LNPayURLElementBuilder(payments),
               },
               onTapLink: (text, url, blah) {
                 launchUrlAwait(context, url);
@@ -446,6 +465,7 @@ class MarkdownArea extends StatelessWidget {
                 //VideoInlineSyntax(),
                 //ImageInlineSyntax()
                 EmbedInlineSyntax(),
+                LnpayURLSyntax(),
               ],
               blockSyntaxes: [
                 _FormBlockSyntax(),
@@ -697,5 +717,80 @@ class _FormElementBuilder extends MarkdownElementBuilder {
       const SizedBox(height: 10),
       submit != null ? _FormSubmitButton(form, submit!) : const Empty(),
     ]);
+  }
+}
+
+class _PayReqBtn extends StatefulWidget {
+  final PaymentsModel payments;
+  final String invoice;
+  const _PayReqBtn(this.payments, this.invoice, {super.key});
+
+  @override
+  State<_PayReqBtn> createState() => __PayReqBtnState();
+}
+
+class __PayReqBtnState extends State<_PayReqBtn> {
+  late PaymentInfo info;
+
+  void payInfoChanged() {
+    setState(() {});
+  }
+
+  void attemptPayment() {
+    info.attemptPayment();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    info = widget.payments.decodedInvoice(widget.invoice);
+    info.addListener(payInfoChanged);
+  }
+
+  @override
+  void dispose() {
+    info.removeListener(payInfoChanged);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (info.decoded == null) {
+      return const ElevatedButton(
+          onPressed: null, child: Text("Decoding invoice..."));
+    }
+
+    String amt = formatDCR(info.decoded?.amount ?? 0);
+
+    if (info.status == PaymentStatus.succeeded) {
+      return ElevatedButton(
+          onPressed: null, child: Text("Succeeded paying $amt"));
+    }
+
+    if (info.status == PaymentStatus.errored) {
+      return ElevatedButton(
+          onPressed: null, child: Text("Errored paying $amt: ${info.err}"));
+    }
+
+    if (info.status == PaymentStatus.inflight) {
+      return ElevatedButton(onPressed: null, child: Text("Paying $amt"));
+    }
+
+    if (info.decoded?.expired ?? false) {
+      return ElevatedButton(
+          onPressed: null, child: Text("Invoice $amt expired"));
+    }
+
+    return ElevatedButton(onPressed: attemptPayment, child: Text("Pay $amt"));
+  }
+}
+
+class _LNPayURLElementBuilder extends MarkdownElementBuilder {
+  final PaymentsModel payments;
+  _LNPayURLElementBuilder(this.payments);
+
+  @override
+  Widget visitElementAfter(md.Element element, TextStyle? preferredStyle) {
+    return _PayReqBtn(payments, element.textContent);
   }
 }

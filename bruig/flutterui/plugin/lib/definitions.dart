@@ -1086,6 +1086,10 @@ class LNDecodedInvoice {
   double get amount =>
       numAtoms > 0 ? numAtoms.toDouble() / 1e8 : numMAtoms.toDouble() / 1e11;
 
+  bool get expired =>
+      DateTime.fromMillisecondsSinceEpoch((timestamp + expiry) * 1000)
+          .isBefore(DateTime.now());
+
   LNDecodedInvoice(this.destination, this.paymentHash, this.numAtoms,
       this.expiry, this.description, this.timestamp, this.numMAtoms);
   factory LNDecodedInvoice.fromJson(Map<String, dynamic> json) =>
