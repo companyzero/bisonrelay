@@ -67,6 +67,7 @@ type OrderStatus string
 
 const (
 	StatusPlaced    OrderStatus = "placed"
+	StatusPaid      OrderStatus = "paid"
 	StatusShipped   OrderStatus = "shipped"
 	StatusCompleted OrderStatus = "completed"
 	StatusCanceled  OrderStatus = "canceled"
@@ -102,6 +103,7 @@ type Order struct {
 	Invoice      string            `json:"invoice"`
 	ShipAddr     *ShippingAddress  `json:"shipping"`
 	Comments     []OrderComment    `json:"comments"`
+	ExpiresTS    time.Time         `json:"expires_ts"`
 }
 
 // Total returns the total amount, with 2 decimal places accuracy.

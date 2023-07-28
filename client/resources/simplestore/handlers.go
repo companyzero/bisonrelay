@@ -269,6 +269,7 @@ func (s *Store) handlePlaceOrder(ctx context.Context, uid clientintf.UserID,
 		PlacedTS:   time.Now(),
 		ShipCharge: s.cfg.ShipCharge,
 		ShipAddr:   shipAddr,
+		ExpiresTS:  time.Now().Add(time.Hour),
 	}
 
 	// Build the message to send to the remote user, and present it to the
@@ -323,7 +324,8 @@ func (s *Store) handlePlaceOrder(ctx context.Context, uid clientintf.UserID,
 	totalDCR := order.TotalDCR()
 	if totalDCR > 0 {
 		wpm("Using the current exchange rate of %.2f USD/DCR, your order is "+
-			"%s, valid for the next 60 minutes\n", order.ExchangeRate, totalDCR)
+			"%s, valid for the next hour (expires %s)\n",
+			order.ExchangeRate, totalDCR, order.ExpiresTS.Format("Mon, 02 Jan 2006 15:04 MST"))
 	}
 
 	pt := s.cfg.PayType
@@ -367,6 +369,20 @@ func (s *Store) handlePlaceOrder(ctx context.Context, uid clientintf.UserID,
 
 	default:
 		wpm("\nYou will be contacted with payment details shortly")
+	}
+
+	// Track pending invoice or onchain addr for payment.
+	if order.Invoice != "" {
+		pendingFname := filepath.Join(s.root, pendingInvoicesDir, fmt.Sprintf("%s-%s", uid, order.ID))
+		if err := jsonfile.Write(pendingFname, "", s.log); err != nil {
+			return nil, fmt.Errorf("unable to write pending invoice file: %v", err)
+		}
+		select {
+		case s.invoiceCreatedChan <- order:
+		case <-s.runCtx.Done():
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
 	}
 
 	if s.cfg.OrderPlaced != nil {
