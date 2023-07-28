@@ -3,8 +3,11 @@ package simplestore
 import (
 	"context"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strings"
 	"sync"
 	"text/template"
 	"time"
@@ -12,7 +15,10 @@ import (
 	"github.com/companyzero/bisonrelay/client"
 	"github.com/companyzero/bisonrelay/client/clientintf"
 	"github.com/companyzero/bisonrelay/client/resources"
+	"github.com/companyzero/bisonrelay/internal/jsonfile"
+	"github.com/companyzero/bisonrelay/internal/strescape"
 	"github.com/companyzero/bisonrelay/rpc"
+	"github.com/decred/dcrlnd/lnrpc"
 	"github.com/decred/slog"
 	"github.com/fsnotify/fsnotify"
 	"github.com/pelletier/go-toml"
@@ -23,6 +29,7 @@ const (
 	productsDir         = "products"
 	cartsDir            = "carts"
 	ordersDir           = "orders"
+	pendingInvoicesDir  = "pendinginvoices"
 	indexTmplFile       = "index.tmpl"
 	prodTmplFile        = "product.tmpl"
 	addToCartTmplFile   = "addtocart.tmpl"
@@ -60,15 +67,21 @@ type Config struct {
 // Store is a simple store instance. A simple store can render a front page
 // (index) and individual product pages.
 type Store struct {
-	cfg  Config
-	c    *client.Client
-	log  slog.Logger
-	root string
-	lnpc *client.DcrlnPaymentClient
+	cfg       Config
+	c         *client.Client
+	log       slog.Logger
+	root      string
+	lnpc      *client.DcrlnPaymentClient
+	runCtx    context.Context
+	runCancel func()
 
 	mtx      sync.Mutex
 	products map[string]*Product
 	tmpl     *template.Template
+
+	invoiceSettledChan  chan string
+	invoiceCanceledChan chan string
+	invoiceCreatedChan  chan *Order
 }
 
 // New creates a new simple store.
@@ -77,15 +90,22 @@ func New(cfg Config) (*Store, error) {
 	if cfg.Log != nil {
 		log = cfg.Log
 	}
+	runCtx, runCancel := context.WithCancel(context.Background())
 
 	s := &Store{
-		cfg:      cfg,
-		c:        cfg.Client,
-		log:      log,
-		root:     cfg.Root,
-		products: make(map[string]*Product),
-		tmpl:     template.New("*root"),
-		lnpc:     cfg.LNPayClient,
+		cfg:       cfg,
+		c:         cfg.Client,
+		log:       log,
+		root:      cfg.Root,
+		products:  make(map[string]*Product),
+		tmpl:      template.New("*root"),
+		lnpc:      cfg.LNPayClient,
+		runCtx:    runCtx,
+		runCancel: runCancel,
+
+		invoiceSettledChan:  make(chan string),
+		invoiceCanceledChan: make(chan string),
+		invoiceCreatedChan:  make(chan *Order),
 	}
 
 	if err := s.reloadStore(); err != nil {
@@ -282,9 +302,253 @@ func (s *Store) runFSWatcher(ctx context.Context, watcher *fsnotify.Watcher) {
 	}
 }
 
+// runLNInvoiceWatcher watches LN invoices and tells the main invoice watcher
+// routine whenever one is settled.
+func (s *Store) runLNInvoiceWatcher(ctx context.Context) error {
+	stream, err := s.lnpc.LNRPC().SubscribeInvoices(ctx, &lnrpc.InvoiceSubscription{})
+	if err != nil {
+		return err
+	}
+
+	for {
+		inv, err := stream.Recv()
+		if err != nil {
+			return err
+		}
+
+		if inv.State == lnrpc.Invoice_SETTLED {
+			select {
+			case s.invoiceSettledChan <- inv.PaymentRequest:
+			case <-ctx.Done():
+				return ctx.Err()
+			}
+		} else if inv.State == lnrpc.Invoice_CANCELED {
+			select {
+			case s.invoiceCanceledChan <- inv.PaymentRequest:
+			case <-ctx.Done():
+				return ctx.Err()
+			}
+		}
+	}
+}
+
+// removePendingInvoice removes an order from the list of orders with pending
+// invoice.
+func (s *Store) removePendingInvoice(order *Order) {
+	dir := filepath.Join(s.root, pendingInvoicesDir)
+	fname := filepath.Join(dir, fmt.Sprintf("%s-%s", order.User, order.ID))
+	err := jsonfile.RemoveIfExists(fname)
+	if err != nil {
+		s.log.Warnf("Unable to remove pending order %s: %v",
+			fname, err)
+	}
+}
+
+// invoiceSettled is called when an invoice for a given order was settled (paid)
+// by the user.
+func (s *Store) invoiceSettled(ctx context.Context, order *Order) {
+	s.mtx.Lock()
+	defer s.mtx.Unlock()
+
+	// Remove pending invoice if exists.
+	s.removePendingInvoice(order)
+
+	// Mark order as paid. First, reload the full order from disk.
+	orderDir := filepath.Join(s.root, ordersDir, order.User.String())
+	orderFname := filepath.Join(orderDir, orderFnamePattern.FilenameFor(uint64(order.ID)))
+	order = new(Order)
+	if err := jsonfile.Read(orderFname, order); err != nil {
+		s.log.Warnf("Unable to read order %s: %v", orderFname, err)
+		return
+	}
+
+	// Now update status.
+	order.Status = StatusPaid
+	if err := jsonfile.Write(orderFname, order, s.log); err != nil {
+		s.log.Warnf("Unable to write order %s: %v", orderFname, err)
+		return
+	}
+
+	ru, err := s.c.UserByID(order.User)
+	if err != nil {
+		s.log.Warnf("Order #%d placed by unknown user %s",
+			order.ID, order.User)
+		return
+	}
+
+	s.log.Infof("Detected order %s/%s from user %s as paid",
+		order.User.ShortLogID(), order.ID, strescape.Nick(ru.Nick()))
+
+	// Finally, send a message to user acknowledging payment.
+	var b strings.Builder
+	wpm := func(f string, args ...interface{}) {
+		b.WriteString(fmt.Sprintf(f, args...))
+	}
+	wpm("Your order %s/%s has been identified as paid",
+		order.User.ShortLogID(), order.ID)
+
+	if s.cfg.StatusChanged != nil {
+		s.cfg.StatusChanged(order, b.String())
+	}
+}
+
+// invoiceExpired is called when the invoice of an order has expired.
+func (s *Store) invoiceExpired(ctx context.Context, order *Order) {
+	s.mtx.Lock()
+	defer s.mtx.Unlock()
+
+	// Remove pending invoice if exists.
+	s.removePendingInvoice(order)
+
+	// Mark order as paid. First, reload the full order from disk.
+	orderDir := filepath.Join(s.root, ordersDir, order.User.String())
+	orderFname := filepath.Join(orderDir, orderFnamePattern.FilenameFor(uint64(order.ID)))
+	order = new(Order)
+	if err := jsonfile.Read(orderFname, order); err != nil {
+		s.log.Warnf("Unable to read order %s: %v", orderFname, err)
+		return
+	}
+
+	// Now update status.
+	order.Status = StatusPaid
+	if err := jsonfile.Write(orderFname, order, s.log); err != nil {
+		s.log.Warnf("Unable to write order %s: %v", orderFname, err)
+		return
+	}
+
+	ru, err := s.c.UserByID(order.User)
+	if err != nil {
+		s.log.Warnf("Order #%d placed by unknown user %s",
+			order.ID, order.User)
+		return
+	}
+
+	s.log.Infof("Detected order %s/%s from user %s as expired",
+		order.User.ShortLogID(), order.ID, strescape.Nick(ru.Nick()))
+
+	// Finally, send a message to user noting the expiration.
+	var b strings.Builder
+	wpm := func(f string, args ...interface{}) {
+		b.WriteString(fmt.Sprintf(f, args...))
+	}
+	wpm("Your order %s/%s has been identified as expired",
+		order.User.ShortLogID(), order.ID)
+
+	if s.cfg.StatusChanged != nil {
+		s.cfg.StatusChanged(order, b.String())
+	}
+}
+
+// runInvoiceWatcher is the main routine that handles changes to the status
+// of invoices associated with orders.
+func (s *Store) runInvoiceWatcher(ctx context.Context) error {
+	// List orders with pending invoices.
+	s.mtx.Lock()
+	dirPending := filepath.Join(s.root, pendingInvoicesDir)
+	entries, err := os.ReadDir(dirPending)
+	if err != nil && !os.IsNotExist(err) {
+		s.mtx.Unlock()
+		return err
+	}
+
+	// Create map of raw invoice to pending id.
+	invoices := make(map[string]*Order, len(entries))
+
+	// Load list of pending orders. The names in the pending invoices
+	// dir is "<uid>-<order_id>".
+	nameRegexp := regexp.MustCompile(`([0-9a-fA-F]{64})-([0-9]*)`)
+	for _, entry := range entries {
+		name := entry.Name()
+		matches := nameRegexp.FindStringSubmatch(name)
+		if len(matches) != 3 {
+			continue
+		}
+		var uid clientintf.UserID
+		if err := uid.FromString(matches[1]); err != nil {
+			continue
+		}
+		var oid OrderID
+		if err := oid.FromString(matches[2]); err != nil {
+			continue
+		}
+		order := new(Order)
+		fname := filepath.Join(s.root, ordersDir, uid.String(),
+			orderFnamePattern.FilenameFor(uint64(oid)))
+		if err := jsonfile.Read(fname, order); err != nil {
+			s.log.Warnf("Unable to load order %s: %v", fname, err)
+			continue
+		}
+		if order.Invoice == "" || order.ExpiresTS.Before(time.Now()) {
+			go s.invoiceExpired(ctx, order)
+			continue
+		}
+		if order.Status != StatusPlaced {
+			s.removePendingInvoice(order)
+			continue
+		}
+		invoices[order.Invoice] = order
+	}
+	s.mtx.Unlock()
+
+	// Timer that is triggered on the next time one of the invoices needs
+	// to be timed out.
+	nextExpiresTimer := time.NewTimer(time.Duration(math.MaxInt64))
+	nextExpiresTimer.Stop()
+	resetNextExpiresTimer := func() {
+		var nextExpiresTime time.Time
+		for _, order := range invoices {
+			if nextExpiresTime.IsZero() || order.ExpiresTS.Before(nextExpiresTime) {
+				nextExpiresTime = order.ExpiresTS
+			}
+		}
+		if nextExpiresTime.IsZero() {
+			return
+		}
+		nextExpiresTimer.Reset(time.Until(nextExpiresTime))
+	}
+	resetNextExpiresTimer()
+
+	// Main loop: handle the outcome of invoices.
+	for {
+		select {
+		case order := <-s.invoiceCreatedChan:
+			invoices[order.Invoice] = order
+
+		case inv := <-s.invoiceSettledChan:
+			if order := invoices[inv]; order != nil {
+				delete(invoices, inv)
+				go s.invoiceSettled(ctx, order)
+			}
+
+		case inv := <-s.invoiceCanceledChan:
+			delete(invoices, inv)
+
+		case <-nextExpiresTimer.C:
+			now := time.Now()
+			for _, order := range invoices {
+				if !order.ExpiresTS.Before(now) {
+					continue
+				}
+				delete(invoices, order.Invoice)
+				go s.invoiceExpired(ctx, order)
+			}
+			resetNextExpiresTimer()
+
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
+}
+
 // Run the simple store functions.
 func (s *Store) Run(ctx context.Context) error {
 	g, gctx := errgroup.WithContext(ctx)
+
+	g.Go(func() error {
+		<-gctx.Done()
+		s.runCancel()
+		return gctx.Err()
+	})
 
 	if s.cfg.LiveReload {
 		g.Go(func() error {
@@ -297,5 +561,9 @@ func (s *Store) Run(ctx context.Context) error {
 			return watcher.Close()
 		})
 	}
+
+	g.Go(func() error { return s.runLNInvoiceWatcher(ctx) })
+	g.Go(func() error { return s.runInvoiceWatcher(ctx) })
+
 	return g.Wait()
 }
