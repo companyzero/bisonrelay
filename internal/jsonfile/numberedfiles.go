@@ -3,6 +3,7 @@ package jsonfile
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strconv"
 
@@ -93,6 +94,24 @@ func (nfp NumberedFilePattern) Last(dir string) (MatchedNumberedFile, error) {
 // FilenameFor returns the filename for a given number.
 func (nfp NumberedFilePattern) FilenameFor(i uint64) string {
 	return fmt.Sprintf(nfp.nameFmt, i)
+}
+
+// NextFilename returns the next filename and ID for numbered files inside the
+// given dir.
+func (nfp NumberedFilePattern) NextFilename(dir string) (string, uint64, error) {
+	last, err := nfp.Last(dir)
+	if err != nil {
+		return "", 0, err
+	}
+
+	next := last.ID + 1
+	if next < last.ID {
+		return "", 0, fmt.Errorf("overflow of IDs")
+	}
+
+	fname := nfp.FilenameFor(next)
+	fpath := filepath.Join(dir, fname)
+	return fpath, next, nil
 }
 
 // MakeHexFilePattern creates a numbered file pattern that can handle hex
