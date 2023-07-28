@@ -354,8 +354,8 @@ func (s *Store) handlePlaceOrder(ctx context.Context, uid clientintf.UserID,
 		} else {
 			invoice, err := s.lnpc.GetInvoice(ctx, int64(totalDCR*1000), nil)
 			if err != nil {
-				s.log.Warnf("Unable to generate LN invoice for user %s "+
-					"for order %s: %v", strescape.Nick(ru.Nick()),
+				s.log.Errorf("Unable to generate LN invoice for user %s "+
+					"order %s: %v", strescape.Nick(ru.Nick()),
 					order.ID, err)
 			} else {
 				urlInvoice := "lnpay://" + invoice
