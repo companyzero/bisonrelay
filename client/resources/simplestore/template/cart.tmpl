@@ -6,15 +6,16 @@ Last Updated: {{.Updated.Format "2006-01-02 15:04:05" }}
 
 ---
 ## Place Order
-{{$shipping := false}}
-{{range .Items}}
-  {{if .Shipping}}
-      {{$shipping = true}}
-      {{break}}
-  {{end}}
-{{- end}}
+{{- $shipping := false -}}
+{{- range .Items -}}
+  {{- if .Product.Shipping -}}
+      {{- $shipping = true -}}
+      {{- break -}}
+  {{- end -}}
+{{- end -}}
 
-{{if $shipping}}
+{{- if $shipping}}
+### Shipping Information
 --form--
 type="action" value="/placeOrder"
 type="txtinput" label="Name" name="name"
@@ -26,6 +27,7 @@ type="txtinput" label="PostalCode" name="postalCode"
 type="txtinput" label="Phone" name="phone"
 type="submit" label="Place Order"
 --/form--
+
 {{else}}
 [Place order](/placeOrder)
 {{end}}

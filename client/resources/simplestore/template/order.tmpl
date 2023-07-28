@@ -3,7 +3,7 @@ Order Date: {{.PlacedTS}}
 Order Status: {{.Status}}
 Exchange Rate: {{.ExchangeRate}}
 
-{{if .ShipAddr ne nil}}
+{{if .ShipAddr }}
 Shipping Address:
 {{.ShipAddr.Name}}
 {{.ShipAddr.Address}}
@@ -35,3 +35,4 @@ type="txtinput" label="New comment" name="comment" value=""
 type="submit" label="Add Comment"
 --/form--
 
+[Back to Orders](/orders)

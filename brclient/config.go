@@ -60,10 +60,7 @@ const (
 )
 
 func (sspt simpleStorePayType) isValid() bool {
-	// NOTE: ssPayTypeLN is disabled here because brclient does not
-	// wrap long lines that do not contain a wrapping character,
-	// which make it impossible for users to pay for such payments.
-	return (sspt == ssPayTypeNone) || /*(sspt == ssPayTypeLN) ||*/
+	return (sspt == ssPayTypeNone) || (sspt == ssPayTypeLN) ||
 		(sspt == ssPayTypeOnChain)
 }
 

@@ -3589,13 +3589,14 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		}
 
 		scfg := simplestore.Config{
-			Root:       path,
-			Log:        logBknd.logger("SSTR"),
-			LiveReload: true, // FIXME: parametrize
-			Client:     c,
-			PayType:    simplestore.PayType(args.SimpleStorePayType),
-			Account:    args.SimpleStoreAccount,
-			ShipCharge: args.SimpleStoreShipCharge,
+			Root:        path,
+			Log:         logBknd.logger("SSTR"),
+			LiveReload:  true, // FIXME: parametrize
+			Client:      c,
+			PayType:     simplestore.PayType(args.SimpleStorePayType),
+			Account:     args.SimpleStoreAccount,
+			ShipCharge:  args.SimpleStoreShipCharge,
+			LNPayClient: lnPC,
 
 			ExchangeRateProvider: func() float64 {
 				dcrPrice, _ := as.rates.Get()
