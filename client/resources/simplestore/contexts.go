@@ -17,7 +17,7 @@ type addToCartContext struct {
 }
 
 type orderContext struct {
-	Order Order
+	Order
 }
 
 type ordersContext struct {

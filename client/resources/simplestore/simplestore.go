@@ -38,7 +38,7 @@ type PayType string
 
 const (
 	PayTypeOnChain PayType = "onchain"
-	PayTypeLN      PayType = "LN"
+	PayTypeLN      PayType = "ln"
 )
 
 // Config holds the configuration for a simple store.
@@ -52,6 +52,7 @@ type Config struct {
 	Account       string
 	ShipCharge    float64
 	Client        *client.Client
+	LNPayClient   *client.DcrlnPaymentClient
 
 	ExchangeRateProvider func() float64
 }
@@ -84,6 +85,7 @@ func New(cfg Config) (*Store, error) {
 		root:     cfg.Root,
 		products: make(map[string]*Product),
 		tmpl:     template.New("*root"),
+		lnpc:     cfg.LNPayClient,
 	}
 
 	if err := s.reloadStore(); err != nil {
@@ -103,6 +105,9 @@ func (s *Store) reloadStore() error {
 		return err
 	}
 	for _, filename := range filenames {
+		if filepath.Ext(filename) != ".tmpl" {
+			continue
+		}
 		rawBytes, err := os.ReadFile(filename)
 		if err != nil {
 			return err
@@ -127,6 +132,9 @@ func (s *Store) reloadStore() error {
 	}
 
 	for _, prodFile := range prodFiles {
+		if filepath.Ext(prodFile.Name()) != ".toml" {
+			continue
+		}
 		fname := filepath.Join(prodDir, prodFile.Name())
 		var prods productsFile
 		f, err := os.Open(fname)
