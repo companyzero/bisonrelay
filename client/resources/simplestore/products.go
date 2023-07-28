@@ -131,3 +131,23 @@ func (order *Order) TotalDCR() dcrutil.Amount {
 	amount, _ := dcrutil.NewAmount(totalDCR)
 	return amount
 }
+
+// onChainInvoiceDiscriminator returns the unique(ish) order discriminator for
+// onchain payments.
+func onChainInvoiceDiscriminator(addr string, amount dcrutil.Amount) string {
+	return fmt.Sprintf("%s_%d", addr, amount)
+}
+
+// invoiceDiscriminator returns a unique(ish) invoice discriminator for this
+// order. For LN payments, this is the invoice itself. For on-chain payments,
+// this is the payment address + expected payment amount.
+func (order *Order) invoiceDiscriminator() string {
+	switch order.PayType {
+	case PayTypeLN:
+		return order.Invoice
+	case PayTypeOnChain:
+		return onChainInvoiceDiscriminator(order.Invoice, order.TotalDCR())
+	default:
+		return ""
+	}
+}

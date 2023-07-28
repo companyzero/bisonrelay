@@ -1,7 +1,9 @@
 package simplestore
 
 import (
+	"bytes"
 	"context"
+	"encoding/hex"
 	"fmt"
 	"math"
 	"os"
@@ -18,6 +20,10 @@ import (
 	"github.com/companyzero/bisonrelay/internal/jsonfile"
 	"github.com/companyzero/bisonrelay/internal/strescape"
 	"github.com/companyzero/bisonrelay/rpc"
+	"github.com/decred/dcrd/chaincfg/v3"
+	"github.com/decred/dcrd/dcrutil/v4"
+	"github.com/decred/dcrd/txscript/v4/stdscript"
+	"github.com/decred/dcrd/wire"
 	"github.com/decred/dcrlnd/lnrpc"
 	"github.com/decred/slog"
 	"github.com/fsnotify/fsnotify"
@@ -67,13 +73,14 @@ type Config struct {
 // Store is a simple store instance. A simple store can render a front page
 // (index) and individual product pages.
 type Store struct {
-	cfg       Config
-	c         *client.Client
-	log       slog.Logger
-	root      string
-	lnpc      *client.DcrlnPaymentClient
-	runCtx    context.Context
-	runCancel func()
+	cfg         Config
+	c           *client.Client
+	log         slog.Logger
+	root        string
+	lnpc        *client.DcrlnPaymentClient
+	runCtx      context.Context
+	runCancel   func()
+	chainParams *chaincfg.Params
 
 	mtx      sync.Mutex
 	products map[string]*Product
@@ -332,6 +339,51 @@ func (s *Store) runLNInvoiceWatcher(ctx context.Context) error {
 	}
 }
 
+// runOnChainInvoiceWatcher watches for on-chain transactions that may complete
+// orders.
+func (s *Store) runOnChainInvoiceWatcher(ctx context.Context) error {
+	// TODO: have some way to look for transactions upon restart.
+
+	stream, err := s.lnpc.LNRPC().SubscribeTransactions(ctx, &lnrpc.GetTransactionsRequest{})
+	if err != nil {
+		return err
+	}
+	for {
+		tx, err := stream.Recv()
+		if err != nil {
+			return err
+		}
+
+		// TODO: use different number of confirmations based on the
+		// the amount.
+		if tx.NumConfirmations < 1 {
+			continue
+		}
+
+		msgTx := wire.NewMsgTx()
+		if err := msgTx.Deserialize(hex.NewDecoder(bytes.NewBuffer([]byte(tx.RawTxHex)))); err != nil {
+			s.log.Warnf("Unable to deserialize raw tx %s", tx.TxHash)
+			continue
+		}
+
+		for _, out := range msgTx.TxOut {
+			_, addrs := stdscript.ExtractAddrs(out.Version, out.PkScript, s.chainParams)
+			if len(addrs) != 1 {
+				// All addressses we create here are standard
+				// P2PKH, so skip any that are not that.
+				continue
+			}
+
+			discriminator := onChainInvoiceDiscriminator(addrs[0].String(), dcrutil.Amount(out.Value))
+			select {
+			case s.invoiceSettledChan <- discriminator:
+			case <-ctx.Done():
+				return ctx.Err()
+			}
+		}
+	}
+}
+
 // removePendingInvoice removes an order from the list of orders with pending
 // invoice.
 func (s *Store) removePendingInvoice(order *Order) {
@@ -507,7 +559,7 @@ func (s *Store) runInvoiceWatcher(ctx context.Context) error {
 			s.removePendingInvoice(order)
 			continue
 		}
-		invoices[order.Invoice] = order
+		invoices[order.invoiceDiscriminator()] = order
 	}
 	s.mtx.Unlock()
 
@@ -533,7 +585,7 @@ func (s *Store) runInvoiceWatcher(ctx context.Context) error {
 	for {
 		select {
 		case order := <-s.invoiceCreatedChan:
-			invoices[order.Invoice] = order
+			invoices[order.invoiceDiscriminator()] = order
 
 		case inv := <-s.invoiceSettledChan:
 			if order := invoices[inv]; order != nil {
@@ -550,7 +602,7 @@ func (s *Store) runInvoiceWatcher(ctx context.Context) error {
 				if !order.ExpiresTS.Before(now) {
 					continue
 				}
-				delete(invoices, order.Invoice)
+				delete(invoices, order.invoiceDiscriminator())
 				go s.invoiceExpired(ctx, order)
 			}
 			resetNextExpiresTimer()
@@ -563,6 +615,12 @@ func (s *Store) runInvoiceWatcher(ctx context.Context) error {
 
 // Run the simple store functions.
 func (s *Store) Run(ctx context.Context) error {
+	chainParams, err := s.lnpc.ChainParams(ctx)
+	if err != nil {
+		return err
+	}
+	s.chainParams = chainParams
+
 	g, gctx := errgroup.WithContext(ctx)
 
 	g.Go(func() error {
@@ -584,6 +642,7 @@ func (s *Store) Run(ctx context.Context) error {
 	}
 
 	g.Go(func() error { return s.runLNInvoiceWatcher(ctx) })
+	g.Go(func() error { return s.runOnChainInvoiceWatcher(ctx) })
 	g.Go(func() error { return s.runInvoiceWatcher(ctx) })
 
 	return g.Wait()
