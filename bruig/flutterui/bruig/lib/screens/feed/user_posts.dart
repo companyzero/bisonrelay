@@ -14,8 +14,10 @@ class UserPostW extends StatefulWidget {
   final PostListItem post;
   final ChatModel? author;
   final ClientModel client;
+  final FeedModel feed;
   final Function onTabChange;
-  const UserPostW(this.post, this.author, this.client, this.onTabChange,
+  const UserPostW(
+      this.post, this.feed, this.author, this.client, this.onTabChange,
       {Key? key})
       : super(key: key);
 
@@ -27,8 +29,9 @@ class _UserPostWState extends State<UserPostW> {
   PostListItem get post => widget.post;
   ChatModel? get author => widget.author;
   showContent(BuildContext context) async {
-    await Golib.getUserPost(author?.id ?? "", post.id);
-    widget.onTabChange(0, null);
+    print("show content");
+    await widget.feed
+        .getUserPost(author?.id ?? "", post.id, widget.onTabChange);
   }
 
   void authorUpdated() => setState(() {});
@@ -146,8 +149,12 @@ class _UserPostWState extends State<UserPostW> {
                               borderRadius:
                                   const BorderRadius.all(Radius.circular(3)),
                               side: BorderSide(color: borderDividerColor))),
-                      onPressed: () => showContent(context),
-                      child: const Text("Download"),
+                      onPressed: () => !widget.feed.gettingUserPost
+                          ? showContent(context)
+                          : null,
+                      child: Text(!widget.feed.gettingUserPost
+                          ? "Download"
+                          : "Loading"),
                     )))
           ]),
         ],
@@ -204,10 +211,9 @@ class _UserPostsState extends State<UserPosts> {
     var authorID = widget.client.userPostListID;
     var alreadyReceivedUserPosts =
         widget.feed.posts.where((post) => (post.summ.authorID == authorID));
-    var posts = widget.posts.where((post) => false);
     List<PostListItem> notReceived = [];
-
-    for (var post in posts) {
+    print("posts length: ${widget.posts.length}");
+    for (var post in widget.posts) {
       var found = false;
       for (var alreadyReceivedPost in alreadyReceivedUserPosts) {
         if (post.id == alreadyReceivedPost.summ.id) {
@@ -219,7 +225,7 @@ class _UserPostsState extends State<UserPosts> {
         notReceived.add(post);
       }
     }
-
+    print("not received length: ${notReceived.length}");
     return Container(
       margin: const EdgeInsets.all(1),
       decoration: BoxDecoration(
@@ -229,25 +235,27 @@ class _UserPostsState extends State<UserPosts> {
           : const EdgeInsets.only(left: 50, right: 50, top: 10, bottom: 10),
       child: Column(children: [
         Expanded(
-            child: ListView.builder(
-                itemCount: notReceived.length,
-                itemBuilder: (context, index) {
-                  var post = notReceived.elementAt(index);
-                  var author = widget.client.getExistingChat(authorID);
-                  return UserPostW(
-                      post, author, widget.client, widget.tabChange);
-                })),
-        Expanded(
-            child: ListView.builder(
-                itemCount: posts.length,
-                itemBuilder: (context, index) {
-                  var post = alreadyReceivedUserPosts.elementAt(index);
-                  var author =
-                      widget.client.getExistingChat(post.summ.authorID);
-                  var from = widget.client.getExistingChat(post.summ.from);
-                  return FeedPostW(widget.feed, post, author, from,
-                      widget.client, widget.tabChange);
-                }))
+            child: ListView(
+          children: [
+            ...notReceived
+                .map((e) => UserPostW(
+                    e,
+                    widget.feed,
+                    widget.client.getExistingChat(authorID),
+                    widget.client,
+                    widget.tabChange))
+                .toList(),
+            ...alreadyReceivedUserPosts
+                .map((e) => FeedPostW(
+                    widget.feed,
+                    e,
+                    widget.client.getExistingChat(e.summ.authorID),
+                    widget.client.getExistingChat(e.summ.from),
+                    widget.client,
+                    widget.tabChange))
+                .toList()
+          ],
+        ))
       ]),
     );
   }
