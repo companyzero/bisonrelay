@@ -307,7 +307,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
   }
 
   void clientChanged() {
-    var newUserPostList = client.userPostList;
+    var newUserPostList = client.activeUserPostList;
     if (newUserPostList != userPostList) {
       if (newUserPostList.isNotEmpty) {
         Navigator.of(context).pushReplacementNamed('/feed',

@@ -202,8 +202,12 @@ List<ChatMenuItem> buildUserChatMenu(ChatModel chat) {
     var event = SynthChatEvent("Listing user posts", SCE_sending);
     try {
       chat.append(ChatEventModel(event, null));
-      client.userPostListID = chat.id;
-      await Golib.listUserPosts(chat.id);
+      if (chat.userPostList.isEmpty) {
+        chat.userPostListID = chat.id;
+        await Golib.listUserPosts(chat.id);
+      } else {
+        client.activeUserPostList = chat.userPostList;
+      }
       event.state = SCE_sent;
     } catch (exception) {
       event.error = Exception("Unable to list user posts: $exception");

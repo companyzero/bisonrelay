@@ -130,6 +130,22 @@ class ChatModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  String _userPostListID = "";
+  String get userPostListID => _userPostListID;
+  set userPostListID(String b) {
+    _userPostListID = b;
+    notifyListeners();
+  }
+
+  List<PostListItem> _userPostList = [];
+  UnmodifiableListView<PostListItem> get userPostList =>
+      UnmodifiableListView(_userPostList);
+
+  set userPostList(List<PostListItem> us) {
+    _userPostList = us;
+    notifyListeners();
+  }
+
   // return the first unread msg index and -1 if there aren't
   // unread msgs
   int firstUnreadIndex() {
@@ -533,6 +549,27 @@ class ClientModel extends ChangeNotifier {
   String _network = "";
   String get network => _network;
 
+  String _activeUserPostAuthorID = "";
+  String get activeUserPostAuthorID => _activeUserPostAuthorID;
+  set activeUserPostAuthorID(String b) {
+    _activeUserPostAuthorID = b;
+    notifyListeners();
+  }
+
+  List<PostListItem> _activeUserPostList = [];
+  UnmodifiableListView<PostListItem> get activeUserPostList =>
+      UnmodifiableListView(_activeUserPostList);
+
+  set activeUserPostList(List<PostListItem> us) {
+    _activeUserPostList = us;
+    notifyListeners();
+  }
+
+  void hideUserPostList() {
+    activeUserPostList = [];
+    notifyListeners();
+  }
+
   ChatModel? _active;
   ChatModel? get active => _active;
 
@@ -560,6 +597,7 @@ class ClientModel extends ChangeNotifier {
     }
     hasUnreadChats = unreadChats;
     hideSubMenu();
+    hideUserPostList();
     notifyListeners();
   }
 
@@ -808,7 +846,10 @@ class ClientModel extends ChangeNotifier {
     await for (var evnt in stream) {
       if (evnt is UserPostList) {
         if (evnt.posts.isNotEmpty) {
-          userPostList = evnt.posts;
+          var chat = getExistingChat(evnt.uid);
+          chat?.userPostList = evnt.posts;
+          activeUserPostList = evnt.posts;
+          activeUserPostAuthorID = evnt.uid;
           notifyListeners();
         }
         continue;

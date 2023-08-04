@@ -4,6 +4,7 @@ import 'package:bruig/components/md_elements.dart';
 import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/models/feed.dart';
+import 'package:bruig/screens/overview.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:provider/provider.dart';
@@ -860,8 +861,9 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
               padding: const EdgeInsets.all(15),
               iconSize: 15,
               tooltip: "Go back",
-              onPressed: () =>
-                  widget.tabChange(0, null), //widget.tabChange(0, null),
+              onPressed: () => Navigator.of(context).pushReplacementNamed(
+                  '/feed',
+                  arguments: PageTabs(0, [])), //widget.tabChange(0, null),
               icon: Icon(color: darkTextColor, Icons.close_outlined)),
         ]));
   }

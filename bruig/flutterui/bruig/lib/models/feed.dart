@@ -241,9 +241,9 @@ class FeedModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  bool _gettingUserPost = false;
-  bool get gettingUserPost => _gettingUserPost;
-  void set gettingUserPost(bool b) {
+  String _gettingUserPost = "";
+  String get gettingUserPost => _gettingUserPost;
+  void set gettingUserPost(String b) {
     _gettingUserPost = b;
     notifyListeners();
   }
@@ -257,7 +257,6 @@ class FeedModel extends ChangeNotifier {
 
   Future<void> getUserPost(
       String authorId, String postId, Function onTabChange) async {
-    _gettingUserPost = true;
     await Golib.getUserPost(authorId, postId);
     tabChange = onTabChange;
   }
@@ -311,12 +310,10 @@ class FeedModel extends ChangeNotifier {
       newPost.lastStatusTS = newPost.summ.lastStatusTS;
       await newPost.readPost();
       _posts.insert(0, newPost);
-      if (gettingUserPost) {
-        print("received new user post");
+      if (gettingUserPost == newPost.summ.id) {
         newUserPost = newPost;
-        _gettingUserPost = false;
+        _gettingUserPost = "";
         active = newPost;
-        print("tabchange? ${tabChange != null}");
         tabChange!(0, PostContentScreenArgs(newUserPost!));
       }
 

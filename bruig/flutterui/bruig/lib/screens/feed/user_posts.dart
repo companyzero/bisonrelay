@@ -8,7 +8,6 @@ import 'package:golib_plugin/definitions.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:bruig/components/user_context_menu.dart';
 import 'package:bruig/util.dart';
-import 'package:golib_plugin/golib_plugin.dart';
 
 class UserPostW extends StatefulWidget {
   final PostListItem post;
@@ -29,7 +28,7 @@ class _UserPostWState extends State<UserPostW> {
   PostListItem get post => widget.post;
   ChatModel? get author => widget.author;
   showContent(BuildContext context) async {
-    print("show content");
+    widget.feed.gettingUserPost = post.id;
     await widget.feed
         .getUserPost(author?.id ?? "", post.id, widget.onTabChange);
   }
@@ -149,12 +148,12 @@ class _UserPostWState extends State<UserPostW> {
                               borderRadius:
                                   const BorderRadius.all(Radius.circular(3)),
                               side: BorderSide(color: borderDividerColor))),
-                      onPressed: () => !widget.feed.gettingUserPost
+                      onPressed: () => widget.feed.gettingUserPost == ""
                           ? showContent(context)
                           : null,
-                      child: Text(!widget.feed.gettingUserPost
-                          ? "Download"
-                          : "Loading"),
+                      child: Text(widget.feed.gettingUserPost != post.id
+                          ? "Get Post"
+                          : "Downloading"),
                     )))
           ]),
         ],
@@ -199,6 +198,10 @@ class _UserPostsState extends State<UserPosts> {
 
   @override
   void dispose() {
+    Future.delayed(Duration.zero, () async {
+      widget.client.hideUserPostList();
+    });
+
     widget.feed.removeListener(feedChanged);
     super.dispose();
   }
@@ -208,11 +211,10 @@ class _UserPostsState extends State<UserPosts> {
     bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
     var theme = Theme.of(context);
     var backgroundColor = theme.backgroundColor;
-    var authorID = widget.client.userPostListID;
+    var authorID = widget.client.activeUserPostAuthorID;
     var alreadyReceivedUserPosts =
         widget.feed.posts.where((post) => (post.summ.authorID == authorID));
     List<PostListItem> notReceived = [];
-    print("posts length: ${widget.posts.length}");
     for (var post in widget.posts) {
       var found = false;
       for (var alreadyReceivedPost in alreadyReceivedUserPosts) {
@@ -225,7 +227,6 @@ class _UserPostsState extends State<UserPosts> {
         notReceived.add(post);
       }
     }
-    print("not received length: ${notReceived.length}");
     return Container(
       margin: const EdgeInsets.all(1),
       decoration: BoxDecoration(
