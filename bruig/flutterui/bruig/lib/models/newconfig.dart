@@ -3,6 +3,8 @@ import 'dart:math';
 
 import 'package:bruig/config.dart';
 import 'package:bruig/wordlist.dart';
+import 'package:bruig/screens/unlock_ln.dart';
+import 'package:bruig/main.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:golib_plugin/definitions.dart';
@@ -187,6 +189,13 @@ class NewConfigModel extends ChangeNotifier {
 
     await copyPath(oldPath, newPath);
     print("Moving old windows wallet to better location");
+    Config cfg = await configFromArgs([]);
+    await Golib.createLockFile(cfg.dbRoot);
+    if (cfg.walletType == "internal") {
+      await runUnlockDcrlnd(cfg);
+      return;
+    }
+    await runMainApp(cfg);
   }
 
   Future<void> deleteLNWalletDir() async {
