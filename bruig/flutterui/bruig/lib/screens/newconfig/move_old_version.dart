@@ -157,7 +157,7 @@ class _MoveOldVersionWalletPageState extends State<MoveOldVersionWalletPage> {
                                       onPressed: moveAcccepted && !moving
                                           ? () => moveOldVersion(context)
                                           : null,
-                                      text: "Delete Wallet",
+                                      text: "Move Wallet",
                                     ),
                                     const SizedBox(width: 10),
                                   ])))
