@@ -156,6 +156,28 @@ class NewConfigModel extends ChangeNotifier {
     return false;
   }
 
+  Future<bool> hasOldVersionWindowsWalletDB() async {
+    if (Platform.isWindows &&
+        Platform.environment.containsKey("LOCALAPPDATA")) {
+      var oldVersionConfigFile = path.join(
+          Platform.environment["LOCALAPPDATA"]!,
+          "Packages",
+          "com.flutter.bruig_ywj3797wkq8tj",
+          "LocalCache",
+          "Local",
+          "${APPNAME}",
+          "${APPNAME}.conf");
+      if (File(oldVersionConfigFile).existsSync()) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  Future<void> moveOldWalletVersion() async {
+    print("Moving old windows wallet to better location");
+  }
+
   Future<void> deleteLNWalletDir() async {
     var dir = await lnWalletDir();
     await File(dir).delete(recursive: true);
