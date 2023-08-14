@@ -175,6 +175,11 @@ class NewConfigModel extends ChangeNotifier {
   }
 
   Future<void> moveOldWalletVersion() async {
+    //var cfgFile = path.join(Platform.environment["LOCALAPPDATA"]!, APPNAME);
+    if (await hasLNWalletDB()) {
+      print("Can't move old windows wallet to better location");
+      throw unableToMoveOldWallet;
+    }
     print("Moving old windows wallet to better location");
   }
 

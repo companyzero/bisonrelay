@@ -1,7 +1,13 @@
 import 'package:bruig/components/buttons.dart';
 import 'package:bruig/components/snackbars.dart';
+import 'package:bruig/config.dart';
 import 'package:bruig/models/newconfig.dart';
 import 'package:flutter/material.dart';
+
+const _errorMoveMsg = "We were unable to move you existing BR wallet/db due"
+    "to there already being a wallet/db at the following location:\n"
+    "%LOCALAPPDATA%/bruig\n"
+    "Please resolve this conflict and then restart Bison Relay";
 
 const _warnMsg = "There is an existing, old version of"
     "the wallet. To use that old version you need to move it"
@@ -23,6 +29,7 @@ class _MoveOldVersionWalletPageState extends State<MoveOldVersionWalletPage> {
   NewConfigModel get newconf => widget.newconf;
   bool moveAcccepted = false;
   bool moving = false;
+  bool unableToMove = false;
 
   void moveOldVersion(BuildContext context) async {
     setState(() {
@@ -31,7 +38,14 @@ class _MoveOldVersionWalletPageState extends State<MoveOldVersionWalletPage> {
     try {
       await newconf.moveOldWalletVersion();
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to move wallet dir: $exception");
+      if (exception == unableToMoveOldWallet) {
+        showErrorSnackbar(context,
+            "Unable to move wallet dir because of existing wallet in new location: $exception");
+        unableToMove = true;
+        return;
+      } else {
+        showErrorSnackbar(context, "Unable to move wallet dir: $exception");
+      }
       return;
     }
     Navigator.of(context).pushReplacementNamed("/newconf/lnChoice/internal");
@@ -83,53 +97,72 @@ class _MoveOldVersionWalletPageState extends State<MoveOldVersionWalletPage> {
                       )),
                 ]),
                 const SizedBox(height: 39),
-                Text("Move old wallet",
-                    style: TextStyle(
-                        color: textColor,
-                        fontSize: 34,
-                        fontWeight: FontWeight.w200)),
-                const SizedBox(height: 20),
-                Column(children: [
-                  SizedBox(
-                      width: 377,
-                      child: Text(_warnMsg,
-                          textAlign: TextAlign.left,
-                          style: TextStyle(
-                              color: textColor,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w300))),
-                  Center(
-                    child: SizedBox(
-                        width: 377,
-                        child: CheckboxListTile(
-                          title: Text(
-                              "Directory has been backed up or you choose to proceed without backing up",
-                              style: TextStyle(color: textColor)),
-                          activeColor: textColor,
-                          value: moveAcccepted,
-                          side: BorderSide(color: textColor),
-                          onChanged: (val) {
-                            setState(() {
-                              moveAcccepted = val ?? false;
-                            });
-                          },
-                        )),
-                  ),
-                  const SizedBox(height: 34),
-                  Center(
-                      child: SizedBox(
-                          width: 278,
-                          child: Row(children: [
-                            const SizedBox(width: 35),
-                            LoadingScreenButton(
-                              onPressed: moveAcccepted && !moving
-                                  ? () => moveOldVersion(context)
-                                  : null,
-                              text: "Delete Wallet",
-                            ),
-                            const SizedBox(width: 10),
-                          ])))
-                ]),
+                unableToMove
+                    ? Column(children: [
+                        Text("Move old wallet",
+                            style: TextStyle(
+                                color: textColor,
+                                fontSize: 34,
+                                fontWeight: FontWeight.w200)),
+                        const SizedBox(height: 20),
+                        SizedBox(
+                            width: 377,
+                            child: Text(_errorMoveMsg,
+                                textAlign: TextAlign.left,
+                                style: TextStyle(
+                                    color: textColor,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w300))),
+                      ])
+                    : Column(children: [
+                        Text("Move old wallet",
+                            style: TextStyle(
+                                color: textColor,
+                                fontSize: 34,
+                                fontWeight: FontWeight.w200)),
+                        const SizedBox(height: 20),
+                        Column(children: [
+                          SizedBox(
+                              width: 377,
+                              child: Text(_warnMsg,
+                                  textAlign: TextAlign.left,
+                                  style: TextStyle(
+                                      color: textColor,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w300))),
+                          Center(
+                            child: SizedBox(
+                                width: 377,
+                                child: CheckboxListTile(
+                                  title: Text(
+                                      "Directory has been backed up or you choose to proceed without backing up",
+                                      style: TextStyle(color: textColor)),
+                                  activeColor: textColor,
+                                  value: moveAcccepted,
+                                  side: BorderSide(color: textColor),
+                                  onChanged: (val) {
+                                    setState(() {
+                                      moveAcccepted = val ?? false;
+                                    });
+                                  },
+                                )),
+                          ),
+                          const SizedBox(height: 34),
+                          Center(
+                              child: SizedBox(
+                                  width: 278,
+                                  child: Row(children: [
+                                    const SizedBox(width: 35),
+                                    LoadingScreenButton(
+                                      onPressed: moveAcccepted && !moving
+                                          ? () => moveOldVersion(context)
+                                          : null,
+                                      text: "Delete Wallet",
+                                    ),
+                                    const SizedBox(width: 10),
+                                  ])))
+                        ]),
+                      ])
               ]))
         ]));
   }

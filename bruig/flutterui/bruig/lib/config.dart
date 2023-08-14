@@ -281,6 +281,7 @@ Future<Config> loadConfig(String filepath) async {
 
 final usageException = Exception("Usage Displayed");
 final newConfigNeededException = Exception("Config needed");
+final unableToMoveOldWallet = Exception("Existing wallet in new location");
 
 Future<String> configFileName(List<String> args) async {
   var defaultCfgFile = path.join(await defaultAppDataDir(), "${APPNAME}.conf");
