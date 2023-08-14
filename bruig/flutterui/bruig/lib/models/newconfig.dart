@@ -7,6 +7,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
+import 'package:io/io.dart';
 import 'package:path/path.dart' as path;
 
 enum LNNodeType { internal, external }
@@ -180,6 +181,11 @@ class NewConfigModel extends ChangeNotifier {
       print("Can't move old windows wallet to better location");
       throw unableToMoveOldWallet;
     }
+    var oldPath = path.join(Platform.environment["LOCALAPPDATA"]!, "Packages",
+        "com.flutter.bruig_ywj3797wkq8tj", "LocalCache", "Local", APPNAME);
+    var newPath = path.join(Platform.environment["LOCALAPPDATA"]!, APPNAME);
+
+    await copyPath(oldPath, newPath);
     print("Moving old windows wallet to better location");
   }
 

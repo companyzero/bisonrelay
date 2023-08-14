@@ -4,7 +4,7 @@ import 'package:bruig/config.dart';
 import 'package:bruig/models/newconfig.dart';
 import 'package:flutter/material.dart';
 
-const _errorMoveMsg = "We were unable to move you existing BR wallet/db due"
+const _errorMoveMsg = "We were unable to move you existing BR wallet/db due "
     "to there already being a wallet/db at the following location:\n"
     "%LOCALAPPDATA%/bruig\n"
     "Please resolve this conflict and then restart Bison Relay";
