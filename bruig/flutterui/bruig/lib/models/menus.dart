@@ -20,6 +20,7 @@ import 'package:golib_plugin/golib_plugin.dart';
 import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:path/path.dart' as path;
+import 'package:flutter_svg/flutter_svg.dart';
 
 class MainMenuItem {
   final String label;
@@ -27,20 +28,14 @@ class MainMenuItem {
   final WidgetBuilder builder;
   final WidgetBuilder titleBuilder;
   final Widget? icon;
-  final Widget? iconNotification;
   final List<SubMenuInfo> subMenuInfo;
 
   MainMenuItem(this.label, this.routeName, this.builder, this.titleBuilder,
-      this.icon, this.iconNotification, this.subMenuInfo);
+      this.icon, this.subMenuInfo);
 }
 
-MainMenuItem _emptyMenu = MainMenuItem(
-    "",
-    "",
-    (context) => const Text(""),
-    (context) => const Text(""),
-    const SidebarIcon(Icons.question_mark, false),
-    null, <SubMenuInfo>[]);
+MainMenuItem _emptyMenu = MainMenuItem("", "", (context) => const Text(""),
+    (context) => const Text(""), null, <SubMenuInfo>[]);
 
 class SubMenuInfo {
   final int pageTab;
@@ -78,8 +73,7 @@ final List<MainMenuItem> mainMenu = [
       (context) => Consumer<MainMenuModel>(
           builder: (context, menu, child) => FeedScreen(menu)),
       (context) => const FeedScreenTitle(),
-      const SidebarIcon(Icons.list_alt, false),
-      const SidebarIcon(Icons.new_releases_outlined, true),
+      const SidebarSvgIcon("assets/icons/icons-menu-news.svg"),
       FeedScreenSub),
   MainMenuItem(
       "Chats",
@@ -88,8 +82,7 @@ final List<MainMenuItem> mainMenu = [
           builder: (context, client, ntfns, child) =>
               ChatsScreen(client, ntfns)),
       (context) => const ChatsScreenTitle(),
-      const SidebarIcon(Icons.chat_bubble_outline, false),
-      const SidebarIcon(Icons.new_releases_outlined, true),
+      const SidebarSvgIcon("assets/icons/icons-menu-chat.svg"),
       <SubMenuInfo>[]),
   MainMenuItem(
       "LN Management",
@@ -97,8 +90,7 @@ final List<MainMenuItem> mainMenu = [
       (context) => Consumer<MainMenuModel>(
           builder: (context, menu, child) => LNScreen(menu)),
       (context) => const LNScreenTitle(),
-      const SidebarIcon(Icons.device_hub, false),
-      const SidebarIcon(Icons.device_hub, false),
+      const SidebarSvgIcon("assets/icons/icons-menu-lnmng.svg"),
       LnScreenSub),
   MainMenuItem(
       "Pages Browser",
@@ -107,8 +99,7 @@ final List<MainMenuItem> mainMenu = [
           builder: (context, client, resources, child) =>
               ViewPageScreen(resources, client)),
       (context) => const ViewPagesScreenTitle(),
-      const SidebarIcon(Icons.web, false),
-      const SidebarIcon(Icons.web, false),
+      const SidebarSvgIcon("assets/icons/icons-menu-pages.svg"),
       <SubMenuInfo>[]),
   MainMenuItem(
       "Manage Content",
@@ -116,17 +107,15 @@ final List<MainMenuItem> mainMenu = [
       (context) => Consumer<MainMenuModel>(
           builder: (context, menu, child) => ManageContentScreen(menu)),
       (context) => const ManageContentScreenTitle(),
-      const SidebarIcon(Icons.file_download, false),
-      const SidebarIcon(Icons.file_download, false),
+      const SidebarSvgIcon("assets/icons/icons-menu-files.svg"),
       ManageContentScreenSub),
   MainMenuItem(
-      "Payment Stats",
+      "Stats",
       PayStatsScreen.routeName,
       (context) => Consumer<ClientModel>(
           builder: (context, client, child) => PayStatsScreen(client)),
       (context) => const PayStatsScreenTitle(),
-      const SidebarIcon(Icons.wallet_outlined, false),
-      const SidebarIcon(Icons.wallet_outlined, false),
+      const SidebarSvgIcon("assets/icons/icons-menu-stats.svg"),
       <SubMenuInfo>[]),
   MainMenuItem(
       "Settings",
@@ -134,8 +123,7 @@ final List<MainMenuItem> mainMenu = [
       (context) => Consumer<ClientModel>(
           builder: (context, client, child) => SettingsScreen(client)),
       (context) => const SettingsScreenTitle(),
-      const SidebarIcon(Icons.settings_rounded, false),
-      const SidebarIcon(Icons.settings_rounded, false),
+      const SidebarSvgIcon("assets/icons/icons-menu-settings.svg"),
       <SubMenuInfo>[]),
   MainMenuItem(
       "Logs",
@@ -143,7 +131,6 @@ final List<MainMenuItem> mainMenu = [
       (context) =>
           Consumer<LogModel>(builder: (context, log, child) => LogScreen(log)),
       (context) => const LogScreenTitle(),
-      const SidebarIcon(Icons.list_rounded, false),
       const SidebarIcon(Icons.list_rounded, false),
       <SubMenuInfo>[]),
 ];
@@ -337,10 +324,28 @@ class SidebarIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    var theme = Theme.of(context);
+    var unselectedTextColor = theme.dividerColor;
     if (alert) {
       return Icon(icon, color: Colors.amber);
     } else {
-      return Icon(icon);
+      return Icon(icon, color: unselectedTextColor);
     }
+  }
+}
+
+class SidebarSvgIcon extends StatelessWidget {
+  final String assetName;
+  const SidebarSvgIcon(this.assetName, {Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    var theme = Theme.of(context);
+    var unselectedTextColor = theme.iconTheme.color;
+    return SvgPicture.asset(
+      assetName,
+      colorFilter: ColorFilter.mode(
+          unselectedTextColor ?? const Color(0xFF8E8D98), BlendMode.srcIn),
+    );
   }
 }

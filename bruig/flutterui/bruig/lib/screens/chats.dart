@@ -13,6 +13,9 @@ import 'package:provider/provider.dart';
 import 'package:bruig/components/chat/active_chat.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:bruig/components/empty_widget.dart';
+import 'package:bruig/util.dart';
+import 'package:bruig/components/user_context_menu.dart';
+import 'package:bruig/components/interactive_avatar.dart';
 
 class ChatsScreenTitle extends StatelessWidget {
   const ChatsScreenTitle({super.key});
@@ -22,20 +25,28 @@ class ChatsScreenTitle extends StatelessWidget {
     return Consumer<ClientModel>(builder: (context, client, child) {
       var activeHeading = client.active;
       if (activeHeading == null) {
-        return Text("Bison Relay / Chat",
-            style:
-                TextStyle(fontSize: 15, color: Theme.of(context).focusColor));
+        return Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+          Text("Bison Relay / Chat",
+              textAlign: TextAlign.center,
+              style:
+                  TextStyle(fontSize: 18, color: Theme.of(context).focusColor))
+        ]);
       }
       if (client.showAddressBook) {
-        return Text("Bison Relay / Chat / Address Book",
-            style:
-                TextStyle(fontSize: 15, color: Theme.of(context).focusColor));
+        return Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+          Text("Bison Relay / Chat / Address Book",
+              style:
+                  TextStyle(fontSize: 15, color: Theme.of(context).focusColor))
+        ]);
       }
       var chat = client.getExistingChat(activeHeading.id);
       if (chat == null) {
-        return Text("Bison Relay / Chat",
-            style:
-                TextStyle(fontSize: 15, color: Theme.of(context).focusColor));
+        return Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+          Text("Bison Relay / Chat",
+              textAlign: TextAlign.center,
+              style:
+                  TextStyle(fontSize: 18, color: Theme.of(context).focusColor))
+        ]);
       }
       var profile = client.profile;
       var suffix = chat.nick != "" ? " / ${chat.nick}" : "";
@@ -44,6 +55,49 @@ class ChatsScreenTitle extends StatelessWidget {
               ? " / Manage Group Chat"
               : " / Profile"
           : "";
+
+      bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
+      if (isScreenSmall) {
+        var theme = Theme.of(context);
+        var darkTextColor = theme.indicatorColor;
+        var hightLightTextColor = theme.dividerColor; // NAME TEXT COLOR
+        var selectedBackgroundColor = theme.highlightColor;
+        var avatarColor = colorFromNick(chat.nick);
+        var avatarTextColor =
+            ThemeData.estimateBrightnessForColor(avatarColor) == Brightness.dark
+                ? hightLightTextColor
+                : darkTextColor;
+        return Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              IconButton(
+                  onPressed: () => client.active = null,
+                  icon: Icon(Icons.keyboard_arrow_left_rounded,
+                      color: Theme.of(context).focusColor)),
+              Text("Bison Relay / Chat$suffix$profileSuffix",
+                  style: TextStyle(
+                      fontSize: 18, color: Theme.of(context).focusColor)),
+              chat.isGC
+                  ? const Empty()
+                  : Container(
+                      width: 40,
+                      margin: const EdgeInsets.only(
+                          top: 0, bottom: 0, left: 5, right: 0),
+                      child: UserContextMenu(
+                        targetUserChat: chat,
+                        child: InteractiveAvatar(
+                          bgColor: selectedBackgroundColor,
+                          chatNick: chat.nick,
+                          onTap: () {
+                            client.showSubMenu(chat.isGC, chat.id);
+                          },
+                          avatarColor: avatarColor,
+                          avatarTextColor: avatarTextColor,
+                        ),
+                      ),
+                    )
+            ]);
+      }
       return Text("Bison Relay / Chat$suffix$profileSuffix",
           style: TextStyle(fontSize: 15, color: Theme.of(context).focusColor));
     });
@@ -289,6 +343,9 @@ class _ChatsScreenState extends State<ChatsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (client.showAddressBook) {
+      return AddressBook(client, inputFocusNode);
+    }
     var theme = Theme.of(context);
     var backgroundColor = theme.backgroundColor;
 
@@ -306,22 +363,31 @@ class _ChatsScreenState extends State<ChatsScreen> {
     }
 
     bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
-
-    return Flex(
-        direction: isScreenSmall ? Axis.vertical : Axis.horizontal,
-        children: [
-          isScreenSmall
-              ? SizedBox(height: 100, child: ChatRibbonMenu(inputFocusNode))
-              : SizedBox(width: 163, child: ChatDrawerMenu(inputFocusNode)),
-          Expanded(
-              child: Container(
-            margin: const EdgeInsets.all(1),
-            decoration: BoxDecoration(
-              color: backgroundColor,
-              borderRadius: BorderRadius.circular(3),
-            ),
-            child: ActiveChat(client, inputFocusNode),
-          )),
-        ]);
+    return !isScreenSmall
+        ? Flex(direction: Axis.horizontal, children: [
+            SizedBox(width: 163, child: ChatDrawerMenu(inputFocusNode)),
+            Expanded(
+                child: Container(
+              margin: const EdgeInsets.all(1),
+              decoration: BoxDecoration(
+                color: backgroundColor,
+                borderRadius: BorderRadius.circular(3),
+              ),
+              child: ActiveChat(client, inputFocusNode),
+            )),
+          ])
+        : Flex(direction: Axis.vertical, children: [
+            client.active == null
+                ? Expanded(child: ChatDrawerMenu(inputFocusNode))
+                : Expanded(
+                    child: Container(
+                    margin: const EdgeInsets.all(1),
+                    decoration: BoxDecoration(
+                      color: backgroundColor,
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                    child: ActiveChat(client, inputFocusNode),
+                  ))
+          ]);
   }
 }

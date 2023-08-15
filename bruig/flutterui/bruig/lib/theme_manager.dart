@@ -39,7 +39,7 @@ class ThemeNotifier with ChangeNotifier {
       selectedRowColor: Colors.black38,
       shadowColor: const Color(0xFFE44B00),
       dialogBackgroundColor: const Color(0xFF3A384B),
-      iconTheme: const IconThemeData(color: Colors.white),
+      iconTheme: const IconThemeData(color: Color(0xFF8E8D98)),
       textTheme: const TextTheme(
           headline5: TextStyle(
             color: Colors.white,
@@ -70,7 +70,7 @@ class ThemeNotifier with ChangeNotifier {
       selectedRowColor: Colors.black38,
       shadowColor: const Color(0xFFE44B00),
       dialogBackgroundColor: const Color(0xFF3A384B),
-      iconTheme: const IconThemeData(color: Colors.white),
+      iconTheme: const IconThemeData(color: Color(0xFF8E8D98)),
       textTheme: const TextTheme(
           headline5: TextStyle(
             color: Colors.white,
