@@ -1,8 +1,10 @@
 import 'package:bruig/components/app_notifications.dart';
+import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/models/feed.dart';
 import 'package:bruig/models/menus.dart';
 import 'package:bruig/models/notifications.dart';
+
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:provider/provider.dart';
@@ -123,6 +125,7 @@ class _SidebarState extends State<Sidebar> {
                 ]),
           ),
           hoverColor: scaffoldBackgroundColor,
+          hoverTextStyle: TextStyle(color: textColor),
           textStyle: TextStyle(color: unselectedTextColor),
           selectedTextStyle: TextStyle(color: textColor),
           itemPadding:
@@ -147,7 +150,7 @@ class _SidebarState extends State<Sidebar> {
             size: 21,
           ),
           selectedIconTheme: IconThemeData(
-            color: textColor,
+            color: selectedColor,
             size: 21,
           ),
         ),
@@ -185,8 +188,18 @@ class _SidebarState extends State<Sidebar> {
                   iconWidget: (e.label == "Chats" && client.hasUnreadChats) ||
                           (e.label == "News Feed" &&
                               feed.hasUnreadPostsComments)
-                      ? e.iconNotification
-                      : e.icon,
+                      ? Stack(children: [
+                          Container(
+                              padding: const EdgeInsets.all(3),
+                              child: e.icon ?? const Empty()),
+                          const Positioned(
+                              top: 1,
+                              right: 1,
+                              child: CircleAvatar(
+                                  backgroundColor: Colors.red, radius: 4)),
+                        ])
+                      : Container(
+                          padding: const EdgeInsets.all(3), child: e.icon),
                   onTap: () => switchScreen(e.routeName),
                 ))
             .toList(),

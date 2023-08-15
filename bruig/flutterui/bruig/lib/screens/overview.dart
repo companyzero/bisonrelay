@@ -266,8 +266,20 @@ class _OverviewScreenState extends State<OverviewScreen> {
                                     client.hasUnreadChats) ||
                                 (menuItem.label == "News Feed" &&
                                     widget.feed.hasUnreadPostsComments)
-                            ? menuItem.iconNotification
-                            : menuItem.icon,
+                            ? Stack(children: [
+                                Container(
+                                    padding: const EdgeInsets.all(3),
+                                    child: menuItem.icon ?? const Empty()),
+                                const Positioned(
+                                    top: 1,
+                                    right: 1,
+                                    child: CircleAvatar(
+                                        backgroundColor: Colors.red,
+                                        radius: 4)),
+                              ])
+                            : Container(
+                                padding: const EdgeInsets.all(3),
+                                child: menuItem.icon),
                         title: Text(menuItem.label,
                             style: const TextStyle(fontSize: 15)))
                     : Theme(
@@ -281,8 +293,20 @@ class _OverviewScreenState extends State<OverviewScreen> {
                                       client.hasUnreadChats) ||
                                   (menuItem.label == "News Feed" &&
                                       widget.feed.hasUnreadPostsComments)
-                              ? menuItem.iconNotification
-                              : menuItem.icon,
+                              ? Stack(children: [
+                                  Container(
+                                      padding: const EdgeInsets.all(3),
+                                      child: menuItem.icon ?? const Empty()),
+                                  const Positioned(
+                                      top: 1,
+                                      right: 1,
+                                      child: CircleAvatar(
+                                          backgroundColor: Colors.red,
+                                          radius: 4)),
+                                ])
+                              : Container(
+                                  padding: const EdgeInsets.all(3),
+                                  child: menuItem.icon),
                           children: (menuItem.subMenuInfo.map((e) => ListTile(
                               hoverColor: scaffoldBackgroundColor,
                               selected: widget.mainMenu.activeMenu.label ==

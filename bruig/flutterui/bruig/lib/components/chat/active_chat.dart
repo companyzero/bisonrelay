@@ -5,7 +5,6 @@ import 'package:bruig/util.dart';
 import 'package:bruig/models/client.dart';
 import 'package:flutter/material.dart';
 import 'package:bruig/components/profile.dart';
-import 'package:bruig/components/addressbook/addressbook.dart';
 import 'package:bruig/components/chat/messages.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import 'package:bruig/components/chat/input.dart';
@@ -86,7 +85,7 @@ class _ActiveChatState extends State<ActiveChat> {
   void dispose() {
     _debounce?.cancel();
     client.removeListener(clientChanged);
-    inputFocusNode.dispose();
+    //inputFocusNode.dispose();  XXX Does this need to be put back?  Errors with it
     super.dispose();
   }
 
@@ -95,9 +94,6 @@ class _ActiveChatState extends State<ActiveChat> {
 
   @override
   Widget build(BuildContext context) {
-    if (client.showAddressBook) {
-      return AddressBook(client, inputFocusNode);
-    }
     if (this.chat == null) return Container();
     var chat = this.chat!;
     var profile = client.profile;
@@ -121,76 +117,144 @@ class _ActiveChatState extends State<ActiveChat> {
             ? hightLightTextColor
             : darkTextColor;
 
-    return Row(children: [
-      Expanded(
-        child: Column(children: [
-          Expanded(
-            child: Messages(chat, client.nick, client, _itemScrollController,
-                _itemPositionsListener),
-          ),
-          Input(sendMsg, chat, inputFocusNode)
-        ]),
-      ),
-      Visibility(
-        visible: client.activeSubMenu.isNotEmpty,
-        child: Container(
-          width: 250,
-          decoration: BoxDecoration(
-            border: Border(
-              left: BorderSide(width: 2, color: subMenuBorderColor),
+    bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
+    return isScreenSmall
+        ? client.activeSubMenu.isNotEmpty
+            ? Stack(
+                alignment: Alignment.topRight,
+                children: [
+                  Column(children: [
+                    Container(
+                      margin: const EdgeInsets.only(top: 20, bottom: 20),
+                      child: CircleAvatar(
+                        radius: 75,
+                        backgroundColor: avatarColor,
+                        child: Text(
+                          nickCapitalLetter(),
+                          style:
+                              TextStyle(color: avatarTextColor, fontSize: 75),
+                        ),
+                      ),
+                    ),
+                    Visibility(
+                      visible: chat.isGC,
+                      child: Text("Group Chat",
+                          style: TextStyle(fontSize: 15, color: textColor)),
+                    ),
+                    Text(chat.nick,
+                        style: TextStyle(fontSize: 15, color: textColor)),
+                    Expanded(
+                        child: ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: client.activeSubMenu.length,
+                      itemBuilder: (context, index) => ListTile(
+                          title: Text(client.activeSubMenu[index].label,
+                              style: const TextStyle(fontSize: 11)),
+                          onTap: () {
+                            client.activeSubMenu[index]
+                                .onSelected(context, client);
+                            client.hideSubMenu();
+                          },
+                          hoverColor: Colors.black),
+                    )),
+                  ]),
+                  Positioned(
+                    top: 5,
+                    right: 5,
+                    child: Material(
+                      color: selectedBackgroundColor.withOpacity(0),
+                      child: IconButton(
+                        tooltip: "Close",
+                        hoverColor: selectedBackgroundColor,
+                        splashRadius: 15,
+                        iconSize: 15,
+                        onPressed: () => client.hideSubMenu(),
+                        icon: Icon(color: darkTextColor, Icons.close_outlined),
+                      ),
+                    ),
+                  ),
+                ],
+              )
+            : Column(children: [
+                Expanded(
+                  child: Messages(chat, client.nick, client,
+                      _itemScrollController, _itemPositionsListener),
+                ),
+                Input(sendMsg, chat, inputFocusNode)
+              ])
+        : Row(children: [
+            Expanded(
+              child: Column(children: [
+                Expanded(
+                  child: Messages(chat, client.nick, client,
+                      _itemScrollController, _itemPositionsListener),
+                ),
+                Input(sendMsg, chat, inputFocusNode)
+              ]),
             ),
-          ),
-          child: Stack(alignment: Alignment.topRight, children: [
-            Column(children: [
-              Container(
-                margin: const EdgeInsets.only(top: 20, bottom: 20),
-                child: CircleAvatar(
-                  radius: 75,
-                  backgroundColor: avatarColor,
-                  child: Text(
-                    nickCapitalLetter(),
-                    style: TextStyle(color: avatarTextColor, fontSize: 75),
+            Visibility(
+              visible: client.activeSubMenu.isNotEmpty,
+              child: Container(
+                width: 250,
+                decoration: BoxDecoration(
+                  border: Border(
+                    left: BorderSide(width: 2, color: subMenuBorderColor),
                   ),
                 ),
+                child: Stack(alignment: Alignment.topRight, children: [
+                  Column(children: [
+                    Container(
+                      margin: const EdgeInsets.only(top: 20, bottom: 20),
+                      child: CircleAvatar(
+                        radius: 75,
+                        backgroundColor: avatarColor,
+                        child: Text(
+                          nickCapitalLetter(),
+                          style:
+                              TextStyle(color: avatarTextColor, fontSize: 75),
+                        ),
+                      ),
+                    ),
+                    Visibility(
+                      visible: chat.isGC,
+                      child: Text("Group Chat",
+                          style: TextStyle(fontSize: 15, color: textColor)),
+                    ),
+                    Text(chat.nick,
+                        style: TextStyle(fontSize: 15, color: textColor)),
+                    Expanded(
+                        child: ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: client.activeSubMenu.length,
+                      itemBuilder: (context, index) => ListTile(
+                          title: Text(client.activeSubMenu[index].label,
+                              style: const TextStyle(fontSize: 11)),
+                          onTap: () {
+                            client.activeSubMenu[index]
+                                .onSelected(context, client);
+                            client.hideSubMenu();
+                          },
+                          hoverColor: Colors.black),
+                    )),
+                  ]),
+                  Positioned(
+                    top: 5,
+                    right: 5,
+                    child: Material(
+                      color: selectedBackgroundColor.withOpacity(0),
+                      child: IconButton(
+                        tooltip: "Close",
+                        hoverColor: selectedBackgroundColor,
+                        splashRadius: 15,
+                        iconSize: 15,
+                        onPressed: () => client.hideSubMenu(),
+                        icon: Icon(color: darkTextColor, Icons.close_outlined),
+                      ),
+                    ),
+                  ),
+                ]),
               ),
-              Visibility(
-                visible: chat.isGC,
-                child: Text("Group Chat",
-                    style: TextStyle(fontSize: 15, color: textColor)),
-              ),
-              Text(chat.nick, style: TextStyle(fontSize: 15, color: textColor)),
-              Expanded(
-                  child: ListView.builder(
-                shrinkWrap: true,
-                itemCount: client.activeSubMenu.length,
-                itemBuilder: (context, index) => ListTile(
-                    title: Text(client.activeSubMenu[index].label,
-                        style: const TextStyle(fontSize: 11)),
-                    onTap: () {
-                      client.activeSubMenu[index].onSelected(context, client);
-                      client.hideSubMenu();
-                    },
-                    hoverColor: Colors.black),
-              )),
-            ]),
-            Positioned(
-              top: 5,
-              right: 5,
-              child: Material(
-                color: selectedBackgroundColor.withOpacity(0),
-                child: IconButton(
-                  tooltip: "Close",
-                  hoverColor: selectedBackgroundColor,
-                  splashRadius: 15,
-                  iconSize: 15,
-                  onPressed: () => client.hideSubMenu(),
-                  icon: Icon(color: darkTextColor, Icons.close_outlined),
-                ),
-              ),
-            ),
-          ]),
-        ),
-      )
-    ]);
+            )
+          ]);
   }
 }

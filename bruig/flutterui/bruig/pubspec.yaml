@@ -38,8 +38,8 @@ dependencies:
   tuple: ^2.0.0
   window_manager: ^0.3.1
   shared_preferences: ^2.0.15
-  intl: ^0.17.0
-  sidebarx: ^0.12.0
+  intl: ^0.18.1
+  sidebarx: ^0.16.1
   markdown: ^7.0.0
   file_picker: ^5.2.6
   path_provider: ^2.0.11
@@ -47,10 +47,12 @@ dependencies:
   msix: ^3.6.3
   qr_flutter: ^4.1.0
   file_icon: ^1.0.0
-  package_info_plus: ^3.0.3
+  package_info_plus: ^4.1.0
   open_filex: ^4.3.2
   loading_animation_widget: ^1.2.0
   scrollable_positioned_list: ^0.3.8
+  duration: ^3.0.3
+  flutter_svg: ^2.0.7
   flutter_markdown:
     git:
       url: https://github.com/tiagoalvesdulce/packages
@@ -70,7 +72,7 @@ dev_dependencies:
   flutter_lints: ^2.0.1
   flutter_test:
     sdk: flutter
-  flutter_launcher_icons: "^0.11.0"
+  flutter_launcher_icons: ^0.13.1
 
 flutter_icons:
   android: "launcher_icon"
@@ -104,6 +106,13 @@ flutter:
   assets:
     - assets/chat-bg.png
     - assets/images/
+    - assets/icons/icons-menu-chat.svg
+    - assets/icons/icons-menu-files.svg
+    - assets/icons/icons-menu-lnmng.svg
+    - assets/icons/icons-menu-news.svg
+    - assets/icons/icons-menu-pages.svg
+    - assets/icons/icons-menu-settings.svg
+    - assets/icons/icons-menu-stats.svg
   #   - images/a_dot_ham.jpeg
 
   # An image asset can refer to one or more resolution-specific "variants", see
