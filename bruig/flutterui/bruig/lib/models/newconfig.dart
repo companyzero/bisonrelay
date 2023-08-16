@@ -3,10 +3,13 @@ import 'dart:math';
 
 import 'package:bruig/config.dart';
 import 'package:bruig/wordlist.dart';
+import 'package:bruig/screens/unlock_ln.dart';
+import 'package:bruig/main.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
+import 'package:io/io.dart';
 import 'package:path/path.dart' as path;
 
 enum LNNodeType { internal, external }
@@ -154,6 +157,58 @@ class NewConfigModel extends ChangeNotifier {
     }
 
     return false;
+  }
+
+  Future<bool> hasOldVersionWindowsWalletDB() async {
+    if (Platform.isWindows &&
+        Platform.environment.containsKey("LOCALAPPDATA")) {
+      var oldVersionConfigFile = path.join(
+          Platform.environment["LOCALAPPDATA"]!,
+          "Packages",
+          "com.flutter.bruig_ywj3797wkq8tj",
+          "LocalCache",
+          "Local",
+          "${APPNAME}",
+          "${APPNAME}.conf");
+      if (File(oldVersionConfigFile).existsSync()) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  Future<void> moveOldWalletVersion() async {
+    //var cfgFile = path.join(Platform.environment["LOCALAPPDATA"]!, APPNAME);
+    if (await hasLNWalletDB()) {
+      print("Can't move old windows wallet to better location");
+      throw unableToMoveOldWallet;
+    }
+    var oldPath = path.join(Platform.environment["LOCALAPPDATA"]!, "Packages",
+        "com.flutter.bruig_ywj3797wkq8tj", "LocalCache", "Local", APPNAME);
+    var oldPathCopied = path.join(
+        Platform.environment["LOCALAPPDATA"]!,
+        "Packages",
+        "com.flutter.bruig_ywj3797wkq8tj",
+        "LocalCache",
+        "Local",
+        "${APPNAME}_copied");
+    var newPath = path.join(Platform.environment["LOCALAPPDATA"]!, APPNAME);
+
+    print("Moving old windows wallet to better location");
+    // Copy data to new location.
+    await copyPath(oldPath, newPath);
+
+    // Rename old data directory.
+    var oldPathDir = Directory(oldPath);
+    await oldPathDir.rename(oldPathCopied);
+
+    Config cfg = await configFromArgs([]);
+    await Golib.createLockFile(cfg.dbRoot);
+    if (cfg.walletType == "internal") {
+      await runUnlockDcrlnd(cfg);
+      return;
+    }
+    await runMainApp(cfg);
   }
 
   Future<void> deleteLNWalletDir() async {

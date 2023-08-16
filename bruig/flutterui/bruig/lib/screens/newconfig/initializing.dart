@@ -12,7 +12,11 @@ class InitializingNewConfPage extends StatefulWidget {
 
 class _InitializingNewConfPageState extends State<InitializingNewConfPage> {
   void checkWallet() async {
-    if (await widget.newconf.hasLNWalletDB()) {
+    if (await widget.newconf.hasOldVersionWindowsWalletDB()) {
+      // Has old windows version wallet that needs to be moved.
+      Navigator.of(context)
+          .pushReplacementNamed("/newconf/moveOldWindowsWallet");
+    } else if (await widget.newconf.hasLNWalletDB()) {
       // No config, but LN wallet db exists. Decide what to do.
       Navigator.of(context).pushReplacementNamed("/newconf/deleteOldWallet");
     } else {

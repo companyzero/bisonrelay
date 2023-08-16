@@ -455,3 +455,14 @@ Future<void> runChainSyncDcrlnd(Config cfg) async {
             UnlockLNApp(cfg, "/sync", snackBar)),
   ));
 }
+
+Future<void> runMovePastWindowsSetup(Config cfg) async {
+  runApp(MultiProvider(
+    providers: [
+      ChangeNotifierProvider(create: (c) => SnackBarModel()),
+    ],
+    child: Consumer<SnackBarModel>(
+        builder: (context, snackBar, child) =>
+            UnlockLNApp(cfg, "/windowsmove", snackBar)),
+  ));
+}
