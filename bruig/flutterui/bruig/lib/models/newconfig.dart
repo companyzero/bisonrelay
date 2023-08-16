@@ -198,12 +198,9 @@ class NewConfigModel extends ChangeNotifier {
     // Copy data to new location.
     await copyPath(oldPath, newPath);
 
-    // Copy data to alternate location to avoid conflict from old setups.
-    await copyPath(oldPath, oldPathCopied);
-
-    // Delete old data.
+    // Rename old data directory.
     var oldPathDir = Directory(oldPath);
-    await oldPathDir.delete(recursive: true);
+    await oldPathDir.rename(oldPathCopied);
 
     Config cfg = await configFromArgs([]);
     await Golib.createLockFile(cfg.dbRoot);
