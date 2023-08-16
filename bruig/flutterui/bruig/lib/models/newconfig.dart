@@ -185,10 +185,26 @@ class NewConfigModel extends ChangeNotifier {
     }
     var oldPath = path.join(Platform.environment["LOCALAPPDATA"]!, "Packages",
         "com.flutter.bruig_ywj3797wkq8tj", "LocalCache", "Local", APPNAME);
+    var oldPathCopied = path.join(
+        Platform.environment["LOCALAPPDATA"]!,
+        "Packages",
+        "com.flutter.bruig_ywj3797wkq8tj",
+        "LocalCache",
+        "Local",
+        "${APPNAME}_copied");
     var newPath = path.join(Platform.environment["LOCALAPPDATA"]!, APPNAME);
 
-    await copyPath(oldPath, newPath);
     print("Moving old windows wallet to better location");
+    // Copy data to new location.
+    await copyPath(oldPath, newPath);
+
+    // Copy data to alternate location to avoid conflict from old setups.
+    await copyPath(oldPath, oldPathCopied);
+
+    // Delete old data.
+    var oldPathDir = Directory(oldPath);
+    await oldPathDir.delete(recursive: true);
+
     Config cfg = await configFromArgs([]);
     await Golib.createLockFile(cfg.dbRoot);
     if (cfg.walletType == "internal") {

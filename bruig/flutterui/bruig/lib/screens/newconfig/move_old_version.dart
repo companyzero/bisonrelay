@@ -1,4 +1,5 @@
 import 'package:bruig/components/buttons.dart';
+import 'package:bruig/components/copyable.dart';
 import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/config.dart';
 import 'package:bruig/models/newconfig.dart';
@@ -9,12 +10,13 @@ const _errorMoveMsg = "We were unable to move you existing BR wallet/db due "
     "%LOCALAPPDATA%/bruig\n"
     "Please resolve this conflict and then restart Bison Relay";
 
-const _warnMsg = "There is an existing, old version of"
+const _warnMsg1 = "There is an existing, old version of"
     "the wallet. To use that old version you need to move it"
     "to a new location.  It is advised to make a backup of"
-    "the following directory before proceeding with the move:"
-    "%LOCALAPPDATA%/Packages/com.flutter.bruig_ywj3797wkq8tj/LocalCache/Local/bruig\n\n"
-    "THIS ACTION CANNOT BE REVERSED";
+    "the following directory before proceeding with the move:";
+const _warnMsg2 =
+    "%LOCALAPPDATA%/Packages/com.flutter.bruig_ywj3797wkq8tj/LocalCache/Local/bruig";
+const _warnMsg3 = "THIS ACTION CANNOT BE REVERSED";
 
 class MoveOldVersionWalletPage extends StatefulWidget {
   final NewConfigModel newconf;
@@ -124,12 +126,26 @@ class _MoveOldVersionWalletPageState extends State<MoveOldVersionWalletPage> {
                         Column(children: [
                           SizedBox(
                               width: 377,
-                              child: Text(_warnMsg,
-                                  textAlign: TextAlign.left,
-                                  style: TextStyle(
-                                      color: textColor,
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w300))),
+                              child: Column(children: [
+                                Text(_warnMsg1,
+                                    textAlign: TextAlign.left,
+                                    style: TextStyle(
+                                        color: textColor,
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w300)),
+                                Copyable(
+                                    _warnMsg2,
+                                    TextStyle(
+                                        color: textColor,
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w300)),
+                                Text(_warnMsg3,
+                                    textAlign: TextAlign.left,
+                                    style: TextStyle(
+                                        color: textColor,
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w300))
+                              ])),
                           Center(
                             child: SizedBox(
                                 width: 377,
