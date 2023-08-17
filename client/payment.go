@@ -148,8 +148,9 @@ func (pc *DcrlnPaymentClient) PayInvoice(ctx context.Context, invoice string) (i
 		payReq.PaymentHash, invoice)
 
 	sendPayReq := &lnrpc.SendRequest{
-		PaymentRequest: invoice,
-		FeeLimit:       PaymentFeeLimit(uint64(payReq.NumMAtoms)),
+		PaymentRequest:       invoice,
+		FeeLimit:             PaymentFeeLimit(uint64(payReq.NumMAtoms)),
+		IgnoreMaxOutboundAmt: true,
 	}
 
 	start := time.Now()
@@ -197,9 +198,10 @@ func (pc *DcrlnPaymentClient) PayInvoiceAmount(ctx context.Context, invoice stri
 		payReq.PaymentHash, invoice)
 
 	sendPayReq := &lnrpc.SendRequest{
-		PaymentRequest: invoice,
-		AmtMAtoms:      amount,
-		FeeLimit:       PaymentFeeLimit(uint64(amount)),
+		PaymentRequest:       invoice,
+		AmtMAtoms:            amount,
+		FeeLimit:             PaymentFeeLimit(uint64(amount)),
+		IgnoreMaxOutboundAmt: true,
 	}
 
 	start := time.Now()
