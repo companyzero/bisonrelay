@@ -177,9 +177,11 @@ minimumsendbalance = 0.01
 # upstream = https://example.com
 
 [simplestore]
-# How to charge for purchases done in simplestore. Either empty (local user
-# will manually charge) or "onchain" (generates an on-chain address). Only used
-# if the upstream resource processor is of type "simplestore:".
+# paytype defines how to charge for purchases done in the simplestore.  The
+# options are "ln" (use lightning network), "onchain" (generates an on-chain address),
+# or leave blank to manually charge.
+# paytype = ln
+# paytype = onchain
 # paytype =
 
 # Which account to use when generating an onchain address for simplestore orders.
