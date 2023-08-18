@@ -41,9 +41,9 @@ type setupWizardScreen struct {
 	crashStack []byte
 	styles     *theme
 
-	selNetwork      *selection.Model
-	selWalletType   *selection.Model
-	selNewOrRestore *selection.Model
+	selNetwork      *selection.Model[string]
+	selWalletType   *selection.Model[string]
+	selNewOrRestore *selection.Model[string]
 
 	connCtx    context.Context
 	connCancel func()
@@ -291,7 +291,7 @@ func (sws setupWizardScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return sws, nil
 		}
 
-		v, err := sws.selNetwork.Value()
+		v, err := sws.selNetwork.ValueAsChoice()
 		if err != nil {
 			sws.err = sws.selNetwork.Err
 			sws.connCancel()
@@ -304,7 +304,7 @@ func (sws setupWizardScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return sws, tea.Quit
 		}
 
-		sws.net = v.Value.(string)
+		sws.net = v.Value
 		sws.stage = swsStageWalletType
 
 	case swsStageWalletType:
@@ -313,7 +313,7 @@ func (sws setupWizardScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return sws, nil
 		}
 
-		v, err := sws.selWalletType.Value()
+		v, err := sws.selWalletType.ValueAsChoice()
 		if err != nil {
 			sws.err = sws.selWalletType.Err
 			sws.connCancel()
@@ -326,7 +326,7 @@ func (sws setupWizardScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return sws, tea.Quit
 		}
 
-		sws.walletType = v.Value.(string)
+		sws.walletType = v.Value
 		switch sws.walletType {
 		case "internal":
 			sws.stage = swsStageNewOrRestore
@@ -347,7 +347,7 @@ func (sws setupWizardScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return sws, nil
 		}
 
-		v, err := sws.selNewOrRestore.Value()
+		v, err := sws.selNewOrRestore.ValueAsChoice()
 		if err != nil {
 			sws.err = sws.selNewOrRestore.Err
 			sws.connCancel()
@@ -360,7 +360,7 @@ func (sws setupWizardScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return sws, tea.Quit
 		}
 
-		sws.newOrRestore = v.Value.(string)
+		sws.newOrRestore = v.Value
 		switch sws.newOrRestore {
 		case "new":
 			sws.stage = swsStageWaitingRunForWalletPass
@@ -618,13 +618,13 @@ func newSetupWizardScreen(cfgFilePath string) setupWizardScreen {
 	walletTypes := []string{"internal", "external"}
 	newOrRestore := []string{"new", "restore"}
 
-	selNetwork := selection.New("Network", selection.Choices(networks))
+	selNetwork := selection.New("Network", networks)
 	selNetwork.Filter = nil
 
-	selWalletType := selection.New("Wallet Type", selection.Choices(walletTypes))
+	selWalletType := selection.New("Wallet Type", walletTypes)
 	selWalletType.Filter = nil
 
-	selNewOrRestore := selection.New("New or Restore", selection.Choices(newOrRestore))
+	selNewOrRestore := selection.New("New or Restore", newOrRestore)
 	selNewOrRestore.Filter = nil
 
 	connCtx, connCancel := context.WithCancel(context.Background())

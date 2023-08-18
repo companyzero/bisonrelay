@@ -30,7 +30,7 @@ type embedWidget struct {
 
 	sharing        bool
 	sharedFiles    []clientdb.SharedFileAndShares
-	selSharedFiles *selection.Model
+	selSharedFiles *selection.Model[string]
 	idxSharedFile  int
 
 	addEmbedCB func(id string, data []byte, embedStr string) error
@@ -43,7 +43,7 @@ func (ew *embedWidget) listSharedFiles() tea.Cmd {
 		return nil
 	}
 
-	choices := make([]*selection.Choice, 0, len(files))
+	choices := make([]string, 0, len(files))
 	sharedFiles := make([]clientdb.SharedFileAndShares, 0, len(files))
 	for _, file := range files {
 		if !file.Global {
@@ -53,9 +53,8 @@ func (ew *embedWidget) listSharedFiles() tea.Cmd {
 		txt := fmt.Sprintf("%s - %s - %s (%s)",
 			file.SF.Filename, hbytes(int64(file.Size)),
 			dcrutil.Amount(int64(file.Cost)), file.SF.FID.ShortLogID())
-		c := selection.NewChoice(txt)
 
-		choices = append(choices, c)
+		choices = append(choices, txt)
 		sharedFiles = append(sharedFiles, file)
 	}
 
@@ -134,9 +133,9 @@ func (ew *embedWidget) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			switch {
 			case msg.Type == tea.KeyEnter:
 				ew.sharing = false
-				choice, err := ew.selSharedFiles.Value()
+				choice, err := ew.selSharedFiles.ValueAsChoice()
 				if err == nil {
-					ew.idxSharedFile = choice.Index
+					ew.idxSharedFile = choice.Index()
 				}
 				return ew, nil
 
@@ -257,7 +256,7 @@ func newEmbedWidget(as *appState, addEmbedCB func(string, []byte, string) error)
 		),
 	)
 
-	sel := selection.New("Select shared file", selection.Choices([]string{""}))
+	sel := selection.New("Select shared file", []string{""})
 	selSharedFiles := selection.NewModel(sel)
 	selSharedFiles.Filter = nil
 	//selSharedFiles.Update(tea.WindowSizeMsg{Width: as.winW, Height: 10})
