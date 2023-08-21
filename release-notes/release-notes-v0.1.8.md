@@ -19,7 +19,7 @@ design from @saender to have a mobile specific UX/UI.
 ## Features
  * content filtering (/filters)
  * basic backup (/backup destdir)
- * simple store for sending digital files (see docs)
+ * simple store for selling digital files (see docs)
 
 ## Improvements
  * Add syncfreelist option in bbolt for improved startup time.  Defaults to true.
