@@ -13,21 +13,40 @@ code has been updated to work with Go Mobile which will allow for the dcrlnd and
 client code to work on mobile platforms.  The GUI has been updated to provide a baseline responsiveness for small screens.  We are currently implementing a new
 design from @saender to have a mobile specific UX/UI.
 
-Simplestore/pages ?
 
 # brclient
 
-## Features 
-
-* 
+## Features
+ * content filtering (/filters)
+ * basic backup (/backup destdir)
+ * simple store for sending digital files (see docs)
 
 ## Improvements
+ * Add syncfreelist option in bbolt for improved startup time.  Defaults to true.
+ * Force recheck on server after a channel changes status, speeding up reconnect.
+ * Switch brclient to strict INI.
+ * Attempt auto key exchange when sending groupchat messages when an unknown member exists
+   in the groupchat.
+ * Display newly kx'd users in groupchats
+ * Remove old mediate ID requests using server expiry.
+ * Display chat history in PM's and GC's
+ * Create version 1 groupchats by default.
+ * Confirm comment before submitting.
+ * Allow using $EDITOR for post comments. (/post)
+ * Allow closing channels with the channel prefix.
+ * Add client 3*way handshake feature to test ratchets (/handshake)
+ * Fetch rates from Bittrex as well as dcrdata.
+ * Sort posts by recent activity
+ * Add command to show running Tip attempts (/runningtips)
+ * Pass proxy settings to DCRLND backend.
+ * Support br:// links to other users pages.
 
-* 
+## Bug fixes
+ * Switch HTTP client idle connections from 100 to 2.
+ * Fix duplicated messages in new chat windows.
+ * fix concurrent autokx causing broken ratchets.
+ * Fix possible panic in /ln channels.
 
-## Bug Fixes
-
-*
 
 # Bison Relay GUI (bruig)
 
