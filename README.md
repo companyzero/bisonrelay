@@ -123,7 +123,7 @@ quick refresher:
 
    Example output:
    ```
-   gpg: assuming signed data in 'decred-v1.5.1-manifest.txt'
+   gpg: assuming signed data in 'brclient-v0.1.8-manifest.txt'
    gpg: Signature made 01/29/20 15:17:58 Eastern Standard Time
    gpg:                using RSA key F516ADB7A069852C7C28A02D6D897EDF518A031D
    gpg: Good signature from "Decred Release <release@decred.org>" [unknown]
@@ -156,7 +156,7 @@ quick refresher:
 
    Example output:
    ```
-   0c43caffa428cebb8a4d3c8efb2a341220fd1c232640ff3b4403ff67e1873e1a  decred-linux-amd64-v1.5.1.tar.gz
+   0c43caffa428cebb8a4d3c8efb2a341220fd1c232640ff3b4403ff67e1873e1a  brclient-linux-amd64-0.1.8
    ```
    
 If your output hash matches the hash from the manifest, you're done! The binary
