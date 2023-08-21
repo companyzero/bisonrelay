@@ -43,8 +43,7 @@ using the initial client wallet seed and this basic backup information.  Any
 contacts added after the most recent backup will need to be manually re-added
 after restoring from the seed and the backup.
 
-Chat history is now loaded when opening a chat window in brclient or GUI.
-
+Chat history is now loaded when opening a chat window in brclient or GUI. 
 Currently, we're just loading the last 500 lines from the logs.  Depending on
 user feedback we can look into allowing users to change that when loading new
 chat windows.
