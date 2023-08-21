@@ -8,7 +8,43 @@ See [README.md](./README.md#verifying-binaries) for more info on verifying the f
 This is another large release for Bison Relay that covers numerous improvements,
 bug fixes and new features.  
 
+With the release of Bison Relay v0.1.8, support for digital-only ecommerce sites
+has been added, along with pages, client-side filtering, and client backups.  
+Since Bison Relay is a standalone alternative platform to the web that tightly
+integrates money via the Lightning Network, it is natural to use it as a basis
+for ecommerce sites.  The initial ecommerce infrastructure is called 
+simplestore and supports selling digital-only goods, e.g. images, videos, 
+audio, and files, where payments can be received both via on-chain payment in
+Decred or via the Decred Lightning Network.  Documentation on how to setup a
+simplestore site can be found [here](https://github.com/companyzero/bisonrelay/blob/master/doc/simplestore.md).
+
+As part of this initial ecommerce release, the concept of pages was added, which
+is similar to web pages.  In order to operate a basic ecommerce site, it is
+necessary to have the site information organized into pages that reference and
+link to each other. These sites, whether ecommerce or other collections of
+pages, are hosted from an individual Bison Relay client, so the client also acts
+as a server for sites and pages.
+
+To date, social media services have implemented several forms of server-side
+filtering, where server administrators determine what should and should not be
+filtered and how to execute the filtering.  Bison Relay is all about making
+users sovereign over their data and communications, and not only is server-side
+filtering a violation of users’ sovereignty, it is not feasible to implement
+when all messages are encrypted and there are no user accounts on the server.
+To address this issue, we have added client-side filtering to allow users to
+filter messages that they would prefer to not see, instead of having server
+administrators centrally plan the filtering.
+
+Backups are a major weak point of most cryptocurrency tools, particularly when
+working with the Lightning Network.  Bison Relay now has a basic backup tool
+that creates a backup of your contacts and your Lightning Network channels.
+In the event a client has unrecoverable errors of any kind, it can be restored
+using the initial client wallet seed and this basic backup information.  Any
+contacts added after the most recent backup will need to be manually re-added
+after restoring from the seed and the backup.
+
 Chat history is now loaded when opening a chat window in brclient or GUI.
+
 Currently, we're just loading the last 500 lines from the logs.  Depending on
 user feedback we can look into allowing users to change that when loading new
 chat windows.
