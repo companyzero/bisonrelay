@@ -1,5 +1,10 @@
 # bisonrelay-v0.1.8
 
+See bisonrelay-v1.8.0-manifest.txt and the other manifest files for SHA-256 hashes and the associated .asc signature files to confirm those hashes.
+
+See [README.md](./README.md#verifying-binaries) for more info on verifying the files.
+
+
 This is another large release for Bison Relay that covers numerous improvements,
 bug fixes and new features.  
 
@@ -85,3 +90,14 @@ they can click the start chat button.
 
 * We are now able to show embedded pictures in the feed posts screen.  
 
+### Code Contributors (alphabetical order):
+
+- Alex Yocom-Piatt (ay-p)
+- David Hill (dhill)
+- miki-totefu
+- Tiago Alves Dulce (tiagoalvesdulce)
+
+## Changelog
+
+All commits since the last release may be viewed on GitHub
+[here](https://github.com/companyzeron/bisonrelay/compare/v0.1.7...v0.1.8).
