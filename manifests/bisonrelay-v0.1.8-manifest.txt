@@ -2,4 +2,3 @@
 6e2766dbdee79283763c7522982fcf45e84abb484df217bac6ab5cd525c5d007 *BisonRelay-v0.1.8.AppImage
 0a89b7248c72a74ab844ea36b4ba5757a8df6c35e76cb1a21dfbd1e851fc2193 *bisonrelay-linux-amd64-v0.1.8.tar.gz
 9fb28748cb2ed5607f0d38aaf733afe3303f91b2e5daf3785076004ee061cda9 *bisonrelay-windows-amd64-v0.1.8.exe
-e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 *manifest-bisonrelay-v0.1.8.txt

@@ -1,5 +1,5 @@
-834a08b6142f2a823927086f3d7323bd399faa13460f5bf7dda620e8e285be54 *build/brclient-darwin-amd64-0.1.8
-23c7ff94f2114ee21f1a8d3d730c8754a2ad50153dd1c773241461d9de0b0c7c *build/brclient-darwin-arm64-0.1.8
-e5a724cc85f3fd9f12c1d30eda0ea5c43ce7ae6f2476c128821eff35bac0e2fb *build/brclient-linux-amd64-0.1.8
-8a675c11af078c7f90bd1fba1c5ee6befa977e8bacc97fed53bf3a4461cbb2d4 *build/brclient-linux-arm64-0.1.8
-c17b8dd47e7e0a77d31d4b9e8891bddaceb988f1faa102131a37e72f12b2b974 *build/brclient-windows-amd64-0.1.8.exe
+834a08b6142f2a823927086f3d7323bd399faa13460f5bf7dda620e8e285be54 *brclient-darwin-amd64-0.1.8
+23c7ff94f2114ee21f1a8d3d730c8754a2ad50153dd1c773241461d9de0b0c7c *brclient-darwin-arm64-0.1.8
+e5a724cc85f3fd9f12c1d30eda0ea5c43ce7ae6f2476c128821eff35bac0e2fb *brclient-linux-amd64-0.1.8
+8a675c11af078c7f90bd1fba1c5ee6befa977e8bacc97fed53bf3a4461cbb2d4 *brclient-linux-arm64-0.1.8
+c17b8dd47e7e0a77d31d4b9e8891bddaceb988f1faa102131a37e72f12b2b974 *brclient-windows-amd64-0.1.8.exe
