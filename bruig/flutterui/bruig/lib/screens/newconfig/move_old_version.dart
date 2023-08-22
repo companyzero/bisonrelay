@@ -10,7 +10,7 @@ const _errorMoveMsg = "We were unable to move you existing BR wallet/db due "
     "%LOCALAPPDATA%/bruig\n"
     "Please resolve this conflict and then restart Bison Relay";
 
-const _warnMsg1 = "There is an existing old version of "
+const _warnMsg1 = "There is an existing version of "
     "the wallet. To use that old version you need to move it "
     "to a new location.  It is advised to make a backup of "
     "the following directory before proceeding with the move:";
