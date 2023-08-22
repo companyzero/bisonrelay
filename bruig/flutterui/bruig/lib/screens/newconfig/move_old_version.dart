@@ -10,9 +10,9 @@ const _errorMoveMsg = "We were unable to move you existing BR wallet/db due "
     "%LOCALAPPDATA%/bruig\n"
     "Please resolve this conflict and then restart Bison Relay";
 
-const _warnMsg1 = "There is an existing, old version of"
-    "the wallet. To use that old version you need to move it"
-    "to a new location.  It is advised to make a backup of"
+const _warnMsg1 = "There is an existing old version of "
+    "the wallet. To use that old version you need to move it "
+    "to a new location.  It is advised to make a backup of "
     "the following directory before proceeding with the move:";
 const _warnMsg2 =
     "%LOCALAPPDATA%/Packages/com.flutter.bruig_ywj3797wkq8tj/LocalCache/Local/bruig";
@@ -151,7 +151,7 @@ class _MoveOldVersionWalletPageState extends State<MoveOldVersionWalletPage> {
                                 width: 377,
                                 child: CheckboxListTile(
                                   title: Text(
-                                      "Directory has been backed up or you choose to proceed without backing up",
+                                      "Directory has been backed up or proceed without backing up",
                                       style: TextStyle(color: textColor)),
                                   activeColor: textColor,
                                   value: moveAcccepted,
