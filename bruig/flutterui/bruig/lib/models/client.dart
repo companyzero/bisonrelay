@@ -318,9 +318,19 @@ class ClientModel extends ChangeNotifier {
     _filteredSearch = [];
     _filteredSearchString = b;
     if (b != "") {
+      for (int i = 0; i < _gcChats.length; i++) {
+        if (_gcChats[i].nick.toLowerCase().contains(b.toLowerCase())) {
+          _filteredSearch.add(_gcChats[i]);
+        }
+      }
       for (int i = 0; i < _hiddenGCs.length; i++) {
         if (_hiddenGCs[i].nick.toLowerCase().contains(b.toLowerCase())) {
           _filteredSearch.add(_hiddenGCs[i]);
+        }
+      }
+      for (int i = 0; i < _userChats.length; i++) {
+        if (_userChats[i].nick.toLowerCase().contains(b.toLowerCase())) {
+          _filteredSearch.add(_userChats[i]);
         }
       }
       for (int i = 0; i < _hiddenUsers.length; i++) {
@@ -329,6 +339,8 @@ class ClientModel extends ChangeNotifier {
         }
       }
     }
+    _filteredSearch
+        .sort((a, b) => a._nick.toLowerCase().compareTo(b._nick.toLowerCase()));
     notifyListeners();
   }
 
@@ -393,54 +405,56 @@ class ClientModel extends ChangeNotifier {
     showAddressBook = false;
   }
 
-  void startChat(ChatModel chat) {
-    if (chat.isGC) {
-      _hiddenGCs.remove(chat);
-      List<ChatModel> newGcChats = [];
-      newGcChats.add(chat);
-      for (int i = 0; i < _gcChats.length; i++) {
-        newGcChats.add(_gcChats[i]);
-      }
-      _gcChats = newGcChats;
-      _subGCMenus[chat.id] = buildGCMenu(chat);
-      if (_savedHiddenGCs.contains(chat.nick)) {
-        var savedHiddenGCsSplit = _savedHiddenGCs.split(",");
-        var newGCSplitStr = "";
-        for (int i = 0; i < savedHiddenGCsSplit.length; i++) {
-          if (!savedHiddenGCsSplit[i].contains(chat.nick)) {
-            if (newGCSplitStr.isEmpty) {
-              newGCSplitStr = chat.nick;
-            } else {
-              newGCSplitStr += ", ${chat.nick}";
+  void startChat(ChatModel chat, bool alreadyOpened) {
+    if (!alreadyOpened) {
+      if (chat.isGC) {
+        _hiddenGCs.remove(chat);
+        List<ChatModel> newGcChats = [];
+        newGcChats.add(chat);
+        for (int i = 0; i < _gcChats.length; i++) {
+          newGcChats.add(_gcChats[i]);
+        }
+        _gcChats = newGcChats;
+        _subGCMenus[chat.id] = buildGCMenu(chat);
+        if (_savedHiddenGCs.contains(chat.nick)) {
+          var savedHiddenGCsSplit = _savedHiddenGCs.split(",");
+          var newGCSplitStr = "";
+          for (int i = 0; i < savedHiddenGCsSplit.length; i++) {
+            if (!savedHiddenGCsSplit[i].contains(chat.nick)) {
+              if (newGCSplitStr.isEmpty) {
+                newGCSplitStr = chat.nick;
+              } else {
+                newGCSplitStr += ", ${chat.nick}";
+              }
             }
           }
+          _savedHiddenGCs = newGCSplitStr;
+          StorageManager.saveData('gcHiddenList', _savedHiddenGCs);
         }
-        _savedHiddenGCs = newGCSplitStr;
-        StorageManager.saveData('gcHiddenList', _savedHiddenGCs);
-      }
-    } else {
-      _hiddenUsers.remove(chat);
-      List<ChatModel> newUserChats = [];
-      newUserChats.add(chat);
-      for (int i = 0; i < userChats.length; i++) {
-        newUserChats.add(_userChats[i]);
-      }
-      _userChats = newUserChats;
-      _subUserMenus[chat.id] = buildUserChatMenu(chat);
-      if (_savedHiddenUsers.contains(chat.nick)) {
-        var savedHiddenUsersSplit = _savedHiddenUsers.split(",");
-        var newUserSplitStr = "";
-        for (int i = 0; i < savedHiddenUsersSplit.length; i++) {
-          if (!savedHiddenUsersSplit[i].contains(chat.nick)) {
-            if (newUserSplitStr.isEmpty) {
-              newUserSplitStr = chat.nick;
-            } else {
-              newUserSplitStr += ", ${chat.nick}";
+      } else {
+        _hiddenUsers.remove(chat);
+        List<ChatModel> newUserChats = [];
+        newUserChats.add(chat);
+        for (int i = 0; i < userChats.length; i++) {
+          newUserChats.add(_userChats[i]);
+        }
+        _userChats = newUserChats;
+        _subUserMenus[chat.id] = buildUserChatMenu(chat);
+        if (_savedHiddenUsers.contains(chat.nick)) {
+          var savedHiddenUsersSplit = _savedHiddenUsers.split(",");
+          var newUserSplitStr = "";
+          for (int i = 0; i < savedHiddenUsersSplit.length; i++) {
+            if (!savedHiddenUsersSplit[i].contains(chat.nick)) {
+              if (newUserSplitStr.isEmpty) {
+                newUserSplitStr = chat.nick;
+              } else {
+                newUserSplitStr += ", ${chat.nick}";
+              }
             }
           }
+          _savedHiddenUsers = newUserSplitStr;
+          StorageManager.saveData('userHiddenList', _savedHiddenUsers);
         }
-        _savedHiddenUsers = newUserSplitStr;
-        StorageManager.saveData('userHiddenList', _savedHiddenUsers);
       }
     }
     active = chat;

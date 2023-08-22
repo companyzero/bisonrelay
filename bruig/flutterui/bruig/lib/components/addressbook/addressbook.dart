@@ -24,8 +24,8 @@ class _AddressBookListingWState extends State<_AddressBookListingW> {
 
   void chatUpdated() => setState(() {});
 
-  void startChat() {
-    client.startChat(chat);
+  void startChat(bool open) {
+    client.startChat(chat, open);
   }
 
   @override
@@ -54,7 +54,12 @@ class _AddressBookListingWState extends State<_AddressBookListingW> {
     var hightLightTextColor = theme.focusColor;
     var selectedBackgroundColor = theme.highlightColor;
     var darkTextColor = theme.indicatorColor;
-
+    var alreadyOpened = false;
+    if (chat.isGC) {
+      alreadyOpened = client.gcChats.contains(chat);
+    } else {
+      alreadyOpened = client.userChats.contains(chat);
+    }
     var avatarColor = colorFromNick(chat.nick);
     var avatarTextColor =
         ThemeData.estimateBrightnessForColor(avatarColor) == Brightness.dark
@@ -82,9 +87,13 @@ class _AddressBookListingWState extends State<_AddressBookListingW> {
                 splashRadius: 15,
                 iconSize: 15,
                 hoverColor: selectedBackgroundColor,
-                tooltip: "Start Chat",
-                onPressed: () => startChat(),
-                icon: Icon(color: darkTextColor, Icons.add))),
+                tooltip: alreadyOpened ? "Open Chat" : "Start Chat",
+                onPressed: () => startChat(alreadyOpened),
+                icon: Icon(
+                    color: darkTextColor,
+                    alreadyOpened
+                        ? Icons.arrow_right_alt_outlined
+                        : Icons.add))),
         onTap: () => {},
       ),
     );
@@ -132,6 +141,12 @@ class _AddressBookState extends State<AddressBook> {
     var theme = Theme.of(context);
     var darkTextColor = theme.indicatorColor;
     var dividerColor = theme.highlightColor;
+    var combinedGCList = client.hiddenGCs + client.gcChats;
+    combinedGCList
+        .sort((a, b) => a.nick.toLowerCase().compareTo(b.nick.toLowerCase()));
+    var combinedUserList = client.hiddenUsers + client.userChats;
+    combinedUserList
+        .sort((a, b) => a.nick.toLowerCase().compareTo(b.nick.toLowerCase()));
     return Column(children: [
       Row(children: [
         Material(
@@ -153,7 +168,7 @@ class _AddressBookState extends State<AddressBook> {
                 splashRadius: 15,
                 iconSize: 15,
                 hoverColor: dividerColor,
-                tooltip: "Close AddressBook",
+                tooltip: "Close Address book",
                 onPressed: () => hideAddressBook(),
                 icon: Icon(color: darkTextColor, Icons.cancel))),
       ]),
@@ -196,13 +211,13 @@ class _AddressBookState extends State<AddressBook> {
                           const SizedBox(height: 21),
                         ])
                   : Column(children: [
-                      client.hiddenGCs.isNotEmpty
+                      combinedGCList.isNotEmpty
                           ? Expanded(
                               child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                   Row(children: [
-                                    Text("Available Group Chats",
+                                    Text("Available Rooms",
                                         textAlign: TextAlign.left,
                                         style: TextStyle(
                                             color: darkTextColor,
@@ -221,15 +236,15 @@ class _AddressBookState extends State<AddressBook> {
                                   const SizedBox(height: 21),
                                   Expanded(
                                       child: ListView.builder(
-                                          itemCount: client.hiddenGCs.length,
+                                          itemCount: combinedGCList.length,
                                           itemBuilder: (context, index) =>
                                               _AddressBookListingW(
-                                                  client.hiddenGCs[index],
+                                                  combinedGCList[index],
                                                   client))),
                                   const SizedBox(height: 21),
                                 ]))
                           : const Empty(),
-                      client.hiddenUsers.isNotEmpty
+                      combinedUserList.isNotEmpty
                           ? Expanded(
                               child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -254,10 +269,10 @@ class _AddressBookState extends State<AddressBook> {
                                   const SizedBox(height: 21),
                                   Expanded(
                                       child: ListView.builder(
-                                    itemCount: client.hiddenUsers.length,
+                                    itemCount: combinedUserList.length,
                                     itemBuilder: (context, index) =>
                                         _AddressBookListingW(
-                                            client.hiddenUsers[index], client),
+                                            combinedUserList[index], client),
                                   )),
                                 ]))
                           : const Empty()

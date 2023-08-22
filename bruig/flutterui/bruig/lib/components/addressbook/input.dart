@@ -1,4 +1,3 @@
-import 'package:bruig/components/attach_file.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:bruig/models/client.dart';
@@ -82,7 +81,7 @@ class _InputState extends State<Input> {
                 fillColor: backgroundColor,
                 hoverColor: hoverColor,
                 isDense: true,
-                hintText: 'Search Addressbook for Group Chat or User',
+                hintText: 'Search Address book for Room or User',
                 hintStyle: TextStyle(
                   fontSize: 11,
                   color: hintTextColor,
