@@ -374,10 +374,11 @@ class MarkdownArea extends StatelessWidget {
     var pageSource = Provider.of<PagesSource?>(context, listen: false);
     var uid = downSource?.uid ?? pageSource?.uid ?? "";
 
-    if (parsed.scheme != "" && parsed.scheme == "br") {
+    if (parsed.scheme != "" && parsed.scheme != "br") {
       if (!await launchUrl(Uri.parse(url))) {
         showErrorSnackbar(context, "Could not launch $url");
       }
+      return;
     }
 
     // Handle absolute br:// link.
