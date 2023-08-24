@@ -14,6 +14,7 @@ import (
 	"github.com/companyzero/bisonrelay/ratchet"
 	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/companyzero/bisonrelay/zkidentity"
+	"golang.org/x/exp/slices"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -671,6 +672,97 @@ func (c *Client) handshakeIdleUsers(limitInterval time.Duration) error {
 		err = c.Handshake(uid)
 		if err != nil {
 			return fmt.Errorf("unable to handshake with %s: %v", uid, err)
+		}
+	}
+
+	return nil
+}
+
+// unsubIdleUsers forcibly unsubscribes and removes from GCs the local client
+// admins any users from which no messages have been received since
+// limitInterval and from which the last handshake attempt was made at least
+// lastHandshakeInterval in the past.
+func (c *Client) unsubIdleUsers(limitInterval, lastHandshakeInterval time.Duration) error {
+	<-c.abLoaded
+
+	if limitInterval == 0 {
+		limitInterval = c.cfg.AutoRemoveIdleUsersInterval
+	}
+	limitDate := time.Now().Add(-limitInterval)
+	if lastHandshakeInterval == 0 {
+		lastHandshakeInterval = c.cfg.AutoHandshakeInterval / 2
+	}
+	limitHandshakeDate := time.Now().Add(-lastHandshakeInterval)
+
+	// Make a map of all GCs we admin.
+	gcs, err := c.ListGCs()
+	if err != nil {
+		return err
+	}
+	adminGCs := make([]*rpc.RMGroupList, 0, len(gcs))
+	for i := range gcs {
+		gc := gcs[i]
+		if err := c.uidHasGCPerm(gc, c.PublicID()); err != nil {
+			// Cannot admin this GC.
+			continue
+		}
+		adminGCs = append(adminGCs, &gcs[i])
+	}
+
+	users := c.rul.userList()
+	for _, uid := range users {
+		ru, err := c.rul.byID(uid)
+		if err != nil {
+			continue
+		}
+
+		// Skip if we received a message from this user more recently
+		// than the limit date.
+		_, lastDecTime := ru.LastRatchetTimes()
+		if lastDecTime.After(limitDate) {
+			continue
+		}
+
+		// Skip if this user is not older than the limit date.
+		ab, err := c.getAddressBookEntry(uid)
+		if err != nil {
+			continue
+		}
+		if ab.FirstCreated.After(limitDate) {
+			continue
+		}
+		if ab.LastHandshakeAttempt.IsZero() || ab.LastHandshakeAttempt.After(limitHandshakeDate) {
+			continue
+		}
+
+		ru.log.Infof("User %s is idle (last received msg time is %s). "+
+			"Removing from any active subscriptions and GCs.",
+			strescape.Nick(ru.Nick()), lastDecTime.Format(time.RFC3339))
+		c.ntfns.notifyUnsubscribingIdleRemote(ru, lastDecTime)
+
+		// Forcibly make user unsub from posts.
+		go func() {
+			err := c.unsubRemoteFromLocalPosts(ru, false)
+			if err != nil {
+				ru.log.Warnf("Unable to unsubscribe from local posts: %v", err)
+			}
+		}()
+
+		// Remove user from any GCs we admin.
+		for _, gc := range adminGCs {
+			if !slices.Contains(gc.Members, uid) {
+				continue
+			}
+
+			gcid := gc.ID
+			uid := uid
+			go func() {
+				err := c.GCKick(gcid, uid, "User is idle for too long")
+				if err != nil {
+					c.log.Warnf("Unable to remove user %s from GC %s: %v",
+						uid, gcid, err)
+				}
+			}()
 		}
 	}
 

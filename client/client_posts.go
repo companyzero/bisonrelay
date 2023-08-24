@@ -148,7 +148,8 @@ func (c *Client) UnsubscribeToPosts(uid UserID) error {
 	return nil
 }
 
-func (c *Client) handlePostsUnsubscribe(ru *RemoteUser, pu rpc.RMPostsUnsubscribe) error {
+// unsubRemoteFromLocalPosts unsubscribes a remote user from local posts.
+func (c *Client) unsubRemoteFromLocalPosts(ru *RemoteUser, replyEvenIfErr bool) error {
 	err := c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
 		return c.db.UnsubscribeToPosts(tx, ru.ID())
 	})
@@ -157,19 +158,22 @@ func (c *Client) handlePostsUnsubscribe(ru *RemoteUser, pu rpc.RMPostsUnsubscrib
 		return err
 	}
 
-	var errMsg *string
-	if err != nil {
-		msg := err.Error()
-		errMsg = &msg
-		ru.log.Warnf("Failed to store remote unsubscription: %v", err)
-	} else {
-		ru.log.Infof("Unsubscribed to our posts")
+	if err == nil {
+		ru.log.Infof("Unsubscribed to local posts")
 		c.ntfns.notifyPostsSubscriberUpdated(ru, false)
 	}
 
-	rm := rpc.RMPostsUnsubscribeReply{Error: errMsg}
-	payEvent := "posts.ubsubscribereply"
-	return c.sendWithSendQ(payEvent, rm, ru.ID())
+	if err == nil || replyEvenIfErr {
+		rm := rpc.RMPostsUnsubscribeReply{}
+		payEvent := "posts.ubsubscribereply"
+		return c.sendWithSendQ(payEvent, rm, ru.ID())
+	}
+
+	return nil
+}
+
+func (c *Client) handlePostsUnsubscribe(ru *RemoteUser, pu rpc.RMPostsUnsubscribe) error {
+	return c.unsubRemoteFromLocalPosts(ru, true)
 }
 
 func (c *Client) handlePostsUnsubscribeReply(ru *RemoteUser, psr rpc.RMPostsUnsubscribeReply) error {

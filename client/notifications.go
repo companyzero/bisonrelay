@@ -280,6 +280,14 @@ type OnPostsListReceived func(user *RemoteUser, postList rpc.RMListPostsReply)
 
 func (_ OnPostsListReceived) typ() string { return onPostsListReceived }
 
+const onUnsubscribingIdleRemoteClient = "onUnsubscribingIdleRemoteClient"
+
+// OnUnsubscribingIdleRemoteClient is a notification sent when a remote client
+// is detected as idle and being unsubscribed from GCs and posts.
+type OnUnsubscribingIdleRemoteClient func(user *RemoteUser, lastDecTime time.Time)
+
+func (_ OnUnsubscribingIdleRemoteClient) typ() string { return onUnsubscribingIdleRemoteClient }
+
 // The following is used only in tests.
 
 const onTestNtfnType = "testNtfnType"
@@ -589,6 +597,11 @@ func (nmgr *NotificationManager) notifyPostsListReceived(ru *RemoteUser, postLis
 		visit(func(h OnPostsListReceived) { h(ru, postList) })
 }
 
+func (nmgr *NotificationManager) notifyUnsubscribingIdleRemote(ru *RemoteUser, lastDecTime time.Time) {
+	nmgr.handlers[onUnsubscribingIdleRemoteClient].(*handlersFor[OnUnsubscribingIdleRemoteClient]).
+		visit(func(h OnUnsubscribingIdleRemoteClient) { h(ru, lastDecTime) })
+}
+
 func NewNotificationManager() *NotificationManager {
 	return &NotificationManager{
 		handlers: map[string]handlersRegistry{
@@ -628,6 +641,7 @@ func NewNotificationManager() *NotificationManager {
 			onResourceFetchedNtfnType:         &handlersFor[OnResourceFetchedNtfn]{},
 			onGCWithUnkxdMemberNtfnType:       &handlersFor[OnGCWithUnkxdMemberNtfn]{},
 			onMessageContentFilteredNtfType:   &handlersFor[OnMsgContentFilteredNtfn]{},
+			onUnsubscribingIdleRemoteClient:   &handlersFor[OnUnsubscribingIdleRemoteClient]{},
 		},
 	}
 }
