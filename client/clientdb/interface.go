@@ -105,6 +105,10 @@ type AddressBookEntry struct {
 	MyResetRV    RawRVID                    `json:"myResetRV"`
 	TheirResetRV RawRVID                    `json:"theirResetRV"`
 	Ignored      bool                       `json:"ignored"`
+
+	// FirstCreated tracks when the address book entry was first created
+	// (i.e. first time this user was KX'd with).
+	FirstCreated time.Time `json:"first_created"`
 }
 
 // AddressBookAndRatchet stores both the address book entry and ratchet data of
