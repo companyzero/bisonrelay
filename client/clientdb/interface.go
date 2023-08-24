@@ -99,12 +99,19 @@ type KXData struct {
 	MediatorID *UserID `json:"mediator_id"`
 }
 
+// AddressBookEntry stores contact information of a remote user.
 type AddressBookEntry struct {
 	ID           *zkidentity.PublicIdentity `json:"id"`
-	R            *ratchet.Ratchet           `json:"r"`
 	MyResetRV    RawRVID                    `json:"myResetRV"`
 	TheirResetRV RawRVID                    `json:"theirResetRV"`
 	Ignored      bool                       `json:"ignored"`
+}
+
+// AddressBookAndRatchet stores both the address book entry and ratchet data of
+// a remote user.
+type AddressBookAndRatchet struct {
+	AddressBook *AddressBookEntry
+	Ratchet     *ratchet.Ratchet
 }
 
 type GCAddressBookEntry struct {

@@ -594,7 +594,7 @@ func (c *Client) loadInitialDBData(ctx context.Context) error {
 func (c *Client) loadAddressBook(ctx context.Context) error {
 	defer func() { close(c.abLoaded) }()
 
-	var ab []*clientdb.AddressBookEntry
+	var ab []clientdb.AddressBookAndRatchet
 	err := c.dbView(func(tx clientdb.ReadTx) error {
 		var err error
 		ab, err = c.db.LoadAddressBook(tx, c.id)
@@ -607,11 +607,12 @@ func (c *Client) loadAddressBook(ctx context.Context) error {
 	c.log.Debugf("Loaded %d entries from the address book", len(ab))
 
 	for _, entry := range ab {
-		_, _, err := c.initRemoteUser(entry.ID, entry.R, false,
-			clientdb.RawRVID{}, entry.MyResetRV, entry.TheirResetRV, entry.Ignored)
+		_, _, err := c.initRemoteUser(entry.AddressBook.ID, entry.Ratchet, false,
+			clientdb.RawRVID{}, entry.AddressBook.MyResetRV,
+			entry.AddressBook.TheirResetRV, entry.AddressBook.Ignored)
 		if err != nil {
 			c.log.Errorf("Unable to init remote user %s: %v",
-				entry.ID.Identity, err)
+				entry.AddressBook.ID.Identity, err)
 		}
 	}
 
