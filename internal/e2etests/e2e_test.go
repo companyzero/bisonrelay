@@ -373,7 +373,8 @@ func (ts *testScaffold) newClientWithCfg(nccfg *clientCfg, opts ...newClientOpt)
 		UnkxdWarningTimeout:        time.Millisecond * 250,
 		MaxAutoKXMediateIDRequests: 3,
 
-		AutoHandshakeInterval: time.Second * 15,
+		AutoHandshakeInterval:       time.Second * 8,
+		AutoRemoveIdleUsersInterval: time.Second * 14,
 
 		ResourcesProvider: resources.ProviderFunc(func(ctx context.Context,
 			uid clientintf.UserID,

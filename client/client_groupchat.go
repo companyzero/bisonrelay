@@ -1260,6 +1260,9 @@ func (c *Client) GCKick(gcID zkidentity.ShortID, uid UserID, reason string) erro
 	}
 	c.log.Infof("Kicking %s from GC %q", us, gcID.String())
 
+	// Notify user was kicked.
+	c.ntfns.notifyGCUserParted(gcID, uid, reason, true)
+
 	// Saved updated GC members list. Send kick event to list of old
 	// members (which includes the kickee).
 	return c.sendToGCMembers(gcID, oldMembers, "kick", rmgk, nil)

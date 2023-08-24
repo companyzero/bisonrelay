@@ -184,6 +184,14 @@ type Config struct {
 	//
 	// If unspecified, it defaults to 21 days.
 	AutoHandshakeInterval time.Duration
+
+	// AutoRemoveIdleUsersInterval is the interval after which any idle
+	// users (i.e. users from which no message has been received) will be
+	// automatically removed from GCs the local client admins and will be
+	// automatically unsubscribed from posts.
+	//
+	// If unspencified, it defaults to 60 days.
+	AutoRemoveIdleUsersInterval time.Duration
 }
 
 // logger creates a logger for the given subsystem in the configured backend.
@@ -225,6 +233,10 @@ func (cfg *Config) setDefaults() {
 
 	if cfg.AutoHandshakeInterval == 0 {
 		cfg.AutoHandshakeInterval = time.Hour * 24 * 21
+	}
+
+	if cfg.AutoRemoveIdleUsersInterval == 0 {
+		cfg.AutoRemoveIdleUsersInterval = time.Hour * 24 * 60
 	}
 
 	// These following GCMQ times were obtained by profiling a client
@@ -915,6 +927,12 @@ func (c *Client) maybeResetAllKXAfterConn(expDays int) {
 		if err := c.handshakeIdleUsers(0); err != nil {
 			c.log.Errorf("Unable to handshake idle users: %v", err)
 		}
+
+		// Remove idle clients users from GCs and posts.
+		if err := c.unsubIdleUsers(0, 0); err != nil {
+			c.log.Errorf("Unable to unsubscribe idle users: %v", err)
+		}
+
 		return
 	}
 

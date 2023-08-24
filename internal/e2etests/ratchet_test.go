@@ -408,3 +408,94 @@ func TestHandshakesIdleClients(t *testing.T) {
 	assert.ChanWritten(t, aliceHandshaked)
 	assert.ChanWritten(t, bobHandshaked)
 }
+
+// TestUnsubsIdleClients asserts that idle clients are unsubscribed and removed
+// from GCs after they become idle.
+func TestUnsubsIdleClients(t *testing.T) {
+	t.Parallel()
+
+	tcfg := testScaffoldCfg{}
+	ts := newTestScaffold(t, tcfg)
+	alice := ts.newClient("alice")
+	bob := ts.newClient("bob")
+
+	ts.kxUsers(alice, bob)
+
+	alicePostSub := make(chan bool, 3)
+	alice.handle(client.OnPostSubscriberUpdated(func(ru *client.RemoteUser, subscribed bool) {
+		if ru.ID() != bob.PublicID() {
+			return
+		}
+		alicePostSub <- subscribed
+	}))
+
+	aliceUnsubbing := make(chan struct{}, 3)
+	alice.handle(client.OnUnsubscribingIdleRemoteClient(func(ru *client.RemoteUser, lastDecTime time.Time) {
+		if ru.ID() != bob.PublicID() {
+			return
+		}
+		aliceUnsubbing <- struct{}{}
+	}))
+
+	bobPostSub := make(chan bool, 3)
+	bob.handle(client.OnRemoteSubscriptionChangedNtfn(func(ru *client.RemoteUser, subscribed bool) {
+		if ru.ID() != alice.PublicID() {
+			return
+		}
+		bobPostSub <- subscribed
+	}))
+
+	aliceKicked := make(chan struct{}, 3)
+	alice.handle(client.OnGCUserPartedNtfn(func(gcid client.GCID, uid client.UserID, reason string, kicked bool) {
+		if uid != bob.PublicID() {
+			return
+		}
+		aliceKicked <- struct{}{}
+	}))
+
+	bobKicked := make(chan struct{}, 3)
+	bob.handle(client.OnGCUserPartedNtfn(func(gcid client.GCID, uid client.UserID, reason string, kicked bool) {
+		if uid != bob.PublicID() {
+			return
+		}
+		bobKicked <- struct{}{}
+	}))
+
+	// Bob subscribes to Alice's post.
+	assert.NilErr(t, bob.SubscribeToPosts(alice.PublicID()))
+	assert.ChanWrittenWithVal(t, alicePostSub, true)
+	assert.ChanWrittenWithVal(t, bobPostSub, true)
+
+	// Bob joins Alice's GC.
+	gcid, err := alice.NewGroupChat("testgc")
+	assert.NilErr(t, err)
+	assertClientJoinsGC(t, gcid, alice, bob)
+
+	// Bob goes idle.
+	assertGoesOffline(t, bob)
+
+	// Wait until the alice will send a handshake attempt.
+	start := time.Now()
+	time.Sleep(alice.cfg.AutoHandshakeInterval)
+
+	// Flick alice. She sends the handshake but does not yet perform the
+	// unsub.
+	assertGoesOffline(t, alice)
+	assertGoesOnline(t, alice)
+	assert.ChanNotWritten(t, aliceUnsubbing, time.Second)
+
+	// Wait for the interval of idle delay unsub to elapse.
+	time.Sleep(alice.cfg.AutoRemoveIdleUsersInterval - time.Since(start))
+
+	// Flick Alice. Bob should be unsubbed and kicked from GC.
+	assertGoesOffline(t, alice)
+	assertGoesOnline(t, alice)
+	assert.ChanWritten(t, aliceUnsubbing)
+	assert.ChanWrittenWithVal(t, alicePostSub, false)
+	assert.ChanWritten(t, aliceKicked)
+
+	// Bob comes online. It should have been unsubbed and kicked from GC.
+	assertGoesOnline(t, bob)
+	assert.ChanWrittenWithVal(t, bobPostSub, false)
+	assert.ChanWritten(t, bobKicked)
+}
