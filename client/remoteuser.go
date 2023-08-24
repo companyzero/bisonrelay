@@ -53,13 +53,6 @@ func UserIDFromStr(s string) UserID {
 	return r
 }
 
-type AddressBookEntry struct {
-	ID      UserID `json:"id"`
-	Nick    string `json:"nick"`
-	Name    string `json:"name"`
-	Ignored bool   `json:"ignored"`
-}
-
 // RemoteUser tracks the state of a fully formed ratchet (that is, after kx
 // completes) and offers services that can be performed on this remote user.
 type RemoteUser struct {
@@ -187,15 +180,6 @@ func (ru *RemoteUser) SetIgnored(ignored bool) {
 	ru.mtx.Lock()
 	ru.ignored = ignored
 	ru.mtx.Unlock()
-}
-
-func (ru *RemoteUser) AddressBookEntry() AddressBookEntry {
-	return AddressBookEntry{
-		ID:      ru.ID(),
-		Nick:    ru.id.Nick,
-		Name:    ru.id.Name,
-		Ignored: ru.ignored,
-	}
 }
 
 func (ru *RemoteUser) LastRatchetTimes() (time.Time, time.Time) {
@@ -834,12 +818,14 @@ func (rul *remoteUserList) byNick(nick string) (*RemoteUser, error) {
 	return res, nil
 }
 
-func (rul *remoteUserList) addressBook() []*AddressBookEntry {
+// userList returns the list of all user IDs.
+func (rul *remoteUserList) userList() []UserID {
 	rul.Lock()
-	res := make([]*AddressBookEntry, 0, len(rul.m))
-	for _, ru := range rul.m {
-		entry := ru.AddressBookEntry()
-		res = append(res, &entry)
+	res := make([]UserID, len(rul.m))
+	var i int
+	for id := range rul.m {
+		res[i] = id
+		i += 1
 	}
 	rul.Unlock()
 	return res

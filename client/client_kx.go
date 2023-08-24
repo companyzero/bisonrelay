@@ -347,11 +347,14 @@ func (c *Client) ResetRatchet(uid UserID) error {
 // If progrChan is specified, each individual reset that is started is reported
 // in progrChan.
 func (c *Client) ResetAllOldRatchets(limitInterval time.Duration, progrChan chan clientintf.UserID) ([]clientintf.UserID, error) {
+	<-c.abLoaded
+
 	if limitInterval == 0 {
 		limitInterval = time.Hour * 24 * 30
 	}
 	limitDate := time.Now().Add(-limitInterval)
 
+	// Load list of in-progress reset attempts.
 	kxMap := make(map[clientintf.UserID]struct{})
 	err := c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
 		kxs, err := c.db.ListKXs(tx)
@@ -393,14 +396,13 @@ func (c *Client) ResetAllOldRatchets(limitInterval time.Duration, progrChan chan
 	var res []clientintf.UserID
 	g := errgroup.Group{}
 
-	ab := c.AddressBook()
-	for _, entry := range ab {
-		uid := entry.ID
+	ids := c.rul.userList()
+	for _, uid := range ids {
 		ru, err := c.UserByID(uid)
 		if err != nil {
 			// Should not happen unless user was removed during
 			// iteration.
-			c.log.Warnf("Unknown user with ID %s", entry.ID)
+			c.log.Warnf("Unknown user with ID %s", uid)
 			continue
 		}
 
@@ -411,13 +413,14 @@ func (c *Client) ResetAllOldRatchets(limitInterval time.Duration, progrChan chan
 		}
 
 		// Skip if we're already KX'ing with them.
-		if _, ok := kxMap[entry.ID]; ok {
+		if _, ok := kxMap[uid]; ok {
 			continue
 		}
 
 		// Start reset attempt. Start all in parallel, so subscriptions
 		// to the reset RVs are likely done in a single step.
 		res = append(res, uid)
+		uid := uid
 		g.Go(func() error {
 			err := c.ResetRatchet(uid)
 			if progrChan != nil {
