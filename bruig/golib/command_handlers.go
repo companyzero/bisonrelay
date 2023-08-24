@@ -759,7 +759,17 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		return nil, err
 
 	case CTAddressBook:
-		return c.AddressBook(), nil
+		ab := c.AddressBook()
+		res := make([]addressBookEntry, 0, len(ab))
+		for _, entry := range ab {
+			res = append(res, addressBookEntry{
+				ID:      entry.ID.Identity,
+				Nick:    entry.ID.Nick,
+				Name:    entry.ID.Name,
+				Ignored: entry.Ignored,
+			})
+		}
+		return res, nil
 
 	case CTLocalID:
 		var id iDInit

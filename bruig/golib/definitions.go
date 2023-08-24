@@ -71,6 +71,13 @@ type pm struct {
 	TimeStamp int64             `json:"timestamp"`
 }
 
+type addressBookEntry struct {
+	ID      clientintf.UserID `json:"id"`
+	Nick    string            `json:"nick"`
+	Name    string            `json:"name"`
+	Ignored bool              `json:"ignored"`
+}
+
 type remoteUser struct {
 	UID  string `json:"uid"`
 	Name string `json:"name"`

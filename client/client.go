@@ -695,9 +695,24 @@ func (c *Client) RMQTimingStat() []timestats.Quantile {
 	return c.q.TimingStats()
 }
 
-func (c *Client) AddressBook() []*AddressBookEntry {
+// AddressBook returns the full address book of remote users.
+func (c *Client) AddressBook() []*clientdb.AddressBookEntry {
 	<-c.abLoaded
-	return c.rul.addressBook()
+	ids := c.rul.userList()
+
+	// Ignore errors, because it just means some operation may be in
+	// progress.
+	var res []*clientdb.AddressBookEntry
+	_ = c.dbView(func(tx clientdb.ReadTx) error {
+		for _, uid := range ids {
+			entry, err := c.db.GetAddressBookEntry(tx, uid)
+			if err == nil {
+				res = append(res, entry)
+			}
+		}
+		return nil
+	})
+	return res
 }
 
 func (c *Client) UserExists(id UserID) bool {
