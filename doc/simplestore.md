@@ -27,8 +27,10 @@ paytype=ln
 ### Configuration
 
 Once the store has been enabled in the configuration file, a store
-template will be installed into the path specified in the `upstream`
-line above.
+template will be installed if the path does not exist. 
+The directory will be created and filled with a sample, minimal store
+into the path specified in the `upstream` line above.
+
 
 #### Store Front
 First, edit `index.tmpl` to introduce your store front.
