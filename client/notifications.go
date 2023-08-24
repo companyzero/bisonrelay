@@ -263,6 +263,23 @@ type OnMsgContentFilteredNtfn func(MsgContentFilteredEvent)
 
 func (_ OnMsgContentFilteredNtfn) typ() string { return onMessageContentFilteredNtfType }
 
+const onPostSubscriberUpdated = "onPostSubscriberUpdated"
+
+// OnPostSubscriberUpdated is called when a remote user changes its subscription
+// status to the local client's posts (i.e. the remote user subscribed or
+// unsubscribed to the local client's posts).
+type OnPostSubscriberUpdated func(user *RemoteUser, subscribed bool)
+
+func (_ OnPostSubscriberUpdated) typ() string { return onPostSubscriberUpdated }
+
+const onPostsListReceived = "onPostsListReceived"
+
+// PostsListReceived is called when the local client receives the list of posts
+// from a remote user.
+type OnPostsListReceived func(user *RemoteUser, postList rpc.RMListPostsReply)
+
+func (_ OnPostsListReceived) typ() string { return onPostsListReceived }
+
 // The following is used only in tests.
 
 const onTestNtfnType = "testNtfnType"
@@ -562,6 +579,16 @@ func (nmgr *NotificationManager) notifyMsgContentFiltered(e MsgContentFilteredEv
 		})
 }
 
+func (nmgr *NotificationManager) notifyPostsSubscriberUpdated(ru *RemoteUser, subscribed bool) {
+	nmgr.handlers[onPostSubscriberUpdated].(*handlersFor[OnPostSubscriberUpdated]).
+		visit(func(h OnPostSubscriberUpdated) { h(ru, subscribed) })
+}
+
+func (nmgr *NotificationManager) notifyPostsListReceived(ru *RemoteUser, postList rpc.RMListPostsReply) {
+	nmgr.handlers[onPostsListReceived].(*handlersFor[OnPostsListReceived]).
+		visit(func(h OnPostsListReceived) { h(ru, postList) })
+}
+
 func NewNotificationManager() *NotificationManager {
 	return &NotificationManager{
 		handlers: map[string]handlersRegistry{
@@ -576,6 +603,8 @@ func NewNotificationManager() *NotificationManager {
 			onHandshakeStageNtfnType: &handlersFor[OnHandshakeStageNtfn]{},
 			onTipReceivedNtfnType:    &handlersFor[OnTipReceivedNtfn]{},
 
+			onPostSubscriberUpdated:    &handlersFor[OnPostSubscriberUpdated]{},
+			onPostsListReceived:        &handlersFor[OnPostsListReceived]{},
 			onGCVersionWarningType:     &handlersFor[OnGCVersionWarning]{},
 			onJoinedGCNtfnType:         &handlersFor[OnJoinedGCNtfn]{},
 			onAddedGCMembersNtfnType:   &handlersFor[OnAddedGCMembersNtfn]{},

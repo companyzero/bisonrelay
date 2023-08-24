@@ -344,6 +344,14 @@ func handleInitClient(handle uint32, args initClient) error {
 		notify(NTTipReceived, v, nil)
 	}))
 
+	ntfns.Register(client.OnPostsListReceived(func(user *client.RemoteUser, postList rpc.RMListPostsReply) {
+		v := userPostList{
+			UID:   user.ID(),
+			Posts: postList.Posts,
+		}
+		notify(NTUserPostsList, v, nil)
+	}))
+
 	// Initialize resources router.
 	var sstore *simplestore.Store
 	resRouter := resources.NewRouter()
@@ -466,14 +474,6 @@ func handleInitClient(handle uint32, args initClient) error {
 				}
 
 			}
-		},
-
-		PostsListReceived: func(user *client.RemoteUser, postList rpc.RMListPostsReply) {
-			v := userPostList{
-				UID:   user.ID(),
-				Posts: postList.Posts,
-			}
-			notify(NTUserPostsList, v, nil)
 		},
 
 		ContentListReceived: func(user *client.RemoteUser, files []clientdb.RemoteFile, listErr error) {
