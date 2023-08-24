@@ -57,6 +57,8 @@ func sendLoop(ctx context.Context, chat types.ChatServiceClient, log slog.Logger
 			log.Warnf("Unable to send last message: %v", err)
 			continue
 		}
+
+		fmt.Println(nick, msg)
 	}
 	return r.Err()
 }
