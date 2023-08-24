@@ -3128,6 +3128,35 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		as.repaintIfActive(cw)
 	}))
 
+	ntfns.Register(client.OnPostSubscriberUpdated(func(user *client.RemoteUser, subscribed bool) {
+		cw := as.findChatWindow(user.ID())
+		msg := fmt.Sprintf("%s subscribed to my posts", strescape.Nick(user.Nick()))
+		if !subscribed {
+			msg = fmt.Sprintf("%s unsubscribed from my posts",
+				strescape.Nick(user.Nick()))
+		}
+		if cw == nil {
+			as.diagMsg(msg)
+		} else {
+			cw.newHelpMsg(msg)
+			as.repaintIfActive(cw)
+		}
+	}))
+
+	ntfns.Register(client.OnPostsListReceived(func(user *client.RemoteUser, postList rpc.RMListPostsReply) {
+		cw := as.findOrNewChatWindow(user.ID(), strescape.Nick(user.Nick()))
+		cw.manyHelpMsgs(func(pf printf) {
+			pf("")
+			pf("List of user posts (%d total)", len(postList.Posts))
+			for _, post := range postList.Posts {
+				pf("ID: %s", post.ID)
+				pf("Title: %s", strescape.Content(post.Title))
+				pf("")
+			}
+		})
+		as.repaintIfActive(cw)
+	}))
+
 	// Initialize resources router.
 	var sstore *simplestore.Store
 	resRouter := resources.NewRouter()
@@ -3283,35 +3312,6 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 						backoff = maxBackoff
 					}
 				}
-			}
-		},
-
-		PostsListReceived: func(user *client.RemoteUser, postList rpc.RMListPostsReply) {
-			cw := as.findOrNewChatWindow(user.ID(), strescape.Nick(user.Nick()))
-			cw.manyHelpMsgs(func(pf printf) {
-				pf("")
-				pf("List of user posts (%d total)", len(postList.Posts))
-				for _, post := range postList.Posts {
-					pf("ID: %s", post.ID)
-					pf("Title: %s", strescape.Content(post.Title))
-					pf("")
-				}
-			})
-			as.repaintIfActive(cw)
-		},
-
-		SubscriptionChanged: func(user *client.RemoteUser, subscribed bool) {
-			cw := as.findChatWindow(user.ID())
-			msg := fmt.Sprintf("%s subscribed to my posts", strescape.Nick(user.Nick()))
-			if !subscribed {
-				msg = fmt.Sprintf("%s unsubscribed from my posts",
-					strescape.Nick(user.Nick()))
-			}
-			if cw == nil {
-				as.diagMsg(msg)
-			} else {
-				cw.newHelpMsg(msg)
-				as.repaintIfActive(cw)
 			}
 		},
 

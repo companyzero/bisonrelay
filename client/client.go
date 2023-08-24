@@ -92,15 +92,6 @@ type Config struct {
 	// with a new user.
 	KXSuggestion func(user *RemoteUser, pii zkidentity.PublicIdentity)
 
-	// PostsListReceived is called when we receive the list of posts from
-	// a remote user.
-	PostsListReceived func(user *RemoteUser, postList rpc.RMListPostsReply)
-
-	// SubscriptionChanged is called whenever the given user changes its
-	// subscription status with the local client (either subscribed or
-	// unsubscribed).
-	SubscriptionChanged func(user *RemoteUser, subscribed bool)
-
 	// ContentListReceived is called when the list of content of the user is
 	// received.
 	ContentListReceived func(user *RemoteUser, files []clientdb.RemoteFile, listErr error)

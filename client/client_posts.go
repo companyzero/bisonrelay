@@ -81,9 +81,7 @@ func (c *Client) handlePostsSubscribe(ru *RemoteUser, ps rpc.RMPostsSubscribe) e
 	} else {
 		ru.log.Infof("Subscribed to our posts")
 
-		if c.cfg.SubscriptionChanged != nil {
-			c.cfg.SubscriptionChanged(ru, true)
-		}
+		c.ntfns.notifyPostsSubscriberUpdated(ru, true)
 	}
 
 	rm := rpc.RMPostsSubscribeReply{Error: errMsg}
@@ -166,9 +164,7 @@ func (c *Client) handlePostsUnsubscribe(ru *RemoteUser, pu rpc.RMPostsUnsubscrib
 		ru.log.Warnf("Failed to store remote unsubscription: %v", err)
 	} else {
 		ru.log.Infof("Unsubscribed to our posts")
-		if c.cfg.SubscriptionChanged != nil {
-			c.cfg.SubscriptionChanged(ru, false)
-		}
+		c.ntfns.notifyPostsSubscriberUpdated(ru, false)
 	}
 
 	rm := rpc.RMPostsUnsubscribeReply{Error: errMsg}
@@ -276,9 +272,7 @@ func (c *Client) handleListPosts(ru *RemoteUser, lp rpc.RMListPosts) error {
 
 func (c *Client) handleListPostsReply(ru *RemoteUser, plr rpc.RMListPostsReply) error {
 	ru.log.Infof("Received list of posts (total posts: %d)", len(plr.Posts))
-	if c.cfg.PostsListReceived != nil {
-		c.cfg.PostsListReceived(ru, plr)
-	}
+	c.ntfns.notifyPostsListReceived(ru, plr)
 	return nil
 }
 
