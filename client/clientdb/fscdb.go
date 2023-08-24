@@ -227,42 +227,19 @@ func (db *DB) UpdateRatchet(tx ReadWriteTx, r *ratchet.Ratchet, theirID zkidenti
 	return nil
 }
 
-func (db *DB) UpdateAddressBookEntry(tx ReadWriteTx,
-	id *zkidentity.PublicIdentity, myResetRV, theirResetRV RawRVID, ignored bool) error {
-
-	// make identity dirs
-	ids := hex.EncodeToString(id.Identity[:])
-	fullPath := filepath.Join(db.root, inboundDir, ids)
-	err := os.MkdirAll(fullPath, 0o700)
-	if err != nil {
-		return err
-	}
-
-	// save identity
-	ab := AddressBookEntry{
-		ID:           id,
-		MyResetRV:    myResetRV,
-		TheirResetRV: theirResetRV,
-		Ignored:      ignored,
-	}
-	blob, err := json.Marshal(ab)
-	if err != nil {
-		return fmt.Errorf("unable to marshal AddressBookEntry: %v", err)
-	}
-	filename := filepath.Join(fullPath, identityFilename)
-	err = os.WriteFile(filename, blob, 0o600)
-	if err != nil {
-		return fmt.Errorf("write to %v: %v", filename, err)
-	}
-
-	return nil
+// UpdateAddressBookEntry updates the address book entry for a single user. This
+// *ONLY* saves the address book entry in the DB, it does not persist the ratchet
+// data.
+func (db *DB) UpdateAddressBookEntry(tx ReadWriteTx, ab *AddressBookEntry) error {
+	fname := filepath.Join(db.root, inboundDir, ab.ID.Identity.String(),
+		identityFilename)
+	return db.saveJsonFile(fname, ab)
 }
 
 func (db *DB) AddressBookEntryExists(tx ReadTx, id UserID) bool {
 	fname := filepath.Join(db.root, inboundDir, id.String(),
 		identityFilename)
-	_, err := os.Stat(fname)
-	return err == nil
+	return fileExists(fname)
 }
 
 // getBaseABEntry returns the base address book entry, without the ratchet info

@@ -168,8 +168,14 @@ func (c *Client) initRemoteUser(id *zkidentity.PublicIdentity, r *ratchet.Ratche
 			ignored = oldEntry.Ignored
 		}
 		if updateAB {
-			if err := c.db.UpdateAddressBookEntry(tx, id, myResetRV,
-				theirResetRV, ignored); err != nil {
+			newEntry := &clientdb.AddressBookEntry{
+				ID:           id,
+				R:            r,
+				MyResetRV:    myResetRV,
+				TheirResetRV: theirResetRV,
+				Ignored:      ignored,
+			}
+			if err := c.db.UpdateAddressBookEntry(tx, newEntry); err != nil {
 				return err
 			}
 
@@ -453,20 +459,20 @@ func (c *Client) Ignore(uid UserID, ignore bool) error {
 	if err != nil {
 		return err
 	}
+
 	isIgnored := ru.IsIgnored()
-	if ignore {
-		if isIgnored {
-			return fmt.Errorf("user is already ignored")
-		}
-		ru.SetIgnored(true)
+	switch {
+	case isIgnored && ignore:
+		return fmt.Errorf("user is already ignored")
+	case !isIgnored && !ignore:
+		return fmt.Errorf("user was not ignored")
+	case ignore:
 		c.log.Infof("Ignoring user %s", ru)
-	} else {
-		if !isIgnored {
-			return fmt.Errorf("user was not ignored")
-		}
-		ru.SetIgnored(false)
+	case !ignore:
 		c.log.Infof("Un-ignoring user %s", ru)
 	}
+
+	ru.SetIgnored(ignore)
 
 	return c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
 		ab, err := c.db.GetAddressBookEntry(tx, ru.ID(), c.id)
@@ -474,8 +480,8 @@ func (c *Client) Ignore(uid UserID, ignore bool) error {
 			return err
 		}
 
-		return c.db.UpdateAddressBookEntry(tx, ru.id, ab.MyResetRV,
-			ab.TheirResetRV, ru.IsIgnored())
+		ab.Ignored = ignore
+		return c.db.UpdateAddressBookEntry(tx, ab)
 	})
 }
 
@@ -544,8 +550,9 @@ func (c *Client) RenameUser(uid UserID, newNick string) error {
 			return err
 		}
 
-		return c.db.UpdateAddressBookEntry(tx, ru.id, ab.MyResetRV,
-			ab.TheirResetRV, ru.IsIgnored())
+		ab.ID = ru.id
+		ab.Ignored = ru.IsIgnored()
+		return c.db.UpdateAddressBookEntry(tx, ab)
 	})
 }
 
