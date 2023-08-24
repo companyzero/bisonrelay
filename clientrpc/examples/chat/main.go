@@ -58,7 +58,7 @@ func sendLoop(ctx context.Context, chat types.ChatServiceClient, log slog.Logger
 			continue
 		}
 
-		fmt.Println(nick, msg)
+		fmt.Printf("-> %v %v\n", user, msg)
 	}
 	return r.Err()
 }
@@ -103,7 +103,7 @@ func receiveLoop(ctx context.Context, chat types.ChatServiceClient, log slog.Log
 			log.Debugf("Received PM from '%s' with len %d and sequence %s",
 				nick, len(msg), types.DebugSequenceID(pm.SequenceId))
 
-			fmt.Println(nick, msg)
+			fmt.Printf("<- %v %v\n", nick, msg)
 
 			// Ack to client that message is processed.
 			ackReq.SequenceId = pm.SequenceId
