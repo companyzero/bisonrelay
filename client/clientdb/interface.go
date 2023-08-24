@@ -109,6 +109,10 @@ type AddressBookEntry struct {
 	// FirstCreated tracks when the address book entry was first created
 	// (i.e. first time this user was KX'd with).
 	FirstCreated time.Time `json:"first_created"`
+
+	// LastHandshake is the last time when the local client attempted
+	// to start a handshake with this remote user.
+	LastHandshakeAttempt time.Time `json:"last_handshake_attempt,omitempty"`
 }
 
 // AddressBookAndRatchet stores both the address book entry and ratchet data of

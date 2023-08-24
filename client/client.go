@@ -177,6 +177,13 @@ type Config struct {
 	//
 	// If unspecified, a default value of 3 is used.
 	MaxAutoKXMediateIDRequests int
+
+	// AutoHandshakeInterval is the interval after which, for any ratchets
+	// that haven't been communicated with, an automatic handshake attempt
+	// is made.
+	//
+	// If unspecified, it defaults to 21 days.
+	AutoHandshakeInterval time.Duration
 }
 
 // logger creates a logger for the given subsystem in the configured backend.
@@ -214,6 +221,10 @@ func (cfg *Config) setDefaults() {
 
 	if cfg.MaxAutoKXMediateIDRequests == 0 {
 		cfg.MaxAutoKXMediateIDRequests = 3
+	}
+
+	if cfg.AutoHandshakeInterval == 0 {
+		cfg.AutoHandshakeInterval = time.Hour * 24 * 21
 	}
 
 	// These following GCMQ times were obtained by profiling a client
@@ -695,6 +706,17 @@ func (c *Client) RMQTimingStat() []timestats.Quantile {
 	return c.q.TimingStats()
 }
 
+// getAddressBookEntry returns an individual address book entry.
+func (c *Client) getAddressBookEntry(uid UserID) (*clientdb.AddressBookEntry, error) {
+	var res *clientdb.AddressBookEntry
+	err := c.dbView(func(tx clientdb.ReadTx) error {
+		var err error
+		res, err = c.db.GetAddressBookEntry(tx, uid)
+		return err
+	})
+	return res, err
+}
+
 // AddressBook returns the full address book of remote users.
 func (c *Client) AddressBook() []*clientdb.AddressBookEntry {
 	<-c.abLoaded
@@ -790,6 +812,20 @@ func (c *Client) Handshake(uid UserID) error {
 	if err != nil {
 		return nil
 	}
+
+	// Store when the last local attempt at a handshake was done.
+	err = c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
+		ab, err := c.db.GetAddressBookEntry(tx, uid)
+		if err != nil {
+			return err
+		}
+		ab.LastHandshakeAttempt = time.Now()
+		return c.db.UpdateAddressBookEntry(tx, ab)
+	})
+	if err != nil {
+		return err
+	}
+
 	return c.sendWithSendQ("syn", rpc.RMHandshakeSYN{}, ru.ID())
 }
 
@@ -874,6 +910,11 @@ func (c *Client) maybeResetAllKXAfterConn(expDays int) {
 		c.log.Debugf("Skipping resetting all KX due to local "+
 			"client offline since %s with limit date %s", oldConnDate,
 			limitDate)
+
+		// Start automatic handshake with idle users.
+		if err := c.handshakeIdleUsers(0); err != nil {
+			c.log.Errorf("Unable to handshake idle users: %v", err)
+		}
 		return
 	}
 

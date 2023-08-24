@@ -359,3 +359,52 @@ func TestPrepaidInvites(t *testing.T) {
 	assert.NilErr(t, bob.AcceptInvite(decodedInvite))
 	assertClientsKXd(t, alice, bob)
 }
+
+// TestHandshakesIdleClients asserts that if a client goes too long without
+// being reached, an automatic handshake attempt is made.
+func TestHandshakesIdleClients(t *testing.T) {
+	t.Parallel()
+
+	tcfg := testScaffoldCfg{}
+	ts := newTestScaffold(t, tcfg)
+	alice := ts.newClient("alice")
+	bob := ts.newClient("bob")
+
+	ts.kxUsers(alice, bob)
+
+	aliceHandshaked := make(chan struct{}, 3)
+	alice.handle(client.OnHandshakeStageNtfn(func(ru *client.RemoteUser, msgType string) {
+		if ru.ID() != bob.PublicID() {
+			return
+		}
+		if msgType == "SYNACK" {
+			aliceHandshaked <- struct{}{}
+		}
+	}))
+	bobHandshaked := make(chan struct{}, 3)
+	bob.handle(client.OnHandshakeStageNtfn(func(ru *client.RemoteUser, msgType string) {
+		if ru.ID() != alice.PublicID() {
+			return
+		}
+		if msgType == "ACK" {
+			bobHandshaked <- struct{}{}
+		}
+	}))
+
+	// Wait halfway through the time for an autohandshake interval. It should
+	// NOT trigger an automatic handshake.
+	time.Sleep(alice.cfg.AutoHandshakeInterval / 2)
+	assertGoesOffline(t, alice)
+	assertGoesOnline(t, alice)
+	assert.ChanNotWritten(t, aliceHandshaked, time.Second)
+
+	// Wait until the timeout for sending a handshake on startup elapses.
+	time.Sleep(alice.cfg.AutoHandshakeInterval / 2)
+
+	// Flick Alice's connection. This should trigger an automatic handshake
+	// attempt.
+	assertGoesOffline(t, alice)
+	assertGoesOnline(t, alice)
+	assert.ChanWritten(t, aliceHandshaked)
+	assert.ChanWritten(t, bobHandshaked)
+}
