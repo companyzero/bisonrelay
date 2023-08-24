@@ -165,17 +165,20 @@ func (c *Client) initRemoteUser(id *zkidentity.PublicIdentity, r *ratchet.Ratche
 		}
 		var ignored bool
 		firstCreated := time.Now()
+		var lastHandshakeAttempt time.Time
 		if oldEntry != nil {
 			ignored = oldEntry.Ignored
 			firstCreated = oldEntry.FirstCreated
+			lastHandshakeAttempt = oldEntry.LastHandshakeAttempt
 		}
 		if updateAB {
 			newEntry := &clientdb.AddressBookEntry{
-				ID:           id,
-				MyResetRV:    myResetRV,
-				TheirResetRV: theirResetRV,
-				Ignored:      ignored,
-				FirstCreated: firstCreated,
+				ID:                   id,
+				MyResetRV:            myResetRV,
+				TheirResetRV:         theirResetRV,
+				Ignored:              ignored,
+				FirstCreated:         firstCreated,
+				LastHandshakeAttempt: lastHandshakeAttempt,
 			}
 			if err := c.db.UpdateAddressBookEntry(tx, newEntry); err != nil {
 				return err
@@ -619,4 +622,57 @@ func (c *Client) ListUsersLastReceivedTime() ([]LastUserReceivedTime, error) {
 
 	sort.Slice(res, func(i, j int) bool { return res[i].LastDecrypted.After(res[j].LastDecrypted) })
 	return res, nil
+}
+
+// handshakeIdleUsers attempts to handshake any users from which no message has
+// been received for the passed limitInterval and for which no handshake attempt
+// has been made in the given interval as well.
+func (c *Client) handshakeIdleUsers(limitInterval time.Duration) error {
+	<-c.abLoaded
+
+	if limitInterval == 0 {
+		limitInterval = c.cfg.AutoHandshakeInterval
+	}
+	limitDate := time.Now().Add(-limitInterval)
+
+	users := c.rul.userList()
+	for _, uid := range users {
+		ru, err := c.rul.byID(uid)
+		if err != nil {
+			continue
+		}
+
+		// Skip if we received a message from this user more recently
+		// than the limit date.
+		_, lastDecTime := ru.LastRatchetTimes()
+		if lastDecTime.After(limitDate) {
+			continue
+		}
+
+		// Skip if we attempted a handshake with this user more recently
+		// than the limit date.
+		ab, err := c.getAddressBookEntry(uid)
+		if err != nil {
+			continue
+		}
+		if ab.LastHandshakeAttempt.After(limitDate) {
+			continue
+		}
+
+		// Skip if this user was created more recently than the limit
+		// date.
+		if !ab.FirstCreated.IsZero() && ab.FirstCreated.After(limitDate) {
+			continue
+		}
+
+		// Attempt handshake.
+		ru.log.Infof("Automatic handshake with user %s due to idle messages",
+			strescape.Nick(ru.Nick()))
+		err = c.Handshake(uid)
+		if err != nil {
+			return fmt.Errorf("unable to handshake with %s: %v", uid, err)
+		}
+	}
+
+	return nil
 }
