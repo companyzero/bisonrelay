@@ -164,8 +164,10 @@ func (c *Client) initRemoteUser(id *zkidentity.PublicIdentity, r *ratchet.Ratche
 			return err
 		}
 		var ignored bool
+		firstCreated := time.Now()
 		if oldEntry != nil {
 			ignored = oldEntry.Ignored
+			firstCreated = oldEntry.FirstCreated
 		}
 		if updateAB {
 			newEntry := &clientdb.AddressBookEntry{
@@ -173,6 +175,7 @@ func (c *Client) initRemoteUser(id *zkidentity.PublicIdentity, r *ratchet.Ratche
 				MyResetRV:    myResetRV,
 				TheirResetRV: theirResetRV,
 				Ignored:      ignored,
+				FirstCreated: firstCreated,
 			}
 			if err := c.db.UpdateAddressBookEntry(tx, newEntry); err != nil {
 				return err
