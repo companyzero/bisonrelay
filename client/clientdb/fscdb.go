@@ -267,31 +267,20 @@ func (db *DB) getBaseABEntry(id UserID) (*AddressBookEntry, error) {
 	return entry, nil
 }
 
-func (db *DB) GetAddressBookEntry(tx ReadTx, id UserID,
-	localID *zkidentity.FullIdentity) (*AddressBookEntry, error) {
+// readRatchet reads the ratchet data of an user.
+func (db *DB) readRatchet(id UserID, localID *zkidentity.FullIdentity,
+	theirPublicKey *zkidentity.FixedSizeSntrupPublicKey) (*ratchet.Ratchet, error) {
 
-	entry, err := db.getBaseABEntry(id)
-	if err != nil {
-		return nil, err
-	}
-
-	// Read Ratchet.
-	filename := filepath.Join(db.root, inboundDir, id.String(), ratchetFilename)
-	ratchetJSON, err := os.ReadFile(filename)
-	if err != nil {
-		return nil, fmt.Errorf("ReadFile ratchet: %v", err)
-	}
-
+	// Read ratchet state from disk.
 	var rs disk.RatchetState
-	err = json.Unmarshal(ratchetJSON, &rs)
-	if err != nil {
-		return nil, fmt.Errorf("could not unmarshal ratchet state: %v", err)
+	filename := filepath.Join(db.root, inboundDir, id.String(), ratchetFilename)
+	if err := db.readJsonFile(filename, &rs); err != nil {
+		return nil, fmt.Errorf("unable to read ratchet state: %v", err)
 	}
 
-	// recreate ratchet
+	// Recreate ratchet.
 	r := ratchet.New(rand.Reader)
-	err = r.Unmarshal(&rs)
-	if err != nil {
+	if err := r.Unmarshal(&rs); err != nil {
 		return nil, fmt.Errorf("could not unmarshal ratchet: %v", err)
 	}
 
@@ -299,22 +288,25 @@ func (db *DB) GetAddressBookEntry(tx ReadTx, id UserID,
 	if localID != nil {
 		r.MyPrivateKey = &localID.PrivateKey
 	}
-	r.TheirPublicKey = &entry.ID.Key
+	r.TheirPublicKey = theirPublicKey
+	return r, nil
+}
 
-	entry.R = r
-	return entry, nil
+// GetAddressBookEntry loads the address book information of an user.
+func (db *DB) GetAddressBookEntry(tx ReadTx, id UserID) (*AddressBookEntry, error) {
+	return db.getBaseABEntry(id)
 }
 
 // LoadAddressBook returns the full client address book. Note that invalid or
 // otherwise incomplete entries do not cause the addressbook loading to fail,
 // only diagnostic messages are returned in that case.
-func (db *DB) LoadAddressBook(tx ReadTx, localID *zkidentity.FullIdentity) ([]*AddressBookEntry, error) {
+func (db *DB) LoadAddressBook(tx ReadTx, localID *zkidentity.FullIdentity) ([]AddressBookAndRatchet, error) {
 	fi, err := os.ReadDir(filepath.Join(db.root, inboundDir))
 	if err != nil {
 		return nil, err
 	}
 
-	res := make([]*AddressBookEntry, 0, len(fi))
+	res := make([]AddressBookAndRatchet, 0, len(fi))
 	id := &UserID{}
 
 	for _, v := range fi {
@@ -325,13 +317,22 @@ func (db *DB) LoadAddressBook(tx ReadTx, localID *zkidentity.FullIdentity) ([]*A
 			continue
 		}
 
-		entry, err := db.GetAddressBookEntry(tx, *id, localID)
+		entry, err := db.getBaseABEntry(*id)
 		if err != nil {
 			db.log.Warnf("Unable to load addressbook entry %s: %v",
 				id, err)
 			continue
 		}
-		res = append(res, entry)
+
+		ratchet, err := db.readRatchet(*id, localID, &entry.ID.Key)
+		if err != nil {
+			db.log.Warnf("Unable to load ratchet data %s: %v", id, err)
+			continue
+		}
+		res = append(res, AddressBookAndRatchet{
+			AddressBook: entry,
+			Ratchet:     ratchet,
+		})
 	}
 
 	return res, nil

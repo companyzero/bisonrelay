@@ -155,7 +155,7 @@ func (c *Client) initRemoteUser(id *zkidentity.PublicIdentity, r *ratchet.Ratche
 	hadKXSearch := false
 	err = c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
 		var err error
-		oldEntry, err = c.db.GetAddressBookEntry(tx, id.Identity, c.id)
+		oldEntry, err = c.db.GetAddressBookEntry(tx, id.Identity)
 		if err != nil && !errors.Is(err, clientdb.ErrNotFound) {
 			return err
 		}
@@ -170,7 +170,6 @@ func (c *Client) initRemoteUser(id *zkidentity.PublicIdentity, r *ratchet.Ratche
 		if updateAB {
 			newEntry := &clientdb.AddressBookEntry{
 				ID:           id,
-				R:            r,
 				MyResetRV:    myResetRV,
 				TheirResetRV: theirResetRV,
 				Ignored:      ignored,
@@ -324,7 +323,7 @@ func (c *Client) ResetRatchet(uid UserID) error {
 
 	var resetRV clientdb.RawRVID
 	err = c.dbView(func(tx clientdb.ReadTx) error {
-		ab, err := c.db.GetAddressBookEntry(tx, uid, c.id)
+		ab, err := c.db.GetAddressBookEntry(tx, uid)
 		if err != nil {
 			return err
 		}
@@ -475,7 +474,7 @@ func (c *Client) Ignore(uid UserID, ignore bool) error {
 	ru.SetIgnored(ignore)
 
 	return c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
-		ab, err := c.db.GetAddressBookEntry(tx, ru.ID(), c.id)
+		ab, err := c.db.GetAddressBookEntry(tx, ru.ID())
 		if err != nil {
 			return err
 		}
@@ -545,7 +544,7 @@ func (c *Client) RenameUser(uid UserID, newNick string) error {
 	c.rul.modifyUserNick(ru, newNick)
 
 	return c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
-		ab, err := c.db.GetAddressBookEntry(tx, ru.ID(), c.id)
+		ab, err := c.db.GetAddressBookEntry(tx, ru.ID())
 		if err != nil {
 			return err
 		}
