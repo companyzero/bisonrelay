@@ -279,11 +279,17 @@ func (s *Store) handlePlaceOrder(ctx context.Context, uid clientintf.UserID,
 		b.WriteString(fmt.Sprintf(f, args...))
 	}
 
+	var userNick string
 	ru, err := s.c.UserByID(order.User)
-	if err != nil {
+	if err != nil && order.User == s.c.PublicID() {
+		userNick = "(local client)"
+	} else if err != nil {
 		return nil, fmt.Errorf("Order #%d placed by unknown user %s",
 			order.ID, order.User)
+	} else {
+		userNick = strescape.Nick(ru.Nick())
 	}
+
 	wpm("Thank you for placing your order #%d\n", order.ID)
 	if order.ShipAddr != nil {
 		shipAddr := order.ShipAddr
@@ -334,14 +340,14 @@ func (s *Store) handlePlaceOrder(ctx context.Context, uid clientintf.UserID,
 		s.log.Warnf("No exchange rate provider setup in simplestore config")
 	case order.ExchangeRate <= 0:
 		s.log.Warnf("Invalid exchange rate to charge user %s for order %s",
-			strescape.Nick(ru.Nick()), order.ID)
+			userNick, order.ID)
 	case totalDCR == 0:
 		s.log.Warnf("Order has zero total dcr amount")
 	case pt == PayTypeOnChain:
 		addr, err := s.c.OnchainRecvAddrForUser(order.User, s.cfg.Account)
 		if err != nil {
 			s.log.Errorf("Unable to generate on-chain addr for user %s: %v",
-				strescape.Nick(ru.Nick()), err)
+				userNick, err)
 		} else {
 			wpm("On-chain Payment Address: %s\n", addr)
 			order.PayType = PayTypeOnChain
@@ -351,13 +357,13 @@ func (s *Store) handlePlaceOrder(ctx context.Context, uid clientintf.UserID,
 	case pt == PayTypeLN:
 		if s.lnpc == nil {
 			s.log.Warnf("Unable to generate LN invoice for user %s "+
-				"for order %s: LN not setup", strescape.Nick(ru.Nick()),
+				"for order %s: LN not setup", userNick,
 				order.ID)
 		} else {
 			invoice, err := s.lnpc.GetInvoice(ctx, int64(totalDCR*1000), nil)
 			if err != nil {
 				s.log.Errorf("Unable to generate LN invoice for user %s "+
-					"order %s: %v", strescape.Nick(ru.Nick()),
+					"order %s: %v", userNick,
 					order.ID, err)
 			} else {
 				urlInvoice := "lnpay://" + invoice
