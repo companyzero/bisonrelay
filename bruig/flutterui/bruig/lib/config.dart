@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:args/args.dart';
+import 'package:bruig/util.dart';
 import "package:ini/ini.dart" as ini;
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
@@ -80,6 +81,8 @@ class Config {
   late final int circuitLimit;
   late final bool noLoadChatHistory;
   late final bool syncFreeList;
+  late final int autoHandshakeInterval;
+  late final int autoRemoveIdleUsersInterval;
 
   Config();
   Config.filled(
@@ -106,7 +109,9 @@ class Config {
       this.proxyPassword: "",
       this.circuitLimit: 32,
       this.noLoadChatHistory: true,
-      this.syncFreeList: true});
+      this.syncFreeList: true,
+      this.autoHandshakeInterval: 21 * 24 * 60 * 60,
+      this.autoRemoveIdleUsersInterval: 60 * 24 * 60 * 60});
   factory Config.newWithRPCHost(
           Config cfg, String rpcHost, String tlsCert, String macaroonPath) =>
       Config.filled(
@@ -134,6 +139,8 @@ class Config {
         circuitLimit: cfg.circuitLimit,
         noLoadChatHistory: cfg.noLoadChatHistory,
         syncFreeList: cfg.syncFreeList,
+        autoHandshakeInterval: cfg.autoHandshakeInterval,
+        autoRemoveIdleUsersInterval: cfg.autoRemoveIdleUsersInterval,
       );
 
   Future<void> saveConfig(String filepath) async {
@@ -243,6 +250,11 @@ Future<Config> loadConfig(String filepath) async {
   c.circuitLimit = getInt("default", "circuitlimit") ?? 32;
   c.noLoadChatHistory = getBool("default", "noloadchathistory");
   c.syncFreeList = getBoolDefaultTrue("default", "syncfreelist");
+
+  c.autoHandshakeInterval =
+      parseDurationSeconds(f.get("default", "autohandshakeinterval") ?? "21d");
+  c.autoRemoveIdleUsersInterval = parseDurationSeconds(
+      f.get("default", "autoremoveidleusersinterval") ?? "60d");
 
   if (c.walletType != "disabled") {
     c.lnRPCHost = f.get("payment", "lnrpchost") ?? "localhost:10009";
