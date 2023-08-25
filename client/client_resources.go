@@ -28,7 +28,7 @@ func (c *Client) NewPagesSession() (clientintf.PagesSessionID, error) {
 
 // FetchLocalResource fetches the local resource and triggers a correspoding
 // ResourceFetched call.
-func (c *Client) FetchLocalResource(path []string, meta map[string]string) error {
+func (c *Client) FetchLocalResource(path []string, meta map[string]string, data json.RawMessage) error {
 	if c.cfg.ResourcesProvider == nil {
 		return fmt.Errorf("resources provider not configured")
 	}
@@ -36,6 +36,7 @@ func (c *Client) FetchLocalResource(path []string, meta map[string]string) error
 	rm := rpc.RMFetchResource{
 		Path: path,
 		Meta: meta,
+		Data: data,
 	}
 	reqTS := time.Now()
 

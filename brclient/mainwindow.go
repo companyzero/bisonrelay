@@ -408,9 +408,10 @@ func (mws mainWindowState) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			uid := cw.page.UID
 			action := cw.selEl.form.action()
 
-			for _, ff := range cw.selEl.form.fields {
-				mws.as.diagMsg("%s - %v", ff.typ, ff.value)
-			}
+			// mws.as.diagMsg("uid: %s", uid)
+			// for _, ff := range cw.selEl.form.fields {
+			//	mws.as.diagMsg("form %s - %v", ff.typ, ff.value)
+			// }
 
 			err := mws.as.fetchPage(uid, action,
 				cw.page.SessionID, cw.page.PageID, cw.selEl.form)

@@ -2363,17 +2363,6 @@ func (as *appState) fetchPage(uid clientintf.UserID, pagePath string, session,
 		}
 	}
 
-	// If it's for a local page, fetch it directly.
-	if as.c.PublicID() == uid {
-		return as.c.FetchLocalResource(path, nil)
-	}
-
-	// Check we know the user.
-	userNick, err := as.c.UserNick(uid)
-	if err != nil {
-		return err
-	}
-
 	// Serialize form data.
 	var data json.RawMessage
 	if form != nil {
@@ -2381,6 +2370,17 @@ func (as *appState) fetchPage(uid clientintf.UserID, pagePath string, session,
 		if err != nil {
 			return err
 		}
+	}
+
+	// If it's for a local page, fetch it directly.
+	if as.c.PublicID() == uid {
+		return as.c.FetchLocalResource(path, nil, data)
+	}
+
+	// Check we know the user.
+	userNick, err := as.c.UserNick(uid)
+	if err != nil {
+		return err
 	}
 
 	tag, err := as.c.FetchResource(uid, path, nil, session, parent, data)
