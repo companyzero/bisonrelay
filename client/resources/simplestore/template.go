@@ -13,12 +13,14 @@ var storeTemplate embed.FS
 
 // WriteTemplate writes the store template in the given path.
 func WriteTemplate(rootDestPath string) error {
-	if _, err := os.Stat(rootDestPath); !os.IsNotExist(err) {
-		return fmt.Errorf("unable write simple store template if dir already exists")
+	if err := os.MkdirAll(rootDestPath, 0o700); err != nil {
+		return fmt.Errorf("unable to create root dir for store: %w", err)
 	}
 
-	if err := os.MkdirAll(rootDestPath, 0o700); err != nil {
-		return fmt.Errorf("unable to create root dir for store: %v", err)
+	if entries, err := os.ReadDir(rootDestPath); err != nil {
+		return fmt.Errorf("failed to read %v: %w", rootDestPath, err)
+	} else if len(entries) != 0 {
+		return os.ErrExist
 	}
 
 	walkDirFunc := func(path string, d fs.DirEntry, err error) error {
