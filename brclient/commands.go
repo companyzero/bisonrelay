@@ -2880,7 +2880,7 @@ var commands = []tuicmd{
 			if len(args) < 1 {
 				return usageError{msg: "backup directory cannot be empty"}
 			}
-			destPath := filepath.Clean(args[0])
+			destPath := cleanAndExpandPath(args[0])
 
 			backupFile, err := as.c.Backup(as.ctx, as.rootDir, destPath)
 			if err != nil {

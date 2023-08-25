@@ -11,6 +11,7 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 	"os"
+	"os/user"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -166,7 +167,7 @@ func defaultAppDataDir(homeDir string) string {
 	return filepath.Join(".", appName)
 }
 
-func cleanAndExpandPath(homeDir, path string) string {
+func expandPath(homeDir, path string) string {
 	if len(path) > 0 && path[0] == '~' {
 		path = filepath.Join(homeDir, path[1:])
 	}
@@ -238,7 +239,7 @@ func loadConfig() (*config, error) {
 	if cfgFile == "" {
 		cfgFile = defaultCfgFile
 	}
-	cfgFile = cleanAndExpandPath(homeDir, cfgFile)
+	cfgFile = expandPath(homeDir, cfgFile)
 
 	// Open config file.
 	f, err := os.Open(cfgFile)
@@ -342,7 +343,7 @@ func loadConfig() (*config, error) {
 	}
 
 	// Clean paths.
-	*flagRootDir = cleanAndExpandPath(homeDir, *flagRootDir)
+	*flagRootDir = expandPath(homeDir, *flagRootDir)
 	switch {
 	case *flagResourcesUpstream == "",
 		*flagResourcesUpstream == "clientrpc",
@@ -351,11 +352,11 @@ func loadConfig() (*config, error) {
 		// Valid, and no more processing needed.
 	case strings.HasPrefix(*flagResourcesUpstream, "pages:"):
 		path := (*flagResourcesUpstream)[len("pages:"):]
-		path = cleanAndExpandPath(homeDir, path)
+		path = expandPath(homeDir, path)
 		*flagResourcesUpstream = "pages:" + path
 	case strings.HasPrefix(*flagResourcesUpstream, "simplestore:"):
 		path := (*flagResourcesUpstream)[len("simplestore:"):]
-		path = cleanAndExpandPath(homeDir, path)
+		path = expandPath(homeDir, path)
 		*flagResourcesUpstream = "simplestore:" + path
 	default:
 		return nil, fmt.Errorf("unknown resources upstream provider %q", *flagResourcesUpstream)
@@ -371,13 +372,13 @@ func loadConfig() (*config, error) {
 	}
 
 	// Clean paths.
-	*flagLogFile = cleanAndExpandPath(homeDir, *flagLogFile)
-	*flagLNTLSCert = cleanAndExpandPath(homeDir, *flagLNTLSCert)
-	*flagLNMacaroonPath = cleanAndExpandPath(homeDir, *flagLNMacaroonPath)
-	*flagMsgRoot = cleanAndExpandPath(homeDir, *flagMsgRoot)
-	*flagRPCKeyPath = cleanAndExpandPath(homeDir, *flagRPCKeyPath)
-	*flagRPCCertPath = cleanAndExpandPath(homeDir, *flagRPCCertPath)
-	*flagRPCClientCAPath = cleanAndExpandPath(homeDir, *flagRPCClientCAPath)
+	*flagLogFile = expandPath(homeDir, *flagLogFile)
+	*flagLNTLSCert = expandPath(homeDir, *flagLNTLSCert)
+	*flagLNMacaroonPath = expandPath(homeDir, *flagLNMacaroonPath)
+	*flagMsgRoot = expandPath(homeDir, *flagMsgRoot)
+	*flagRPCKeyPath = expandPath(homeDir, *flagRPCKeyPath)
+	*flagRPCCertPath = expandPath(homeDir, *flagRPCCertPath)
+	*flagRPCClientCAPath = expandPath(homeDir, *flagRPCClientCAPath)
 
 	var cmdHistoryPath string
 	if *flagSaveHistory {
@@ -552,4 +553,58 @@ func saveNewConfig(cfgFile string, cfg *config) error {
 	}
 
 	return os.WriteFile(cfgFile, generated.Bytes(), 0o600)
+}
+
+// cleanAndExpandPath expands environment variables and leading ~ in the
+// passed path, cleans the result, and returns it.
+func cleanAndExpandPath(path string) string {
+	// Nothing to do when no path is given.
+	if path == "" {
+		return path
+	}
+
+	// NOTE: The os.ExpandEnv doesn't work with Windows cmd.exe-style
+	// %VARIABLE%, but the variables can still be expanded via POSIX-style
+	// $VARIABLE.
+	path = os.ExpandEnv(path)
+
+	if !strings.HasPrefix(path, "~") {
+		return filepath.Clean(path)
+	}
+
+	// Expand initial ~ to the current user's home directory, or ~otheruser
+	// to otheruser's home directory.  On Windows, both forward and backward
+	// slashes can be used.
+	path = path[1:]
+
+	var pathSeparators string
+	if runtime.GOOS == "windows" {
+		pathSeparators = string(os.PathSeparator) + "/"
+	} else {
+		pathSeparators = string(os.PathSeparator)
+	}
+
+	userName := ""
+	if i := strings.IndexAny(path, pathSeparators); i != -1 {
+		userName = path[:i]
+		path = path[i:]
+	}
+
+	homeDir := ""
+	var u *user.User
+	var err error
+	if userName == "" {
+		u, err = user.Current()
+	} else {
+		u, err = user.Lookup(userName)
+	}
+	if err == nil {
+		homeDir = u.HomeDir
+	}
+	// Fallback to CWD if user lookup fails or user has no home directory.
+	if homeDir == "" {
+		homeDir = "."
+	}
+
+	return filepath.Join(homeDir, path)
 }
