@@ -5,6 +5,7 @@ import 'package:bruig/models/resources.dart';
 import 'package:flutter/foundation.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
+import 'package:intl/intl.dart';
 import '../storage_manager.dart';
 
 const SCE_unknown = 0;
@@ -12,6 +13,13 @@ const SCE_sending = 1;
 const SCE_sent = 2;
 const SCE_received = 3;
 const SCE_errored = 99;
+
+class DateChangeEvent extends ChatEvent {
+  final DateTime date;
+
+  DateChangeEvent(this.date)
+      : super("", DateFormat("EEE - d MMM").format(date));
+}
 
 class SynthChatEvent extends ChatEvent with ChangeNotifier {
   SynthChatEvent(String msg, [this._state = SCE_unknown, this._error])
@@ -89,6 +97,16 @@ class ChatEventModel extends ChangeNotifier {
   }
 }
 
+class DayGCMessages {
+  List<ChatEventModel> _msgs = [];
+  UnmodifiableListView<ChatEventModel> get msgs => UnmodifiableListView(_msgs);
+  void append(ChatEventModel msg) {
+    _msgs.add(msg);
+  }
+
+  String date = "";
+}
+
 class ChatModel extends ChangeNotifier {
   final String id; // RemoteUID or GC ID
   final bool isGC;
@@ -159,32 +177,92 @@ class ChatModel extends ChangeNotifier {
 
   List<ChatEventModel> _msgs = [];
   UnmodifiableListView<ChatEventModel> get msgs => UnmodifiableListView(_msgs);
-  void append(ChatEventModel msg) {
-    if (!_active && _unreadMsgCount == 0 && _msgs.isNotEmpty) {
-      msg.firstUnread = true;
+  void append(ChatEventModel msg, bool history) {
+    if (!history) {
+      if (!_active && _unreadMsgCount == 0 && _msgs.isNotEmpty) {
+        msg.firstUnread = true;
+      }
     }
     if (_msgs.isNotEmpty &&
-        _msgs[_msgs.length - 1].source?.id == msg.source?.id) {
+        _msgs[_msgs.length - 1].source?.nick == msg.source?.nick) {
       msg.sameUser = true;
     }
-    _msgs.add(msg);
-    if (!_active) {
-      if (msg.event is PM || msg.event is GCMsg) {
-        _unreadMsgCount += 1;
+    var timestamp = 0;
+    var evnt = msg.event;
+    if (evnt is PM) {
+      timestamp =
+          msg.source?.nick == null ? evnt.timestamp : evnt.timestamp * 1000;
+    } else if (evnt is GCMsg) {
+      timestamp =
+          msg.source?.nick == null ? evnt.timestamp : evnt.timestamp * 1000;
+    }
+    if (timestamp != 0) {
+      // Only show dateChange event if it is the first message or if the
+      // previous message in the chat was from a different date.
+      var dateChange =
+          DateChangeEvent(DateTime.fromMillisecondsSinceEpoch(timestamp));
+      if (_msgs.isEmpty) {
+        _msgs.add(ChatEventModel(dateChange, null));
       } else {
-        _unreadEventCount += 1;
+        var lastTimestamp = 0;
+        for (var i = _msgs.length - 1; i >= 0; i--) {
+          var oldEvent = _msgs[i].event;
+          if (oldEvent is PM) {
+            lastTimestamp = _msgs[i].source?.nick == null
+                ? oldEvent.timestamp
+                : oldEvent.timestamp * 1000;
+            break;
+          } else if (oldEvent is GCMsg) {
+            lastTimestamp = _msgs[i].source?.nick == null
+                ? oldEvent.timestamp
+                : oldEvent.timestamp * 1000;
+            break;
+          }
+        }
+        if (lastTimestamp != 0) {
+          var lastDate = DateChangeEvent(
+              DateTime.fromMillisecondsSinceEpoch(lastTimestamp));
+          if (lastDate.msg != dateChange.msg) {
+            _msgs.add(ChatEventModel(dateChange, null));
+          }
+        }
       }
+    }
+    _msgs.add(msg);
+    if (!history) {
+      if (!_active) {
+        if (msg.event is PM || msg.event is GCMsg) {
+          _unreadMsgCount += 1;
+        } else {
+          _unreadEventCount += 1;
+        }
+      }
+    }
+    if (evnt is GCMsg) {
+      appendDayGCMsgs(msg, DateTime.fromMillisecondsSinceEpoch(timestamp));
     }
     notifyListeners();
   }
 
-  void appendHistory(ChatEventModel msg) {
-    if (_msgs.isNotEmpty &&
-        _msgs[_msgs.length - 1].source?.id == msg.source?.id) {
-      msg.sameUser = true;
+  List<DayGCMessages> _dayGCMsgs = [];
+  UnmodifiableListView<DayGCMessages> get dayGCMsgs =>
+      UnmodifiableListView(_dayGCMsgs);
+
+  // Group together message
+  void appendDayGCMsgs(ChatEventModel msg, DateTime date) {
+    bool dayFound = false;
+    for (int i = 0; i < dayGCMsgs.length; i++) {
+      if (dayGCMsgs[i].date == DateFormat("EEE - d MMM y").format(date)) {
+        dayGCMsgs[i]._msgs.add(msg);
+        dayFound = true;
+      }
     }
-    _msgs.add(msg);
-    notifyListeners();
+    if (!dayFound) {
+      var dayGCMsg = DayGCMessages();
+      dayGCMsg._msgs = [msg];
+      dayGCMsg.date = DateFormat("EEE - d MMM y").format(date);
+      _dayGCMsgs.add(dayGCMsg);
+    }
   }
 
   void removeFirstUnread() {
@@ -208,15 +286,18 @@ class ChatModel extends ChangeNotifier {
     if (!active) {
       _unreadMsgCount += 1;
     }
-
     if (isGC) {
-      var m = GCMsg(id, nick, msg, DateTime.now().millisecondsSinceEpoch);
+      var timestamp = DateTime.now().millisecondsSinceEpoch;
+      var m = GCMsg(id, nick, msg, timestamp);
       var evnt = ChatEventModel(m, null);
       evnt.sentState = CMS_sending; // Track individual sending status?
       if (_msgs.isNotEmpty && _msgs[_msgs.length - 1].source == null) {
         evnt.sameUser = true;
       }
       _msgs.add(evnt);
+
+      appendDayGCMsgs(evnt, DateTime.fromMillisecondsSinceEpoch(timestamp));
+
       notifyListeners();
 
       try {
@@ -257,7 +338,7 @@ class ChatModel extends ChangeNotifier {
   void subscribeToPosts() {
     var event = SynthChatEvent("Subscribing to user's posts");
     event.state = SCE_sending;
-    append(ChatEventModel(event, null));
+    append(ChatEventModel(event, null), false);
     (() async {
       try {
         await Golib.subscribeToPosts(id);
@@ -271,7 +352,7 @@ class ChatModel extends ChangeNotifier {
   Future<void> unsubscribeToPosts() {
     var event = SynthChatEvent("Unsubscribing from user's posts");
     event.state = SCE_sending;
-    append(ChatEventModel(event, null));
+    append(ChatEventModel(event, null), false);
     return (() async {
       try {
         await Golib.unsubscribeToPosts(id);
@@ -284,7 +365,7 @@ class ChatModel extends ChangeNotifier {
 
   void requestKXReset() {
     var event = SynthChatEvent("Requesting KX reset", SCE_sending);
-    append(ChatEventModel(event, null));
+    append(ChatEventModel(event, null), false);
     (() async {
       try {
         await Golib.requestKXReset(id);
@@ -711,7 +792,7 @@ class ClientModel extends ChangeNotifier {
                 ? ChatModel(id, chatHistory[i].from, false)
                 : null);
       }
-      c.appendHistory(evnt);
+      c.append(evnt, true);
     }
 
     // Sorting algo to attempt to retain order
@@ -883,7 +964,10 @@ class ClientModel extends ChangeNotifier {
       } else {
         source = chat;
       }
-      chat.append(ChatEventModel(evnt, source));
+      if (!chat.active) {
+        hasUnreadChats = true;
+      }
+      chat.append(ChatEventModel(evnt, source), false);
 
       if (chat.isGC) {
         _gcChats.remove(chat);
@@ -956,7 +1040,8 @@ class ClientModel extends ChangeNotifier {
       }
       var chat = await _newChat(remoteUser.uid, remoteUser.nick, false, false);
       chat.append(
-          ChatEventModel(SynthChatEvent("KX Completed", SCE_received), null));
+          ChatEventModel(SynthChatEvent("KX Completed", SCE_received), null),
+          false);
     }
   }
 

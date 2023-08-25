@@ -41,6 +41,19 @@ class ServerEvent extends StatelessWidget {
   }
 }
 
+class DateChange extends StatelessWidget {
+  final Widget child;
+  const DateChange({required this.child, Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+        padding: const EdgeInsets.only(left: 41, top: 5, bottom: 5),
+        margin: const EdgeInsets.all(5),
+        child: child);
+  }
+}
+
 class ReceivedSentPM extends StatefulWidget {
   final ChatEventModel evnt;
   final String nick;
@@ -109,8 +122,8 @@ class _ReceivedSentPMState extends State<ReceivedSentPM> {
       sourceID = widget.evnt.source!.id;
     }
     var now = DateTime.fromMillisecondsSinceEpoch(widget.timestamp);
-    var formatter = DateFormat('yyyy-MM-dd HH:mm:ss');
-    var date = formatter.format(now);
+    var hour = DateFormat('HH:mm').format(now);
+    var fullDate = DateFormat("yyyy-MM-dd HH:mm:ss").format(now);
 
     var msg = "${widget.evnt.event.msg}$suffix";
     msg = msg.replaceAll("\n",
@@ -151,7 +164,7 @@ class _ReceivedSentPMState extends State<ReceivedSentPM> {
           : const Empty(),
       widget.evnt.sameUser
           ? const Empty()
-          : Row(children: [
+          : Row(mainAxisAlignment: MainAxisAlignment.start, children: [
               SelectionContainer.disabled(
                 child: Container(
                   width: 28,
@@ -185,9 +198,23 @@ class _ReceivedSentPMState extends State<ReceivedSentPM> {
               Text(
                 widget.nick,
                 style: TextStyle(
-                  fontSize: 12,
-                  color: avatarColor, // NAME TEXT COLOR,
-                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                  color: hightLightTextColor,
+                  fontWeight: FontWeight.w500,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const Spacer(),
+              SelectionContainer.disabled(
+                child: Padding(
+                  padding: const EdgeInsets.all(4.0),
+                  child: Tooltip(
+                      message: fullDate,
+                      child: Text(
+                        hour,
+                        style: TextStyle(
+                            fontSize: 12, color: darkTextColor), // DATE COLOR
+                      )),
                 ),
               ),
             ]),
@@ -214,18 +241,404 @@ class _ReceivedSentPMState extends State<ReceivedSentPM> {
                       msg,
                       widget.userNick != widget.nick &&
                           msg.contains(widget.userNick)))),
-          SelectionContainer.disabled(
-            child: Padding(
-              padding: const EdgeInsets.all(4.0),
-              child: Text(
-                date,
-                style:
-                    TextStyle(fontSize: 9, color: darkTextColor), // DATE COLOR
-              ),
-            ),
-          ),
           const SizedBox(width: 10)
         ]),
+        const SizedBox(height: 5),
+      ])
+    ]);
+  }
+}
+
+class ReceivedSentMobileGCMsg extends StatefulWidget {
+  final ChatEventModel evnt;
+  final String nick;
+  final int timestamp;
+  final ShowSubMenuCB showSubMenu;
+  final String id;
+  final String userNick;
+  final bool isGC;
+
+  const ReceivedSentMobileGCMsg(this.evnt, this.nick, this.timestamp,
+      this.showSubMenu, this.id, this.userNick, this.isGC,
+      {Key? key})
+      : super(key: key);
+
+  @override
+  State<ReceivedSentMobileGCMsg> createState() =>
+      _ReceivedSentMobileGCMsgState();
+}
+
+class _ReceivedSentMobileGCMsgState extends State<ReceivedSentMobileGCMsg> {
+  void eventChanged() => setState(() {});
+
+  @override
+  initState() {
+    super.initState();
+    widget.evnt.addListener(eventChanged);
+  }
+
+  @override
+  didUpdateWidget(ReceivedSentMobileGCMsg oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    oldWidget.evnt.removeListener(eventChanged);
+    widget.evnt.addListener(eventChanged);
+  }
+
+  @override
+  dispose() {
+    widget.evnt.removeListener(eventChanged);
+    super.dispose();
+  }
+
+  Future<void> launchUrlAwait(url) async {
+    if (!await launchUrl(Uri.parse(url))) {
+      throw 'Could not launch $url';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    var prefix = "";
+    var suffix = "";
+    switch (widget.evnt.sentState) {
+      case CMS_sending:
+        prefix = "…";
+        break;
+      case CMS_sent:
+        prefix = "✓";
+        break;
+      case CMS_errored:
+        prefix = "✗";
+        suffix = "\n\n${widget.evnt.sendError}";
+        break;
+      default:
+    }
+    var sourceID = widget.evnt.event.sid;
+    if (widget.evnt.source != null) {
+      sourceID = widget.evnt.source!.id;
+    }
+    var now = DateTime.fromMillisecondsSinceEpoch(widget.timestamp);
+    var hour = DateFormat('HH:mm').format(now);
+    var fullDate = DateFormat("yyyy-MM-dd HH:mm:ss").format(now);
+
+    var msg = "${widget.evnt.event.msg}$suffix";
+    msg = msg.replaceAll("\n",
+        "  \n"); // Replace newlines with <space space newline> for proper md render
+    var theme = Theme.of(context);
+    var darkTextColor = theme.indicatorColor;
+    var hightLightTextColor = theme.dividerColor; // NAME TEXT COLOR
+    var avatarColor = colorFromNick(widget.nick);
+    var avatarTextColor =
+        ThemeData.estimateBrightnessForColor(avatarColor) == Brightness.dark
+            ? hightLightTextColor
+            : darkTextColor;
+    var selectedBackgroundColor = theme.highlightColor;
+    var textColor = theme.dividerColor;
+    var messageBackgroundColor = theme.dialogBackgroundColor;
+
+    return Column(children: [
+      widget.evnt.firstUnread
+          ? Row(children: [
+              Expanded(
+                  child: Divider(
+                color: textColor, //color of divider
+                height: 8, //height spacing of divider
+                thickness: 1, //thickness of divier line
+                indent: 5, //spacing at the start of divider
+                endIndent: 5, //spacing at the end of divider
+              )),
+              Text("Last read posts",
+                  style: TextStyle(fontSize: 9, color: textColor)),
+              Expanded(
+                  child: Divider(
+                color: textColor, //color of divider
+                height: 8, //height spacing of divider
+                thickness: 1, //thickness of divier line
+                indent: 5, //spacing at the start of divider
+                endIndent: 5, //spacing at the end of divider
+              )),
+            ])
+          : const Empty(),
+      Container(
+          margin: const EdgeInsets.only(left: 5, right: 20),
+          padding:
+              const EdgeInsets.only(left: 10, right: 10, top: 5, bottom: 5),
+          decoration: BoxDecoration(
+            color: messageBackgroundColor,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Row(children: [
+            Flexible(
+                child: Column(children: [
+              SelectionContainer.disabled(
+                child: Container(
+                  width: 28,
+                  margin: const EdgeInsets.only(
+                      top: 0, bottom: 0, left: 5, right: 0),
+                  child: widget.isGC
+                      ? UserContextMenu(
+                          targetUserChat: widget.evnt.source,
+                          child: InteractiveAvatar(
+                            bgColor: selectedBackgroundColor,
+                            chatNick: widget.nick,
+                            avatarColor: avatarColor,
+                            avatarTextColor: avatarTextColor,
+                          ),
+                        )
+                      : UserContextMenu(
+                          targetUserChat: widget.evnt.source,
+                          child: InteractiveAvatar(
+                            bgColor: selectedBackgroundColor,
+                            chatNick: widget.nick,
+                            onTap: () {
+                              widget.showSubMenu(widget.isGC, widget.id);
+                            },
+                            avatarColor: avatarColor,
+                            avatarTextColor: avatarTextColor,
+                          ),
+                        ),
+                ),
+              ),
+            ])),
+            Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Flexible(
+                    child: Text(
+                  widget.nick,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: avatarColor, // NAME TEXT COLOR,
+                    fontWeight: FontWeight.bold,
+                  ),
+                )),
+                Flexible(
+                    child: SelectionContainer.disabled(
+                        child: Padding(
+                  padding: const EdgeInsets.all(4.0),
+                  child: Tooltip(
+                      message: fullDate,
+                      child: Text(
+                        hour,
+                        style: TextStyle(
+                            fontSize: 9, color: darkTextColor), // DATE COLOR
+                      )),
+                )))
+              ]),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Flexible(
+                      child: Provider<DownloadSource>(
+                          create: (context) => DownloadSource(sourceID),
+                          child: MarkdownArea(
+                              msg,
+                              widget.userNick != widget.nick &&
+                                  msg.contains(widget.userNick)))),
+                  Flexible(
+                      child: SelectionContainer.disabled(
+                    child: SizedBox(
+                        width: 5,
+                        child: Text(
+                          prefix,
+                          style: TextStyle(
+                              fontSize: 12,
+                              color: hightLightTextColor, // NAME TEXT COLOR,
+                              fontWeight: FontWeight.bold,
+                              fontStyle: FontStyle.italic),
+                        )),
+                  ))
+                ],
+              ),
+              const SizedBox(width: 10)
+            ]),
+            const SizedBox(height: 5),
+          ]))
+    ]);
+  }
+}
+
+class ReceivedSentMobilePM extends StatefulWidget {
+  final ChatEventModel evnt;
+  final String nick;
+  final int timestamp;
+  final ShowSubMenuCB showSubMenu;
+  final String id;
+  final String userNick;
+  final bool isGC;
+
+  const ReceivedSentMobilePM(this.evnt, this.nick, this.timestamp,
+      this.showSubMenu, this.id, this.userNick, this.isGC,
+      {Key? key})
+      : super(key: key);
+
+  @override
+  State<ReceivedSentMobilePM> createState() => _ReceivedSentPMMobileState();
+}
+
+class _ReceivedSentPMMobileState extends State<ReceivedSentMobilePM> {
+  void eventChanged() => setState(() {});
+
+  @override
+  initState() {
+    super.initState();
+    widget.evnt.addListener(eventChanged);
+  }
+
+  @override
+  didUpdateWidget(ReceivedSentMobilePM oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    oldWidget.evnt.removeListener(eventChanged);
+    widget.evnt.addListener(eventChanged);
+  }
+
+  @override
+  dispose() {
+    widget.evnt.removeListener(eventChanged);
+    super.dispose();
+  }
+
+  Future<void> launchUrlAwait(url) async {
+    if (!await launchUrl(Uri.parse(url))) {
+      throw 'Could not launch $url';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    var prefix = "";
+    var suffix = "";
+    switch (widget.evnt.sentState) {
+      case CMS_sending:
+        prefix = "…";
+        break;
+      case CMS_sent:
+        prefix = "✓";
+        break;
+      case CMS_errored:
+        prefix = "✗";
+        suffix = "\n\n${widget.evnt.sendError}";
+        break;
+      default:
+    }
+
+    var sent = widget.evnt.source == null;
+
+    var sourceID = widget.evnt.event.sid;
+    if (!sent) {
+      sourceID = widget.evnt.source!.id;
+    }
+    var now = DateTime.fromMillisecondsSinceEpoch(widget.timestamp);
+    var hour = DateFormat('HH:mm').format(now);
+    var fullDate = DateFormat("yyyy-MM-dd HH:mm:ss").format(now);
+
+    var msg = "${widget.evnt.event.msg}$suffix";
+    msg = msg.replaceAll("\n",
+        "  \n"); // Replace newlines with <space space newline> for proper md render
+    var theme = Theme.of(context);
+    var darkTextColor = theme.indicatorColor;
+    var textColor = theme.focusColor;
+    var receivedBackgroundColor = theme.highlightColor;
+    var sentBackgroundColor = theme.dialogBackgroundColor;
+
+    return Column(children: [
+      widget.evnt.firstUnread
+          ? Row(children: [
+              Expanded(
+                  child: Divider(
+                color: textColor, //color of divider
+                height: 8, //height spacing of divider
+                thickness: 1, //thickness of divier line
+                indent: 5, //spacing at the start of divider
+                endIndent: 5, //spacing at the end of divider
+              )),
+              Text("Last read posts",
+                  style: TextStyle(fontSize: 9, color: textColor)),
+              Expanded(
+                  child: Divider(
+                color: textColor, //color of divider
+                height: 8, //height spacing of divider
+                thickness: 1, //thickness of divier line
+                indent: 5, //spacing at the start of divider
+                endIndent: 5, //spacing at the end of divider
+              )),
+            ])
+          : const Empty(),
+      Column(children: [
+        widget.evnt.sameUser ? const Empty() : const SizedBox(height: 10),
+        sent
+            ? Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                    Flexible(
+                      flex: 3,
+                      child: SelectionContainer.disabled(
+                          child: Padding(
+                        padding: const EdgeInsets.all(4.0),
+                        child: Tooltip(
+                            message: fullDate,
+                            child: Text(
+                              hour,
+                              style: TextStyle(
+                                  fontSize: 13,
+                                  color: darkTextColor), // DATE COLOR
+                            )),
+                      )),
+                    ),
+                    Flexible(
+                      flex: 7,
+                      child: Container(
+                          margin: const EdgeInsets.only(left: 5, right: 20),
+                          padding: const EdgeInsets.only(
+                              left: 10, right: 10, top: 5, bottom: 5),
+                          decoration: BoxDecoration(
+                            color: sentBackgroundColor,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Provider<DownloadSource>(
+                              create: (context) => DownloadSource(sourceID),
+                              child: MarkdownArea(
+                                  msg,
+                                  widget.userNick != widget.nick &&
+                                      msg.contains(widget.userNick)))),
+                    )
+                  ])
+            : Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                mainAxisAlignment: MainAxisAlignment.start,
+                children: [
+                    Flexible(
+                        flex: 7,
+                        child: Container(
+                            margin: const EdgeInsets.only(left: 5, right: 20),
+                            padding: const EdgeInsets.only(
+                                left: 10, right: 10, top: 5, bottom: 5),
+                            decoration: BoxDecoration(
+                              color: receivedBackgroundColor,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Provider<DownloadSource>(
+                                create: (context) => DownloadSource(sourceID),
+                                child: MarkdownArea(
+                                    msg,
+                                    widget.userNick != widget.nick &&
+                                        msg.contains(widget.userNick))))),
+                    Flexible(
+                      flex: 3,
+                      child: SelectionContainer.disabled(
+                          child: Padding(
+                        padding: const EdgeInsets.all(4.0),
+                        child: Tooltip(
+                            message: fullDate,
+                            child: Text(
+                              hour,
+                              style: TextStyle(
+                                  fontSize: 13,
+                                  color: darkTextColor), // DATE COLOR
+                            )),
+                      )),
+                    ),
+                  ]),
         const SizedBox(height: 5),
       ])
     ]);
@@ -247,6 +660,12 @@ class PMW extends StatelessWidget {
       timestamp =
           evnt.source?.nick == null ? event.timestamp : event.timestamp * 1000;
     }
+
+    bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
+    if (isScreenSmall) {
+      return ReceivedSentMobilePM(evnt, evnt.source?.nick ?? nick, timestamp,
+          showSubMenu, evnt.source?.id ?? "", nick, false);
+    }
     return ReceivedSentPM(evnt, evnt.source?.nick ?? nick, timestamp,
         showSubMenu, evnt.source?.id ?? "", nick, false);
   }
@@ -267,6 +686,8 @@ class GCMW extends StatelessWidget {
       timestamp =
           evnt.source?.nick == null ? event.timestamp : event.timestamp * 1000;
     }
+    bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
+
     return ReceivedSentPM(evnt, evnt.source?.nick ?? nick, timestamp,
         showSubMenu, evnt.source?.id ?? "", nick, true);
   }
@@ -382,7 +803,7 @@ class _PostsListWState extends State<PostsListW> {
         SynthChatEvent("Fetching user post '${post.title}'", SCE_sending);
     widget.scrollToBottom();
     try {
-      chat.append(ChatEventModel(event, null));
+      chat.append(ChatEventModel(event, null), false);
       await Golib.getUserPost(chat.id, post.id);
       event.state = SCE_sent;
     } catch (exception) {
@@ -999,6 +1420,15 @@ class Event extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (event.event is DateChangeEvent) {
+      var theme = Theme.of(context);
+      var textColor = theme.dividerColor;
+      return Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+        DateChange(
+            child: Text(event.event.msg, style: TextStyle(color: textColor)))
+      ]);
+    }
+
     if (event.event is PM) {
       return PMW(event, nick, showSubMenu);
     }

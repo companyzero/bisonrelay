@@ -45,33 +45,32 @@ class _SharedContentFileState extends State<SharedContentFile> {
     return Column(
       children: [
         Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Expanded(
-                flex: 100,
-                child: Text(file.sf.filename,
-                    style: TextStyle(color: textColor, fontSize: 11))),
-            Expanded(
-                flex: 50,
-                child: Text((file.cost / 1e8).toString(),
-                    style: TextStyle(color: textColor, fontSize: 11))),
-            Expanded(
-                flex: 40,
-                child: Text(file.sf.fid,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: textColor, fontSize: 11))),
-            Expanded(
-                flex: 5,
-                child: !widget.file.global
-                    ? const Text("")
-                    : IconButton(
-                        iconSize: 18,
-                        icon: Icon(
-                            loading ? Icons.hourglass_bottom : Icons.delete),
-                        onPressed:
-                            loading ? null : () => removeContent(context, null),
-                      ))
+            Text(file.sf.filename,
+                style: TextStyle(
+                    color: textColor,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: 0.5)),
+            /*
+            Text((file.cost / 1e8).toString(),
+                style: TextStyle(color: textColor, fontSize: 11)),
+            Text(file.sf.fid,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: textColor, fontSize: 11)),
+            */
+            !widget.file.global
+                ? const Text("")
+                : IconButton(
+                    iconSize: 18,
+                    icon: Icon(loading ? Icons.hourglass_bottom : Icons.delete),
+                    onPressed:
+                        loading ? null : () => removeContent(context, null),
+                  )
           ],
         ),
+        /*
         ListView.builder(
           scrollDirection: Axis.vertical,
           shrinkWrap: true,
@@ -96,8 +95,9 @@ class _SharedContentFileState extends State<SharedContentFile> {
                     : () => removeContent(context, widget.file.shares[index]),
               )
             ]);
+            
           },
-        ),
+        ),*/
       ],
     );
   }
@@ -117,26 +117,23 @@ class SharedContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     var theme = Theme.of(context);
-    var backgroundColor = theme.backgroundColor;
-    var otherBackgroundColor = theme.indicatorColor;
-    return Container(
-      padding: const EdgeInsets.all(30),
-      child: ListView.builder(
-          itemCount: files.length,
-          itemBuilder: (BuildContext context, int index) {
-            return ListTile(
-                contentPadding: const EdgeInsets.all(0),
-                title: Container(
-                    margin: const EdgeInsets.only(top: 0, bottom: 0),
-                    padding: const EdgeInsets.only(
-                        left: 8, top: 0, right: 8, bottom: 0),
-                    color: index.isOdd ? backgroundColor : otherBackgroundColor,
-                    child:
-                        SharedContentFile(files[index], removeContent, client)),
-                onTap: fileSelectedCB != null
-                    ? () => fileSelectedCB!(files[index].sf)
-                    : null);
-          }),
+    var bgColor = theme.highlightColor;
+    return ListView.builder(
+      itemCount: files.length,
+      itemBuilder: (BuildContext context, int index) {
+        return ListTile(
+            contentPadding: const EdgeInsets.all(0),
+            title: Container(
+                margin: const EdgeInsets.only(left: 8, right: 8),
+                padding:
+                    const EdgeInsets.only(bottom: 5, left: 5, right: 5, top: 5),
+                decoration: BoxDecoration(
+                    color: bgColor, borderRadius: BorderRadius.circular(10)),
+                child: SharedContentFile(files[index], removeContent, client)),
+            onTap: fileSelectedCB != null
+                ? () => fileSelectedCB!(files[index].sf)
+                : null);
+      },
     );
   }
 }
@@ -388,7 +385,7 @@ class _ManageContentState extends State<ManageContent> {
               decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(3),
                   color: backgroundColor),
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(10),
               child: widget.view == 1
                   ? SharedContent(
                       client,
