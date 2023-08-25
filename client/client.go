@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
+	"os"
 	"regexp"
 	"sync"
 	"time"
@@ -886,8 +887,13 @@ func (c *Client) maybeResetAllKXAfterConn(expDays int) {
 
 // Backup
 func (c *Client) Backup(_ context.Context, rootDir, destPath string) (string, error) {
+	err := os.MkdirAll(destPath, 0o700)
+	if err != nil {
+		return "", err
+	}
+
 	var backupFile string
-	err := c.dbView(func(tx clientdb.ReadTx) error {
+	err = c.dbView(func(tx clientdb.ReadTx) error {
 		var err error
 		backupFile, err = c.db.Backup(tx, rootDir, destPath)
 		return err
