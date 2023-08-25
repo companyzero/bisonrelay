@@ -14,12 +14,14 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/companyzero/bisonrelay/brclient/internal/version"
 	"github.com/companyzero/bisonrelay/client/clientintf"
 	"github.com/decred/dcrd/dcrutil/v4"
 	"github.com/decred/go-socks/socks"
 	"github.com/jrick/flagfile"
+	strduration "github.com/xhit/go-str2duration/v2"
 	"golang.org/x/exp/slices"
 )
 
@@ -93,6 +95,9 @@ type config struct {
 	MemProfile        string
 	LogPings          bool
 	NoLoadChatHistory bool
+
+	AutoHandshakeInterval       time.Duration
+	AutoRemoveIdleUsersInterval time.Duration
 
 	SyncFreeList bool
 
@@ -266,6 +271,9 @@ func loadConfig() (*config, error) {
 	flagExternalEditorForComments := fs.Bool("externaleditorforcomments", false, "")
 	flagNoLoadChatHistory := fs.Bool("noloadchathistory", false, "Whether to read chat logs to build chat history")
 
+	flagAutoHandshake := fs.String("autohandshakeinterval", "21d", "")
+	flagAutoRemove := fs.String("autoremoveidleusersinterval", "60d", "")
+
 	// log
 	flagMsgRoot := fs.String("log.msglog", defaultMsgRoot, "Root for message log files")
 	flagLogFile := fs.String("log.logfile", defaultLogFile, "Log file location")
@@ -323,6 +331,14 @@ func loadConfig() (*config, error) {
 	}
 	if *flagRootDir == "" {
 		return nil, fmt.Errorf("flag 'root' cannot be empty")
+	}
+	autoHandshakeInterval, err := strduration.ParseDuration(*flagAutoHandshake)
+	if err != nil {
+		return nil, fmt.Errorf("invalid value for flag 'autohandshakeinterval': %v", err)
+	}
+	autoRemoveInterval, err := strduration.ParseDuration(*flagAutoRemove)
+	if err != nil {
+		return nil, fmt.Errorf("invalid value for flag 'autoremoveidleusersinterval': %v", err)
 	}
 
 	// Clean paths.
@@ -482,6 +498,9 @@ func loadConfig() (*config, error) {
 		RPCIssueClientCert: *flagRPCIssueClientCert,
 		InviteFundsAccount: *flagInviteFundsAccount,
 		ResourcesUpstream:  *flagResourcesUpstream,
+
+		AutoHandshakeInterval:       autoHandshakeInterval,
+		AutoRemoveIdleUsersInterval: autoRemoveInterval,
 
 		SyncFreeList:             *flagSyncFreeList,
 		ExtenalEditorForComments: *flagExternalEditorForComments,
