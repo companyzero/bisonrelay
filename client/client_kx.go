@@ -633,6 +633,11 @@ func (c *Client) handshakeIdleUsers(limitInterval time.Duration) error {
 
 	if limitInterval == 0 {
 		limitInterval = c.cfg.AutoHandshakeInterval
+		if limitInterval == 0 {
+			// Autohandshake disabled.
+			c.log.Debugf("Auto handshake with idle users is disabled")
+			return nil
+		}
 	}
 	limitDate := time.Now().Add(-limitInterval)
 
@@ -687,6 +692,11 @@ func (c *Client) unsubIdleUsers(limitInterval, lastHandshakeInterval time.Durati
 
 	if limitInterval == 0 {
 		limitInterval = c.cfg.AutoRemoveIdleUsersInterval
+		if limitInterval == 0 {
+			// Auto unsubscribe disabled.
+			c.log.Debugf("Auto removal of idle users is disabled")
+			return nil
+		}
 	}
 	limitDate := time.Now().Add(-limitInterval)
 	if lastHandshakeInterval == 0 {
@@ -731,7 +741,17 @@ func (c *Client) unsubIdleUsers(limitInterval, lastHandshakeInterval time.Durati
 		if ab.FirstCreated.After(limitDate) {
 			continue
 		}
-		if ab.LastHandshakeAttempt.IsZero() || ab.LastHandshakeAttempt.After(limitHandshakeDate) {
+
+		// Skip if a last handshake was not attempted (or was attempted
+		// too recently). This helps prevent the case where this this
+		// logic is first run from automatically unsubbing too many
+		// people before a handshake is attempted.
+		//
+		// This check only takes effect if automatic handshaking is
+		// enabled.
+		handshakeTooRecent := !limitHandshakeDate.IsZero() &&
+			(ab.LastHandshakeAttempt.IsZero() || ab.LastHandshakeAttempt.After(limitHandshakeDate))
+		if handshakeTooRecent {
 			continue
 		}
 
