@@ -36,6 +36,9 @@ type initClient struct {
 	ProxyPassword string `json:"proxy_password"`
 	TorIsolation  bool   `json:"torisolation"`
 	CircuitLimit  uint32 `json:"circuit_limit"`
+
+	AutoHandshakeInterval       int64 `json:"auto_handshake_interval"`
+	AutoRemoveIdleUsersInterval int64 `json:"auto_remove_idle_users_interval"`
 }
 
 type iDInit struct {

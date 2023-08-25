@@ -55,6 +55,10 @@ class InitClient {
   final int circuitLimit;
   @JsonKey(name: 'no_load_chat_history')
   final bool noLoadChatHistory;
+  @JsonKey(name: 'auto_handshake_interval')
+  final int autoHandshakeInterval;
+  @JsonKey(name: 'auto_remove_idle_users_interval')
+  final int autoRemoveIdleUsersInterval;
 
   InitClient(
       this.dbRoot,
@@ -76,7 +80,9 @@ class InitClient {
       this.proxyUsername,
       this.proxyPassword,
       this.circuitLimit,
-      this.noLoadChatHistory);
+      this.noLoadChatHistory,
+      this.autoHandshakeInterval,
+      this.autoRemoveIdleUsersInterval);
 
   Map<String, dynamic> toJson() => _$InitClientToJson(this);
 }
