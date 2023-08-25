@@ -567,13 +567,14 @@ func handleInitClient(handle uint32, args initClient) error {
 		}
 
 		scfg := simplestore.Config{
-			Root:       path,
-			Log:        logBknd.logger("SSTR"),
-			LiveReload: true, // FIXME: parametrize
-			Client:     c,
-			PayType:    simplestore.PayType(args.SimpleStorePayType),
-			Account:    args.SimpleStoreAccount,
-			ShipCharge: args.SimpleStoreShipCharge,
+			Root:        path,
+			Log:         logBknd.logger("SSTR"),
+			LiveReload:  true, // FIXME: parametrize
+			Client:      c,
+			PayType:     simplestore.PayType(args.SimpleStorePayType),
+			Account:     args.SimpleStoreAccount,
+			ShipCharge:  args.SimpleStoreShipCharge,
+			LNPayClient: lnpc,
 
 			ExchangeRateProvider: func() float64 {
 				dcrPrice, _ := cctx.rates.Get()
