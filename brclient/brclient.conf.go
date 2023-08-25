@@ -51,6 +51,21 @@ root = {{ .Root }}
 # improves running performance while worsening startup performance.
 # syncfreelist = true
 
+# The interval to perform automatic handshake. If no message has been received
+# from a remote client after this interval, the local client will automatically
+# attempt a handshake to verify if the user is still active.
+#
+# Set to zero to disable autohandshaking.
+# autohandshakeinterval = 21d
+
+# The interval after which to automatically unsubscribe and remove idle users
+# from GCs. If no message has been received from a remote client after this
+# interval, the local client will automatically unsubscribe the remote user from
+# its posts and will remove it from any GCs that the local client admins.
+#
+# Set to zero to disable idle user removal.
+# autoremoveidleusersinterval = 60d
+
 # logging and debug
 [log]
 
