@@ -181,16 +181,12 @@ type Config struct {
 	// AutoHandshakeInterval is the interval after which, for any ratchets
 	// that haven't been communicated with, an automatic handshake attempt
 	// is made.
-	//
-	// If unspecified, it defaults to 21 days.
 	AutoHandshakeInterval time.Duration
 
 	// AutoRemoveIdleUsersInterval is the interval after which any idle
 	// users (i.e. users from which no message has been received) will be
 	// automatically removed from GCs the local client admins and will be
 	// automatically unsubscribed from posts.
-	//
-	// If unspencified, it defaults to 60 days.
 	AutoRemoveIdleUsersInterval time.Duration
 }
 
@@ -229,14 +225,6 @@ func (cfg *Config) setDefaults() {
 
 	if cfg.MaxAutoKXMediateIDRequests == 0 {
 		cfg.MaxAutoKXMediateIDRequests = 3
-	}
-
-	if cfg.AutoHandshakeInterval == 0 {
-		cfg.AutoHandshakeInterval = time.Hour * 24 * 21
-	}
-
-	if cfg.AutoRemoveIdleUsersInterval == 0 {
-		cfg.AutoRemoveIdleUsersInterval = time.Hour * 24 * 60
 	}
 
 	// These following GCMQ times were obtained by profiling a client
