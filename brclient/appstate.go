@@ -3607,12 +3607,10 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 	case strings.HasPrefix(args.ResourcesUpstream, "simplestore:"):
 		// Generate the template store if the path does not exist.
 		path := args.ResourcesUpstream[len("simplestore:"):]
-		if _, err := os.Stat(path); os.IsNotExist(err) {
-			err := simplestore.WriteTemplate(path)
-			if err != nil {
-				return nil, fmt.Errorf("unable to write simplestore"+
-					" template: %v", err)
-			}
+		err := simplestore.WriteTemplate(path)
+		if err != nil && !errors.Is(err, os.ErrExist) {
+			return nil, fmt.Errorf("unable to write simplestore"+
+				" template: %v", err)
 		}
 
 		scfg := simplestore.Config{
