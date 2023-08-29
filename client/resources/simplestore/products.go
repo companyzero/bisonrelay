@@ -34,6 +34,17 @@ type Cart struct {
 	Updated time.Time   `json:"updated"`
 }
 
+// HasCharges returns true if at least one item has a positive charge amount.
+func (cart *Cart) HasCharges() bool {
+	for _, item := range cart.Items {
+		if item.Quantity > 0 && item.Product.Price > 0 {
+			return true
+		}
+	}
+
+	return false
+}
+
 // Total returns the total amount, with 2 decimal places accuracy.
 func (cart *Cart) TotalCents() int64 {
 	var totalUSDCents int64
