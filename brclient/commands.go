@@ -2284,8 +2284,9 @@ var lnCommands = []tuicmd{
 			if len(args) < 1 {
 				return usageError{msg: "invoice cannot be empty"}
 			}
+			payreq := strings.TrimPrefix(args[0], "lnpay://")
 
-			req := &lnrpc.PayReqString{PayReq: args[0]}
+			req := &lnrpc.PayReqString{PayReq: payreq}
 			invoice, err := as.lnRPC.DecodePayReq(as.ctx, req)
 			if err != nil {
 				return err
@@ -2321,6 +2322,8 @@ var lnCommands = []tuicmd{
 				return usageError{msg: "invoice cannot be empty"}
 			}
 
+			payreq := strings.TrimPrefix(args[0], "lnpay://")
+
 			as.cwHelpMsg("Attempting to pay invoice")
 			go func() {
 				pc, err := as.lnRPC.SendPayment(as.ctx)
@@ -2330,7 +2333,7 @@ var lnCommands = []tuicmd{
 				}
 
 				req := &lnrpc.SendRequest{
-					PaymentRequest: args[0],
+					PaymentRequest: payreq,
 				}
 				err = pc.Send(req)
 				if err != nil {
