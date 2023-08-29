@@ -2,5 +2,11 @@
 
 {{template "cart-listing.tmpl" .Cart}}
 
+{{if eq .PayType "ln" }}
+LN Invoice: lnpay://{{.Invoice}}
+{{else if eq .PayType "onchain" }}
+On-Chain Address: {{ .Invoice }}
+{{end}}
+
 [Back to Index](/index.md)
 
