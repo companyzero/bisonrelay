@@ -209,6 +209,7 @@ class _AppState extends State<App> with WindowListener {
         ntfns.addNtfn(AppNtfn(AppNtfnType.walletNeedsChannels));
         if (!pushed) {
           navkey.currentState!.pushNamed("/needsOutChannel");
+          pushed = true;
         }
       }
       if (balances.channel.maxInboundAmount == 0) {
