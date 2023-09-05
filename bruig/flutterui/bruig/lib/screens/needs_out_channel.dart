@@ -370,12 +370,10 @@ Note that Lightning Network channels require managing off-chain data, and as suc
                                   ])
                                 : const Empty(),
                           ])
-                    : Expanded(
-                        child: Column(children: [
-                          const SizedBox(height: 30),
-                          Text(preventMsg, style: TextStyle(color: textColor))
-                        ]),
-                      ),
+                    : Column(children: [
+                        const SizedBox(height: 30),
+                        Text(preventMsg, style: TextStyle(color: textColor))
+                      ]),
                 Center(
                   child: LoadingScreenButton(
                     onPressed: () => Navigator.of(context).pop(),
