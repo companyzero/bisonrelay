@@ -390,14 +390,13 @@ After the channel is opened, it may take up to 6 confirmations for it to be broa
                                   ])
                                 : const Empty(),
                           ])
-                    : Expanded(
-                        child: Column(children: [
+                    : Column(children: [
                         const SizedBox(height: 30),
                         Text(
                           preventMsg,
                           style: TextStyle(color: textColor),
                         )
-                      ])),
+                      ]),
                 Center(
                   child: LoadingScreenButton(
                     onPressed: () => Navigator.of(context).pop(),
