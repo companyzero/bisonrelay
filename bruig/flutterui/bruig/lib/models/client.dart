@@ -883,6 +883,10 @@ class ClientModel extends ChangeNotifier {
   void _handleSSOrderPlaced(SSPlacedOrder po) async {
     try {
       var order = po.order;
+      if (order.user == publicID) {
+        print("Sample of message that would be sent to user: ${po.msg}");
+        return;
+      }
       var chat = getExistingChat(order.user);
       if (chat == null) {
         throw "user ${order.user} not found in placed simplestore order";

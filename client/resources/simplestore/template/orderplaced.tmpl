@@ -2,5 +2,19 @@
 
 {{template "cart-listing.tmpl" .Cart}}
 
+Items Total: ${{ .Cart.Total  }}
+Shipping Charge: ${{ .ShipCharge  }}
+Total Amount: ${{ .Total  }}
+Exchange Rate: {{.ExchangeRate}} DCR/$
+Final DCR Amount: {{.TotalDCR}}
+
+{{if eq .PayType "ln" }}
+LN Invoice: lnpay://{{.Invoice}}
+{{else if eq .PayType "onchain" }}
+On-Chain Address: {{ .Invoice }}
+{{end}}
+
+The final DCR amount for settling this order is valid for the next 60 minutes (1 hour).
+
 [Back to Index](/index.md)
 

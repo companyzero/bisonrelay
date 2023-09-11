@@ -132,11 +132,15 @@ class _LNPaymentsPageState extends State<LNPaymentsPage> {
 
   void onPayInvoiceChanged() {
     var invoice = payCtrl.text.trim();
+    if (invoice.startsWith("lnpay://")) {
+      invoice = invoice.substring(8);
+    }
     if (invoice == invoiceToDecode) return;
     if (decodeTimer != null) {
       decodeTimer!.cancel();
       decodeTimer = null;
     }
+
     invoiceToDecode = invoice;
     setState(() {
       decoded = null;

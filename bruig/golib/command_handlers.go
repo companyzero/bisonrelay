@@ -1710,8 +1710,8 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 
 		// If it's for a local page, fetch it directly.
 		if c.PublicID() == args.UID {
-			return 0, c.FetchLocalResource(args.Path, args.Metadata)
-
+			return 0, c.FetchLocalResource(args.Path, args.Metadata,
+				args.Data)
 		}
 
 		if args.SessionID == 0 {
