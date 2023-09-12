@@ -464,13 +464,16 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
   void dispose() {
     super.dispose();
     widget.args.post.removeListener(postUpdated);
-    for (int i = 0; i < widget.args.post.comments.length; i++) {
-      if (widget.args.post.comments[i].unreadComment) {
-        widget.args.post.comments[i].unreadComment = false;
-      }
-    }
+    setChildCommentsRead(widget.args.post.comments);
     var authorID = widget.args.post.summ.authorID;
     widget.client.getExistingChat(authorID)?.removeListener(authorUpdated);
+  }
+
+  void setChildCommentsRead(List<FeedCommentModel> comments) {
+    for (int i = 0; i < comments.length; i++) {
+      comments[i].unreadComment = false;
+      setChildCommentsRead(comments[i].children);
+    }
   }
 
   Future<void> launchUrlAwait(url) async {
