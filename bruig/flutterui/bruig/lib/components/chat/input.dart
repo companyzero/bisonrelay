@@ -39,32 +39,37 @@ class _InputState extends State<Input> {
     }
   }
 
-  void handleKeyPress(event) {
-    if (event is RawKeyUpEvent) {
-      bool modPressed = event.isShiftPressed || event.isControlPressed;
-      final val = controller.value;
-      if (event.data.logicalKey.keyLabel == "Enter" && !modPressed) {
-        final messageWithoutNewLine =
-            controller.text.substring(0, val.selection.start - 1) +
-                controller.text.substring(val.selection.start);
-        controller.value = const TextEditingValue(
-            text: "", selection: TextSelection.collapsed(offset: 0));
-        final String withEmbeds = embeds.fold(
-            messageWithoutNewLine.trim(), (s, e) => e.replaceInString(s));
-        /*
+  void sendMsg() {
+    final val = controller.value;
+    final messageWithoutNewLine =
+        controller.text.substring(0, val.selection.start - 1) +
+            controller.text.substring(val.selection.start);
+    controller.value = const TextEditingValue(
+        text: "", selection: TextSelection.collapsed(offset: 0));
+    final String withEmbeds = embeds.fold(
+        messageWithoutNewLine.trim(), (s, e) => e.replaceInString(s));
+    /*
           if (withEmbeds.length > 1024 * 1024) {
             showErrorSnackbar(context,
                 "Message is larger than maximum allowed (limit: 1MiB)");
             return;
           }
           */
-        if (withEmbeds != "") {
-          widget._send(withEmbeds);
-          widget.chat.workingMsg = "";
-          setState(() {
-            embeds = [];
-          });
-        }
+    if (withEmbeds != "") {
+      widget._send(withEmbeds);
+      widget.chat.workingMsg = "";
+      setState(() {
+        embeds = [];
+      });
+    }
+  }
+
+  void handleKeyPress(event) {
+    if (event is RawKeyUpEvent) {
+      bool modPressed = event.isShiftPressed || event.isControlPressed;
+      final val = controller.value;
+      if (event.data.logicalKey.keyLabel == "Enter" && !modPressed) {
+        sendMsg();
       } else {
         widget.chat.workingMsg = val.text.trim();
       }
@@ -89,47 +94,65 @@ class _InputState extends State<Input> {
   @override
   Widget build(BuildContext context) {
     var theme = Theme.of(context);
-    var textColor = theme.focusColor; // MESSAGE TEXT COLOR
-    var hoverColor = theme.hoverColor;
-    var backgroundColor = theme.highlightColor;
-    var hintTextColor = theme.dividerColor;
+    var textColor = theme.dividerColor; // MESS
+    var cardColor = theme.cardColor;
+    var secondaryTextColor = theme.focusColor;
+    var darkTextColor = theme.indicatorColor;
     return RawKeyboardListener(
       focusNode: node,
       onKey: handleKeyPress,
       child: Container(
         margin: const EdgeInsets.only(bottom: 5),
-        child: Row(
-          children: [
-            IconButton(onPressed: attachFile, icon: Icon(Icons.attach_file)),
-            Expanded(
-                child: TextField(
-              autofocus: true,
-              focusNode: widget.inputFocusNode,
-              style: TextStyle(
-                fontSize: 11,
-                color: textColor,
-              ),
-              controller: controller,
-              minLines: 1,
-              maxLines: null,
-              //textInputAction: TextInputAction.done,
-              //style: normalTextStyle,
-              keyboardType: TextInputType.multiline,
-              decoration: InputDecoration(
-                filled: true,
-                fillColor: backgroundColor,
-                hoverColor: hoverColor,
-                isDense: true,
-                hintText: 'Type a message',
-                hintStyle: TextStyle(
-                  fontSize: 11,
-                  color: hintTextColor,
-                ),
-                border: InputBorder.none,
-              ),
-            )),
-          ],
-        ),
+        child: Expanded(
+            child: TextField(
+          spellCheckConfiguration: const SpellCheckConfiguration(),
+          autofocus: true,
+          focusNode: widget.inputFocusNode,
+          style: TextStyle(
+            fontSize: 13,
+            color: secondaryTextColor,
+          ),
+          controller: controller,
+          minLines: 1,
+          maxLines: null,
+          //textInputAction: TextInputAction.done,
+          //style: normalTextStyle,
+          keyboardType: TextInputType.multiline,
+          decoration: InputDecoration(
+            errorBorder: const OutlineInputBorder(
+              borderRadius: BorderRadius.all(Radius.circular(30.0)),
+              borderSide: BorderSide(color: Colors.red, width: 2.0),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: const BorderRadius.all(Radius.circular(30.0)),
+              borderSide: BorderSide(color: secondaryTextColor, width: 2.0),
+            ),
+            border: OutlineInputBorder(
+              borderRadius: const BorderRadius.all(Radius.circular(30.0)),
+              borderSide: BorderSide(color: cardColor, width: 2.0),
+            ),
+            hintText: "Start a message",
+            hintStyle: TextStyle(
+                fontSize: 13,
+                letterSpacing: 0.5,
+                fontWeight: FontWeight.w300,
+                color: textColor),
+            filled: true,
+            fillColor: cardColor,
+            prefixIcon: IconButton(
+                padding: EdgeInsets.all(0),
+                iconSize: 25,
+                onPressed: attachFile,
+                icon: const Icon(Icons.attach_file)),
+            prefixIconColor: textColor,
+            suffixIcon: IconButton(
+                padding: EdgeInsets.all(0),
+                iconSize: 25,
+                onPressed: sendMsg,
+                icon: const Icon(Icons.send)),
+            suffixIconColor: textColor,
+          ),
+        )),
       ),
     );
   }
