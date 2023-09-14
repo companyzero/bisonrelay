@@ -47,7 +47,8 @@ class _MessagesState extends State<Messages> {
     widget.itemPositionsListener.itemPositions.addListener(() {
       if (_debounce?.isActive ?? false) _debounce!.cancel();
       _debounce = Timer(const Duration(milliseconds: 50), () {
-        _maxItem = widget.itemPositionsListener.itemPositions.value.isNotEmpty
+        var newMaxItem = widget
+                .itemPositionsListener.itemPositions.value.isNotEmpty
             ? widget.itemPositionsListener.itemPositions.value
                 .where((ItemPosition position) => position.itemLeadingEdge < 1)
                 .reduce((ItemPosition max, ItemPosition position) =>
@@ -56,7 +57,8 @@ class _MessagesState extends State<Messages> {
                         : max)
                 .index
             : 0;
-        if (mounted) {
+        if (mounted && newMaxItem != _maxItem) {
+          _maxItem = newMaxItem;
           if (_maxItem < chat.msgs.length - 5) {
             setState(() {
               _showFAB = true;
