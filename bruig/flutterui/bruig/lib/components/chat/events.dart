@@ -62,9 +62,10 @@ class ReceivedSentPM extends StatefulWidget {
   final String id;
   final String userNick;
   final bool isGC;
+  final OpenReplyDMCB openReplyDM;
 
   const ReceivedSentPM(this.evnt, this.nick, this.timestamp, this.showSubMenu,
-      this.id, this.userNick, this.isGC,
+      this.id, this.userNick, this.isGC, this.openReplyDM,
       {Key? key})
       : super(key: key);
 
@@ -138,7 +139,6 @@ class _ReceivedSentPMState extends State<ReceivedSentPM> {
             : darkTextColor;
     var selectedBackgroundColor = theme.highlightColor;
     var textColor = theme.dividerColor;
-
     // Will show a divider and text before the last unread message.
     var firstUnread = widget.evnt.firstUnread
         ? Row(children: [
@@ -213,7 +213,19 @@ class _ReceivedSentPMState extends State<ReceivedSentPM> {
                     ),
                   ),
             // Now put reply/dm button here if GC
-            widget.evnt.sameUser ? const Empty() : const SizedBox(height: 10)
+            widget.isGC &&
+                    widget.userNick != widget.nick &&
+                    !widget.evnt.sameUser
+                ? Material(
+                    color: selectedBackgroundColor.withOpacity(0),
+                    child: IconButton(
+                        hoverColor: selectedBackgroundColor,
+                        splashRadius: 15,
+                        iconSize: 25,
+                        tooltip: "Go to DM",
+                        onPressed: () => widget.openReplyDM(false, widget.nick),
+                        icon: const Icon(size: 28, Icons.reply)))
+                : const Empty(),
           ],
         ),
         const SizedBox(width: 10),
@@ -671,14 +683,14 @@ class PMW extends StatelessWidget {
       timestamp =
           evnt.source?.nick == null ? event.timestamp : event.timestamp * 1000;
     }
-
+    openReplyDM(bool isGC, String id) => null;
     bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
     if (isScreenSmall) {
       return ReceivedSentMobilePM(evnt, evnt.source?.nick ?? nick, timestamp,
           showSubMenu, evnt.source?.id ?? "", nick, false);
     }
     return ReceivedSentPM(evnt, evnt.source?.nick ?? nick, timestamp,
-        showSubMenu, evnt.source?.id ?? "", nick, false);
+        showSubMenu, evnt.source?.id ?? "", nick, false, openReplyDM);
   }
 }
 
@@ -686,7 +698,9 @@ class GCMW extends StatelessWidget {
   final ChatEventModel evnt;
   final String nick;
   final ShowSubMenuCB showSubMenu;
-  const GCMW(this.evnt, this.nick, this.showSubMenu, {Key? key})
+  final OpenReplyDMCB openReplyDM;
+  const GCMW(this.evnt, this.nick, this.showSubMenu, this.openReplyDM,
+      {Key? key})
       : super(key: key);
 
   @override
@@ -697,10 +711,9 @@ class GCMW extends StatelessWidget {
       timestamp =
           evnt.source?.nick == null ? event.timestamp : event.timestamp * 1000;
     }
-    bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
 
     return ReceivedSentPM(evnt, evnt.source?.nick ?? nick, timestamp,
-        showSubMenu, evnt.source?.id ?? "", nick, true);
+        showSubMenu, evnt.source?.id ?? "", nick, true, openReplyDM);
   }
 }
 
@@ -1428,7 +1441,7 @@ class Event extends StatelessWidget {
       : super(key: key);
 
   showSubMenu(bool isGC, String id) => client.showSubMenu(isGC, id);
-
+  openReplyDM(bool isGC, String id) => client.setActiveByNick(id, isGC);
   @override
   Widget build(BuildContext context) {
     if (event.event is DateChangeEvent) {
@@ -1456,7 +1469,7 @@ class Event extends StatelessWidget {
     }
 
     if (event.event is GCMsg) {
-      return GCMW(event, nick, showSubMenu);
+      return GCMW(event, nick, showSubMenu, openReplyDM);
     }
 
     if (event.event is GCUserEvent) {
