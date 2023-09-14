@@ -48,7 +48,7 @@ class DateChange extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-        padding: const EdgeInsets.only(left: 41, top: 5, bottom: 5),
+        padding: const EdgeInsets.only(top: 5, bottom: 5),
         margin: const EdgeInsets.all(5),
         child: child);
   }
@@ -139,112 +139,123 @@ class _ReceivedSentPMState extends State<ReceivedSentPM> {
     var selectedBackgroundColor = theme.highlightColor;
     var textColor = theme.dividerColor;
 
+    // Will show a divider and text before the last unread message.
+    var firstUnread = widget.evnt.firstUnread
+        ? Row(children: [
+            Expanded(
+                child: Divider(
+              color: textColor, //color of divider
+              height: 8, //height spacing of divider
+              thickness: 1, //thickness of divier line
+              indent: 5, //spacing at the start of divider
+              endIndent: 5, //spacing at the end of divider
+            )),
+            Text("Last read posts",
+                style: TextStyle(fontSize: 9, color: textColor)),
+            Expanded(
+                child: Divider(
+              color: textColor, //color of divider
+              height: 8, //height spacing of divider
+              thickness: 1, //thickness of divier line
+              indent: 5, //spacing at the start of divider
+              endIndent: 5, //spacing at the end of divider
+            )),
+          ])
+        : const Empty();
+    var msgWidget = Provider<DownloadSource>(
+        create: (context) => DownloadSource(sourceID),
+        child: Expanded(
+            child: MarkdownArea(
+                msg,
+                widget.userNick != widget.nick &&
+                    msg.contains(widget.userNick))));
     return Column(children: [
-      widget.evnt.firstUnread
-          ? Row(children: [
-              Expanded(
-                  child: Divider(
-                color: textColor, //color of divider
-                height: 8, //height spacing of divider
-                thickness: 1, //thickness of divier line
-                indent: 5, //spacing at the start of divider
-                endIndent: 5, //spacing at the end of divider
-              )),
-              Text("Last read posts",
-                  style: TextStyle(fontSize: 9, color: textColor)),
-              Expanded(
-                  child: Divider(
-                color: textColor, //color of divider
-                height: 8, //height spacing of divider
-                thickness: 1, //thickness of divier line
-                indent: 5, //spacing at the start of divider
-                endIndent: 5, //spacing at the end of divider
-              )),
-            ])
-          : const Empty(),
-      widget.evnt.sameUser
-          ? const Empty()
-          : Row(mainAxisAlignment: MainAxisAlignment.start, children: [
-              SelectionContainer.disabled(
-                child: Container(
-                  width: 28,
-                  margin: const EdgeInsets.only(
-                      top: 0, bottom: 0, left: 5, right: 0),
-                  child: widget.isGC
-                      ? UserContextMenu(
-                          targetUserChat: widget.evnt.source,
-                          child: InteractiveAvatar(
-                            bgColor: selectedBackgroundColor,
-                            chatNick: widget.nick,
-                            avatarColor: avatarColor,
-                            avatarTextColor: avatarTextColor,
-                          ),
-                        )
-                      : UserContextMenu(
-                          targetUserChat: widget.evnt.source,
-                          child: InteractiveAvatar(
-                            bgColor: selectedBackgroundColor,
-                            chatNick: widget.nick,
-                            onTap: () {
-                              widget.showSubMenu(widget.isGC, widget.id);
-                            },
-                            avatarColor: avatarColor,
-                            avatarTextColor: avatarTextColor,
-                          ),
-                        ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Text(
-                widget.nick,
-                style: TextStyle(
-                  fontSize: 15,
-                  color: hightLightTextColor,
-                  fontWeight: FontWeight.w500,
-                  letterSpacing: 0.5,
-                ),
-              ),
-              const Spacer(),
-              SelectionContainer.disabled(
+      firstUnread,
+      widget.evnt.sameUser ? const Empty() : const SizedBox(height: 10),
+      Row(children: [
+        Column(
+          mainAxisAlignment: MainAxisAlignment.start,
+          children: [
+            widget.evnt.sameUser
+                ? Container(
+                    width: 28,
+                    margin: const EdgeInsets.only(
+                        top: 0, bottom: 0, left: 10, right: 0),
+                  )
+                : SelectionContainer.disabled(
+                    child: Container(
+                      height: 28,
+                      width: 28,
+                      margin: const EdgeInsets.only(
+                          top: 0, bottom: 0, left: 10, right: 0),
+                      child: widget.isGC
+                          ? UserContextMenu(
+                              targetUserChat: widget.evnt.source,
+                              child: InteractiveAvatar(
+                                bgColor: selectedBackgroundColor,
+                                chatNick: widget.nick,
+                                avatarColor: avatarColor,
+                                avatarTextColor: avatarTextColor,
+                              ),
+                            )
+                          : UserContextMenu(
+                              targetUserChat: widget.evnt.source,
+                              child: InteractiveAvatar(
+                                bgColor: selectedBackgroundColor,
+                                chatNick: widget.nick,
+                                onTap: () {
+                                  widget.showSubMenu(widget.isGC, widget.id);
+                                },
+                                avatarColor: avatarColor,
+                                avatarTextColor: avatarTextColor,
+                              ),
+                            ),
+                    ),
+                  ),
+            // Now put reply/dm button here if GC
+            widget.evnt.sameUser ? const Empty() : const SizedBox(height: 10)
+          ],
+        ),
+        const SizedBox(width: 10),
+        // Middle column
+        Expanded(
+            child:
+                Column(mainAxisAlignment: MainAxisAlignment.start, children: [
+          widget.evnt.sameUser
+              ? const Empty()
+              : Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(widget.nick,
+                      style: TextStyle(
+                        fontSize: 15,
+                        color: hightLightTextColor,
+                        fontWeight: FontWeight.w500,
+                        letterSpacing: 0.5,
+                      )),
+                ]),
+          Row(children: [msgWidget]),
+        ])),
+        // Third (timestamp) column
+        Column(children: [
+          SizedBox(
+              width: 40,
+              child: SelectionContainer.disabled(
                 child: Padding(
                   padding: const EdgeInsets.all(4.0),
                   child: Tooltip(
                       message: fullDate,
                       child: Text(
-                        hour,
+                        widget.evnt.sentState == CMS_sent ||
+                                widget.evnt.sentState == CMS_unknown
+                            ? hour
+                            : prefix,
                         style: TextStyle(
                             fontSize: 12, color: darkTextColor), // DATE COLOR
                       )),
                 ),
-              ),
-            ]),
-      Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const SizedBox(width: 13),
-          SelectionContainer.disabled(
-            child: SizedBox(
-                width: 5,
-                child: Text(
-                  prefix,
-                  style: TextStyle(
-                      fontSize: 12,
-                      color: hightLightTextColor, // NAME TEXT COLOR,
-                      fontWeight: FontWeight.bold,
-                      fontStyle: FontStyle.italic),
-                )),
-          ),
-          const SizedBox(width: 24),
-          Expanded(
-              child: Provider<DownloadSource>(
-                  create: (context) => DownloadSource(sourceID),
-                  child: MarkdownArea(
-                      msg,
-                      widget.userNick != widget.nick &&
-                          msg.contains(widget.userNick)))),
-          const SizedBox(width: 10)
+              )),
         ]),
-        const SizedBox(height: 5),
-      ])
+      ]),
+      widget.evnt.sameUser ? const SizedBox(height: 10) : const Empty()
     ]);
   }
 }
@@ -1423,10 +1434,17 @@ class Event extends StatelessWidget {
     if (event.event is DateChangeEvent) {
       var theme = Theme.of(context);
       var textColor = theme.dividerColor;
-      return Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-        DateChange(
-            child: Text(event.event.msg, style: TextStyle(color: textColor)))
-      ]);
+      return Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            DateChange(
+                child: Center(
+                    child: Text(
+                        textAlign: TextAlign.center,
+                        event.event.msg,
+                        style: TextStyle(color: textColor))))
+          ]);
     }
 
     if (event.event is PM) {
