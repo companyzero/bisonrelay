@@ -79,6 +79,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 : Text('Set Dark Theme'),
           ),
           */
+          ElevatedButton(
+            onPressed: () => client.requestResetKXAllOld(),
+            child: const Text("Reset all Old KX"),
+          ),
           Column(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
             Text('Font Size',
                 style: TextStyle(

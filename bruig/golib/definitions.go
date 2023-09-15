@@ -414,3 +414,7 @@ type loadUserHistory struct {
 	Page    int               `json:"page"`
 	PageNum int               `json:"page_num"`
 }
+
+type resetOldKX struct {
+	Age int `json:"age"`
+}
