@@ -3,6 +3,8 @@ import 'package:golib_plugin/definitions.dart';
 import 'package:bruig/theme_manager.dart';
 import 'package:provider/provider.dart';
 import 'package:bruig/models/client.dart';
+import 'package:golib_plugin/golib_plugin.dart';
+import 'package:bruig/components/snackbars.dart';
 
 class SettingsScreenTitle extends StatelessWidget {
   const SettingsScreenTitle({super.key});
@@ -26,11 +28,25 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   ClientModel get client => widget.client;
   ServerSessionState connState = ServerSessionState.empty();
+  bool loading = false;
 
   void clientUpdated() async {
     setState(() {
       connState = client.connState;
     });
+  }
+
+  void resetAllOldKX(BuildContext context) async {
+    if (loading) return;
+    setState(() => loading = true);
+    try {
+      await Golib.resetAllOldKX(0);
+      showSuccessSnackbar(context, 'Requesting KX to all old KX...');
+    } catch (exception) {
+      showErrorSnackbar(context, 'Unable to reset all old KX: $exception');
+    } finally {
+      setState(() => loading = false);
+    }
   }
 
   @override
@@ -79,10 +95,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 : Text('Set Dark Theme'),
           ),
           */
+          const SizedBox(height: 20),
           ElevatedButton(
-            onPressed: () => client.requestResetKXAllOld(),
+            onPressed: () => loading ? null : resetAllOldKX(context),
             child: const Text("Reset all Old KX"),
           ),
+          const SizedBox(height: 50),
           Column(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
             Text('Font Size',
                 style: TextStyle(

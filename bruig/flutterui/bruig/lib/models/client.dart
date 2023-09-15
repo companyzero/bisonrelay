@@ -906,6 +906,4 @@ class ClientModel extends ChangeNotifier {
       _handleSSOrderPlaced(order);
     }
   }
-
-  Future<void> requestResetKXAllOld() async => await Golib.resetAllOldKX(0);
 }
