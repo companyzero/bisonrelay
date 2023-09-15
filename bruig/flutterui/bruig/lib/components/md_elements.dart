@@ -411,7 +411,7 @@ class MarkdownArea extends StatelessWidget {
               codeBlockMaxHeight: 200,
               styleSheet: MarkdownStyleSheet(
                 p: TextStyle(
-                    fontSize: 8 + theme.getFontSize() * 7,
+                    fontSize: theme.getFontSize(),
                     color: textColor,
                     fontWeight: hasNick ? FontWeight.w700 : FontWeight.w300,
                     letterSpacing: 0.44),
@@ -439,7 +439,7 @@ class MarkdownArea extends StatelessWidget {
                     color: textColor,
                     backgroundColor: Colors.black87,
                     height: 1.2,
-                    fontSize: 8 + theme.getFontSize() * 7,
+                    fontSize: theme.getFontSize(),
                     fontFamily: 'Inter',
                     textBaseline: TextBaseline.alphabetic),
               ),
