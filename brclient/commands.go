@@ -3306,6 +3306,11 @@ var commands = []tuicmd{
 					return err
 				}
 
+				ab, err := as.c.AddressBookEntry(ru.ID())
+				if err != nil {
+					return err
+				}
+
 				as.cwHelpMsgs(func(pf printf) {
 					pii := ru.PublicIdentity()
 					r := ru.RatchetDebugInfo()
@@ -3314,6 +3319,8 @@ var commands = []tuicmd{
 					pf("              UID: %s", ru.ID())
 					pf("             Name: %s", strescape.Content(pii.Name))
 					pf("          Ignored: %v", ru.IsIgnored())
+					pf("    First Created: %s", ab.FirstCreated.Format(ISO8601DateTimeMs))
+					pf("Handshake Attempt: %s", ab.LastHandshakeAttempt.Format(ISO8601DateTimeMs))
 					pf("Last Encrypt Time: %s", r.LastEncTime.Format(ISO8601DateTimeMs))
 					pf("Last Decrypt Time: %s", r.LastDecTime.Format(ISO8601DateTimeMs))
 					pf("          Send RV: %s (%s...)",

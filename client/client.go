@@ -738,6 +738,11 @@ func (c *Client) AddressBook() []*clientdb.AddressBookEntry {
 	return res
 }
 
+// AddressBookEntry returns the address book information of a given user.
+func (c *Client) AddressBookEntry(uid UserID) (*clientdb.AddressBookEntry, error) {
+	return c.getAddressBookEntry(uid)
+}
+
 func (c *Client) UserExists(id UserID) bool {
 	var res bool
 	err := c.dbView(func(tx clientdb.ReadTx) error {

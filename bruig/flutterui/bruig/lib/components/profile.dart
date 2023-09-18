@@ -23,6 +23,7 @@ String _shortLog(String s) => s.length < 16 ? s : s.substring(0, 16);
 class _UserProfileState extends State<UserProfile> {
   ChatModel get chat => widget.chat;
   RatchetDebugInfo ratchetInfo = RatchetDebugInfo.empty();
+  AddressBookEntry abEntry = AddressBookEntry.empty();
   bool isIgnored = false;
   bool loading = false;
   bool firstLoading = true;
@@ -30,11 +31,13 @@ class _UserProfileState extends State<UserProfile> {
   void readProfile() async {
     try {
       var newIgnored = await Golib.isIgnored(chat.id);
+      var newAbEntry = await Golib.addressBookEntry(chat.id);
       var newRatchetInfo = await Golib.userRatchetInfo(chat.id);
 
       setState(() {
         isIgnored = newIgnored;
         ratchetInfo = newRatchetInfo;
+        abEntry = newAbEntry;
       });
     } catch (exception) {
       showErrorSnackbar(context, "Unable to load profile: $exception");
@@ -193,6 +196,12 @@ class _UserProfileState extends State<UserProfile> {
                 style: TextStyle(color: textColor, fontSize: 20)),
             const SizedBox(height: 10),
             SimpleInfoGrid([
+              Tuple2(Text("First Created", style: headTS),
+                  Text(abEntry.firstCreated.toIso8601String(), style: txtTS)),
+              Tuple2(
+                  Text("Last Handshake Attempt", style: headTS),
+                  Text(abEntry.lastHandshakeAttempt.toIso8601String(),
+                      style: txtTS)),
               Tuple2(
                   Text("Last Sent Time", style: headTS),
                   Text(ratchetInfo.lastEncTime.toIso8601String(),

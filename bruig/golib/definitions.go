@@ -2,6 +2,7 @@ package golib
 
 import (
 	"encoding/json"
+	"time"
 
 	"github.com/companyzero/bisonrelay/client/clientdb"
 	"github.com/companyzero/bisonrelay/client/clientintf"
@@ -75,10 +76,12 @@ type pm struct {
 }
 
 type addressBookEntry struct {
-	ID      clientintf.UserID `json:"id"`
-	Nick    string            `json:"nick"`
-	Name    string            `json:"name"`
-	Ignored bool              `json:"ignored"`
+	ID                   clientintf.UserID `json:"id"`
+	Nick                 string            `json:"nick"`
+	Name                 string            `json:"name"`
+	Ignored              bool              `json:"ignored"`
+	FirstCreated         time.Time         `json:"first_created"`
+	LastHandshakeAttempt time.Time         `json:"last_handshake_attempt"`
 }
 
 type remoteUser struct {
