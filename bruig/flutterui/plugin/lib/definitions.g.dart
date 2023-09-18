@@ -340,8 +340,10 @@ AddressBookEntry _$AddressBookEntryFromJson(Map<String, dynamic> json) =>
     AddressBookEntry(
       json['id'] as String,
       json['nick'] as String,
-      name: json['name'] as String? ?? "",
-      ignored: json['ignored'] as bool? ?? false,
+      json['name'] as String,
+      json['ignored'] as bool,
+      DateTime.parse(json['first_created'] as String),
+      DateTime.parse(json['last_handshake_attempt'] as String),
     );
 
 Map<String, dynamic> _$AddressBookEntryToJson(AddressBookEntry instance) =>
@@ -350,6 +352,8 @@ Map<String, dynamic> _$AddressBookEntryToJson(AddressBookEntry instance) =>
       'nick': instance.nick,
       'name': instance.name,
       'ignored': instance.ignored,
+      'first_created': instance.firstCreated.toIso8601String(),
+      'last_handshake_attempt': instance.lastHandshakeAttempt.toIso8601String(),
     };
 
 ShareFileArgs _$ShareFileArgsFromJson(Map<String, dynamic> json) =>

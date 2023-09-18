@@ -133,10 +133,12 @@ class MockPlugin with NtfStreams /*implements PluginPlatform*/ {
       Future.delayed(Duration(seconds: 3), () => false);
 
   Future<List<AddressBookEntry>> addressBook() async => <AddressBookEntry>[
+        /*
         AddressBookEntry("id01", "Someone"),
         AddressBookEntry("id02", "Someone else"),
         AddressBookEntry("id03", "Test Group"),
         AddressBookEntry("id04", "group2"),
+        */
       ];
 
   Future<void> initID(IDInit args) async => throw "unimplemented";
@@ -203,8 +205,8 @@ class MockPlugin with NtfStreams /*implements PluginPlatform*/ {
   Future<LNNewWalletSeed> lnInitDcrlnd(
           String rootPath, String network, String password) async =>
       throw "unimplemented";
-  Future<String> lnRunDcrlnd(
-          String rootPath, String network, String password, String proxyaddr, bool torisolation) async =>
+  Future<String> lnRunDcrlnd(String rootPath, String network, String password,
+          String proxyaddr, bool torisolation) async =>
       throw "unimplemented";
   void captureDcrlndLog() => throw "unimplemented";
   Future<String> lnGetDepositAddr() async => throw "unimplemented";

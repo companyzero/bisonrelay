@@ -1757,6 +1757,26 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 			})
 		}
 		return res, nil
+
+	case CTAddressBookEntry:
+		var args clientintf.UserID
+		if err := cmd.decode(&args); err != nil {
+			return nil, err
+		}
+		entry, err := c.AddressBookEntry(args)
+		if err != nil {
+			return nil, err
+		}
+
+		res := addressBookEntry{
+			Nick:                 entry.ID.Nick,
+			Name:                 entry.ID.Name,
+			Ignored:              entry.Ignored,
+			FirstCreated:         entry.FirstCreated,
+			LastHandshakeAttempt: entry.LastHandshakeAttempt,
+		}
+		return res, err
+
 	}
 	return nil, nil
 

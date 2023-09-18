@@ -121,6 +121,7 @@ const (
 	CTFetchResource                   = 0x76
 	CTHandshake                       = 0x77
 	CTLoadUserHistory                 = 0x78
+	CTAddressBookEntry                = 0x79
 
 	NTInviteReceived         = 0x1001
 	NTInviteAccepted         = 0x1002

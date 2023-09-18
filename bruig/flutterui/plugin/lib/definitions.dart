@@ -359,7 +359,21 @@ class AddressBookEntry {
   final String nick;
   final String name;
   final bool ignored;
-  AddressBookEntry(this.id, this.nick, {this.name: "", this.ignored: false});
+  @JsonKey(name: "first_created")
+  final DateTime firstCreated;
+  @JsonKey(name: "last_handshake_attempt")
+  final DateTime lastHandshakeAttempt;
+
+  AddressBookEntry(this.id, this.nick, this.name, this.ignored,
+      this.firstCreated, this.lastHandshakeAttempt);
+
+  factory AddressBookEntry.empty() => AddressBookEntry(
+      "",
+      "",
+      "",
+      false,
+      DateTime.fromMicrosecondsSinceEpoch(0),
+      DateTime.fromMicrosecondsSinceEpoch(0));
 
   factory AddressBookEntry.fromJson(Map<String, dynamic> json) =>
       _$AddressBookEntryFromJson(json);
@@ -2448,6 +2462,8 @@ abstract class PluginPlatform {
   Future<void> unignoreUser(String uid) async =>
       await asyncCall(CTUnignoreUser, uid);
   Future<bool> isIgnored(String uid) async => await asyncCall(CTIsIgnored, uid);
+  Future<AddressBookEntry> addressBookEntry(String uid) async =>
+      AddressBookEntry.fromJson(await asyncCall(CTAddressBookEntry, uid));
   Future<List<String>> listSubscribers() async {
     var res = await asyncCall(CTListSubscribers, null);
     if (res == null) {
@@ -2870,6 +2886,7 @@ const int CTCancelOnboard = 0x75;
 const int CTFetchResource = 0x76;
 const int CTHandshake = 0x77;
 const int CTLoadUserHistory = 0x78;
+const int CTAddressBookEntry = 0x79;
 
 const int notificationsStartID = 0x1000;
 
