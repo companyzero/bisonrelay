@@ -212,7 +212,13 @@ func (tc *testClient) handleSync(handler client.NotificationHandler) client.Noti
 // waitTippingSubsysRunning waits until the tipping subsystem is running tipping
 // attempts (plus an additional time for its actions to possibly complete).
 func (tc *testClient) waitTippingSubsysRunning(extra time.Duration) {
-	tc.ListRunningTipUserAttempts()
+	for {
+		_, err := tc.ListRunningTipUserAttempts()
+		if err == nil {
+			break
+		}
+		time.Sleep(time.Millisecond * 5)
+	}
 
 	// Sleep additional time for actions to start.
 	time.Sleep(extra)
