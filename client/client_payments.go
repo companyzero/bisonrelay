@@ -181,11 +181,11 @@ func (c *Client) handleGetInvoice(ru *RemoteUser, getInvoice rpc.RMGetInvoice) e
 	}
 
 	if ru.log.Level() <= slog.LevelDebug {
-		ru.log.Debugf("Generated invoice for tip of %.8f DCR: %s",
-			dcrAmount, inv)
+		ru.log.Debugf("Generated invoice for tip of %.8f DCR (tag %d): %s",
+			dcrAmount, getInvoice.Tag, inv)
 	} else {
-		ru.log.Infof("Generated invoice for tip of %.8f DCR",
-			dcrAmount)
+		ru.log.Infof("Generated invoice for tip of %.8f DCR (tag %d)",
+			dcrAmount, getInvoice.Tag)
 	}
 
 	// Persist the generated invoice.
@@ -419,19 +419,27 @@ type RunningTipUserAttempt struct {
 
 // ListRunningTipUserAttempts lists the currently running attempts at tipping
 // remote users.
-func (c *Client) ListRunningTipUserAttempts() []RunningTipUserAttempt {
+func (c *Client) ListRunningTipUserAttempts() ([]RunningTipUserAttempt, error) {
+
+	// If the tips goroutine is not running yet, report an error.
+	select {
+	case <-c.tipAttemptsRunning:
+	default:
+		return nil, fmt.Errorf("tip attempts goroutine still warming up")
+	}
+
 	ch := make(chan []RunningTipUserAttempt, 1)
 	select {
 	case c.listRunningTipAttemptsChan <- ch:
 	case <-c.ctx.Done():
-		return nil
+		return nil, c.ctx.Err()
 	}
 
 	select {
 	case res := <-ch:
-		return res
+		return res, nil
 	case <-c.ctx.Done():
-		return nil
+		return nil, c.ctx.Err()
 	}
 }
 
@@ -688,7 +696,13 @@ func (c *Client) runTipAttempts(ctx context.Context) error {
 	for {
 		select {
 		case ch := <-c.listRunningTipAttemptsChan:
-			ch <- attempts.currentAttempts()
+			report := attempts.currentAttempts()
+			go func() {
+				select {
+				case ch <- report:
+				case <-ctx.Done():
+				}
+			}()
 
 		case ta := <-c.tipAttemptsChan:
 			switch {

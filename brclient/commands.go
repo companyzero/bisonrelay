@@ -531,7 +531,10 @@ var listCommands = []tuicmd{
 		descr:         "List the currently running tip user attempts",
 		usableOffline: true,
 		handler: func(args []string, as *appState) error {
-			attempts := as.c.ListRunningTipUserAttempts()
+			attempts, err := as.c.ListRunningTipUserAttempts()
+			if err != nil {
+				return err
+			}
 			as.cwHelpMsgs(func(pf printf) {
 				if len(attempts) == 0 {
 					pf("No running tip attempts")
