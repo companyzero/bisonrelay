@@ -65,6 +65,10 @@ type clientCtx struct {
 	// are about to be initiated.
 	downloadConfMtx   sync.Mutex
 	downloadConfChans map[zkidentity.ShortID]chan bool
+
+	// expirationDays are the expirtation days provided by the server when
+	// connected
+	expirationDays uint64
 }
 
 var (
@@ -306,6 +310,7 @@ func handleInitClient(handle uint32, args initClient) error {
 		}
 		st := serverSessState{State: state}
 		notify(NTServerSessChanged, st, nil)
+		cctx.expirationDays = expDays
 	}))
 
 	ntfns.Register(client.OnTipAttemptProgressNtfn(func(ru *client.RemoteUser, amtMAtoms int64, completed bool, attempt int, attemptErr error, willRetry bool) {
@@ -1777,6 +1782,25 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		}
 		return res, err
 
+	case CTResetAllOldKX:
+		var age int
+		if err := cmd.decode(&age); err != nil {
+			return nil, err
+		}
+		var interval time.Duration
+		if age > 0 {
+			interval = time.Duration(age) * 24 * time.Hour
+		} else {
+			// Use server expiration days if none provided
+			cc.log.Debugf("Resetting all KX older than server"+
+				" expiration day setting: %v days", cc.expirationDays)
+			interval = time.Duration(cc.expirationDays) * 24 * time.Hour
+		}
+		res, err := c.ResetAllOldRatchets(interval, nil)
+		if err != nil {
+			return nil, err
+		}
+		return res, nil
 	}
 	return nil, nil
 
