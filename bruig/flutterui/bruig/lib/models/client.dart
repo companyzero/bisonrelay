@@ -779,9 +779,11 @@ class ClientModel extends ChangeNotifier {
       if (evnt is PM) {
         if (!evnt.mine) {
           source = chat;
+          hasUnreadChats = true;
         }
       } else if (evnt is GCMsg) {
         source = await _newChat(evnt.senderUID, "", false, false);
+        hasUnreadChats = true;
       } else if (evnt is GCUserEvent) {
         source = await _newChat(evnt.uid, "", false, false);
       } else {
