@@ -1,11 +1,11 @@
-frdbsim
+pgdbsim
 =======
 
 This is a simulation tool for helping test performance and correctness.
 
 ## Initial Postgres Setup
 
-This tool requires the same initial setup that is detailed in the [frdb README.md initial postgres setup section](../../README.md#initial-postgres-setup) with the exception of the database name, which is `brdatasim` by default.
+This tool requires the same initial setup that is detailed in the [pgdb README.md initial postgres setup section](../../README.md#initial-postgres-setup) with the exception of the database name, which is `brdatasim` by default.
 
 Thus, after following the aforementioned setup instructions, run the following commands to create the database:
 
@@ -23,7 +23,7 @@ postgres=# CREATE DATABASE brdatasim OWNER brdata TABLESPACE brbulk;
 Run the following command and enter the password when prompted:
 
 ```sh
-$ go build && ./brdbsim
+$ go build && ./pgdbsim
 ```
 
 ## Configuring the Simulation
@@ -41,4 +41,4 @@ full list.  The following are the ones most likely to be used:
 
 ## License
 
-frdb is licensed under the [copyfree](http://copyfree.org) ISC License.
+pgdbsim is licensed under the [copyfree](http://copyfree.org) ISC License.
