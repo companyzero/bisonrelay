@@ -31,6 +31,16 @@ const (
 )
 
 var (
+	// defaultAutoRemoveIgnoreList is the list of users that should not be
+	// removed during the auto unsubscribe idle check. By default, these are
+	// some well-known bots.
+	defaultAutoRemoveIgnoreList = strings.Join([]string{
+		"86abd31f2141b274196d481edd061a00ab7a56b61a31656775c8a590d612b966", // Oprah
+		"ad716557157c1f191d8b5f8c6757ea41af49de27dc619fc87f337ca85be325ee", // GC bot
+	}, ",")
+)
+
+var (
 	// Error to signal loadConfig() completed everything the cmd had to do
 	// and main() should exit.
 	errCmdDone = errors.New("cmd done")
@@ -99,6 +109,7 @@ type config struct {
 
 	AutoHandshakeInterval       time.Duration
 	AutoRemoveIdleUsersInterval time.Duration
+	AutoRemoveIdleUsersIgnore   []string
 
 	SyncFreeList bool
 
@@ -274,6 +285,7 @@ func loadConfig() (*config, error) {
 
 	flagAutoHandshake := fs.String("autohandshakeinterval", "21d", "")
 	flagAutoRemove := fs.String("autoremoveidleusersinterval", "60d", "")
+	flagAutoRemoveIgnoreList := fs.String("autoremoveignorelist", defaultAutoRemoveIgnoreList, "")
 
 	// log
 	flagMsgRoot := fs.String("log.msglog", defaultMsgRoot, "Root for message log files")
@@ -410,6 +422,11 @@ func loadConfig() (*config, error) {
 		mimeMap[spl[0]] = spl[1]
 	}
 
+	autoRemoveIgnoreList := strings.Split(*flagAutoRemoveIgnoreList, ",")
+	for i := range autoRemoveIgnoreList {
+		autoRemoveIgnoreList[i] = strings.TrimSpace(autoRemoveIgnoreList[i])
+	}
+
 	var jrpcListen []string
 	if *flagJSONRPCListen != "" {
 		jrpcListen = strings.Split(*flagJSONRPCListen, ",")
@@ -502,6 +519,7 @@ func loadConfig() (*config, error) {
 
 		AutoHandshakeInterval:       autoHandshakeInterval,
 		AutoRemoveIdleUsersInterval: autoRemoveInterval,
+		AutoRemoveIdleUsersIgnore:   autoRemoveIgnoreList,
 
 		SyncFreeList:             *flagSyncFreeList,
 		ExtenalEditorForComments: *flagExternalEditorForComments,

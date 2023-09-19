@@ -59,6 +59,8 @@ class InitClient {
   final int autoHandshakeInterval;
   @JsonKey(name: 'auto_remove_idle_users_interval')
   final int autoRemoveIdleUsersInterval;
+  @JsonKey(name: 'auto_remove_idle_users_ignore')
+  final List<String> autoRemoveIdleUsersIgnore;
 
   InitClient(
       this.dbRoot,
@@ -82,7 +84,8 @@ class InitClient {
       this.circuitLimit,
       this.noLoadChatHistory,
       this.autoHandshakeInterval,
-      this.autoRemoveIdleUsersInterval);
+      this.autoRemoveIdleUsersInterval,
+      this.autoRemoveIdleUsersIgnore);
 
   Map<String, dynamic> toJson() => _$InitClientToJson(this);
 }

@@ -719,8 +719,31 @@ func (c *Client) unsubIdleUsers(limitInterval, lastHandshakeInterval time.Durati
 		adminGCs = append(adminGCs, &gcs[i])
 	}
 
+	c.log.Debugf("Starting auto unsubscribe of idle users with limitDate %s "+
+		"and limitHandshakeDate %s", limitDate.Format(time.RFC3339),
+		limitHandshakeDate.Format(time.RFC3339))
+
+	// Build ignore list.
+	ignoreList := make(map[clientintf.UserID]struct{}, len(c.cfg.AutoRemoveIdleUsersIgnoreList))
+	for _, nick := range c.cfg.AutoRemoveIdleUsersIgnoreList {
+		uid, err := c.UIDByNick(nick)
+		if err == nil {
+			ignoreList[uid] = struct{}{}
+		} else {
+			c.log.Warnf("User %q in list to ignore from auto remove "+
+				"not found", nick)
+		}
+	}
+
 	users := c.rul.userList()
 	for _, uid := range users {
+		// Do not perform autounsub if this user is in the list to
+		// ignore unsubbing.
+		if _, ok := ignoreList[uid]; ok {
+			c.log.Tracef("Ignoring %s in auto unsubscribe action", uid)
+			continue
+		}
+
 		ru, err := c.rul.byID(uid)
 		if err != nil {
 			continue
@@ -755,9 +778,11 @@ func (c *Client) unsubIdleUsers(limitInterval, lastHandshakeInterval time.Durati
 			continue
 		}
 
-		ru.log.Infof("User %s is idle (last received msg time is %s). "+
-			"Removing from any active subscriptions and GCs.",
-			strescape.Nick(ru.Nick()), lastDecTime.Format(time.RFC3339))
+		ru.log.Infof("User %s is idle (last received msg time is %s, "+
+			"last handshake attempt time is %s). Removing from all "+
+			"active subscriptions and GCs.",
+			strescape.Nick(ru.Nick()), lastDecTime.Format(time.RFC3339),
+			ab.LastHandshakeAttempt.Format(time.RFC3339))
 		c.ntfns.notifyUnsubscribingIdleRemote(ru, lastDecTime)
 
 		// Forcibly make user unsub from posts.

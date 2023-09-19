@@ -3174,8 +3174,9 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		ResourcesProvider: resRouter,
 		NoLoadChatHistory: args.NoLoadChatHistory,
 
-		AutoHandshakeInterval:       args.AutoHandshakeInterval,
-		AutoRemoveIdleUsersInterval: args.AutoRemoveIdleUsersInterval,
+		AutoHandshakeInterval:         args.AutoHandshakeInterval,
+		AutoRemoveIdleUsersInterval:   args.AutoRemoveIdleUsersInterval,
+		AutoRemoveIdleUsersIgnoreList: args.AutoRemoveIdleUsersIgnore,
 
 		CertConfirmer: func(ctx context.Context, cs *tls.ConnectionState,
 			svrID *zkidentity.PublicIdentity) error {

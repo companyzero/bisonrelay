@@ -29,6 +29,9 @@ InitClient _$InitClientFromJson(Map<String, dynamic> json) => InitClient(
       json['no_load_chat_history'] as bool,
       json['auto_handshake_interval'] as int,
       json['auto_remove_idle_users_interval'] as int,
+      (json['auto_remove_idle_users_ignore'] as List<dynamic>)
+          .map((e) => e as String)
+          .toList(),
     );
 
 Map<String, dynamic> _$InitClientToJson(InitClient instance) =>
@@ -55,6 +58,7 @@ Map<String, dynamic> _$InitClientToJson(InitClient instance) =>
       'no_load_chat_history': instance.noLoadChatHistory,
       'auto_handshake_interval': instance.autoHandshakeInterval,
       'auto_remove_idle_users_interval': instance.autoRemoveIdleUsersInterval,
+      'auto_remove_idle_users_ignore': instance.autoRemoveIdleUsersIgnore,
     };
 
 IDInit _$IDInitFromJson(Map<String, dynamic> json) => IDInit(

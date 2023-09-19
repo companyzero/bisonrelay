@@ -167,7 +167,8 @@ class _AppState extends State<App> with WindowListener {
           cfg.circuitLimit,
           cfg.noLoadChatHistory,
           cfg.autoHandshakeInterval,
-          cfg.autoRemoveIdleUsersInterval);
+          cfg.autoRemoveIdleUsersInterval,
+          cfg.autoRemoveIgnoreList);
       await Golib.initClient(initArgs);
 
       navkey.currentState!.pushReplacementNamed(OverviewScreen.routeName);

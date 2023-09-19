@@ -7,6 +7,11 @@ import 'package:path/path.dart' as path;
 
 const APPNAME = "bruig";
 
+const defaultAutoRemoveIgnoreList = [
+  "86abd31f2141b274196d481edd061a00ab7a56b61a31656775c8a590d612b966", // Oprah
+  "ad716557157c1f191d8b5f8c6757ea41af49de27dc619fc87f337ca85be325ee", // GC bot
+];
+
 String homeDir() {
   var env = Platform.environment;
   if (Platform.isWindows) {
@@ -83,6 +88,7 @@ class Config {
   late final bool syncFreeList;
   late final int autoHandshakeInterval;
   late final int autoRemoveIdleUsersInterval;
+  late final List<String> autoRemoveIgnoreList;
 
   Config();
   Config.filled(
@@ -111,7 +117,8 @@ class Config {
       this.noLoadChatHistory: true,
       this.syncFreeList: true,
       this.autoHandshakeInterval: 21 * 24 * 60 * 60,
-      this.autoRemoveIdleUsersInterval: 60 * 24 * 60 * 60});
+      this.autoRemoveIdleUsersInterval: 60 * 24 * 60 * 60,
+      this.autoRemoveIgnoreList: defaultAutoRemoveIgnoreList});
   factory Config.newWithRPCHost(
           Config cfg, String rpcHost, String tlsCert, String macaroonPath) =>
       Config.filled(
@@ -141,6 +148,7 @@ class Config {
         syncFreeList: cfg.syncFreeList,
         autoHandshakeInterval: cfg.autoHandshakeInterval,
         autoRemoveIdleUsersInterval: cfg.autoRemoveIdleUsersInterval,
+        autoRemoveIgnoreList: cfg.autoRemoveIgnoreList,
       );
 
   Future<void> saveConfig(String filepath) async {
@@ -200,6 +208,13 @@ Future<Config> loadConfig(String filepath) async {
     return v != null && v != "" ? int.tryParse(v) : null;
   };
 
+  var getCommaList = (String section, String opt) {
+    var v = f.get(section, opt);
+    return v != null && v != ""
+        ? v.split(",").map((e) => e.trim()).toList()
+        : null;
+  };
+
   var iniLogFile = f.get("log", "logfile");
   String logfile = path.join(appDataDir, "applogs", "${APPNAME}.log");
   if (iniLogFile != null) {
@@ -255,6 +270,8 @@ Future<Config> loadConfig(String filepath) async {
       parseDurationSeconds(f.get("default", "autohandshakeinterval") ?? "21d");
   c.autoRemoveIdleUsersInterval = parseDurationSeconds(
       f.get("default", "autoremoveidleusersinterval") ?? "60d");
+  c.autoRemoveIgnoreList = getCommaList("default", "autoremoveignorelist") ??
+      defaultAutoRemoveIgnoreList;
 
   if (c.walletType != "disabled") {
     c.lnRPCHost = f.get("payment", "lnrpchost") ?? "localhost:10009";

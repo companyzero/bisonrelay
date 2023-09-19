@@ -385,8 +385,9 @@ func handleInitClient(handle uint32, args initClient) error {
 		ResourcesProvider: resRouter,
 		NoLoadChatHistory: args.NoLoadChatHistory,
 
-		AutoHandshakeInterval:       time.Duration(args.AutoHandshakeInterval) * time.Second,
-		AutoRemoveIdleUsersInterval: time.Duration(args.AutoRemoveIdleUsersInterval) * time.Second,
+		AutoHandshakeInterval:         time.Duration(args.AutoHandshakeInterval) * time.Second,
+		AutoRemoveIdleUsersInterval:   time.Duration(args.AutoRemoveIdleUsersInterval) * time.Second,
+		AutoRemoveIdleUsersIgnoreList: args.AutoRemoveIdleUsersIgnore,
 
 		CertConfirmer: func(ctx context.Context, cs *tls.ConnectionState,
 			svrID *zkidentity.PublicIdentity) error {
