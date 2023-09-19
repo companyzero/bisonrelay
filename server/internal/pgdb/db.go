@@ -1432,8 +1432,8 @@ func WithTLS(serverCA string) Option {
 //
 // For example:
 //
-//	db, err := frdb.Open(ctx, frdb.WithHost(host), frdb.WithPassphrase(pass)
-//		frdb.WithTLS("./server.crt"))
+//	db, err := pgdb.Open(ctx, pgdb.WithHost(host), pgdb.WithPassphrase(pass)
+//		pgdb.WithTLS("./server.crt"))
 //	if err != nil {
 //		/* handle err */
 //	}

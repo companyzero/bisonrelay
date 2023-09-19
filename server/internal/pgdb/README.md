@@ -23,7 +23,7 @@ At the `psql` shell:
 postgres=# CREATE ROLE brdata WITH LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOREPLICATION CONNECTION LIMIT -1 PASSWORD 'xxxxxx';
 postgres=# CREATE TABLESPACE brbulk OWNER brdata LOCATION '/path/to/bulk_data';
 postgres=# CREATE TABLESPACE brindex OWNER brdata LOCATION '/path/to/index_data';
-postgres=# CREATE DATABASE brdata OWNER frdata TABLESPACE brbulk;
+postgres=# CREATE DATABASE brdata OWNER brdata TABLESPACE brbulk;
 ```
 
 It is also highly recommended to configure the Postgres server to enable SSL/TLS
@@ -49,12 +49,12 @@ $ gencerts -H "server hostname" -L -o "postgres" server.crt server.key
 
 ```Go
 func example() error {
-	// Open a connection to the database.  Use `frpgdb.WithHost` to specify a
+	// Open a connection to the database.  Use `pgdb.WithHost` to specify a
 	// remote host.  See the documentation for other functions that start with
 	// the prefix "With" for additional configuration operations.
 	ctx := context.Background()
-	db, err := brpgdb.Open(ctx, brpgdb.WithPassphrase("xxxxxx"),
-		frpgdb.WithTLS("/path/to/server.crt"))
+	db, err := pgdb.Open(ctx, pgdb.WithPassphrase("xxxxxx"),
+		pgdb.WithTLS("/path/to/server.crt"))
 	if err != nil {
 		return err
 	}
@@ -119,9 +119,9 @@ func main() {
 ## Simulation Tool
 
 A simulation tool for helping test performance and correctness is available in
-`cmd/brdbsim`.  See its [README.md](./cmd/frdbsim/README.md) for further
+`cmd/pgdbsim`.  See its [README.md](./cmd/pgdbsim/README.md) for further
 details.
 
 ## License
 
-brpgdb is licensed under the [copyfree](http://copyfree.org) ISC License.
+pgdb is licensed under the [copyfree](http://copyfree.org) ISC License.
