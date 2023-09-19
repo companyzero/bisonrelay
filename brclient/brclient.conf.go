@@ -66,6 +66,13 @@ root = {{ .Root }}
 # Set to zero to disable idle user removal.
 # autoremoveidleusersinterval = 60d
 
+# Comma-separated list of users to NOT auto-unsubscribe or remove from GCs
+# during the idle check. This may be either the nick or UID of the user. By
+# default, some well-known bots are included in this list:
+# 86abd31f2141b274196d481edd061a00ab7a56b61a31656775c8a590d612b966 - Oprah
+# ad716557157c1f191d8b5f8c6757ea41af49de27dc619fc87f337ca85be325ee - GC bot
+# autoremoveignorelist =
+
 # logging and debug
 [log]
 

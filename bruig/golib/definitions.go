@@ -38,8 +38,9 @@ type initClient struct {
 	TorIsolation  bool   `json:"torisolation"`
 	CircuitLimit  uint32 `json:"circuit_limit"`
 
-	AutoHandshakeInterval       int64 `json:"auto_handshake_interval"`
-	AutoRemoveIdleUsersInterval int64 `json:"auto_remove_idle_users_interval"`
+	AutoHandshakeInterval       int64    `json:"auto_handshake_interval"`
+	AutoRemoveIdleUsersInterval int64    `json:"auto_remove_idle_users_interval"`
+	AutoRemoveIdleUsersIgnore   []string `json:"auto_remove_idle_users_ignore"`
 }
 
 type iDInit struct {

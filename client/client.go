@@ -189,6 +189,12 @@ type Config struct {
 	// automatically removed from GCs the local client admins and will be
 	// automatically unsubscribed from posts.
 	AutoRemoveIdleUsersInterval time.Duration
+
+	// AutoRemoveIdleUsersIgnoreList is a list of users that should NOT be
+	// forcibly unsubscribed even if they are idle. The values may be an
+	// user's nick or the prefix of the string representatation of its nick
+	// (i.e. anything acceptable as returned by UserByNick()).
+	AutoRemoveIdleUsersIgnoreList []string
 }
 
 // logger creates a logger for the given subsystem in the configured backend.
