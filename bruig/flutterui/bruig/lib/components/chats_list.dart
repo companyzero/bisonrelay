@@ -33,8 +33,8 @@ class _ChatHeadingWState extends State<_ChatHeadingW> {
 
   @override
   void initState() {
-    super.initState();
     chat.addListener(chatUpdated);
+    super.initState();
   }
 
   @override

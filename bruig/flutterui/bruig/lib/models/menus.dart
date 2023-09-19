@@ -197,11 +197,17 @@ List<ChatMenuItem> buildUserChatMenu(ChatModel chat) {
     }
   }
 
-  void listUserPosts(BuildContext context, ChatModel chat) async {
+  void listUserPosts(
+      BuildContext context, ClientModel client, ChatModel chat) async {
     var event = SynthChatEvent("Listing user posts", SCE_sending);
     try {
       chat.append(ChatEventModel(event, null));
-      await Golib.listUserPosts(chat.id);
+      if (chat.userPostList.isEmpty) {
+        chat.userPostListID = chat.id;
+        await Golib.listUserPosts(chat.id);
+      } else {
+        client.activeUserPostList = chat.userPostList;
+      }
       event.state = SCE_sent;
     } catch (exception) {
       event.error = Exception("Unable to list user posts: $exception");
@@ -262,13 +268,18 @@ List<ChatMenuItem> buildUserChatMenu(ChatModel chat) {
       "Show Content",
       (context, chats) => listUserContent(context, chats.active!),
     ),
+    chat.isSubscribed
+        ? ChatMenuItem(
+            "Unsubscribe to Posts",
+            (context, chats) => chats.active!.unsubscribeToPosts(),
+          )
+        : ChatMenuItem(
+            "Subscribe to Posts",
+            (context, chats) => chats.active!.subscribeToPosts(),
+          ),
     ChatMenuItem(
-      "Subscribe to Posts",
-      (context, chats) => chats.active!.subscribeToPosts(),
-    ),
-    ChatMenuItem(
-      "List Posts",
-      (context, chats) => listUserPosts(context, chats.active!),
+      chat.isSubscribed ? "List Posts" : "",
+      (context, chats) => listUserPosts(context, chats, chats.active!),
     ),
     ChatMenuItem(
       "Send File",

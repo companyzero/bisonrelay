@@ -93,6 +93,13 @@ class ChatModel extends ChangeNotifier {
   final String id; // RemoteUID or GC ID
   final bool isGC;
 
+  bool _isSubscribed = false;
+  bool get isSubscribed => _isSubscribed;
+  void set isSubscribed(bool b) {
+    _isSubscribed = b;
+    //notifyListeners();
+  }
+
   String _nick; // Nick or GC name
   String get nick => _nick;
   void set nick(String nn) {
@@ -120,6 +127,22 @@ class ChatModel extends ChangeNotifier {
   bool get showChatListing => _showChatListing;
   set showChatListing(bool b) {
     _showChatListing = b;
+    notifyListeners();
+  }
+
+  String _userPostListID = "";
+  String get userPostListID => _userPostListID;
+  set userPostListID(String b) {
+    _userPostListID = b;
+    notifyListeners();
+  }
+
+  List<PostListItem> _userPostList = [];
+  UnmodifiableListView<PostListItem> get userPostList =>
+      UnmodifiableListView(_userPostList);
+
+  set userPostList(List<PostListItem> us) {
+    _userPostList = us;
     notifyListeners();
   }
 
@@ -405,6 +428,22 @@ class ClientModel extends ChangeNotifier {
     showAddressBook = false;
   }
 
+  String _userPostListID = "";
+  String get userPostListID => _userPostListID;
+  set userPostListID(String b) {
+    _userPostListID = b;
+    notifyListeners();
+  }
+
+  List<PostListItem> _userPostList = [];
+  UnmodifiableListView<PostListItem> get userPostList =>
+      UnmodifiableListView(_userPostList);
+
+  set userPostList(List<PostListItem> us) {
+    _userPostList = us;
+    notifyListeners();
+  }
+
   void startChat(ChatModel chat, bool alreadyOpened) {
     if (!alreadyOpened) {
       if (chat.isGC) {
@@ -473,6 +512,11 @@ class ClientModel extends ChangeNotifier {
   UnmodifiableListView<ChatMenuItem> get activeSubMenu =>
       UnmodifiableListView(_activeSubMenu);
 
+  void updateUserMenu(String id, List<ChatMenuItem> menu) {
+    _subUserMenus[id] = menu;
+    //notifyListeners();
+  }
+
   void set activeSubMenu(List<ChatMenuItem> sm) {
     _activeSubMenu = sm;
     notifyListeners();
@@ -505,6 +549,27 @@ class ClientModel extends ChangeNotifier {
   String _network = "";
   String get network => _network;
 
+  String _activeUserPostAuthorID = "";
+  String get activeUserPostAuthorID => _activeUserPostAuthorID;
+  set activeUserPostAuthorID(String b) {
+    _activeUserPostAuthorID = b;
+    notifyListeners();
+  }
+
+  List<PostListItem> _activeUserPostList = [];
+  UnmodifiableListView<PostListItem> get activeUserPostList =>
+      UnmodifiableListView(_activeUserPostList);
+
+  set activeUserPostList(List<PostListItem> us) {
+    _activeUserPostList = us;
+    notifyListeners();
+  }
+
+  void hideUserPostList() {
+    activeUserPostList = [];
+    notifyListeners();
+  }
+
   ChatModel? _active;
   ChatModel? get active => _active;
 
@@ -532,6 +597,7 @@ class ClientModel extends ChangeNotifier {
     }
     hasUnreadChats = unreadChats;
     hideSubMenu();
+    hideUserPostList();
     notifyListeners();
   }
 
@@ -551,6 +617,14 @@ class ClientModel extends ChangeNotifier {
       active = c;
     } on StateError {
       // Ignore if chat doesn't exist.
+    }
+  }
+
+  Future<void> handleSubscriptions() async {
+    var newSubscriptions = await Golib.listSubscriptions();
+    for (var subscription in newSubscriptions) {
+      var chat = getExistingChat(subscription);
+      chat?.isSubscribed = true;
     }
   }
 
@@ -595,6 +669,10 @@ class ClientModel extends ChangeNotifier {
 
     alias = alias == "" ? "[blank]" : alias;
     c = ChatModel(id, alias, isGC);
+    if (!isGC) {
+      var subscriptions = await Golib.listSubscriptions();
+      c.isSubscribed = subscriptions.contains(id);
+    }
     _activeChats[id] = c;
 
     // Start with 500 messages and first page (0). We can load more with a scrolling
@@ -766,6 +844,22 @@ class ClientModel extends ChangeNotifier {
   void _handleChatMsgs() async {
     var stream = Golib.chatEvents();
     await for (var evnt in stream) {
+      if (evnt is UserPostList) {
+        if (evnt.posts.isNotEmpty) {
+          var chat = getExistingChat(evnt.uid);
+          chat?.userPostList = evnt.posts;
+          activeUserPostList = evnt.posts;
+          activeUserPostAuthorID = evnt.uid;
+          notifyListeners();
+        }
+        continue;
+      }
+      if (evnt is FeedPostEvent) {
+        if (evnt.sid == publicID) {
+          // Ignore own relays.
+          continue;
+        }
+      }
       if (evnt is FeedPostEvent) {
         if (evnt.sid == publicID) {
           // Ignore own relays.

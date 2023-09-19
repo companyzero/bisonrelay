@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:bruig/models/menus.dart';
 import 'package:flutter/material.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/components/chat/types.dart';
@@ -577,9 +578,19 @@ class PostEventW extends StatelessWidget {
   }
 }
 
-class PostSubscriptionEventW extends StatelessWidget {
+class PostSubscriptionEventW extends StatefulWidget {
   final PostSubscriptionResult event;
-  const PostSubscriptionEventW(this.event, {Key? key}) : super(key: key);
+  final ClientModel client;
+  const PostSubscriptionEventW(this.event, this.client, {Key? key})
+      : super(key: key);
+
+  @override
+  State<PostSubscriptionEventW> createState() => _PostSubscriptionEventWState();
+}
+
+class _PostSubscriptionEventWState extends State<PostSubscriptionEventW> {
+  PostSubscriptionResult get event => widget.event;
+  ClientModel get client => widget.client;
 
   @override
   Widget build(BuildContext context) {
@@ -589,10 +600,20 @@ class PostSubscriptionEventW extends StatelessWidget {
     if (event.wasSubRequest && event.error != "") {
       msg = "Unable to subscribe to user's posts: ${event.error}";
     } else if (event.wasSubRequest) {
+      setState(() {
+        var chat = client.getExistingChat(event.id);
+        chat!.isSubscribed = true;
+        client.updateUserMenu(event.id, buildUserChatMenu(chat));
+      });
       msg = "Subscribed to user's posts!";
     } else if (event.error != "") {
       msg = "Unable to unsubscribe from user's posts: ${event.error}";
     } else {
+      setState(() {
+        var chat = client.getExistingChat(event.id);
+        chat!.isSubscribed = false;
+        client.updateUserMenu(event.id, buildUserChatMenu(chat));
+      });
       msg = "Unsubscribed from user's posts!";
     }
 
@@ -1009,17 +1030,19 @@ class Event extends StatelessWidget {
     if (event.event is GCInvitation) {
       return JoinGCEventW(event, event.event as GCInvitation);
     }
-
+/*
     if (event.event is UserPostList) {
       return PostsListW(chat, event.event as UserPostList, scrollToBottom);
     }
-
+*/
     if (event.event is UserContentList) {
       return UserContentEventW(event.event as UserContentList, chat);
     }
 
     if (event.event is PostSubscriptionResult) {
-      return PostSubscriptionEventW(event.event as PostSubscriptionResult);
+      return Consumer<ClientModel>(
+          builder: (context, client, child) => PostSubscriptionEventW(
+              event.event as PostSubscriptionResult, client));
     }
 
     if (event.event is GCVersionWarn) {
