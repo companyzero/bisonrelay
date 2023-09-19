@@ -181,7 +181,9 @@ class _ActiveChatState extends State<ActiveChat> {
                   child: Messages(chat, client.nick, client,
                       _itemScrollController, _itemPositionsListener),
                 ),
-                Input(sendMsg, chat, inputFocusNode)
+                Container(
+                    margin: EdgeInsets.all(10),
+                    child: Input(sendMsg, chat, inputFocusNode))
               ])
         : Row(children: [
             Expanded(
@@ -190,7 +192,9 @@ class _ActiveChatState extends State<ActiveChat> {
                   child: Messages(chat, client.nick, client,
                       _itemScrollController, _itemPositionsListener),
                 ),
-                Input(sendMsg, chat, inputFocusNode)
+                Container(
+                    padding: EdgeInsets.all(10),
+                    child: Input(sendMsg, chat, inputFocusNode))
               ]),
             ),
             Visibility(

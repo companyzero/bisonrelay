@@ -172,15 +172,63 @@ class _MessagesState extends State<Messages> {
       floatingActionButton: _getFAB(textColor, backgroundColor),
       body: SelectionArea(
         child: ScrollablePositionedList.builder(
-          itemCount: chat.msgs.length,
+          itemCount: chat.isGC ? chat.dayGCMsgs.length : chat.msgs.length,
           physics: const ClampingScrollPhysics(),
-          itemBuilder: (context, index) {
-            return Event(chat, chat.msgs[index], nick, client, _scrollToBottom);
-          },
+          itemBuilder: chat.isGC
+              ? (context, index) {
+                  return DayGroupedMessages(chat, chat.dayGCMsgs[index], nick,
+                      client, _scrollToBottom);
+                }
+              : (context, index) {
+                  return Event(
+                      chat, chat.msgs[index], nick, client, _scrollToBottom);
+                },
           itemScrollController: widget.itemScrollController,
           itemPositionsListener: widget.itemPositionsListener,
         ),
       ),
     );
+  }
+}
+
+class DayGroupedMessages extends StatelessWidget {
+  final DayGCMessages dayGCMsgs;
+  final ChatModel chat;
+  final String nick;
+  final ClientModel client;
+  final Function() scrollToBottom;
+  const DayGroupedMessages(
+      this.chat, this.dayGCMsgs, this.nick, this.client, this.scrollToBottom,
+      {Key? key})
+      : super(key: key);
+
+  showSubMenu(bool isGC, String id) => client.showSubMenu(isGC, id);
+
+  @override
+  Widget build(BuildContext context) {
+    var theme = Theme.of(context);
+    var textColor = theme.dividerColor;
+    var bgColor = theme.highlightColor;
+    return Column(children: [
+      Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+        DateChange(
+            child: Text(dayGCMsgs.date, style: TextStyle(color: textColor)))
+      ]),
+      Container(
+          margin: const EdgeInsets.only(left: 8, right: 8),
+          padding: const EdgeInsets.only(bottom: 5, left: 5, right: 5, top: 5),
+          decoration: BoxDecoration(
+              color: bgColor, borderRadius: BorderRadius.circular(10)),
+          child: Column(children: [
+            ListView.builder(
+              shrinkWrap: true,
+              itemCount: dayGCMsgs.msgs.length,
+              itemBuilder: (context, index) {
+                return Event(
+                    chat, dayGCMsgs.msgs[index], nick, client, scrollToBottom);
+              },
+            )
+          ]))
+    ]);
   }
 }

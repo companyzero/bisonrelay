@@ -190,8 +190,11 @@ List<ChatMenuItem> buildUserChatMenu(ChatModel chat) {
     try {
       await Golib.sendFile(chat.id, filePath);
       var fname = path.basename(filePath);
-      chat.append(ChatEventModel(
-          SynthChatEvent("Sending file \"$fname\" to user", SCE_sent), null));
+      chat.append(
+          ChatEventModel(
+              SynthChatEvent("Sending file \"$fname\" to user", SCE_sent),
+              null),
+          false);
     } catch (exception) {
       showErrorSnackbar(context, "Unable to send file: $exception");
     }
@@ -201,7 +204,7 @@ List<ChatMenuItem> buildUserChatMenu(ChatModel chat) {
       BuildContext context, ClientModel client, ChatModel chat) async {
     var event = SynthChatEvent("Listing user posts", SCE_sending);
     try {
-      chat.append(ChatEventModel(event, null));
+      chat.append(ChatEventModel(event, null), false);
       if (chat.userPostList.isEmpty) {
         chat.userPostListID = chat.id;
         await Golib.listUserPosts(chat.id);
@@ -217,7 +220,7 @@ List<ChatMenuItem> buildUserChatMenu(ChatModel chat) {
   void listUserContent(BuildContext context, ChatModel chat) async {
     var event = SynthChatEvent("Listing user content", SCE_sending);
     try {
-      chat.append(ChatEventModel(event, null));
+      chat.append(ChatEventModel(event, null), false);
       await Golib.listUserContent(chat.id);
       event.state = SCE_sent;
     } catch (exception) {
@@ -231,11 +234,11 @@ List<ChatMenuItem> buildUserChatMenu(ChatModel chat) {
       var resources = Provider.of<ResourcesModel>(context, listen: false);
       var sess = await resources.fetchPage(chat.id, path, 0, 0, null);
       var event = RequestedResourceEvent(chat.id, sess);
-      chat.append(ChatEventModel(event, null));
+      chat.append(ChatEventModel(event, null), false);
     } catch (exception) {
       var event = SynthChatEvent("", SCE_sending);
       event.error = Exception("Unable to fetch page: $exception");
-      chat.append(ChatEventModel(event, null));
+      chat.append(ChatEventModel(event, null), false);
     }
   }
 
@@ -244,11 +247,11 @@ List<ChatMenuItem> buildUserChatMenu(ChatModel chat) {
       await Golib.handshake(chat.id);
       var event =
           SynthChatEvent("Requested 3-way handshake with user", SCE_sent);
-      chat.append(ChatEventModel(event, null));
+      chat.append(ChatEventModel(event, null), false);
     } catch (exception) {
       var event = SynthChatEvent("", SCE_sending);
       event.error = Exception("Unable to perform handshake: $exception");
-      chat.append(ChatEventModel(event, null));
+      chat.append(ChatEventModel(event, null), false);
     }
   }
 
@@ -316,7 +319,7 @@ List<ChatMenuItem> buildGCMenu(ChatModel chat) {
       (context, chats) async {
         var msg = SynthChatEvent("Resending GC list to members");
         msg.state = SCE_sending;
-        chat.append(ChatEventModel(msg, null));
+        chat.append(ChatEventModel(msg, null), false);
         try {
           await chat.resendGCList();
           msg.state = SCE_sent;
