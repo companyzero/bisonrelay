@@ -359,7 +359,7 @@ func RunDcrlnd(ctx context.Context, cfg Config) (*Dcrlnd, error) {
 	conf.DisableRest = true
 	conf.DisableListen = true
 	conf.BackupFilePath = filepath.Join(rootDir, "channels.backup")
-	conf.Node = "dcrw"
+	conf.Decred.Node = "dcrw"
 	conf.DB.Bolt.SyncFreelist = cfg.SyncFreeList
 	conf.DebugLevel = cfg.DebugLevel
 	conf.ProtocolOptions = &lncfg.ProtocolOptions{}
@@ -388,9 +388,9 @@ func RunDcrlnd(ctx context.Context, cfg Config) (*Dcrlnd, error) {
 	case "mainnet":
 		// Default network.
 	case "testnet":
-		conf.TestNet3 = true
+		conf.Decred.TestNet3 = true
 	case "simnet":
-		conf.SimNet = true
+		conf.Decred.SimNet = true
 
 		// In the case of simnet, add SPV Connect addresses to the
 		// standard simnet dcrd node and the standard dcrlnd 3 node

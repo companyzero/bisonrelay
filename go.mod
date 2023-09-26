@@ -18,7 +18,7 @@ require (
 	github.com/decred/dcrd/dcrutil/v4 v4.0.1
 	github.com/decred/dcrd/txscript/v4 v4.1.0
 	github.com/decred/dcrd/wire v1.6.0
-	github.com/decred/dcrlnd v0.4.0
+	github.com/decred/dcrlnd v0.4.1-0.20230920191458-944b0fccb7ae
 	github.com/decred/dcrlnlpd v0.0.0-20230616144508-d84160568398
 	github.com/decred/go-socks v1.1.0
 	github.com/decred/slog v1.2.0
@@ -36,8 +36,9 @@ require (
 	github.com/rogpeppe/go-internal v1.10.0
 	github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
 	github.com/vaughan0/go-ini v0.0.0-20130923145212-a98ad7ee00ec
+	github.com/xhit/go-str2duration/v2 v2.1.0
 	golang.org/x/crypto v0.8.0
-	golang.org/x/exp v0.0.0-20230321023759-10a507213a29
+	golang.org/x/exp v0.0.0-20230711023510-fffb14384f22
 	golang.org/x/mobile v0.0.0-20230427221453-e8d11dd0ba41
 	golang.org/x/net v0.9.0
 	golang.org/x/sync v0.3.0
@@ -65,7 +66,7 @@ require (
 	github.com/coreos/pkg v0.0.0-20230327231512-ba87abf18a23 // indirect
 	github.com/dchest/siphash v1.2.3 // indirect
 	github.com/decred/base58 v1.0.5 // indirect
-	github.com/decred/dcrd v1.2.1-0.20230608200243-645f649907cd // indirect
+	github.com/decred/dcrd v1.8.0 // indirect
 	github.com/decred/dcrd/addrmgr/v2 v2.0.2 // indirect
 	github.com/decred/dcrd/blockchain/stake/v4 v4.0.0 // indirect
 	github.com/decred/dcrd/blockchain/stake/v5 v5.0.0 // indirect
@@ -85,10 +86,10 @@ require (
 	github.com/decred/dcrd/hdkeychain/v3 v3.1.1 // indirect
 	github.com/decred/dcrd/lru v1.1.2 // indirect
 	github.com/decred/dcrd/math/uint256 v1.0.1 // indirect
-	github.com/decred/dcrd/peer/v3 v3.0.1 // indirect
+	github.com/decred/dcrd/peer/v3 v3.0.2 // indirect
 	github.com/decred/dcrd/rpc/jsonrpc/types/v4 v4.0.0 // indirect
 	github.com/decred/dcrd/rpcclient/v8 v8.0.0 // indirect
-	github.com/decred/dcrtest/dcrdtest v0.0.0-20230608204327-d0a3c1865f71 // indirect
+	github.com/decred/dcrtest/dcrdtest v1.0.0 // indirect
 	github.com/decred/lightning-onion/v4 v4.0.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/go-errors/errors v1.4.2 // indirect
@@ -112,7 +113,7 @@ require (
 	github.com/kkdai/bstream v1.0.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.0.9 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
-	github.com/matheusd/etcd v0.5.0-alpha.5.0.20230215150709-cb359727eca4 // indirect
+	github.com/matheusd/etcd v0.5.0-alpha.5.0.20230703143131-79b93c0cee87 // indirect
 	github.com/mattn/go-isatty v0.0.19 // indirect
 	github.com/mattn/go-localereader v0.0.1 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
@@ -122,6 +123,7 @@ require (
 	github.com/muesli/ansi v0.0.0-20230316100256-276c6243b2f6 // indirect
 	github.com/muesli/cancelreader v0.2.2 // indirect
 	github.com/muesli/termenv v0.15.2 // indirect
+	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/client_golang v1.15.0 // indirect
 	github.com/prometheus/client_model v0.3.0 // indirect
 	github.com/prometheus/common v0.42.0 // indirect
@@ -130,9 +132,9 @@ require (
 	github.com/rogpeppe/fastuuid v1.2.0 // indirect
 	github.com/sirupsen/logrus v1.9.0 // indirect
 	github.com/soheilhy/cmux v0.1.5 // indirect
+	github.com/stretchr/testify v1.8.1 // indirect
 	github.com/tmc/grpc-websocket-proxy v0.0.0-20220101234140-673ab2c3ae75 // indirect
 	github.com/tv42/zbase32 v0.0.0-20220222190657-f76a9fc892fa // indirect
-	github.com/xhit/go-str2duration/v2 v2.1.0 // indirect
 	github.com/xiang90/probing v0.0.0-20221125231312-a49e3df8f510 // indirect
 	gitlab.com/NebulousLabs/fastrand v0.0.0-20181126182046-603482d69e40 // indirect
 	gitlab.com/NebulousLabs/go-upnp v0.0.0-20211002182029-11da932010b6 // indirect
@@ -141,7 +143,7 @@ require (
 	go.uber.org/atomic v1.10.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.24.0 // indirect
-	golang.org/x/mod v0.10.0 // indirect
+	golang.org/x/mod v0.11.0 // indirect
 	golang.org/x/sys v0.11.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
 	golang.org/x/tools v0.8.0 // indirect
@@ -150,6 +152,7 @@ require (
 	gopkg.in/errgo.v1 v1.0.1 // indirect
 	gopkg.in/macaroon-bakery.v2 v2.3.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 	lukechampine.com/blake3 v1.2.1 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
