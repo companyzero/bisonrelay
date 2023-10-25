@@ -42,14 +42,11 @@ class _InputState extends State<Input> {
   }
 
   void sendMsg() {
-    final val = controller.value;
-    final messageWithoutNewLine =
-        controller.text.substring(0, val.selection.start - 1) +
-            controller.text.substring(val.selection.start);
+    final messageWithoutNewLine = controller.text.trim();
     controller.value = const TextEditingValue(
         text: "", selection: TextSelection.collapsed(offset: 0));
-    final String withEmbeds = embeds.fold(
-        messageWithoutNewLine.trim(), (s, e) => e.replaceInString(s));
+    final String withEmbeds =
+        embeds.fold(messageWithoutNewLine, (s, e) => e.replaceInString(s));
     /*
           if (withEmbeds.length > 1024 * 1024) {
             showErrorSnackbar(context,
