@@ -145,6 +145,8 @@ class __LNUnlockPageState extends State<_LNUnlockPage> {
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
                             SizedBox(
+                                height: MediaQuery.of(context).size.height / 6),
+                            SizedBox(
                                 width: 250,
                                 child: Text("Connect to Bison Relay",
                                     textAlign: TextAlign.center,
@@ -152,9 +154,7 @@ class __LNUnlockPageState extends State<_LNUnlockPage> {
                                         color: secondaryTextColor,
                                         fontSize: theme.getHugeFont(context),
                                         fontWeight: FontWeight.w300))),
-                            SizedBox(
-                              height: MediaQuery.of(context).size.height / 6,
-                            ),
+                            SizedBox(height: 50),
                             loading
                                 ? SizedBox(
                                     width: 50,
@@ -166,8 +166,6 @@ class __LNUnlockPageState extends State<_LNUnlockPage> {
                                         strokeWidth: 2),
                                   )
                                 : const SizedBox(height: 50),
-                            SizedBox(
-                                height: MediaQuery.of(context).size.height / 6),
                             Expanded(
                                 child: TextField(
                                     enabled: !loading,

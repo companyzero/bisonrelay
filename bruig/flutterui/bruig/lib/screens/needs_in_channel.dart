@@ -353,63 +353,47 @@ After the channel is opened, it may take up to 6 confirmations for it to be broa
                                 physics: const NeverScrollableScrollPhysics(),
                                 shrinkWrap: true,
                                 padding: const EdgeInsets.all(15.0),
-                                children: <Widget>[
-                                    SimpleInfoGrid([
-                                      Tuple2(
-                                          Text("Amount",
-                                              style: TextStyle(
-                                                  color: darkTextColor,
-                                                  fontSize: theme
-                                                      .getSmallFont(context),
-                                                  fontWeight: FontWeight.w300)),
-                                          SizedBox(
-                                            width: 150,
-                                            child: dcrInput(
-                                                controller: amountCtrl),
-                                          )),
-                                      Tuple2(
-                                          const SizedBox(height: 50),
-                                          LoadingScreenButton(
-                                            onPressed: !loading
-                                                ? requestRecvCapacity
-                                                : null,
-                                            text: "Request Inbound Channel",
-                                          ))
-                                    ]),
-                                    showAdvanced
-                                        ? SimpleInfoGrid([
-                                            Tuple2(
-                                                Text("LP Server Address",
-                                                    style: TextStyle(
-                                                        color: darkTextColor,
-                                                        fontSize:
-                                                            theme.getSmallFont(
-                                                                context),
-                                                        fontWeight:
-                                                            FontWeight.w300)),
-                                                TextField(
-                                                  controller: serverCtrl,
-                                                  decoration: const InputDecoration(
-                                                      hintText:
-                                                          "https://lpd-server:port"),
-                                                )),
-                                            Tuple2(
-                                                Text("LP Server Cert",
-                                                    style: TextStyle(
-                                                        color: darkTextColor,
-                                                        fontSize:
-                                                            theme.getSmallFont(
-                                                                context),
-                                                        fontWeight:
-                                                            FontWeight.w300)),
-                                                TextField(
-                                                  controller: certCtrl,
-                                                  maxLines: null,
-                                                  keyboardType:
-                                                      TextInputType.multiline,
-                                                )),
-                                          ])
-                                        : const Empty(),
+                                children: [
+                                    Text("Amount",
+                                        style: TextStyle(
+                                            color: darkTextColor,
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w300)),
+                                    SizedBox(
+                                      width: 150,
+                                      child: dcrInput(controller: amountCtrl),
+                                    ),
+                                    const SizedBox(height: 50),
+                                    LoadingScreenButton(
+                                      onPressed:
+                                          !loading ? requestRecvCapacity : null,
+                                      text: "Request Inbound Channel",
+                                    ),
+                                    if (showAdvanced) ...[
+                                      const SizedBox(height: 10),
+                                      Text("LP Server Address",
+                                          style: TextStyle(
+                                              color: darkTextColor,
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w300)),
+                                      TextField(
+                                        controller: serverCtrl,
+                                        decoration: const InputDecoration(
+                                            hintText:
+                                                "https://lpd-server:port"),
+                                      ),
+                                      const SizedBox(height: 10),
+                                      Text("LP Server Cert",
+                                          style: TextStyle(
+                                              color: darkTextColor,
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w300)),
+                                      TextField(
+                                        controller: certCtrl,
+                                        maxLines: null,
+                                        keyboardType: TextInputType.multiline,
+                                      )
+                                    ]
                                   ])
                             : Column(children: [
                                 const SizedBox(height: 30),
