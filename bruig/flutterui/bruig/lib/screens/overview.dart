@@ -210,6 +210,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
         backgroundColor: theme.canvasColor,
         appBar: isScreenSmall
             ? AppBar(
+                titleSpacing: 0.0,
                 title: _OverviewScreenTitle(widget.mainMenu),
               )
             : AppBar(
