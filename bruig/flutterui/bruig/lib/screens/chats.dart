@@ -13,6 +13,7 @@ import 'package:golib_plugin/golib_plugin.dart';
 import 'package:provider/provider.dart';
 import 'package:bruig/components/chat/active_chat.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
+import 'package:bruig/components/gc_context_menu.dart';
 
 import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/util.dart';
@@ -27,13 +28,13 @@ class ChatsScreenTitle extends StatelessWidget {
   Widget build(BuildContext context) {
     var theme = Theme.of(context);
     var darkTextColor = theme.indicatorColor;
-    var hightLightTextColor = theme.dividerColor; // NAME TEXT COLOR
+    var hightLightTextColor = theme.dividerColor;
     var selectedBackgroundColor = theme.highlightColor;
     return Consumer2<ClientModel, ThemeNotifier>(
         builder: (context, client, theme, child) {
       var activeHeading = client.active;
       if (activeHeading == null) {
-        return Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+        return Row(mainAxisAlignment: MainAxisAlignment.start, children: [
           Text("Bison Relay / Chat",
               textAlign: TextAlign.center,
               style: TextStyle(
@@ -51,7 +52,7 @@ class ChatsScreenTitle extends StatelessWidget {
       }
       var chat = client.getExistingChat(activeHeading.id);
       if (chat == null) {
-        return Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+        return Row(mainAxisAlignment: MainAxisAlignment.start, children: [
           Text("Bison Relay / Chat",
               textAlign: TextAlign.center,
               style: TextStyle(
@@ -74,37 +75,43 @@ class ChatsScreenTitle extends StatelessWidget {
             ThemeData.estimateBrightnessForColor(avatarColor) == Brightness.dark
                 ? hightLightTextColor
                 : darkTextColor;
-        return Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              IconButton(
-                  onPressed: () => client.active = null,
-                  icon: Icon(Icons.keyboard_arrow_left_rounded,
-                      color: Theme.of(context).focusColor)),
-              Text("Bison Relay / Chat$suffix$profileSuffix",
-                  style: TextStyle(
-                      fontSize: theme.getLargeFont(context),
-                      color: Theme.of(context).focusColor)),
-              chat.isGC
-                  ? const Empty()
-                  : Container(
-                      width: 40,
-                      margin: const EdgeInsets.only(
-                          top: 0, bottom: 0, left: 5, right: 0),
-                      child: UserContextMenu(
-                        targetUserChat: chat,
-                        child: InteractiveAvatar(
-                          bgColor: selectedBackgroundColor,
-                          chatNick: chat.nick,
-                          onTap: () {
-                            client.showSubMenu(chat.isGC, chat.id);
-                          },
-                          avatarColor: avatarColor,
-                          avatarTextColor: avatarTextColor,
-                        ),
-                      ),
-                    )
-            ]);
+        Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
+          Text("Bison Relay / Chat$suffix$profileSuffix",
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                  fontSize: theme.getLargeFont(context),
+                  color: Theme.of(context).focusColor)),
+          Expanded(
+              child: Container(
+            width: 40,
+            margin: const EdgeInsets.only(top: 0, bottom: 0, left: 0, right: 5),
+            child: chat.isGC
+                ? GcContexMenu(
+                    targetGcChat: chat,
+                    child: InteractiveAvatar(
+                      bgColor: selectedBackgroundColor,
+                      chatNick: chat.nick,
+                      onTap: () {
+                        client.showSubMenu(chat.isGC, chat.id);
+                      },
+                      avatarColor: avatarColor,
+                      avatarTextColor: avatarTextColor,
+                    ),
+                  )
+                : UserContextMenu(
+                    targetUserChat: chat,
+                    child: InteractiveAvatar(
+                      bgColor: selectedBackgroundColor,
+                      chatNick: chat.nick,
+                      onTap: () {
+                        client.showSubMenu(chat.isGC, chat.id);
+                      },
+                      avatarColor: avatarColor,
+                      avatarTextColor: avatarTextColor,
+                    ),
+                  ),
+          )),
+        ]);
       }
       return Text("Bison Relay / Chat$suffix$profileSuffix",
           style: TextStyle(
