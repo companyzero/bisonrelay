@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:bruig/components/buttons.dart';
 import 'package:bruig/components/chats_list.dart';
 import 'package:bruig/components/addressbook/addressbook.dart';
+import 'package:bruig/components/gc_context_menu.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/models/notifications.dart';
 import 'package:bruig/screens/needs_out_channel.dart';
@@ -13,9 +14,7 @@ import 'package:golib_plugin/golib_plugin.dart';
 import 'package:provider/provider.dart';
 import 'package:bruig/components/chat/active_chat.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
-import 'package:bruig/components/gc_context_menu.dart';
 
-import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/util.dart';
 import 'package:bruig/components/user_context_menu.dart';
 import 'package:bruig/components/interactive_avatar.dart';
@@ -75,7 +74,7 @@ class ChatsScreenTitle extends StatelessWidget {
             ThemeData.estimateBrightnessForColor(avatarColor) == Brightness.dark
                 ? hightLightTextColor
                 : darkTextColor;
-        Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
+        return Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
           Text("Bison Relay / Chat$suffix$profileSuffix",
               textAlign: TextAlign.center,
               style: TextStyle(

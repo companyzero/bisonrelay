@@ -215,10 +215,11 @@ class _OverviewScreenState extends State<OverviewScreen> {
                 leading: Builder(builder: (BuildContext context) {
                   return client.active != null
                       ? IconButton(
-                          padding: EdgeInsets.all(0),
                           iconSize: 20,
                           splashRadius: 20,
-                          onPressed: () => client.active = null,
+                          onPressed: () => client.activeSubMenu.isNotEmpty
+                              ? client.activeSubMenu = []
+                              : client.active = null,
                           icon: Icon(Icons.keyboard_arrow_left_rounded,
                               color: Theme.of(context).focusColor))
                       : IconButton(
