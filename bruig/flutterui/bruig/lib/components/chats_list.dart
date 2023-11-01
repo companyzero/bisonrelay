@@ -10,6 +10,7 @@ import 'package:bruig/components/gc_context_menu.dart';
 import 'package:bruig/components/chat/types.dart';
 import 'package:bruig/util.dart';
 import 'package:bruig/components/addressbook/addressbook.dart';
+import 'package:bruig/theme_manager.dart';
 
 class _ChatHeadingW extends StatefulWidget {
   final ChatModel chat;
@@ -97,41 +98,48 @@ class _ChatHeadingWState extends State<_ChatHeadingW> {
         avatarColor: avatarColor,
         avatarTextColor: avatarTextColor);
 
-    return Container(
-      decoration: BoxDecoration(
-        color: chat.active ? selectedBackgroundColor : null,
-        borderRadius: BorderRadius.circular(3),
-      ),
-      child: chat.isGC
-          ? GcContexMenu(
-              client: client,
-              targetGcChat: chat,
-              child: ListTile(
-                enabled: true,
-                title: Text(chat.nick,
-                    style: TextStyle(fontSize: 11, color: textColor)),
-                leading: popMenuButton,
-                trailing: trailing,
-                selected: chat.active,
-                onTap: () => widget.makeActive(chat),
-                selectedColor: selectedBackgroundColor,
+    return Consumer<ThemeNotifier>(
+        builder: (context, theme, _) => Container(
+              decoration: BoxDecoration(
+                color: chat.active ? selectedBackgroundColor : null,
+                borderRadius: BorderRadius.circular(3),
               ),
-            )
-          : UserContextMenu(
-              client: client,
-              targetUserChat: chat,
-              child: ListTile(
-                enabled: true,
-                title: Text(chat.nick,
-                    style: TextStyle(fontSize: 11, color: textColor)),
-                leading: popMenuButton,
-                trailing: trailing,
-                selected: chat.active,
-                onTap: () => widget.makeActive(chat),
-                selectedColor: selectedBackgroundColor,
-              ),
-            ),
-    );
+              child: chat.isGC
+                  ? GcContexMenu(
+                      client: client,
+                      targetGcChat: chat,
+                      child: ListTile(
+                        enabled: true,
+                        title: Text(chat.nick,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                                fontSize: theme.getSmallFont(),
+                                color: textColor)),
+                        leading: popMenuButton,
+                        trailing: trailing,
+                        selected: chat.active,
+                        onTap: () => widget.makeActive(chat),
+                        selectedColor: selectedBackgroundColor,
+                      ),
+                    )
+                  : UserContextMenu(
+                      client: client,
+                      targetUserChat: chat,
+                      child: ListTile(
+                        enabled: true,
+                        title: Text(chat.nick,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                                fontSize: theme.getSmallFont(),
+                                color: textColor)),
+                        leading: popMenuButton,
+                        trailing: trailing,
+                        selected: chat.active,
+                        onTap: () => widget.makeActive(chat),
+                        selectedColor: selectedBackgroundColor,
+                      ),
+                    ),
+            ));
   }
 }
 

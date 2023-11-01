@@ -105,14 +105,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
               Expanded(
                   child: Container(
-                margin: EdgeInsets.only(left: 10, right: 10),
-                decoration: new BoxDecoration(
-                    borderRadius:
-                        new BorderRadius.all(new Radius.circular(5.0)),
+                margin: const EdgeInsets.only(left: 10, right: 10),
+                decoration: const BoxDecoration(
+                    borderRadius: BorderRadius.all(Radius.circular(5.0)),
                     boxShadow: [
-                      new BoxShadow(
+                      BoxShadow(
                           color: Colors.black38,
-                          offset: new Offset(0.0, 2.0),
+                          offset: Offset(0.0, 2.0),
                           blurRadius: 10)
                     ]),
                 child: Slider(
@@ -121,36 +120,43 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   inactiveColor: Colors.white,
                   onChanged: (double s) => theme.setFontSize(s),
                   divisions: 3,
-                  min: 1.0,
-                  max: 4.0,
+                  min: 0.0,
+                  max: 3.0,
                 ),
               )),
             ]),
             const SizedBox(height: 20),
             Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
-              Text('Small',
-                  style: TextStyle(fontSize: 12 * 1, color: textColor)),
+              Text('Small', style: TextStyle(fontSize: 13, color: textColor)),
               const SizedBox(width: 35),
-              Text('Normal',
-                  style: TextStyle(fontSize: 12 * 2, color: textColor)),
+              Text('Normal', style: TextStyle(fontSize: 15, color: textColor)),
               const SizedBox(width: 20),
-              Text('Large',
-                  style: TextStyle(fontSize: 12 * 3, color: textColor)),
+              Text('Large', style: TextStyle(fontSize: 17, color: textColor)),
               const SizedBox(width: 10),
-              Text('Huge',
-                  style: TextStyle(fontSize: 12 * 4, color: textColor)),
+              Text('Extra Large',
+                  style: TextStyle(fontSize: 19, color: textColor)),
             ]),
             const SizedBox(height: 20),
             Container(
                 margin: const EdgeInsets.only(left: 20),
-                height: 50,
                 child: Row(children: [
                   Text('Current Font Size: ',
                       style: TextStyle(fontSize: 12, color: textColor)),
-                  const SizedBox(width: 20),
-                  Text('Bison Relay',
-                      style: TextStyle(
-                          fontSize: theme.getFontSize(), color: textColor)),
+                  const SizedBox(width: 30),
+                  Column(children: [
+                    Text('Small Text',
+                        style: TextStyle(
+                            fontSize: theme.getSmallFont(), color: textColor)),
+                    const SizedBox(height: 20),
+                    Text('Medium Text',
+                        style: TextStyle(
+                            fontSize: theme.getMediumFont(), color: textColor)),
+                    const SizedBox(height: 20),
+                    Text('Large Text',
+                        style: TextStyle(
+                            fontSize: theme.getLargeFont(), color: textColor)),
+                    const SizedBox(height: 20),
+                  ])
                 ])),
           ]),
           const SizedBox(height: 20),

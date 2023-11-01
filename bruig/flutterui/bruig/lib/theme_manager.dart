@@ -83,7 +83,11 @@ class ThemeNotifier with ChangeNotifier {
   late double _fontSize = defaultFontSize;
   double getFontCoef() => _fontSize;
 
-  double getFontSize() => _fontSize * 10 + 2;
+  double getSmallFont() => _fontSize * 2 + 11;
+
+  double getMediumFont() => _fontSize * 2 + 13;
+
+  double getLargeFont() => _fontSize * 2 + 15;
 
   ThemeNotifier() {
     StorageManager.readData('themeMode').then((value) {

@@ -6,6 +6,7 @@ import 'package:bruig/components/addressbook/addressbook.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/models/notifications.dart';
 import 'package:bruig/screens/needs_out_channel.dart';
+import 'package:bruig/theme_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
@@ -24,21 +25,28 @@ class ChatsScreenTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<ClientModel>(builder: (context, client, child) {
+    var theme = Theme.of(context);
+    var darkTextColor = theme.indicatorColor;
+    var hightLightTextColor = theme.dividerColor; // NAME TEXT COLOR
+    var selectedBackgroundColor = theme.highlightColor;
+    return Consumer2<ClientModel, ThemeNotifier>(
+        builder: (context, client, theme, child) {
       var activeHeading = client.active;
       if (activeHeading == null) {
         return Row(mainAxisAlignment: MainAxisAlignment.center, children: [
           Text("Bison Relay / Chat",
               textAlign: TextAlign.center,
-              style:
-                  TextStyle(fontSize: 18, color: Theme.of(context).focusColor))
+              style: TextStyle(
+                  fontSize: theme.getLargeFont(),
+                  color: Theme.of(context).focusColor))
         ]);
       }
       if (client.showAddressBook) {
         return Row(mainAxisAlignment: MainAxisAlignment.center, children: [
           Text("Bison Relay / Chat / Address Book",
-              style:
-                  TextStyle(fontSize: 15, color: Theme.of(context).focusColor))
+              style: TextStyle(
+                  fontSize: theme.getLargeFont(),
+                  color: Theme.of(context).focusColor))
         ]);
       }
       var chat = client.getExistingChat(activeHeading.id);
@@ -46,8 +54,9 @@ class ChatsScreenTitle extends StatelessWidget {
         return Row(mainAxisAlignment: MainAxisAlignment.center, children: [
           Text("Bison Relay / Chat",
               textAlign: TextAlign.center,
-              style:
-                  TextStyle(fontSize: 18, color: Theme.of(context).focusColor))
+              style: TextStyle(
+                  fontSize: theme.getLargeFont(),
+                  color: Theme.of(context).focusColor))
         ]);
       }
       var profile = client.profile;
@@ -60,10 +69,6 @@ class ChatsScreenTitle extends StatelessWidget {
 
       bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
       if (isScreenSmall) {
-        var theme = Theme.of(context);
-        var darkTextColor = theme.indicatorColor;
-        var hightLightTextColor = theme.dividerColor; // NAME TEXT COLOR
-        var selectedBackgroundColor = theme.highlightColor;
         var avatarColor = colorFromNick(chat.nick);
         var avatarTextColor =
             ThemeData.estimateBrightnessForColor(avatarColor) == Brightness.dark
@@ -78,7 +83,8 @@ class ChatsScreenTitle extends StatelessWidget {
                       color: Theme.of(context).focusColor)),
               Text("Bison Relay / Chat$suffix$profileSuffix",
                   style: TextStyle(
-                      fontSize: 18, color: Theme.of(context).focusColor)),
+                      fontSize: theme.getLargeFont(),
+                      color: Theme.of(context).focusColor)),
               chat.isGC
                   ? const Empty()
                   : Container(
@@ -101,7 +107,9 @@ class ChatsScreenTitle extends StatelessWidget {
             ]);
       }
       return Text("Bison Relay / Chat$suffix$profileSuffix",
-          style: TextStyle(fontSize: 15, color: Theme.of(context).focusColor));
+          style: TextStyle(
+              fontSize: theme.getLargeFont(),
+              color: Theme.of(context).focusColor));
     });
   }
 }
