@@ -213,7 +213,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
                 titleSpacing: 0.0,
                 title: _OverviewScreenTitle(widget.mainMenu),
                 leading: Builder(builder: (BuildContext context) {
-                  return client.active != null
+                  return client.active != null || client.showAddressBook
                       ? IconButton(
                           iconSize: 20,
                           splashRadius: 20,
