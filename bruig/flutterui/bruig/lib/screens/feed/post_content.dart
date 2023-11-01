@@ -911,15 +911,17 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
 
                 // end of post area
               ]),
-          IconButton(
-              alignment: Alignment.topLeft,
-              padding: const EdgeInsets.all(15),
-              iconSize: 15,
-              tooltip: "Go back",
-              onPressed: () => Navigator.of(context).pushReplacementNamed(
-                  '/feed',
-                  arguments: PageTabs(0, [])), //widget.tabChange(0, null),
-              icon: Icon(color: darkTextColor, Icons.close_outlined)),
+          isScreenSmall
+              ? const Empty()
+              : IconButton(
+                  alignment: Alignment.topLeft,
+                  padding: const EdgeInsets.all(15),
+                  iconSize: 15,
+                  tooltip: "Go back",
+                  onPressed: () => Navigator.of(context).pushReplacementNamed(
+                      '/feed',
+                      arguments: PageTabs(0, [])), //widget.tabChange(0, null),
+                  icon: Icon(color: darkTextColor, Icons.close_outlined)),
         ]));
   }
 }

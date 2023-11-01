@@ -88,6 +88,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
   ClientModel get client => widget.client;
   AppNotifications get ntfns => widget.ntfns;
   DownloadsModel get down => widget.down;
+  FeedModel get feed => widget.feed;
   ServerSessionState connState = ServerSessionState.empty();
   GlobalKey<NavigatorState> navKey = GlobalKey(debugLabel: "overview nav key");
 
@@ -222,12 +223,25 @@ class _OverviewScreenState extends State<OverviewScreen> {
                               : client.active = null,
                           icon: Icon(Icons.keyboard_arrow_left_rounded,
                               color: Theme.of(context).focusColor))
-                      : IconButton(
-                          iconSize: 20,
-                          splashRadius: 20,
-                          icon: const Icon(Icons.menu_rounded),
-                          onPressed: () => Scaffold.of(context).openDrawer(),
-                        );
+                      : feed.active != null
+                          ? IconButton(
+                              iconSize: 20,
+                              splashRadius: 20,
+                              icon: Icon(Icons.keyboard_arrow_left_rounded,
+                                  color: Theme.of(context).focusColor),
+                              onPressed: () {
+                                feed.active = null;
+                                navKey.currentState!.pushReplacementNamed(
+                                    '/feed',
+                                    arguments: PageTabs(0, []));
+                              })
+                          : IconButton(
+                              iconSize: 20,
+                              splashRadius: 20,
+                              icon: const Icon(Icons.menu_rounded),
+                              onPressed: () =>
+                                  Scaffold.of(context).openDrawer(),
+                            );
                 }),
               )
             : AppBar(
