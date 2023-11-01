@@ -139,6 +139,7 @@ class _FundsNeededPage extends StatelessWidget {
     var backgroundColor = theme.backgroundColor;
     var textColor = const Color(0xFF8E8D98);
     var secondaryTextColor = const Color(0xFFE4E3E6);
+    bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
 
     return Consumer<ThemeNotifier>(
         builder: (context, theme, child) => Container(
@@ -155,8 +156,7 @@ class _FundsNeededPage extends StatelessWidget {
                         fontWeight: FontWeight.w200)),
                 const SizedBox(height: 34),
                 Text('''
-Bison relay requires active LN channels with outbound capacity to pay to send
-messages to the server.
+Bison relay requires active LN channels with outbound capacity to pay to send messages to the server.
 ''',
                     style: TextStyle(
                         color: secondaryTextColor,
@@ -164,7 +164,9 @@ messages to the server.
                         fontWeight: FontWeight.w300)),
                 const SizedBox(height: 34),
                 Center(
-                  child: Row(
+                  child: Flex(
+                      direction:
+                          isScreenSmall ? Axis.vertical : Axis.horizontal,
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         LoadingScreenButton(
@@ -173,7 +175,7 @@ messages to the server.
                                   .pushNamed("/needsFunds"),
                           text: "Add wallet funds",
                         ),
-                        const SizedBox(width: 34),
+                        const SizedBox(height: 20, width: 34),
                         LoadingScreenButton(
                           onPressed: () =>
                               Navigator.of(context, rootNavigator: true)
