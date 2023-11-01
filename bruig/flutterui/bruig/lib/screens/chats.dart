@@ -246,7 +246,7 @@ class _InviteNeededPageState extends State<_InviteNeededPage> {
     var backgroundColor = theme.backgroundColor;
     var textColor = const Color(0xFF8E8D98);
     var secondaryTextColor = const Color(0xFFE4E3E6);
-
+    bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
     return Consumer<ThemeNotifier>(
         builder: (context, theme, child) => Container(
             padding: const EdgeInsets.all(20),
@@ -262,7 +262,7 @@ class _InviteNeededPageState extends State<_InviteNeededPage> {
                         fontWeight: FontWeight.w200)),
                 const SizedBox(height: 34),
                 Text('''
-Bison Relay does not rely on a central server for user accounts, so to chat with someone else you need to exchange an invitation with them. This is  just a file that should be sent via some other secure transfer method.
+Bison Relay does not rely on a central server for user accounts, so to chat with someone else you need to exchange an invitation with them. This is just a file that should be sent via some other secure transfer method.
 
 After the invitation is accepted, you'll be able to chat with them, and if they know other people, they'll be able to connect you with them.
 ''',
@@ -272,14 +272,16 @@ After the invitation is accepted, you'll be able to chat with them, and if they 
                         fontWeight: FontWeight.w300)),
                 const SizedBox(height: 34),
                 Center(
-                  child: Row(
+                  child: Flex(
+                      direction:
+                          isScreenSmall ? Axis.vertical : Axis.horizontal,
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         LoadingScreenButton(
                           onPressed: () => debouncedLoadInvite(context),
                           text: "Load Invitation",
                         ),
-                        const SizedBox(width: 34),
+                        const SizedBox(height: 20, width: 34),
                         LoadingScreenButton(
                           onPressed: () => generateInvite(context),
                           text: "Create Invitation",
