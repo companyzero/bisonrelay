@@ -3,6 +3,8 @@ import 'package:bruig/components/buttons.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
+import 'package:bruig/theme_manager.dart';
+import 'package:provider/provider.dart';
 
 class InitLocalIDScreen extends StatefulWidget {
   const InitLocalIDScreen({Key? key}) : super(key: key);

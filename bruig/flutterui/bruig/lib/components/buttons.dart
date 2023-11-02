@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:bruig/theme_manager.dart';
+import 'package:provider/provider.dart';
 
 class CancelButton extends StatelessWidget {
   final VoidCallback? onPressed;
@@ -68,26 +70,28 @@ class LoadingScreenButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TextButton(
-        style: minSize != 0
-            ? ElevatedButton.styleFrom(
-                padding: const EdgeInsets.only(
-                    left: 34, top: 10, right: 34, bottom: 10),
-                minimumSize: Size(minSize - 30, 55),
-                foregroundColor: const Color(0xFFE4E3E6),
-                backgroundColor: const Color(0xFF252438),
-                //padding: EdgeInsets.symmetric(horizontal: 16),
-                shape: const RoundedRectangleBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(30)),
-                ),
-              )
-            : empty
-                ? emptyButtonStyle
-                : raisedButtonStyle,
-        onPressed: !loading ? onPressed : null,
-        child: Text(text,
-            style:
-                const TextStyle(fontSize: 21, fontWeight: FontWeight.normal)));
+    return Consumer<ThemeNotifier>(
+        builder: (context, theme, _) => TextButton(
+            style: minSize != 0
+                ? ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.only(
+                        left: 34, top: 10, right: 34, bottom: 10),
+                    minimumSize: Size(minSize - 30, 55),
+                    foregroundColor: const Color(0xFFE4E3E6),
+                    backgroundColor: const Color(0xFF252438),
+                    //padding: EdgeInsets.symmetric(horizontal: 16),
+                    shape: const RoundedRectangleBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(30)),
+                    ),
+                  )
+                : empty
+                    ? emptyButtonStyle
+                    : raisedButtonStyle,
+            onPressed: !loading ? onPressed : null,
+            child: Text(text,
+                style: TextStyle(
+                    fontSize: theme.getLargeFont(),
+                    fontWeight: FontWeight.normal))));
   }
 }
 
@@ -111,25 +115,28 @@ class MobileScreenButton extends StatelessWidget {
     var theme = Theme.of(context);
     var buttonForeground = theme.backgroundColor;
     var buttonBackground = theme.bottomAppBarColor;
-    return TextButton(
-        style: minSize != 0
-            ? ElevatedButton.styleFrom(
-                padding: const EdgeInsets.only(
-                    left: 34, top: 13, right: 34, bottom: 13),
-                minimumSize: Size(minSize - 46, 20),
-                foregroundColor: buttonForeground,
-                backgroundColor: buttonBackground,
-                shape: const RoundedRectangleBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(30)),
-                ),
-              )
-            : empty
-                ? emptyButtonStyle
-                : raisedButtonStyle,
-        onPressed: !loading ? onPressed : null,
-        child: Text(text,
-            style: const TextStyle(
-                letterSpacing: 1, fontSize: 13, fontWeight: FontWeight.w500)));
+    return Consumer<ThemeNotifier>(
+        builder: (context, theme, _) => TextButton(
+            style: minSize != 0
+                ? ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.only(
+                        left: 34, top: 13, right: 34, bottom: 13),
+                    minimumSize: Size(minSize - 46, 20),
+                    foregroundColor: buttonForeground,
+                    backgroundColor: buttonBackground,
+                    shape: const RoundedRectangleBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(30)),
+                    ),
+                  )
+                : empty
+                    ? emptyButtonStyle
+                    : raisedButtonStyle,
+            onPressed: !loading ? onPressed : null,
+            child: Text(text,
+                style: TextStyle(
+                    letterSpacing: 1,
+                    fontSize: theme.getMediumFont(),
+                    fontWeight: FontWeight.w500))));
   }
 }
 
@@ -150,10 +157,12 @@ class FeedReadMoreButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TextButton(
-        style: readMoreButton,
-        onPressed: !loading ? onPressed : null,
-        child:
-            Text(text, style: const TextStyle(letterSpacing: 1, fontSize: 12)));
+    return Consumer<ThemeNotifier>(
+        builder: (context, theme, _) => TextButton(
+            style: readMoreButton,
+            onPressed: !loading ? onPressed : null,
+            child: Text(text,
+                style: TextStyle(
+                    letterSpacing: 1, fontSize: theme.getMediumFont()))));
   }
 }

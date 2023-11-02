@@ -14,6 +14,7 @@ import 'package:bruig/screens/feed/new_post.dart';
 import 'package:bruig/screens/feed/post_lists.dart';
 import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/models/menus.dart';
+import 'package:bruig/theme_manager.dart';
 
 class FeedScreenTitle extends StatelessWidget {
   const FeedScreenTitle({super.key});

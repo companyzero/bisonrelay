@@ -103,8 +103,7 @@ class ThemeNotifier with ChangeNotifier {
     });
     StorageManager.readData('fontCoef').then((value) {
       debugPrint('value read from storage: ${value.toString()}');
-      _fontSize = double.parse(value);
-      print(_fontSize);
+      _fontSize = double.parse(value ?? "1");
       notifyListeners();
     });
   }

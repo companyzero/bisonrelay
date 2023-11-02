@@ -11,6 +11,7 @@ import 'package:flutter/material.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:path/path.dart' as path;
 import 'package:provider/provider.dart';
+import 'package:bruig/theme_manager.dart';
 
 class UnlockLNApp extends StatefulWidget {
   Config cfg;
@@ -537,6 +538,7 @@ Future<void> runUnlockDcrlnd(Config cfg) async {
   runApp(MultiProvider(
     providers: [
       ChangeNotifierProvider(create: (c) => SnackBarModel()),
+      ChangeNotifierProvider(create: (c) => ThemeNotifier()),
     ],
     child: Consumer<SnackBarModel>(
         builder: (context, snackBar, child) => UnlockLNApp(cfg, "/", snackBar)),

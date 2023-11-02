@@ -1,6 +1,8 @@
 import 'package:bruig/components/recent_log.dart';
 import 'package:bruig/models/log.dart';
 import 'package:flutter/material.dart';
+import 'package:bruig/theme_manager.dart';
+import 'package:provider/provider.dart';
 
 class LogScreenTitle extends StatelessWidget {
   const LogScreenTitle({super.key});

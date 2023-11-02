@@ -11,6 +11,8 @@ import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:golib_plugin/util.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:bruig/theme_manager.dart';
+import 'package:provider/provider.dart';
 
 class NeedsFundsScreen extends StatefulWidget {
   final AppNotifications ntfns;

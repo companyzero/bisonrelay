@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:provider/provider.dart';
+import 'package:bruig/theme_manager.dart';
 
 class ManageGCScreen extends StatelessWidget {
   const ManageGCScreen({Key? key}) : super(key: key);
@@ -71,20 +72,23 @@ class _InviteUserPanelState extends State<_InviteUserPanel> {
     var theme = Theme.of(context);
     var textColor = theme.focusColor;
 
-    return Column(children: [
-      Divider(height: 10, color: textColor),
-      const SizedBox(height: 10),
-      Text("Invite to GC", style: TextStyle(color: textColor, fontSize: 20)),
-      Row(children: [
-        Expanded(child: UsersDropdown(cb: (ChatModel? chat) {
-          userToInvite = chat;
-        })),
-        Container(width: 20),
-        ElevatedButton(
-            onPressed: !loading ? () => inviteUser(context) : null,
-            child: const Text('Invite User')),
-      ])
-    ]);
+    return Consumer<ThemeNotifier>(
+        builder: (context, theme, _) => Column(children: [
+              Divider(height: 10, color: textColor),
+              const SizedBox(height: 10),
+              Text("Invite to GC",
+                  style: TextStyle(
+                      color: textColor, fontSize: theme.getMediumFont())),
+              Row(children: [
+                Expanded(child: UsersDropdown(cb: (ChatModel? chat) {
+                  userToInvite = chat;
+                })),
+                Container(width: 20),
+                ElevatedButton(
+                    onPressed: !loading ? () => inviteUser(context) : null,
+                    child: const Text('Invite User')),
+              ])
+            ]));
   }
 }
 
@@ -354,106 +358,120 @@ class ManageGCScreenState extends State<ManageGCScreenForChat> {
     if (firstLoading) {
       return const Scaffold(body: Center(child: Text("Loading...")));
     }
-    return Container(
-      padding: const EdgeInsets.all(40),
-      constraints: const BoxConstraints(maxWidth: 500),
-      child: Column(
-        children: [
-          Row(children: [
-            Text("Managing GC - ",
-                style: TextStyle(fontSize: 20, color: textColor)),
-            Text(gcName,
-                style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: textColor)),
-            const SizedBox(width: 20),
-            localIsOwner
-                ? ElevatedButton(
-                    onPressed: !loading ? killGC : null,
-                    child: const Text("Kill GC"))
-                : ElevatedButton(
-                    onPressed: !loading ? partFromGC : null,
-                    child: const Text("Part from GC")),
-            const SizedBox(width: 10),
-            localIsAdmin && gcVersion < MAXGCVERSION
-                ? ElevatedButton(
-                    onPressed: !loading ? upgradeGC : null,
-                    child: const Text("Upgrade Version"))
-                : const Empty(),
-            const SizedBox(width: 10),
-            ElevatedButton(
-                onPressed: !loading ? hideGC : null,
-                child: const Text("Hide GC"))
-          ]),
-          const SizedBox(height: 10),
-          Row(children: [
-            Text("ID: ",
-                style: TextStyle(
-                    color: textColor,
-                    fontWeight: FontWeight.w100,
-                    fontSize: 10)),
-            Copyable(
-                gcID,
-                TextStyle(
-                    color: textColor,
-                    fontWeight: FontWeight.w100,
-                    fontSize: 10))
-          ]),
-          const SizedBox(height: 3),
-          Row(children: [
-            Text(
-                "Version: $gcVersion, Generation: $gcGeneration, Timestamp: ${gcTimestamp.toIso8601String()}",
-                style: TextStyle(
-                    color: textColor,
-                    fontWeight: FontWeight.w100,
-                    fontSize: 10))
-          ]),
-          const SizedBox(height: 10),
-          localIsAdmin
-              ? Container(
-                  margin: const EdgeInsets.only(top: 10, bottom: 10),
-                  child: _InviteUserPanel(gcID))
-              : const Empty(),
-          Divider(height: 10, color: textColor),
-          const SizedBox(height: 10),
-          Text("GC Members", style: TextStyle(color: textColor, fontSize: 20)),
-          Expanded(
-              child: ListView.builder(
-                  itemCount: users.length,
-                  itemBuilder: (context, index) => ListTile(
-                        title: Text(users[index].nick),
-                        trailing:
-                            Row(mainAxisSize: MainAxisSize.min, children: [
-                          isBlocked(users[index].id)
-                              ? IconButton(
-                                  tooltip: "Un-ignore user messages in this GC",
-                                  icon: const Icon(Icons.volume_off_outlined),
-                                  onPressed: () => unblockUser(users[index].id),
-                                )
-                              : IconButton(
-                                  tooltip: "Ignore user messages in this GC",
-                                  icon: const Icon(Icons.volume_mute),
-                                  onPressed: () => blockUser(users[index].id),
-                                ),
-                          localIsAdmin
-                              ? IconButton(
-                                  icon: const Icon(Icons.remove_circle),
-                                  tooltip: "Remove user from GC",
-                                  onPressed: !loading
-                                      ? () => confirmRemoveUser(context, index)
-                                      : null,
-                                )
-                              : const Empty(),
-                          buildAdminAction(users[index], index),
-                        ]),
-                      ))),
-          ElevatedButton(
-              //style: ElevatedButton.styleFrom(primary: Colors.grey),
-              onPressed: !loading ? () => widget.client.profile = null : null,
-              child: const Text("Done"))
-        ],
-      ),
-    );
+    return Consumer<ThemeNotifier>(
+        builder: (context, theme, _) => Container(
+              padding: const EdgeInsets.all(40),
+              constraints: const BoxConstraints(maxWidth: 500),
+              child: Column(
+                children: [
+                  Row(children: [
+                    Text("Managing GC - ",
+                        style: TextStyle(
+                            fontSize: theme.getMediumFont(), color: textColor)),
+                    Text(gcName,
+                        style: TextStyle(
+                            fontSize: theme.getMediumFont(),
+                            fontWeight: FontWeight.bold,
+                            color: textColor)),
+                    const SizedBox(width: 20),
+                    localIsOwner
+                        ? ElevatedButton(
+                            onPressed: !loading ? killGC : null,
+                            child: const Text("Kill GC"))
+                        : ElevatedButton(
+                            onPressed: !loading ? partFromGC : null,
+                            child: const Text("Part from GC")),
+                    const SizedBox(width: 10),
+                    localIsAdmin && gcVersion < MAXGCVERSION
+                        ? ElevatedButton(
+                            onPressed: !loading ? upgradeGC : null,
+                            child: const Text("Upgrade Version"))
+                        : const Empty(),
+                    const SizedBox(width: 10),
+                    ElevatedButton(
+                        onPressed: !loading ? hideGC : null,
+                        child: const Text("Hide GC"))
+                  ]),
+                  const SizedBox(height: 10),
+                  Row(children: [
+                    Text("ID: ",
+                        style: TextStyle(
+                            color: textColor,
+                            fontWeight: FontWeight.w100,
+                            fontSize: theme.getSmallFont())),
+                    Copyable(
+                        gcID,
+                        TextStyle(
+                            color: textColor,
+                            fontWeight: FontWeight.w100,
+                            fontSize: theme.getSmallFont()))
+                  ]),
+                  const SizedBox(height: 3),
+                  Row(children: [
+                    Text(
+                        "Version: $gcVersion, Generation: $gcGeneration, Timestamp: ${gcTimestamp.toIso8601String()}",
+                        style: TextStyle(
+                            color: textColor,
+                            fontWeight: FontWeight.w100,
+                            fontSize: theme.getSmallFont()))
+                  ]),
+                  const SizedBox(height: 10),
+                  localIsAdmin
+                      ? Container(
+                          margin: const EdgeInsets.only(top: 10, bottom: 10),
+                          child: _InviteUserPanel(gcID))
+                      : const Empty(),
+                  Divider(height: 10, color: textColor),
+                  const SizedBox(height: 10),
+                  Text("GC Members",
+                      style: TextStyle(
+                          color: textColor, fontSize: theme.getMediumFont())),
+                  Expanded(
+                      child: ListView.builder(
+                          itemCount: users.length,
+                          itemBuilder: (context, index) => ListTile(
+                                title: Text(users[index].nick),
+                                trailing: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      isBlocked(users[index].id)
+                                          ? IconButton(
+                                              tooltip:
+                                                  "Un-ignore user messages in this GC",
+                                              icon: const Icon(
+                                                  Icons.volume_off_outlined),
+                                              onPressed: () =>
+                                                  unblockUser(users[index].id),
+                                            )
+                                          : IconButton(
+                                              tooltip:
+                                                  "Ignore user messages in this GC",
+                                              icon:
+                                                  const Icon(Icons.volume_mute),
+                                              onPressed: () =>
+                                                  blockUser(users[index].id),
+                                            ),
+                                      localIsAdmin
+                                          ? IconButton(
+                                              icon: const Icon(
+                                                  Icons.remove_circle),
+                                              tooltip: "Remove user from GC",
+                                              onPressed: !loading
+                                                  ? () => confirmRemoveUser(
+                                                      context, index)
+                                                  : null,
+                                            )
+                                          : const Empty(),
+                                      buildAdminAction(users[index], index),
+                                    ]),
+                              ))),
+                  ElevatedButton(
+                      //style: ElevatedButton.styleFrom(primary: Colors.grey),
+                      onPressed:
+                          !loading ? () => widget.client.profile = null : null,
+                      child: const Text("Done"))
+                ],
+              ),
+            ));
   }
 }

@@ -8,6 +8,8 @@ import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:tuple/tuple.dart';
+import 'package:bruig/theme_manager.dart';
+import 'package:provider/provider.dart';
 
 class UserProfile extends StatefulWidget {
   final ClientModel client;
@@ -147,100 +149,108 @@ class _UserProfileState extends State<UserProfile> {
   Widget build(BuildContext context) {
     var theme = Theme.of(context);
     var textColor = theme.focusColor;
-    var txtTS =
-        TextStyle(color: textColor, fontWeight: FontWeight.w100, fontSize: 12);
-    var headTS =
-        TextStyle(color: textColor, fontWeight: FontWeight.w400, fontSize: 12);
+    var errorColor = theme.errorColor;
+    return Consumer<ThemeNotifier>(builder: (context, theme, _) {
+      var txtTS = TextStyle(
+          color: textColor,
+          fontWeight: FontWeight.w100,
+          fontSize: theme.getSmallFont());
+      var headTS = TextStyle(
+          color: textColor,
+          fontWeight: FontWeight.w400,
+          fontSize: theme.getSmallFont());
 
-    return Container(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text("User Profile - ",
-                    style: TextStyle(color: textColor, fontSize: 20)),
-                Text(chat.nick,
-                    style: TextStyle(
-                        color: textColor,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold)),
-              ],
-            ),
-            Text(chat.id,
-                style:
-                    TextStyle(color: textColor, fontWeight: FontWeight.w100)),
-            const SizedBox(height: 20),
-            isIgnored
-                ? ElevatedButton(
-                    onPressed: !loading ? unignore : null,
-                    child: const Text("Un-ignore user"))
-                : ElevatedButton(
-                    onPressed: !loading ? ignore : null,
-                    child: const Text("Ignore user")),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: !loading ? hide : null,
-              child: const Text("Hide Chat"),
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: !loading ? confirmBlock : null,
-              style:
-                  ElevatedButton.styleFrom(backgroundColor: theme.errorColor),
-              child: const Text("Block User"),
-            ),
-            const SizedBox(height: 20),
-            Text("Ratchet Debug Info",
-                style: TextStyle(color: textColor, fontSize: 20)),
-            const SizedBox(height: 10),
-            SimpleInfoGrid([
-              Tuple2(Text("First Created", style: headTS),
-                  Text(abEntry.firstCreated.toIso8601String(), style: txtTS)),
-              Tuple2(
-                  Text("Last Handshake Attempt", style: headTS),
-                  Text(abEntry.lastHandshakeAttempt.toIso8601String(),
-                      style: txtTS)),
-              Tuple2(
-                  Text("Last Sent Time", style: headTS),
-                  Text(ratchetInfo.lastEncTime.toIso8601String(),
-                      style: txtTS)),
-              Tuple2(
-                  Text("Last Received Time", style: headTS),
-                  Text(ratchetInfo.lastDecTime.toIso8601String(),
-                      style: txtTS)),
-              Tuple2(
-                  Text("Send RV", style: headTS),
-                  Copyable(
-                      "${ratchetInfo.sendRVPlain} (${_shortLog(ratchetInfo.sendRV)}...)",
-                      txtTS)),
-              Tuple2(
-                  Text("Receive RV", style: headTS),
-                  Copyable(
-                      "${ratchetInfo.recvRVPlain} (${_shortLog(ratchetInfo.recvRV)}...)",
-                      txtTS)),
-              Tuple2(
-                  Text("Drain RV", style: headTS),
-                  Copyable(
-                      "${ratchetInfo.drainRVPlain} (${_shortLog(ratchetInfo.drainRV)}...)",
-                      txtTS)),
-              Tuple2(Text("My Reset RV", style: headTS),
-                  Copyable(ratchetInfo.myResetRV, txtTS)),
-              Tuple2(Text("Their Reset RV", style: headTS),
-                  Copyable(ratchetInfo.theirResetRV, txtTS)),
-              Tuple2(Text("Saved Keys", style: headTS),
-                  Text(ratchetInfo.nbSavedKeys.toString(), style: txtTS)),
-              Tuple2(Text("Will Ratchet", style: headTS),
-                  Text(ratchetInfo.willRatchet.toString(), style: txtTS)),
-            ]),
-            const Expanded(
-              child: Text(""),
-            ),
-            ElevatedButton(
-                onPressed: () => widget.client.profile = null,
-                child: const Text("Done"))
-          ],
-        ));
+      return Container(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text("User Profile - ",
+                      style: TextStyle(
+                          color: textColor, fontSize: theme.getMediumFont())),
+                  Text(chat.nick,
+                      style: TextStyle(
+                          color: textColor,
+                          fontSize: theme.getMediumFont(),
+                          fontWeight: FontWeight.bold)),
+                ],
+              ),
+              Text(chat.id,
+                  style:
+                      TextStyle(color: textColor, fontWeight: FontWeight.w100)),
+              const SizedBox(height: 20),
+              isIgnored
+                  ? ElevatedButton(
+                      onPressed: !loading ? unignore : null,
+                      child: const Text("Un-ignore user"))
+                  : ElevatedButton(
+                      onPressed: !loading ? ignore : null,
+                      child: const Text("Ignore user")),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: !loading ? hide : null,
+                child: const Text("Hide Chat"),
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: !loading ? confirmBlock : null,
+                style: ElevatedButton.styleFrom(backgroundColor: errorColor),
+                child: const Text("Block User"),
+              ),
+              const SizedBox(height: 20),
+              Text("Ratchet Debug Info",
+                  style: TextStyle(
+                      color: textColor, fontSize: theme.getMediumFont())),
+              const SizedBox(height: 10),
+              SimpleInfoGrid([
+                Tuple2(Text("First Created", style: headTS),
+                    Text(abEntry.firstCreated.toIso8601String(), style: txtTS)),
+                Tuple2(
+                    Text("Last Handshake Attempt", style: headTS),
+                    Text(abEntry.lastHandshakeAttempt.toIso8601String(),
+                        style: txtTS)),
+                Tuple2(
+                    Text("Last Sent Time", style: headTS),
+                    Text(ratchetInfo.lastEncTime.toIso8601String(),
+                        style: txtTS)),
+                Tuple2(
+                    Text("Last Received Time", style: headTS),
+                    Text(ratchetInfo.lastDecTime.toIso8601String(),
+                        style: txtTS)),
+                Tuple2(
+                    Text("Send RV", style: headTS),
+                    Copyable(
+                        "${ratchetInfo.sendRVPlain} (${_shortLog(ratchetInfo.sendRV)}...)",
+                        txtTS)),
+                Tuple2(
+                    Text("Receive RV", style: headTS),
+                    Copyable(
+                        "${ratchetInfo.recvRVPlain} (${_shortLog(ratchetInfo.recvRV)}...)",
+                        txtTS)),
+                Tuple2(
+                    Text("Drain RV", style: headTS),
+                    Copyable(
+                        "${ratchetInfo.drainRVPlain} (${_shortLog(ratchetInfo.drainRV)}...)",
+                        txtTS)),
+                Tuple2(Text("My Reset RV", style: headTS),
+                    Copyable(ratchetInfo.myResetRV, txtTS)),
+                Tuple2(Text("Their Reset RV", style: headTS),
+                    Copyable(ratchetInfo.theirResetRV, txtTS)),
+                Tuple2(Text("Saved Keys", style: headTS),
+                    Text(ratchetInfo.nbSavedKeys.toString(), style: txtTS)),
+                Tuple2(Text("Will Ratchet", style: headTS),
+                    Text(ratchetInfo.willRatchet.toString(), style: txtTS)),
+              ]),
+              const Expanded(
+                child: Text(""),
+              ),
+              ElevatedButton(
+                  onPressed: () => widget.client.profile = null,
+                  child: const Text("Done"))
+            ],
+          ));
+    });
   }
 }

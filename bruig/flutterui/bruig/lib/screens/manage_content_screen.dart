@@ -9,6 +9,7 @@ import 'package:bruig/components/manage_bar.dart';
 import 'package:bruig/screens/overview.dart';
 import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/models/menus.dart';
+import 'package:bruig/theme_manager.dart';
 
 class ManageContentScreenTitle extends StatelessWidget {
   const ManageContentScreenTitle({super.key});

@@ -6,6 +6,8 @@ import 'package:bruig/util.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/util.dart';
+import 'package:bruig/theme_manager.dart';
+import 'package:provider/provider.dart';
 
 class ConfirmFileDownloadScreen extends StatelessWidget {
   final ClientModel client;

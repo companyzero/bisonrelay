@@ -12,6 +12,7 @@ import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:golib_plugin/util.dart';
 import 'package:provider/provider.dart';
+import 'package:bruig/theme_manager.dart';
 
 Map<OnboardStage, String> _stageTitle = {
   OnboardStage.stageFetchingInvite: "Fetching invite from server",

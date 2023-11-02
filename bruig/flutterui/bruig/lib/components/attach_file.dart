@@ -11,6 +11,8 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:golib_plugin/definitions.dart';
+import 'package:bruig/theme_manager.dart';
+import 'package:provider/provider.dart';
 
 class AttachmentEmbed {
   String? mime;
@@ -144,53 +146,56 @@ class _AttachFileScreenState extends State<AttachFileScreen> {
     var theme = Theme.of(context);
     var textColor = theme.focusColor;
 
-    return Scaffold(
-      body: Container(
-        padding: const EdgeInsets.all(40),
-        child: Center(
-          child: Column(children: [
-            Text("Attach File",
-                style: TextStyle(fontSize: 20, color: textColor)),
-            const SizedBox(height: 20),
-            Row(children: [
-              filePath != ""
-                  ? Expanded(
-                      child: Text(
-                        "File: $filePath",
-                        style: TextStyle(color: textColor),
-                      ),
-                    )
-                  : const Empty(),
-              ElevatedButton(
-                  onPressed: loadFile, child: const Text("Load File")),
-            ]),
-            const SizedBox(height: 20),
-            Row(children: [
-              Text("Alt Text:", style: TextStyle(color: textColor)),
-              const SizedBox(width: 41),
-              Flexible(child: TextField(controller: altTxtCtrl)),
-            ]),
-            const SizedBox(height: 20),
-            Row(children: [
-              Text("Linking to: ", style: TextStyle(color: textColor)),
-              const SizedBox(width: 20),
-              Flexible(
-                  child: LocalContentDropDown(
-                true,
-                onChanged: onLinkChanged,
-              )),
-            ]),
-            const Expanded(child: Empty()),
-            Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-              ElevatedButton(onPressed: attach, child: const Text("Attach")),
-              const SizedBox(width: 10),
-              CancelButton(onPressed: () {
-                Navigator.of(context).pop();
-              }),
-            ]),
-          ]),
-        ),
-      ),
-    );
+    return Consumer<ThemeNotifier>(
+        builder: (context, theme, _) => Scaffold(
+              body: Container(
+                padding: const EdgeInsets.all(40),
+                child: Center(
+                  child: Column(children: [
+                    Text("Attach File",
+                        style: TextStyle(
+                            fontSize: theme.getLargeFont(), color: textColor)),
+                    const SizedBox(height: 20),
+                    Row(children: [
+                      filePath != ""
+                          ? Expanded(
+                              child: Text(
+                                "File: $filePath",
+                                style: TextStyle(color: textColor),
+                              ),
+                            )
+                          : const Empty(),
+                      ElevatedButton(
+                          onPressed: loadFile, child: const Text("Load File")),
+                    ]),
+                    const SizedBox(height: 20),
+                    Row(children: [
+                      Text("Alt Text:", style: TextStyle(color: textColor)),
+                      const SizedBox(width: 41),
+                      Flexible(child: TextField(controller: altTxtCtrl)),
+                    ]),
+                    const SizedBox(height: 20),
+                    Row(children: [
+                      Text("Linking to: ", style: TextStyle(color: textColor)),
+                      const SizedBox(width: 20),
+                      Flexible(
+                          child: LocalContentDropDown(
+                        true,
+                        onChanged: onLinkChanged,
+                      )),
+                    ]),
+                    const Expanded(child: Empty()),
+                    Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                      ElevatedButton(
+                          onPressed: attach, child: const Text("Attach")),
+                      const SizedBox(width: 10),
+                      CancelButton(onPressed: () {
+                        Navigator.of(context).pop();
+                      }),
+                    ]),
+                  ]),
+                ),
+              ),
+            ));
   }
 }

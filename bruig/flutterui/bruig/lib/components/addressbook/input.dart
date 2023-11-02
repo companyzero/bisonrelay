@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:bruig/models/client.dart';
+import 'package:bruig/theme_manager.dart';
+import 'package:provider/provider.dart';
 
 class Input extends StatefulWidget {
   final ClientModel client;
@@ -55,43 +57,44 @@ class _InputState extends State<Input> {
     var hoverColor = theme.hoverColor;
     var backgroundColor = theme.highlightColor;
     var hintTextColor = theme.dividerColor;
-    return RawKeyboardListener(
-      focusNode: node,
-      onKey: handleKeyPress,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 5),
-        child: Row(
-          children: [
-            Expanded(
-                child: TextField(
-              autofocus: true,
-              focusNode: widget.inputFocusNode,
-              style: TextStyle(
-                fontSize: 11,
-                color: textColor,
-              ),
-              controller: controller,
-              minLines: 1,
-              maxLines: null,
-              //textInputAction: TextInputAction.done,
-              //style: normalTextStyle,
-              keyboardType: TextInputType.multiline,
-              decoration: InputDecoration(
-                filled: true,
-                fillColor: backgroundColor,
-                hoverColor: hoverColor,
-                isDense: true,
-                hintText: 'Search Address book for Room or User',
-                hintStyle: TextStyle(
-                  fontSize: 11,
-                  color: hintTextColor,
+    return Consumer<ThemeNotifier>(
+        builder: (context, theme, _) => RawKeyboardListener(
+              focusNode: node,
+              onKey: handleKeyPress,
+              child: Container(
+                margin: const EdgeInsets.only(bottom: 5),
+                child: Row(
+                  children: [
+                    Expanded(
+                        child: TextField(
+                      autofocus: true,
+                      focusNode: widget.inputFocusNode,
+                      style: TextStyle(
+                        fontSize: theme.getMediumFont(),
+                        color: textColor,
+                      ),
+                      controller: controller,
+                      minLines: 1,
+                      maxLines: null,
+                      //textInputAction: TextInputAction.done,
+                      //style: normalTextStyle,
+                      keyboardType: TextInputType.multiline,
+                      decoration: InputDecoration(
+                        filled: true,
+                        fillColor: backgroundColor,
+                        hoverColor: hoverColor,
+                        isDense: true,
+                        hintText: 'Search Address book for Room or User',
+                        hintStyle: TextStyle(
+                          fontSize: theme.getMediumFont(),
+                          color: hintTextColor,
+                        ),
+                        border: InputBorder.none,
+                      ),
+                    )),
+                  ],
                 ),
-                border: InputBorder.none,
               ),
-            )),
-          ],
-        ),
-      ),
-    );
+            ));
   }
 }

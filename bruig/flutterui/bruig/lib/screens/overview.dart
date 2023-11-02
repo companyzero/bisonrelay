@@ -14,6 +14,8 @@ import 'package:bruig/screens/feed.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
+import 'package:bruig/theme_manager.dart';
+import 'package:provider/provider.dart';
 
 class _OverviewScreenTitle extends StatefulWidget {
   final MainMenuModel mainMenu;
