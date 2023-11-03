@@ -3,6 +3,8 @@ import 'package:bruig/models/client.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
+import 'package:bruig/theme_manager.dart';
+import 'package:provider/provider.dart';
 
 class ContactsLastMsgTimesScreen extends StatefulWidget {
   static const routeName = "contactsLastMsgTimes";
@@ -93,25 +95,31 @@ class _ContactsLastMsgTimesScreenState
   @override
   Widget build(BuildContext context) {
     var textColor = const Color(0xFF8E8D98);
-    return Scaffold(
-      body: Center(
-          child: Container(
-              padding: const EdgeInsets.all(40),
-              child: Column(
-                children: [
-                  Text(
-                    "Last Message Time",
-                    style: TextStyle(color: textColor, fontSize: 20),
-                  ),
-                  Expanded(
-                      child: ListView.builder(
-                          itemCount: users.length,
-                          itemBuilder: (context, index) => _UserLastMsgTime(
-                              users[index],
-                              client.getExistingChat(users[index].uid)!))),
-                  ElevatedButton(onPressed: onDone, child: const Text("Done"))
-                ],
-              ))),
-    );
+    return Consumer<ThemeNotifier>(
+        builder: (context, theme, child) => Scaffold(
+              body: Center(
+                  child: Container(
+                      padding: const EdgeInsets.all(40),
+                      child: Column(
+                        children: [
+                          Text(
+                            "Last Message Time",
+                            style: TextStyle(
+                                color: textColor,
+                                fontSize: theme.getLargeFont()),
+                          ),
+                          Expanded(
+                              child: ListView.builder(
+                                  itemCount: users.length,
+                                  itemBuilder: (context, index) =>
+                                      _UserLastMsgTime(
+                                          users[index],
+                                          client.getExistingChat(
+                                              users[index].uid)!))),
+                          ElevatedButton(
+                              onPressed: onDone, child: const Text("Done"))
+                        ],
+                      ))),
+            ));
   }
 }

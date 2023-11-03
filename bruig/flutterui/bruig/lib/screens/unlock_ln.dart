@@ -115,205 +115,214 @@ class __LNUnlockPageState extends State<_LNUnlockPage> {
         fit: BoxFit.fill, image: AssetImage("assets/images/loading-bg.png"));
     var mobileBG = const DecorationImage(
         fit: BoxFit.fill, image: AssetImage("assets/images/testBG.gif"));
-    return Container(
-        color: backgroundColor,
-        child: Stack(children: [
-          Container(
-              decoration:
-                  BoxDecoration(image: isScreenSmall ? mobileBG : wideBG)),
-          Container(
-            decoration: isScreenSmall
-                ? null
-                : BoxDecoration(
-                    gradient: LinearGradient(
-                        begin: Alignment.bottomLeft,
-                        end: Alignment.topRight,
-                        colors: [
-                        cardColor,
-                        const Color(0xFF07051C),
-                        backgroundColor.withOpacity(0.34),
-                      ],
-                        stops: const [
-                        0,
-                        0.17,
-                        1
-                      ])),
-            padding: const EdgeInsets.all(30),
-            child: isScreenSmall
-                ? Column(mainAxisAlignment: MainAxisAlignment.end, children: [
-                    SizedBox(
-                        width: 250,
-                        child: Text("Connect to Bison Relay",
-                            textAlign: TextAlign.center,
+    return Consumer<ThemeNotifier>(
+        builder: (context, theme, child) => Container(
+            color: backgroundColor,
+            child: Stack(children: [
+              Container(
+                  decoration:
+                      BoxDecoration(image: isScreenSmall ? mobileBG : wideBG)),
+              Container(
+                decoration: isScreenSmall
+                    ? null
+                    : BoxDecoration(
+                        gradient: LinearGradient(
+                            begin: Alignment.bottomLeft,
+                            end: Alignment.topRight,
+                            colors: [
+                            cardColor,
+                            const Color(0xFF07051C),
+                            backgroundColor.withOpacity(0.34),
+                          ],
+                            stops: const [
+                            0,
+                            0.17,
+                            1
+                          ])),
+                padding: const EdgeInsets.all(30),
+                child: isScreenSmall
+                    ? Column(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                            SizedBox(
+                                width: 250,
+                                child: Text("Connect to Bison Relay",
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                        color: secondaryTextColor,
+                                        fontSize: theme.getHugeFont(),
+                                        fontWeight: FontWeight.w300))),
+                            SizedBox(
+                              height: MediaQuery.of(context).size.height / 6,
+                            ),
+                            loading
+                                ? SizedBox(
+                                    width: 50,
+                                    height: 50,
+                                    child: CircularProgressIndicator(
+                                        value: null,
+                                        backgroundColor: backgroundColor,
+                                        color: secondaryTextColor,
+                                        strokeWidth: 2),
+                                  )
+                                : const SizedBox(height: 50),
+                            SizedBox(
+                                height: MediaQuery.of(context).size.height / 6),
+                            Expanded(
+                                child: TextField(
+                                    enabled: !loading,
+                                    autofocus: true,
+                                    cursorColor: secondaryTextColor,
+                                    decoration: InputDecoration(
+                                        enabled: !loading,
+                                        labelText: "Password",
+                                        labelStyle: TextStyle(
+                                            letterSpacing: 0,
+                                            color: secondaryTextColor),
+                                        errorText:
+                                            _validate != "" ? _validate : null,
+                                        errorBorder: const OutlineInputBorder(
+                                          borderRadius: BorderRadius.all(
+                                              Radius.circular(10.0)),
+                                          borderSide: BorderSide(
+                                              color: Colors.red, width: 2.0),
+                                        ),
+                                        focusedBorder: OutlineInputBorder(
+                                          borderRadius: const BorderRadius.all(
+                                              Radius.circular(10.0)),
+                                          borderSide: BorderSide(
+                                              color: secondaryTextColor,
+                                              width: 2.0),
+                                        ),
+                                        border: OutlineInputBorder(
+                                          borderRadius: const BorderRadius.all(
+                                              Radius.circular(10.0)),
+                                          borderSide: BorderSide(
+                                              color: cardColor, width: 2.0),
+                                        ),
+                                        hintText: "Password",
+                                        hintStyle: TextStyle(
+                                            letterSpacing: 0,
+                                            fontWeight: FontWeight.w100,
+                                            color: secondaryTextColor),
+                                        filled: true,
+                                        fillColor: cardColor),
+                                    style: TextStyle(
+                                        letterSpacing: 5,
+                                        color: secondaryTextColor,
+                                        fontSize: theme.getLargeFont()),
+                                    controller: passCtrl,
+                                    obscureText: true,
+                                    onSubmitted: (value) {
+                                      if (!loading) {
+                                        unlock();
+                                      }
+                                    },
+                                    onChanged: (value) {
+                                      setState(() {
+                                        _validate = value.isEmpty
+                                            ? "Password cannot be empty"
+                                            : "";
+                                      });
+                                    })),
+                            _validate == ""
+                                ? const SizedBox(height: 22)
+                                : const Empty(),
+                            const SizedBox(height: 34),
+                            LoadingScreenButton(
+                              minSize: MediaQuery.of(context).size.width,
+                              onPressed: !loading ? unlock : null,
+                              text: "Unlock Wallet",
+                            ),
+                          ])
+                    : Column(children: [
+                        Row(children: [
+                          IconButton(
+                              alignment: Alignment.topLeft,
+                              tooltip: "About Bison Relay",
+                              iconSize: 50,
+                              onPressed: goToAbout,
+                              icon: Image.asset(
+                                "assets/images/icon.png",
+                              )),
+                        ]),
+                        const SizedBox(height: 208),
+                        Text("Connect to Bison Relay",
                             style: TextStyle(
-                                color: secondaryTextColor,
-                                fontSize: 40,
-                                fontWeight: FontWeight.w300))),
-                    SizedBox(
-                      height: MediaQuery.of(context).size.height / 6,
-                    ),
-                    loading
-                        ? SizedBox(
-                            width: 50,
-                            height: 50,
-                            child: CircularProgressIndicator(
-                                value: null,
-                                backgroundColor: backgroundColor,
-                                color: secondaryTextColor,
-                                strokeWidth: 2),
-                          )
-                        : const SizedBox(height: 50),
-                    SizedBox(height: MediaQuery.of(context).size.height / 6),
-                    Expanded(
-                        child: TextField(
-                            enabled: !loading,
-                            autofocus: true,
-                            cursorColor: secondaryTextColor,
-                            decoration: InputDecoration(
-                                enabled: !loading,
-                                labelText: "Password",
-                                labelStyle: TextStyle(
-                                    letterSpacing: 0,
-                                    color: secondaryTextColor),
-                                errorText: _validate != "" ? _validate : null,
-                                errorBorder: const OutlineInputBorder(
-                                  borderRadius:
-                                      BorderRadius.all(Radius.circular(10.0)),
-                                  borderSide:
-                                      BorderSide(color: Colors.red, width: 2.0),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: const BorderRadius.all(
-                                      Radius.circular(10.0)),
-                                  borderSide: BorderSide(
-                                      color: secondaryTextColor, width: 2.0),
-                                ),
-                                border: OutlineInputBorder(
-                                  borderRadius: const BorderRadius.all(
-                                      Radius.circular(10.0)),
-                                  borderSide:
-                                      BorderSide(color: cardColor, width: 2.0),
-                                ),
-                                hintText: "Password",
-                                hintStyle: TextStyle(
-                                    letterSpacing: 0,
-                                    fontWeight: FontWeight.w100,
-                                    color: secondaryTextColor),
-                                filled: true,
-                                fillColor: cardColor),
-                            style: TextStyle(
-                                letterSpacing: 5,
-                                color: secondaryTextColor,
-                                fontSize: 21),
-                            controller: passCtrl,
-                            obscureText: true,
-                            onSubmitted: (value) {
-                              if (!loading) {
-                                unlock();
-                              }
-                            },
-                            onChanged: (value) {
-                              setState(() {
-                                _validate = value.isEmpty
-                                    ? "Password cannot be empty"
-                                    : "";
-                              });
-                            })),
-                    _validate == ""
-                        ? const SizedBox(height: 22)
-                        : const Empty(),
-                    const SizedBox(height: 34),
-                    LoadingScreenButton(
-                      minSize: MediaQuery.of(context).size.width,
-                      onPressed: !loading ? unlock : null,
-                      text: "Unlock Wallet",
-                    ),
-                  ])
-                : Column(children: [
-                    Row(children: [
-                      IconButton(
-                          alignment: Alignment.topLeft,
-                          tooltip: "About Bison Relay",
-                          iconSize: 50,
-                          onPressed: goToAbout,
-                          icon: Image.asset(
-                            "assets/images/icon.png",
-                          )),
-                    ]),
-                    const SizedBox(height: 208),
-                    Text("Connect to Bison Relay",
-                        style: TextStyle(
-                            color: textColor,
-                            fontSize: 34,
-                            fontWeight: FontWeight.w200)),
-                    const SizedBox(height: 34),
-                    Column(children: [
-                      SizedBox(
-                          width: 377,
-                          child: Text("Password",
-                              textAlign: TextAlign.left,
-                              style: TextStyle(
-                                  color: darkTextColor,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w300))),
-                      const SizedBox(height: 5),
-                      Center(
-                          child: SizedBox(
+                                color: textColor,
+                                fontSize: theme.getHugeFont(),
+                                fontWeight: FontWeight.w200)),
+                        const SizedBox(height: 34),
+                        Column(children: [
+                          SizedBox(
                               width: 377,
-                              child: TextField(
-                                  autofocus: true,
-                                  cursorColor: secondaryTextColor,
-                                  decoration: InputDecoration(
-                                      errorText: _validate,
-                                      border: InputBorder.none,
-                                      hintText: "Password",
-                                      hintStyle: TextStyle(
-                                          fontSize: 21, color: textColor),
-                                      filled: true,
-                                      fillColor: cardColor),
+                              child: Text("Password",
+                                  textAlign: TextAlign.left,
                                   style: TextStyle(
-                                      color: secondaryTextColor, fontSize: 21),
-                                  controller: passCtrl,
-                                  obscureText: true,
-                                  onSubmitted: (value) {
-                                    if (!loading) {
-                                      unlock();
-                                    }
-                                  },
-                                  onChanged: (value) {
-                                    setState(() {
-                                      _validate = value.isEmpty
-                                          ? "Password cannot be empty"
-                                          : "";
-                                    });
-                                  }))),
-                      const SizedBox(height: 34),
-                      Center(
-                          child: SizedBox(
-                              width: 283,
-                              child: Row(children: [
-                                const SizedBox(width: 35),
-                                LoadingScreenButton(
-                                  onPressed: !loading ? unlock : null,
-                                  text: "Unlock Wallet",
-                                ),
-                                const SizedBox(width: 10),
-                                loading
-                                    ? SizedBox(
-                                        height: 25,
-                                        width: 25,
-                                        child: CircularProgressIndicator(
-                                            value: null,
-                                            backgroundColor: backgroundColor,
-                                            color: textColor,
-                                            strokeWidth: 2),
-                                      )
-                                    : const SizedBox(width: 25),
-                              ])))
-                    ]),
-                  ]),
-          )
-        ]));
+                                      color: darkTextColor,
+                                      fontSize: theme.getMediumFont(),
+                                      fontWeight: FontWeight.w300))),
+                          const SizedBox(height: 5),
+                          Center(
+                              child: SizedBox(
+                                  width: 377,
+                                  child: TextField(
+                                      autofocus: true,
+                                      cursorColor: secondaryTextColor,
+                                      decoration: InputDecoration(
+                                          errorText: _validate,
+                                          border: InputBorder.none,
+                                          hintText: "Password",
+                                          hintStyle: TextStyle(
+                                              fontSize: theme.getLargeFont(),
+                                              color: textColor),
+                                          filled: true,
+                                          fillColor: cardColor),
+                                      style: TextStyle(
+                                          color: secondaryTextColor,
+                                          fontSize: theme.getLargeFont()),
+                                      controller: passCtrl,
+                                      obscureText: true,
+                                      onSubmitted: (value) {
+                                        if (!loading) {
+                                          unlock();
+                                        }
+                                      },
+                                      onChanged: (value) {
+                                        setState(() {
+                                          _validate = value.isEmpty
+                                              ? "Password cannot be empty"
+                                              : "";
+                                        });
+                                      }))),
+                          const SizedBox(height: 34),
+                          Center(
+                              child: SizedBox(
+                                  width: 283,
+                                  child: Row(children: [
+                                    const SizedBox(width: 35),
+                                    LoadingScreenButton(
+                                      onPressed: !loading ? unlock : null,
+                                      text: "Unlock Wallet",
+                                    ),
+                                    const SizedBox(width: 10),
+                                    loading
+                                        ? SizedBox(
+                                            height: 25,
+                                            width: 25,
+                                            child: CircularProgressIndicator(
+                                                value: null,
+                                                backgroundColor:
+                                                    backgroundColor,
+                                                color: textColor,
+                                                strokeWidth: 2),
+                                          )
+                                        : const SizedBox(width: 25),
+                                  ])))
+                        ]),
+                      ]),
+              )
+            ])));
   }
 }
 
@@ -385,152 +394,155 @@ class _LNChainSyncPageState extends State<_LNChainSyncPage> {
       Navigator.of(context).pushNamed("/about");
     }
 
-    return Container(
-        color: backgroundColor,
-        child: Stack(children: [
-          Container(
-              decoration:
-                  BoxDecoration(image: isScreenSmall ? mobileBG : wideBG)),
-          isScreenSmall
-              ? const Empty()
-              : Container(
-                  decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                          begin: Alignment.bottomLeft,
-                          end: Alignment.topRight,
-                          colors: [
-                        cardColor,
-                        const Color(0xFF07051C),
-                        backgroundColor.withOpacity(0.34),
-                      ],
-                          stops: const [
-                        0,
-                        0.17,
-                        1
-                      ])),
-                ),
-          Container(
-              padding: const EdgeInsets.all(10),
-              child: Column(children: [
-                Row(children: [
-                  IconButton(
-                      alignment: Alignment.topLeft,
-                      tooltip: "About Bison Relay",
-                      iconSize: 50,
-                      onPressed: goToAbout,
-                      icon: Image.asset(
-                        "assets/images/icon.png",
-                      )),
-                ]),
-                const SizedBox(height: 39),
-                Text("Setting up Bison Relay",
-                    style: TextStyle(
-                        color: textColor,
-                        fontSize: 34,
-                        fontWeight: FontWeight.w200)),
-                const SizedBox(height: 89),
-                Text("Network Sync",
-                    style: TextStyle(
-                        color: secondaryTextColor,
-                        fontSize: 21,
-                        fontWeight: FontWeight.w300)),
-                const SizedBox(height: 50),
-                Center(
-                    child: SizedBox(
-                        width: 740,
-                        child: Row(children: [
-                          const SizedBox(width: 65),
-                          Expanded(
-                              child: ClipRRect(
-                                  borderRadius: const BorderRadius.all(
-                                      Radius.circular(5)),
-                                  child: LinearProgressIndicator(
-                                      minHeight: 8,
-                                      value: progress > 1 ? 1 : progress,
-                                      color: cardColor,
-                                      backgroundColor: cardColor,
-                                      valueColor: AlwaysStoppedAnimation<Color>(
-                                          textColor)))),
-                          const SizedBox(width: 20),
-                          Text(
-                              "${((progress > 1 ? 1 : progress) * 100).toStringAsFixed(0)}%",
-                              style: TextStyle(
-                                  color: textColor,
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w300))
-                        ]))),
-                const SizedBox(height: 21),
-                Center(
-                  child: Container(
-                      margin: const EdgeInsets.all(0),
-                      width: 610,
-                      height: 251,
-                      padding: const EdgeInsets.all(10),
-                      color: cardColor,
-                      child: Column(children: [
-                        Flex(
-                            direction:
-                                isScreenSmall ? Axis.vertical : Axis.horizontal,
-                            children: [
-                              RichText(
-                                  text: TextSpan(children: [
-                                TextSpan(
-                                    text: "Block Height: ",
-                                    style: TextStyle(
-                                        color: textColor,
-                                        fontSize: 9,
-                                        fontWeight: FontWeight.w300)),
-                                TextSpan(
-                                    text: "$blockHeight",
-                                    style: TextStyle(
-                                        color: textColor,
-                                        fontSize: 9,
-                                        fontWeight: FontWeight.w300))
-                              ])),
-                              isScreenSmall
-                                  ? const SizedBox(height: 5)
-                                  : const SizedBox(width: 21),
-                              RichText(
-                                  text: TextSpan(children: [
-                                TextSpan(
-                                    text: "Block Hash: ",
-                                    style: TextStyle(
-                                        color: textColor,
-                                        fontSize: 9,
-                                        fontWeight: FontWeight.w300)),
-                                TextSpan(
-                                    text: "$blockHeight",
-                                    style: TextStyle(
-                                        color: textColor,
-                                        fontSize: 9,
-                                        fontWeight: FontWeight.w300))
-                              ])),
-                              isScreenSmall
-                                  ? const SizedBox(height: 5)
-                                  : const SizedBox(width: 21),
-                              RichText(
-                                  text: TextSpan(children: [
-                                TextSpan(
-                                    text: "Block Time: ",
-                                    style: TextStyle(
-                                        color: textColor,
-                                        fontSize: 9,
-                                        fontWeight: FontWeight.w300)),
-                                TextSpan(
-                                    text: blockTimestamp.toString(),
-                                    style: TextStyle(
-                                        color: textColor,
-                                        fontSize: 9,
-                                        fontWeight: FontWeight.w300))
-                              ]))
-                            ]),
-                        Expanded(
-                            child: LogLines(globalLogModel,
-                                maxLines: 15, optionalTextColor: textColor))
-                      ])),
-                )
-              ]))
-        ]));
+    return Consumer<ThemeNotifier>(
+        builder: (context, theme, child) => Container(
+            color: backgroundColor,
+            child: Stack(children: [
+              Container(
+                  decoration:
+                      BoxDecoration(image: isScreenSmall ? mobileBG : wideBG)),
+              isScreenSmall
+                  ? const Empty()
+                  : Container(
+                      decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                              begin: Alignment.bottomLeft,
+                              end: Alignment.topRight,
+                              colors: [
+                            cardColor,
+                            const Color(0xFF07051C),
+                            backgroundColor.withOpacity(0.34),
+                          ],
+                              stops: const [
+                            0,
+                            0.17,
+                            1
+                          ])),
+                    ),
+              Container(
+                  padding: const EdgeInsets.all(10),
+                  child: Column(children: [
+                    Row(children: [
+                      IconButton(
+                          alignment: Alignment.topLeft,
+                          tooltip: "About Bison Relay",
+                          iconSize: 50,
+                          onPressed: goToAbout,
+                          icon: Image.asset(
+                            "assets/images/icon.png",
+                          )),
+                    ]),
+                    const SizedBox(height: 39),
+                    Text("Setting up Bison Relay",
+                        style: TextStyle(
+                            color: textColor,
+                            fontSize: theme.getHugeFont(),
+                            fontWeight: FontWeight.w200)),
+                    const SizedBox(height: 89),
+                    Text("Network Sync",
+                        style: TextStyle(
+                            color: secondaryTextColor,
+                            fontSize: theme.getLargeFont(),
+                            fontWeight: FontWeight.w300)),
+                    const SizedBox(height: 50),
+                    Center(
+                        child: SizedBox(
+                            width: 740,
+                            child: Row(children: [
+                              const SizedBox(width: 65),
+                              Expanded(
+                                  child: ClipRRect(
+                                      borderRadius: const BorderRadius.all(
+                                          Radius.circular(5)),
+                                      child: LinearProgressIndicator(
+                                          minHeight: 8,
+                                          value: progress > 1 ? 1 : progress,
+                                          color: cardColor,
+                                          backgroundColor: cardColor,
+                                          valueColor:
+                                              AlwaysStoppedAnimation<Color>(
+                                                  textColor)))),
+                              const SizedBox(width: 20),
+                              Text(
+                                  "${((progress > 1 ? 1 : progress) * 100).toStringAsFixed(0)}%",
+                                  style: TextStyle(
+                                      color: textColor,
+                                      fontSize: theme.getMediumFont(),
+                                      fontWeight: FontWeight.w300))
+                            ]))),
+                    const SizedBox(height: 21),
+                    Center(
+                      child: Container(
+                          margin: const EdgeInsets.all(0),
+                          width: 610,
+                          height: 251,
+                          padding: const EdgeInsets.all(10),
+                          color: cardColor,
+                          child: Column(children: [
+                            Flex(
+                                direction: isScreenSmall
+                                    ? Axis.vertical
+                                    : Axis.horizontal,
+                                children: [
+                                  RichText(
+                                      text: TextSpan(children: [
+                                    TextSpan(
+                                        text: "Block Height: ",
+                                        style: TextStyle(
+                                            color: textColor,
+                                            fontSize: theme.getSmallFont(),
+                                            fontWeight: FontWeight.w300)),
+                                    TextSpan(
+                                        text: "$blockHeight",
+                                        style: TextStyle(
+                                            color: textColor,
+                                            fontSize: theme.getSmallFont(),
+                                            fontWeight: FontWeight.w300))
+                                  ])),
+                                  isScreenSmall
+                                      ? const SizedBox(height: 5)
+                                      : const SizedBox(width: 21),
+                                  RichText(
+                                      text: TextSpan(children: [
+                                    TextSpan(
+                                        text: "Block Hash: ",
+                                        style: TextStyle(
+                                            color: textColor,
+                                            fontSize: theme.getSmallFont(),
+                                            fontWeight: FontWeight.w300)),
+                                    TextSpan(
+                                        text: "$blockHeight",
+                                        style: TextStyle(
+                                            color: textColor,
+                                            fontSize: theme.getSmallFont(),
+                                            fontWeight: FontWeight.w300))
+                                  ])),
+                                  isScreenSmall
+                                      ? const SizedBox(height: 5)
+                                      : const SizedBox(width: 21),
+                                  RichText(
+                                      text: TextSpan(children: [
+                                    TextSpan(
+                                        text: "Block Time: ",
+                                        style: TextStyle(
+                                            color: textColor,
+                                            fontSize: theme.getSmallFont(),
+                                            fontWeight: FontWeight.w300)),
+                                    TextSpan(
+                                        text: blockTimestamp.toString(),
+                                        style: TextStyle(
+                                            color: textColor,
+                                            fontSize: theme.getSmallFont(),
+                                            fontWeight: FontWeight.w300))
+                                  ]))
+                                ]),
+                            Expanded(
+                                child: LogLines(globalLogModel,
+                                    maxLines: 15, optionalTextColor: textColor))
+                          ])),
+                    )
+                  ]))
+            ])));
   }
 }
 
@@ -549,6 +561,7 @@ Future<void> runChainSyncDcrlnd(Config cfg) async {
   runApp(MultiProvider(
     providers: [
       ChangeNotifierProvider(create: (c) => SnackBarModel()),
+      ChangeNotifierProvider(create: (c) => ThemeNotifier()),
     ],
     child: Consumer<SnackBarModel>(
         builder: (context, snackBar, child) =>
@@ -560,6 +573,7 @@ Future<void> runMovePastWindowsSetup(Config cfg) async {
   runApp(MultiProvider(
     providers: [
       ChangeNotifierProvider(create: (c) => SnackBarModel()),
+      ChangeNotifierProvider(create: (c) => ThemeNotifier()),
     ],
     child: Consumer<SnackBarModel>(
         builder: (context, snackBar, child) =>

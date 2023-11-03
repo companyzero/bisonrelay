@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:golib_plugin/util.dart';
+import 'package:provider/provider.dart';
+import 'package:bruig/theme_manager.dart';
 
 class LNAccountsPage extends StatefulWidget {
   const LNAccountsPage({super.key});
@@ -57,71 +59,87 @@ class _LNAccountsPageState extends State<LNAccountsPage> {
     var backgroundColor = theme.backgroundColor;
     var inputFill = theme.hoverColor;
 
-    return Container(
-      margin: const EdgeInsets.all(1),
-      decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(3), color: backgroundColor),
-      padding: const EdgeInsets.all(16),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          Text("Wallet Accounts",
-              textAlign: TextAlign.left,
-              style: TextStyle(color: darkTextColor, fontSize: 15)),
-          Expanded(
-              child: Divider(
-            color: dividerColor, //color of divider
-            height: 10, //height spacing of divider
-            thickness: 1, //thickness of divier line
-            indent: 8, //spacing at the start of divider
-            endIndent: 5, //spacing at the end of divider
-          )),
-        ]),
-        Expanded(
-          child: ListView.builder(
-              itemCount: accounts.length,
-              itemBuilder: (BuildContext context, int index) {
-                var acc = accounts[index];
-                var confirmed = formatDCR(atomsToDCR(acc.confirmedBalance));
-                var unconf = formatDCR(atomsToDCR(acc.unconfirmedBalance));
-                return ListTile(
-                  title: Text(acc.name),
-                  subtitle: Text(
-                      "$confirmed confirmed\n$unconf unconfirmed\nKeys: ${acc.internalKeyCount} internal, ${acc.externalKeyCount} external\n"),
-                );
-              }),
-        ),
-        Row(children: [
-          Text("Create New Account",
-              textAlign: TextAlign.left,
-              style: TextStyle(color: darkTextColor, fontSize: 15)),
-          Expanded(
-              child: Divider(
-            color: dividerColor, //color of divider
-            height: 10, //height spacing of divider
-            thickness: 1, //thickness of divier line
-            indent: 8, //spacing at the start of divider
-            endIndent: 5, //spacing at the end of divider
-          )),
-        ]),
-        const SizedBox(height: 21),
-        Row(children: [
-          Text("Account Name:",
-              style: TextStyle(fontSize: 11, color: secondaryTextColor)),
-          const SizedBox(width: 10),
-          Expanded(
-              child: TextField(
-                  style: TextStyle(fontSize: 11, color: secondaryTextColor),
-                  controller: nameCtrl,
-                  decoration: InputDecoration(
-                      hintText: "Name of the new account",
-                      hintStyle:
-                          TextStyle(fontSize: 11, color: secondaryTextColor),
-                      filled: true,
-                      fillColor: inputFill))),
-          const SizedBox(width: 10),
-          ElevatedButton(onPressed: createAccount, child: const Text("Create"))
-        ]),
-      ]),
-    );
+    return Consumer<ThemeNotifier>(
+        builder: (context, theme, _) => Container(
+              margin: const EdgeInsets.all(1),
+              decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(3),
+                  color: backgroundColor),
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(children: [
+                      Text("Wallet Accounts",
+                          textAlign: TextAlign.left,
+                          style: TextStyle(
+                              color: darkTextColor,
+                              fontSize: theme.getMediumFont())),
+                      Expanded(
+                          child: Divider(
+                        color: dividerColor, //color of divider
+                        height: 10, //height spacing of divider
+                        thickness: 1, //thickness of divier line
+                        indent: 8, //spacing at the start of divider
+                        endIndent: 5, //spacing at the end of divider
+                      )),
+                    ]),
+                    Expanded(
+                      child: ListView.builder(
+                          itemCount: accounts.length,
+                          itemBuilder: (BuildContext context, int index) {
+                            var acc = accounts[index];
+                            var confirmed =
+                                formatDCR(atomsToDCR(acc.confirmedBalance));
+                            var unconf =
+                                formatDCR(atomsToDCR(acc.unconfirmedBalance));
+                            return ListTile(
+                              title: Text(acc.name),
+                              subtitle: Text(
+                                  "$confirmed confirmed\n$unconf unconfirmed\nKeys: ${acc.internalKeyCount} internal, ${acc.externalKeyCount} external\n"),
+                            );
+                          }),
+                    ),
+                    Row(children: [
+                      Text("Create New Account",
+                          textAlign: TextAlign.left,
+                          style: TextStyle(
+                              color: darkTextColor,
+                              fontSize: theme.getMediumFont())),
+                      Expanded(
+                          child: Divider(
+                        color: dividerColor, //color of divider
+                        height: 10, //height spacing of divider
+                        thickness: 1, //thickness of divier line
+                        indent: 8, //spacing at the start of divider
+                        endIndent: 5, //spacing at the end of divider
+                      )),
+                    ]),
+                    const SizedBox(height: 21),
+                    Row(children: [
+                      Text("Account Name:",
+                          style: TextStyle(
+                              fontSize: theme.getSmallFont(),
+                              color: secondaryTextColor)),
+                      const SizedBox(width: 10),
+                      Expanded(
+                          child: TextField(
+                              style: TextStyle(
+                                  fontSize: theme.getSmallFont(),
+                                  color: secondaryTextColor),
+                              controller: nameCtrl,
+                              decoration: InputDecoration(
+                                  hintText: "Name of the new account",
+                                  hintStyle: TextStyle(
+                                      fontSize: theme.getSmallFont(),
+                                      color: secondaryTextColor),
+                                  filled: true,
+                                  fillColor: inputFill))),
+                      const SizedBox(width: 10),
+                      ElevatedButton(
+                          onPressed: createAccount, child: const Text("Create"))
+                    ]),
+                  ]),
+            ));
   }
 }

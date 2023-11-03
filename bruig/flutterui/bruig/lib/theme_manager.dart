@@ -89,6 +89,8 @@ class ThemeNotifier with ChangeNotifier {
 
   double getLargeFont() => _fontSize * 2 + 15;
 
+  double getHugeFont() => _fontSize * 2 + 26;
+
   ThemeNotifier() {
     StorageManager.readData('themeMode').then((value) {
       debugPrint('value read from storage: ${value.toString()}');

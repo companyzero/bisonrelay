@@ -7,6 +7,8 @@ import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:golib_plugin/util.dart';
+import 'package:provider/provider.dart';
+import 'package:bruig/theme_manager.dart';
 
 typedef CloseChanCB = Future<void> Function(LNChannel chan);
 
@@ -31,63 +33,97 @@ class _ChanW extends StatelessWidget {
     var localBalance = atomsToDCR(chan.localBalance).toStringAsFixed(8);
     var remoteBalance = atomsToDCR(chan.remoteBalance).toStringAsFixed(8);
     var state = chan.active ? "Active" : "Inactive";
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SizedBox(height: 13),
-        Row(children: [
-          Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text("State:",
-                style: TextStyle(fontSize: 11, color: secondaryTextColor)),
-            const SizedBox(height: 8),
-            Text("Remote Node:",
-                style: TextStyle(fontSize: 11, color: secondaryTextColor)),
-            const SizedBox(height: 8),
-            Text("Channel Point:",
-                style: TextStyle(fontSize: 11, color: secondaryTextColor)),
-            const SizedBox(height: 8),
-            Text("Channel Capacity:",
-                style: TextStyle(fontSize: 11, color: secondaryTextColor)),
-            const SizedBox(height: 8),
-            Text("Relative Balances:",
-                style: TextStyle(fontSize: 11, color: secondaryTextColor))
-          ]),
-          const SizedBox(width: 10),
-          Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(state, style: TextStyle(fontSize: 11, color: textColor)),
-            const SizedBox(height: 8),
-            Copyable(
-                chan.remotePubkey, TextStyle(fontSize: 11, color: textColor)),
-            const SizedBox(height: 8),
-            Copyable(
-                chan.channelPoint, TextStyle(fontSize: 11, color: textColor)),
-            const SizedBox(height: 8),
-            Text("$capacity DCR",
-                style: TextStyle(fontSize: 11, color: textColor)),
-            const SizedBox(height: 8),
-            Row(children: [
-              Text("$localBalance DCR",
-                  style: TextStyle(fontSize: 11, color: textColor)),
-              const SizedBox(width: 8),
-              Text("Local <--> Remote",
-                  style: TextStyle(fontSize: 11, color: secondaryTextColor)),
-              const SizedBox(width: 8),
-              Text("$remoteBalance DCR",
-                  style: TextStyle(fontSize: 11, color: textColor)),
-            ])
-          ]),
-        ]),
-        const SizedBox(height: 13),
-        ElevatedButton(
-          onPressed: () => closeChan(chan),
-          style: ElevatedButton.styleFrom(
-              textStyle: TextStyle(color: textColor, fontSize: 11),
-              backgroundColor: theme.errorColor),
-          child: const Text("Close Channel"),
-        ),
-        const SizedBox(height: 13),
-      ],
-    );
+    var errorColor = theme.errorColor;
+    return Consumer<ThemeNotifier>(
+        builder: (context, theme, _) => Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 13),
+                Row(children: [
+                  Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text("State:",
+                            style: TextStyle(
+                                fontSize: theme.getSmallFont(),
+                                color: secondaryTextColor)),
+                        const SizedBox(height: 8),
+                        Text("Remote Node:",
+                            style: TextStyle(
+                                fontSize: theme.getSmallFont(),
+                                color: secondaryTextColor)),
+                        const SizedBox(height: 8),
+                        Text("Channel Point:",
+                            style: TextStyle(
+                                fontSize: theme.getSmallFont(),
+                                color: secondaryTextColor)),
+                        const SizedBox(height: 8),
+                        Text("Channel Capacity:",
+                            style: TextStyle(
+                                fontSize: theme.getSmallFont(),
+                                color: secondaryTextColor)),
+                        const SizedBox(height: 8),
+                        Text("Relative Balances:",
+                            style: TextStyle(
+                                fontSize: theme.getSmallFont(),
+                                color: secondaryTextColor))
+                      ]),
+                  const SizedBox(width: 10),
+                  Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(state,
+                            style: TextStyle(
+                                fontSize: theme.getSmallFont(),
+                                color: textColor)),
+                        const SizedBox(height: 8),
+                        Copyable(
+                            chan.remotePubkey,
+                            TextStyle(
+                                fontSize: theme.getSmallFont(),
+                                color: textColor)),
+                        const SizedBox(height: 8),
+                        Copyable(
+                            chan.channelPoint,
+                            TextStyle(
+                                fontSize: theme.getSmallFont(),
+                                color: textColor)),
+                        const SizedBox(height: 8),
+                        Text("$capacity DCR",
+                            style: TextStyle(
+                                fontSize: theme.getSmallFont(),
+                                color: textColor)),
+                        const SizedBox(height: 8),
+                        Row(children: [
+                          Text("$localBalance DCR",
+                              style: TextStyle(
+                                  fontSize: theme.getSmallFont(),
+                                  color: textColor)),
+                          const SizedBox(width: 8),
+                          Text("Local <--> Remote",
+                              style: TextStyle(
+                                  fontSize: theme.getSmallFont(),
+                                  color: secondaryTextColor)),
+                          const SizedBox(width: 8),
+                          Text("$remoteBalance DCR",
+                              style: TextStyle(
+                                  fontSize: theme.getSmallFont(),
+                                  color: textColor)),
+                        ])
+                      ]),
+                ]),
+                const SizedBox(height: 13),
+                ElevatedButton(
+                  onPressed: () => closeChan(chan),
+                  style: ElevatedButton.styleFrom(
+                      textStyle: TextStyle(
+                          color: textColor, fontSize: theme.getSmallFont()),
+                      backgroundColor: errorColor),
+                  child: const Text("Close Channel"),
+                ),
+                const SizedBox(height: 13),
+              ],
+            ));
   }
 }
 
@@ -96,45 +132,68 @@ Widget pendingChanSummary(LNPendingChannel chan, String state, Color textColor,
   var capacity = atomsToDCR(chan.capacity).toStringAsFixed(8);
   var localBalance = atomsToDCR(chan.localBalance).toStringAsFixed(8);
   var remoteBalance = atomsToDCR(chan.remoteBalance).toStringAsFixed(8);
-  return Row(children: [
-    Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text("State:", style: TextStyle(fontSize: 11, color: secondaryTextColor)),
-      const SizedBox(height: 8),
-      Text("Remote Node:",
-          style: TextStyle(fontSize: 11, color: secondaryTextColor)),
-      const SizedBox(height: 8),
-      Text("Channel Point:",
-          style: TextStyle(fontSize: 11, color: secondaryTextColor)),
-      const SizedBox(height: 8),
-      Text("Channel Capacity:",
-          style: TextStyle(fontSize: 11, color: secondaryTextColor)),
-      const SizedBox(height: 8),
-      Text("Relative Balances:",
-          style: TextStyle(fontSize: 11, color: secondaryTextColor))
-    ]),
-    const SizedBox(width: 10),
-    Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(state, style: TextStyle(fontSize: 11, color: textColor)),
-      const SizedBox(height: 8),
-      Text(chan.remoteNodePub,
-          style: TextStyle(fontSize: 11, color: textColor)),
-      const SizedBox(height: 8),
-      Text(chan.channelPoint, style: TextStyle(fontSize: 11, color: textColor)),
-      const SizedBox(height: 8),
-      Text("$capacity DCR", style: TextStyle(fontSize: 11, color: textColor)),
-      const SizedBox(height: 8),
-      Row(children: [
-        Text("$localBalance DCR",
-            style: TextStyle(fontSize: 11, color: textColor)),
-        const SizedBox(width: 8),
-        Text("Local <--> Remote",
-            style: TextStyle(fontSize: 11, color: secondaryTextColor)),
-        const SizedBox(width: 8),
-        Text("$remoteBalance DCR",
-            style: TextStyle(fontSize: 11, color: textColor)),
-      ])
-    ]),
-  ]);
+  return Consumer<ThemeNotifier>(
+      builder: (context, theme, _) => Row(children: [
+            Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text("State:",
+                  style: TextStyle(
+                      fontSize: theme.getSmallFont(),
+                      color: secondaryTextColor)),
+              const SizedBox(height: 8),
+              Text("Remote Node:",
+                  style: TextStyle(
+                      fontSize: theme.getSmallFont(),
+                      color: secondaryTextColor)),
+              const SizedBox(height: 8),
+              Text("Channel Point:",
+                  style: TextStyle(
+                      fontSize: theme.getSmallFont(),
+                      color: secondaryTextColor)),
+              const SizedBox(height: 8),
+              Text("Channel Capacity:",
+                  style: TextStyle(
+                      fontSize: theme.getSmallFont(),
+                      color: secondaryTextColor)),
+              const SizedBox(height: 8),
+              Text("Relative Balances:",
+                  style: TextStyle(
+                      fontSize: theme.getSmallFont(),
+                      color: secondaryTextColor))
+            ]),
+            const SizedBox(width: 10),
+            Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(state,
+                  style: TextStyle(
+                      fontSize: theme.getSmallFont(), color: textColor)),
+              const SizedBox(height: 8),
+              Text(chan.remoteNodePub,
+                  style: TextStyle(
+                      fontSize: theme.getSmallFont(), color: textColor)),
+              const SizedBox(height: 8),
+              Text(chan.channelPoint,
+                  style: TextStyle(
+                      fontSize: theme.getSmallFont(), color: textColor)),
+              const SizedBox(height: 8),
+              Text("$capacity DCR",
+                  style: TextStyle(
+                      fontSize: theme.getSmallFont(), color: textColor)),
+              const SizedBox(height: 8),
+              Row(children: [
+                Text("$localBalance DCR",
+                    style: TextStyle(
+                        fontSize: theme.getSmallFont(), color: textColor)),
+                const SizedBox(width: 8),
+                Text("Local <--> Remote",
+                    style: TextStyle(
+                        fontSize: theme.getSmallFont(),
+                        color: secondaryTextColor)),
+                const SizedBox(width: 8),
+                Text("$remoteBalance DCR",
+                    style: TextStyle(
+                        fontSize: theme.getSmallFont(), color: textColor)),
+              ])
+            ]),
+          ]));
 }
 
 class _PendingOpenChanW extends StatelessWidget {
@@ -260,9 +319,12 @@ class _LNChannelsPageState extends State<LNChannelsPage> {
         padding: const EdgeInsets.all(16),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
-            Text("Channels",
-                textAlign: TextAlign.left,
-                style: TextStyle(color: darkTextColor, fontSize: 15)),
+            Consumer<ThemeNotifier>(
+                builder: (context, theme, _) => Text("Channels",
+                    textAlign: TextAlign.left,
+                    style: TextStyle(
+                        color: darkTextColor,
+                        fontSize: theme.getMediumFont()))),
             Expanded(
                 child: Divider(
               color: dividerColor, //color of divider

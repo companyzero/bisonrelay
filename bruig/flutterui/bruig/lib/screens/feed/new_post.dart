@@ -9,6 +9,8 @@ import 'package:file_picker/file_picker.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:bruig/components/snackbars.dart';
+import 'package:provider/provider.dart';
+import 'package:bruig/theme_manager.dart';
 
 void showAltTextModal(BuildContext context, String mime, String id,
     TextEditingController contentCtrl) {
@@ -56,32 +58,36 @@ class _AddAltTextState extends State<AddAltText> {
     var theme = Theme.of(context);
     var textColor = theme.focusColor;
 
-    return Container(
-      padding: const EdgeInsets.all(30),
-      child: Row(
-        children: [
-          Text("Add Alt Text: ",
-              style: TextStyle(color: textColor, fontSize: 15)),
-          Expanded(
-            child: TextField(
-              onSubmitted: (_) {
-                _addEmbed();
-              },
-              controller: embedAlt,
-              autofocus: true,
-            ),
-          ),
-          const SizedBox(width: 30),
-          ElevatedButton(
-            onPressed: () => _addEmbed(),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.grey),
-            child: const Text("No, thanks"),
-          ),
-          const SizedBox(width: 10),
-          ElevatedButton(onPressed: _addEmbed, child: const Text("Add")),
-        ],
-      ),
-    );
+    return Consumer<ThemeNotifier>(
+        builder: (context, theme, child) => Container(
+              padding: const EdgeInsets.all(30),
+              child: Row(
+                children: [
+                  Text("Add Alt Text: ",
+                      style: TextStyle(
+                          color: textColor, fontSize: theme.getMediumFont())),
+                  Expanded(
+                    child: TextField(
+                      onSubmitted: (_) {
+                        _addEmbed();
+                      },
+                      controller: embedAlt,
+                      autofocus: true,
+                    ),
+                  ),
+                  const SizedBox(width: 30),
+                  ElevatedButton(
+                    onPressed: () => _addEmbed(),
+                    style:
+                        ElevatedButton.styleFrom(backgroundColor: Colors.grey),
+                    child: const Text("No, thanks"),
+                  ),
+                  const SizedBox(width: 10),
+                  ElevatedButton(
+                      onPressed: _addEmbed, child: const Text("Add")),
+                ],
+              ),
+            ));
   }
 }
 
@@ -253,36 +259,41 @@ class _NewPostScreenState extends State<NewPostScreen> {
       textColor = theme.errorColor;
     }
 
-    return Container(
-      margin: const EdgeInsets.all(1),
-      decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(3), color: backgroundColor),
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        children: [
-          Text("New Post", style: TextStyle(color: textColor, fontSize: 20)),
-          Expanded(
-            child: Container(
-              margin: const EdgeInsets.only(bottom: 15),
-              child: TextField(
-                controller: contentCtrl,
-                keyboardType: TextInputType.multiline,
-                maxLines: null,
-              ),
-            ),
-          ),
-          const Divider(thickness: 2),
-          Row(children: [
-            Text("Add embedded",
-                style: TextStyle(color: textColor, fontSize: 15)),
-            const SizedBox(width: 10),
-            OutlinedButton(
-              onPressed: () {
-                pickFile(context);
-              },
-              child: const Text("Load File"),
-            ),
-            /*  XXX Need to figure out Link to Content button
+    return Consumer<ThemeNotifier>(
+        builder: (context, theme, child) => Container(
+              margin: const EdgeInsets.all(1),
+              decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(3),
+                  color: backgroundColor),
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  Text("New Post",
+                      style: TextStyle(
+                          color: textColor, fontSize: theme.getLargeFont())),
+                  Expanded(
+                    child: Container(
+                      margin: const EdgeInsets.only(bottom: 15),
+                      child: TextField(
+                        controller: contentCtrl,
+                        keyboardType: TextInputType.multiline,
+                        maxLines: null,
+                      ),
+                    ),
+                  ),
+                  const Divider(thickness: 2),
+                  Row(children: [
+                    Text("Add embedded",
+                        style: TextStyle(
+                            color: textColor, fontSize: theme.getMediumFont())),
+                    const SizedBox(width: 10),
+                    OutlinedButton(
+                      onPressed: () {
+                        pickFile(context);
+                      },
+                      child: const Text("Load File"),
+                    ),
+                    /*  XXX Need to figure out Link to Content button
             const SizedBox(width: 10),
             OutlinedButton(
                 onPressed: linkToFile, child: const Text("Link to Content")),
@@ -293,23 +304,23 @@ class _NewPostScreenState extends State<NewPostScreen> {
               child: Text(embedLink?.filename ?? ""),
             ),
             */
-          ]),
-          const SizedBox(height: 20),
-          const Divider(thickness: 2),
-          Text(
-            "Estimated Size: ${humanReadableSize(estimatedSize)}",
-            style: TextStyle(color: textColor),
-          ),
-          const SizedBox(height: 10),
-          Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-            const SizedBox(width: 20),
-            ElevatedButton(
-                onPressed: !loading && validSize ? createPost : null,
-                child: const Text("Create Post")),
-            const SizedBox(width: 20),
-          ])
-        ],
-      ),
-    );
+                  ]),
+                  const SizedBox(height: 20),
+                  const Divider(thickness: 2),
+                  Text(
+                    "Estimated Size: ${humanReadableSize(estimatedSize)}",
+                    style: TextStyle(color: textColor),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                    const SizedBox(width: 20),
+                    ElevatedButton(
+                        onPressed: !loading && validSize ? createPost : null,
+                        child: const Text("Create Post")),
+                    const SizedBox(width: 20),
+                  ])
+                ],
+              ),
+            ));
   }
 }

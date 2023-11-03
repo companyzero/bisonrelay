@@ -8,6 +8,8 @@ import 'package:golib_plugin/definitions.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:bruig/components/user_context_menu.dart';
 import 'package:bruig/util.dart';
+import 'package:provider/provider.dart';
+import 'package:bruig/theme_manager.dart';
 
 class UserPostW extends StatefulWidget {
   final PostListItem post;
@@ -77,88 +79,91 @@ class _UserPostWState extends State<UserPostW> {
             : darkTextColor;
 
     return Container(
-      //height: 100,
-      width: 470,
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-          color: bgColor,
-          borderRadius: const BorderRadius.all(Radius.elliptical(5, 5))),
-      child: Column(
-        children: [
-          Row(
+        //height: 100,
+        width: 470,
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+            color: bgColor,
+            borderRadius: const BorderRadius.all(Radius.elliptical(5, 5))),
+        child: Consumer<ThemeNotifier>(
+          builder: (context, theme, _) => Column(
             children: [
-              Container(
-                width: 28,
-                margin:
-                    const EdgeInsets.only(top: 0, bottom: 0, left: 5, right: 0),
-                child: UserContextMenu(
-                  client: widget.client,
-                  targetUserChat: widget.author,
-                  child: CircleAvatar(
-                      backgroundColor: avatarColor,
-                      child: Text(authorNick[0].toUpperCase(),
-                          style:
-                              TextStyle(color: avatarTextColor, fontSize: 20))),
-                ),
+              Row(
+                children: [
+                  Container(
+                    width: 28,
+                    margin: const EdgeInsets.only(
+                        top: 0, bottom: 0, left: 5, right: 0),
+                    child: UserContextMenu(
+                      client: widget.client,
+                      targetUserChat: widget.author,
+                      child: CircleAvatar(
+                          backgroundColor: avatarColor,
+                          child: Text(authorNick[0].toUpperCase(),
+                              style: TextStyle(
+                                  color: avatarTextColor,
+                                  fontSize: theme.getLargeFont()))),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                      child: Text(authorNick,
+                          style: TextStyle(
+                              color: hightLightTextColor,
+                              fontSize: theme.getSmallFont()))),
+                ],
               ),
-              const SizedBox(width: 6),
-              Expanded(
-                  child: Text(authorNick,
-                      style:
-                          TextStyle(color: hightLightTextColor, fontSize: 11))),
+              const SizedBox(
+                height: 10,
+              ),
+              Row(children: [
+                Expanded(
+                    flex: 4,
+                    child: Align(
+                        alignment: Alignment.center,
+                        child: Provider<DownloadSource>(
+                            create: (context) => DownloadSource(authorId),
+                            child: MarkdownArea(widget.post.title, false))))
+              ]),
+              const SizedBox(height: 5),
+              Row(children: [
+                Expanded(
+                    child: Divider(
+                  color: borderDividerColor, //color of divider
+                  height: 10, //height spacing of divider
+                  thickness: 1, //thickness of divier line
+                  indent: 10, //spacing at the start of divider
+                  endIndent: 10, //spacing at the end of divider
+                )),
+              ]),
+              const SizedBox(height: 5),
+              Row(children: [
+                Expanded(
+                    child: Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton(
+                          style: TextButton.styleFrom(
+                              textStyle: TextStyle(
+                                fontSize: theme.getSmallFont(),
+                                color: hightLightTextColor,
+                              ),
+                              foregroundColor: hightLightTextColor,
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: const BorderRadius.all(
+                                      Radius.circular(3)),
+                                  side: BorderSide(color: borderDividerColor))),
+                          onPressed: () => widget.feed.gettingUserPost == ""
+                              ? showContent(context)
+                              : null,
+                          child: Text(widget.feed.gettingUserPost != post.id
+                              ? "Get Post"
+                              : "Downloading"),
+                        )))
+              ]),
             ],
           ),
-          const SizedBox(
-            height: 10,
-          ),
-          Row(children: [
-            Expanded(
-                flex: 4,
-                child: Align(
-                    alignment: Alignment.center,
-                    child: Provider<DownloadSource>(
-                        create: (context) => DownloadSource(authorId),
-                        child: MarkdownArea(widget.post.title, false))))
-          ]),
-          const SizedBox(height: 5),
-          Row(children: [
-            Expanded(
-                child: Divider(
-              color: borderDividerColor, //color of divider
-              height: 10, //height spacing of divider
-              thickness: 1, //thickness of divier line
-              indent: 10, //spacing at the start of divider
-              endIndent: 10, //spacing at the end of divider
-            )),
-          ]),
-          const SizedBox(height: 5),
-          Row(children: [
-            Expanded(
-                child: Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
-                      style: TextButton.styleFrom(
-                          textStyle: TextStyle(
-                            fontSize: 12,
-                            color: hightLightTextColor,
-                          ),
-                          foregroundColor: hightLightTextColor,
-                          shape: RoundedRectangleBorder(
-                              borderRadius:
-                                  const BorderRadius.all(Radius.circular(3)),
-                              side: BorderSide(color: borderDividerColor))),
-                      onPressed: () => widget.feed.gettingUserPost == ""
-                          ? showContent(context)
-                          : null,
-                      child: Text(widget.feed.gettingUserPost != post.id
-                          ? "Get Post"
-                          : "Downloading"),
-                    )))
-          ]),
-        ],
-      ),
-    );
+        ));
   }
 }
 

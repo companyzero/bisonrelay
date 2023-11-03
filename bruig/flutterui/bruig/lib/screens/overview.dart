@@ -284,8 +284,11 @@ class _OverviewScreenState extends State<OverviewScreen> {
                             : Container(
                                 padding: const EdgeInsets.all(3),
                                 child: menuItem.icon),
-                        title: Text(menuItem.label,
-                            style: const TextStyle(fontSize: 15)))
+                        title: Consumer<ThemeNotifier>(
+                            builder: (context, theme, child) => Text(
+                                menuItem.label,
+                                style: TextStyle(
+                                    fontSize: theme.getMediumFont()))))
                     : Theme(
                         data: Theme.of(context)
                             .copyWith(dividerColor: Colors.transparent),

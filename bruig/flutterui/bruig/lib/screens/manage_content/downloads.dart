@@ -2,6 +2,7 @@ import 'package:bruig/models/downloads.dart';
 import 'package:flutter/material.dart';
 import 'package:bruig/theme_manager.dart';
 import 'package:provider/provider.dart';
+import 'package:bruig/theme_manager.dart';
 
 class _FileDownloadW extends StatefulWidget {
   final FileDownloadModel fd;
@@ -47,33 +48,36 @@ class _FileDownloadWState extends State<_FileDownloadW> {
     var textColor = theme.focusColor;
     var cardColor = theme.cardColor;
 
-    return Container(
-      margin: const EdgeInsets.all(10),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            margin: const EdgeInsets.only(right: 10),
-            width: 200,
-            child: LinearProgressIndicator(
-                minHeight: 8,
-                value: progress > 1 ? 1 : progress,
-                color: cardColor,
-                backgroundColor: cardColor,
-                valueColor: AlwaysStoppedAnimation<Color>(textColor)),
-          ),
-          Expanded(
-              child: Text(widget.fd.rf.metadata.filename,
-                  style: TextStyle(color: textColor, fontSize: 12))),
-          Expanded(
-              child: Text(diskPath,
-                  style: TextStyle(
-                      color: textColor,
-                      fontStyle: FontStyle.italic,
-                      fontSize: 12))),
-        ],
-      ),
-    );
+    return Consumer<ThemeNotifier>(
+        builder: (context, theme, _) => Container(
+              margin: const EdgeInsets.all(10),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    margin: const EdgeInsets.only(right: 10),
+                    width: 200,
+                    child: LinearProgressIndicator(
+                        minHeight: 8,
+                        value: progress > 1 ? 1 : progress,
+                        color: cardColor,
+                        backgroundColor: cardColor,
+                        valueColor: AlwaysStoppedAnimation<Color>(textColor)),
+                  ),
+                  Expanded(
+                      child: Text(widget.fd.rf.metadata.filename,
+                          style: TextStyle(
+                              color: textColor,
+                              fontSize: theme.getSmallFont()))),
+                  Expanded(
+                      child: Text(diskPath,
+                          style: TextStyle(
+                              color: textColor,
+                              fontStyle: FontStyle.italic,
+                              fontSize: theme.getSmallFont()))),
+                ],
+              ),
+            ));
   }
 }
 

@@ -8,6 +8,7 @@ import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:provider/provider.dart';
+import 'package:bruig/theme_manager.dart';
 
 typedef RemoveContentCB = Future<void> Function(String fid, String? uid);
 
@@ -42,35 +43,39 @@ class _SharedContentFileState extends State<SharedContentFile> {
     var theme = Theme.of(context);
     var textColor = theme.focusColor;
     var file = widget.file;
-    return Column(
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(file.sf.filename,
-                style: TextStyle(
-                    color: textColor,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    letterSpacing: 0.5)),
-            /*
+    return Consumer<ThemeNotifier>(
+        builder: (context, theme, _) => Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(file.sf.filename,
+                        style: TextStyle(
+                            color: textColor,
+                            fontSize: theme.getSmallFont(),
+                            fontWeight: FontWeight.w500,
+                            letterSpacing: 0.5)),
+                    /*
             Text((file.cost / 1e8).toString(),
-                style: TextStyle(color: textColor, fontSize: 11)),
+                style: TextStyle(color: textColor, fontSize: theme.getSmallFont())),
             Text(file.sf.fid,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(color: textColor, fontSize: 11)),
+                style: TextStyle(color: textColor, fontSize: theme.getSmallFont())),
             */
-            !widget.file.global
-                ? const Text("")
-                : IconButton(
-                    iconSize: 18,
-                    icon: Icon(loading ? Icons.hourglass_bottom : Icons.delete),
-                    onPressed:
-                        loading ? null : () => removeContent(context, null),
-                  )
-          ],
-        ),
-        /*
+                    !widget.file.global
+                        ? const Text("")
+                        : IconButton(
+                            iconSize: 18,
+                            icon: Icon(loading
+                                ? Icons.hourglass_bottom
+                                : Icons.delete),
+                            onPressed: loading
+                                ? null
+                                : () => removeContent(context, null),
+                          )
+                  ],
+                ),
+                /*
         ListView.builder(
           scrollDirection: Axis.vertical,
           shrinkWrap: true,
@@ -79,14 +84,14 @@ class _SharedContentFileState extends State<SharedContentFile> {
             return Row(children: [
               const SizedBox(width: 40),
               Text(widget.file.shares[index],
-                  style: TextStyle(color: textColor, fontSize: 11)),
+                  style: TextStyle(color: textColor, fontSize: theme.getSmallFont())),
               const SizedBox(width: 20),
               Text(
                   widget.client
                           .getExistingChat(widget.file.shares[index])
                           ?.nick ??
                       "",
-                  style: TextStyle(color: textColor, fontSize: 11)),
+                  style: TextStyle(color: textColor, fontSize: theme.getSmallFont())),
               IconButton(
                 iconSize: 18,
                 icon: Icon(loading ? Icons.hourglass_bottom : Icons.delete),
@@ -98,8 +103,8 @@ class _SharedContentFileState extends State<SharedContentFile> {
             
           },
         ),*/
-      ],
-    );
+              ],
+            ));
   }
 }
 
@@ -207,104 +212,120 @@ class _AddContentPanelState extends State<AddContentPanel> {
     var textColor = theme.dividerColor;
     var inputBackground = theme.hoverColor;
     var secondaryTextColor = theme.focusColor;
-    return Column(children: [
-      Row(children: [
-        SizedBox(
-            width: 100,
-            child: OutlinedButton(
-              onPressed: loading ? null : pickFile,
-              style: OutlinedButton.styleFrom(
-                textStyle: TextStyle(color: textColor, fontSize: 11),
-              ),
-              child: Text("Select File",
-                  style: TextStyle(color: textColor, fontSize: 11)),
-            )),
-        const SizedBox(width: 15),
-        Container(
-            padding:
-                const EdgeInsets.only(left: 8, top: 4, bottom: 4, right: 8),
-            decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(3), color: inputBackground),
-            width: 250,
-            height: 34,
-            child: Center(
-                child: Text(
-              fnameCtrl.text,
-              softWrap: true,
-              style: TextStyle(color: textColor, fontSize: 11),
-              //overflow: TextOverflow.ellipsis,
-            ))),
-      ]),
-      const SizedBox(height: 20),
-      Row(children: [
-        SizedBox(
-          width: 115,
-          child: Text("Sharing Preference:",
-              style: TextStyle(color: textColor, fontSize: 11)),
-        ),
-        Container(
-            alignment: Alignment.centerRight,
-            padding:
-                const EdgeInsets.only(left: 8, top: 4, bottom: 4, right: 8),
-            decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(3), color: inputBackground),
-            width: 200,
-            height: 34,
-            child: UsersDropdown(
-              allowEmpty: true,
-              cb: (c) => setState(() {
-                toCtrl.text = c?.id ?? "";
-              }),
-            ))
-      ]),
-      const SizedBox(height: 20),
-      Row(children: [
-        SizedBox(
-          width: 115,
-          child: Text("Cost for user:",
-              style: TextStyle(color: textColor, fontSize: 11)),
-        ),
-        Container(
-          width: 100,
-          child: TextField(
-            enabled: !loading,
-            cursorColor: secondaryTextColor,
-            decoration: InputDecoration(
-                border: InputBorder.none,
-                hintText: "Cost DCR/kb",
-                hintStyle: TextStyle(fontSize: 11, color: textColor),
-                filled: true,
-                fillColor: inputBackground),
-            style: TextStyle(color: secondaryTextColor, fontSize: 11),
-            controller: costCtrl,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            inputFormatters: [
-              FilteringTextInputFormatter.allow(RegExp(r'[0-9]+\.?[0-9]*'))
-            ],
-          ),
-        ),
-        const SizedBox(width: 10),
-        Tooltip(
-          message: "How much others will pay for this content",
-          child: Icon(
-            Icons.help,
-            size: 16,
-            color: textColor,
-          ),
-        ),
-      ]),
-      const SizedBox(height: 20),
-      Row(children: [
-        SizedBox(
-            width: 100,
-            child: OutlinedButton(
-              //style: ElevatedButton.styleFrom(primary: Colors.transparent),
-              onPressed: loading ? null : addContent,
-              child: Text("Share",
-                  style: TextStyle(color: textColor, fontSize: 11)),
-            ))
-      ]),
-    ]);
+    return Consumer<ThemeNotifier>(
+        builder: (context, theme, _) => Column(children: [
+              Row(children: [
+                SizedBox(
+                    width: 100,
+                    child: OutlinedButton(
+                      onPressed: loading ? null : pickFile,
+                      style: OutlinedButton.styleFrom(
+                        textStyle: TextStyle(
+                            color: textColor, fontSize: theme.getSmallFont()),
+                      ),
+                      child: Text("Select File",
+                          style: TextStyle(
+                              color: textColor,
+                              fontSize: theme.getSmallFont())),
+                    )),
+                const SizedBox(width: 15),
+                Container(
+                    padding: const EdgeInsets.only(
+                        left: 8, top: 4, bottom: 4, right: 8),
+                    decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(3),
+                        color: inputBackground),
+                    width: 250,
+                    height: 34,
+                    child: Center(
+                        child: Text(
+                      fnameCtrl.text,
+                      softWrap: true,
+                      style: TextStyle(
+                          color: textColor, fontSize: theme.getSmallFont()),
+                      //overflow: TextOverflow.ellipsis,
+                    ))),
+              ]),
+              const SizedBox(height: 20),
+              Row(children: [
+                SizedBox(
+                  width: 115,
+                  child: Text("Sharing Preference:",
+                      style: TextStyle(
+                          color: textColor, fontSize: theme.getSmallFont())),
+                ),
+                Container(
+                    alignment: Alignment.centerRight,
+                    padding: const EdgeInsets.only(
+                        left: 8, top: 4, bottom: 4, right: 8),
+                    decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(3),
+                        color: inputBackground),
+                    width: 200,
+                    height: 34,
+                    child: UsersDropdown(
+                      allowEmpty: true,
+                      cb: (c) => setState(() {
+                        toCtrl.text = c?.id ?? "";
+                      }),
+                    ))
+              ]),
+              const SizedBox(height: 20),
+              Row(children: [
+                SizedBox(
+                  width: 115,
+                  child: Text("Cost for user:",
+                      style: TextStyle(
+                          color: textColor, fontSize: theme.getSmallFont())),
+                ),
+                SizedBox(
+                  width: 100,
+                  child: TextField(
+                    enabled: !loading,
+                    cursorColor: secondaryTextColor,
+                    decoration: InputDecoration(
+                        border: InputBorder.none,
+                        hintText: "Cost DCR/kb",
+                        hintStyle: TextStyle(
+                            fontSize: theme.getSmallFont(), color: textColor),
+                        filled: true,
+                        fillColor: inputBackground),
+                    style: TextStyle(
+                        color: secondaryTextColor,
+                        fontSize: theme.getSmallFont()),
+                    controller: costCtrl,
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(
+                          RegExp(r'[0-9]+\.?[0-9]*'))
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Tooltip(
+                  message: "How much others will pay for this content",
+                  child: Icon(
+                    Icons.help,
+                    size: 16,
+                    color: textColor,
+                  ),
+                ),
+              ]),
+              const SizedBox(height: 20),
+              Row(children: [
+                SizedBox(
+                    width: 100,
+                    child: OutlinedButton(
+                      //style: ElevatedButton.styleFrom(primary: Colors.transparent),
+                      onPressed: loading ? null : addContent,
+                      child: Text("Share",
+                          style: TextStyle(
+                              color: textColor,
+                              fontSize: theme.getSmallFont())),
+                    ))
+              ]),
+            ]));
   }
 }
 

@@ -134,46 +134,50 @@ class _FundsNeededPage extends StatelessWidget {
     var textColor = const Color(0xFF8E8D98);
     var secondaryTextColor = const Color(0xFFE4E3E6);
 
-    return Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(color: backgroundColor),
-        child: Center(
-            child: Column(
-          children: [
-            const SizedBox(height: 34),
-            Text("Fund Wallet and Channels",
-                style: TextStyle(
-                    color: textColor,
-                    fontSize: 34,
-                    fontWeight: FontWeight.w200)),
-            const SizedBox(height: 34),
-            Text('''
+    return Consumer<ThemeNotifier>(
+        builder: (context, theme, child) => Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(color: backgroundColor),
+            child: Center(
+                child: Column(
+              children: [
+                const SizedBox(height: 34),
+                Text("Fund Wallet and Channels",
+                    style: TextStyle(
+                        color: textColor,
+                        fontSize: theme.getHugeFont(),
+                        fontWeight: FontWeight.w200)),
+                const SizedBox(height: 34),
+                Text('''
 Bison relay requires active LN channels with outbound capacity to pay to send
 messages to the server.
 ''',
-                style: TextStyle(
-                    color: secondaryTextColor,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w300)),
-            const SizedBox(height: 34),
-            Center(
-              child:
-                  Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                LoadingScreenButton(
-                  onPressed: () => Navigator.of(context, rootNavigator: true)
-                      .pushNamed("/needsFunds"),
-                  text: "Add wallet funds",
+                    style: TextStyle(
+                        color: secondaryTextColor,
+                        fontSize: theme.getMediumFont(),
+                        fontWeight: FontWeight.w300)),
+                const SizedBox(height: 34),
+                Center(
+                  child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        LoadingScreenButton(
+                          onPressed: () =>
+                              Navigator.of(context, rootNavigator: true)
+                                  .pushNamed("/needsFunds"),
+                          text: "Add wallet funds",
+                        ),
+                        const SizedBox(width: 34),
+                        LoadingScreenButton(
+                          onPressed: () =>
+                              Navigator.of(context, rootNavigator: true)
+                                  .pushNamed(NeedsOutChannelScreen.routeName),
+                          text: "Create outbound channels",
+                        )
+                      ]),
                 ),
-                const SizedBox(width: 34),
-                LoadingScreenButton(
-                  onPressed: () => Navigator.of(context, rootNavigator: true)
-                      .pushNamed(NeedsOutChannelScreen.routeName),
-                  text: "Create outbound channels",
-                )
-              ]),
-            ),
-          ],
-        )));
+              ],
+            ))));
   }
 }
 
@@ -186,21 +190,24 @@ class _LoadingAddressBookPage extends StatelessWidget {
     var backgroundColor = theme.backgroundColor;
     var textColor = const Color(0xFF8E8D98);
 
-    return Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(color: backgroundColor),
-        child: Center(
-            child: Column(children: [
-          const SizedBox(height: 34),
-          Text("Loading Address Book",
-              style: TextStyle(
-                  color: textColor, fontSize: 34, fontWeight: FontWeight.w200)),
-          const SizedBox(height: 20),
-          LoadingAnimationWidget.waveDots(
-            color: textColor,
-            size: 50,
-          ),
-        ])));
+    return Consumer<ThemeNotifier>(
+        builder: (context, theme, child) => Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(color: backgroundColor),
+            child: Center(
+                child: Column(children: [
+              const SizedBox(height: 34),
+              Text("Loading Address Book",
+                  style: TextStyle(
+                      color: textColor,
+                      fontSize: theme.getHugeFont(),
+                      fontWeight: FontWeight.w200)),
+              const SizedBox(height: 20),
+              LoadingAnimationWidget.waveDots(
+                color: textColor,
+                size: 50,
+              ),
+            ]))));
   }
 }
 
@@ -234,48 +241,47 @@ class _InviteNeededPageState extends State<_InviteNeededPage> {
     var textColor = const Color(0xFF8E8D98);
     var secondaryTextColor = const Color(0xFFE4E3E6);
 
-    return Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(color: backgroundColor),
-        child: Center(
-            child: Column(
-          children: [
-            const SizedBox(height: 34),
-            Text("Initial Invitation",
-                style: TextStyle(
-                    color: textColor,
-                    fontSize: 34,
-                    fontWeight: FontWeight.w200)),
-            const SizedBox(height: 34),
-            Text('''
-Bison Relay does not rely on a central server for user accounts, so to chat
-with someone else you need to exchange an invitation with them. This is
-just a file that should be sent via some other secure transfer method.
+    return Consumer<ThemeNotifier>(
+        builder: (context, theme, child) => Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(color: backgroundColor),
+            child: Center(
+                child: Column(
+              children: [
+                const SizedBox(height: 34),
+                Text("Initial Invitation",
+                    style: TextStyle(
+                        color: textColor,
+                        fontSize: theme.getHugeFont(),
+                        fontWeight: FontWeight.w200)),
+                const SizedBox(height: 34),
+                Text('''
+Bison Relay does not rely on a central server for user accounts, so to chat with someone else you need to exchange an invitation with them. This is  just a file that should be sent via some other secure transfer method.
 
-After the invitation is accepted, you'll be able to chat with them, and if they
-know other people, they'll be able to connect you with them.
+After the invitation is accepted, you'll be able to chat with them, and if they know other people, they'll be able to connect you with them.
 ''',
-                style: TextStyle(
-                    color: secondaryTextColor,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w300)),
-            const SizedBox(height: 34),
-            Center(
-              child:
-                  Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                LoadingScreenButton(
-                  onPressed: () => debouncedLoadInvite(context),
-                  text: "Load Invitation",
+                    style: TextStyle(
+                        color: secondaryTextColor,
+                        fontSize: theme.getMediumFont(),
+                        fontWeight: FontWeight.w300)),
+                const SizedBox(height: 34),
+                Center(
+                  child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        LoadingScreenButton(
+                          onPressed: () => debouncedLoadInvite(context),
+                          text: "Load Invitation",
+                        ),
+                        const SizedBox(width: 34),
+                        LoadingScreenButton(
+                          onPressed: () => generateInvite(context),
+                          text: "Create Invitation",
+                        )
+                      ]),
                 ),
-                const SizedBox(width: 34),
-                LoadingScreenButton(
-                  onPressed: () => generateInvite(context),
-                  text: "Create Invitation",
-                )
-              ]),
-            ),
-          ],
-        )));
+              ],
+            ))));
   }
 }
 

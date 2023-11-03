@@ -21,16 +21,20 @@ class FeedScreenTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<MainMenuModel>(builder: (context, menu, child) {
+    return Consumer2<MainMenuModel, ThemeNotifier>(
+        builder: (context, menu, theme, child) {
       if (menu.activePageTab <= 0) {
         return Text("Bison Relay / News Feed",
-            style:
-                TextStyle(fontSize: 15, color: Theme.of(context).focusColor));
+            style: TextStyle(
+                fontSize: theme.getLargeFont(),
+                color: Theme.of(context).focusColor));
       }
       var idx = LnScreenSub.indexWhere((e) => e.pageTab == menu.activePageTab);
 
       return Text("Bison Relay / News Feed / ${FeedScreenSub[idx].label}",
-          style: TextStyle(fontSize: 15, color: Theme.of(context).focusColor));
+          style: TextStyle(
+              fontSize: theme.getLargeFont(),
+              color: Theme.of(context).focusColor));
     });
   }
 }

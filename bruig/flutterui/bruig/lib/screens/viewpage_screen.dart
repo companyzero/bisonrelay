@@ -8,6 +8,7 @@ import 'package:bruig/models/client.dart';
 import 'package:bruig/models/resources.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:bruig/theme_manager.dart';
 
 class ViewPagesScreenTitle extends StatelessWidget {
   const ViewPagesScreenTitle({super.key});
@@ -15,7 +16,11 @@ class ViewPagesScreenTitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const baseTitle = "Bison Relay / Pages";
-    return const Text(baseTitle);
+    return Consumer<ThemeNotifier>(
+        builder: (context, theme, child) => Text(baseTitle,
+            style: TextStyle(
+                fontSize: theme.getLargeFont(),
+                color: Theme.of(context).focusColor)));
   }
 }
 
@@ -178,58 +183,64 @@ class _ViewPageScreenState extends State<ViewPageScreen> {
     var selectedTextColor = theme.focusColor; // MESSAGE TEXT COLOR
     var sidebarBackground = theme.backgroundColor;
     var hoverColor = theme.hoverColor;
-    var tsUnselected = TextStyle(
-        color: unselectedTextColor, fontSize: 11, fontWeight: FontWeight.w400);
-    var tsSelected = TextStyle(
-        color: selectedTextColor, fontSize: 11, fontWeight: FontWeight.w400);
+    return Consumer<ThemeNotifier>(builder: (context, theme, child) {
+      var tsUnselected = TextStyle(
+          color: unselectedTextColor,
+          fontSize: theme.getSmallFont(),
+          fontWeight: FontWeight.w400);
+      var tsSelected = TextStyle(
+          color: selectedTextColor,
+          fontSize: theme.getSmallFont(),
+          fontWeight: FontWeight.w400);
 
-    var activeSess = resources.mostRecent;
+      var activeSess = resources.mostRecent;
 
-    return Row(children: [
-      Container(
-          width: 118,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(5),
-            gradient: LinearGradient(
-                begin: Alignment.centerRight,
-                end: Alignment.centerLeft,
-                colors: [
-                  hoverColor,
-                  sidebarBackground,
-                  sidebarBackground,
-                ],
-                stops: const [
-                  0,
-                  0.51,
-                  1
-                ]),
-          ),
-          child: Column(children: [
-            Expanded(
-                child: ListView.builder(
-                    itemCount: sessions.length,
-                    itemBuilder: (BuildContext context, int index) {
-                      var selected = activeSess == sessions[index];
-                      return ListTile(
-                        title: Text("Session ${sessions[index].id}",
-                            style: selected ? tsSelected : tsUnselected),
-                        selected: selected,
-                        onTap: () {
-                          resources.mostRecent = sessions[index];
-                        },
-                      );
-                    })),
-            Row(children: [
-              IconButton(
-                onPressed: viewLocal,
-                icon: const Icon(Icons.browser_updated_sharp),
-                tooltip: "Open local pages",
-              )
-            ]),
-          ])),
-      activeSess != null
-          ? Expanded(child: _ActivePageScreen(activeSess, widget.client))
-          : const Empty(),
-    ]);
+      return Row(children: [
+        Container(
+            width: 118,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(5),
+              gradient: LinearGradient(
+                  begin: Alignment.centerRight,
+                  end: Alignment.centerLeft,
+                  colors: [
+                    hoverColor,
+                    sidebarBackground,
+                    sidebarBackground,
+                  ],
+                  stops: const [
+                    0,
+                    0.51,
+                    1
+                  ]),
+            ),
+            child: Column(children: [
+              Expanded(
+                  child: ListView.builder(
+                      itemCount: sessions.length,
+                      itemBuilder: (BuildContext context, int index) {
+                        var selected = activeSess == sessions[index];
+                        return ListTile(
+                          title: Text("Session ${sessions[index].id}",
+                              style: selected ? tsSelected : tsUnselected),
+                          selected: selected,
+                          onTap: () {
+                            resources.mostRecent = sessions[index];
+                          },
+                        );
+                      })),
+              Row(children: [
+                IconButton(
+                  onPressed: viewLocal,
+                  icon: const Icon(Icons.browser_updated_sharp),
+                  tooltip: "Open local pages",
+                )
+              ]),
+            ])),
+        activeSess != null
+            ? Expanded(child: _ActivePageScreen(activeSess, widget.client))
+            : const Empty(),
+      ]);
+    });
   }
 }
