@@ -4,6 +4,7 @@ import 'package:bruig/models/client.dart';
 import 'package:bruig/models/feed.dart';
 import 'package:bruig/models/menus.dart';
 import 'package:bruig/models/notifications.dart';
+import 'package:bruig/theme_manager.dart';
 
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
@@ -102,7 +103,8 @@ class _SidebarState extends State<Sidebar> {
     var hoverColor = theme.hoverColor;
 
     final divider = Divider(color: scaffoldBackgroundColor, height: 2);
-    return Consumer<ClientModel>(builder: (context, client, child) {
+    return Consumer2<ClientModel, ThemeNotifier>(
+        builder: (context, client, theme, child) {
       return SidebarX(
         theme: SidebarXTheme(
           margin: const EdgeInsets.all(1),
@@ -125,9 +127,12 @@ class _SidebarState extends State<Sidebar> {
                 ]),
           ),
           hoverColor: scaffoldBackgroundColor,
-          hoverTextStyle: TextStyle(color: textColor),
-          textStyle: TextStyle(color: unselectedTextColor),
-          selectedTextStyle: TextStyle(color: textColor),
+          hoverTextStyle:
+              TextStyle(color: textColor, fontSize: theme.getMediumFont()),
+          textStyle: TextStyle(
+              color: unselectedTextColor, fontSize: theme.getMediumFont()),
+          selectedTextStyle:
+              TextStyle(color: textColor, fontSize: theme.getMediumFont()),
           itemPadding:
               const EdgeInsets.only(top: 7, bottom: 6, left: 12, right: 12),
           itemMargin:
