@@ -17,12 +17,14 @@ import 'package:bruig/screens/newconfig/server.dart';
 import 'package:bruig/screens/about.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:bruig/theme_manager.dart';
 
 Future<void> runNewConfigApp(List<String> args) async {
   runApp(MultiProvider(
     providers: [
       ChangeNotifierProvider(create: (c) => NewConfigModel(args)),
       ChangeNotifierProvider(create: (c) => SnackBarModel()),
+      ChangeNotifierProvider(create: (c) => ThemeNotifier()),
     ],
     child: NewConfigScreen(args),
   ));
