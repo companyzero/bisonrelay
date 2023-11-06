@@ -97,7 +97,6 @@ class ThemeNotifier with ChangeNotifier {
     if (mediaQuery.size.width <= 500) {
       return mediaQuery.textScaleFactor * 15;
     } else {
-      print(((_fontSize * .15) + 0.85) * 15);
       return ((_fontSize * .15) + 0.85) * 15;
     }
   }
