@@ -101,7 +101,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(height: 20),
           ElevatedButton(
             onPressed: () => loading ? null : resetAllOldKX(context),
-            child: const Text("Reset all Old KX"),
+            child: const Text(
+              "Reset all Old KX",
+            ),
           ),
           const SizedBox(height: 50),
           Column(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
@@ -160,6 +162,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     Text('Large Text',
                         style: TextStyle(
                             fontSize: theme.getLargeFont(context),
+                            color: textColor)),
+                    const SizedBox(height: 20),
+                    Text('Huge Text',
+                        style: TextStyle(
+                            fontSize: theme.getHugeFont(context),
                             color: textColor)),
                     const SizedBox(height: 20),
                   ])

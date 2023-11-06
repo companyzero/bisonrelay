@@ -23,35 +23,41 @@ class CancelButton extends StatelessWidget {
   }
 }
 
-final ButtonStyle raisedButtonStyle = ElevatedButton.styleFrom(
-  padding: const EdgeInsets.only(left: 34, top: 10, right: 34, bottom: 10),
-  minimumSize: const Size(150, 55),
-  foregroundColor: const Color(0xFFE4E3E6),
-  backgroundColor: const Color(0xFF252438),
-  //padding: EdgeInsets.symmetric(horizontal: 16),
-  shape: const RoundedRectangleBorder(
-    borderRadius: BorderRadius.all(Radius.circular(30)),
-  ),
-);
-
-final ButtonStyle emptyButtonStyle = ElevatedButton.styleFrom(
-  padding: const EdgeInsets.only(left: 34, top: 10, right: 34, bottom: 10),
-  minimumSize: const Size(150, 55),
-  foregroundColor: const Color(0xFFE4E3E6),
-  //padding: EdgeInsets.symmetric(horizontal: 16),
-  shape: const RoundedRectangleBorder(
+ButtonStyle raisedButtonStyle(ThemeData theme) {
+  return ElevatedButton.styleFrom(
+    padding: const EdgeInsets.only(left: 34, top: 10, right: 34, bottom: 10),
+    minimumSize: const Size(150, 55),
+    foregroundColor: theme.focusColor,
+    backgroundColor: theme.highlightColor,
+    //padding: EdgeInsets.symmetric(horizontal: 16),
+    shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.all(Radius.circular(30)),
-      side: BorderSide(color: Color(0xFF5A5968), width: 2)),
-);
+    ),
+  );
+}
 
-final ButtonStyle readMoreButton = ElevatedButton.styleFrom(
-  padding: const EdgeInsets.only(left: 10, top: 10, right: 10, bottom: 10),
-  foregroundColor: const Color(0xFF8E8D98),
-  //padding: EdgeInsets.symmetric(horizontal: 16),
-  shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.all(Radius.circular(30)),
-      side: BorderSide(color: Color(0xFF5A5968), width: 1)),
-);
+ButtonStyle emptyButtonStyle(ThemeData theme) {
+  return ElevatedButton.styleFrom(
+    padding: const EdgeInsets.only(left: 34, top: 10, right: 34, bottom: 10),
+    minimumSize: const Size(150, 55),
+    foregroundColor: theme.focusColor,
+    //padding: EdgeInsets.symmetric(horizontal: 16),
+    shape: RoundedRectangleBorder(
+        borderRadius: const BorderRadius.all(Radius.circular(30)),
+        side: BorderSide(color: theme.indicatorColor, width: 2)),
+  );
+}
+
+ButtonStyle readMoreButton(ThemeData theme) {
+  return ElevatedButton.styleFrom(
+    padding: const EdgeInsets.only(left: 10, top: 10, right: 10, bottom: 10),
+    foregroundColor: const Color(0xFF8E8D98),
+    //padding: EdgeInsets.symmetric(horizontal: 16),
+    shape: RoundedRectangleBorder(
+        borderRadius: const BorderRadius.all(Radius.circular(30)),
+        side: BorderSide(color: theme.indicatorColor, width: 1)),
+  );
+}
 
 class LoadingScreenButton extends StatelessWidget {
   final VoidCallback? onPressed;
@@ -77,16 +83,16 @@ class LoadingScreenButton extends StatelessWidget {
                     padding: const EdgeInsets.only(
                         left: 34, top: 10, right: 34, bottom: 10),
                     minimumSize: Size(minSize - 30, 55),
-                    foregroundColor: const Color(0xFFE4E3E6),
-                    backgroundColor: const Color(0xFF252438),
+                    foregroundColor: theme.getTheme().focusColor,
+                    backgroundColor: theme.getTheme().highlightColor,
                     //padding: EdgeInsets.symmetric(horizontal: 16),
                     shape: const RoundedRectangleBorder(
                       borderRadius: BorderRadius.all(Radius.circular(30)),
                     ),
                   )
                 : empty
-                    ? emptyButtonStyle
-                    : raisedButtonStyle,
+                    ? emptyButtonStyle(theme.getTheme())
+                    : raisedButtonStyle(theme.getTheme()),
             onPressed: !loading ? onPressed : null,
             child: Text(text,
                 style: TextStyle(
@@ -129,8 +135,8 @@ class MobileScreenButton extends StatelessWidget {
                     ),
                   )
                 : empty
-                    ? emptyButtonStyle
-                    : raisedButtonStyle,
+                    ? emptyButtonStyle(theme.getTheme())
+                    : raisedButtonStyle(theme.getTheme()),
             onPressed: !loading ? onPressed : null,
             child: Text(text,
                 style: TextStyle(
@@ -159,7 +165,7 @@ class FeedReadMoreButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<ThemeNotifier>(
         builder: (context, theme, _) => TextButton(
-            style: readMoreButton,
+            style: readMoreButton(theme.getTheme()),
             onPressed: !loading ? onPressed : null,
             child: Text(text,
                 style: TextStyle(

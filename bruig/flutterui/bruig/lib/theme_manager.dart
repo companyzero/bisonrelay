@@ -86,9 +86,9 @@ class ThemeNotifier with ChangeNotifier {
   double getSmallFont(BuildContext context) {
     var mediaQuery = MediaQuery.of(context);
     if (mediaQuery.size.width <= 500) {
-      return mediaQuery.textScaleFactor * 13;
+      return mediaQuery.textScaleFactor * 12;
     } else {
-      return _fontSize * 2 + 11;
+      return ((_fontSize * .15) + 0.85) * 12;
     }
   }
 
@@ -97,7 +97,8 @@ class ThemeNotifier with ChangeNotifier {
     if (mediaQuery.size.width <= 500) {
       return mediaQuery.textScaleFactor * 15;
     } else {
-      return _fontSize * 2 + 13;
+      print(((_fontSize * .15) + 0.85) * 15);
+      return ((_fontSize * .15) + 0.85) * 15;
     }
   }
 
@@ -106,7 +107,7 @@ class ThemeNotifier with ChangeNotifier {
     if (mediaQuery.size.width <= 500) {
       return mediaQuery.textScaleFactor * 20;
     } else {
-      return _fontSize * 2 + 13;
+      return ((_fontSize * .15) + 0.85) * 20;
     }
   }
 
@@ -115,7 +116,7 @@ class ThemeNotifier with ChangeNotifier {
     if (mediaQuery.size.width <= 500) {
       return mediaQuery.textScaleFactor * 30;
     } else {
-      return _fontSize * 2 + 26;
+      return ((_fontSize * .15) + 0.85) * 30;
     }
   }
 
