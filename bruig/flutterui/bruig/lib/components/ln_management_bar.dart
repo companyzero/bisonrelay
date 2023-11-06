@@ -65,7 +65,7 @@ class _LNManagementBarState extends State<LNManagementBar> {
                         color: selectedIndex == 0
                             ? selectedTextColor
                             : unselectedTextColor,
-                        fontSize: theme.getSmallFont(),
+                        fontSize: theme.getSmallFont(context),
                         fontWeight: FontWeight.w400)),
                 onTap: () {
                   tabChange(0);
@@ -77,7 +77,7 @@ class _LNManagementBarState extends State<LNManagementBar> {
                         color: selectedIndex == 1
                             ? selectedTextColor
                             : unselectedTextColor,
-                        fontSize: theme.getSmallFont(),
+                        fontSize: theme.getSmallFont(context),
                         fontWeight: FontWeight.w400)),
                 onTap: () {
                   tabChange(1);
@@ -89,7 +89,7 @@ class _LNManagementBarState extends State<LNManagementBar> {
                         color: selectedIndex == 2
                             ? selectedTextColor
                             : unselectedTextColor,
-                        fontSize: theme.getSmallFont(),
+                        fontSize: theme.getSmallFont(context),
                         fontWeight: FontWeight.w400)),
                 onTap: () {
                   tabChange(2);
@@ -101,7 +101,7 @@ class _LNManagementBarState extends State<LNManagementBar> {
                         color: selectedIndex == 3
                             ? selectedTextColor
                             : unselectedTextColor,
-                        fontSize: theme.getSmallFont(),
+                        fontSize: theme.getSmallFont(context),
                         fontWeight: FontWeight.w400)),
                 onTap: () {
                   tabChange(3);
@@ -113,7 +113,7 @@ class _LNManagementBarState extends State<LNManagementBar> {
                         color: selectedIndex == 4
                             ? selectedTextColor
                             : unselectedTextColor,
-                        fontSize: theme.getSmallFont(),
+                        fontSize: theme.getSmallFont(context),
                         fontWeight: FontWeight.w400)),
                 onTap: () {
                   tabChange(4);
@@ -125,7 +125,7 @@ class _LNManagementBarState extends State<LNManagementBar> {
                         color: selectedIndex == 5
                             ? selectedTextColor
                             : unselectedTextColor,
-                        fontSize: theme.getSmallFont(),
+                        fontSize: theme.getSmallFont(context),
                         fontWeight: FontWeight.w400)),
                 onTap: () {
                   tabChange(5);
@@ -137,7 +137,7 @@ class _LNManagementBarState extends State<LNManagementBar> {
                         color: selectedIndex == 6
                             ? selectedTextColor
                             : unselectedTextColor,
-                        fontSize: theme.getSmallFont(),
+                        fontSize: theme.getSmallFont(context),
                         fontWeight: FontWeight.w400)),
                 onTap: () {
                   tabChange(6);

@@ -104,7 +104,7 @@ class _ShutdownScreenState extends State<ShutdownScreen> {
                         Text("Shutting Down Bison Relay",
                             style: TextStyle(
                                 color: textColor,
-                                fontSize: theme.getHugeFont(),
+                                fontSize: theme.getHugeFont(context),
                                 fontWeight: FontWeight.w200)),
                         clientStopErr != null
                             ? Text(clientStopErr!)

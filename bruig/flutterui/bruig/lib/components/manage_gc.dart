@@ -78,7 +78,8 @@ class _InviteUserPanelState extends State<_InviteUserPanel> {
               const SizedBox(height: 10),
               Text("Invite to GC",
                   style: TextStyle(
-                      color: textColor, fontSize: theme.getMediumFont())),
+                      color: textColor,
+                      fontSize: theme.getMediumFont(context))),
               Row(children: [
                 Expanded(child: UsersDropdown(cb: (ChatModel? chat) {
                   userToInvite = chat;
@@ -367,10 +368,11 @@ class ManageGCScreenState extends State<ManageGCScreenForChat> {
                   Row(children: [
                     Text("Managing GC - ",
                         style: TextStyle(
-                            fontSize: theme.getMediumFont(), color: textColor)),
+                            fontSize: theme.getMediumFont(context),
+                            color: textColor)),
                     Text(gcName,
                         style: TextStyle(
-                            fontSize: theme.getMediumFont(),
+                            fontSize: theme.getMediumFont(context),
                             fontWeight: FontWeight.bold,
                             color: textColor)),
                     const SizedBox(width: 20),
@@ -398,13 +400,13 @@ class ManageGCScreenState extends State<ManageGCScreenForChat> {
                         style: TextStyle(
                             color: textColor,
                             fontWeight: FontWeight.w100,
-                            fontSize: theme.getSmallFont())),
+                            fontSize: theme.getSmallFont(context))),
                     Copyable(
                         gcID,
                         TextStyle(
                             color: textColor,
                             fontWeight: FontWeight.w100,
-                            fontSize: theme.getSmallFont()))
+                            fontSize: theme.getSmallFont(context)))
                   ]),
                   const SizedBox(height: 3),
                   Row(children: [
@@ -413,7 +415,7 @@ class ManageGCScreenState extends State<ManageGCScreenForChat> {
                         style: TextStyle(
                             color: textColor,
                             fontWeight: FontWeight.w100,
-                            fontSize: theme.getSmallFont()))
+                            fontSize: theme.getSmallFont(context)))
                   ]),
                   const SizedBox(height: 10),
                   localIsAdmin
@@ -425,7 +427,8 @@ class ManageGCScreenState extends State<ManageGCScreenForChat> {
                   const SizedBox(height: 10),
                   Text("GC Members",
                       style: TextStyle(
-                          color: textColor, fontSize: theme.getMediumFont())),
+                          color: textColor,
+                          fontSize: theme.getMediumFont(context))),
                   Expanded(
                       child: ListView.builder(
                           itemCount: users.length,

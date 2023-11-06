@@ -23,7 +23,7 @@ class ManageContentScreenTitle extends StatelessWidget {
       return Text(
           "Bison Relay / Manage Content / ${ManageContentScreenSub[idx].label}",
           style: TextStyle(
-              fontSize: theme.getLargeFont(),
+              fontSize: theme.getLargeFont(context),
               color: Theme.of(context).focusColor));
     });
   }

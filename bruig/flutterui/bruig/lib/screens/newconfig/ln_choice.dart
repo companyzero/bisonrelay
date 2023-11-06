@@ -75,13 +75,13 @@ class LNChoicePage extends StatelessWidget {
                     Text("Setting up Bison Relay",
                         style: TextStyle(
                             color: textColor,
-                            fontSize: theme.getHugeFont(),
+                            fontSize: theme.getHugeFont(context),
                             fontWeight: FontWeight.w200)),
                     const SizedBox(height: 20),
                     Text("Choose Network Mode",
                         style: TextStyle(
                             color: secondaryTextColor,
-                            fontSize: theme.getLargeFont(),
+                            fontSize: theme.getLargeFont(context),
                             fontWeight: FontWeight.w300)),
                     const SizedBox(height: 34),
                     Row(mainAxisAlignment: MainAxisAlignment.center, children: [

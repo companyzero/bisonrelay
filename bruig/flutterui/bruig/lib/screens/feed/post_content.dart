@@ -193,7 +193,7 @@ class _CommentWState extends State<_CommentW> {
                     Text(nick,
                         style: TextStyle(
                             color: hightLightTextColor,
-                            fontSize: theme.getSmallFont())),
+                            fontSize: theme.getSmallFont(context))),
                     const SizedBox(width: 8),
                     !mine && !hasChat && !kxing
                         ? SizedBox(
@@ -227,7 +227,7 @@ class _CommentWState extends State<_CommentW> {
                             Text("New Comment",
                                 style: TextStyle(
                                   fontStyle: FontStyle.italic,
-                                  fontSize: theme.getSmallFont(),
+                                  fontSize: theme.getSmallFont(context),
                                   color: Colors.amber,
                                 ))
                           ])
@@ -239,7 +239,7 @@ class _CommentWState extends State<_CommentW> {
                               alignment: Alignment.centerRight,
                               child: Text(strTimestamp,
                                   style: TextStyle(
-                                      fontSize: theme.getSmallFont(),
+                                      fontSize: theme.getSmallFont(context),
                                       color: darkTextColor))))
                       : const Empty(),
                   const SizedBox(width: 10)
@@ -276,7 +276,8 @@ class _CommentWState extends State<_CommentW> {
                                       minLines: 3,
                                       style: TextStyle(
                                           color: textColor,
-                                          fontSize: theme.getMediumFont(),
+                                          fontSize:
+                                              theme.getMediumFont(context),
                                           letterSpacing: 0.44),
                                       keyboardType: TextInputType.multiline,
                                       maxLines: null,
@@ -604,7 +605,8 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
               builder: (context, theme, _) => Text("Comments",
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                      color: darkTextColor, fontSize: theme.getSmallFont()))),
+                      color: darkTextColor,
+                      fontSize: theme.getSmallFont(context)))),
           Expanded(
               child: Divider(
             color: dividerColor, //color of divider
@@ -624,7 +626,7 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
                           style: ElevatedButton.styleFrom(
                               textStyle: TextStyle(
                                   color: textColor,
-                                  fontSize: theme.getSmallFont(),
+                                  fontSize: theme.getSmallFont(context),
                                   letterSpacing: 1),
                               padding: const EdgeInsets.only(
                                   bottom: 4, top: 4, left: 8, right: 8)),
@@ -633,7 +635,7 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
                             "Add Comment",
                             style: TextStyle(
                                 color: textColor,
-                                fontSize: theme.getSmallFont(),
+                                fontSize: theme.getSmallFont(context),
                                 letterSpacing: 1),
                           ))
                     ])))
@@ -651,7 +653,7 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
                             minLines: 3,
                             style: TextStyle(
                                 color: textColor,
-                                fontSize: theme.getMediumFont(),
+                                fontSize: theme.getMediumFont(context),
                                 letterSpacing: 0.44),
                             controller: newCommentCtrl,
                             keyboardType: TextInputType.multiline,
@@ -694,7 +696,7 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
                             textAlign: TextAlign.center,
                             style: TextStyle(
                                 color: darkTextColor,
-                                fontSize: theme.getSmallFont())),
+                                fontSize: theme.getSmallFont(context))),
                         Expanded(
                             child: Divider(
                           color: dividerColor, //color of divider
@@ -711,13 +713,13 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
                               """Unreplicated comments are those that have been sent to the post's relayer for replication but which the relayer has not yet sent back to the local client. Comment replication requires the remote user to be online so it may take some time until the comment is received back.""",
                               style: TextStyle(
                                   color: hightLightTextColor,
-                                  fontSize: theme.getSmallFont(),
+                                  fontSize: theme.getSmallFont(context),
                                   letterSpacing: 1))),
                       ...newComments.map((e) => Container(
                             padding: const EdgeInsets.all(10),
                             child: Text(e,
                                 style: TextStyle(
-                                    fontSize: theme.getSmallFont(),
+                                    fontSize: theme.getSmallFont(context),
                                     color: textColor)),
                           )),
                     ]))
@@ -744,7 +746,7 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
                   Text("""This is a relayed post and cannot be commented on.""",
                       style: TextStyle(
                           color: textColor,
-                          fontSize: theme.getSmallFont(),
+                          fontSize: theme.getSmallFont(context),
                           letterSpacing: 1)),
                   const SizedBox(height: 10),
                   isKXSearchingAuthor
@@ -752,7 +754,7 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
                           """Currently attempting to KX search for post author. This may take a long time to complete, as it involves contacting and performing KX with multiple peers.""",
                           style: TextStyle(
                               color: textColor,
-                              fontSize: theme.getSmallFont(),
+                              fontSize: theme.getSmallFont(context),
                               letterSpacing: 1))
                       : !knowsAuthor
                           ? Column(children: [
@@ -760,7 +762,7 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
                                   """In order to comment on the post, the local client needs to KX with the post author and subscribe to their posts. This may be done automatically by using the "KX Search" action. KX search may take a long time to complete, because it depends on remote peers completing KX and referring us to the original author.""",
                                   style: TextStyle(
                                       color: textColor,
-                                      fontSize: theme.getSmallFont(),
+                                      fontSize: theme.getSmallFont(context),
                                       letterSpacing: 1)),
                               const SizedBox(height: 10),
                               ElevatedButton(
@@ -773,7 +775,7 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
                                       """In order to comment on the post, the local client needs subscribe to the author's posts and then fetch this post. The process to do this can be started automatically, but it may take some time until the author responds.""",
                                       style: TextStyle(
                                           color: textColor,
-                                          fontSize: theme.getSmallFont(),
+                                          fontSize: theme.getSmallFont(context),
                                           letterSpacing: 1)),
                                   const SizedBox(height: 10),
                                   ElevatedButton(
@@ -785,7 +787,7 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
                                   """Sent subscription attempt. It may take some time until the author responds.""",
                                   style: TextStyle(
                                       color: textColor,
-                                      fontSize: theme.getSmallFont(),
+                                      fontSize: theme.getSmallFont(context),
                                       letterSpacing: 1)),
                 ]))),
       ]);
@@ -839,7 +841,8 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
                                   Text(authorNick,
                                       style: TextStyle(
                                           color: hightLightTextColor,
-                                          fontSize: theme.getSmallFont())),
+                                          fontSize:
+                                              theme.getSmallFont(context))),
                                   const SizedBox(width: 8),
                                   !myPost && !hasChat
                                       ? SizedBox(
@@ -875,8 +878,8 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
                                                   .toLocal()
                                                   .toIso8601String(),
                                               style: TextStyle(
-                                                  fontSize:
-                                                      theme.getSmallFont(),
+                                                  fontSize: theme
+                                                      .getSmallFont(context),
                                                   color: darkTextColor))))
                                 ],
                               ),
@@ -888,8 +891,8 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
                                           child: Text("Relayed by $relayer",
                                               style: TextStyle(
                                                   color: textColor,
-                                                  fontSize:
-                                                      theme.getMediumFont(),
+                                                  fontSize: theme
+                                                      .getMediumFont(context),
                                                   fontStyle: FontStyle.italic)))
                                     ]),
                               const SizedBox(height: 10),

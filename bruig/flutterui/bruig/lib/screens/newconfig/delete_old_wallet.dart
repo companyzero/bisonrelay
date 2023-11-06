@@ -86,7 +86,7 @@ class _DeleteOldWalletPageState extends State<DeleteOldWalletPage> {
                     Text("Remove old wallet",
                         style: TextStyle(
                             color: textColor,
-                            fontSize: theme.getHugeFont(),
+                            fontSize: theme.getHugeFont(context),
                             fontWeight: FontWeight.w200)),
                     const SizedBox(height: 20),
                     Column(children: [
@@ -96,7 +96,7 @@ class _DeleteOldWalletPageState extends State<DeleteOldWalletPage> {
                               textAlign: TextAlign.left,
                               style: TextStyle(
                                   color: textColor,
-                                  fontSize: theme.getMediumFont(),
+                                  fontSize: theme.getMediumFont(context),
                                   fontWeight: FontWeight.w300))),
                       Center(
                         child: SizedBox(

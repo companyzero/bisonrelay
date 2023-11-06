@@ -14,7 +14,7 @@ class SettingsScreenTitle extends StatelessWidget {
     return Consumer<ThemeNotifier>(
         builder: (context, theme, child) => Text("Bison Relay / Settings",
             style: TextStyle(
-                fontSize: theme.getLargeFont(),
+                fontSize: theme.getLargeFont(context),
                 color: Theme.of(context).focusColor)));
   }
 }
@@ -149,15 +149,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   Column(children: [
                     Text('Small Text',
                         style: TextStyle(
-                            fontSize: theme.getSmallFont(), color: textColor)),
+                            fontSize: theme.getSmallFont(context),
+                            color: textColor)),
                     const SizedBox(height: 20),
                     Text('Medium Text',
                         style: TextStyle(
-                            fontSize: theme.getMediumFont(), color: textColor)),
+                            fontSize: theme.getMediumFont(context),
+                            color: textColor)),
                     const SizedBox(height: 20),
                     Text('Large Text',
                         style: TextStyle(
-                            fontSize: theme.getLargeFont(), color: textColor)),
+                            fontSize: theme.getLargeFont(context),
+                            color: textColor)),
                     const SizedBox(height: 20),
                   ])
                 ])),

@@ -35,7 +35,7 @@ class InteractiveAvatar extends StatelessWidget {
                       child: Text(chatNick[0].toUpperCase(),
                           style: TextStyle(
                               color: avatarTextColor,
-                              fontSize: theme.getLargeFont()))),
+                              fontSize: theme.getLargeFont(context)))),
                 ),
               ),
             ));

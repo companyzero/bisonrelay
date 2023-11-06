@@ -112,7 +112,8 @@ class _AboutScreenState extends State<AboutScreen> {
                                                                 color:
                                                                     textColor,
                                                                 fontSize: theme
-                                                                    .getHugeFont(),
+                                                                    .getHugeFont(
+                                                                        context),
                                                                 fontWeight:
                                                                     FontWeight
                                                                         .w200)),
@@ -123,7 +124,8 @@ class _AboutScreenState extends State<AboutScreen> {
                                                                 color:
                                                                     textColor,
                                                                 fontSize: theme
-                                                                    .getLargeFont(),
+                                                                    .getLargeFont(
+                                                                        context),
                                                                 fontWeight:
                                                                     FontWeight
                                                                         .w200)),
@@ -140,7 +142,8 @@ class _AboutScreenState extends State<AboutScreen> {
                                                                       color:
                                                                           textColor,
                                                                       size: theme
-                                                                          .getMediumFont(),
+                                                                          .getMediumFont(
+                                                                              context),
                                                                       Icons
                                                                           .copyright)),
                                                               TextSpan(
@@ -150,8 +153,8 @@ class _AboutScreenState extends State<AboutScreen> {
                                                                       color:
                                                                           textColor,
                                                                       fontSize:
-                                                                          theme
-                                                                              .getLargeFont(),
+                                                                          theme.getLargeFont(
+                                                                              context),
                                                                       fontWeight:
                                                                           FontWeight
                                                                               .w200))

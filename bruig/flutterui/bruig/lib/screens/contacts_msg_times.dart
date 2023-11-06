@@ -106,7 +106,7 @@ class _ContactsLastMsgTimesScreenState
                             "Last Message Time",
                             style: TextStyle(
                                 color: textColor,
-                                fontSize: theme.getLargeFont()),
+                                fontSize: theme.getLargeFont(context)),
                           ),
                           Expanded(
                               child: ListView.builder(

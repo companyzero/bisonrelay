@@ -37,7 +37,7 @@ class _DecodedInvoice extends StatelessWidget {
                       textAlign: TextAlign.left,
                       style: TextStyle(
                           color: darkTextColor,
-                          fontSize: theme.getMediumFont())),
+                          fontSize: theme.getMediumFont(context))),
                   Expanded(
                       child: Divider(
                     color: dividerColor, //color of divider
@@ -53,14 +53,14 @@ class _DecodedInvoice extends StatelessWidget {
                       width: 80,
                       child: Text("Description:",
                           style: TextStyle(
-                              fontSize: theme.getSmallFont(),
+                              fontSize: theme.getSmallFont(context),
                               color: secondaryTextColor))),
                   SizedBox(
                       width: 500,
                       child: Text(
                         inv.description,
                         style: TextStyle(
-                            fontSize: theme.getSmallFont(),
+                            fontSize: theme.getSmallFont(context),
                             color: secondaryTextColor),
                       ))
                 ]),
@@ -70,14 +70,14 @@ class _DecodedInvoice extends StatelessWidget {
                       width: 80,
                       child: Text("Destination:",
                           style: TextStyle(
-                              fontSize: theme.getSmallFont(),
+                              fontSize: theme.getSmallFont(context),
                               color: secondaryTextColor))),
                   SizedBox(
                       width: 500,
                       child: Text(
                         inv.destination,
                         style: TextStyle(
-                            fontSize: theme.getSmallFont(),
+                            fontSize: theme.getSmallFont(context),
                             color: secondaryTextColor),
                       ))
                 ]),
@@ -87,7 +87,7 @@ class _DecodedInvoice extends StatelessWidget {
                       width: 80,
                       child: Text("Amount:",
                           style: TextStyle(
-                              fontSize: theme.getSmallFont(),
+                              fontSize: theme.getSmallFont(context),
                               color: secondaryTextColor))),
                   SizedBox(
                       width: 100,
@@ -95,7 +95,7 @@ class _DecodedInvoice extends StatelessWidget {
                           ? dcrInput(controller: payAmountCtrl)
                           : Text("${inv.amount.toStringAsFixed(8)} DCR",
                               style: TextStyle(
-                                  fontSize: theme.getSmallFont(),
+                                  fontSize: theme.getSmallFont(context),
                                   color: secondaryTextColor)))
                 ]),
                 const SizedBox(height: 21),
@@ -216,7 +216,7 @@ class _LNPaymentsPageState extends State<LNPaymentsPage> {
                         textAlign: TextAlign.left,
                         style: TextStyle(
                             color: darkTextColor,
-                            fontSize: theme.getMediumFont())),
+                            fontSize: theme.getMediumFont(context))),
                     Expanded(
                         child: Divider(
                       color: dividerColor, //color of divider
@@ -232,19 +232,19 @@ class _LNPaymentsPageState extends State<LNPaymentsPage> {
                         width: 80,
                         child: Text("Memo:",
                             style: TextStyle(
-                                fontSize: theme.getSmallFont(),
+                                fontSize: theme.getSmallFont(context),
                                 color: secondaryTextColor))),
                     SizedBox(
                         width: 500,
                         child: TextField(
                             style: TextStyle(
-                                fontSize: theme.getSmallFont(),
+                                fontSize: theme.getSmallFont(context),
                                 color: secondaryTextColor),
                             controller: memoCtrl,
                             decoration: InputDecoration(
                                 hintText: "Type an invoice description",
                                 hintStyle: TextStyle(
-                                    fontSize: theme.getSmallFont(),
+                                    fontSize: theme.getSmallFont(context),
                                     color: secondaryTextColor),
                                 filled: true,
                                 fillColor: inputFill)))
@@ -255,7 +255,7 @@ class _LNPaymentsPageState extends State<LNPaymentsPage> {
                         width: 80,
                         child: Text("Amount:",
                             style: TextStyle(
-                                fontSize: theme.getSmallFont(),
+                                fontSize: theme.getSmallFont(context),
                                 color: secondaryTextColor))),
                     SizedBox(
                         width: 100, child: dcrInput(controller: genAmountCtrl))
@@ -265,7 +265,8 @@ class _LNPaymentsPageState extends State<LNPaymentsPage> {
                     onPressed: generateInvoice,
                     style: ElevatedButton.styleFrom(
                         textStyle: TextStyle(
-                            color: textColor, fontSize: theme.getSmallFont())),
+                            color: textColor,
+                            fontSize: theme.getSmallFont(context))),
                     child: const Text("Generate Invoice"),
                   ),
                   const SizedBox(height: 21),
@@ -276,7 +277,7 @@ class _LNPaymentsPageState extends State<LNPaymentsPage> {
                                 textAlign: TextAlign.left,
                                 style: TextStyle(
                                     color: darkTextColor,
-                                    fontSize: theme.getMediumFont())),
+                                    fontSize: theme.getMediumFont(context))),
                             Expanded(
                                 child: Divider(
                               color: dividerColor, //color of divider
@@ -290,14 +291,14 @@ class _LNPaymentsPageState extends State<LNPaymentsPage> {
                           Text(generatedInvoice,
                               style: TextStyle(
                                   color: secondaryTextColor,
-                                  fontSize: theme.getSmallFont())),
+                                  fontSize: theme.getSmallFont(context))),
                           const SizedBox(height: 10),
                           ElevatedButton(
                             onPressed: copyInvoiceToClipboard,
                             style: ElevatedButton.styleFrom(
                               textStyle: TextStyle(
                                   color: textColor,
-                                  fontSize: theme.getSmallFont()),
+                                  fontSize: theme.getSmallFont(context)),
                             ),
                             child: const Text("Copy Invoice"),
                           ),
@@ -309,7 +310,7 @@ class _LNPaymentsPageState extends State<LNPaymentsPage> {
                         textAlign: TextAlign.left,
                         style: TextStyle(
                             color: darkTextColor,
-                            fontSize: theme.getMediumFont())),
+                            fontSize: theme.getMediumFont(context))),
                     Expanded(
                         child: Divider(
                       color: dividerColor, //color of divider
@@ -325,19 +326,19 @@ class _LNPaymentsPageState extends State<LNPaymentsPage> {
                         width: 80,
                         child: Text("Invoice ID:",
                             style: TextStyle(
-                                fontSize: theme.getSmallFont(),
+                                fontSize: theme.getSmallFont(context),
                                 color: secondaryTextColor))),
                     SizedBox(
                         width: 500,
                         child: TextField(
                             style: TextStyle(
-                                fontSize: theme.getSmallFont(),
+                                fontSize: theme.getSmallFont(context),
                                 color: secondaryTextColor),
                             controller: payCtrl,
                             decoration: InputDecoration(
                                 hintText: "Type an invoice hash",
                                 hintStyle: TextStyle(
-                                    fontSize: theme.getSmallFont(),
+                                    fontSize: theme.getSmallFont(context),
                                     color: secondaryTextColor),
                                 filled: true,
                                 fillColor: inputFill)))
@@ -354,7 +355,7 @@ class _LNPaymentsPageState extends State<LNPaymentsPage> {
                               : Icons.hourglass_bottom),
                           label: Text("Pay Invoice",
                               style: TextStyle(
-                                  fontSize: theme.getSmallFont(),
+                                  fontSize: theme.getSmallFont(context),
                                   color: textColor)),
                           onPressed: !paying ? payInvoice : null,
                         )

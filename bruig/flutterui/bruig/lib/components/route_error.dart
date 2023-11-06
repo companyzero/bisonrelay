@@ -19,7 +19,8 @@ class RouteErrorPage extends StatelessWidget {
                 children: [
                   Text("Route $routeName not found",
                       style: TextStyle(
-                          color: textColor, fontSize: theme.getMediumFont())),
+                          color: textColor,
+                          fontSize: theme.getMediumFont(context))),
                   ElevatedButton(
                       onPressed: () {
                         Navigator.of(context, rootNavigator: true)

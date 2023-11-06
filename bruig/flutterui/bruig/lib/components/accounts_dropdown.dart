@@ -74,7 +74,7 @@ class _AccountsDropDownState extends State<AccountsDropDown> {
                             child: Text(e.name,
                                 style: TextStyle(
                                   color: textColor,
-                                  fontSize: theme.getSmallFont(),
+                                  fontSize: theme.getSmallFont(context),
                                 ))),
                       ))).toList(),
               onChanged: (newValue) {

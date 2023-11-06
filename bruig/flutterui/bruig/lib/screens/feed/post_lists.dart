@@ -59,14 +59,14 @@ class _SubItem extends StatelessWidget {
                       child: Text(chat?.nick ?? "",
                           style: TextStyle(
                               color: textColor,
-                              fontSize: theme.getSmallFont()))),
+                              fontSize: theme.getSmallFont(context)))),
                   Expanded(
                       flex: 10,
                       child: Text(id,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                               color: textColor,
-                              fontSize: theme.getSmallFont(),
+                              fontSize: theme.getSmallFont(context),
                               fontWeight: FontWeight.w200))),
                   (remoteSub
                       ? IconButton(
@@ -134,7 +134,8 @@ class _PostListsScreenState extends State<PostListsScreen> {
           builder: (context, theme, _) => Center(
                 child: Text("Loading...",
                     style: TextStyle(
-                        color: textColor, fontSize: theme.getSmallFont())),
+                        color: textColor,
+                        fontSize: theme.getSmallFont(context))),
               ));
     }
     return Consumer<ThemeNotifier>(
@@ -159,7 +160,7 @@ class _PostListsScreenState extends State<PostListsScreen> {
                         textAlign: TextAlign.center,
                         style: TextStyle(
                             color: darkTextColor,
-                            fontSize: theme.getSmallFont())),
+                            fontSize: theme.getSmallFont(context))),
                     Expanded(
                         child: Divider(
                       color: dividerColor, //color of divider
@@ -197,7 +198,7 @@ class _PostListsScreenState extends State<PostListsScreen> {
                         textAlign: TextAlign.center,
                         style: TextStyle(
                             color: darkTextColor,
-                            fontSize: theme.getSmallFont())),
+                            fontSize: theme.getSmallFont(context))),
                     Expanded(
                         child: Divider(
                       color: dividerColor, //color of divider

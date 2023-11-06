@@ -53,13 +53,13 @@ class _UsersDropdownState extends State<UsersDropdown> {
                     child: Text(c != null ? c.nick : "Share globally",
                         style: TextStyle(
                           color: textColor,
-                          fontSize: theme.getSmallFont(),
+                          fontSize: theme.getSmallFont(context),
                         )))))).toList(),
         selectedItemBuilder: (BuildContext context) => (list.map(
           (ChatModel? c) => Text(
             c != null ? c.nick : "Share globally",
             style: TextStyle(
-                fontSize: theme.getSmallFont(),
+                fontSize: theme.getSmallFont(context),
                 color: textColor,
                 fontStyle: FontStyle.italic,
                 fontWeight: FontWeight.bold),

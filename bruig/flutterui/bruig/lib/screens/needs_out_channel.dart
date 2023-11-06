@@ -219,7 +219,7 @@ open channels to other LN nodes.''';
                           child: Text("Setting up Bison Relay",
                               style: TextStyle(
                                   color: textColor,
-                                  fontSize: theme.getHugeFont(),
+                                  fontSize: theme.getHugeFont(context),
                                   fontWeight: FontWeight.w200)),
                         ),
                         const SizedBox(height: 20),
@@ -227,7 +227,7 @@ open channels to other LN nodes.''';
                           child: Text("Add Outbound Capacity",
                               style: TextStyle(
                                   color: secondaryTextColor,
-                                  fontSize: theme.getLargeFont(),
+                                  fontSize: theme.getLargeFont(context),
                                   fontWeight: FontWeight.w300)),
                         ),
                         const SizedBox(height: 34),
@@ -244,7 +244,7 @@ Note that Lightning Network channels require managing off-chain data, and as suc
                       ''',
                                 style: TextStyle(
                                     color: secondaryTextColor,
-                                    fontSize: theme.getMediumFont(),
+                                    fontSize: theme.getMediumFont(context),
                                     fontWeight: FontWeight.w300),
                               )),
                         ),
@@ -260,14 +260,14 @@ Note that Lightning Network channels require managing off-chain data, and as suc
                                       "Wallet Balance:",
                                       style: TextStyle(
                                           color: darkTextColor,
-                                          fontSize: theme.getSmallFont(),
+                                          fontSize: theme.getSmallFont(context),
                                           fontWeight: FontWeight.w300)),
                                   Text(
                                       textAlign: TextAlign.right,
                                       formatDCR(atomsToDCR(walletBalance)),
                                       style: TextStyle(
                                           color: darkTextColor,
-                                          fontSize: theme.getSmallFont(),
+                                          fontSize: theme.getSmallFont(context),
                                           fontWeight: FontWeight.w300)),
                                 ])),
                         const SizedBox(height: 3),
@@ -279,14 +279,14 @@ Note that Lightning Network channels require managing off-chain data, and as suc
                                   "Outbound Channel Capacity:",
                                   style: TextStyle(
                                       color: darkTextColor,
-                                      fontSize: theme.getSmallFont(),
+                                      fontSize: theme.getSmallFont(context),
                                       fontWeight: FontWeight.w300)),
                               Text(
                                   textAlign: TextAlign.right,
                                   formatDCR(atomsToDCR(maxOutAmount)),
                                   style: TextStyle(
                                       color: darkTextColor,
-                                      fontSize: theme.getSmallFont(),
+                                      fontSize: theme.getSmallFont(context),
                                       fontWeight: FontWeight.w300))
                             ]),
                         Row(
@@ -297,14 +297,14 @@ Note that Lightning Network channels require managing off-chain data, and as suc
                                   "Pending Channels:",
                                   style: TextStyle(
                                       color: darkTextColor,
-                                      fontSize: theme.getSmallFont(),
+                                      fontSize: theme.getSmallFont(context),
                                       fontWeight: FontWeight.w300)),
                               Text(
                                   textAlign: TextAlign.right,
                                   "$numPendingChannels",
                                   style: TextStyle(
                                       color: darkTextColor,
-                                      fontSize: theme.getSmallFont(),
+                                      fontSize: theme.getSmallFont(context),
                                       fontWeight: FontWeight.w300))
                             ]),
                         Row(
@@ -315,14 +315,14 @@ Note that Lightning Network channels require managing off-chain data, and as suc
                                   "Active Channels:",
                                   style: TextStyle(
                                       color: darkTextColor,
-                                      fontSize: theme.getSmallFont(),
+                                      fontSize: theme.getSmallFont(context),
                                       fontWeight: FontWeight.w300)),
                               Text(
                                   textAlign: TextAlign.right,
                                   "$numChannels",
                                   style: TextStyle(
                                       color: darkTextColor,
-                                      fontSize: theme.getSmallFont(),
+                                      fontSize: theme.getSmallFont(context),
                                       fontWeight: FontWeight.w300))
                             ]),
                         const SizedBox(height: 10),
@@ -351,8 +351,8 @@ Note that Lightning Network channels require managing off-chain data, and as suc
                                           Text("Amount",
                                               style: TextStyle(
                                                   color: darkTextColor,
-                                                  fontSize:
-                                                      theme.getSmallFont(),
+                                                  fontSize: theme
+                                                      .getSmallFont(context),
                                                   fontWeight: FontWeight.w300)),
                                           SizedBox(
                                             width: 150,
@@ -373,8 +373,9 @@ Note that Lightning Network channels require managing off-chain data, and as suc
                                                 Text("Peer ID and Address",
                                                     style: TextStyle(
                                                         color: darkTextColor,
-                                                        fontSize: theme
-                                                            .getSmallFont(),
+                                                        fontSize:
+                                                            theme.getSmallFont(
+                                                                context),
                                                         fontWeight:
                                                             FontWeight.w300)),
                                                 TextField(

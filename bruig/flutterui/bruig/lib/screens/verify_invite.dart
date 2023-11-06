@@ -125,7 +125,7 @@ class _VerifyInviteScreenState extends State<VerifyInviteScreen> {
                         Text("Accept Invite",
                             style: TextStyle(
                                 color: textColor,
-                                fontSize: theme.getHugeFont(),
+                                fontSize: theme.getHugeFont(context),
                                 fontWeight: FontWeight.w200)),
                         const SizedBox(height: 34),
                         invite.invite.funds != null
@@ -135,17 +135,17 @@ class _VerifyInviteScreenState extends State<VerifyInviteScreen> {
                         Text("Name: ${invite.invite.public.name}",
                             style: TextStyle(
                                 color: textColor,
-                                fontSize: theme.getMediumFont(),
+                                fontSize: theme.getMediumFont(context),
                                 fontWeight: FontWeight.w300)),
                         Text("Nick: ${invite.invite.public.nick}",
                             style: TextStyle(
                                 color: textColor,
-                                fontSize: theme.getMediumFont(),
+                                fontSize: theme.getMediumFont(context),
                                 fontWeight: FontWeight.w300)),
                         Text("Identity: ${invite.invite.public.identity}",
                             style: TextStyle(
                                 color: textColor,
-                                fontSize: theme.getMediumFont(),
+                                fontSize: theme.getMediumFont(context),
                                 fontWeight: FontWeight.w300)),
                         const SizedBox(height: 34),
                         ElevatedButton(

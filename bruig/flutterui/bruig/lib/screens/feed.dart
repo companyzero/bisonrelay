@@ -26,14 +26,14 @@ class FeedScreenTitle extends StatelessWidget {
       if (menu.activePageTab <= 0) {
         return Text("Bison Relay / News Feed",
             style: TextStyle(
-                fontSize: theme.getLargeFont(),
+                fontSize: theme.getLargeFont(context),
                 color: Theme.of(context).focusColor));
       }
       var idx = LnScreenSub.indexWhere((e) => e.pageTab == menu.activePageTab);
 
       return Text("Bison Relay / News Feed / ${FeedScreenSub[idx].label}",
           style: TextStyle(
-              fontSize: theme.getLargeFont(),
+              fontSize: theme.getLargeFont(context),
               color: Theme.of(context).focusColor));
     });
   }

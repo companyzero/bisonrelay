@@ -109,7 +109,7 @@ class _InputState extends State<Input> {
               autofocus: true,
               focusNode: widget.inputFocusNode,
               style: TextStyle(
-                fontSize: theme.getMediumFont(),
+                fontSize: theme.getMediumFont(context),
                 color: secondaryTextColor,
               ),
               controller: controller,
@@ -133,7 +133,7 @@ class _InputState extends State<Input> {
                 ),
                 hintText: "Start a message",
                 hintStyle: TextStyle(
-                    fontSize: theme.getMediumFont(),
+                    fontSize: theme.getMediumFont(context),
                     letterSpacing: 0.5,
                     fontWeight: FontWeight.w300,
                     color: textColor),

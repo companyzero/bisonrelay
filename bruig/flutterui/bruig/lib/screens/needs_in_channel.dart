@@ -227,7 +227,7 @@ cNPr8Y+sSs2MHf6xMNBQzV4KuIlPIg==
                           child: Text("Setting up Bison Relay",
                               style: TextStyle(
                                   color: textColor,
-                                  fontSize: theme.getHugeFont(),
+                                  fontSize: theme.getHugeFont(context),
                                   fontWeight: FontWeight.w200)),
                         ),
                         const SizedBox(height: 20),
@@ -235,7 +235,7 @@ cNPr8Y+sSs2MHf6xMNBQzV4KuIlPIg==
                           child: Text("Add Inbound Capacity",
                               style: TextStyle(
                                   color: secondaryTextColor,
-                                  fontSize: theme.getLargeFont(),
+                                  fontSize: theme.getLargeFont(context),
                                   fontWeight: FontWeight.w300)),
                         ),
                         const SizedBox(height: 34),
@@ -253,7 +253,7 @@ After the channel is opened, it may take up to 6 confirmations for it to be broa
                 ''',
                               style: TextStyle(
                                   color: secondaryTextColor,
-                                  fontSize: theme.getMediumFont(),
+                                  fontSize: theme.getMediumFont(context),
                                   fontWeight: FontWeight.w300)),
                         )),
                         const SizedBox(height: 21),
@@ -268,14 +268,14 @@ After the channel is opened, it may take up to 6 confirmations for it to be broa
                                       "Outbound Channel Capacity:",
                                       style: TextStyle(
                                           color: darkTextColor,
-                                          fontSize: theme.getSmallFont(),
+                                          fontSize: theme.getSmallFont(context),
                                           fontWeight: FontWeight.w300)),
                                   Text(
                                       textAlign: TextAlign.right,
                                       formatDCR(atomsToDCR(maxOutAmount)),
                                       style: TextStyle(
                                           color: darkTextColor,
-                                          fontSize: theme.getSmallFont(),
+                                          fontSize: theme.getSmallFont(context),
                                           fontWeight: FontWeight.w300)),
                                 ])),
                         const SizedBox(height: 3),
@@ -287,14 +287,14 @@ After the channel is opened, it may take up to 6 confirmations for it to be broa
                                   "Inbound Channel Capacity:",
                                   style: TextStyle(
                                       color: darkTextColor,
-                                      fontSize: theme.getSmallFont(),
+                                      fontSize: theme.getSmallFont(context),
                                       fontWeight: FontWeight.w300)),
                               Text(
                                   textAlign: TextAlign.right,
                                   formatDCR(atomsToDCR(maxInAmount)),
                                   style: TextStyle(
                                       color: darkTextColor,
-                                      fontSize: theme.getSmallFont(),
+                                      fontSize: theme.getSmallFont(context),
                                       fontWeight: FontWeight.w300))
                             ]),
                         Row(
@@ -305,14 +305,14 @@ After the channel is opened, it may take up to 6 confirmations for it to be broa
                                   "Pending Channels:",
                                   style: TextStyle(
                                       color: darkTextColor,
-                                      fontSize: theme.getSmallFont(),
+                                      fontSize: theme.getSmallFont(context),
                                       fontWeight: FontWeight.w300)),
                               Text(
                                   textAlign: TextAlign.right,
                                   "$numPendingChannels",
                                   style: TextStyle(
                                       color: darkTextColor,
-                                      fontSize: theme.getSmallFont(),
+                                      fontSize: theme.getSmallFont(context),
                                       fontWeight: FontWeight.w300))
                             ]),
                         Row(
@@ -323,14 +323,14 @@ After the channel is opened, it may take up to 6 confirmations for it to be broa
                                   "Active Channels:",
                                   style: TextStyle(
                                       color: darkTextColor,
-                                      fontSize: theme.getSmallFont(),
+                                      fontSize: theme.getSmallFont(context),
                                       fontWeight: FontWeight.w300)),
                               Text(
                                   textAlign: TextAlign.right,
                                   "$numChannels",
                                   style: TextStyle(
                                       color: darkTextColor,
-                                      fontSize: theme.getSmallFont(),
+                                      fontSize: theme.getSmallFont(context),
                                       fontWeight: FontWeight.w300))
                             ]),
                         const SizedBox(height: 10),
@@ -359,8 +359,8 @@ After the channel is opened, it may take up to 6 confirmations for it to be broa
                                           Text("Amount",
                                               style: TextStyle(
                                                   color: darkTextColor,
-                                                  fontSize:
-                                                      theme.getSmallFont(),
+                                                  fontSize: theme
+                                                      .getSmallFont(context),
                                                   fontWeight: FontWeight.w300)),
                                           SizedBox(
                                             width: 150,
@@ -382,8 +382,9 @@ After the channel is opened, it may take up to 6 confirmations for it to be broa
                                                 Text("LP Server Address",
                                                     style: TextStyle(
                                                         color: darkTextColor,
-                                                        fontSize: theme
-                                                            .getSmallFont(),
+                                                        fontSize:
+                                                            theme.getSmallFont(
+                                                                context),
                                                         fontWeight:
                                                             FontWeight.w300)),
                                                 TextField(
@@ -396,8 +397,9 @@ After the channel is opened, it may take up to 6 confirmations for it to be broa
                                                 Text("LP Server Cert",
                                                     style: TextStyle(
                                                         color: darkTextColor,
-                                                        fontSize: theme
-                                                            .getSmallFont(),
+                                                        fontSize:
+                                                            theme.getSmallFont(
+                                                                context),
                                                         fontWeight:
                                                             FontWeight.w300)),
                                                 TextField(

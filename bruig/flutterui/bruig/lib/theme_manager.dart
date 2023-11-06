@@ -83,13 +83,41 @@ class ThemeNotifier with ChangeNotifier {
   late double _fontSize = defaultFontSize;
   double getFontCoef() => _fontSize;
 
-  double getSmallFont() => _fontSize * 2 + 11;
+  double getSmallFont(BuildContext context) {
+    var mediaQuery = MediaQuery.of(context);
+    if (mediaQuery.size.width <= 500) {
+      return mediaQuery.textScaleFactor * 13;
+    } else {
+      return _fontSize * 2 + 11;
+    }
+  }
 
-  double getMediumFont() => _fontSize * 2 + 13;
+  double getMediumFont(BuildContext context) {
+    var mediaQuery = MediaQuery.of(context);
+    if (mediaQuery.size.width <= 500) {
+      return mediaQuery.textScaleFactor * 15;
+    } else {
+      return _fontSize * 2 + 13;
+    }
+  }
 
-  double getLargeFont() => _fontSize * 2 + 15;
+  double getLargeFont(BuildContext context) {
+    var mediaQuery = MediaQuery.of(context);
+    if (mediaQuery.size.width <= 500) {
+      return mediaQuery.textScaleFactor * 20;
+    } else {
+      return _fontSize * 2 + 13;
+    }
+  }
 
-  double getHugeFont() => _fontSize * 2 + 26;
+  double getHugeFont(BuildContext context) {
+    var mediaQuery = MediaQuery.of(context);
+    if (mediaQuery.size.width <= 500) {
+      return mediaQuery.textScaleFactor * 30;
+    } else {
+      return _fontSize * 2 + 26;
+    }
+  }
 
   ThemeNotifier() {
     StorageManager.readData('themeMode').then((value) {

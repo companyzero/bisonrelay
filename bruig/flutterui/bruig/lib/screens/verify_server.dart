@@ -61,18 +61,18 @@ class _VerifyServerScreen extends StatelessWidget {
                         Text("Accept Server Fingerprint",
                             style: TextStyle(
                                 color: textColor,
-                                fontSize: theme.getHugeFont(),
+                                fontSize: theme.getHugeFont(context),
                                 fontWeight: FontWeight.w200)),
                         const SizedBox(height: 34),
                         Text("Inner Fingerprint: ${cert.innerFingerprint}",
                             style: TextStyle(
                                 color: textColor,
-                                fontSize: theme.getMediumFont(),
+                                fontSize: theme.getMediumFont(context),
                                 fontWeight: FontWeight.w300)),
                         Text("Outer Fingerprint: ${cert.outerFingerprint}",
                             style: TextStyle(
                                 color: textColor,
-                                fontSize: theme.getMediumFont(),
+                                fontSize: theme.getMediumFont(context),
                                 fontWeight: FontWeight.w300)),
                         const SizedBox(height: 34),
                         ElevatedButton(

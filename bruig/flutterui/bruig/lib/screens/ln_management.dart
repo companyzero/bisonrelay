@@ -29,14 +29,14 @@ class LNScreenTitle extends StatelessWidget {
       if (menu.activePageTab <= 0) {
         return Text("Bison Relay / LN",
             style: TextStyle(
-                fontSize: theme.getLargeFont(),
+                fontSize: theme.getLargeFont(context),
                 color: Theme.of(context).focusColor));
       }
       var idx = LnScreenSub.indexWhere((e) => e.pageTab == menu.activePageTab);
 
       return Text("Bison Relay / LN / ${LnScreenSub[idx].label}",
           style: TextStyle(
-              fontSize: theme.getLargeFont(),
+              fontSize: theme.getLargeFont(context),
               color: Theme.of(context).focusColor));
     });
   }
@@ -143,7 +143,8 @@ class LNConfirmRecvChanPaymentScreen extends StatelessWidget {
                 child: Column(children: [
                   Text("Confirm LN Payment to Open Receive Channel",
                       style: TextStyle(
-                          color: textColor, fontSize: theme.getLargeFont())),
+                          color: textColor,
+                          fontSize: theme.getLargeFont(context))),
                   const SizedBox(height: 20),
                   Text("Amount: $amount", style: TextStyle(color: textColor)),
                   const SizedBox(height: 20),

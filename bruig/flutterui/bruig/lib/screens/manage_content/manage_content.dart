@@ -52,15 +52,15 @@ class _SharedContentFileState extends State<SharedContentFile> {
                     Text(file.sf.filename,
                         style: TextStyle(
                             color: textColor,
-                            fontSize: theme.getSmallFont(),
+                            fontSize: theme.getSmallFont(context),
                             fontWeight: FontWeight.w500,
                             letterSpacing: 0.5)),
                     /*
             Text((file.cost / 1e8).toString(),
-                style: TextStyle(color: textColor, fontSize: theme.getSmallFont())),
+                style: TextStyle(color: textColor, fontSize: theme.getSmallFont(context))),
             Text(file.sf.fid,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(color: textColor, fontSize: theme.getSmallFont())),
+                style: TextStyle(color: textColor, fontSize: theme.getSmallFont(context))),
             */
                     !widget.file.global
                         ? const Text("")
@@ -84,14 +84,14 @@ class _SharedContentFileState extends State<SharedContentFile> {
             return Row(children: [
               const SizedBox(width: 40),
               Text(widget.file.shares[index],
-                  style: TextStyle(color: textColor, fontSize: theme.getSmallFont())),
+                  style: TextStyle(color: textColor, fontSize: theme.getSmallFont(context))),
               const SizedBox(width: 20),
               Text(
                   widget.client
                           .getExistingChat(widget.file.shares[index])
                           ?.nick ??
                       "",
-                  style: TextStyle(color: textColor, fontSize: theme.getSmallFont())),
+                  style: TextStyle(color: textColor, fontSize: theme.getSmallFont(context))),
               IconButton(
                 iconSize: 18,
                 icon: Icon(loading ? Icons.hourglass_bottom : Icons.delete),
@@ -221,12 +221,13 @@ class _AddContentPanelState extends State<AddContentPanel> {
                       onPressed: loading ? null : pickFile,
                       style: OutlinedButton.styleFrom(
                         textStyle: TextStyle(
-                            color: textColor, fontSize: theme.getSmallFont()),
+                            color: textColor,
+                            fontSize: theme.getSmallFont(context)),
                       ),
                       child: Text("Select File",
                           style: TextStyle(
                               color: textColor,
-                              fontSize: theme.getSmallFont())),
+                              fontSize: theme.getSmallFont(context))),
                     )),
                 const SizedBox(width: 15),
                 Container(
@@ -242,7 +243,8 @@ class _AddContentPanelState extends State<AddContentPanel> {
                       fnameCtrl.text,
                       softWrap: true,
                       style: TextStyle(
-                          color: textColor, fontSize: theme.getSmallFont()),
+                          color: textColor,
+                          fontSize: theme.getSmallFont(context)),
                       //overflow: TextOverflow.ellipsis,
                     ))),
               ]),
@@ -252,7 +254,8 @@ class _AddContentPanelState extends State<AddContentPanel> {
                   width: 115,
                   child: Text("Sharing Preference:",
                       style: TextStyle(
-                          color: textColor, fontSize: theme.getSmallFont())),
+                          color: textColor,
+                          fontSize: theme.getSmallFont(context))),
                 ),
                 Container(
                     alignment: Alignment.centerRight,
@@ -276,7 +279,8 @@ class _AddContentPanelState extends State<AddContentPanel> {
                   width: 115,
                   child: Text("Cost for user:",
                       style: TextStyle(
-                          color: textColor, fontSize: theme.getSmallFont())),
+                          color: textColor,
+                          fontSize: theme.getSmallFont(context))),
                 ),
                 SizedBox(
                   width: 100,
@@ -287,12 +291,13 @@ class _AddContentPanelState extends State<AddContentPanel> {
                         border: InputBorder.none,
                         hintText: "Cost DCR/kb",
                         hintStyle: TextStyle(
-                            fontSize: theme.getSmallFont(), color: textColor),
+                            fontSize: theme.getSmallFont(context),
+                            color: textColor),
                         filled: true,
                         fillColor: inputBackground),
                     style: TextStyle(
                         color: secondaryTextColor,
-                        fontSize: theme.getSmallFont()),
+                        fontSize: theme.getSmallFont(context)),
                     controller: costCtrl,
                     keyboardType:
                         const TextInputType.numberWithOptions(decimal: true),
@@ -322,7 +327,7 @@ class _AddContentPanelState extends State<AddContentPanel> {
                       child: Text("Share",
                           style: TextStyle(
                               color: textColor,
-                              fontSize: theme.getSmallFont())),
+                              fontSize: theme.getSmallFont(context))),
                     ))
               ]),
             ]));

@@ -17,7 +17,7 @@ class PayStatsScreenTitle extends StatelessWidget {
     return Consumer<ThemeNotifier>(
         builder: (context, theme, child) => Text("Bison Relay / Pay Stats",
             style: TextStyle(
-                fontSize: theme.getLargeFont(),
+                fontSize: theme.getLargeFont(context),
                 color: Theme.of(context).focusColor)));
   }
 }
@@ -141,20 +141,24 @@ class _PayStatsScreenState extends State<PayStatsScreen> {
                                               ? stats[index].item2
                                               : "User fees",
                                           style: TextStyle(
-                                              fontSize: theme.getSmallFont()))),
+                                              fontSize: theme
+                                                  .getSmallFont(context)))),
                                   Text(" Sent ",
                                       style: TextStyle(
-                                          fontSize: theme.getSmallFont())),
+                                          fontSize:
+                                              theme.getSmallFont(context))),
                                   SizedBox(
                                       width: 110,
                                       child: Text(
                                           formatDCR(milliatomsToDCR(
                                               stats[index].item3.totalSent)),
                                           style: TextStyle(
-                                              fontSize: theme.getSmallFont()))),
+                                              fontSize: theme
+                                                  .getSmallFont(context)))),
                                   Text(" Received ",
                                       style: TextStyle(
-                                          fontSize: theme.getSmallFont())),
+                                          fontSize:
+                                              theme.getSmallFont(context))),
                                   SizedBox(
                                       width: 110,
                                       child: Text(
@@ -162,7 +166,8 @@ class _PayStatsScreenState extends State<PayStatsScreen> {
                                               .item3
                                               .totalReceived)),
                                           style: TextStyle(
-                                              fontSize: theme.getSmallFont()))),
+                                              fontSize: theme
+                                                  .getSmallFont(context)))),
                                   Expanded(
                                       child: IconButton(
                                           alignment: Alignment.centerRight,

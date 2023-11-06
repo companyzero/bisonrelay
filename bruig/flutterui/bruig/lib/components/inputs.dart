@@ -29,7 +29,8 @@ Widget intInput({
     Consumer<ThemeNotifier>(
         builder: (context, theme, _) => TextField(
             style: TextStyle(
-                fontSize: theme.getSmallFont(), color: const Color(0xFF8E8D98)),
+                fontSize: theme.getSmallFont(context),
+                color: const Color(0xFF8E8D98)),
             controller: controller,
             onChanged: (String v) {
               try {
@@ -43,7 +44,7 @@ Widget intInput({
             inputFormatters: [_LimitIntTextInputFormatter()],
             decoration: InputDecoration(
               hintStyle: TextStyle(
-                  fontSize: theme.getSmallFont(),
+                  fontSize: theme.getSmallFont(context),
                   color: const Color(0xFF8E8D98)),
               filled: true,
               fillColor: const Color(0xFF121026),

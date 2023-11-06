@@ -37,7 +37,7 @@ class ChatsScreenTitle extends StatelessWidget {
           Text("Bison Relay / Chat",
               textAlign: TextAlign.center,
               style: TextStyle(
-                  fontSize: theme.getLargeFont(),
+                  fontSize: theme.getLargeFont(context),
                   color: Theme.of(context).focusColor))
         ]);
       }
@@ -45,7 +45,7 @@ class ChatsScreenTitle extends StatelessWidget {
         return Row(mainAxisAlignment: MainAxisAlignment.center, children: [
           Text("Bison Relay / Chat / Address Book",
               style: TextStyle(
-                  fontSize: theme.getLargeFont(),
+                  fontSize: theme.getLargeFont(context),
                   color: Theme.of(context).focusColor))
         ]);
       }
@@ -55,7 +55,7 @@ class ChatsScreenTitle extends StatelessWidget {
           Text("Bison Relay / Chat",
               textAlign: TextAlign.center,
               style: TextStyle(
-                  fontSize: theme.getLargeFont(),
+                  fontSize: theme.getLargeFont(context),
                   color: Theme.of(context).focusColor))
         ]);
       }
@@ -83,7 +83,7 @@ class ChatsScreenTitle extends StatelessWidget {
                       color: Theme.of(context).focusColor)),
               Text("Bison Relay / Chat$suffix$profileSuffix",
                   style: TextStyle(
-                      fontSize: theme.getLargeFont(),
+                      fontSize: theme.getLargeFont(context),
                       color: Theme.of(context).focusColor)),
               chat.isGC
                   ? const Empty()
@@ -108,7 +108,7 @@ class ChatsScreenTitle extends StatelessWidget {
       }
       return Text("Bison Relay / Chat$suffix$profileSuffix",
           style: TextStyle(
-              fontSize: theme.getLargeFont(),
+              fontSize: theme.getLargeFont(context),
               color: Theme.of(context).focusColor));
     });
   }
@@ -145,7 +145,7 @@ class _FundsNeededPage extends StatelessWidget {
                 Text("Fund Wallet and Channels",
                     style: TextStyle(
                         color: textColor,
-                        fontSize: theme.getHugeFont(),
+                        fontSize: theme.getHugeFont(context),
                         fontWeight: FontWeight.w200)),
                 const SizedBox(height: 34),
                 Text('''
@@ -154,7 +154,7 @@ messages to the server.
 ''',
                     style: TextStyle(
                         color: secondaryTextColor,
-                        fontSize: theme.getMediumFont(),
+                        fontSize: theme.getMediumFont(context),
                         fontWeight: FontWeight.w300)),
                 const SizedBox(height: 34),
                 Center(
@@ -200,7 +200,7 @@ class _LoadingAddressBookPage extends StatelessWidget {
               Text("Loading Address Book",
                   style: TextStyle(
                       color: textColor,
-                      fontSize: theme.getHugeFont(),
+                      fontSize: theme.getHugeFont(context),
                       fontWeight: FontWeight.w200)),
               const SizedBox(height: 20),
               LoadingAnimationWidget.waveDots(
@@ -252,7 +252,7 @@ class _InviteNeededPageState extends State<_InviteNeededPage> {
                 Text("Initial Invitation",
                     style: TextStyle(
                         color: textColor,
-                        fontSize: theme.getHugeFont(),
+                        fontSize: theme.getHugeFont(context),
                         fontWeight: FontWeight.w200)),
                 const SizedBox(height: 34),
                 Text('''
@@ -262,7 +262,7 @@ After the invitation is accepted, you'll be able to chat with them, and if they 
 ''',
                     style: TextStyle(
                         color: secondaryTextColor,
-                        fontSize: theme.getMediumFont(),
+                        fontSize: theme.getMediumFont(context),
                         fontWeight: FontWeight.w300)),
                 const SizedBox(height: 34),
                 Center(

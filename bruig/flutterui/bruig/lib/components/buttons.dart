@@ -90,7 +90,7 @@ class LoadingScreenButton extends StatelessWidget {
             onPressed: !loading ? onPressed : null,
             child: Text(text,
                 style: TextStyle(
-                    fontSize: theme.getLargeFont(),
+                    fontSize: theme.getLargeFont(context),
                     fontWeight: FontWeight.normal))));
   }
 }
@@ -135,7 +135,7 @@ class MobileScreenButton extends StatelessWidget {
             child: Text(text,
                 style: TextStyle(
                     letterSpacing: 1,
-                    fontSize: theme.getMediumFont(),
+                    fontSize: theme.getMediumFont(context),
                     fontWeight: FontWeight.w500))));
   }
 }
@@ -163,6 +163,7 @@ class FeedReadMoreButton extends StatelessWidget {
             onPressed: !loading ? onPressed : null,
             child: Text(text,
                 style: TextStyle(
-                    letterSpacing: 1, fontSize: theme.getMediumFont()))));
+                    letterSpacing: 1,
+                    fontSize: theme.getMediumFont(context)))));
   }
 }

@@ -65,7 +65,8 @@ class _AddAltTextState extends State<AddAltText> {
                 children: [
                   Text("Add Alt Text: ",
                       style: TextStyle(
-                          color: textColor, fontSize: theme.getMediumFont())),
+                          color: textColor,
+                          fontSize: theme.getMediumFont(context))),
                   Expanded(
                     child: TextField(
                       onSubmitted: (_) {
@@ -270,7 +271,8 @@ class _NewPostScreenState extends State<NewPostScreen> {
                 children: [
                   Text("New Post",
                       style: TextStyle(
-                          color: textColor, fontSize: theme.getLargeFont())),
+                          color: textColor,
+                          fontSize: theme.getLargeFont(context))),
                   Expanded(
                     child: Container(
                       margin: const EdgeInsets.only(bottom: 15),
@@ -285,7 +287,8 @@ class _NewPostScreenState extends State<NewPostScreen> {
                   Row(children: [
                     Text("Add embedded",
                         style: TextStyle(
-                            color: textColor, fontSize: theme.getMediumFont())),
+                            color: textColor,
+                            fontSize: theme.getMediumFont(context))),
                     const SizedBox(width: 10),
                     OutlinedButton(
                       onPressed: () {

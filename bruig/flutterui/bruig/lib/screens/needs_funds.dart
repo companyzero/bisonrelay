@@ -119,7 +119,7 @@ class _NeedsFundsScreenState extends State<NeedsFundsScreen> {
     return Consumer<ThemeNotifier>(builder: (context, theme, child) {
       var ts = TextStyle(
           color: secondaryTextColor,
-          fontSize: theme.getMediumFont(),
+          fontSize: theme.getMediumFont(context),
           fontWeight: FontWeight.w300);
 
       if (redeemed != null) {
@@ -190,13 +190,13 @@ to redeem it by clicking in the button.
                           Text("Setting up Bison Relay",
                               style: TextStyle(
                                   color: textColor,
-                                  fontSize: theme.getHugeFont(),
+                                  fontSize: theme.getHugeFont(context),
                                   fontWeight: FontWeight.w200)),
                           const SizedBox(height: 20),
                           Text("Receive Wallet Funds",
                               style: TextStyle(
                                   color: secondaryTextColor,
-                                  fontSize: theme.getLargeFont(),
+                                  fontSize: theme.getLargeFont(context),
                                   fontWeight: FontWeight.w300)),
                           const SizedBox(height: 20),
                           Text('''
@@ -209,7 +209,7 @@ corrupted or lost.
 ''',
                               style: TextStyle(
                                   color: secondaryTextColor,
-                                  fontSize: theme.getMediumFont(),
+                                  fontSize: theme.getMediumFont(context),
                                   fontWeight: FontWeight.w300)),
                           buildFundsWidget(context),
                           const SizedBox(height: 13),
@@ -230,7 +230,7 @@ corrupted or lost.
                                   addr,
                                   TextStyle(
                                       color: textColor,
-                                      fontSize: theme.getMediumFont()))),
+                                      fontSize: theme.getMediumFont(context)))),
                           const SizedBox(height: 9),
                           Container(
                               padding: const EdgeInsets.only(
@@ -241,14 +241,14 @@ corrupted or lost.
                                     "Unconfirmed wallet balance:",
                                     style: TextStyle(
                                         color: darkTextColor,
-                                        fontSize: theme.getSmallFont(),
+                                        fontSize: theme.getSmallFont(context),
                                         fontWeight: FontWeight.w300)),
                                 Text(
                                     textAlign: TextAlign.right,
                                     formatDCR(atomsToDCR(unconfirmedBalance)),
                                     style: TextStyle(
                                         color: darkTextColor,
-                                        fontSize: theme.getSmallFont(),
+                                        fontSize: theme.getSmallFont(context),
                                         fontWeight: FontWeight.w300)),
                               ])),
                           const SizedBox(height: 3),
@@ -261,14 +261,14 @@ corrupted or lost.
                                     "Confirmed wallet balance:",
                                     style: TextStyle(
                                         color: darkTextColor,
-                                        fontSize: theme.getSmallFont(),
+                                        fontSize: theme.getSmallFont(context),
                                         fontWeight: FontWeight.w300)),
                                 Text(
                                     textAlign: TextAlign.right,
                                     formatDCR(atomsToDCR(confirmedBalance)),
                                     style: TextStyle(
                                         color: darkTextColor,
-                                        fontSize: theme.getSmallFont(),
+                                        fontSize: theme.getSmallFont(context),
                                         fontWeight: FontWeight.w300))
                               ])),
                           const SizedBox(height: 20),

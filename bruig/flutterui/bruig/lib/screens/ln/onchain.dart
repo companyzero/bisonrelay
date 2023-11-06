@@ -112,7 +112,8 @@ class _LNOnChainPageState extends State<LNOnChainPage> {
               Text("Receive On-Chain",
                   textAlign: TextAlign.left,
                   style: TextStyle(
-                      color: darkTextColor, fontSize: theme.getMediumFont())),
+                      color: darkTextColor,
+                      fontSize: theme.getMediumFont(context))),
               Expanded(
                   child: Divider(
                 color: dividerColor, //color of divider
@@ -146,7 +147,8 @@ class _LNOnChainPageState extends State<LNOnChainPage> {
               Text("Send On-Chain",
                   textAlign: TextAlign.left,
                   style: TextStyle(
-                      color: darkTextColor, fontSize: theme.getMediumFont())),
+                      color: darkTextColor,
+                      fontSize: theme.getMediumFont(context))),
               Expanded(
                   child: Divider(
                 color: dividerColor, //color of divider
@@ -182,13 +184,13 @@ class _LNOnChainPageState extends State<LNOnChainPage> {
                 Expanded(
                     child: TextField(
                         style: TextStyle(
-                            fontSize: theme.getSmallFont(),
+                            fontSize: theme.getSmallFont(context),
                             color: secondaryTextColor),
                         controller: sendAddrCtrl,
                         decoration: InputDecoration(
                             hintText: "Destination Address",
                             hintStyle: TextStyle(
-                                fontSize: theme.getSmallFont(),
+                                fontSize: theme.getSmallFont(context),
                                 color: secondaryTextColor),
                             filled: true,
                             fillColor: inputFill))),

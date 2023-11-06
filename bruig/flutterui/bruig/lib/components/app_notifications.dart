@@ -88,7 +88,8 @@ class _NotificationW extends StatelessWidget {
                   child: Text(
                     content,
                     style: TextStyle(
-                        fontSize: theme.getSmallFont(), color: textColor),
+                        fontSize: theme.getSmallFont(context),
+                        color: textColor),
                   )),
               leading: Icon(size: 10, Icons.arrow_forward, color: textColor),
               onTap: onTap,

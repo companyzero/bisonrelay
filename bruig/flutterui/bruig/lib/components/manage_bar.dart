@@ -65,7 +65,7 @@ class _ManageContentBarState extends State<ManageContentBar> {
                         color: selectedIndex == 0
                             ? selectedTextColor
                             : unselectedTextColor,
-                        fontSize: theme.getSmallFont(),
+                        fontSize: theme.getSmallFont(context),
                         fontWeight: FontWeight.w400)),
                 onTap: () {
                   tabChange(0);
@@ -77,7 +77,7 @@ class _ManageContentBarState extends State<ManageContentBar> {
                         color: selectedIndex == 1
                             ? selectedTextColor
                             : unselectedTextColor,
-                        fontSize: theme.getSmallFont(),
+                        fontSize: theme.getSmallFont(context),
                         fontWeight: FontWeight.w400)),
                 onTap: () {
                   tabChange(1);
@@ -89,7 +89,7 @@ class _ManageContentBarState extends State<ManageContentBar> {
                         color: selectedIndex == 2
                             ? selectedTextColor
                             : unselectedTextColor,
-                        fontSize: theme.getSmallFont(),
+                        fontSize: theme.getSmallFont(context),
                         fontWeight: FontWeight.w400)),
                 onTap: () {
                   tabChange(2);

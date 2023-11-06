@@ -143,12 +143,12 @@ class _ActiveChatState extends State<ActiveChat> {
                           visible: chat.isGC,
                           child: Text("Group Chat",
                               style: TextStyle(
-                                  fontSize: theme.getMediumFont(),
+                                  fontSize: theme.getMediumFont(context),
                                   color: textColor)),
                         ),
                         Text(chat.nick,
                             style: TextStyle(
-                                fontSize: theme.getMediumFont(),
+                                fontSize: theme.getMediumFont(context),
                                 color: textColor)),
                         Expanded(
                             child: ListView.builder(
@@ -157,7 +157,7 @@ class _ActiveChatState extends State<ActiveChat> {
                           itemBuilder: (context, index) => ListTile(
                               title: Text(client.activeSubMenu[index].label,
                                   style: TextStyle(
-                                      fontSize: theme.getSmallFont())),
+                                      fontSize: theme.getSmallFont(context))),
                               onTap: () {
                                 client.activeSubMenu[index]
                                     .onSelected(context, client);
@@ -232,12 +232,12 @@ class _ActiveChatState extends State<ActiveChat> {
                           visible: chat.isGC,
                           child: Text("Group Chat",
                               style: TextStyle(
-                                  fontSize: theme.getMediumFont(),
+                                  fontSize: theme.getMediumFont(context),
                                   color: textColor)),
                         ),
                         Text(chat.nick,
                             style: TextStyle(
-                                fontSize: theme.getMediumFont(),
+                                fontSize: theme.getMediumFont(context),
                                 color: textColor)),
                         Expanded(
                             child: ListView.builder(
@@ -246,7 +246,7 @@ class _ActiveChatState extends State<ActiveChat> {
                           itemBuilder: (context, index) => ListTile(
                               title: Text(client.activeSubMenu[index].label,
                                   style: TextStyle(
-                                      fontSize: theme.getSmallFont())),
+                                      fontSize: theme.getSmallFont(context))),
                               onTap: () {
                                 client.activeSubMenu[index]
                                     .onSelected(context, client);

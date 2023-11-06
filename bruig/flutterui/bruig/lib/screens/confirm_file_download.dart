@@ -47,27 +47,33 @@ class ConfirmFileDownloadScreen extends StatelessWidget {
                     child: Column(children: [
                   Text("Confirm File Download",
                       style: TextStyle(
-                          fontSize: theme.getLargeFont(), color: textColor)),
+                          fontSize: theme.getLargeFont(context),
+                          color: textColor)),
                   const SizedBox(height: 20),
                   Text("Sender: $sender",
                       style: TextStyle(
-                          fontSize: theme.getMediumFont(), color: textColor)),
+                          fontSize: theme.getMediumFont(context),
+                          color: textColor)),
                   const SizedBox(height: 20),
                   Text("FID: ${fd.uid}",
                       style: TextStyle(
-                          fontSize: theme.getMediumFont(), color: textColor)),
+                          fontSize: theme.getMediumFont(context),
+                          color: textColor)),
                   const SizedBox(height: 20),
                   Text("File Name: ${fd.metadata.filename}",
                       style: TextStyle(
-                          fontSize: theme.getMediumFont(), color: textColor)),
+                          fontSize: theme.getMediumFont(context),
+                          color: textColor)),
                   const SizedBox(height: 20),
                   Text("Size: $size",
                       style: TextStyle(
-                          fontSize: theme.getMediumFont(), color: textColor)),
+                          fontSize: theme.getMediumFont(context),
+                          color: textColor)),
                   const SizedBox(height: 20),
                   Text("Cost: $cost",
                       style: TextStyle(
-                          fontSize: theme.getMediumFont(), color: textColor)),
+                          fontSize: theme.getMediumFont(context),
+                          color: textColor)),
                   const SizedBox(height: 20),
                   Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                     ElevatedButton(

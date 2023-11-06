@@ -103,7 +103,7 @@ class _UserPostWState extends State<UserPostW> {
                           child: Text(authorNick[0].toUpperCase(),
                               style: TextStyle(
                                   color: avatarTextColor,
-                                  fontSize: theme.getLargeFont()))),
+                                  fontSize: theme.getLargeFont(context)))),
                     ),
                   ),
                   const SizedBox(width: 6),
@@ -111,7 +111,7 @@ class _UserPostWState extends State<UserPostW> {
                       child: Text(authorNick,
                           style: TextStyle(
                               color: hightLightTextColor,
-                              fontSize: theme.getSmallFont()))),
+                              fontSize: theme.getSmallFont(context)))),
                 ],
               ),
               const SizedBox(
@@ -145,7 +145,7 @@ class _UserPostWState extends State<UserPostW> {
                         child: TextButton(
                           style: TextButton.styleFrom(
                               textStyle: TextStyle(
-                                fontSize: theme.getSmallFont(),
+                                fontSize: theme.getSmallFont(context),
                                 color: hightLightTextColor,
                               ),
                               foregroundColor: hightLightTextColor,

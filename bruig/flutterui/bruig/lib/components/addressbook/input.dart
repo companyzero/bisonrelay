@@ -70,7 +70,7 @@ class _InputState extends State<Input> {
                       autofocus: true,
                       focusNode: widget.inputFocusNode,
                       style: TextStyle(
-                        fontSize: theme.getMediumFont(),
+                        fontSize: theme.getMediumFont(context),
                         color: textColor,
                       ),
                       controller: controller,
@@ -86,7 +86,7 @@ class _InputState extends State<Input> {
                         isDense: true,
                         hintText: 'Search Address book for Room or User',
                         hintStyle: TextStyle(
-                          fontSize: theme.getMediumFont(),
+                          fontSize: theme.getMediumFont(context),
                           color: hintTextColor,
                         ),
                         border: InputBorder.none,

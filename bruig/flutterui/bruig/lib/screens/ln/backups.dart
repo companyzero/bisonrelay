@@ -73,7 +73,7 @@ class _LNBackupsPageState extends State<LNBackupsPage> {
                       textAlign: TextAlign.left,
                       style: TextStyle(
                           color: darkTextColor,
-                          fontSize: theme.getMediumFont())),
+                          fontSize: theme.getMediumFont(context))),
                   Expanded(
                       child: Divider(
                     color: dividerColor, //color of divider
@@ -98,13 +98,15 @@ closed, or users are at risk of losing access to their funds.
                     onPressed: saveSCB,
                     child: Text("Save SCB file",
                         style: TextStyle(
-                            fontSize: theme.getSmallFont(), color: textColor))),
+                            fontSize: theme.getSmallFont(context),
+                            color: textColor))),
                 const SizedBox(height: 30),
                 ElevatedButton(
                     onPressed: restoreSCB,
                     child: Text("Restore SCB file",
                         style: TextStyle(
-                            fontSize: theme.getSmallFont(), color: textColor))),
+                            fontSize: theme.getSmallFont(context),
+                            color: textColor))),
               ],
             )));
   }

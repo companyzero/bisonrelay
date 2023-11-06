@@ -117,7 +117,7 @@ class _RestoreWalletPageState extends State<RestoreWalletPage> {
                     Text("Restoring wallet",
                         style: TextStyle(
                             color: textColor,
-                            fontSize: theme.getHugeFont(),
+                            fontSize: theme.getHugeFont(context),
                             fontWeight: FontWeight.w200)),
                     const SizedBox(height: 20),
                     SizedBox(
@@ -126,7 +126,7 @@ class _RestoreWalletPageState extends State<RestoreWalletPage> {
                             textAlign: TextAlign.left,
                             style: TextStyle(
                                 color: darkTextColor,
-                                fontSize: theme.getMediumFont(),
+                                fontSize: theme.getMediumFont(context),
                                 fontWeight: FontWeight.w300))),
                     Center(
                         child: SizedBox(
@@ -138,13 +138,13 @@ class _RestoreWalletPageState extends State<RestoreWalletPage> {
                                     border: InputBorder.none,
                                     hintText: "Seed words",
                                     hintStyle: TextStyle(
-                                        fontSize: theme.getLargeFont(),
+                                        fontSize: theme.getLargeFont(context),
                                         color: textColor),
                                     filled: true,
                                     fillColor: cardColor),
                                 style: TextStyle(
                                     color: secondaryTextColor,
-                                    fontSize: theme.getLargeFont()),
+                                    fontSize: theme.getLargeFont(context)),
                                 controller: seedCtrl))),
                     const SizedBox(height: 10),
                     Column(

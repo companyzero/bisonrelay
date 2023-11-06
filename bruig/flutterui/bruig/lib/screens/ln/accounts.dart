@@ -74,7 +74,7 @@ class _LNAccountsPageState extends State<LNAccountsPage> {
                           textAlign: TextAlign.left,
                           style: TextStyle(
                               color: darkTextColor,
-                              fontSize: theme.getMediumFont())),
+                              fontSize: theme.getMediumFont(context))),
                       Expanded(
                           child: Divider(
                         color: dividerColor, //color of divider
@@ -105,7 +105,7 @@ class _LNAccountsPageState extends State<LNAccountsPage> {
                           textAlign: TextAlign.left,
                           style: TextStyle(
                               color: darkTextColor,
-                              fontSize: theme.getMediumFont())),
+                              fontSize: theme.getMediumFont(context))),
                       Expanded(
                           child: Divider(
                         color: dividerColor, //color of divider
@@ -119,19 +119,19 @@ class _LNAccountsPageState extends State<LNAccountsPage> {
                     Row(children: [
                       Text("Account Name:",
                           style: TextStyle(
-                              fontSize: theme.getSmallFont(),
+                              fontSize: theme.getSmallFont(context),
                               color: secondaryTextColor)),
                       const SizedBox(width: 10),
                       Expanded(
                           child: TextField(
                               style: TextStyle(
-                                  fontSize: theme.getSmallFont(),
+                                  fontSize: theme.getSmallFont(context),
                                   color: secondaryTextColor),
                               controller: nameCtrl,
                               decoration: InputDecoration(
                                   hintText: "Name of the new account",
                                   hintStyle: TextStyle(
-                                      fontSize: theme.getSmallFont(),
+                                      fontSize: theme.getSmallFont(context),
                                       color: secondaryTextColor),
                                   filled: true,
                                   fillColor: inputFill))),

@@ -127,13 +127,13 @@ class _LNExternalWalletPageState extends State<LNExternalWalletPage> {
                     Text("Setting up Bison Relay",
                         style: TextStyle(
                             color: textColor,
-                            fontSize: theme.getHugeFont(),
+                            fontSize: theme.getHugeFont(context),
                             fontWeight: FontWeight.w200)),
                     const SizedBox(height: 20),
                     Text("External dcrlnd Config",
                         style: TextStyle(
                             color: secondaryTextColor,
-                            fontSize: theme.getLargeFont(),
+                            fontSize: theme.getLargeFont(context),
                             fontWeight: FontWeight.w300)),
                     const SizedBox(height: 34),
                     Column(children: [
@@ -143,7 +143,7 @@ class _LNExternalWalletPageState extends State<LNExternalWalletPage> {
                               textAlign: TextAlign.left,
                               style: TextStyle(
                                   color: darkTextColor,
-                                  fontSize: theme.getSmallFont(),
+                                  fontSize: theme.getSmallFont(context),
                                   fontWeight: FontWeight.w300))),
                       const SizedBox(height: 5),
                       Center(
@@ -155,13 +155,13 @@ class _LNExternalWalletPageState extends State<LNExternalWalletPage> {
                                       border: InputBorder.none,
                                       hintText: "RPC Host",
                                       hintStyle: TextStyle(
-                                          fontSize: theme.getLargeFont(),
+                                          fontSize: theme.getLargeFont(context),
                                           color: textColor),
                                       filled: true,
                                       fillColor: cardColor),
                                   style: TextStyle(
                                       color: secondaryTextColor,
-                                      fontSize: theme.getLargeFont()),
+                                      fontSize: theme.getLargeFont(context)),
                                   controller: hostCtrl))),
                       const SizedBox(height: 13),
                       SizedBox(
@@ -170,7 +170,7 @@ class _LNExternalWalletPageState extends State<LNExternalWalletPage> {
                               textAlign: TextAlign.left,
                               style: TextStyle(
                                   color: darkTextColor,
-                                  fontSize: theme.getSmallFont(),
+                                  fontSize: theme.getSmallFont(context),
                                   fontWeight: FontWeight.w300))),
                       const SizedBox(height: 5),
                       Center(
@@ -182,13 +182,13 @@ class _LNExternalWalletPageState extends State<LNExternalWalletPage> {
                                       border: InputBorder.none,
                                       hintText: "TLS Cert Path",
                                       hintStyle: TextStyle(
-                                          fontSize: theme.getLargeFont(),
+                                          fontSize: theme.getLargeFont(context),
                                           color: textColor),
                                       filled: true,
                                       fillColor: cardColor),
                                   style: TextStyle(
                                       color: secondaryTextColor,
-                                      fontSize: theme.getLargeFont()),
+                                      fontSize: theme.getLargeFont(context)),
                                   controller: tlsCtrl))),
                       const SizedBox(height: 13),
                       SizedBox(
@@ -197,7 +197,7 @@ class _LNExternalWalletPageState extends State<LNExternalWalletPage> {
                               textAlign: TextAlign.left,
                               style: TextStyle(
                                   color: darkTextColor,
-                                  fontSize: theme.getSmallFont(),
+                                  fontSize: theme.getSmallFont(context),
                                   fontWeight: FontWeight.w300))),
                       const SizedBox(height: 5),
                       Center(
@@ -209,13 +209,13 @@ class _LNExternalWalletPageState extends State<LNExternalWalletPage> {
                                       border: InputBorder.none,
                                       hintText: "Macaroon Path",
                                       hintStyle: TextStyle(
-                                          fontSize: theme.getLargeFont(),
+                                          fontSize: theme.getLargeFont(context),
                                           color: textColor),
                                       filled: true,
                                       fillColor: cardColor),
                                   style: TextStyle(
                                       color: secondaryTextColor,
-                                      fontSize: theme.getLargeFont()),
+                                      fontSize: theme.getLargeFont(context)),
                                   controller: macaroonCtrl))),
                       const SizedBox(height: 34),
                       Center(

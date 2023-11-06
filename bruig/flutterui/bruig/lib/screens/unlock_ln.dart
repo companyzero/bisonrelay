@@ -150,7 +150,7 @@ class __LNUnlockPageState extends State<_LNUnlockPage> {
                                     textAlign: TextAlign.center,
                                     style: TextStyle(
                                         color: secondaryTextColor,
-                                        fontSize: theme.getHugeFont(),
+                                        fontSize: theme.getHugeFont(context),
                                         fontWeight: FontWeight.w300))),
                             SizedBox(
                               height: MediaQuery.of(context).size.height / 6,
@@ -210,7 +210,7 @@ class __LNUnlockPageState extends State<_LNUnlockPage> {
                                     style: TextStyle(
                                         letterSpacing: 5,
                                         color: secondaryTextColor,
-                                        fontSize: theme.getLargeFont()),
+                                        fontSize: theme.getLargeFont(context)),
                                     controller: passCtrl,
                                     obscureText: true,
                                     onSubmitted: (value) {
@@ -250,7 +250,7 @@ class __LNUnlockPageState extends State<_LNUnlockPage> {
                         Text("Connect to Bison Relay",
                             style: TextStyle(
                                 color: textColor,
-                                fontSize: theme.getHugeFont(),
+                                fontSize: theme.getHugeFont(context),
                                 fontWeight: FontWeight.w200)),
                         const SizedBox(height: 34),
                         Column(children: [
@@ -260,7 +260,7 @@ class __LNUnlockPageState extends State<_LNUnlockPage> {
                                   textAlign: TextAlign.left,
                                   style: TextStyle(
                                       color: darkTextColor,
-                                      fontSize: theme.getMediumFont(),
+                                      fontSize: theme.getMediumFont(context),
                                       fontWeight: FontWeight.w300))),
                           const SizedBox(height: 5),
                           Center(
@@ -274,13 +274,15 @@ class __LNUnlockPageState extends State<_LNUnlockPage> {
                                           border: InputBorder.none,
                                           hintText: "Password",
                                           hintStyle: TextStyle(
-                                              fontSize: theme.getLargeFont(),
+                                              fontSize:
+                                                  theme.getLargeFont(context),
                                               color: textColor),
                                           filled: true,
                                           fillColor: cardColor),
                                       style: TextStyle(
                                           color: secondaryTextColor,
-                                          fontSize: theme.getLargeFont()),
+                                          fontSize:
+                                              theme.getLargeFont(context)),
                                       controller: passCtrl,
                                       obscureText: true,
                                       onSubmitted: (value) {
@@ -436,13 +438,13 @@ class _LNChainSyncPageState extends State<_LNChainSyncPage> {
                     Text("Setting up Bison Relay",
                         style: TextStyle(
                             color: textColor,
-                            fontSize: theme.getHugeFont(),
+                            fontSize: theme.getHugeFont(context),
                             fontWeight: FontWeight.w200)),
                     const SizedBox(height: 89),
                     Text("Network Sync",
                         style: TextStyle(
                             color: secondaryTextColor,
-                            fontSize: theme.getLargeFont(),
+                            fontSize: theme.getLargeFont(context),
                             fontWeight: FontWeight.w300)),
                     const SizedBox(height: 50),
                     Center(
@@ -467,7 +469,7 @@ class _LNChainSyncPageState extends State<_LNChainSyncPage> {
                                   "${((progress > 1 ? 1 : progress) * 100).toStringAsFixed(0)}%",
                                   style: TextStyle(
                                       color: textColor,
-                                      fontSize: theme.getMediumFont(),
+                                      fontSize: theme.getMediumFont(context),
                                       fontWeight: FontWeight.w300))
                             ]))),
                     const SizedBox(height: 21),
@@ -490,13 +492,15 @@ class _LNChainSyncPageState extends State<_LNChainSyncPage> {
                                         text: "Block Height: ",
                                         style: TextStyle(
                                             color: textColor,
-                                            fontSize: theme.getSmallFont(),
+                                            fontSize:
+                                                theme.getSmallFont(context),
                                             fontWeight: FontWeight.w300)),
                                     TextSpan(
                                         text: "$blockHeight",
                                         style: TextStyle(
                                             color: textColor,
-                                            fontSize: theme.getSmallFont(),
+                                            fontSize:
+                                                theme.getSmallFont(context),
                                             fontWeight: FontWeight.w300))
                                   ])),
                                   isScreenSmall
@@ -508,13 +512,15 @@ class _LNChainSyncPageState extends State<_LNChainSyncPage> {
                                         text: "Block Hash: ",
                                         style: TextStyle(
                                             color: textColor,
-                                            fontSize: theme.getSmallFont(),
+                                            fontSize:
+                                                theme.getSmallFont(context),
                                             fontWeight: FontWeight.w300)),
                                     TextSpan(
                                         text: "$blockHeight",
                                         style: TextStyle(
                                             color: textColor,
-                                            fontSize: theme.getSmallFont(),
+                                            fontSize:
+                                                theme.getSmallFont(context),
                                             fontWeight: FontWeight.w300))
                                   ])),
                                   isScreenSmall
@@ -526,13 +532,15 @@ class _LNChainSyncPageState extends State<_LNChainSyncPage> {
                                         text: "Block Time: ",
                                         style: TextStyle(
                                             color: textColor,
-                                            fontSize: theme.getSmallFont(),
+                                            fontSize:
+                                                theme.getSmallFont(context),
                                             fontWeight: FontWeight.w300)),
                                     TextSpan(
                                         text: blockTimestamp.toString(),
                                         style: TextStyle(
                                             color: textColor,
-                                            fontSize: theme.getSmallFont(),
+                                            fontSize:
+                                                theme.getSmallFont(context),
                                             fontWeight: FontWeight.w300))
                                   ]))
                                 ]),

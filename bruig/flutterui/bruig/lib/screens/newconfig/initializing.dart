@@ -82,7 +82,7 @@ class _InitializingNewConfPageState extends State<InitializingNewConfPage> {
                     Text("Setting up Bison Relay",
                         style: TextStyle(
                             color: textColor,
-                            fontSize: theme.getHugeFont(),
+                            fontSize: theme.getHugeFont(context),
                             fontWeight: FontWeight.w200)),
                     const SizedBox(height: 20),
                   ]))

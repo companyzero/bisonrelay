@@ -68,13 +68,13 @@ class _FileDownloadWState extends State<_FileDownloadW> {
                       child: Text(widget.fd.rf.metadata.filename,
                           style: TextStyle(
                               color: textColor,
-                              fontSize: theme.getSmallFont()))),
+                              fontSize: theme.getSmallFont(context)))),
                   Expanded(
                       child: Text(diskPath,
                           style: TextStyle(
                               color: textColor,
                               fontStyle: FontStyle.italic,
-                              fontSize: theme.getSmallFont()))),
+                              fontSize: theme.getSmallFont(context)))),
                 ],
               ),
             ));

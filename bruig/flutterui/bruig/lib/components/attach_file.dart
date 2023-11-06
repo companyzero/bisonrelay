@@ -154,7 +154,8 @@ class _AttachFileScreenState extends State<AttachFileScreen> {
                   child: Column(children: [
                     Text("Attach File",
                         style: TextStyle(
-                            fontSize: theme.getLargeFont(), color: textColor)),
+                            fontSize: theme.getLargeFont(context),
+                            color: textColor)),
                     const SizedBox(height: 20),
                     Row(children: [
                       filePath != ""

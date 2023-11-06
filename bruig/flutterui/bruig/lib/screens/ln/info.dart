@@ -97,7 +97,7 @@ class _LNInfoPageState extends State<LNInfoPage> {
                                   textAlign: TextAlign.left,
                                   style: TextStyle(
                                       color: textColor,
-                                      fontSize: theme.getLargeFont()))),
+                                      fontSize: theme.getLargeFont(context)))),
                           Divider(
                             color: backgroundColor, //color of divider
                             height: 10, //height spacing of divider
@@ -115,17 +115,20 @@ class _LNInfoPageState extends State<LNInfoPage> {
                                     children: [
                                       Text("Max Receivable:",
                                           style: TextStyle(
-                                              fontSize: theme.getMediumFont(),
+                                              fontSize:
+                                                  theme.getMediumFont(context),
                                               color: secondaryTextColor)),
                                       const SizedBox(height: 8),
                                       Text("Max Sendable:",
                                           style: TextStyle(
-                                              fontSize: theme.getMediumFont(),
+                                              fontSize:
+                                                  theme.getMediumFont(context),
                                               color: secondaryTextColor)),
                                       const SizedBox(height: 8),
                                       Text("On-chain Balance:",
                                           style: TextStyle(
-                                              fontSize: theme.getMediumFont(),
+                                              fontSize:
+                                                  theme.getMediumFont(context),
                                               color: secondaryTextColor))
                                     ]),
                                 const SizedBox(width: 10),
@@ -136,19 +139,22 @@ class _LNInfoPageState extends State<LNInfoPage> {
                                       Text(maxReceive,
                                           style: TextStyle(
                                               fontWeight: FontWeight.w300,
-                                              fontSize: theme.getMediumFont(),
+                                              fontSize:
+                                                  theme.getMediumFont(context),
                                               color: textColor)),
                                       const SizedBox(height: 8),
                                       Text(maxSend,
                                           style: TextStyle(
                                               fontWeight: FontWeight.w300,
-                                              fontSize: theme.getMediumFont(),
+                                              fontSize:
+                                                  theme.getMediumFont(context),
                                               color: textColor)),
                                       const SizedBox(height: 8),
                                       Text(onChainBalance,
                                           style: TextStyle(
                                               fontWeight: FontWeight.w300,
-                                              fontSize: theme.getMediumFont(),
+                                              fontSize:
+                                                  theme.getMediumFont(context),
                                               color: textColor))
                                     ]),
                               ])),
@@ -169,7 +175,7 @@ class _LNInfoPageState extends State<LNInfoPage> {
                                 textAlign: TextAlign.left,
                                 style: TextStyle(
                                     color: textColor,
-                                    fontSize: theme.getLargeFont()))),
+                                    fontSize: theme.getLargeFont(context)))),
                         Divider(
                           color: backgroundColor, //color of divider
                           height: 10, //height spacing of divider
@@ -184,32 +190,38 @@ class _LNInfoPageState extends State<LNInfoPage> {
                                   children: [
                                     Text("Chain Height",
                                         style: TextStyle(
-                                            fontSize: theme.getMediumFont(),
+                                            fontSize:
+                                                theme.getMediumFont(context),
                                             color: secondaryTextColor)),
                                     const SizedBox(height: 8),
                                     Text("Synced to Chain",
                                         style: TextStyle(
-                                            fontSize: theme.getMediumFont(),
+                                            fontSize:
+                                                theme.getMediumFont(context),
                                             color: secondaryTextColor)),
                                     const SizedBox(height: 8),
                                     Text("Synced to Graph:",
                                         style: TextStyle(
-                                            fontSize: theme.getMediumFont(),
+                                            fontSize:
+                                                theme.getMediumFont(context),
                                             color: secondaryTextColor)),
                                     const SizedBox(height: 8),
                                     Text("Pending Channels:",
                                         style: TextStyle(
-                                            fontSize: theme.getMediumFont(),
+                                            fontSize:
+                                                theme.getMediumFont(context),
                                             color: secondaryTextColor)),
                                     const SizedBox(height: 8),
                                     Text("Inactive Channels:",
                                         style: TextStyle(
-                                            fontSize: theme.getMediumFont(),
+                                            fontSize:
+                                                theme.getMediumFont(context),
                                             color: secondaryTextColor)),
                                     const SizedBox(height: 8),
                                     Text("Active Channels:",
                                         style: TextStyle(
-                                            fontSize: theme.getMediumFont(),
+                                            fontSize:
+                                                theme.getMediumFont(context),
                                             color: secondaryTextColor)),
                                   ]),
                               const SizedBox(width: 10),
@@ -219,37 +231,43 @@ class _LNInfoPageState extends State<LNInfoPage> {
                                     Text(info.blockHeight.toString(),
                                         style: TextStyle(
                                             fontWeight: FontWeight.w300,
-                                            fontSize: theme.getMediumFont(),
+                                            fontSize:
+                                                theme.getMediumFont(context),
                                             color: textColor)),
                                     const SizedBox(height: 8),
                                     Text(info.syncedToChain.toString(),
                                         style: TextStyle(
                                             fontWeight: FontWeight.w300,
-                                            fontSize: theme.getMediumFont(),
+                                            fontSize:
+                                                theme.getMediumFont(context),
                                             color: textColor)),
                                     const SizedBox(height: 8),
                                     Text(info.syncedToGraph.toString(),
                                         style: TextStyle(
                                             fontWeight: FontWeight.w300,
-                                            fontSize: theme.getMediumFont(),
+                                            fontSize:
+                                                theme.getMediumFont(context),
                                             color: textColor)),
                                     const SizedBox(height: 8),
                                     Text(info.numPendingChannels.toString(),
                                         style: TextStyle(
                                             fontWeight: FontWeight.w300,
-                                            fontSize: theme.getMediumFont(),
+                                            fontSize:
+                                                theme.getMediumFont(context),
                                             color: textColor)),
                                     const SizedBox(height: 8),
                                     Text(info.numInactiveChannels.toString(),
                                         style: TextStyle(
                                             fontWeight: FontWeight.w300,
-                                            fontSize: theme.getMediumFont(),
+                                            fontSize:
+                                                theme.getMediumFont(context),
                                             color: textColor)),
                                     const SizedBox(height: 8),
                                     Text(info.numActiveChannels.toString(),
                                         style: TextStyle(
                                             fontWeight: FontWeight.w300,
-                                            fontSize: theme.getMediumFont(),
+                                            fontSize:
+                                                theme.getMediumFont(context),
                                             color: textColor)),
                                   ]),
                             ])),
@@ -266,7 +284,8 @@ class _LNInfoPageState extends State<LNInfoPage> {
                                 children: [
                                   Text("Version:",
                                       style: TextStyle(
-                                          fontSize: theme.getMediumFont(),
+                                          fontSize:
+                                              theme.getMediumFont(context),
                                           color: secondaryTextColor)),
                                   const SizedBox(height: 5),
                                   Copyable(
@@ -274,7 +293,8 @@ class _LNInfoPageState extends State<LNInfoPage> {
                                       TextStyle(
                                           letterSpacing: 1,
                                           fontWeight: FontWeight.w300,
-                                          fontSize: theme.getMediumFont(),
+                                          fontSize:
+                                              theme.getMediumFont(context),
                                           color: textColor))
                                 ])),
                         Divider(
@@ -290,7 +310,8 @@ class _LNInfoPageState extends State<LNInfoPage> {
                                 children: [
                                   Text("Node ID:",
                                       style: TextStyle(
-                                          fontSize: theme.getMediumFont(),
+                                          fontSize:
+                                              theme.getMediumFont(context),
                                           color: secondaryTextColor)),
                                   const SizedBox(height: 5),
                                   Copyable(
@@ -299,7 +320,8 @@ class _LNInfoPageState extends State<LNInfoPage> {
                                           letterSpacing: 1,
                                           fontWeight: FontWeight.w300,
                                           color: textColor,
-                                          fontSize: theme.getMediumFont())),
+                                          fontSize:
+                                              theme.getMediumFont(context))),
                                 ])),
                         Divider(
                           color: backgroundColor, //color of divider
@@ -314,7 +336,8 @@ class _LNInfoPageState extends State<LNInfoPage> {
                                 children: [
                                   Text("Chain Hash:",
                                       style: TextStyle(
-                                          fontSize: theme.getMediumFont(),
+                                          fontSize:
+                                              theme.getMediumFont(context),
                                           color: secondaryTextColor)),
                                   const SizedBox(height: 5),
                                   Container(
@@ -328,7 +351,8 @@ class _LNInfoPageState extends State<LNInfoPage> {
                                           TextStyle(
                                               letterSpacing: 1,
                                               color: textColor,
-                                              fontSize: theme.getMediumFont())))
+                                              fontSize: theme
+                                                  .getMediumFont(context))))
                                 ])),
                         Container(
                             padding: const EdgeInsets.only(
@@ -344,7 +368,7 @@ class _LNInfoPageState extends State<LNInfoPage> {
                                   depositAddr,
                                   TextStyle(
                                       color: textColor,
-                                      fontSize: theme.getMediumFont())),
+                                      fontSize: theme.getMediumFont(context))),
                             ])),
                       ],
                     ))
@@ -363,7 +387,7 @@ class _LNInfoPageState extends State<LNInfoPage> {
                         textAlign: TextAlign.left,
                         style: TextStyle(
                             color: darkTextColor,
-                            fontSize: theme.getMediumFont())),
+                            fontSize: theme.getMediumFont(context))),
                     Expanded(
                         child: Divider(
                       color: dividerColor, //color of divider
@@ -380,17 +404,17 @@ class _LNInfoPageState extends State<LNInfoPage> {
                         children: [
                           Text("Max Receivable:",
                               style: TextStyle(
-                                  fontSize: theme.getSmallFont(),
+                                  fontSize: theme.getSmallFont(context),
                                   color: secondaryTextColor)),
                           const SizedBox(height: 8),
                           Text("Max Sendable:",
                               style: TextStyle(
-                                  fontSize: theme.getSmallFont(),
+                                  fontSize: theme.getSmallFont(context),
                                   color: secondaryTextColor)),
                           const SizedBox(height: 8),
                           Text("On-chain Balance:",
                               style: TextStyle(
-                                  fontSize: theme.getSmallFont(),
+                                  fontSize: theme.getSmallFont(context),
                                   color: secondaryTextColor))
                         ]),
                     const SizedBox(width: 10),
@@ -399,17 +423,17 @@ class _LNInfoPageState extends State<LNInfoPage> {
                         children: [
                           Text(maxReceive,
                               style: TextStyle(
-                                  fontSize: theme.getSmallFont(),
+                                  fontSize: theme.getSmallFont(context),
                                   color: textColor)),
                           const SizedBox(height: 8),
                           Text(maxSend,
                               style: TextStyle(
-                                  fontSize: theme.getSmallFont(),
+                                  fontSize: theme.getSmallFont(context),
                                   color: textColor)),
                           const SizedBox(height: 8),
                           Text(onChainBalance,
                               style: TextStyle(
-                                  fontSize: theme.getSmallFont(),
+                                  fontSize: theme.getSmallFont(context),
                                   color: textColor))
                         ]),
                   ]),
@@ -419,7 +443,7 @@ class _LNInfoPageState extends State<LNInfoPage> {
                         textAlign: TextAlign.left,
                         style: TextStyle(
                             color: darkTextColor,
-                            fontSize: theme.getMediumFont())),
+                            fontSize: theme.getMediumFont(context))),
                     Expanded(
                         child: Divider(
                       color: dividerColor, //color of divider
@@ -436,47 +460,47 @@ class _LNInfoPageState extends State<LNInfoPage> {
                         children: [
                           Text("Chain Height",
                               style: TextStyle(
-                                  fontSize: theme.getSmallFont(),
+                                  fontSize: theme.getSmallFont(context),
                                   color: secondaryTextColor)),
                           const SizedBox(height: 8),
                           Text("Synced to Chain",
                               style: TextStyle(
-                                  fontSize: theme.getSmallFont(),
+                                  fontSize: theme.getSmallFont(context),
                                   color: secondaryTextColor)),
                           const SizedBox(height: 8),
                           Text("Synced to Graph:",
                               style: TextStyle(
-                                  fontSize: theme.getSmallFont(),
+                                  fontSize: theme.getSmallFont(context),
                                   color: secondaryTextColor)),
                           const SizedBox(height: 8),
                           Text("Pending Channels:",
                               style: TextStyle(
-                                  fontSize: theme.getSmallFont(),
+                                  fontSize: theme.getSmallFont(context),
                                   color: secondaryTextColor)),
                           const SizedBox(height: 8),
                           Text("Inactive Channels:",
                               style: TextStyle(
-                                  fontSize: theme.getSmallFont(),
+                                  fontSize: theme.getSmallFont(context),
                                   color: secondaryTextColor)),
                           const SizedBox(height: 8),
                           Text("Active Channels:",
                               style: TextStyle(
-                                  fontSize: theme.getSmallFont(),
+                                  fontSize: theme.getSmallFont(context),
                                   color: secondaryTextColor)),
                           const SizedBox(height: 8),
                           Text("Version:",
                               style: TextStyle(
-                                  fontSize: theme.getSmallFont(),
+                                  fontSize: theme.getSmallFont(context),
                                   color: secondaryTextColor)),
                           const SizedBox(height: 8),
                           Text("Node ID:",
                               style: TextStyle(
-                                  fontSize: theme.getSmallFont(),
+                                  fontSize: theme.getSmallFont(context),
                                   color: secondaryTextColor)),
                           const SizedBox(height: 8),
                           Text("Chain Hash:",
                               style: TextStyle(
-                                  fontSize: theme.getSmallFont(),
+                                  fontSize: theme.getSmallFont(context),
                                   color: secondaryTextColor))
                         ]),
                     const SizedBox(width: 10),
@@ -485,51 +509,51 @@ class _LNInfoPageState extends State<LNInfoPage> {
                         children: [
                           Text(info.blockHeight.toString(),
                               style: TextStyle(
-                                  fontSize: theme.getSmallFont(),
+                                  fontSize: theme.getSmallFont(context),
                                   color: textColor)),
                           const SizedBox(height: 8),
                           Text(info.syncedToChain.toString(),
                               style: TextStyle(
-                                  fontSize: theme.getSmallFont(),
+                                  fontSize: theme.getSmallFont(context),
                                   color: textColor)),
                           const SizedBox(height: 8),
                           Text(info.syncedToGraph.toString(),
                               style: TextStyle(
-                                  fontSize: theme.getSmallFont(),
+                                  fontSize: theme.getSmallFont(context),
                                   color: textColor)),
                           const SizedBox(height: 8),
                           Text(info.numPendingChannels.toString(),
                               style: TextStyle(
-                                  fontSize: theme.getSmallFont(),
+                                  fontSize: theme.getSmallFont(context),
                                   color: textColor)),
                           const SizedBox(height: 8),
                           Text(info.numInactiveChannels.toString(),
                               style: TextStyle(
-                                  fontSize: theme.getSmallFont(),
+                                  fontSize: theme.getSmallFont(context),
                                   color: textColor)),
                           const SizedBox(height: 8),
                           Text(info.numActiveChannels.toString(),
                               style: TextStyle(
-                                  fontSize: theme.getSmallFont(),
+                                  fontSize: theme.getSmallFont(context),
                                   color: textColor)),
                           const SizedBox(height: 8),
                           Copyable(
                               info.version.trim(),
                               TextStyle(
-                                  fontSize: theme.getSmallFont(),
+                                  fontSize: theme.getSmallFont(context),
                                   color: textColor)),
                           const SizedBox(height: 8),
                           Copyable(
                               info.identityPubkey.trim(),
                               TextStyle(
                                   color: textColor,
-                                  fontSize: theme.getSmallFont())),
+                                  fontSize: theme.getSmallFont(context))),
                           const SizedBox(height: 8),
                           Copyable(
                               info.blockHash.toString(),
                               TextStyle(
                                   color: textColor,
-                                  fontSize: theme.getSmallFont()))
+                                  fontSize: theme.getSmallFont(context)))
                         ]),
                   ]),
                   const SizedBox(height: 21),
@@ -538,13 +562,14 @@ class _LNInfoPageState extends State<LNInfoPage> {
                         onPressed: getDepositAddr,
                         child: Text("New Deposit Address",
                             style: TextStyle(
-                                fontSize: theme.getSmallFont(),
+                                fontSize: theme.getSmallFont(context),
                                 color: textColor))),
                     const SizedBox(width: 20),
                     Copyable(
                         depositAddr,
                         TextStyle(
-                            color: textColor, fontSize: theme.getMediumFont())),
+                            color: textColor,
+                            fontSize: theme.getMediumFont(context))),
                   ]),
                   const SizedBox(width: 21),
                   depositAddr.isNotEmpty

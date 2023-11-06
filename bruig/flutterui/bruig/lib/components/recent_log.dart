@@ -78,7 +78,7 @@ class _LogLinesState extends State<LogLines> {
               readOnly: true,
               style: TextStyle(
                   color: textColor,
-                  fontSize: theme.getSmallFont(),
+                  fontSize: theme.getSmallFont(context),
                   fontFeatures: const [FontFeature.tabularFigures()],
                   height: 1.2),
             ));

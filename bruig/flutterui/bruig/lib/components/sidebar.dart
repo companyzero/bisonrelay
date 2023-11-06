@@ -127,12 +127,13 @@ class _SidebarState extends State<Sidebar> {
                 ]),
           ),
           hoverColor: scaffoldBackgroundColor,
-          hoverTextStyle:
-              TextStyle(color: textColor, fontSize: theme.getMediumFont()),
+          hoverTextStyle: TextStyle(
+              color: textColor, fontSize: theme.getMediumFont(context)),
           textStyle: TextStyle(
-              color: unselectedTextColor, fontSize: theme.getMediumFont()),
-          selectedTextStyle:
-              TextStyle(color: textColor, fontSize: theme.getMediumFont()),
+              color: unselectedTextColor,
+              fontSize: theme.getMediumFont(context)),
+          selectedTextStyle: TextStyle(
+              color: textColor, fontSize: theme.getMediumFont(context)),
           itemPadding:
               const EdgeInsets.only(top: 7, bottom: 6, left: 12, right: 12),
           itemMargin:

@@ -100,13 +100,13 @@ class _ServerPageState extends State<ServerPage> {
                     Text("Setting up Bison Relay",
                         style: TextStyle(
                             color: textColor,
-                            fontSize: theme.getHugeFont(),
+                            fontSize: theme.getHugeFont(context),
                             fontWeight: FontWeight.w200)),
                     const SizedBox(height: 20),
                     Text("Connect to Server",
                         style: TextStyle(
                             color: secondaryTextColor,
-                            fontSize: theme.getLargeFont(),
+                            fontSize: theme.getLargeFont(context),
                             fontWeight: FontWeight.w300)),
                     const SizedBox(height: 34),
                     Row(children: [
@@ -120,13 +120,15 @@ class _ServerPageState extends State<ServerPage> {
                                           border: InputBorder.none,
                                           hintText: "RPC Host",
                                           hintStyle: TextStyle(
-                                              fontSize: theme.getMediumFont(),
+                                              fontSize:
+                                                  theme.getMediumFont(context),
                                               color: textColor),
                                           filled: true,
                                           fillColor: cardColor),
                                       style: TextStyle(
                                           color: textColor,
-                                          fontSize: theme.getMediumFont()),
+                                          fontSize:
+                                              theme.getMediumFont(context)),
                                       controller: serverCtrl)))),
                     ]),
                     const SizedBox(height: 34),

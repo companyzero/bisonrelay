@@ -101,13 +101,13 @@ class _ConfirmLNWalletSeedPageState extends State<ConfirmLNWalletSeedPage> {
                   Text("Setting up Bison Relay",
                       style: TextStyle(
                           color: textColor,
-                          fontSize: theme.getHugeFont(),
+                          fontSize: theme.getHugeFont(context),
                           fontWeight: FontWeight.w200)),
                   const SizedBox(height: 20),
                   Text("Confirm New Wallet Seed",
                       style: TextStyle(
                           color: secondaryTextColor,
-                          fontSize: theme.getLargeFont(),
+                          fontSize: theme.getLargeFont(context),
                           fontWeight: FontWeight.w300)),
                   const SizedBox(height: 34),
                   AnimatedOpacity(
@@ -122,7 +122,7 @@ class _ConfirmLNWalletSeedPageState extends State<ConfirmLNWalletSeedPage> {
                             Text("Seed Confirmed",
                                 style: TextStyle(
                                     color: textColor,
-                                    fontSize: theme.getLargeFont(),
+                                    fontSize: theme.getLargeFont(context),
                                     fontWeight: FontWeight.w200)),
                             const SizedBox(height: 20),
                             Center(
@@ -156,7 +156,7 @@ class QuestionArea extends StatelessWidget {
                   child: Text("Word #${currentWords.position + 1}",
                       style: TextStyle(
                           color: textColor,
-                          fontSize: theme.getHugeFont(),
+                          fontSize: theme.getHugeFont(context),
                           fontWeight: FontWeight.w200))),
               const SizedBox(height: 20),
               SizedBox(
@@ -193,7 +193,7 @@ class IncorrectArea extends StatelessWidget {
                       textAlign: TextAlign.center,
                       style: TextStyle(
                           color: textColor,
-                          fontSize: theme.getLargeFont(),
+                          fontSize: theme.getLargeFont(context),
                           fontWeight: FontWeight.w200))),
               const SizedBox(height: 20),
               Center(

@@ -84,7 +84,8 @@ class _AddressBookListingWState extends State<_AddressBookListingW> {
                 enabled: true,
                 title: Text(chat.nick,
                     style: TextStyle(
-                        fontSize: theme.getSmallFont(), color: textColor)),
+                        fontSize: theme.getSmallFont(context),
+                        color: textColor)),
                 leading: popMenuButton,
                 trailing: Material(
                     color: textColor.withOpacity(0),
@@ -190,7 +191,8 @@ class _AddressBookState extends State<AddressBook> {
                                         textAlign: TextAlign.left,
                                         style: TextStyle(
                                             color: darkTextColor,
-                                            fontSize: theme.getMediumFont())),
+                                            fontSize:
+                                                theme.getMediumFont(context))),
                                     Expanded(
                                         child: Divider(
                                       color: dividerColor, //color of divider
@@ -219,8 +221,8 @@ class _AddressBookState extends State<AddressBook> {
                                               textAlign: TextAlign.center,
                                               style: TextStyle(
                                                   color: darkTextColor,
-                                                  fontSize:
-                                                      theme.getMediumFont()))),
+                                                  fontSize: theme.getMediumFont(
+                                                      context)))),
                                   const SizedBox(height: 21),
                                 ])
                           : Column(children: [
@@ -236,7 +238,8 @@ class _AddressBookState extends State<AddressBook> {
                                                 style: TextStyle(
                                                     color: darkTextColor,
                                                     fontSize:
-                                                        theme.getMediumFont())),
+                                                        theme.getMediumFont(
+                                                            context))),
                                             Expanded(
                                                 child: Divider(
                                               color:
@@ -276,7 +279,8 @@ class _AddressBookState extends State<AddressBook> {
                                                 style: TextStyle(
                                                     color: darkTextColor,
                                                     fontSize:
-                                                        theme.getMediumFont())),
+                                                        theme.getMediumFont(
+                                                            context))),
                                             Expanded(
                                                 child: Divider(
                                               color:

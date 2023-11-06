@@ -154,11 +154,11 @@ class _UserProfileState extends State<UserProfile> {
       var txtTS = TextStyle(
           color: textColor,
           fontWeight: FontWeight.w100,
-          fontSize: theme.getSmallFont());
+          fontSize: theme.getSmallFont(context));
       var headTS = TextStyle(
           color: textColor,
           fontWeight: FontWeight.w400,
-          fontSize: theme.getSmallFont());
+          fontSize: theme.getSmallFont(context));
 
       return Container(
           padding: const EdgeInsets.all(20),
@@ -169,11 +169,12 @@ class _UserProfileState extends State<UserProfile> {
                 children: [
                   Text("User Profile - ",
                       style: TextStyle(
-                          color: textColor, fontSize: theme.getMediumFont())),
+                          color: textColor,
+                          fontSize: theme.getMediumFont(context))),
                   Text(chat.nick,
                       style: TextStyle(
                           color: textColor,
-                          fontSize: theme.getMediumFont(),
+                          fontSize: theme.getMediumFont(context),
                           fontWeight: FontWeight.bold)),
                 ],
               ),
@@ -202,7 +203,8 @@ class _UserProfileState extends State<UserProfile> {
               const SizedBox(height: 20),
               Text("Ratchet Debug Info",
                   style: TextStyle(
-                      color: textColor, fontSize: theme.getMediumFont())),
+                      color: textColor,
+                      fontSize: theme.getMediumFont(context))),
               const SizedBox(height: 10),
               SimpleInfoGrid([
                 Tuple2(Text("First Created", style: headTS),

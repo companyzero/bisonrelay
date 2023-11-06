@@ -154,7 +154,8 @@ class _ReceivedSentPMState extends State<ReceivedSentPM> {
                 )),
                 Text("Last read posts",
                     style: TextStyle(
-                        fontSize: theme.getSmallFont(), color: textColor)),
+                        fontSize: theme.getSmallFont(context),
+                        color: textColor)),
                 Expanded(
                     child: Divider(
                   color: textColor, //color of divider
@@ -247,7 +248,7 @@ class _ReceivedSentPMState extends State<ReceivedSentPM> {
                               children: [
                                   Text(widget.nick,
                                       style: TextStyle(
-                                        fontSize: theme.getMediumFont(),
+                                        fontSize: theme.getMediumFont(context),
                                         color: hightLightTextColor,
                                         fontWeight: FontWeight.w500,
                                         letterSpacing: 0.5,
@@ -270,7 +271,7 @@ class _ReceivedSentPMState extends State<ReceivedSentPM> {
                                     ? hour
                                     : prefix,
                                 style: TextStyle(
-                                    fontSize: theme.getSmallFont(),
+                                    fontSize: theme.getSmallFont(context),
                                     color: darkTextColor), // DATE COLOR
                               )),
                         ),
@@ -383,7 +384,7 @@ class _ReceivedSentMobileGCMsgState extends State<ReceivedSentMobileGCMsg> {
                       )),
                       Text("Last read posts",
                           style: TextStyle(
-                              fontSize: theme.getSmallFont(),
+                              fontSize: theme.getSmallFont(context),
                               color: textColor)),
                       Expanded(
                           child: Divider(
@@ -447,7 +448,7 @@ class _ReceivedSentMobileGCMsgState extends State<ReceivedSentMobileGCMsg> {
                                     child: Text(
                                   widget.nick,
                                   style: TextStyle(
-                                    fontSize: theme.getSmallFont(),
+                                    fontSize: theme.getSmallFont(context),
                                     color: avatarColor, // NAME TEXT COLOR,
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -461,7 +462,8 @@ class _ReceivedSentMobileGCMsgState extends State<ReceivedSentMobileGCMsg> {
                                       child: Text(
                                         hour,
                                         style: TextStyle(
-                                            fontSize: theme.getSmallFont(),
+                                            fontSize:
+                                                theme.getSmallFont(context),
                                             color: darkTextColor), // DATE COLOR
                                       )),
                                 )))
@@ -484,7 +486,7 @@ class _ReceivedSentMobileGCMsgState extends State<ReceivedSentMobileGCMsg> {
                                     child: Text(
                                       prefix,
                                       style: TextStyle(
-                                          fontSize: theme.getSmallFont(),
+                                          fontSize: theme.getSmallFont(context),
                                           color:
                                               hightLightTextColor, // NAME TEXT COLOR,
                                           fontWeight: FontWeight.bold,
@@ -598,7 +600,7 @@ class _ReceivedSentPMMobileState extends State<ReceivedSentMobilePM> {
                       )),
                       Text("Last read posts",
                           style: TextStyle(
-                              fontSize: theme.getSmallFont(),
+                              fontSize: theme.getSmallFont(context),
                               color: textColor)),
                       Expanded(
                           child: Divider(
@@ -629,7 +631,7 @@ class _ReceivedSentPMMobileState extends State<ReceivedSentMobilePM> {
                                     child: Text(
                                       hour,
                                       style: TextStyle(
-                                          fontSize: theme.getSmallFont(),
+                                          fontSize: theme.getSmallFont(context),
                                           color: darkTextColor), // DATE COLOR
                                     )),
                               )),
@@ -687,7 +689,7 @@ class _ReceivedSentPMMobileState extends State<ReceivedSentMobilePM> {
                                     child: Text(
                                       hour,
                                       style: TextStyle(
-                                          fontSize: theme.getSmallFont(),
+                                          fontSize: theme.getSmallFont(context),
                                           color: darkTextColor), // DATE COLOR
                                     )),
                               )),
@@ -761,12 +763,12 @@ class GCUserEventW extends StatelessWidget {
         return ServerEvent(
             child: SelectableText("${evnt.source!.nick}:  ${evnt.event.msg}",
                 style: TextStyle(
-                    fontSize: theme.getSmallFont(), color: textColor)));
+                    fontSize: theme.getSmallFont(context), color: textColor)));
       } else {
         return ServerEvent(
             child: SelectableText(evnt.event.msg,
                 style: TextStyle(
-                    fontSize: theme.getSmallFont(), color: textColor)));
+                    fontSize: theme.getSmallFont(context), color: textColor)));
       }
     });
   }
@@ -813,29 +815,34 @@ class _JoinGCEventWState extends State<JoinGCEventW> {
           return ServerEvent(
               child: Text("Declined GC invitation to '${invite.name}",
                   style: TextStyle(
-                      fontSize: theme.getSmallFont(), color: textColor)));
+                      fontSize: theme.getSmallFont(context),
+                      color: textColor)));
         case CMS_errored:
           return ServerEvent(
               child: SelectableText(
                   "Unable to join GC ${invite.name}: ${event.sendError}",
                   style: TextStyle(
-                      fontSize: theme.getSmallFont(), color: textColor)));
+                      fontSize: theme.getSmallFont(context),
+                      color: textColor)));
         case CMS_sent:
           return ServerEvent(
               child: Text("Accepted invitation to join GC '${invite.name}'",
                   style: TextStyle(
-                      fontSize: theme.getSmallFont(), color: textColor)));
+                      fontSize: theme.getSmallFont(context),
+                      color: textColor)));
         case CMS_sending:
           return ServerEvent(
               child: Text("Accepting invitation to join GC '${invite.name}'",
                   style: TextStyle(
-                      fontSize: theme.getSmallFont(), color: textColor)));
+                      fontSize: theme.getSmallFont(context),
+                      color: textColor)));
       }
 
       return ServerEvent(
           child: Column(children: [
         Text("Received invitation to join GC '${invite.name}'",
-            style: TextStyle(fontSize: theme.getSmallFont(), color: textColor)),
+            style: TextStyle(
+                fontSize: theme.getSmallFont(context), color: textColor)),
         const SizedBox(height: 20),
         Row(mainAxisAlignment: MainAxisAlignment.center, children: [
           ElevatedButton(onPressed: acceptInvite, child: const Text("Accept")),
@@ -952,17 +959,21 @@ class _InflightTipState extends State<InflightTipW> {
       if (tip.state == ITS_completed) {
         child = Text(
             "✓ Requesting invoice for ${formatDCR(tip.amount)} to tip ${source.nick}!",
-            style: TextStyle(fontSize: theme.getSmallFont(), color: textColor));
+            style: TextStyle(
+                fontSize: theme.getSmallFont(context), color: textColor));
       } else if (tip.state == ITS_errored) {
         child = Text("✗ Failed to send tip: ${tip.error}",
-            style: TextStyle(fontSize: theme.getSmallFont(), color: textColor));
+            style: TextStyle(
+                fontSize: theme.getSmallFont(context), color: textColor));
       } else if (tip.state == ITS_received) {
         child = Text("\$ Received ${tip.amount} DCR from ${source.nick}!",
-            style: TextStyle(fontSize: theme.getSmallFont(), color: textColor));
+            style: TextStyle(
+                fontSize: theme.getSmallFont(context), color: textColor));
       } else {
         child = Text(
             "… Requesting invoice for ${formatDCR(tip.amount)} DCR to tip ${source.nick}...",
-            style: TextStyle(fontSize: theme.getSmallFont(), color: textColor));
+            style: TextStyle(
+                fontSize: theme.getSmallFont(context), color: textColor));
       }
       return ServerEvent(child: child);
     });
@@ -1010,19 +1021,24 @@ class _SynthEventWState extends State<SynthEventW> {
     return Consumer<ThemeNotifier>(builder: (context, theme, _) {
       if (event.state == SCE_sent) {
         child = Text("✓ ${widget.event.msg}",
-            style: TextStyle(fontSize: theme.getSmallFont(), color: textColor));
+            style: TextStyle(
+                fontSize: theme.getSmallFont(context), color: textColor));
       } else if (event.state == SCE_errored) {
         child = Text("✗ Failed to ${widget.event.msg} - ${event.error}",
-            style: TextStyle(fontSize: theme.getSmallFont(), color: textColor));
+            style: TextStyle(
+                fontSize: theme.getSmallFont(context), color: textColor));
       } else if (event.state == SCE_sending) {
         child = Text("… ${widget.event.msg}",
-            style: TextStyle(fontSize: theme.getSmallFont(), color: textColor));
+            style: TextStyle(
+                fontSize: theme.getSmallFont(context), color: textColor));
       } else if (event.state == SCE_received) {
         child = Text(widget.event.msg,
-            style: TextStyle(fontSize: theme.getSmallFont(), color: textColor));
+            style: TextStyle(
+                fontSize: theme.getSmallFont(context), color: textColor));
       } else {
         child = Text("? unknown state ${event.state}",
-            style: TextStyle(fontSize: theme.getSmallFont(), color: textColor));
+            style: TextStyle(
+                fontSize: theme.getSmallFont(context), color: textColor));
       }
       return ServerEvent(child: child);
     });
@@ -1048,7 +1064,7 @@ class _UserContentEventWState extends State<UserContentEventW> {
               Text("User Content",
                   style: TextStyle(
                       color: Theme.of(context).focusColor,
-                      fontSize: theme.getMediumFont())),
+                      fontSize: theme.getMediumFont(context))),
               const SizedBox(height: 20),
               UserContentListW(widget.chat, downloads, widget.content),
             ])));
@@ -1067,7 +1083,7 @@ class PostEventW extends StatelessWidget {
         builder: (context, theme, _) => ServerEvent(
             child: SelectableText("Received post '${event.title}'",
                 style: TextStyle(
-                    fontSize: theme.getSmallFont(), color: textColor))));
+                    fontSize: theme.getSmallFont(context), color: textColor))));
   }
 }
 
@@ -1114,7 +1130,7 @@ class _PostSubscriptionEventWState extends State<PostSubscriptionEventW> {
         builder: (context, theme, _) => ServerEvent(
             child: SelectableText(msg,
                 style: TextStyle(
-                    fontSize: theme.getSmallFont(), color: textColor))));
+                    fontSize: theme.getSmallFont(context), color: textColor))));
   }
 }
 
@@ -1151,7 +1167,8 @@ class FileDownloadedEventW extends StatelessWidget {
                     SelectableText(
                       "Downloaded file ${event.diskPath}",
                       style: TextStyle(
-                          fontSize: theme.getSmallFont(), color: textColor),
+                          fontSize: theme.getSmallFont(context),
+                          color: textColor),
                     ),
                   ],
                 ),
@@ -1178,7 +1195,7 @@ class GCVersionWarnW extends StatelessWidget {
             child: SelectableText(
                 "Received GC definitions with unsupported version ${event.version}. Please update the software to interact in this GC.",
                 style: TextStyle(
-                    fontSize: theme.getSmallFont(), color: textColor))));
+                    fontSize: theme.getSmallFont(context), color: textColor))));
   }
 }
 
@@ -1205,7 +1222,7 @@ class GCAddedMembersW extends StatelessWidget {
         builder: (context, theme, _) => ServerEvent(
             child: SelectableText(msg,
                 style: TextStyle(
-                    fontSize: theme.getSmallFont(), color: textColor))));
+                    fontSize: theme.getSmallFont(context), color: textColor))));
   }
 }
 
@@ -1233,7 +1250,7 @@ class GCPartedMemberW extends StatelessWidget {
         builder: (context, theme, _) => ServerEvent(
             child: SelectableText(msg,
                 style: TextStyle(
-                    fontSize: theme.getSmallFont(), color: textColor))));
+                    fontSize: theme.getSmallFont(context), color: textColor))));
   }
 }
 
@@ -1251,7 +1268,7 @@ class GCUpgradedVersionW extends StatelessWidget {
         builder: (context, theme, _) => ServerEvent(
             child: SelectableText(msg,
                 style: TextStyle(
-                    fontSize: theme.getSmallFont(), color: textColor))));
+                    fontSize: theme.getSmallFont(context), color: textColor))));
   }
 }
 
@@ -1286,7 +1303,7 @@ class GCAdminsChangedW extends StatelessWidget {
         builder: (context, theme, _) => ServerEvent(
             child: SelectableText(msg,
                 style: TextStyle(
-                    fontSize: theme.getSmallFont(), color: textColor))));
+                    fontSize: theme.getSmallFont(context), color: textColor))));
   }
 }
 
@@ -1336,25 +1353,29 @@ class _KXSuggestedWState extends State<KXSuggestedW> {
               child: Text(
                   "Accepting suggestion to KX from '${suggest.inviteenick}' to '${suggest.targetnick}'",
                   style: TextStyle(
-                      fontSize: theme.getSmallFont(), color: textColor)));
+                      fontSize: theme.getSmallFont(context),
+                      color: textColor)));
         case Suggestion_errored:
           return ServerEvent(
               child: SelectableText(
                   "Unable to accept suggestion from  '${suggest.inviteenick}' to '${suggest.targetnick}'",
                   style: TextStyle(
-                      fontSize: theme.getSmallFont(), color: textColor)));
+                      fontSize: theme.getSmallFont(context),
+                      color: textColor)));
         case Suggestion_canceled:
           return ServerEvent(
               child: Text(
                   "Canceled suggestion to KX from '${suggest.inviteenick}' to '${suggest.targetnick}'",
                   style: TextStyle(
-                      fontSize: theme.getSmallFont(), color: textColor)));
+                      fontSize: theme.getSmallFont(context),
+                      color: textColor)));
         case Suggestion_confirmed:
           return ServerEvent(
               child: Text(
                   "Confirmed suggestion to KX from '${suggest.inviteenick}' to '${suggest.targetnick}'",
                   style: TextStyle(
-                      fontSize: theme.getSmallFont(), color: textColor)));
+                      fontSize: theme.getSmallFont(context),
+                      color: textColor)));
       }
 
       return suggest.alreadyknown
@@ -1362,13 +1383,13 @@ class _KXSuggestedWState extends State<KXSuggestedW> {
               child: Text(
                   "Received already known suggestion to KX from '${suggest.inviteenick}' to '${suggest.targetnick}'",
                   style: TextStyle(
-                      fontSize: theme.getSmallFont(), color: textColor)))
+                      fontSize: theme.getSmallFont(context), color: textColor)))
           : ServerEvent(
               child: Column(children: [
               Text(
                   "Received suggestion to KX from '${suggest.inviteenick}' to '${suggest.targetnick}'",
                   style: TextStyle(
-                      fontSize: theme.getSmallFont(), color: textColor)),
+                      fontSize: theme.getSmallFont(context), color: textColor)),
               const SizedBox(height: 20),
               Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                 ElevatedButton(
@@ -1406,7 +1427,7 @@ class TipUserProgressW extends StatelessWidget {
         builder: (context, theme, _) => ServerEvent(
             child: SelectableText(msg,
                 style: TextStyle(
-                    fontSize: theme.getSmallFont(), color: textColor))));
+                    fontSize: theme.getSmallFont(context), color: textColor))));
   }
 }
 
@@ -1463,7 +1484,8 @@ class _FetchedResourceWState extends State<FetchedResourceW> {
                     borderRadius: const BorderRadius.all(Radius.circular(5))),
                 child: Text("Requested page",
                     style: TextStyle(
-                        fontSize: theme.getSmallFont(), color: textColor))));
+                        fontSize: theme.getSmallFont(context),
+                        color: textColor))));
       } else {
         return ServerEvent(
             child: Container(
@@ -1498,7 +1520,8 @@ class HandshakeStageW extends StatelessWidget {
                 child: Text(
                     "Completed 3-way handshake (due to receiving msg ${event.stage})",
                     style: TextStyle(
-                        color: textColor, fontSize: theme.getSmallFont())),
+                        color: textColor,
+                        fontSize: theme.getSmallFont(context))),
               ),
             ));
   }

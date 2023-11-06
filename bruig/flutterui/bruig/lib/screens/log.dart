@@ -12,7 +12,7 @@ class LogScreenTitle extends StatelessWidget {
     return Consumer<ThemeNotifier>(
         builder: (context, theme, child) => Text("Bison Relay / Logs",
             style: TextStyle(
-                fontSize: theme.getLargeFont(),
+                fontSize: theme.getLargeFont(context),
                 color: Theme.of(context).focusColor)));
   }
 }
@@ -39,7 +39,7 @@ class LogScreen extends StatelessWidget {
               const SizedBox(height: 20),
               Text("Recent Dcrlnd Log",
                   style: TextStyle(
-                      color: textColor, fontSize: theme.getLargeFont())),
+                      color: textColor, fontSize: theme.getLargeFont(context))),
               const SizedBox(height: 20),
               Expanded(child: LogLines(log)),
               const SizedBox(height: 20),

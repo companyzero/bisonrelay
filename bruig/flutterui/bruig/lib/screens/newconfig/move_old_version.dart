@@ -107,7 +107,7 @@ class _MoveOldVersionWalletPageState extends State<MoveOldVersionWalletPage> {
                             Text("Move old wallet",
                                 style: TextStyle(
                                     color: textColor,
-                                    fontSize: theme.getHugeFont(),
+                                    fontSize: theme.getHugeFont(context),
                                     fontWeight: FontWeight.w200)),
                             const SizedBox(height: 20),
                             SizedBox(
@@ -116,14 +116,14 @@ class _MoveOldVersionWalletPageState extends State<MoveOldVersionWalletPage> {
                                     textAlign: TextAlign.left,
                                     style: TextStyle(
                                         color: textColor,
-                                        fontSize: theme.getMediumFont(),
+                                        fontSize: theme.getMediumFont(context),
                                         fontWeight: FontWeight.w300))),
                           ])
                         : Column(children: [
                             Text("Move old wallet",
                                 style: TextStyle(
                                     color: textColor,
-                                    fontSize: theme.getHugeFont(),
+                                    fontSize: theme.getHugeFont(context),
                                     fontWeight: FontWeight.w200)),
                             const SizedBox(height: 20),
                             Column(children: [
@@ -134,19 +134,22 @@ class _MoveOldVersionWalletPageState extends State<MoveOldVersionWalletPage> {
                                         textAlign: TextAlign.left,
                                         style: TextStyle(
                                             color: textColor,
-                                            fontSize: theme.getMediumFont(),
+                                            fontSize:
+                                                theme.getMediumFont(context),
                                             fontWeight: FontWeight.w300)),
                                     Copyable(
                                         _warnMsg2,
                                         TextStyle(
                                             color: textColor,
-                                            fontSize: theme.getMediumFont(),
+                                            fontSize:
+                                                theme.getMediumFont(context),
                                             fontWeight: FontWeight.w300)),
                                     Text(_warnMsg3,
                                         textAlign: TextAlign.left,
                                         style: TextStyle(
                                             color: textColor,
-                                            fontSize: theme.getMediumFont(),
+                                            fontSize:
+                                                theme.getMediumFont(context),
                                             fontWeight: FontWeight.w300))
                                   ])),
                               Center(

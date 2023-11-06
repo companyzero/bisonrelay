@@ -19,7 +19,7 @@ class ViewPagesScreenTitle extends StatelessWidget {
     return Consumer<ThemeNotifier>(
         builder: (context, theme, child) => Text(baseTitle,
             style: TextStyle(
-                fontSize: theme.getLargeFont(),
+                fontSize: theme.getLargeFont(context),
                 color: Theme.of(context).focusColor)));
   }
 }
@@ -186,11 +186,11 @@ class _ViewPageScreenState extends State<ViewPageScreen> {
     return Consumer<ThemeNotifier>(builder: (context, theme, child) {
       var tsUnselected = TextStyle(
           color: unselectedTextColor,
-          fontSize: theme.getSmallFont(),
+          fontSize: theme.getSmallFont(context),
           fontWeight: FontWeight.w400);
       var tsSelected = TextStyle(
           color: selectedTextColor,
-          fontSize: theme.getSmallFont(),
+          fontSize: theme.getSmallFont(context),
           fontWeight: FontWeight.w400);
 
       var activeSess = resources.mostRecent;

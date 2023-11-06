@@ -143,14 +143,15 @@ class _FeedPostWState extends State<FeedPostW> {
                               child: Text(authorNick,
                                   style: TextStyle(
                                       color: hightLightTextColor,
-                                      fontSize: theme.getMediumFont(),
+                                      fontSize: theme.getMediumFont(context),
                                       fontWeight: FontWeight.w500))),
                           Expanded(
                               child: Align(
                                   alignment: Alignment.centerRight,
                                   child: Text(sincePost,
                                       style: TextStyle(
-                                          fontSize: theme.getMediumFont(),
+                                          fontSize:
+                                              theme.getMediumFont(context),
                                           color: hightLightTextColor,
                                           fontWeight: FontWeight.w300))))
                         ],
@@ -189,7 +190,7 @@ class _FeedPostWState extends State<FeedPostW> {
                                 Text("New Comments",
                                     style: TextStyle(
                                       fontStyle: FontStyle.italic,
-                                      fontSize: theme.getSmallFont(),
+                                      fontSize: theme.getSmallFont(context),
                                       color: Colors.amber,
                                     ))
                               ])
@@ -241,14 +242,14 @@ class _FeedPostWState extends State<FeedPostW> {
                           child: Text(authorNick,
                               style: TextStyle(
                                   color: hightLightTextColor,
-                                  fontSize: theme.getMediumFont(),
+                                  fontSize: theme.getMediumFont(context),
                                   fontWeight: FontWeight.w500))),
                       Expanded(
                           child: Align(
                               alignment: Alignment.centerRight,
                               child: Text(sincePost,
                                   style: TextStyle(
-                                      fontSize: theme.getMediumFont(),
+                                      fontSize: theme.getMediumFont(context),
                                       color: hightLightTextColor,
                                       fontWeight: FontWeight.w300))))
                     ],
@@ -287,7 +288,7 @@ class _FeedPostWState extends State<FeedPostW> {
                             Text("New Comments",
                                 style: TextStyle(
                                   fontStyle: FontStyle.italic,
-                                  fontSize: theme.getSmallFont(),
+                                  fontSize: theme.getSmallFont(context),
                                   color: Colors.amber,
                                 ))
                           ])
@@ -298,7 +299,7 @@ class _FeedPostWState extends State<FeedPostW> {
                             child: TextButton(
                               style: TextButton.styleFrom(
                                   textStyle: TextStyle(
-                                    fontSize: theme.getSmallFont(),
+                                    fontSize: theme.getSmallFont(context),
                                     color: hightLightTextColor,
                                   ),
                                   foregroundColor: hightLightTextColor,

@@ -80,13 +80,13 @@ class InitLocalIDScreenState extends State<InitLocalIDScreen> {
                           Text("Setting up Bison Relay",
                               style: TextStyle(
                                   color: textColor,
-                                  fontSize: theme.getHugeFont(),
+                                  fontSize: theme.getHugeFont(context),
                                   fontWeight: FontWeight.w200)),
                           const SizedBox(height: 20),
                           Text("Choose Username/Nick",
                               style: TextStyle(
                                   color: secondaryTextColor,
-                                  fontSize: theme.getLargeFont(),
+                                  fontSize: theme.getLargeFont(context),
                                   fontWeight: FontWeight.w300)),
                           const SizedBox(height: 34),
                           Column(children: [

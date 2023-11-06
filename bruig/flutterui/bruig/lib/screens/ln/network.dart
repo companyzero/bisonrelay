@@ -33,11 +33,12 @@ class _PeerW extends StatelessWidget {
                     width: 100,
                     child: Text("Peer ID:",
                         style: TextStyle(
-                            fontSize: theme.getSmallFont(),
+                            fontSize: theme.getSmallFont(context),
                             color: secondaryTextColor))),
                 Text(peer.pubkey,
                     style: TextStyle(
-                        fontSize: theme.getSmallFont(), color: textColor)),
+                        fontSize: theme.getSmallFont(context),
+                        color: textColor)),
               ]),
               const SizedBox(height: 8),
               Row(children: [
@@ -45,11 +46,12 @@ class _PeerW extends StatelessWidget {
                     width: 100,
                     child: Text("Address:",
                         style: TextStyle(
-                            fontSize: theme.getSmallFont(),
+                            fontSize: theme.getSmallFont(context),
                             color: secondaryTextColor))),
                 Text(peer.address,
                     style: TextStyle(
-                        fontSize: theme.getSmallFont(), color: textColor)),
+                        fontSize: theme.getSmallFont(context),
+                        color: textColor)),
               ]),
               const SizedBox(height: 10),
               Row(children: [
@@ -80,17 +82,17 @@ class _QueriedRouteW extends StatelessWidget {
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text("Hop:",
                     style: TextStyle(
-                        fontSize: theme.getSmallFont(),
+                        fontSize: theme.getSmallFont(context),
                         color: secondaryTextColor)),
                 const SizedBox(height: 8),
                 Text("Node:",
                     style: TextStyle(
-                        fontSize: theme.getSmallFont(),
+                        fontSize: theme.getSmallFont(context),
                         color: secondaryTextColor)),
                 const SizedBox(height: 8),
                 Text("Channel ID:",
                     style: TextStyle(
-                        fontSize: theme.getSmallFont(),
+                        fontSize: theme.getSmallFont(context),
                         color: secondaryTextColor)),
                 const SizedBox(height: 8),
               ]),
@@ -98,16 +100,19 @@ class _QueriedRouteW extends StatelessWidget {
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text("$hop",
                     style: TextStyle(
-                        fontSize: theme.getSmallFont(), color: textColor)),
+                        fontSize: theme.getSmallFont(context),
+                        color: textColor)),
                 const SizedBox(height: 8),
                 Copyable(
                     h.pubkey,
                     TextStyle(
-                        fontSize: theme.getSmallFont(), color: textColor)),
+                        fontSize: theme.getSmallFont(context),
+                        color: textColor)),
                 const SizedBox(height: 8),
                 Text(chanID,
                     style: TextStyle(
-                        fontSize: theme.getSmallFont(), color: textColor)),
+                        fontSize: theme.getSmallFont(context),
+                        color: textColor)),
                 const SizedBox(height: 8)
               ])
             ]));
@@ -123,15 +128,16 @@ class _QueriedRouteW extends StatelessWidget {
         builder: (context, theme, _) => Column(children: [
               Text(node,
                   style: TextStyle(
-                      fontSize: theme.getSmallFont(), color: textColor)),
+                      fontSize: theme.getSmallFont(context), color: textColor)),
               Text("Success Probability: $successProb%",
                   style: TextStyle(
-                      fontSize: theme.getSmallFont(), color: textColor)),
+                      fontSize: theme.getSmallFont(context), color: textColor)),
               const SizedBox(height: 8),
               res.routes.isEmpty
                   ? Text("No routes to node",
                       style: TextStyle(
-                          fontSize: theme.getSmallFont(), color: textColor))
+                          fontSize: theme.getSmallFont(context),
+                          color: textColor))
                   : Expanded(
                       child: ListView.separated(
                       separatorBuilder: (context, index) => Divider(
@@ -162,62 +168,68 @@ class _NodeInfo extends StatelessWidget {
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text("Channel ID:",
                     style: TextStyle(
-                        fontSize: theme.getSmallFont(),
+                        fontSize: theme.getSmallFont(context),
                         color: secondaryTextColor)),
                 const SizedBox(height: 8),
                 Text("Last Channel Update:",
                     style: TextStyle(
-                        fontSize: theme.getSmallFont(),
+                        fontSize: theme.getSmallFont(context),
                         color: secondaryTextColor)),
                 const SizedBox(height: 8),
                 Text("Channel Point:",
                     style: TextStyle(
-                        fontSize: theme.getSmallFont(),
+                        fontSize: theme.getSmallFont(context),
                         color: secondaryTextColor)),
                 const SizedBox(height: 8),
                 Text("Channel Capacity:",
                     style: TextStyle(
-                        fontSize: theme.getSmallFont(),
+                        fontSize: theme.getSmallFont(context),
                         color: secondaryTextColor)),
                 const SizedBox(height: 8),
                 Text("Node 1:",
                     style: TextStyle(
-                        fontSize: theme.getSmallFont(),
+                        fontSize: theme.getSmallFont(context),
                         color: secondaryTextColor)),
                 const SizedBox(height: 8),
                 Text("Node 2:",
                     style: TextStyle(
-                        fontSize: theme.getSmallFont(),
+                        fontSize: theme.getSmallFont(context),
                         color: secondaryTextColor))
               ]),
               const SizedBox(width: 10),
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text(chanID,
                     style: TextStyle(
-                        fontSize: theme.getSmallFont(), color: textColor)),
+                        fontSize: theme.getSmallFont(context),
+                        color: textColor)),
                 const SizedBox(height: 8),
                 Text(
                     DateTime.fromMillisecondsSinceEpoch(chan.lastUpdate * 1000)
                         .toIso8601String(),
                     style: TextStyle(
-                        fontSize: theme.getSmallFont(), color: textColor)),
+                        fontSize: theme.getSmallFont(context),
+                        color: textColor)),
                 const SizedBox(height: 8),
                 Copyable(
                     chan.channelPoint,
                     TextStyle(
-                        fontSize: theme.getSmallFont(), color: textColor)),
+                        fontSize: theme.getSmallFont(context),
+                        color: textColor)),
                 const SizedBox(height: 8),
                 Text(capacity,
                     style: TextStyle(
-                        fontSize: theme.getSmallFont(), color: textColor)),
+                        fontSize: theme.getSmallFont(context),
+                        color: textColor)),
                 const SizedBox(height: 8),
                 Text("${chan.node1Pub} disabled: ${chan.node1Policy.disabled}",
                     style: TextStyle(
-                        fontSize: theme.getSmallFont(), color: textColor)),
+                        fontSize: theme.getSmallFont(context),
+                        color: textColor)),
                 const SizedBox(height: 8),
                 Text("${chan.node2Pub} disabled: ${chan.node2Policy.disabled}",
                     style: TextStyle(
-                        fontSize: theme.getSmallFont(), color: textColor)),
+                        fontSize: theme.getSmallFont(context),
+                        color: textColor)),
               ])
             ]));
   }
@@ -229,17 +241,21 @@ class _NodeInfo extends StatelessWidget {
     var secondaryTextColor = theme.dividerColor;
     return Consumer<ThemeNotifier>(
         builder: (context, theme, _) => Column(children: [
-              Copyable(nodeInfo.node.pubkey,
-                  TextStyle(fontSize: theme.getSmallFont(), color: textColor)),
-              Copyable(nodeInfo.node.alias,
-                  TextStyle(fontSize: theme.getSmallFont(), color: textColor)),
+              Copyable(
+                  nodeInfo.node.pubkey,
+                  TextStyle(
+                      fontSize: theme.getSmallFont(context), color: textColor)),
+              Copyable(
+                  nodeInfo.node.alias,
+                  TextStyle(
+                      fontSize: theme.getSmallFont(context), color: textColor)),
               Text("Number of channels: ${nodeInfo.numChannels}",
                   style: TextStyle(
-                      fontSize: theme.getSmallFont(), color: textColor)),
+                      fontSize: theme.getSmallFont(context), color: textColor)),
               Text(
                   "Total Capacity: ${formatDCR(atomsToDCR(nodeInfo.totalCapacity))}",
                   style: TextStyle(
-                      fontSize: theme.getSmallFont(), color: textColor)),
+                      fontSize: theme.getSmallFont(context), color: textColor)),
               const SizedBox(height: 8),
               nodeInfo.channels.isEmpty
                   ? Text("No channels for node",
@@ -390,7 +406,7 @@ class _LNNetworkPageState extends State<LNNetworkPage> {
                         textAlign: TextAlign.left,
                         style: TextStyle(
                             color: darkTextColor,
-                            fontSize: theme.getMediumFont())),
+                            fontSize: theme.getMediumFont(context))),
                     Expanded(
                         child: Divider(
                       color: dividerColor, //color of divider
@@ -408,7 +424,7 @@ class _LNNetworkPageState extends State<LNNetworkPage> {
                         textAlign: TextAlign.left,
                         style: TextStyle(
                             color: darkTextColor,
-                            fontSize: theme.getMediumFont())),
+                            fontSize: theme.getMediumFont(context))),
                     Expanded(
                         child: Divider(
                       color: dividerColor, //color of divider
@@ -452,7 +468,7 @@ class _LNNetworkPageState extends State<LNNetworkPage> {
                           textAlign: TextAlign.left,
                           style: TextStyle(
                               color: darkTextColor,
-                              fontSize: theme.getMediumFont())),
+                              fontSize: theme.getMediumFont(context))),
                       Expanded(
                           child: Divider(
                         color: dividerColor, //color of divider
@@ -468,11 +484,11 @@ class _LNNetworkPageState extends State<LNNetworkPage> {
                           width: 100,
                           child: Text("Node ID:",
                               style: TextStyle(
-                                  fontSize: theme.getSmallFont(),
+                                  fontSize: theme.getSmallFont(context),
                                   color: secondaryTextColor))),
                       Text(serverNode,
                           style: TextStyle(
-                              fontSize: theme.getSmallFont(),
+                              fontSize: theme.getSmallFont(context),
                               color: textColor)),
                     ]),
                     const SizedBox(height: 21),
@@ -480,7 +496,7 @@ class _LNNetworkPageState extends State<LNNetworkPage> {
                         onPressed: !querying ? queryRouteToServer : null,
                         child: Text("Query Route",
                             style: TextStyle(
-                                fontSize: theme.getSmallFont(),
+                                fontSize: theme.getSmallFont(context),
                                 color: textColor))),
                     const SizedBox(height: 34),
                     Row(children: [
@@ -488,7 +504,7 @@ class _LNNetworkPageState extends State<LNNetworkPage> {
                           textAlign: TextAlign.left,
                           style: TextStyle(
                               color: darkTextColor,
-                              fontSize: theme.getMediumFont())),
+                              fontSize: theme.getMediumFont(context))),
                       Expanded(
                           child: Divider(
                         color: dividerColor, //color of divider
@@ -511,19 +527,19 @@ class _LNNetworkPageState extends State<LNNetworkPage> {
                           width: 100,
                           child: Text("Connect to Peer:",
                               style: TextStyle(
-                                  fontSize: theme.getSmallFont(),
+                                  fontSize: theme.getSmallFont(context),
                                   color: secondaryTextColor))),
                       SizedBox(
                           width: 500,
                           child: TextField(
                               style: TextStyle(
-                                  fontSize: theme.getSmallFont(),
+                                  fontSize: theme.getSmallFont(context),
                                   color: secondaryTextColor),
                               controller: connectCtrl,
                               decoration: InputDecoration(
                                   hintText: "ID",
                                   hintStyle: TextStyle(
-                                      fontSize: theme.getSmallFont(),
+                                      fontSize: theme.getSmallFont(context),
                                       color: secondaryTextColor),
                                   filled: true,
                                   fillColor: inputFill)))
@@ -532,7 +548,7 @@ class _LNNetworkPageState extends State<LNNetworkPage> {
                         onPressed: !connecting ? connectToPeer : null,
                         child: Text("Connect",
                             style: TextStyle(
-                                fontSize: theme.getSmallFont(),
+                                fontSize: theme.getSmallFont(context),
                                 color: textColor))),
                     const SizedBox(height: 34),
                     Row(children: [
@@ -540,7 +556,7 @@ class _LNNetworkPageState extends State<LNNetworkPage> {
                           textAlign: TextAlign.left,
                           style: TextStyle(
                               color: darkTextColor,
-                              fontSize: theme.getMediumFont())),
+                              fontSize: theme.getMediumFont(context))),
                       Expanded(
                           child: Divider(
                         color: dividerColor, //color of divider
@@ -555,19 +571,19 @@ class _LNNetworkPageState extends State<LNNetworkPage> {
                           width: 100,
                           child: Text("Node ID:",
                               style: TextStyle(
-                                  fontSize: theme.getSmallFont(),
+                                  fontSize: theme.getSmallFont(context),
                                   color: secondaryTextColor))),
                       SizedBox(
                           width: 500,
                           child: TextField(
                               style: TextStyle(
-                                  fontSize: theme.getSmallFont(),
+                                  fontSize: theme.getSmallFont(context),
                                   color: secondaryTextColor),
                               controller: queryRouteCtrl,
                               decoration: InputDecoration(
                                   hintText: "Node ID",
                                   hintStyle: TextStyle(
-                                      fontSize: theme.getSmallFont(),
+                                      fontSize: theme.getSmallFont(context),
                                       color: secondaryTextColor),
                                   filled: true,
                                   fillColor: inputFill)))
@@ -578,7 +594,7 @@ class _LNNetworkPageState extends State<LNNetworkPage> {
                           width: 100,
                           child: Text("Amount:",
                               style: TextStyle(
-                                  fontSize: theme.getSmallFont(),
+                                  fontSize: theme.getSmallFont(context),
                                   color: secondaryTextColor))),
                       SizedBox(
                           width: 100,
@@ -588,7 +604,7 @@ class _LNNetworkPageState extends State<LNNetworkPage> {
                         onPressed: !querying ? queryRoute : null,
                         child: Text("Search",
                             style: TextStyle(
-                                fontSize: theme.getSmallFont(),
+                                fontSize: theme.getSmallFont(context),
                                 color: textColor))),
                   ]),
             ));

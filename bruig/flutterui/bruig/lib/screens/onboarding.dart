@@ -314,7 +314,7 @@ Cancelling onboarding means the wallet setup, including obtaining on-chain funds
         Consumer<ThemeNotifier>(
             builder: (context, theme, child) => Text("Recent Log",
                 style: TextStyle(
-                    color: textColor, fontSize: theme.getMediumFont()))),
+                    color: textColor, fontSize: theme.getMediumFont(context)))),
         Expanded(
             child: Consumer<LogModel>(
                 builder: (context, logModel, child) => LogLines(logModel))),
@@ -363,7 +363,7 @@ Cancelling onboarding means the wallet setup, including obtaining on-chain funds
                             "Setting up Bison Relay",
                             style: TextStyle(
                                 color: textColor,
-                                fontSize: theme.getHugeFont(),
+                                fontSize: theme.getHugeFont(context),
                                 fontWeight: FontWeight.w200))),
                     const SizedBox(height: 20),
                     ...children,

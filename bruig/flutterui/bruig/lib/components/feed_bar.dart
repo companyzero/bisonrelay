@@ -66,7 +66,7 @@ class _FeedBarState extends State<FeedBar> {
                             color: selectedIndex == 0
                                 ? selectedTextColor
                                 : unselectedTextColor,
-                            fontSize: theme.getSmallFont(),
+                            fontSize: theme.getSmallFont(context),
                             fontWeight: FontWeight.w400)),
                     onTap: () {
                       tabChange(0, null);
@@ -78,7 +78,7 @@ class _FeedBarState extends State<FeedBar> {
                             color: selectedIndex == 1
                                 ? selectedTextColor
                                 : unselectedTextColor,
-                            fontSize: theme.getSmallFont(),
+                            fontSize: theme.getSmallFont(context),
                             fontWeight: FontWeight.w400)),
                     onTap: () {
                       tabChange(1, null);
@@ -90,7 +90,7 @@ class _FeedBarState extends State<FeedBar> {
                             color: selectedIndex == 2
                                 ? selectedTextColor
                                 : unselectedTextColor,
-                            fontSize: theme.getSmallFont(),
+                            fontSize: theme.getSmallFont(context),
                             fontWeight: FontWeight.w400)),
                     onTap: () {
                       tabChange(2, null);
@@ -102,7 +102,7 @@ class _FeedBarState extends State<FeedBar> {
                             color: selectedIndex == 3
                                 ? selectedTextColor
                                 : unselectedTextColor,
-                            fontSize: theme.getSmallFont(),
+                            fontSize: theme.getSmallFont(context),
                             fontWeight: FontWeight.w400)),
                     onTap: () {
                       tabChange(3, null);

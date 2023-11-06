@@ -77,7 +77,7 @@ class _ChatHeadingWState extends State<_ChatHeadingW> {
                   child: Text("$unreadCount",
                       style: TextStyle(
                           color: hightLightTextColor,
-                          fontSize: theme.getSmallFont())))));
+                          fontSize: theme.getSmallFont(context))))));
     } else if (chat.unreadEventCount > 0) {
       textColor = hightLightTextColor;
       trailing = Container(
@@ -116,7 +116,7 @@ class _ChatHeadingWState extends State<_ChatHeadingW> {
                         title: Text(chat.nick,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                                fontSize: theme.getSmallFont(),
+                                fontSize: theme.getSmallFont(context),
                                 color: textColor)),
                         leading: popMenuButton,
                         trailing: trailing,
@@ -133,7 +133,7 @@ class _ChatHeadingWState extends State<_ChatHeadingW> {
                         title: Text(chat.nick,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                                fontSize: theme.getSmallFont(),
+                                fontSize: theme.getSmallFont(context),
                                 color: textColor)),
                         leading: popMenuButton,
                         trailing: trailing,
@@ -263,7 +263,8 @@ class _ChatsListState extends State<_ChatsList> {
                                   Text("Room",
                                       style: TextStyle(
                                           color: darkTextColor,
-                                          fontSize: theme.getMediumFont(),
+                                          fontSize:
+                                              theme.getMediumFont(context),
                                           fontWeight: FontWeight.w400)),
                                   IconButton(
                                       onPressed: () => createGC(),
@@ -316,7 +317,8 @@ class _ChatsListState extends State<_ChatsList> {
                                     Text("Users",
                                         style: TextStyle(
                                             color: darkTextColor,
-                                            fontSize: theme.getMediumFont(),
+                                            fontSize:
+                                                theme.getMediumFont(context),
                                             fontWeight: FontWeight.w400)),
                                     IconButton(
                                         onPressed: () => showAddressBook(),
@@ -467,7 +469,7 @@ class _ChatsListState extends State<_ChatsList> {
                                     text: "  Rooms",
                                     style: TextStyle(
                                         color: darkTextColor,
-                                        fontSize: theme.getMediumFont(),
+                                        fontSize: theme.getMediumFont(context),
                                         fontWeight: FontWeight.w200)),
                               ])),
                             ]),
@@ -523,7 +525,7 @@ class _ChatsListState extends State<_ChatsList> {
                                     text: "  Users",
                                     style: TextStyle(
                                         color: darkTextColor,
-                                        fontSize: theme.getMediumFont(),
+                                        fontSize: theme.getMediumFont(context),
                                         fontWeight: FontWeight.w200)),
                               ])),
                             ]),

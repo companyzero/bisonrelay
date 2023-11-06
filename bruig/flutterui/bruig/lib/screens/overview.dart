@@ -288,7 +288,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
                             builder: (context, theme, child) => Text(
                                 menuItem.label,
                                 style: TextStyle(
-                                    fontSize: theme.getMediumFont()))))
+                                    fontSize: theme.getMediumFont(context)))))
                     : Theme(
                         data: Theme.of(context)
                             .copyWith(dividerColor: Colors.transparent),
