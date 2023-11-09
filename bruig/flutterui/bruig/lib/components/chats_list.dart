@@ -510,7 +510,7 @@ class _ChatsListState extends State<_ChatsList> {
                                     text: "  Rooms",
                                     style: TextStyle(
                                         color: darkTextColor,
-                                        fontSize: 15,
+                                        fontSize: theme.getMediumFont(context),
                                         fontWeight: FontWeight.w200)),
                               ])),
                             ]),
