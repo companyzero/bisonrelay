@@ -6,6 +6,8 @@ import 'package:bruig/util.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/util.dart';
+import 'package:bruig/theme_manager.dart';
+import 'package:provider/provider.dart';
 
 class ConfirmFileDownloadScreen extends StatelessWidget {
   final ClientModel client;
@@ -37,32 +39,49 @@ class ConfirmFileDownloadScreen extends StatelessWidget {
       }
     }
 
-    return Scaffold(
-        body: Container(
-            padding: const EdgeInsets.all(10),
-            child: Center(
-                child: Column(children: [
-              Text("Confirm File Download",
-                  style: TextStyle(fontSize: 20, color: textColor)),
-              const SizedBox(height: 20),
-              Text("Sender: $sender", style: TextStyle(color: textColor)),
-              const SizedBox(height: 20),
-              Text("FID: ${fd.uid}", style: TextStyle(color: textColor)),
-              const SizedBox(height: 20),
-              Text("File Name: ${fd.metadata.filename}",
-                  style: TextStyle(color: textColor)),
-              const SizedBox(height: 20),
-              Text("Size: $size", style: TextStyle(color: textColor)),
-              const SizedBox(height: 20),
-              Text("Cost: $cost", style: TextStyle(color: textColor)),
-              const SizedBox(height: 20),
-              Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                ElevatedButton(
-                    onPressed: () => reply(true),
-                    child: const Text("Pay & Download")),
-                const SizedBox(width: 10),
-                CancelButton(onPressed: () => reply(false)),
-              ]),
-            ]))));
+    return Consumer<ThemeNotifier>(
+        builder: (context, theme, child) => Scaffold(
+            body: Container(
+                padding: const EdgeInsets.all(10),
+                child: Center(
+                    child: Column(children: [
+                  Text("Confirm File Download",
+                      style: TextStyle(
+                          fontSize: theme.getLargeFont(context),
+                          color: textColor)),
+                  const SizedBox(height: 20),
+                  Text("Sender: $sender",
+                      style: TextStyle(
+                          fontSize: theme.getMediumFont(context),
+                          color: textColor)),
+                  const SizedBox(height: 20),
+                  Text("FID: ${fd.uid}",
+                      style: TextStyle(
+                          fontSize: theme.getMediumFont(context),
+                          color: textColor)),
+                  const SizedBox(height: 20),
+                  Text("File Name: ${fd.metadata.filename}",
+                      style: TextStyle(
+                          fontSize: theme.getMediumFont(context),
+                          color: textColor)),
+                  const SizedBox(height: 20),
+                  Text("Size: $size",
+                      style: TextStyle(
+                          fontSize: theme.getMediumFont(context),
+                          color: textColor)),
+                  const SizedBox(height: 20),
+                  Text("Cost: $cost",
+                      style: TextStyle(
+                          fontSize: theme.getMediumFont(context),
+                          color: textColor)),
+                  const SizedBox(height: 20),
+                  Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                    ElevatedButton(
+                        onPressed: () => reply(true),
+                        child: const Text("Pay & Download")),
+                    const SizedBox(width: 10),
+                    CancelButton(onPressed: () => reply(false)),
+                  ]),
+                ])))));
   }
 }

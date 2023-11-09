@@ -12,6 +12,7 @@ import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:golib_plugin/util.dart';
 import 'package:provider/provider.dart';
+import 'package:bruig/theme_manager.dart';
 
 Map<OnboardStage, String> _stageTitle = {
   OnboardStage.stageFetchingInvite: "Fetching invite from server",
@@ -310,7 +311,10 @@ Cancelling onboarding means the wallet setup, including obtaining on-chain funds
         ]),
         const SizedBox(height: 20),
         const Expanded(child: Empty()),
-        Text("Recent Log", style: TextStyle(color: textColor, fontSize: 18)),
+        Consumer<ThemeNotifier>(
+            builder: (context, theme, child) => Text("Recent Log",
+                style: TextStyle(
+                    color: textColor, fontSize: theme.getMediumFont(context)))),
         Expanded(
             child: Consumer<LogModel>(
                 builder: (context, logModel, child) => LogLines(logModel))),
@@ -354,11 +358,13 @@ Cancelling onboarding means the wallet setup, including obtaining on-chain funds
                           )),
                     ]),
                     const SizedBox(height: 39),
-                    Text("Setting up Bison Relay",
-                        style: TextStyle(
-                            color: textColor,
-                            fontSize: 34,
-                            fontWeight: FontWeight.w200)),
+                    Consumer<ThemeNotifier>(
+                        builder: (context, theme, child) => Text(
+                            "Setting up Bison Relay",
+                            style: TextStyle(
+                                color: textColor,
+                                fontSize: theme.getHugeFont(context),
+                                fontWeight: FontWeight.w200))),
                     const SizedBox(height: 20),
                     ...children,
                   ]))

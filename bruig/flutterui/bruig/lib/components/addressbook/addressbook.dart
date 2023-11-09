@@ -1,4 +1,5 @@
 import 'package:bruig/models/client.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:bruig/util.dart';
 import 'package:bruig/components/interactive_avatar.dart';
@@ -6,6 +7,8 @@ import 'package:bruig/components/empty_widget.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:bruig/components/addressbook/input.dart';
+import 'package:bruig/theme_manager.dart';
+import 'package:provider/provider.dart';
 
 class _AddressBookListingW extends StatefulWidget {
   final ChatModel chat;
@@ -72,31 +75,34 @@ class _AddressBookListingWState extends State<_AddressBookListingW> {
         avatarColor: avatarColor,
         avatarTextColor: avatarTextColor);
 
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(3),
-      ),
-      child: ListTile(
-        enabled: true,
-        title:
-            Text(chat.nick, style: TextStyle(fontSize: 11, color: textColor)),
-        leading: popMenuButton,
-        trailing: Material(
-            color: textColor.withOpacity(0),
-            child: IconButton(
-                splashRadius: 15,
-                iconSize: 15,
-                hoverColor: selectedBackgroundColor,
-                tooltip: alreadyOpened ? "Open Chat" : "Start Chat",
-                onPressed: () => startChat(alreadyOpened),
-                icon: Icon(
-                    color: darkTextColor,
-                    alreadyOpened
-                        ? Icons.arrow_right_alt_outlined
-                        : Icons.add))),
-        onTap: () => {},
-      ),
-    );
+    return Consumer<ThemeNotifier>(
+        builder: (context, theme, _) => Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(3),
+              ),
+              child: ListTile(
+                enabled: true,
+                title: Text(chat.nick,
+                    style: TextStyle(
+                        fontSize: theme.getSmallFont(context),
+                        color: textColor)),
+                leading: popMenuButton,
+                trailing: Material(
+                    color: textColor.withOpacity(0),
+                    child: IconButton(
+                        splashRadius: 15,
+                        iconSize: 15,
+                        hoverColor: selectedBackgroundColor,
+                        tooltip: alreadyOpened ? "Open Chat" : "Start Chat",
+                        onPressed: () => startChat(alreadyOpened),
+                        icon: Icon(
+                            color: darkTextColor,
+                            alreadyOpened
+                                ? Icons.arrow_right_alt_outlined
+                                : Icons.add))),
+                onTap: () => {},
+              ),
+            ));
   }
 }
 
@@ -147,81 +153,46 @@ class _AddressBookState extends State<AddressBook> {
     var combinedUserList = client.hiddenUsers + client.userChats;
     combinedUserList
         .sort((a, b) => a.nick.toLowerCase().compareTo(b.nick.toLowerCase()));
-    return Column(children: [
-      Row(children: [
-        Material(
-            color: dividerColor.withOpacity(0),
-            child: IconButton(
-                hoverColor: dividerColor,
-                splashRadius: 15,
-                iconSize: 15,
-                tooltip: client.isOnline
-                    ? "Load Invite"
-                    : "Cannot load invite while client is offline",
-                onPressed: () =>
-                    client.isOnline ? () => loadInvite(context) : null,
-                icon: Icon(size: 15, color: darkTextColor, Icons.add))),
-        Expanded(child: Input(client, inputFocusNode)),
-        Material(
-            color: dividerColor.withOpacity(0),
-            child: IconButton(
-                splashRadius: 15,
-                iconSize: 15,
-                hoverColor: dividerColor,
-                tooltip: "Close Address book",
-                onPressed: () => hideAddressBook(),
-                icon: Icon(color: darkTextColor, Icons.cancel))),
-      ]),
-      Expanded(
-          child: Container(
-              padding: const EdgeInsets.all(20),
-              child: client.filteredSearchString != ""
-                  ? Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                          Row(children: [
-                            Text("Matching Chats",
-                                textAlign: TextAlign.left,
-                                style: TextStyle(
-                                    color: darkTextColor, fontSize: 15)),
-                            Expanded(
-                                child: Divider(
-                              color: dividerColor, //color of divider
-                              height: 10, //height spacing of divider
-                              thickness: 1, //thickness of divier line
-                              indent: 8, //spacing at the start of divider
-                              endIndent: 5, //spacing at the end of divider
-                            )),
-                          ]),
-                          const SizedBox(height: 21),
-                          client.filteredSearch.isNotEmpty
-                              ? Expanded(
-                                  child: ListView.builder(
-                                      itemCount: client.filteredSearch.length,
-                                      itemBuilder: (context, index) =>
-                                          _AddressBookListingW(
-                                              client.filteredSearch[index],
-                                              client)))
-                              : Center(
-                                  //padding: const EdgeInsets.only(left: 50),
-                                  child: Text("No Matching Chats",
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(
-                                          color: darkTextColor, fontSize: 15))),
-                          const SizedBox(height: 21),
-                        ])
-                  : Column(children: [
-                      combinedGCList.isNotEmpty
-                          ? Expanded(
-                              child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
+    return Consumer<ThemeNotifier>(
+        builder: (context, theme, _) => Column(children: [
+              Row(children: [
+                Material(
+                    color: dividerColor.withOpacity(0),
+                    child: IconButton(
+                        hoverColor: dividerColor,
+                        splashRadius: 15,
+                        iconSize: 15,
+                        tooltip: client.isOnline
+                            ? "Load Invite"
+                            : "Cannot load invite while client is offline",
+                        onPressed: () =>
+                            client.isOnline ? () => loadInvite(context) : null,
+                        icon: Icon(size: 15, color: darkTextColor, Icons.add))),
+                Expanded(child: Input(client, inputFocusNode)),
+                Material(
+                    color: dividerColor.withOpacity(0),
+                    child: IconButton(
+                        splashRadius: 15,
+                        iconSize: 15,
+                        hoverColor: dividerColor,
+                        tooltip: "Close Address book",
+                        onPressed: () => hideAddressBook(),
+                        icon: Icon(color: darkTextColor, Icons.cancel))),
+              ]),
+              Expanded(
+                  child: Container(
+                      padding: const EdgeInsets.all(20),
+                      child: client.filteredSearchString != ""
+                          ? Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
                                   Row(children: [
-                                    Text("Available Rooms",
+                                    Text("Matching Chats",
                                         textAlign: TextAlign.left,
                                         style: TextStyle(
                                             color: darkTextColor,
-                                            fontSize: 15)),
+                                            fontSize:
+                                                theme.getMediumFont(context))),
                                     Expanded(
                                         child: Divider(
                                       color: dividerColor, //color of divider
@@ -234,49 +205,108 @@ class _AddressBookState extends State<AddressBook> {
                                     )),
                                   ]),
                                   const SizedBox(height: 21),
-                                  Expanded(
-                                      child: ListView.builder(
-                                          itemCount: combinedGCList.length,
-                                          itemBuilder: (context, index) =>
-                                              _AddressBookListingW(
-                                                  combinedGCList[index],
-                                                  client))),
+                                  client.filteredSearch.isNotEmpty
+                                      ? Expanded(
+                                          child: ListView.builder(
+                                              itemCount:
+                                                  client.filteredSearch.length,
+                                              itemBuilder: (context, index) =>
+                                                  _AddressBookListingW(
+                                                      client.filteredSearch[
+                                                          index],
+                                                      client)))
+                                      : Center(
+                                          //padding: const EdgeInsets.only(left: 50),
+                                          child: Text("No Matching Chats",
+                                              textAlign: TextAlign.center,
+                                              style: TextStyle(
+                                                  color: darkTextColor,
+                                                  fontSize: theme.getMediumFont(
+                                                      context)))),
                                   const SizedBox(height: 21),
-                                ]))
-                          : const Empty(),
-                      combinedUserList.isNotEmpty
-                          ? Expanded(
-                              child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                  Row(children: [
-                                    Text("Available Users",
-                                        textAlign: TextAlign.left,
-                                        style: TextStyle(
-                                            color: darkTextColor,
-                                            fontSize: 15)),
-                                    Expanded(
-                                        child: Divider(
-                                      color: dividerColor, //color of divider
-                                      height: 10, //height spacing of divider
-                                      thickness: 1, //thickness of divier line
-                                      indent:
-                                          8, //spacing at the start of divider
-                                      endIndent:
-                                          5, //spacing at the end of divider
-                                    )),
-                                  ]),
-                                  const SizedBox(height: 21),
-                                  Expanded(
-                                      child: ListView.builder(
-                                    itemCount: combinedUserList.length,
-                                    itemBuilder: (context, index) =>
-                                        _AddressBookListingW(
-                                            combinedUserList[index], client),
-                                  )),
-                                ]))
-                          : const Empty()
-                    ]))),
-    ]);
+                                ])
+                          : Column(children: [
+                              combinedGCList.isNotEmpty
+                                  ? Expanded(
+                                      child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                          Row(children: [
+                                            Text("Available Rooms",
+                                                textAlign: TextAlign.left,
+                                                style: TextStyle(
+                                                    color: darkTextColor,
+                                                    fontSize:
+                                                        theme.getMediumFont(
+                                                            context))),
+                                            Expanded(
+                                                child: Divider(
+                                              color:
+                                                  dividerColor, //color of divider
+                                              height:
+                                                  10, //height spacing of divider
+                                              thickness:
+                                                  1, //thickness of divier line
+                                              indent:
+                                                  8, //spacing at the start of divider
+                                              endIndent:
+                                                  5, //spacing at the end of divider
+                                            )),
+                                          ]),
+                                          const SizedBox(height: 21),
+                                          Expanded(
+                                              child: ListView.builder(
+                                                  itemCount:
+                                                      combinedGCList.length,
+                                                  itemBuilder: (context,
+                                                          index) =>
+                                                      _AddressBookListingW(
+                                                          combinedGCList[index],
+                                                          client))),
+                                          const SizedBox(height: 21),
+                                        ]))
+                                  : const Empty(),
+                              combinedUserList.isNotEmpty
+                                  ? Expanded(
+                                      child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                          Row(children: [
+                                            Text("Available Users",
+                                                textAlign: TextAlign.left,
+                                                style: TextStyle(
+                                                    color: darkTextColor,
+                                                    fontSize:
+                                                        theme.getMediumFont(
+                                                            context))),
+                                            Expanded(
+                                                child: Divider(
+                                              color:
+                                                  dividerColor, //color of divider
+                                              height:
+                                                  10, //height spacing of divider
+                                              thickness:
+                                                  1, //thickness of divier line
+                                              indent:
+                                                  8, //spacing at the start of divider
+                                              endIndent:
+                                                  5, //spacing at the end of divider
+                                            )),
+                                          ]),
+                                          const SizedBox(height: 21),
+                                          Expanded(
+                                              child: ListView.builder(
+                                            itemCount: combinedUserList.length,
+                                            itemBuilder: (context, index) =>
+                                                _AddressBookListingW(
+                                                    combinedUserList[index],
+                                                    client),
+                                          )),
+                                        ]))
+                                  : const Empty()
+                            ]))),
+            ]));
   }
 }

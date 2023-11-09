@@ -9,18 +9,22 @@ import 'package:bruig/components/manage_bar.dart';
 import 'package:bruig/screens/overview.dart';
 import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/models/menus.dart';
+import 'package:bruig/theme_manager.dart';
 
 class ManageContentScreenTitle extends StatelessWidget {
   const ManageContentScreenTitle({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<MainMenuModel>(builder: (context, menu, child) {
+    return Consumer2<MainMenuModel, ThemeNotifier>(
+        builder: (context, menu, theme, child) {
       var idx = LnScreenSub.indexWhere((e) => e.pageTab == menu.activePageTab);
 
       return Text(
           "Bison Relay / Manage Content / ${ManageContentScreenSub[idx].label}",
-          style: TextStyle(fontSize: 15, color: Theme.of(context).focusColor));
+          style: TextStyle(
+              fontSize: theme.getLargeFont(context),
+              color: Theme.of(context).focusColor));
     });
   }
 }

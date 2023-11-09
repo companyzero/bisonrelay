@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:bruig/theme_manager.dart';
+import 'package:provider/provider.dart';
 
 class IntEditingController extends TextEditingController {
   int get intvalue => text != "" ? int.parse(text) : 0;
@@ -24,21 +26,26 @@ Widget intInput({
   void Function(int amount)? onChanged,
   IntEditingController? controller,
 }) =>
-    TextField(
-        style: const TextStyle(fontSize: 11, color: Color(0xFF8E8D98)),
-        controller: controller,
-        onChanged: (String v) {
-          try {
-            int val = v != "" ? int.parse(v) : 0;
-            if (onChanged != null) onChanged(val);
-          } catch (exception) {
-            // ignore.
-          }
-        },
-        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-        inputFormatters: [_LimitIntTextInputFormatter()],
-        decoration: const InputDecoration(
-          hintStyle: TextStyle(fontSize: 11, color: Color(0xFF8E8D98)),
-          filled: true,
-          fillColor: Color(0xFF121026),
-        ));
+    Consumer<ThemeNotifier>(
+        builder: (context, theme, _) => TextField(
+            style: TextStyle(
+                fontSize: theme.getSmallFont(context),
+                color: const Color(0xFF8E8D98)),
+            controller: controller,
+            onChanged: (String v) {
+              try {
+                int val = v != "" ? int.parse(v) : 0;
+                if (onChanged != null) onChanged(val);
+              } catch (exception) {
+                // ignore.
+              }
+            },
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            inputFormatters: [_LimitIntTextInputFormatter()],
+            decoration: InputDecoration(
+              hintStyle: TextStyle(
+                  fontSize: theme.getSmallFont(context),
+                  color: const Color(0xFF8E8D98)),
+              filled: true,
+              fillColor: const Color(0xFF121026),
+            )));

@@ -3,6 +3,8 @@ import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/models/client.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/golib_plugin.dart';
+import 'package:provider/provider.dart';
+import 'package:bruig/theme_manager.dart';
 
 class PostListsScreenTitle extends StatelessWidget {
   const PostListsScreenTitle({super.key});
@@ -42,39 +44,43 @@ class _SubItem extends StatelessWidget {
     var textColor = theme.focusColor;
     var highlightColor = theme.highlightColor;
     var backgroundColor = theme.backgroundColor;
-    return Container(
-      color: index.isEven ? highlightColor : backgroundColor,
-      margin: isScreenSmall
-          ? const EdgeInsets.only(left: 10, right: 10, top: 8)
-          : const EdgeInsets.only(left: 50, right: 50, top: 8),
-      padding: const EdgeInsets.only(top: 4, bottom: 4, left: 8, right: 8),
-      child: Row(
-        children: [
-          Expanded(
-              flex: 2,
-              child: Text(chat?.nick ?? "",
-                  style: TextStyle(color: textColor, fontSize: 11))),
-          Expanded(
-              flex: 10,
-              child: Text(id,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                      color: textColor,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w200))),
-          (remoteSub
-              ? IconButton(
-                  tooltip: "Unsubscribe from users's posts",
-                  onPressed: chat != null
-                      ? () {
-                          unsub(chat!);
-                        }
-                      : null,
-                  icon: const Icon(Icons.remove_circle_outline_rounded))
-              : const Empty())
-        ],
-      ),
-    );
+    return Consumer<ThemeNotifier>(
+        builder: (context, theme, _) => Container(
+              color: index.isEven ? highlightColor : backgroundColor,
+              margin: isScreenSmall
+                  ? const EdgeInsets.only(left: 10, right: 10, top: 8)
+                  : const EdgeInsets.only(left: 50, right: 50, top: 8),
+              padding:
+                  const EdgeInsets.only(top: 4, bottom: 4, left: 8, right: 8),
+              child: Row(
+                children: [
+                  Expanded(
+                      flex: 2,
+                      child: Text(chat?.nick ?? "",
+                          style: TextStyle(
+                              color: textColor,
+                              fontSize: theme.getSmallFont(context)))),
+                  Expanded(
+                      flex: 10,
+                      child: Text(id,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                              color: textColor,
+                              fontSize: theme.getSmallFont(context),
+                              fontWeight: FontWeight.w200))),
+                  (remoteSub
+                      ? IconButton(
+                          tooltip: "Unsubscribe from users's posts",
+                          onPressed: chat != null
+                              ? () {
+                                  unsub(chat!);
+                                }
+                              : null,
+                          icon: const Icon(Icons.remove_circle_outline_rounded))
+                      : const Empty())
+                ],
+              ),
+            ));
   }
 }
 
@@ -124,89 +130,98 @@ class _PostListsScreenState extends State<PostListsScreen> {
     var dividerColor = theme.highlightColor;
 
     if (firstLoading) {
-      return Center(
-        child: Text("Loading...",
-            style: TextStyle(color: textColor, fontSize: 21)),
-      );
+      return Consumer<ThemeNotifier>(
+          builder: (context, theme, _) => Center(
+                child: Text("Loading...",
+                    style: TextStyle(
+                        color: textColor,
+                        fontSize: theme.getSmallFont(context))),
+              ));
     }
-    return Container(
-      margin: const EdgeInsets.all(1),
-      decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(3), color: backgroundColor),
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        children: [
-          Row(children: [
-            Expanded(
-                child: Divider(
-              color: dividerColor, //color of divider
-              height: 10, //height spacing of divider
-              thickness: 1, //thickness of divier line
-              indent: 10, //spacing at the start of divider
-              endIndent: 7, //spacing at the end of divider
-            )),
-            Text("Subscribers to local posts",
-                textAlign: TextAlign.center,
-                style: TextStyle(color: darkTextColor, fontSize: 11)),
-            Expanded(
-                child: Divider(
-              color: dividerColor, //color of divider
-              height: 10, //height spacing of divider
-              thickness: 1, //thickness of divier line
-              indent: 7, //spacing at the start of divider
-              endIndent: 10, //spacing at the end of divider
-            )),
-          ]),
-          const SizedBox(height: 20),
-          Expanded(
-              child: Align(
-                  alignment: Alignment.center,
-                  child: ListView.builder(
-                    controller: subcribersCtrl,
-                    itemCount: subscribers.length,
+    return Consumer<ThemeNotifier>(
+        builder: (context, theme, _) => Container(
+              margin: const EdgeInsets.all(1),
+              decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(3),
+                  color: backgroundColor),
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  Row(children: [
+                    Expanded(
+                        child: Divider(
+                      color: dividerColor, //color of divider
+                      height: 10, //height spacing of divider
+                      thickness: 1, //thickness of divier line
+                      indent: 10, //spacing at the start of divider
+                      endIndent: 7, //spacing at the end of divider
+                    )),
+                    Text("Subscribers to local posts",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                            color: darkTextColor,
+                            fontSize: theme.getSmallFont(context))),
+                    Expanded(
+                        child: Divider(
+                      color: dividerColor, //color of divider
+                      height: 10, //height spacing of divider
+                      thickness: 1, //thickness of divier line
+                      indent: 7, //spacing at the start of divider
+                      endIndent: 10, //spacing at the end of divider
+                    )),
+                  ]),
+                  const SizedBox(height: 20),
+                  Expanded(
+                      child: Align(
+                          alignment: Alignment.center,
+                          child: ListView.builder(
+                            controller: subcribersCtrl,
+                            itemCount: subscribers.length,
+                            itemBuilder: (context, index) => _SubItem(
+                                index,
+                                subscribers[index],
+                                client.getExistingChat(subscribers[index]),
+                                false,
+                                unsub),
+                          ))),
+                  const SizedBox(height: 20),
+                  Row(children: [
+                    Expanded(
+                        child: Divider(
+                      color: dividerColor, //color of divider
+                      height: 10, //height spacing of divider
+                      thickness: 1, //thickness of divier line
+                      indent: 10, //spacing at the start of divider
+                      endIndent: 7, //spacing at the end of divider
+                    )),
+                    Text("Subscriptions to remote posters",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                            color: darkTextColor,
+                            fontSize: theme.getSmallFont(context))),
+                    Expanded(
+                        child: Divider(
+                      color: dividerColor, //color of divider
+                      height: 10, //height spacing of divider
+                      thickness: 1, //thickness of divier line
+                      indent: 7, //spacing at the start of divider
+                      endIndent: 10, //spacing at the end of divider
+                    )),
+                  ]),
+                  const SizedBox(height: 20),
+                  Expanded(
+                      child: ListView.builder(
+                    controller: subscriptnsCtrl,
+                    itemCount: subscriptions.length,
                     itemBuilder: (context, index) => _SubItem(
                         index,
-                        subscribers[index],
-                        client.getExistingChat(subscribers[index]),
-                        false,
+                        subscriptions[index],
+                        client.getExistingChat(subscriptions[index]),
+                        true,
                         unsub),
-                  ))),
-          const SizedBox(height: 20),
-          Row(children: [
-            Expanded(
-                child: Divider(
-              color: dividerColor, //color of divider
-              height: 10, //height spacing of divider
-              thickness: 1, //thickness of divier line
-              indent: 10, //spacing at the start of divider
-              endIndent: 7, //spacing at the end of divider
-            )),
-            Text("Subscriptions to remote posters",
-                textAlign: TextAlign.center,
-                style: TextStyle(color: darkTextColor, fontSize: 11)),
-            Expanded(
-                child: Divider(
-              color: dividerColor, //color of divider
-              height: 10, //height spacing of divider
-              thickness: 1, //thickness of divier line
-              indent: 7, //spacing at the start of divider
-              endIndent: 10, //spacing at the end of divider
-            )),
-          ]),
-          const SizedBox(height: 20),
-          Expanded(
-              child: ListView.builder(
-            controller: subscriptnsCtrl,
-            itemCount: subscriptions.length,
-            itemBuilder: (context, index) => _SubItem(
-                index,
-                subscriptions[index],
-                client.getExistingChat(subscriptions[index]),
-                true,
-                unsub),
-          )),
-        ],
-      ),
-    );
+                  )),
+                ],
+              ),
+            ));
   }
 }

@@ -1,6 +1,8 @@
 import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/models/notifications.dart';
 import 'package:flutter/material.dart';
+import 'package:bruig/theme_manager.dart';
+import 'package:provider/provider.dart';
 
 class _NotificationW extends StatelessWidget {
   final AppNotifications ntfns;
@@ -79,16 +81,19 @@ class _NotificationW extends StatelessWidget {
         break;
     }
 
-    return ListTile(
-      title: Tooltip(
-          message: tooltip,
-          child: Text(
-            content,
-            style: TextStyle(fontSize: 11, color: textColor),
-          )),
-      leading: Icon(size: 10, Icons.arrow_forward, color: textColor),
-      onTap: onTap,
-    );
+    return Consumer<ThemeNotifier>(
+        builder: (context, theme, _) => ListTile(
+              title: Tooltip(
+                  message: tooltip,
+                  child: Text(
+                    content,
+                    style: TextStyle(
+                        fontSize: theme.getSmallFont(context),
+                        color: textColor),
+                  )),
+              leading: Icon(size: 10, Icons.arrow_forward, color: textColor),
+              onTap: onTap,
+            ));
   }
 }
 

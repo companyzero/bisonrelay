@@ -14,6 +14,8 @@ import 'package:bruig/screens/feed.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
+import 'package:bruig/theme_manager.dart';
+import 'package:provider/provider.dart';
 
 class _OverviewScreenTitle extends StatefulWidget {
   final MainMenuModel mainMenu;
@@ -282,8 +284,11 @@ class _OverviewScreenState extends State<OverviewScreen> {
                             : Container(
                                 padding: const EdgeInsets.all(3),
                                 child: menuItem.icon),
-                        title: Text(menuItem.label,
-                            style: const TextStyle(fontSize: 15)))
+                        title: Consumer<ThemeNotifier>(
+                            builder: (context, theme, child) => Text(
+                                menuItem.label,
+                                style: TextStyle(
+                                    fontSize: theme.getMediumFont(context)))))
                     : Theme(
                         data: Theme.of(context)
                             .copyWith(dividerColor: Colors.transparent),

@@ -22,6 +22,7 @@ import 'package:bruig/components/interactive_avatar.dart';
 import 'package:bruig/components/user_context_menu.dart';
 import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/util.dart';
+import 'package:bruig/theme_manager.dart';
 
 class ServerEvent extends StatelessWidget {
   final Widget child;
@@ -140,28 +141,31 @@ class _ReceivedSentPMState extends State<ReceivedSentPM> {
     var selectedBackgroundColor = theme.highlightColor;
     var textColor = theme.dividerColor;
     // Will show a divider and text before the last unread message.
-    var firstUnread = widget.evnt.firstUnread
-        ? Row(children: [
-            Expanded(
-                child: Divider(
-              color: textColor, //color of divider
-              height: 8, //height spacing of divider
-              thickness: 1, //thickness of divier line
-              indent: 5, //spacing at the start of divider
-              endIndent: 5, //spacing at the end of divider
-            )),
-            Text("Last read posts",
-                style: TextStyle(fontSize: 9, color: textColor)),
-            Expanded(
-                child: Divider(
-              color: textColor, //color of divider
-              height: 8, //height spacing of divider
-              thickness: 1, //thickness of divier line
-              indent: 5, //spacing at the start of divider
-              endIndent: 5, //spacing at the end of divider
-            )),
-          ])
-        : const Empty();
+    var firstUnread = Consumer<ThemeNotifier>(
+        builder: (context, theme, _) => widget.evnt.firstUnread
+            ? Row(children: [
+                Expanded(
+                    child: Divider(
+                  color: textColor, //color of divider
+                  height: 8, //height spacing of divider
+                  thickness: 1, //thickness of divier line
+                  indent: 5, //spacing at the start of divider
+                  endIndent: 5, //spacing at the end of divider
+                )),
+                Text("Last read posts",
+                    style: TextStyle(
+                        fontSize: theme.getSmallFont(context),
+                        color: textColor)),
+                Expanded(
+                    child: Divider(
+                  color: textColor, //color of divider
+                  height: 8, //height spacing of divider
+                  thickness: 1, //thickness of divier line
+                  indent: 5, //spacing at the start of divider
+                  endIndent: 5, //spacing at the end of divider
+                )),
+              ])
+            : const Empty());
     var msgWidget = Provider<DownloadSource>(
         create: (context) => DownloadSource(sourceID),
         child: Expanded(
@@ -169,106 +173,113 @@ class _ReceivedSentPMState extends State<ReceivedSentPM> {
                 msg,
                 widget.userNick != widget.nick &&
                     msg.contains(widget.userNick))));
-    return Column(children: [
-      firstUnread,
-      widget.evnt.sameUser ? const Empty() : const SizedBox(height: 10),
-      Row(children: [
-        Column(
-          mainAxisAlignment: MainAxisAlignment.start,
-          children: [
-            widget.evnt.sameUser
-                ? Container(
-                    width: 28,
-                    margin: const EdgeInsets.only(
-                        top: 0, bottom: 0, left: 10, right: 0),
-                  )
-                : SelectionContainer.disabled(
-                    child: Container(
-                      height: 28,
-                      width: 28,
-                      margin: const EdgeInsets.only(
-                          top: 0, bottom: 0, left: 10, right: 0),
-                      child: widget.isGC
-                          ? UserContextMenu(
-                              targetUserChat: widget.evnt.source,
-                              child: InteractiveAvatar(
-                                bgColor: selectedBackgroundColor,
-                                chatNick: widget.nick,
-                                avatarColor: avatarColor,
-                                avatarTextColor: avatarTextColor,
-                              ),
-                            )
-                          : UserContextMenu(
-                              targetUserChat: widget.evnt.source,
-                              child: InteractiveAvatar(
-                                bgColor: selectedBackgroundColor,
-                                chatNick: widget.nick,
-                                onTap: () {
-                                  widget.showSubMenu(widget.isGC, widget.id);
-                                },
-                                avatarColor: avatarColor,
-                                avatarTextColor: avatarTextColor,
-                              ),
+    return Consumer<ThemeNotifier>(
+        builder: (context, theme, _) => Column(children: [
+              firstUnread,
+              widget.evnt.sameUser ? const Empty() : const SizedBox(height: 10),
+              Row(children: [
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: [
+                    widget.evnt.sameUser
+                        ? Container(
+                            width: 28,
+                            margin: const EdgeInsets.only(
+                                top: 0, bottom: 0, left: 10, right: 0),
+                          )
+                        : SelectionContainer.disabled(
+                            child: Container(
+                              height: 28,
+                              width: 28,
+                              margin: const EdgeInsets.only(
+                                  top: 0, bottom: 0, left: 10, right: 0),
+                              child: widget.isGC
+                                  ? UserContextMenu(
+                                      targetUserChat: widget.evnt.source,
+                                      child: InteractiveAvatar(
+                                        bgColor: selectedBackgroundColor,
+                                        chatNick: widget.nick,
+                                        avatarColor: avatarColor,
+                                        avatarTextColor: avatarTextColor,
+                                      ),
+                                    )
+                                  : UserContextMenu(
+                                      targetUserChat: widget.evnt.source,
+                                      child: InteractiveAvatar(
+                                        bgColor: selectedBackgroundColor,
+                                        chatNick: widget.nick,
+                                        onTap: () {
+                                          widget.showSubMenu(
+                                              widget.isGC, widget.id);
+                                        },
+                                        avatarColor: avatarColor,
+                                        avatarTextColor: avatarTextColor,
+                                      ),
+                                    ),
                             ),
-                    ),
-                  ),
-            // Now put reply/dm button here if GC
-            widget.isGC &&
-                    widget.userNick != widget.nick &&
-                    !widget.evnt.sameUser
-                ? Material(
-                    color: selectedBackgroundColor.withOpacity(0),
-                    child: IconButton(
-                        hoverColor: selectedBackgroundColor,
-                        splashRadius: 15,
-                        iconSize: 25,
-                        tooltip: "Go to DM",
-                        onPressed: () => widget.openReplyDM(false, widget.nick),
-                        icon: const Icon(size: 28, Icons.reply)))
-                : const Empty(),
-          ],
-        ),
-        const SizedBox(width: 10),
-        // Middle column
-        Expanded(
-            child:
-                Column(mainAxisAlignment: MainAxisAlignment.start, children: [
-          widget.evnt.sameUser
-              ? const Empty()
-              : Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(widget.nick,
-                      style: TextStyle(
-                        fontSize: 15,
-                        color: hightLightTextColor,
-                        fontWeight: FontWeight.w500,
-                        letterSpacing: 0.5,
+                          ),
+                    // Now put reply/dm button here if GC
+                    widget.isGC &&
+                            widget.userNick != widget.nick &&
+                            !widget.evnt.sameUser
+                        ? Material(
+                            color: selectedBackgroundColor.withOpacity(0),
+                            child: IconButton(
+                                hoverColor: selectedBackgroundColor,
+                                splashRadius: 15,
+                                iconSize: 25,
+                                tooltip: "Go to DM",
+                                onPressed: () =>
+                                    widget.openReplyDM(false, widget.nick),
+                                icon: const Icon(size: 28, Icons.reply)))
+                        : const Empty(),
+                  ],
+                ),
+                const SizedBox(width: 10),
+                // Middle column
+                Expanded(
+                    child: Column(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        children: [
+                      widget.evnt.sameUser
+                          ? const Empty()
+                          : Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                  Text(widget.nick,
+                                      style: TextStyle(
+                                        fontSize: theme.getMediumFont(context),
+                                        color: hightLightTextColor,
+                                        fontWeight: FontWeight.w500,
+                                        letterSpacing: 0.5,
+                                      )),
+                                ]),
+                      Row(children: [msgWidget]),
+                    ])),
+                // Third (timestamp) column
+                Column(children: [
+                  SizedBox(
+                      width: 40,
+                      child: SelectionContainer.disabled(
+                        child: Padding(
+                          padding: const EdgeInsets.all(4.0),
+                          child: Tooltip(
+                              message: fullDate,
+                              child: Text(
+                                widget.evnt.sentState == CMS_sent ||
+                                        widget.evnt.sentState == CMS_unknown
+                                    ? hour
+                                    : prefix,
+                                style: TextStyle(
+                                    fontSize: theme.getSmallFont(context),
+                                    color: darkTextColor), // DATE COLOR
+                              )),
+                        ),
                       )),
                 ]),
-          Row(children: [msgWidget]),
-        ])),
-        // Third (timestamp) column
-        Column(children: [
-          SizedBox(
-              width: 40,
-              child: SelectionContainer.disabled(
-                child: Padding(
-                  padding: const EdgeInsets.all(4.0),
-                  child: Tooltip(
-                      message: fullDate,
-                      child: Text(
-                        widget.evnt.sentState == CMS_sent ||
-                                widget.evnt.sentState == CMS_unknown
-                            ? hour
-                            : prefix,
-                        style: TextStyle(
-                            fontSize: 12, color: darkTextColor), // DATE COLOR
-                      )),
-                ),
-              )),
-        ]),
-      ]),
-      widget.evnt.sameUser ? const SizedBox(height: 10) : const Empty()
-    ]);
+              ]),
+              widget.evnt.sameUser ? const SizedBox(height: 10) : const Empty()
+            ]));
   }
 }
 
@@ -359,124 +370,136 @@ class _ReceivedSentMobileGCMsgState extends State<ReceivedSentMobileGCMsg> {
     var textColor = theme.dividerColor;
     var messageBackgroundColor = theme.dialogBackgroundColor;
 
-    return Column(children: [
-      widget.evnt.firstUnread
-          ? Row(children: [
-              Expanded(
-                  child: Divider(
-                color: textColor, //color of divider
-                height: 8, //height spacing of divider
-                thickness: 1, //thickness of divier line
-                indent: 5, //spacing at the start of divider
-                endIndent: 5, //spacing at the end of divider
-              )),
-              Text("Last read posts",
-                  style: TextStyle(fontSize: 9, color: textColor)),
-              Expanded(
-                  child: Divider(
-                color: textColor, //color of divider
-                height: 8, //height spacing of divider
-                thickness: 1, //thickness of divier line
-                indent: 5, //spacing at the start of divider
-                endIndent: 5, //spacing at the end of divider
-              )),
-            ])
-          : const Empty(),
-      Container(
-          margin: const EdgeInsets.only(left: 5, right: 20),
-          padding:
-              const EdgeInsets.only(left: 10, right: 10, top: 5, bottom: 5),
-          decoration: BoxDecoration(
-            color: messageBackgroundColor,
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Row(children: [
-            Flexible(
-                child: Column(children: [
-              SelectionContainer.disabled(
-                child: Container(
-                  width: 28,
-                  margin: const EdgeInsets.only(
-                      top: 0, bottom: 0, left: 5, right: 0),
-                  child: widget.isGC
-                      ? UserContextMenu(
-                          targetUserChat: widget.evnt.source,
-                          child: InteractiveAvatar(
-                            bgColor: selectedBackgroundColor,
-                            chatNick: widget.nick,
-                            avatarColor: avatarColor,
-                            avatarTextColor: avatarTextColor,
-                          ),
-                        )
-                      : UserContextMenu(
-                          targetUserChat: widget.evnt.source,
-                          child: InteractiveAvatar(
-                            bgColor: selectedBackgroundColor,
-                            chatNick: widget.nick,
-                            onTap: () {
-                              widget.showSubMenu(widget.isGC, widget.id);
-                            },
-                            avatarColor: avatarColor,
-                            avatarTextColor: avatarTextColor,
-                          ),
-                        ),
-                ),
-              ),
-            ])),
-            Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-              Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Flexible(
-                    child: Text(
-                  widget.nick,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: avatarColor, // NAME TEXT COLOR,
-                    fontWeight: FontWeight.bold,
-                  ),
-                )),
-                Flexible(
-                    child: SelectionContainer.disabled(
-                        child: Padding(
-                  padding: const EdgeInsets.all(4.0),
-                  child: Tooltip(
-                      message: fullDate,
-                      child: Text(
-                        hour,
-                        style: TextStyle(
-                            fontSize: 9, color: darkTextColor), // DATE COLOR
+    return Consumer<ThemeNotifier>(
+        builder: (context, theme, _) => Column(children: [
+              widget.evnt.firstUnread
+                  ? Row(children: [
+                      Expanded(
+                          child: Divider(
+                        color: textColor, //color of divider
+                        height: 8, //height spacing of divider
+                        thickness: 1, //thickness of divier line
+                        indent: 5, //spacing at the start of divider
+                        endIndent: 5, //spacing at the end of divider
                       )),
-                )))
-              ]),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Flexible(
-                      child: Provider<DownloadSource>(
-                          create: (context) => DownloadSource(sourceID),
-                          child: MarkdownArea(
-                              msg,
-                              widget.userNick != widget.nick &&
-                                  msg.contains(widget.userNick)))),
-                  Flexible(
-                      child: SelectionContainer.disabled(
-                    child: SizedBox(
-                        width: 5,
-                        child: Text(
-                          prefix,
+                      Text("Last read posts",
                           style: TextStyle(
-                              fontSize: 12,
-                              color: hightLightTextColor, // NAME TEXT COLOR,
-                              fontWeight: FontWeight.bold,
-                              fontStyle: FontStyle.italic),
-                        )),
-                  ))
-                ],
-              ),
-              const SizedBox(width: 10)
-            ]),
-            const SizedBox(height: 5),
-          ]))
-    ]);
+                              fontSize: theme.getSmallFont(context),
+                              color: textColor)),
+                      Expanded(
+                          child: Divider(
+                        color: textColor, //color of divider
+                        height: 8, //height spacing of divider
+                        thickness: 1, //thickness of divier line
+                        indent: 5, //spacing at the start of divider
+                        endIndent: 5, //spacing at the end of divider
+                      )),
+                    ])
+                  : const Empty(),
+              Container(
+                  margin: const EdgeInsets.only(left: 5, right: 20),
+                  padding: const EdgeInsets.only(
+                      left: 10, right: 10, top: 5, bottom: 5),
+                  decoration: BoxDecoration(
+                    color: messageBackgroundColor,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Row(children: [
+                    Flexible(
+                        child: Column(children: [
+                      SelectionContainer.disabled(
+                        child: Container(
+                          width: 28,
+                          margin: const EdgeInsets.only(
+                              top: 0, bottom: 0, left: 5, right: 0),
+                          child: widget.isGC
+                              ? UserContextMenu(
+                                  targetUserChat: widget.evnt.source,
+                                  child: InteractiveAvatar(
+                                    bgColor: selectedBackgroundColor,
+                                    chatNick: widget.nick,
+                                    avatarColor: avatarColor,
+                                    avatarTextColor: avatarTextColor,
+                                  ),
+                                )
+                              : UserContextMenu(
+                                  targetUserChat: widget.evnt.source,
+                                  child: InteractiveAvatar(
+                                    bgColor: selectedBackgroundColor,
+                                    chatNick: widget.nick,
+                                    onTap: () {
+                                      widget.showSubMenu(
+                                          widget.isGC, widget.id);
+                                    },
+                                    avatarColor: avatarColor,
+                                    avatarTextColor: avatarTextColor,
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ])),
+                    Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Flexible(
+                                    child: Text(
+                                  widget.nick,
+                                  style: TextStyle(
+                                    fontSize: theme.getSmallFont(context),
+                                    color: avatarColor, // NAME TEXT COLOR,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                )),
+                                Flexible(
+                                    child: SelectionContainer.disabled(
+                                        child: Padding(
+                                  padding: const EdgeInsets.all(4.0),
+                                  child: Tooltip(
+                                      message: fullDate,
+                                      child: Text(
+                                        hour,
+                                        style: TextStyle(
+                                            fontSize:
+                                                theme.getSmallFont(context),
+                                            color: darkTextColor), // DATE COLOR
+                                      )),
+                                )))
+                              ]),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Flexible(
+                                  child: Provider<DownloadSource>(
+                                      create: (context) =>
+                                          DownloadSource(sourceID),
+                                      child: MarkdownArea(
+                                          msg,
+                                          widget.userNick != widget.nick &&
+                                              msg.contains(widget.userNick)))),
+                              Flexible(
+                                  child: SelectionContainer.disabled(
+                                child: SizedBox(
+                                    width: 5,
+                                    child: Text(
+                                      prefix,
+                                      style: TextStyle(
+                                          fontSize: theme.getSmallFont(context),
+                                          color:
+                                              hightLightTextColor, // NAME TEXT COLOR,
+                                          fontWeight: FontWeight.bold,
+                                          fontStyle: FontStyle.italic),
+                                    )),
+                              ))
+                            ],
+                          ),
+                          const SizedBox(width: 10)
+                        ]),
+                    const SizedBox(height: 5),
+                  ]))
+            ]));
   }
 }
 
@@ -563,108 +586,118 @@ class _ReceivedSentPMMobileState extends State<ReceivedSentMobilePM> {
     var receivedBackgroundColor = theme.highlightColor;
     var sentBackgroundColor = theme.dialogBackgroundColor;
 
-    return Column(children: [
-      widget.evnt.firstUnread
-          ? Row(children: [
-              Expanded(
-                  child: Divider(
-                color: textColor, //color of divider
-                height: 8, //height spacing of divider
-                thickness: 1, //thickness of divier line
-                indent: 5, //spacing at the start of divider
-                endIndent: 5, //spacing at the end of divider
-              )),
-              Text("Last read posts",
-                  style: TextStyle(fontSize: 9, color: textColor)),
-              Expanded(
-                  child: Divider(
-                color: textColor, //color of divider
-                height: 8, //height spacing of divider
-                thickness: 1, //thickness of divier line
-                indent: 5, //spacing at the start of divider
-                endIndent: 5, //spacing at the end of divider
-              )),
-            ])
-          : const Empty(),
-      Column(children: [
-        widget.evnt.sameUser ? const Empty() : const SizedBox(height: 10),
-        sent
-            ? Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                    Flexible(
-                      flex: 3,
-                      child: SelectionContainer.disabled(
-                          child: Padding(
-                        padding: const EdgeInsets.all(4.0),
-                        child: Tooltip(
-                            message: fullDate,
-                            child: Text(
-                              hour,
-                              style: TextStyle(
-                                  fontSize: 13,
-                                  color: darkTextColor), // DATE COLOR
-                            )),
+    return Consumer<ThemeNotifier>(
+        builder: (context, theme, _) => Column(children: [
+              widget.evnt.firstUnread
+                  ? Row(children: [
+                      Expanded(
+                          child: Divider(
+                        color: textColor, //color of divider
+                        height: 8, //height spacing of divider
+                        thickness: 1, //thickness of divier line
+                        indent: 5, //spacing at the start of divider
+                        endIndent: 5, //spacing at the end of divider
                       )),
-                    ),
-                    Flexible(
-                      flex: 7,
-                      child: Container(
-                          margin: const EdgeInsets.only(left: 5, right: 20),
-                          padding: const EdgeInsets.only(
-                              left: 10, right: 10, top: 5, bottom: 5),
-                          decoration: BoxDecoration(
-                            color: sentBackgroundColor,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Provider<DownloadSource>(
-                              create: (context) => DownloadSource(sourceID),
-                              child: MarkdownArea(
-                                  msg,
-                                  widget.userNick != widget.nick &&
-                                      msg.contains(widget.userNick)))),
-                    )
-                  ])
-            : Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                mainAxisAlignment: MainAxisAlignment.start,
-                children: [
-                    Flexible(
-                        flex: 7,
-                        child: Container(
-                            margin: const EdgeInsets.only(left: 5, right: 20),
-                            padding: const EdgeInsets.only(
-                                left: 10, right: 10, top: 5, bottom: 5),
-                            decoration: BoxDecoration(
-                              color: receivedBackgroundColor,
-                              borderRadius: BorderRadius.circular(10),
+                      Text("Last read posts",
+                          style: TextStyle(
+                              fontSize: theme.getSmallFont(context),
+                              color: textColor)),
+                      Expanded(
+                          child: Divider(
+                        color: textColor, //color of divider
+                        height: 8, //height spacing of divider
+                        thickness: 1, //thickness of divier line
+                        indent: 5, //spacing at the start of divider
+                        endIndent: 5, //spacing at the end of divider
+                      )),
+                    ])
+                  : const Empty(),
+              Column(children: [
+                widget.evnt.sameUser
+                    ? const Empty()
+                    : const SizedBox(height: 10),
+                sent
+                    ? Row(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                            Flexible(
+                              flex: 3,
+                              child: SelectionContainer.disabled(
+                                  child: Padding(
+                                padding: const EdgeInsets.all(4.0),
+                                child: Tooltip(
+                                    message: fullDate,
+                                    child: Text(
+                                      hour,
+                                      style: TextStyle(
+                                          fontSize: theme.getSmallFont(context),
+                                          color: darkTextColor), // DATE COLOR
+                                    )),
+                              )),
                             ),
-                            child: Provider<DownloadSource>(
-                                create: (context) => DownloadSource(sourceID),
-                                child: MarkdownArea(
-                                    msg,
-                                    widget.userNick != widget.nick &&
-                                        msg.contains(widget.userNick))))),
-                    Flexible(
-                      flex: 3,
-                      child: SelectionContainer.disabled(
-                          child: Padding(
-                        padding: const EdgeInsets.all(4.0),
-                        child: Tooltip(
-                            message: fullDate,
-                            child: Text(
-                              hour,
-                              style: TextStyle(
-                                  fontSize: 13,
-                                  color: darkTextColor), // DATE COLOR
-                            )),
-                      )),
-                    ),
-                  ]),
-        const SizedBox(height: 5),
-      ])
-    ]);
+                            Flexible(
+                              flex: 7,
+                              child: Container(
+                                  margin:
+                                      const EdgeInsets.only(left: 5, right: 20),
+                                  padding: const EdgeInsets.only(
+                                      left: 10, right: 10, top: 5, bottom: 5),
+                                  decoration: BoxDecoration(
+                                    color: sentBackgroundColor,
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Provider<DownloadSource>(
+                                      create: (context) =>
+                                          DownloadSource(sourceID),
+                                      child: MarkdownArea(
+                                          msg,
+                                          widget.userNick != widget.nick &&
+                                              msg.contains(widget.userNick)))),
+                            )
+                          ])
+                    : Row(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        children: [
+                            Flexible(
+                                flex: 7,
+                                child: Container(
+                                    margin: const EdgeInsets.only(
+                                        left: 5, right: 20),
+                                    padding: const EdgeInsets.only(
+                                        left: 10, right: 10, top: 5, bottom: 5),
+                                    decoration: BoxDecoration(
+                                      color: receivedBackgroundColor,
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Provider<DownloadSource>(
+                                        create: (context) =>
+                                            DownloadSource(sourceID),
+                                        child: MarkdownArea(
+                                            msg,
+                                            widget.userNick != widget.nick &&
+                                                msg.contains(
+                                                    widget.userNick))))),
+                            Flexible(
+                              flex: 3,
+                              child: SelectionContainer.disabled(
+                                  child: Padding(
+                                padding: const EdgeInsets.all(4.0),
+                                child: Tooltip(
+                                    message: fullDate,
+                                    child: Text(
+                                      hour,
+                                      style: TextStyle(
+                                          fontSize: theme.getSmallFont(context),
+                                          color: darkTextColor), // DATE COLOR
+                                    )),
+                              )),
+                            ),
+                          ]),
+                const SizedBox(height: 5),
+              ])
+            ]));
   }
 }
 
@@ -725,15 +758,19 @@ class GCUserEventW extends StatelessWidget {
   Widget build(BuildContext context) {
     var theme = Theme.of(context);
     var textColor = theme.dividerColor;
-    if (evnt.source != null) {
-      return ServerEvent(
-          child: SelectableText("${evnt.source!.nick}:  ${evnt.event.msg}",
-              style: TextStyle(fontSize: 9, color: textColor)));
-    } else {
-      return ServerEvent(
-          child: SelectableText(evnt.event.msg,
-              style: TextStyle(fontSize: 9, color: textColor)));
-    }
+    return Consumer<ThemeNotifier>(builder: (context, theme, _) {
+      if (evnt.source != null) {
+        return ServerEvent(
+            child: SelectableText("${evnt.source!.nick}:  ${evnt.event.msg}",
+                style: TextStyle(
+                    fontSize: theme.getSmallFont(context), color: textColor)));
+      } else {
+        return ServerEvent(
+            child: SelectableText(evnt.event.msg,
+                style: TextStyle(
+                    fontSize: theme.getSmallFont(context), color: textColor)));
+      }
+    });
   }
 }
 
@@ -772,37 +809,48 @@ class _JoinGCEventWState extends State<JoinGCEventW> {
   Widget build(BuildContext context) {
     var theme = Theme.of(context);
     var textColor = theme.dividerColor;
-    switch (event.sentState) {
-      case CMS_canceled:
-        return ServerEvent(
-            child: Text("Declined GC invitation to '${invite.name}",
-                style: TextStyle(fontSize: 9, color: textColor)));
-      case CMS_errored:
-        return ServerEvent(
-            child: SelectableText(
-                "Unable to join GC ${invite.name}: ${event.sendError}",
-                style: TextStyle(fontSize: 9, color: textColor)));
-      case CMS_sent:
-        return ServerEvent(
-            child: Text("Accepted invitation to join GC '${invite.name}'",
-                style: TextStyle(fontSize: 9, color: textColor)));
-      case CMS_sending:
-        return ServerEvent(
-            child: Text("Accepting invitation to join GC '${invite.name}'",
-                style: TextStyle(fontSize: 9, color: textColor)));
-    }
+    return Consumer<ThemeNotifier>(builder: (context, theme, _) {
+      switch (event.sentState) {
+        case CMS_canceled:
+          return ServerEvent(
+              child: Text("Declined GC invitation to '${invite.name}",
+                  style: TextStyle(
+                      fontSize: theme.getSmallFont(context),
+                      color: textColor)));
+        case CMS_errored:
+          return ServerEvent(
+              child: SelectableText(
+                  "Unable to join GC ${invite.name}: ${event.sendError}",
+                  style: TextStyle(
+                      fontSize: theme.getSmallFont(context),
+                      color: textColor)));
+        case CMS_sent:
+          return ServerEvent(
+              child: Text("Accepted invitation to join GC '${invite.name}'",
+                  style: TextStyle(
+                      fontSize: theme.getSmallFont(context),
+                      color: textColor)));
+        case CMS_sending:
+          return ServerEvent(
+              child: Text("Accepting invitation to join GC '${invite.name}'",
+                  style: TextStyle(
+                      fontSize: theme.getSmallFont(context),
+                      color: textColor)));
+      }
 
-    return ServerEvent(
-        child: Column(children: [
-      Text("Received invitation to join GC '${invite.name}'",
-          style: TextStyle(fontSize: 9, color: textColor)),
-      const SizedBox(height: 20),
-      Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-        ElevatedButton(onPressed: acceptInvite, child: const Text("Accept")),
-        const SizedBox(width: 10),
-        CancelButton(onPressed: cancelInvite),
-      ]),
-    ]));
+      return ServerEvent(
+          child: Column(children: [
+        Text("Received invitation to join GC '${invite.name}'",
+            style: TextStyle(
+                fontSize: theme.getSmallFont(context), color: textColor)),
+        const SizedBox(height: 20),
+        Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+          ElevatedButton(onPressed: acceptInvite, child: const Text("Accept")),
+          const SizedBox(width: 10),
+          CancelButton(onPressed: cancelInvite),
+        ]),
+      ]));
+    });
   }
 }
 
@@ -906,22 +954,29 @@ class _InflightTipState extends State<InflightTipW> {
     late Widget child;
     var theme = Theme.of(context);
     var textColor = theme.dividerColor;
-    if (tip.state == ITS_completed) {
-      child = Text(
-          "✓ Requesting invoice for ${formatDCR(tip.amount)} to tip ${source.nick}!",
-          style: TextStyle(fontSize: 9, color: textColor));
-    } else if (tip.state == ITS_errored) {
-      child = Text("✗ Failed to send tip: ${tip.error}",
-          style: TextStyle(fontSize: 9, color: textColor));
-    } else if (tip.state == ITS_received) {
-      child = Text("\$ Received ${tip.amount} DCR from ${source.nick}!",
-          style: TextStyle(fontSize: 9, color: textColor));
-    } else {
-      child = Text(
-          "… Requesting invoice for ${formatDCR(tip.amount)} DCR to tip ${source.nick}...",
-          style: TextStyle(fontSize: 9, color: textColor));
-    }
-    return ServerEvent(child: child);
+
+    return Consumer<ThemeNotifier>(builder: (context, theme, _) {
+      if (tip.state == ITS_completed) {
+        child = Text(
+            "✓ Requesting invoice for ${formatDCR(tip.amount)} to tip ${source.nick}!",
+            style: TextStyle(
+                fontSize: theme.getSmallFont(context), color: textColor));
+      } else if (tip.state == ITS_errored) {
+        child = Text("✗ Failed to send tip: ${tip.error}",
+            style: TextStyle(
+                fontSize: theme.getSmallFont(context), color: textColor));
+      } else if (tip.state == ITS_received) {
+        child = Text("\$ Received ${tip.amount} DCR from ${source.nick}!",
+            style: TextStyle(
+                fontSize: theme.getSmallFont(context), color: textColor));
+      } else {
+        child = Text(
+            "… Requesting invoice for ${formatDCR(tip.amount)} DCR to tip ${source.nick}...",
+            style: TextStyle(
+                fontSize: theme.getSmallFont(context), color: textColor));
+      }
+      return ServerEvent(child: child);
+    });
   }
 }
 
@@ -963,24 +1018,30 @@ class _SynthEventWState extends State<SynthEventW> {
     late Widget child;
     var theme = Theme.of(context);
     var textColor = theme.dividerColor;
-
-    if (event.state == SCE_sent) {
-      child = Text("✓ ${widget.event.msg}",
-          style: TextStyle(fontSize: 9, color: textColor));
-    } else if (event.state == SCE_errored) {
-      child = Text("✗ Failed to ${widget.event.msg} - ${event.error}",
-          style: TextStyle(fontSize: 9, color: textColor));
-    } else if (event.state == SCE_sending) {
-      child = Text("… ${widget.event.msg}",
-          style: TextStyle(fontSize: 9, color: textColor));
-    } else if (event.state == SCE_received) {
-      child = Text(widget.event.msg,
-          style: TextStyle(fontSize: 9, color: textColor));
-    } else {
-      child = Text("? unknown state ${event.state}",
-          style: TextStyle(fontSize: 9, color: textColor));
-    }
-    return ServerEvent(child: child);
+    return Consumer<ThemeNotifier>(builder: (context, theme, _) {
+      if (event.state == SCE_sent) {
+        child = Text("✓ ${widget.event.msg}",
+            style: TextStyle(
+                fontSize: theme.getSmallFont(context), color: textColor));
+      } else if (event.state == SCE_errored) {
+        child = Text("✗ Failed to ${widget.event.msg} - ${event.error}",
+            style: TextStyle(
+                fontSize: theme.getSmallFont(context), color: textColor));
+      } else if (event.state == SCE_sending) {
+        child = Text("… ${widget.event.msg}",
+            style: TextStyle(
+                fontSize: theme.getSmallFont(context), color: textColor));
+      } else if (event.state == SCE_received) {
+        child = Text(widget.event.msg,
+            style: TextStyle(
+                fontSize: theme.getSmallFont(context), color: textColor));
+      } else {
+        child = Text("? unknown state ${event.state}",
+            style: TextStyle(
+                fontSize: theme.getSmallFont(context), color: textColor));
+      }
+      return ServerEvent(child: child);
+    });
   }
 }
 
@@ -997,12 +1058,13 @@ class UserContentEventW extends StatefulWidget {
 class _UserContentEventWState extends State<UserContentEventW> {
   @override
   Widget build(BuildContext context) {
-    return Consumer<DownloadsModel>(
-        builder: (context, downloads, child) => ServerEvent(
+    return Consumer2<DownloadsModel, ThemeNotifier>(
+        builder: (context, downloads, theme, child) => ServerEvent(
                 child: Column(children: [
               Text("User Content",
                   style: TextStyle(
-                      color: Theme.of(context).focusColor, fontSize: 15)),
+                      color: Theme.of(context).focusColor,
+                      fontSize: theme.getMediumFont(context))),
               const SizedBox(height: 20),
               UserContentListW(widget.chat, downloads, widget.content),
             ])));
@@ -1017,9 +1079,11 @@ class PostEventW extends StatelessWidget {
   Widget build(BuildContext context) {
     var theme = Theme.of(context);
     var textColor = theme.dividerColor;
-    return ServerEvent(
-        child: SelectableText("Received post '${event.title}'",
-            style: TextStyle(fontSize: 9, color: textColor)));
+    return Consumer<ThemeNotifier>(
+        builder: (context, theme, _) => ServerEvent(
+            child: SelectableText("Received post '${event.title}'",
+                style: TextStyle(
+                    fontSize: theme.getSmallFont(context), color: textColor))));
   }
 }
 
@@ -1062,9 +1126,11 @@ class _PostSubscriptionEventWState extends State<PostSubscriptionEventW> {
       msg = "Unsubscribed from user's posts!";
     }
 
-    return ServerEvent(
-        child: SelectableText(msg,
-            style: TextStyle(fontSize: 9, color: textColor)));
+    return Consumer<ThemeNotifier>(
+        builder: (context, theme, _) => ServerEvent(
+            child: SelectableText(msg,
+                style: TextStyle(
+                    fontSize: theme.getSmallFont(context), color: textColor))));
   }
 }
 
@@ -1077,34 +1143,37 @@ class FileDownloadedEventW extends StatelessWidget {
     var theme = Theme.of(context);
     var textColor = theme.dividerColor;
     var backgroundColor = theme.highlightColor;
-    return ServerEvent(
-      child: Container(
-        padding: const EdgeInsets.all(0),
-        decoration: BoxDecoration(
-          color: backgroundColor,
-          borderRadius: const BorderRadius.all(Radius.circular(5)),
-        ),
-        child: Row(
-          children: [
-            Material(
-              color: backgroundColor,
-              child: IconButton(
-                onPressed: () {
-                  OpenFilex.open(event.diskPath);
-                },
-                splashRadius: 20,
-                icon: FileIcon(event.diskPath, size: 24),
+    return Consumer<ThemeNotifier>(
+        builder: (context, theme, _) => ServerEvent(
+              child: Container(
+                padding: const EdgeInsets.all(0),
+                decoration: BoxDecoration(
+                  color: backgroundColor,
+                  borderRadius: const BorderRadius.all(Radius.circular(5)),
+                ),
+                child: Row(
+                  children: [
+                    Material(
+                      color: backgroundColor,
+                      child: IconButton(
+                        onPressed: () {
+                          OpenFilex.open(event.diskPath);
+                        },
+                        splashRadius: 20,
+                        icon: FileIcon(event.diskPath, size: 24),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    SelectableText(
+                      "Downloaded file ${event.diskPath}",
+                      style: TextStyle(
+                          fontSize: theme.getSmallFont(context),
+                          color: textColor),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(width: 10),
-            SelectableText(
-              "Downloaded file ${event.diskPath}",
-              style: TextStyle(fontSize: 9, color: textColor),
-            ),
-          ],
-        ),
-      ),
-    );
+            ));
   }
 }
 
@@ -1116,15 +1185,17 @@ class GCVersionWarnW extends StatelessWidget {
   Widget build(BuildContext context) {
     var bgColor = Colors.red[600];
     var textColor = Colors.white;
-    return Container(
-        padding: const EdgeInsets.only(left: 41, top: 5, bottom: 5),
-        margin: const EdgeInsets.all(5),
-        decoration: BoxDecoration(
-            color: bgColor,
-            borderRadius: const BorderRadius.all(Radius.circular(5))),
-        child: SelectableText(
-            "Received GC definitions with unsupported version ${event.version}. Please update the software to interact in this GC.",
-            style: TextStyle(fontSize: 9, color: textColor)));
+    return Consumer<ThemeNotifier>(
+        builder: (context, theme, _) => Container(
+            padding: const EdgeInsets.only(left: 41, top: 5, bottom: 5),
+            margin: const EdgeInsets.all(5),
+            decoration: BoxDecoration(
+                color: bgColor,
+                borderRadius: const BorderRadius.all(Radius.circular(5))),
+            child: SelectableText(
+                "Received GC definitions with unsupported version ${event.version}. Please update the software to interact in this GC.",
+                style: TextStyle(
+                    fontSize: theme.getSmallFont(context), color: textColor))));
   }
 }
 
@@ -1147,9 +1218,11 @@ class GCAddedMembersW extends StatelessWidget {
       }
     });
 
-    return ServerEvent(
-        child: SelectableText(msg,
-            style: TextStyle(fontSize: 9, color: textColor)));
+    return Consumer<ThemeNotifier>(
+        builder: (context, theme, _) => ServerEvent(
+            child: SelectableText(msg,
+                style: TextStyle(
+                    fontSize: theme.getSmallFont(context), color: textColor))));
   }
 }
 
@@ -1173,9 +1246,11 @@ class GCPartedMemberW extends StatelessWidget {
       msg = "User '$nick' parted from GC. Reason: '${event.reason}'";
     }
 
-    return ServerEvent(
-        child: SelectableText(msg,
-            style: TextStyle(fontSize: 9, color: textColor)));
+    return Consumer<ThemeNotifier>(
+        builder: (context, theme, _) => ServerEvent(
+            child: SelectableText(msg,
+                style: TextStyle(
+                    fontSize: theme.getSmallFont(context), color: textColor))));
   }
 }
 
@@ -1189,9 +1264,11 @@ class GCUpgradedVersionW extends StatelessWidget {
     var textColor = theme.dividerColor;
     String msg =
         "GC Upgraded from version ${event.oldVersion} to ${event.newVersion}";
-    return ServerEvent(
-        child: SelectableText(msg,
-            style: TextStyle(fontSize: 9, color: textColor)));
+    return Consumer<ThemeNotifier>(
+        builder: (context, theme, _) => ServerEvent(
+            child: SelectableText(msg,
+                style: TextStyle(
+                    fontSize: theme.getSmallFont(context), color: textColor))));
   }
 }
 
@@ -1222,9 +1299,11 @@ class GCAdminsChangedW extends StatelessWidget {
       });
     }
 
-    return ServerEvent(
-        child: SelectableText(msg,
-            style: TextStyle(fontSize: 9, color: textColor)));
+    return Consumer<ThemeNotifier>(
+        builder: (context, theme, _) => ServerEvent(
+            child: SelectableText(msg,
+                style: TextStyle(
+                    fontSize: theme.getSmallFont(context), color: textColor))));
   }
 }
 
@@ -1267,48 +1346,59 @@ class _KXSuggestedWState extends State<KXSuggestedW> {
   Widget build(BuildContext context) {
     var theme = Theme.of(context);
     var textColor = theme.dividerColor;
+    return Consumer<ThemeNotifier>(builder: (context, theme, _) {
+      switch (event.sentState) {
+        case Suggestion_accepted:
+          return ServerEvent(
+              child: Text(
+                  "Accepting suggestion to KX from '${suggest.inviteenick}' to '${suggest.targetnick}'",
+                  style: TextStyle(
+                      fontSize: theme.getSmallFont(context),
+                      color: textColor)));
+        case Suggestion_errored:
+          return ServerEvent(
+              child: SelectableText(
+                  "Unable to accept suggestion from  '${suggest.inviteenick}' to '${suggest.targetnick}'",
+                  style: TextStyle(
+                      fontSize: theme.getSmallFont(context),
+                      color: textColor)));
+        case Suggestion_canceled:
+          return ServerEvent(
+              child: Text(
+                  "Canceled suggestion to KX from '${suggest.inviteenick}' to '${suggest.targetnick}'",
+                  style: TextStyle(
+                      fontSize: theme.getSmallFont(context),
+                      color: textColor)));
+        case Suggestion_confirmed:
+          return ServerEvent(
+              child: Text(
+                  "Confirmed suggestion to KX from '${suggest.inviteenick}' to '${suggest.targetnick}'",
+                  style: TextStyle(
+                      fontSize: theme.getSmallFont(context),
+                      color: textColor)));
+      }
 
-    switch (event.sentState) {
-      case Suggestion_accepted:
-        return ServerEvent(
-            child: Text(
-                "Accepting suggestion to KX from '${suggest.inviteenick}' to '${suggest.targetnick}'",
-                style: TextStyle(fontSize: 9, color: textColor)));
-      case Suggestion_errored:
-        return ServerEvent(
-            child: SelectableText(
-                "Unable to accept suggestion from  '${suggest.inviteenick}' to '${suggest.targetnick}'",
-                style: TextStyle(fontSize: 9, color: textColor)));
-      case Suggestion_canceled:
-        return ServerEvent(
-            child: Text(
-                "Canceled suggestion to KX from '${suggest.inviteenick}' to '${suggest.targetnick}'",
-                style: TextStyle(fontSize: 9, color: textColor)));
-      case Suggestion_confirmed:
-        return ServerEvent(
-            child: Text(
-                "Confirmed suggestion to KX from '${suggest.inviteenick}' to '${suggest.targetnick}'",
-                style: TextStyle(fontSize: 9, color: textColor)));
-    }
-
-    return suggest.alreadyknown
-        ? ServerEvent(
-            child: Text(
-                "Received already known suggestion to KX from '${suggest.inviteenick}' to '${suggest.targetnick}'",
-                style: TextStyle(fontSize: 9, color: textColor)))
-        : ServerEvent(
-            child: Column(children: [
-            Text(
-                "Received suggestion to KX from '${suggest.inviteenick}' to '${suggest.targetnick}'",
-                style: TextStyle(fontSize: 9, color: textColor)),
-            const SizedBox(height: 20),
-            Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-              ElevatedButton(
-                  onPressed: acceptSuggestion, child: const Text("Accept")),
-              const SizedBox(width: 10),
-              CancelButton(onPressed: cancelSuggestion),
-            ]),
-          ]));
+      return suggest.alreadyknown
+          ? ServerEvent(
+              child: Text(
+                  "Received already known suggestion to KX from '${suggest.inviteenick}' to '${suggest.targetnick}'",
+                  style: TextStyle(
+                      fontSize: theme.getSmallFont(context), color: textColor)))
+          : ServerEvent(
+              child: Column(children: [
+              Text(
+                  "Received suggestion to KX from '${suggest.inviteenick}' to '${suggest.targetnick}'",
+                  style: TextStyle(
+                      fontSize: theme.getSmallFont(context), color: textColor)),
+              const SizedBox(height: 20),
+              Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                ElevatedButton(
+                    onPressed: acceptSuggestion, child: const Text("Accept")),
+                const SizedBox(width: 10),
+                CancelButton(onPressed: cancelSuggestion),
+              ]),
+            ]));
+    });
   }
 }
 
@@ -1333,9 +1423,11 @@ class TipUserProgressW extends StatelessWidget {
           "Tip attempt of $dcrAmount failed due to ${event.attemptErr}. Given up on attempting to tip.";
     }
 
-    return ServerEvent(
-        child: SelectableText(msg,
-            style: TextStyle(fontSize: 9, color: textColor)));
+    return Consumer<ThemeNotifier>(
+        builder: (context, theme, _) => ServerEvent(
+            child: SelectableText(msg,
+                style: TextStyle(
+                    fontSize: theme.getSmallFont(context), color: textColor))));
   }
 }
 
@@ -1383,26 +1475,29 @@ class _FetchedResourceWState extends State<FetchedResourceW> {
     var theme = Theme.of(context);
     var textColor = theme.dividerColor;
     var backgroundColor = theme.highlightColor;
-
-    if (sess.loading) {
-      return ServerEvent(
-          child: Container(
-              decoration: BoxDecoration(
-                  color: backgroundColor,
-                  borderRadius: const BorderRadius.all(Radius.circular(5))),
-              child: Text("Requested page",
-                  style: TextStyle(fontSize: 9, color: textColor))));
-    } else {
-      return ServerEvent(
-          child: Container(
-              decoration: BoxDecoration(
-                  color: backgroundColor,
-                  borderRadius: const BorderRadius.all(Radius.circular(5))),
-              child: ElevatedButton(
-                onPressed: viewPage,
-                child: const Text("View Page"),
-              )));
-    }
+    return Consumer<ThemeNotifier>(builder: (context, theme, _) {
+      if (sess.loading) {
+        return ServerEvent(
+            child: Container(
+                decoration: BoxDecoration(
+                    color: backgroundColor,
+                    borderRadius: const BorderRadius.all(Radius.circular(5))),
+                child: Text("Requested page",
+                    style: TextStyle(
+                        fontSize: theme.getSmallFont(context),
+                        color: textColor))));
+      } else {
+        return ServerEvent(
+            child: Container(
+                decoration: BoxDecoration(
+                    color: backgroundColor,
+                    borderRadius: const BorderRadius.all(Radius.circular(5))),
+                child: ElevatedButton(
+                  onPressed: viewPage,
+                  child: const Text("View Page"),
+                )));
+      }
+    });
   }
 }
 
@@ -1416,16 +1511,19 @@ class HandshakeStageW extends StatelessWidget {
     var textColor = theme.dividerColor;
     var backgroundColor = theme.highlightColor;
 
-    return ServerEvent(
-      child: Container(
-        decoration: BoxDecoration(
-            color: backgroundColor,
-            borderRadius: const BorderRadius.all(Radius.circular(5))),
-        child: Text(
-            "Completed 3-way handshake (due to receiving msg ${event.stage})",
-            style: TextStyle(color: textColor, fontSize: 9)),
-      ),
-    );
+    return Consumer<ThemeNotifier>(
+        builder: (context, theme, _) => ServerEvent(
+              child: Container(
+                decoration: BoxDecoration(
+                    color: backgroundColor,
+                    borderRadius: const BorderRadius.all(Radius.circular(5))),
+                child: Text(
+                    "Completed 3-way handshake (due to receiving msg ${event.stage})",
+                    style: TextStyle(
+                        color: textColor,
+                        fontSize: theme.getSmallFont(context))),
+              ),
+            ));
   }
 }
 

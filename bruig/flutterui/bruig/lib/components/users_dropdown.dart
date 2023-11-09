@@ -1,6 +1,7 @@
 import 'package:bruig/models/client.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:bruig/theme_manager.dart';
 
 typedef ChatModelCB = Function(ChatModel? c);
 
@@ -22,7 +23,8 @@ class _UsersDropdownState extends State<UsersDropdown> {
     var theme = Theme.of(context);
     var textColor = theme.focusColor;
     var backgroundColor = theme.backgroundColor;
-    return Consumer<ClientModel>(builder: (context, client, child) {
+    return Consumer2<ClientModel, ThemeNotifier>(
+        builder: (context, client, theme, child) {
       List<ChatModel?> list = client.userChats.cast<ChatModel?>().toList();
       list.addAll(client.hiddenUsers.cast<ChatModel?>().toList());
       list.sort(
@@ -51,13 +53,13 @@ class _UsersDropdownState extends State<UsersDropdown> {
                     child: Text(c != null ? c.nick : "Share globally",
                         style: TextStyle(
                           color: textColor,
-                          fontSize: 11,
+                          fontSize: theme.getSmallFont(context),
                         )))))).toList(),
         selectedItemBuilder: (BuildContext context) => (list.map(
           (ChatModel? c) => Text(
             c != null ? c.nick : "Share globally",
             style: TextStyle(
-                fontSize: 11,
+                fontSize: theme.getSmallFont(context),
                 color: textColor,
                 fontStyle: FontStyle.italic,
                 fontWeight: FontWeight.bold),

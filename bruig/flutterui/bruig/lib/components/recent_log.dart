@@ -3,6 +3,8 @@ import 'dart:ui';
 
 import 'package:bruig/models/log.dart';
 import 'package:flutter/material.dart';
+import 'package:bruig/theme_manager.dart';
+import 'package:provider/provider.dart';
 
 class LogLines extends StatefulWidget {
   final LogModel log;
@@ -67,17 +69,18 @@ class _LogLinesState extends State<LogLines> {
   Widget build(BuildContext context) {
     var theme = Theme.of(context);
     var textColor = widget.optionalTextColor ?? theme.focusColor;
-    return TextField(
-      scrollController: ctrl,
-      controller: txtCtrl,
-      maxLines: null,
-      keyboardType: TextInputType.multiline,
-      readOnly: true,
-      style: TextStyle(
-          color: textColor,
-          fontSize: 11,
-          fontFeatures: const [FontFeature.tabularFigures()],
-          height: 1.2),
-    );
+    return Consumer<ThemeNotifier>(
+        builder: (context, theme, _) => TextField(
+              scrollController: ctrl,
+              controller: txtCtrl,
+              maxLines: null,
+              keyboardType: TextInputType.multiline,
+              readOnly: true,
+              style: TextStyle(
+                  color: textColor,
+                  fontSize: theme.getSmallFont(context),
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                  height: 1.2),
+            ));
   }
 }

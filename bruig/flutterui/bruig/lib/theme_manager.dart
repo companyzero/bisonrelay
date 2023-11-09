@@ -13,10 +13,7 @@ import './storage_manager.dart';
 //  colorScheme: ColorScheme.fromSeed(seedColor: Color(0xff2970ff))),
 
 class ThemeNotifier with ChangeNotifier {
-  final double defaultFontSize = 2;
-  final double smallFontSize = 1;
-  final double largeFontSize = 3;
-  final double hugeFontSize = 4;
+  final double defaultFontSize = 1;
   static String emojifont =
       Platform.isWindows ? "notoemoji_win" : "notoemoji_unix";
   final darkTheme = ThemeData(
@@ -84,7 +81,43 @@ class ThemeNotifier with ChangeNotifier {
   ThemeData getTheme() => _themeData;
 
   late double _fontSize = defaultFontSize;
-  double getFontSize() => _fontSize;
+  double getFontCoef() => _fontSize;
+
+  double getSmallFont(BuildContext context) {
+    var mediaQuery = MediaQuery.of(context);
+    if (mediaQuery.size.width <= 500) {
+      return mediaQuery.textScaleFactor * 12;
+    } else {
+      return ((_fontSize * .15) + 0.85) * 12;
+    }
+  }
+
+  double getMediumFont(BuildContext context) {
+    var mediaQuery = MediaQuery.of(context);
+    if (mediaQuery.size.width <= 500) {
+      return mediaQuery.textScaleFactor * 15;
+    } else {
+      return ((_fontSize * .15) + 0.85) * 15;
+    }
+  }
+
+  double getLargeFont(BuildContext context) {
+    var mediaQuery = MediaQuery.of(context);
+    if (mediaQuery.size.width <= 500) {
+      return mediaQuery.textScaleFactor * 20;
+    } else {
+      return ((_fontSize * .15) + 0.85) * 20;
+    }
+  }
+
+  double getHugeFont(BuildContext context) {
+    var mediaQuery = MediaQuery.of(context);
+    if (mediaQuery.size.width <= 500) {
+      return mediaQuery.textScaleFactor * 30;
+    } else {
+      return ((_fontSize * .15) + 0.85) * 30;
+    }
+  }
 
   ThemeNotifier() {
     StorageManager.readData('themeMode').then((value) {
@@ -98,18 +131,9 @@ class ThemeNotifier with ChangeNotifier {
       }
       notifyListeners();
     });
-    StorageManager.readData('fontSize').then((value) {
+    StorageManager.readData('fontCoef').then((value) {
       debugPrint('value read from storage: ${value.toString()}');
-      var fontMode = value ?? 'defaultFontSize';
-      if (fontMode == 'defaultFontSize') {
-        _fontSize = defaultFontSize;
-      } else if (fontMode == 'smallFontSize') {
-        _fontSize = smallFontSize;
-      } else if (fontMode == 'largeFontSize') {
-        _fontSize = largeFontSize;
-      } else if (fontMode == 'hugeFontSize') {
-        _fontSize = hugeFontSize;
-      }
+      _fontSize = double.parse(value ?? "1");
       notifyListeners();
     });
   }
@@ -126,27 +150,9 @@ class ThemeNotifier with ChangeNotifier {
     notifyListeners();
   }
 
-  void setSmallFontMode() async {
-    _fontSize = smallFontSize;
-    StorageManager.saveData('fontSize', 'smallFontSize');
-    notifyListeners();
-  }
-
-  void setDefaultFontMode() async {
-    _fontSize = defaultFontSize;
-    StorageManager.saveData('fontSize', 'defaultFontSize');
-    notifyListeners();
-  }
-
-  void setLargeFontMode() async {
-    _fontSize = largeFontSize;
-    StorageManager.saveData('fontSize', 'largeFontSize');
-    notifyListeners();
-  }
-
-  void setHugeFontMode() async {
-    _fontSize = hugeFontSize;
-    StorageManager.saveData('fontSize', 'hugeFontSize');
+  void setFontSize(double fs) async {
+    _fontSize = fs;
+    StorageManager.saveData('fontCoef', fs.toString());
     notifyListeners();
   }
 }

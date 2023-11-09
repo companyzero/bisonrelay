@@ -6,6 +6,7 @@ import 'package:bruig/components/addressbook/addressbook.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/models/notifications.dart';
 import 'package:bruig/screens/needs_out_channel.dart';
+import 'package:bruig/theme_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
@@ -24,21 +25,28 @@ class ChatsScreenTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<ClientModel>(builder: (context, client, child) {
+    var theme = Theme.of(context);
+    var darkTextColor = theme.indicatorColor;
+    var hightLightTextColor = theme.dividerColor; // NAME TEXT COLOR
+    var selectedBackgroundColor = theme.highlightColor;
+    return Consumer2<ClientModel, ThemeNotifier>(
+        builder: (context, client, theme, child) {
       var activeHeading = client.active;
       if (activeHeading == null) {
         return Row(mainAxisAlignment: MainAxisAlignment.center, children: [
           Text("Bison Relay / Chat",
               textAlign: TextAlign.center,
-              style:
-                  TextStyle(fontSize: 18, color: Theme.of(context).focusColor))
+              style: TextStyle(
+                  fontSize: theme.getLargeFont(context),
+                  color: Theme.of(context).focusColor))
         ]);
       }
       if (client.showAddressBook) {
         return Row(mainAxisAlignment: MainAxisAlignment.center, children: [
           Text("Bison Relay / Chat / Address Book",
-              style:
-                  TextStyle(fontSize: 15, color: Theme.of(context).focusColor))
+              style: TextStyle(
+                  fontSize: theme.getLargeFont(context),
+                  color: Theme.of(context).focusColor))
         ]);
       }
       var chat = client.getExistingChat(activeHeading.id);
@@ -46,8 +54,9 @@ class ChatsScreenTitle extends StatelessWidget {
         return Row(mainAxisAlignment: MainAxisAlignment.center, children: [
           Text("Bison Relay / Chat",
               textAlign: TextAlign.center,
-              style:
-                  TextStyle(fontSize: 18, color: Theme.of(context).focusColor))
+              style: TextStyle(
+                  fontSize: theme.getLargeFont(context),
+                  color: Theme.of(context).focusColor))
         ]);
       }
       var profile = client.profile;
@@ -60,10 +69,6 @@ class ChatsScreenTitle extends StatelessWidget {
 
       bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
       if (isScreenSmall) {
-        var theme = Theme.of(context);
-        var darkTextColor = theme.indicatorColor;
-        var hightLightTextColor = theme.dividerColor; // NAME TEXT COLOR
-        var selectedBackgroundColor = theme.highlightColor;
         var avatarColor = colorFromNick(chat.nick);
         var avatarTextColor =
             ThemeData.estimateBrightnessForColor(avatarColor) == Brightness.dark
@@ -78,7 +83,8 @@ class ChatsScreenTitle extends StatelessWidget {
                       color: Theme.of(context).focusColor)),
               Text("Bison Relay / Chat$suffix$profileSuffix",
                   style: TextStyle(
-                      fontSize: 18, color: Theme.of(context).focusColor)),
+                      fontSize: theme.getLargeFont(context),
+                      color: Theme.of(context).focusColor)),
               chat.isGC
                   ? const Empty()
                   : Container(
@@ -101,7 +107,9 @@ class ChatsScreenTitle extends StatelessWidget {
             ]);
       }
       return Text("Bison Relay / Chat$suffix$profileSuffix",
-          style: TextStyle(fontSize: 15, color: Theme.of(context).focusColor));
+          style: TextStyle(
+              fontSize: theme.getLargeFont(context),
+              color: Theme.of(context).focusColor));
     });
   }
 }
@@ -126,46 +134,50 @@ class _FundsNeededPage extends StatelessWidget {
     var textColor = const Color(0xFF8E8D98);
     var secondaryTextColor = const Color(0xFFE4E3E6);
 
-    return Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(color: backgroundColor),
-        child: Center(
-            child: Column(
-          children: [
-            const SizedBox(height: 34),
-            Text("Fund Wallet and Channels",
-                style: TextStyle(
-                    color: textColor,
-                    fontSize: 34,
-                    fontWeight: FontWeight.w200)),
-            const SizedBox(height: 34),
-            Text('''
+    return Consumer<ThemeNotifier>(
+        builder: (context, theme, child) => Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(color: backgroundColor),
+            child: Center(
+                child: Column(
+              children: [
+                const SizedBox(height: 34),
+                Text("Fund Wallet and Channels",
+                    style: TextStyle(
+                        color: textColor,
+                        fontSize: theme.getHugeFont(context),
+                        fontWeight: FontWeight.w200)),
+                const SizedBox(height: 34),
+                Text('''
 Bison relay requires active LN channels with outbound capacity to pay to send
 messages to the server.
 ''',
-                style: TextStyle(
-                    color: secondaryTextColor,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w300)),
-            const SizedBox(height: 34),
-            Center(
-              child:
-                  Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                LoadingScreenButton(
-                  onPressed: () => Navigator.of(context, rootNavigator: true)
-                      .pushNamed("/needsFunds"),
-                  text: "Add wallet funds",
+                    style: TextStyle(
+                        color: secondaryTextColor,
+                        fontSize: theme.getMediumFont(context),
+                        fontWeight: FontWeight.w300)),
+                const SizedBox(height: 34),
+                Center(
+                  child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        LoadingScreenButton(
+                          onPressed: () =>
+                              Navigator.of(context, rootNavigator: true)
+                                  .pushNamed("/needsFunds"),
+                          text: "Add wallet funds",
+                        ),
+                        const SizedBox(width: 34),
+                        LoadingScreenButton(
+                          onPressed: () =>
+                              Navigator.of(context, rootNavigator: true)
+                                  .pushNamed(NeedsOutChannelScreen.routeName),
+                          text: "Create outbound channels",
+                        )
+                      ]),
                 ),
-                const SizedBox(width: 34),
-                LoadingScreenButton(
-                  onPressed: () => Navigator.of(context, rootNavigator: true)
-                      .pushNamed(NeedsOutChannelScreen.routeName),
-                  text: "Create outbound channels",
-                )
-              ]),
-            ),
-          ],
-        )));
+              ],
+            ))));
   }
 }
 
@@ -178,21 +190,24 @@ class _LoadingAddressBookPage extends StatelessWidget {
     var backgroundColor = theme.backgroundColor;
     var textColor = const Color(0xFF8E8D98);
 
-    return Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(color: backgroundColor),
-        child: Center(
-            child: Column(children: [
-          const SizedBox(height: 34),
-          Text("Loading Address Book",
-              style: TextStyle(
-                  color: textColor, fontSize: 34, fontWeight: FontWeight.w200)),
-          const SizedBox(height: 20),
-          LoadingAnimationWidget.waveDots(
-            color: textColor,
-            size: 50,
-          ),
-        ])));
+    return Consumer<ThemeNotifier>(
+        builder: (context, theme, child) => Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(color: backgroundColor),
+            child: Center(
+                child: Column(children: [
+              const SizedBox(height: 34),
+              Text("Loading Address Book",
+                  style: TextStyle(
+                      color: textColor,
+                      fontSize: theme.getHugeFont(context),
+                      fontWeight: FontWeight.w200)),
+              const SizedBox(height: 20),
+              LoadingAnimationWidget.waveDots(
+                color: textColor,
+                size: 50,
+              ),
+            ]))));
   }
 }
 
@@ -226,48 +241,47 @@ class _InviteNeededPageState extends State<_InviteNeededPage> {
     var textColor = const Color(0xFF8E8D98);
     var secondaryTextColor = const Color(0xFFE4E3E6);
 
-    return Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(color: backgroundColor),
-        child: Center(
-            child: Column(
-          children: [
-            const SizedBox(height: 34),
-            Text("Initial Invitation",
-                style: TextStyle(
-                    color: textColor,
-                    fontSize: 34,
-                    fontWeight: FontWeight.w200)),
-            const SizedBox(height: 34),
-            Text('''
-Bison Relay does not rely on a central server for user accounts, so to chat
-with someone else you need to exchange an invitation with them. This is
-just a file that should be sent via some other secure transfer method.
+    return Consumer<ThemeNotifier>(
+        builder: (context, theme, child) => Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(color: backgroundColor),
+            child: Center(
+                child: Column(
+              children: [
+                const SizedBox(height: 34),
+                Text("Initial Invitation",
+                    style: TextStyle(
+                        color: textColor,
+                        fontSize: theme.getHugeFont(context),
+                        fontWeight: FontWeight.w200)),
+                const SizedBox(height: 34),
+                Text('''
+Bison Relay does not rely on a central server for user accounts, so to chat with someone else you need to exchange an invitation with them. This is  just a file that should be sent via some other secure transfer method.
 
-After the invitation is accepted, you'll be able to chat with them, and if they
-know other people, they'll be able to connect you with them.
+After the invitation is accepted, you'll be able to chat with them, and if they know other people, they'll be able to connect you with them.
 ''',
-                style: TextStyle(
-                    color: secondaryTextColor,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w300)),
-            const SizedBox(height: 34),
-            Center(
-              child:
-                  Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                LoadingScreenButton(
-                  onPressed: () => debouncedLoadInvite(context),
-                  text: "Load Invitation",
+                    style: TextStyle(
+                        color: secondaryTextColor,
+                        fontSize: theme.getMediumFont(context),
+                        fontWeight: FontWeight.w300)),
+                const SizedBox(height: 34),
+                Center(
+                  child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        LoadingScreenButton(
+                          onPressed: () => debouncedLoadInvite(context),
+                          text: "Load Invitation",
+                        ),
+                        const SizedBox(width: 34),
+                        LoadingScreenButton(
+                          onPressed: () => generateInvite(context),
+                          text: "Create Invitation",
+                        )
+                      ]),
                 ),
-                const SizedBox(width: 34),
-                LoadingScreenButton(
-                  onPressed: () => generateInvite(context),
-                  text: "Create Invitation",
-                )
-              ]),
-            ),
-          ],
-        )));
+              ],
+            ))));
   }
 }
 
@@ -361,6 +375,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
     }
     var theme = Theme.of(context);
     var backgroundColor = theme.backgroundColor;
+
     if (client.userChats.isEmpty &&
         client.hiddenUsers.isEmpty &&
         !client.loadingAddressBook) {
