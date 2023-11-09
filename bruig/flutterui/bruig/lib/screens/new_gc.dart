@@ -28,7 +28,7 @@ class NewGCScreenState extends State<NewGCScreen> {
     try {
       await Golib.createGC(gcName);
       await client.readAddressBook();
-      var newChat = client.getExistingChatByNick(gcName);
+      var newChat = client.getExistingChatByNick(gcName, true);
       if (newChat != null) {
         client.startChat(newChat, false);
       }
