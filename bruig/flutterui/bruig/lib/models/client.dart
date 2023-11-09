@@ -734,6 +734,14 @@ class ClientModel extends ChangeNotifier {
 
   Map<String, ChatModel> _activeChats = Map<String, ChatModel>();
   ChatModel? getExistingChat(String uid) => _activeChats[uid];
+  ChatModel? getExistingChatByNick(String nick) {
+    for (var chat in _activeChats.values) {
+      if (chat.nick == nick) {
+        return chat;
+      }
+    }
+    return null;
+  }
 
   Future<ChatModel> _newChat(
       String id, String alias, bool isGC, bool startup) async {

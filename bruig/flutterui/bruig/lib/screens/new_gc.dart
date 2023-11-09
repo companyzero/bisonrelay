@@ -28,6 +28,10 @@ class NewGCScreenState extends State<NewGCScreen> {
     try {
       await Golib.createGC(gcName);
       await client.readAddressBook();
+      var newChat = client.getExistingChatByNick(gcName);
+      if (newChat != null) {
+        client.startChat(newChat, false);
+      }
       Navigator.pop(context);
     } catch (exception) {
       showErrorSnackbar(context, 'Unable to create GC: $exception');
