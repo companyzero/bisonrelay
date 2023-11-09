@@ -11,6 +11,7 @@ import 'package:bruig/components/chat/input.dart';
 import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/theme_manager.dart';
 import 'package:provider/provider.dart';
+import 'package:bruig/components/empty_widget.dart';
 
 class ActiveChat extends StatefulWidget {
   final ClientModel client;
@@ -255,22 +256,25 @@ class _ActiveChatState extends State<ActiveChat> {
                               hoverColor: Colors.black),
                         )),
                       ]),
-                      Positioned(
-                        top: 5,
-                        right: 5,
-                        child: Material(
-                          color: selectedBackgroundColor.withOpacity(0),
-                          child: IconButton(
-                            tooltip: "Close",
-                            hoverColor: selectedBackgroundColor,
-                            splashRadius: 15,
-                            iconSize: 15,
-                            onPressed: () => client.hideSubMenu(),
-                            icon: Icon(
-                                color: darkTextColor, Icons.close_outlined),
-                          ),
-                        ),
-                      ),
+                      isScreenSmall
+                          ? const Empty()
+                          : Positioned(
+                              top: 5,
+                              right: 5,
+                              child: Material(
+                                color: selectedBackgroundColor.withOpacity(0),
+                                child: IconButton(
+                                  tooltip: "Close",
+                                  hoverColor: selectedBackgroundColor,
+                                  splashRadius: 15,
+                                  iconSize: 15,
+                                  onPressed: () => client.hideSubMenu(),
+                                  icon: Icon(
+                                      color: darkTextColor,
+                                      Icons.close_outlined),
+                                ),
+                              ),
+                            ),
                     ]),
                   ),
                 )

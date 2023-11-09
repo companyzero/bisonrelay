@@ -153,6 +153,7 @@ class _AddressBookState extends State<AddressBook> {
     var combinedUserList = client.hiddenUsers + client.userChats;
     combinedUserList
         .sort((a, b) => a.nick.toLowerCase().compareTo(b.nick.toLowerCase()));
+    bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
     return Consumer<ThemeNotifier>(
         builder: (context, theme, _) => Column(children: [
               Row(children: [
@@ -171,13 +172,15 @@ class _AddressBookState extends State<AddressBook> {
                 Expanded(child: Input(client, inputFocusNode)),
                 Material(
                     color: dividerColor.withOpacity(0),
-                    child: IconButton(
-                        splashRadius: 15,
-                        iconSize: 15,
-                        hoverColor: dividerColor,
-                        tooltip: "Close Address book",
-                        onPressed: () => hideAddressBook(),
-                        icon: Icon(color: darkTextColor, Icons.cancel))),
+                    child: isScreenSmall
+                        ? const SizedBox(width: 37)
+                        : IconButton(
+                            splashRadius: 15,
+                            iconSize: 15,
+                            hoverColor: dividerColor,
+                            tooltip: "Close Address book",
+                            onPressed: () => hideAddressBook(),
+                            icon: Icon(color: darkTextColor, Icons.cancel))),
               ]),
               Expanded(
                   child: Container(

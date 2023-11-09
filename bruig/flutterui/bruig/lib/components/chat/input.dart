@@ -42,14 +42,11 @@ class _InputState extends State<Input> {
   }
 
   void sendMsg() {
-    final val = controller.value;
-    final messageWithoutNewLine =
-        controller.text.substring(0, val.selection.start - 1) +
-            controller.text.substring(val.selection.start);
+    final messageWithoutNewLine = controller.text.trim();
     controller.value = const TextEditingValue(
         text: "", selection: TextSelection.collapsed(offset: 0));
-    final String withEmbeds = embeds.fold(
-        messageWithoutNewLine.trim(), (s, e) => e.replaceInString(s));
+    final String withEmbeds =
+        embeds.fold(messageWithoutNewLine, (s, e) => e.replaceInString(s));
     /*
           if (withEmbeds.length > 1024 * 1024) {
             showErrorSnackbar(context,
@@ -87,7 +84,7 @@ class _InputState extends State<Input> {
     var embed = res as AttachmentEmbed;
     embeds.add(embed);
     setState(() {
-      controller.text = controller.text + embed.displayString() + " ";
+      controller.text = "${controller.text}${embed.displayString()} ";
       widget.chat.workingMsg = controller.text;
       widget.inputFocusNode.requestFocus();
     });
@@ -96,64 +93,66 @@ class _InputState extends State<Input> {
   @override
   Widget build(BuildContext context) {
     var theme = Theme.of(context);
-    var textColor = theme.dividerColor; // MESS
+    var textColor = theme.dividerColor;
     var cardColor = theme.cardColor;
     var secondaryTextColor = theme.focusColor;
-    return Consumer<ThemeNotifier>(builder: (context, theme, child) {
-      return RawKeyboardListener(
-        focusNode: node,
-        onKey: handleKeyPress,
-        child: Container(
-            margin: const EdgeInsets.only(bottom: 5),
-            child: TextField(
-              autofocus: true,
-              focusNode: widget.inputFocusNode,
-              style: TextStyle(
-                fontSize: theme.getMediumFont(context),
-                color: secondaryTextColor,
-              ),
-              controller: controller,
-              minLines: 1,
-              maxLines: null,
-              //textInputAction: TextInputAction.done,
-              //style: normalTextStyle,
-              keyboardType: TextInputType.multiline,
-              decoration: InputDecoration(
-                errorBorder: const OutlineInputBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(30.0)),
-                  borderSide: BorderSide(color: Colors.red, width: 2.0),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: const BorderRadius.all(Radius.circular(30.0)),
-                  borderSide: BorderSide(color: secondaryTextColor, width: 2.0),
-                ),
-                border: OutlineInputBorder(
-                  borderRadius: const BorderRadius.all(Radius.circular(30.0)),
-                  borderSide: BorderSide(color: cardColor, width: 2.0),
-                ),
-                hintText: "Start a message",
-                hintStyle: TextStyle(
-                    fontSize: theme.getMediumFont(context),
-                    letterSpacing: 0.5,
-                    fontWeight: FontWeight.w300,
-                    color: textColor),
-                filled: true,
-                fillColor: cardColor,
-                prefixIcon: IconButton(
-                    padding: EdgeInsets.all(0),
-                    iconSize: 25,
-                    onPressed: attachFile,
-                    icon: const Icon(Icons.attach_file)),
-                prefixIconColor: textColor,
-                suffixIcon: IconButton(
-                    padding: EdgeInsets.all(0),
-                    iconSize: 25,
-                    onPressed: sendMsg,
-                    icon: const Icon(Icons.send)),
-                suffixIconColor: textColor,
-              ),
-            )),
-      );
-    });
+    return Consumer<ThemeNotifier>(
+        builder: (context, theme, _) => RawKeyboardListener(
+              focusNode: node,
+              onKey: handleKeyPress,
+              child: Container(
+                  margin: const EdgeInsets.only(bottom: 5),
+                  child: TextField(
+                    autofocus: true,
+                    focusNode: widget.inputFocusNode,
+                    style: TextStyle(
+                      fontSize: theme.getMediumFont(context),
+                      color: secondaryTextColor,
+                    ),
+                    controller: controller,
+                    minLines: 1,
+                    maxLines: null,
+                    //textInputAction: TextInputAction.done,
+                    //style: normalTextStyle,
+                    keyboardType: TextInputType.multiline,
+                    decoration: InputDecoration(
+                      errorBorder: const OutlineInputBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(30.0)),
+                        borderSide: BorderSide(color: Colors.red, width: 2.0),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius:
+                            const BorderRadius.all(Radius.circular(30.0)),
+                        borderSide:
+                            BorderSide(color: secondaryTextColor, width: 2.0),
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius:
+                            const BorderRadius.all(Radius.circular(30.0)),
+                        borderSide: BorderSide(color: cardColor, width: 2.0),
+                      ),
+                      hintText: "Start a message",
+                      hintStyle: TextStyle(
+                          fontSize: theme.getMediumFont(context),
+                          letterSpacing: 0.5,
+                          fontWeight: FontWeight.w300,
+                          color: textColor),
+                      filled: true,
+                      fillColor: cardColor,
+                      prefixIcon: IconButton(
+                          padding: const EdgeInsets.all(0),
+                          iconSize: 25,
+                          onPressed: attachFile,
+                          icon: const Icon(Icons.attach_file)),
+                      prefixIconColor: textColor,
+                      suffixIcon: IconButton(
+                          padding: const EdgeInsets.all(0),
+                          iconSize: 25,
+                          onPressed: sendMsg,
+                          icon: const Icon(Icons.send)),
+                      suffixIconColor: textColor,
+                    ),
+                  )),
+            ));
   }
 }

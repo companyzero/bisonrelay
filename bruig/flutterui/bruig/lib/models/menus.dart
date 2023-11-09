@@ -6,7 +6,6 @@ import 'package:bruig/models/client.dart';
 import 'package:bruig/models/log.dart';
 import 'package:bruig/models/notifications.dart';
 import 'package:bruig/models/resources.dart';
-import 'package:bruig/models/snackbar.dart';
 import 'package:bruig/screens/chats.dart';
 import 'package:bruig/screens/feed.dart';
 import 'package:bruig/screens/ln_management.dart';

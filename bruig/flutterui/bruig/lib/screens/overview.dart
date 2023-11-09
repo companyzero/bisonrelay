@@ -88,6 +88,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
   ClientModel get client => widget.client;
   AppNotifications get ntfns => widget.ntfns;
   DownloadsModel get down => widget.down;
+  FeedModel get feed => widget.feed;
   ServerSessionState connState = ServerSessionState.empty();
   GlobalKey<NavigatorState> navKey = GlobalKey(debugLabel: "overview nav key");
 
@@ -210,11 +211,54 @@ class _OverviewScreenState extends State<OverviewScreen> {
         backgroundColor: theme.canvasColor,
         appBar: isScreenSmall
             ? AppBar(
+                titleSpacing: 0.0,
                 title: _OverviewScreenTitle(widget.mainMenu),
+                leading: Builder(builder: (BuildContext context) {
+                  return client.active != null || client.showAddressBook
+                      ? IconButton(
+                          iconSize: 20,
+                          splashRadius: 20,
+                          onPressed: () => client.activeSubMenu.isNotEmpty
+                              ? client.activeSubMenu = []
+                              : client.active = null,
+                          icon: Icon(Icons.keyboard_arrow_left_rounded,
+                              color: Theme.of(context).focusColor))
+                      : feed.active != null
+                          ? IconButton(
+                              iconSize: 20,
+                              splashRadius: 20,
+                              icon: Icon(Icons.keyboard_arrow_left_rounded,
+                                  color: Theme.of(context).focusColor),
+                              onPressed: () {
+                                feed.active = null;
+                                navKey.currentState!.pushReplacementNamed(
+                                    '/feed',
+                                    arguments: PageTabs(0, []));
+                              })
+                          : IconButton(
+                              iconSize: 20,
+                              splashRadius: 20,
+                              icon: const Icon(Icons.menu_rounded),
+                              onPressed: () =>
+                                  Scaffold.of(context).openDrawer(),
+                            );
+                }),
               )
             : AppBar(
+                titleSpacing: 0.0,
                 title: Row(children: [
-                  const SizedBox(width: 10),
+                  _OverviewScreenTitle(widget.mainMenu),
+                ]),
+                leadingWidth: 156,
+                leading: Row(children: [
+                  IconButton(
+                      tooltip: "About Bison Relay",
+                      splashRadius: 20,
+                      iconSize: 40,
+                      onPressed: goToAbout,
+                      icon: Image.asset(
+                        "assets/images/icon.png",
+                      )),
                   IconButton(
                       splashRadius: 20,
                       tooltip: "Create a new post",
@@ -232,18 +276,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
                       icon: Icon(
                           color: theme.dividerColor, size: 20, connectedIcon)),
                   const SizedBox(width: 20),
-                  _OverviewScreenTitle(widget.mainMenu),
                 ]),
-                leading: Builder(
-                    builder: (BuildContext context) => Row(children: [
-                          IconButton(
-                              tooltip: "About Bison Relay",
-                              iconSize: 40,
-                              onPressed: goToAbout,
-                              icon: Image.asset(
-                                "assets/images/icon.png",
-                              )),
-                        ])),
               ),
         drawer: Drawer(
           backgroundColor: sidebarBackground,

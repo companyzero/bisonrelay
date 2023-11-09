@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:bruig/components/buttons.dart';
 import 'package:bruig/components/chats_list.dart';
 import 'package:bruig/components/addressbook/addressbook.dart';
+import 'package:bruig/components/gc_context_menu.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/models/notifications.dart';
 import 'package:bruig/screens/needs_out_channel.dart';
@@ -14,7 +15,6 @@ import 'package:provider/provider.dart';
 import 'package:bruig/components/chat/active_chat.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 
-import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/util.dart';
 import 'package:bruig/components/user_context_menu.dart';
 import 'package:bruig/components/interactive_avatar.dart';
@@ -27,13 +27,13 @@ class ChatsScreenTitle extends StatelessWidget {
   Widget build(BuildContext context) {
     var theme = Theme.of(context);
     var darkTextColor = theme.indicatorColor;
-    var hightLightTextColor = theme.dividerColor; // NAME TEXT COLOR
+    var hightLightTextColor = theme.dividerColor;
     var selectedBackgroundColor = theme.highlightColor;
     return Consumer2<ClientModel, ThemeNotifier>(
         builder: (context, client, theme, child) {
       var activeHeading = client.active;
       if (activeHeading == null) {
-        return Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+        return Row(mainAxisAlignment: MainAxisAlignment.start, children: [
           Text("Bison Relay / Chat",
               textAlign: TextAlign.center,
               style: TextStyle(
@@ -51,7 +51,7 @@ class ChatsScreenTitle extends StatelessWidget {
       }
       var chat = client.getExistingChat(activeHeading.id);
       if (chat == null) {
-        return Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+        return Row(mainAxisAlignment: MainAxisAlignment.start, children: [
           Text("Bison Relay / Chat",
               textAlign: TextAlign.center,
               style: TextStyle(
@@ -74,37 +74,43 @@ class ChatsScreenTitle extends StatelessWidget {
             ThemeData.estimateBrightnessForColor(avatarColor) == Brightness.dark
                 ? hightLightTextColor
                 : darkTextColor;
-        return Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              IconButton(
-                  onPressed: () => client.active = null,
-                  icon: Icon(Icons.keyboard_arrow_left_rounded,
-                      color: Theme.of(context).focusColor)),
-              Text("Bison Relay / Chat$suffix$profileSuffix",
-                  style: TextStyle(
-                      fontSize: theme.getLargeFont(context),
-                      color: Theme.of(context).focusColor)),
-              chat.isGC
-                  ? const Empty()
-                  : Container(
-                      width: 40,
-                      margin: const EdgeInsets.only(
-                          top: 0, bottom: 0, left: 5, right: 0),
-                      child: UserContextMenu(
-                        targetUserChat: chat,
-                        child: InteractiveAvatar(
-                          bgColor: selectedBackgroundColor,
-                          chatNick: chat.nick,
-                          onTap: () {
-                            client.showSubMenu(chat.isGC, chat.id);
-                          },
-                          avatarColor: avatarColor,
-                          avatarTextColor: avatarTextColor,
-                        ),
-                      ),
-                    )
-            ]);
+        return Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
+          Text("Bison Relay / Chat$suffix$profileSuffix",
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                  fontSize: theme.getLargeFont(context),
+                  color: Theme.of(context).focusColor)),
+          Expanded(
+              child: Container(
+            width: 40,
+            margin: const EdgeInsets.only(top: 0, bottom: 0, left: 0, right: 5),
+            child: chat.isGC
+                ? GcContexMenu(
+                    targetGcChat: chat,
+                    child: InteractiveAvatar(
+                      bgColor: selectedBackgroundColor,
+                      chatNick: chat.nick,
+                      onTap: () {
+                        client.showSubMenu(chat.isGC, chat.id);
+                      },
+                      avatarColor: avatarColor,
+                      avatarTextColor: avatarTextColor,
+                    ),
+                  )
+                : UserContextMenu(
+                    targetUserChat: chat,
+                    child: InteractiveAvatar(
+                      bgColor: selectedBackgroundColor,
+                      chatNick: chat.nick,
+                      onTap: () {
+                        client.showSubMenu(chat.isGC, chat.id);
+                      },
+                      avatarColor: avatarColor,
+                      avatarTextColor: avatarTextColor,
+                    ),
+                  ),
+          )),
+        ]);
       }
       return Text("Bison Relay / Chat$suffix$profileSuffix",
           style: TextStyle(
@@ -133,6 +139,7 @@ class _FundsNeededPage extends StatelessWidget {
     var backgroundColor = theme.backgroundColor;
     var textColor = const Color(0xFF8E8D98);
     var secondaryTextColor = const Color(0xFFE4E3E6);
+    bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
 
     return Consumer<ThemeNotifier>(
         builder: (context, theme, child) => Container(
@@ -149,8 +156,7 @@ class _FundsNeededPage extends StatelessWidget {
                         fontWeight: FontWeight.w200)),
                 const SizedBox(height: 34),
                 Text('''
-Bison relay requires active LN channels with outbound capacity to pay to send
-messages to the server.
+Bison relay requires active LN channels with outbound capacity to pay to send messages to the server.
 ''',
                     style: TextStyle(
                         color: secondaryTextColor,
@@ -158,7 +164,9 @@ messages to the server.
                         fontWeight: FontWeight.w300)),
                 const SizedBox(height: 34),
                 Center(
-                  child: Row(
+                  child: Flex(
+                      direction:
+                          isScreenSmall ? Axis.vertical : Axis.horizontal,
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         LoadingScreenButton(
@@ -167,7 +175,7 @@ messages to the server.
                                   .pushNamed("/needsFunds"),
                           text: "Add wallet funds",
                         ),
-                        const SizedBox(width: 34),
+                        const SizedBox(height: 20, width: 34),
                         LoadingScreenButton(
                           onPressed: () =>
                               Navigator.of(context, rootNavigator: true)
@@ -240,7 +248,7 @@ class _InviteNeededPageState extends State<_InviteNeededPage> {
     var backgroundColor = theme.backgroundColor;
     var textColor = const Color(0xFF8E8D98);
     var secondaryTextColor = const Color(0xFFE4E3E6);
-
+    bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
     return Consumer<ThemeNotifier>(
         builder: (context, theme, child) => Container(
             padding: const EdgeInsets.all(20),
@@ -256,7 +264,7 @@ class _InviteNeededPageState extends State<_InviteNeededPage> {
                         fontWeight: FontWeight.w200)),
                 const SizedBox(height: 34),
                 Text('''
-Bison Relay does not rely on a central server for user accounts, so to chat with someone else you need to exchange an invitation with them. This is  just a file that should be sent via some other secure transfer method.
+Bison Relay does not rely on a central server for user accounts, so to chat with someone else you need to exchange an invitation with them. This is just a file that should be sent via some other secure transfer method.
 
 After the invitation is accepted, you'll be able to chat with them, and if they know other people, they'll be able to connect you with them.
 ''',
@@ -266,14 +274,16 @@ After the invitation is accepted, you'll be able to chat with them, and if they 
                         fontWeight: FontWeight.w300)),
                 const SizedBox(height: 34),
                 Center(
-                  child: Row(
+                  child: Flex(
+                      direction:
+                          isScreenSmall ? Axis.vertical : Axis.horizontal,
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         LoadingScreenButton(
                           onPressed: () => debouncedLoadInvite(context),
                           text: "Load Invitation",
                         ),
-                        const SizedBox(width: 34),
+                        const SizedBox(height: 20, width: 34),
                         LoadingScreenButton(
                           onPressed: () => generateInvite(context),
                           text: "Create Invitation",

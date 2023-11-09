@@ -10,6 +10,7 @@ import 'package:golib_plugin/golib_plugin.dart';
 import 'package:tuple/tuple.dart';
 import 'package:bruig/theme_manager.dart';
 import 'package:provider/provider.dart';
+import 'package:bruig/components/empty_widget.dart';
 
 class UserProfile extends StatefulWidget {
   final ClientModel client;
@@ -160,6 +161,8 @@ class _UserProfileState extends State<UserProfile> {
           fontWeight: FontWeight.w400,
           fontSize: theme.getSmallFont(context));
 
+      bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
+
       return Container(
           padding: const EdgeInsets.all(20),
           child: Column(
@@ -248,9 +251,11 @@ class _UserProfileState extends State<UserProfile> {
               const Expanded(
                 child: Text(""),
               ),
-              ElevatedButton(
-                  onPressed: () => widget.client.profile = null,
-                  child: const Text("Done"))
+              isScreenSmall
+                  ? const Empty()
+                  : ElevatedButton(
+                      onPressed: () => widget.client.profile = null,
+                      child: const Text("Done"))
             ],
           ));
     });

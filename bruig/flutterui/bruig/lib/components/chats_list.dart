@@ -233,6 +233,9 @@ class _ChatsListState extends State<_ChatsList> {
     var gcList = client.gcChats.toList();
     var chatList = client.userChats.toList();
 
+    var userListScroll = ScrollController();
+    var gcListScroll = ScrollController();
+
     makeActive(ChatModel? c) => {client.active = c};
 
     showSubMenu(bool isGC, String id) => {client.showSubMenu(isGC, id)};
@@ -245,180 +248,218 @@ class _ChatsListState extends State<_ChatsList> {
                     borderRadius: BorderRadius.circular(3),
                     color: backgroundColor),
                 padding: const EdgeInsets.all(16),
-                child: ListView(children: [
-                  Container(
-                    padding: const EdgeInsets.only(
-                        left: 20, right: 5, top: 5, bottom: 5),
-                    decoration: BoxDecoration(
-                      color: dividerColor,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
+                child: Column(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                          flex: expandRooms && gcList.isNotEmpty ? 3 : 0,
+                          child: Container(
+                            padding: const EdgeInsets.only(
+                                left: 20, right: 5, top: 5, bottom: 5),
+                            decoration: BoxDecoration(
+                              color: dividerColor,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Row(children: [
+                                          Text("Room",
+                                              style: TextStyle(
+                                                  color: darkTextColor,
+                                                  fontSize: theme
+                                                      .getMediumFont(context),
+                                                  fontWeight: FontWeight.w400)),
+                                          IconButton(
+                                              onPressed: () => createGC(),
+                                              tooltip:
+                                                  'Create a new group chat',
+                                              icon: Icon(
+                                                  color: darkTextColor,
+                                                  size: 25,
+                                                  weight: 1,
+                                                  Icons.add_outlined)),
+                                        ]),
+                                        gcList.isNotEmpty
+                                            ? IconButton(
+                                                onPressed: () => setState(() {
+                                                      expandRooms =
+                                                          !expandRooms;
+                                                    }),
+                                                icon: Icon(
+                                                    color: darkTextColor,
+                                                    size: 25,
+                                                    expandRooms
+                                                        ? Icons
+                                                            .keyboard_arrow_up_outlined
+                                                        : Icons
+                                                            .keyboard_arrow_down_outlined))
+                                            : const Empty(),
+                                      ]),
+                                  expandRooms && gcList.isNotEmpty
+                                      ? Expanded(
+                                          child: ListView.builder(
+                                              physics: const ScrollPhysics(),
+                                              controller: gcListScroll,
+                                              scrollDirection: Axis.vertical,
+                                              shrinkWrap: true,
+                                              itemCount: gcList.length,
+                                              itemBuilder: (context, index) =>
+                                                  _ChatHeadingW(
+                                                      gcList[index],
+                                                      client,
+                                                      makeActive,
+                                                      showSubMenu)))
+                                      : const Empty()
+                                ]),
+                          )),
+                      const SizedBox(height: 10),
+                      Expanded(
+                          flex: expandUsers && chatList.isNotEmpty ? 5 : 0,
+                          child: Container(
+                              padding: const EdgeInsets.only(
+                                  left: 20, right: 5, top: 5, bottom: 5),
+                              decoration: BoxDecoration(
+                                color: dividerColor,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Row(children: [
+                                            Text("Users",
+                                                style: TextStyle(
+                                                    color: darkTextColor,
+                                                    fontSize: theme
+                                                        .getMediumFont(context),
+                                                    fontWeight:
+                                                        FontWeight.w400)),
+                                            IconButton(
+                                                onPressed: () =>
+                                                    showAddressBook(),
+                                                tooltip: 'Address book',
+                                                icon: Icon(
+                                                    color: darkTextColor,
+                                                    size: 25,
+                                                    Icons.add_outlined)),
+                                          ]),
+                                          chatList.isNotEmpty
+                                              ? IconButton(
+                                                  onPressed: () => setState(() {
+                                                        expandUsers =
+                                                            !expandUsers;
+                                                      }),
+                                                  icon: Icon(
+                                                      color: darkTextColor,
+                                                      size: 25,
+                                                      expandUsers
+                                                          ? Icons
+                                                              .keyboard_arrow_up_outlined
+                                                          : Icons
+                                                              .keyboard_arrow_down_outlined))
+                                              : const Empty(),
+                                        ]),
+                                    expandUsers && chatList.isNotEmpty
+                                        ? Expanded(
+                                            child: ListView.builder(
+                                                physics: const ScrollPhysics(),
+                                                controller: userListScroll,
+                                                scrollDirection: Axis.vertical,
+                                                shrinkWrap: true,
+                                                itemCount: chatList.length,
+                                                itemBuilder: (context, index) =>
+                                                    _ChatHeadingW(
+                                                        chatList[index],
+                                                        client,
+                                                        makeActive,
+                                                        showSubMenu)))
+                                        : const Empty()
+                                  ]))),
+                      !expandUsers && !expandRooms
+                          ? const Expanded(flex: 5, child: Empty())
+                          : const SizedBox(height: 10),
+                      Container(
+                          padding: const EdgeInsets.only(
+                              left: 20, right: 20, top: 5, bottom: 5),
+                          decoration: BoxDecoration(
+                            color: dividerColor,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Row(children: [
-                                  Text("Room",
-                                      style: TextStyle(
-                                          color: darkTextColor,
-                                          fontSize:
-                                              theme.getMediumFont(context),
-                                          fontWeight: FontWeight.w400)),
-                                  IconButton(
-                                      onPressed: () => createGC(),
-                                      tooltip: 'Create a new group chat',
-                                      icon: Icon(
-                                          color: darkTextColor,
-                                          size: 25,
-                                          weight: 1,
-                                          Icons.add_outlined)),
-                                ]),
-                                IconButton(
-                                    onPressed: () => setState(() {
-                                          expandRooms = !expandRooms;
-                                        }),
-                                    icon: Icon(
-                                        color: darkTextColor,
-                                        size: 25,
-                                        expandRooms
-                                            ? Icons.keyboard_arrow_up_outlined
-                                            : Icons
-                                                .keyboard_arrow_down_outlined)),
-                              ]),
-                          expandRooms
-                              ? ListView.builder(
-                                  scrollDirection: Axis.vertical,
-                                  shrinkWrap: true,
-                                  itemCount: gcList.length,
-                                  itemBuilder: (context, index) =>
-                                      _ChatHeadingW(gcList[index], client,
-                                          makeActive, showSubMenu))
-                              : const Empty()
-                        ]),
-                  ),
-                  const SizedBox(height: 10),
-                  Container(
-                      padding: const EdgeInsets.only(
-                          left: 20, right: 5, top: 5, bottom: 5),
-                      decoration: BoxDecoration(
-                        color: dividerColor,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Row(children: [
-                                    Text("Users",
-                                        style: TextStyle(
-                                            color: darkTextColor,
-                                            fontSize:
-                                                theme.getMediumFont(context),
-                                            fontWeight: FontWeight.w400)),
-                                    IconButton(
+                                Material(
+                                    color:
+                                        selectedBackgroundColor.withOpacity(0),
+                                    child: IconButton(
+                                        hoverColor: selectedBackgroundColor,
+                                        splashRadius: 15,
+                                        iconSize: 25,
+                                        tooltip: "Address Book",
                                         onPressed: () => showAddressBook(),
-                                        tooltip: 'Address book',
                                         icon: Icon(
-                                            color: darkTextColor,
                                             size: 25,
-                                            Icons.add_outlined)),
-                                  ]),
-                                  IconButton(
-                                      onPressed: () => setState(() {
-                                            expandUsers = !expandUsers;
-                                          }),
-                                      icon: Icon(
-                                          color: darkTextColor,
-                                          size: 25,
-                                          expandUsers
-                                              ? Icons.keyboard_arrow_up_outlined
-                                              : Icons
-                                                  .keyboard_arrow_down_outlined)),
-                                ]),
-                            expandUsers
-                                ? ListView.builder(
-                                    scrollDirection: Axis.vertical,
-                                    shrinkWrap: true,
-                                    itemCount: chatList.length,
-                                    itemBuilder: (context, index) =>
-                                        _ChatHeadingW(chatList[index], client,
-                                            makeActive, showSubMenu))
-                                : const Empty()
-                          ])),
-                  const SizedBox(height: 10),
-                  Container(
-                      padding: const EdgeInsets.only(
-                          left: 20, right: 20, top: 5, bottom: 5),
-                      decoration: BoxDecoration(
-                        color: dividerColor,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Material(
-                                color: selectedBackgroundColor.withOpacity(0),
-                                child: IconButton(
-                                    hoverColor: selectedBackgroundColor,
-                                    splashRadius: 15,
-                                    iconSize: 25,
-                                    tooltip: "Address Book",
-                                    onPressed: () => showAddressBook(),
-                                    icon: Icon(
-                                        size: 25,
-                                        color: darkTextColor,
-                                        Icons.add))),
-                            Material(
-                                color: selectedBackgroundColor.withOpacity(0),
-                                child: IconButton(
-                                    hoverColor: selectedBackgroundColor,
-                                    splashRadius: 15,
-                                    iconSize: 25,
-                                    tooltip: client.isOnline
-                                        ? "Fetch invite using key"
-                                        : "Cannot fetch invite while client is offline",
-                                    onPressed: client.isOnline
-                                        ? () => fetchInvite(context)
-                                        : null,
-                                    icon: Icon(
-                                        size: 25,
-                                        color: darkTextColor,
-                                        Icons.get_app_sharp))),
-                            Material(
-                                color: selectedBackgroundColor.withOpacity(0),
-                                child: IconButton(
-                                    hoverColor: selectedBackgroundColor,
-                                    splashRadius: 15,
-                                    iconSize: 25,
-                                    tooltip: "List last received message time",
-                                    onPressed: () =>
-                                        gotoContactsLastMsgTimeScreen(context),
-                                    icon: Icon(
-                                        size: 25,
-                                        color: darkTextColor,
-                                        Icons.list_rounded))),
-                            Material(
-                                color: selectedBackgroundColor.withOpacity(0),
-                                child: IconButton(
-                                    hoverColor: selectedBackgroundColor,
-                                    splashRadius: 15,
-                                    iconSize: 25,
-                                    tooltip: client.isOnline
-                                        ? "Generate Invite"
-                                        : "Cannot generate invite while offline",
-                                    onPressed:
-                                        client.isOnline ? genInvite : null,
-                                    icon: Icon(
-                                        size: 25,
-                                        color: darkTextColor,
-                                        Icons.people)))
-                          ]))
-                ]),
+                                            color: darkTextColor,
+                                            Icons.add))),
+                                Material(
+                                    color:
+                                        selectedBackgroundColor.withOpacity(0),
+                                    child: IconButton(
+                                        hoverColor: selectedBackgroundColor,
+                                        splashRadius: 15,
+                                        iconSize: 25,
+                                        tooltip: client.isOnline
+                                            ? "Fetch invite using key"
+                                            : "Cannot fetch invite while client is offline",
+                                        onPressed: client.isOnline
+                                            ? () => fetchInvite(context)
+                                            : null,
+                                        icon: Icon(
+                                            size: 25,
+                                            color: darkTextColor,
+                                            Icons.get_app_sharp))),
+                                Material(
+                                    color:
+                                        selectedBackgroundColor.withOpacity(0),
+                                    child: IconButton(
+                                        hoverColor: selectedBackgroundColor,
+                                        splashRadius: 15,
+                                        iconSize: 25,
+                                        tooltip:
+                                            "List last received message time",
+                                        onPressed: () =>
+                                            gotoContactsLastMsgTimeScreen(
+                                                context),
+                                        icon: Icon(
+                                            size: 25,
+                                            color: darkTextColor,
+                                            Icons.list_rounded))),
+                                Material(
+                                    color:
+                                        selectedBackgroundColor.withOpacity(0),
+                                    child: IconButton(
+                                        hoverColor: selectedBackgroundColor,
+                                        splashRadius: 15,
+                                        iconSize: 25,
+                                        tooltip: client.isOnline
+                                            ? "Generate Invite"
+                                            : "Cannot generate invite while offline",
+                                        onPressed:
+                                            client.isOnline ? genInvite : null,
+                                        icon: Icon(
+                                            size: 25,
+                                            color: darkTextColor,
+                                            Icons.people)))
+                              ]))
+                    ]),
               ));
     }
     return Consumer<ThemeNotifier>(

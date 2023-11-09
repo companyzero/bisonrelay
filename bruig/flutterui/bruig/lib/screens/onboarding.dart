@@ -18,9 +18,12 @@ Map<OnboardStage, String> _stageTitle = {
   OnboardStage.stageFetchingInvite: "Fetching invite from server",
   OnboardStage.stageInviteNoFunds: "Invite does not have funds",
   OnboardStage.stageRedeemingFunds: "Redeeming invite funds on-chain",
-  OnboardStage.stageWaitingFundsConfirm: "Waiting on-chain funds to confirm",
-  OnboardStage.stageOpeningOutbound: "Opening outbound LN channel",
-  OnboardStage.stageWaitingOutConfirm: "Waiting outbound LN channel to confirm",
+  OnboardStage.stageWaitingFundsConfirm:
+      "Waiting for on-chain funds to confirm",
+  OnboardStage.stageOpeningOutbound:
+      "Waiting for outbound LN channel to confirm", // Remove step heading
+  OnboardStage.stageWaitingOutConfirm:
+      "Waiting for outbound LN channel to confirm",
   OnboardStage.stageOpeningInbound: "Opening inbound LN channel",
   OnboardStage.stageInitialKX: "Performing initial KX with inviter",
   OnboardStage.stageOnboardDone: "Onboarding completed",
