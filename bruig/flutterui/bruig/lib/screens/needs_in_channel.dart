@@ -357,7 +357,8 @@ After the channel is opened, it may take up to 6 confirmations for it to be broa
                                     Text("Amount",
                                         style: TextStyle(
                                             color: darkTextColor,
-                                            fontSize: 13,
+                                            fontSize:
+                                                theme.getSmallFont(context),
                                             fontWeight: FontWeight.w300)),
                                     SizedBox(
                                       width: 150,
@@ -374,7 +375,8 @@ After the channel is opened, it may take up to 6 confirmations for it to be broa
                                       Text("LP Server Address",
                                           style: TextStyle(
                                               color: darkTextColor,
-                                              fontSize: 13,
+                                              fontSize:
+                                                  theme.getSmallFont(context),
                                               fontWeight: FontWeight.w300)),
                                       TextField(
                                         controller: serverCtrl,
@@ -386,7 +388,8 @@ After the channel is opened, it may take up to 6 confirmations for it to be broa
                                       Text("LP Server Cert",
                                           style: TextStyle(
                                               color: darkTextColor,
-                                              fontSize: 13,
+                                              fontSize:
+                                                  theme.getSmallFont(context),
                                               fontWeight: FontWeight.w300)),
                                       TextField(
                                         controller: certCtrl,
