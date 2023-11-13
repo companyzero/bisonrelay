@@ -888,7 +888,16 @@ func (c *Client) ReadUserHistoryMessages(uid UserID, gcName string, page, pageNu
 		}
 		chatHistory = make([]ChatHistoryEntry, 0, len(messages))
 		for _, entry := range messages {
-			filter, _ := c.shouldFilter(uid, &gcID, nil, nil, entry.Message)
+			var filter bool
+			if gcName == "" {
+				filter, _ = c.shouldFilter(uid, nil, nil, nil, entry.Message)
+			} else {
+				userID, err := c.UIDByNick(entry.From)
+				if err != nil {
+					continue
+				}
+				filter, _ = c.shouldFilter(userID, &gcID, nil, nil, entry.Message)
+			}
 			if !filter {
 				chatHistory = append(chatHistory, ChatHistoryEntry{
 					Message:   entry.Message,
