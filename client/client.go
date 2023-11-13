@@ -870,8 +870,13 @@ func (c *Client) ReadUserHistoryMessages(uid UserID, gcName string, page, pageNu
 	var chatHistory []ChatHistoryEntry
 	err = c.dbView(func(tx clientdb.ReadTx) error {
 		var messages []clientdb.PMLogEntry
+		var gcID zkidentity.ShortID
 		if gcName != "" {
 			messages, err = c.db.ReadLogGCMsg(tx, gcName, uid, page, pageNum)
+			if err != nil {
+				return err
+			}
+			gcID, err = c.GCIDByName(gcName)
 			if err != nil {
 				return err
 			}
@@ -883,11 +888,14 @@ func (c *Client) ReadUserHistoryMessages(uid UserID, gcName string, page, pageNu
 		}
 		chatHistory = make([]ChatHistoryEntry, 0, len(messages))
 		for _, entry := range messages {
-			chatHistory = append(chatHistory, ChatHistoryEntry{
-				Message:   entry.Message,
-				From:      entry.From,
-				Internal:  entry.Internal,
-				Timestamp: entry.Timestamp})
+			filter, _ := c.shouldFilter(uid, &gcID, nil, nil, entry.Message)
+			if !filter {
+				chatHistory = append(chatHistory, ChatHistoryEntry{
+					Message:   entry.Message,
+					From:      entry.From,
+					Internal:  entry.Internal,
+					Timestamp: entry.Timestamp})
+			}
 		}
 		now = time.Now()
 		return nil
