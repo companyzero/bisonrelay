@@ -259,7 +259,7 @@ class _ReceivedSentPMState extends State<ReceivedSentPM> {
                 // Third (timestamp) column
                 Column(children: [
                   SizedBox(
-                      width: 40,
+                      width: 50,
                       child: SelectionContainer.disabled(
                         child: Padding(
                           padding: const EdgeInsets.all(4.0),
@@ -278,7 +278,7 @@ class _ReceivedSentPMState extends State<ReceivedSentPM> {
                       )),
                 ]),
               ]),
-              widget.evnt.sameUser ? const SizedBox(height: 10) : const Empty()
+              widget.evnt.sameUser ? const SizedBox(height: 20) : const Empty()
             ]));
   }
 }
@@ -551,17 +551,13 @@ class _ReceivedSentPMMobileState extends State<ReceivedSentMobilePM> {
 
   @override
   Widget build(BuildContext context) {
-    var prefix = "";
     var suffix = "";
     switch (widget.evnt.sentState) {
       case CMS_sending:
-        prefix = "…";
         break;
       case CMS_sent:
-        prefix = "✓";
         break;
       case CMS_errored:
-        prefix = "✗";
         suffix = "\n\n${widget.evnt.sendError}";
         break;
       default:
@@ -615,7 +611,7 @@ class _ReceivedSentPMMobileState extends State<ReceivedSentMobilePM> {
               Column(children: [
                 widget.evnt.sameUser
                     ? const Empty()
-                    : const SizedBox(height: 10),
+                    : const SizedBox(height: 20),
                 sent
                     ? Row(
                         crossAxisAlignment: CrossAxisAlignment.end,
