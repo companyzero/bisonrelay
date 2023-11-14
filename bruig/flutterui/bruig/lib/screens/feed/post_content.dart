@@ -258,13 +258,14 @@ class _CommentWState extends State<_CommentW> {
                     padding:
                         const EdgeInsets.only(top: 10, bottom: 10, left: 10),
                     child: Column(children: [
-                      Row(
+                      SelectionArea(
+                          child: Row(
                         children: [
                           Expanded(
                             child: MarkdownArea(widget.comment.comment, false),
                           ),
                         ],
-                      ),
+                      )),
                       replying && !sendingReply
                           ? Column(
                               children: [
@@ -896,13 +897,14 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
                                                   fontStyle: FontStyle.italic)))
                                     ]),
                               const SizedBox(height: 10),
-                              Container(
-                                  padding: const EdgeInsets.all(15),
-                                  child: Provider<DownloadSource>(
-                                      create: (context) => DownloadSource(
-                                          widget.args.post.summ.authorID),
-                                      child:
-                                          MarkdownArea(markdownData, false))),
+                              SelectionArea(
+                                  child: Container(
+                                      padding: const EdgeInsets.all(15),
+                                      child: Provider<DownloadSource>(
+                                          create: (context) => DownloadSource(
+                                              widget.args.post.summ.authorID),
+                                          child: MarkdownArea(
+                                              markdownData, false)))),
                             ],
                           )),
                 ),

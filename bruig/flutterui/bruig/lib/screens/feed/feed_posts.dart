@@ -117,7 +117,8 @@ class _FeedPostWState extends State<FeedPostW> {
                   Container(
                       padding:
                           const EdgeInsets.only(left: 10, right: 10, top: 5),
-                      child: Row(
+                      child: SelectionContainer.disabled(
+                          child: Row(
                         children: [
                           Container(
                             width: 35,
@@ -155,7 +156,7 @@ class _FeedPostWState extends State<FeedPostW> {
                                           color: hightLightTextColor,
                                           fontWeight: FontWeight.w300))))
                         ],
-                      )),
+                      ))),
                   Divider(
                     color: borderDividerColor, //color of divider
                     height: 20, //height spacing of divider
@@ -178,31 +179,32 @@ class _FeedPostWState extends State<FeedPostW> {
                     height: 20, //height spacing of divider
                     thickness: 2, //thickness of divier line
                   ),
-                  Container(
-                      padding: const EdgeInsets.only(
-                          left: 10, right: 10, bottom: 10),
-                      child: Row(children: [
-                        hasUnreadComments
-                            ? Row(children: [
-                                const Icon(Icons.new_releases_outlined,
-                                    color: Colors.amber),
-                                const SizedBox(width: 10),
-                                Text("New Comments",
-                                    style: TextStyle(
-                                      fontStyle: FontStyle.italic,
-                                      fontSize: theme.getSmallFont(context),
-                                      color: Colors.amber,
-                                    ))
-                              ])
-                            : const Empty(),
-                        Expanded(
-                            child: Align(
-                                alignment: Alignment.centerRight,
-                                child: FeedReadMoreButton(
-                                  onPressed: () => showContent(context),
-                                  text: "Read More",
-                                )))
-                      ])),
+                  SelectionContainer.disabled(
+                      child: Container(
+                          padding: const EdgeInsets.only(
+                              left: 10, right: 10, bottom: 10),
+                          child: Row(children: [
+                            hasUnreadComments
+                                ? Row(children: [
+                                    const Icon(Icons.new_releases_outlined,
+                                        color: Colors.amber),
+                                    const SizedBox(width: 10),
+                                    Text("New Comments",
+                                        style: TextStyle(
+                                          fontStyle: FontStyle.italic,
+                                          fontSize: theme.getSmallFont(context),
+                                          color: Colors.amber,
+                                        ))
+                                  ])
+                                : const Empty(),
+                            Expanded(
+                                child: Align(
+                                    alignment: Alignment.centerRight,
+                                    child: FeedReadMoreButton(
+                                      onPressed: () => showContent(context),
+                                      text: "Read More",
+                                    )))
+                          ]))),
                 ],
               ),
             )
@@ -216,7 +218,8 @@ class _FeedPostWState extends State<FeedPostW> {
                       const BorderRadius.all(Radius.elliptical(5, 5))),
               child: Column(
                 children: [
-                  Row(
+                  SelectionContainer.disabled(
+                      child: Row(
                     children: [
                       Container(
                         width: 28,
@@ -253,7 +256,7 @@ class _FeedPostWState extends State<FeedPostW> {
                                       color: hightLightTextColor,
                                       fontWeight: FontWeight.w300))))
                     ],
-                  ),
+                  )),
                   const SizedBox(
                     height: 10,
                   ),
@@ -279,7 +282,8 @@ class _FeedPostWState extends State<FeedPostW> {
                     )),
                   ]),
                   const SizedBox(height: 5),
-                  Row(children: [
+                  SelectionContainer.disabled(
+                      child: Row(children: [
                     hasUnreadComments
                         ? Row(children: [
                             const Icon(Icons.new_releases_outlined,
@@ -311,7 +315,7 @@ class _FeedPostWState extends State<FeedPostW> {
                               onPressed: () => showContent(context),
                               child: const Text("Read More"),
                             )))
-                  ]),
+                  ])),
                 ],
               ),
             );
@@ -359,7 +363,8 @@ class _FeedPostsState extends State<FeedPosts> {
         ? widget.feed.posts
             .where((post) => (post.summ.authorID == widget.client.publicID))
         : widget.feed.posts;
-    return Container(
+    return SelectionArea(
+        child: Container(
       margin: const EdgeInsets.all(1),
       decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(3), color: backgroundColor),
@@ -375,6 +380,6 @@ class _FeedPostsState extends State<FeedPosts> {
             return FeedPostW(widget.feed, post, author, from, widget.client,
                 widget.tabChange);
           }),
-    );
+    ));
   }
 }
