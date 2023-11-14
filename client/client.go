@@ -850,11 +850,11 @@ type ChatHistoryEntry struct {
 	Internal  bool   `json:"internal"`
 }
 
-// ReadUserHistoryMessages determines which log parsing to use based on whether
+// ReadHistoryMessages determines which log parsing to use based on whether
 // a group chat name was provided in the arguments.  This function will return
 // an array of ChatHistoryEntry's that contain information from each line of
 // saved logs.
-func (c *Client) ReadUserHistoryMessages(uid UserID, gcName string, page, pageNum int) ([]ChatHistoryEntry, time.Time, error) {
+func (c *Client) ReadHistoryMessages(uid UserID, gcName string, page, pageNum int) ([]ChatHistoryEntry, time.Time, error) {
 	var now time.Time
 	if c.cfg.NoLoadChatHistory {
 		return nil, now, nil
@@ -870,13 +870,8 @@ func (c *Client) ReadUserHistoryMessages(uid UserID, gcName string, page, pageNu
 	var chatHistory []ChatHistoryEntry
 	err = c.dbView(func(tx clientdb.ReadTx) error {
 		var messages []clientdb.PMLogEntry
-		var gcID zkidentity.ShortID
 		if gcName != "" {
 			messages, err = c.db.ReadLogGCMsg(tx, gcName, uid, page, pageNum)
-			if err != nil {
-				return err
-			}
-			gcID, err = c.GCIDByName(gcName)
 			if err != nil {
 				return err
 			}
@@ -896,7 +891,7 @@ func (c *Client) ReadUserHistoryMessages(uid UserID, gcName string, page, pageNu
 				if err != nil {
 					continue
 				}
-				filter, _ = c.shouldFilter(userID, &gcID, nil, nil, entry.Message)
+				filter, _ = c.shouldFilter(userID, &uid, nil, nil, entry.Message)
 			}
 			if !filter {
 				chatHistory = append(chatHistory, ChatHistoryEntry{
