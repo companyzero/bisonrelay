@@ -850,11 +850,11 @@ type ChatHistoryEntry struct {
 	Internal  bool   `json:"internal"`
 }
 
-// ReadUserHistoryMessages determines which log parsing to use based on whether
+// ReadHistoryMessages determines which log parsing to use based on whether
 // a group chat name was provided in the arguments.  This function will return
 // an array of ChatHistoryEntry's that contain information from each line of
 // saved logs.
-func (c *Client) ReadUserHistoryMessages(uid UserID, gcName string, page, pageNum int) ([]ChatHistoryEntry, time.Time, error) {
+func (c *Client) ReadHistoryMessages(uid UserID, gcName string, page, pageNum int) ([]ChatHistoryEntry, time.Time, error) {
 	var now time.Time
 	if c.cfg.NoLoadChatHistory {
 		return nil, now, nil
@@ -883,11 +883,23 @@ func (c *Client) ReadUserHistoryMessages(uid UserID, gcName string, page, pageNu
 		}
 		chatHistory = make([]ChatHistoryEntry, 0, len(messages))
 		for _, entry := range messages {
-			chatHistory = append(chatHistory, ChatHistoryEntry{
-				Message:   entry.Message,
-				From:      entry.From,
-				Internal:  entry.Internal,
-				Timestamp: entry.Timestamp})
+			var filter bool
+			if gcName == "" {
+				filter, _ = c.shouldFilter(uid, nil, nil, nil, entry.Message)
+			} else {
+				userID, err := c.UIDByNick(entry.From)
+				if err != nil {
+					continue
+				}
+				filter, _ = c.shouldFilter(userID, &uid, nil, nil, entry.Message)
+			}
+			if !filter {
+				chatHistory = append(chatHistory, ChatHistoryEntry{
+					Message:   entry.Message,
+					From:      entry.From,
+					Internal:  entry.Internal,
+					Timestamp: entry.Timestamp})
+			}
 		}
 		now = time.Now()
 		return nil
