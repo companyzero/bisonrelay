@@ -888,6 +888,7 @@ class _PostSubscriptionEventWState extends State<PostSubscriptionEventW> {
       setState(() {
         var chat = client.getExistingChat(event.id);
         chat!.isSubscribed = true;
+        chat.isSubscribing = false;
         client.updateUserMenu(event.id, buildUserChatMenu(chat));
       });
       msg = "Subscribed to user's posts!";

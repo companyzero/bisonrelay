@@ -24,14 +24,14 @@ class FeedScreenTitle extends StatelessWidget {
     return Consumer2<MainMenuModel, ThemeNotifier>(
         builder: (context, menu, theme, child) {
       if (menu.activePageTab <= 0) {
-        return Text("Bison Relay / News Feed",
+        return Text("Bison Relay / Feed",
             style: TextStyle(
                 fontSize: theme.getLargeFont(context),
                 color: Theme.of(context).focusColor));
       }
       var idx = LnScreenSub.indexWhere((e) => e.pageTab == menu.activePageTab);
 
-      return Text("Bison Relay / News Feed / ${FeedScreenSub[idx].label}",
+      return Text("Bison Relay / Feed / ${FeedScreenSub[idx].label}",
           style: TextStyle(
               fontSize: theme.getLargeFont(context),
               color: Theme.of(context).focusColor));

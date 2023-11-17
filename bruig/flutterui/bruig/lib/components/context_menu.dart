@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-typedef PopMenuList = List<PopupMenuItem>;
+typedef PopMenuList = List<PopupMenuItem?>;
 
 class ContextMenu extends StatefulWidget {
   const ContextMenu(
@@ -25,7 +25,8 @@ class _ContextMenuState extends State<ContextMenu> {
     final RenderObject overlay =
         Overlay.of(context).context.findRenderObject() as RenderBox;
     Offset offs = const Offset(10, 30);
-
+    final List<PopupMenuItem> items =
+        widget.items.whereType<PopupMenuItem>().toList();
     final result = await showMenu(
       context: context,
       position: RelativeRect.fromRect(
@@ -37,7 +38,7 @@ class _ContextMenuState extends State<ContextMenu> {
         ),
         Offset.zero & overlay.paintBounds.size,
       ),
-      items: widget.items,
+      items: items,
     );
 
     widget.handleItemTap(result);

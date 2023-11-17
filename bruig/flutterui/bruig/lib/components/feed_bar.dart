@@ -61,7 +61,7 @@ class _FeedBarState extends State<FeedBar> {
               child: ListView(
                 children: [
                   ListTile(
-                    title: Text("News Feed",
+                    title: Text("Feed",
                         style: TextStyle(
                             color: selectedIndex == 0
                                 ? selectedTextColor

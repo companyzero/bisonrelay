@@ -301,7 +301,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
                         },
                         leading: (menuItem.label == "Chats" &&
                                     client.hasUnreadChats) ||
-                                (menuItem.label == "News Feed" &&
+                                (menuItem.label == "Feed" &&
                                     widget.feed.hasUnreadPostsComments)
                             ? Stack(children: [
                                 Container(
@@ -331,7 +331,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
                               menuItem.label,
                           leading: (menuItem.label == "Chats" &&
                                       client.hasUnreadChats) ||
-                                  (menuItem.label == "News Feed" &&
+                                  (menuItem.label == "Feed" &&
                                       widget.feed.hasUnreadPostsComments)
                               ? Stack(children: [
                                   Container(

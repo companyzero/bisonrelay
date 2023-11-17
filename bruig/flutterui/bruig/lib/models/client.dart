@@ -334,10 +334,17 @@ class ChatModel extends ChangeNotifier {
   }
 
   String workingMsg = "";
+  bool _isSubscribing = false;
+  bool get isSubscribing => _isSubscribing;
+  set isSubscribing(bool b) {
+    _isSubscribing = b;
+    notifyListeners();
+  }
 
   void subscribeToPosts() {
     var event = SynthChatEvent("Subscribing to user's posts");
     event.state = SCE_sending;
+    isSubscribing = true;
     append(ChatEventModel(event, null), false);
     (() async {
       try {
@@ -345,6 +352,7 @@ class ChatModel extends ChangeNotifier {
         event.state = SCE_sent;
       } catch (error) {
         event.error = Exception(error);
+        isSubscribing = false;
       }
     })();
   }
@@ -585,20 +593,20 @@ class ClientModel extends ChangeNotifier {
   UnmodifiableMapView<String, List<ChatMenuItem>> get subGCMenus =>
       UnmodifiableMapView(_subGCMenus);
 
-  final Map<String, List<ChatMenuItem>> _subUserMenus = {};
-  UnmodifiableMapView<String, List<ChatMenuItem>> get subUserMenus =>
+  final Map<String, List<ChatMenuItem?>> _subUserMenus = {};
+  UnmodifiableMapView<String, List<ChatMenuItem?>> get subUserMenus =>
       UnmodifiableMapView(_subUserMenus);
 
-  List<ChatMenuItem> _activeSubMenu = [];
-  UnmodifiableListView<ChatMenuItem> get activeSubMenu =>
+  List<ChatMenuItem?> _activeSubMenu = [];
+  UnmodifiableListView<ChatMenuItem?> get activeSubMenu =>
       UnmodifiableListView(_activeSubMenu);
 
-  void updateUserMenu(String id, List<ChatMenuItem> menu) {
+  void updateUserMenu(String id, List<ChatMenuItem?> menu) {
     _subUserMenus[id] = menu;
-    //notifyListeners();
+    notifyListeners();
   }
 
-  void set activeSubMenu(List<ChatMenuItem> sm) {
+  void set activeSubMenu(List<ChatMenuItem?> sm) {
     _activeSubMenu = sm;
     notifyListeners();
   }
