@@ -230,7 +230,7 @@ func (s *Store) Fulfill(ctx context.Context, uid clientintf.UserID,
 	case pathEquals(request.Path, "addToCart"):
 		return s.handleAddToCart(ctx, uid, request)
 	case len(request.Path) == 1 && request.Path[0] == "clearCart":
-		return s.handleClearCart(ctx, uid)
+		return s.handleClearCart(ctx, uid, request)
 	case len(request.Path) == 1 && request.Path[0] == "cart":
 		return s.handleCart(ctx, uid, request)
 	case len(request.Path) == 1 && request.Path[0] == "placeOrder":

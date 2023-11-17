@@ -22,6 +22,7 @@ func (sr *StaticResource) Fulfill(ctx context.Context, uid clientintf.UserID,
 	req *rpc.RMFetchResource) (*rpc.RMFetchResourceReply, error) {
 
 	return &rpc.RMFetchResourceReply{
+		Tag:    req.Tag,
 		Status: rpc.ResourceStatusOk,
 		Data:   sr.Data,
 		Meta:   sr.Meta,
@@ -60,6 +61,7 @@ func (fr *FilesystemResource) Fulfill(ctx context.Context, uid clientintf.UserID
 	data, err := os.ReadFile(filename)
 	if os.IsNotExist(err) {
 		return &rpc.RMFetchResourceReply{
+			Tag:    req.Tag,
 			Status: rpc.ResourceStatusNotFound,
 		}, nil
 	} else if err != nil {
@@ -72,6 +74,7 @@ func (fr *FilesystemResource) Fulfill(ctx context.Context, uid clientintf.UserID
 	}
 
 	return &rpc.RMFetchResourceReply{
+		Tag:    req.Tag,
 		Data:   data,
 		Status: rpc.ResourceStatusOk,
 	}, nil

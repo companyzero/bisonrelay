@@ -24,6 +24,7 @@ func (s *Store) handleNotFound(ctx context.Context, uid clientintf.UserID,
 	request *rpc.RMFetchResource) (*rpc.RMFetchResourceReply, error) {
 
 	return &rpc.RMFetchResourceReply{
+		Tag:    request.Tag,
 		Status: rpc.ResourceStatusNotFound,
 	}, nil
 }
@@ -44,6 +45,7 @@ func (s *Store) handleIndex(ctx context.Context, uid clientintf.UserID,
 	}
 
 	return &rpc.RMFetchResourceReply{
+		Tag:    request.Tag,
 		Data:   w.Bytes(),
 		Status: rpc.ResourceStatusOk,
 	}, nil
@@ -67,6 +69,7 @@ func (s *Store) handleProduct(ctx context.Context, uid clientintf.UserID,
 	}
 
 	return &rpc.RMFetchResourceReply{
+		Tag:    request.Tag,
 		Data:   w.Bytes(),
 		Status: rpc.ResourceStatusOk,
 	}, nil
@@ -77,6 +80,7 @@ func (s *Store) handleAddToCart(ctx context.Context, uid clientintf.UserID,
 
 	if request.Data == nil {
 		return &rpc.RMFetchResourceReply{
+			Tag:    request.Tag,
 			Status: rpc.ResourceStatusBadRequest,
 			Data:   []byte("request data is empty"),
 		}, nil
@@ -89,6 +93,7 @@ func (s *Store) handleAddToCart(ctx context.Context, uid clientintf.UserID,
 
 	if err := json.Unmarshal(request.Data, &formData); err != nil {
 		return &rpc.RMFetchResourceReply{
+			Tag:    request.Tag,
 			Status: rpc.ResourceStatusBadRequest,
 			Data:   []byte("request data not valid json"),
 		}, nil
@@ -143,12 +148,13 @@ func (s *Store) handleAddToCart(ctx context.Context, uid clientintf.UserID,
 	}
 
 	return &rpc.RMFetchResourceReply{
+		Tag:    request.Tag,
 		Data:   w.Bytes(),
 		Status: rpc.ResourceStatusOk,
 	}, nil
 }
 
-func (s *Store) handleClearCart(ctx context.Context, uid clientintf.UserID) (*rpc.RMFetchResourceReply, error) {
+func (s *Store) handleClearCart(ctx context.Context, uid clientintf.UserID, request *rpc.RMFetchResource) (*rpc.RMFetchResourceReply, error) {
 	fname := filepath.Join(s.root, cartsDir, uid.String())
 
 	err := os.Remove(fname)
@@ -164,6 +170,7 @@ func (s *Store) handleClearCart(ctx context.Context, uid clientintf.UserID) (*rp
 	}
 
 	return &rpc.RMFetchResourceReply{
+		Tag:    request.Tag,
 		Data:   w.Bytes(),
 		Status: rpc.ResourceStatusOk,
 	}, nil
@@ -190,6 +197,7 @@ func (s *Store) handleCart(ctx context.Context, uid clientintf.UserID,
 	}
 
 	return &rpc.RMFetchResourceReply{
+		Tag:    request.Tag,
 		Data:   w.Bytes(),
 		Status: rpc.ResourceStatusOk,
 	}, nil
@@ -211,6 +219,7 @@ func (s *Store) handlePlaceOrder(ctx context.Context, uid clientintf.UserID,
 
 	if len(cart.Items) == 0 {
 		return &rpc.RMFetchResourceReply{
+			Tag:    request.Tag,
 			Data:   []byte("No items in order.\n\n[Back to Index](/index.md)"),
 			Status: rpc.ResourceStatusOk,
 		}, nil
@@ -222,6 +231,7 @@ func (s *Store) handlePlaceOrder(ctx context.Context, uid clientintf.UserID,
 		prod, ok := s.products[item.Product.SKU]
 		if !ok {
 			return &rpc.RMFetchResourceReply{
+				Tag:    request.Tag,
 				Status: rpc.ResourceStatusBadRequest,
 				Data:   []byte(fmt.Sprintf("SKU %q does not exist", item.Product.SKU)),
 			}, nil
@@ -233,6 +243,7 @@ func (s *Store) handlePlaceOrder(ctx context.Context, uid clientintf.UserID,
 			var formData ShippingAddress
 			if err := json.Unmarshal(request.Data, &formData); err != nil {
 				return &rpc.RMFetchResourceReply{
+					Tag:    request.Tag,
 					Status: rpc.ResourceStatusBadRequest,
 					Data:   []byte("request data not valid json"),
 				}, nil
@@ -242,6 +253,7 @@ func (s *Store) handlePlaceOrder(ctx context.Context, uid clientintf.UserID,
 				formData.City == "" || formData.State == "" ||
 				formData.PostalCode == "" {
 				return &rpc.RMFetchResourceReply{
+					Tag:    request.Tag,
 					Status: rpc.ResourceStatusBadRequest,
 					Data:   []byte("incomplete shipping address"),
 				}, nil
@@ -423,6 +435,7 @@ func (s *Store) handlePlaceOrder(ctx context.Context, uid clientintf.UserID,
 		return nil, fmt.Errorf("unable to execute product template: %v", err)
 	}
 	return &rpc.RMFetchResourceReply{
+		Tag:    request.Tag,
 		Data:   w.Bytes(),
 		Status: rpc.ResourceStatusOk,
 	}, nil
@@ -464,6 +477,7 @@ func (s *Store) handleOrders(ctx context.Context, uid clientintf.UserID,
 	}
 
 	return &rpc.RMFetchResourceReply{
+		Tag:    request.Tag,
 		Data:   w.Bytes(),
 		Status: rpc.ResourceStatusOk,
 	}, nil
@@ -478,6 +492,7 @@ func (s *Store) handleOrderStatus(ctx context.Context, uid clientintf.UserID,
 	id, err := strconv.ParseUint(request.Path[1], 10, 64)
 	if err != nil {
 		return &rpc.RMFetchResourceReply{
+			Tag:    request.Tag,
 			Data:   []byte("invalid order id"),
 			Status: rpc.ResourceStatusBadRequest,
 		}, nil
@@ -490,6 +505,7 @@ func (s *Store) handleOrderStatus(ctx context.Context, uid clientintf.UserID,
 	if err != nil {
 		if errors.Is(err, jsonfile.ErrNotFound) {
 			return &rpc.RMFetchResourceReply{
+				Tag:    request.Tag,
 				Data:   []byte("order not found"),
 				Status: rpc.ResourceStatusBadRequest,
 			}, nil
@@ -509,6 +525,7 @@ func (s *Store) handleOrderStatus(ctx context.Context, uid clientintf.UserID,
 	}
 
 	return &rpc.RMFetchResourceReply{
+		Tag:    request.Tag,
 		Data:   w.Bytes(),
 		Status: rpc.ResourceStatusOk,
 	}, nil
@@ -530,6 +547,7 @@ func (s *Store) handleOrderAddComment(ctx context.Context, uid clientintf.UserID
 	id, err := strconv.ParseUint(request.Path[1], 10, 64)
 	if err != nil {
 		return &rpc.RMFetchResourceReply{
+			Tag:    request.Tag,
 			Data:   []byte("invalid order id"),
 			Status: rpc.ResourceStatusBadRequest,
 		}, nil
@@ -542,6 +560,7 @@ func (s *Store) handleOrderAddComment(ctx context.Context, uid clientintf.UserID
 	if err != nil {
 		if errors.Is(err, jsonfile.ErrNotFound) {
 			return &rpc.RMFetchResourceReply{
+				Tag:    request.Tag,
 				Data:   []byte("order not found"),
 				Status: rpc.ResourceStatusBadRequest,
 			}, nil
@@ -567,6 +586,7 @@ func (s *Store) handleOrderAddComment(ctx context.Context, uid clientintf.UserID
 	w.WriteString("# Comment added\n\n")
 	w.WriteString(fmt.Sprintf("[Back to Order](/order/%d)\n\n", id))
 	return &rpc.RMFetchResourceReply{
+		Tag:    request.Tag,
 		Data:   w.Bytes(),
 		Status: rpc.ResourceStatusOk,
 	}, nil
