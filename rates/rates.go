@@ -62,16 +62,16 @@ func (r *Rates) Run(ctx context.Context) {
 			cancel()
 			r.cfg.Log.Debugf("Unable to fetch rate from dcrdata: %v", err)
 
-			// Try from bittrex.
+			// Try from mexc.
 			rctx, cancel = context.WithTimeout(ctx, requestTimeout)
-			if err = r.bittrex(rctx); err == nil {
+			if err = r.mexc(rctx); err == nil {
 				cancel()
 				failedTries = 0
 				t.Reset(longTimeout)
 				continue
 			}
 			cancel()
-			r.cfg.Log.Debugf("Unable to fetch rate from bittrex: %v", err)
+			r.cfg.Log.Debugf("Unable to fetch rate from mexc: %v", err)
 
 			// Only log these at a higher warning level once after
 			// the rate has been successfully fetched. This prevents
@@ -79,7 +79,7 @@ func (r *Rates) Run(ctx context.Context) {
 			failedTries++
 			if failedTries == triesBeforeErr {
 				r.cfg.Log.Warnf("Unable to fetch rate from dcrdata: %v", err)
-				r.cfg.Log.Warnf("Unable to fetch rate from bittrex: %v", err)
+				r.cfg.Log.Warnf("Unable to fetch rate from mexc: %v", err)
 				r.cfg.Log.Errorf("Unable to fetch recent exchange rate. Will keep retrying.")
 			}
 			t.Reset(shortTimeout)
@@ -133,38 +133,38 @@ func (r *Rates) dcrData(ctx context.Context) error {
 	return nil
 }
 
-func (r *Rates) bittrex(ctx context.Context) error {
-	bittrexExchange := struct {
-		LastTradeRate string `json:"lastTradeRate"`
+func (r *Rates) mexc(ctx context.Context) error {
+	mexcExchange := struct {
+		Price string `json:"price"`
 	}{}
 
-	const dcrAPI = "https://api.bittrex.com/v3/markets/DCR-USD/ticker"
+	const dcrAPI = "https://api.mexc.com//api/v3/avgPrice?symbol=DCRUSDT"
 	b, err := r.getRaw(ctx, dcrAPI)
 	if err != nil {
 		return err
 	}
-	if err = json.Unmarshal(b, &bittrexExchange); err != nil {
+	if err = json.Unmarshal(b, &mexcExchange); err != nil {
 		return fmt.Errorf("failed to decode exchange rate: %w", err)
 	}
-	dcrPrice, err := strconv.ParseFloat(bittrexExchange.LastTradeRate, 64)
+	dcrPrice, err := strconv.ParseFloat(mexcExchange.Price, 64)
 	if err != nil {
 		return fmt.Errorf("failed to parse exchange rate: %w", err)
 	}
 
-	const btcAPI = "https://api.bittrex.com/v3/markets/BTC-USDT/ticker"
+	const btcAPI = "https://api.mexc.com//api/v3/avgPrice?symbol=BTCUSDT"
 	b, err = r.getRaw(ctx, btcAPI)
 	if err != nil {
 		return err
 	}
-	if err = json.Unmarshal(b, &bittrexExchange); err != nil {
+	if err = json.Unmarshal(b, &mexcExchange); err != nil {
 		return fmt.Errorf("failed to decode exchange rate: %v", err)
 	}
-	btcPrice, err := strconv.ParseFloat(bittrexExchange.LastTradeRate, 64)
+	btcPrice, err := strconv.ParseFloat(mexcExchange.Price, 64)
 	if err != nil {
 		return fmt.Errorf("failed to parse exchange rate: %w", err)
 	}
 
-	r.cfg.Log.Infof("Current bittrex exchange rate: DCR:%0.2f BTC:%0.2f",
+	r.cfg.Log.Infof("Current mexc exchange rate: DCR:%0.2f BTC:%0.2f",
 		dcrPrice, btcPrice)
 
 	r.mtx.Lock()
