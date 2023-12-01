@@ -1790,7 +1790,7 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		}
 		var interval time.Duration
 		if age > 0 {
-			interval = time.Duration(age) * 24 * time.Hour
+			interval = time.Duration(age) * 1 * time.Second
 		} else {
 			// Use server expiration days if none provided
 			cc.log.Debugf("Resetting all KX older than server"+

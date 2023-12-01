@@ -44,6 +44,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
     setState(() => loading = true);
     try {
       await Golib.resetAllOldKX(0);
+      showSuccessSnackbar(
+          context, 'Requesting KX to all old KX no communicated in 30 days...');
+    } catch (exception) {
+      showErrorSnackbar(context, 'Unable to reset all old KX: $exception');
+    } finally {
+      setState(() => loading = false);
+    }
+  }
+
+  void resetAllOldKX1s(BuildContext context) async {
+    if (loading) return;
+    setState(() => loading = true);
+    try {
+      await Golib.resetAllOldKX(1);
       showSuccessSnackbar(context, 'Requesting KX to all old KX...');
     } catch (exception) {
       showErrorSnackbar(context, 'Unable to reset all old KX: $exception');
@@ -102,7 +116,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ElevatedButton(
             onPressed: () => loading ? null : resetAllOldKX(context),
             child: const Text(
-              "Reset all Old KX",
+              "Reset all Older than 30d KX",
+            ),
+          ),
+          const SizedBox(height: 20),
+          ElevatedButton(
+            onPressed: () => loading ? null : resetAllOldKX1s(context),
+            child: const Text(
+              "Reset ALL KX",
             ),
           ),
           const SizedBox(height: 50),
