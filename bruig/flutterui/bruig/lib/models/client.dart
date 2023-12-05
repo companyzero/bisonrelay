@@ -963,6 +963,19 @@ class ClientModel extends ChangeNotifier {
           continue;
         }
       }
+      if (evnt is PostSubscriptionResult) {
+        if (evnt.wasSubRequest && evnt.error == "") {
+          var chat = getExistingChat(evnt.id);
+          chat!.isSubscribed = true;
+          chat.isSubscribing = false;
+          updateUserMenu(evnt.id, buildUserChatMenu(chat));
+        } else if (evnt.error == "") {
+          var chat = getExistingChat(evnt.id);
+          chat!.isSubscribed = false;
+          updateUserMenu(evnt.id, buildUserChatMenu(chat));
+        }
+      }
+
       var isGC = (evnt is GCMsg) || (evnt is GCUserEvent);
 
       var chat = await _newChat(evnt.sid, "", isGC, false);

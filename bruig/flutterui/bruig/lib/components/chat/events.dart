@@ -877,31 +877,25 @@ class _PostSubscriptionEventWState extends State<PostSubscriptionEventW> {
   PostSubscriptionResult get event => widget.event;
   ClientModel get client => widget.client;
 
+  String msg = "";
   @override
-  Widget build(BuildContext context) {
-    var theme = Theme.of(context);
-    var textColor = theme.dividerColor;
-    String msg;
+  void initState() {
+    super.initState();
     if (event.wasSubRequest && event.error != "") {
       msg = "Unable to subscribe to user's posts: ${event.error}";
     } else if (event.wasSubRequest) {
-      setState(() {
-        var chat = client.getExistingChat(event.id);
-        chat!.isSubscribed = true;
-        chat.isSubscribing = false;
-        client.updateUserMenu(event.id, buildUserChatMenu(chat));
-      });
       msg = "Subscribed to user's posts!";
     } else if (event.error != "") {
       msg = "Unable to unsubscribe from user's posts: ${event.error}";
     } else {
-      setState(() {
-        var chat = client.getExistingChat(event.id);
-        chat!.isSubscribed = false;
-        client.updateUserMenu(event.id, buildUserChatMenu(chat));
-      });
       msg = "Unsubscribed from user's posts!";
     }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    var theme = Theme.of(context);
+    var textColor = theme.dividerColor;
 
     return Consumer<ThemeNotifier>(
         builder: (context, theme, _) => ServerEvent(
@@ -1376,9 +1370,8 @@ class Event extends StatelessWidget {
     }
 
     if (event.event is PostSubscriptionResult) {
-      return Consumer<ClientModel>(
-          builder: (context, client, child) => PostSubscriptionEventW(
-              event.event as PostSubscriptionResult, client));
+      return PostSubscriptionEventW(
+          event.event as PostSubscriptionResult, client);
     }
 
     if (event.event is GCVersionWarn) {

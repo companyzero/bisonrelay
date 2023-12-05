@@ -260,7 +260,6 @@ List<ChatMenuItem?> buildUserChatMenu(ChatModel chat) {
     client.updateUserMenu(chat.id, buildUserChatMenu(chat));
   }
 
-  print("${chat.nick} ${chat.isSubscribed} ${chat.isSubscribing}");
   return <ChatMenuItem?>[
     ChatMenuItem(
         "User Profile", (context, chats) => chats.profile = chats.active),

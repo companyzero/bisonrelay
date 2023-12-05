@@ -81,8 +81,6 @@ class _CommentWState extends State<_CommentW> {
 
   bool sendingReply = false;
   bool showChildren = true;
-  bool isSubscribed = false;
-  bool isSubscribing = false;
 
   void sendReply() async {
     replying = false;
@@ -143,6 +141,8 @@ class _CommentWState extends State<_CommentW> {
     var timestamp = widget.comment.timestamp;
     var chat = widget.client.getExistingChat(widget.comment.uid);
     var hasChat = chat != null;
+    var isSubscribed = false;
+    var isSubscribing = false;
     if (hasChat) {
       nick = chat.nick;
       isSubscribed = chat.isSubscribed;
