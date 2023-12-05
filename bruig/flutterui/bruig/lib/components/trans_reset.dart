@@ -5,37 +5,37 @@ import 'package:flutter/material.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:bruig/components/users_dropdown.dart';
 
-void showSuggestKXModalBottom(BuildContext context, ChatModel chat) {
+void showTransResetModalBottom(BuildContext context, ChatModel chat) {
   showModalBottomSheet(
     context: context,
-    builder: (BuildContext context) => SuggestKXModal(chat),
+    builder: (BuildContext context) => TransResetModal(chat),
   );
 }
 
-class SuggestKXModal extends StatefulWidget {
+class TransResetModal extends StatefulWidget {
   final ChatModel chat;
-  const SuggestKXModal(this.chat, {Key? key}) : super(key: key);
+  const TransResetModal(this.chat, {Key? key}) : super(key: key);
 
   @override
-  State<SuggestKXModal> createState() => _SuggestKXModalState();
+  State<TransResetModal> createState() => _TransResetModalState();
 }
 
-class _SuggestKXModalState extends State<SuggestKXModal> {
+class _TransResetModalState extends State<TransResetModal> {
   ChatModel get chat => widget.chat;
   bool loading = false;
-  ChatModel? userToSuggest;
+  ChatModel? userToTarget;
 
-  void suggestKX(BuildContext context) async {
+  void transReset(BuildContext context) async {
     if (loading) return;
-    if (userToSuggest == null) return;
+    if (userToTarget == null) return;
     setState(() => loading = true);
-
+    print("${chat.id}  ${userToTarget!.id}");
     try {
-      await Golib.suggestKX(chat.id, userToSuggest!.id);
-      showSuccessSnackbar(context, 'Sent KX suggestion to ${chat.nick}');
+      await Golib.transReset(chat.id, userToTarget!.id);
+      showSuccessSnackbar(context, 'Sent transitive reset to ${chat.nick}');
       Navigator.of(context).pop();
     } catch (exception) {
-      showErrorSnackbar(context, 'Unable to suggest KX: $exception');
+      showErrorSnackbar(context, 'Unable to transitive reset: $exception');
       Navigator.of(context).pop();
     } finally {
       setState(() => loading = false);
@@ -47,16 +47,16 @@ class _SuggestKXModalState extends State<SuggestKXModal> {
     return Container(
       padding: const EdgeInsets.all(30),
       child: Row(children: [
-        Text("Suggest KX '${chat.nick}' with: ",
+        Text("Transitive Reset '${chat.nick}' with: ",
             style: TextStyle(color: Theme.of(context).focusColor)),
         const SizedBox(width: 10, height: 10),
         Expanded(child: UsersDropdown(cb: (ChatModel? chat) {
-          userToSuggest = chat;
+          userToTarget = chat;
         })),
         const SizedBox(width: 20),
         ElevatedButton(
-            onPressed: !loading ? () => suggestKX(context) : null,
-            child: const Text('Suggest KX')),
+            onPressed: !loading ? () => transReset(context) : null,
+            child: const Text('Transitive Reset')),
         CancelButton(onPressed: () => Navigator.pop(context)),
       ]),
     );

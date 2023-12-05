@@ -1,6 +1,7 @@
 import 'package:bruig/components/pay_tip.dart';
 import 'package:bruig/components/rename_chat.dart';
 import 'package:bruig/components/suggest_kx.dart';
+import 'package:bruig/components/trans_reset.dart';
 import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/models/log.dart';
@@ -298,6 +299,10 @@ List<ChatMenuItem> buildUserChatMenu(ChatModel chat) {
     ChatMenuItem(
       "Suggest User to KX",
       (context, chats) => showSuggestKXModalBottom(context, chats.active!),
+    ),
+    ChatMenuItem(
+      "Issue Transitive Reset with User",
+      (context, chats) => showTransResetModalBottom(context, chats.active!),
     ),
     ChatMenuItem(
       "Perform Handshake",

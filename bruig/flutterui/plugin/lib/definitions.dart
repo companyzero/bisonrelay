@@ -1634,6 +1634,17 @@ class SuggestKX {
 }
 
 @JsonSerializable()
+class TransReset {
+  @JsonKey(name: "mediator")
+  final String mediatorID;
+  @JsonKey(name: "target")
+  final String targetID;
+
+  TransReset(this.mediatorID, this.targetID);
+  Map<String, dynamic> toJson() => _$TransResetToJson(this);
+}
+
+@JsonSerializable()
 class KXSuggested extends ChatEvent {
   final bool alreadyknown;
   final String inviteenick;
@@ -2782,6 +2793,10 @@ abstract class PluginPlatform {
   }
 
   Future<void> handshake(String uid) async => await asyncCall(CTHandshake, uid);
+
+  Future<void> transReset(String muid, tuid) async {
+    await asyncCall(CTSuggestKX, TransReset(muid, tuid));
+  }
 }
 
 const int CTUnknown = 0x00;
@@ -2895,6 +2910,7 @@ const int CTHandshake = 0x77;
 const int CTLoadUserHistory = 0x78;
 const int CTAddressBookEntry = 0x79;
 const int CTResetAllOldKX = 0x80;
+const int CTTransReset = 0x81;
 
 const int notificationsStartID = 0x1000;
 
