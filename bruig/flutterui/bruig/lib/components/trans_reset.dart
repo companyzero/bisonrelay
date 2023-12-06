@@ -50,9 +50,12 @@ class _TransResetModalState extends State<TransResetModal> {
         Text("Transitive Reset '${chat.nick}' with: ",
             style: TextStyle(color: Theme.of(context).focusColor)),
         const SizedBox(width: 10, height: 10),
-        Expanded(child: UsersDropdown(cb: (ChatModel? chat) {
-          userToTarget = chat;
-        })),
+        Expanded(
+            child: UsersDropdown(
+                cb: (ChatModel? chat) {
+                  userToTarget = chat;
+                },
+                nick: chat.nick)),
         const SizedBox(width: 20),
         ElevatedButton(
             onPressed: !loading ? () => transReset(context) : null,

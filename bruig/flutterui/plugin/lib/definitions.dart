@@ -2795,7 +2795,7 @@ abstract class PluginPlatform {
   Future<void> handshake(String uid) async => await asyncCall(CTHandshake, uid);
 
   Future<void> transReset(String muid, tuid) async {
-    await asyncCall(CTSuggestKX, TransReset(muid, tuid));
+    await asyncCall(CTTransReset, TransReset(muid, tuid));
   }
 }
 

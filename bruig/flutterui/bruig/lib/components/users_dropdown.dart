@@ -8,7 +8,9 @@ typedef ChatModelCB = Function(ChatModel? c);
 class UsersDropdown extends StatefulWidget {
   final ChatModelCB? cb;
   final bool allowEmpty;
-  const UsersDropdown({this.cb, Key? key, this.allowEmpty = false})
+  final String nick;
+  const UsersDropdown(
+      {this.cb, Key? key, this.allowEmpty = false, this.nick = ""})
       : super(key: key);
 
   @override
@@ -32,6 +34,7 @@ class _UsersDropdownState extends State<UsersDropdown> {
       if (widget.allowEmpty) {
         list.insert(0, null);
       }
+      list = list.where((e) => e!.nick != widget.nick).toList();
       return DropdownButton<ChatModel?>(
         focusColor: Colors.red,
         isDense: true,
