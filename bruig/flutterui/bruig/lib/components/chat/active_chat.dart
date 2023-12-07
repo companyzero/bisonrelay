@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:bruig/components/manage_gc.dart';
+import 'package:bruig/models/menus.dart';
 import 'package:bruig/util.dart';
 import 'package:bruig/models/client.dart';
 import 'package:flutter/material.dart';
@@ -121,9 +122,11 @@ class _ActiveChatState extends State<ActiveChat> {
             : darkTextColor;
 
     bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
+    List<ChatMenuItem> activeSubMenu =
+        client.activeSubMenu.whereType<ChatMenuItem>().toList();
     return Consumer<ThemeNotifier>(
         builder: (context, theme, _) => isScreenSmall
-            ? client.activeSubMenu.isNotEmpty
+            ? activeSubMenu.isNotEmpty
                 ? Stack(
                     alignment: Alignment.topRight,
                     children: [
@@ -154,13 +157,13 @@ class _ActiveChatState extends State<ActiveChat> {
                         Expanded(
                             child: ListView.builder(
                           shrinkWrap: true,
-                          itemCount: client.activeSubMenu.length,
+                          itemCount: activeSubMenu.length,
                           itemBuilder: (context, index) => ListTile(
-                              title: Text(client.activeSubMenu[index].label,
+                              title: Text(activeSubMenu[index].label,
                                   style: TextStyle(
                                       fontSize: theme.getSmallFont(context))),
                               onTap: () {
-                                client.activeSubMenu[index]
+                                activeSubMenu[index]
                                     .onSelected(context, client);
                                 client.hideSubMenu();
                               },
@@ -191,7 +194,7 @@ class _ActiveChatState extends State<ActiveChat> {
                           _itemScrollController, _itemPositionsListener),
                     ),
                     Container(
-                        margin: EdgeInsets.all(10),
+                        margin: const EdgeInsets.all(10),
                         child: Input(sendMsg, chat, inputFocusNode))
                   ])
             : Row(children: [
@@ -202,12 +205,12 @@ class _ActiveChatState extends State<ActiveChat> {
                           _itemScrollController, _itemPositionsListener),
                     ),
                     Container(
-                        padding: EdgeInsets.all(10),
+                        padding: const EdgeInsets.all(10),
                         child: Input(sendMsg, chat, inputFocusNode))
                   ]),
                 ),
                 Visibility(
-                  visible: client.activeSubMenu.isNotEmpty,
+                  visible: activeSubMenu.isNotEmpty,
                   child: Container(
                     width: 250,
                     decoration: BoxDecoration(
@@ -243,13 +246,13 @@ class _ActiveChatState extends State<ActiveChat> {
                         Expanded(
                             child: ListView.builder(
                           shrinkWrap: true,
-                          itemCount: client.activeSubMenu.length,
+                          itemCount: activeSubMenu.length,
                           itemBuilder: (context, index) => ListTile(
-                              title: Text(client.activeSubMenu[index].label,
+                              title: Text(activeSubMenu[index].label,
                                   style: TextStyle(
                                       fontSize: theme.getSmallFont(context))),
                               onTap: () {
-                                client.activeSubMenu[index]
+                                activeSubMenu[index]
                                     .onSelected(context, client);
                                 client.hideSubMenu();
                               },

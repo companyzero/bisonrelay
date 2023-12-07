@@ -34,6 +34,9 @@ class UserContextMenu extends StatelessWidget {
         case 'subscribe':
           targetUserChat!.subscribeToPosts();
           break;
+        case 'unsubscribe':
+          targetUserChat!.unsubscribeToPosts();
+          break;
         case 'rename':
           showRenameModalBottom(context, targetUserChat!);
           break;
@@ -47,25 +50,38 @@ class UserContextMenu extends StatelessWidget {
     };
   }
 
-  PopMenuList _buildUserMenu() {
-    return const [
-      PopupMenuItem(
+  PopMenuList _buildUserMenu(ChatModel? chat) {
+    bool isSubscribed = false;
+    bool isSubscribing = false;
+    if (chat != null) {
+      isSubscribed = chat.isSubscribed;
+      isSubscribing = chat.isSubscribing;
+    }
+    return [
+      const PopupMenuItem(
         value: 'tip',
         child: Text('Pay Tip'),
       ),
-      PopupMenuItem(
+      const PopupMenuItem(
         value: 'reqRatchetReset',
         child: Text('Request Ratchet Reset'),
       ),
-      PopupMenuItem(
-        value: 'subscribe',
-        child: Text('Subscribe to Posts'),
-      ),
-      PopupMenuItem(
+      isSubscribed
+          ? const PopupMenuItem(
+              value: 'unsubscribe',
+              child: Text('Unsubscribe to Posts'),
+            )
+          : !isSubscribing
+              ? const PopupMenuItem(
+                  value: 'subscribe',
+                  child: Text('Subscribe to Posts'),
+                )
+              : null,
+      const PopupMenuItem(
         value: 'rename',
         child: Text('Rename User'),
       ),
-      PopupMenuItem(
+      const PopupMenuItem(
         value: 'suggestToKX',
         child: Text('Suggest User to KX'),
       ),
@@ -104,7 +120,7 @@ class UserContextMenu extends StatelessWidget {
     return ContextMenu(
       disabled: disabled,
       handleItemTap: _handleItemTap(context),
-      items: _buildUserMenu(),
+      items: _buildUserMenu(targetUserChat),
       child: child,
     );
   }

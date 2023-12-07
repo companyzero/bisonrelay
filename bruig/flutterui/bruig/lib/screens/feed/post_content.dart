@@ -106,6 +106,10 @@ class _CommentWState extends State<_CommentW> {
     widget.client.requestMediateID(widget.post.summ.from, widget.comment.uid);
   }
 
+  void subscibeToPosts(ChatModel? chat) {
+    if (chat != null) chat.subscribeToPosts();
+  }
+
   void chatUpdated() => setState(() {});
 
   @override
@@ -137,8 +141,12 @@ class _CommentWState extends State<_CommentW> {
     var timestamp = widget.comment.timestamp;
     var chat = widget.client.getExistingChat(widget.comment.uid);
     var hasChat = chat != null;
-    if (chat != null) {
+    var isSubscribed = false;
+    var isSubscribing = false;
+    if (hasChat) {
       nick = chat.nick;
+      isSubscribed = chat.isSubscribed;
+      isSubscribing = chat.isSubscribing;
     }
 
     var intTimestamp = 0;
@@ -206,7 +214,27 @@ class _CommentWState extends State<_CommentW> {
                                 onPressed: requestMediateID,
                                 icon:
                                     const Icon(Icons.connect_without_contact)))
-                        : const Text(""),
+                        : !mine && !isSubscribed
+                            ? SizedBox(
+                                width: 20,
+                                child: IconButton(
+                                    padding: const EdgeInsets.all(0),
+                                    iconSize: 15,
+                                    tooltip: isSubscribing
+                                        ? "Requesting Subscription from user..."
+                                        : "Subscribe to user's posts",
+                                    onPressed: () => !isSubscribing
+                                        ? subscibeToPosts(chat)
+                                        : null,
+                                    icon: isSubscribing
+                                        ? SizedBox(
+                                            height: 15,
+                                            width: 15,
+                                            child: CircularProgressIndicator(
+                                                strokeWidth: 1,
+                                                color: hightLightTextColor))
+                                        : Icon(Icons.follow_the_signs_rounded)))
+                            : const Empty(),
                     SizedBox(
                         width: 20,
                         child: IconButton(

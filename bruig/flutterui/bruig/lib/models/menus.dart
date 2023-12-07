@@ -43,7 +43,7 @@ class SubMenuInfo {
 }
 
 final List<SubMenuInfo> FeedScreenSub = [
-  SubMenuInfo(0, "News Feed"),
+  SubMenuInfo(0, "Feed"),
   SubMenuInfo(1, "Your Posts"),
   SubMenuInfo(2, "Subscriptions"),
   SubMenuInfo(3, "New Post")
@@ -67,7 +67,7 @@ final List<SubMenuInfo> LnScreenSub = [
 
 final List<MainMenuItem> mainMenu = [
   MainMenuItem(
-      "News Feed",
+      "Feed",
       FeedScreen.routeName,
       (context) => Consumer<MainMenuModel>(
           builder: (context, menu, child) => FeedScreen(menu)),
@@ -177,7 +177,7 @@ class ChatMenuItem {
   const ChatMenuItem(this.label, this.onSelected);
 }
 
-List<ChatMenuItem> buildUserChatMenu(ChatModel chat) {
+List<ChatMenuItem?> buildUserChatMenu(ChatModel chat) {
   void sendFile(BuildContext context, ChatModel chat) async {
     var filePickRes = await FilePicker.platform.pickFiles();
     if (filePickRes == null) return;
@@ -254,7 +254,13 @@ List<ChatMenuItem> buildUserChatMenu(ChatModel chat) {
     }
   }
 
-  return <ChatMenuItem>[
+  void subscribeToPosts(
+      BuildContext context, ClientModel client, ChatModel chat) async {
+    chat.subscribeToPosts();
+    client.updateUserMenu(chat.id, buildUserChatMenu(chat));
+  }
+
+  return <ChatMenuItem?>[
     ChatMenuItem(
         "User Profile", (context, chats) => chats.profile = chats.active),
     //.of(context, rootNavigator: true).pushNamed('/userProfile', arguments: UserProfileArgs(chat))),
@@ -275,14 +281,22 @@ List<ChatMenuItem> buildUserChatMenu(ChatModel chat) {
             "Unsubscribe to Posts",
             (context, chats) => chats.active!.unsubscribeToPosts(),
           )
-        : ChatMenuItem(
-            "Subscribe to Posts",
-            (context, chats) => chats.active!.subscribeToPosts(),
-          ),
-    ChatMenuItem(
-      chat.isSubscribed ? "List Posts" : "",
-      (context, chats) => listUserPosts(context, chats, chats.active!),
-    ),
+        : !chat.isSubscribing
+            ? ChatMenuItem(
+                "Subscribe to Posts",
+                (context, chats) =>
+                    subscribeToPosts(context, chats, chats.active!),
+              )
+            : ChatMenuItem(
+                "Subscribing to Posts",
+                (context, chats) => null,
+              ),
+    chat.isSubscribed
+        ? ChatMenuItem(
+            "List Posts",
+            (context, chats) => listUserPosts(context, chats, chats.active!),
+          )
+        : null,
     ChatMenuItem(
       "Send File",
       (context, chats) => sendFile(context, chats.active!),
