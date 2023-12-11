@@ -10,7 +10,10 @@ import 'package:bruig/models/feed.dart';
 import 'package:bruig/models/menus.dart';
 import 'package:bruig/models/notifications.dart';
 import 'package:bruig/models/snackbar.dart';
+import 'package:bruig/screens/chats.dart';
 import 'package:bruig/screens/feed.dart';
+import 'package:bruig/screens/feed/post_content.dart';
+import 'package:bruig/notification_service.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
@@ -59,8 +62,9 @@ class _OverviewScreenTitleState extends State<_OverviewScreenTitle> {
 class PageTabs {
   final int tabIndex;
   final List<PostListItem> userPostList;
+  final PostContentScreenArgs? postScreenArgs;
 
-  PageTabs(this.tabIndex, this.userPostList);
+  PageTabs(this.tabIndex, this.userPostList, this.postScreenArgs);
 }
 
 class OverviewScreen extends StatefulWidget {
@@ -110,7 +114,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
 
   void goToSubMenuPage(String route, int pageTab) {
     navKey.currentState!
-        .pushReplacementNamed(route, arguments: PageTabs(pageTab, []));
+        .pushReplacementNamed(route, arguments: PageTabs(pageTab, [], null));
     Timer(const Duration(milliseconds: 1),
         () async => widget.mainMenu.activePageTab = pageTab);
     Navigator.pop(context);
@@ -118,7 +122,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
 
   void goToNewPost() {
     navKey.currentState!
-        .pushReplacementNamed('/feed', arguments: PageTabs(3, []));
+        .pushReplacementNamed('/feed', arguments: PageTabs(3, [], null));
   }
 
   void goToAbout() {
@@ -152,11 +156,53 @@ class _OverviewScreenState extends State<OverviewScreen> {
     }
   }
 
+  void _configureDidReceiveLocalNotificationSubject() {
+    NotificationService()
+        .didReceiveLocalNotificationStream
+        .stream
+        .listen((ReceivedNotification receivedNotification) async {});
+  }
+
+  // This sets up the listener for notification tapping actions.  When
+  // a user taps a chat notification they should be brought to the corresponding
+  // chat.  When a user taps a post/comment notification they are brought to the
+  // corresponding post.
+  void _configureSelectNotificationSubject() {
+    NotificationService()
+        .selectNotificationStream
+        .stream
+        .listen((String? payload) async {
+      if (payload != null) {
+        if (payload.contains("chat")) {
+          switchScreen(ChatsScreen.routeName);
+          var nick = payload.split(":");
+          if (nick.length > 1) {
+            client.setActiveByNick(nick[1], payload.contains("gc"));
+          }
+        } else if (payload.contains("post")) {
+          var authorPostIDs = payload.split(":");
+          if (authorPostIDs.length > 2) {
+            var authorID = authorPostIDs[1];
+            var pid = authorPostIDs[2];
+            var post = feed.getPost(authorID, pid);
+            if (post != null) {
+              navKey.currentState!.pushReplacementNamed("/feed",
+                  arguments: PageTabs(0, [], PostContentScreenArgs(post)));
+              feed.active = post;
+            }
+          }
+        }
+      }
+    });
+  }
+
   @override
   void initState() {
     super.initState();
     connState = widget.client.connState;
     widget.client.addListener(clientChanged);
+    _configureDidReceiveLocalNotificationSubject();
+    _configureSelectNotificationSubject();
   }
 
   @override
@@ -169,6 +215,8 @@ class _OverviewScreenState extends State<OverviewScreen> {
   @override
   void dispose() {
     widget.client.removeListener(clientChanged);
+    NotificationService().didReceiveLocalNotificationStream.close();
+    NotificationService().selectNotificationStream.close();
     super.dispose();
   }
 
@@ -233,7 +281,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
                                 feed.active = null;
                                 navKey.currentState!.pushReplacementNamed(
                                     '/feed',
-                                    arguments: PageTabs(0, []));
+                                    arguments: PageTabs(0, [], null));
                               })
                           : IconButton(
                               iconSize: 20,

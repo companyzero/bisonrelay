@@ -1,12 +1,15 @@
 import 'dart:async';
 import 'dart:collection';
+
+import 'package:bruig/components/gc_context_menu.dart';
 import 'package:bruig/models/menus.dart';
 import 'package:bruig/models/resources.dart';
 import 'package:flutter/foundation.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:intl/intl.dart';
-import '../storage_manager.dart';
+import 'package:bruig/storage_manager.dart';
+import 'package:bruig/notification_service.dart';
 
 const SCE_unknown = 0;
 const SCE_sending = 1;
@@ -1012,6 +1015,16 @@ class ClientModel extends ChangeNotifier {
         hasUnreadChats = true;
       }
       chat.append(ChatEventModel(evnt, source), false);
+
+      // Only do notifcications for GC messages or PMs
+      if (evnt is GCMsg || evnt is PM) {
+        if (source != null) {
+          if (!chat.active) {
+            NotificationService().showChatNotification(
+                evnt.msg, source.nick, chat.isGC, chat.nick);
+          }
+        }
+      }
 
       if (chat.isGC) {
         _gcChats.remove(chat);
