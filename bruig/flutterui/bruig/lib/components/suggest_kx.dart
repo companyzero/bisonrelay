@@ -55,7 +55,7 @@ class _SuggestKXModalState extends State<SuggestKXModal> {
                 cb: (ChatModel? chat) {
                   userToSuggest = chat;
                 },
-                nick: chat.nick)),
+                excludeUIDs: [chat.id])),
         const SizedBox(width: 20),
         ElevatedButton(
             onPressed: !loading ? () => suggestKX(context) : null,

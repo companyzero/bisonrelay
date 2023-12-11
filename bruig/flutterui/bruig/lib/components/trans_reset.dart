@@ -55,7 +55,7 @@ class _TransResetModalState extends State<TransResetModal> {
                 cb: (ChatModel? chat) {
                   userToTarget = chat;
                 },
-                nick: chat.nick)),
+                excludeUIDs: [chat.id])),
         const SizedBox(width: 20),
         ElevatedButton(
             onPressed: !loading ? () => transReset(context) : null,
