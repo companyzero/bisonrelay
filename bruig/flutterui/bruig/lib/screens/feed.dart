@@ -124,6 +124,7 @@ class _FeedScreenState extends State<FeedScreen> {
       final args = ModalRoute.of(context)!.settings.arguments as PageTabs;
       tabIndex = args.tabIndex;
       userPostList = args.userPostList;
+      showPost = args.postScreenArgs;
     }
 
     return Row(children: [

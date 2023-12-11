@@ -1,6 +1,7 @@
 import 'dart:collection';
 
 import 'package:flutter/cupertino.dart';
+import 'package:bruig/notification_service.dart';
 import 'package:bruig/screens/feed/post_content.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
@@ -169,7 +170,8 @@ class FeedPostModel extends ChangeNotifier {
     return null;
   }
 
-  Future<void> addReceivedStatus(PostMetadataStatus ps, bool mine) async {
+  Future<void> addReceivedStatus(
+      PostMetadataStatus ps, bool mine, PostSummary post) async {
     if (ps.attributes[RMPSComment] == "") {
       // Not a comment. Nothing to do.
       return;
@@ -190,6 +192,7 @@ class FeedPostModel extends ChangeNotifier {
         _comments.add(c);
       }
     }
+    NotificationService().showPostCommentNotification(post, c.nick, c.comment);
     /*
     var idx = _comments.indexWhere((e) => e.id == c.parentID);
 
@@ -317,6 +320,7 @@ class FeedModel extends ChangeNotifier {
         tabChange!(0, PostContentScreenArgs(newUserPost!));
       }
 
+      NotificationService().showPostNotification(newPost.summ);
       // Handle posts that replace a previously relayed post: the client removes
       // the relayed post in favor of the one by the author, so remove such posts
       // from the list.
@@ -344,7 +348,7 @@ class FeedModel extends ChangeNotifier {
         var post = _posts[postIdx];
         hasUnreadPostsComments = true;
         post.lastStatusTS = DateTime.now();
-        await post.addReceivedStatus(msg.status, true);
+        await post.addReceivedStatus(msg.status, true, post.summ);
       }
       _posts.sort(sortFeedPosts);
     }

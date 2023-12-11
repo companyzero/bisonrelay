@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:bruig/models/client.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:bruig/components/snackbars.dart';
+import 'package:bruig/storage_manager.dart';
 
 class SettingsScreenTitle extends StatelessWidget {
   const SettingsScreenTitle({super.key});
@@ -32,10 +33,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
   ClientModel get client => widget.client;
   ServerSessionState connState = ServerSessionState.empty();
   bool loading = false;
+  bool notificationsEnabled = false;
 
   void clientUpdated() async {
     setState(() {
       connState = client.connState;
+    });
+  }
+
+  void updateNotificationSettings(bool value) {
+    StorageManager.saveData('notifications', value);
+    setState(() {
+      notificationsEnabled = value;
     });
   }
 
@@ -71,6 +80,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
     super.initState();
     clientUpdated();
     client.addListener(clientUpdated);
+
+    StorageManager.readData('notifications').then((value) {
+      if (value != null) {
+        setState(() {
+          notificationsEnabled = value;
+        });
+      }
+    });
   }
 
   @override
@@ -112,6 +129,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 : Text('Set Dark Theme'),
           ),
           */
+          Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+            Text("Notifications",
+                style: TextStyle(
+                    fontSize: theme.getLargeFont(context),
+                    color: Theme.of(context).focusColor)),
+            const SizedBox(width: 50),
+            Switch(
+                // thumb color (round icon)
+                activeColor: Theme.of(context).focusColor,
+                activeTrackColor: Theme.of(context).highlightColor,
+                inactiveThumbColor: Theme.of(context).indicatorColor,
+                inactiveTrackColor: Theme.of(context).dividerColor,
+                //splashRadius: 20.0,
+                // boolean variable value
+                value: notificationsEnabled,
+                // changes the state of the switch
+                onChanged: (value) =>
+                    setState(() => updateNotificationSettings(value))),
+          ]),
           const SizedBox(height: 20),
           ElevatedButton(
             onPressed: () => loading ? null : resetAllOldKX(context),

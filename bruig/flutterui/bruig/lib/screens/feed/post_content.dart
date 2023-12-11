@@ -11,7 +11,6 @@ import 'package:golib_plugin/definitions.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:bruig/components/user_context_menu.dart';
-import 'package:provider/provider.dart';
 import 'package:bruig/theme_manager.dart';
 
 class PostContentScreenArgs {
@@ -1099,7 +1098,8 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
                   tooltip: "Go back",
                   onPressed: () => Navigator.of(context).pushReplacementNamed(
                       '/feed',
-                      arguments: PageTabs(0, [])), //widget.tabChange(0, null),
+                      arguments:
+                          PageTabs(0, [], null)), //widget.tabChange(0, null),
                   icon: Icon(color: darkTextColor, Icons.close_outlined)),
         ]));
   }

@@ -8,6 +8,7 @@ import 'package:bruig/components/route_error.dart';
 import 'package:bruig/models/menus.dart';
 import 'package:bruig/models/payments.dart';
 import 'package:bruig/models/resources.dart';
+import 'package:bruig/notification_service.dart';
 import 'package:bruig/screens/about.dart';
 import 'package:bruig/models/snackbar.dart';
 import 'package:bruig/screens/contacts_msg_times.dart';
@@ -59,7 +60,7 @@ void main(List<String> args) async {
   // DartVLC.initialize();
 
   // Get user to stop optimizing battery usage
-  OptimizeBattery.stopOptimizingBatteryUsage();
+  if (Platform.isAndroid) OptimizeBattery.stopOptimizingBatteryUsage();
   // The MockGolib was mostly useful during early stages of development.
   //UseMockGolib();
 
@@ -127,6 +128,7 @@ class _AppState extends State<App> with WindowListener {
     handleNotifications();
     initClient();
     windowManager.setPreventClose(true);
+    NotificationService().init();
   }
 
   @override
@@ -382,14 +384,4 @@ class _AppState extends State<App> with WindowListener {
               },
             ));
   }
-}
-
-// You can pass any object to the arguments parameter.
-// In this example, create a class that contains both
-// a customizable title and message.
-class ScreenArguments {
-  final Widget? title;
-  final String? screen;
-
-  ScreenArguments(this.title, this.screen);
 }

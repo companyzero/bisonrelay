@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:bruig/models/menus.dart';
 import 'package:flutter/material.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/components/chat/types.dart';
@@ -492,8 +491,10 @@ class PMW extends StatelessWidget {
       timestamp =
           evnt.source?.nick == null ? event.timestamp : event.timestamp * 1000;
     }
+
     openReplyDM(bool isGC, String id) => null;
     bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
+
     if (isScreenSmall) {
       return ReceivedSentMobilePM(evnt, evnt.source?.nick ?? nick, timestamp,
           showSubMenu, evnt.source?.id ?? "", nick, false);
@@ -1334,8 +1335,6 @@ class Event extends StatelessWidget {
       return PMW(event, nick, showSubMenu);
     }
 
-    print("XXXXX gonna render ${event.event}");
-
     if (event.event is InflightTip) {
       return InflightTipW((event.event as InflightTip), event.source!);
     }
@@ -1394,7 +1393,6 @@ class Event extends StatelessWidget {
     }
 
     if (event.event is GCAdminsChanged) {
-      print("XXXXX Gonna render GCAdminsChanged");
       return GCAdminsChangedW(event.event as GCAdminsChanged, client);
     }
 
