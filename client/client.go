@@ -868,6 +868,7 @@ func (c *Client) ReadHistoryMessages(uid UserID, gcName string, page, pageNum in
 	}
 
 	var chatHistory []ChatHistoryEntry
+	myNick := c.LocalNick()
 	err = c.dbView(func(tx clientdb.ReadTx) error {
 		var messages []clientdb.PMLogEntry
 		if gcName != "" {
@@ -884,14 +885,13 @@ func (c *Client) ReadHistoryMessages(uid UserID, gcName string, page, pageNum in
 		chatHistory = make([]ChatHistoryEntry, 0, len(messages))
 		for _, entry := range messages {
 			var filter bool
-			if gcName == "" {
+			if gcName == "" && entry.From != myNick {
 				filter, _ = c.shouldFilter(uid, nil, nil, nil, entry.Message)
-			} else {
+			} else if gcName != "" && entry.From != myNick {
 				userID, err := c.UIDByNick(entry.From)
-				if err != nil {
-					continue
+				if err == nil {
+					filter, _ = c.shouldFilter(userID, &uid, nil, nil, entry.Message)
 				}
-				filter, _ = c.shouldFilter(userID, &uid, nil, nil, entry.Message)
 			}
 			if !filter {
 				chatHistory = append(chatHistory, ChatHistoryEntry{
