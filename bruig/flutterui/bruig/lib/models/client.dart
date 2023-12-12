@@ -228,6 +228,7 @@ class ChatModel extends ChangeNotifier {
         }
       }
     }
+
     _msgs.add(msg);
     if (!history) {
       if (!_active) {
@@ -238,8 +239,11 @@ class ChatModel extends ChangeNotifier {
         }
       }
     }
-    if (evnt is GCMsg) {
-      appendDayGCMsgs(msg, DateTime.fromMillisecondsSinceEpoch(timestamp));
+    if (isGC) {
+      var dt = timestamp > 0
+          ? DateTime.fromMillisecondsSinceEpoch(timestamp)
+          : DateTime.now();
+      appendDayGCMsgs(msg, dt);
     }
     notifyListeners();
   }
@@ -976,7 +980,8 @@ class ClientModel extends ChangeNotifier {
         }
       }
 
-      var isGC = (evnt is GCMsg) || (evnt is GCUserEvent);
+      var isGC =
+          (evnt is GCMsg) || (evnt is GCUserEvent) || (evnt is GCAdminsChanged);
 
       var chat = await _newChat(evnt.sid, "", isGC, false);
       ChatModel? source;

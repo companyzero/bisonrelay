@@ -1561,8 +1561,11 @@ class GCAdminsChanged extends ChatEvent {
   final String source;
   final List<String>? added;
   final List<String>? removed;
+  @JsonKey(name: "changed_owner")
+  final bool changedOwner;
 
-  GCAdminsChanged(this.gcid, this.source, this.added, this.removed)
+  GCAdminsChanged(
+      this.gcid, this.source, this.added, this.removed, this.changedOwner)
       : super(gcid, "Admins changed");
   factory GCAdminsChanged.fromJson(Map<String, dynamic> json) =>
       _$GCAdminsChangedFromJson(json);
@@ -2794,9 +2797,11 @@ abstract class PluginPlatform {
 
   Future<void> handshake(String uid) async => await asyncCall(CTHandshake, uid);
 
-  Future<void> transReset(String muid, tuid) async {
-    await asyncCall(CTTransReset, TransReset(muid, tuid));
-  }
+  Future<void> transReset(String muid, tuid) async =>
+      await asyncCall(CTTransReset, TransReset(muid, tuid));
+
+  Future<void> modifyGCOwner(String gcID, String ownerID) async =>
+      await asyncCall(CTGCModifyOwner, GCModifyAdmins(gcID, [ownerID]));
 }
 
 const int CTUnknown = 0x00;
@@ -2909,8 +2914,9 @@ const int CTFetchResource = 0x76;
 const int CTHandshake = 0x77;
 const int CTLoadUserHistory = 0x78;
 const int CTAddressBookEntry = 0x79;
-const int CTResetAllOldKX = 0x80;
-const int CTTransReset = 0x81;
+const int CTResetAllOldKX = 0x7a;
+const int CTTransReset = 0x7b;
+const int CTGCModifyOwner = 0x7c;
 
 const int notificationsStartID = 0x1000;
 

@@ -295,10 +295,11 @@ func handleInitClient(handle uint32, args initClient) error {
 
 	ntfns.Register(client.OnGCAdminsChangedNtfn(func(ru *client.RemoteUser, gc rpc.RMGroupList, added, removed []zkidentity.ShortID) {
 		ntfn := gcAdminsChanged{
-			Source:  ru.ID(),
-			GCID:    gc.ID,
-			Added:   added,
-			Removed: removed,
+			Source:       ru.ID(),
+			GCID:         gc.ID,
+			Added:        added,
+			Removed:      removed,
+			ChangedOwner: len(added) > 0 && gc.Members[0] == added[0],
 		}
 		notify(NTGCAdminsChanged, ntfn, nil)
 	}))
@@ -1802,12 +1803,26 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 			return nil, err
 		}
 		return res, nil
+
 	case CTTransReset:
 		var args transReset
 		if err := cmd.decode(&args); err != nil {
 			return nil, err
 		}
 		return nil, c.RequestTransitiveReset(args.Mediator, args.Target)
+
+	case CTGCModifyOwner:
+		var args gcModifyAdmins
+		if err := cmd.decode(&args); err != nil {
+			return nil, err
+		}
+		if len(args.NewAdmins) != 1 {
+			return nil, fmt.Errorf("new admins must have len == 1")
+		}
+
+		err := c.ModifyGCOwner(args.GCID, args.NewAdmins[0], "Changing owner")
+		return nil, err
+
 	}
 	return nil, nil
 
