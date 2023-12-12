@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"io"
 	"net"
 	"os"
 	"path/filepath"
@@ -25,6 +24,7 @@ import (
 	"github.com/decred/dcrlnd/lnrpc/watchtowerrpc"
 	"github.com/decred/dcrlnd/lnrpc/wtclientrpc"
 	"github.com/decred/dcrlnd/macaroons"
+	"github.com/decred/dcrlnd/signal"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
@@ -69,11 +69,11 @@ type Dcrlnd struct {
 	runErr       error
 	runDone      chan struct{}
 	rpcAddr      string
-	shutdownChan chan struct{}
 	connOpts     []grpc.DialOption
 	conn         *grpc.ClientConn
 	macaroonPath string
 	tlsCertPath  string
+	interceptor  *signal.Interceptor
 
 	mtx      sync.Mutex
 	unlocked bool
@@ -100,15 +100,26 @@ func (lndc *Dcrlnd) MacaroonPath() string {
 // TryUnlock attempts to unlock the wallet with the given passphrase.
 func (lndc *Dcrlnd) TryUnlock(ctx context.Context, pass string) error {
 	lnUnlocker := lnrpc.NewWalletUnlockerClient(lndc.conn)
-	uwr := lnrpc.UnlockWalletRequest{
-		WalletPassword: []byte(pass),
-	}
-	_, err := lnUnlocker.UnlockWallet(ctx, &uwr)
-	if err != nil && strings.Contains(err.Error(), "wallet not found") {
-		return ErrLNWalletNotFound
-	}
-	if err != nil {
-		return err
+
+	for {
+		uwr := lnrpc.UnlockWalletRequest{
+			WalletPassword: []byte(pass),
+		}
+		_, err := lnUnlocker.UnlockWallet(ctx, &uwr)
+		if err != nil && strings.Contains(err.Error(), "wallet not found") {
+			return ErrLNWalletNotFound
+		}
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		if err != nil && isRPCStartingErr(err) {
+			time.Sleep(time.Second)
+			continue
+		}
+		if err != nil {
+			return err
+		}
+		break
 	}
 
 	// In case of successful unlock, we'll re-create the connection so
@@ -206,6 +217,18 @@ func (lndc *Dcrlnd) Create(ctx context.Context, pass string, existingSeed []stri
 
 type ChainSyncNotifier func(*initchainsyncrpc.ChainSyncUpdate, error)
 
+func isRPCStartingErr(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	const rpcStartingErrMsg1 = "the RPC server is in the process of starting"
+	const rpcStartingErrMsg2 = "waiting to start, RPC services not available"
+	return (status.Code(err) == codes.Unimplemented) ||
+		strings.Contains(err.Error(), rpcStartingErrMsg1) ||
+		strings.Contains(err.Error(), rpcStartingErrMsg2)
+}
+
 // NotifyInitialChainSync calls the especified notifier while the chain is
 // syncing. The notifier will be called at least once, either with a message
 // with Synced = true or with an error.
@@ -215,81 +238,77 @@ func (lndc *Dcrlnd) NotifyInitialChainSync(ctx context.Context, ntf ChainSyncNot
 	go func() {
 		select {
 		case <-ctx.Done():
-		case <-lndc.shutdownChan:
+		case <-lndc.interceptor.ShutdownChannel():
 			cancel()
 		}
 	}()
 
-	// Wait until either the SubscribeChainSync call succeeds or the
-	// GetInfo call succeeds. Either of those mean the sync has completed.
+	// Wait until the SubscribeChainSync call succeeds and the GetInfo call
+	// succeeds. Both are needed for the wallet to be usable.
 
 	lnInitSync := initchainsyncrpc.NewInitialChainSyncClient(lndc.conn)
 	lnRPC := lnrpc.NewLightningClient(lndc.conn)
 	reqSub := &initchainsyncrpc.ChainSyncSubscription{}
 	var recv *initchainsyncrpc.ChainSyncUpdate
 	var stream initchainsyncrpc.InitialChainSync_SubscribeChainSyncClient
+
+	var err error
+	for stream == nil {
+		stream, err = lnInitSync.SubscribeChainSync(ctx, reqSub)
+		if err != nil && !isRPCStartingErr(err) {
+			ntf(nil, err)
+			return
+		}
+		if err != nil {
+			select {
+			case <-ctx.Done():
+			case <-time.After(time.Second):
+			}
+		}
+	}
+
 	for {
-		// Try subscribing to the chain sync stream.
-		var err error
-		if stream == nil {
-			stream, err = lnInitSync.SubscribeChainSync(ctx, reqSub)
+		// Try to fetch an update.
+		recv, err = stream.Recv()
+		if err != nil {
+			ntf(nil, err)
+			return
+		}
+		if recv.Synced {
+			break
 		}
 
-		if err == nil {
-			// Try to fetch an update.
-			recv, err = stream.Recv()
-			if err == nil {
-				ntf(recv, nil)
-				if recv.Synced {
-					// All done!
-					return
-				}
+		// Keep looping.
+		ntf(recv, nil)
+	}
 
-				// Keep looping.
+	// Chain is synced. Wait until GetInfo does not return the "rpc
+	// starting" error.
+	for {
+		res, err := lnRPC.GetInfo(ctx, &lnrpc.GetInfoRequest{})
+		if err != nil && !isRPCStartingErr(err) {
+			ntf(nil, err)
+			return
+		}
+		if err != nil {
+			select {
+			case <-ctx.Done():
+				return
+			case <-time.After(time.Second):
 				continue
 			}
 		}
 
-		// At this point, we have an error. Decide what to do.
-		//
-		// If err != unimplemented, it's a fatal error, so
-		// notify and return.
-		if (status.Code(err) != codes.Unimplemented) && !errors.Is(err, io.EOF) {
-			err = fmt.Errorf("unable to query initChainSync service: %v", err)
-			ntf(nil, err)
-			return
+		// RPC service is online, so chain sync is completed.
+		bh, _ := hex.DecodeString(res.BlockHash)
+		recv = &initchainsyncrpc.ChainSyncUpdate{
+			BlockHeight:    int64(res.BlockHeight),
+			BlockHash:      bh,
+			BlockTimestamp: res.BestHeaderTimestamp,
+			Synced:         true,
 		}
-
-		// An unimplemented error means the initChainSync service isn't
-		// online. Try to query via the standard rpc.
-		res, err := lnRPC.GetInfo(ctx, &lnrpc.GetInfoRequest{})
-		if err == nil {
-			// RPC service is online, so chain sync is completed.
-			bh, _ := hex.DecodeString(res.BlockHash)
-			recv = &initchainsyncrpc.ChainSyncUpdate{
-				BlockHeight:    int64(res.BlockHeight),
-				BlockHash:      bh,
-				BlockTimestamp: res.BestHeaderTimestamp,
-				Synced:         true,
-			}
-			ntf(recv, nil)
-			return
-		}
-
-		// An error != unimplemented is a fatal error.
-		if err != nil && status.Code(err) != codes.Unimplemented {
-			err = fmt.Errorf("unable to query rpc service: %v", err)
-			ntf(nil, err)
-			return
-		}
-
-		// An unimplemented error on both services means the startup
-		// hasn't finished yet. Wait for a bit, then try again.
-		select {
-		case <-time.After(time.Second):
-		case <-ctx.Done():
-			return
-		}
+		ntf(recv, nil)
+		break
 	}
 }
 
@@ -318,10 +337,10 @@ func (lndc *Dcrlnd) Stop() {
 	select {
 	case <-lndc.runDone:
 		return
-	case <-lndc.shutdownChan:
+	case <-lndc.interceptor.ShutdownChannel():
 		return
 	default:
-		close(lndc.shutdownChan)
+		lndc.interceptor.RequestShutdown()
 	}
 }
 
@@ -401,22 +420,24 @@ func RunDcrlnd(ctx context.Context, cfg Config) (*Dcrlnd, error) {
 		return nil, fmt.Errorf("unrecognized network %q", network)
 	}
 
-	validConf, err := dcrlnd.ValidateConfig(conf, "")
+	inter := signal.InterceptNoSignal()
+
+	validConf, err := dcrlnd.ValidateConfig(conf, "", inter)
 	if err != nil {
 		return nil, fmt.Errorf("error validating dcrlnd conf: %v", err)
 	}
 
 	lndc := &Dcrlnd{
-		runDone:      make(chan struct{}),
-		shutdownChan: make(chan struct{}),
-		rpcAddr:      rpcAddr,
+		runDone: make(chan struct{}),
+		rpcAddr: rpcAddr,
 		macaroonPath: filepath.Join(conf.DataDir, "chain", "decred",
 			network, "admin.macaroon"),
 		tlsCertPath: conf.TLSCertPath,
+		interceptor: &inter,
 	}
 	go func() {
 		err := dcrlnd.Main(
-			validConf, dcrlnd.ListenerCfg{}, lndc.shutdownChan,
+			validConf, dcrlnd.ListenerCfg{}, inter,
 		)
 		if err != nil {
 			err = fmt.Errorf("dcrlnd.Main error: %v", err)
@@ -429,7 +450,7 @@ func RunDcrlnd(ctx context.Context, cfg Config) (*Dcrlnd, error) {
 	// function. This is deferred in a closure because cleanup is
 	// overwritten further down the function.
 	cleanup := func() {
-		close(lndc.shutdownChan)
+		inter.RequestShutdown()
 	}
 	defer func() { cleanup() }()
 

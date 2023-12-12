@@ -17,7 +17,6 @@ import (
 	"github.com/decred/dcrd/dcrutil/v4"
 	"github.com/decred/dcrd/txscript/v4/stdaddr"
 	"github.com/decred/dcrd/wire"
-	"github.com/decred/dcrlnd"
 	"github.com/decred/dcrlnd/lnrpc"
 	"github.com/decred/dcrlnd/lnrpc/chainrpc"
 	"github.com/decred/dcrlnd/lnrpc/invoicesrpc"
@@ -927,7 +926,7 @@ func TrackWalletCheckEvents(ctx context.Context, lnRPC lnrpc.LightningClient) (c
 }
 
 func chanPointToStr(cp *lnrpc.ChannelPoint) string {
-	tx, err := dcrlnd.GetChanPointFundingTxid(cp)
+	tx, err := lnrpc.GetChanPointFundingTxid(cp)
 	if err != nil {
 		return fmt.Sprintf("[%v]", err)
 	}
