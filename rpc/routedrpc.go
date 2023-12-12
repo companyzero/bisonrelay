@@ -862,9 +862,7 @@ type RMGroupUpdateAdmins struct {
 
 const RMGCGroupUpdateAdmins = "groupupdateadmins"
 
-// RMGroupList, currently we detect spoofing by ensuring the origin of the
-// message.  This may not be sufficient and we may have to add a signature of
-// sorts.  For now roll with this assumption.
+// RMGroupList defines a Group Chat channel.
 type RMGroupList struct {
 	ID         zkidentity.ShortID `json:"id"` // group id
 	Name       string             `json:"name"`
@@ -872,8 +870,8 @@ type RMGroupList struct {
 	Timestamp  int64              `json:"timestamp"`  // unix time last generation changed
 	Version    uint8              `json:"version"`    // version of the rules for GC op
 
-	// all participants, [0] is administrator
-	// receiver must check [0] == originator
+	// Members is the list of GC participants. Members[0] is the "owner"
+	// of the GC and has power over admins.
 	Members []zkidentity.ShortID `json:"members"`
 
 	// Version 1 fields.
