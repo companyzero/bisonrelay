@@ -1548,6 +1548,7 @@ GCAdminsChanged _$GCAdminsChangedFromJson(Map<String, dynamic> json) =>
       json['source'] as String,
       (json['added'] as List<dynamic>?)?.map((e) => e as String).toList(),
       (json['removed'] as List<dynamic>?)?.map((e) => e as String).toList(),
+      json['changed_owner'] as bool,
     );
 
 Map<String, dynamic> _$GCAdminsChangedToJson(GCAdminsChanged instance) =>
@@ -1556,6 +1557,7 @@ Map<String, dynamic> _$GCAdminsChangedToJson(GCAdminsChanged instance) =>
       'source': instance.source,
       'added': instance.added,
       'removed': instance.removed,
+      'changed_owner': instance.changedOwner,
     };
 
 SubscribeToPosts _$SubscribeToPostsFromJson(Map<String, dynamic> json) =>

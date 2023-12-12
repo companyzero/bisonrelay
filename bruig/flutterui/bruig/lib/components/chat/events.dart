@@ -1055,18 +1055,19 @@ class GCAdminsChangedW extends StatelessWidget {
     var srcNick = client.getNick(event.source);
     String msg = "$srcNick modified the GC admins:\n";
     var myID = client.publicID;
+    var role = event.changedOwner ? "owner" : "admin";
     if (event.added != null) {
       msg += event.added!.fold("", (prev, e) {
         var nick = e == myID ? "Local client" : client.getNick(e);
         nick = nick == "" ? e : nick;
-        return prev + "\n$nick added as admin";
+        return prev + "\n$nick added as $role";
       });
     }
     if (event.removed != null) {
       msg += event.removed!.fold("", (prev, e) {
         var nick = e == myID ? "Local client" : client.getNick(e);
         nick = nick == "" ? e : nick;
-        return prev + "\n$nick removed as admin";
+        return prev + "\n$nick removed as $role";
       });
     }
 
@@ -1333,6 +1334,8 @@ class Event extends StatelessWidget {
       return PMW(event, nick, showSubMenu);
     }
 
+    print("XXXXX gonna render ${event.event}");
+
     if (event.event is InflightTip) {
       return InflightTipW((event.event as InflightTip), event.source!);
     }
@@ -1391,6 +1394,7 @@ class Event extends StatelessWidget {
     }
 
     if (event.event is GCAdminsChanged) {
+      print("XXXXX Gonna render GCAdminsChanged");
       return GCAdminsChangedW(event.event as GCAdminsChanged, client);
     }
 

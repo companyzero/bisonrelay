@@ -335,10 +335,11 @@ type gcModifyAdmins struct {
 }
 
 type gcAdminsChanged struct {
-	GCID    zkidentity.ShortID   `json:"gcid"`
-	Source  zkidentity.ShortID   `json:"source"`
-	Added   []zkidentity.ShortID `json:"added"`
-	Removed []zkidentity.ShortID `json:"removed"`
+	GCID         zkidentity.ShortID   `json:"gcid"`
+	Source       zkidentity.ShortID   `json:"source"`
+	Added        []zkidentity.ShortID `json:"added"`
+	Removed      []zkidentity.ShortID `json:"removed"`
+	ChangedOwner bool                 `json:"changed_owner"`
 }
 
 type subscribeToPosts struct {

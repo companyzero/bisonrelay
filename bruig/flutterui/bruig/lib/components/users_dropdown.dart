@@ -9,8 +9,13 @@ class UsersDropdown extends StatefulWidget {
   final ChatModelCB? cb;
   final bool allowEmpty;
   final List<String> excludeUIDs;
+  final List<String>? limitUIDs;
   const UsersDropdown(
-      {this.cb, Key? key, this.allowEmpty = false, this.excludeUIDs = const []})
+      {this.cb,
+      Key? key,
+      this.allowEmpty = false,
+      this.excludeUIDs = const [],
+      this.limitUIDs})
       : super(key: key);
 
   @override
@@ -29,6 +34,9 @@ class _UsersDropdownState extends State<UsersDropdown> {
         builder: (context, client, theme, child) {
       List<ChatModel?> list = client.userChats.cast<ChatModel?>().toList();
       list.addAll(client.hiddenUsers.cast<ChatModel?>().toList());
+      if (widget.limitUIDs != null) {
+        list.removeWhere((c) => !(widget.limitUIDs!.contains(c?.id)));
+      }
       list.sort(
           (a, b) => a!.nick.toLowerCase().compareTo(b!.nick.toLowerCase()));
       if (widget.allowEmpty) {

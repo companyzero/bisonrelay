@@ -122,8 +122,9 @@ const (
 	CTHandshake                       = 0x77
 	CTLoadUserHistory                 = 0x78
 	CTAddressBookEntry                = 0x79
-	CTResetAllOldKX                   = 0x80
-	CTTransReset                      = 0x81
+	CTResetAllOldKX                   = 0x7a
+	CTTransReset                      = 0x7b
+	CTGCModifyOwner                   = 0x7c
 
 	NTInviteReceived         = 0x1001
 	NTInviteAccepted         = 0x1002

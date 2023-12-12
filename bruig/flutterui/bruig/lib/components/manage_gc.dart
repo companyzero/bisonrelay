@@ -93,6 +93,84 @@ class _InviteUserPanelState extends State<_InviteUserPanel> {
   }
 }
 
+class _ChangeGCOwnerPanel extends StatefulWidget {
+  final String gcID;
+  final List<ChatModel> users;
+  final Function changeOwner;
+  const _ChangeGCOwnerPanel(this.gcID, this.users, this.changeOwner,
+      {super.key});
+
+  @override
+  State<_ChangeGCOwnerPanel> createState() => __ChangeGCOwnerPanelState();
+}
+
+class __ChangeGCOwnerPanelState extends State<_ChangeGCOwnerPanel> {
+  bool loading = false;
+  ChatModel? newOwner;
+
+  void confirmNewOwner() async {
+    var theme = Theme.of(context);
+    var textColor = theme.focusColor;
+    if (newOwner == null) {
+      return;
+    }
+
+    showModalBottomSheet(
+        context: context,
+        builder: (BuildContext context) => Container(
+              padding: const EdgeInsets.all(30),
+              child: Row(children: [
+                Text(
+                    "Really set '${newOwner!.nick}' as new GC owner? This CANNOT be undone",
+                    style: TextStyle(color: textColor)),
+                const SizedBox(width: 10, height: 10),
+                ElevatedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.grey),
+                  child: const Text("No"),
+                ),
+                const SizedBox(width: 10, height: 10),
+                ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      widget.changeOwner(newOwner);
+                    },
+                    child: const Text("Yes")),
+              ]),
+            ));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    var theme = Theme.of(context);
+    var textColor = theme.focusColor;
+
+    var userIDs = widget.users.map((e) => e.id).toList();
+
+    return Consumer<ThemeNotifier>(
+        builder: (context, theme, _) => Column(children: [
+              Divider(height: 10, color: textColor),
+              const SizedBox(height: 10),
+              Text("Change GC Owner",
+                  style: TextStyle(
+                      color: textColor,
+                      fontSize: theme.getMediumFont(context))),
+              Row(children: [
+                Expanded(
+                    child: UsersDropdown(
+                        limitUIDs: userIDs,
+                        cb: (ChatModel? chat) {
+                          newOwner = chat;
+                        })),
+                Container(width: 20),
+                ElevatedButton(
+                    onPressed: !loading ? confirmNewOwner : null,
+                    child: const Text('Change Owner')),
+              ])
+            ]));
+  }
+}
+
 class ManageGCScreenState extends State<ManageGCScreenForChat> {
   // This must be updated every time a new GC version is deployed and its features
   // implemented in bruig.
@@ -316,6 +394,19 @@ class ManageGCScreenState extends State<ManageGCScreenForChat> {
     }
   }
 
+  Future<void> changeOwner(ChatModel newOwner) async {
+    if (loading) return;
+    setState(() => loading = true);
+    try {
+      await Golib.modifyGCOwner(gcID, newOwner.id);
+    } catch (exception) {
+      showErrorSnackbar(context, "Unable to modify GC Owner: $exception");
+    } finally {
+      setState(() => loading = false);
+      reloadUsers();
+    }
+  }
+
   Widget buildAdminAction(ChatModel user, int index) {
     if (!localIsAdmin || gcVersion == 0) {
       if (isGCOwner(user.id)) {
@@ -425,6 +516,14 @@ class ManageGCScreenState extends State<ManageGCScreenForChat> {
                       : const Empty(),
                   Divider(height: 10, color: textColor),
                   const SizedBox(height: 10),
+                  if (localIsOwner) ...[
+                    const SizedBox(height: 10),
+                    Container(
+                        margin: const EdgeInsets.only(top: 10, bottom: 10),
+                        child: _ChangeGCOwnerPanel(gcID, users, changeOwner)),
+                    Divider(height: 10, color: textColor),
+                    const SizedBox(height: 10),
+                  ],
                   Text("GC Members",
                       style: TextStyle(
                           color: textColor,
