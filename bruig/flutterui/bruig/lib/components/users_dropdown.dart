@@ -8,7 +8,9 @@ typedef ChatModelCB = Function(ChatModel? c);
 class UsersDropdown extends StatefulWidget {
   final ChatModelCB? cb;
   final bool allowEmpty;
-  const UsersDropdown({this.cb, Key? key, this.allowEmpty = false})
+  final List<String> excludeUIDs;
+  const UsersDropdown(
+      {this.cb, Key? key, this.allowEmpty = false, this.excludeUIDs = const []})
       : super(key: key);
 
   @override
@@ -32,6 +34,8 @@ class _UsersDropdownState extends State<UsersDropdown> {
       if (widget.allowEmpty) {
         list.insert(0, null);
       }
+      // Only use chats that aren't in the exclude UID list
+      list = list.where((e) => !widget.excludeUIDs.contains(e!.id)).toList();
       return DropdownButton<ChatModel?>(
         focusColor: Colors.red,
         isDense: true,

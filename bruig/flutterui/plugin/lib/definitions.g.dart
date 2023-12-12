@@ -1644,6 +1644,17 @@ Map<String, dynamic> _$SuggestKXToJson(SuggestKX instance) => <String, dynamic>{
       'target': instance.targetID,
     };
 
+TransReset _$TransResetFromJson(Map<String, dynamic> json) => TransReset(
+      json['mediator'] as String,
+      json['target'] as String,
+    );
+
+Map<String, dynamic> _$TransResetToJson(TransReset instance) =>
+    <String, dynamic>{
+      'mediator': instance.mediatorID,
+      'target': instance.targetID,
+    };
+
 KXSuggested _$KXSuggestedFromJson(Map<String, dynamic> json) => KXSuggested(
       json['alreadyknown'] as bool,
       json['inviteenick'] as String,

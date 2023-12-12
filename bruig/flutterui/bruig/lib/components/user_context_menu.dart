@@ -3,6 +3,7 @@ import 'package:bruig/models/client.dart';
 import 'package:bruig/components/context_menu.dart';
 import 'package:bruig/components/rename_chat.dart';
 import 'package:bruig/components/suggest_kx.dart';
+import 'package:bruig/components/trans_reset.dart';
 import 'package:bruig/components/pay_tip.dart';
 
 class UserContextMenu extends StatelessWidget {
@@ -42,6 +43,9 @@ class UserContextMenu extends StatelessWidget {
           break;
         case 'suggestToKX':
           showSuggestKXModalBottom(context, targetUserChat!);
+          break;
+        case 'transReset':
+          showTransResetModalBottom(context, targetUserChat!);
           break;
         case 'kx':
           client!.requestMediateID(postFrom!, targetUserId!);
@@ -84,6 +88,10 @@ class UserContextMenu extends StatelessWidget {
       const PopupMenuItem(
         value: 'suggestToKX',
         child: Text('Suggest User to KX'),
+      ),
+      PopupMenuItem(
+        value: 'transReset',
+        child: Text('Issue Transitive Reset with User'),
       ),
     ];
   }

@@ -1802,6 +1802,12 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 			return nil, err
 		}
 		return res, nil
+	case CTTransReset:
+		var args transReset
+		if err := cmd.decode(&args); err != nil {
+			return nil, err
+		}
+		return nil, c.RequestTransitiveReset(args.Mediator, args.Target)
 	}
 	return nil, nil
 

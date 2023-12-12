@@ -415,3 +415,8 @@ type loadUserHistory struct {
 	Page    int               `json:"page"`
 	PageNum int               `json:"page_num"`
 }
+
+type transReset struct {
+	Mediator zkidentity.ShortID `json:"mediator"`
+	Target   zkidentity.ShortID `json:"target"`
+}
