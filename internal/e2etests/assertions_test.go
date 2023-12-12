@@ -241,6 +241,31 @@ func assertClientCannotSeeGCM(t testing.TB, gcID zkidentity.ShortID, src, target
 	reg.Unregister()
 }
 
+// assertIsGCOwner asserts that the client c sees owner as the owner of a GC.
+func assertIsGCOwner(t testing.TB, gcID zkidentity.ShortID, c, owner *testClient) {
+	t.Helper()
+	gc, err := c.GetGC(gcID)
+	assert.NilErr(t, err)
+	if gc.Members[0] != owner.PublicID() {
+		t.Fatalf("unexpected gc owner: got %s, want %s", gc.Members[0],
+			owner.PublicID())
+	}
+}
+
+// assertGCDoesNotExist asserts that the client c does not have the gcID as one
+// of its GCs.
+func assertGCDoesNotExist(t testing.TB, gcID zkidentity.ShortID, c *testClient) {
+	t.Helper()
+	gcs, err := c.ListGCs()
+	assert.NilErr(t, err)
+	for _, gc := range gcs {
+		if gc.ID == gcID {
+			t.Fatalf("client %s has GC %s in list, when it should not",
+				c.name, gcID)
+		}
+	}
+}
+
 // assertSubscribeToPosts attempts to make subscriber subscribe to target's
 // posts.
 func assertSubscribeToPosts(t testing.TB, target, subscriber *testClient) {

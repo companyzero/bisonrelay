@@ -1089,5 +1089,98 @@ func TestGCUnkxMediateIDRetries(t *testing.T) {
 	time.Sleep(bob.cfg.RecentMediateIDThreshold)
 	assert.NilErr(t, bob.GCMessage(gcID, "msg07", 0, nil))
 	assert.ChanNotWritten(t, bobGCUnkxdMemberChan, 100*time.Millisecond)
+}
 
+// TestGCChangesOwner tests that changing the owner of the GC works as expected.
+func TestGCChangesOwner(t *testing.T) {
+	t.Parallel()
+
+	// One of the tests is attempting to spoof a change in ownership, which
+	// should generate the following error log line in the target.
+	errLogLinePattern := `only previous GC owner [0-9a-f]+ may change GC's [0-9a-f]+ owner`
+	tls := &testLogLineScanner{re: *regexp.MustCompile(errLogLinePattern)}
+
+	tcfg := testScaffoldCfg{logScanner: tls}
+	ts := newTestScaffold(t, tcfg)
+	alice := ts.newClient("alice")
+	bob := ts.newClient("bob")
+	charlie := ts.newClient("charlie")
+
+	// KX everyone.
+	ts.kxUsers(alice, bob)
+	ts.kxUsers(alice, charlie)
+	ts.kxUsers(bob, charlie)
+
+	// Create the GC, add Bob and Charlie.
+	gcID, err := alice.NewGroupChat("gc01")
+	assert.NilErr(t, err)
+	assertClientJoinsGC(t, gcID, alice, bob)
+	assertClientJoinsGC(t, gcID, alice, charlie)
+	assertClientSeesInGC(t, bob, gcID, charlie.PublicID())
+	assertClientsCanGCM(t, gcID, alice, bob, charlie)
+
+	// Setup handlers that receive the new owner ID.
+	bobAdminChangedChan := make(chan clientintf.UserID, 3)
+	bob.handle(client.OnGCAdminsChangedNtfn(func(ru *client.RemoteUser, gc rpc.RMGroupList, added, removed []zkidentity.ShortID) {
+		if gc.ID == gcID && len(added) > 0 {
+			bobAdminChangedChan <- added[0]
+		}
+	}))
+	charlieAdminChangedChan := make(chan clientintf.UserID, 3)
+	charlie.handle(client.OnGCAdminsChangedNtfn(func(ru *client.RemoteUser, gc rpc.RMGroupList, added, removed []zkidentity.ShortID) {
+		if gc.ID == gcID && len(added) > 0 {
+			charlieAdminChangedChan <- added[0]
+		}
+	}))
+
+	// Bob cannot change the ownership.
+	err = bob.ModifyGCOwner(gcID, bob.PublicID(), "test")
+	assert.NonNilErr(t, err)
+
+	// Bob spoofs a change in ownership to Charlie. This is not processed.
+	oldGC, err := alice.GetGC(gcID)
+	assert.NilErr(t, err)
+	spoofedUpdate := rpc.RMGroupList{
+		ID:         gcID,
+		Name:       "gc01",
+		Generation: oldGC.Generation + 1000,
+		Version:    oldGC.Version,
+		Timestamp:  time.Now().Unix(),
+		Members:    []zkidentity.ShortID{bob.PublicID()},
+	}
+	err = bob.testInterface().SendUserRM(charlie.PublicID(), spoofedUpdate)
+	assert.NilErr(t, err)
+	assert.ChanNotWritten(t, charlieAdminChangedChan, time.Millisecond*200)
+	assert.DeepEqual(t, tls.hasMatches(), true)
+
+	// Alice makes Bob the owner. This is processed and Alice remains in the
+	// GC.
+	assert.NilErr(t, alice.ModifyGCOwner(gcID, bob.PublicID(), "test"))
+	time.Sleep(time.Millisecond * 200)
+	assertIsGCOwner(t, gcID, alice, bob)
+	assertIsGCOwner(t, gcID, bob, bob)
+	assertIsGCOwner(t, gcID, charlie, bob)
+	assertClientsCanGCM(t, gcID, alice, bob, charlie)
+
+	// Bob kills the GC (something only the owner can do).
+	aliceKilledChan := make(chan struct{}, 1)
+	alice.handle(client.OnGCKilledNtfn(func(killedGCID zkidentity.ShortID, _ string) {
+		if killedGCID == gcID {
+			aliceKilledChan <- struct{}{}
+		}
+	}))
+	charlieKilledChan := make(chan struct{}, 1)
+	charlie.handle(client.OnGCKilledNtfn(func(killedGCID zkidentity.ShortID, _ string) {
+		if killedGCID == gcID {
+			charlieKilledChan <- struct{}{}
+		}
+	}))
+
+	err = bob.KillGroupChat(gcID, "test")
+	assert.NilErr(t, err)
+	assert.ChanWritten(t, aliceKilledChan)
+	assert.ChanWritten(t, charlieKilledChan)
+	assertGCDoesNotExist(t, gcID, alice)
+	assertGCDoesNotExist(t, gcID, bob)
+	assertGCDoesNotExist(t, gcID, charlie)
 }

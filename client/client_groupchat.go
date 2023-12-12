@@ -668,11 +668,14 @@ func (c *Client) maybeUpdateGCFunc(ru *RemoteUser, gcid zkidentity.ShortID, f fu
 				newGC.Generation)
 		}
 
-		// Special case changing the admin: only the admin itself
+		// Special case changing the owner: only the owner itself
 		// can do it.
+		if len(oldGC.Members) == 0 || len(newGC.Members) == 0 {
+			return fmt.Errorf("gc has no members")
+		}
 		if oldGC.Members[0] != newGC.Members[0] && oldGC.Members[0] != updaterID {
-			return fmt.Errorf("only previous GC admin %s may change "+
-				"GC's %s admin", oldGC.Members[0], gcid)
+			return fmt.Errorf("only previous GC owner %s may change "+
+				"GC's %s owner", oldGC.Members[0], gcid)
 		}
 
 		// This check is done before checking for permission because a
@@ -1403,7 +1406,7 @@ func (c *Client) handleGCKill(ru *RemoteUser, rmgk rpc.RMGroupKill) error {
 			return err
 		}
 
-		// Ensure we received this from the existing admin.
+		// Ensure we received this from the existing owner.
 		if len(gc.Members) == 0 || gc.Members[0] != ru.ID() {
 			return fmt.Errorf("received gc kill %q from non-owner",
 				gc.ID.String())
@@ -1608,13 +1611,66 @@ func (c *Client) ModifyGCAdmins(gcid zkidentity.ShortID, extraAdmins []zkidentit
 	return c.sendToGCMembers(gcid, newGC.Members, "modifyAdmins", rm, nil)
 }
 
+// ModifyGCOwner changes the owner of a GC. The old owner still remains as
+// a member of the GC (but not as admin).
+func (c *Client) ModifyGCOwner(gcid zkidentity.ShortID, newOwner clientintf.UserID,
+	reason string) error {
+
+	cb := func(gc *rpc.RMGroupList) error {
+		if gc.Version < 1 {
+			return fmt.Errorf("cannot modify extra admins for GC with version < 1")
+		}
+		newOwnerIdx := slices.Index(gc.Members, newOwner)
+		if newOwnerIdx < 0 {
+			return fmt.Errorf("new owner is not a member of the GC")
+		}
+		if newOwnerIdx == 0 {
+			return fmt.Errorf("new owner is already owner of the GC")
+		}
+		gc.Timestamp = time.Now().Unix()
+		gc.Generation += 1
+		gc.Members[0], gc.Members[newOwnerIdx] = gc.Members[newOwnerIdx], gc.Members[0]
+
+		// Remove new owner from list of extra admins if it's there.
+		newOwnerAdminIdx := slices.Index(gc.ExtraAdmins, newOwner)
+		if newOwnerAdminIdx > -1 {
+			gc.ExtraAdmins = slices.Delete(gc.ExtraAdmins, newOwnerAdminIdx, newOwnerAdminIdx+1)
+		}
+		return nil
+	}
+
+	_, newGC, err := c.maybeUpdateGCFunc(nil, gcid, cb)
+	if err != nil {
+		return err
+	}
+
+	gcAlias, _ := c.GetGCAlias(gcid)
+	newOwnerNick, _ := c.UserNick(newOwner)
+	c.log.Infof("Changed list GC owner of GC %q (%s) to %q (%v)",
+		gcAlias, gcid, newOwnerNick, newOwner)
+
+	rm := rpc.RMGroupUpdateAdmins{
+		Reason:       reason,
+		NewGroupList: newGC,
+	}
+	return c.sendToGCMembers(gcid, newGC.Members, "modifyOwner", rm, nil)
+}
+
 func (c *Client) handleGCUpdateAdmins(ru *RemoteUser, gcup rpc.RMGroupUpdateAdmins) error {
 	oldGC, err := c.maybeUpdateGC(ru, gcup.NewGroupList)
 	if err != nil {
 		return err
 	}
-	ru.log.Infof("Updated list of GC admins for GC %s to %v",
-		gcup.NewGroupList.ID, gcup.NewGroupList.ExtraAdmins)
+
+	gcAlias, _ := c.GetGCAlias(gcup.NewGroupList.ID)
+	if gcup.NewGroupList.Members[0] != oldGC.Members[0] {
+		newOwnerNick, _ := c.UserNick(gcup.NewGroupList.Members[0])
+		ru.log.Infof("Changed owner of GC %q (%s) to %q (%v)",
+			gcAlias, gcup.NewGroupList.ID, newOwnerNick, gcup.NewGroupList.Members[0])
+	} else {
+		ru.log.Infof("Updated list of GC admins for GC %s to %v",
+			gcup.NewGroupList.ID, gcup.NewGroupList.ExtraAdmins)
+	}
 	c.notifyUpdatedGC(ru, oldGC, gcup.NewGroupList)
 	return err
 }
