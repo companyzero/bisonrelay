@@ -2937,9 +2937,17 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 			myID := as.c.PublicID()
 			pf("List of GC Admins modified by %s", srcNick)
 			for _, uid := range added {
-				if uid == myID {
+				newOwner := uid == gc.Members[0]
+				switch {
+				case uid == myID && newOwner:
+					pf("Local client is now owner of GC")
+				case uid == myID:
 					pf("Added local client as admin")
-				} else {
+				case newOwner:
+					nick, _ := as.c.UserNick(uid)
+					pf("Changed owner of GC to %q (%s)", strescape.Nick(nick),
+						uid)
+				default:
 					nick, _ := as.c.UserNick(uid)
 					pf("Added %q (%s) as admin", strescape.Nick(nick),
 						uid)

@@ -1094,6 +1094,12 @@ var gcCommands = []tuicmd{
 
 			return nil
 		},
+		completer: func(args []string, arg string, as *appState) []string {
+			if len(args) == 0 {
+				return gcCompleter(arg, as)
+			}
+			return nil
+		},
 	}, {
 		cmd:   "kick",
 		usage: "<gc> <nick> [<reason>]",
@@ -1467,6 +1473,53 @@ var gcCommands = []tuicmd{
 			return as.modifyGCAdmins(gcID, clientintf.UserID{}, uid)
 		},
 
+		completer: func(args []string, arg string, as *appState) []string {
+			if len(args) == 0 {
+				return gcCompleter(arg, as)
+			}
+			if len(args) == 1 {
+				return nickCompleter(arg, as)
+			}
+			return nil
+		},
+	}, {
+		cmd:   "modowner",
+		usage: "<gc> <new owner>",
+		descr: "Change the owner of the given GC",
+		handler: func(args []string, as *appState) error {
+			if len(args) < 1 {
+				return usageError{msg: "GC cannot be empty"}
+			}
+			if len(args) < 2 {
+				return usageError{msg: "New admin cannot be empty"}
+			}
+
+			gcID, err := as.c.GCIDByName(args[0])
+			if err != nil {
+				return err
+			}
+			gcAlias, err := as.c.GetGCAlias(gcID)
+			if err != nil {
+				return err
+			}
+
+			ru, err := as.c.UserByNick(args[1])
+			if err != nil {
+				return err
+			}
+
+			reason := "Changing owner"
+			err = as.c.ModifyGCOwner(gcID, ru.ID(), reason)
+			if err != nil {
+				return err
+			}
+
+			cw := as.findOrNewGCWindow(gcID)
+			cw.newHelpMsg("Changed owner of GC %s to %s",
+				strescape.Nick(gcAlias), strescape.Nick(ru.Nick()))
+			as.repaintIfActive(cw)
+			return nil
+		},
 		completer: func(args []string, arg string, as *appState) []string {
 			if len(args) == 0 {
 				return gcCompleter(arg, as)
