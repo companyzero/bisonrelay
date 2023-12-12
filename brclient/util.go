@@ -15,7 +15,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/decred/dcrd/chaincfg/chainhash"
 	"github.com/decred/dcrd/dcrutil/v4"
-	"github.com/decred/dcrlnd"
 	"github.com/decred/dcrlnd/lnrpc"
 	"github.com/decred/dcrlnd/zpay32"
 )
@@ -154,7 +153,7 @@ func allStack() []byte {
 }
 
 func chanPointToStr(cp *lnrpc.ChannelPoint) string {
-	tx, err := dcrlnd.GetChanPointFundingTxid(cp)
+	tx, err := lnrpc.GetChanPointFundingTxid(cp)
 	if err != nil {
 		return fmt.Sprintf("[%v]", err)
 	}

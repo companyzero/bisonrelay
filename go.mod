@@ -18,8 +18,8 @@ require (
 	github.com/decred/dcrd/dcrutil/v4 v4.0.1
 	github.com/decred/dcrd/txscript/v4 v4.1.0
 	github.com/decred/dcrd/wire v1.6.0
-	github.com/decred/dcrlnd v0.4.1-0.20230920191458-944b0fccb7ae
-	github.com/decred/dcrlnlpd v0.0.0-20230616144508-d84160568398
+	github.com/decred/dcrlnd v0.4.1-0.20231204134446-736bd7624cfe
+	github.com/decred/dcrlnlpd v0.0.0-20231212171353-b46ff7b10bf4
 	github.com/decred/go-socks v1.1.0
 	github.com/decred/slog v1.2.0
 	github.com/erikgeiser/promptkit v0.9.0
@@ -37,13 +37,13 @@ require (
 	github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
 	github.com/vaughan0/go-ini v0.0.0-20130923145212-a98ad7ee00ec
 	github.com/xhit/go-str2duration/v2 v2.1.0
-	golang.org/x/crypto v0.8.0
-	golang.org/x/exp v0.0.0-20230711023510-fffb14384f22
+	golang.org/x/crypto v0.15.0
+	golang.org/x/exp v0.0.0-20231110203233-9a3e6036ecaa
 	golang.org/x/mobile v0.0.0-20230427221453-e8d11dd0ba41
-	golang.org/x/net v0.9.0
-	golang.org/x/sync v0.3.0
-	golang.org/x/term v0.11.0
-	golang.org/x/text v0.12.0
+	golang.org/x/net v0.18.0
+	golang.org/x/sync v0.5.0
+	golang.org/x/term v0.14.0
+	golang.org/x/text v0.14.0
 	google.golang.org/grpc v1.56.0
 	google.golang.org/protobuf v1.30.0
 	gopkg.in/macaroon.v2 v2.1.0
@@ -68,11 +68,10 @@ require (
 	github.com/decred/base58 v1.0.5 // indirect
 	github.com/decred/dcrd v1.8.0 // indirect
 	github.com/decred/dcrd/addrmgr/v2 v2.0.2 // indirect
-	github.com/decred/dcrd/blockchain/stake/v4 v4.0.0 // indirect
 	github.com/decred/dcrd/blockchain/stake/v5 v5.0.0 // indirect
 	github.com/decred/dcrd/blockchain/standalone/v2 v2.2.0 // indirect
 	github.com/decred/dcrd/chaincfg v1.5.2 // indirect
-	github.com/decred/dcrd/connmgr v1.1.0 // indirect
+	github.com/decred/dcrd/connmgr v1.1.1 // indirect
 	github.com/decred/dcrd/connmgr/v3 v3.1.1 // indirect
 	github.com/decred/dcrd/container/apbf v1.0.1 // indirect
 	github.com/decred/dcrd/crypto/ripemd160 v1.0.2 // indirect
@@ -81,7 +80,6 @@ require (
 	github.com/decred/dcrd/dcrec/edwards/v2 v2.0.3 // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.2.0 // indirect
 	github.com/decred/dcrd/dcrjson/v4 v4.0.1 // indirect
-	github.com/decred/dcrd/gcs/v3 v3.0.0 // indirect
 	github.com/decred/dcrd/gcs/v4 v4.0.0 // indirect
 	github.com/decred/dcrd/hdkeychain/v3 v3.1.1 // indirect
 	github.com/decred/dcrd/lru v1.1.2 // indirect
@@ -139,14 +137,14 @@ require (
 	gitlab.com/NebulousLabs/fastrand v0.0.0-20181126182046-603482d69e40 // indirect
 	gitlab.com/NebulousLabs/go-upnp v0.0.0-20211002182029-11da932010b6 // indirect
 	gitlab.com/yawning/bsaes.git v0.0.0-20190805113838-0a714cd429ec // indirect
-	go.etcd.io/bbolt v1.3.7 // indirect
+	go.etcd.io/bbolt v1.3.8 // indirect
 	go.uber.org/atomic v1.10.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.24.0 // indirect
-	golang.org/x/mod v0.11.0 // indirect
-	golang.org/x/sys v0.11.0 // indirect
+	golang.org/x/mod v0.14.0 // indirect
+	golang.org/x/sys v0.14.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
-	golang.org/x/tools v0.8.0 // indirect
+	golang.org/x/tools v0.15.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 	google.golang.org/genproto v0.0.0-20230410155749-daa745c078e1 // indirect
 	gopkg.in/errgo.v1 v1.0.1 // indirect
