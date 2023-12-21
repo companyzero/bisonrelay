@@ -421,3 +421,14 @@ type transReset struct {
 	Mediator zkidentity.ShortID `json:"mediator"`
 	Target   zkidentity.ShortID `json:"target"`
 }
+
+type listTransactions struct {
+	StartHeight int32 `json:"start_height"`
+	EndHeight   int32 `json:"end_height"`
+}
+
+type transaction struct {
+	TxHash      string `json:"tx_hash"`
+	Amount      int64  `json:"amount"`
+	BlockHeight int32  `json:"block_height"`
+}

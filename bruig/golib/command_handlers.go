@@ -1843,6 +1843,30 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		}
 		return nil, err
 
+	case CTListTransactions:
+		var args listTransactions
+		if err := cmd.decode(&args); err != nil {
+			return nil, err
+		}
+
+		req := &lnrpc.GetTransactionsRequest{
+			StartHeight: args.StartHeight,
+			EndHeight:   args.EndHeight,
+		}
+		txs, err := lnc.GetTransactions(cc.ctx, req)
+		if err != nil {
+			return nil, err
+		}
+		res := make([]transaction, len(txs.Transactions))
+		for i, tx := range txs.Transactions {
+			res[i] = transaction{
+				TxHash:      tx.TxHash,
+				Amount:      tx.Amount,
+				BlockHeight: tx.BlockHeight,
+			}
+		}
+		return res, nil
+
 	}
 	return nil, nil
 
