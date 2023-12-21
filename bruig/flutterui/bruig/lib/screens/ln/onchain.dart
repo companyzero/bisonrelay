@@ -1,15 +1,19 @@
+import 'dart:async';
+
 import 'package:bruig/components/accounts_dropdown.dart';
 import 'package:bruig/components/copyable.dart';
 import 'package:bruig/components/dcr_input.dart';
 import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/components/snackbars.dart';
+import 'package:bruig/models/client.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:provider/provider.dart';
 import 'package:bruig/theme_manager.dart';
 
 class LNOnChainPage extends StatefulWidget {
-  const LNOnChainPage({super.key});
+  final ClientModel client;
+  const LNOnChainPage(this.client, {super.key});
 
   @override
   State<LNOnChainPage> createState() => _LNOnChainPageState();
@@ -21,6 +25,8 @@ class _LNOnChainPageState extends State<LNOnChainPage> {
   String? sendAccount;
   TextEditingController sendAddrCtrl = TextEditingController();
   AmountEditingController amountCtrl = AmountEditingController();
+  int rescanProgress = -1;
+  int rescanTarget = 0;
 
   void generateRecvAddr() async {
     if (recvAccount == null) {
@@ -88,6 +94,40 @@ class _LNOnChainPageState extends State<LNOnChainPage> {
                 tooltip: "Send (cannot be undone)",
               ),
             ])));
+  }
+
+  void rescanProgressed() {
+    setState(() {
+      rescanProgress = widget.client.rescanNotifier.progressHeight;
+    });
+  }
+
+  void rescan() async {
+    var tipHeight = (await Golib.lnGetInfo()).blockHeight;
+
+    var rescanNtfn = widget.client.rescanNotifier;
+    rescanNtfn.addListener(rescanProgressed);
+
+    setState(() {
+      rescanProgress = 0;
+      rescanTarget = tipHeight;
+    });
+
+    try {
+      await Golib.rescanWallet(0);
+    } catch (exception) {
+      showErrorSnackbar(context, "Unable to rescan wallet: $exception");
+    }
+
+    rescanNtfn.removeListener(rescanProgressed);
+    setState(() {
+      rescanProgress = -1;
+    });
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
   }
 
   @override
@@ -210,6 +250,32 @@ class _LNOnChainPageState extends State<LNOnChainPage> {
             const SizedBox(height: 10),
             ElevatedButton(
                 onPressed: confirmSend, child: const Text("Send On-Chain")),
+            const SizedBox(height: 10),
+            Row(children: [
+              Text("Rescan",
+                  textAlign: TextAlign.left,
+                  style: TextStyle(
+                      color: darkTextColor,
+                      fontSize: theme.getMediumFont(context))),
+              Expanded(
+                  child: Divider(
+                color: dividerColor, //color of divider
+                height: 10, //height spacing of divider
+                thickness: 1, //thickness of divier line
+                indent: 8, //spacing at the start of divider
+                endIndent: 5, //spacing at the end of divider
+              )),
+            ]),
+            const SizedBox(height: 10),
+            ElevatedButton(
+                onPressed: rescanProgress == -1 ? rescan : null,
+                child: const Text("Rescan Wallet")),
+            const SizedBox(height: 10),
+            rescanProgress < 0
+                ? const Empty()
+                : Text(
+                    "Rescanned through $rescanProgress / $rescanTarget blocks (${(rescanProgress / rescanTarget * 100).toStringAsFixed(2)}%)",
+                    style: TextStyle(color: darkTextColor)),
           ])),
     );
   }
