@@ -125,6 +125,7 @@ const (
 	CTResetAllOldKX                   = 0x7a
 	CTTransReset                      = 0x7b
 	CTGCModifyOwner                   = 0x7c
+	CTRescanWallet                    = 0x7d
 
 	NTInviteReceived         = 0x1001
 	NTInviteAccepted         = 0x1002
@@ -166,6 +167,7 @@ const (
 	NTResourceFetched        = 0x1026
 	NTSimpleStoreOrderPlaced = 0x1027
 	NTHandshakeStage         = 0x1028
+	NTRescanWalletProgress   = 0x1029
 )
 
 type cmd struct {

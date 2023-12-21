@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:bruig/components/buttons.dart';
+import 'package:bruig/models/client.dart';
 import 'package:bruig/screens/ln/accounts.dart';
 import 'package:bruig/screens/ln/backups.dart';
 import 'package:bruig/screens/ln/channels.dart';
@@ -61,7 +62,8 @@ class _LNScreenState extends State<LNScreen> {
       case 1:
         return const LNAccountsPage();
       case 2:
-        return const LNOnChainPage();
+        return Consumer<ClientModel>(
+            builder: (context, client, child) => LNOnChainPage(client));
       case 3:
         return const LNChannelsPage();
       case 4:

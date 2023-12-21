@@ -1823,6 +1823,26 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		err := c.ModifyGCOwner(args.GCID, args.NewAdmins[0], "Changing owner")
 		return nil, err
 
+	case CTRescanWallet:
+		var beginHeight int32
+		if err := cmd.decode(&beginHeight); err != nil {
+			return nil, err
+		}
+		req := &walletrpc.RescanWalletRequest{BeginHeight: beginHeight}
+		s, err := lnWallet.RescanWallet(cc.ctx, req)
+		if err != nil {
+			return nil, err
+		}
+
+		ntf, err := s.Recv()
+		for ; err == nil; ntf, err = s.Recv() {
+			notify(NTRescanWalletProgress, ntf.ScannedThroughHeight, nil)
+		}
+		if err == nil || errors.Is(err, io.EOF) {
+			return nil, nil
+		}
+		return nil, err
+
 	}
 	return nil, nil
 

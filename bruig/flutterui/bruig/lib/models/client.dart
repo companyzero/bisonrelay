@@ -391,6 +391,15 @@ class ChatModel extends ChangeNotifier {
   Future<void> resendGCList() async => await Golib.resendGCList(id);
 }
 
+class RescanNotifier extends ChangeNotifier {
+  int _height = 0;
+  int get progressHeight => _height;
+  void set _progressHeight(int h) {
+    _height = h;
+    notifyListeners();
+  }
+}
+
 class ClientModel extends ChangeNotifier {
   ClientModel() {
     _handleAcceptedInvites();
@@ -400,6 +409,7 @@ class ClientModel extends ChangeNotifier {
     _handleGCListUpdates();
     _fetchInfo();
     _handleSSOrders();
+    _handleRescanWalletProgress();
   }
 
   List<ChatModel> _gcChats = [];
@@ -1117,6 +1127,15 @@ class ClientModel extends ChangeNotifier {
     var stream = Golib.simpleStoreOrders();
     await for (var order in stream) {
       _handleSSOrderPlaced(order);
+    }
+  }
+
+  RescanNotifier _rescanNtf = RescanNotifier();
+  RescanNotifier get rescanNotifier => _rescanNtf;
+  void _handleRescanWalletProgress() async {
+    var stream = Golib.rescanWalletProgress();
+    await for (var h in stream) {
+      _rescanNtf._progressHeight = h;
     }
   }
 }

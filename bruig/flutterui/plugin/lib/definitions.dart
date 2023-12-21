@@ -2002,6 +2002,9 @@ mixin NtfStreams {
       StreamController<SSPlacedOrder>();
   Stream<SSPlacedOrder> simpleStoreOrders() => ntfSimpleStoreOrders.stream;
 
+  StreamController<int> ntfRescanProgress = StreamController<int>();
+  Stream<int> rescanWalletProgress() => ntfRescanProgress.stream;
+
   handleNotifications(int cmd, bool isError, String jsonPayload) {
     dynamic payload;
     if (jsonPayload != "") {
@@ -2202,6 +2205,11 @@ mixin NtfStreams {
         }
         break;
 
+      case NTRescanWalletProgress:
+        var event = payload as int;
+        ntfRescanProgress.add(event);
+        break;
+
       default:
         print("Received unknown notification ${cmd.toRadixString(16)}");
     }
@@ -2237,6 +2245,7 @@ abstract class PluginPlatform {
   Stream<OnboardState> onboardStateChanged() => throw "unimplemented";
   Stream<FetchedResource> fetchedResources() => throw "unimplemented";
   Stream<SSPlacedOrder> simpleStoreOrders() => throw "unimplemented";
+  Stream<int> rescanWalletProgress() => throw "unimplemented";
 
   Future<bool> hasServer() async => throw "unimplemented";
 
@@ -2802,6 +2811,9 @@ abstract class PluginPlatform {
 
   Future<void> modifyGCOwner(String gcID, String ownerID) async =>
       await asyncCall(CTGCModifyOwner, GCModifyAdmins(gcID, [ownerID]));
+
+  Future<void> rescanWallet(int beginHeight) async =>
+      await asyncCall(CTRescanWallet, beginHeight);
 }
 
 const int CTUnknown = 0x00;
@@ -2917,6 +2929,7 @@ const int CTAddressBookEntry = 0x79;
 const int CTResetAllOldKX = 0x7a;
 const int CTTransReset = 0x7b;
 const int CTGCModifyOwner = 0x7c;
+const int CTRescanWallet = 0x7d;
 
 const int notificationsStartID = 0x1000;
 
@@ -2960,3 +2973,4 @@ const int NTOnboardStateChanged = 0x1025;
 const int NTResourceFetched = 0x1026;
 const int NTSimpleStoreOrderPlaced = 0x1027;
 const int NTHandshakeStage = 0x1028;
+const int NTRescanWalletProgress = 0x1029;
