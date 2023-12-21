@@ -1985,3 +1985,30 @@ Map<String, dynamic> _$HandshakeStageToJson(HandshakeStage instance) =>
       'uid': instance.uid,
       'stage': instance.stage,
     };
+
+ListTransactionsArgs _$ListTransactionsArgsFromJson(
+        Map<String, dynamic> json) =>
+    ListTransactionsArgs(
+      json['start_height'] as int,
+      json['end_height'] as int,
+    );
+
+Map<String, dynamic> _$ListTransactionsArgsToJson(
+        ListTransactionsArgs instance) =>
+    <String, dynamic>{
+      'start_height': instance.startHeight,
+      'end_height': instance.endHeight,
+    };
+
+Transaction _$TransactionFromJson(Map<String, dynamic> json) => Transaction(
+      json['tx_hash'] as String,
+      json['amount'] as int,
+      json['block_height'] as int,
+    );
+
+Map<String, dynamic> _$TransactionToJson(Transaction instance) =>
+    <String, dynamic>{
+      'tx_hash': instance.txHash,
+      'amount': instance.amount,
+      'block_height': instance.blockHeight,
+    };

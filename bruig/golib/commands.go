@@ -126,6 +126,7 @@ const (
 	CTTransReset                      = 0x7b
 	CTGCModifyOwner                   = 0x7c
 	CTRescanWallet                    = 0x7d
+	CTListTransactions                = 0x7e
 
 	NTInviteReceived         = 0x1001
 	NTInviteAccepted         = 0x1002

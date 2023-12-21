@@ -4,10 +4,13 @@ import 'package:bruig/components/accounts_dropdown.dart';
 import 'package:bruig/components/copyable.dart';
 import 'package:bruig/components/dcr_input.dart';
 import 'package:bruig/components/empty_widget.dart';
+import 'package:bruig/components/indicator.dart';
 import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/models/client.dart';
 import 'package:flutter/material.dart';
+import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
+import 'package:golib_plugin/util.dart';
 import 'package:provider/provider.dart';
 import 'package:bruig/theme_manager.dart';
 
@@ -27,6 +30,8 @@ class _LNOnChainPageState extends State<LNOnChainPage> {
   AmountEditingController amountCtrl = AmountEditingController();
   int rescanProgress = -1;
   int rescanTarget = 0;
+  List<Transaction> transactions = [];
+  bool loadingTxs = false;
 
   void generateRecvAddr() async {
     if (recvAccount == null) {
@@ -50,6 +55,7 @@ class _LNOnChainPageState extends State<LNOnChainPage> {
     try {
       await Golib.sendOnChain(addr, amount, fromAccount);
       showSuccessSnackbar(context, "Sent on-chain transaction");
+      listTransactions();
     } catch (exception) {
       showErrorSnackbar(context, "Unable to send coins: $exception");
     }
@@ -125,6 +131,30 @@ class _LNOnChainPageState extends State<LNOnChainPage> {
     });
   }
 
+  void listTransactions() async {
+    setState(() {
+      loadingTxs = true;
+    });
+    try {
+      var txs = await Golib.listTransactions(0, 0);
+      setState(() {
+        transactions = txs;
+      });
+    } catch (exception) {
+      showErrorSnackbar(context, "Unable to list transactions: $exception");
+    } finally {
+      setState(() {
+        loadingTxs = false;
+      });
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    listTransactions();
+  }
+
   @override
   void dispose() {
     super.dispose();
@@ -139,6 +169,8 @@ class _LNOnChainPageState extends State<LNOnChainPage> {
     var dividerColor = theme.highlightColor;
     var backgroundColor = theme.backgroundColor;
     var inputFill = theme.hoverColor;
+
+    var txTs = TextStyle(color: darkTextColor);
 
     return Consumer<ThemeNotifier>(
       builder: (context, theme, _) => Container(
@@ -276,6 +308,57 @@ class _LNOnChainPageState extends State<LNOnChainPage> {
                 : Text(
                     "Rescanned through $rescanProgress / $rescanTarget blocks (${(rescanProgress / rescanTarget * 100).toStringAsFixed(2)}%)",
                     style: TextStyle(color: darkTextColor)),
+            Row(children: [
+              Text("On-Chain Transactions",
+                  textAlign: TextAlign.left,
+                  style: TextStyle(
+                      color: darkTextColor,
+                      fontSize: theme.getMediumFont(context))),
+              if (loadingTxs) ...[
+                const SizedBox(width: 10),
+                const SizedBox(
+                    width: 15,
+                    height: 15,
+                    child: IndeterminateIndicator(strokeWidth: 2.0)),
+              ],
+              Expanded(
+                  child: Divider(
+                color: dividerColor, //color of divider
+                height: 10, //height spacing of divider
+                thickness: 1, //thickness of divier line
+                indent: 8, //spacing at the start of divider
+                endIndent: 5, //spacing at the end of divider
+              )),
+            ]),
+            if (transactions.isNotEmpty)
+              Expanded(
+                  child: ListView.separated(
+                separatorBuilder: (context, index) => Divider(
+                  height: 5,
+                  thickness: 1,
+                  color: dividerColor,
+                ),
+                itemCount: transactions.length,
+                itemBuilder: (BuildContext context, int index) {
+                  var tx = transactions[index];
+                  return Row(children: [
+                    Flexible(
+                        flex: 4,
+                        child: Align(
+                            alignment: Alignment.topRight,
+                            child: Text(formatDCR(atomsToDCR(tx.amount)),
+                                style: txTs))),
+                    const SizedBox(width: 10),
+                    Flexible(
+                        flex: 2,
+                        child: Align(
+                            alignment: Alignment.topRight,
+                            child: Text("${tx.blockHeight}", style: txTs))),
+                    const SizedBox(width: 10),
+                    Flexible(flex: 15, child: Copyable(tx.txHash, txTs)),
+                  ]);
+                },
+              )),
           ])),
     );
   }

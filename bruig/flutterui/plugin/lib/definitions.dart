@@ -1947,6 +1947,31 @@ class HandshakeStage extends ChatEvent {
       _$HandshakeStageFromJson(json);
 }
 
+@JsonSerializable()
+class ListTransactionsArgs {
+  @JsonKey(name: "start_height")
+  final int startHeight;
+  @JsonKey(name: "end_height")
+  final int endHeight;
+
+  ListTransactionsArgs(this.startHeight, this.endHeight);
+  Map<String, dynamic> toJson() => _$ListTransactionsArgsToJson(this);
+}
+
+@JsonSerializable()
+class Transaction {
+  @JsonKey(name: "tx_hash")
+  final String txHash;
+  @JsonKey(name: "amount")
+  final int amount;
+  @JsonKey(name: "block_height")
+  final int blockHeight;
+
+  Transaction(this.txHash, this.amount, this.blockHeight);
+  factory Transaction.fromJson(Map<String, dynamic> json) =>
+      _$TransactionFromJson(json);
+}
+
 mixin NtfStreams {
   StreamController<RemoteUser> ntfAcceptedInvites =
       StreamController<RemoteUser>();
@@ -2814,6 +2839,17 @@ abstract class PluginPlatform {
 
   Future<void> rescanWallet(int beginHeight) async =>
       await asyncCall(CTRescanWallet, beginHeight);
+
+  Future<List<Transaction>> listTransactions(int startHeight, endHeight) async {
+    var res = await asyncCall(
+        CTListTransactions, ListTransactionsArgs(startHeight, endHeight));
+    if (res == null) {
+      return List.empty();
+    }
+    return (res as List)
+        .map<Transaction>((v) => Transaction.fromJson(v))
+        .toList();
+  }
 }
 
 const int CTUnknown = 0x00;
@@ -2930,6 +2966,7 @@ const int CTResetAllOldKX = 0x7a;
 const int CTTransReset = 0x7b;
 const int CTGCModifyOwner = 0x7c;
 const int CTRescanWallet = 0x7d;
+const int CTListTransactions = 0x7e;
 
 const int notificationsStartID = 0x1000;
 
