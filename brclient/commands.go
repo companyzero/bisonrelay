@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -2794,6 +2796,50 @@ var lnCommands = []tuicmd{
 				return err
 			}
 			as.cwHelpMsg("Created account %s", name)
+			return nil
+		},
+	}, {
+		cmd:           "rescanwallet",
+		usage:         "[<start height>]",
+		usableOffline: true,
+		descr:         "Rescan for on-chain wallet transactions",
+		handler: func(args []string, as *appState) error {
+			var beginHeight int32
+			if len(args) > 0 {
+				h, err := strconv.ParseInt(args[0], 10, 32)
+				if err != nil {
+					return err
+				}
+				beginHeight = int32(h)
+			}
+
+			go func() {
+				req := &walletrpc.RescanWalletRequest{BeginHeight: beginHeight}
+				s, err := as.lnWallet.RescanWallet(as.ctx, req)
+				if err != nil {
+					as.cwHelpMsg("Unable to rescan wallet: %v", err)
+					return
+				}
+
+				t := time.Now()
+				as.cwHelpMsg("Starting rescan at height %d", beginHeight)
+				var lastHeight int32
+				ntf, err := s.Recv()
+				for ; err == nil; ntf, err = s.Recv() {
+					if time.Since(t) > 5*time.Second {
+						as.cwHelpMsg("Rescanned up to block %d", ntf.ScannedThroughHeight)
+						t = time.Now()
+					}
+					lastHeight = ntf.ScannedThroughHeight
+				}
+				if err == nil || errors.Is(err, io.EOF) {
+					as.cwHelpMsg("Finished rescan at height %d", lastHeight)
+				} else {
+					as.cwHelpMsg("Error during rescan (last height %d): %v",
+						lastHeight, err)
+				}
+			}()
+
 			return nil
 		},
 	},
