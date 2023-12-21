@@ -2839,7 +2839,57 @@ var lnCommands = []tuicmd{
 						lastHeight, err)
 				}
 			}()
+			return nil
+		},
+	}, {
+		cmd:           "listtxs",
+		usableOffline: true,
+		aliases:       []string{"listtransactions"},
+		descr:         "List on-chain wallet transactions",
+		usage:         "[<start height>] [<end height>]",
+		long: []string{
+			"If start height is not specified, it defaults to -1. If end height is not specified, it defaults to 0.",
+			"This makes the listing include unconfirmed transactions and returns most recent transactions first.",
+		},
+		handler: func(args []string, as *appState) error {
+			var startHeight, endHeight int32 = 0, 0
+			if len(args) > 0 {
+				i, err := strconv.ParseInt(args[0], 10, 32)
+				if err != nil {
+					return fmt.Errorf("start height parsing error: %v", err)
+				}
+				startHeight = int32(i)
+			}
+			if len(args) > 1 {
+				i, err := strconv.ParseInt(args[1], 10, 32)
+				if err != nil {
+					return fmt.Errorf("end height parsing error: %v", err)
+				}
+				endHeight = int32(i)
+			}
 
+			// TODO: What if GetTransactions it too large?
+			as.cwHelpMsg("Fetching list of transactions...")
+			go func() {
+				req := &lnrpc.GetTransactionsRequest{StartHeight: startHeight, EndHeight: endHeight}
+				txs, err := as.lnRPC.GetTransactions(as.ctx, req)
+				if err != nil {
+					errMsg := fmt.Sprintf("Unable to list transactions: %v", err)
+					as.diagMsg(as.styles.err.Render(errMsg))
+					return
+				}
+
+				as.cwHelpMsgs(func(pf printf) {
+					pf("")
+					pf("Wallet transactions")
+					pf("       Net Amount -  Height - Tx Hash")
+					for _, tx := range txs.Transactions {
+						value := dcrutil.Amount(tx.Amount)
+						pf("%13.8f DCR - %7d - %s",
+							value.ToCoin(), tx.BlockHeight, tx.TxHash)
+					}
+				})
+			}()
 			return nil
 		},
 	},
