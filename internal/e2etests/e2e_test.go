@@ -87,6 +87,8 @@ type clientCfg struct {
 	idIniter  func(context.Context) (*zkidentity.FullIdentity, error)
 	netDialer func(context.Context) (clientintf.Conn, *tls.ConnectionState, error)
 	pcIniter  func(loggerSubsysIniter) clientintf.PaymentClient
+
+	sendRecvReceipts bool
 }
 
 type newClientOpt func(*clientCfg)
@@ -94,6 +96,12 @@ type newClientOpt func(*clientCfg)
 func withPCIniter(pcIniter func(loggerSubsysIniter) clientintf.PaymentClient) newClientOpt {
 	return func(cfg *clientCfg) {
 		cfg.pcIniter = pcIniter
+	}
+}
+
+func withSendRecvReceipts() newClientOpt {
+	return func(cfg *clientCfg) {
+		cfg.sendRecvReceipts = true
 	}
 }
 
@@ -381,6 +389,7 @@ func (ts *testScaffold) newClientWithCfg(nccfg *clientCfg, opts ...newClientOpt)
 
 		AutoHandshakeInterval:       time.Second * 8,
 		AutoRemoveIdleUsersInterval: time.Second * 14,
+		SendReceiveReceipts:         nccfg.sendRecvReceipts,
 
 		ResourcesProvider: resources.ProviderFunc(func(ctx context.Context,
 			uid clientintf.UserID,

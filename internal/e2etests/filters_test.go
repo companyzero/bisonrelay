@@ -457,7 +457,7 @@ func TestContentFilters(t *testing.T) {
 				var parent zkidentity.ShortID
 				rand.Read(parent[:])
 				comment += fmt.Sprintf("#%d", time.Now().UnixMicro())
-				err := commenter.CommentPost(postFrom.PublicID(), pid, comment, &parent)
+				_, err := commenter.CommentPost(postFrom.PublicID(), pid, comment, &parent)
 				assert.NilErr(t, err)
 			}
 

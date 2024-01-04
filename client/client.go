@@ -195,6 +195,10 @@ type Config struct {
 	// user's nick or the prefix of the string representatation of its nick
 	// (i.e. anything acceptable as returned by UserByNick()).
 	AutoRemoveIdleUsersIgnoreList []string
+
+	// SendReceiveReceipts flags whether to send receive receipts for all
+	// domains.
+	SendReceiveReceipts bool
 }
 
 // logger creates a logger for the given subsystem in the configured backend.

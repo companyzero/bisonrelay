@@ -376,6 +376,9 @@ func ComposeCompressedRM(from *zkidentity.FullIdentity, rm interface{}, zlibLeve
 	case RMPostStatusReply:
 		h.Command = RMCPostStatusReply
 
+	case RMReceiveReceipt:
+		h.Command = RMCReceiveReceipt
+
 	// Resources
 	case RMFetchResource:
 		h.Command = RMCFetchResource
@@ -720,6 +723,11 @@ func DecomposeRM(id *zkidentity.PublicIdentity, mb []byte) (*RMHeader, interface
 		var postStatusReply RMPostStatusReply
 		err = pmd.Decode(&postStatusReply)
 		payload = postStatusReply
+
+	case RMCReceiveReceipt:
+		var receipt RMReceiveReceipt
+		err = pmd.Decode(&receipt)
+		payload = receipt
 
 	// Resources
 	case RMCFetchResource:
@@ -1236,3 +1244,36 @@ func IsPostStatus(attrs map[string]string) bool {
 	// status updates.
 	return attrs[RMPSComment] != "" || attrs[RMPSHeart] != ""
 }
+
+// RMReceiptDomain are the valid read receipt domains.
+type RMReceiptDomain string
+
+const (
+	ReceiptDomainPosts        RMReceiptDomain = "posts"
+	ReceiptDomainPostComments RMReceiptDomain = "postcomments"
+)
+
+// RMReceiveReceipt is a receipt sent by a client when it has received an RM
+// for something. The fields set and their interpretation depends on the domain.
+type RMReceiveReceipt struct {
+	// Domain is the type of receipt.
+	Domain RMReceiptDomain
+
+	// ID is the main ID of the receipt. Depends on the domain.
+	//
+	// post, postcomments : ID of the post.
+	ID *zkidentity.ShortID
+
+	// SubID is the secondary id of the receipt. Depends on the domain.
+	//
+	// posts: nil
+	// postcomments: ID of the comment.
+	SubID *zkidentity.ShortID
+
+	// ClientTime is the unix millisecond timestamp of when the client
+	// received.
+	ClientTime int64
+}
+
+// RMCReceiveReceipt is the command for a RMReceiveReceipt value.
+const RMCReceiveReceipt = "recvreceipt"

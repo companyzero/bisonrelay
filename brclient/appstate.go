@@ -1977,7 +1977,7 @@ func (as *appState) commentPost(from clientintf.UserID, pid clientintf.PostID,
 	as.postsMtx.Unlock()
 	as.sendMsg(sentPostComment{})
 
-	err := as.c.CommentPost(from, pid, comment, parentComment)
+	_, err := as.c.CommentPost(from, pid, comment, parentComment)
 	if err != nil {
 		as.diagMsg("Unable to comment post: %v", err.Error())
 	}

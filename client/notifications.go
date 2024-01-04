@@ -38,7 +38,7 @@ func (_ OnPostRcvdNtfn) typ() string { return onPostRcvdNtfnType }
 
 const onPostStatusRcvdNtfnType = "onPostStatusRcvd"
 
-// OnPostStatusRcvdNtfn is the handler for received post status updates.0
+// OnPostStatusRcvdNtfn is the handler for received post status updates.
 type OnPostStatusRcvdNtfn func(*RemoteUser, clientintf.PostID, UserID,
 	rpc.PostMetadataStatus)
 
@@ -287,6 +287,14 @@ const onUnsubscribingIdleRemoteClient = "onUnsubscribingIdleRemoteClient"
 type OnUnsubscribingIdleRemoteClient func(user *RemoteUser, lastDecTime time.Time)
 
 func (_ OnUnsubscribingIdleRemoteClient) typ() string { return onUnsubscribingIdleRemoteClient }
+
+const onReceiveReceipt = "onReceiveReceipt"
+
+// OnReceiveReceipt is a notification sent when a remote client sends a
+// receive receipt.
+type OnReceiveReceipt func(user *RemoteUser, rr rpc.RMReceiveReceipt, serverTime time.Time)
+
+func (_ OnReceiveReceipt) typ() string { return onReceiveReceipt }
 
 // The following is used only in tests.
 
@@ -602,6 +610,11 @@ func (nmgr *NotificationManager) notifyUnsubscribingIdleRemote(ru *RemoteUser, l
 		visit(func(h OnUnsubscribingIdleRemoteClient) { h(ru, lastDecTime) })
 }
 
+func (nmgr *NotificationManager) notifyReceiveReceipt(ru *RemoteUser, rr rpc.RMReceiveReceipt, serverTime time.Time) {
+	nmgr.handlers[onReceiveReceipt].(*handlersFor[OnReceiveReceipt]).
+		visit(func(h OnReceiveReceipt) { h(ru, rr, serverTime) })
+}
+
 func NewNotificationManager() *NotificationManager {
 	return &NotificationManager{
 		handlers: map[string]handlersRegistry{
@@ -615,6 +628,7 @@ func NewNotificationManager() *NotificationManager {
 			onPostStatusRcvdNtfnType: &handlersFor[OnPostStatusRcvdNtfn]{},
 			onHandshakeStageNtfnType: &handlersFor[OnHandshakeStageNtfn]{},
 			onTipReceivedNtfnType:    &handlersFor[OnTipReceivedNtfn]{},
+			onReceiveReceipt:         &handlersFor[OnReceiveReceipt]{},
 
 			onPostSubscriberUpdated:    &handlersFor[OnPostSubscriberUpdated]{},
 			onPostsListReceived:        &handlersFor[OnPostsListReceived]{},

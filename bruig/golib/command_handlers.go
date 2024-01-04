@@ -973,7 +973,7 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		if err := cmd.decode(&args); err != nil {
 			return nil, err
 		}
-		return nil, c.CommentPost(args.From, args.PID, args.Comment, args.Parent)
+		return c.CommentPost(args.From, args.PID, args.Comment, args.Parent)
 
 	case CTGetLocalInfo:
 		res := localInfo{

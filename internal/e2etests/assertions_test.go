@@ -322,6 +322,41 @@ func assertReceivesNewPost(t testing.TB, poster *testClient, targets ...*testCli
 	return post.ID
 }
 
+// assertCommentsOnPost asserts that a commenter comments on a post, that the
+// original post relayer receives that comment and that any passed subscribers
+// get that status update. Returns the comment ID.
+func assertCommentsOnPost(t testing.TB, relayer, commenter *testClient, pid clientintf.PostID, subs ...*testClient) clientintf.ID {
+	t.Helper()
+
+	commentReceived := make(chan clientintf.ID, 1)
+	reg := relayer.handle(client.OnPostStatusRcvdNtfn(func(user *client.RemoteUser, pid clientintf.PostID,
+		statusFrom client.UserID, status rpc.PostMetadataStatus) {
+		commentReceived <- status.Hash()
+	}))
+
+	regs := make([]client.NotificationRegistration, len(subs))
+	subChans := make([]chan clientintf.ID, len(subs))
+	for i, sub := range subs {
+		i := i
+		subChans[i] = make(chan clientintf.ID, 1)
+		regs[i] = sub.handle(client.OnPostStatusRcvdNtfn(func(user *client.RemoteUser, pid clientintf.PostID,
+			statusFrom client.UserID, status rpc.PostMetadataStatus) {
+			subChans[i] <- status.Hash()
+		}))
+	}
+
+	commentID, err := commenter.CommentPost(relayer.PublicID(), pid, "test comment", nil)
+	assert.NilErr(t, err)
+	assert.ChanWrittenWithVal(t, commentReceived, commentID)
+	for i := range subChans {
+		assert.ChanWrittenWithVal(t, subChans[i], commentID)
+		regs[i].Unregister()
+	}
+
+	reg.Unregister()
+	return commentID
+}
+
 // assertRelaysPost attempts to relay a post from src to dst and verify that it
 // was received in dst.
 func assertRelaysPost(t testing.TB, src, dst *testClient, postFrom clientintf.UserID, pid clientintf.PostID) {
