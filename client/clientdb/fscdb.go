@@ -66,6 +66,9 @@ const (
 	genTipInvoicesFile      = "generated-tip-invoices.json"
 	recvTipInvoicesFile     = "received-tip-invoices.json"
 	expiredTipInvoicesFile  = "expired-tip-invoices.json"
+
+	postRecvReceiptSuff       = "-recvreceipts.json"
+	postCommentRecvReceiptDir = "-comments-recvreceipts"
 )
 
 var (

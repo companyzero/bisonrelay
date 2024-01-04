@@ -438,6 +438,13 @@ type ContentFilter struct {
 	Regexp string
 }
 
+// ReceiveReceipt stores receive receipt times.
+type ReceiveReceipt struct {
+	User       UserID `json:"user"`
+	ServerTime int64  `json:"server_time"` // Unix Millisecond timestamp
+	ClientTime int64  `json:"client_time"` // Unix Millisecond timestamp
+}
+
 var (
 	ErrLocalIDEmpty         = errors.New("local ID is not initialized")
 	ErrServerIDEmpty        = errors.New("server ID is not known")

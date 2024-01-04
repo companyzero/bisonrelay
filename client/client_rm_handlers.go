@@ -247,6 +247,9 @@ func (c *Client) innerHandleUserRM(ru *RemoteUser, h *rpc.RMHeader,
 	case rpc.RMPostStatusReply:
 		return c.handlePostStatusReply(ru, p)
 
+	case rpc.RMReceiveReceipt:
+		return c.handleReceiveReceipt(ru, p, ts)
+
 	case rpc.RMGroupKick:
 		return c.handleGCKick(ru, p)
 

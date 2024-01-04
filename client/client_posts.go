@@ -462,6 +462,7 @@ func (c *Client) verifyPostStatusSignature(pms rpc.PostMetadataStatus) error {
 func (c *Client) handlePostShare(ru *RemoteUser, ps rpc.RMPostShare) error {
 	var p = rpc.PostMetadata(ps)
 	var pid clientintf.PostID
+	var statusID *zkidentity.ShortID
 	var statusFrom UserID
 	var update rpc.PostMetadataStatus
 
@@ -519,9 +520,13 @@ func (c *Client) handlePostShare(ru *RemoteUser, ps rpc.RMPostShare) error {
 				if filter {
 					return errFilter
 				}
+
 			}
 
 			_, update, err = c.db.AddPostStatusUpdate(tx, from, p)
+			hash := update.Hash()
+			statusID = new(zkidentity.ShortID)
+			copy(statusID[:], hash[:])
 			return err
 		}
 
@@ -603,6 +608,22 @@ func (c *Client) handlePostShare(ru *RemoteUser, ps rpc.RMPostShare) error {
 	} else {
 		ru.log.Infof("Received post update %s from %s", pid, statusFrom)
 		c.ntfns.notifyOnPostStatusRcvd(ru, pid, statusFrom, update)
+	}
+
+	// Send receive receipt.
+	if c.cfg.SendReceiveReceipts {
+		rr := rpc.RMReceiveReceipt{
+			Domain:     rpc.ReceiptDomainPosts,
+			ID:         &pid,
+			SubID:      statusID,
+			ClientTime: time.Now().UnixMilli(),
+		}
+		if isUpdate {
+			rr.Domain = rpc.ReceiptDomainPostComments
+		}
+		ru.log.Debugf("Sending receive receipt for domain %q (ID: %v, SubID: %v)",
+			rr.Domain, rr.ID, rr.SubID)
+		return c.sendWithSendQ("posts.%s.recvreceipt", rr, ru.ID())
 	}
 
 	return nil
@@ -711,9 +732,10 @@ func (c *Client) addStatusToPost(statusFrom clientintf.UserID, pms *rpc.PostMeta
 // sendPostStatus sends the given list of attributes as a status update on a
 // post.
 func (c *Client) sendPostStatus(postFrom clientintf.UserID,
-	pid clientintf.PostID, attr map[string]string) error {
+	pid clientintf.PostID, attr map[string]string) (clientintf.ID, error) {
 
 	// Ensure post exists.
+	var statusID clientintf.ID
 	var kxSearchTarget *UserID
 	err := c.dbView(func(tx clientdb.ReadTx) error {
 		post, err := c.db.ReadPost(tx, postFrom, pid)
@@ -745,11 +767,11 @@ func (c *Client) sendPostStatus(postFrom clientintf.UserID,
 		return nil
 	})
 	if err != nil {
-		return err
+		return statusID, err
 	}
 
 	if kxSearchTarget != nil {
-		return ErrKXSearchNeeded{Author: *kxSearchTarget}
+		return statusID, ErrKXSearchNeeded{Author: *kxSearchTarget}
 	}
 
 	// Status is coming from the local client.
@@ -768,6 +790,7 @@ func (c *Client) sendPostStatus(postFrom clientintf.UserID,
 
 	// Sign the status.
 	pmHash := pms.Hash()
+	copy(statusID[:], pmHash[:])
 	signature := c.id.SignMessage(pmHash[:])
 	attr[rpc.RMPSignature] = hex.EncodeToString(signature[:])
 
@@ -778,13 +801,13 @@ func (c *Client) sendPostStatus(postFrom clientintf.UserID,
 	// we'll send the status update to the post author.
 	if postFrom == statusFrom {
 		pms.Attributes[rpc.RMPFromNick] = c.LocalNick()
-		return c.addStatusToPost(statusFrom, &pms)
+		return statusID, c.addStatusToPost(statusFrom, &pms)
 	}
 
 	// Ensure we know author.
 	ru, err := c.rul.byID(postFrom)
 	if err != nil {
-		return err
+		return statusID, err
 	}
 
 	// Store in case we go offline.
@@ -795,7 +818,7 @@ func (c *Client) sendPostStatus(postFrom clientintf.UserID,
 	}
 	sqid, err := c.addToSendQ(payEvent, rm, priorityDefault, postFrom)
 	if err != nil {
-		return err
+		return statusID, err
 	}
 
 	ru.log.Debugf("Sending post status update %x about post %s", pms.Hash(), pid)
@@ -805,7 +828,7 @@ func (c *Client) sendPostStatus(postFrom clientintf.UserID,
 	if err == nil {
 		c.removeFromSendQ(sqid, postFrom)
 	}
-	return err
+	return statusID, err
 }
 
 // HeartPost sends a status update, either adding or removing the current
@@ -819,12 +842,13 @@ func (c *Client) HeartPost(from clientintf.UserID, pid clientintf.PostID, heart 
 	attr := map[string]string{
 		rpc.RMPSHeart: mode,
 	}
-	return c.sendPostStatus(from, pid, attr)
+	_, err := c.sendPostStatus(from, pid, attr)
+	return err
 }
 
 // CommentPost sends a comment status update on the received post.
 func (c *Client) CommentPost(postFrom clientintf.UserID, pid clientintf.PostID,
-	comment string, parent *clientintf.ID) error {
+	comment string, parent *clientintf.ID) (clientintf.ID, error) {
 
 	attr := map[string]string{
 		rpc.RMPSComment: comment,
@@ -1071,4 +1095,43 @@ func (c *Client) RelayPostToSubscribers(postFrom clientintf.UserID, pid clientin
 	}
 
 	return c.relayPost(postFrom, pid, subs...)
+}
+
+func (c *Client) handleReceiveReceipt(ru *RemoteUser, rr rpc.RMReceiveReceipt, serverTime time.Time) error {
+	err := c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
+		return c.db.StoreReceiveReceipt(tx, ru.ID(), c.PublicID(), &rr, serverTime)
+	})
+	if err != nil {
+		return err
+	}
+	ru.log.Debugf("Received receive receipt for domain %q (id %v, subid %v)",
+		rr.Domain, rr.ID, rr.SubID)
+	c.ntfns.notifyReceiveReceipt(ru, rr, serverTime)
+	return nil
+}
+
+// ListPostReceiveReceipts returns the receive receipts from a post that the
+// local client has shared.
+func (c *Client) ListPostReceiveReceipts(pid clientintf.PostID) ([]*clientdb.ReceiveReceipt, error) {
+	var res []*clientdb.ReceiveReceipt
+	err := c.dbView(func(tx clientdb.ReadTx) error {
+		var err error
+		res, err = c.db.ListPostReceiveReceipts(tx, c.PublicID(), pid)
+		return err
+	})
+	return res, err
+}
+
+// ListPostCommentReceiveReceipts returns the receive receipts from a post
+// comment that the local client has shared.
+func (c *Client) ListPostCommentReceiveReceipts(pid clientintf.PostID,
+	statusID zkidentity.ShortID) ([]*clientdb.ReceiveReceipt, error) {
+	var res []*clientdb.ReceiveReceipt
+	err := c.dbView(func(tx clientdb.ReadTx) error {
+		var err error
+		res, err = c.db.ListPostCommentReceiveReceipts(tx,
+			c.PublicID(), pid, statusID)
+		return err
+	})
+	return res, err
 }

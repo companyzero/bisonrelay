@@ -9,6 +9,7 @@ import (
 	"github.com/companyzero/bisonrelay/client/clientintf"
 	"github.com/companyzero/bisonrelay/internal/assert"
 	"github.com/companyzero/bisonrelay/rpc"
+	"github.com/companyzero/bisonrelay/zkidentity"
 )
 
 func TestBasicPostFeatures(t *testing.T) {
@@ -71,7 +72,7 @@ func TestBasicPostFeatures(t *testing.T) {
 
 	// Alice writes a comment. Bob should receive it.
 	wantComment := "alice comment"
-	err = alice.CommentPost(alice.PublicID(), alicePost.ID, wantComment, nil)
+	_, err = alice.CommentPost(alice.PublicID(), alicePost.ID, wantComment, nil)
 	assert.NilErr(t, err)
 	gotComment := assert.ChanWritten(t, bobRecvComments)
 	assert.DeepEqual(t, gotComment, wantComment)
@@ -106,7 +107,7 @@ func TestBasicPostFeatures(t *testing.T) {
 	// Charlie attempts to comment on the relayed post. It doesn't work
 	// because Charlie isn't KXd with Alice.
 	wantComment = "charlie comment"
-	err = charlie.CommentPost(bob.PublicID(), alicePost.ID, wantComment, nil)
+	_, err = charlie.CommentPost(bob.PublicID(), alicePost.ID, wantComment, nil)
 	assert.ErrorIs(t, err, client.ErrKXSearchNeeded{})
 }
 
@@ -144,7 +145,7 @@ func TestKXSearchFromPosts(t *testing.T) {
 	alicePostID := alicePost.ID
 	assert.NilErr(t, err)
 	aliceComment := "alice's comment"
-	err = alice.CommentPost(alice.PublicID(), alicePostID, aliceComment, nil)
+	_, err = alice.CommentPost(alice.PublicID(), alicePostID, aliceComment, nil)
 	assert.NilErr(t, err)
 	assert.ChanWrittenWithVal(t, bobRecvPostChan, alicePostID)
 
@@ -182,6 +183,73 @@ func TestKXSearchFromPosts(t *testing.T) {
 
 	// Bob comments on Alice's post. Eve should receive it.
 	bobComment := "bob comment"
-	assert.NilErr(t, bob.CommentPost(alice.PublicID(), alicePostID, bobComment, nil))
+	_, err = bob.CommentPost(alice.PublicID(), alicePostID, bobComment, nil)
+	assert.NilErr(t, err)
 	assert.ChanWrittenWithVal(t, eveRcvdStatus, bobComment)
+}
+
+// TestPostReceiveReceipts tests that post and post status received receipts
+// work.
+func TestPostReceiveReceipts(t *testing.T) {
+	tcfg := testScaffoldCfg{}
+	ts := newTestScaffold(t, tcfg)
+	alice := ts.newClient("alice")
+	bob := ts.newClient("bob", withSendRecvReceipts())
+	charlie := ts.newClient("charlie", withSendRecvReceipts())
+	eve := ts.newClient("eve")
+
+	ts.kxUsers(alice, bob)
+	ts.kxUsers(alice, charlie)
+	ts.kxUsers(alice, eve)
+	assertSubscribeToPosts(t, alice, bob)
+	assertSubscribeToPosts(t, alice, charlie)
+	assertSubscribeToPosts(t, alice, eve)
+
+	// Setup handlers.
+	rrFromBob := make(chan rpc.RMReceiveReceipt, 10)
+	rrFromCharlie := make(chan rpc.RMReceiveReceipt, 10)
+	rrFromEve := make(chan rpc.RMReceiveReceipt, 10)
+	alice.handle(client.OnReceiveReceipt(func(ru *client.RemoteUser, rr rpc.RMReceiveReceipt, _ time.Time) {
+		if ru.ID() == bob.PublicID() {
+			rrFromBob <- rr
+		} else if ru.ID() == charlie.PublicID() {
+			rrFromCharlie <- rr
+		} else if ru.ID() == eve.PublicID() {
+			rrFromEve <- rr
+		}
+	}))
+
+	assertRR := func(wantDomain rpc.RMReceiptDomain, wantID, wantSubID *zkidentity.ShortID, ch chan rpc.RMReceiveReceipt) {
+		t.Helper()
+		got := assert.ChanWritten(t, ch)
+		assert.DeepEqual(t, got.Domain, wantDomain)
+		assert.DeepEqual(t, got.ID, wantID)
+		assert.DeepEqual(t, got.SubID, wantSubID)
+	}
+
+	// Alice will create a post. Bob and Charlie will ack it, Eve will NOT
+	// ack it.
+	post1 := assertReceivesNewPost(t, alice, bob, charlie, eve)
+	assertRR(rpc.ReceiptDomainPosts, &post1, nil, rrFromBob)
+	assertRR(rpc.ReceiptDomainPosts, &post1, nil, rrFromCharlie)
+	assert.ChanNotWritten(t, rrFromEve, 500*time.Millisecond)
+
+	// Bob will write a comment. Alice will receive and relay it. Bob, and
+	// Charlie ack it, Eve does NOT.
+	comment1 := assertCommentsOnPost(t, alice, bob, post1, bob, charlie, eve)
+	assertRR(rpc.ReceiptDomainPostComments, &post1, &comment1, rrFromBob)
+	assertRR(rpc.ReceiptDomainPostComments, &post1, &comment1, rrFromCharlie)
+	assert.ChanNotWritten(t, rrFromEve, 500*time.Millisecond)
+
+	// Second comment, from Eve.
+	comment2 := assertCommentsOnPost(t, alice, eve, post1, bob, charlie, eve)
+	assertRR(rpc.ReceiptDomainPostComments, &post1, &comment2, rrFromBob)
+	assertRR(rpc.ReceiptDomainPostComments, &post1, &comment2, rrFromCharlie)
+	assert.ChanNotWritten(t, rrFromEve, 500*time.Millisecond)
+
+	// Third comment, from Alice.
+	comment3 := assertCommentsOnPost(t, alice, alice, post1, bob, charlie, eve)
+	assertRR(rpc.ReceiptDomainPostComments, &post1, &comment3, rrFromBob)
+	assertRR(rpc.ReceiptDomainPostComments, &post1, &comment3, rrFromCharlie)
+	assert.ChanNotWritten(t, rrFromEve, 500*time.Millisecond)
 }
