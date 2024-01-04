@@ -16,6 +16,9 @@ root = {{ .Root }}
 # 0=no compression, 9=best compression (slowest).
 # compresslevel = 4
 
+# Whether to send receive receipts for received posts and comments.
+# sendrecvreceipts = 1
+
 # Proxy Configuration. Also needed for accessing the server as a TOR hidden
 # service.
 # proxyaddr =

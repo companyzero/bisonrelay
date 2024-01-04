@@ -72,6 +72,7 @@ type postWindow struct {
 	relaying          bool
 	confirmingComment bool
 	cmdErr            string
+	showingRR         bool // Showing receive receipts
 
 	viewport viewport.Model
 	textArea *textAreaModel
@@ -449,7 +450,7 @@ func (pw *postWindow) renderPost() {
 		write(fmt.Sprintf("  /post get %s %s\n", nick, pw.summ.ID))
 
 	} else {
-		write(styles.help.Render("═════ Comments ══════════ (R)eply, (C)omment, (S+I) Req. Invite "))
+		write(styles.help.Render("═════ Comments ══════════ (R)eply, (C)omment, (S+I) Req. Invite, F4 Recv Receipts "))
 		write(styles.help.Render(strings.Repeat("═", pw.as.winW-15)))
 		write("\n\n")
 		pw.startCommentsLine = lineCount
@@ -625,6 +626,63 @@ func (pw *postWindow) kxSearchAuthor() {
 	pw.renderPost()
 }
 
+func (pw *postWindow) renderReceiveReceipts() {
+	if pw.summ.From != pw.as.c.PublicID() {
+		pw.recalcViewportSize()
+		pw.viewport.SetContent("Only post author/relayer can see receive receipts")
+		return
+	}
+
+	postRRs, err := pw.as.c.ListPostReceiveReceipts(pw.summ.ID)
+	if err != nil {
+		pw.as.diagMsg("Unable to load post receive receipts: %v", err)
+	}
+
+	var b strings.Builder
+	b.WriteString("Receive Receipts for Post:\n")
+	if len(postRRs) == 0 {
+		b.WriteString("(no receive receipts)\n")
+	} else {
+		for _, rr := range postRRs {
+			nick, _ := pw.as.c.UserNick(rr.User)
+			if nick == "" {
+				nick = rr.User.ShortLogID()
+			}
+			t := time.UnixMilli(rr.ServerTime)
+			b.WriteString(fmt.Sprintf("%s - %s\n",
+				t.Format(ISO8601DateTime), nick))
+		}
+	}
+	b.WriteString("\n")
+
+	if pw.selComment < len(pw.comments) {
+		comment := pw.comments[pw.selComment]
+		commentRRs, err := pw.as.c.ListPostCommentReceiveReceipts(pw.summ.ID,
+			comment.id)
+		if err != nil {
+			pw.as.diagMsg("Unable to load post comment receive receipts: %v", err)
+		}
+		b.WriteString("Receive Receipts for selected comment:\n")
+		if len(commentRRs) == 0 {
+			b.WriteString("(no receive receipts)\n")
+		} else {
+			for _, rr := range commentRRs {
+				nick, _ := pw.as.c.UserNick(rr.User)
+				if nick == "" {
+					nick = rr.User.ShortLogID()
+				}
+				t := time.UnixMilli(rr.ServerTime)
+				b.WriteString(fmt.Sprintf("%s - %s\n",
+					t.Format(ISO8601DateTime), nick))
+			}
+		}
+		b.WriteString("\n")
+	}
+
+	pw.recalcViewportSize()
+	pw.viewport.SetContent(b.String())
+}
+
 func (pw *postWindow) recalcViewportSize() {
 	// First, update the edit line height. This is not entirely accurate
 	// because textArea does its own wrapping.
@@ -697,6 +755,20 @@ func (pw postWindow) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case pw.confirmingComment:
 			// Ignore all other msgs when confirming comment.
 
+		case pw.showingRR && msg.Type == tea.KeyF4,
+			pw.showingRR && msg.Type == tea.KeyEsc:
+			pw.showingRR = false
+			pw.recalcViewportSize()
+			pw.renderPost()
+			return pw, cmd
+
+		case pw.showingRR && (msg.Type == tea.KeyUp || msg.Type == tea.KeyDown):
+			pw.viewport, cmd = pw.viewport.Update(msg)
+			cmds = appendCmd(cmds, cmd)
+
+		case pw.showingRR:
+			// Ignore all other msgs when showing receive receipts.
+
 		case msg.Type == tea.KeyEsc:
 			pw.cmdErr = ""
 			if pw.commenting {
@@ -705,6 +777,10 @@ func (pw postWindow) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			} else if pw.relaying {
 				pw.relaying = false
 				pw.recalcViewportSize()
+			} else if pw.showingRR {
+				pw.showingRR = false
+				pw.recalcViewportSize()
+				pw.renderPost()
 			} else {
 				// Return to feed window
 				return newFeedWindow(pw.as, pw.feedActiveIdx,
@@ -902,6 +978,12 @@ func (pw postWindow) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			pw.textArea.Placeholder = "Type target nick or id"
 			cmd = pw.textArea.Focus()
 			return pw, cmd
+
+		case msg.Type == tea.KeyF4:
+			pw.showingRR = true
+			pw.renderReceiveReceipts()
+			return pw, cmd
+
 		}
 
 	case rpc.PostMetadataStatus:

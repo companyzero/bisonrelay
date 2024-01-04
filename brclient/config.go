@@ -106,6 +106,7 @@ type config struct {
 	MemProfile        string
 	LogPings          bool
 	NoLoadChatHistory bool
+	SendRecvReceipts  bool
 
 	AutoHandshakeInterval       time.Duration
 	AutoRemoveIdleUsersInterval time.Duration
@@ -268,6 +269,7 @@ func loadConfig() (*config, error) {
 	flagServerAddr := fs.String("server", "127.0.0.1:12345", "Address and port of the CR server")
 	flagRootDir := fs.String("root", defaultAppDir, "Root of all app data")
 	flagWinPin := fs.String("winpin", "", "Comma delimited list of DM and GC windows to launch on start")
+	flagSendRecvReceipts := fs.Bool("sendrecvreceipts", true, "Send receive receipts")
 	flagCompressLevel := fs.Int("compresslevel", defaultCompressLevel, "Compression level")
 	flagProxyAddr := fs.String("proxyaddr", "", "")
 	flagProxyUser := fs.String("proxyuser", "", "")
@@ -499,6 +501,7 @@ func loadConfig() (*config, error) {
 		CPUProfileHz:       *flagCPUProfileHz,
 		MemProfile:         *flagMemProfile,
 		LogPings:           *flagLogPings,
+		SendRecvReceipts:   *flagSendRecvReceipts,
 		NoLoadChatHistory:  *flagNoLoadChatHistory,
 		ProxyAddr:          *flagProxyAddr,
 		ProxyUser:          *flagProxyUser,

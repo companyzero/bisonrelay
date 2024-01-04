@@ -3182,6 +3182,8 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		ResourcesProvider: resRouter,
 		NoLoadChatHistory: args.NoLoadChatHistory,
 
+		SendReceiveReceipts: args.SendRecvReceipts,
+
 		AutoHandshakeInterval:         args.AutoHandshakeInterval,
 		AutoRemoveIdleUsersInterval:   args.AutoRemoveIdleUsersInterval,
 		AutoRemoveIdleUsersIgnoreList: args.AutoRemoveIdleUsersIgnore,
