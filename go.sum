@@ -555,6 +555,8 @@ github.com/decred/dcrd/wire v1.6.0 h1:YOGwPHk4nzGr6OIwUGb8crJYWDiVLpuMxfDBCCF7s/
 github.com/decred/dcrd/wire v1.6.0/go.mod h1:XQ8Xv/pN/3xaDcb7sH8FBLS9cdgVctT7HpBKKGsIACk=
 github.com/decred/dcrlnd v0.4.1-0.20231204134446-736bd7624cfe h1:or4XOEAbr4lV2XBKopqTmDuEq04+WGKqR/CEY890bFk=
 github.com/decred/dcrlnd v0.4.1-0.20231204134446-736bd7624cfe/go.mod h1:4mkwIpKGWEcmIdP1EeWNfSrZ4da7gKXBC9xeK1MtRNQ=
+github.com/decred/dcrlnd v0.5.0 h1:4Y+YID3W5+HhDXb8gS498oRsk4PYvsJe0DtCgjg1rkI=
+github.com/decred/dcrlnd v0.5.0/go.mod h1:4mkwIpKGWEcmIdP1EeWNfSrZ4da7gKXBC9xeK1MtRNQ=
 github.com/decred/dcrlnlpd v0.0.0-20231212171353-b46ff7b10bf4 h1:YzdUnl1gmzz4xn4xDcmqX1+XQQTT/5W/omLDM1IoyzM=
 github.com/decred/dcrlnlpd v0.0.0-20231212171353-b46ff7b10bf4/go.mod h1:1rLb98Flkw6qqSfoDC68gMm/Wa7seo9/+IsXj+bVFTU=
 github.com/decred/dcrtest/dcrdtest v1.0.0 h1:M50BpCPwkCJLtRa2MAo7QMs9sQFgZdCjTnZahnak594=

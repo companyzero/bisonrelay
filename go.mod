@@ -18,7 +18,7 @@ require (
 	github.com/decred/dcrd/dcrutil/v4 v4.0.1
 	github.com/decred/dcrd/txscript/v4 v4.1.0
 	github.com/decred/dcrd/wire v1.6.0
-	github.com/decred/dcrlnd v0.4.1-0.20231204134446-736bd7624cfe
+	github.com/decred/dcrlnd v0.5.0
 	github.com/decred/dcrlnlpd v0.0.0-20231212171353-b46ff7b10bf4
 	github.com/decred/go-socks v1.1.0
 	github.com/decred/slog v1.2.0
