@@ -32,6 +32,7 @@ InitClient _$InitClientFromJson(Map<String, dynamic> json) => InitClient(
       (json['auto_remove_idle_users_ignore'] as List<dynamic>)
           .map((e) => e as String)
           .toList(),
+      json['send_recv_receipts'] as bool,
     );
 
 Map<String, dynamic> _$InitClientToJson(InitClient instance) =>
@@ -59,6 +60,7 @@ Map<String, dynamic> _$InitClientToJson(InitClient instance) =>
       'auto_handshake_interval': instance.autoHandshakeInterval,
       'auto_remove_idle_users_interval': instance.autoRemoveIdleUsersInterval,
       'auto_remove_idle_users_ignore': instance.autoRemoveIdleUsersIgnore,
+      'send_recv_receipts': instance.sendRecvReceipts,
     };
 
 IDInit _$IDInitFromJson(Map<String, dynamic> json) => IDInit(
@@ -2011,4 +2013,30 @@ Map<String, dynamic> _$TransactionToJson(Transaction instance) =>
       'tx_hash': instance.txHash,
       'amount': instance.amount,
       'block_height': instance.blockHeight,
+    };
+
+PostAndCommandID _$PostAndCommandIDFromJson(Map<String, dynamic> json) =>
+    PostAndCommandID(
+      json['post_id'] as String,
+      json['comment_id'] as String,
+    );
+
+Map<String, dynamic> _$PostAndCommandIDToJson(PostAndCommandID instance) =>
+    <String, dynamic>{
+      'post_id': instance.postID,
+      'comment_id': instance.commentID,
+    };
+
+ReceiveReceipt _$ReceiveReceiptFromJson(Map<String, dynamic> json) =>
+    ReceiveReceipt(
+      json['user'] as String,
+      json['server_time'] as int,
+      json['client_time'] as int,
+    );
+
+Map<String, dynamic> _$ReceiveReceiptToJson(ReceiveReceipt instance) =>
+    <String, dynamic>{
+      'user': instance.user,
+      'server_time': instance.serverTime,
+      'client_time': instance.clientTime,
     };

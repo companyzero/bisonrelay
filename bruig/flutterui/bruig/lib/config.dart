@@ -89,6 +89,7 @@ class Config {
   late final int autoHandshakeInterval;
   late final int autoRemoveIdleUsersInterval;
   late final List<String> autoRemoveIgnoreList;
+  late final bool sendRecvReceipts;
 
   Config();
   Config.filled(
@@ -118,7 +119,8 @@ class Config {
       this.syncFreeList: true,
       this.autoHandshakeInterval: 21 * 24 * 60 * 60,
       this.autoRemoveIdleUsersInterval: 60 * 24 * 60 * 60,
-      this.autoRemoveIgnoreList: defaultAutoRemoveIgnoreList});
+      this.autoRemoveIgnoreList: defaultAutoRemoveIgnoreList,
+      this.sendRecvReceipts: true});
   factory Config.newWithRPCHost(
           Config cfg, String rpcHost, String tlsCert, String macaroonPath) =>
       Config.filled(
@@ -149,6 +151,7 @@ class Config {
         autoHandshakeInterval: cfg.autoHandshakeInterval,
         autoRemoveIdleUsersInterval: cfg.autoRemoveIdleUsersInterval,
         autoRemoveIgnoreList: cfg.autoRemoveIgnoreList,
+        sendRecvReceipts: cfg.sendRecvReceipts,
       );
 
   Future<void> saveConfig(String filepath) async {
@@ -298,6 +301,8 @@ Future<Config> loadConfig(String filepath) async {
     path = cleanAndExpandPath(path);
     resUpstream = "simplestore:$path";
   }
+
+  c.sendRecvReceipts = getBoolDefaultTrue("default", "sendrecvreceipts");
 
   c.resourcesUpstream = resUpstream;
   c.simpleStorePayType = f.get("resources", "simplestorepaytype") ?? "";

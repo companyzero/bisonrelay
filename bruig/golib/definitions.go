@@ -27,6 +27,7 @@ type initClient struct {
 	WantsLogNtfns     bool   `json:"wants_log_ntfns"`
 	ResourcesUpstream string `json:"resources_upstream"`
 	NoLoadChatHistory bool   `json:"no_load_chat_history"`
+	SendRecvReceipts  bool   `json:"send_recv_receipts"`
 
 	SimpleStorePayType    string  `json:"simplestore_pay_type"`
 	SimpleStoreAccount    string  `json:"simplestore_account"`
@@ -431,4 +432,9 @@ type transaction struct {
 	TxHash      string `json:"tx_hash"`
 	Amount      int64  `json:"amount"`
 	BlockHeight int32  `json:"block_height"`
+}
+
+type postAndCommentID struct {
+	PostID    clientintf.PostID `json:"post_id"`
+	CommentID clientintf.ID     `json:"comment_id"`
 }
