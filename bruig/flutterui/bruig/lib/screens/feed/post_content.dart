@@ -7,6 +7,7 @@ import 'package:bruig/models/feed.dart';
 import 'package:bruig/screens/overview.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/golib_plugin.dart';
+import 'package:golib_plugin/definitions.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:bruig/components/user_context_menu.dart';
@@ -45,6 +46,51 @@ class _PostContentScreenForArgs extends StatefulWidget {
   @override
   State<_PostContentScreenForArgs> createState() =>
       _PostContentScreenForArgsState();
+}
+
+class _ReceiveReceipt extends StatelessWidget {
+  final ClientModel client;
+  final ReceiveReceipt rr;
+  const _ReceiveReceipt(this.client, this.rr, {super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    var theme = Theme.of(context);
+    var darkTextColor = theme.indicatorColor;
+    var nick = client.getNick(rr.user);
+    var rrTxtStyle = TextStyle(color: darkTextColor);
+    var rrdt =
+        DateTime.fromMillisecondsSinceEpoch(rr.serverTime).toIso8601String();
+
+    var hightLightTextColor = theme.dividerColor;
+    var avatarColor = colorFromNick(nick);
+    var avatarTextColor =
+        ThemeData.estimateBrightnessForColor(avatarColor) == Brightness.dark
+            ? hightLightTextColor
+            : darkTextColor;
+
+    return Container(
+      width: 28,
+      margin: const EdgeInsets.only(top: 0, bottom: 0, left: 5),
+      child: Tooltip(
+          message: "$nick - $rrdt",
+          child: CircleAvatar(
+            backgroundColor: avatarColor,
+            child: Text(nick[0].toUpperCase(),
+                style: TextStyle(color: avatarTextColor, fontSize: 20)),
+          )),
+    );
+
+    /*
+    return Row(children: [
+      const SizedBox(width: 10),
+      Text(DateTime.fromMillisecondsSinceEpoch(rr.serverTime).toIso8601String(),
+          style: rrTxtStyle),
+      const SizedBox(width: 10),
+      Text(nick, style: rrTxtStyle)
+    ]);
+    */
+  }
 }
 
 typedef ShowingReplyCB = Future<void> Function(String id);
@@ -112,6 +158,20 @@ class _CommentWState extends State<_CommentW> {
 
   void chatUpdated() => setState(() {});
 
+  List<ReceiveReceipt>? commentRRs;
+  void listReceiveReceipts() async {
+    try {
+      var rrs = await Golib.listPostCommentReceiveReceipts(
+          widget.post.summ.id, widget.comment.id);
+      setState(() {
+        commentRRs = rrs;
+      });
+    } catch (exception) {
+      showErrorSnackbar(
+          context, "Unable to load comment receive receipts: $exception");
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -173,6 +233,9 @@ class _CommentWState extends State<_CommentW> {
     var darkAddCommentColor = theme.hoverColor;
     var selectedBackgroundColor = theme.highlightColor;
     var errorColor = theme.errorColor;
+    var dividerColor = theme.indicatorColor; // DIVIDER COLOR
+
+    var relayedByMe = widget.post.summ.from == widget.client.publicID;
 
     return Consumer<ThemeNotifier>(
         builder: (context, theme, child) => Column(children: [
@@ -246,6 +309,17 @@ class _CommentWState extends State<_CommentW> {
                             icon: Icon(!sendingReply
                                 ? Icons.reply
                                 : Icons.hourglass_bottom))),
+                    relayedByMe
+                        ? SizedBox(
+                            width: 20,
+                            child: IconButton(
+                                padding: const EdgeInsets.all(0),
+                                iconSize: 15,
+                                tooltip:
+                                    "View Receive Receipts for this comment",
+                                onPressed: listReceiveReceipts,
+                                icon: const Icon(Icons.receipt_long)))
+                        : const Empty(),
                     unreadComment
                         ? Row(children: [
                             const SizedBox(width: 10),
@@ -332,6 +406,47 @@ class _CommentWState extends State<_CommentW> {
                               ],
                             )
                           : const Text(""),
+                      commentRRs != null
+                          ? const SizedBox(height: 10)
+                          : const Empty(),
+                      commentRRs != null
+                          ? Row(children: [
+                              Expanded(
+                                  child: Divider(
+                                color: dividerColor, //color of divider
+                                height: 10, //height spacing of divider
+                                thickness: 1, //thickness of divier line
+                                indent: 10, //spacing at the start of divider
+                                endIndent: 7, //spacing at the end of divider
+                              )),
+                              Consumer<ThemeNotifier>(
+                                  builder: (context, theme, _) => Text(
+                                      commentRRs!.isEmpty
+                                          ? "No receive receipts"
+                                          : "Comment receive receipts",
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                          color: darkTextColor,
+                                          fontSize:
+                                              theme.getSmallFont(context)))),
+                              Expanded(
+                                  child: Divider(
+                                color: dividerColor, //color of divider
+                                height: 10, //height spacing of divider
+                                thickness: 1, //thickness of divier line
+                                indent: 7, //spacing at the start of divider
+                                endIndent: 10, //spacing at the end of divider
+                              )),
+                            ])
+                          : const Empty(),
+                      if (commentRRs != null && commentRRs!.isNotEmpty)
+                        Container(
+                            alignment: Alignment.centerLeft,
+                            child: Wrap(
+                                children: commentRRs!
+                                    .map((rr) =>
+                                        _ReceiveReceipt(widget.client, rr))
+                                    .toList()))
                     ])),
                 widget.comment.children.isNotEmpty
                     ? Positioned(
@@ -384,6 +499,7 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
   bool isKXSearchingAuthor = false;
   bool sentSubscribeAttempt = false;
   bool showingReply = false;
+  List<ReceiveReceipt> postRRs = [];
 
   void loadContent() async {
     setState(() {
@@ -414,6 +530,18 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
       showErrorSnackbar(context, 'Unable to load content: $exception');
     } finally {
       setState(() => loading = false);
+    }
+
+    try {
+      var summ = widget.args.post.summ;
+      if (summ.from == widget.client.publicID) {
+        var rrs = await Golib.listPostReceiveReceipts(summ.id);
+        setState(() {
+          postRRs = rrs;
+        });
+      }
+    } catch (exception) {
+      showErrorSnackbar(context, "Unable to load receive receipts: $exception");
     }
   }
 
@@ -581,32 +709,16 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
 
     var relayerID = widget.args.post.summ.from;
     var relayedByAuthor = relayerID == authorID;
+    var relayedByMe = relayerID == widget.client.publicID;
     if (!relayedByAuthor) {
       var relayerChat = widget.client.getExistingChat(relayerID);
       if (relayerChat != null) {
         relayer = relayerChat.nick;
-      } else if (relayerID == widget.client.publicID) {
+      } else if (relayedByMe) {
         relayer = "me";
       } else {
         relayer = relayerID;
       }
-    }
-
-    Widget _renderComments(List<FeedCommentModel> comments) {
-      return ExpansionPanelList.radio(
-        children: comments.map<ExpansionPanelRadio>((FeedCommentModel comment) {
-          return ExpansionPanelRadio(
-              headerBuilder: (BuildContext context, bool isExpanded) {
-                return ListTile(
-                  title: Text(comment.nick),
-                );
-              },
-              body: ListTile(
-                  title: Text(comment.comment),
-                  subtitle: _renderComments(comment.children)),
-              value: comment.id);
-        }).toList(),
-      );
     }
 
     var avatarColor = colorFromNick(authorNick);
@@ -822,6 +934,42 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
       ]);
     }
 
+    List<Widget> receiveReceiptsWidgets = [];
+    if (postRRs.isNotEmpty) {
+      receiveReceiptsWidgets = [
+        const SizedBox(height: 20),
+        Row(children: [
+          Expanded(
+              child: Divider(
+            color: dividerColor, //color of divider
+            height: 10, //height spacing of divider
+            thickness: 1, //thickness of divier line
+            indent: 10, //spacing at the start of divider
+            endIndent: 7, //spacing at the end of divider
+          )),
+          Consumer<ThemeNotifier>(
+              builder: (context, theme, _) => Text("Receive Receipts",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                      color: darkTextColor,
+                      fontSize: theme.getSmallFont(context)))),
+          Expanded(
+              child: Divider(
+            color: dividerColor, //color of divider
+            height: 10, //height spacing of divider
+            thickness: 1, //thickness of divier line
+            indent: 7, //spacing at the start of divider
+            endIndent: 10, //spacing at the end of divider
+          )),
+        ]),
+        const SizedBox(height: 10),
+        Wrap(
+          children:
+              postRRs.map((rr) => _ReceiveReceipt(widget.client, rr)).toList(),
+        )
+      ];
+    }
+
     bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
     return Container(
         margin: const EdgeInsets.all(1),
@@ -938,6 +1086,7 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
                 ),
 
                 ...commentsWidgets,
+                ...receiveReceiptsWidgets,
 
                 // end of post area
               ]),

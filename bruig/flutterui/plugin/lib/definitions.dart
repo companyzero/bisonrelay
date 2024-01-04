@@ -61,31 +61,35 @@ class InitClient {
   final int autoRemoveIdleUsersInterval;
   @JsonKey(name: 'auto_remove_idle_users_ignore')
   final List<String> autoRemoveIdleUsersIgnore;
+  @JsonKey(name: 'send_recv_receipts')
+  final bool sendRecvReceipts;
 
   InitClient(
-      this.dbRoot,
-      this.downloadsDir,
-      this.serverAddr,
-      this.lnRPCHost,
-      this.lnTLSCertPath,
-      this.lnMacaroonPath,
-      this.logFile,
-      this.msgsRoot,
-      this.debugLevel,
-      this.wantsLogNtfns,
-      this.resourcesUpstream,
-      this.simpleStorePayType,
-      this.simpleStoreAccount,
-      this.simpleStoreShipCharge,
-      this.proxyaddr,
-      this.torisolation,
-      this.proxyUsername,
-      this.proxyPassword,
-      this.circuitLimit,
-      this.noLoadChatHistory,
-      this.autoHandshakeInterval,
-      this.autoRemoveIdleUsersInterval,
-      this.autoRemoveIdleUsersIgnore);
+    this.dbRoot,
+    this.downloadsDir,
+    this.serverAddr,
+    this.lnRPCHost,
+    this.lnTLSCertPath,
+    this.lnMacaroonPath,
+    this.logFile,
+    this.msgsRoot,
+    this.debugLevel,
+    this.wantsLogNtfns,
+    this.resourcesUpstream,
+    this.simpleStorePayType,
+    this.simpleStoreAccount,
+    this.simpleStoreShipCharge,
+    this.proxyaddr,
+    this.torisolation,
+    this.proxyUsername,
+    this.proxyPassword,
+    this.circuitLimit,
+    this.noLoadChatHistory,
+    this.autoHandshakeInterval,
+    this.autoRemoveIdleUsersInterval,
+    this.autoRemoveIdleUsersIgnore,
+    this.sendRecvReceipts,
+  );
 
   Map<String, dynamic> toJson() => _$InitClientToJson(this);
 }
@@ -1972,6 +1976,30 @@ class Transaction {
       _$TransactionFromJson(json);
 }
 
+@JsonSerializable()
+class PostAndCommandID {
+  @JsonKey(name: "post_id")
+  final String postID;
+  @JsonKey(name: "comment_id")
+  final String commentID;
+
+  PostAndCommandID(this.postID, this.commentID);
+  Map<String, dynamic> toJson() => _$PostAndCommandIDToJson(this);
+}
+
+@JsonSerializable()
+class ReceiveReceipt {
+  final String user;
+  @JsonKey(name: "server_time")
+  final int serverTime;
+  @JsonKey(name: "client_time")
+  final int clientTime;
+
+  ReceiveReceipt(this.user, this.serverTime, this.clientTime);
+  factory ReceiveReceipt.fromJson(Map<String, dynamic> json) =>
+      _$ReceiveReceiptFromJson(json);
+}
+
 mixin NtfStreams {
   StreamController<RemoteUser> ntfAcceptedInvites =
       StreamController<RemoteUser>();
@@ -2850,6 +2878,28 @@ abstract class PluginPlatform {
         .map<Transaction>((v) => Transaction.fromJson(v))
         .toList();
   }
+
+  Future<List<ReceiveReceipt>> listPostReceiveReceipts(String postID) async {
+    var res = await asyncCall(CTListPostRecvReceipts, postID);
+    if (res == null) {
+      return List.empty();
+    }
+    return (res as List)
+        .map<ReceiveReceipt>((v) => ReceiveReceipt.fromJson(v))
+        .toList();
+  }
+
+  Future<List<ReceiveReceipt>> listPostCommentReceiveReceipts(
+      String postID, String commentID) async {
+    var res = await asyncCall(
+        CTListPostCommentRecvReceipts, PostAndCommandID(postID, commentID));
+    if (res == null) {
+      return List.empty();
+    }
+    return (res as List)
+        .map<ReceiveReceipt>((v) => ReceiveReceipt.fromJson(v))
+        .toList();
+  }
 }
 
 const int CTUnknown = 0x00;
@@ -2967,6 +3017,8 @@ const int CTTransReset = 0x7b;
 const int CTGCModifyOwner = 0x7c;
 const int CTRescanWallet = 0x7d;
 const int CTListTransactions = 0x7e;
+const int CTListPostRecvReceipts = 0x7f;
+const int CTListPostCommentRecvReceipts = 0x80;
 
 const int notificationsStartID = 0x1000;
 

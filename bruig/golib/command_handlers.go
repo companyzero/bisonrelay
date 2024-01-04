@@ -391,6 +391,8 @@ func handleInitClient(handle uint32, args initClient) error {
 		ResourcesProvider: resRouter,
 		NoLoadChatHistory: args.NoLoadChatHistory,
 
+		SendReceiveReceipts: args.SendRecvReceipts,
+
 		AutoHandshakeInterval:         time.Duration(args.AutoHandshakeInterval) * time.Second,
 		AutoRemoveIdleUsersInterval:   time.Duration(args.AutoRemoveIdleUsersInterval) * time.Second,
 		AutoRemoveIdleUsersIgnoreList: args.AutoRemoveIdleUsersIgnore,
@@ -1866,6 +1868,20 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 			}
 		}
 		return res, nil
+
+	case CTListPostRecvReceipts:
+		var args clientintf.PostID
+		if err := cmd.decode(&args); err != nil {
+			return nil, err
+		}
+		return c.ListPostReceiveReceipts(args)
+
+	case CTListPostCommentRecvReceipts:
+		var args postAndCommentID
+		if err := cmd.decode(&args); err != nil {
+			return nil, err
+		}
+		return c.ListPostCommentReceiveReceipts(args.PostID, args.CommentID)
 
 	}
 	return nil, nil
