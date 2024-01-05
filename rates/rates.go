@@ -192,5 +192,8 @@ func (r *Rates) getRaw(ctx context.Context, exchangeAPI string) ([]byte, error) 
 	if err != nil {
 		return nil, fmt.Errorf("failed to read exchange rate response: %v", err)
 	}
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("%s", http.StatusText(resp.StatusCode))
+	}
 	return b, nil
 }
