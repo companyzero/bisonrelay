@@ -3675,6 +3675,8 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 	r := rates.New(rates.Config{
 		HTTPClient: &httpClient,
 		Log:        logBknd.logger("RATE"),
+
+		OnionEnable: args.ProxyAddr != "",
 	})
 	go r.Run(ctx)
 

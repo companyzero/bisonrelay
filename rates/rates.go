@@ -16,6 +16,8 @@ import (
 type Config struct {
 	HTTPClient *http.Client
 	Log        slog.Logger
+
+	OnionEnable bool
 }
 
 type Rates struct {
@@ -113,7 +115,12 @@ func (r *Rates) dcrData(ctx context.Context) error {
 		BTCPrice float64 `json:"btcPrice"`
 	}{}
 
-	const apiURL = "https://explorer.dcrdata.org/api/exchangerate"
+	var apiURL string
+	if r.cfg.OnionEnable {
+		apiURL = "http://dcrdata5oppwcotlxkrlsp6afncnxvw54sw6jqftc4bjytm4rn27j3ad.onion/api/exchangerate"
+	} else {
+		apiURL = "https://explorer.dcrdata.org/api/exchangerate"
+	}
 	b, err := r.getRaw(ctx, apiURL)
 	if err != nil {
 		return err
