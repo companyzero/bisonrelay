@@ -60,7 +60,7 @@ class _GenerateInviteScreenState extends State<GenerateInviteScreen> {
         );
         if (filePath == null) return;
         setState(() {
-          path = "$filePath + /invite.bin";
+          path = "$filePath/invite.bin";
         });
       } else {
         var filePath = await FilePicker.platform.saveFile(
