@@ -634,8 +634,9 @@ func handleInitClient(handle uint32, args initClient) error {
 		},
 	}
 	r := rates.New(rates.Config{
-		HTTPClient: &httpClient,
-		Log:        logBknd.logger("RATE"),
+		HTTPClient:  &httpClient,
+		Log:         logBknd.logger("RATE"),
+		OnionEnable: args.ProxyAddr != "",
 	})
 	go r.Run(ctx)
 
