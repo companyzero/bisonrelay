@@ -58,6 +58,7 @@ dependencies:
       url: https://github.com/tiagoalvesdulce/packages
       ref: main
       path: packages/flutter_markdown
+  permission_handler: ^10.4.5
 
 msix_config:
   display_name: Bison Relay GUI
