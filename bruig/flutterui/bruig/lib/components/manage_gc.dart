@@ -466,7 +466,9 @@ class ManageGCScreenState extends State<ManageGCScreenForChat> {
                             fontSize: theme.getMediumFont(context),
                             fontWeight: FontWeight.bold,
                             color: textColor)),
-                    const SizedBox(width: 20),
+                  ]),
+                  const SizedBox(height: 20),
+                  Row(children: [
                     localIsOwner
                         ? ElevatedButton(
                             onPressed: !loading ? killGC : null,
@@ -492,12 +494,15 @@ class ManageGCScreenState extends State<ManageGCScreenForChat> {
                             color: textColor,
                             fontWeight: FontWeight.w100,
                             fontSize: theme.getSmallFont(context))),
-                    Copyable(
-                        gcID,
-                        TextStyle(
-                            color: textColor,
-                            fontWeight: FontWeight.w100,
-                            fontSize: theme.getSmallFont(context)))
+                    SizedBox(
+                        width: 200,
+                        child: Copyable(
+                            gcID,
+                            TextStyle(
+                                overflow: TextOverflow.ellipsis,
+                                color: textColor,
+                                fontWeight: FontWeight.w100,
+                                fontSize: theme.getSmallFont(context))))
                   ]),
                   const SizedBox(height: 3),
                   Row(children: [

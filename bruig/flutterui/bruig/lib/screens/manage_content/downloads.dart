@@ -86,7 +86,7 @@ class DownloadsScreenTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text("Bison Relay / Downloads",
+    return Text("Downloads",
         style: TextStyle(color: Theme.of(context).focusColor));
   }
 }
