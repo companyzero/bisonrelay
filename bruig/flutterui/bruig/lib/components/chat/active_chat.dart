@@ -99,10 +99,12 @@ class _ActiveChatState extends State<ActiveChat> {
   @override
   Widget build(BuildContext context) {
     if (this.chat == null) return Container();
-    var chat = this.chat!;
+    var chat = this!.chat;
     var profile = client.profile;
+    print("wut!");
     if (profile != null) {
-      if (chat.isGC) {
+      print("there!");
+      if (chat!.isGC) {
         return const ManageGCScreen();
       } else {
         return UserProfile(client, profile);
@@ -115,7 +117,7 @@ class _ActiveChatState extends State<ActiveChat> {
     var selectedBackgroundColor = theme.highlightColor;
     var subMenuBorderColor = theme.canvasColor;
     var hightLightTextColor = theme.focusColor; // NAME TEXT COLOR
-    var avatarColor = colorFromNick(chat.nick);
+    var avatarColor = colorFromNick(chat!.nick);
     var avatarTextColor =
         ThemeData.estimateBrightnessForColor(avatarColor) == Brightness.dark
             ? hightLightTextColor

@@ -22,18 +22,21 @@ class GcContexMenu extends StatelessWidget {
       this.client,
       this.targetGcChat,
       this.disabled,
-      this.targetUserId});
+      this.targetUserId,
+      this.mobile});
 
   final bool? disabled;
   final ClientModel? client;
   final ChatModel? targetGcChat;
   final Widget child;
   final String? targetUserId;
+  final void Function(BuildContext)? mobile;
 
   void Function(dynamic) _handleItemTap(context) {
     return (result) {
       switch (result) {
         case 'manage':
+          print("here!!!");
           client!.profile = targetGcChat;
           break;
         case 'rename':
@@ -65,10 +68,13 @@ class GcContexMenu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    print("gc ${mobile == null}");
     return ContextMenu(
+      gc: true,
       disabled: disabled,
       handleItemTap: _handleItemTap(context),
       items: _buildUserMenu(),
+      mobile: (context) => mobile!(context),
       child: child,
     );
   }

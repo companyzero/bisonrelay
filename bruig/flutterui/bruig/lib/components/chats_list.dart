@@ -101,6 +101,7 @@ class _ChatHeadingWState extends State<_ChatHeadingW> {
         avatarColor: avatarColor,
         avatarTextColor: avatarTextColor);
 
+    bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
     return Consumer<ThemeNotifier>(
         builder: (context, theme, _) => Container(
               decoration: BoxDecoration(
@@ -109,6 +110,12 @@ class _ChatHeadingWState extends State<_ChatHeadingW> {
               ),
               child: chat.isGC
                   ? GcContexMenu(
+                      mobile: isScreenSmall
+                          ? (context) {
+                              widget.makeActive(chat);
+                              widget.showSubMenu(chat.isGC, chat.id);
+                            }
+                          : null,
                       client: client,
                       targetGcChat: chat,
                       child: ListTile(
