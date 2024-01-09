@@ -99,10 +99,10 @@ class _ActiveChatState extends State<ActiveChat> {
   @override
   Widget build(BuildContext context) {
     if (this.chat == null) return Container();
-    var chat = this!.chat;
+    var chat = this.chat!;
     var profile = client.profile;
     if (profile != null) {
-      if (chat!.isGC) {
+      if (chat.isGC) {
         return const ManageGCScreen();
       } else {
         return UserProfile(client, profile);

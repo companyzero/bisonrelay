@@ -417,7 +417,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
             )),
           ])
         : Flex(direction: Axis.vertical, children: [
-            client.active == null && client.profile == null
+            client.active == null
                 ? Expanded(child: ChatDrawerMenu(inputFocusNode))
                 : Expanded(
                     child: Container(

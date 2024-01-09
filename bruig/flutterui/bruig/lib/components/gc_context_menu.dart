@@ -68,7 +68,6 @@ class GcContexMenu extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ContextMenu(
-      gc: true,
       disabled: disabled,
       handleItemTap: _handleItemTap(context),
       items: _buildUserMenu(),

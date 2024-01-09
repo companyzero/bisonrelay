@@ -9,15 +9,13 @@ class ContextMenu extends StatefulWidget {
       required this.items,
       required this.handleItemTap,
       this.disabled,
-      this.mobile,
-      this.gc});
+      this.mobile});
 
   final bool? disabled;
   final Widget child;
   final PopMenuList items;
   final void Function(dynamic) handleItemTap;
   final void Function(BuildContext)? mobile;
-  final bool? gc;
 
   @override
   State<ContextMenu> createState() => _ContextMenuState();
