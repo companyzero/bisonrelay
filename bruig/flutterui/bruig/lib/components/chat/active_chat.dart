@@ -155,11 +155,6 @@ class _ActiveChatState extends State<ActiveChat> {
                             style: TextStyle(
                                 fontSize: theme.getMediumFont(context),
                                 color: textColor)),
-                        Copyable(
-                            chat.id,
-                            TextStyle(
-                                fontSize: theme.getSmallFont(context),
-                                color: textColor)),
                         Expanded(
                             child: ListView.builder(
                           shrinkWrap: true,
