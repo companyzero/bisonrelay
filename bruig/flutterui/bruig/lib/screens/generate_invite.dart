@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:bruig/components/accounts_dropdown.dart';
 import 'package:bruig/components/copyable.dart';
@@ -12,6 +13,7 @@ import 'package:golib_plugin/golib_plugin.dart';
 import 'package:golib_plugin/util.dart';
 import 'package:bruig/theme_manager.dart';
 import 'package:provider/provider.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class GenerateInviteScreen extends StatefulWidget {
   const GenerateInviteScreen({super.key});
@@ -53,14 +55,26 @@ class _GenerateInviteScreenState extends State<GenerateInviteScreen> {
   void selectPath() async {
     if (_debounce?.isActive ?? false) _debounce!.cancel();
     _debounce = Timer(const Duration(milliseconds: 500), () async {
-      var filePath = await FilePicker.platform.saveFile(
-        dialogTitle: "Select invitation file location",
-        fileName: "invite.bin",
-      );
-      if (filePath == null) return;
-      setState(() {
-        path = filePath;
-      });
+      if (Platform.isAndroid) {
+        if (await Permission.manageExternalStorage.request().isGranted) {
+          var filePath = await FilePicker.platform.getDirectoryPath(
+            dialogTitle: "Select invitation file location",
+          );
+          if (filePath == null) return;
+          setState(() {
+            path = "$filePath/invite.bin";
+          });
+        }
+      } else {
+        var filePath = await FilePicker.platform.saveFile(
+          dialogTitle: "Select invitation file location",
+          fileName: "invite.bin",
+        );
+        if (filePath == null) return;
+        setState(() {
+          path = filePath;
+        });
+      }
     });
   }
 
