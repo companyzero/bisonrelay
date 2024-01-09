@@ -86,8 +86,9 @@ class ChatsScreenTitle extends StatelessWidget {
             margin: const EdgeInsets.only(top: 0, bottom: 0, left: 0, right: 5),
             child: chat.isGC
                 ? GcContexMenu(
-                    mobile:
-                        isScreenSmall ? (context) => print("bdsafsfd") : null,
+                    mobile: isScreenSmall
+                        ? (context) => client.showSubMenu(chat.isGC, chat.id)
+                        : null,
                     targetGcChat: chat,
                     child: InteractiveAvatar(
                       bgColor: selectedBackgroundColor,
@@ -402,7 +403,6 @@ class _ChatsScreenState extends State<ChatsScreen> {
     }
 
     bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
-    print(client.profile == null);
     return !isScreenSmall
         ? Flex(direction: Axis.horizontal, children: [
             SizedBox(width: 163, child: ChatDrawerMenu(inputFocusNode)),

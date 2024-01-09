@@ -101,9 +101,7 @@ class _ActiveChatState extends State<ActiveChat> {
     if (this.chat == null) return Container();
     var chat = this!.chat;
     var profile = client.profile;
-    print("wut!");
     if (profile != null) {
-      print("there!");
       if (chat!.isGC) {
         return const ManageGCScreen();
       } else {

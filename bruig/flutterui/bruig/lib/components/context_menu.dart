@@ -50,7 +50,6 @@ class _ContextMenuState extends State<ContextMenu> {
 
   @override
   Widget build(BuildContext context) {
-    if (widget.gc != null) {}
     return GestureDetector(
       child: widget.child,
       onLongPress: () => widget.disabled == true

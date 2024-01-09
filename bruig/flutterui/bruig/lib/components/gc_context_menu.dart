@@ -36,7 +36,6 @@ class GcContexMenu extends StatelessWidget {
     return (result) {
       switch (result) {
         case 'manage':
-          print("here!!!");
           client!.profile = targetGcChat;
           break;
         case 'rename':
@@ -68,7 +67,6 @@ class GcContexMenu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    print("gc ${mobile == null}");
     return ContextMenu(
       gc: true,
       disabled: disabled,
