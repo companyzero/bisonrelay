@@ -15,7 +15,7 @@ class PayStatsScreenTitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Consumer<ThemeNotifier>(
-        builder: (context, theme, child) => Text("Bison Relay / Pay Stats",
+        builder: (context, theme, child) => Text("Pay Stats",
             style: TextStyle(
                 fontSize: theme.getLargeFont(context),
                 color: Theme.of(context).focusColor)));

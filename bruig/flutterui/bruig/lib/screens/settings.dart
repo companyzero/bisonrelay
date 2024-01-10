@@ -12,7 +12,7 @@ class SettingsScreenTitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Consumer<ThemeNotifier>(
-        builder: (context, theme, child) => Text("Bison Relay / Settings",
+        builder: (context, theme, child) => Text("Settings",
             style: TextStyle(
                 fontSize: theme.getLargeFont(context),
                 color: Theme.of(context).focusColor)));

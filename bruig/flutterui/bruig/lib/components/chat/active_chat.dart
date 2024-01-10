@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:bruig/components/copyable.dart';
 import 'package:bruig/components/manage_gc.dart';
 import 'package:bruig/models/menus.dart';
 import 'package:bruig/util.dart';
@@ -243,6 +244,14 @@ class _ActiveChatState extends State<ActiveChat> {
                             style: TextStyle(
                                 fontSize: theme.getMediumFont(context),
                                 color: textColor)),
+                        Container(
+                            margin: const EdgeInsets.all(10),
+                            child: Copyable(
+                                chat.id,
+                                TextStyle(
+                                    fontSize: theme.getSmallFont(context),
+                                    color: textColor,
+                                    overflow: TextOverflow.ellipsis))),
                         Expanded(
                             child: ListView.builder(
                           shrinkWrap: true,

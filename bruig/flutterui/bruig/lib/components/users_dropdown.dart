@@ -43,7 +43,9 @@ class _UsersDropdownState extends State<UsersDropdown> {
         list.insert(0, null);
       }
       // Only use chats that aren't in the exclude UID list
-      list = list.where((e) => !widget.excludeUIDs.contains(e!.id)).toList();
+      if (widget.excludeUIDs.isNotEmpty && list.isNotEmpty) {
+        list = list.where((e) => !widget.excludeUIDs.contains(e!.id)).toList();
+      }
       return DropdownButton<ChatModel?>(
         focusColor: Colors.red,
         isDense: true,

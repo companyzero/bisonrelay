@@ -11,7 +11,7 @@ class PostListsScreenTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text("Bison Relay / Subscriptions ",
+    return Text("Subscriptions ",
         style: TextStyle(color: Theme.of(context).focusColor));
   }
 }

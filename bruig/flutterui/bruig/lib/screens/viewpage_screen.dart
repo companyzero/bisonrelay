@@ -15,7 +15,7 @@ class ViewPagesScreenTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const baseTitle = "Bison Relay / Pages";
+    const baseTitle = "Pages";
     return Consumer<ThemeNotifier>(
         builder: (context, theme, child) => Text(baseTitle,
             style: TextStyle(

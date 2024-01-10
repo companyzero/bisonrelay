@@ -450,6 +450,7 @@ class ManageGCScreenState extends State<ManageGCScreenForChat> {
     if (firstLoading) {
       return const Scaffold(body: Center(child: Text("Loading...")));
     }
+    bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
     return Consumer<ThemeNotifier>(
         builder: (context, theme, _) => Container(
               padding: const EdgeInsets.all(40),
@@ -466,25 +467,34 @@ class ManageGCScreenState extends State<ManageGCScreenForChat> {
                             fontSize: theme.getMediumFont(context),
                             fontWeight: FontWeight.bold,
                             color: textColor)),
-                    const SizedBox(width: 20),
-                    localIsOwner
-                        ? ElevatedButton(
-                            onPressed: !loading ? killGC : null,
-                            child: const Text("Kill GC"))
-                        : ElevatedButton(
-                            onPressed: !loading ? partFromGC : null,
-                            child: const Text("Part from GC")),
-                    const SizedBox(width: 10),
-                    localIsAdmin && gcVersion < MAXGCVERSION
-                        ? ElevatedButton(
-                            onPressed: !loading ? upgradeGC : null,
-                            child: const Text("Upgrade Version"))
-                        : const Empty(),
-                    const SizedBox(width: 10),
-                    ElevatedButton(
-                        onPressed: !loading ? hideGC : null,
-                        child: const Text("Hide GC"))
                   ]),
+                  const SizedBox(height: 20),
+                  Flex(
+                      direction:
+                          isScreenSmall ? Axis.vertical : Axis.horizontal,
+                      children: [
+                        localIsOwner
+                            ? ElevatedButton(
+                                onPressed: !loading ? killGC : null,
+                                child: const Text("Kill GC"))
+                            : ElevatedButton(
+                                onPressed: !loading ? partFromGC : null,
+                                child: const Text("Part from GC")),
+                        isScreenSmall
+                            ? const SizedBox(height: 10)
+                            : const SizedBox(width: 10),
+                        localIsAdmin && gcVersion < MAXGCVERSION
+                            ? ElevatedButton(
+                                onPressed: !loading ? upgradeGC : null,
+                                child: const Text("Upgrade Version"))
+                            : const Empty(),
+                        isScreenSmall
+                            ? const SizedBox(height: 10)
+                            : const SizedBox(width: 10),
+                        ElevatedButton(
+                            onPressed: !loading ? hideGC : null,
+                            child: const Text("Hide GC"))
+                      ]),
                   const SizedBox(height: 10),
                   Row(children: [
                     Text("ID: ",
@@ -492,12 +502,15 @@ class ManageGCScreenState extends State<ManageGCScreenForChat> {
                             color: textColor,
                             fontWeight: FontWeight.w100,
                             fontSize: theme.getSmallFont(context))),
-                    Copyable(
-                        gcID,
-                        TextStyle(
-                            color: textColor,
-                            fontWeight: FontWeight.w100,
-                            fontSize: theme.getSmallFont(context)))
+                    SizedBox(
+                        width: 200,
+                        child: Copyable(
+                            gcID,
+                            TextStyle(
+                                overflow: TextOverflow.ellipsis,
+                                color: textColor,
+                                fontWeight: FontWeight.w100,
+                                fontSize: theme.getSmallFont(context))))
                   ]),
                   const SizedBox(height: 3),
                   Row(children: [

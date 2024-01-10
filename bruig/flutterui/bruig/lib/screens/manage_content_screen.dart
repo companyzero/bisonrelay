@@ -20,8 +20,7 @@ class ManageContentScreenTitle extends StatelessWidget {
         builder: (context, menu, theme, child) {
       var idx = LnScreenSub.indexWhere((e) => e.pageTab == menu.activePageTab);
 
-      return Text(
-          "Bison Relay / Manage Content / ${ManageContentScreenSub[idx].label}",
+      return Text("Manage Content / ${ManageContentScreenSub[idx].label}",
           style: TextStyle(
               fontSize: theme.getLargeFont(context),
               color: Theme.of(context).focusColor));

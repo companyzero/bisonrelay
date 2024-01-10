@@ -34,7 +34,7 @@ class ChatsScreenTitle extends StatelessWidget {
       var activeHeading = client.active;
       if (activeHeading == null) {
         return Row(mainAxisAlignment: MainAxisAlignment.start, children: [
-          Text("Bison Relay / Chat",
+          Text("Chat",
               textAlign: TextAlign.center,
               style: TextStyle(
                   fontSize: theme.getLargeFont(context),
@@ -43,7 +43,7 @@ class ChatsScreenTitle extends StatelessWidget {
       }
       if (client.showAddressBook) {
         return Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-          Text("Bison Relay / Chat / Address Book",
+          Text("Chat / Address Book",
               style: TextStyle(
                   fontSize: theme.getLargeFont(context),
                   color: Theme.of(context).focusColor))
@@ -52,7 +52,7 @@ class ChatsScreenTitle extends StatelessWidget {
       var chat = client.getExistingChat(activeHeading.id);
       if (chat == null) {
         return Row(mainAxisAlignment: MainAxisAlignment.start, children: [
-          Text("Bison Relay / Chat",
+          Text("Chat",
               textAlign: TextAlign.center,
               style: TextStyle(
                   fontSize: theme.getLargeFont(context),
@@ -75,7 +75,7 @@ class ChatsScreenTitle extends StatelessWidget {
                 ? hightLightTextColor
                 : darkTextColor;
         return Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
-          Text("Bison Relay / Chat$suffix$profileSuffix",
+          Text("Chat$suffix$profileSuffix",
               textAlign: TextAlign.center,
               style: TextStyle(
                   fontSize: theme.getLargeFont(context),
@@ -115,7 +115,7 @@ class ChatsScreenTitle extends StatelessWidget {
           )),
         ]);
       }
-      return Text("Bison Relay / Chat$suffix$profileSuffix",
+      return Text("Chat$suffix$profileSuffix",
           style: TextStyle(
               fontSize: theme.getLargeFont(context),
               color: Theme.of(context).focusColor));

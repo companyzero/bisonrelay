@@ -28,14 +28,14 @@ class LNScreenTitle extends StatelessWidget {
     return Consumer2<MainMenuModel, ThemeNotifier>(
         builder: (context, menu, theme, child) {
       if (menu.activePageTab <= 0) {
-        return Text("Bison Relay / LN",
+        return Text("LN",
             style: TextStyle(
                 fontSize: theme.getLargeFont(context),
                 color: Theme.of(context).focusColor));
       }
       var idx = LnScreenSub.indexWhere((e) => e.pageTab == menu.activePageTab);
 
-      return Text("Bison Relay / LN / ${LnScreenSub[idx].label}",
+      return Text("LN / ${LnScreenSub[idx].label}",
           style: TextStyle(
               fontSize: theme.getLargeFont(context),
               color: Theme.of(context).focusColor));

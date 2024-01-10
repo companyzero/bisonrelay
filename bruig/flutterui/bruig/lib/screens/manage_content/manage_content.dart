@@ -339,7 +339,7 @@ class ManageContentScreenTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text("Bison Relay / Manage Content",
+    return Text("Manage Content",
         style: TextStyle(color: Theme.of(context).focusColor));
   }
 }
