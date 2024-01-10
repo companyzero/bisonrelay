@@ -116,7 +116,7 @@ func (z *ZKS) writeMessage(kx *session.KX, msg *RPCWrapper) error {
 		return fmt.Errorf("could not write %v: %v",
 			msg.Message.Command, err)
 	}
-	z.stats.bytesSent.add(int64(len(payload)))
+	z.stats.bytesSent.Add(int64(len(payload)))
 
 	return nil
 }

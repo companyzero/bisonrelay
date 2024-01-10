@@ -123,7 +123,7 @@ loop:
 				}
 				delete(z.subscribers, rv)
 				delete(sessSubs, rv)
-				z.stats.activeSubs.add(-1)
+				z.stats.activeSubs.Add(-1)
 			}
 
 			// Add new subscriptions.
@@ -139,8 +139,8 @@ loop:
 				}
 				z.subscribers[rv] = sc
 				sessSubs[rv] = struct{}{}
-				z.stats.subsRecv.add(1)
-				z.stats.activeSubs.add(1)
+				z.stats.subsRecv.Add(1)
+				z.stats.activeSubs.Add(1)
 			}
 			z.Unlock()
 
@@ -210,7 +210,7 @@ loop:
 			// And send
 			sc.log.Debugf("Pushing %d bytes to client at RV %s",
 				len(msgPayload.Payload), rv)
-			z.stats.rmsSent.add(1)
+			z.stats.rmsSent.Add(1)
 
 			sc.writer <- &reply
 		}
@@ -220,7 +220,7 @@ loop:
 	z.Lock()
 	for rv := range sessSubs {
 		delete(z.subscribers, rv)
-		z.stats.activeSubs.add(-1)
+		z.stats.activeSubs.Add(-1)
 	}
 	z.Unlock()
 
@@ -284,7 +284,7 @@ func (z *ZKS) sessionReader(ctx context.Context, sc *sessionContext) error {
 			return ctx.Err()
 		}
 
-		z.stats.bytesRecv.add(int64(len(cmd)))
+		z.stats.bytesRecv.Add(int64(len(cmd)))
 
 		// unmarshal header
 		br := bytes.NewReader(cmd)
@@ -448,7 +448,7 @@ func (z *ZKS) runNewSession(ctx context.Context, conn net.Conn, kx *session.KX) 
 	// Mark session online.
 	z.logConn.Debugf("handleSession online: from %s id %s", conn.RemoteAddr(), rid)
 
-	z.stats.connections.add(1)
+	z.stats.connections.Add(1)
 
 	// Start subroutines.
 	g, gctx := errgroup.WithContext(ctx)
@@ -492,5 +492,5 @@ func (z *ZKS) runNewSession(ctx context.Context, conn net.Conn, kx *session.KX) 
 
 	}
 
-	z.stats.disconnections.add(1)
+	z.stats.disconnections.Add(1)
 }

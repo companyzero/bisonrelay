@@ -63,7 +63,7 @@ func TestWSPeerMultiStreams(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var nbReq1, nbReq2 int32
+	var nbReq1, nbReq2 atomic.Int32
 	go func() {
 		for {
 			var res types.KeepaliveEvent
@@ -71,7 +71,7 @@ func TestWSPeerMultiStreams(t *testing.T) {
 			if err != nil {
 				return
 			}
-			atomic.AddInt32(&nbReq1, 1)
+			nbReq1.Add(1)
 		}
 	}()
 	go func() {
@@ -81,13 +81,13 @@ func TestWSPeerMultiStreams(t *testing.T) {
 			if err != nil {
 				return
 			}
-			atomic.AddInt32(&nbReq2, 1)
+			nbReq2.Add(1)
 		}
 	}()
 
 	// Run for 0.5 second.
 	time.Sleep(time.Millisecond * 500)
-	countReq1, countReq2 := atomic.LoadInt32(&nbReq1), atomic.LoadInt32(&nbReq2)
+	countReq1, countReq2 := nbReq1.Load(), nbReq2.Load()
 
 	// Number of req1 requests should be approximately 5 times nb of req2
 	// requests (to within a margin of error due to timing effects).

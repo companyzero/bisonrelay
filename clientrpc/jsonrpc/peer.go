@@ -41,7 +41,7 @@ type peer struct {
 	nextEncoder    func() (*json.Encoder, error)
 	flushLastWrite func() error
 
-	id       uint32 // Atomic
+	id       atomic.Uint32
 	runDone  chan struct{}
 	readEOFd chan struct{}
 	reqsSema requestsSemaphore
@@ -82,7 +82,7 @@ func (p *peer) requestStream(ctx context.Context, method string, params proto.Me
 }
 
 func (p *peer) request(ctx context.Context, method string, params, resp proto.Message) error {
-	id := atomic.AddUint32(&p.id, 1)
+	id := p.id.Add(1)
 	out := outboundMsg{
 		Version: version,
 		ID:      id,
