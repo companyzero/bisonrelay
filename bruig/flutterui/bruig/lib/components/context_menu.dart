@@ -8,12 +8,14 @@ class ContextMenu extends StatefulWidget {
       required this.child,
       required this.items,
       required this.handleItemTap,
-      this.disabled});
+      this.disabled,
+      this.mobile});
 
   final bool? disabled;
   final Widget child;
   final PopMenuList items;
   final void Function(dynamic) handleItemTap;
+  final void Function(BuildContext)? mobile;
 
   @override
   State<ContextMenu> createState() => _ContextMenuState();
@@ -48,8 +50,11 @@ class _ContextMenuState extends State<ContextMenu> {
   Widget build(BuildContext context) {
     return GestureDetector(
       child: widget.child,
-      onLongPress: () =>
-          widget.disabled == true ? null : _showContextMenu(context),
+      onLongPress: () => widget.disabled == true
+          ? null
+          : widget.mobile != null
+              ? widget.mobile!(context)
+              : _showContextMenu(context),
       onSecondaryTap: () =>
           widget.disabled == true ? null : _showContextMenu(context),
     );

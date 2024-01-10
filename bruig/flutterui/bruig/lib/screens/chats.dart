@@ -86,6 +86,9 @@ class ChatsScreenTitle extends StatelessWidget {
             margin: const EdgeInsets.only(top: 0, bottom: 0, left: 0, right: 5),
             child: chat.isGC
                 ? GcContexMenu(
+                    mobile: isScreenSmall
+                        ? (context) => client.showSubMenu(chat.isGC, chat.id)
+                        : null,
                     targetGcChat: chat,
                     child: InteractiveAvatar(
                       bgColor: selectedBackgroundColor,
