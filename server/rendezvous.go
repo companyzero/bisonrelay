@@ -18,7 +18,7 @@ import (
 // maybePushRM pushes the given RM to the appropriate session if there is an
 // online session that is expecting it.
 func (z *ZKS) maybePushRM(r rpc.RouteMessage) {
-	z.stats.rmsRecv.add(1)
+	z.stats.rmsRecv.Add(1)
 
 	z.Lock() // XXX LOOOL
 	if sc, ok := z.subscribers[r.Rendezvous]; ok {

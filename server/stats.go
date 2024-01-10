@@ -9,28 +9,18 @@ import (
 	"github.com/decred/slog"
 )
 
-type counter int64
-
-func (c *counter) add(amt int64) {
-	atomic.AddInt64((*int64)(c), amt)
-}
-
-func (c *counter) value() int64 {
-	return atomic.LoadInt64((*int64)(c))
-}
-
 type stats struct {
-	bytesSent      counter
-	bytesRecv      counter
-	matomsRecv     counter
-	invoicesSent   counter
-	invoicesRecv   counter
-	subsRecv       counter
-	rmsSent        counter
-	rmsRecv        counter
-	activeSubs     counter
-	connections    counter
-	disconnections counter
+	bytesSent      atomic.Int64
+	bytesRecv      atomic.Int64
+	matomsRecv     atomic.Int64
+	invoicesSent   atomic.Int64
+	invoicesRecv   atomic.Int64
+	subsRecv       atomic.Int64
+	rmsSent        atomic.Int64
+	rmsRecv        atomic.Int64
+	activeSubs     atomic.Int64
+	connections    atomic.Int64
+	disconnections atomic.Int64
 }
 
 // hbytes == "human bytes"
@@ -64,17 +54,17 @@ func (s *stats) runPrinter(ctx context.Context, log slog.Logger) error {
 		case <-time.After(10 * time.Second):
 			// Not fetching all under a single lock makes the stats
 			// less exact, but more performant.
-			bs := s.bytesSent.value()
-			br := s.bytesRecv.value()
-			mr := s.matomsRecv.value()
-			ivs := s.invoicesSent.value()
-			ivr := s.invoicesRecv.value()
-			sr := s.subsRecv.value()
-			rs := s.rmsRecv.value()
-			rr := s.rmsSent.value()
-			as := s.activeSubs.value()
-			conn := s.connections.value()
-			disc := s.disconnections.value()
+			bs := s.bytesSent.Load()
+			br := s.bytesRecv.Load()
+			mr := s.matomsRecv.Load()
+			ivs := s.invoicesSent.Load()
+			ivr := s.invoicesRecv.Load()
+			sr := s.subsRecv.Load()
+			rs := s.rmsRecv.Load()
+			rr := s.rmsSent.Load()
+			as := s.activeSubs.Load()
+			conn := s.connections.Load()
+			disc := s.disconnections.Load()
 			online := conn - disc
 
 			log.Infof("Server Stats: "+

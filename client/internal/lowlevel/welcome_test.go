@@ -21,7 +21,7 @@ import (
 func TestAttemptsConn(t *testing.T) {
 	t.Parallel()
 
-	var cas uint32
+	var cas atomic.Uint32
 
 	errDialer := errors.New("dialer error")
 	errConfirmer := errors.New("confirmer error")
@@ -34,7 +34,7 @@ func TestAttemptsConn(t *testing.T) {
 	}
 	okDialer := func(ctx context.Context) (clientintf.Conn, *tls.ConnectionState, error) {
 		// Ensure a unique cert per connection to force tls re-confirm.
-		u := atomic.AddUint32(&cas, 1)
+		u := cas.Add(1)
 		return newSpidConn(), mockTLSConnState(uint8(u)), nil
 	}
 	errorConfirmer := func(context.Context, *tls.ConnectionState, *zkidentity.PublicIdentity) error {
@@ -106,14 +106,14 @@ func TestAttemptsConn(t *testing.T) {
 func TestKeepsOnline(t *testing.T) {
 	t.Parallel()
 
-	var attempts uint32
+	var attempts atomic.Uint32
 	maxFails := uint32(5)
 	errDialer := errors.New("test dialer error")
 	ctxFailedAttemptsDone, cancelCtxFailedAttemps := context.WithCancel(context.Background())
 	testDialer := func(ctx context.Context) (clientintf.Conn, *tls.ConnectionState, error) {
 		// This dialer will fail the first maxFails attempts,
 		// then succeed.
-		a := atomic.AddUint32(&attempts, 1)
+		a := attempts.Add(1)
 		if a <= maxFails {
 			return nil, nil, errDialer
 		}
@@ -149,7 +149,7 @@ func TestKeepsOnline(t *testing.T) {
 		t.Fatal("timeout")
 	}
 	wantAttempts := maxFails + 1
-	gotAttempts := atomic.LoadUint32(&attempts)
+	gotAttempts := attempts.Load()
 	if gotAttempts != wantAttempts {
 		t.Fatalf("unexpected nb of attempts: got %d, want %d",
 			gotAttempts, wantAttempts)
@@ -176,7 +176,7 @@ func TestKeepsOnline(t *testing.T) {
 		t.Fatalf("unexpected nil session")
 	}
 	wantAttempts += 1
-	gotAttempts = atomic.LoadUint32(&attempts)
+	gotAttempts = attempts.Load()
 	if gotAttempts != wantAttempts {
 		t.Fatalf("unexpected nb of attempts: got %d, want %d",
 			gotAttempts, wantAttempts)
@@ -190,7 +190,7 @@ func TestKeepsOnline(t *testing.T) {
 		t.Fatalf("unexpected session (expected nil)")
 	}
 	time.Sleep(cfg.ReconnectDelay * 10)
-	gotAttempts = atomic.LoadUint32(&attempts)
+	gotAttempts = attempts.Load()
 	if gotAttempts != wantAttempts {
 		t.Fatalf("unexpected nb of attempts: got %d, want %d",
 			gotAttempts, wantAttempts)
@@ -203,7 +203,7 @@ func TestKeepsOnline(t *testing.T) {
 	if sess == nil {
 		t.Fatalf("unexpected session (expected filled)")
 	}
-	gotAttempts = atomic.LoadUint32(&attempts)
+	gotAttempts = attempts.Load()
 	wantAttempts += 1
 	if gotAttempts != wantAttempts {
 		t.Fatalf("unexpected nb of attempts: got %d, want %d",

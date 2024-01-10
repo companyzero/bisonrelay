@@ -162,7 +162,7 @@ func (z *ZKS) generateNextLNInvoice(ctx context.Context, sc *sessionContext, act
 		sc.lnPayReqHashSub = addInvoiceRes.RHash
 	}
 
-	z.stats.invoicesSent.add(1)
+	z.stats.invoicesSent.Add(1)
 	id := hex.EncodeToString(addInvoiceRes.RHash)
 	return addInvoiceRes.PaymentRequest, id, nil
 }
@@ -301,8 +301,8 @@ func (z *ZKS) isRMPaid(ctx context.Context, rm *rpc.RouteMessage, sc *sessionCon
 						payTimeLimit)
 
 				default:
-					z.stats.invoicesRecv.add(1)
-					z.stats.matomsRecv.add(lookupRes.AmtPaidMAtoms)
+					z.stats.invoicesRecv.Add(1)
+					z.stats.matomsRecv.Add(lookupRes.AmtPaidMAtoms)
 
 					// Everything ok.
 					sc.log.Debugf("LN invoice %x settled "+
@@ -373,8 +373,8 @@ func (z *ZKS) areSubsPaid(ctx context.Context, r *rpc.SubscribeRoutedMessages, s
 					// on how much was paid.
 					sc.lnPayReqHashSub = nil
 					nbAllowed = lookupRes.AmtPaidMAtoms / int64(z.settings.MilliAtomsPerSub)
-					z.stats.invoicesRecv.add(1)
-					z.stats.matomsRecv.add(lookupRes.AmtPaidMAtoms)
+					z.stats.invoicesRecv.Add(1)
+					z.stats.matomsRecv.Add(lookupRes.AmtPaidMAtoms)
 
 					sc.log.Debugf("LN invoice %x settled "+
 						"w/ %d MAtoms for %d new subscriptions",
