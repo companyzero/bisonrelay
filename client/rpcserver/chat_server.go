@@ -289,6 +289,31 @@ func (c *chatServer) AcceptInvite(_ context.Context, req *types.AcceptInviteRequ
 	return nil
 }
 
+func (c *chatServer) UserNick(ctx context.Context, req *types.UserNickRequest, res *types.UserNickResponse) error {
+	var uid clientintf.UserID
+	if req.Uid != nil && len(req.Uid) == len(uid) {
+		err := uid.FromBytes(req.Uid)
+		if err != nil {
+			return err
+		}
+	} else if len(req.HexUid) == len(uid)*2 {
+		err := uid.FromString(req.HexUid)
+		if err != nil {
+			return err
+		}
+	} else {
+		return fmt.Errorf("invalid uid and hex_uid")
+	}
+
+	nick, err := c.c.UserNick(uid)
+	if err != nil {
+		return err
+	}
+
+	res.Nick = nick
+	return nil
+}
+
 // registerOfflineMessageStorageHandlers registers the handlers for streams on
 // the client's notification manager.
 func (c *chatServer) registerOfflineMessageStorageHandlers() {
