@@ -220,9 +220,7 @@ func (c *Client) HasDownloadedFile(fid zkidentity.ShortID) (string, error) {
 func (c *Client) handleFTListReply(ru *RemoteUser, ftrp rpc.RMFTListReply) error {
 	if ftrp.Error != nil {
 		err := errors.New(*ftrp.Error)
-		if c.cfg.ContentListReceived != nil {
-			c.cfg.ContentListReceived(ru, nil, err)
-		}
+		c.ntfns.notifyContentListReceived(ru, nil, err)
 		return err
 	}
 
@@ -237,10 +235,7 @@ func (c *Client) handleFTListReply(ru *RemoteUser, ftrp rpc.RMFTListReply) error
 		return err
 	}
 	c.log.Infof("User listed %d files", len(res))
-
-	if c.cfg.ContentListReceived != nil {
-		c.cfg.ContentListReceived(ru, res, nil)
-	}
+	c.ntfns.notifyContentListReceived(ru, res, nil)
 
 	return nil
 }
@@ -927,11 +922,9 @@ func (c *Client) handleFTGetChunkReply(ru *RemoteUser, gcr rpc.RMFTGetChunkReply
 		baseName := filepath.Base(completedFname)
 		ru.log.Infof("Completed file download %q (%s, saved as %q",
 			fd.Metadata.Filename, fd.FID, baseName)
-		if c.cfg.FileDownloadCompleted != nil {
-			c.cfg.FileDownloadCompleted(ru, *fd.Metadata, completedFname)
-		}
-	} else if c.cfg.FileDownloadProgress != nil {
-		c.cfg.FileDownloadProgress(ru, *fd.Metadata, nbMissingChunks)
+		c.ntfns.notifyFileDownloadCompleted(ru, *fd.Metadata, completedFname)
+	} else {
+		c.ntfns.notifyFileDownloadProgress(ru, *fd.Metadata, nbMissingChunks)
 	}
 	return err
 }
