@@ -42,6 +42,7 @@ import 'package:golib_plugin/golib_plugin.dart';
 import 'package:provider/provider.dart';
 import 'package:window_manager/window_manager.dart';
 import './screens/app_start.dart';
+import 'package:optimize_battery/optimize_battery.dart';
 
 final Random random = Random();
 
@@ -56,6 +57,8 @@ void main(List<String> args) async {
   Golib.captureDcrlndLog();
   // DartVLC.initialize();
 
+  // Get user to stop optimizing battery usage
+  OptimizeBattery.stopOptimizingBatteryUsage();
   // The MockGolib was mostly useful during early stages of development.
   //UseMockGolib();
 
