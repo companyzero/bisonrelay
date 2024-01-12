@@ -135,7 +135,10 @@ type ChatServiceClient interface {
 	// AcceptInvite accepts an invite to kx with the user-provided invite.
 	AcceptInvite(ctx context.Context, in *AcceptInviteRequest, out *AcceptInviteResponse) error
 	// SendFile sends a file to a user.
+	// TODO: move to ContentService.
 	SendFile(ctx context.Context, in *SendFileRequest, out *SendFileResponse) error
+	// UserNick returns the nick of an user.
+	UserNick(ctx context.Context, in *UserNickRequest, out *UserNickResponse) error
 }
 
 type client_ChatService struct {
@@ -227,6 +230,11 @@ func (c *client_ChatService) SendFile(ctx context.Context, in *SendFileRequest, 
 	return c.defn.Methods[method].ClientHandler(c.c, ctx, in, out)
 }
 
+func (c *client_ChatService) UserNick(ctx context.Context, in *UserNickRequest, out *UserNickResponse) error {
+	const method = "UserNick"
+	return c.defn.Methods[method].ClientHandler(c.c, ctx, in, out)
+}
+
 func NewChatServiceClient(c ClientConn) ChatServiceClient {
 	return &client_ChatService{c: c, defn: ChatServiceDefn()}
 }
@@ -263,7 +271,10 @@ type ChatServiceServer interface {
 	// AcceptInvite accepts an invite to kx with the user-provided invite.
 	AcceptInvite(context.Context, *AcceptInviteRequest, *AcceptInviteResponse) error
 	// SendFile sends a file to a user.
+	// TODO: move to ContentService.
 	SendFile(context.Context, *SendFileRequest, *SendFileResponse) error
+	// UserNick returns the nick of an user.
+	UserNick(context.Context, *UserNickRequest, *UserNickResponse) error
 }
 
 type ChatService_PMStreamServer interface {
@@ -453,12 +464,27 @@ func ChatServiceDefn() ServiceDefn {
 				NewResponse:  func() proto.Message { return new(SendFileResponse) },
 				RequestDefn:  func() protoreflect.MessageDescriptor { return new(SendFileRequest).ProtoReflect().Descriptor() },
 				ResponseDefn: func() protoreflect.MessageDescriptor { return new(SendFileResponse).ProtoReflect().Descriptor() },
-				Help:         "SendFile sends a file to a user.",
+				Help:         "SendFile sends a file to a user. TODO: move to ContentService.",
 				ServerHandler: func(x interface{}, ctx context.Context, request, response proto.Message) error {
 					return x.(ChatServiceServer).SendFile(ctx, request.(*SendFileRequest), response.(*SendFileResponse))
 				},
 				ClientHandler: func(conn ClientConn, ctx context.Context, request, response proto.Message) error {
 					method := "ChatService.SendFile"
+					return conn.Request(ctx, method, request, response)
+				},
+			},
+			"UserNick": {
+				IsStreaming:  false,
+				NewRequest:   func() proto.Message { return new(UserNickRequest) },
+				NewResponse:  func() proto.Message { return new(UserNickResponse) },
+				RequestDefn:  func() protoreflect.MessageDescriptor { return new(UserNickRequest).ProtoReflect().Descriptor() },
+				ResponseDefn: func() protoreflect.MessageDescriptor { return new(UserNickResponse).ProtoReflect().Descriptor() },
+				Help:         "UserNick returns the nick of an user.",
+				ServerHandler: func(x interface{}, ctx context.Context, request, response proto.Message) error {
+					return x.(ChatServiceServer).UserNick(ctx, request.(*UserNickRequest), response.(*UserNickResponse))
+				},
+				ClientHandler: func(conn ClientConn, ctx context.Context, request, response proto.Message) error {
+					method := "ChatService.UserNick"
 					return conn.Request(ctx, method, request, response)
 				},
 			},
@@ -1563,6 +1589,15 @@ var help_messages = map[string]map[string]string{
 	},
 	"SendFileResponse": {
 		"@": "SendFileResponse is the response to sending a file to a user.",
+	},
+	"UserNickRequest": {
+		"@":       "UserNickRequest is the request to fetch a user's nick.",
+		"uid":     "uid is the uid in raw bytes format.",
+		"hex_uid": "hex_uid is the uid in hex format.",
+	},
+	"UserNickResponse": {
+		"@":    "UserNickResponse is the response to fetch a user's nick.",
+		"nick": "nick is the nick of the user.",
 	},
 	"KickFromGCRequest": {
 		"@":      "KickFromGCRequest is the request to kick an user from a GC.",
