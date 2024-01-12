@@ -3165,6 +3165,98 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		as.repaintIfActive(cw)
 	}))
 
+	ntfns.Register(client.OnContentListReceived(func(user *client.RemoteUser, files []clientdb.RemoteFile, listErr error) {
+		cw := as.findOrNewChatWindow(user.ID(), strescape.Nick(user.Nick()))
+		if listErr != nil {
+			cw.newInternalMsg(fmt.Sprintf("Unable to list user contents: %v", listErr))
+			as.repaintIfActive(cw)
+			return
+		}
+
+		// Store the list of files so we know what to fetch.
+		if len(files) > 0 {
+			as.contentMtx.Lock()
+			userFiles, ok := as.remoteFiles[cw.uid]
+			if !ok {
+				userFiles = make(map[clientdb.FileID]clientdb.RemoteFile, len(files))
+				as.remoteFiles[cw.uid] = userFiles
+			}
+
+			for _, rf := range files {
+				userFiles[rf.FID] = rf
+			}
+
+			as.contentMtx.Unlock()
+		}
+
+		cw.manyHelpMsgs(func(pf printf) {
+			pf("")
+			pf("Received file list")
+			dcrPrice, _ := as.rates.Get()
+			for _, f := range files {
+				meta := f.Metadata
+				dcrCost := float64(meta.Cost) / 1e8
+				usdCost := dcrPrice * dcrCost
+
+				pf("ID         : %x", meta.MetadataHash())
+				pf("Filename   : %q", meta.Filename)
+				pf("Description: %q", meta.Description)
+				pf("Size       : %d", meta.Size)
+				pf("Cost       : %.8f DCR / %0.8f USD", dcrCost, usdCost)
+				pf("Hash       : %q", meta.Hash)
+				pf("Signature  : %q", meta.Signature)
+				pf("")
+			}
+		})
+		as.repaintIfActive(cw)
+	}))
+
+	ntfns.Register(client.OnFileDownloadCompleted(func(user *client.RemoteUser, fm rpc.FileMetadata, diskPath string) {
+		cw := as.findOrNewChatWindow(user.ID(), strescape.Nick(user.Nick()))
+		cw.newInternalMsg(fmt.Sprintf("Download completed: %s",
+			diskPath))
+
+		fid := clientdb.FileID(fm.MetadataHash())
+		as.contentMtx.Lock()
+		msg := as.progressMsg[fid]
+		if msg != nil {
+			delete(as.progressMsg, fid)
+			totChunks := len(fm.Manifest)
+			msg.msg = fmt.Sprintf("Downloaded %d/%d chunks (100.00%%)- %q",
+				totChunks, totChunks, fm.Filename)
+		}
+		as.contentMtx.Unlock()
+
+		activeCW := as.activeChatWindow()
+		as.sendMsg(msgDownloadCompleted(fid))
+		if activeCW != nil && activeCW != cw {
+			activeCW.newHelpMsg("Download completed: %s", diskPath)
+			as.repaintIfActive(activeCW)
+		}
+	}))
+
+	ntfns.Register(client.OnFileDownloadProgress(func(user *client.RemoteUser, fm rpc.FileMetadata,
+		nbMissingChunks int) {
+
+		cw := as.findOrNewChatWindow(user.ID(), strescape.Nick(user.Nick()))
+		totChunks := len(fm.Manifest)
+		gotChunks := totChunks - nbMissingChunks
+
+		fid := clientdb.FileID(fm.MetadataHash())
+		as.contentMtx.Lock()
+		msg := as.progressMsg[fid]
+		if msg == nil {
+			msg = cw.newInternalMsg("")
+			as.progressMsg[fid] = msg
+		}
+		msg.msg = fmt.Sprintf("Downloaded %d/%d chunks (%.2f%%) - %q",
+			gotChunks, totChunks, float64(gotChunks*100/totChunks),
+			fm.Filename)
+		as.contentMtx.Unlock()
+
+		as.repaintIfActive(cw)
+	}))
+
 	// Initialize resources router.
 	var sstore *simplestore.Store
 	resRouter := resources.NewRouter()
@@ -3327,98 +3419,6 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 					}
 				}
 			}
-		},
-
-		ContentListReceived: func(user *client.RemoteUser, files []clientdb.RemoteFile, listErr error) {
-			cw := as.findOrNewChatWindow(user.ID(), strescape.Nick(user.Nick()))
-			if listErr != nil {
-				cw.newInternalMsg(fmt.Sprintf("Unable to list user contents: %v", listErr))
-				as.repaintIfActive(cw)
-				return
-			}
-
-			// Store the list of files so we know what to fetch.
-			if len(files) > 0 {
-				as.contentMtx.Lock()
-				userFiles, ok := as.remoteFiles[cw.uid]
-				if !ok {
-					userFiles = make(map[clientdb.FileID]clientdb.RemoteFile, len(files))
-					as.remoteFiles[cw.uid] = userFiles
-				}
-
-				for _, rf := range files {
-					userFiles[rf.FID] = rf
-				}
-
-				as.contentMtx.Unlock()
-			}
-
-			cw.manyHelpMsgs(func(pf printf) {
-				pf("")
-				pf("Received file list")
-				dcrPrice, _ := as.rates.Get()
-				for _, f := range files {
-					meta := f.Metadata
-					dcrCost := float64(meta.Cost) / 1e8
-					usdCost := dcrPrice * dcrCost
-
-					pf("ID         : %x", meta.MetadataHash())
-					pf("Filename   : %q", meta.Filename)
-					pf("Description: %q", meta.Description)
-					pf("Size       : %d", meta.Size)
-					pf("Cost       : %.8f DCR / %0.8f USD", dcrCost, usdCost)
-					pf("Hash       : %q", meta.Hash)
-					pf("Signature  : %q", meta.Signature)
-					pf("")
-				}
-			})
-			as.repaintIfActive(cw)
-		},
-
-		FileDownloadCompleted: func(user *client.RemoteUser, fm rpc.FileMetadata, diskPath string) {
-			cw := as.findOrNewChatWindow(user.ID(), strescape.Nick(user.Nick()))
-			cw.newInternalMsg(fmt.Sprintf("Download completed: %s",
-				diskPath))
-
-			fid := clientdb.FileID(fm.MetadataHash())
-			as.contentMtx.Lock()
-			msg := as.progressMsg[fid]
-			if msg != nil {
-				delete(as.progressMsg, fid)
-				totChunks := len(fm.Manifest)
-				msg.msg = fmt.Sprintf("Downloaded %d/%d chunks (100.00%%)- %q",
-					totChunks, totChunks, fm.Filename)
-			}
-			as.contentMtx.Unlock()
-
-			activeCW := as.activeChatWindow()
-			as.sendMsg(msgDownloadCompleted(fid))
-			if activeCW != nil && activeCW != cw {
-				activeCW.newHelpMsg("Download completed: %s", diskPath)
-				as.repaintIfActive(activeCW)
-			}
-		},
-
-		FileDownloadProgress: func(user *client.RemoteUser, fm rpc.FileMetadata,
-			nbMissingChunks int) {
-
-			cw := as.findOrNewChatWindow(user.ID(), strescape.Nick(user.Nick()))
-			totChunks := len(fm.Manifest)
-			gotChunks := totChunks - nbMissingChunks
-
-			fid := clientdb.FileID(fm.MetadataHash())
-			as.contentMtx.Lock()
-			msg := as.progressMsg[fid]
-			if msg == nil {
-				msg = cw.newInternalMsg("")
-				as.progressMsg[fid] = msg
-			}
-			msg.msg = fmt.Sprintf("Downloaded %d/%d chunks (%.2f%%) - %q",
-				gotChunks, totChunks, float64(gotChunks*100/totChunks),
-				fm.Filename)
-			as.contentMtx.Unlock()
-
-			as.repaintIfActive(cw)
 		},
 
 		TransitiveEvent: func(src, dst client.UserID, event client.TransitiveEvent) {

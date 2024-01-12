@@ -296,6 +296,30 @@ type OnReceiveReceipt func(user *RemoteUser, rr rpc.RMReceiveReceipt, serverTime
 
 func (_ OnReceiveReceipt) typ() string { return onReceiveReceipt }
 
+const onContentListReceived = "onContentListReceived"
+
+// ContentListReceived is called when the list of content of the user is
+// received.
+type OnContentListReceived func(user *RemoteUser, files []clientdb.RemoteFile, listErr error)
+
+func (_ OnContentListReceived) typ() string { return onContentListReceived }
+
+const onFileDownloadCompleted = "onFileDownloadCompleted"
+
+// FileDownloadCompleted is called whenever a download of a file has
+// completed.
+type OnFileDownloadCompleted func(user *RemoteUser, fm rpc.FileMetadata, diskPath string)
+
+func (_ OnFileDownloadCompleted) typ() string { return onFileDownloadCompleted }
+
+const onFileDownloadProgress = "onFileDownloadProgress"
+
+// FileDownloadProgress is called reporting the progress of a file
+// download process.
+type OnFileDownloadProgress func(user *RemoteUser, fm rpc.FileMetadata, nbMissingChunks int)
+
+func (_ OnFileDownloadProgress) typ() string { return onFileDownloadProgress }
+
 // The following is used only in tests.
 
 const onTestNtfnType = "testNtfnType"
@@ -615,6 +639,22 @@ func (nmgr *NotificationManager) notifyReceiveReceipt(ru *RemoteUser, rr rpc.RMR
 		visit(func(h OnReceiveReceipt) { h(ru, rr, serverTime) })
 }
 
+func (nmgr *NotificationManager) notifyContentListReceived(user *RemoteUser, files []clientdb.RemoteFile, listErr error) {
+	nmgr.handlers[onContentListReceived].(*handlersFor[OnContentListReceived]).
+		visit(func(h OnContentListReceived) { h(user, files, listErr) })
+
+}
+
+func (nmgr *NotificationManager) notifyFileDownloadCompleted(user *RemoteUser, fm rpc.FileMetadata, diskPath string) {
+	nmgr.handlers[onFileDownloadCompleted].(*handlersFor[OnFileDownloadCompleted]).
+		visit(func(h OnFileDownloadCompleted) { h(user, fm, diskPath) })
+}
+
+func (nmgr *NotificationManager) notifyFileDownloadProgress(user *RemoteUser, fm rpc.FileMetadata, nbMissingChunks int) {
+	nmgr.handlers[onFileDownloadProgress].(*handlersFor[OnFileDownloadProgress]).
+		visit(func(h OnFileDownloadProgress) { h(user, fm, nbMissingChunks) })
+}
+
 func NewNotificationManager() *NotificationManager {
 	return &NotificationManager{
 		handlers: map[string]handlersRegistry{
@@ -642,6 +682,9 @@ func NewNotificationManager() *NotificationManager {
 			onGCUserPartedNtfnType:     &handlersFor[OnGCUserPartedNtfn]{},
 			onGCKilledNtfnType:         &handlersFor[OnGCKilledNtfn]{},
 			onGCAdminsChangedNtfnType:  &handlersFor[OnGCAdminsChangedNtfn]{},
+			onContentListReceived:      &handlersFor[OnContentListReceived]{},
+			onFileDownloadCompleted:    &handlersFor[OnFileDownloadCompleted]{},
+			onFileDownloadProgress:     &handlersFor[OnFileDownloadProgress]{},
 
 			onKXSearchCompletedNtfnType:       &handlersFor[OnKXSearchCompleted]{},
 			onInvoiceGenFailedNtfnType:        &handlersFor[OnInvoiceGenFailedNtfn]{},

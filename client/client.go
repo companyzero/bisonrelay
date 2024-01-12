@@ -93,21 +93,9 @@ type Config struct {
 	// with a new user.
 	KXSuggestion func(user *RemoteUser, pii zkidentity.PublicIdentity)
 
-	// ContentListReceived is called when the list of content of the user is
-	// received.
-	ContentListReceived func(user *RemoteUser, files []clientdb.RemoteFile, listErr error)
-
 	// FileDownloadConfirmer is called to confirm the start of a file
 	// download with the user.
 	FileDownloadConfirmer func(user *RemoteUser, fm rpc.FileMetadata) bool
-
-	// FileDownloadCompleted is called whenever a download of a file has
-	// completed.
-	FileDownloadCompleted func(user *RemoteUser, fm rpc.FileMetadata, diskPath string)
-
-	// FileDownloadProgress is called reporting the progress of a file
-	// download process.
-	FileDownloadProgress func(user *RemoteUser, fm rpc.FileMetadata, nbMissingChunks int)
 
 	// TransitiveEvent is called whenever a request is made by source for
 	// the local client to forward a message to dst.

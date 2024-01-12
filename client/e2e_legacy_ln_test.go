@@ -266,11 +266,11 @@ func TestE2EDcrlnContent(t *testing.T) {
 	bob := newTestClient(t, rnd, "bob")
 
 	completedFileChan := make(chan string)
-	bob.cfg.FileDownloadCompleted = func(user *RemoteUser, fm rpc.FileMetadata, diskPath string) {
+	bob.cfg.Notifications.Register(OnFileDownloadCompleted(func(user *RemoteUser, fm rpc.FileMetadata, diskPath string) {
 		completedFileChan <- diskPath
-	}
+	}))
 	listedFilesChan := make(chan interface{})
-	bob.cfg.ContentListReceived = func(user *RemoteUser, files []clientdb.RemoteFile, listErr error) {
+	bob.cfg.Notifications.Register(OnContentListReceived(func(user *RemoteUser, files []clientdb.RemoteFile, listErr error) {
 		if listErr != nil {
 			listedFilesChan <- listErr
 			return
@@ -280,7 +280,7 @@ func TestE2EDcrlnContent(t *testing.T) {
 			mds[i] = rf.Metadata
 		}
 		listedFilesChan <- mds
-	}
+	}))
 
 	// Start the clients. Return any run errors on errChan.
 	ctx, cancel := context.WithCancel(context.Background())

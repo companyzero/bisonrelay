@@ -358,6 +358,35 @@ func handleInitClient(handle uint32, args initClient) error {
 		notify(NTUserPostsList, v, nil)
 	}))
 
+	ntfns.Register(client.OnContentListReceived(func(user *client.RemoteUser, files []clientdb.RemoteFile, listErr error) {
+		data := userContentList{
+			UID:   user.ID(),
+			Files: files,
+		}
+		notify(NTUserContentList, data, listErr)
+	}))
+
+	ntfns.Register(client.OnFileDownloadProgress(func(user *client.RemoteUser, fm rpc.FileMetadata, nbMissingChunks int) {
+		fdp := fileDownloadProgress{
+			UID:             user.ID(),
+			FID:             fm.MetadataHash(),
+			Metadata:        fm,
+			NbMissingChunks: nbMissingChunks,
+		}
+		notify(NTFileDownloadProgress, fdp, nil)
+	}))
+
+	ntfns.Register(client.OnFileDownloadCompleted(func(user *client.RemoteUser,
+		fm rpc.FileMetadata, diskPath string) {
+		rf := clientdb.RemoteFile{
+			FID:      fm.MetadataHash(),
+			UID:      user.ID(),
+			DiskPath: diskPath,
+			Metadata: fm,
+		}
+		notify(NTFileDownloadCompleted, rf, nil)
+	}))
+
 	// Initialize resources router.
 	var sstore *simplestore.Store
 	resRouter := resources.NewRouter()
@@ -488,14 +517,6 @@ func handleInitClient(handle uint32, args initClient) error {
 			}
 		},
 
-		ContentListReceived: func(user *client.RemoteUser, files []clientdb.RemoteFile, listErr error) {
-			data := userContentList{
-				UID:   user.ID(),
-				Files: files,
-			}
-			notify(NTUserContentList, data, listErr)
-		},
-
 		FileDownloadConfirmer: func(user *client.RemoteUser, fm rpc.FileMetadata) bool {
 			fid := fm.MetadataHash()
 
@@ -532,27 +553,6 @@ func handleInitClient(handle uint32, args initClient) error {
 			case <-cctx.ctx.Done():
 				return false
 			}
-		},
-
-		FileDownloadProgress: func(user *client.RemoteUser, fm rpc.FileMetadata, nbMissingChunks int) {
-			fdp := fileDownloadProgress{
-				UID:             user.ID(),
-				FID:             fm.MetadataHash(),
-				Metadata:        fm,
-				NbMissingChunks: nbMissingChunks,
-			}
-			notify(NTFileDownloadProgress, fdp, nil)
-		},
-
-		FileDownloadCompleted: func(user *client.RemoteUser,
-			fm rpc.FileMetadata, diskPath string) {
-			rf := clientdb.RemoteFile{
-				FID:      fm.MetadataHash(),
-				UID:      user.ID(),
-				DiskPath: diskPath,
-				Metadata: fm,
-			}
-			notify(NTFileDownloadCompleted, rf, nil)
 		},
 	}
 
