@@ -168,6 +168,17 @@ service ResourcesService {
   rpc FulfillRequest(FulfillResourceRequest) returns (FulfillResourceRequestResponse);
 }
 
+/* ContentService is the service to perform content (file transfer) related actions. */
+service ContentService {
+  /* DownloadsCompletedStream streams completed downloads (file transfers) made
+     by the local client. This includes both downloads initiated by the local
+     client and pushed by remote clients. */
+  rpc DownloadsCompletedStream (DownloadsCompletedStreamRequest) returns (stream DownloadCompletedResponse);
+
+  /* AckDownloadCompleted acks download completed events. */
+  rpc AckDownloadCompleted(AckRequest) returns (AckResponse);
+}
+
 /******************************************************************************
   *                           Messages
   *****************************************************************************/
@@ -700,6 +711,30 @@ message FulfillResourceRequest {
 message FulfillResourceRequestResponse{
 }
 
+/* DownloadsCompletedRequest is the request sent when obtaining a stream of
+   completed downloads notifications. */
+message DownloadsCompletedStreamRequest{
+  /* unacked_from specifies to the server the sequence_id of the last completed
+     download. Downloads completed by the server that have a higher sequence_id
+     will be streamed back to the client. */
+  uint64 unacked_from = 1;
+}
+
+/* DownloadCompletedResponse is the data about one completed file download. */
+message DownloadCompletedResponse {
+  /* sequence_id is an opaque sequential ID. */
+  uint64 sequence_id = 1;
+  /* uid is the User ID of the client that sent the file. */
+  bytes uid = 2;
+  /* nick is the nick of the client that sent the resource. */
+  string nick = 3;
+  /* disk_path is the path of the file in the local client's disk. */
+  string disk_path = 4;
+  /* file_metadata is the metadata about the file. */
+  FileMetadata file_metadata = 5;
+}
+
+
 /******************************************************************************
   *                          Routed RPC Compat
   *****************************************************************************/
@@ -871,4 +906,38 @@ message RMFetchResourceReply {
   uint32 index = 5;
   /* count is the total number of chunks in multipart responses. */
   uint32 count  = 6;
+}
+
+/* FileManifest is metadata about a chunk of the file. */
+message FileManifest {
+  /* index is the position of this manifest item on the file metadata manifest. */
+  uint64 index = 1;
+  /* size is the size of this chunk. */
+  uint64 size = 2;
+  /* hash is the hash of the chunk data. */
+  bytes hash = 3;
+}
+
+/* FileMetadata is metadata about a file in the file transfer subsystem. */
+message FileMetadata {
+  /* version of the metadata. */
+  uint64 version = 1;
+  /* cost (in milliatoms) to download the file. */
+  uint64 cost = 2;
+  /* size (in bytes) of the file. */
+  uint64 size = 3;
+  /* directory where the file is stored in the source. */
+  string directory = 4;
+  /* filename of the file. */
+  string filename = 5;
+  /* description of the file. */
+  string description = 6;
+  /* hash of the file contents. */
+  string hash = 7;
+  /* manifest of the chunks that compose the file. */
+  repeated FileManifest manifest    = 8;
+  /* signature of the file by the host. */
+  string signature = 9;
+  /* attributes of the file. */
+  map<string,string> attributes  = 10;
 }

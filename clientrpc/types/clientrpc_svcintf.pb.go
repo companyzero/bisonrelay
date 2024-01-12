@@ -1287,6 +1287,98 @@ func ResourcesServiceDefn() ServiceDefn {
 	}
 }
 
+// ContentServiceClient is the client API for ContentService service.
+type ContentServiceClient interface {
+	// DownloadsCompletedStream streams completed downloads (file transfers) made
+	// by the local client. This includes both downloads initiated by the local
+	// client and pushed by remote clients.
+	DownloadsCompletedStream(ctx context.Context, in *DownloadsCompletedStreamRequest) (ContentService_DownloadsCompletedStreamClient, error)
+	// AckDownloadCompleted acks download completed events.
+	AckDownloadCompleted(ctx context.Context, in *AckRequest, out *AckResponse) error
+}
+
+type client_ContentService struct {
+	c    ClientConn
+	defn ServiceDefn
+}
+type ContentService_DownloadsCompletedStreamClient interface {
+	Recv(*DownloadCompletedResponse) error
+}
+
+func (c *client_ContentService) DownloadsCompletedStream(ctx context.Context, in *DownloadsCompletedStreamRequest) (ContentService_DownloadsCompletedStreamClient, error) {
+	const method = "DownloadsCompletedStream"
+	inner, err := c.defn.Methods[method].ClientStreamHandler(c.c, ctx, in)
+	if err != nil {
+		return nil, err
+	}
+	return streamerImpl[*DownloadCompletedResponse]{c: inner}, nil
+}
+
+func (c *client_ContentService) AckDownloadCompleted(ctx context.Context, in *AckRequest, out *AckResponse) error {
+	const method = "AckDownloadCompleted"
+	return c.defn.Methods[method].ClientHandler(c.c, ctx, in, out)
+}
+
+func NewContentServiceClient(c ClientConn) ContentServiceClient {
+	return &client_ContentService{c: c, defn: ContentServiceDefn()}
+}
+
+// ContentServiceServer is the server API for ContentService service.
+type ContentServiceServer interface {
+	// DownloadsCompletedStream streams completed downloads (file transfers) made
+	// by the local client. This includes both downloads initiated by the local
+	// client and pushed by remote clients.
+	DownloadsCompletedStream(context.Context, *DownloadsCompletedStreamRequest, ContentService_DownloadsCompletedStreamServer) error
+	// AckDownloadCompleted acks download completed events.
+	AckDownloadCompleted(context.Context, *AckRequest, *AckResponse) error
+}
+
+type ContentService_DownloadsCompletedStreamServer interface {
+	Send(m *DownloadCompletedResponse) error
+}
+
+func ContentServiceDefn() ServiceDefn {
+	return ServiceDefn{
+		Name: "ContentService",
+		Methods: map[string]MethodDefn{
+			"DownloadsCompletedStream": {
+				IsStreaming: true,
+				NewRequest:  func() proto.Message { return new(DownloadsCompletedStreamRequest) },
+				NewResponse: func() proto.Message { return new(DownloadCompletedResponse) },
+				RequestDefn: func() protoreflect.MessageDescriptor {
+					return new(DownloadsCompletedStreamRequest).ProtoReflect().Descriptor()
+				},
+				ResponseDefn: func() protoreflect.MessageDescriptor {
+					return new(DownloadCompletedResponse).ProtoReflect().Descriptor()
+				},
+				Help: "DownloadsCompletedStream streams completed downloads (file transfers) made by the local client. This includes both downloads initiated by the local client and pushed by remote clients.",
+				ServerStreamHandler: func(x interface{}, ctx context.Context, request proto.Message, stream ServerStream) error {
+					return x.(ContentServiceServer).DownloadsCompletedStream(ctx, request.(*DownloadsCompletedStreamRequest), streamerImpl[*DownloadCompletedResponse]{s: stream})
+				},
+				ClientStreamHandler: func(conn ClientConn, ctx context.Context, request proto.Message) (ClientStream, error) {
+					method := "ContentService.DownloadsCompletedStream"
+					return conn.Stream(ctx, method, request)
+				},
+			},
+			"AckDownloadCompleted": {
+				IsStreaming:  false,
+				NewRequest:   func() proto.Message { return new(AckRequest) },
+				NewResponse:  func() proto.Message { return new(AckResponse) },
+				RequestDefn:  func() protoreflect.MessageDescriptor { return new(AckRequest).ProtoReflect().Descriptor() },
+				ResponseDefn: func() protoreflect.MessageDescriptor { return new(AckResponse).ProtoReflect().Descriptor() },
+				Help:         "AckDownloadCompleted acks download completed events.",
+				ServerHandler: func(x interface{}, ctx context.Context, request, response proto.Message) error {
+					return x.(ContentServiceServer).AckDownloadCompleted(ctx, request.(*AckRequest), response.(*AckResponse))
+				},
+				ClientHandler: func(conn ClientConn, ctx context.Context, request, response proto.Message) error {
+					method := "ContentService.AckDownloadCompleted"
+					return conn.Request(ctx, method, request, response)
+				},
+			},
+		},
+	}
+}
+
 var help_messages = map[string]map[string]string{
 	"VersionRequest": {
 		"@": "",
@@ -1579,6 +1671,18 @@ var help_messages = map[string]map[string]string{
 	"FulfillResourceRequestResponse": {
 		"@": "FulfillResourceRequestResponse is the response to a FulfillResourceResquest call.",
 	},
+	"DownloadsCompletedStreamRequest": {
+		"@":            "DownloadsCompletedRequest is the request sent when obtaining a stream of completed downloads notifications.",
+		"unacked_from": "unacked_from specifies to the server the sequence_id of the last completed download. Downloads completed by the server that have a higher sequence_id will be streamed back to the client.",
+	},
+	"DownloadCompletedResponse": {
+		"@":             "DownloadCompletedResponse is the data about one completed file download.",
+		"sequence_id":   "sequence_id is an opaque sequential ID.",
+		"uid":           "uid is the User ID of the client that sent the file.",
+		"nick":          "nick is the nick of the client that sent the resource.",
+		"disk_path":     "disk_path is the path of the file in the local client's disk.",
+		"file_metadata": "file_metadata is the metadata about the file.",
+	},
 	"RMPrivateMessage": {
 		"@":       "RMPrivateMessage is the network-level routed private message.",
 		"message": "message is the private message payload.",
@@ -1665,5 +1769,24 @@ var help_messages = map[string]map[string]string{
 		"data":   "data is the raw response data.",
 		"index":  "index is used in chunked/multipart responses.",
 		"count":  "count is the total number of chunks in multipart responses.",
+	},
+	"FileManifest": {
+		"@":     "FileManifest is metadata about a chunk of the file.",
+		"index": "index is the position of this manifest item on the file metadata manifest.",
+		"size":  "size is the size of this chunk.",
+		"hash":  "hash is the hash of the chunk data.",
+	},
+	"FileMetadata": {
+		"@":           "FileMetadata is metadata about a file in the file transfer subsystem.",
+		"version":     "version of the metadata.",
+		"cost":        "cost (in milliatoms) to download the file.",
+		"size":        "size (in bytes) of the file.",
+		"directory":   "directory where the file is stored in the source.",
+		"filename":    "filename of the file.",
+		"description": "description of the file.",
+		"hash":        "hash of the file contents.",
+		"manifest":    "manifest of the chunks that compose the file.",
+		"signature":   "signature of the file by the host.",
+		"attributes":  "attributes of the file.",
 	},
 }
