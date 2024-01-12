@@ -59,6 +59,7 @@ dependencies:
       ref: main
       path: packages/flutter_markdown
   permission_handler: ^10.4.5
+  optimize_battery: ^0.0.4
 
 msix_config:
   display_name: Bison Relay GUI
