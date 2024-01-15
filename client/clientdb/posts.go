@@ -598,6 +598,12 @@ func (db *DB) ListPosts(tx ReadTx) ([]PostSummary, error) {
 			if strings.HasSuffix(postFile.Name(), postsStatusExt) {
 				continue
 			}
+			if strings.HasSuffix(postFile.Name(), postRecvReceiptSuff) {
+				continue
+			}
+			if strings.HasSuffix(postFile.Name(), postCommentRecvReceiptDir) {
+				continue
+			}
 
 			fullPath := filepath.Join(fullDir, postFile.Name())
 			pid := new(PostID)
