@@ -250,11 +250,12 @@ func (ru *RemoteUser) queueRMPriority(payload interface{}, priority uint,
 		return err
 	}
 
-	if rpc.EstimateRoutedRMWireSize(len(me)) > rpc.MaxMsgSize {
+	estSize := rpc.EstimateRoutedRMWireSize(len(me))
+	maxMsgSize := int(ru.q.MaxMsgSize())
+	if estSize > maxMsgSize {
 		return fmt.Errorf("message %T estimated as larger than "+
 			"max message size %d > %d: %w", payload,
-			rpc.EstimateRoutedRMWireSize(len(me)),
-			rpc.MaxMsgSize, errRMTooLarge)
+			estSize, maxMsgSize, errRMTooLarge)
 	}
 
 	if ru.logPayloads.Level() <= slog.LevelTrace {

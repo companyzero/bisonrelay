@@ -20,6 +20,7 @@ import (
 	"github.com/companyzero/bisonrelay/client/clientdb"
 	"github.com/companyzero/bisonrelay/client/internal/lowlevel"
 	"github.com/companyzero/bisonrelay/ratchet"
+	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/companyzero/bisonrelay/zkidentity"
 	"github.com/decred/slog"
 )
@@ -293,6 +294,11 @@ func (q *mockRMServerRMQ) SendRM(orm lowlevel.OutboundRM) error {
 	replyChan := make(chan error)
 	_ = q.QueueRM(orm, replyChan)
 	return <-replyChan
+}
+
+func (q *mockRMServerRMQ) MaxMsgSize() uint32 {
+	return uint32(rpc.MaxMsgSizeForVersion(rpc.MaxMsgSizeV0))
+
 }
 
 type mockRMServerRMgr struct {

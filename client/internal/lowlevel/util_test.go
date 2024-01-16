@@ -92,7 +92,7 @@ var (
 func mockServerKX(conn clientintf.Conn) *session.KX {
 	return &session.KX{
 		Conn:           conn,
-		MaxMessageSize: uint(rpc.MaxMsgSize),
+		MaxMessageSize: 1887437,
 		OurPublicKey:   &mockServerID.Public.Key,
 		OurPrivateKey:  &mockServerID.PrivateKey,
 	}
@@ -327,6 +327,8 @@ func newMockServerSession() *mockServerSession {
 		policy: clientintf.ServerPolicy{
 			MaxPushInvoices:     1,
 			PushPaymentLifetime: time.Second,
+			MaxMsgSizeVersion:   rpc.MaxMsgSizeV0,
+			MaxMsgSize:          rpc.MaxMsgSizeForVersion(rpc.MaxMsgSizeV0),
 		},
 		mpc: &testutils.MockPayClient{},
 	}

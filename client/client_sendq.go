@@ -28,11 +28,13 @@ func (c *Client) addToSendQ(typ string, msg interface{}, priority uint,
 		return sendqID, err
 	}
 
-	if rpc.EstimateRoutedRMWireSize(len(blob)) > rpc.MaxMsgSize {
+	estSize := rpc.EstimateRoutedRMWireSize(len(blob))
+	maxMsgSize := int(c.q.MaxMsgSize())
+	if estSize > maxMsgSize {
 		return sendqID, fmt.Errorf("cannot enqueue message %T "+
 			"estimated as larger than max message size %d > %d: %w",
-			msg, rpc.EstimateRoutedRMWireSize(len(blob)),
-			rpc.MaxMsgSize, errRMTooLarge)
+			msg, estSize, maxMsgSize, errRMTooLarge)
+
 	}
 
 	err = c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
