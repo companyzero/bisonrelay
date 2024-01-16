@@ -20,13 +20,6 @@ import (
 const (
 	RMHeaderVersion = 1
 
-	// maxRMEncodedSize is the absolute maximum value of a a decrompressed
-	// routed message (plus its header). This is the upper bound used when
-	// decompressing RMs to avoid decompressing bombs and should be larger
-	// then the max actual RM payload and low enough to not cause DoS in
-	// clients in case of such attacks.
-	maxRMDecompressSize = MaxMsgSize
-
 	// Use NoCompression by default
 	RMDefaultCompressionLevel = zlib.NoCompression
 )
@@ -439,13 +432,14 @@ func ComposeRM(from *zkidentity.FullIdentity, rm interface{}) ([]byte, error) {
 	return ComposeCompressedRM(from, rm, RMDefaultCompressionLevel)
 }
 
-func DecomposeRM(id *zkidentity.PublicIdentity, mb []byte) (*RMHeader, interface{}, error) {
+// DecomposeRM decodes a message of up to maxDecompressSize bytes from mb.
+func DecomposeRM(id *zkidentity.PublicIdentity, mb []byte, maxDecompressSize uint) (*RMHeader, interface{}, error) {
 	// Decompress everything
 	cr, err := zlib.NewReader(bytes.NewReader(mb))
 	if err != nil {
 		return nil, nil, err
 	}
-	lr := &limitedReader{R: cr, N: maxRMDecompressSize}
+	lr := &limitedReader{R: cr, N: maxDecompressSize}
 	all, err := io.ReadAll(lr)
 	closeErr := cr.Close()
 	if err != nil {

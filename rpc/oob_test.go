@@ -10,6 +10,8 @@ import (
 	"github.com/companyzero/bisonrelay/zkidentity"
 )
 
+const testMaxDecompressSize = 1024 * 1024
+
 func TestEncryptDecryptHalfRatchet(t *testing.T) {
 	alice, err := zkidentity.New("Alice McMalice", "alice")
 	if err != nil {
@@ -41,7 +43,7 @@ func TestEncryptDecryptHalfRatchet(t *testing.T) {
 	}
 
 	// Bob decrypts packed blob
-	halfKXAtBob, err := DecryptOOBHalfKXBlob(packed, &bob.PrivateKey)
+	halfKXAtBob, err := DecryptOOBHalfKXBlob(packed, &bob.PrivateKey, testMaxDecompressSize)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -87,7 +89,7 @@ func TestEncryptDecryptFullRatchet(t *testing.T) {
 	}
 
 	// Alice decrypts packed blob
-	fullKXAtAlice, err := DecryptOOBFullKXBlob(packed, &alice.PrivateKey)
+	fullKXAtAlice, err := DecryptOOBFullKXBlob(packed, &alice.PrivateKey, testMaxDecompressSize)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -254,7 +256,7 @@ func TestDecomposeRMOLimitsZlibDeflate(t *testing.T) {
 	// RMO message.
 	validPrefix := `{"command":"ohalfkx"}` + "\n{" // Valid header and start of message.
 	validSuffix := "}"                             // End of message.
-	maxSize := maxRMDecompressSize - len(validPrefix) - 1
+	maxSize := testMaxDecompressSize - len(validPrefix) - 1
 
 	tests := []struct {
 		name    string
@@ -303,7 +305,7 @@ func TestDecomposeRMOLimitsZlibDeflate(t *testing.T) {
 			}
 
 			// Attempt to decompress it.
-			_, _, err = DecomposeRMO(bts)
+			_, _, err = DecomposeRMO(bts, testMaxDecompressSize)
 			if !errors.Is(err, tc.wantErr) {
 				t.Fatalf("unexpected error: got %v, want %v", err, tc.wantErr)
 			}

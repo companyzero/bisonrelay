@@ -61,8 +61,8 @@ func MarshalOOBPublicIdentityInvite(pii *OOBPublicIdentityInvite) ([]byte, error
 	return json.Marshal(pii)
 }
 
-func DecryptOOBPublicIdentityInvite(packed []byte, key *zkidentity.FixedSizeSntrupPrivateKey) (*OOBPublicIdentityInvite, error) {
-	pii, err := DecryptOOB(packed, key)
+func DecryptOOBPublicIdentityInvite(packed []byte, key *zkidentity.FixedSizeSntrupPrivateKey, maxDecompressSize uint) (*OOBPublicIdentityInvite, error) {
+	pii, err := DecryptOOB(packed, key, maxDecompressSize)
 	if err != nil {
 		return nil, err
 	}
@@ -187,7 +187,7 @@ func EncryptRMO(x interface{}, them zkidentity.PublicIdentity, zlibLevel int) ([
 	return packed, nil
 }
 
-func DecryptOOB(packed []byte, key *zkidentity.FixedSizeSntrupPrivateKey) (interface{}, error) {
+func DecryptOOB(packed []byte, key *zkidentity.FixedSizeSntrupPrivateKey, maxDecompressSize uint) (interface{}, error) {
 	if len(packed) < sntrup4591761.CiphertextSize {
 		return nil, fmt.Errorf("packed blob too small")
 	}
@@ -203,7 +203,7 @@ func DecryptOOB(packed []byte, key *zkidentity.FixedSizeSntrupPrivateKey) (inter
 	if !ok {
 		return nil, fmt.Errorf("could not open")
 	}
-	_, hkx, err := DecomposeRMO(hkxb)
+	_, hkx, err := DecomposeRMO(hkxb, maxDecompressSize)
 	if err != nil {
 		return nil, fmt.Errorf("DecomposeRMO %v", err)
 	}
@@ -212,8 +212,8 @@ func DecryptOOB(packed []byte, key *zkidentity.FixedSizeSntrupPrivateKey) (inter
 }
 
 // DecryptOOBHalfKXBlob decrypts a packed RMOHalfKX blob.
-func DecryptOOBHalfKXBlob(packed []byte, key *zkidentity.FixedSizeSntrupPrivateKey) (*RMOHalfKX, error) {
-	hkx, err := DecryptOOB(packed, key)
+func DecryptOOBHalfKXBlob(packed []byte, key *zkidentity.FixedSizeSntrupPrivateKey, maxDecompressSize uint) (*RMOHalfKX, error) {
+	hkx, err := DecryptOOB(packed, key, maxDecompressSize)
 	if err != nil {
 		return nil, err
 	}
@@ -227,8 +227,8 @@ func DecryptOOBHalfKXBlob(packed []byte, key *zkidentity.FixedSizeSntrupPrivateK
 }
 
 // DecryptOOBFullKXBlob decrypts a packed RMOFullKX blob.
-func DecryptOOBFullKXBlob(packed []byte, key *zkidentity.FixedSizeSntrupPrivateKey) (*RMOFullKX, error) {
-	fkx, err := DecryptOOB(packed, key)
+func DecryptOOBFullKXBlob(packed []byte, key *zkidentity.FixedSizeSntrupPrivateKey, maxDecompressSize uint) (*RMOFullKX, error) {
+	fkx, err := DecryptOOB(packed, key, maxDecompressSize)
 	if err != nil {
 		return nil, err
 	}
@@ -322,12 +322,12 @@ func ComposeRMO(rm interface{}, zlibLevel int) ([]byte, error) {
 	return mb.Bytes(), nil
 }
 
-func DecomposeRMO(mb []byte) (*RMOHeader, interface{}, error) {
+func DecomposeRMO(mb []byte, maxDecompressSize uint) (*RMOHeader, interface{}, error) {
 	cr, err := zlib.NewReader(bytes.NewReader(mb))
 	if err != nil {
 		return nil, nil, err
 	}
-	lr := &limitedReader{R: cr, N: maxRMDecompressSize}
+	lr := &limitedReader{R: cr, N: maxDecompressSize}
 
 	// Read header
 	var h RMOHeader

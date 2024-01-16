@@ -93,7 +93,7 @@ func (c *Client) handleTransitiveMsgFwd(ru *RemoteUser, fwd rpc.RMTransitiveMess
 		id := from.PublicIdentity()
 		fromID = &id
 	}
-	h, cmd, err := rpc.DecomposeRM(fromID, cleartext)
+	h, cmd, err := rpc.DecomposeRM(fromID, cleartext, uint(c.q.MaxMsgSize()))
 	if err != nil {
 		return fmt.Errorf("handleRMTransitiveMessageForward: "+
 			"decompose %v", err)

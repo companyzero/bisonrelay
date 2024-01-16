@@ -540,7 +540,7 @@ func (ru *RemoteUser) handleReceivedEncrypted(recvBlob lowlevel.RVBlob) error {
 		return errRemoteUserExiting
 	}
 
-	h, c, err := rpc.DecomposeRM(ru.id, cleartext)
+	h, c, err := rpc.DecomposeRM(ru.id, cleartext, uint(ru.q.MaxMsgSize()))
 	if err != nil {
 		// Encryption is authenticated, so an error here means the
 		// client encoded an unknown or otherwise invalid RM.
