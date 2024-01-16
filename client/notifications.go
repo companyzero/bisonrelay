@@ -329,6 +329,15 @@ type OnRMReceived func(ru *RemoteUser, h *rpc.RMHeader, p interface{}, ts time.T
 
 func (_ OnRMReceived) typ() string { return onRMReceived }
 
+const onServerUnwelcomeError = "onServerUnwelcomeError"
+
+// OnServerUnwelcomeError is a notification sent, when attempting to connect
+// to a server, the client receives an error that hints that it should
+// upgrade.
+type OnServerUnwelcomeError func(err error)
+
+func (_ OnServerUnwelcomeError) typ() string { return onServerUnwelcomeError }
+
 // The following is used only in tests.
 
 const onTestNtfnType = "testNtfnType"
@@ -669,6 +678,11 @@ func (nmgr *NotificationManager) notifyRMReceived(ru *RemoteUser, rmh *rpc.RMHea
 		visit(func(h OnRMReceived) { h(ru, rmh, p, ts) })
 }
 
+func (nmgr *NotificationManager) notifyServerUnwelcomeError(err error) {
+	nmgr.handlers[onServerUnwelcomeError].(*handlersFor[OnServerUnwelcomeError]).
+		visit(func(h OnServerUnwelcomeError) { h(err) })
+}
+
 func NewNotificationManager() *NotificationManager {
 	return &NotificationManager{
 		handlers: map[string]handlersRegistry{
@@ -700,6 +714,7 @@ func NewNotificationManager() *NotificationManager {
 			onContentListReceived:      &handlersFor[OnContentListReceived]{},
 			onFileDownloadCompleted:    &handlersFor[OnFileDownloadCompleted]{},
 			onFileDownloadProgress:     &handlersFor[OnFileDownloadProgress]{},
+			onServerUnwelcomeError:     &handlersFor[OnServerUnwelcomeError]{},
 
 			onKXSearchCompletedNtfnType:       &handlersFor[OnKXSearchCompleted]{},
 			onInvoiceGenFailedNtfnType:        &handlersFor[OnInvoiceGenFailedNtfn]{},

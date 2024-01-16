@@ -1,5 +1,6 @@
 import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/models/notifications.dart';
+import 'package:bruig/screens/server_unwelcome_error.dart';
 import 'package:flutter/material.dart';
 import 'package:bruig/theme_manager.dart';
 import 'package:provider/provider.dart';
@@ -77,6 +78,17 @@ class _NotificationW extends StatelessWidget {
           ntfns.delNtfn(ntf);
           Navigator.of(context, rootNavigator: true)
               .pushNamed("/needsInChannel");
+        };
+        break;
+
+      case AppNtfnType.serverUnwelcomeError:
+        content = "Client software needs upgrade";
+        tooltip = ntf.msg ?? "Client/server protocol negotiation error.";
+        onTap = () {
+          ntfns.delNtfn(ntf);
+          Navigator.of(context, rootNavigator: true).pushReplacementNamed(
+              ServerUnwelcomeErrorScreen.routeName,
+              arguments: ntf.msg);
         };
         break;
     }

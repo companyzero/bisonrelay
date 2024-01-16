@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"strconv"
 	"sync/atomic"
@@ -314,6 +315,10 @@ func TestAttemptsFailedKX(t *testing.T) {
 func TestAttemptsWelcomeUnknownProps(t *testing.T) {
 	// Prepare the test harness.
 	cfg := ConnKeeperCfg{}
+	unwelcomeErrChan := make(chan error, 5)
+	cfg.OnUnwelcomeError = func(err error) {
+		unwelcomeErrChan <- err
+	}
 	ck := NewConnKeeper(cfg)
 	cc := offlineConn{}
 	serverKX := newMockKX()
@@ -341,6 +346,7 @@ func TestAttemptsWelcomeUnknownProps(t *testing.T) {
 	}()
 	serverKX.pushReadMsg(t, msg, wmsg)
 	assert.NilErrFromChan(t, cliErrChan)
+	assert.ChanNotWritten(t, unwelcomeErrChan, 200*time.Millisecond)
 
 	// Add a new, unknown, optional server property.
 	wmsg.Properties = append(wmsg.Properties, rpc.ServerProperty{
@@ -357,6 +363,7 @@ func TestAttemptsWelcomeUnknownProps(t *testing.T) {
 	}()
 	serverKX.pushReadMsg(t, msg, wmsg)
 	assert.NilErrFromChan(t, cliErrChan)
+	assert.ChanNotWritten(t, unwelcomeErrChan, 200*time.Millisecond)
 
 	// Switch the property to a required server property should make it
 	// fail welcome.
@@ -370,6 +377,8 @@ func TestAttemptsWelcomeUnknownProps(t *testing.T) {
 	assert.ErrorIs(t, err, UnwelcomeError{})
 	reason := err.(UnwelcomeError).Reason
 	assert.DeepEqual(t, reason, "unhandled server property: ****unknown")
+	err = assert.ChanWritten(t, unwelcomeErrChan)
+	assert.ErrorIs(t, err, UnwelcomeError{})
 }
 
 // TestAttemptsWelcomeUnknownMaxMsgSizeVersion tests that if the server sends
@@ -378,6 +387,10 @@ func TestAttemptsWelcomeUnknownProps(t *testing.T) {
 func TestAttemptsWelcomeUnknownMaxMsgSizeVersion(t *testing.T) {
 	// Prepare the test harness.
 	cfg := ConnKeeperCfg{}
+	unwelcomeErrChan := make(chan error, 5)
+	cfg.OnUnwelcomeError = func(err error) {
+		unwelcomeErrChan <- err
+	}
 	ck := NewConnKeeper(cfg)
 	cc := offlineConn{}
 	serverKX := newMockKX()
@@ -410,4 +423,43 @@ func TestAttemptsWelcomeUnknownMaxMsgSizeVersion(t *testing.T) {
 	assert.ErrorIs(t, err, UnwelcomeError{})
 	reason := err.(UnwelcomeError).Reason
 	assert.DeepEqual(t, reason, "server did not send a supported max msg size version")
+	err = assert.ChanWritten(t, unwelcomeErrChan)
+	assert.ErrorIs(t, err, UnwelcomeError{})
+}
+
+// TestAttemptsWelcomeUnknownProtocolVersion asserts that attempting to connect
+// to a server with a protocol version higher than supported triggers an error.
+func TestAttemptsWelcomeUnknownProtocolVersion(t *testing.T) {
+	// Prepare the test harness.
+	cfg := ConnKeeperCfg{}
+	unwelcomeErrChan := make(chan error, 5)
+	cfg.OnUnwelcomeError = func(err error) {
+		unwelcomeErrChan <- err
+	}
+	ck := NewConnKeeper(cfg)
+	cc := offlineConn{}
+	serverKX := newMockKX()
+	cliErrChan := make(chan error)
+
+	// Prepare the welcome msg.
+	wmsg := rpc.Welcome{
+		Version:    rpc.ProtocolVersion + 1,
+		ServerTime: time.Now().Unix(),
+		Properties: rpc.SupportedServerProperties,
+	}
+	msg := &rpc.Message{Command: rpc.SessionCmdWelcome}
+
+	// Attempting welcome should fail.
+	go func() {
+		_, err := ck.attemptWelcome(cc, serverKX)
+		cliErrChan <- err
+	}()
+	serverKX.pushReadMsg(t, msg, wmsg)
+	err := assert.ChanWritten(t, cliErrChan)
+	assert.ErrorIs(t, err, UnwelcomeError{})
+	reason := err.(UnwelcomeError).Reason
+	assert.DeepEqual(t, reason, fmt.Sprintf("protocol version mismatch: got %v wanted %v",
+		rpc.ProtocolVersion+1, rpc.ProtocolVersion))
+	err = assert.ChanWritten(t, unwelcomeErrChan)
+	assert.ErrorIs(t, err, UnwelcomeError{})
 }

@@ -28,6 +28,12 @@ type ConnKeeperCfg struct {
 
 	// Passed to created serverSession instances (see there for reference).
 	PushedRoutedMsgsHandler func(msg *rpc.PushRoutedMessage) error
+
+	// OnUnwelcomeError is called when a connection attempt is rejected
+	// due to a protocol negotiation error. This usually means the client
+	// needs to be upgraded. This is called concurrently to the connection
+	// attempts, therefore it should not block for long.
+	OnUnwelcomeError func(err error)
 }
 
 // ConnKeeper maintains an open connection to a server. Whenever the connection
@@ -158,10 +164,12 @@ func (ck *ConnKeeper) attemptWelcome(conn clientintf.Conn, kx msgReaderWriter) (
 	}
 
 	if wmsg.Version != rpc.ProtocolVersion {
-		return nil, fmt.Errorf("protocol version mismatch: "+
-			"got %v wanted %v",
-			wmsg.Version,
-			rpc.ProtocolVersion)
+		err := makeUnwelcomeError(fmt.Sprintf("protocol version mismatch: "+
+			"got %v wanted %v", wmsg.Version, rpc.ProtocolVersion))
+		if ck.cfg.OnUnwelcomeError != nil {
+			ck.cfg.OnUnwelcomeError(err)
+		}
+		return nil, err
 	}
 
 	if ck.log.Level() <= slog.LevelDebug {
@@ -254,8 +262,11 @@ func (ck *ConnKeeper) attemptWelcome(conn clientintf.Conn, kx msgReaderWriter) (
 
 		default:
 			if v.Required {
-				errMsg := fmt.Sprintf("unhandled server property: %v", v.Key)
-				return nil, makeUnwelcomeError(errMsg)
+				err := makeUnwelcomeError(fmt.Sprintf("unhandled server property: %v", v.Key))
+				if ck.cfg.OnUnwelcomeError != nil {
+					ck.cfg.OnUnwelcomeError(err)
+				}
+				return nil, err
 			}
 
 			ck.log.Warnf("Received unknown optional server "+
@@ -307,7 +318,11 @@ func (ck *ConnKeeper) attemptWelcome(conn clientintf.Conn, kx msgReaderWriter) (
 	// message size
 	maxMsgSize := rpc.MaxMsgSizeForVersion(maxMsgSizeVersion)
 	if maxMsgSize == 0 {
-		return nil, makeUnwelcomeError("server did not send a supported max msg size version")
+		err := makeUnwelcomeError("server did not send a supported max msg size version")
+		if ck.cfg.OnUnwelcomeError != nil {
+			ck.cfg.OnUnwelcomeError(err)
+		}
+		return nil, err
 
 	}
 	if kx, ok := kx.(*session.KX); ok {

@@ -7,6 +7,7 @@ enum AppNtfnType {
   error,
   walletCheckFailed,
   invoiceGenFailed,
+  serverUnwelcomeError,
 }
 
 class AppNtfn {
