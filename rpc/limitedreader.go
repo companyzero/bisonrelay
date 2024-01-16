@@ -14,17 +14,17 @@ var errLimitedReaderExhausted = errors.New("errLimitedReaderExhausted")
 // by the limitedReader exceeding its read budget.
 type limitedReader struct {
 	R io.Reader // underlying reader
-	N int64     // max bytes remaining
+	N uint      // max bytes remaining
 }
 
 func (l *limitedReader) Read(p []byte) (n int, err error) {
 	if l.N <= 0 {
 		return 0, errLimitedReaderExhausted
 	}
-	if int64(len(p)) > l.N {
+	if uint(len(p)) > l.N {
 		p = p[0:l.N]
 	}
 	n, err = l.R.Read(p)
-	l.N -= int64(n)
+	l.N -= uint(n)
 	return
 }

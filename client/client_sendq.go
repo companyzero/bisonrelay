@@ -182,7 +182,7 @@ func (c *Client) runSendQ(ctx context.Context) error {
 			continue
 		}
 
-		_, rm, err := rpc.DecomposeRM(&c.id.Public, el.msg.Msg)
+		_, rm, err := rpc.DecomposeRM(&c.id.Public, el.msg.Msg, uint(c.q.MaxMsgSize()))
 		if err != nil {
 			c.log.Warnf("Unable to decompose queued RM %s: %v",
 				el.msg.Type, err)

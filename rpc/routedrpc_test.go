@@ -246,7 +246,7 @@ func TestDecomposeLimitsZlibDeflate(t *testing.T) {
 	// Figure out the max valid size when we prepend the blob with a valid
 	// RM message.
 	validRM := `{"command":"pm"}` + "\n{}" // Valid header and message.
-	maxSize := maxRMDecompressSize - len(validRM)
+	maxSize := testMaxDecompressSize - len(validRM) - 1
 
 	tests := []struct {
 		name    string
@@ -291,7 +291,7 @@ func TestDecomposeLimitsZlibDeflate(t *testing.T) {
 			}
 
 			// Attempt to decompress it.
-			_, _, err = DecomposeRM(nil, bts)
+			_, _, err = DecomposeRM(nil, bts, testMaxDecompressSize)
 			if !errors.Is(err, tc.wantErr) {
 				t.Fatalf("unexpected error: got %v, want %v", err, tc.wantErr)
 			}

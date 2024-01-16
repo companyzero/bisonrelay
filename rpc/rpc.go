@@ -64,13 +64,6 @@ const (
 	// downloads.
 	MaxChunkSize = 1024 * 1024 // 1 MiB
 
-	// MaxMsgSize is the maximum size of a message. This was determined as
-	// enough to contain a base64 encoded version of MaxChunkSize bytes,
-	// along with the necessary overhead of headers, encodings and frames
-	// needed by the encrypted routed messages with some room to spare, when
-	// sending with compression turned off.
-	MaxMsgSize = 1887437 // ~1.8 MiB
-
 	// MinRMPushPayment is the minimum payment amount required to push a payment
 	// to the server (in milliatoms).
 	MinRMPushPayment uint64 = 1000

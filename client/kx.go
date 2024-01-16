@@ -341,7 +341,7 @@ func (kx *kxList) handleStep2IDKX(kxid clientdb.RawRVID, blob lowlevel.RVBlob) e
 	// Perform step2IDKX.
 
 	// Decode and decrypt the RMOHalfRatchet msg.
-	rmohk, err := rpc.DecryptOOBHalfKXBlob(blob.Decoded, &kx.id.PrivateKey)
+	rmohk, err := rpc.DecryptOOBHalfKXBlob(blob.Decoded, &kx.id.PrivateKey, uint(kx.q.MaxMsgSize()))
 	if err != nil {
 		return fmt.Errorf("step2IDKX DecryptOOBHalfKXBlob: %v", err)
 	}
@@ -410,7 +410,7 @@ func (kx *kxList) handleStep2IDKX(kxid clientdb.RawRVID, blob lowlevel.RVBlob) e
 
 func (kx *kxList) handleStep3IDKX(kxid clientdb.RawRVID, blob lowlevel.RVBlob) error {
 	// Decrypt remote msg.
-	fullKX, err := rpc.DecryptOOBFullKXBlob(blob.Decoded, &kx.id.PrivateKey)
+	fullKX, err := rpc.DecryptOOBFullKXBlob(blob.Decoded, &kx.id.PrivateKey, uint(kx.q.MaxMsgSize()))
 	if err != nil {
 		return fmt.Errorf("step3IDKX DecryptOOBFullKXBlob: %v", err)
 	}
@@ -608,7 +608,7 @@ func (kx *kxList) requestReset(rv clientdb.RawRVID, id *zkidentity.PublicIdentit
 // the given user.
 func (kx *kxList) handleReset(id *zkidentity.PublicIdentity, blob lowlevel.RVBlob) error {
 	pii, err := rpc.DecryptOOBPublicIdentityInvite(blob.Decoded,
-		&kx.id.PrivateKey)
+		&kx.id.PrivateKey, uint(kx.q.MaxMsgSize()))
 	if err != nil {
 		return fmt.Errorf("handleReset DecryptOOBPublicIdentityInvite:"+
 			" %v", err)
