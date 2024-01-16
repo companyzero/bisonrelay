@@ -55,8 +55,25 @@ type CertConfirmer func(context.Context, *tls.ConnectionState, *zkidentity.Publi
 type ServerPolicy struct {
 	PushPaymentLifetime time.Duration
 	MaxPushInvoices     int
-	MaxMsgSizeVersion   rpc.MaxMsgSizeVersion
-	MaxMsgSize          uint
+
+	// MaxMsgSizeVersion is the version of the max message size accepted
+	// by the server.
+	MaxMsgSizeVersion rpc.MaxMsgSizeVersion
+
+	// MaxMsgSize is the maximum message size accepted by the server.
+	MaxMsgSize uint
+
+	// ExpirationDays is the number of days after which data pushed to the server
+	// is removed if not fetched.
+	ExpirationDays int
+
+	// PushPayRate is the rate (in milli-atoms per byte) to push data to
+	// the server.
+	PushPayRate uint64
+
+	// SubPayRate is the rate (in milli-atoms) to subscribe to an RV point
+	// on the server.
+	SubPayRate uint64
 }
 
 // ServerSessionIntf is the interface available from serverSession to
@@ -65,8 +82,6 @@ type ServerSessionIntf interface {
 	SendPRPC(msg rpc.Message, payload interface{}, reply chan<- interface{}) error
 	RequestClose(err error)
 	PayClient() PaymentClient
-	PaymentRates() (uint64, uint64)
-	ExpirationDays() int
 	Policy() ServerPolicy
 
 	// Context returns a context that gets cancelled once this session stops

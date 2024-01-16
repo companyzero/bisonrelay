@@ -379,7 +379,7 @@ func (rmgr *RVManager) payForSubs(ctx context.Context, rlist []ratchet.RVPoint,
 
 	// Determine payment amount. The amount to pay depends on how many
 	// unpaid for RVs we have.
-	unpaidRVs, err := rmgr.db.UnpaidRVs(rlist, sess.ExpirationDays())
+	unpaidRVs, err := rmgr.db.UnpaidRVs(rlist, sess.Policy().ExpirationDays)
 	if err != nil {
 		return nil, err
 	}
@@ -411,7 +411,7 @@ func (rmgr *RVManager) payForSubs(ctx context.Context, rlist []ratchet.RVPoint,
 		}
 	}
 
-	_, subPayRate := sess.PaymentRates()
+	subPayRate := sess.Policy().SubPayRate
 	amt := len(unpaidRVs) * int(subPayRate)
 
 	// Pay for it. Independently of payment result, clear the invoice to pay.

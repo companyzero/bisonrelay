@@ -326,7 +326,7 @@ func (q *RMQ) payForRM(ctx context.Context, rmm *rmmsg, invoice string,
 	// Determine payment amount.
 	pc := sess.PayClient()
 	payloadSize := rmm.orm.EncryptedLen()
-	pushPayRate, _ := sess.PaymentRates()
+	pushPayRate := sess.Policy().PushPayRate
 	amt := int64(payloadSize) * int64(pushPayRate)
 
 	// Enforce the minimum payment policy.

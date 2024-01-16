@@ -394,7 +394,7 @@ func assertEmptyRMQ(t testing.TB, c *testClient) {
 func assertGoesOffline(t testing.TB, c *testClient) {
 	t.Helper()
 	ch := make(chan bool, 10)
-	reg := c.handle(client.OnServerSessionChangedNtfn(func(connected bool, _, _, _ uint64) {
+	reg := c.handle(client.OnServerSessionChangedNtfn(func(connected bool, _ clientintf.ServerPolicy) {
 		ch <- connected
 	}))
 	c.RemainOffline()
@@ -406,7 +406,7 @@ func assertGoesOffline(t testing.TB, c *testClient) {
 func assertGoesOnline(t testing.TB, c *testClient) {
 	t.Helper()
 	ch := make(chan bool, 10)
-	reg := c.handle(client.OnServerSessionChangedNtfn(func(connected bool, _, _, _ uint64) {
+	reg := c.handle(client.OnServerSessionChangedNtfn(func(connected bool, _ clientintf.ServerPolicy) {
 		ch <- connected
 	}))
 	c.GoOnline()
