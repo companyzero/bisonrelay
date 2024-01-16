@@ -19,6 +19,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	genericlist "github.com/bahlo/generic-list-go"
@@ -201,6 +202,8 @@ type appState struct {
 	// cmd to run when receiving messages. First element is bin, other are
 	// args.
 	bellCmd []string
+
+	unwelcomeError atomic.Pointer[error]
 
 	inboundMsgsMtx  sync.Mutex
 	inboundMsgs     *genericlist.List[inboundRemoteMsg]
@@ -3256,6 +3259,19 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		as.contentMtx.Unlock()
 
 		as.repaintIfActive(cw)
+	}))
+
+	ntfns.Register(client.OnServerUnwelcomeError(func(err error) {
+		as.manyDiagMsgsCb(func(pf printf) {
+			pf(as.styles.err.Render("Server un-welcomed our connection attempt:"))
+			pf(as.styles.err.Render(err.Error()))
+			pf("This usually means the client software needs to be upgraded.")
+			pf("Stopping new connection attempts until /online is called.")
+			pf("Actions that require a connection to the server will not work.")
+			as.unwelcomeError.Store(&err)
+			as.c.RemainOffline()
+			as.sendMsg(msgUnwelcomeError{err: err})
+		})
 	}))
 
 	// Initialize resources router.

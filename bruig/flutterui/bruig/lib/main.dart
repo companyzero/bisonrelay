@@ -14,6 +14,7 @@ import 'package:bruig/screens/contacts_msg_times.dart';
 import 'package:bruig/screens/fetch_invite.dart';
 import 'package:bruig/screens/generate_invite.dart';
 import 'package:bruig/screens/onboarding.dart';
+import 'package:bruig/screens/server_unwelcome_error.dart';
 import 'package:bruig/theme_manager.dart';
 import 'package:bruig/config.dart';
 import 'package:bruig/models/downloads.dart';
@@ -283,6 +284,13 @@ class _AppState extends State<App> with WindowListener {
           ntfns.addNtfn(AppNtfn(AppNtfnType.invoiceGenFailed, msg: msg));
           break;
 
+        case NTServerUnwelcomeError:
+          Golib.remainOffline();
+          var ntfns = Provider.of<AppNotifications>(context, listen: false);
+          var msg = ntf.payload as String;
+          ntfns.addNtfn(AppNtfn(AppNtfnType.serverUnwelcomeError, msg: msg));
+          break;
+
         default:
           developer.log("Unknown conf ntf received ${ntf.type}");
       }
@@ -330,6 +338,8 @@ class _AppState extends State<App> with WindowListener {
                         builder: (context, client, child) =>
                             ContactsLastMsgTimesScreen(client)),
                 '/fatalError': (context) => const FatalErrorScreen(),
+                ServerUnwelcomeErrorScreen.routeName: (context) =>
+                    const ServerUnwelcomeErrorScreen(),
                 '/shutdown': (context) => Consumer<LogModel>(
                     builder: (context, log, child) => ShutdownScreen(
                         widget.cfg.walletType == "internal",

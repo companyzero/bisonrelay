@@ -44,6 +44,11 @@ func (ins initStepState) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return ins, tea.Quit
 	}
 
+	if ins.as.unwelcomeError.Load() != nil {
+		// Send to app anyway to allow wallet to be used.
+		return newMainWindowState(ins.as)
+	}
+
 	if ins.msgConfCert != nil {
 		switch msg := msg.(type) {
 		case tea.KeyMsg:
@@ -155,6 +160,8 @@ func (ins initStepState) footerView() string {
 
 func (ins initStepState) View() string {
 	var msg, content string
+	msgStyle := ins.as.styles.focused
+	unwelcomeErr := ins.as.unwelcomeError.Load()
 	switch {
 	case ins.as.winW == 0:
 		msg = "Initializing client..."
@@ -185,6 +192,11 @@ func (ins initStepState) View() string {
 		wln(strings.Repeat("\n", ins.as.winH-13))
 		content = b.String()
 
+	case unwelcomeErr != nil:
+		msgStyle = ins.as.styles.err
+		msg = fmt.Sprintf("Client needs upgrade: %v", *unwelcomeErr)
+		content = ins.viewport.View()
+
 	default:
 		msg = "Waiting initial server connection..."
 		content = ins.viewport.View()
@@ -192,7 +204,7 @@ func (ins initStepState) View() string {
 
 	return fmt.Sprintf("%s\n\n%s\n\n%s\n%s",
 		ins.headerView(),
-		ins.as.styles.focused.Render(msg),
+		msgStyle.Render(msg),
 		content,
 		ins.footerView(),
 	)

@@ -171,6 +171,7 @@ const (
 	NTSimpleStoreOrderPlaced = 0x1027
 	NTHandshakeStage         = 0x1028
 	NTRescanWalletProgress   = 0x1029
+	NTServerUnwelcomeError   = 0x102a
 )
 
 type cmd struct {

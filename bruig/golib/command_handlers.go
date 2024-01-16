@@ -387,6 +387,10 @@ func handleInitClient(handle uint32, args initClient) error {
 		notify(NTFileDownloadCompleted, rf, nil)
 	}))
 
+	ntfns.Register(client.OnServerUnwelcomeError(func(err error) {
+		notify(NTServerUnwelcomeError, err.Error(), nil)
+	}))
+
 	// Initialize resources router.
 	var sstore *simplestore.Store
 	resRouter := resources.NewRouter()

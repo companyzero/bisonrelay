@@ -2263,6 +2263,11 @@ mixin NtfStreams {
         ntfRescanProgress.add(event);
         break;
 
+      case NTServerUnwelcomeError:
+        var event = ConfNotification(cmd, payload as String);
+        ntfConfs.add(event);
+        break;
+
       default:
         print("Received unknown notification ${cmd.toRadixString(16)}");
     }
@@ -3063,3 +3068,4 @@ const int NTResourceFetched = 0x1026;
 const int NTSimpleStoreOrderPlaced = 0x1027;
 const int NTHandshakeStage = 0x1028;
 const int NTRescanWalletProgress = 0x1029;
+const int NTServerUnwelcomeError = 0x102a;

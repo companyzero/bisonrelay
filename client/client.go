@@ -318,6 +318,11 @@ func New(cfg Config) (*Client, error) {
 	cfg.setDefaults()
 	id := new(zkidentity.FullIdentity)
 
+	ntfns := cfg.Notifications
+	if ntfns == nil {
+		ntfns = NewNotificationManager()
+	}
+
 	subsDelayer := func() <-chan time.Time {
 		// Delay subscriptions for 100 milliseconds to allow multiple
 		// concurrent changes to be sent in a single batched update.
@@ -356,6 +361,7 @@ func New(cfg Config) (*Client, error) {
 		PushedRoutedMsgsHandler: rmgr.HandlePushedRMs,
 		Log:                     cfg.logger("CONN"),
 		LogPings:                cfg.LogPings,
+		OnUnwelcomeError:        ntfns.notifyServerUnwelcomeError,
 	}
 	ck := lowlevel.NewConnKeeper(ckCfg)
 
@@ -369,11 +375,6 @@ func New(cfg Config) (*Client, error) {
 	kxl.compressLevel = cfg.CompressLevel
 	kxl.dbCtx = dbCtx
 	kxl.log = cfg.logger("KXLS")
-
-	ntfns := cfg.Notifications
-	if ntfns == nil {
-		ntfns = NewNotificationManager()
-	}
 
 	c = &Client{
 		cfg:         &cfg,

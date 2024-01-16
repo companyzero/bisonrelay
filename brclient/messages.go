@@ -77,6 +77,9 @@ type msgActiveWindowChanged struct{}
 type msgOnboardStateChanged struct{}
 type msgStartOnboardErr error
 type msgActiveCWRequestedPage struct{}
+type msgUnwelcomeError struct {
+	err error
+}
 
 func paste() tea.Msg {
 	str, err := clipboard.ReadAll()
