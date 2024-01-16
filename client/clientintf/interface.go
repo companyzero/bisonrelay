@@ -55,6 +55,8 @@ type CertConfirmer func(context.Context, *tls.ConnectionState, *zkidentity.Publi
 type ServerPolicy struct {
 	PushPaymentLifetime time.Duration
 	MaxPushInvoices     int
+	MaxMsgSizeVersion   rpc.MaxMsgSizeVersion
+	MaxMsgSize          uint
 }
 
 // ServerSessionIntf is the interface available from serverSession to

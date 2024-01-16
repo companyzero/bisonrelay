@@ -186,6 +186,8 @@ func (ck *ConnKeeper) attemptWelcome(conn clientintf.Conn, kx msgReaderWriter) (
 
 		pushPaymentLifetime int64 = rpc.PropPushPaymentLifetimeDefault
 		maxPushInvoices     int64 = rpc.PropMaxPushInvoicesDefault
+
+		maxMsgSizeVersion rpc.MaxMsgSizeVersion = rpc.MaxMsgSizeV0
 	)
 
 	for _, v := range wmsg.Properties {
@@ -295,8 +297,13 @@ func (ck *ConnKeeper) attemptWelcome(conn clientintf.Conn, kx msgReaderWriter) (
 	ck.log.Debugf("Server provided time %v", time.Unix(pt, 0).Format(time.RFC3339))
 
 	// message size
+	maxMsgSize := rpc.MaxMsgSizeForVersion(maxMsgSizeVersion)
+	if maxMsgSize == 0 {
+		return nil, fmt.Errorf("server did not send a supported max msg size version")
+
+	}
 	if kx, ok := kx.(*session.KX); ok {
-		kx.MaxMessageSize = rpc.MaxMsgSize
+		kx.MaxMessageSize = maxMsgSize
 	}
 
 	// Expiration days.
@@ -338,6 +345,8 @@ func (ck *ConnKeeper) attemptWelcome(conn clientintf.Conn, kx msgReaderWriter) (
 	sess.policy = clientintf.ServerPolicy{
 		PushPaymentLifetime: time.Duration(pushPaymentLifetime) * time.Second,
 		MaxPushInvoices:     int(maxPushInvoices),
+		MaxMsgSizeVersion:   maxMsgSizeVersion,
+		MaxMsgSize:          maxMsgSize,
 	}
 
 	ck.log.Infof("Connected to server %s",
@@ -357,7 +366,7 @@ func (ck *ConnKeeper) attemptServerKX(conn clientintf.Conn, spid *zkidentity.Pub
 	// Session with server and use a default msgSize.
 	kx := &session.KX{
 		Conn:           conn,
-		MaxMessageSize: rpc.MaxMsgSize,
+		MaxMessageSize: rpc.MaxMsgSizeForVersion(rpc.MaxMsgSizeV0),
 		TheirPublicKey: &spid.Key,
 	}
 	err = kx.Initiate()

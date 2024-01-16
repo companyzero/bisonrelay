@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	genericlist "github.com/bahlo/generic-list-go"
@@ -65,6 +66,8 @@ type RMQDB interface {
 // Sending an RM only fails when the rmq is shutting down or the rm failed to
 // encrypt itself.
 type RMQ struct {
+	maxMsgSize atomic.Uint32
+
 	// The following fields should only be set during setup this struct and
 	// are not safe for concurrent modification.
 
@@ -86,7 +89,7 @@ func NewRMQ(log slog.Logger, localID *zkidentity.FullIdentity, db RMQDB) *RMQ {
 	if log == nil {
 		log = slog.Disabled
 	}
-	return &RMQ{
+	q := &RMQ{
 		sessionChan:    make(chan clientintf.ServerSessionIntf),
 		localID:        localID,
 		log:            log,
@@ -99,6 +102,13 @@ func NewRMQ(log slog.Logger, localID *zkidentity.FullIdentity, db RMQDB) *RMQ {
 		sendDoneChan:   make(chan struct{}),
 		timingStat:     *timestats.NewTracker(250),
 	}
+	q.maxMsgSize.Store(uint32(rpc.MaxMsgSizeForVersion(rpc.MaxMsgSizeV0)))
+	return q
+}
+
+// MaxMsgSize returns the current max message size of the RMQ.
+func (q *RMQ) MaxMsgSize() uint32 {
+	return q.maxMsgSize.Load()
 }
 
 // BindToSession binds the rmq to the specified server session. Queued and new
@@ -117,9 +127,11 @@ func (q *RMQ) BindToSession(sess clientintf.ServerSessionIntf) {
 // determined when the RMQ receives the corresponding server ack) or if the rmq
 // is stopping.
 func (q *RMQ) QueueRM(orm OutboundRM, replyChan chan error) error {
+
 	encLen := orm.EncryptedLen()
-	if encLen > rpc.MaxMsgSize {
-		return fmt.Errorf("%d > %d: %w", encLen, rpc.MaxMsgSize, errORMTooLarge)
+	maxMsgSize := q.maxMsgSize.Load()
+	if encLen > maxMsgSize {
+		return fmt.Errorf("%d > %d: %w", encLen, maxMsgSize, errORMTooLarge)
 	}
 
 	rmm := &rmmsg{
@@ -650,6 +662,12 @@ loop:
 				invoices = &genericlist.List[string]{}
 				sendChan = nil
 				continue loop
+			}
+
+			maxMsgSize := uint32(sess.Policy().MaxMsgSize)
+			if q.maxMsgSize.Swap(maxMsgSize) != maxMsgSize {
+				q.log.Infof("Max message size changed to %d bytes",
+					maxMsgSize)
 			}
 
 			// We received a new session, resend outstanding items.

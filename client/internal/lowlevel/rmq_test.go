@@ -521,9 +521,9 @@ func TestRMQEncryptErrorFailsRM(t *testing.T) {
 // the max size fails.
 func TestRMQMaxMsgSizeErrors(t *testing.T) {
 	t.Parallel()
-	const maxMsgSize = rpc.MaxMsgSize
 	mockID := &zkidentity.FullIdentity{}
 	q := NewRMQ(nil, mockID, newMockRMQDB())
+	maxMsgSize := int(q.maxMsgSize.Load())
 	rm := mockRM(strings.Repeat(" ", maxMsgSize+1))
 	err := q.SendRM(rm)
 	if !errors.Is(err, errORMTooLarge) {

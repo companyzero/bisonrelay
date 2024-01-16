@@ -11,6 +11,7 @@ import (
 type rmqIntf interface {
 	SendRM(orm lowlevel.OutboundRM) error
 	QueueRM(orm lowlevel.OutboundRM, replyChan chan error) error
+	MaxMsgSize() uint32
 }
 
 // rdzvManagerIntf is the public interface for the rendezvous manager that

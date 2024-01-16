@@ -477,7 +477,9 @@ func (ts *testScaffold) kxUsersWithInvite(inviter, invitee *testClient, gcID zki
 	invite, err := inviter.WriteNewInvite(io.Discard, nil)
 	assert.NilErr(ts.t, err)
 	assert.NilErr(ts.t, inviter.AddInviteOnKX(invite.InitialRendezvous, gcID))
-	assert.NilErr(ts.t, invitee.AcceptInvite(invite))
+	errChan := make(chan error, 1)
+	go func() { errChan <- invitee.AcceptInvite(invite) }()
+	assert.NilErrFromChan(ts.t, errChan)
 	assertClientsKXd(ts.t, inviter, invitee)
 }
 
@@ -487,7 +489,9 @@ func (ts *testScaffold) kxUsers(inviter, invitee *testClient) {
 	ts.t.Helper()
 	invite, err := inviter.WriteNewInvite(io.Discard, nil)
 	assert.NilErr(ts.t, err)
-	assert.NilErr(ts.t, invitee.AcceptInvite(invite))
+	errChan := make(chan error, 1)
+	go func() { errChan <- invitee.AcceptInvite(invite) }()
+	assert.NilErrFromChan(ts.t, errChan)
 	assertClientsKXd(ts.t, inviter, invitee)
 }
 
