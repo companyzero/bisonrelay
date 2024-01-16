@@ -84,6 +84,13 @@ const (
 	// messages with some room to spare, when sending with compression
 	// turned off.
 	MaxMsgSizeV0 MaxMsgSizeVersion = 0
+
+	// MaxMsgSizeV1 is the second version of the max size of a message.
+	// This was determined as enough to contain a base64 encoded version
+	// of 10 MiB (10*1024*1024 bytes), along with the necessary overhead of
+	// headers, encodings and frames needed by the encrypted routed mesasges
+	// with some room to spare, when sending with compression turned off.
+	MaxMsgSizeV1 MaxMsgSizeVersion = 1
 )
 
 // MaxMsgSizeForVersion returns the max message size according to the given
@@ -92,6 +99,25 @@ func MaxMsgSizeForVersion(v MaxMsgSizeVersion) uint {
 	switch v {
 	case MaxMsgSizeV0:
 		return 1887437 // ~1.8 MiB
+	case MaxMsgSizeV1:
+		return 18874370 // ~18 MiB
+	default:
+		return 0
+	}
+}
+
+// MaxPayloadSizeForVersion returns the (approximate) max payload size according
+// to the given max message size version. It returns 0 for unknown versions.
+//
+// It is approximate because due to encoding and compression, the actual payload
+// may be slightly greater than this, but clients should not attempt to send
+// more than this amount of data.
+func MaxPayloadSizeForVersion(v MaxMsgSizeVersion) uint {
+	switch v {
+	case MaxMsgSizeV0:
+		return 1024 * 1024 // 1 MiB
+	case MaxMsgSizeV1:
+		return 10 * 1024 * 1024 // 10 MiB
 	default:
 		return 0
 	}
