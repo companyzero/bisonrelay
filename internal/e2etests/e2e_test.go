@@ -1,6 +1,7 @@
 package e2etests
 
 import (
+	"compress/zlib"
 	"context"
 	"crypto/tls"
 	"fmt"
@@ -383,6 +384,7 @@ func (ts *testScaffold) newClientWithCfg(nccfg *clientCfg, opts ...newClientOpt)
 		Logger:        logBknd,
 		PayClient:     pc,
 		Notifications: nccfg.ntfns,
+		CompressLevel: zlib.NoCompression,
 
 		TipUserRestartDelay:          2 * time.Second,
 		TipUserReRequestInvoiceDelay: time.Second,

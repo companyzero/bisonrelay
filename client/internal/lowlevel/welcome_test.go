@@ -371,3 +371,43 @@ func TestAttemptsWelcomeUnknownProps(t *testing.T) {
 	reason := err.(UnwelcomeError).Reason
 	assert.DeepEqual(t, reason, "unhandled server property: ****unknown")
 }
+
+// TestAttemptsWelcomeUnknownMaxMsgSizeVersion tests that if the server sends
+// a max msg size version that is unknown to the client, the connection is
+// dropped.
+func TestAttemptsWelcomeUnknownMaxMsgSizeVersion(t *testing.T) {
+	// Prepare the test harness.
+	cfg := ConnKeeperCfg{}
+	ck := NewConnKeeper(cfg)
+	cc := offlineConn{}
+	serverKX := newMockKX()
+	cliErrChan := make(chan error)
+
+	// Prepare the welcome msg.
+	wmsg := rpc.Welcome{
+		Version:    rpc.ProtocolVersion,
+		ServerTime: time.Now().Unix(),
+		Properties: rpc.SupportedServerProperties,
+	}
+	for i := range wmsg.Properties {
+		prop := &wmsg.Properties[i]
+		switch prop.Key {
+		case rpc.PropServerTime:
+			prop.Value = strconv.FormatInt(time.Now().Unix(), 10)
+		case rpc.PropMaxMsgSizeVersion:
+			prop.Value = strconv.FormatInt(1<<24-1, 10)
+		}
+	}
+	msg := &rpc.Message{Command: rpc.SessionCmdWelcome}
+
+	// Attempting welcome should fail.
+	go func() {
+		_, err := ck.attemptWelcome(cc, serverKX)
+		cliErrChan <- err
+	}()
+	serverKX.pushReadMsg(t, msg, wmsg)
+	err := assert.ChanWritten(t, cliErrChan)
+	assert.ErrorIs(t, err, UnwelcomeError{})
+	reason := err.(UnwelcomeError).Reason
+	assert.DeepEqual(t, reason, "server did not send a supported max msg size version")
+}

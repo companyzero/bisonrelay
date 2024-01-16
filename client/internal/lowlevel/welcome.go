@@ -307,7 +307,7 @@ func (ck *ConnKeeper) attemptWelcome(conn clientintf.Conn, kx msgReaderWriter) (
 	// message size
 	maxMsgSize := rpc.MaxMsgSizeForVersion(maxMsgSizeVersion)
 	if maxMsgSize == 0 {
-		return nil, fmt.Errorf("server did not send a supported max msg size version")
+		return nil, makeUnwelcomeError("server did not send a supported max msg size version")
 
 	}
 	if kx, ok := kx.(*session.KX); ok {

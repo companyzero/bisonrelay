@@ -1,13 +1,17 @@
 package server
 
 import (
+	"compress/zlib"
 	"context"
+	"crypto/rand"
 	"testing"
 	"time"
 
 	"github.com/companyzero/bisonrelay/client/clientintf"
+	"github.com/companyzero/bisonrelay/internal/assert"
 	"github.com/companyzero/bisonrelay/ratchet"
 	"github.com/companyzero/bisonrelay/rpc"
+	"github.com/companyzero/bisonrelay/zkidentity"
 	"github.com/decred/slog"
 )
 
@@ -125,5 +129,98 @@ func TestServerPingPong(t *testing.T) {
 			t.Fatalf("Unexpected run error: %v", err)
 		}
 	case <-time.After(pingLimit):
+	}
+}
+
+// TestServerRecvMaxMsgSize tests how the server handles messages around its
+// max message size.
+func TestServerRecvMaxMsgSize(t *testing.T) {
+	id, err := zkidentity.New("Alice McMalice", "alice")
+	assert.NilErr(t, err)
+
+	tests := []struct {
+		name    string
+		version rpc.MaxMsgSizeVersion
+	}{{
+		name:    "v0",
+		version: rpc.MaxMsgSizeV0,
+	}, {
+		name:    "v1",
+		version: rpc.MaxMsgSizeV1,
+	}}
+
+	for i := range tests {
+		tc := tests[i]
+		t.Run(tc.name, func(t *testing.T) {
+			svr := newTestServer(t)
+			svr.settings.MaxMsgSizeVersion = tc.version
+
+			errChan := runTestServer(t, svr)
+			addr := serverBoundAddr(t, svr)
+			dialer := clientintf.NetDialer(addr, slog.Disabled)
+			ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+			defer cancel()
+			conn, _, err := dialer(ctx)
+			assert.NilErr(t, err)
+
+			kx := kxServerConn(t, conn)
+
+			// Message that has max possible payload.
+			maxPayload := rpc.MaxPayloadSizeForVersion(tc.version)
+			data := make([]byte, maxPayload)
+			n, err := rand.Read(data[:])
+			assert.NilErr(t, err)
+			if n != len(data) {
+				t.Fatal("too few bytes read")
+			}
+			rm := rpc.RMFTGetChunkReply{
+				FileID: zkidentity.ShortID{}.String(),
+				Index:  1<<32 - 1,
+				Chunk:  data,
+				Tag:    1<<32 - 1,
+			}
+			compressed, err := rpc.ComposeCompressedRM(id, rm, zlib.NoCompression)
+			assert.NilErr(t, err)
+
+			// This message should be sent without issues.
+			msg1 := rpc.Message{
+				Command: rpc.TaggedCmdRouteMessage,
+				Tag:     1,
+			}
+			msg1Payload := rpc.RouteMessage{
+				Rendezvous: ratchet.RVPoint{31: 0xff},
+				Message:    compressed,
+			}
+			writeServerMsg(t, kx, msg1, msg1Payload)
+
+			// Prepare a message larger than the max allowed.
+			largeMsg := append(compressed, compressed[:]...)
+			msg2 := rpc.Message{
+				Command: rpc.TaggedCmdRouteMessage,
+				Tag:     1,
+			}
+			msg2Payload := rpc.RouteMessage{
+				Rendezvous: ratchet.RVPoint{31: 0xff},
+				Message:    largeMsg,
+			}
+
+			// The server might error while the test is writing the
+			// message or it may fail after the message has been
+			// completely written (due to buffering), so attempt
+			// writing twice to verify at least one of the times it
+			// fails.
+			for i := 0; i < 2; i++ {
+				err := writeServerMsgMaybeErr(t, kx, msg2, msg2Payload)
+				if err != nil {
+					break
+				}
+				if i == 1 {
+					t.Fatal("Second write did not fail.")
+				}
+				msg2.Tag += 1
+				time.Sleep(10 * time.Millisecond)
+			}
+			assert.ChanNotWritten(t, errChan, time.Second)
+		})
 	}
 }
