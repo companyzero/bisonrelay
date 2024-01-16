@@ -244,6 +244,14 @@ func (ck *ConnKeeper) attemptWelcome(conn clientintf.Conn, kx msgReaderWriter) (
 				return nil, fmt.Errorf("invalid max push invoices: %v", err)
 			}
 
+		case rpc.PropMaxMsgSizeVersion:
+			var mmv uint64
+			mmv, err = strconv.ParseUint(v.Value, 10, 32)
+			if err != nil {
+				return nil, fmt.Errorf("invalid max msg size version: %v", err)
+			}
+			maxMsgSizeVersion = rpc.MaxMsgSizeVersion(mmv)
+
 		default:
 			if v.Required {
 				errMsg := fmt.Sprintf("unhandled server property: %v", v.Key)

@@ -144,6 +144,8 @@ func (z *ZKS) welcome(kx *session.KX) error {
 			properties[k].Value = strconv.FormatInt(int64(z.settings.PushPaymentLifetime), 10)
 		case rpc.PropMaxPushInvoices:
 			properties[k].Value = strconv.FormatInt(int64(z.settings.MaxPushInvoices), 10)
+		case rpc.PropMaxMsgSizeVersion:
+			properties[k].Value = strconv.FormatUint(uint64(z.settings.MaxMsgSizeVersion), 10)
 		}
 	}
 

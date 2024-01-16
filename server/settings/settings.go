@@ -89,7 +89,7 @@ func New() *Settings {
 
 		// Policy
 		ExpirationDays:    rpc.PropExpirationDaysDefault,
-		MaxMsgSizeVersion: rpc.MaxMsgSizeV0,
+		MaxMsgSizeVersion: rpc.PropMaxMsgSizeVersionDefault,
 
 		// payment
 		PayScheme:           "free",
