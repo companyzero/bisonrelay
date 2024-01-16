@@ -36,7 +36,8 @@ type Settings struct {
 	InitSessTimeout time.Duration // How long to wait for session on a new connection
 
 	// policy section
-	ExpirationDays int // How many days after which to expire data
+	ExpirationDays    int // How many days after which to expire data
+	MaxMsgSizeVersion rpc.MaxMsgSizeVersion
 
 	// payment section
 	PayScheme           string
@@ -87,7 +88,8 @@ func New() *Settings {
 		InitSessTimeout: time.Second * 20,
 
 		// Policy
-		ExpirationDays: rpc.PropExpirationDaysDefault,
+		ExpirationDays:    rpc.PropExpirationDaysDefault,
+		MaxMsgSizeVersion: rpc.MaxMsgSizeV0,
 
 		// payment
 		PayScheme:           "free",
@@ -260,6 +262,14 @@ func (s *Settings) Load(filename string) error {
 	}
 	s.MaxPushInvoices = maxPushInvoices
 
+	err = iniMaxMsgSize(cfg, &s.MaxMsgSizeVersion, "policy", "maxmsgsizeversion")
+	if err != nil && !errors.Is(err, errIniNotFound) {
+		return err
+	}
+	if size := rpc.MaxMsgSizeForVersion(s.MaxMsgSizeVersion); size == 0 {
+		return fmt.Errorf("unsupported max msg size version")
+	}
+
 	return nil
 }
 
@@ -301,6 +311,19 @@ func iniInt(cfg ini.File, p *int, section, key string) error {
 	i64, err := strconv.ParseInt(v, 10, 64)
 	if err == nil {
 		*p = int(i64)
+	}
+	return err
+}
+
+func iniMaxMsgSize(cfg ini.File, p *rpc.MaxMsgSizeVersion, section, key string) error {
+	v, ok := cfg.Get(section, key)
+	if !ok {
+		return errIniNotFound
+	}
+
+	u64, err := strconv.ParseUint(v, 10, 64)
+	if err == nil {
+		*p = rpc.MaxMsgSizeVersion(u64)
 	}
 	return err
 }

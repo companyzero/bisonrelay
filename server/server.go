@@ -235,7 +235,7 @@ loop:
 			// go full session
 			kx := new(session.KX)
 			kx.Conn = conn
-			kx.MaxMessageSize = rpc.MaxMsgSize
+			kx.MaxMessageSize = rpc.MaxMsgSizeForVersion(z.settings.MaxMsgSizeVersion)
 			kx.OurPublicKey = &z.id.Public.Key
 			kx.OurPrivateKey = &z.id.PrivateKey
 			err = kx.Respond()

@@ -80,6 +80,30 @@ const (
 	InvoiceExpiryAffordance = 15 * time.Second
 )
 
+// MaxMsgSizeVersion tracks defined versions of max msg size.
+type MaxMsgSizeVersion uint
+
+const (
+	// MaxMsgSizeV0 is the first version of the max size of a message.
+	// This was determined as enough to contain a base64 encoded version of
+	// 1MiB (1024*1024 bytes), along with the necessary overhead of
+	// headers, encodings and frames needed by the encrypted routed
+	// messages with some room to spare, when sending with compression
+	// turned off.
+	MaxMsgSizeV0 MaxMsgSizeVersion = 0
+)
+
+// MaxMsgSizeForVersion returns the max message size according to the given
+// max message size version. It returns 0 for unknown versions.
+func MaxMsgSizeForVersion(v MaxMsgSizeVersion) uint {
+	switch v {
+	case MaxMsgSizeV0:
+		return 1887437 // ~1.8 MiB
+	default:
+		return 0
+	}
+}
+
 // Message is the generic command that flows between a server and client and
 // vice versa.  Its purpose is to add a discriminator to simplify payload
 // decoding.  Additionally it has a tag that the recipient shall return

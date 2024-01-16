@@ -103,7 +103,7 @@ func kxServerConn(t testing.TB, conn clientintf.Conn) *session.KX {
 	// Session with server and use a default msgSize.
 	kx := &session.KX{
 		Conn:           conn,
-		MaxMessageSize: rpc.MaxMsgSize,
+		MaxMessageSize: 1887437,
 		TheirPublicKey: &pid.Key,
 	}
 	err = kx.Initiate()
