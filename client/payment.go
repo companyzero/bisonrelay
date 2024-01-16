@@ -259,15 +259,7 @@ func (pc *DcrlnPaymentClient) watchInvoice(ctx context.Context, rhash []byte,
 
 func (pc *DcrlnPaymentClient) GetInvoice(ctx context.Context, mat int64, cb func(int64)) (string, error) {
 	addInvoiceReq := &lnrpc.Invoice{}
-	if mat < 1000 {
-		addInvoiceReq.ValueMAtoms = mat
-	} else {
-		// Use Value to get warnings about missing capacity.
-		addInvoiceReq.Value = mat / 1000
-		if mat%1000 > 500 {
-			addInvoiceReq.Value += 1
-		}
-	}
+	addInvoiceReq.ValueMAtoms = mat
 	addInvoiceRes, err := pc.lnRpc.AddInvoice(ctx, addInvoiceReq)
 	if err != nil {
 		return "", err

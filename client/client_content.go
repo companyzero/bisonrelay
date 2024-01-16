@@ -870,7 +870,7 @@ func (c *Client) handleFTPayForChunk(ru *RemoteUser, pfc rpc.RMFTPayForChunk) er
 
 		// Double check amount to pay for chunk.
 		wantMAtoms := clientintf.FileChunkMAtoms(chunkIdx, fd.Metadata)
-		if uint64(inv.MAtoms) != wantMAtoms {
+		if uint64(inv.MAtoms) > wantMAtoms {
 			return fmt.Errorf("unexpected value of invoice (got %d, want %d)",
 				inv.MAtoms, wantMAtoms)
 		}
