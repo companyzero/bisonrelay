@@ -4,12 +4,14 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"math"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/companyzero/bisonrelay/client/clientintf"
+	"github.com/companyzero/bisonrelay/internal/assert"
 	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/companyzero/bisonrelay/server/settings"
 	"github.com/companyzero/bisonrelay/session"
@@ -103,7 +105,7 @@ func kxServerConn(t testing.TB, conn clientintf.Conn) *session.KX {
 	// Session with server and use a default msgSize.
 	kx := &session.KX{
 		Conn:           conn,
-		MaxMessageSize: 1887437,
+		MaxMessageSize: math.MaxUint,
 		TheirPublicKey: &pid.Key,
 	}
 	err = kx.Initiate()
@@ -139,7 +141,8 @@ func kxServerConn(t testing.TB, conn clientintf.Conn) *session.KX {
 	return kx
 }
 
-func writeServerMsg(t testing.TB, kx *session.KX, msg rpc.Message, payload interface{}) {
+func writeServerMsgMaybeErr(t testing.TB, kx *session.KX, msg rpc.Message, payload interface{}) error {
+	t.Helper()
 	var bb bytes.Buffer
 	enc := json.NewEncoder(&bb)
 	err := enc.Encode(msg)
@@ -152,11 +155,13 @@ func writeServerMsg(t testing.TB, kx *session.KX, msg rpc.Message, payload inter
 	}
 
 	b := bb.Bytes()
-	err = kx.Write(b)
-	if err != nil {
-		t.Fatalf("could not write '%v': %v",
-			msg.Command, err)
-	}
+	return kx.Write(b)
+}
+
+func writeServerMsg(t testing.TB, kx *session.KX, msg rpc.Message, payload interface{}) {
+	t.Helper()
+	err := writeServerMsgMaybeErr(t, kx, msg, payload)
+	assert.NilErr(t, err)
 }
 
 func decodeServerMsg(t testing.TB, rawMsg []byte) (rpc.Message, interface{}) {

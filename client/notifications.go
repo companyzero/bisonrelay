@@ -320,6 +320,15 @@ type OnFileDownloadProgress func(user *RemoteUser, fm rpc.FileMetadata, nbMissin
 
 func (_ OnFileDownloadProgress) typ() string { return onFileDownloadProgress }
 
+const onRMReceived = "onRMReceived"
+
+// OnRMReceived is a notification sent whenever a remote user receives an RM.
+// Note: this is called _before_ the RM has been processed, therefore care must
+// be taken when hooking and handling this notification.
+type OnRMReceived func(ru *RemoteUser, h *rpc.RMHeader, p interface{}, ts time.Time)
+
+func (_ OnRMReceived) typ() string { return onRMReceived }
+
 // The following is used only in tests.
 
 const onTestNtfnType = "testNtfnType"
@@ -655,6 +664,11 @@ func (nmgr *NotificationManager) notifyFileDownloadProgress(user *RemoteUser, fm
 		visit(func(h OnFileDownloadProgress) { h(user, fm, nbMissingChunks) })
 }
 
+func (nmgr *NotificationManager) notifyRMReceived(ru *RemoteUser, rmh *rpc.RMHeader, p interface{}, ts time.Time) {
+	nmgr.handlers[onRMReceived].(*handlersFor[OnRMReceived]).
+		visit(func(h OnRMReceived) { h(ru, rmh, p, ts) })
+}
+
 func NewNotificationManager() *NotificationManager {
 	return &NotificationManager{
 		handlers: map[string]handlersRegistry{
@@ -669,6 +683,7 @@ func NewNotificationManager() *NotificationManager {
 			onHandshakeStageNtfnType: &handlersFor[OnHandshakeStageNtfn]{},
 			onTipReceivedNtfnType:    &handlersFor[OnTipReceivedNtfn]{},
 			onReceiveReceipt:         &handlersFor[OnReceiveReceipt]{},
+			onRMReceived:             &handlersFor[OnRMReceived]{},
 
 			onPostSubscriberUpdated:    &handlersFor[OnPostSubscriberUpdated]{},
 			onPostsListReceived:        &handlersFor[OnPostsListReceived]{},
