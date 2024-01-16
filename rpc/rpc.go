@@ -234,6 +234,11 @@ const (
 	// for them.
 	PropMaxPushInvoices        = "maxpushinvoices"
 	PropMaxPushInvoicesDefault = 8
+
+	// PropMaxMsgSizeVersion is the max message size version supported by
+	// the server.
+	PropMaxMsgSizeVersion        = "maxmsgsizeversion"
+	PropMaxMsgSizeVersionDefault = MaxMsgSizeV0
 )
 
 var (
@@ -308,6 +313,13 @@ var (
 
 		// optional
 		DefaultPropServerLNNode,
+
+		// TODO: make it required once clients upgrade.
+		{
+			Key:      PropMaxMsgSizeVersion,
+			Value:    strconv.Itoa(int(PropMaxMsgSizeVersionDefault)),
+			Required: false,
+		},
 	}
 )
 
