@@ -31,6 +31,8 @@ type testScaffoldCfg struct {
 	skipNewServer bool
 	logScanner    io.Writer
 	rootDir       string
+
+	serverMaxMsgSizeVersion rpc.MaxMsgSizeVersion
 }
 
 type testConn struct {
@@ -87,6 +89,7 @@ type clientCfg struct {
 	idIniter  func(context.Context) (*zkidentity.FullIdentity, error)
 	netDialer func(context.Context) (clientintf.Conn, *tls.ConnectionState, error)
 	pcIniter  func(loggerSubsysIniter) clientintf.PaymentClient
+	ntfns     *client.NotificationManager
 
 	sendRecvReceipts bool
 }
@@ -129,6 +132,12 @@ func withSimnetEnvDcrlndPayClient(t testing.TB, alt bool) newClientOpt {
 		return pc
 	}
 	return withPCIniter(pcIniter)
+}
+
+func withNtfns(ntfns *client.NotificationManager) newClientOpt {
+	return func(cfg *clientCfg) {
+		cfg.ntfns = ntfns
+	}
 }
 
 type testClient struct {
@@ -373,6 +382,7 @@ func (ts *testScaffold) newClientWithCfg(nccfg *clientCfg, opts ...newClientOpt)
 		LocalIDIniter: nccfg.idIniter,
 		Logger:        logBknd,
 		PayClient:     pc,
+		Notifications: nccfg.ntfns,
 
 		TipUserRestartDelay:          2 * time.Second,
 		TipUserReRequestInvoiceDelay: time.Second,
@@ -519,6 +529,7 @@ func (ts *testScaffold) newTestServer() {
 	cfg.InitSessTimeout = time.Second
 	cfg.DebugLevel = "debug"
 	cfg.LogStdOut = ts.tlb
+	cfg.MaxMsgSizeVersion = ts.cfg.serverMaxMsgSizeVersion
 
 	s, err := server.NewServer(cfg)
 	if err != nil {

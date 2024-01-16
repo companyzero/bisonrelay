@@ -343,22 +343,21 @@ func (ck *ConnKeeper) attemptWelcome(conn clientintf.Conn, kx msgReaderWriter) (
 	sess := newServerSession(conn, kx, td, ck.log)
 	sess.pc = pc
 	sess.payScheme = ps
-	sess.pushPayRate = ppr
-	sess.subPayRate = spr
 	sess.lnNode = lnNode
 	sess.pingInterval = ck.cfg.PingInterval
 	sess.pushedRoutedMsgsHandler = ck.cfg.PushedRoutedMsgsHandler
-	sess.expirationDays = int(expd)
 	sess.logPings = ck.cfg.LogPings
 	sess.policy = clientintf.ServerPolicy{
 		PushPaymentLifetime: time.Duration(pushPaymentLifetime) * time.Second,
 		MaxPushInvoices:     int(maxPushInvoices),
 		MaxMsgSizeVersion:   maxMsgSizeVersion,
 		MaxMsgSize:          maxMsgSize,
+		PushPayRate:         ppr,
+		SubPayRate:          spr,
+		ExpirationDays:      int(expd),
 	}
 
-	ck.log.Infof("Connected to server %s",
-		conn.RemoteAddr())
+	ck.log.Infof("Connected to server %s", conn.RemoteAddr())
 
 	return sess, nil
 }

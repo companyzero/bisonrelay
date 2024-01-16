@@ -87,6 +87,11 @@ type Config struct {
 	// closed (either by the remote end or by the local end).
 	CheckServerSession func(connCtx context.Context, lnNode string) error
 
+	// Notifications tracks handlers for client events. If nil, the client
+	// will initialize a new notification manager. Specifying a
+	// notification manager in the config is useful to ensure no
+	// notifications are lost due to race conditions in client
+	// initialization.
 	Notifications *NotificationManager
 
 	// KXSuggestion is called when a remote user sends a suggestion to KX
@@ -271,8 +276,9 @@ type Client struct {
 	// done after the client starts.
 	firstSubDone chan struct{}
 
-	svrLnNodeMtx sync.Mutex
-	svrLnNode    string
+	svrMtx     sync.Mutex
+	svrLnNode  string
+	svrSession clientintf.ServerSessionIntf
 
 	newUsersChan chan *RemoteUser
 
@@ -669,9 +675,19 @@ func (c *Client) LocalNick() string {
 // ServerLNNode returns the LN Node ID of the server we're connected to. This
 // can be empty if we're not connected to any servers.
 func (c *Client) ServerLNNode() string {
-	c.svrLnNodeMtx.Lock()
+	c.svrMtx.Lock()
 	res := c.svrLnNode
-	c.svrLnNodeMtx.Unlock()
+	c.svrMtx.Unlock()
+	return res
+}
+
+// ServerSession returns the current server session the client is connected to.
+// Returns nil if not connected to the server. Note this is set before a
+// connection to the server is fully validated as usable.
+func (c *Client) ServerSession() clientintf.ServerSessionIntf {
+	c.svrMtx.Lock()
+	res := c.svrSession
+	c.svrMtx.Unlock()
 	return res
 }
 
@@ -1070,10 +1086,12 @@ func (c *Client) Run(ctx context.Context) error {
 			var lnNode string
 			if lnSess, ok := nextSess.(lnNodeSession); lnSess != nil && ok {
 				lnNode = lnSess.LNNode()
-				c.svrLnNodeMtx.Lock()
-				c.svrLnNode = lnSess.LNNode()
-				c.svrLnNodeMtx.Unlock()
 			}
+
+			c.svrMtx.Lock()
+			c.svrSession = nextSess
+			c.svrLnNode = lnNode
+			c.svrMtx.Unlock()
 
 			// Let users check if this server conn is usable.
 			if nextSess != nil && c.cfg.CheckServerSession != nil {
@@ -1084,20 +1102,17 @@ func (c *Client) Run(ctx context.Context) error {
 				}
 			}
 
-			var pushRate, subRate uint64
-			var expDays int
+			var policy clientintf.ServerPolicy
 
 			// Clean old unpaid RVs based on server expirationDays
 			// setting if it changed.
 			if nextSess != nil {
-				pushRate, subRate = nextSess.PaymentRates()
-				expDays = nextSess.ExpirationDays()
-
-				if lastExpDays != expDays {
+				policy = nextSess.Policy()
+				if lastExpDays != policy.ExpirationDays {
 					c.log.Infof("Cleaning up expired RVs "+
-						"older than %d days", expDays)
-					c.cleanupPaidRVsDir(nextSess.ExpirationDays())
-					lastExpDays = expDays
+						"older than %d days", policy.ExpirationDays)
+					c.cleanupPaidRVsDir(policy.ExpirationDays)
+					lastExpDays = policy.ExpirationDays
 				}
 
 				c.cleanupPushPaymentAttempts(nextSess.Policy().PushPaymentLifetime)
@@ -1111,7 +1126,7 @@ func (c *Client) Run(ctx context.Context) error {
 			c.rmgr.BindToSession(nextSess)
 			c.q.BindToSession(nextSess)
 			connected := nextSess != nil
-			c.ntfns.notifyServerSessionChanged(connected, pushRate, subRate, uint64(expDays))
+			c.ntfns.notifyServerSessionChanged(connected, policy)
 			if canceled(gctx) {
 				return nil
 			}
@@ -1120,7 +1135,7 @@ func (c *Client) Run(ctx context.Context) error {
 				// the first server connection.
 				close(firstConnChan)
 				firstConn = false
-				kxExpiryLimit := time.Duration(expDays) * time.Hour * 24
+				kxExpiryLimit := time.Duration(policy.ExpirationDays) * time.Hour * 24
 				g.Go(func() error {
 					err := c.clearOldMediateIDs(kxExpiryLimit)
 					if err != nil && !errors.Is(err, context.Canceled) {
@@ -1136,7 +1151,7 @@ func (c *Client) Run(ctx context.Context) error {
 				})
 			}
 			if nextSess != nil {
-				go c.maybeResetAllKXAfterConn(nextSess.ExpirationDays())
+				go c.maybeResetAllKXAfterConn(policy.ExpirationDays)
 			}
 		}
 	})

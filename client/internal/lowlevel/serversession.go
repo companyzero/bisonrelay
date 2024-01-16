@@ -72,12 +72,9 @@ type serverSession struct {
 	pingInterval time.Duration
 	lnNode       string
 
-	tagStackDepth  int64  // max nb of inflight requests
-	payScheme      string // negotiated between server and client on welcome
-	pushPayRate    uint64 // Push Payment rate in MAtoms/byte
-	subPayRate     uint64 // Sub payment rate in MAtoms/byte
-	logPings       bool   // Whether to log ping/pong messages.
-	expirationDays int    // After When data is purged from server
+	tagStackDepth int64  // max nb of inflight requests
+	payScheme     string // negotiated between server and client on welcome
+	logPings      bool   // Whether to log ping/pong messages.
 
 	policy clientintf.ServerPolicy
 
@@ -122,14 +119,6 @@ func (sess *serverSession) PayClient() clientintf.PaymentClient {
 
 func (sess *serverSession) LNNode() string {
 	return sess.lnNode
-}
-
-func (sess *serverSession) PaymentRates() (uint64, uint64) {
-	return sess.pushPayRate, sess.subPayRate
-}
-
-func (sess *serverSession) ExpirationDays() int {
-	return sess.expirationDays
 }
 
 func (sess *serverSession) Policy() clientintf.ServerPolicy {

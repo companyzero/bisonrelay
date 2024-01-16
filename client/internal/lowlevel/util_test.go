@@ -329,6 +329,9 @@ func newMockServerSession() *mockServerSession {
 			PushPaymentLifetime: time.Second,
 			MaxMsgSizeVersion:   rpc.MaxMsgSizeV0,
 			MaxMsgSize:          rpc.MaxMsgSizeForVersion(rpc.MaxMsgSizeV0),
+			ExpirationDays:      30,
+			PushPayRate:         1000,
+			SubPayRate:          1000,
 		},
 		mpc: &testutils.MockPayClient{},
 	}

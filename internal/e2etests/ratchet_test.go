@@ -62,7 +62,7 @@ func TestResendsUnackedRM(t *testing.T) {
 	alice.conn.startFailing(fmt.Errorf("forced read failure"), nil)
 	wantMsg2 := "test PM 2"
 	aliceConnClosed := make(chan (struct{}))
-	regServerChanged := alice.handleSync(client.OnServerSessionChangedNtfn(func(connected bool, _, _, _ uint64) {
+	regServerChanged := alice.handleSync(client.OnServerSessionChangedNtfn(func(connected bool, _ clientintf.ServerPolicy) {
 		if !connected {
 			select {
 			case <-aliceConnClosed:
@@ -109,7 +109,7 @@ func TestResendsUnackedRM(t *testing.T) {
 	alice.conn.startFailing(nil, fmt.Errorf("forced write failure"))
 	aliceConnClosed = make(chan (struct{}))
 	regServerChanged.Unregister()
-	alice.handleSync(client.OnServerSessionChangedNtfn(func(connected bool, _, _, _ uint64) {
+	alice.handleSync(client.OnServerSessionChangedNtfn(func(connected bool, _ clientintf.ServerPolicy) {
 		if !connected {
 			select {
 			case <-aliceConnClosed:
@@ -219,7 +219,7 @@ func TestRemoteOfflineMsgs(t *testing.T) {
 
 	// Hook and helper to check on Alice connected state.
 	aliceSess := make(chan bool, 3)
-	alice.handle(client.OnServerSessionChangedNtfn(func(connected bool, _, _, _ uint64) {
+	alice.handle(client.OnServerSessionChangedNtfn(func(connected bool, _ clientintf.ServerPolicy) {
 		aliceSess <- connected
 	}))
 	assertAliceSess := func(wantSess bool) {
@@ -277,7 +277,7 @@ func TestLocalOfflineMsgs(t *testing.T) {
 
 	// Hook and helper to check on Alice connected state.
 	aliceSess := make(chan bool, 3)
-	alice.handle(client.OnServerSessionChangedNtfn(func(connected bool, _, _, _ uint64) {
+	alice.handle(client.OnServerSessionChangedNtfn(func(connected bool, _ clientintf.ServerPolicy) {
 		aliceSess <- connected
 	}))
 	assertAliceSess := func(wantSess bool) {

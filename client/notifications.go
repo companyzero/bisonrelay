@@ -190,7 +190,7 @@ const onServerSessionChangedNtfnType = "onServerSessionChanged"
 // server changed to the specified state (either connected or not).
 //
 // The push and subscription rates are specified in milliatoms/byte.
-type OnServerSessionChangedNtfn func(connected bool, pushRate, subRate, expirationDays uint64)
+type OnServerSessionChangedNtfn func(connected bool, policy clientintf.ServerPolicy)
 
 func (_ OnServerSessionChangedNtfn) typ() string { return onServerSessionChangedNtfnType }
 
@@ -578,9 +578,9 @@ func (nmgr *NotificationManager) notifyOnBlock(ru *RemoteUser) {
 		visit(func(h OnBlockNtfn) { h(ru) })
 }
 
-func (nmgr *NotificationManager) notifyServerSessionChanged(connected bool, pushRate, subRate, expDays uint64) {
+func (nmgr *NotificationManager) notifyServerSessionChanged(connected bool, policy clientintf.ServerPolicy) {
 	nmgr.handlers[onServerSessionChangedNtfnType].(*handlersFor[OnServerSessionChangedNtfn]).
-		visit(func(h OnServerSessionChangedNtfn) { h(connected, pushRate, subRate, expDays) })
+		visit(func(h OnServerSessionChangedNtfn) { h(connected, policy) })
 }
 
 func (nmgr *NotificationManager) notifyOnOnboardStateChanged(state clientintf.OnboardState, err error) {

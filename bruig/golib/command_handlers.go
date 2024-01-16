@@ -304,14 +304,14 @@ func handleInitClient(handle uint32, args initClient) error {
 		notify(NTGCAdminsChanged, ntfn, nil)
 	}))
 
-	ntfns.Register(client.OnServerSessionChangedNtfn(func(connected bool, pushRate, subRate, expDays uint64) {
+	ntfns.Register(client.OnServerSessionChangedNtfn(func(connected bool, policy clientintf.ServerPolicy) {
 		state := ConnStateOffline
 		if connected {
 			state = ConnStateOnline
 		}
 		st := serverSessState{State: state}
 		notify(NTServerSessChanged, st, nil)
-		cctx.expirationDays = expDays
+		cctx.expirationDays = uint64(policy.ExpirationDays)
 	}))
 
 	ntfns.Register(client.OnTipAttemptProgressNtfn(func(ru *client.RemoteUser, amtMAtoms int64, completed bool, attempt int, attemptErr error, willRetry bool) {

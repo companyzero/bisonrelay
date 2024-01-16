@@ -2994,19 +2994,20 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		as.repaintIfActive(cw)
 	}))
 
-	ntfns.Register(client.OnServerSessionChangedNtfn(func(connected bool, pushRate, subRate, expDays uint64) {
+	ntfns.Register(client.OnServerSessionChangedNtfn(func(connected bool, policy clientintf.ServerPolicy) {
 		state := connStateOffline
 		if connected {
 			state = connStateOnline
 		}
+		pushRate, subRate, expDays := policy.PushPayRate, policy.SubPayRate, policy.ExpirationDays
 		as.connectedMtx.Lock()
 		as.connected = state
 		showRates := as.pushRate != pushRate || as.subRate != subRate
-		showExpDays := as.expirationDays != expDays
+		showExpDays := as.expirationDays != uint64(expDays)
 		if connected {
 			as.pushRate = pushRate
 			as.subRate = subRate
-			as.expirationDays = expDays
+			as.expirationDays = uint64(expDays)
 		}
 		as.connectedMtx.Unlock()
 		as.sendMsg(state)
