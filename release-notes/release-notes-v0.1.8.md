@@ -135,4 +135,4 @@ they can click the start chat button.
 ## Changelog
 
 All commits since the last release may be viewed on GitHub
-[here](https://github.com/companyzeron/bisonrelay/compare/v0.1.7...v0.1.8).
+[here](https://github.com/companyzero/bisonrelay/compare/v0.1.7...v0.1.8).
