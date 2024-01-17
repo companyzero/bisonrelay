@@ -7,7 +7,7 @@ See [README.md](./README.md#verifying-binaries) for more info on verifying the f
 
 # brclient
 
-There has been a lot of added commands and improvments since the last release.
+There has been a lot of added commands and improvements since the last release.
 
 The most important improvements lie with upcoming server policy changes to 
 allow for various updates to existing restrictions (eg. max message size of 
@@ -28,7 +28,7 @@ that BR utilizes.
 
 - Send and show post receive receipts.
 
-- Replace bittrex with mexc for rates.  
+- Replace Bittrex with MEXC for rates.  
 
 - Move various invite commands under /invite.
 
@@ -44,8 +44,8 @@ that BR utilizes.
 This marks the initial release of the mobile BR implementation.  The UX/UI is 
 still a work in progress for a few areas, but generally should be easy to use.
 
-We've focues on having the BR mobile application be as easy to understand as 
-possible, since this will be aimed to less techinical users.
+We've focused on having the BR mobile application be as easy to understand as 
+possible, since this will be aimed at less technical users.
 
 Currently, we're just supporting Android apks, which can be installed when
 users allow for 3rd party installations in the developer settings.
@@ -54,7 +54,7 @@ users allow for 3rd party installations in the developer settings.
 
 - Refine UX/UI for mobile usage.
 
-- Refine font size across all widgets and screens.  There is now 3 sizes
+- Refine font size across all widgets and screens.  There are now 3 sizes
   that can be used throughout and those sizes are centralized in one location
   to have a consistent look and feel throughout.
 
@@ -75,7 +75,7 @@ users allow for 3rd party installations in the developer settings.
 
 - Fix jumping to beginning of day message in GCs
 
-- Add newly create GCs to current chat list.
+- Add newly created GCs to current chat list.
 
 - Filter historical logs based on rules.
 
