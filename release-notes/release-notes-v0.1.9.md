@@ -64,4 +64,4 @@ We've also included a major push to implement the mobile design from @saender.
 ## Changelog
 
 All commits since the last release may be viewed on GitHub
-[here](https://github.com/companyzeron/bisonrelay/compare/v0.1.8...v0.1.9).
+[here](https://github.com/companyzero/bisonrelay/compare/v0.1.8...v0.1.9).
