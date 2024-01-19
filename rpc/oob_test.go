@@ -37,7 +37,7 @@ func TestEncryptDecryptHalfRatchet(t *testing.T) {
 	}
 
 	// Alice encrypts and packs structure
-	packed, err := EncryptRMO(*halfKX, bob.Public, 0)
+	packed, err := EncryptRMO(*halfKX, &bob.Public.Key, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -83,7 +83,7 @@ func TestEncryptDecryptFullRatchet(t *testing.T) {
 	}
 
 	// Bob encrypts and packs structure
-	packed, err := EncryptRMO(*fullKX, alice.Public, 0)
+	packed, err := EncryptRMO(*fullKX, &alice.Public.Key, 0)
 	if err != nil {
 		t.Fatal(err)
 	}

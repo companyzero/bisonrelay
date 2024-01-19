@@ -3464,15 +3464,14 @@ var commands = []tuicmd{
 				}
 
 				as.cwHelpMsgs(func(pf printf) {
-					pii := ru.PublicIdentity()
 					r := ru.RatchetDebugInfo()
 					pf("")
 					pf("Info for user %s", strescape.Nick(ru.Nick()))
 					pf("              UID: %s", ru.ID())
-					if ru.Nick() != pii.Nick {
-						pf("    Original Nick: %s", strescape.Nick(pii.Nick))
+					if ru.Nick() != ab.ID.Nick {
+						pf("    Original Nick: %s", strescape.Nick(ab.ID.Nick))
 					}
-					pf("             Name: %s", strescape.Content(pii.Name))
+					pf("             Name: %s", strescape.Content(ab.ID.Name))
 					pf("          Ignored: %v", ru.IsIgnored())
 					pf("    First Created: %s", ab.FirstCreated.Format(ISO8601DateTimeMs))
 					pf("Handshake Attempt: %s", ab.LastHandshakeAttempt.Format(ISO8601DateTimeMs))

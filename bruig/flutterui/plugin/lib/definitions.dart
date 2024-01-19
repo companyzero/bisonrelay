@@ -161,10 +161,9 @@ class ServerInfo {
 @JsonSerializable()
 class RemoteUser {
   final String uid;
-  final String name;
   final String nick;
 
-  const RemoteUser(this.uid, this.name, this.nick);
+  const RemoteUser(this.uid, this.nick);
 
   factory RemoteUser.fromJson(Map<String, dynamic> json) =>
       _$RemoteUserFromJson(json);

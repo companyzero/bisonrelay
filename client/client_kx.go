@@ -349,12 +349,14 @@ func (c *Client) ResetRatchet(uid UserID) error {
 	}
 
 	var resetRV clientdb.RawRVID
+	var userPub *zkidentity.PublicIdentity
 	err = c.dbView(func(tx clientdb.ReadTx) error {
 		ab, err := c.db.GetAddressBookEntry(tx, uid)
 		if err != nil {
 			return err
 		}
 		resetRV = ab.TheirResetRV
+		userPub = ab.ID
 		return nil
 	})
 	if err != nil {
@@ -363,7 +365,7 @@ func (c *Client) ResetRatchet(uid UserID) error {
 
 	ru.log.Infof("Initiating reset via RV %s", resetRV)
 
-	return c.kxl.requestReset(resetRV, ru.id)
+	return c.kxl.requestReset(resetRV, userPub)
 }
 
 // ResetAllOldRatchets starts the reset ratchet procedure with all users from
@@ -579,7 +581,6 @@ func (c *Client) RenameUser(uid UserID, newNick string) error {
 			return err
 		}
 
-		ab.ID = ru.id
 		ab.Ignored = ru.IsIgnored()
 		ab.NickAlias = newNick
 		return c.db.UpdateAddressBookEntry(tx, ab)
@@ -594,12 +595,12 @@ func (c *Client) SuggestKX(invitee, target UserID) error {
 		return err
 	}
 
-	ruTarget, err := c.rul.byID(target)
+	ruAB, err := c.getAddressBookEntry(target)
 	if err != nil {
 		return err
 	}
 
-	rm := rpc.RMKXSuggestion{Target: ruTarget.PublicIdentity()}
+	rm := rpc.RMKXSuggestion{Target: *ruAB.ID}
 	payEvent := "kxsuggest." + target.String()
 	return c.sendWithSendQ(payEvent, rm, invitee)
 }

@@ -89,14 +89,12 @@ type addressBookEntry struct {
 
 type remoteUser struct {
 	UID  string `json:"uid"`
-	Name string `json:"name"`
 	Nick string `json:"nick"`
 }
 
 func remoteUserFromPII(pii *zkidentity.PublicIdentity) remoteUser {
 	return remoteUser{
 		UID:  pii.Identity.String(),
-		Name: pii.Name,
 		Nick: pii.Nick,
 	}
 }
@@ -104,7 +102,6 @@ func remoteUserFromPII(pii *zkidentity.PublicIdentity) remoteUser {
 func remoteUserFromRU(ru *client.RemoteUser) remoteUser {
 	return remoteUser{
 		UID:  ru.ID().String(),
-		Name: ru.PublicIdentity().Name,
 		Nick: ru.Nick(),
 	}
 }

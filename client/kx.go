@@ -335,7 +335,7 @@ func (kx *kxList) acceptInvite(pii rpc.OOBPublicIdentityInvite, isForReset, isAu
 		rv:       sendRV,
 		paidRMCB: kx.makePaidForRMCB(pii.Public.Identity, "kx.acceptinvite"),
 	}
-	rm.msg, err = rpc.EncryptRMO(rmohk, pii.Public, kx.compressLevel)
+	rm.msg, err = rpc.EncryptRMO(rmohk, &pii.Public.Key, kx.compressLevel)
 	if err != nil {
 		return fmt.Errorf("unable to encrypt RMOHalfKX: %v", err)
 	}
@@ -376,7 +376,7 @@ func (kx *kxList) handleStep2IDKX(kxid clientdb.RawRVID, blob lowlevel.RVBlob) e
 		rv:       sendRV,
 		paidRMCB: kx.makePaidForRMCB(rmohk.Public.Identity, "kx.step2idkx"),
 	}
-	rm.msg, err = rpc.EncryptRMO(rmofkx, rmohk.Public, kx.compressLevel)
+	rm.msg, err = rpc.EncryptRMO(rmofkx, &rmohk.Public.Key, kx.compressLevel)
 	if err != nil {
 		return err
 	}
@@ -602,7 +602,7 @@ func (kx *kxList) requestReset(rv clientdb.RawRVID, id *zkidentity.PublicIdentit
 		return err
 	}
 
-	packed, err := rpc.EncryptRMO(invite, *id, kx.compressLevel)
+	packed, err := rpc.EncryptRMO(invite, &id.Key, kx.compressLevel)
 	if err != nil {
 		return err
 	}

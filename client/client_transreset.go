@@ -36,10 +36,15 @@ func (c *Client) RequestTransitiveReset(mediator, target UserID) error {
 		return fmt.Errorf("target of trans reset: %w", err)
 	}
 
+	targetAB, err := c.getAddressBookEntry(target)
+	if err != nil {
+		return err
+	}
+
 	// Create new ratchet with remote identity
 	r := ratchet.New(rand.Reader) // half
 	r.MyPrivateKey = &c.localID.privKey
-	r.TheirPublicKey = &targetRU.id.Key
+	r.TheirPublicKey = &targetAB.ID.Key
 
 	// Fill out half the kx
 	kxA := new(ratchet.KeyExchange)
@@ -51,7 +56,7 @@ func (c *Client) RequestTransitiveReset(mediator, target UserID) error {
 
 	// Store half-kx in DB.
 	err = c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
-		return c.db.StoreTransResetHalfKX(tx, r, targetRU.id.Identity)
+		return c.db.StoreTransResetHalfKX(tx, r, targetRU.ID())
 	})
 	if err != nil {
 		return err
@@ -61,7 +66,7 @@ func (c *Client) RequestTransitiveReset(mediator, target UserID) error {
 
 	// Ask mediator to forward msg to target.
 	tr := rpc.RMTransitiveReset{HalfKX: *kxA}
-	return mediatorRU.sendTransitive(tr, "transreset", *targetRU.id, priorityDefault)
+	return mediatorRU.sendTransitive(tr, "transreset", targetAB.ID, priorityDefault)
 }
 
 func (c *Client) handleRMTransitiveReset(mediator *RemoteUser, target UserID, tr rpc.RMTransitiveReset) error {
@@ -74,12 +79,17 @@ func (c *Client) handleRMTransitiveReset(mediator *RemoteUser, target UserID, tr
 		return fmt.Errorf("transitive reset for previously unknown peer: %w", err)
 	}
 
+	ruAB, err := c.getAddressBookEntry(target)
+	if err != nil {
+		return err
+	}
+
 	mediator.log.Infof("Received trans reset request from %s", ru)
 
 	// Fill out missing bits
 	r := ratchet.New(rand.Reader) // full
 	r.MyPrivateKey = &c.localID.privKey
-	r.TheirPublicKey = &ru.id.Key
+	r.TheirPublicKey = &ruAB.ID.Key
 	kxB := new(ratchet.KeyExchange)
 	err = r.FillKeyExchange(kxB)
 	if err != nil {
@@ -99,7 +109,7 @@ func (c *Client) handleRMTransitiveReset(mediator *RemoteUser, target UserID, tr
 
 	// Send reply to originator using mediator.
 	trr := rpc.RMTransitiveResetReply{FullKX: *kxB}
-	if err := mediator.sendTransitive(trr, "transresetreply", *ru.id, priorityDefault); err != nil {
+	if err := mediator.sendTransitive(trr, "transresetreply", ruAB.ID, priorityDefault); err != nil {
 		return err
 	}
 

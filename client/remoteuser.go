@@ -65,7 +65,8 @@ type RemoteUser struct {
 	rmgr            rdzvManagerIntf
 	log             slog.Logger
 	logPayloads     slog.Logger
-	id              *zkidentity.PublicIdentity
+	id              zkidentity.ShortID
+	sigKey          zkidentity.FixedSizeEd25519PublicKey
 	localIDSigner   rpc.MessageSigner
 	runDone         chan struct{}
 	stopChan        chan struct{}
@@ -111,7 +112,8 @@ func newRemoteUser(q rmqIntf, rmgr rdzvManagerIntf, db *clientdb.DB,
 		db:              db,
 		log:             slog.Disabled,
 		logPayloads:     slog.Disabled,
-		id:              remoteID,
+		id:              remoteID.Identity,
+		sigKey:          remoteID.SigKey,
 		localIDSigner:   localIDSigner,
 		runDone:         make(chan struct{}),
 		stopChan:        make(chan struct{}),
@@ -126,11 +128,11 @@ func newRemoteUser(q rmqIntf, rmgr rdzvManagerIntf, db *clientdb.DB,
 }
 
 func (ru *RemoteUser) ID() UserID {
-	return ru.id.Identity
+	return ru.id
 }
 
-func (ru *RemoteUser) PublicIdentity() zkidentity.PublicIdentity {
-	return *ru.id
+func (ru *RemoteUser) verifyMessage(msg []byte, sig *zkidentity.FixedSizeSignature) bool {
+	return zkidentity.VerifyMessage(msg, sig, &ru.sigKey)
 }
 
 func (ru *RemoteUser) setNick(nick string) {
@@ -202,7 +204,7 @@ func (ru *RemoteUser) LastRatchetTimes() (time.Time, time.Time) {
 }
 
 func (ru *RemoteUser) String() string {
-	return fmt.Sprintf("%s (%q)", ru.id.Identity, ru.Nick())
+	return fmt.Sprintf("%s (%q)", ru.ID(), ru.Nick())
 }
 
 func (ru *RemoteUser) replaceRatchet(newR *ratchet.Ratchet) {
@@ -342,7 +344,7 @@ func (ru *RemoteUser) sendRM(payload interface{}, payEvent string) error {
 // sendTransitive sends the given payload as a transitive message encoded to
 // the given ultimate receiver.
 func (ru *RemoteUser) sendTransitive(payload interface{}, payType string,
-	to zkidentity.PublicIdentity, priority uint) error {
+	to *zkidentity.PublicIdentity, priority uint) error {
 
 	// Create message blob
 	composed, err := rpc.ComposeCompressedRM(ru.localIDSigner, payload, ru.compressLevel)
@@ -449,10 +451,10 @@ func (ru *RemoteUser) saveRatchet(encrypted []byte, rv *clientintf.RawRVID,
 		// ratchet can happen if some critical error (power failure,
 		// OOM, etc) happens between the two calls below.
 
-		err := ru.db.UpdateRatchet(tx, ru.r, ru.id.Identity)
+		err := ru.db.UpdateRatchet(tx, ru.r, ru.id)
 
 		if err == nil && encrypted != nil && rv != nil {
-			err = ru.db.StoreUserUnackedRM(tx, ru.ID(), encrypted,
+			err = ru.db.StoreUserUnackedRM(tx, ru.id, encrypted,
 				*rv, payEvent)
 		}
 
@@ -552,7 +554,7 @@ func (ru *RemoteUser) handleReceivedEncrypted(recvBlob lowlevel.RVBlob) error {
 		return errRemoteUserExiting
 	}
 
-	h, c, err := rpc.DecomposeRM(ru.id.VerifyMessage, cleartext, uint(ru.q.MaxMsgSize()))
+	h, c, err := rpc.DecomposeRM(ru.verifyMessage, cleartext, uint(ru.q.MaxMsgSize()))
 	if err != nil {
 		// Encryption is authenticated, so an error here means the
 		// client encoded an unknown or otherwise invalid RM.
@@ -788,20 +790,20 @@ func (rul *remoteUserList) uniqueNick(nick string, uid UserID, myNick string) st
 
 func (rul *remoteUserList) add(ru *RemoteUser, myNick string) (*RemoteUser, error) {
 	rul.Lock()
-	if oldRU, ok := rul.m[ru.id.Identity]; ok {
+	if oldRU, ok := rul.m[ru.id]; ok {
 		rul.Unlock()
-		return oldRU, alreadyHaveUserError{ru.id.Identity}
+		return oldRU, alreadyHaveUserError{ru.id}
 	}
 
-	ru.setNick(rul.uniqueNick(ru.Nick(), ru.id.Identity, myNick))
-	rul.m[ru.id.Identity] = ru
+	ru.setNick(rul.uniqueNick(ru.Nick(), ru.id, myNick))
+	rul.m[ru.id] = ru
 	rul.Unlock()
 	return nil, nil
 }
 
 func (rul *remoteUserList) del(ru *RemoteUser) {
 	rul.Lock()
-	delete(rul.m, ru.id.Identity)
+	delete(rul.m, ru.id)
 	rul.Unlock()
 }
 
