@@ -2283,6 +2283,33 @@ func (as *appState) editExternalTextFile(baseContent string) (string, error) {
 	return string(data), nil
 }
 
+func (as *appState) viewRaw(b []byte) (tea.Cmd, error) {
+	typ := imageMimeType(b)
+	if !strings.HasPrefix(typ, "image/") {
+		return nil, fmt.Errorf("unknown image file type")
+	}
+	prog := programByMimeType(*as.mimeMap.Load(), typ)
+	if prog == "" {
+		return nil, fmt.Errorf("no external viewer configured for %v", typ)
+	}
+
+	// Save to downloads/users/file?
+	f, err := os.CreateTemp("", tempFileTemplate)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create temp file: %v", err)
+	}
+	if _, err = f.Write(b); err != nil {
+		return nil, fmt.Errorf("failed to write temp file: %v", err)
+	}
+	f.Close()
+	c := exec.Command(prog, f.Name())
+	cmd := tea.ExecProcess(c, func(error) tea.Msg {
+		os.Remove(f.Name())
+		return externalViewer{err: err}
+	})
+	return cmd, nil
+}
+
 func (as *appState) viewEmbed(embedded mdembeds.EmbeddedArgs) (tea.Cmd, error) {
 	if len(embedded.Data) == 0 {
 		return nil, fmt.Errorf("no embedded file")
@@ -3274,6 +3301,30 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 			as.c.RemainOffline()
 			as.sendMsg(msgUnwelcomeError{err: err})
 		})
+	}))
+
+	ntfns.Register(client.OnProfileUpdated(func(ru *client.RemoteUser,
+		ab *clientdb.AddressBookEntry, fields []client.ProfileUpdateField) {
+
+		var updatedAvatar bool
+		fieldsStr := ""
+		for i := range fields {
+			if i > 0 {
+				fieldsStr += ", "
+			}
+			fieldsStr += string(fields[i])
+			updatedAvatar = updatedAvatar || fields[i] == client.ProfileUpdateAvatar
+		}
+
+		cw := as.findOrNewChatWindow(ru.ID(), strescape.Nick(ru.Nick()))
+		cw.newHelpMsg("Updated its profile (%s)", fieldsStr)
+		if updatedAvatar && len(ab.ID.Avatar) > 0 {
+			cw.newHelpMsg("Type '/ab %s viewavatar' to view the new avatar",
+				strescape.Nick(ru.Nick()))
+		} else if updatedAvatar {
+			cw.newHelpMsg("User cleared its avatar")
+		}
+		as.repaintIfActive(cw)
 	}))
 
 	// Initialize resources router.

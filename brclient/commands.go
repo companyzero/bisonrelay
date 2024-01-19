@@ -3278,6 +3278,67 @@ var filterCommands = []tuicmd{
 	},
 }
 
+var myAvatarCmds = []tuicmd{
+	{
+		cmd:   "set",
+		descr: "Set the user avatar",
+		usage: "<filename>",
+		handler: func(args []string, as *appState) error {
+			if len(args) < 1 {
+				return fmt.Errorf("filename cannot be empty")
+			}
+
+			avatar, err := os.ReadFile(args[0])
+			if err != nil {
+				return err
+			}
+
+			if !strings.HasPrefix(imageMimeType(avatar), "image/") {
+				return fmt.Errorf("unsupported file format")
+			}
+
+			err = as.c.UpdateLocalAvatar(avatar)
+			if err != nil {
+				return err
+			}
+
+			as.diagMsg("Avatar updated!")
+			return nil
+		},
+		completer: func(args []string, arg string, as *appState) []string {
+			return fileCompleter(arg)
+		},
+	}, {
+		cmd:   "clear",
+		descr: "Removes the user avatar",
+		long:  []string{"An update is sent to remote users to clear the avatar."},
+		handler: func(args []string, as *appState) error {
+			err := as.c.UpdateLocalAvatar(nil)
+			if err != nil {
+				return err
+			}
+			as.diagMsg("Avatar updated")
+			return nil
+		},
+	}, {
+		cmd:           "view",
+		descr:         "View the user avatar",
+		usableOffline: true,
+		handler: func(args []string, as *appState) error {
+			pubid := as.c.Public()
+			if len(pubid.Avatar) == 0 {
+				return fmt.Errorf("user does not have avatar")
+			}
+			cmd, err := as.viewRaw(pubid.Avatar)
+			if err != nil {
+				return err
+			}
+			as.sendMsg(msgRunCmd(cmd))
+			return nil
+		},
+	},
+}
+
 var commands = []tuicmd{
 	{
 		cmd:           "backup",
@@ -3447,11 +3508,28 @@ var commands = []tuicmd{
 		},
 	}, {
 		cmd:           "addressbook",
-		usage:         "[<user>]",
+		usage:         "[<user>] [viewavatar]",
 		usableOffline: true,
 		aliases:       []string{"ab"},
-		descr:         "Show the address book of known remote users (or a user profile)",
+		long: []string{
+			"Without arguments, shows the entire addressbook (list of known users).",
+			"",
+			"If passing a nick on the first argument, it shows detailed addressbook information for that user.",
+			"",
+			"If the user has an avatar, passing 'viewavatar' will open the external viewer for that avatar image type.",
+		},
+		descr: "Show the address book of known remote users (or a user profile)",
 		handler: func(args []string, as *appState) error {
+			var viewAvatar bool
+			if len(args) > 1 {
+				switch {
+				case args[1] == "viewavatar":
+					viewAvatar = true
+				default:
+					return fmt.Errorf("unknown argument %q", args[1])
+				}
+			}
+
 			if len(args) > 0 {
 				ru, err := as.c.UserByNick(args[0])
 				if err != nil {
@@ -3461,6 +3539,18 @@ var commands = []tuicmd{
 				ab, err := as.c.AddressBookEntry(ru.ID())
 				if err != nil {
 					return err
+				}
+
+				if viewAvatar {
+					if len(ab.ID.Avatar) == 0 {
+						return fmt.Errorf("user does not have an avatar")
+					}
+					cmd, err := as.viewRaw(ab.ID.Avatar)
+					if err != nil {
+						return err
+					}
+					as.sendMsg(msgRunCmd(cmd))
+					return nil
 				}
 
 				as.cwHelpMsgs(func(pf printf) {
@@ -3487,6 +3577,10 @@ var commands = []tuicmd{
 					pf("   Their Reset RV: %s", r.TheirResetRV)
 					pf("       Saved Keys: %d", r.NbSavedKeys)
 					pf("     Will Ratchet: %v", r.WillRatchet)
+					if len(ab.ID.Avatar) > 0 {
+						pf("View user's avatar with the following command:")
+						pf("  /ab %s viewavatar", args[0])
+					}
 				})
 				return nil
 			}
@@ -3521,8 +3615,13 @@ var commands = []tuicmd{
 			return nil
 		},
 		completer: func(args []string, arg string, as *appState) []string {
-			if len(args) == 1 {
+			if len(args) == 0 {
 				return nickCompleter(arg, as)
+			}
+			if len(args) == 1 {
+				if strings.HasPrefix("viewavatar", arg) {
+					return []string{"viewavatar"}
+				}
 			}
 			return nil
 		},
@@ -4081,6 +4180,18 @@ var commands = []tuicmd{
 			as.rates.Set(dcrPrice, btcPrice)
 			return nil
 		},
+	}, {
+		cmd:           "myavatar",
+		usableOffline: true,
+		descr:         "Update the local client's avatar",
+		sub:           myAvatarCmds,
+		completer: func(args []string, arg string, as *appState) []string {
+			if len(args) == 0 {
+				return cmdCompleter(myAvatarCmds, arg, false)
+			}
+			return nil
+		},
+		handler: subcmdNeededHandler,
 	}, {
 		cmd:           "quit",
 		usableOffline: true,
