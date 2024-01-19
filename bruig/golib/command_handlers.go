@@ -193,25 +193,25 @@ func handleInitClient(handle uint32, args initClient) error {
 		notify(NTPostStatusReceived, pr, nil)
 	}))
 
-	ntfns.Register(client.OnKXCompleted(func(_ *clientintf.RawRVID, user *client.RemoteUser, _ bool) {
-		pii := user.PublicIdentity()
-		notify(NTKXCompleted, remoteUserFromPII(&pii), nil)
+	ntfns.Register(client.OnKXCompleted(func(_ *clientintf.RawRVID, ru *client.RemoteUser, _ bool) {
+		notify(NTKXCompleted, remoteUserFromRU(ru), nil)
 	}))
 
 	ntfns.Register(client.OnKXSuggested(func(invitee *client.RemoteUser, target zkidentity.PublicIdentity) {
 		alreadyKnown := false
-		_, err := c.UserByID(target.Identity)
+		targetNick := target.Nick
+		targetRu, err := c.UserByID(target.Identity)
 		if err == nil {
 			// Already KX'd with this user.
 			alreadyKnown = true
+			targetNick = targetRu.Nick()
 		}
-		ipii := invitee.PublicIdentity()
 		skx := suggestKX{
 			AlreadyKnown: alreadyKnown,
-			InviteeNick:  ipii.Nick,
-			Invitee:      ipii.Identity,
+			InviteeNick:  invitee.Nick(),
+			Invitee:      invitee.ID(),
 			Target:       target.Identity,
-			TargetNick:   target.Nick,
+			TargetNick:   targetNick,
 		}
 		notify(NTKXSuggested, skx, nil)
 	}))
@@ -239,9 +239,8 @@ func handleInitClient(handle uint32, args initClient) error {
 	}))
 
 	ntfns.Register(client.OnInvitedToGCNtfn(func(user *client.RemoteUser, iid uint64, invite rpc.RMGroupInvite) {
-		pubid := user.PublicIdentity()
 		inv := gcInvitation{
-			Inviter: remoteUserFromPII(&pubid),
+			Inviter: remoteUserFromRU(user),
 			IID:     iid,
 			Name:    invite.Name,
 		}
@@ -782,7 +781,7 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		for _, entry := range ab {
 			res = append(res, addressBookEntry{
 				ID:      entry.ID.Identity,
-				Nick:    entry.ID.Nick,
+				Nick:    entry.Nick(),
 				Name:    entry.ID.Name,
 				Ignored: entry.Ignored,
 			})
@@ -1783,7 +1782,7 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		}
 
 		res := addressBookEntry{
-			Nick:                 entry.ID.Nick,
+			Nick:                 entry.Nick(),
 			Name:                 entry.ID.Name,
 			Ignored:              entry.Ignored,
 			FirstCreated:         entry.FirstCreated,

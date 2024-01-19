@@ -952,7 +952,7 @@ func (db *DB) HasDownloadedFile(tx ReadTx, fid zkidentity.ShortID) (string, erro
 	fname := fd.CompletedName
 	if fname != "" {
 		fname = filepath.Join(db.downloadsDir,
-			escapeNickForFname(ab.ID.Nick), fd.CompletedName)
+			escapeNickForFname(ab.Nick()), fd.CompletedName)
 		if !fileExists(fname) {
 			fname = ""
 		}

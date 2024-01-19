@@ -115,6 +115,11 @@ type AddressBookEntry struct {
 	LastHandshakeAttempt time.Time `json:"last_handshake_attempt,omitempty"`
 }
 
+// Nick returns the nick of the user.
+func (abe *AddressBookEntry) Nick() string {
+	return abe.ID.Nick
+}
+
 // AddressBookAndRatchet stores both the address book entry and ratchet data of
 // a remote user.
 type AddressBookAndRatchet struct {

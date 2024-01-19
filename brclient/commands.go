@@ -3492,7 +3492,7 @@ var commands = []tuicmd{
 			ab := as.c.AddressBook()
 			var maxNickLen int
 			for i := range ab {
-				ab[i].ID.Nick = strescape.Nick(ab[i].ID.Nick)
+				ab[i].ID.Nick = strescape.Nick(ab[i].Nick())
 				l := lipgloss.Width(ab[i].ID.Nick)
 				if l > maxNickLen {
 					maxNickLen = l

@@ -1027,6 +1027,7 @@ func (c *Client) GCMessage(gcID zkidentity.ShortID, msg string, mode rpc.Message
 
 	var gc rpc.RMGroupList
 	var gcBlockList clientdb.GCBlockList
+	myNick := c.LocalNick()
 	err := c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
 		var err error
 		if gc, err = c.db.GetGC(tx, gcID); err != nil {
@@ -1041,7 +1042,7 @@ func (c *Client) GCMessage(gcID zkidentity.ShortID, msg string, mode rpc.Message
 			gcAlias = gc.Name
 		}
 
-		return c.db.LogGCMsg(tx, gcAlias, gcID, false, c.id.Public.Nick, msg, time.Now())
+		return c.db.LogGCMsg(tx, gcAlias, gcID, false, myNick, msg, time.Now())
 	})
 	if err != nil {
 		return err

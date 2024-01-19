@@ -190,7 +190,7 @@ func (ru *RemoteUser) LastRatchetTimes() (time.Time, time.Time) {
 }
 
 func (ru *RemoteUser) String() string {
-	return fmt.Sprintf("%s (%q)", ru.id.Identity, ru.id.Nick)
+	return fmt.Sprintf("%s (%q)", ru.id.Identity, ru.Nick())
 }
 
 func (ru *RemoteUser) replaceRatchet(newR *ratchet.Ratchet) {
@@ -757,7 +757,7 @@ nextTry:
 			if ruid == uid {
 				continue
 			}
-			if ru.id.Nick == nick || strings.HasPrefix(ruid.String(), nick) {
+			if ru.Nick() == nick || strings.HasPrefix(ruid.String(), nick) {
 				nick = fmt.Sprintf("%s_%d", origNick, i)
 				continue nextTry
 			}
@@ -806,7 +806,7 @@ func (rul *remoteUserList) byNick(nick string) (*RemoteUser, error) {
 	rul.Lock()
 	var res *RemoteUser
 	for uid, ru := range rul.m {
-		if strings.EqualFold(ru.id.Nick, nick) || len(nick) > 4 && strings.HasPrefix(uid.String(), nick) {
+		if strings.EqualFold(ru.Nick(), nick) || len(nick) > 4 && strings.HasPrefix(uid.String(), nick) {
 			res = ru
 			break
 		}
