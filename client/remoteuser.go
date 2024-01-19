@@ -756,36 +756,41 @@ func newRemoteUserList() *remoteUserList {
 // does so by trying to append "_n" for increasing n to the passed nick.
 //
 // This is called by add() and for correct operation, the list must be locked.
-func (rul *remoteUserList) uniqueNick(nick string, uid UserID) string {
+func (rul *remoteUserList) uniqueNick(nick string, uid UserID, myNick string) string {
 	origNick := nick
 
-nextTry:
 	for i := 2; ; i++ {
 		// Ensure no one has the same nick.
+		isDupe := nick == myNick
 		for ruid, ru := range rul.m {
 			if ruid == uid {
 				continue
 			}
 			if ru.Nick() == nick || strings.HasPrefix(ruid.String(), nick) {
-				nick = fmt.Sprintf("%s_%d", origNick, i)
-				continue nextTry
+				isDupe = true
+				break
 			}
 		}
-		// All good.
-		break
+
+		if isDupe {
+			nick = fmt.Sprintf("%s_%d", origNick, i)
+		} else {
+			// All good.
+			break
+		}
 	}
 
 	return nick
 }
 
-func (rul *remoteUserList) add(ru *RemoteUser) (*RemoteUser, error) {
+func (rul *remoteUserList) add(ru *RemoteUser, myNick string) (*RemoteUser, error) {
 	rul.Lock()
 	if oldRU, ok := rul.m[ru.id.Identity]; ok {
 		rul.Unlock()
 		return oldRU, alreadyHaveUserError{ru.id.Identity}
 	}
 
-	ru.setNick(rul.uniqueNick(ru.Nick(), ru.id.Identity))
+	ru.setNick(rul.uniqueNick(ru.Nick(), ru.id.Identity, myNick))
 	rul.m[ru.id.Identity] = ru
 	rul.Unlock()
 	return nil, nil

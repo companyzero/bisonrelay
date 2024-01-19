@@ -528,3 +528,107 @@ func TestUnsubsIdleClients(t *testing.T) {
 	assert.ChanWrittenWithVal(t, bobPostSub, false)
 	assert.ChanWritten(t, bobKicked)
 }
+
+// TestUserNickAlias performs tests around duplicate and aliased users.
+func TestUserNickAlias(t *testing.T) {
+	t.Parallel()
+
+	tcfg := testScaffoldCfg{}
+	ts := newTestScaffold(t, tcfg)
+	alice := ts.newClient("alice")
+
+	// First bob.
+	bob1 := ts.newClient("bob")
+	ts.kxUsers(alice, bob1)
+	assertUserNick(t, alice, bob1, "bob")
+
+	// Second bob. Create in a loop until the ID for bob2 is < the id for
+	// bob1.
+	bob2 := ts.newClient("bob")
+	for bytes.Compare(bob2.PublicID().Bytes(), bob1.PublicID().Bytes()) >= 0 {
+		bob2 = ts.newClient("bob")
+	}
+
+	ts.kxUsers(alice, bob2)
+	assertUserNick(t, alice, bob2, "bob_2")
+
+	// Third bob. Create in a loop until the ID for bob3 is > the id for bob1.
+	bob3 := ts.newClient("bob")
+	for bytes.Compare(bob3.PublicID().Bytes(), bob1.PublicID().Bytes()) < 0 {
+		bob3 = ts.newClient("bob")
+	}
+
+	ts.kxUsers(alice, bob3)
+	assertUserNick(t, alice, bob3, "bob_3")
+
+	// Dupe alice.
+	alice2 := ts.newClient("alice")
+	ts.kxUsers(alice, alice2)
+	assertUserNick(t, alice, alice2, "alice_2")
+
+	// Restart alice. Bobs should be the same.
+	alice = ts.recreateClient(alice)
+	assertUserNick(t, alice, bob1, "bob")
+	assertUserNick(t, alice, bob2, "bob_2")
+	assertUserNick(t, alice, bob3, "bob_3")
+
+	// Rename bob_2 to bob2_renamed and assert.
+	assert.NilErr(t, alice.RenameUser(bob2.PublicID(), "bob2_renamed"))
+	assertUserNick(t, alice, bob1, "bob")
+	assertUserNick(t, alice, bob2, "bob2_renamed")
+	assertUserNick(t, alice, bob3, "bob_3")
+	alice = ts.recreateClient(alice)
+	assertUserNick(t, alice, bob1, "bob")
+	assertUserNick(t, alice, bob2, "bob2_renamed")
+	assertUserNick(t, alice, bob3, "bob_3")
+
+	// Manually (locally) rename bob2 to bob2_localrename. This requires
+	// recreating the client because the local identity is only loaded at
+	// startup. Then reset KX so that the modified ID goes to alice.
+	err := bob2.db.Update(context.Background(), func(tx clientdb.ReadWriteTx) error {
+		id, err := bob2.db.LocalID(tx)
+		if err != nil {
+			return err
+		}
+		id.Public.Nick = "bob2_localrename"
+		return bob2.db.UpdateLocalID(tx, id)
+	})
+	assert.NilErr(t, err)
+	bob2 = ts.recreateClient(bob2)
+	assert.DeepEqual(t, bob2.LocalNick(), "bob2_localrename")
+	assertKXReset(t, alice, bob2)
+
+	// Alice still sees the same nick.
+	assertUserNick(t, alice, bob1, "bob")
+	assertUserNick(t, alice, bob2, "bob2_renamed")
+	assertUserNick(t, alice, bob3, "bob_3")
+	alice = ts.recreateClient(alice)
+	assertUserNick(t, alice, bob1, "bob")
+	assertUserNick(t, alice, bob2, "bob2_renamed")
+	assertUserNick(t, alice, bob3, "bob_3")
+
+	// Manually (locally) rename bob1 to bob1_localrename. This requires
+	// recreating the client because the local identity is only loaded at
+	// startup. Then reset KX so that the modified ID goes to alice.
+	err = bob1.db.Update(context.Background(), func(tx clientdb.ReadWriteTx) error {
+		id, err := bob1.db.LocalID(tx)
+		if err != nil {
+			return err
+		}
+		id.Public.Nick = "bob1_localrename"
+		return bob1.db.UpdateLocalID(tx, id)
+	})
+	assert.NilErr(t, err)
+	bob1 = ts.recreateClient(bob1)
+	assert.DeepEqual(t, bob1.LocalNick(), "bob1_localrename")
+	assertKXReset(t, alice, bob1)
+
+	// Alice still sees the same nick.
+	assertUserNick(t, alice, bob1, "bob")
+	assertUserNick(t, alice, bob2, "bob2_renamed")
+	assertUserNick(t, alice, bob3, "bob_3")
+	alice = ts.recreateClient(alice)
+	assertUserNick(t, alice, bob1, "bob")
+	assertUserNick(t, alice, bob2, "bob2_renamed")
+	assertUserNick(t, alice, bob3, "bob_3")
+}

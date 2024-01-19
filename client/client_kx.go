@@ -120,7 +120,8 @@ func (c *Client) takePostKXActions(ru *RemoteUser, actions []clientdb.PostKXActi
 // initRemoteUser inserts the given ratchet as a new remote user. The bool
 // returns whether this is a new user.
 func (c *Client) initRemoteUser(id *zkidentity.PublicIdentity, r *ratchet.Ratchet,
-	updateAB bool, initialRV, myResetRV, theirResetRV clientdb.RawRVID, ignored bool) (*RemoteUser, bool, error) {
+	updateAB bool, initialRV, myResetRV, theirResetRV clientdb.RawRVID,
+	ignored bool, nickAlias string) (*RemoteUser, bool, error) {
 
 	var postKXActions []clientdb.PostKXAction
 
@@ -133,12 +134,23 @@ func (c *Client) initRemoteUser(id *zkidentity.PublicIdentity, r *ratchet.Ratche
 	ru.rmHandler = c.handleUserRM
 	ru.myResetRV = myResetRV
 	ru.theirResetRV = theirResetRV
+	if nickAlias != "" {
+		ru.setNick(nickAlias)
+	}
 
-	oldRU, err := c.rul.add(ru)
+	oldRU, err := c.rul.add(ru, c.LocalNick())
 	oldUser := false
 	if errors.Is(err, alreadyHaveUserError{}) && oldRU != nil {
 		oldRU.log.Tracef("Reusing old remote user and replacing ratchet "+
 			"(initial RV %s)", initialRV)
+
+		// Preserve the earliest known nick as a NickAlias
+		// (this prevents the same remote user from having
+		// their nick modified) and confusing the local client
+		// operator.
+		if oldRU.Nick() != ru.Nick() {
+			nickAlias = oldRU.Nick()
+		}
 
 		// Already have this user running. Replace the ratchet with the
 		// new one.
@@ -171,8 +183,16 @@ func (c *Client) initRemoteUser(id *zkidentity.PublicIdentity, r *ratchet.Ratche
 			ignored = oldEntry.Ignored
 			firstCreated = oldEntry.FirstCreated
 			lastHandshakeAttempt = oldEntry.LastHandshakeAttempt
+			nickAlias = oldEntry.NickAlias
 		}
 		if updateAB {
+			// Store the deduped nick as an alias if we had to
+			// generate a deduped nick alias.
+			if nickAlias == "" && ru.Nick() != id.Nick {
+				nickAlias = ru.Nick()
+				ru.log.Debugf("Preserving deduped nick %q", nickAlias)
+			}
+
 			newEntry := &clientdb.AddressBookEntry{
 				ID:                   id,
 				MyResetRV:            myResetRV,
@@ -180,6 +200,7 @@ func (c *Client) initRemoteUser(id *zkidentity.PublicIdentity, r *ratchet.Ratche
 				Ignored:              ignored,
 				FirstCreated:         firstCreated,
 				LastHandshakeAttempt: lastHandshakeAttempt,
+				NickAlias:            nickAlias,
 			}
 			if err := c.db.UpdateAddressBookEntry(tx, newEntry); err != nil {
 				return err
@@ -266,7 +287,8 @@ func (c *Client) initRemoteUser(id *zkidentity.PublicIdentity, r *ratchet.Ratche
 func (c *Client) kxCompleted(public *zkidentity.PublicIdentity, r *ratchet.Ratchet,
 	initialRV, myResetRV, theirResetRV clientdb.RawRVID) {
 
-	ru, isNew, err := c.initRemoteUser(public, r, true, initialRV, myResetRV, theirResetRV, false)
+	ru, isNew, err := c.initRemoteUser(public, r, true, initialRV, myResetRV,
+		theirResetRV, false, "")
 	if err != nil && !errors.Is(err, clientintf.ErrSubsysExiting) {
 		c.log.Errorf("unable to init user for completed kx: %v", err)
 	}
@@ -561,6 +583,7 @@ func (c *Client) RenameUser(uid UserID, newNick string) error {
 
 		ab.ID = ru.id
 		ab.Ignored = ru.IsIgnored()
+		ab.NickAlias = newNick
 		return c.db.UpdateAddressBookEntry(tx, ab)
 	})
 }
