@@ -839,3 +839,97 @@ func (c *Client) unsubIdleUsers(limitInterval, lastHandshakeInterval time.Durati
 
 	return nil
 }
+
+// UpdateLocalAvatar changes the local avatar. If set to nil or an empty slice,
+// an update will be sent to remote clients to clear the avatar.
+func (c *Client) UpdateLocalAvatar(avatar []byte) error {
+	// Restrict max size of avatar stored by default to ensure
+	// OOBPublicIdentityInvite is less than the max msg size and can
+	// flow through a single server message.
+	maxAvatarSize := 200 * 1024 // 200KiB
+	if len(avatar) > maxAvatarSize {
+		return fmt.Errorf("avatar byte size %d > max avatar size %d",
+			len(avatar), maxAvatarSize)
+	}
+
+	// Update the DB.
+	err := c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
+		id, err := c.db.LocalID(tx)
+		if err != nil {
+			return err
+		}
+		if len(avatar) == 0 {
+			id.Public.Avatar = nil
+		} else {
+			id.Public.Avatar = avatar
+		}
+		return c.db.UpdateLocalID(tx, id)
+	})
+	if err != nil {
+		return err
+	}
+
+	// Update runtime.
+	c.profileMtx.Lock()
+	c.profile.avatar = avatar
+	c.profileMtx.Unlock()
+
+	// Let everyone know the avatar has been updated.
+	if avatar == nil {
+		avatar = []byte{}
+	}
+	rmpu := rpc.RMProfileUpdate{
+		Avatar: avatar,
+	}
+	allUsers := c.rul.userList()
+	payType := "profile.avatar"
+	return c.sendWithSendQ(payType, rmpu, allUsers...)
+}
+
+func (c *Client) handleProfileUpdate(ru *RemoteUser, rmpu rpc.RMProfileUpdate) error {
+	// Update the profile in the DB.
+	var ab *clientdb.AddressBookEntry
+	var fields []ProfileUpdateField
+	if rmpu.Avatar != nil {
+		fields = append(fields, ProfileUpdateAvatar)
+	}
+
+	if len(fields) == 0 {
+		return fmt.Errorf("profile update message without any updates")
+	}
+
+	err := c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
+		var err error
+		ab, err = c.db.GetAddressBookEntry(tx, ru.ID())
+		if err != nil {
+			return err
+		}
+
+		// Update the fields that were sent in this update msg.
+		if rmpu.Avatar != nil {
+			if len(rmpu.Avatar) == 0 {
+				ab.ID.Avatar = nil
+			} else {
+				ab.ID.Avatar = rmpu.Avatar
+			}
+		}
+
+		return c.db.UpdateAddressBookEntry(tx, ab)
+	})
+	if err != nil {
+		return err
+	}
+
+	fieldsStr := ""
+	for i := range fields {
+		if i > 0 {
+			fieldsStr += ", "
+		}
+		fieldsStr += string(fields[i])
+	}
+
+	ru.log.Infof("Updated profile (fields %s, avatar size %d)",
+		fieldsStr, len(ab.ID.Avatar))
+	c.ntfns.notifyProfileUpdated(ru, ab, fields)
+	return nil
+}

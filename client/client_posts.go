@@ -329,7 +329,7 @@ func (c *Client) CreatePost(post, descr string) (clientdb.PostSummary, error) {
 	// the client API level.
 	const fname = ""
 
-	me := c.public()
+	me := c.Public()
 	var pm rpc.PostMetadata
 	var subs []clientdb.UserID
 	var summ clientdb.PostSummary

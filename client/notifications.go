@@ -338,6 +338,23 @@ type OnServerUnwelcomeError func(err error)
 
 func (_ OnServerUnwelcomeError) typ() string { return onServerUnwelcomeError }
 
+// ProfileUpdateField tracks profile fields which may be updated.
+type ProfileUpdateField string
+
+const (
+	// ProfileUpdateAvatar is the profile field that corresponds to the
+	// user's avatar.
+	ProfileUpdateAvatar ProfileUpdateField = "avatar"
+)
+
+const onProfileUpdatedType = "onProfileChanged"
+
+// OnProfileChanged is a notification sent whenever a remote client has updated
+// its profile.
+type OnProfileUpdated func(ru *RemoteUser, ab *clientdb.AddressBookEntry, fields []ProfileUpdateField)
+
+func (_ OnProfileUpdated) typ() string { return onProfileUpdatedType }
+
 // The following is used only in tests.
 
 const onTestNtfnType = "testNtfnType"
@@ -683,6 +700,12 @@ func (nmgr *NotificationManager) notifyServerUnwelcomeError(err error) {
 		visit(func(h OnServerUnwelcomeError) { h(err) })
 }
 
+func (nmgr *NotificationManager) notifyProfileUpdated(ru *RemoteUser, ab *clientdb.AddressBookEntry,
+	fields []ProfileUpdateField) {
+	nmgr.handlers[onProfileUpdatedType].(*handlersFor[OnProfileUpdated]).
+		visit(func(h OnProfileUpdated) { h(ru, ab, fields) })
+}
+
 func NewNotificationManager() *NotificationManager {
 	return &NotificationManager{
 		handlers: map[string]handlersRegistry{
@@ -698,6 +721,7 @@ func NewNotificationManager() *NotificationManager {
 			onTipReceivedNtfnType:    &handlersFor[OnTipReceivedNtfn]{},
 			onReceiveReceipt:         &handlersFor[OnReceiveReceipt]{},
 			onRMReceived:             &handlersFor[OnRMReceived]{},
+			onProfileUpdatedType:     &handlersFor[OnProfileUpdated]{},
 
 			onPostSubscriberUpdated:    &handlersFor[OnPostSubscriberUpdated]{},
 			onPostsListReceived:        &handlersFor[OnPostsListReceived]{},

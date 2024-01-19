@@ -301,6 +301,10 @@ func localIdentityFromFull(id *zkidentity.FullIdentity) localIdentity {
 	}
 }
 
+type localProfile struct {
+	avatar []byte
+}
+
 // Client is the main state manager for a CR client connection. It attempts to
 // maintain an active connection to a CR server and manages the internal state
 // of a client, including remote users it's connected to.
@@ -316,6 +320,9 @@ type Client struct {
 	// localID are the unchanging properties of the local client's ID.
 	// This is filled at the start of Run() and is not modified afterwards.
 	localID localIdentity
+
+	profileMtx sync.Mutex
+	profile    localProfile
 
 	pc    clientintf.PaymentClient
 	db    *clientdb.DB
@@ -457,7 +464,7 @@ func New(cfg Config) (*Client, error) {
 		tipAttemptsRunning:         make(chan struct{}),
 	}
 
-	kxl := newKXList(q, rmgr, &c.localID, c.public, cfg.DB, ctx)
+	kxl := newKXList(q, rmgr, &c.localID, c.Public, cfg.DB, ctx)
 	kxl.compressLevel = cfg.CompressLevel
 	kxl.dbCtx = dbCtx
 	kxl.log = cfg.logger("KXLS")
@@ -508,6 +515,7 @@ func (c *Client) loadLocalID(ctx context.Context) error {
 	}
 
 	c.localID = localIdentityFromFull(id)
+	c.profile.avatar = id.Public.Avatar
 	zeroSlice(id.PrivateSigKey[:])
 	zeroSlice(id.PrivateKey[:])
 
@@ -725,9 +733,17 @@ func (c *Client) PublicID() UserID {
 	return c.localID.id
 }
 
-// public returns the full public identity data for the client.
-func (c *Client) public() zkidentity.PublicIdentity {
-	return c.localID.public()
+// Public returns the full public identity data for the local client.
+func (c *Client) Public() zkidentity.PublicIdentity {
+	// Fixed fields.
+	public := c.localID.public()
+
+	// Variable fields.
+	c.profileMtx.Lock()
+	public.Avatar = c.profile.avatar
+	c.profileMtx.Unlock()
+
+	return public
 }
 
 // LocalNick is the nick of this client. This is only available after the Run()

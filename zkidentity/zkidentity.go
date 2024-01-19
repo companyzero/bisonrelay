@@ -42,6 +42,7 @@ type PublicIdentity struct {
 	Identity  ShortID                   `json:"identity"`
 	Digest    FixedSizeDigest           `json:"digest"`    // digest of name, keys and identity
 	Signature FixedSizeSignature        `json:"signature"` // signature of Digest
+	Avatar    []byte                    `json:"avatar"`
 }
 
 type FullIdentity struct {
