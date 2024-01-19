@@ -245,6 +245,62 @@ func (cfg *Config) setDefaults() {
 	}
 }
 
+// localIdentity stores identity related data that is not modified throughout
+// the lifetime of the client.
+type localIdentity struct {
+	id         zkidentity.ShortID
+	nick       string
+	name       string
+	privKey    zkidentity.FixedSizeSntrupPrivateKey
+	pubKey     zkidentity.FixedSizeSntrupPublicKey
+	privSigKey zkidentity.FixedSizeEd25519PrivateKey
+	pubSigKey  zkidentity.FixedSizeEd25519PublicKey
+	digest     zkidentity.FixedSizeDigest
+	signature  zkidentity.FixedSizeSignature
+}
+
+func (li *localIdentity) zero() {
+	zeroSlice(li.privKey[:])
+	zeroSlice(li.privSigKey[:])
+	zeroSlice(li.pubKey[:])
+	zeroSlice(li.pubSigKey[:])
+}
+
+func (li *localIdentity) signMessage(message []byte) zkidentity.FixedSizeSignature {
+	return zkidentity.SignMessage(message, &li.privSigKey)
+}
+
+func (li *localIdentity) verifyMessage(msg []byte, sig *zkidentity.FixedSizeSignature) bool {
+	return zkidentity.VerifyMessage(msg, sig, &li.pubSigKey)
+}
+
+// public returns a public identity instance with the fixed data filled.
+func (li *localIdentity) public() zkidentity.PublicIdentity {
+	return zkidentity.PublicIdentity{
+		Name:      li.name,
+		Nick:      li.nick,
+		SigKey:    li.pubSigKey,
+		Key:       li.pubKey,
+		Identity:  li.id,
+		Digest:    li.digest,
+		Signature: li.signature,
+	}
+}
+
+func localIdentityFromFull(id *zkidentity.FullIdentity) localIdentity {
+	return localIdentity{
+		privKey:    id.PrivateKey,
+		privSigKey: id.PrivateSigKey,
+		pubKey:     id.Public.Key,
+		pubSigKey:  id.Public.SigKey,
+		id:         id.Public.Identity,
+		nick:       id.Public.Nick,
+		name:       id.Public.Name,
+		digest:     id.Public.Digest,
+		signature:  id.Public.Signature,
+	}
+}
+
 // Client is the main state manager for a CR client connection. It attempts to
 // maintain an active connection to a CR server and manages the internal state
 // of a client, including remote users it's connected to.
@@ -256,10 +312,12 @@ type Client struct {
 	cancel      func()
 	dbCtx       context.Context
 	dbCtxCancel func()
-	runDone     chan struct{}
+
+	// localID are the unchanging properties of the local client's ID.
+	// This is filled at the start of Run() and is not modified afterwards.
+	localID localIdentity
 
 	pc    clientintf.PaymentClient
-	id    *zkidentity.FullIdentity
 	db    *clientdb.DB
 	ck    *lowlevel.ConnKeeper
 	q     *lowlevel.RMQ
@@ -316,7 +374,6 @@ func New(cfg Config) (*Client, error) {
 	var c *Client
 
 	cfg.setDefaults()
-	id := new(zkidentity.FullIdentity)
 
 	ntfns := cfg.Notifications
 	if ntfns == nil {
@@ -371,26 +428,18 @@ func New(cfg Config) (*Client, error) {
 
 	dbCtx, dbCtxCancel := context.WithCancel(context.Background())
 
-	kxl := newKXList(q, rmgr, id, cfg.DB, ctx)
-	kxl.compressLevel = cfg.CompressLevel
-	kxl.dbCtx = dbCtx
-	kxl.log = cfg.logger("KXLS")
-
 	c = &Client{
 		cfg:         &cfg,
 		ctx:         ctx,
 		cancel:      cancel,
-		runDone:     make(chan struct{}),
 		dbCtx:       dbCtx,
 		dbCtxCancel: dbCtxCancel,
 
 		db:    cfg.DB,
 		pc:    cfg.PayClient,
-		id:    id,
 		ck:    ck,
 		q:     q,
 		rmgr:  rmgr,
-		kxl:   kxl,
 		log:   cfg.logger("CLNT"),
 		rul:   newRemoteUserList(),
 		ntfns: ntfns,
@@ -407,6 +456,12 @@ func New(cfg Config) (*Client, error) {
 		listRunningTipAttemptsChan: make(chan chan []RunningTipUserAttempt),
 		tipAttemptsRunning:         make(chan struct{}),
 	}
+
+	kxl := newKXList(q, rmgr, &c.localID, c.public, cfg.DB, ctx)
+	kxl.compressLevel = cfg.CompressLevel
+	kxl.dbCtx = dbCtx
+	kxl.log = cfg.logger("KXLS")
+	c.kxl = kxl
 
 	// Use the GC message cacher to collect gc messages for a few seconds
 	// after restarting so that messages are displayed in the order they
@@ -452,7 +507,7 @@ func (c *Client) loadLocalID(ctx context.Context) error {
 		return err
 	}
 
-	*c.id = *id
+	c.localID = localIdentityFromFull(id)
 	zeroSlice(id.PrivateSigKey[:])
 	zeroSlice(id.PrivateKey[:])
 
@@ -614,7 +669,7 @@ func (c *Client) loadAddressBook(ctx context.Context) error {
 	var ab []clientdb.AddressBookAndRatchet
 	err := c.dbView(func(tx clientdb.ReadTx) error {
 		var err error
-		ab, err = c.db.LoadAddressBook(tx, c.id)
+		ab, err = c.db.LoadAddressBook(tx, &c.localID.privKey)
 		return err
 	})
 	if err != nil {
@@ -664,14 +719,21 @@ func (c *Client) NotificationManager() *NotificationManager {
 	return c.ntfns
 }
 
-// PublicID is the public local identity of this client.
+// PublicID is the public local identity of this client. This is only available
+// after the Run() method has loaded the user ID from the DB.
 func (c *Client) PublicID() UserID {
-	return c.id.Public.Identity
+	return c.localID.id
 }
 
-// LocalNick is the nick of this client.
+// public returns the full public identity data for the client.
+func (c *Client) public() zkidentity.PublicIdentity {
+	return c.localID.public()
+}
+
+// LocalNick is the nick of this client. This is only available after the Run()
+// method has loaded the user ID from the DB.
 func (c *Client) LocalNick() string {
-	return c.id.Public.Nick
+	return c.localID.nick
 }
 
 // ServerLNNode returns the LN Node ID of the server we're connected to. This
@@ -993,13 +1055,19 @@ func (c *Client) Backup(_ context.Context, rootDir, destPath string) (string, er
 //
 // Must only be called once.
 func (c *Client) Run(ctx context.Context) error {
-	defer func() { close(c.runDone) }()
-	defer func() { c.cancel() }()
+	// The last thing done is clearing the local client's private data.
+	defer c.localID.zero()
 
 	// runctx enables canceling in case of run initialization errors.
 	runctx, cancel := context.WithCancel(ctx)
 
 	g, gctx := errgroup.WithContext(runctx)
+
+	// Cancel client context immediately after any of the goroutines fail.
+	g.Go(func() error {
+		<-gctx.Done()
+		return nil
+	})
 
 	// Wait until the errorgroup context is done + a final shutdown delay
 	// before cancelling the db ctx. This allows outstanding db ops to
@@ -1040,7 +1108,7 @@ func (c *Client) Run(ctx context.Context) error {
 		return err
 	}
 
-	c.log.Infof("Starting client %s", c.id.Public.Identity)
+	c.log.Infof("Starting client %s", c.localID.id)
 
 	// From now on, all initialization data has been loaded. Init
 	// subsystems.

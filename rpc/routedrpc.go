@@ -210,10 +210,12 @@ type RMHandshakeSYN struct{}
 type RMHandshakeSYNACK struct{}
 type RMHandshakeACK struct{}
 
+type MessageSigner func(message []byte) zkidentity.FixedSizeSignature
+
 // ComposeCompressedRM creates a blobified message that has a header and a
 // payload that can then be encrypted and transmitted to the other side. The
 // contents are zlib compressed with the specified level.
-func ComposeCompressedRM(from *zkidentity.FullIdentity, rm interface{}, zlibLevel int) ([]byte, error) {
+func ComposeCompressedRM(fromSigner MessageSigner, rm interface{}, zlibLevel int) ([]byte, error) {
 	h := RMHeader{
 		Version:   RMHeaderVersion,
 		Timestamp: time.Now().Unix(),
@@ -392,7 +394,7 @@ func ComposeCompressedRM(from *zkidentity.FullIdentity, rm interface{}, zlibLeve
 	}
 
 	// Sign payload
-	h.Signature = from.SignMessage(payload)
+	h.Signature = fromSigner(payload)
 
 	// Create payload
 	// Create header, note that the encoder appends a '\n'
@@ -428,12 +430,14 @@ func ComposeCompressedRM(from *zkidentity.FullIdentity, rm interface{}, zlibLeve
 
 // ComposeRM creates a blobified message that has a header and a
 // payload that can then be encrypted and transmitted to the other side.
-func ComposeRM(from *zkidentity.FullIdentity, rm interface{}) ([]byte, error) {
-	return ComposeCompressedRM(from, rm, RMDefaultCompressionLevel)
+func ComposeRM(fromSigner MessageSigner, rm interface{}) ([]byte, error) {
+	return ComposeCompressedRM(fromSigner, rm, RMDefaultCompressionLevel)
 }
 
+type MessageVerifier func(msg []byte, sig *zkidentity.FixedSizeSignature) bool
+
 // DecomposeRM decodes a message of up to maxDecompressSize bytes from mb.
-func DecomposeRM(id *zkidentity.PublicIdentity, mb []byte, maxDecompressSize uint) (*RMHeader, interface{}, error) {
+func DecomposeRM(msgVerifier MessageVerifier, mb []byte, maxDecompressSize uint) (*RMHeader, interface{}, error) {
 	// Decompress everything
 	cr, err := zlib.NewReader(bytes.NewReader(mb))
 	if err != nil {
@@ -746,8 +750,8 @@ func DecomposeRM(id *zkidentity.PublicIdentity, mb []byte, maxDecompressSize uin
 	}
 
 	// Verify signature if an identity was provided
-	if id != nil {
-		if !id.VerifyMessage(all[offset:], h.Signature) {
+	if msgVerifier != nil {
+		if !msgVerifier(all[offset:], &h.Signature) {
 			return nil, nil, fmt.Errorf("message authentication " +
 				"failed")
 		}

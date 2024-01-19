@@ -21,7 +21,8 @@ func newTestKXList(t testing.TB, svr *mockRMServer, rnd io.Reader, name string) 
 	q, r := svr.endpoints(id)
 	db := testDB(t, id, nil)
 	runTestDB(t, db)
-	kxl := newKXList(q, r, id, db, context.Background())
+	localID := localIdentityFromFull(id)
+	kxl := newKXList(q, r, &localID, localID.public, db, context.Background())
 	kxl.randReader = rnd
 	//kxl.log = testutils.TestLoggerSys(t, name)
 	return kxl
@@ -107,20 +108,22 @@ func TestRepeatedResetActivation(t *testing.T) {
 		t.Fatal(err)
 	}
 	invite.InitialRendezvous[0] ^= 0xa5 // Prevent KX by changing the initial RV.
-	packed, err := rpc.EncryptRMO(invite, alice.id.Public, 0)
+	packed, err := rpc.EncryptRMO(invite, alice.public(), 0)
 	if err != nil {
 		t.Fatal(err)
 	}
 	blob := lowlevel.RVBlob{Decoded: packed}
 
+	bobPublic := bob.public()
+
 	// Accepting the first reset should work.
-	if err := alice.handleReset(&bob.id.Public, blob); err != nil {
+	if err := alice.handleReset(&bobPublic, blob); err != nil {
 		t.Fatalf("unexpected error on first handleReset: %v", err)
 	}
 
 	// The second call should error due to duplicated reset attempt.
 	wantErr := clientdb.ErrAlreadyExists
-	if err := alice.handleReset(&bob.id.Public, blob); !errors.Is(err, wantErr) {
+	if err := alice.handleReset(&bobPublic, blob); !errors.Is(err, wantErr) {
 		t.Fatalf("unexpected error on second handleReset: got %v, want %v",
 			err, wantErr)
 	}

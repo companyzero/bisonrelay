@@ -66,7 +66,7 @@ type RemoteUser struct {
 	log             slog.Logger
 	logPayloads     slog.Logger
 	id              *zkidentity.PublicIdentity
-	localID         *zkidentity.FullIdentity
+	localIDSigner   rpc.MessageSigner
 	runDone         chan struct{}
 	stopChan        chan struct{}
 	nextRMChan      chan *remoteUserRM
@@ -100,7 +100,10 @@ type RemoteUser struct {
 	rError error
 }
 
-func newRemoteUser(q rmqIntf, rmgr rdzvManagerIntf, db *clientdb.DB, remoteID *zkidentity.PublicIdentity, localID *zkidentity.FullIdentity, r *ratchet.Ratchet) *RemoteUser {
+func newRemoteUser(q rmqIntf, rmgr rdzvManagerIntf, db *clientdb.DB,
+	remoteID *zkidentity.PublicIdentity, localIDSigner rpc.MessageSigner,
+	r *ratchet.Ratchet) *RemoteUser {
+
 	ru := &RemoteUser{
 		q:               q,
 		rmgr:            rmgr,
@@ -109,7 +112,7 @@ func newRemoteUser(q rmqIntf, rmgr rdzvManagerIntf, db *clientdb.DB, remoteID *z
 		log:             slog.Disabled,
 		logPayloads:     slog.Disabled,
 		id:              remoteID,
-		localID:         localID,
+		localIDSigner:   localIDSigner,
 		runDone:         make(chan struct{}),
 		stopChan:        make(chan struct{}),
 		nextRMChan:      make(chan *remoteUserRM),
@@ -254,7 +257,7 @@ func (ru *RemoteUser) queueRMPriority(payload interface{}, priority uint,
 		return fmt.Errorf("priority must be max 4")
 	}
 
-	me, err := rpc.ComposeCompressedRM(ru.localID, payload, ru.compressLevel)
+	me, err := rpc.ComposeCompressedRM(ru.localIDSigner, payload, ru.compressLevel)
 	if err != nil {
 		return err
 	}
@@ -342,7 +345,7 @@ func (ru *RemoteUser) sendTransitive(payload interface{}, payType string,
 	to zkidentity.PublicIdentity, priority uint) error {
 
 	// Create message blob
-	composed, err := rpc.ComposeCompressedRM(ru.localID, payload, ru.compressLevel)
+	composed, err := rpc.ComposeCompressedRM(ru.localIDSigner, payload, ru.compressLevel)
 	if err != nil {
 		return fmt.Errorf("compose encapsulated msg: %v", err)
 	}
@@ -549,7 +552,7 @@ func (ru *RemoteUser) handleReceivedEncrypted(recvBlob lowlevel.RVBlob) error {
 		return errRemoteUserExiting
 	}
 
-	h, c, err := rpc.DecomposeRM(ru.id, cleartext, uint(ru.q.MaxMsgSize()))
+	h, c, err := rpc.DecomposeRM(ru.id.VerifyMessage, cleartext, uint(ru.q.MaxMsgSize()))
 	if err != nil {
 		// Encryption is authenticated, so an error here means the
 		// client encoded an unknown or otherwise invalid RM.

@@ -126,7 +126,7 @@ func (c *Client) initRemoteUser(id *zkidentity.PublicIdentity, r *ratchet.Ratche
 	var postKXActions []clientdb.PostKXAction
 
 	// Track the new user.
-	ru := newRemoteUser(c.q, c.rmgr, c.db, id, c.id, r)
+	ru := newRemoteUser(c.q, c.rmgr, c.db, id, c.localID.signMessage, r)
 	ru.ignored = ignored
 	ru.compressLevel = c.cfg.CompressLevel
 	ru.log = c.cfg.logger(fmt.Sprintf("RUSR %x", id.Identity[:8]))
@@ -265,8 +265,6 @@ func (c *Client) initRemoteUser(id *zkidentity.PublicIdentity, r *ratchet.Ratche
 		select {
 		case c.newUsersChan <- ru:
 		case <-c.ctx.Done():
-			return nil, false, errClientExiting
-		case <-c.runDone:
 			return nil, false, errClientExiting
 		}
 	}

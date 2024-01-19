@@ -83,8 +83,10 @@ func FileChunkMAtoms(chunkIdx int, fm *rpc.FileMetadata) uint64 {
 	return matoms
 }
 
-// dummyIDEstimates is a dummy ID used in the estimation functions.
-var dummyIDEstimates = zkidentity.MustNew("", "")
+// dummySigner dummy signer used for estimation.
+func dummySigner(message []byte) zkidentity.FixedSizeSignature {
+	return zkidentity.FixedSizeSignature{}
+}
 
 // Returns the estimate cost (in milliatoms) to upload a file of the given size
 // to a remote user. The feeRate must be specified in milliatoms/byte.
@@ -149,7 +151,7 @@ func EstimateUploadCost(size int64, feeRate uint64) (uint64, error) {
 			Hash:  randBts(32),
 		}
 	}
-	rm, err := rpc.ComposeCompressedRM(dummyIDEstimates, ftGetReply, compressLevel)
+	rm, err := rpc.ComposeCompressedRM(dummySigner, ftGetReply, compressLevel)
 	if err != nil {
 		return 0, err
 	}
@@ -164,7 +166,7 @@ func EstimateUploadCost(size int64, feeRate uint64) (uint64, error) {
 		Index:   nbChunks,
 		Hash:    randBts(32),
 	}
-	rm, err = rpc.ComposeCompressedRM(dummyIDEstimates, ftPayForChunk, compressLevel)
+	rm, err = rpc.ComposeCompressedRM(dummySigner, ftPayForChunk, compressLevel)
 	if err != nil {
 		return 0, err
 	}
@@ -188,7 +190,7 @@ func EstimateUploadCost(size int64, feeRate uint64) (uint64, error) {
 	if !lastChunkUneven {
 		ftGetChunkReply.Chunk = chunk
 	}
-	rm, err = rpc.ComposeCompressedRM(dummyIDEstimates, ftGetChunkReply, compressLevel)
+	rm, err = rpc.ComposeCompressedRM(dummySigner, ftGetChunkReply, compressLevel)
 	if err != nil {
 		return 0, err
 	}
@@ -198,7 +200,7 @@ func EstimateUploadCost(size int64, feeRate uint64) (uint64, error) {
 	// Finally, if there were more chunks before the last one, add them up.
 	if nbChunks > 0 {
 		ftGetChunkReply.Chunk = chunk
-		rm, err = rpc.ComposeCompressedRM(dummyIDEstimates, ftGetChunkReply, compressLevel)
+		rm, err = rpc.ComposeCompressedRM(dummySigner, ftGetChunkReply, compressLevel)
 		if err != nil {
 			return 0, err
 		}
@@ -243,7 +245,7 @@ func EstimatePostSize(content, descr string) (uint64, error) {
 	}
 
 	// Encode it and return the size of an encrypted version of it.
-	rm, err := rpc.ComposeCompressedRM(dummyIDEstimates, rmps, compressLevel)
+	rm, err := rpc.ComposeCompressedRM(dummySigner, rmps, compressLevel)
 	if err != nil {
 		return 0, err
 	}

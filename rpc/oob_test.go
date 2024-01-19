@@ -24,14 +24,14 @@ func TestEncryptDecryptHalfRatchet(t *testing.T) {
 	}
 
 	// Alice creates new half ratchet and kx
-	r, hkx, err := NewHalfRatchetKX(alice, bob.Public)
+	r, hkx, err := NewHalfRatchetKX(&alice.PrivateKey, bob.Public)
 	if err != nil {
 		t.Fatal(err)
 	}
 	_ = r
 
 	// Alice creates half KX RPC
-	halfKX, err := NewHalfKX(alice, hkx)
+	halfKX, err := NewHalfKX(alice.Public, hkx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -65,13 +65,13 @@ func TestEncryptDecryptFullRatchet(t *testing.T) {
 	}
 
 	// Alice creates new half ratchet and kx
-	_, hkx, err := NewHalfRatchetKX(alice, bob.Public)
+	_, hkx, err := NewHalfRatchetKX(&alice.PrivateKey, bob.Public)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Bob creates new full ratchet and kx
-	_, fkx, err := NewFullRatchetKX(bob, alice.Public, hkx)
+	_, fkx, err := NewFullRatchetKX(&bob.PrivateKey, alice.Public, hkx)
 	if err != nil {
 		t.Fatal(err)
 	}

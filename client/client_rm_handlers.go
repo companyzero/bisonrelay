@@ -9,7 +9,6 @@ import (
 	"github.com/companyzero/bisonrelay/client/clientintf"
 	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/companyzero/bisonrelay/sw"
-	"github.com/companyzero/bisonrelay/zkidentity"
 	"github.com/companyzero/sntrup4591761"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/decred/slog"
@@ -67,7 +66,7 @@ func (c *Client) handleTransitiveMsg(ru *RemoteUser, tm rpc.RMTransitiveMessage)
 
 func (c *Client) handleTransitiveMsgFwd(ru *RemoteUser, fwd rpc.RMTransitiveMessageForward) error {
 	ct := (*sntrup4591761.Ciphertext)(&fwd.CipherText)
-	pk := (*sntrup4591761.PrivateKey)(&c.id.PrivateKey)
+	pk := (*sntrup4591761.PrivateKey)(&c.localID.privKey)
 	sk, n := sntrup4591761.Decapsulate(ct, pk)
 	if n != 1 {
 		return fmt.Errorf("could not decapsulate shared key from transitive msg fwd")
@@ -81,19 +80,19 @@ func (c *Client) handleTransitiveMsgFwd(ru *RemoteUser, fwd rpc.RMTransitiveMess
 
 	// Get header and command
 	from, err := c.rul.byID(fwd.From)
-	var fromID *zkidentity.PublicIdentity
+	var msgVerifier rpc.MessageVerifier
 	if err != nil {
 		if !errors.Is(err, userNotFoundError{}) {
 			return fmt.Errorf("error finding target user %s of transitive "+
 				"forward: %v", fwd.From, err)
 		}
 
-		// this should only happen during KX
+		// This should only happen during KX.
 	} else {
-		id := from.PublicIdentity()
-		fromID = &id
+		fromPub := from.PublicIdentity()
+		msgVerifier = fromPub.VerifyMessage
 	}
-	h, cmd, err := rpc.DecomposeRM(fromID, cleartext, uint(c.q.MaxMsgSize()))
+	h, cmd, err := rpc.DecomposeRM(msgVerifier, cleartext, uint(c.q.MaxMsgSize()))
 	if err != nil {
 		return fmt.Errorf("handleRMTransitiveMessageForward: "+
 			"decompose %v", err)
