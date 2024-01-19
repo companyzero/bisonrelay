@@ -1,3 +1,8 @@
+import 'dart:io';
+
+import 'package:bruig/components/empty_widget.dart';
+import 'package:bruig/util.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:bruig/theme_manager.dart';
@@ -75,6 +80,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  void pickAvatarFile() async {
+    var filePickRes = await FilePicker.platform.pickFiles(
+      allowMultiple: false,
+      dialogTitle: "Pick avatar image file",
+      type: FileType.image,
+    );
+    if (filePickRes == null) return;
+    var fPath = filePickRes.files.first.path;
+    if (fPath == null) return;
+    var filePath = fPath.trim();
+    var fileData = await File(filePath).readAsBytes();
+    try {
+      await Golib.setMyAvatar(fileData);
+      client.myAvatar = MemoryImage(fileData);
+    } catch (exception) {
+      showErrorSnackbar(context, "Unable to set avatar: $exception");
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -109,6 +133,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
     var backgroundColor = theme.backgroundColor;
     var textColor = theme.focusColor;
 
+    var avatarColor = colorFromNick(client.nick);
+    var darkTextColor = theme.indicatorColor;
+    var hightLightTextColor = theme.dividerColor; // NAME TEXT COLOR
+    var avatarTextColor =
+        ThemeData.estimateBrightnessForColor(avatarColor) == Brightness.dark
+            ? hightLightTextColor
+            : darkTextColor;
+
     return Consumer<ThemeNotifier>(
       builder: (context, theme, _) => Container(
         margin: const EdgeInsets.all(1),
@@ -129,6 +161,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 : Text('Set Dark Theme'),
           ),
           */
+          Tooltip(
+              message: "User avatar. Click to select a new image.",
+              child: InkWell(
+                  onTap: pickAvatarFile,
+                  child: CircleAvatar(
+                    radius: 50,
+                    backgroundColor: colorFromNick(client.nick),
+                    backgroundImage: client.myAvatar,
+                    child: client.myAvatar != null
+                        ? const Empty()
+                        : Text(client.nick[0].toUpperCase(),
+                            style: TextStyle(
+                                color: avatarTextColor,
+                                fontSize: theme.getLargeFont(context))),
+                  ))),
           Row(mainAxisAlignment: MainAxisAlignment.end, children: [
             Text("Notifications",
                 style: TextStyle(

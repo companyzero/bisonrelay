@@ -85,6 +85,19 @@ type addressBookEntry struct {
 	Ignored              bool              `json:"ignored"`
 	FirstCreated         time.Time         `json:"first_created"`
 	LastHandshakeAttempt time.Time         `json:"last_handshake_attempt"`
+	Avatar               []byte            `json:"avatar"`
+}
+
+func abEntryFromDB(entry *clientdb.AddressBookEntry) addressBookEntry {
+	return addressBookEntry{
+		ID:                   entry.ID.Identity,
+		Nick:                 entry.Nick(),
+		Name:                 entry.ID.Name,
+		Ignored:              entry.Ignored,
+		FirstCreated:         entry.FirstCreated,
+		LastHandshakeAttempt: entry.LastHandshakeAttempt,
+		Avatar:               entry.ID.Avatar,
+	}
 }
 
 type remoteUser struct {
@@ -443,4 +456,10 @@ type transaction struct {
 type postAndCommentID struct {
 	PostID    clientintf.PostID `json:"post_id"`
 	CommentID clientintf.ID     `json:"comment_id"`
+}
+
+type profileUpdated struct {
+	UID           clientintf.UserID           `json:"sid"`
+	AbEntry       addressBookEntry            `json:"addressbook_entry"`
+	UpdatedFields []client.ProfileUpdateField `json:"updated_fields"`
 }

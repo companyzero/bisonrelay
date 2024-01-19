@@ -63,9 +63,10 @@ class ReceivedSentPM extends StatefulWidget {
   final String userNick;
   final bool isGC;
   final OpenReplyDMCB openReplyDM;
+  final ClientModel client;
 
   const ReceivedSentPM(this.evnt, this.nick, this.timestamp, this.showSubMenu,
-      this.id, this.userNick, this.isGC, this.openReplyDM,
+      this.id, this.userNick, this.isGC, this.openReplyDM, this.client,
       {Key? key})
       : super(key: key);
 
@@ -192,29 +193,23 @@ class _ReceivedSentPMState extends State<ReceivedSentPM> {
                               width: 28,
                               margin: const EdgeInsets.only(
                                   top: 0, bottom: 0, left: 10, right: 0),
-                              child: widget.isGC
-                                  ? UserContextMenu(
-                                      targetUserChat: widget.evnt.source,
-                                      child: InteractiveAvatar(
-                                        bgColor: selectedBackgroundColor,
-                                        chatNick: widget.nick,
-                                        avatarColor: avatarColor,
-                                        avatarTextColor: avatarTextColor,
-                                      ),
-                                    )
-                                  : UserContextMenu(
-                                      targetUserChat: widget.evnt.source,
-                                      child: InteractiveAvatar(
-                                        bgColor: selectedBackgroundColor,
-                                        chatNick: widget.nick,
-                                        onTap: () {
-                                          widget.showSubMenu(
-                                              widget.isGC, widget.id);
-                                        },
-                                        avatarColor: avatarColor,
-                                        avatarTextColor: avatarTextColor,
-                                      ),
-                                    ),
+                              child: UserContextMenu(
+                                targetUserChat: widget.evnt.source,
+                                child: InteractiveAvatar(
+                                    bgColor: selectedBackgroundColor,
+                                    chatNick: widget.nick,
+                                    avatarColor: avatarColor,
+                                    avatarTextColor: avatarTextColor,
+                                    avatar: widget.evnt.source != null
+                                        ? widget.evnt.source?.avatar
+                                        : widget.client.myAvatar,
+                                    onTap: widget.isGC
+                                        ? null
+                                        : () {
+                                            widget.showSubMenu(
+                                                widget.isGC, widget.id);
+                                          }),
+                              ),
                             ),
                           ),
                     // Now put reply/dm button here if GC
@@ -290,9 +285,10 @@ class ReceivedSentMobilePM extends StatefulWidget {
   final String id;
   final String userNick;
   final bool isGC;
+  final ClientModel client;
 
   const ReceivedSentMobilePM(this.evnt, this.nick, this.timestamp,
-      this.showSubMenu, this.id, this.userNick, this.isGC,
+      this.showSubMenu, this.id, this.userNick, this.isGC, this.client,
       {Key? key})
       : super(key: key);
 
@@ -480,7 +476,8 @@ class PMW extends StatelessWidget {
   final ChatEventModel evnt;
   final String nick;
   final ShowSubMenuCB showSubMenu;
-  const PMW(this.evnt, this.nick, this.showSubMenu, {Key? key})
+  final ClientModel client;
+  const PMW(this.evnt, this.nick, this.showSubMenu, this.client, {Key? key})
       : super(key: key);
 
   @override
@@ -497,10 +494,10 @@ class PMW extends StatelessWidget {
 
     if (isScreenSmall) {
       return ReceivedSentMobilePM(evnt, evnt.source?.nick ?? nick, timestamp,
-          showSubMenu, evnt.source?.id ?? "", nick, false);
+          showSubMenu, evnt.source?.id ?? "", nick, false, client);
     }
     return ReceivedSentPM(evnt, evnt.source?.nick ?? nick, timestamp,
-        showSubMenu, evnt.source?.id ?? "", nick, false, openReplyDM);
+        showSubMenu, evnt.source?.id ?? "", nick, false, openReplyDM, client);
   }
 }
 
@@ -509,7 +506,9 @@ class GCMW extends StatelessWidget {
   final String nick;
   final ShowSubMenuCB showSubMenu;
   final OpenReplyDMCB openReplyDM;
-  const GCMW(this.evnt, this.nick, this.showSubMenu, this.openReplyDM,
+  final ClientModel client;
+  const GCMW(
+      this.evnt, this.nick, this.showSubMenu, this.openReplyDM, this.client,
       {Key? key})
       : super(key: key);
 
@@ -523,7 +522,7 @@ class GCMW extends StatelessWidget {
     }
 
     return ReceivedSentPM(evnt, evnt.source?.nick ?? nick, timestamp,
-        showSubMenu, evnt.source?.id ?? "", nick, true, openReplyDM);
+        showSubMenu, evnt.source?.id ?? "", nick, true, openReplyDM, client);
   }
 }
 
@@ -1300,6 +1299,33 @@ class HandshakeStageW extends StatelessWidget {
   }
 }
 
+class ProfileUpdatedW extends StatelessWidget {
+  final ProfileUpdated event;
+  const ProfileUpdatedW(this.event, {super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    var theme = Theme.of(context);
+    var textColor = theme.dividerColor;
+    var backgroundColor = theme.highlightColor;
+
+    var fields = event.updatedFields.join(", ");
+
+    return Consumer<ThemeNotifier>(
+        builder: (context, theme, _) => ServerEvent(
+              child: Container(
+                decoration: BoxDecoration(
+                    color: backgroundColor,
+                    borderRadius: const BorderRadius.all(Radius.circular(5))),
+                child: Text("Profile updated ($fields)",
+                    style: TextStyle(
+                        color: textColor,
+                        fontSize: theme.getSmallFont(context))),
+              ),
+            ));
+  }
+}
+
 class Event extends StatelessWidget {
   final ChatEventModel event;
   final ChatModel chat;
@@ -1332,7 +1358,7 @@ class Event extends StatelessWidget {
     }
 
     if (event.event is PM) {
-      return PMW(event, nick, showSubMenu);
+      return PMW(event, nick, showSubMenu, client);
     }
 
     if (event.event is InflightTip) {
@@ -1340,7 +1366,7 @@ class Event extends StatelessWidget {
     }
 
     if (event.event is GCMsg) {
-      return GCMW(event, nick, showSubMenu, openReplyDM);
+      return GCMW(event, nick, showSubMenu, openReplyDM, client);
     }
 
     if (event.event is GCUserEvent) {
@@ -1410,6 +1436,10 @@ class Event extends StatelessWidget {
 
     if (event.event is HandshakeStage) {
       return HandshakeStageW(event.event as HandshakeStage);
+    }
+
+    if (event.event is ProfileUpdated) {
+      return ProfileUpdatedW(event.event as ProfileUpdated);
     }
 
     var theme = Theme.of(context);

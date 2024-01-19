@@ -390,6 +390,16 @@ func handleInitClient(handle uint32, args initClient) error {
 		notify(NTServerUnwelcomeError, err.Error(), nil)
 	}))
 
+	ntfns.Register(client.OnProfileUpdated(func(ru *client.RemoteUser,
+		ab *clientdb.AddressBookEntry, fields []client.ProfileUpdateField) {
+		event := profileUpdated{
+			UID:           ru.ID(),
+			AbEntry:       abEntryFromDB(ab),
+			UpdatedFields: fields,
+		}
+		notify(NTProfileUpdated, event, nil)
+	}))
+
 	// Initialize resources router.
 	var sstore *simplestore.Store
 	resRouter := resources.NewRouter()
@@ -677,6 +687,14 @@ func handleInitClient(handle uint32, args initClient) error {
 		notify(NTClientStopped, nil, err)
 	}()
 
+	go func() {
+		select {
+		case <-ctx.Done():
+		case <-c.AddressBookLoaded():
+			notify(NTAddressBookLoaded, nil, nil)
+		}
+	}()
+
 	return nil
 }
 
@@ -777,14 +795,9 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 
 	case CTAddressBook:
 		ab := c.AddressBook()
-		res := make([]addressBookEntry, 0, len(ab))
-		for _, entry := range ab {
-			res = append(res, addressBookEntry{
-				ID:      entry.ID.Identity,
-				Nick:    entry.Nick(),
-				Name:    entry.ID.Name,
-				Ignored: entry.Ignored,
-			})
+		res := make([]addressBookEntry, len(ab))
+		for i, entry := range ab {
+			res[i] = abEntryFromDB(entry)
 		}
 		return res, nil
 
@@ -1781,13 +1794,7 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 			return nil, err
 		}
 
-		res := addressBookEntry{
-			Nick:                 entry.Nick(),
-			Name:                 entry.ID.Name,
-			Ignored:              entry.Ignored,
-			FirstCreated:         entry.FirstCreated,
-			LastHandshakeAttempt: entry.LastHandshakeAttempt,
-		}
+		res := abEntryFromDB(entry)
 		return res, err
 
 	case CTResetAllOldKX:
@@ -1886,6 +1893,17 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 			return nil, err
 		}
 		return c.ListPostCommentReceiveReceipts(args.PostID, args.CommentID)
+
+	case CTMyAvatarSet:
+		var args []byte
+		if err := cmd.decode(&args); err != nil {
+			return nil, err
+		}
+		return nil, c.UpdateLocalAvatar(args)
+
+	case CTMyAvatarGet:
+		pub := c.Public()
+		return pub.Avatar, nil
 
 	}
 	return nil, nil

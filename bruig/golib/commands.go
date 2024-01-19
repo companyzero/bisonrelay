@@ -129,6 +129,8 @@ const (
 	CTListTransactions                    = 0x7e
 	CTListPostRecvReceipts                = 0x7f
 	CTListPostCommentRecvReceipts         = 0x80
+	CTMyAvatarSet                         = 0x81
+	CTMyAvatarGet                         = 0x82
 
 	NTInviteReceived         = 0x1001
 	NTInviteAccepted         = 0x1002
@@ -172,6 +174,8 @@ const (
 	NTHandshakeStage         = 0x1028
 	NTRescanWalletProgress   = 0x1029
 	NTServerUnwelcomeError   = 0x102a
+	NTProfileUpdated         = 0x102b
+	NTAddressBookLoaded      = 0x102c
 )
 
 type cmd struct {

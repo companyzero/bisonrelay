@@ -671,6 +671,12 @@ func (c *Client) loadInitialDBData(ctx context.Context) error {
 	return nil
 }
 
+// AddressBookLoaded returns a channel that is closed when the addressbook has
+// been loaded for the first time, after Run() is started.
+func (c *Client) AddressBookLoaded() <-chan struct{} {
+	return c.abLoaded
+}
+
 func (c *Client) loadAddressBook(ctx context.Context) error {
 	defer func() { close(c.abLoaded) }()
 

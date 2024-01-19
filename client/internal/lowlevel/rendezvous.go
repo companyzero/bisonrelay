@@ -213,6 +213,8 @@ func (rmgr *RVManager) FetchPrepaidRV(ctx context.Context, rdzv RVID) (RVBlob, e
 		prepaid:     true,
 	}
 
+	rmgr.log.Debugf("Attempting to sub to RV %s to fetch prepaid RV", rdzv)
+
 	// Ask Run() to make the sub.
 	select {
 	case rmgr.subChan <- sub:
@@ -244,9 +246,13 @@ func (rmgr *RVManager) FetchPrepaidRV(ctx context.Context, rdzv RVID) (RVBlob, e
 		return RVBlob{}, ctx.Err()
 	}
 
+	rmgr.log.Debugf("Subscribed to RV %s to fetch prepaid blob", rdzv)
+
 	// By this point, sub was done in server. Wait for the data.
 	select {
 	case blob := <-c:
+		rmgr.log.Debugf("Fetched blob (%d bytes) from prepaid RV %s",
+			len(blob.Decoded), rdzv)
 		go rmgr.Unsub(rdzv)
 		return blob, nil
 	case <-rmgr.runDone:
