@@ -13,7 +13,6 @@ import (
 	"github.com/companyzero/bisonrelay/client/internal/multipriq"
 	"github.com/companyzero/bisonrelay/client/timestats"
 	"github.com/companyzero/bisonrelay/rpc"
-	"github.com/companyzero/bisonrelay/zkidentity"
 	"github.com/decred/slog"
 	"golang.org/x/sync/errgroup"
 )
@@ -72,7 +71,6 @@ type RMQ struct {
 	// are not safe for concurrent modification.
 
 	sessionChan    chan clientintf.ServerSessionIntf
-	localID        *zkidentity.FullIdentity
 	log            slog.Logger
 	rmChan         chan *rmmsg
 	enqueueDone    chan struct{}
@@ -85,13 +83,12 @@ type RMQ struct {
 	sendDoneChan chan struct{}
 }
 
-func NewRMQ(log slog.Logger, localID *zkidentity.FullIdentity, db RMQDB) *RMQ {
+func NewRMQ(log slog.Logger, db RMQDB) *RMQ {
 	if log == nil {
 		log = slog.Disabled
 	}
 	q := &RMQ{
 		sessionChan:    make(chan clientintf.ServerSessionIntf),
-		localID:        localID,
 		log:            log,
 		db:             db,
 		rmChan:         make(chan *rmmsg),
