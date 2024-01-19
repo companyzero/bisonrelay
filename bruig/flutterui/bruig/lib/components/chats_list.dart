@@ -99,7 +99,8 @@ class _ChatHeadingWState extends State<_ChatHeadingW> {
           widget.showSubMenu(chat.isGC, chat.id);
         },
         avatarColor: avatarColor,
-        avatarTextColor: avatarTextColor);
+        avatarTextColor: avatarTextColor,
+        avatar: chat.avatar);
 
     bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
     return Consumer<ThemeNotifier>(

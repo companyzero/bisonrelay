@@ -93,7 +93,7 @@ void main(List<String> args) async {
 Future<void> runMainApp(Config cfg) async {
   runApp(MultiProvider(
     providers: [
-      ChangeNotifierProvider(create: (c) => ClientModel()),
+      ChangeNotifierProvider(create: (c) => ClientModel(), lazy: false),
       ChangeNotifierProvider(create: (c) => FeedModel()),
       ChangeNotifierProvider.value(value: globalLogModel),
       ChangeNotifierProvider(create: (c) => DownloadsModel()),
@@ -179,17 +179,13 @@ class _AppState extends State<App> with WindowListener {
         cfg.sendRecvReceipts,
       );
       await Golib.initClient(initArgs);
-
-      navkey.currentState!.pushReplacementNamed(OverviewScreen.routeName);
-
-      doWalletChecks();
     } catch (exception) {
       print("XXXXXX $exception");
       navkey.currentState!.pushNamed('/fatalError', arguments: exception);
     }
   }
 
-  void doWalletChecks() async {
+  Future<void> doWalletChecks() async {
     var ntfns = Provider.of<AppNotifications>(context, listen: false);
     try {
       var balances = await Golib.lnGetBalances();
@@ -294,6 +290,14 @@ class _AppState extends State<App> with WindowListener {
           ntfns.addNtfn(AppNtfn(AppNtfnType.serverUnwelcomeError, msg: msg));
           break;
 
+        case NTAddressBookLoaded:
+          navkey.currentState!.pushReplacementNamed(OverviewScreen.routeName);
+          await doWalletChecks();
+          var client = Provider.of<ClientModel>(context, listen: false);
+          await client.fetchNetworkInfo();
+          await client.readAddressBook();
+          await client.fetchMyAvatar();
+          break;
         default:
           developer.log("Unknown conf ntf received ${ntf.type}");
       }

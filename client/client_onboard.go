@@ -521,6 +521,8 @@ func (c *Client) runOnboarding(ctx context.Context, ostate clientintf.OnboardSta
 			runErr = fmt.Errorf("empty paid invite key")
 
 		case ostate.Stage == clientintf.StageFetchingInvite:
+			c.log.Infof("Fetching paid invite from server at RV point %s",
+				ostate.Key.RVPoint())
 			var invite rpc.OOBPublicIdentityInvite
 			invite, runErr = c.FetchPrepaidInvite(ctx, *ostate.Key, io.Discard)
 			if runErr == nil {
@@ -547,6 +549,8 @@ func (c *Client) runOnboarding(ctx context.Context, ostate clientintf.OnboardSta
 
 		case ostate.Stage == clientintf.StageWaitingFundsConfirm:
 			// Verify that the invite funds were confirmed onchain.
+			c.log.Infof("Waiting for tx %s to confirm to proceed with onboarding",
+				ostate.RedeemTx)
 			pc, ok := c.pc.(*DcrlnPaymentClient)
 			if !ok {
 				runErr = fmt.Errorf("payment client is not a dcrlnd payment client")
@@ -559,6 +563,8 @@ func (c *Client) runOnboarding(ctx context.Context, ostate clientintf.OnboardSta
 
 		case ostate.Stage == clientintf.StageOpeningOutbound:
 			// Open channel to one of predefined hubs.
+			c.log.Infof("Attempting to open outbound channel from "+
+				"%s of on-chain funds", ostate.RedeemAmount)
 			var opened bool
 			ostate.OutChannelID, opened, runErr = c.onboardOpenOutboundChan(ctx, ostate.RedeemAmount)
 			if opened {
@@ -568,18 +574,23 @@ func (c *Client) runOnboarding(ctx context.Context, ostate clientintf.OnboardSta
 			}
 
 		case ostate.Stage == clientintf.StageWaitingOutConfirm:
+			c.log.Infof("Onboarding waiting until channel %s is confirmed open",
+				ostate.OutChannelID)
 			runErr = c.onboardWaitChannelOpened(ctx, ostate.OutChannelID)
 			if runErr == nil {
 				ostate.Stage = clientintf.StageOpeningInbound
 			}
 
 		case ostate.Stage == clientintf.StageOpeningInbound:
+			c.log.Infof("Onboarding attepmting to open inbound channel")
 			ostate.InChannelID, runErr = c.onboardOpenInboundChan(ctx)
 			if runErr == nil {
 				ostate.Stage = clientintf.StageInitialKX
 			}
 
 		case ostate.Stage == clientintf.StageInitialKX:
+			c.log.Infof("Onboarding attempting initial KX with %s (%q)",
+				ostate.Invite.Public.Identity, ostate.Invite.Public.Nick)
 			runErr = c.onboardInitialKX(ctx, ostate)
 			if runErr == nil {
 				ostate.Stage = clientintf.StageOnboardDone

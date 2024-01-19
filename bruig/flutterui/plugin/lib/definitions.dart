@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
-import 'dart:developer' as developer;
 
 import 'package:convert/convert.dart';
 import 'package:flutter/cupertino.dart';
@@ -369,9 +368,11 @@ class AddressBookEntry {
   final DateTime firstCreated;
   @JsonKey(name: "last_handshake_attempt")
   final DateTime lastHandshakeAttempt;
+  @JsonKey(fromJson: base64ToUint8list)
+  final Uint8List? avatar;
 
   AddressBookEntry(this.id, this.nick, this.name, this.ignored,
-      this.firstCreated, this.lastHandshakeAttempt);
+      this.firstCreated, this.lastHandshakeAttempt, this.avatar);
 
   factory AddressBookEntry.empty() => AddressBookEntry(
       "",
@@ -379,7 +380,8 @@ class AddressBookEntry {
       "",
       false,
       DateTime.fromMicrosecondsSinceEpoch(0),
-      DateTime.fromMicrosecondsSinceEpoch(0));
+      DateTime.fromMicrosecondsSinceEpoch(0),
+      null);
 
   factory AddressBookEntry.fromJson(Map<String, dynamic> json) =>
       _$AddressBookEntryFromJson(json);
@@ -1999,6 +2001,20 @@ class ReceiveReceipt {
       _$ReceiveReceiptFromJson(json);
 }
 
+@JsonSerializable()
+class ProfileUpdated extends ChatEvent {
+  @JsonKey(name: "sid")
+  final String uid;
+  @JsonKey(name: "addressbook_entry")
+  final AddressBookEntry abEntry;
+  @JsonKey(name: "updated_fields")
+  final List<String> updatedFields;
+
+  ProfileUpdated(this.uid, this.abEntry, this.updatedFields) : super(uid, "");
+  factory ProfileUpdated.fromJson(Map<String, dynamic> json) =>
+      _$ProfileUpdatedFromJson(json);
+}
+
 mixin NtfStreams {
   StreamController<RemoteUser> ntfAcceptedInvites =
       StreamController<RemoteUser>();
@@ -2264,6 +2280,16 @@ mixin NtfStreams {
 
       case NTServerUnwelcomeError:
         var event = ConfNotification(cmd, payload as String);
+        ntfConfs.add(event);
+        break;
+
+      case NTProfileUpdated:
+        var event = ProfileUpdated.fromJson(payload);
+        ntfChatEvents.add(event);
+        break;
+
+      case NTAddressBookLoaded:
+        var event = ConfNotification(cmd, null);
         ntfConfs.add(event);
         break;
 
@@ -2904,6 +2930,12 @@ abstract class PluginPlatform {
         .map<ReceiveReceipt>((v) => ReceiveReceipt.fromJson(v))
         .toList();
   }
+
+  Future<void> setMyAvatar(Uint8List? avatar) =>
+      asyncCall(CTMyAvatarSet, avatar);
+
+  Future<Uint8List?> getMyAvatar() async =>
+      base64ToUint8list(await asyncCall(CTMyAvatarGet, null));
 }
 
 const int CTUnknown = 0x00;
@@ -3023,6 +3055,8 @@ const int CTRescanWallet = 0x7d;
 const int CTListTransactions = 0x7e;
 const int CTListPostRecvReceipts = 0x7f;
 const int CTListPostCommentRecvReceipts = 0x80;
+const int CTMyAvatarSet = 0x81;
+const int CTMyAvatarGet = 0x82;
 
 const int notificationsStartID = 0x1000;
 
@@ -3068,3 +3102,5 @@ const int NTSimpleStoreOrderPlaced = 0x1027;
 const int NTHandshakeStage = 0x1028;
 const int NTRescanWalletProgress = 0x1029;
 const int NTServerUnwelcomeError = 0x102a;
+const int NTProfileUpdated = 0x102b;
+const int NTAddressBookLoaded = 0x102c;

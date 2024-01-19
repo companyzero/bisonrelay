@@ -450,6 +450,8 @@ func (ck *ConnKeeper) attemptConn(ctx context.Context) (*serverSession, error) {
 
 	needsConfirm := !bytes.Equal(newCert, oldCert) || !reflect.DeepEqual(oldSpid, newSpid)
 	if needsConfirm {
+		ck.log.Debugf("Requiring certificate confirmation for server connection")
+
 		// Certs need confirmation. Ask it from user.
 		if err := ck.cfg.CertConf(ctx, tlsState, &newSpid); err != nil {
 			return fail(err)
@@ -457,6 +459,7 @@ func (ck *ConnKeeper) attemptConn(ctx context.Context) (*serverSession, error) {
 
 		// User confirmed certs. Store them, so reconnection attempts
 		// to the same server don't require reconfirmations.
+		ck.log.Debugf("Server connection confirmed")
 		ck.certMtx.Lock()
 		ck.tlsCert = newCert
 		ck.spid = newSpid

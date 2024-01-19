@@ -438,7 +438,13 @@ func (ts *testScaffold) newClientWithCfg(nccfg *clientCfg, opts ...newClientOpt)
 	go func() { tc.runC <- c.Run(ctx) }()
 
 	// Wait until address book is loaded.
-	tc.AddressBook()
+	select {
+	case <-tc.AddressBookLoaded():
+	case <-time.After(5 * time.Second):
+		ts.t.Fatalf("Timeout waiting for client db init")
+	case err := <-tc.runC:
+		ts.t.Fatalf("Error waiting for client to finish db init: %v", err)
+	}
 	tc.log.Infof("Test client ready for use as instance %p", tc)
 
 	return tc

@@ -1,3 +1,4 @@
+import 'package:bruig/components/empty_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:bruig/theme_manager.dart';
 import 'package:provider/provider.dart';
@@ -11,6 +12,7 @@ class InteractiveAvatar extends StatelessWidget {
     this.avatarTextColor,
     this.onTap,
     this.onSecondaryTap,
+    this.avatar,
   });
 
   final String chatNick;
@@ -19,6 +21,7 @@ class InteractiveAvatar extends StatelessWidget {
   final Color? avatarTextColor;
   final VoidCallback? onTap;
   final VoidCallback? onSecondaryTap;
+  final ImageProvider? avatar;
 
   @override
   Widget build(BuildContext context) {
@@ -32,10 +35,13 @@ class InteractiveAvatar extends StatelessWidget {
                   onSecondaryTap: onSecondaryTap,
                   child: CircleAvatar(
                       backgroundColor: avatarColor,
-                      child: Text(chatNick[0].toUpperCase(),
-                          style: TextStyle(
-                              color: avatarTextColor,
-                              fontSize: theme.getLargeFont(context)))),
+                      backgroundImage: avatar,
+                      child: avatar != null
+                          ? const Empty()
+                          : Text(chatNick[0].toUpperCase(),
+                              style: TextStyle(
+                                  color: avatarTextColor,
+                                  fontSize: theme.getLargeFont(context)))),
                 ),
               ),
             ));

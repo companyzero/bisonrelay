@@ -348,6 +348,7 @@ AddressBookEntry _$AddressBookEntryFromJson(Map<String, dynamic> json) =>
       json['ignored'] as bool,
       DateTime.parse(json['first_created'] as String),
       DateTime.parse(json['last_handshake_attempt'] as String),
+      base64ToUint8list(json['avatar'] as String?),
     );
 
 Map<String, dynamic> _$AddressBookEntryToJson(AddressBookEntry instance) =>
@@ -358,6 +359,7 @@ Map<String, dynamic> _$AddressBookEntryToJson(AddressBookEntry instance) =>
       'ignored': instance.ignored,
       'first_created': instance.firstCreated.toIso8601String(),
       'last_handshake_attempt': instance.lastHandshakeAttempt.toIso8601String(),
+      'avatar': instance.avatar,
     };
 
 ShareFileArgs _$ShareFileArgsFromJson(Map<String, dynamic> json) =>
@@ -2037,4 +2039,21 @@ Map<String, dynamic> _$ReceiveReceiptToJson(ReceiveReceipt instance) =>
       'user': instance.user,
       'server_time': instance.serverTime,
       'client_time': instance.clientTime,
+    };
+
+ProfileUpdated _$ProfileUpdatedFromJson(Map<String, dynamic> json) =>
+    ProfileUpdated(
+      json['sid'] as String,
+      AddressBookEntry.fromJson(
+          json['addressbook_entry'] as Map<String, dynamic>),
+      (json['updated_fields'] as List<dynamic>)
+          .map((e) => e as String)
+          .toList(),
+    );
+
+Map<String, dynamic> _$ProfileUpdatedToJson(ProfileUpdated instance) =>
+    <String, dynamic>{
+      'sid': instance.uid,
+      'addressbook_entry': instance.abEntry,
+      'updated_fields': instance.updatedFields,
     };

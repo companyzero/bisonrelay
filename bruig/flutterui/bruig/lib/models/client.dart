@@ -5,6 +5,7 @@ import 'package:bruig/components/gc_context_menu.dart';
 import 'package:bruig/models/menus.dart';
 import 'package:bruig/models/resources.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:intl/intl.dart';
@@ -158,6 +159,23 @@ class ChatModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  ImageProvider? _avatar;
+  ImageProvider? get avatar => _avatar;
+  void loadAvatar(Uint8List? newAvatar) async {
+    if (newAvatar == null || newAvatar.isEmpty) {
+      _avatar = null;
+    } else {
+      try {
+        _avatar = MemoryImage(newAvatar);
+        // Resize to a smaller size?
+        notifyListeners();
+      } catch (exception) {
+        print("Unable to decode '$nick' avatar: $exception");
+        _avatar = null;
+      }
+    }
+  }
+
   List<PostListItem> _userPostList = [];
   UnmodifiableListView<PostListItem> get userPostList =>
       UnmodifiableListView(_userPostList);
@@ -248,7 +266,12 @@ class ChatModel extends ChangeNotifier {
           : DateTime.now();
       appendDayGCMsgs(msg, dt);
     }
+
     notifyListeners();
+
+    if (evnt is ProfileUpdated) {
+      loadAvatar(evnt.abEntry.avatar);
+    }
   }
 
   List<DayGCMessages> _dayGCMsgs = [];
@@ -407,10 +430,8 @@ class ClientModel extends ChangeNotifier {
   ClientModel() {
     _handleAcceptedInvites();
     _handleChatMsgs();
-    readAddressBook();
     _handleServerSessChanged();
     _handleGCListUpdates();
-    _fetchInfo();
     _handleSSOrders();
     _handleRescanWalletProgress();
   }
@@ -800,30 +821,26 @@ class ClientModel extends ChangeNotifier {
     }
     for (int i = 0; i < chatHistory.length; i++) {
       ChatEventModel evnt;
+      var mine = chatHistory[i].from == _nick;
       if (isGC) {
-        var m = GCMsg(
-            id,
-            chatHistory[i].from,
-            chatHistory[i].message,
-            chatHistory[i].timestamp *
-                (chatHistory[i].from == _nick ? 1000 : 1));
-        evnt = ChatEventModel(
-            m,
-            chatHistory[i].from != _nick
-                ? ChatModel(chatHistory[i].from, chatHistory[i].from, true)
-                : null);
+        ChatModel? source;
+        if (!mine) {
+          source = getExistingChatByNick(chatHistory[i].from, false);
+          print("source ${chatHistory[i].from} is ${source?.id ?? 'fooo'}");
+        }
+
+        var m = GCMsg(id, chatHistory[i].from, chatHistory[i].message,
+            chatHistory[i].timestamp * (mine ? 1000 : 1));
+        evnt = ChatEventModel(m, source);
       } else {
+        var source = !mine ? c : null;
         var m = PM(
             id,
             chatHistory[i].message,
-            chatHistory[i].from == _nick,
+            mine,
             chatHistory[i].timestamp *
                 (chatHistory[i].from == _nick ? 1000 : 1));
-        evnt = ChatEventModel(
-            m,
-            chatHistory[i].from != _nick
-                ? ChatModel(id, chatHistory[i].from, false)
-                : null);
+        evnt = ChatEventModel(m, source);
       }
       c.append(evnt, true);
     }
@@ -1062,11 +1079,32 @@ class ClientModel extends ChangeNotifier {
     _publicID = info.id;
     _nick = info.nick;
     var ab = await Golib.addressBook();
-    ab.forEach((v) => _newChat(v.id, v.nick, false, true));
+    ab.forEach((v) async {
+      var c = await _newChat(v.id, v.nick, false, true);
+      if (v.avatar != null) {
+        c.loadAvatar(v.avatar);
+      }
+    });
     var gcs = await Golib.listGCs();
     gcs.forEach((v) => _newChat(v.id, v.name, true, true));
 
     loadingAddressBook = false;
+  }
+
+  ImageProvider? _myAvatar;
+  ImageProvider? get myAvatar => _myAvatar;
+  set myAvatar(ImageProvider? newAvatar) {
+    _myAvatar = newAvatar;
+    notifyListeners();
+  }
+
+  Future<void> fetchMyAvatar() async {
+    var avatarData = await Golib.getMyAvatar();
+    try {
+      myAvatar = avatarData != null ? MemoryImage(avatarData) : null;
+    } catch (exception) {
+      print("unable to decode my avatar: $exception");
+    }
   }
 
   void acceptInvite(Invitation invite) async {
@@ -1084,7 +1122,7 @@ class ClientModel extends ChangeNotifier {
     await Golib.requestMediateID(mediator, target);
   }
 
-  void _fetchInfo() async {
+  Future<void> fetchNetworkInfo() async {
     var res = await Golib.lnGetInfo();
     _network = res.chains[0].network;
   }
