@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/hex"
@@ -253,6 +254,48 @@ func programByMimeType(mimeMap map[string]string, t string) string {
 		return n
 	}
 	return ""
+}
+
+func fromHex(h string) []byte {
+	v, err := hex.DecodeString(h)
+	if err != nil {
+		panic(err)
+	}
+	return v
+}
+
+var (
+	// https://en.wikipedia.org/wiki/List_of_file_signatures
+	knownImageTypes = map[string][][]byte{
+		"image/png": {fromHex("89504e470d0a1a0a")},
+		"image/jpg": {
+			fromHex("ffd8ffdb"),
+			fromHex("ffd8ffe000104a4649460001"),
+			fromHex("ffd8ffee"),
+			fromHex("ffd8ffe18790457869660000"),
+		},
+		"image/jp2": {
+			fromHex("ff4fff51"),
+			fromHex("0000000c6a5020200d0a870a"),
+		},
+		"image/gif": {
+			fromHex("474946383761"),
+			fromHex("474946383961"),
+		},
+	}
+)
+
+// imageMimeType returns image/{jpg,gif,png,webp} if the byte slice is one
+// of the supported image types or binary/octet-stream if not.
+func imageMimeType(b []byte) string {
+	for mime, prefixes := range knownImageTypes {
+		for _, prefix := range prefixes {
+			if bytes.HasPrefix(b, prefix) {
+				return mime
+			}
+		}
+	}
+	return "binary/octet-stream"
 }
 
 // blankLines returns blank lines if nb > 0.
