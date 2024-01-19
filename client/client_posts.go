@@ -1,7 +1,6 @@
 package client
 
 import (
-	"crypto/ed25519"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -330,12 +329,14 @@ func (c *Client) CreatePost(post, descr string) (clientdb.PostSummary, error) {
 	// the client API level.
 	const fname = ""
 
+	me := c.public()
 	var pm rpc.PostMetadata
 	var subs []clientdb.UserID
 	var summ clientdb.PostSummary
 	err := c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
 		var err error
-		summ, pm, err = c.db.CreatePost(tx, post, descr, fname, nil, c.id)
+		summ, pm, err = c.db.CreatePost(tx, post, descr, fname, nil,
+			&me, c.localID.signMessage)
 		if err != nil {
 			return err
 		}
@@ -378,7 +379,7 @@ func (c *Client) verifyPostSignature(p rpc.PostMetadata) error {
 	// a known user).
 	var pubid zkidentity.PublicIdentity
 	if from == c.PublicID() {
-		pubid = c.id.Public
+		pubid = c.public()
 	} else {
 		ru, err := c.rul.byID(from)
 		if err != nil {
@@ -389,7 +390,7 @@ func (c *Client) verifyPostSignature(p rpc.PostMetadata) error {
 		pubid = *ru.id
 	}
 
-	var sig [ed25519.SignatureSize]byte
+	var sig zkidentity.FixedSizeSignature
 	sigStr := p.Attributes[rpc.RMPSignature]
 	if len(sigStr) != len(sig)*2 {
 		return failf("rpc.RMPSignature has wrong len (%d != %d)",
@@ -401,7 +402,7 @@ func (c *Client) verifyPostSignature(p rpc.PostMetadata) error {
 	}
 
 	msg := p.Hash()
-	if !pubid.VerifyMessage(msg[:], sig) {
+	if !pubid.VerifyMessage(msg[:], &sig) {
 		return failf("signature failed verification")
 	}
 
@@ -426,7 +427,7 @@ func (c *Client) verifyPostStatusSignature(pms rpc.PostMetadataStatus) error {
 	// a known user).
 	var pubid zkidentity.PublicIdentity
 	if from == c.PublicID() {
-		pubid = c.id.Public
+		pubid = c.public()
 	} else {
 		ru, err := c.rul.byID(from)
 		if err != nil {
@@ -441,7 +442,7 @@ func (c *Client) verifyPostStatusSignature(pms rpc.PostMetadataStatus) error {
 		pms.From = pms.Attributes[rpc.RMPStatusFrom]
 	}
 
-	var sig [ed25519.SignatureSize]byte
+	var sig zkidentity.FixedSizeSignature
 	sigStr := pms.Attributes[rpc.RMPSignature]
 	if len(sigStr) != len(sig)*2 {
 		return failf("rpc.RMPSignature has wrong len (%d != %d)",
@@ -453,7 +454,7 @@ func (c *Client) verifyPostStatusSignature(pms rpc.PostMetadataStatus) error {
 	}
 
 	msg := pms.Hash()
-	if !pubid.VerifyMessage(msg[:], sig) {
+	if !pubid.VerifyMessage(msg[:], &sig) {
 		return failf("signature failed verification")
 	}
 	return nil
@@ -791,7 +792,7 @@ func (c *Client) sendPostStatus(postFrom clientintf.UserID,
 	// Sign the status.
 	pmHash := pms.Hash()
 	copy(statusID[:], pmHash[:])
-	signature := c.id.SignMessage(pmHash[:])
+	signature := c.localID.signMessage(pmHash[:])
 	attr[rpc.RMPSignature] = hex.EncodeToString(signature[:])
 
 	// Set the timestamp for the status update

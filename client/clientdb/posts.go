@@ -229,7 +229,7 @@ func (db *DB) IsPostSubscriber(tx ReadTx, uid UserID) (bool, error) {
 //
 // Note that the optional file specified in fname is **copied** to the post.
 func (db *DB) CreatePost(tx ReadWriteTx, post, descr string, fname string,
-	extraAttrs map[string]string, me *zkidentity.FullIdentity) (PostSummary, rpc.PostMetadata, error) {
+	extraAttrs map[string]string, me *zkidentity.PublicIdentity, msgSigner rpc.MessageSigner) (PostSummary, rpc.PostMetadata, error) {
 
 	var pid PostID
 	var summ PostSummary
@@ -252,7 +252,7 @@ func (db *DB) CreatePost(tx ReadWriteTx, post, descr string, fname string,
 		fblob = base64.StdEncoding.EncodeToString(blob)
 	}
 
-	dir := filepath.Join(db.root, postsDir, me.Public.Identity.String())
+	dir := filepath.Join(db.root, postsDir, me.Identity.String())
 	if err := os.MkdirAll(dir, 0700); err != nil {
 		return summ, p, err
 	}
@@ -262,8 +262,8 @@ func (db *DB) CreatePost(tx ReadWriteTx, post, descr string, fname string,
 	for k, v := range extraAttrs {
 		attrs[k] = v
 	}
-	attrs[rpc.RMPStatusFrom] = me.Public.Identity.String()
-	attrs[rpc.RMPFromNick] = me.Public.Nick
+	attrs[rpc.RMPStatusFrom] = me.Identity.String()
+	attrs[rpc.RMPFromNick] = me.Nick
 	attrs[rpc.RMPMain] = post
 	if descr != "" {
 		attrs[rpc.RMPDescription] = descr
@@ -279,7 +279,7 @@ func (db *DB) CreatePost(tx ReadWriteTx, post, descr string, fname string,
 	}
 	pmHash := p.Hash()
 	copy(pid[:], pmHash[:])
-	signature := me.SignMessage(pmHash[:])
+	signature := msgSigner(pmHash[:])
 	attrs[rpc.RMPSignature] = hex.EncodeToString(signature[:])
 	attrs[rpc.RMPIdentifier] = pid.String()
 
@@ -301,7 +301,7 @@ func (db *DB) CreatePost(tx ReadWriteTx, post, descr string, fname string,
 		return summ, p, err
 	}
 
-	summ = PostSummFromMetadata(&p, me.Public.Identity)
+	summ = PostSummFromMetadata(&p, me.Identity)
 	summ.Date = finfo.ModTime()
 	return summ, p, nil
 }

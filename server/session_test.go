@@ -4,6 +4,7 @@ import (
 	"compress/zlib"
 	"context"
 	"crypto/rand"
+	"io"
 	"testing"
 	"time"
 
@@ -132,12 +133,15 @@ func TestServerPingPong(t *testing.T) {
 	}
 }
 
+func dummySigner(_ []byte) zkidentity.FixedSizeSignature {
+	var res zkidentity.FixedSizeSignature
+	_, _ = io.ReadFull(rand.Reader, res[:])
+	return res
+}
+
 // TestServerRecvMaxMsgSize tests how the server handles messages around its
 // max message size.
 func TestServerRecvMaxMsgSize(t *testing.T) {
-	id, err := zkidentity.New("Alice McMalice", "alice")
-	assert.NilErr(t, err)
-
 	tests := []struct {
 		name    string
 		version rpc.MaxMsgSizeVersion
@@ -179,7 +183,7 @@ func TestServerRecvMaxMsgSize(t *testing.T) {
 				Chunk:  data,
 				Tag:    1<<32 - 1,
 			}
-			compressed, err := rpc.ComposeCompressedRM(id, rm, zlib.NoCompression)
+			compressed, err := rpc.ComposeCompressedRM(dummySigner, rm, zlib.NoCompression)
 			assert.NilErr(t, err)
 
 			// This message should be sent without issues.

@@ -95,10 +95,12 @@ func UnmarshalOOBPublicIdentityInviteFile(filename string) (*OOBPublicIdentityIn
 
 // NewHalfRatchetKX creates a new half ratchet between two identities. It returns
 // the half ratchet and a random key exchange structure.
-func NewHalfRatchetKX(us *zkidentity.FullIdentity, them zkidentity.PublicIdentity) (*ratchet.Ratchet, *ratchet.KeyExchange, error) {
+//
+// ourPrivKey should be the local client's private key from their full identity.
+func NewHalfRatchetKX(ourPrivKey *zkidentity.FixedSizeSntrupPrivateKey, them zkidentity.PublicIdentity) (*ratchet.Ratchet, *ratchet.KeyExchange, error) {
 	// Create new ratchet with remote identity
 	r := ratchet.New(rand.Reader)
-	r.MyPrivateKey = &us.PrivateKey
+	r.MyPrivateKey = ourPrivKey
 	r.TheirPublicKey = &them.Key
 
 	// Fill out half the kx
@@ -112,10 +114,13 @@ func NewHalfRatchetKX(us *zkidentity.FullIdentity, them zkidentity.PublicIdentit
 }
 
 // NewHalfKX creates a RMOHalfKX structure from a half ratchet.
-func NewHalfKX(us *zkidentity.FullIdentity, hkx *ratchet.KeyExchange) (*RMOHalfKX, error) {
+//
+// us should be the public identity that is derived from the local client's
+// full identity.
+func NewHalfKX(us zkidentity.PublicIdentity, hkx *ratchet.KeyExchange) (*RMOHalfKX, error) {
 	// Create half KX RPC
 	halfKX := RMOHalfKX{
-		Public: us.Public,
+		Public: us,
 		HalfKX: *hkx,
 	}
 	_, err := io.ReadFull(rand.Reader, halfKX.InitialRendezvous[:])
@@ -132,10 +137,13 @@ func NewHalfKX(us *zkidentity.FullIdentity, hkx *ratchet.KeyExchange) (*RMOHalfK
 
 // NewFullRatchetKX creates a new full ratchet between two identities. It returns
 // the completed full ratchet.
-func NewFullRatchetKX(us *zkidentity.FullIdentity, them zkidentity.PublicIdentity, halfKX *ratchet.KeyExchange) (*ratchet.Ratchet, *ratchet.KeyExchange, error) {
+//
+// ourPrivKey should be the private key that corresponds to the local client's
+// full identity.
+func NewFullRatchetKX(ourPrivKey *zkidentity.FixedSizeSntrupPrivateKey, them zkidentity.PublicIdentity, halfKX *ratchet.KeyExchange) (*ratchet.Ratchet, *ratchet.KeyExchange, error) {
 	// Fill out missing bits to create full ratchet
 	r := ratchet.New(rand.Reader)
-	r.MyPrivateKey = &us.PrivateKey
+	r.MyPrivateKey = ourPrivKey
 	r.TheirPublicKey = &them.Key
 	fkx := new(ratchet.KeyExchange)
 	err := r.FillKeyExchange(fkx)

@@ -25,8 +25,8 @@ func newRemoteUserTestPair(t testing.TB, rnd *rand.Rand, svr *mockRMServer, name
 	db2 := testDB(t, id2, nil)
 	runTestDB(t, db1)
 	runTestDB(t, db2)
-	ru1 := newRemoteUser(q1, rm1, db1, &id2.Public, id1, r1)
-	ru2 := newRemoteUser(q2, rm2, db2, &id1.Public, id2, r2)
+	ru1 := newRemoteUser(q1, rm1, db1, &id2.Public, id1.SignMessage, r1)
+	ru2 := newRemoteUser(q2, rm2, db2, &id1.Public, id2.SignMessage, r2)
 	//ru1.log = testutils.TestLoggerSys(t, name1)
 	//ru2.log = testutils.TestLoggerSys(t, name2)
 	return ru1, ru2

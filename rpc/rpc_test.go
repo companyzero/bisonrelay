@@ -50,7 +50,7 @@ func TestMaxSizeVersions(t *testing.T) {
 			}
 
 			// Sign, compress and encode this RM.
-			compressed, err := ComposeCompressedRM(id, rm, zlib.NoCompression)
+			compressed, err := ComposeCompressedRM(id.SignMessage, rm, zlib.NoCompression)
 			assert.NilErr(t, err)
 			maxSize := MaxMsgSizeForVersion(tc.version)
 			estSize := uint(EstimateRoutedRMWireSize(len(compressed)))
@@ -88,7 +88,7 @@ func TestMaxSizeVersions(t *testing.T) {
 
 			// Decompose the compressed message as it would in the
 			// receiving client.
-			_, decomposed, err := DecomposeRM(&id.Public, compressed, maxSize)
+			_, decomposed, err := DecomposeRM(id.Public.VerifyMessage, compressed, maxSize)
 			assert.NilErr(t, err)
 			decomposedRM := decomposed.(RMFTGetChunkReply)
 			if !bytes.Equal(decomposedRM.Chunk, rm.Chunk) {

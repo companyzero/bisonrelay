@@ -271,7 +271,7 @@ func (db *DB) getBaseABEntry(id UserID) (*AddressBookEntry, error) {
 }
 
 // readRatchet reads the ratchet data of an user.
-func (db *DB) readRatchet(id UserID, localID *zkidentity.FullIdentity,
+func (db *DB) readRatchet(id UserID, localPrivKey *zkidentity.FixedSizeSntrupPrivateKey,
 	theirPublicKey *zkidentity.FixedSizeSntrupPublicKey) (*ratchet.Ratchet, error) {
 
 	// Read ratchet state from disk.
@@ -287,10 +287,7 @@ func (db *DB) readRatchet(id UserID, localID *zkidentity.FullIdentity,
 		return nil, fmt.Errorf("could not unmarshal ratchet: %v", err)
 	}
 
-	// XXX verify this
-	if localID != nil {
-		r.MyPrivateKey = &localID.PrivateKey
-	}
+	r.MyPrivateKey = localPrivKey
 	r.TheirPublicKey = theirPublicKey
 	return r, nil
 }
@@ -303,7 +300,7 @@ func (db *DB) GetAddressBookEntry(tx ReadTx, id UserID) (*AddressBookEntry, erro
 // LoadAddressBook returns the full client address book. Note that invalid or
 // otherwise incomplete entries do not cause the addressbook loading to fail,
 // only diagnostic messages are returned in that case.
-func (db *DB) LoadAddressBook(tx ReadTx, localID *zkidentity.FullIdentity) ([]AddressBookAndRatchet, error) {
+func (db *DB) LoadAddressBook(tx ReadTx, localPrivKey *zkidentity.FixedSizeSntrupPrivateKey) ([]AddressBookAndRatchet, error) {
 	fi, err := os.ReadDir(filepath.Join(db.root, inboundDir))
 	if err != nil {
 		return nil, err
@@ -327,7 +324,7 @@ func (db *DB) LoadAddressBook(tx ReadTx, localID *zkidentity.FullIdentity) ([]Ad
 			continue
 		}
 
-		ratchet, err := db.readRatchet(*id, localID, &entry.ID.Key)
+		ratchet, err := db.readRatchet(*id, localPrivKey, &entry.ID.Key)
 		if err != nil {
 			db.log.Warnf("Unable to load ratchet data %s: %v", id, err)
 			continue
@@ -374,7 +371,7 @@ func (db *DB) StoreTransResetHalfKX(tx ReadWriteTx, r *ratchet.Ratchet, theirID 
 
 // LoadTransResetHalfKX returns the existing trans reset half kx.
 func (db *DB) LoadTransResetHalfKX(tx ReadTx, id UserID,
-	localID *zkidentity.FullIdentity) (*ratchet.Ratchet, error) {
+	localPrivKey *zkidentity.FixedSizeSntrupPrivateKey) (*ratchet.Ratchet, error) {
 
 	// Read Ratchet.
 	dir := filepath.Join(db.root, inboundDir, id.String())
@@ -402,10 +399,7 @@ func (db *DB) LoadTransResetHalfKX(tx ReadTx, id UserID,
 		return nil, err
 	}
 
-	// XXX verify this
-	if localID != nil {
-		r.MyPrivateKey = &localID.PrivateKey
-	}
+	r.MyPrivateKey = localPrivKey
 	r.TheirPublicKey = &entry.ID.Key
 	return r, nil
 }

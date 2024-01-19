@@ -42,7 +42,7 @@ func TestSignVerify(t *testing.T) {
 
 	message := []byte("this is a message")
 	signature := alice.SignMessage(message)
-	if !alice.Public.VerifyMessage(message, signature) {
+	if !alice.Public.VerifyMessage(message, &signature) {
 		t.Fatalf("corrupt signature")
 	}
 }

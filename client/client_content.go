@@ -71,7 +71,7 @@ func (c *Client) ShareFile(fname string, uid *UserID,
 	var f clientdb.SharedFile
 	var md rpc.FileMetadata
 	sign := func(hash []byte) ([]byte, error) {
-		sig := c.id.SignMessage(hash)
+		sig := c.localID.signMessage(hash)
 		return sig[:], nil
 	}
 

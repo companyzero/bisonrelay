@@ -117,14 +117,24 @@ func (fi *FullIdentity) RecalculateDigest() error {
 	return nil
 }
 
-func (fi FullIdentity) SignMessage(message []byte) [ed25519.SignatureSize]byte {
+// SignMessage signs a message with an Ed25519 private key.
+func SignMessage(message []byte, privKey *FixedSizeEd25519PrivateKey) FixedSizeSignature {
 	var sig [ed25519.SignatureSize]byte
-	copy(sig[:], ed25519.Sign(fi.PrivateSigKey[:], message))
+	copy(sig[:], ed25519.Sign(privKey[:], message))
 	return sig
 }
 
-func (p PublicIdentity) VerifyMessage(msg []byte, sig [ed25519.SignatureSize]byte) bool {
-	return ed25519.Verify(p.SigKey[:], msg, sig[:])
+func (fi *FullIdentity) SignMessage(message []byte) FixedSizeSignature {
+	return SignMessage(message, &fi.PrivateSigKey)
+}
+
+// VerifyMessage verifies a message with an Ed25519 public key.
+func VerifyMessage(msg []byte, sig *FixedSizeSignature, pubKey *FixedSizeEd25519PublicKey) bool {
+	return ed25519.Verify(pubKey[:], msg, sig[:])
+}
+
+func (p PublicIdentity) VerifyMessage(msg []byte, sig *FixedSizeSignature) bool {
+	return VerifyMessage(msg, sig, &p.SigKey)
 }
 
 func (p PublicIdentity) String() string {

@@ -20,15 +20,22 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+// publicProducer is a func that produces a full public identity.
+type publicProducer func() zkidentity.PublicIdentity
+
 type kxList struct {
 	q             rmqIntf
 	rmgr          rdzvManagerIntf
-	id            *zkidentity.FullIdentity
 	randReader    io.Reader
 	db            *clientdb.DB
 	ctx           context.Context
 	dbCtx         context.Context
 	compressLevel int
+
+	privKey  *zkidentity.FixedSizeSntrupPrivateKey
+	identity *zkidentity.ShortID
+
+	public publicProducer
 
 	kxCompleted func(*zkidentity.PublicIdentity, *ratchet.Ratchet,
 		clientdb.RawRVID, clientdb.RawRVID, clientdb.RawRVID)
@@ -36,17 +43,20 @@ type kxList struct {
 	log slog.Logger
 }
 
-func newKXList(q rmqIntf, rmgr rdzvManagerIntf, id *zkidentity.FullIdentity,
-	db *clientdb.DB, ctx context.Context) *kxList {
+func newKXList(q rmqIntf, rmgr rdzvManagerIntf, id *localIdentity,
+	public publicProducer, db *clientdb.DB, ctx context.Context) *kxList {
 	return &kxList{
 		q:          q,
 		rmgr:       rmgr,
-		id:         id,
 		db:         db,
 		randReader: rand.Reader,
 		log:        slog.Disabled,
 		ctx:        ctx,
 		dbCtx:      ctx,
+
+		privKey:  &id.privKey,
+		identity: &id.id,
+		public:   public,
 	}
 }
 
@@ -83,7 +93,7 @@ func (kx *kxList) createInvite(w io.Writer, invitee *zkidentity.PublicIdentity,
 
 	// Write the invite.
 	pii := rpc.OOBPublicIdentityInvite{
-		Public:            kx.id.Public,
+		Public:            kx.public(),
 		InitialRendezvous: rv,
 		ResetRendezvous:   resetRV,
 		Funds:             funds,
@@ -216,7 +226,7 @@ func (kx *kxList) decodeInvite(r io.Reader) (rpc.OOBPublicIdentityInvite, error)
 func (kx *kxList) acceptInvite(pii rpc.OOBPublicIdentityInvite, isForReset, isAutoKX bool) error {
 	// Make sure we don't add ourselves
 	identity := pii.Public.Identity
-	if bytes.Equal(kx.id.Public.Identity[:], identity[:]) {
+	if kx.identity.ConstantTimeEq(&identity) {
 		return fmt.Errorf("can't perform kx with self")
 	}
 	err := kx.db.View(context.Background(), func(tx clientdb.ReadTx) error {
@@ -271,7 +281,7 @@ func (kx *kxList) acceptInvite(pii rpc.OOBPublicIdentityInvite, isForReset, isAu
 	sendRV := pii.InitialRendezvous
 
 	// Setup a new ratchet
-	hr, kxRatchet, err := rpc.NewHalfRatchetKX(kx.id, pii.Public)
+	hr, kxRatchet, err := rpc.NewHalfRatchetKX(kx.privKey, pii.Public)
 	if err != nil {
 		return fmt.Errorf("could not setup ratchet key exchange: %v",
 			err)
@@ -316,7 +326,7 @@ func (kx *kxList) acceptInvite(pii rpc.OOBPublicIdentityInvite, isForReset, isAu
 		pii.Public.Identity)
 
 	rmohk := rpc.RMOHalfKX{
-		Public:            kx.id.Public,
+		Public:            kx.public(),
 		HalfKX:            *kxRatchet,
 		InitialRendezvous: rv,
 		ResetRendezvous:   resetRV,
@@ -341,19 +351,19 @@ func (kx *kxList) handleStep2IDKX(kxid clientdb.RawRVID, blob lowlevel.RVBlob) e
 	// Perform step2IDKX.
 
 	// Decode and decrypt the RMOHalfRatchet msg.
-	rmohk, err := rpc.DecryptOOBHalfKXBlob(blob.Decoded, &kx.id.PrivateKey, uint(kx.q.MaxMsgSize()))
+	rmohk, err := rpc.DecryptOOBHalfKXBlob(blob.Decoded, kx.privKey, uint(kx.q.MaxMsgSize()))
 	if err != nil {
 		return fmt.Errorf("step2IDKX DecryptOOBHalfKXBlob: %v", err)
 	}
 
-	if bytes.Equal(rmohk.Public.Identity[:], kx.id.Public.Identity[:]) {
+	if bytes.Equal(rmohk.Public.Identity[:], kx.identity[:]) {
 		return fmt.Errorf("can't kx with self")
 	}
 
 	sendRV := rmohk.InitialRendezvous
 
 	// Create full ratchet from rmohk.
-	r, fkx, err := rpc.NewFullRatchetKX(kx.id, rmohk.Public, &rmohk.HalfKX)
+	r, fkx, err := rpc.NewFullRatchetKX(kx.privKey, rmohk.Public, &rmohk.HalfKX)
 	if err != nil {
 		return fmt.Errorf("could not create full ratchet: %v", err)
 	}
@@ -410,7 +420,7 @@ func (kx *kxList) handleStep2IDKX(kxid clientdb.RawRVID, blob lowlevel.RVBlob) e
 
 func (kx *kxList) handleStep3IDKX(kxid clientdb.RawRVID, blob lowlevel.RVBlob) error {
 	// Decrypt remote msg.
-	fullKX, err := rpc.DecryptOOBFullKXBlob(blob.Decoded, &kx.id.PrivateKey, uint(kx.q.MaxMsgSize()))
+	fullKX, err := rpc.DecryptOOBFullKXBlob(blob.Decoded, kx.privKey, uint(kx.q.MaxMsgSize()))
 	if err != nil {
 		return fmt.Errorf("step3IDKX DecryptOOBFullKXBlob: %v", err)
 	}
@@ -438,7 +448,7 @@ func (kx *kxList) handleStep3IDKX(kxid clientdb.RawRVID, blob lowlevel.RVBlob) e
 		}
 
 		public = kxd.Public
-		r.MyPrivateKey = &kx.id.PrivateKey
+		r.MyPrivateKey = kx.privKey
 		r.TheirPublicKey = &public.Key
 
 		// Complete the key exchange.
@@ -608,7 +618,7 @@ func (kx *kxList) requestReset(rv clientdb.RawRVID, id *zkidentity.PublicIdentit
 // the given user.
 func (kx *kxList) handleReset(id *zkidentity.PublicIdentity, blob lowlevel.RVBlob) error {
 	pii, err := rpc.DecryptOOBPublicIdentityInvite(blob.Decoded,
-		&kx.id.PrivateKey, uint(kx.q.MaxMsgSize()))
+		kx.privKey, uint(kx.q.MaxMsgSize()))
 	if err != nil {
 		return fmt.Errorf("handleReset DecryptOOBPublicIdentityInvite:"+
 			" %v", err)

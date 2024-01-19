@@ -23,7 +23,7 @@ func (c *Client) addToSendQ(typ string, msg interface{}, priority uint,
 
 	// Trick to ease storing this msg payload: compose as a full blobified
 	// RM.
-	blob, err := rpc.ComposeCompressedRM(c.id, msg, c.cfg.CompressLevel)
+	blob, err := rpc.ComposeCompressedRM(c.localID.signMessage, msg, c.cfg.CompressLevel)
 	if err != nil {
 		return sendqID, err
 	}
@@ -182,7 +182,7 @@ func (c *Client) runSendQ(ctx context.Context) error {
 			continue
 		}
 
-		_, rm, err := rpc.DecomposeRM(&c.id.Public, el.msg.Msg, uint(c.q.MaxMsgSize()))
+		_, rm, err := rpc.DecomposeRM(c.localID.verifyMessage, el.msg.Msg, uint(c.q.MaxMsgSize()))
 		if err != nil {
 			c.log.Warnf("Unable to decompose queued RM %s: %v",
 				el.msg.Type, err)

@@ -38,7 +38,7 @@ func (c *Client) RequestTransitiveReset(mediator, target UserID) error {
 
 	// Create new ratchet with remote identity
 	r := ratchet.New(rand.Reader) // half
-	r.MyPrivateKey = &c.id.PrivateKey
+	r.MyPrivateKey = &c.localID.privKey
 	r.TheirPublicKey = &targetRU.id.Key
 
 	// Fill out half the kx
@@ -78,7 +78,7 @@ func (c *Client) handleRMTransitiveReset(mediator *RemoteUser, target UserID, tr
 
 	// Fill out missing bits
 	r := ratchet.New(rand.Reader) // full
-	r.MyPrivateKey = &c.id.PrivateKey
+	r.MyPrivateKey = &c.localID.privKey
 	r.TheirPublicKey = &ru.id.Key
 	kxB := new(ratchet.KeyExchange)
 	err = r.FillKeyExchange(kxB)
@@ -124,7 +124,7 @@ func (c *Client) handleRMTransitiveResetReply(mediator *RemoteUser,
 	var r *ratchet.Ratchet
 	err = c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
 		var err error
-		r, err = c.db.LoadTransResetHalfKX(tx, target, c.id)
+		r, err = c.db.LoadTransResetHalfKX(tx, target, &c.localID.privKey)
 		if err != nil {
 			return err
 		}
