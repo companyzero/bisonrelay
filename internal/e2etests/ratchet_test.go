@@ -13,6 +13,7 @@ import (
 	"github.com/companyzero/bisonrelay/client/clientintf"
 	"github.com/companyzero/bisonrelay/internal/assert"
 	"github.com/companyzero/bisonrelay/rpc"
+	"github.com/companyzero/bisonrelay/zkidentity"
 )
 
 // TestResendsUnackedRM tests shutting down the client while there are
@@ -320,6 +321,34 @@ func TestLocalOfflineMsgs(t *testing.T) {
 		assert.NilErrFromChan(t, errChan)
 		assert.ChanWrittenWithVal(t, bobPMs, testMsg)
 	}
+}
+
+// TestSuggestKX tests that the suggest kx works.
+func TestSuggestKX(t *testing.T) {
+	t.Parallel()
+
+	tcfg := testScaffoldCfg{}
+	ts := newTestScaffold(t, tcfg)
+	alice := ts.newClient("alice")
+	bob := ts.newClient("bob")
+	charlie := ts.newClient("charlie")
+
+	ts.kxUsers(alice, bob)
+	ts.kxUsers(alice, charlie)
+
+	bobSuggestKxChan := make(chan clientintf.UserID, 5)
+	bob.handle(client.OnKXSuggested(func(ru *client.RemoteUser, target zkidentity.PublicIdentity) {
+		bobSuggestKxChan <- target.Identity
+	}))
+
+	// Suggest KX with unknown user.
+	alice.SuggestKX(bob.PublicID(), charlie.PublicID())
+	assert.ChanWrittenWithVal(t, bobSuggestKxChan, charlie.PublicID())
+
+	// Suggest KX with known user.
+	ts.kxUsers(bob, charlie)
+	alice.SuggestKX(bob.PublicID(), charlie.PublicID())
+	assert.ChanWrittenWithVal(t, bobSuggestKxChan, charlie.PublicID())
 }
 
 // TestPrepaidInvites asserts that using prepaid invites works.

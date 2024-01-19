@@ -585,13 +585,17 @@ func (c *Client) SuggestKX(invitee, target UserID) error {
 
 func (c *Client) handleKXSuggestion(ru *RemoteUser, kxsg rpc.RMKXSuggestion) error {
 	known := "known"
-	_, err := c.rul.byID(kxsg.Target.Identity)
+	targetNick := kxsg.Target.Nick
+	targetRu, err := c.rul.byID(kxsg.Target.Identity)
 	if err != nil {
 		known = "unknown"
 	}
+	if targetRu != nil {
+		targetNick = targetRu.Nick()
+	}
 
 	ru.log.Infof("Received suggestion to KX with %s %s (%q)", known,
-		kxsg.Target.Identity, strescape.Nick(kxsg.Target.Nick))
+		kxsg.Target.Identity, targetNick)
 
 	if c.cfg.KXSuggestion != nil {
 		c.cfg.KXSuggestion(ru, kxsg.Target)

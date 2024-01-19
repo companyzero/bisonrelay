@@ -99,7 +99,7 @@ func (pw *postWindow) processStatus(status rpc.PostMetadataStatus) *comment {
 					from = "(ignored)"
 					v = "(ignored)"
 				} else {
-					from = ru.PublicIdentity().Nick
+					from = ru.Nick()
 				}
 			} else if nick, ok := status.Attributes[rpc.RMPFromNick]; ok {
 				from = nick

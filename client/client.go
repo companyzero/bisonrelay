@@ -816,8 +816,9 @@ func (c *Client) PM(uid UserID, msg string) error {
 		return err
 	}
 
+	myNick := c.LocalNick()
 	err = c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
-		return c.db.LogPM(tx, uid, false, c.id.Public.Nick, msg, time.Now())
+		return c.db.LogPM(tx, uid, false, myNick, msg, time.Now())
 	})
 	if err != nil {
 		return err

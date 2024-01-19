@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/companyzero/bisonrelay/client"
 	"github.com/companyzero/bisonrelay/client/clientdb"
 	"github.com/companyzero/bisonrelay/client/clientintf"
 	"github.com/companyzero/bisonrelay/client/resources/simplestore"
@@ -97,6 +98,14 @@ func remoteUserFromPII(pii *zkidentity.PublicIdentity) remoteUser {
 		UID:  pii.Identity.String(),
 		Name: pii.Name,
 		Nick: pii.Nick,
+	}
+}
+
+func remoteUserFromRU(ru *client.RemoteUser) remoteUser {
+	return remoteUser{
+		UID:  ru.ID().String(),
+		Name: ru.PublicIdentity().Name,
+		Nick: ru.Nick(),
 	}
 }
 
