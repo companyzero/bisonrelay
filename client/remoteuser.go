@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/companyzero/bisonrelay/client/clientdb"
@@ -76,6 +77,8 @@ type RemoteUser struct {
 	myResetRV       clientdb.RawRVID
 	theirResetRV    clientdb.RawRVID
 
+	nick atomic.Pointer[string]
+
 	// mtx protects the following fields.
 	mtx     sync.Mutex
 	ignored bool
@@ -98,7 +101,7 @@ type RemoteUser struct {
 }
 
 func newRemoteUser(q rmqIntf, rmgr rdzvManagerIntf, db *clientdb.DB, remoteID *zkidentity.PublicIdentity, localID *zkidentity.FullIdentity, r *ratchet.Ratchet) *RemoteUser {
-	return &RemoteUser{
+	ru := &RemoteUser{
 		q:               q,
 		rmgr:            rmgr,
 		r:               r,
@@ -115,6 +118,8 @@ func newRemoteUser(q rmqIntf, rmgr rdzvManagerIntf, db *clientdb.DB, remoteID *z
 		decryptedRMChan: make(chan error),
 		sentRMChan:      make(chan error),
 	}
+	ru.setNick(remoteID.Nick)
+	return ru
 }
 
 func (ru *RemoteUser) ID() UserID {
@@ -125,8 +130,12 @@ func (ru *RemoteUser) PublicIdentity() zkidentity.PublicIdentity {
 	return *ru.id
 }
 
+func (ru *RemoteUser) setNick(nick string) {
+	ru.nick.Store(&nick)
+}
+
 func (ru *RemoteUser) Nick() string {
-	return ru.id.Nick
+	return *ru.nick.Load()
 }
 
 // RatchetDebugInfo is debug information about a user's ratchet state.
@@ -776,7 +785,7 @@ func (rul *remoteUserList) add(ru *RemoteUser) (*RemoteUser, error) {
 		return oldRU, alreadyHaveUserError{ru.id.Identity}
 	}
 
-	ru.id.Nick = rul.uniqueNick(ru.id.Nick, ru.id.Identity)
+	ru.setNick(rul.uniqueNick(ru.Nick(), ru.id.Identity))
 	rul.m[ru.id.Identity] = ru
 	rul.Unlock()
 	return nil, nil
@@ -847,6 +856,6 @@ func (rul *remoteUserList) nicksWithPrefix(prefix string) []string {
 
 func (rul *remoteUserList) modifyUserNick(ru *RemoteUser, newNick string) {
 	rul.Lock()
-	ru.id.Nick = newNick
+	ru.setNick(newNick)
 	rul.Unlock()
 }
