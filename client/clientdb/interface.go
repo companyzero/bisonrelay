@@ -113,10 +113,17 @@ type AddressBookEntry struct {
 	// LastHandshake is the last time when the local client attempted
 	// to start a handshake with this remote user.
 	LastHandshakeAttempt time.Time `json:"last_handshake_attempt,omitempty"`
+
+	// NickAlias is a local alias to the user (a replacement to the
+	// original nick stored in the PublicIdentity). Only used if non-empty.
+	NickAlias string `json:"nick_alias"`
 }
 
 // Nick returns the nick of the user.
 func (abe *AddressBookEntry) Nick() string {
+	if abe.NickAlias != "" {
+		return abe.NickAlias
+	}
 	return abe.ID.Nick
 }
 

@@ -414,6 +414,49 @@ func assertGoesOnline(t testing.TB, c *testClient) {
 	reg.Unregister()
 }
 
+// assertUserNick verifies that the client 'c' sees the nick of 'target' as
+// 'nick'.
+func assertUserNick(t testing.TB, c, target *testClient, nick string) {
+	t.Helper()
+
+	// Assert UserNick() returns the correct nick.
+	gotNick, err := c.UserNick(target.PublicID())
+	assert.NilErr(t, err)
+	assert.DeepEqual(t, gotNick, nick)
+
+	// Assert UserByNick() finds the correct user.
+	ru, err := c.UserByNick(nick)
+	assert.NilErr(t, err)
+	assert.DeepEqual(t, ru.ID(), target.PublicID())
+
+	// Assert ru.Nick() returns the correct nick.
+	assert.DeepEqual(t, ru.Nick(), nick)
+}
+
+// assertKXReset verifies that client c can perform a ratchet reset with target.
+func assertKXReset(t testing.TB, c, target *testClient) {
+	t.Helper()
+	targetKXChan := make(chan struct{}, 5)
+	regTarget := target.handle(client.OnKXCompleted(func(_ *clientintf.RawRVID, ru *client.RemoteUser, isNew bool) {
+		if ru.ID() == c.PublicID() && !isNew {
+			targetKXChan <- struct{}{}
+		}
+	}))
+	defer regTarget.Unregister()
+
+	cKXChan := make(chan struct{}, 5)
+	regC := c.handle(client.OnKXCompleted(func(_ *clientintf.RawRVID, ru *client.RemoteUser, isNew bool) {
+		if ru.ID() == target.PublicID() && !isNew {
+			cKXChan <- struct{}{}
+		}
+	}))
+	defer regC.Unregister()
+
+	assert.NilErr(t, c.ResetRatchet(target.PublicID()))
+	assert.ChanWritten(t, targetKXChan)
+	assert.ChanWritten(t, cKXChan)
+}
+
 func testRand(t testing.TB) *rand.Rand {
 	seed := time.Now().UnixNano()
 	rnd := rand.New(rand.NewSource(seed))

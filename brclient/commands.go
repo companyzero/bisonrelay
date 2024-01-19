@@ -3469,6 +3469,9 @@ var commands = []tuicmd{
 					pf("")
 					pf("Info for user %s", strescape.Nick(ru.Nick()))
 					pf("              UID: %s", ru.ID())
+					if ru.Nick() != pii.Nick {
+						pf("    Original Nick: %s", strescape.Nick(pii.Nick))
+					}
 					pf("             Name: %s", strescape.Content(pii.Name))
 					pf("          Ignored: %v", ru.IsIgnored())
 					pf("    First Created: %s", ab.FirstCreated.Format(ISO8601DateTimeMs))
@@ -3492,7 +3495,7 @@ var commands = []tuicmd{
 			ab := as.c.AddressBook()
 			var maxNickLen int
 			for i := range ab {
-				ab[i].ID.Nick = strescape.Nick(ab[i].Nick())
+				ab[i].NickAlias = strescape.Nick(ab[i].Nick())
 				l := lipgloss.Width(ab[i].ID.Nick)
 				if l > maxNickLen {
 					maxNickLen = l
@@ -3500,8 +3503,8 @@ var commands = []tuicmd{
 			}
 			maxNickLen = clamp(maxNickLen, 5, as.winW-64-10)
 			sort.Slice(ab, func(i, j int) bool {
-				ni := ab[i].ID.Nick
-				nj := ab[j].ID.Nick
+				ni := ab[i].NickAlias
+				nj := ab[j].NickAlias
 				return as.collator.CompareString(ni, nj) < 0
 			})
 			as.cwHelpMsgs(func(pf printf) {
@@ -3512,7 +3515,7 @@ var commands = []tuicmd{
 					if entry.Ignored {
 						ignored = " (ignored)"
 					}
-					pf("%*s - %s%s", maxNickLen, entry.ID.Nick,
+					pf("%*s - %s%s", maxNickLen, entry.NickAlias,
 						entry.ID, ignored)
 				}
 			})
