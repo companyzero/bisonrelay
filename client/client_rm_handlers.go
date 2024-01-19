@@ -148,6 +148,9 @@ func (c *Client) innerHandleUserRM(ru *RemoteUser, h *rpc.RMHeader,
 	case rpc.RMHandshakeSYN, rpc.RMHandshakeACK, rpc.RMHandshakeSYNACK:
 		return c.handleRMHandshake(ru, p)
 
+	case rpc.RMProfileUpdate:
+		return c.handleProfileUpdate(ru, p)
+
 	case rpc.RMGroupInvite:
 		return c.handleGCInvite(ru, p)
 

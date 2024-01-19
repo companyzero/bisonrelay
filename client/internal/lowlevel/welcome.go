@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"reflect"
 	"strconv"
 	"sync"
 	"time"
@@ -447,7 +448,7 @@ func (ck *ConnKeeper) attemptConn(ctx context.Context) (*serverSession, error) {
 		return fail(err)
 	}
 
-	needsConfirm := !bytes.Equal(newCert, oldCert) || oldSpid != newSpid
+	needsConfirm := !bytes.Equal(newCert, oldCert) || !reflect.DeepEqual(oldSpid, newSpid)
 	if needsConfirm {
 		// Certs need confirmation. Ask it from user.
 		if err := ck.cfg.CertConf(ctx, tlsState, &newSpid); err != nil {

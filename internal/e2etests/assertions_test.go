@@ -457,6 +457,15 @@ func assertKXReset(t testing.TB, c, target *testClient) {
 	assert.ChanWritten(t, cKXChan)
 }
 
+// assertUserAvatar asserts that user c sees the avatar for the target user
+// as want.
+func assertUserAvatar(t testing.TB, c, target *testClient, want []byte) {
+	t.Helper()
+	ab, err := c.AddressBookEntry(target.PublicID())
+	assert.NilErr(t, err)
+	assert.DeepEqual(t, ab.ID.Avatar, want)
+}
+
 func testRand(t testing.TB) *rand.Rand {
 	seed := time.Now().UnixNano()
 	rnd := rand.New(rand.NewSource(seed))

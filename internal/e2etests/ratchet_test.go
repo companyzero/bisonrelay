@@ -632,3 +632,46 @@ func TestUserNickAlias(t *testing.T) {
 	assertUserNick(t, alice, bob2, "bob2_renamed")
 	assertUserNick(t, alice, bob3, "bob_3")
 }
+
+func TestUpdateProfileAvatar(t *testing.T) {
+	t.Parallel()
+
+	tcfg := testScaffoldCfg{}
+	ts := newTestScaffold(t, tcfg)
+	alice := ts.newClient("alice")
+
+	// Initial avatar is empty.
+	bob := ts.newClient("bob")
+	ts.kxUsers(alice, bob)
+	assertUserAvatar(t, bob, alice, nil)
+
+	avatarUpdateChan := make(chan []byte, 5)
+	bob.handle(client.OnProfileUpdated(func(ru *client.RemoteUser,
+		ab *clientdb.AddressBookEntry, _ []client.ProfileUpdateField) {
+		avatarUpdateChan <- ab.ID.Avatar
+	}))
+
+	avatar1 := bytes.Repeat([]byte{0xa1}, 16)
+	assert.NilErr(t, alice.UpdateLocalAvatar(avatar1))
+	assert.ChanWrittenWithVal(t, avatarUpdateChan, avatar1)
+	assertUserAvatar(t, bob, alice, avatar1)
+
+	// Ensure avatar was saved.
+	bob = ts.recreateClient(bob)
+	assertUserAvatar(t, bob, alice, avatar1)
+
+	// Ensure Alice's avatar was saved.
+	alice = ts.recreateClient(alice)
+	gotAvatar := alice.Public().Avatar
+	assert.DeepEqual(t, gotAvatar, avatar1)
+
+	// Ensure avatar can be cleared.
+	bob.handle(client.OnProfileUpdated(func(ru *client.RemoteUser,
+		ab *clientdb.AddressBookEntry, _ []client.ProfileUpdateField) {
+		avatarUpdateChan <- ab.ID.Avatar
+	}))
+	assert.NilErr(t, alice.UpdateLocalAvatar(nil))
+	assert.ChanWrittenWithVal(t, avatarUpdateChan, nil)
+	bob = ts.recreateClient(bob)
+	assertUserAvatar(t, bob, alice, nil)
+}

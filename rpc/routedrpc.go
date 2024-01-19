@@ -266,6 +266,9 @@ func ComposeCompressedRM(fromSigner MessageSigner, rm interface{}, zlibLevel int
 	case RMKXSuggestion:
 		h.Command = RMCKXSuggestion
 
+	case RMProfileUpdate:
+		h.Command = RMCProfileUpdate
+
 	// Handshake
 	case RMHandshakeSYN:
 		h.Command = RMCHandshakeSYN
@@ -546,6 +549,11 @@ func DecomposeRM(msgVerifier MessageVerifier, mb []byte, maxDecompressSize uint)
 		var kxsg RMKXSuggestion
 		err = pmd.Decode(&kxsg)
 		payload = kxsg
+
+	case RMCProfileUpdate:
+		var rmpu RMProfileUpdate
+		err = pmd.Decode(&rmpu)
+		payload = rmpu
 
 	// Handshake
 	case RMCHandshakeSYN:
@@ -1275,3 +1283,14 @@ type RMReceiveReceipt struct {
 
 // RMCReceiveReceipt is the command for a RMReceiveReceipt value.
 const RMCReceiveReceipt = "recvreceipt"
+
+// RMProfileUpdate is a message sent by a client when it has updated one of
+// its profile fields.
+type RMProfileUpdate struct {
+	// Avatar is the user's avatar. If set to nil, the avatar is not
+	// updated. If set to an empty slice, the avatar is cleared.
+	Avatar []byte `json:"avatar"`
+}
+
+// RMCProfileUpdate is the command for a RMProfileUpdate.
+const RMCProfileUpdate = "profileupdt"
