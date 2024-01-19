@@ -151,10 +151,14 @@ func (c *Client) handleMediateID(ru *RemoteUser, mi rpc.RMMediateIdentity) error
 			zkidentity.ShortID(mi.Identity))
 		return err
 	}
+	ruAB, err := c.getAddressBookEntry(ru.ID())
+	if err != nil {
+		return err
+	}
 	ru.log.Infof("Asked to mediate id to %s", target)
 
 	// Ask target to generate an identity invite.
-	rm := rpc.RMInvite{Invitee: ru.PublicIdentity()}
+	rm := rpc.RMInvite{Invitee: *ruAB.ID}
 	payEvent := fmt.Sprintf("mediateid.%s", ru.ID())
 	return target.sendRM(rm, payEvent)
 }
@@ -173,7 +177,7 @@ func (c *Client) handleRMInvite(ru *RemoteUser, iv rpc.RMInvite) error {
 		return err
 	}
 
-	return ru.sendTransitive(pii, "RMInvite", iv.Invitee, priorityDefault)
+	return ru.sendTransitive(pii, "RMInvite", &iv.Invitee, priorityDefault)
 }
 
 func (c *Client) handleTransitiveIDInvite(ru *RemoteUser, pii rpc.OOBPublicIdentityInvite) error {

@@ -167,10 +167,10 @@ func NewFullKX(fkx *ratchet.KeyExchange) (*RMOFullKX, error) {
 // EncryptRMO returns an encrypted blob from x.
 // The returned blob is packed and prefixed with a sntrup ciphertext followed
 // by an encrypted JSON objecti; or [sntrup ciphertext][encrypted JSON object].
-func EncryptRMO(x interface{}, them zkidentity.PublicIdentity, zlibLevel int) ([]byte, error) {
+func EncryptRMO(x interface{}, theirKey *zkidentity.FixedSizeSntrupPublicKey, zlibLevel int) ([]byte, error) {
 	// Create shared key that will be discarded as function exits
 	cipherText, sharedKey, err := sntrup4591761.Encapsulate(rand.Reader,
-		(*sntrup4591761.PublicKey)(&them.Key))
+		(*sntrup4591761.PublicKey)(theirKey))
 	if err != nil {
 		return nil, err
 	}

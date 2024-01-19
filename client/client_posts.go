@@ -377,9 +377,9 @@ func (c *Client) verifyPostSignature(p rpc.PostMetadata) error {
 
 	// Select the public key to check (either the local client or from
 	// a known user).
-	var pubid zkidentity.PublicIdentity
+	var verifyMsg rpc.MessageVerifier
 	if from == c.PublicID() {
-		pubid = c.public()
+		verifyMsg = c.localID.verifyMessage
 	} else {
 		ru, err := c.rul.byID(from)
 		if err != nil {
@@ -387,7 +387,7 @@ func (c *Client) verifyPostSignature(p rpc.PostMetadata) error {
 				"unknown author", p.Hash())
 			return nil
 		}
-		pubid = *ru.id
+		verifyMsg = ru.verifyMessage
 	}
 
 	var sig zkidentity.FixedSizeSignature
@@ -402,7 +402,7 @@ func (c *Client) verifyPostSignature(p rpc.PostMetadata) error {
 	}
 
 	msg := p.Hash()
-	if !pubid.VerifyMessage(msg[:], &sig) {
+	if !verifyMsg(msg[:], &sig) {
 		return failf("signature failed verification")
 	}
 
@@ -425,9 +425,9 @@ func (c *Client) verifyPostStatusSignature(pms rpc.PostMetadataStatus) error {
 
 	// Select the public key to check (either the local client or from
 	// a known user).
-	var pubid zkidentity.PublicIdentity
+	var verifyMsg rpc.MessageVerifier
 	if from == c.PublicID() {
-		pubid = c.public()
+		verifyMsg = c.localID.verifyMessage
 	} else {
 		ru, err := c.rul.byID(from)
 		if err != nil {
@@ -435,7 +435,7 @@ func (c *Client) verifyPostStatusSignature(pms rpc.PostMetadataStatus) error {
 				"unknown author", pms.Hash())
 			return nil
 		}
-		pubid = *ru.id
+		verifyMsg = ru.verifyMessage
 	}
 
 	if pms.From == "" {
@@ -454,7 +454,7 @@ func (c *Client) verifyPostStatusSignature(pms rpc.PostMetadataStatus) error {
 	}
 
 	msg := pms.Hash()
-	if !pubid.VerifyMessage(msg[:], &sig) {
+	if !verifyMsg(msg[:], &sig) {
 		return failf("signature failed verification")
 	}
 	return nil

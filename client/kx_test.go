@@ -108,7 +108,8 @@ func TestRepeatedResetActivation(t *testing.T) {
 		t.Fatal(err)
 	}
 	invite.InitialRendezvous[0] ^= 0xa5 // Prevent KX by changing the initial RV.
-	packed, err := rpc.EncryptRMO(invite, alice.public(), 0)
+	alicePub := alice.public()
+	packed, err := rpc.EncryptRMO(invite, &alicePub.Key, 0)
 	if err != nil {
 		t.Fatal(err)
 	}

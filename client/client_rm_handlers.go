@@ -89,8 +89,7 @@ func (c *Client) handleTransitiveMsgFwd(ru *RemoteUser, fwd rpc.RMTransitiveMess
 
 		// This should only happen during KX.
 	} else {
-		fromPub := from.PublicIdentity()
-		msgVerifier = fromPub.VerifyMessage
+		msgVerifier = from.verifyMessage
 	}
 	h, cmd, err := rpc.DecomposeRM(msgVerifier, cleartext, uint(c.q.MaxMsgSize()))
 	if err != nil {

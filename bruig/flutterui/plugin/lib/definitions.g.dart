@@ -121,14 +121,12 @@ Map<String, dynamic> _$ServerInfoToJson(ServerInfo instance) =>
 
 RemoteUser _$RemoteUserFromJson(Map<String, dynamic> json) => RemoteUser(
       json['uid'] as String,
-      json['name'] as String,
       json['nick'] as String,
     );
 
 Map<String, dynamic> _$RemoteUserToJson(RemoteUser instance) =>
     <String, dynamic>{
       'uid': instance.uid,
-      'name': instance.name,
       'nick': instance.nick,
     };
 
