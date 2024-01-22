@@ -70,7 +70,9 @@ mixin BaseMobilePlatform on ChanneledPlatform, NtfStreams {
 
       dynamic payload;
       if (jsonPayload != "") {
-        payload = jsonDecode(jsonPayload);
+        jsonPayload = jsonPayload.trim().replaceAll("\n", "");
+        jsonPayload = jsonPayload.trim().replaceAll("\t", "");
+        payload = jsonDecode(jsonPayload.trim());
       }
 
       if (isError) {
