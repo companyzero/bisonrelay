@@ -18,8 +18,8 @@ require (
 	github.com/decred/dcrd/dcrutil/v4 v4.0.1
 	github.com/decred/dcrd/txscript/v4 v4.1.0
 	github.com/decred/dcrd/wire v1.6.0
-	github.com/decred/dcrlnd v0.5.1-0.20240112165935-63417e2556c1
-	github.com/decred/dcrlnlpd v0.0.0-20231212171353-b46ff7b10bf4
+	github.com/decred/dcrlnd v0.5.1-0.20240123175816-ae2058fde3dd
+	github.com/decred/dcrlnlpd v0.0.0-20240123180445-e796ee43935f
 	github.com/decred/go-socks v1.1.0
 	github.com/decred/slog v1.2.0
 	github.com/erikgeiser/promptkit v0.9.0
@@ -51,7 +51,7 @@ require (
 
 require (
 	decred.org/cspp/v2 v2.1.0 // indirect
-	decred.org/dcrwallet/v3 v3.0.0 // indirect
+	decred.org/dcrwallet/v3 v3.1.1-0.20240123171509-cb3222c211b9 // indirect
 	github.com/NebulousLabs/go-upnp v0.0.0-20181203152547-b32978b8ccbf // indirect
 	github.com/Yawning/aez v0.0.0-20211027044916-e49e68abd344 // indirect
 	github.com/agl/ed25519 v0.0.0-20170116200512-5312a6153412 // indirect
@@ -85,7 +85,7 @@ require (
 	github.com/decred/dcrd/lru v1.1.2 // indirect
 	github.com/decred/dcrd/math/uint256 v1.0.1 // indirect
 	github.com/decred/dcrd/peer/v3 v3.0.2 // indirect
-	github.com/decred/dcrd/rpc/jsonrpc/types/v4 v4.0.0 // indirect
+	github.com/decred/dcrd/rpc/jsonrpc/types/v4 v4.1.0 // indirect
 	github.com/decred/dcrd/rpcclient/v8 v8.0.0 // indirect
 	github.com/decred/dcrtest/dcrdtest v1.0.0 // indirect
 	github.com/decred/lightning-onion/v4 v4.0.0 // indirect
@@ -109,7 +109,7 @@ require (
 	github.com/jrick/wsrpc/v2 v2.3.5 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/kkdai/bstream v1.0.0 // indirect
-	github.com/klauspost/cpuid/v2 v2.0.9 // indirect
+	github.com/klauspost/cpuid/v2 v2.2.5 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/matheusd/etcd v0.5.0-alpha.5.0.20230703143131-79b93c0cee87 // indirect
 	github.com/mattn/go-isatty v0.0.19 // indirect
