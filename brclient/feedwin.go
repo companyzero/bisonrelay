@@ -170,15 +170,13 @@ func (fw feedWindow) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			fw.as.activatePost(&summ)
 			return newPostWin(fw.as, fw.idx, fw.viewport.YOffset)
 
-		case msg.Type == tea.KeyCtrlN:
+		case msg.Type == tea.KeyCtrlPgUp:
 			// Switch to the window after the feed and go back to
 			// main window.
-			fw.as.changeActiveWindow(activeCWFeed + 1)
+			fw.as.changeActiveWindowNext()
 			return newMainWindowState(fw.as)
 
-		// There is no window prior to feed
-		// window, so this is is commented out.
-		case msg.Type == tea.KeyCtrlP:
+		case msg.Type == tea.KeyCtrlPgDown:
 			fw.as.changeActiveWindowPrev()
 			return newMainWindowState(fw.as)
 		}
@@ -198,7 +196,7 @@ func (fw feedWindow) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (fw feedWindow) headerView(styles *theme) string {
-	msg := " Posts Feed - Press ESC to return"
+	msg := " Posts Feed - Press ESC to return - ctrl+pgup/pgdown to change windows"
 	headerMsg := styles.header.Render(msg)
 	spaces := styles.header.Render(strings.Repeat(" ",
 		max(0, fw.as.winW-lipgloss.Width(headerMsg))))
