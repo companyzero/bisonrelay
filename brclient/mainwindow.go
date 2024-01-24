@@ -235,6 +235,9 @@ func (mws mainWindowState) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cw := mws.as.activeChatWindow()
 
 		switch {
+		case msg.Type == tea.KeyCtrlW:
+			mws.as.closeActiveWindow()
+
 		case msg.Type == tea.KeyEsc:
 			mws.escStr = ""
 			mws.escMode = !mws.escMode
@@ -252,6 +255,43 @@ func (mws mainWindowState) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			mws.recalcViewportSize()
 
 		case msg.Type == tea.KeyEnter:
+			if mws.isPage {
+				if cw.selEl != nil && cw.selEl.embed != nil {
+					// View selected embed.
+					embedded := *cw.selEl.embed
+					cmd, err := mws.as.viewEmbed(embedded)
+					if err == nil {
+						return mws, cmd
+					}
+					cw.newHelpMsg("Unable to view embed: %v", err)
+					mws.updateViewportContent()
+
+				} else if cw.selEl != nil && cw.selEl.link != nil {
+					// Navigate to other page.
+					uid := cw.page.UID
+					err := mws.as.fetchPage(uid, *cw.selEl.link,
+						cw.page.SessionID, cw.page.PageID, nil)
+					if err != nil {
+						mws.as.diagMsg("Unable to fetch page: %v", err)
+					}
+				} else if cw.selEl != nil && cw.selEl.form != nil &&
+					cw.selEl.formField != nil && cw.selEl.formField.typ == "submit" {
+
+					// Submit form.
+					uid := cw.page.UID
+					action := cw.selEl.form.action()
+
+					err := mws.as.fetchPage(uid, action,
+						cw.page.SessionID, cw.page.PageID, cw.selEl.form)
+					if err != nil {
+						mws.as.diagMsg("Unable to fetch page: %v", err)
+					}
+
+				}
+
+				break
+			}
+
 			// Execute command
 			mws.onTextInputAction()
 
@@ -280,15 +320,44 @@ func (mws mainWindowState) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 		case msg.Type == tea.KeyTab:
+			if mws.isPage {
+				if cw.changeSelected(1) {
+					mws.updateViewportContent()
+					mws.resetFormInput()
+				}
+
+				break
+			}
+
 			mws.updateCompletion()
 
-		case msg.Type == tea.KeyCtrlN:
+		case msg.Type == tea.KeyShiftTab:
+			if mws.isPage {
+				if cw.changeSelected(-1) {
+					mws.updateViewportContent()
+					mws.resetFormInput()
+				}
+
+				break
+			}
+
+		case msg.Type == tea.KeyCtrlPgUp:
 			mws.as.changeActiveWindowNext()
 
-		case msg.Type == tea.KeyCtrlP:
+		case msg.Type == tea.KeyCtrlPgDown:
 			mws.as.changeActiveWindowPrev()
 
-		case mws.isChat && msg.Type == tea.KeyUp, mws.isChat && msg.Type == tea.KeyDown:
+		case msg.Type == tea.KeyUp, msg.Type == tea.KeyDown:
+			if mws.isPage {
+				// send to viewport
+				mws.viewport, cmd = mws.viewport.Update(msg)
+				cmds = appendCmd(cmds, cmd)
+
+				break
+			} else if !mws.isChat {
+				break
+			}
+
 			up := msg.Type == tea.KeyUp
 			down := !up
 			afterHistory := mws.as.cmdHistoryIdx >= len(mws.as.cmdHistory)
@@ -366,11 +435,6 @@ func (mws mainWindowState) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				cmds = appendCmd(cmds, textarea.Blink)
 			}
 
-		case mws.isPage && (msg.Type == tea.KeyUp || msg.Type == tea.KeyDown):
-			// send to viewport
-			mws.viewport, cmd = mws.viewport.Update(msg)
-			cmds = appendCmd(cmds, cmd)
-
 		case mws.escMode && len(msg.Runes) == 1:
 			mws.escStr += msg.String()
 			return mws, func() tea.Msg {
@@ -381,17 +445,7 @@ func (mws mainWindowState) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case msg.Type == tea.KeyF2:
 			cmds = mws.ew.activate()
 
-		case cw != nil && msg.Type == tea.KeyCtrlUp, cw != nil && msg.Type == tea.KeyCtrlDown:
-			delta := -1
-			if msg.Type == tea.KeyCtrlDown {
-				delta = 1
-			}
-			if cw.changeSelected(delta) {
-				mws.updateViewportContent()
-				mws.resetFormInput()
-			}
-
-		case cw != nil && cw.selEl != nil && cw.selEl.embed != nil && msg.Type == tea.KeyCtrlV:
+		case !mws.isPage && cw != nil && cw.selEl != nil && cw.selEl.embed != nil && msg.Type == tea.KeyCtrlV:
 			// View selected embed.
 			embedded := *cw.selEl.embed
 			cmd, err := mws.as.viewEmbed(embedded)
@@ -401,7 +455,7 @@ func (mws mainWindowState) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			cw.newHelpMsg("Unable to view embed: %v", err)
 			mws.updateViewportContent()
 
-		case cw != nil && cw.selEl != nil && cw.selEl.link != nil && msg.Type == tea.KeyCtrlV:
+		case !mws.isPage && cw != nil && cw.selEl != nil && cw.selEl.link != nil && msg.Type == tea.KeyCtrlV:
 			// Navigate to other page.
 			uid := cw.page.UID
 			err := mws.as.fetchPage(uid, *cw.selEl.link,
@@ -410,7 +464,7 @@ func (mws mainWindowState) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				mws.as.diagMsg("Unable to fetch page: %v", err)
 			}
 
-		case cw != nil && cw.selEl != nil && cw.selEl.formField != nil && cw.selEl.formField.typ == "submit" && cw.selEl.form != nil && msg.Type == tea.KeyCtrlV:
+		case !mws.isPage && cw != nil && cw.selEl != nil && cw.selEl.formField != nil && cw.selEl.formField.typ == "submit" && cw.selEl.form != nil && msg.Type == tea.KeyCtrlV:
 			// Submit form.
 			uid := cw.page.UID
 			action := cw.selEl.form.action()
