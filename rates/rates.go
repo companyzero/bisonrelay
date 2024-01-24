@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strconv"
 	"sync"
 	"time"
 
@@ -23,9 +22,10 @@ type Config struct {
 type Rates struct {
 	cfg Config
 
-	mtx      sync.Mutex
-	dcrPrice float64
-	btcPrice float64
+	mtx         sync.Mutex
+	dcrPrice    float64
+	btcPrice    float64
+	lastUpdated int64
 }
 
 func New(cfg Config) *Rates {
@@ -41,20 +41,30 @@ func (r *Rates) Run(ctx context.Context) {
 	const requestTimeout = shortTimeout
 
 	t := time.NewTicker(1)
-	defer t.Stop()
 
 	var failedTries int
-
 	var err error
 	for {
 		select {
 		case <-ctx.Done():
+			t.Stop()
 			return
 		case <-t.C:
 			t.Stop()
 
-			// Try from dcrdata.
+			// Try from api.decred.org.
 			rctx, cancel := context.WithTimeout(ctx, requestTimeout)
+			if err = r.dcrAPI(rctx); err == nil {
+				cancel()
+				failedTries = 0
+				t.Reset(longTimeout)
+				continue
+			}
+			cancel()
+			r.cfg.Log.Debugf("Unable to fetch rate from api.decred.org: %v", err)
+
+			// Try from dcrdata.
+			rctx, cancel = context.WithTimeout(ctx, requestTimeout)
 			if err = r.dcrData(rctx); err == nil {
 				cancel()
 				failedTries = 0
@@ -64,24 +74,11 @@ func (r *Rates) Run(ctx context.Context) {
 			cancel()
 			r.cfg.Log.Debugf("Unable to fetch rate from dcrdata: %v", err)
 
-			// Try from mexc.
-			rctx, cancel = context.WithTimeout(ctx, requestTimeout)
-			if err = r.mexc(rctx); err == nil {
-				cancel()
-				failedTries = 0
-				t.Reset(longTimeout)
-				continue
-			}
-			cancel()
-			r.cfg.Log.Debugf("Unable to fetch rate from mexc: %v", err)
-
 			// Only log these at a higher warning level once after
 			// the rate has been successfully fetched. This prevents
 			// spam in the UI.
 			failedTries++
 			if failedTries == triesBeforeErr {
-				r.cfg.Log.Warnf("Unable to fetch rate from dcrdata: %v", err)
-				r.cfg.Log.Warnf("Unable to fetch rate from mexc: %v", err)
 				r.cfg.Log.Errorf("Unable to fetch recent exchange rate. Will keep retrying.")
 			}
 			t.Reset(shortTimeout)
@@ -106,6 +103,7 @@ func (r *Rates) Set(dcrPrice, btcPrice float64) {
 	r.mtx.Lock()
 	r.dcrPrice = dcrPrice
 	r.btcPrice = btcPrice
+	r.lastUpdated = time.Now().Unix()
 	r.mtx.Unlock()
 }
 
@@ -129,54 +127,52 @@ func (r *Rates) dcrData(ctx context.Context) error {
 		return fmt.Errorf("failed to decode exchange rate: %v", err)
 	}
 
-	r.cfg.Log.Infof("Current dcrdata exchange rate: DCR:%0.2f BTC:%0.2f",
+	r.cfg.Log.Infof("Current exchange rate via dcrdata: DCR:%0.2f BTC:%0.2f",
 		dcrDataExchange.DCRPrice, dcrDataExchange.BTCPrice)
 
 	r.mtx.Lock()
 	r.dcrPrice = dcrDataExchange.DCRPrice
 	r.btcPrice = dcrDataExchange.BTCPrice
+	r.lastUpdated = time.Now().Unix()
 	r.mtx.Unlock()
 
 	return nil
 }
 
-func (r *Rates) mexc(ctx context.Context) error {
-	mexcExchange := struct {
-		Price string `json:"price"`
+func (r *Rates) dcrAPI(ctx context.Context) error {
+	dcrAPIExchange := struct {
+		DCRPrice    float64 `json:"decred_usd"`
+		BTCPrice    float64 `json:"bitcoin_usd"`
+		LastUpdated int64   `json:"lastupdated"`
 	}{}
 
-	const dcrAPI = "https://api.mexc.com//api/v3/avgPrice?symbol=DCRUSDT"
-	b, err := r.getRaw(ctx, dcrAPI)
+	var apiURL string
+	if r.cfg.OnionEnable {
+		apiURL = "http://uhzsyccm5uobnd2mzzwp765vdqveampfacvbarl7xaopkdd3hfrfqqad.onion/?c=price"
+	} else {
+		apiURL = "https://api.decred.org/?c=price"
+	}
+	b, err := r.getRaw(ctx, apiURL)
 	if err != nil {
 		return err
 	}
-	if err = json.Unmarshal(b, &mexcExchange); err != nil {
+	if err = json.Unmarshal(b, &dcrAPIExchange); err != nil {
 		return fmt.Errorf("failed to decode exchange rate: %w", err)
 	}
-	dcrPrice, err := strconv.ParseFloat(mexcExchange.Price, 64)
-	if err != nil {
-		return fmt.Errorf("failed to parse exchange rate: %w", err)
+
+	now := time.Now()
+	last := now.Sub(time.Unix(dcrAPIExchange.LastUpdated, 0))
+	if last > 24*time.Hour {
+		return fmt.Errorf("api.decred.org data is stale")
 	}
 
-	const btcAPI = "https://api.mexc.com//api/v3/avgPrice?symbol=BTCUSDT"
-	b, err = r.getRaw(ctx, btcAPI)
-	if err != nil {
-		return err
-	}
-	if err = json.Unmarshal(b, &mexcExchange); err != nil {
-		return fmt.Errorf("failed to decode exchange rate: %v", err)
-	}
-	btcPrice, err := strconv.ParseFloat(mexcExchange.Price, 64)
-	if err != nil {
-		return fmt.Errorf("failed to parse exchange rate: %w", err)
-	}
-
-	r.cfg.Log.Infof("Current mexc exchange rate: DCR:%0.2f BTC:%0.2f",
-		dcrPrice, btcPrice)
+	r.cfg.Log.Infof("Current exchange rate via API: DCR:%0.2f BTC:%0.2f",
+		dcrAPIExchange.DCRPrice, dcrAPIExchange.BTCPrice)
 
 	r.mtx.Lock()
-	r.dcrPrice = dcrPrice
-	r.btcPrice = btcPrice
+	r.dcrPrice = dcrAPIExchange.DCRPrice
+	r.btcPrice = dcrAPIExchange.BTCPrice
+	r.lastUpdated = now.Unix()
 	r.mtx.Unlock()
 
 	return nil
