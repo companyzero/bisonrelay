@@ -176,10 +176,12 @@ class _AddContentPanelState extends State<AddContentPanel> {
       var fPath = filePickRes.files.first.path;
       if (fPath == null) return;
       filePath = fPath.trim();
-    });
-    if (filePath == null) return;
-    setState(() {
-      fnameCtrl.text = filePath!;
+      if (filePath == null) {
+        return;
+      }
+      setState(() {
+        fnameCtrl.text = filePath!;
+      });
     });
   }
 
@@ -374,6 +376,7 @@ class _ManageContentState extends State<ManageContent> {
   }
 
   Future<void> addContent(String filename, String nick, double cost) async {
+    print("share file $nick");
     await Golib.shareFile(filename, nick, cost, "");
     await loadSharedContent();
   }
