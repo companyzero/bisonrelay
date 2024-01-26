@@ -43,26 +43,31 @@ type mainWindowState struct {
 	debug string
 }
 
-func (mws *mainWindowState) updateHeader() {
+func (mws *mainWindowState) updateHeader(styles *theme) {
 	var connMsg string
 	state := mws.as.currentConnState()
 	switch state {
 	case connStateOnline:
-		connMsg = mws.as.styles.online.Render("online")
+		connMsg = styles.online.Render("online")
 	case connStateOffline:
-		connMsg = mws.as.styles.offline.Render("offline")
+		connMsg = styles.offline.Render("offline")
 	case connStateCheckingWallet:
-		connMsg = mws.as.styles.checkingWallet.Render("checking wallet")
+		connMsg = styles.checkingWallet.Render("checking wallet")
 	}
 
-	helpMsg := mws.as.styles.header.Render(" - F2 to embed, ctrl+up/down to select, ctrl+v to view")
-
-	qlenMsg := mws.as.styles.header.Render(fmt.Sprintf("Q %d ", mws.as.rmqLen()))
+	var helpStr string
+	if mws.isPage {
+		helpStr = " - tab/shift+tab to navigate form, enter to select, ctrl+pgup/pgdown to change windows, ctrl+w to close"
+	} else {
+		helpStr = " - F2 to embed, ctrl+up/down to select, ctrl+v to view"
+	}
+	helpMsg := styles.header.Render(helpStr)
+	qlenMsg := styles.header.Render(fmt.Sprintf("Q %d ", mws.as.rmqLen()))
 
 	server := mws.as.serverAddr
 	msg := fmt.Sprintf(" %s - %s%s", server, connMsg, helpMsg)
-	headerMsg := mws.as.styles.header.Render(msg)
-	spaces := mws.as.styles.header.Render(strings.Repeat(" ",
+	headerMsg := styles.header.Render(msg)
+	spaces := styles.header.Render(strings.Repeat(" ",
 		max(0, mws.as.winW-lipgloss.Width(headerMsg)-lipgloss.Width(qlenMsg))))
 	mws.header = headerMsg + spaces + qlenMsg
 }
@@ -79,6 +84,7 @@ func (mws *mainWindowState) updateViewportContent() {
 }
 
 func (mws *mainWindowState) recalcViewportSize() {
+	styles := mws.as.styles.Load()
 
 	// First, update the edit line height. This is not entirely accurate
 	// because textArea does its own wrapping.
@@ -86,7 +92,7 @@ func (mws *mainWindowState) recalcViewportSize() {
 
 	// Next figure out how much is left for the viewport.
 	headerHeight := lipgloss.Height(mws.header)
-	footerHeight := lipgloss.Height(mws.footerView())
+	footerHeight := lipgloss.Height(mws.footerView(styles))
 	editHeight := textAreaHeight
 
 	verticalMarginHeight := headerHeight + footerHeight + editHeight
@@ -219,6 +225,7 @@ func (mws mainWindowState) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		_, cmd = mws.ew.Update(msg)
 		return mws, cmd
 	}
+	styles := mws.as.styles.Load()
 
 	// Main msg handler. We only return early in cases where we switch to a
 	// different state, otherwise only return at the end of the function.
@@ -471,7 +478,7 @@ func (mws mainWindowState) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg: // resize window
 		mws.as.winW, mws.as.winH = msg.Width, msg.Height
 		mws.textArea.SetWidth(msg.Width)
-		mws.updateHeader()
+		mws.updateHeader(styles)
 		mws.recalcViewportSize()
 		mws.updateViewportContent()
 
@@ -530,7 +537,7 @@ func (mws mainWindowState) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return newLNOpenChannelWindow(mws.as, false)
 
 	case connState, rmqLenChanged:
-		mws.updateHeader()
+		mws.updateHeader(styles)
 		return mws, nil
 
 	case msgConfirmServerCert:
@@ -575,10 +582,10 @@ func (mws mainWindowState) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return mws, batchCmds(cmds)
 }
 
-func (mws mainWindowState) footerView() string {
+func (mws mainWindowState) footerView(styles *theme) string {
 	esc := ""
 	if !mws.viewport.AtBottom() {
-		esc = mws.as.styles.footer.Render("(more) ")
+		esc = styles.footer.Render("(more) ")
 	}
 	if mws.debug != "" {
 		esc = mws.debug
@@ -586,16 +593,17 @@ func (mws mainWindowState) footerView() string {
 		esc = "ESC"
 	}
 
-	return mws.as.footerView(esc)
+	return mws.as.footerView(styles, esc)
 }
 
 func (mws mainWindowState) View() string {
+	styles := mws.as.styles.Load()
 
 	if mws.ew.active() {
 		return fmt.Sprintf("%s\n%s\n%s\n",
 			mws.header,
 			mws.ew.View(),
-			mws.footerView())
+			mws.footerView(styles))
 	}
 
 	textAreaView := mws.textArea.View()
@@ -605,13 +613,13 @@ func (mws mainWindowState) View() string {
 		// break in the future if textArea changes.
 		textAreaView = strings.TrimRightFunc(textAreaView, unicode.IsSpace)
 		opt = mws.completeOpts[mws.completeIdx]
-		opt = mws.as.styles.help.Render(opt)
+		opt = styles.help.Render(opt)
 	}
 
 	return fmt.Sprintf("%s\n%s\n%s\n%s%s",
 		mws.header,
 		mws.viewport.View(),
-		mws.footerView(),
+		mws.footerView(styles),
 		textAreaView,
 		opt,
 	)
@@ -623,7 +631,9 @@ func newMainWindowState(as *appState) (mainWindowState, tea.Cmd) {
 		embedContent: make(map[string][]byte),
 		formInput:    textinput.NewModel(),
 	}
-	mws.textArea = newTextAreaModel(as.styles)
+	styles := as.styles.Load()
+
+	mws.textArea = newTextAreaModel(styles)
 	mws.textArea.Prompt = ""
 	mws.textArea.Placeholder = ""
 	mws.textArea.ShowLineNumbers = false
@@ -635,7 +645,7 @@ func newMainWindowState(as *appState) (mainWindowState, tea.Cmd) {
 	mws.formInput.Focus()
 
 	mws.ew = newEmbedWidget(as, mws.addEmbedCB)
-	mws.updateHeader()
+	mws.updateHeader(styles)
 	mws.recalcViewportSize()
 	mws.updateViewportContent()
 	return mws, nil

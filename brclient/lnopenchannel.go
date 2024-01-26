@@ -93,32 +93,33 @@ func (pw lnOpenChannelWindow) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return pw, cmd
 }
 
-func (pw lnOpenChannelWindow) headerView() string {
+func (pw lnOpenChannelWindow) headerView(styles *theme) string {
 	msg := " Open Outbound LN Channel for Sending Payments"
 	if !pw.isManual {
 		msg += " - Press F2 for manual entry"
 	}
-	headerMsg := pw.as.styles.header.Render(msg)
-	spaces := pw.as.styles.header.Render(strings.Repeat(" ",
+	headerMsg := styles.header.Render(msg)
+	spaces := styles.header.Render(strings.Repeat(" ",
 		max(0, pw.as.winW-lipgloss.Width(headerMsg))))
 	return headerMsg + spaces
 }
 
-func (pw lnOpenChannelWindow) footerView() string {
+func (pw lnOpenChannelWindow) footerView(styles *theme) string {
 	footerMsg := fmt.Sprintf(
 		" [%s] ",
 		time.Now().Format("15:04"),
 	)
-	fs := pw.as.styles.footer
+	fs := styles.footer
 	spaces := fs.Render(strings.Repeat(" ",
 		max(0, pw.as.winW-lipgloss.Width(footerMsg))))
 	return fs.Render(footerMsg + spaces)
 }
 
 func (pw lnOpenChannelWindow) View() string {
-	var b strings.Builder
+	styles := pw.as.styles.Load()
 
-	b.WriteString(pw.headerView())
+	var b strings.Builder
+	b.WriteString(pw.headerView(styles))
 	b.WriteString("\n\n")
 	b.WriteString("To send payments through the Lightning Network, your LN wallet\n")
 	b.WriteString("needs to open a channel to some other, existing LN node.\n")
@@ -143,7 +144,7 @@ func (pw lnOpenChannelWindow) View() string {
 		nbLines += pw.form.lineCount()
 
 		if pw.openChanErr != nil {
-			b.WriteString(pw.as.styles.err.Render(pw.openChanErr.Error()))
+			b.WriteString(styles.err.Render(pw.openChanErr.Error()))
 			b.WriteString("\n")
 			nbLines += 1
 		}
@@ -152,29 +153,31 @@ func (pw lnOpenChannelWindow) View() string {
 	for i := 0; i < pw.as.winH-nbLines-1; i++ {
 		b.WriteString("\n")
 	}
-	b.WriteString(pw.footerView())
+	b.WriteString(pw.footerView(styles))
 
 	return b.String()
 }
 
 func newLNOpenChannelWindow(as *appState, isManual bool) (lnOpenChannelWindow, tea.Cmd) {
-	form := newFormHelper(as.styles,
-		newTextInputHelper(as.styles,
+	styles := as.styles.Load()
+
+	form := newFormHelper(styles,
+		newTextInputHelper(styles,
 			tihWithPrompt("Amount: "),
 		),
 	)
 	if isManual {
 		form.AddInputs(
-			newTextInputHelper(as.styles,
+			newTextInputHelper(styles,
 				tihWithPrompt("Server:Port: "),
 			),
-			newTextInputHelper(as.styles,
+			newTextInputHelper(styles,
 				tihWithPrompt("Server PubKey: "),
 			),
 		)
 	}
 	form.AddInputs(
-		newButtonHelper(as.styles,
+		newButtonHelper(styles,
 			btnWithLabel(" [ Add Outbound Capacity ]"),
 			btnWithTrailing("\n"),
 			btnWithFixedMsgAction(msgSubmitForm{}),

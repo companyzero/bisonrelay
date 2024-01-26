@@ -436,7 +436,7 @@ var listCommands = []tuicmd{
 						totalRecv += s.TotalReceived
 						pf("%12.8f   %12.8f - %s %s",
 							totSent, totRecv, nick,
-							as.styles.help.Render(uid.String()))
+							as.styles.Load().help.Render(uid.String()))
 					}
 					pf("%12.8f   %12.8f - Totals",
 						float64(totalSent)/1e11,
@@ -715,7 +715,7 @@ var inviteCommands = []tuicmd{
 			}
 			if as.inviteFundsAccount == "" || as.inviteFundsAccount == "default" {
 				as.manyDiagMsgsCb(func(pf printf) {
-					pf(as.styles.err.Render("Cannot fund invite when funding account is set to the default wallet account"))
+					pf(as.styles.Load().err.Render("Cannot fund invite when funding account is set to the default wallet account"))
 					pf("Create a new account with '/ln newaccount <name>'")
 					pf("and set the 'invitefundsaccount = <name>' config option in brclient.conf")
 				})
@@ -2875,7 +2875,7 @@ var lnCommands = []tuicmd{
 				txs, err := as.lnRPC.GetTransactions(as.ctx, req)
 				if err != nil {
 					errMsg := fmt.Sprintf("Unable to list transactions: %v", err)
-					as.diagMsg(as.styles.err.Render(errMsg))
+					as.diagMsg(as.styles.Load().err.Render(errMsg))
 					return
 				}
 

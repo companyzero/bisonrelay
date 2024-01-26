@@ -193,7 +193,7 @@ func (ew *embedWidget) embeddingView() string {
 	b.WriteString(ew.formEmbed.View())
 	b.WriteString("\n")
 	if ew.embedErr != nil {
-		b.WriteString(ew.as.styles.err.Render(ew.embedErr.Error()))
+		b.WriteString(ew.as.styles.Load().err.Render(ew.embedErr.Error()))
 	}
 	b.WriteString("\n")
 
@@ -232,24 +232,26 @@ func (ew *embedWidget) View() string {
 }
 
 func newEmbedWidget(as *appState, addEmbedCB func(string, []byte, string) error) *embedWidget {
-	formEmbed := newFormHelper(as.styles,
-		newTextInputHelper(as.styles,
+	styles := as.styles.Load()
+
+	formEmbed := newFormHelper(styles,
+		newTextInputHelper(styles,
 			tihWithPrompt("File to embed: "),
 		),
-		newTextInputHelper(as.styles,
+		newTextInputHelper(styles,
 			tihWithPrompt("Alt Text: "),
 		),
-		newButtonHelper(as.styles,
+		newButtonHelper(styles,
 			btnWithLabel("[ Link to Shared File ]"),
 			btnWithTrailing("\n\n"),
 			btnWithFixedMsgAction(msgShowSharedFilesForLink{}),
 		),
-		newButtonHelper(as.styles,
+		newButtonHelper(styles,
 			btnWithLabel("[ Cancel ]"),
 			btnWithTrailing(" "),
 			btnWithFixedMsgAction(msgCancelForm{}),
 		),
-		newButtonHelper(as.styles,
+		newButtonHelper(styles,
 			btnWithLabel(" [ Add Embed ]"),
 			btnWithTrailing("\n"),
 			btnWithFixedMsgAction(msgSubmitForm{}),

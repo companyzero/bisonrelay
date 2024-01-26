@@ -67,29 +67,30 @@ func (os startOnboardScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return os, cmd
 }
 
-func (os startOnboardScreen) headerView() string {
+func (os startOnboardScreen) headerView(styles *theme) string {
 	msg := "Onboarding Bison Relay Client"
-	headerMsg := os.as.styles.header.Render(msg)
-	spaces := os.as.styles.header.Render(strings.Repeat(" ",
+	headerMsg := styles.header.Render(msg)
+	spaces := styles.header.Render(strings.Repeat(" ",
 		max(0, os.as.winW-lipgloss.Width(headerMsg))))
 	return headerMsg + spaces
 }
 
-func (os startOnboardScreen) footerView() string {
+func (os startOnboardScreen) footerView(styles *theme) string {
 	footerMsg := fmt.Sprintf(
 		" [%s] ",
 		time.Now().Format("15:04"),
 	)
-	fs := os.as.styles.footer
+	fs := styles.footer
 	spaces := fs.Render(strings.Repeat(" ",
 		max(0, os.as.winW-lipgloss.Width(footerMsg))))
 	return fs.Render(footerMsg + spaces)
 }
 
 func (os startOnboardScreen) View() string {
-	var b strings.Builder
+	styles := os.as.styles.Load()
 
-	b.WriteString(os.headerView())
+	var b strings.Builder
+	b.WriteString(os.headerView(styles))
 	b.WriteString("\n\n")
 	b.WriteString("Automatic onboarding is supported by having an existing\n")
 	b.WriteString("BR user send you a Paid Invite Key with funds for setting\n")
@@ -107,13 +108,13 @@ func (os startOnboardScreen) View() string {
 
 	if os.onboardErr != nil {
 		b.WriteString("\n")
-		b.WriteString(os.as.styles.err.Render(os.onboardErr.Error()))
+		b.WriteString(styles.err.Render(os.onboardErr.Error()))
 		b.WriteString("\n")
 		nbLines += 2
 	}
 
 	b.WriteString(blankLines(os.as.winH - nbLines - 1))
-	b.WriteString(os.footerView())
+	b.WriteString(os.footerView(styles))
 
 	return b.String()
 }
@@ -139,16 +140,18 @@ func cmdAttemptStartOnboard(c *client.Client, key string) func() tea.Msg {
 }
 
 func newStartOnboardScreen(as *appState) (startOnboardScreen, tea.Cmd) {
-	form := newFormHelper(as.styles,
-		newTextInputHelper(as.styles,
+	styles := as.styles.Load()
+
+	form := newFormHelper(styles,
+		newTextInputHelper(styles,
 			tihWithPrompt("Key: "),
 		),
-		newButtonHelper(as.styles,
+		newButtonHelper(styles,
 			btnWithLabel(" [ Start Onboarding ]"),
 			btnWithTrailing(" "),
 			btnWithFixedMsgAction(msgSubmitForm{}),
 		),
-		newButtonHelper(as.styles,
+		newButtonHelper(styles,
 			btnWithLabel(" [ Skip Onboarding ]"),
 			btnWithTrailing("\n"),
 			btnWithFixedMsgAction(msgCancelForm{}),

@@ -204,7 +204,7 @@ func (pw *postWindow) updatePost() {
 }
 
 func (pw *postWindow) renderComment(cmt *comment, write func(s string), idx int) {
-	styles := pw.as.styles
+	styles := pw.as.styles.Load()
 
 	fromStyle := styles.help
 	nickStyle := styles.nick
@@ -298,7 +298,7 @@ func (pw *postWindow) renderComment(cmt *comment, write func(s string), idx int)
 }
 
 func (pw *postWindow) renderPost() {
-	b := new(strings.Builder)
+	var b strings.Builder
 	var lineCount int
 	write := func(s string) {
 		lineCount += strings.Count(s, "\n")
@@ -308,7 +308,7 @@ func (pw *postWindow) renderPost() {
 
 	attr := pw.post.Attributes
 	id := attr[rpc.RMPIdentifier]
-	styles := pw.as.styles
+	styles := pw.as.styles.Load()
 	date := pw.summ.Date.Format("2006-01-02 15:04")
 
 	write(styles.help.Render(pf("Post %s by ", id)))
@@ -379,9 +379,9 @@ func (pw *postWindow) renderPost() {
 			}
 		}
 
-		style := pw.as.styles.embed
+		style := styles.embed
 		if idx == pw.selEmbed {
-			style = pw.as.styles.focused
+			style = styles.focused
 		}
 		idx += 1
 		embeds = append(embeds, args)
@@ -1080,39 +1080,41 @@ done:
 	return pw, batchCmds(cmds)
 }
 
-func (pw postWindow) headerView() string {
+func (pw postWindow) headerView(styles *theme) string {
 	msg := " Post - ESC to return, " +
 		"(S+R) Relay Post, (S+S) KX Search Author, (S+U) Relay to User, (Ctrl+D) Download, (Ctrl+V) View File"
-	headerMsg := pw.as.styles.header.Render(msg)
-	spaces := pw.as.styles.header.Render(strings.Repeat(" ",
+	headerMsg := styles.header.Render(msg)
+	spaces := styles.header.Render(strings.Repeat(" ",
 		max(0, pw.as.winW-lipgloss.Width(headerMsg))))
 	return headerMsg + spaces
 }
 
-func (pw postWindow) footerView() string {
+func (pw postWindow) footerView(styles *theme) string {
 	moreLines := ""
 	if !pw.viewport.AtBottom() {
-		moreLines = pw.as.styles.footer.Render(" (more lines)")
+		moreLines = styles.footer.Render(" (more lines)")
 	}
 
-	return pw.as.footerView(moreLines)
+	return pw.as.footerView(styles, moreLines)
 }
 
 func (pw postWindow) View() string {
+	styles := pw.as.styles.Load()
+
 	b := new(strings.Builder)
 	write := b.WriteString
-	write(pw.headerView())
+	write(pw.headerView(styles))
 	write("\n")
 	write(pw.viewport.View())
 	write("\n")
-	write(pw.footerView())
+	write(pw.footerView(styles))
 	write("\n")
 	if pw.confirmingComment {
 		// Skip text area.
 	} else if pw.commenting || pw.relaying {
 		write(pw.textArea.View())
 	} else if pw.cmdErr != "" {
-		write(pw.as.styles.err.Render(pw.cmdErr))
+		write(styles.err.Render(pw.cmdErr))
 	}
 	return b.String()
 }
@@ -1124,7 +1126,7 @@ func newPostWin(as *appState, feedActiveIdx, feedYOffsetHint int) (postWindow, t
 		feedActiveIdx:   feedActiveIdx,
 		feedYOffsetHint: feedYOffsetHint,
 	}
-	pw.textArea = newTextAreaModel(as.styles)
+	pw.textArea = newTextAreaModel(as.styles.Load())
 	pw.textArea.Placeholder = "Type comment"
 	pw.textArea.Prompt = ""
 	pw.textArea.SetWidth(as.winW)
