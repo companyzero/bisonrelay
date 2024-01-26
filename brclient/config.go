@@ -133,7 +133,7 @@ type config struct {
 	RPCClientCAPath    string
 	RPCIssueClientCert bool
 
-	ExtenalEditorForComments bool
+	ExternalEditorForComments bool
 
 	ResourcesUpstream     string
 	SimpleStorePayType    simpleStorePayType
@@ -524,8 +524,8 @@ func loadConfig() (*config, error) {
 		AutoRemoveIdleUsersInterval: autoRemoveInterval,
 		AutoRemoveIdleUsersIgnore:   autoRemoveIgnoreList,
 
-		SyncFreeList:             *flagSyncFreeList,
-		ExtenalEditorForComments: *flagExternalEditorForComments,
+		SyncFreeList:              *flagSyncFreeList,
+		ExternalEditorForComments: *flagExternalEditorForComments,
 
 		SimpleStorePayType:    ssPayType,
 		SimpleStoreAccount:    *flagSimpleStoreAccount,

@@ -197,7 +197,7 @@ type appState struct {
 	// Collator for sorting strings for displaying.
 	collator *collate.Collator
 
-	mimeMap map[string]string
+	mimeMap atomic.Pointer[map[string]string]
 
 	// cmd to run when receiving messages. First element is bin, other are
 	// args.
@@ -212,7 +212,7 @@ type appState struct {
 
 	inviteFundsAccount string
 
-	extenalEditorForComments bool
+	externalEditorForComments atomic.Bool
 
 	payReqStatuses *xsync.MapOf[chainhash.Hash, lnrpc.Payment_PaymentStatus]
 
@@ -2287,7 +2287,7 @@ func (as *appState) viewEmbed(embedded mdembeds.EmbeddedArgs) (tea.Cmd, error) {
 	if len(embedded.Data) == 0 {
 		return nil, fmt.Errorf("no embedded file")
 	}
-	prog := programByMimeType(as.mimeMap, embedded.Typ)
+	prog := programByMimeType(*as.mimeMap.Load(), embedded.Typ)
 	if prog == "" {
 		return nil, fmt.Errorf("no external viewer configured for %v", embedded.Typ)
 	}
@@ -3753,7 +3753,6 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		lnFundWalletChan:  make(chan msgLNFundWalletReply),
 
 		winpin:             args.WinPin,
-		mimeMap:            args.MimeMap,
 		bellCmd:            bellCmd,
 		inviteFundsAccount: args.InviteFundsAccount,
 
@@ -3765,8 +3764,6 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		inboundMsgsChan: make(chan struct{}, 8),
 		logsMsgs:        args.MsgRoot != "",
 
-		extenalEditorForComments: args.ExtenalEditorForComments,
-
 		payReqStatuses: xsync.NewTypedMapOf[chainhash.Hash, lnrpc.Payment_PaymentStatus](chainHashMapHashHasher),
 
 		sstore:       sstore,
@@ -3774,6 +3771,8 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		ssAcct:       args.SimpleStoreAccount,
 		ssShipCharge: args.SimpleStoreShipCharge,
 	}
+	as.externalEditorForComments.Store(args.ExternalEditorForComments)
+	as.mimeMap.Store(&args.MimeMap)
 	as.styles.Store(theme)
 
 	as.diagMsg("%s version %s", appName, version.String())
