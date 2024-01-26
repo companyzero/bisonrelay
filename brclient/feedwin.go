@@ -31,7 +31,8 @@ func (fw *feedWindow) renderPostSumm(post clientdb.PostSummary,
 	b *strings.Builder, i int, me clientintf.UserID) {
 
 	pf := fmt.Sprintf
-	st := fw.as.styles
+	st := fw.as.styles.Load()
+
 	date := post.Date.Format("2006-01-02 15:04")
 	lastStatus := "[no status update]"
 	if !post.LastStatusTS.IsZero() {
@@ -196,23 +197,25 @@ func (fw feedWindow) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return fw, cmd
 }
 
-func (fw feedWindow) headerView() string {
+func (fw feedWindow) headerView(styles *theme) string {
 	msg := " Posts Feed - Press ESC to return"
-	headerMsg := fw.as.styles.header.Render(msg)
-	spaces := fw.as.styles.header.Render(strings.Repeat(" ",
+	headerMsg := styles.header.Render(msg)
+	spaces := styles.header.Render(strings.Repeat(" ",
 		max(0, fw.as.winW-lipgloss.Width(headerMsg))))
 	return headerMsg + spaces
 }
 
-func (fw feedWindow) footerView() string {
-	return fw.as.footerView("")
+func (fw feedWindow) footerView(styles *theme) string {
+	return fw.as.footerView(styles, "")
 }
 
 func (fw feedWindow) View() string {
+	styles := fw.as.styles.Load()
+
 	return fmt.Sprintf("%s\n\n%s\n%s",
-		fw.headerView(),
+		fw.headerView(styles),
 		fw.viewport.View(),
-		fw.footerView(),
+		fw.footerView(styles),
 	)
 }
 

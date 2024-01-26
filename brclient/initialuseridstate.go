@@ -82,19 +82,20 @@ func (ws initialUIDState) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				ws.focusIndex = len(ws.inputs)
 			}
 
+			styles := ws.as.styles.Load()
 			for i := 0; i <= len(ws.inputs)-1; i++ {
 				if i == ws.focusIndex {
 					// Set focused state
 					cmd = ws.inputs[i].Focus()
 					cmds = appendCmd(cmds, cmd)
-					ws.inputs[i].PromptStyle = ws.as.styles.focused
-					ws.inputs[i].TextStyle = ws.as.styles.focused
+					ws.inputs[i].PromptStyle = styles.focused
+					ws.inputs[i].TextStyle = styles.focused
 					continue
 				}
 				// Remove focused state
 				ws.inputs[i].Blur()
-				ws.inputs[i].PromptStyle = ws.as.styles.noStyle
-				ws.inputs[i].TextStyle = ws.as.styles.noStyle
+				ws.inputs[i].PromptStyle = styles.noStyle
+				ws.inputs[i].TextStyle = styles.noStyle
 			}
 		default:
 			// Handle other keys in the focused input.
@@ -113,29 +114,30 @@ func (ws initialUIDState) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return ws, batchCmds(cmds)
 }
 
-func (ws initialUIDState) headerView() string {
+func (ws initialUIDState) headerView(styles *theme) string {
 	msg := " Local User Information"
-	headerMsg := ws.as.styles.header.Render(msg)
-	spaces := ws.as.styles.header.Render(strings.Repeat(" ",
+	headerMsg := styles.header.Render(msg)
+	spaces := styles.header.Render(strings.Repeat(" ",
 		max(0, ws.as.winW-lipgloss.Width(headerMsg))))
 	return headerMsg + spaces
 }
 
-func (ws initialUIDState) footerView() string {
+func (ws initialUIDState) footerView(styles *theme) string {
 	footerMsg := fmt.Sprintf(
 		" [%s] ",
 		time.Now().Format("15:04"),
 	)
-	fs := ws.as.styles.footer
+	fs := styles.footer
 	spaces := fs.Render(strings.Repeat(" ",
 		max(0, ws.as.winW-lipgloss.Width(footerMsg))))
 	return fs.Render(footerMsg + spaces)
 }
 
 func (ws initialUIDState) View() string {
-	var b strings.Builder
+	styles := ws.as.styles.Load()
 
-	b.WriteString(ws.headerView())
+	var b strings.Builder
+	b.WriteString(ws.headerView(styles))
 	b.WriteString("\n\n")
 	b.WriteString("Type the information needed about the local user.\n\n")
 
@@ -146,9 +148,9 @@ func (ws initialUIDState) View() string {
 		}
 	}
 
-	btnStyle := ws.as.styles.blurred
+	btnStyle := styles.blurred
 	if ws.focusIndex == len(ws.inputs) {
-		btnStyle = ws.as.styles.focused
+		btnStyle = styles.focused
 	}
 	button := btnStyle.Render("[ Submit ]")
 	fmt.Fprintf(&b, "\n\n%s\n\n", button)
@@ -157,25 +159,27 @@ func (ws initialUIDState) View() string {
 	for i := 0; i < ws.as.winH-nbLines; i++ {
 		b.WriteString("\n")
 	}
-	b.WriteString(ws.footerView())
+	b.WriteString(ws.footerView(styles))
 
 	return b.String()
 }
 
 func newInitialUIDState(as *appState) (initialUIDState, tea.Cmd) {
+	styles := as.styles.Load()
+
 	inputs := make([]textinput.Model, 1)
 	var t textinput.Model
 	for i := range inputs {
 		t = textinput.New()
-		t.CursorStyle = as.styles.cursor
+		t.CursorStyle = styles.cursor
 		t.CharLimit = 32
 
 		switch i {
 		case 0:
 			t.Placeholder = "Nickname"
 			t.Focus()
-			t.PromptStyle = as.styles.focused
-			t.TextStyle = as.styles.focused
+			t.PromptStyle = styles.focused
+			t.TextStyle = styles.focused
 		}
 
 		inputs[i] = t

@@ -142,27 +142,28 @@ func (pw newPostWindow) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return pw, batchCmds(cmds)
 }
 
-func (pw *newPostWindow) headerView() string {
+func (pw *newPostWindow) headerView(styles *theme) string {
 	msg := " Create Post - F2 to Embed/Link File"
-	headerMsg := pw.as.styles.header.Render(msg)
-	spaces := pw.as.styles.header.Render(strings.Repeat(" ",
+	headerMsg := styles.header.Render(msg)
+	spaces := styles.header.Render(strings.Repeat(" ",
 		max(0, pw.as.winW-lipgloss.Width(headerMsg))))
 	return headerMsg + spaces
 }
 
-func (pw *newPostWindow) footerView() string {
-	return pw.as.footerView(pw.debug)
+func (pw *newPostWindow) footerView(styles *theme) string {
+	return pw.as.footerView(styles, pw.debug)
 }
 
 func (pw newPostWindow) View() string {
-	var b strings.Builder
+	styles := pw.as.styles.Load()
 
-	b.WriteString(pw.headerView())
+	var b strings.Builder
+	b.WriteString(pw.headerView(styles))
 	b.WriteString("\n\n")
 
 	if pw.ew.active() {
 		b.WriteString(pw.ew.View())
-		b.WriteString(pw.footerView())
+		b.WriteString(pw.footerView(styles))
 		return b.String()
 	}
 
@@ -170,36 +171,35 @@ func (pw newPostWindow) View() string {
 	b.WriteString("\n\n")
 
 	if pw.errMsg != "" {
-		b.WriteString(pw.as.styles.err.Render(pw.errMsg))
+		b.WriteString(styles.err.Render(pw.errMsg))
 	} else {
 		estSizeMsg := fmt.Sprintf(" Estimated post size: %s.", hbytes(int64(pw.estSize)))
 		if pw.estSize > rpc.MaxChunkSize {
-			estSizeMsg = pw.as.styles.err.Render(estSizeMsg)
+			estSizeMsg = styles.err.Render(estSizeMsg)
 		}
 		b.WriteString(estSizeMsg)
 	}
 	if pw.focusIdx == 1 {
-		b.WriteString(pw.as.styles.focused.Render(" [ Submit ]"))
+		b.WriteString(styles.focused.Render(" [ Submit ]"))
 	} else {
 		b.WriteString(" [ Submit ]")
 	}
 	b.WriteString("\n\n")
 
-	b.WriteString(pw.footerView())
+	b.WriteString(pw.footerView(styles))
 
 	return b.String()
 }
 
 func newNewPostWindow(as *appState) (newPostWindow, tea.Cmd) {
-	var cmds []tea.Cmd
-
-	t := newTextAreaModel(as.styles)
+	styles := as.styles.Load()
+	t := newTextAreaModel(styles)
 	t.Placeholder = "Post"
 	t.CharLimit = 0
-	t.FocusedStyle.Prompt = as.styles.focused
-	t.FocusedStyle.Text = as.styles.focused
-	t.BlurredStyle.Prompt = as.styles.noStyle
-	t.BlurredStyle.Text = as.styles.noStyle
+	t.FocusedStyle.Prompt = styles.focused
+	t.FocusedStyle.Text = styles.focused
+	t.BlurredStyle.Prompt = styles.noStyle
+	t.BlurredStyle.Text = styles.noStyle
 	t.Focus()
 
 	nw := newPostWindow{
@@ -210,5 +210,5 @@ func newNewPostWindow(as *appState) (newPostWindow, tea.Cmd) {
 
 	nw.ew = newEmbedWidget(as, nw.addEmbedCB)
 	nw.updateTextAreaSize()
-	return nw, batchCmds(cmds)
+	return nw, batchCmds(nil)
 }

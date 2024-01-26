@@ -97,7 +97,7 @@ type appState struct {
 	logBknd     *logBackend
 	log         slog.Logger
 	lndLogLines *sloglinesbuffer.Buffer
-	styles      *theme
+	styles      atomic.Pointer[theme]
 	network     string
 	isRestore   bool
 	rpcServer   *rpcserver.Server
@@ -636,20 +636,20 @@ func (as *appState) lastLogLines(nbLines int) string {
 	// TODO: This is inneficient. Improve to a streaming method.
 	log := strings.Join(as.logBknd.lastLogLines(nbLines), "")
 	log = wordwrap.String(log, as.winW-5)
-	log = as.styles.help.Render(log)
+	log = as.styles.Load().help.Render(log)
 	return log
 }
 
 func (as *appState) lastLndLogLines(nbLines int) string {
 	log := strings.Join(as.lndLogLines.LastLogLines(nbLines), "")
 	log = wordwrap.String(log, as.winW-5)
-	log = as.styles.help.Render(log)
+	log = as.styles.Load().help.Render(log)
 	return log
 }
 
 // errorLogMsg is called by the log backend when an error msg is received.
 func (as *appState) errorLogMsg(msg string) {
-	as.diagMsg(as.styles.err.Render(msg))
+	as.diagMsg(as.styles.Load().err.Render(msg))
 }
 
 // diagMsg adds a message to be displayed in the diagnostic window (i.e. win0).
@@ -664,7 +664,7 @@ type printf func(string, ...interface{})
 // goroutines.
 func (as *appState) manyDiagMsgsCb(f func(printf)) {
 	pf := func(format string, args ...interface{}) {
-		now := as.styles.timestamp.Render(time.Now().Format("15:04:05 "))
+		now := as.styles.Load().timestamp.Render(time.Now().Format("15:04:05 "))
 		line := now + fmt.Sprintf(format, args...)
 		as.diagMsgs = append(as.diagMsgs, line)
 	}
@@ -756,7 +756,7 @@ func (as *appState) activeWindowMsgs() string {
 
 	cw := as.chatWindows[as.activeCW]
 	as.chatWindowsMtx.Unlock()
-	msgs := cw.renderContent(as.winW, as.styles, as)
+	msgs := cw.renderContent(as.winW, as.styles.Load(), as)
 	return msgs
 }
 
@@ -979,8 +979,8 @@ func (as *appState) footerInvalidate() {
 }
 
 // footerView returns the main window footer view.
-func (as *appState) footerView(extraRight string) string {
-	fs := as.styles.footer
+func (as *appState) footerView(styles *theme, extraRight string) string {
+	fs := styles.footer
 
 	// Helper that rebuilds and returns the full footer based on the left
 	// and right messages.
@@ -1018,7 +1018,7 @@ func (as *appState) footerView(extraRight string) string {
 		}
 		style := fs
 		if _, ok := mentionedWins[win]; ok {
-			style = as.styles.footerMention
+			style = styles.footerMention
 		}
 		updated += style.Render(win)
 	}
@@ -1342,7 +1342,7 @@ func (as *appState) writeInvite(filename string, gcID zkidentity.ShortID, funds 
 		pf("Send file %q to other client and type /add %s",
 			filename, filepath.Base(filename))
 		pf("Prepaid invite written to RV %s", inviteKey.RVPoint())
-		pf("Key for fetching invite: %s", as.styles.nick.Render(encodedKey))
+		pf("Key for fetching invite: %s", as.styles.Load().nick.Render(encodedKey))
 
 	})
 }
@@ -1417,7 +1417,7 @@ func (as *appState) payPayReq(cw *chatWindow, invoice string, payReq *zpay32.Inv
 
 	fees, err := as.lnPC.PayInvoice(as.ctx, invoice)
 	if err != nil {
-		as.diagMsg(as.styles.err.Render(fmt.Sprintf("Unable to pay invoice: %v", err)))
+		as.diagMsg(as.styles.Load().err.Render(fmt.Sprintf("Unable to pay invoice: %v", err)))
 		as.payReqStatuses.Store(*payReq.PaymentHash, lnrpc.Payment_FAILED)
 		return
 	}
@@ -2174,7 +2174,7 @@ func (as *appState) msgInActiveWindow(msg string) {
 	switch {
 	case as.activeCW == activeCWDiag:
 		as.chatWindowsMtx.Unlock()
-		as.diagMsg(as.styles.err.Render(fmt.Sprintf("Not a command: %q", msg)))
+		as.diagMsg(as.styles.Load().err.Render(fmt.Sprintf("Not a command: %q", msg)))
 		return
 
 	case as.activeCW == activeCWLog:
@@ -2465,8 +2465,9 @@ func (as *appState) handleCmd(rawText string, args []string) {
 	}
 	as.cmdHistoryIdx = len(as.cmdHistory)
 
-	renderErr := renderPF(as.styles.err)
-	render := renderPF(as.styles.noStyle)
+	styles := as.styles.Load()
+	renderErr := renderPF(styles.err)
+	render := renderPF(styles.noStyle)
 
 	cmd, subCmd, args := findCommand(args)
 	if cmd == nil {
@@ -2795,7 +2796,7 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 
 	ntfns.Register(client.OnInvoiceGenFailedNtfn(func(user *client.RemoteUser, dcrAmount float64, err error) {
 		as.manyDiagMsgsCb(func(pf printf) {
-			pf(as.styles.err.Render("Unable to generate LN invoice"))
+			pf(as.styles.Load().err.Render("Unable to generate LN invoice"))
 			pf("Unable to generate invoice for remote user %s to send us %.8f DCR: %v",
 				strescape.Nick(user.Nick()), dcrAmount, err)
 			pf("More receive capacity may be obtained by opening receive " +
@@ -2841,7 +2842,7 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 			gcAlias, _ := as.c.GetGCAlias(gc.ID)
 			msg := fmt.Sprintf("Received GC list for GC %q (%s) with "+
 				"unsupported GC version %d", gcAlias, gc.ID, gc.Version)
-			pf(as.styles.err.Render(msg))
+			pf(as.styles.Load().err.Render(msg))
 			pf("Please update the client software to interact in updated GCs.")
 		})
 	}))
@@ -3263,8 +3264,9 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 
 	ntfns.Register(client.OnServerUnwelcomeError(func(err error) {
 		as.manyDiagMsgsCb(func(pf printf) {
-			pf(as.styles.err.Render("Server un-welcomed our connection attempt:"))
-			pf(as.styles.err.Render(err.Error()))
+			styles := as.styles.Load()
+			pf(styles.err.Render("Server un-welcomed our connection attempt:"))
+			pf(styles.err.Render(err.Error()))
 			pf("This usually means the client software needs to be upgraded.")
 			pf("Stopping new connection attempts until /online is called.")
 			pf("Actions that require a connection to the server will not work.")
@@ -3717,7 +3719,6 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		logBknd:     logBknd,
 		log:         logBknd.logger("ZTUI"),
 		lndLogLines: lndLogLines,
-		styles:      theme,
 		serverAddr:  args.ServerAddr,
 		lnPC:        lnPC,
 		lnRPC:       lnRPC,
@@ -3773,6 +3774,7 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		ssAcct:       args.SimpleStoreAccount,
 		ssShipCharge: args.SimpleStoreShipCharge,
 	}
+	as.styles.Store(theme)
 
 	as.diagMsg("%s version %s", appName, version.String())
 

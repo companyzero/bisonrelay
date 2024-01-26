@@ -79,29 +79,30 @@ func (ws lnFundWalletWindow) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return ws, batchCmds(cmds)
 }
 
-func (ws lnFundWalletWindow) headerView() string {
+func (ws lnFundWalletWindow) headerView(styles *theme) string {
 	msg := "Fund the LN wallet"
-	headerMsg := ws.as.styles.header.Render(msg)
-	spaces := ws.as.styles.header.Render(strings.Repeat(" ",
+	headerMsg := styles.header.Render(msg)
+	spaces := styles.header.Render(strings.Repeat(" ",
 		max(0, ws.as.winW-lipgloss.Width(headerMsg))))
 	return headerMsg + spaces
 }
 
-func (ws lnFundWalletWindow) footerView() string {
+func (ws lnFundWalletWindow) footerView(styles *theme) string {
 	footerMsg := fmt.Sprintf(
 		" [%s] ",
 		time.Now().Format("15:04"),
 	)
-	fs := ws.as.styles.footer
+	fs := styles.footer
 	spaces := fs.Render(strings.Repeat(" ",
 		max(0, ws.as.winW-lipgloss.Width(footerMsg))))
 	return fs.Render(footerMsg + spaces)
 }
 
 func (ws lnFundWalletWindow) View() string {
-	var b strings.Builder
+	styles := ws.as.styles.Load()
 
-	b.WriteString(ws.headerView())
+	var b strings.Builder
+	b.WriteString(ws.headerView(styles))
 	b.WriteString("\n\n")
 	b.WriteString("The underlying wallet has no on-chain funds.\n")
 	b.WriteString("Please send funds to the following on-chain address:\n")
@@ -120,13 +121,13 @@ func (ws lnFundWalletWindow) View() string {
 	}
 	nbLines += 2
 
-	btnStyle := ws.as.styles.focused
+	btnStyle := styles.focused
 	button := btnStyle.Render("[ Skip ]")
 	fmt.Fprintf(&b, "\n\n%s\n\n", button)
 	nbLines += 4
 
 	b.WriteString(blankLines(ws.as.winH - nbLines - 1))
-	b.WriteString(ws.footerView())
+	b.WriteString(ws.footerView(styles))
 
 	return b.String()
 }

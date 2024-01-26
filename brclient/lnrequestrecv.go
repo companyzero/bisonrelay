@@ -167,35 +167,36 @@ func (pw lnRequestRecvWindow) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return pw, nil
 }
 
-func (pw lnRequestRecvWindow) headerView() string {
+func (pw lnRequestRecvWindow) headerView(styles *theme) string {
 	msg := " Request Lightning Wallet Receive Capacity"
 	if !pw.isManual {
 		msg += " - Press F2 for manual entry"
 	}
-	headerMsg := pw.as.styles.header.Render(msg)
-	spaces := pw.as.styles.header.Render(strings.Repeat(" ",
+	headerMsg := styles.header.Render(msg)
+	spaces := styles.header.Render(strings.Repeat(" ",
 		max(0, pw.as.winW-lipgloss.Width(headerMsg))))
 	return headerMsg + spaces
 }
 
-func (pw lnRequestRecvWindow) footerView() string {
+func (pw lnRequestRecvWindow) footerView(styles *theme) string {
 	footerMsg := fmt.Sprintf(
 		" [%s] ",
 		time.Now().Format("15:04"),
 	)
-	fs := pw.as.styles.footer
+	fs := styles.footer
 	spaces := fs.Render(strings.Repeat(" ",
 		max(0, pw.as.winW-lipgloss.Width(footerMsg))))
 	return fs.Render(footerMsg + spaces)
 }
 
 func (pw lnRequestRecvWindow) View() string {
-	var b strings.Builder
+	styles := pw.as.styles.Load()
 
+	var b strings.Builder
 	pf := func(f string, args ...interface{}) {
 		b.WriteString(fmt.Sprintf(f, args...))
 	}
-	pf(pw.headerView())
+	pf(pw.headerView(styles))
 	pf("\n\n")
 
 	nbLines := 2 + 2
@@ -216,7 +217,7 @@ func (pw lnRequestRecvWindow) View() string {
 		pf("detect and to consider the channel to send payments.")
 		pf("\n")
 
-		yesStyle, noStyle := pw.as.styles.focused, pw.as.styles.noStyle
+		yesStyle, noStyle := styles.focused, styles.noStyle
 		if pw.confirmIdx == 1 {
 			yesStyle, noStyle = noStyle, yesStyle
 		}
@@ -238,7 +239,7 @@ func (pw lnRequestRecvWindow) View() string {
 		pf("\n")
 		if pw.requestErr != nil {
 			pw.requesting = false
-			b.WriteString(pw.as.styles.err.Render(pw.requestErr.Error()))
+			b.WriteString(styles.err.Render(pw.requestErr.Error()))
 		}
 		pf("\n")
 		nbLines += 2
@@ -248,14 +249,16 @@ func (pw lnRequestRecvWindow) View() string {
 		pf("\n")
 	}
 
-	pf(pw.footerView())
+	pf(pw.footerView(styles))
 
 	return b.String()
 }
 
 func newLNRequestRecvWindow(as *appState, isManual bool) (lnRequestRecvWindow, tea.Cmd) {
-	form := newFormHelper(as.styles,
-		newTextInputHelper(as.styles,
+	styles := as.styles.Load()
+
+	form := newFormHelper(styles,
+		newTextInputHelper(styles,
 			tihWithPrompt("Amount: "),
 		),
 	)
@@ -266,17 +269,17 @@ func newLNRequestRecvWindow(as *appState, isManual bool) (lnRequestRecvWindow, t
 			server = "https://127.0.0.1:29130"
 		}
 		form.AddInputs(
-			newTextInputHelper(as.styles,
+			newTextInputHelper(styles,
 				tihWithPrompt("Server URL: "),
 				tihWithValue(server),
 			),
-			newTextInputHelper(as.styles,
+			newTextInputHelper(styles,
 				tihWithPrompt("Certificate Path: "),
 			),
 		)
 	}
 	form.AddInputs(
-		newButtonHelper(as.styles,
+		newButtonHelper(styles,
 			btnWithLabel(" [ Request Inbound Capacity ]"),
 			btnWithTrailing("\n"),
 			btnWithFixedMsgAction(msgSubmitForm{}),

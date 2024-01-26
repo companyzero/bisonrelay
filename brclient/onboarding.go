@@ -35,10 +35,12 @@ func (os *onboardScreen) updateLogLines() {
 }
 
 func (os *onboardScreen) updateButtons() {
-	btns := newFormHelper(os.as.styles)
+	styles := os.as.styles.Load()
+
+	btns := newFormHelper(styles)
 	if os.oerr != nil {
 		btns.AddInputs(newButtonHelper(
-			os.as.styles,
+			styles,
 			btnWithLabel("[ Retry ]"),
 			btnWithTrailing(" "),
 			btnWithFixedMsgAction(msgRetryAction{}),
@@ -46,14 +48,14 @@ func (os *onboardScreen) updateButtons() {
 	}
 	if os.ostate.Stage == clientintf.StageOpeningInbound && os.oerr != nil {
 		btns.AddInputs(newButtonHelper(
-			os.as.styles,
+			styles,
 			btnWithLabel("[ Skip Inbound Channel ]"),
 			btnWithTrailing(" "),
 			btnWithFixedMsgAction(msgSkipAction{}),
 		))
 	}
 	btns.AddInputs(newButtonHelper(
-		os.as.styles,
+		styles,
 		btnWithLabel("[ Cancel Onboarding ]"),
 		btnWithFixedMsgAction(msgCancelForm{}),
 	))
@@ -119,29 +121,30 @@ func (os onboardScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return os, nil
 }
 
-func (os onboardScreen) headerView() string {
+func (os onboardScreen) headerView(styles *theme) string {
 	msg := "Onboarding Bison Relay Client"
-	headerMsg := os.as.styles.header.Render(msg)
-	spaces := os.as.styles.header.Render(strings.Repeat(" ",
+	headerMsg := styles.header.Render(msg)
+	spaces := styles.header.Render(strings.Repeat(" ",
 		max(0, os.as.winW-lipgloss.Width(headerMsg))))
 	return headerMsg + spaces
 }
 
-func (os onboardScreen) footerView() string {
+func (os onboardScreen) footerView(styles *theme) string {
 	footerMsg := fmt.Sprintf(
 		" [%s] ",
 		time.Now().Format("15:04"),
 	)
-	fs := os.as.styles.footer
+	fs := styles.footer
 	spaces := fs.Render(strings.Repeat(" ",
 		max(0, os.as.winW-lipgloss.Width(footerMsg))))
 	return fs.Render(footerMsg + spaces)
 }
 
 func (os onboardScreen) View() string {
-	var b strings.Builder
+	styles := os.as.styles.Load()
 
-	b.WriteString(os.headerView())
+	var b strings.Builder
+	b.WriteString(os.headerView(styles))
 	nbLines := 1
 
 	ostate := os.ostate
@@ -179,7 +182,7 @@ func (os onboardScreen) View() string {
 	wallet, recv, send := os.as.channelBalance()
 
 	pf("Performing onboarding procedure.\n")
-	pf("Current stage: %s\n", os.as.styles.nick.Render(niceStage))
+	pf("Current stage: %s\n", styles.nick.Render(niceStage))
 	pf("Balances - Wallet: %s, Send: %s, Recv: %s\n", wallet, send, recv)
 	pf("Original Key: %s\n", encKey)
 	nbLines += 4
@@ -213,7 +216,7 @@ func (os onboardScreen) View() string {
 	pf("\n")
 	nbLines += 1
 	if os.oerr != nil {
-		errMsg := wordwrap.String(os.as.styles.err.Render(os.oerr.Error()), os.as.winW-1)
+		errMsg := wordwrap.String(styles.err.Render(os.oerr.Error()), os.as.winW-1)
 		pf(errMsg)
 		pf("\n")
 		nbLines += countNewLines(errMsg) + 1
@@ -229,7 +232,7 @@ func (os onboardScreen) View() string {
 	nbLines += 10
 
 	b.WriteString(blankLines(os.as.winH - nbLines - 1))
-	b.WriteString(os.footerView())
+	b.WriteString(os.footerView(styles))
 
 	return b.String()
 }

@@ -694,7 +694,7 @@ func writePayReq(b *strings.Builder, offset, winW int, payReq *zpay32.Invoice, s
 func (cw *chatWindow) renderMsgElements(winW int, as *appState, elements []*chatMsgElLine,
 	fromUID *clientintf.UserID, style lipgloss.Style, b *strings.Builder, offset int) {
 
-	styles := as.styles
+	styles := as.styles.Load()
 
 	// Loop through hard newlines.
 	for _, line := range elements {
@@ -739,18 +739,18 @@ func (cw *chatWindow) renderMsgElements(winW int, as *appState, elements []*chat
 					}
 				}
 
-				style := as.styles.embed
+				style := styles.embed
 				if cw.maxSelectable == cw.selElIndex {
-					style = as.styles.focused
+					style = styles.focused
 					args.Uid = fromUID
 					cw.selEl = &el
 				}
 				cw.maxSelectable += 1
 				offset = writeWrappedWithStyle(b, offset, winW, style, s)
 			} else if el.link != nil {
-				style := as.styles.embed
+				style := styles.embed
 				if cw.maxSelectable == cw.selElIndex {
-					style = as.styles.focused
+					style = styles.focused
 					cw.selEl = &el
 				}
 				cw.maxSelectable += 1
@@ -761,9 +761,9 @@ func (cw *chatWindow) renderMsgElements(winW int, as *appState, elements []*chat
 				s = *el.mention
 				offset = writeWrappedWithStyle(b, offset, winW, style, s)
 			} else if el.payReq != nil {
-				style := as.styles.embed
+				style := styles.embed
 				if cw.maxSelectable == cw.selElIndex {
-					style = as.styles.focused
+					style = styles.focused
 					cw.selEl = &el
 				}
 				cw.maxSelectable += 1
@@ -771,9 +771,9 @@ func (cw *chatWindow) renderMsgElements(winW int, as *appState, elements []*chat
 			} else if el.url != nil {
 				offset = writeWrappedURL(b, offset, winW, *el.url)
 			} else if el.formField != nil && el.formField.label != "" {
-				style := as.styles.embed
+				style := styles.embed
 				if cw.maxSelectable == cw.selElIndex {
-					style = as.styles.focused
+					style = styles.focused
 					cw.selEl = &el
 				}
 				cw.maxSelectable += 1
@@ -826,7 +826,7 @@ func (cw *chatWindow) renderMsg(winW int, styles *theme, b *strings.Builder, as 
 }
 
 func (cw *chatWindow) renderPage(winW int, as *appState, b *strings.Builder) {
-	style := as.styles.msg
+	style := as.styles.Load().msg
 
 	if cw.page != nil {
 		loadingTxt := "  "

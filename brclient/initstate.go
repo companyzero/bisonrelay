@@ -139,28 +139,29 @@ func (ins initStepState) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return ins, batchCmds(cmds)
 }
 
-func (ins initStepState) headerView() string {
+func (ins initStepState) headerView(styles *theme) string {
 	msg := " Initializing Client"
-	headerMsg := ins.as.styles.header.Render(msg)
-	spaces := ins.as.styles.header.Render(strings.Repeat(" ",
+	headerMsg := styles.header.Render(msg)
+	spaces := styles.header.Render(strings.Repeat(" ",
 		max(0, ins.as.winW-lipgloss.Width(headerMsg))))
 	return headerMsg + spaces
 }
 
-func (ins initStepState) footerView() string {
+func (ins initStepState) footerView(styles *theme) string {
 	footerMsg := fmt.Sprintf(
 		" [%s] ",
 		time.Now().Format("15:04"),
 	)
-	fs := ins.as.styles.footer
+	fs := styles.footer
 	spaces := fs.Render(strings.Repeat(" ",
 		max(0, ins.as.winW-lipgloss.Width(footerMsg))))
 	return fs.Render(footerMsg + spaces)
 }
 
 func (ins initStepState) View() string {
+	styles := ins.as.styles.Load()
 	var msg, content string
-	msgStyle := ins.as.styles.focused
+	msgStyle := styles.focused
 	unwelcomeErr := ins.as.unwelcomeError.Load()
 	switch {
 	case ins.as.winW == 0:
@@ -184,16 +185,16 @@ func (ins initStepState) View() string {
 		noBtn := "[No]"
 		switch ins.focusIdx {
 		case 0:
-			yesBtn = ins.as.styles.focused.Render(yesBtn)
+			yesBtn = styles.focused.Render(yesBtn)
 		case 1:
-			noBtn = ins.as.styles.focused.Render(noBtn)
+			noBtn = styles.focused.Render(noBtn)
 		}
 		wln("%s %s", yesBtn, noBtn)
 		wln(strings.Repeat("\n", ins.as.winH-13))
 		content = b.String()
 
 	case unwelcomeErr != nil:
-		msgStyle = ins.as.styles.err
+		msgStyle = styles.err
 		msg = fmt.Sprintf("Client needs upgrade: %v", *unwelcomeErr)
 		content = ins.viewport.View()
 
@@ -203,10 +204,10 @@ func (ins initStepState) View() string {
 	}
 
 	return fmt.Sprintf("%s\n\n%s\n\n%s\n%s",
-		ins.headerView(),
+		ins.headerView(styles),
 		msgStyle.Render(msg),
 		content,
-		ins.footerView(),
+		ins.footerView(styles),
 	)
 }
 
