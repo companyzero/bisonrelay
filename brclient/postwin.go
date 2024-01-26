@@ -914,7 +914,7 @@ func (pw postWindow) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case msg.String() == "c", msg.String() == "r":
 			replying := msg.String() == "r"
-			if pw.as.extenalEditorForComments {
+			if pw.as.externalEditorForComments.Load() {
 				var parent *zkidentity.ShortID
 				if replying && pw.selComment < len(pw.comments) {
 					selComment := pw.comments[pw.selComment]

@@ -3873,6 +3873,26 @@ var commands = []tuicmd{
 			return nil
 		},
 	}, {
+		cmd:           "reload",
+		usableOffline: true,
+		descr:         "Reload the configuration",
+		handler: func(args []string, as *appState) error {
+			cfg, err := loadConfig()
+			if err != nil {
+				return err
+			}
+			theme, err := newTheme(cfg)
+			if err != nil {
+				return err
+			}
+			as.externalEditorForComments.Store(cfg.ExternalEditorForComments)
+			as.mimeMap.Store(&cfg.MimeMap)
+			as.styles.Store(theme)
+
+			as.cwHelpMsg("reloaded configuration")
+			return nil
+		},
+	}, {
 		cmd:           "rename",
 		usableOffline: true,
 		descr:         "Modify the local nick of a user",
