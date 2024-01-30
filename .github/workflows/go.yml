@@ -4,21 +4,6 @@ permissions:
   contents: read
 
 jobs:
-  lint:
-    name: Lint Go files
-    runs-on: ubuntu-latest
-    steps:
-      - name: Set up Go
-        uses: actions/setup-go@93397bea11091df50f3d7e59dc26a7711a8bcfbe # v4.1.0
-        with:
-          go-version: "1.21"
-      - name: Check out source
-        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 #v3.5.3
-      - name: Install Linters
-        run: "curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.54.2"
-      - name: Lint
-        run: golangci-lint run
-
   build:
     name: Go CI
     runs-on: ubuntu-latest
@@ -27,15 +12,19 @@ jobs:
         go: ["1.20", "1.21"]
     steps:
       - name: Set up Go
-        uses: actions/setup-go@93397bea11091df50f3d7e59dc26a7711a8bcfbe # v4.1.0
+        uses: actions/setup-go@0c52d547c9bc32b1aa3301fd7a9cb496313a4491 #v5.0.0
         with:
           go-version: ${{ matrix.go }}
       - name: Check out source
-        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 #v3.5.3
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 #v4.1.1
+      - name: Install Linters
+        run: "go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.55.2"
       - name: Build
         run: go build ./...
       - name: Test
         run: go test ./...
+      - name: Lint
+        run: golangci-lint run
       - name: Upload logs if tests failed
         if: failure()
         uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2

@@ -14,17 +14,17 @@ jobs:
           sudo apt-get install -y ninja-build clang libgtk-3-dev
 
       - name: Set up Go
-        uses: actions/setup-go@93397bea11091df50f3d7e59dc26a7711a8bcfbe # v4.1.0
+        uses: actions/setup-go@0c52d547c9bc32b1aa3301fd7a9cb496313a4491 #v5.0.0
         with:
           go-version: '1.21'
 
       - name: Setup Flutter
-        uses: subosito/flutter-action@48cafc24713cca54bbe03cdc3a423187d413aafa #v2.10.0
+        uses: subosito/flutter-action@2783a3f08e1baf891508463f8c6653c258246225 #v2.12.0
         with:
-          flutter-version: '3.13'
+          flutter-version: '3.16.9'
 
       - name: Check out source
-        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 #v3.5.3
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 #v4.1.1
 
       - name: Go generate
         working-directory: ./bruig
