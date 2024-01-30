@@ -68,14 +68,6 @@ final List<SubMenuInfo> LnScreenSub = [
 
 final List<MainMenuItem> mainMenu = [
   MainMenuItem(
-      "Feed",
-      FeedScreen.routeName,
-      (context) => Consumer<MainMenuModel>(
-          builder: (context, menu, child) => FeedScreen(menu)),
-      (context) => const FeedScreenTitle(),
-      const SidebarSvgIcon("assets/icons/icons-menu-news.svg"),
-      FeedScreenSub),
-  MainMenuItem(
       "Chats",
       ChatsScreen.routeName,
       (context) => Consumer2<ClientModel, AppNotifications>(
@@ -84,6 +76,14 @@ final List<MainMenuItem> mainMenu = [
       (context) => const ChatsScreenTitle(),
       const SidebarSvgIcon("assets/icons/icons-menu-chat.svg"),
       <SubMenuInfo>[]),
+  MainMenuItem(
+      "Feed",
+      FeedScreen.routeName,
+      (context) => Consumer<MainMenuModel>(
+          builder: (context, menu, child) => FeedScreen(menu)),
+      (context) => const FeedScreenTitle(),
+      const SidebarSvgIcon("assets/icons/icons-menu-news.svg"),
+      FeedScreenSub),
   MainMenuItem(
       "LN Management",
       LNScreen.routeName,

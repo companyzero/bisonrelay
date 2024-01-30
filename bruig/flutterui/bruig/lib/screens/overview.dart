@@ -421,7 +421,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
                 child: Navigator(
                   key: navKey,
                   initialRoute: widget.initialRoute == ""
-                      ? FeedScreen.routeName
+                      ? ChatsScreen.routeName
                       : widget.initialRoute,
                   onGenerateRoute: (settings) {
                     String routeName = settings.name!;
