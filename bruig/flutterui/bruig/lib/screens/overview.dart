@@ -10,6 +10,7 @@ import 'package:bruig/models/feed.dart';
 import 'package:bruig/models/menus.dart';
 import 'package:bruig/models/notifications.dart';
 import 'package:bruig/models/snackbar.dart';
+import 'package:bruig/screens/chats.dart';
 import 'package:bruig/screens/feed.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
@@ -373,7 +374,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
                 child: Navigator(
                   key: navKey,
                   initialRoute: widget.initialRoute == ""
-                      ? FeedScreen.routeName
+                      ? ChatsScreen.routeName
                       : widget.initialRoute,
                   onGenerateRoute: (settings) {
                     String routeName = settings.name!;
