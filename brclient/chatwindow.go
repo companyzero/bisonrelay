@@ -11,6 +11,7 @@ import (
 	"unicode/utf8"
 
 	genericlist "github.com/bahlo/generic-list-go"
+	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -437,7 +438,8 @@ type chatWindow struct {
 	pageSess      clientintf.PagesSessionID
 	page          *clientdb.FetchedResource
 	isPage        bool
-	pageRequested bool
+	pageRequested *[]string
+	pageSpinner   spinner.Model
 
 	selEl         *chatMsgEl
 	selElIndex    int
@@ -550,7 +552,7 @@ func (cw *chatWindow) replacePage(fr clientdb.FetchedResource) {
 	msg.fromUID = &fr.UID
 	cw.page = &fr
 	cw.selElIndex = 0
-	cw.pageRequested = false
+	cw.pageRequested = nil
 	cw.Unlock()
 }
 
@@ -798,21 +800,31 @@ func (cw *chatWindow) renderMsg(winW int, styles *theme, b *strings.Builder, as 
 	cw.renderMsgElements(winW, as, msg.elements, msg.fromUID, style, b, offset)
 }
 
+func (cw *chatWindow) renderPageHeader(as *appState, b *strings.Builder) {
+	if cw.page == nil {
+		return
+	}
+
+	var reqPath string
+	if cw.pageRequested != nil {
+		reqPath = strings.Join(*cw.pageRequested, "/")
+	} else {
+		reqPath = strings.Join(cw.page.Request.Path, "/")
+	}
+
+	nick, _ := as.c.UserNick(cw.page.UID)
+	fmt.Fprintf(b, "Source : %s (%s)\n", strescape.Nick(nick), cw.page.UID)
+	fmt.Fprintf(b, "Path   : %s\n", strescape.Nick(reqPath))
+	fmt.Fprintf(b, "%s\n", strings.Repeat("\xe2\x80\x95", as.winW))
+	if cw.pageRequested != nil {
+		fmt.Fprintf(b, "%s Fetching page...\n", cw.pageSpinner.View())
+	}
+}
+
 func (cw *chatWindow) renderPage(winW int, as *appState, b *strings.Builder) {
 	style := as.styles.Load().msg
 
-	if cw.page != nil {
-		loadingTxt := "  "
-		if cw.pageRequested {
-			loadingTxt = "⌛"
-		}
-		nick, _ := as.c.UserNick(cw.page.UID)
-		fmt.Fprintf(b, "Source : %s (%s)\n", strescape.Nick(nick), cw.page.UID)
-		fmt.Fprintf(b, "Path %s: %s\n", loadingTxt, strescape.Nick(strings.Join(cw.page.Request.Path, "/")))
-		fmt.Fprintf(b, "%s", strings.Repeat("―", winW))
-		b.WriteRune('\n')
-	}
-
+	cw.renderPageHeader(as, b)
 	if len(cw.msgs) > 0 {
 		// msg[0] is the parsed contents of the page.
 		cw.renderMsgElements(winW, as, cw.msgs[0].elements, cw.msgs[0].fromUID, style, b, 0)

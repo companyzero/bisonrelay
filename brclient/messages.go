@@ -76,7 +76,9 @@ type msgActiveWindowChanged struct{}
 
 type msgOnboardStateChanged struct{}
 type msgStartOnboardErr error
-type msgActiveCWRequestedPage struct{}
+type msgActiveCWRequestedPage struct {
+	cmds []tea.Cmd
+}
 type msgUnwelcomeError struct {
 	err error
 }
