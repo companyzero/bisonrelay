@@ -23,6 +23,7 @@ import (
 	"time"
 
 	genericlist "github.com/bahlo/generic-list-go"
+	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/exp/term/ansi"
@@ -1295,10 +1296,11 @@ func (as *appState) findOrNewPagesChatWindow(sessID clientintf.PagesSessionID) *
 	}
 	if cw == nil {
 		cw = &chatWindow{
-			alias:    fmt.Sprintf("page session %d", sessID),
-			me:       as.c.LocalNick(),
-			pageSess: sessID,
-			isPage:   true,
+			alias:       fmt.Sprintf("page session %d", sessID),
+			me:          as.c.LocalNick(),
+			pageSess:    sessID,
+			isPage:      true,
+			pageSpinner: spinner.New(spinner.WithSpinner(spinner.Meter)),
 		}
 		as.chatWindows = append(as.chatWindows, cw)
 		as.updatedCW[len(as.chatWindows)-1] = false
@@ -2505,11 +2507,12 @@ func (as *appState) fetchPage(uid clientintf.UserID, pagePath string, session,
 	cw := as.findPagesChatWindow(session)
 	if cw != nil {
 		cw.Lock()
-		cw.pageRequested = true
+		cw.pageRequested = &path
 		cw.Unlock()
 
 		if as.activeChatWindow() == cw {
-			as.sendMsg(msgActiveCWRequestedPage{})
+			// Initialize the page spinner.
+			as.sendMsg(msgActiveCWRequestedPage{[]tea.Cmd{cw.pageSpinner.Tick}})
 		}
 	}
 

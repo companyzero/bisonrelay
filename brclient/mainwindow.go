@@ -246,12 +246,22 @@ func (mws mainWindowState) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 	styles := mws.as.styles.Load()
 
+	cw := mws.as.activeChatWindow()
+	if cw != nil && cw.isPage {
+		cw.Lock()
+		pageRequested := cw.pageRequested
+		cw.Unlock()
+		if pageRequested != nil {
+			cw.pageSpinner, cmd = cw.pageSpinner.Update(msg)
+			cmds = appendCmd(cmds, cmd)
+		}
+	}
+
 	// Main msg handler. We only return early in cases where we switch to a
 	// different state, otherwise only return at the end of the function.
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		// mws.debug = fmt.Sprintf("%q %v", msg.String(), msg.Type)
-		cw := mws.as.activeChatWindow()
 
 		switch {
 		case msg.Type == tea.KeyCtrlW:
@@ -541,6 +551,8 @@ func (mws mainWindowState) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 		case mws.isPage:
+			cw.pageSpinner, _ = cw.pageSpinner.Update(msg)
+
 			// Do not process command input when a page is active
 			// (to capture form input).
 
@@ -682,6 +694,9 @@ func (mws mainWindowState) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		mws.resetFormInput()
 
 	case msgActiveCWRequestedPage:
+		for i := range msg.cmds {
+			cmds = appendCmd(cmds, msg.cmds[i])
+		}
 		mws.updateViewportContent()
 
 	case msgRunCmd:
@@ -718,6 +733,25 @@ func (mws mainWindowState) View() string {
 			mws.header,
 			mws.ew.View(),
 			mws.footerView(styles))
+	}
+
+	if mws.isPage {
+		cw := mws.as.activeChatWindow()
+		if cw != nil {
+			cw.Lock()
+			if cw.pageRequested != nil {
+				var b strings.Builder
+				b.WriteString(mws.header)
+				b.WriteRune('\n')
+				cw.renderPageHeader(mws.as, &b)
+				cw.Unlock()
+				b.WriteString(strings.Repeat("\n", mws.viewport.Height-4))
+				b.WriteString(mws.footerView(styles))
+				b.WriteRune('\n')
+				return b.String()
+			}
+			cw.Unlock()
+		}
 	}
 
 	textAreaView := mws.textArea.View()
