@@ -13,6 +13,8 @@ import (
 )
 
 func TestBasicPostFeatures(t *testing.T) {
+	t.Parallel()
+
 	// Setup Alice and Bob and have them KX.
 	tcfg := testScaffoldCfg{}
 	ts := newTestScaffold(t, tcfg)
@@ -117,6 +119,8 @@ func TestBasicPostFeatures(t *testing.T) {
 // a post and relay across the chain. The last user (Eve) attempts to search
 // for the original post author (Alice).
 func TestKXSearchFromPosts(t *testing.T) {
+	t.Parallel()
+
 	tcfg := testScaffoldCfg{}
 	ts := newTestScaffold(t, tcfg)
 	alice := ts.newClient("alice")
@@ -191,6 +195,8 @@ func TestKXSearchFromPosts(t *testing.T) {
 // TestPostReceiveReceipts tests that post and post status received receipts
 // work.
 func TestPostReceiveReceipts(t *testing.T) {
+	t.Parallel()
+
 	tcfg := testScaffoldCfg{}
 	ts := newTestScaffold(t, tcfg)
 	alice := ts.newClient("alice")
@@ -252,4 +258,55 @@ func TestPostReceiveReceipts(t *testing.T) {
 	assertRR(rpc.ReceiptDomainPostComments, &post1, &comment3, rrFromBob)
 	assertRR(rpc.ReceiptDomainPostComments, &post1, &comment3, rrFromCharlie)
 	assert.ChanNotWritten(t, rrFromEve, 500*time.Millisecond)
+}
+
+// TestAutoSubToPosts tests that when the autosubscribe to posts flag is set, it
+// works.
+func TestAutoSubToPosts(t *testing.T) {
+	t.Parallel()
+
+	tcfg := testScaffoldCfg{}
+	ts := newTestScaffold(t, tcfg)
+	alice := ts.newClient("alice")
+	bob := ts.newClient("bob", withAutoSubToPosts())
+	charlie := ts.newClient("charlie", withAutoSubToPosts())
+
+	aliceSubChan := make(chan clientintf.UserID, 5)
+	alice.handle(client.OnPostSubscriberUpdated(func(ru *client.RemoteUser, subscribed bool) {
+		if subscribed {
+			aliceSubChan <- ru.ID()
+		}
+	}))
+	bobSubChan := make(chan clientintf.UserID, 5)
+	bob.handle(client.OnPostSubscriberUpdated(func(ru *client.RemoteUser, subscribed bool) {
+		if subscribed {
+			bobSubChan <- ru.ID()
+		}
+	}))
+	charlieSubChan := make(chan clientintf.UserID, 5)
+	charlie.handle(client.OnPostSubscriberUpdated(func(ru *client.RemoteUser, subscribed bool) {
+		if subscribed {
+			charlieSubChan <- ru.ID()
+		}
+	}))
+
+	// Invite based subscription.
+	ts.kxUsers(alice, bob)
+	assert.ChanWrittenWithVal(t, aliceSubChan, bob.PublicID())
+	ts.kxUsers(alice, charlie)
+	assert.ChanWrittenWithVal(t, aliceSubChan, charlie.PublicID())
+
+	// GC-based subscription.
+	gcID, err := alice.NewGroupChat("gc01")
+	assert.NilErr(t, err)
+	assertClientJoinsGC(t, gcID, alice, bob)
+
+	assert.ChanNotWritten(t, aliceSubChan, 150*time.Millisecond)
+	assert.ChanNotWritten(t, bobSubChan, 150*time.Millisecond)
+	assert.ChanNotWritten(t, charlieSubChan, 150*time.Millisecond)
+
+	assertClientJoinsGC(t, gcID, alice, charlie)
+	assert.ChanWrittenWithVal(t, bobSubChan, charlie.PublicID())
+	assert.ChanWrittenWithVal(t, charlieSubChan, bob.PublicID())
+	assert.ChanNotWritten(t, aliceSubChan, 150*time.Millisecond)
 }

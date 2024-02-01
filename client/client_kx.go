@@ -267,6 +267,19 @@ func (c *Client) initRemoteUser(id *zkidentity.PublicIdentity, r *ratchet.Ratche
 		case <-c.ctx.Done():
 			return nil, false, errClientExiting
 		}
+
+		// Check if we should subscribe to posts. Ignore if there's a
+		// post-kx action to subscribe, which will be prioritized.
+		subToPosts := c.cfg.AutoSubscribeToPosts && updateAB
+		for i := range postKXActions {
+			if postKXActions[i].Type == clientdb.PKXActionFetchPost {
+				subToPosts = false
+				break
+			}
+		}
+		if subToPosts {
+			go c.SubscribeToPosts(ru.ID())
+		}
 	}
 
 	// If there are any post-kx actions to be taken, start them up.

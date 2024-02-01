@@ -192,6 +192,10 @@ type Config struct {
 	// SendReceiveReceipts flags whether to send receive receipts for all
 	// domains.
 	SendReceiveReceipts bool
+
+	// AutoSubscribeToPosts flags whether to automatically subscribe to
+	// posts when kx'ing for the first time with an user.
+	AutoSubscribeToPosts bool
 }
 
 // logger creates a logger for the given subsystem in the configured backend.
