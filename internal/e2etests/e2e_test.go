@@ -93,6 +93,7 @@ type clientCfg struct {
 	ntfns     *client.NotificationManager
 
 	sendRecvReceipts bool
+	autoSubToPosts   bool
 }
 
 type newClientOpt func(*clientCfg)
@@ -138,6 +139,12 @@ func withSimnetEnvDcrlndPayClient(t testing.TB, alt bool) newClientOpt {
 func withNtfns(ntfns *client.NotificationManager) newClientOpt {
 	return func(cfg *clientCfg) {
 		cfg.ntfns = ntfns
+	}
+}
+
+func withAutoSubToPosts() newClientOpt {
+	return func(cfg *clientCfg) {
+		cfg.autoSubToPosts = true
 	}
 }
 
@@ -402,6 +409,7 @@ func (ts *testScaffold) newClientWithCfg(nccfg *clientCfg, opts ...newClientOpt)
 		AutoHandshakeInterval:       time.Second * 8,
 		AutoRemoveIdleUsersInterval: time.Second * 14,
 		SendReceiveReceipts:         nccfg.sendRecvReceipts,
+		AutoSubscribeToPosts:        nccfg.autoSubToPosts,
 
 		ResourcesProvider: resources.ProviderFunc(func(ctx context.Context,
 			uid clientintf.UserID,

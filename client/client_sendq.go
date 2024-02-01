@@ -59,7 +59,7 @@ func (c *Client) removeFromSendQ(id clientdb.SendQID, dest clientintf.UserID) {
 	})
 	if err != nil {
 		c.log.Errorf("Unable to remove dest %s from send queue %s: %v",
-			dest, id)
+			dest, id, err)
 	} else {
 		c.log.Tracef("Removed dest %s from sendq %s", dest, id)
 	}
