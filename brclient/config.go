@@ -107,6 +107,7 @@ type config struct {
 	LogPings          bool
 	NoLoadChatHistory bool
 	SendRecvReceipts  bool
+	AutoSubPosts      bool
 
 	AutoHandshakeInterval       time.Duration
 	AutoRemoveIdleUsersInterval time.Duration
@@ -288,6 +289,7 @@ func loadConfig() (*config, error) {
 	flagAutoHandshake := fs.String("autohandshakeinterval", "21d", "")
 	flagAutoRemove := fs.String("autoremoveidleusersinterval", "60d", "")
 	flagAutoRemoveIgnoreList := fs.String("autoremoveignorelist", defaultAutoRemoveIgnoreList, "")
+	flagAutoSubPosts := fs.Bool("autosubposts", true, "")
 
 	// log
 	flagMsgRoot := fs.String("log.msglog", defaultMsgRoot, "Root for message log files")
@@ -523,6 +525,7 @@ func loadConfig() (*config, error) {
 		AutoHandshakeInterval:       autoHandshakeInterval,
 		AutoRemoveIdleUsersInterval: autoRemoveInterval,
 		AutoRemoveIdleUsersIgnore:   autoRemoveIgnoreList,
+		AutoSubPosts:                *flagAutoSubPosts,
 
 		SyncFreeList:              *flagSyncFreeList,
 		ExternalEditorForComments: *flagExternalEditorForComments,

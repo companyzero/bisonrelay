@@ -76,6 +76,9 @@ root = {{ .Root }}
 # ad716557157c1f191d8b5f8c6757ea41af49de27dc619fc87f337ca85be325ee - GC bot
 # autoremoveignorelist =
 
+# Whether to automatically subscribe to posts of everyone you KX with.
+# autosubposts = 1
+
 # logging and debug
 [log]
 
