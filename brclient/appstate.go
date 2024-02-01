@@ -3349,6 +3349,7 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		AutoHandshakeInterval:         args.AutoHandshakeInterval,
 		AutoRemoveIdleUsersInterval:   args.AutoRemoveIdleUsersInterval,
 		AutoRemoveIdleUsersIgnoreList: args.AutoRemoveIdleUsersIgnore,
+		AutoSubscribeToPosts:          args.AutoSubPosts,
 
 		CertConfirmer: func(ctx context.Context, cs *tls.ConnectionState,
 			svrID *zkidentity.PublicIdentity) error {
