@@ -100,14 +100,27 @@ class _AttachFileScreenState extends State<AttachFileScreen> {
           case "txt":
             mime = "text/plain";
             break;
-          case "jpg":
-            mime = "image/jpeg";
+          case "avif":
+            mime = "image/avif";
             break;
+          case "bmp":
+            mime = "image/bmp";
+            break;
+          case "gif":
+            mime = "image/gif";
+            break;
+          case "jpg":
           case "jpeg":
             mime = "image/jpeg";
             break;
+          case "jxl":
+            mime = "image/jxl";
+            break;
           case "png":
             mime = "image/png";
+            break;
+          case "webp":
+            mime = "image/webp";
             break;
           default:
             throw "Unable to recognize type of embed";

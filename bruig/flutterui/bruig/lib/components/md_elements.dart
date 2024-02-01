@@ -134,12 +134,13 @@ class EmbedInlineSyntax extends md.InlineSyntax {
 
     var tag = "";
     switch (parms["type"]) {
-      case "image/jpeg":
-        tag = "image";
-        break;
-      case "image/png":
-      case "image/gif":
+      case "image/avif":
       case "image/bmp":
+      case "image/gif":
+      case "image/jpeg":
+      case "image/jxl":
+      case "image/png":
+      case "image/webp":
         tag = "image";
         break;
       case "text/plain":
