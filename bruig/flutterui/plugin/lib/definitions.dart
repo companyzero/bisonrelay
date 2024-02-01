@@ -1412,6 +1412,20 @@ class PostSubscriptionResult extends ChatEvent {
 }
 
 @JsonSerializable()
+class PostSubscriberUpdated extends ChatEvent {
+  final String id;
+  final String nick;
+  final bool subscribed;
+
+  PostSubscriberUpdated(this.id, this.nick, this.subscribed)
+      : super(id,
+            "${subscribed ? 'Subscribed' : 'Unsubscribed'} from local client posts");
+
+  factory PostSubscriberUpdated.fromJson(Map<String, dynamic> json) =>
+      _$PostSubscriberUpdatedFromJson(json);
+}
+
+@JsonSerializable()
 class LastUserReceivedTime {
   final String uid;
   @JsonKey(name: "last_decrypted")
@@ -2296,6 +2310,11 @@ mixin NtfStreams {
         ntfConfs.add(event);
         break;
 
+      case NTPostsSubscriberUpdated:
+        var event = PostSubscriberUpdated.fromJson(payload);
+        ntfChatEvents.add(event);
+        break;
+
       default:
         print("Received unknown notification ${cmd.toRadixString(16)}");
     }
@@ -3107,3 +3126,4 @@ const int NTRescanWalletProgress = 0x1029;
 const int NTServerUnwelcomeError = 0x102a;
 const int NTProfileUpdated = 0x102b;
 const int NTAddressBookLoaded = 0x102c;
+const int NTPostsSubscriberUpdated = 0x102d;

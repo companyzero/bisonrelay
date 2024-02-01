@@ -905,6 +905,24 @@ class _PostSubscriptionEventWState extends State<PostSubscriptionEventW> {
   }
 }
 
+class PostsSubscriberUpdatedW extends StatelessWidget {
+  final PostSubscriberUpdated event;
+  const PostsSubscriberUpdatedW(this.event, {Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    var theme = Theme.of(context);
+    var textColor = theme.dividerColor;
+    var subTxt = event.subscribed ? "subscribed to" : "unsubscribed from";
+    return Consumer<ThemeNotifier>(
+        builder: (context, theme, _) => ServerEvent(
+            child: SelectableText(
+                "${event.nick} $subTxt the local client's posts.",
+                style: TextStyle(
+                    fontSize: theme.getSmallFont(context), color: textColor))));
+  }
+}
+
 class FileDownloadedEventW extends StatelessWidget {
   final FileDownloadedEvent event;
   const FileDownloadedEventW(this.event, {Key? key}) : super(key: key);
@@ -1400,6 +1418,10 @@ class Event extends StatelessWidget {
     if (event.event is PostSubscriptionResult) {
       return PostSubscriptionEventW(
           event.event as PostSubscriptionResult, client);
+    }
+
+    if (event.event is PostSubscriberUpdated) {
+      return PostsSubscriberUpdatedW(event.event as PostSubscriberUpdated);
     }
 
     if (event.event is GCVersionWarn) {
