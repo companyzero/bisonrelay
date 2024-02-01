@@ -176,6 +176,7 @@ const (
 	NTServerUnwelcomeError   = 0x102a
 	NTProfileUpdated         = 0x102b
 	NTAddressBookLoaded      = 0x102c
+	NTPostsSubscriberUpdated = 0x102d
 )
 
 type cmd struct {

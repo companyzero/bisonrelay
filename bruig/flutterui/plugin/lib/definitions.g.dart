@@ -1412,6 +1412,22 @@ Map<String, dynamic> _$PostSubscriptionResultToJson(
       'error': instance.error,
     };
 
+PostSubscriberUpdated _$PostSubscriberUpdatedFromJson(
+        Map<String, dynamic> json) =>
+    PostSubscriberUpdated(
+      json['id'] as String,
+      json['nick'] as String,
+      json['subscribed'] as bool,
+    );
+
+Map<String, dynamic> _$PostSubscriberUpdatedToJson(
+        PostSubscriberUpdated instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'nick': instance.nick,
+      'subscribed': instance.subscribed,
+    };
+
 LastUserReceivedTime _$LastUserReceivedTimeFromJson(
         Map<String, dynamic> json) =>
     LastUserReceivedTime(

@@ -158,6 +158,15 @@ func handleInitClient(handle uint32, args initClient) error {
 		notify(NTGCMessage, gcm, nil)
 	}))
 
+	ntfns.Register(client.OnPostSubscriberUpdated(func(ru *client.RemoteUser, subscribed bool) {
+		v := postSubscriberUpdated{
+			ID:         ru.ID(),
+			Nick:       ru.Nick(),
+			Subscribed: subscribed,
+		}
+		notify(NTPostsSubscriberUpdated, v, nil)
+	}))
+
 	ntfns.Register(client.OnRemoteSubscriptionChangedNtfn(func(user *client.RemoteUser, subscribed bool) {
 		v := postSubscriptionResult{ID: user.ID(), WasSubRequest: subscribed}
 		notify(NTRemoteSubChanged, v, nil)

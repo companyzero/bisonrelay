@@ -312,6 +312,12 @@ type postSubscriptionResult struct {
 	Error         string             `json:"error"`
 }
 
+type postSubscriberUpdated struct {
+	ID         zkidentity.ShortID `json:"id"`
+	Nick       string             `json:"nick"`
+	Subscribed bool               `json:"subscribed"`
+}
+
 type lastUserReceivedTime struct {
 	UID           clientintf.UserID `json:"uid"`
 	LastDecrypted int64             `json:"last_decrypted"`
