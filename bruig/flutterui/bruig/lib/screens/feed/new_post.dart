@@ -171,7 +171,7 @@ class _NewPostScreenState extends State<NewPostScreen> {
     if (_debounce?.isActive ?? false) _debounce!.cancel();
     _debounce = Timer(const Duration(milliseconds: 500), () async {
       var filePickRes = await FilePicker.platform.pickFiles(
-        allowedExtensions: ["png", "jpg", "jpeg", "txt"],
+        allowedExtensions: ["avif", "bmp", "gif", "jpg", "jpeg", "jxl", "png", "webp", "txt"],
         withData: true,
       );
       if (filePickRes == null) return;
@@ -192,14 +192,27 @@ class _NewPostScreenState extends State<NewPostScreen> {
         case "txt":
           mime = "text/plain";
           break;
-        case "jpg":
-          mime = "image/jpeg";
+        case "avif":
+          mime = "image/avif";
           break;
+        case "bmp":
+          mime = "image/bmp";
+          break;
+        case "gif":
+          mime = "image/gif";
+          break;
+        case "jpg":
         case "jpeg":
           mime = "image/jpeg";
           break;
+        case "jxl":
+          mime = "image/jxl";
+          break;
         case "png":
           mime = "image/png";
+          break;
+        case "webp":
+          mime = "image/webp";
           break;
         default:
           showErrorSnackbar(context, "Unable to recognize type of embed");
