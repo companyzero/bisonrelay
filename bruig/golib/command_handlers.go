@@ -438,6 +438,7 @@ func handleInitClient(handle uint32, args initClient) error {
 		AutoHandshakeInterval:         time.Duration(args.AutoHandshakeInterval) * time.Second,
 		AutoRemoveIdleUsersInterval:   time.Duration(args.AutoRemoveIdleUsersInterval) * time.Second,
 		AutoRemoveIdleUsersIgnoreList: args.AutoRemoveIdleUsersIgnore,
+		AutoSubscribeToPosts:          args.AutoSubPosts,
 
 		CertConfirmer: func(ctx context.Context, cs *tls.ConnectionState,
 			svrID *zkidentity.PublicIdentity) error {

@@ -33,6 +33,7 @@ InitClient _$InitClientFromJson(Map<String, dynamic> json) => InitClient(
           .map((e) => e as String)
           .toList(),
       json['send_recv_receipts'] as bool,
+      json['auto_sub_posts'] as bool,
     );
 
 Map<String, dynamic> _$InitClientToJson(InitClient instance) =>
@@ -61,6 +62,7 @@ Map<String, dynamic> _$InitClientToJson(InitClient instance) =>
       'auto_remove_idle_users_interval': instance.autoRemoveIdleUsersInterval,
       'auto_remove_idle_users_ignore': instance.autoRemoveIdleUsersIgnore,
       'send_recv_receipts': instance.sendRecvReceipts,
+      'auto_sub_posts': instance.autoSubPosts,
     };
 
 IDInit _$IDInitFromJson(Map<String, dynamic> json) => IDInit(

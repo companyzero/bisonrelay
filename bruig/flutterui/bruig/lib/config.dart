@@ -90,6 +90,7 @@ class Config {
   late final int autoRemoveIdleUsersInterval;
   late final List<String> autoRemoveIgnoreList;
   late final bool sendRecvReceipts;
+  late final bool autoSubPosts;
 
   Config();
   Config.filled(
@@ -120,7 +121,8 @@ class Config {
       this.autoHandshakeInterval: 21 * 24 * 60 * 60,
       this.autoRemoveIdleUsersInterval: 60 * 24 * 60 * 60,
       this.autoRemoveIgnoreList: defaultAutoRemoveIgnoreList,
-      this.sendRecvReceipts: true});
+      this.sendRecvReceipts: true,
+      this.autoSubPosts: true});
   factory Config.newWithRPCHost(
           Config cfg, String rpcHost, String tlsCert, String macaroonPath) =>
       Config.filled(
@@ -152,6 +154,7 @@ class Config {
         autoRemoveIdleUsersInterval: cfg.autoRemoveIdleUsersInterval,
         autoRemoveIgnoreList: cfg.autoRemoveIgnoreList,
         sendRecvReceipts: cfg.sendRecvReceipts,
+        autoSubPosts: cfg.autoSubPosts,
       );
 
   Future<void> saveConfig(String filepath) async {
@@ -275,6 +278,7 @@ Future<Config> loadConfig(String filepath) async {
       f.get("default", "autoremoveidleusersinterval") ?? "60d");
   c.autoRemoveIgnoreList = getCommaList("default", "autoremoveignorelist") ??
       defaultAutoRemoveIgnoreList;
+  c.autoSubPosts = getBoolDefaultTrue("default", "autosubposts");
 
   if (c.walletType != "disabled") {
     c.lnRPCHost = f.get("payment", "lnrpchost") ?? "localhost:10009";

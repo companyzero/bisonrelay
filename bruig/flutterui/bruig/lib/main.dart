@@ -177,6 +177,7 @@ class _AppState extends State<App> with WindowListener {
         cfg.autoRemoveIdleUsersInterval,
         cfg.autoRemoveIgnoreList,
         cfg.sendRecvReceipts,
+        cfg.autoSubPosts,
       );
       await Golib.initClient(initArgs);
     } catch (exception) {
