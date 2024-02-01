@@ -43,6 +43,7 @@ type initClient struct {
 	AutoHandshakeInterval       int64    `json:"auto_handshake_interval"`
 	AutoRemoveIdleUsersInterval int64    `json:"auto_remove_idle_users_interval"`
 	AutoRemoveIdleUsersIgnore   []string `json:"auto_remove_idle_users_ignore"`
+	AutoSubPosts                bool     `json:"auto_sub_posts"`
 }
 
 type iDInit struct {

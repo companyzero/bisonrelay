@@ -62,6 +62,8 @@ class InitClient {
   final List<String> autoRemoveIdleUsersIgnore;
   @JsonKey(name: 'send_recv_receipts')
   final bool sendRecvReceipts;
+  @JsonKey(name: 'auto_sub_posts')
+  final bool autoSubPosts;
 
   InitClient(
     this.dbRoot,
@@ -88,6 +90,7 @@ class InitClient {
     this.autoRemoveIdleUsersInterval,
     this.autoRemoveIdleUsersIgnore,
     this.sendRecvReceipts,
+    this.autoSubPosts,
   );
 
   Map<String, dynamic> toJson() => _$InitClientToJson(this);
