@@ -436,20 +436,12 @@ class ClientModel extends ChangeNotifier {
     _handleRescanWalletProgress();
   }
 
-  List<ChatModel> _gcChats = [];
-  UnmodifiableListView<ChatModel> get gcChats => UnmodifiableListView(_gcChats);
+  List<ChatModel> _sortedChats = [];
+  UnmodifiableListView<ChatModel> get sortedChats =>
+      UnmodifiableListView(_sortedChats);
 
-  void set gcChats(List<ChatModel> gc) {
-    _gcChats = gc;
-    notifyListeners();
-  }
-
-  List<ChatModel> _userChats = [];
-  UnmodifiableListView<ChatModel> get userChats =>
-      UnmodifiableListView(_userChats);
-
-  void set userChats(List<ChatModel> us) {
-    _userChats = us;
+  void set sortedChats(List<ChatModel> gc) {
+    _sortedChats = gc;
     notifyListeners();
   }
 
@@ -468,24 +460,14 @@ class ClientModel extends ChangeNotifier {
     _filteredSearch = [];
     _filteredSearchString = b;
     if (b != "") {
-      for (int i = 0; i < _gcChats.length; i++) {
-        if (_gcChats[i].nick.toLowerCase().contains(b.toLowerCase())) {
-          _filteredSearch.add(_gcChats[i]);
+      for (int i = 0; i < _sortedChats.length; i++) {
+        if (_sortedChats[i].nick.toLowerCase().contains(b.toLowerCase())) {
+          _filteredSearch.add(_sortedChats[i]);
         }
       }
-      for (int i = 0; i < _hiddenGCs.length; i++) {
-        if (_hiddenGCs[i].nick.toLowerCase().contains(b.toLowerCase())) {
-          _filteredSearch.add(_hiddenGCs[i]);
-        }
-      }
-      for (int i = 0; i < _userChats.length; i++) {
-        if (_userChats[i].nick.toLowerCase().contains(b.toLowerCase())) {
-          _filteredSearch.add(_userChats[i]);
-        }
-      }
-      for (int i = 0; i < _hiddenUsers.length; i++) {
-        if (_hiddenUsers[i].nick.toLowerCase().contains(b.toLowerCase())) {
-          _filteredSearch.add(_hiddenUsers[i]);
+      for (int i = 0; i < _hiddenChats.length; i++) {
+        if (_hiddenChats[i].nick.toLowerCase().contains(b.toLowerCase())) {
+          _filteredSearch.add(_hiddenChats[i]);
         }
       }
     }
@@ -494,35 +476,19 @@ class ClientModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  List<ChatModel> _hiddenGCs = [];
-  UnmodifiableListView<ChatModel> get hiddenGCs =>
-      UnmodifiableListView(_hiddenGCs);
+  List<ChatModel> _hiddenChats = [];
+  UnmodifiableListView<ChatModel> get hiddenChats =>
+      UnmodifiableListView(_hiddenChats);
 
-  set hiddenGCs(List<ChatModel> us) {
-    _hiddenGCs = us;
+  set hiddenChats(List<ChatModel> us) {
+    _hiddenChats = us;
     notifyListeners();
   }
 
-  List<ChatModel> _hiddenUsers = [];
-  UnmodifiableListView<ChatModel> get hiddenUsers =>
-      UnmodifiableListView(_hiddenUsers);
-
-  set hiddenUsers(List<ChatModel> us) {
-    _hiddenUsers = us;
-    notifyListeners();
-  }
-
-  String _savedHiddenUsers = "";
-  String get savedHiddenUsers => _savedHiddenUsers;
-  set savedHiddenUsers(String b) {
-    _savedHiddenUsers = b;
-    notifyListeners();
-  }
-
-  String _savedHiddenGCs = "";
-  String get savedHiddenGCs => _savedHiddenGCs;
-  set savedHiddenGCs(String b) {
-    _savedHiddenGCs = b;
+  String _savedHiddenChats = "";
+  String get savedHiddenChats => _savedHiddenChats;
+  set savedHiddenChats(String b) {
+    _savedHiddenChats = b;
     notifyListeners();
   }
 
@@ -573,53 +539,31 @@ class ClientModel extends ChangeNotifier {
 
   void startChat(ChatModel chat, bool alreadyOpened) {
     if (!alreadyOpened) {
-      if (chat.isGC) {
-        _hiddenGCs.remove(chat);
-        List<ChatModel> newGcChats = [];
-        newGcChats.add(chat);
-        for (int i = 0; i < _gcChats.length; i++) {
-          newGcChats.add(_gcChats[i]);
-        }
-        _gcChats = newGcChats;
-        _subGCMenus[chat.id] = buildGCMenu(chat);
-        if (_savedHiddenGCs.contains(chat.nick)) {
-          var savedHiddenGCsSplit = _savedHiddenGCs.split(",");
-          var newGCSplitStr = "";
-          for (int i = 0; i < savedHiddenGCsSplit.length; i++) {
-            if (!savedHiddenGCsSplit[i].contains(chat.nick)) {
-              if (newGCSplitStr.isEmpty) {
-                newGCSplitStr = chat.nick;
-              } else {
-                newGCSplitStr += ", ${chat.nick}";
-              }
+      List<ChatModel> newSortedChats = [];
+      newSortedChats.add(chat);
+      for (int i = 0; i < _sortedChats.length; i++) {
+        newSortedChats.add(_sortedChats[i]);
+      }
+      _sortedChats = newSortedChats;
+      _hiddenChats.remove(chat);
+      if (_savedHiddenChats.contains(chat.nick)) {
+        var savedHiddenChatsSplit = _savedHiddenChats.split(",");
+        var newChatSplitStr = "";
+        for (int i = 0; i < savedHiddenChatsSplit.length; i++) {
+          if (!savedHiddenChatsSplit[i].contains(chat.nick)) {
+            if (newChatSplitStr.isEmpty) {
+              newChatSplitStr = chat.nick;
+            } else {
+              newChatSplitStr += ", ${chat.nick}";
             }
           }
-          _savedHiddenGCs = newGCSplitStr;
-          StorageManager.saveData('gcHiddenList', _savedHiddenGCs);
         }
-      } else {
-        _hiddenUsers.remove(chat);
-        List<ChatModel> newUserChats = [];
-        newUserChats.add(chat);
-        for (int i = 0; i < userChats.length; i++) {
-          newUserChats.add(_userChats[i]);
-        }
-        _userChats = newUserChats;
-        _subUserMenus[chat.id] = buildUserChatMenu(chat);
-        if (_savedHiddenUsers.contains(chat.nick)) {
-          var savedHiddenUsersSplit = _savedHiddenUsers.split(",");
-          var newUserSplitStr = "";
-          for (int i = 0; i < savedHiddenUsersSplit.length; i++) {
-            if (!savedHiddenUsersSplit[i].contains(chat.nick)) {
-              if (newUserSplitStr.isEmpty) {
-                newUserSplitStr = chat.nick;
-              } else {
-                newUserSplitStr += ", ${chat.nick}";
-              }
-            }
-          }
-          _savedHiddenUsers = newUserSplitStr;
-          StorageManager.saveData('userHiddenList', _savedHiddenUsers);
+        _savedHiddenChats = newChatSplitStr;
+        StorageManager.saveData('chatHiddenList', _savedHiddenChats);
+        if (chat.isGC) {
+          _subGCMenus[chat.id] = buildGCMenu(chat);
+        } else {
+          _subUserMenus[chat.id] = buildUserChatMenu(chat);
         }
       }
     }
@@ -711,17 +655,12 @@ class ClientModel extends ChangeNotifier {
 
     // Check for unreadMessages so we can turn off sidebar notification
     bool unreadChats = false;
-    for (int i = 0; i < _gcChats.length; i++) {
-      if (_gcChats[i].unreadMsgCount > 0) {
+    for (int i = 0; i < _sortedChats.length; i++) {
+      if (_sortedChats[i].unreadMsgCount > 0) {
         unreadChats = true;
       }
     }
 
-    for (int i = 0; i < _userChats.length; i++) {
-      if (_userChats[i].unreadMsgCount > 0) {
-        unreadChats = true;
-      }
-    }
     hasUnreadChats = unreadChats;
     hideSubMenu();
     hideUserPostList();
@@ -738,9 +677,7 @@ class ClientModel extends ChangeNotifier {
 
   void setActiveByNick(String nick, bool isGC) {
     try {
-      var c = isGC
-          ? _gcChats.firstWhere((c) => c.nick == nick)
-          : _userChats.firstWhere((c) => c.nick == nick);
+      var c = _sortedChats.firstWhere((c) => c.nick == nick);
       active = c;
     } on StateError {
       // Ignore if chat doesn't exist.
@@ -757,23 +694,13 @@ class ClientModel extends ChangeNotifier {
 
   Future<void> newSentMsg(ChatModel? chat) async {
     if (chat != null) {
-      if (chat.isGC) {
-        _gcChats.remove(chat);
-        List<ChatModel> newGcChats = [];
-        newGcChats.add(chat);
-        for (int i = 0; i < _gcChats.length; i++) {
-          newGcChats.add(_gcChats[i]);
-        }
-        _gcChats = newGcChats;
-      } else {
-        _userChats.remove(chat);
-        List<ChatModel> newUserChats = [];
-        newUserChats.add(chat);
-        for (int i = 0; i < _userChats.length; i++) {
-          newUserChats.add(_userChats[i]);
-        }
-        _userChats = newUserChats;
+      _sortedChats.remove(chat);
+      List<ChatModel> newSortedChats = [];
+      newSortedChats.add(chat);
+      for (int i = 0; i < _sortedChats.length; i++) {
+        newSortedChats.add(_sortedChats[i]);
       }
+      _sortedChats = newSortedChats;
     }
     notifyListeners();
   }
@@ -892,35 +819,23 @@ class ClientModel extends ChangeNotifier {
     }
 
     // TODO: this test should be superflous.
-    if (isGC) {
-      if (_gcChats.indexWhere((c) => c.id == id) == -1 &&
-          ((c._msgs.isNotEmpty && !_savedHiddenGCs.contains(c.nick)) ||
-              (c._msgs.isEmpty && !startup))) {
-        // Add to list of chats if not empty or the chat is empty and
-        // not being create via readAddressBook call.
-        _gcChats.add(c);
-        _gcChats.sort(sortUsedChats);
+    if (_sortedChats.indexWhere((c) => c.id == id) == -1 &&
+        ((c._msgs.isNotEmpty && !_savedHiddenChats.contains(c.nick)) ||
+            (c._msgs.isEmpty && !startup))) {
+      // Add to list of chats if not empty or the chat is empty and
+      // not being create via readAddressBook call.
+      _sortedChats.add(c);
+      _sortedChats.sort(sortUsedChats);
+      if (isGC) {
         _subGCMenus[c.id] = buildGCMenu(c);
-      } else if ((c._msgs.isEmpty || _savedHiddenGCs.contains(c.nick)) &&
-          startup) {
-        // Add all empty chats on startup to hiddenGCs list.
-        _hiddenGCs.add(c);
-        _hiddenGCs.sort((a, b) => b.nick.compareTo(a.nick));
-      }
-    } else {
-      if (_userChats.indexWhere((c) => c.id == id) == -1 &&
-          ((c._msgs.isNotEmpty && !_savedHiddenUsers.contains(c.nick)) ||
-              (c._msgs.isEmpty && !startup))) {
-        // Add to list of chats.
-        _userChats.add(c);
-        _userChats.sort(sortUsedChats);
+      } else {
         _subUserMenus[c.id] = buildUserChatMenu(c);
-      } else if ((c._msgs.isEmpty || _savedHiddenUsers.contains(c.nick)) &&
-          startup) {
-        // Add all empty chats on startup to hiddenGCs list.
-        _hiddenUsers.add(c);
-        _hiddenUsers.sort((a, b) => b.nick.compareTo(a.nick));
       }
+    } else if ((c._msgs.isEmpty || _savedHiddenChats.contains(c.nick)) &&
+        startup) {
+      // Add all empty chats on startup to hiddenGCs list.
+      _hiddenChats.add(c);
+      _hiddenChats.sort((a, b) => b.nick.compareTo(a.nick));
     }
 
     notifyListeners();
@@ -929,38 +844,24 @@ class ClientModel extends ChangeNotifier {
   }
 
   void hideChat(ChatModel chat) {
-    if (chat.isGC) {
-      _active = null;
-      _gcChats.remove(chat);
-      _hiddenGCs.add(chat);
-      _hiddenUsers.sort((a, b) => b.nick.compareTo(a.nick));
-      if (_savedHiddenGCs.isNotEmpty) {
-        _savedHiddenGCs += ",${chat.nick}";
-      } else {
-        _savedHiddenGCs = chat.nick;
-      }
-      StorageManager.saveData('gcHiddenList', _savedHiddenGCs);
+    _active = null;
+    _sortedChats.remove(chat);
+    _hiddenChats.add(chat);
+    _hiddenChats.sort((a, b) => b.nick.compareTo(a.nick));
+    if (_savedHiddenChats.isNotEmpty) {
+      _savedHiddenChats += ",${chat.nick}";
     } else {
-      _active = null;
-      _userChats.remove(chat);
-      _hiddenUsers.add(chat);
-      _hiddenUsers.sort((a, b) => b.nick.compareTo(a.nick));
-      if (_savedHiddenUsers.isNotEmpty) {
-        _savedHiddenUsers += ",${chat.nick}";
-      } else {
-        _savedHiddenUsers = chat.nick;
-      }
-      StorageManager.saveData('userHiddenList', _savedHiddenUsers);
+      _savedHiddenChats = chat.nick;
     }
+    StorageManager.saveData('chatHiddenList', _savedHiddenChats);
     notifyListeners();
   }
 
   void removeChat(ChatModel chat) {
+    _sortedChats.remove(chat);
     if (chat.isGC) {
-      _gcChats.remove(chat);
       _subGCMenus.remove(chat.id);
     } else {
-      _userChats.remove(chat);
       _subUserMenus.remove(chat.id);
     }
     _activeChats.remove(chat.id);
@@ -1043,37 +944,23 @@ class ClientModel extends ChangeNotifier {
         }
       }
 
-      if (chat.isGC) {
-        _gcChats.remove(chat);
-        List<ChatModel> newGcChats = [];
-        newGcChats.add(chat);
-        for (int i = 0; i < _gcChats.length; i++) {
-          newGcChats.add(_gcChats[i]);
-        }
-        _gcChats = newGcChats;
-      } else {
-        _userChats.remove(chat);
-        List<ChatModel> newUserChats = [];
-        newUserChats.add(chat);
-        for (int i = 0; i < _userChats.length; i++) {
-          newUserChats.add(_userChats[i]);
-        }
-        _userChats = newUserChats;
+      _sortedChats.remove(chat);
+      List<ChatModel> newSortedChats = [];
+      newSortedChats.add(chat);
+      for (int i = 0; i < _sortedChats.length; i++) {
+        newSortedChats.add(_sortedChats[i]);
       }
+      _sortedChats = newSortedChats;
+
       notifyListeners();
     }
   }
 
   Future<void> readAddressBook() async {
-    await StorageManager.readData('gcHiddenList').then((value) {
+    await StorageManager.readData('chatHiddenList').then((value) {
       if (value != null && value.length > 0) {
-        _savedHiddenGCs = value;
+        _savedHiddenChats = value;
       }
-    });
-    await StorageManager.readData('userHiddenList').then((value) {
-      if (value != null && value.length > 0) {
-        _savedHiddenUsers = value;
-      } else {}
     });
     var info = await Golib.getLocalInfo();
     _publicID = info.id;

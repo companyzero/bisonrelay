@@ -124,7 +124,7 @@ class _ChatHeadingWState extends State<_ChatHeadingW> {
                         title: Text(chat.nick,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                                fontSize: theme.getSmallFont(context),
+                                fontSize: theme.getMediumFont(context),
                                 color: textColor)),
                         leading: popMenuButton,
                         trailing: trailing,
@@ -141,7 +141,7 @@ class _ChatHeadingWState extends State<_ChatHeadingW> {
                         title: Text(chat.nick,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                                fontSize: theme.getSmallFont(context),
+                                fontSize: theme.getMediumFont(context),
                                 color: textColor)),
                         leading: popMenuButton,
                         trailing: trailing,
@@ -181,8 +181,6 @@ class _ChatsListState extends State<_ChatsList> {
   ClientModel get client => widget.client;
   FocusNode get inputFocusNode => widget.inputFocusNode;
   Timer? _debounce;
-  bool expandRooms = true;
-  bool expandUsers = true;
   bool showAddressbookRoomsButton = false;
   bool showAddressbookUsersButton = false;
 
@@ -238,11 +236,9 @@ class _ChatsListState extends State<_ChatsList> {
     var dividerColor = theme.highlightColor;
     var backgroundColor = theme.backgroundColor;
 
-    var gcList = client.gcChats.toList();
-    var chatList = client.userChats.toList();
+    var sortedList = client.sortedChats.toList();
 
-    var userListScroll = ScrollController();
-    var gcListScroll = ScrollController();
+    var sortedListScroll = ScrollController();
 
     makeActive(ChatModel? c) => {client.active = c};
 
@@ -255,155 +251,42 @@ class _ChatsListState extends State<_ChatsList> {
                 decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(3),
                     color: backgroundColor),
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(5),
                 child: Column(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Expanded(
-                          flex: expandRooms && gcList.isNotEmpty ? 3 : 0,
-                          child: Container(
-                            padding: const EdgeInsets.only(
-                                left: 20, right: 5, top: 5, bottom: 5),
-                            decoration: BoxDecoration(
-                              color: dividerColor,
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Row(children: [
-                                          Text("Room",
-                                              style: TextStyle(
-                                                  color: darkTextColor,
-                                                  fontSize: theme
-                                                      .getMediumFont(context),
-                                                  fontWeight: FontWeight.w400)),
-                                          IconButton(
-                                              onPressed: () => createGC(),
-                                              tooltip:
-                                                  'Create a new group chat',
-                                              icon: Icon(
-                                                  color: darkTextColor,
-                                                  size: 25,
-                                                  weight: 1,
-                                                  Icons.add_outlined)),
-                                        ]),
-                                        gcList.isNotEmpty
-                                            ? IconButton(
-                                                onPressed: () => setState(() {
-                                                      expandRooms =
-                                                          !expandRooms;
-                                                    }),
-                                                icon: Icon(
-                                                    color: darkTextColor,
-                                                    size: 25,
-                                                    expandRooms
-                                                        ? Icons
-                                                            .keyboard_arrow_up_outlined
-                                                        : Icons
-                                                            .keyboard_arrow_down_outlined))
-                                            : const Empty(),
-                                      ]),
-                                  expandRooms && gcList.isNotEmpty
-                                      ? Expanded(
-                                          child: ListView.builder(
-                                              physics: const ScrollPhysics(),
-                                              controller: gcListScroll,
-                                              scrollDirection: Axis.vertical,
-                                              shrinkWrap: true,
-                                              itemCount: gcList.length,
-                                              itemBuilder: (context, index) =>
-                                                  _ChatHeadingW(
-                                                      gcList[index],
-                                                      client,
-                                                      makeActive,
-                                                      showSubMenu)))
-                                      : const Empty()
-                                ]),
-                          )),
-                      const SizedBox(height: 10),
-                      Expanded(
-                          flex: expandUsers && chatList.isNotEmpty ? 5 : 0,
                           child: Container(
                               padding: const EdgeInsets.only(
-                                  left: 20, right: 5, top: 5, bottom: 5),
-                              decoration: BoxDecoration(
-                                color: dividerColor,
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Row(children: [
-                                            Text("Users",
-                                                style: TextStyle(
-                                                    color: darkTextColor,
-                                                    fontSize: theme
-                                                        .getMediumFont(context),
-                                                    fontWeight:
-                                                        FontWeight.w400)),
-                                            IconButton(
-                                                onPressed: () =>
-                                                    showAddressBook(),
-                                                tooltip: 'Address book',
-                                                icon: Icon(
-                                                    color: darkTextColor,
-                                                    size: 25,
-                                                    Icons.add_outlined)),
-                                          ]),
-                                          chatList.isNotEmpty
-                                              ? IconButton(
-                                                  onPressed: () => setState(() {
-                                                        expandUsers =
-                                                            !expandUsers;
-                                                      }),
-                                                  icon: Icon(
-                                                      color: darkTextColor,
-                                                      size: 25,
-                                                      expandUsers
-                                                          ? Icons
-                                                              .keyboard_arrow_up_outlined
-                                                          : Icons
-                                                              .keyboard_arrow_down_outlined))
-                                              : const Empty(),
-                                        ]),
-                                    expandUsers && chatList.isNotEmpty
-                                        ? Expanded(
-                                            child: ListView.builder(
-                                                physics: const ScrollPhysics(),
-                                                controller: userListScroll,
-                                                scrollDirection: Axis.vertical,
-                                                shrinkWrap: true,
-                                                itemCount: chatList.length,
-                                                itemBuilder: (context, index) =>
-                                                    _ChatHeadingW(
-                                                        chatList[index],
-                                                        client,
-                                                        makeActive,
-                                                        showSubMenu)))
-                                        : const Empty()
-                                  ]))),
-                      !expandUsers && !expandRooms
-                          ? const Expanded(flex: 5, child: Empty())
-                          : const SizedBox(height: 10),
+                                  left: 10, right: 5, top: 5, bottom: 5),
+                              child: ListView.builder(
+                                  physics: const ScrollPhysics(),
+                                  controller: sortedListScroll,
+                                  scrollDirection: Axis.vertical,
+                                  shrinkWrap: true,
+                                  itemCount: sortedList.length,
+                                  itemBuilder: (context, index) =>
+                                      _ChatHeadingW(sortedList[index], client,
+                                          makeActive, showSubMenu)))),
                       Container(
                           padding: const EdgeInsets.only(
                               left: 20, right: 20, top: 5, bottom: 5),
-                          decoration: BoxDecoration(
-                            color: dividerColor,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
                           child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
+                                Material(
+                                    color:
+                                        selectedBackgroundColor.withOpacity(0),
+                                    child: IconButton(
+                                        hoverColor: selectedBackgroundColor,
+                                        splashRadius: 15,
+                                        iconSize: 25,
+                                        tooltip: "Create a group chat",
+                                        onPressed: () => createGC(),
+                                        icon: Icon(
+                                            size: 25,
+                                            color: darkTextColor,
+                                            Icons.add))),
                                 Material(
                                     color:
                                         selectedBackgroundColor.withOpacity(0),
@@ -492,124 +375,20 @@ class _ChatsListState extends State<_ChatsList> {
               child: Stack(children: [
                 Container(
                     margin: const EdgeInsets.only(bottom: 50),
-                    child: ListView(children: [
-                      Column(children: [
-                        Row(children: [
-                          Expanded(
-                              child: TextButton(
-                            onPressed: () => setState(() {
-                              expandRooms = !expandRooms;
-                            }),
-                            onHover: (show) => setState(() {
-                              showAddressbookRoomsButton = show;
-                            }),
-                            child: Row(children: [
-                              RichText(
-                                  text: TextSpan(children: [
-                                WidgetSpan(
-                                    alignment: PlaceholderAlignment.middle,
-                                    child: Icon(
-                                        color: darkTextColor,
-                                        size: 15,
-                                        expandRooms
-                                            ? Icons.arrow_drop_down_sharp
-                                            : Icons.arrow_drop_up_sharp)),
-                                TextSpan(
-                                    text: "  Rooms",
-                                    style: TextStyle(
-                                        color: darkTextColor,
-                                        fontSize: theme.getMediumFont(context),
-                                        fontWeight: FontWeight.w200)),
-                              ])),
-                            ]),
-                          )),
-                          showAddressbookRoomsButton
-                              ? TextButton(
-                                  onPressed: () => createGC(),
-                                  onHover: (show) => setState(() {
-                                        showAddressbookRoomsButton = show;
-                                      }),
-                                  child: Tooltip(
-                                      message: 'Create a new group chat',
-                                      child: Icon(
-                                          color: darkTextColor,
-                                          size: 15,
-                                          Icons.more_vert)))
-                              : const SizedBox(height: 20, width: 15)
-                        ]),
-                        expandRooms
-                            ? ListView.builder(
-                                scrollDirection: Axis.vertical,
-                                shrinkWrap: true,
-                                itemCount: gcList.length,
-                                itemBuilder: (context, index) => _ChatHeadingW(
-                                    gcList[index],
-                                    client,
-                                    makeActive,
-                                    showSubMenu))
-                            : const Empty()
-                      ]),
-                      Column(children: [
-                        Row(children: [
-                          Expanded(
-                              child: TextButton(
-                            onPressed: () => setState(() {
-                              expandUsers = !expandUsers;
-                            }),
-                            onHover: (show) => setState(() {
-                              showAddressbookUsersButton = show;
-                            }),
-                            child: Row(children: [
-                              RichText(
-                                  text: TextSpan(children: [
-                                WidgetSpan(
-                                    alignment: PlaceholderAlignment.middle,
-                                    child: Icon(
-                                        color: darkTextColor,
-                                        size: 15,
-                                        expandUsers
-                                            ? Icons.arrow_drop_down_sharp
-                                            : Icons.arrow_drop_up_sharp)),
-                                TextSpan(
-                                    text: "  Users",
-                                    style: TextStyle(
-                                        color: darkTextColor,
-                                        fontSize: theme.getMediumFont(context),
-                                        fontWeight: FontWeight.w200)),
-                              ])),
-                            ]),
-                          )),
-                          showAddressbookUsersButton
-                              ? TextButton(
-                                  onPressed: () => showAddressBook(),
-                                  onHover: (show) => setState(() {
-                                        showAddressbookUsersButton = show;
-                                      }),
-                                  child: Tooltip(
-                                      message: 'Start a new chat',
-                                      child: Icon(
-                                          color: darkTextColor,
-                                          size: 15,
-                                          Icons.more_vert)))
-                              : const SizedBox(height: 20, width: 15)
-                        ]),
-                        expandUsers
-                            ? ListView.builder(
-                                scrollDirection: Axis.vertical,
-                                shrinkWrap: true,
-                                itemCount: chatList.length,
-                                itemBuilder: (context, index) => _ChatHeadingW(
-                                    chatList[index],
-                                    client,
-                                    makeActive,
-                                    showSubMenu))
-                            : const Empty()
-                      ]),
-                    ])),
+                    child: ListView.builder(
+                        controller: sortedListScroll,
+                        scrollDirection: Axis.vertical,
+                        shrinkWrap: true,
+                        itemCount: sortedList.length,
+                        itemBuilder: (context, index) => _ChatHeadingW(
+                            sortedList[index],
+                            client,
+                            makeActive,
+                            showSubMenu))),
                 !client.showAddressBook
                     ? Positioned(
                         bottom: 5,
-                        right: 5,
+                        right: 0,
                         child: Material(
                             color: selectedBackgroundColor.withOpacity(0),
                             child: IconButton(
@@ -619,13 +398,26 @@ class _ChatsListState extends State<_ChatsList> {
                                 tooltip: "Address Book",
                                 onPressed: () => showAddressBook(),
                                 icon: Icon(
-                                    size: 15,
+                                    size: 20,
                                     color: darkTextColor,
                                     Icons.add))))
                     : const Empty(),
                 Positioned(
                     bottom: 5,
-                    right: 25,
+                    right: 30,
+                    child: Material(
+                        color: selectedBackgroundColor.withOpacity(0),
+                        child: IconButton(
+                            hoverColor: selectedBackgroundColor,
+                            splashRadius: 15,
+                            iconSize: 15,
+                            tooltip: "Create new group chat",
+                            onPressed: createGC,
+                            icon: Icon(
+                                size: 20, color: darkTextColor, Icons.add)))),
+                Positioned(
+                    bottom: 5,
+                    right: 60,
                     child: Material(
                         color: selectedBackgroundColor.withOpacity(0),
                         child: IconButton(
@@ -639,12 +431,12 @@ class _ChatsListState extends State<_ChatsList> {
                                 ? () => fetchInvite(context)
                                 : null,
                             icon: Icon(
-                                size: 15,
+                                size: 20,
                                 color: darkTextColor,
                                 Icons.get_app_sharp)))),
                 Positioned(
                     bottom: 5,
-                    left: 30,
+                    right: 90,
                     child: Material(
                         color: selectedBackgroundColor.withOpacity(0),
                         child: IconButton(
@@ -655,12 +447,12 @@ class _ChatsListState extends State<_ChatsList> {
                             onPressed: () =>
                                 gotoContactsLastMsgTimeScreen(context),
                             icon: Icon(
-                                size: 15,
+                                size: 20,
                                 color: darkTextColor,
                                 Icons.list_rounded)))),
                 Positioned(
                     bottom: 5,
-                    left: 5,
+                    right: 120,
                     child: Material(
                         color: selectedBackgroundColor.withOpacity(0),
                         child: IconButton(
@@ -672,7 +464,7 @@ class _ChatsListState extends State<_ChatsList> {
                                 : "Cannot generate invite while offline",
                             onPressed: client.isOnline ? genInvite : null,
                             icon: Icon(
-                                size: 15, color: darkTextColor, Icons.people))))
+                                size: 20, color: darkTextColor, Icons.people))))
               ]),
             ));
   }

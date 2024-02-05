@@ -58,11 +58,7 @@ class _AddressBookListingWState extends State<_AddressBookListingW> {
     var selectedBackgroundColor = theme.highlightColor;
     var darkTextColor = theme.indicatorColor;
     var alreadyOpened = false;
-    if (chat.isGC) {
-      alreadyOpened = client.gcChats.contains(chat);
-    } else {
-      alreadyOpened = client.userChats.contains(chat);
-    }
+    alreadyOpened = client.sortedChats.contains(chat);
     var avatarColor = colorFromNick(chat.nick);
     var avatarTextColor =
         ThemeData.estimateBrightnessForColor(avatarColor) == Brightness.dark
@@ -147,11 +143,8 @@ class _AddressBookState extends State<AddressBook> {
     var theme = Theme.of(context);
     var darkTextColor = theme.indicatorColor;
     var dividerColor = theme.highlightColor;
-    var combinedGCList = client.hiddenGCs + client.gcChats;
-    combinedGCList
-        .sort((a, b) => a.nick.toLowerCase().compareTo(b.nick.toLowerCase()));
-    var combinedUserList = client.hiddenUsers + client.userChats;
-    combinedUserList
+    var combinedChatList = client.hiddenChats + client.sortedChats;
+    combinedChatList
         .sort((a, b) => a.nick.toLowerCase().compareTo(b.nick.toLowerCase()));
     bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
     return Consumer<ThemeNotifier>(
@@ -229,7 +222,7 @@ class _AddressBookState extends State<AddressBook> {
                                   const SizedBox(height: 21),
                                 ])
                           : Column(children: [
-                              combinedGCList.isNotEmpty
+                              combinedChatList.isNotEmpty
                                   ? Expanded(
                                       child: Column(
                                           crossAxisAlignment:
@@ -261,54 +254,16 @@ class _AddressBookState extends State<AddressBook> {
                                           Expanded(
                                               child: ListView.builder(
                                                   itemCount:
-                                                      combinedGCList.length,
-                                                  itemBuilder: (context,
-                                                          index) =>
-                                                      _AddressBookListingW(
-                                                          combinedGCList[index],
-                                                          client))),
+                                                      combinedChatList.length,
+                                                  itemBuilder:
+                                                      (context, index) =>
+                                                          _AddressBookListingW(
+                                                              combinedChatList[
+                                                                  index],
+                                                              client))),
                                           const SizedBox(height: 21),
                                         ]))
                                   : const Empty(),
-                              combinedUserList.isNotEmpty
-                                  ? Expanded(
-                                      child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                          Row(children: [
-                                            Text("Available Users",
-                                                textAlign: TextAlign.left,
-                                                style: TextStyle(
-                                                    color: darkTextColor,
-                                                    fontSize:
-                                                        theme.getMediumFont(
-                                                            context))),
-                                            Expanded(
-                                                child: Divider(
-                                              color:
-                                                  dividerColor, //color of divider
-                                              height:
-                                                  10, //height spacing of divider
-                                              thickness:
-                                                  1, //thickness of divier line
-                                              indent:
-                                                  8, //spacing at the start of divider
-                                              endIndent:
-                                                  5, //spacing at the end of divider
-                                            )),
-                                          ]),
-                                          const SizedBox(height: 21),
-                                          Expanded(
-                                              child: ListView.builder(
-                                            itemCount: combinedUserList.length,
-                                            itemBuilder: (context, index) =>
-                                                _AddressBookListingW(
-                                                    combinedUserList[index],
-                                                    client),
-                                          )),
-                                        ]))
-                                  : const Empty()
                             ]))),
             ]));
   }

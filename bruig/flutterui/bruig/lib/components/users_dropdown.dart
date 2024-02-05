@@ -32,8 +32,8 @@ class _UsersDropdownState extends State<UsersDropdown> {
     var backgroundColor = theme.backgroundColor;
     return Consumer2<ClientModel, ThemeNotifier>(
         builder: (context, client, theme, child) {
-      List<ChatModel?> list = client.userChats.cast<ChatModel?>().toList();
-      list.addAll(client.hiddenUsers.cast<ChatModel?>().toList());
+      List<ChatModel?> list = client.sortedChats.cast<ChatModel?>().toList();
+      list.addAll(client.hiddenChats.cast<ChatModel?>().toList());
       if (widget.limitUIDs != null) {
         list.removeWhere((c) => !(widget.limitUIDs!.contains(c?.id)));
       }
