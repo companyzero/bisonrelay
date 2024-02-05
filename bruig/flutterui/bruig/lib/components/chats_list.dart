@@ -9,8 +9,9 @@ import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/components/gc_context_menu.dart';
 import 'package:bruig/components/chat/types.dart';
 import 'package:bruig/util.dart';
-import 'package:bruig/components/addressbook/addressbook.dart';
 import 'package:bruig/theme_manager.dart';
+import 'package:golib_plugin/golib_plugin.dart';
+import 'package:file_picker/file_picker.dart';
 
 class _ChatHeadingW extends StatefulWidget {
   final ChatModel chat;
@@ -177,6 +178,19 @@ class _ChatsList extends StatefulWidget {
   State<_ChatsList> createState() => _ChatsListState();
 }
 
+Future<void> loadInvite(BuildContext context) async {
+  // Decode the invite and send to the user verification screen.
+  var filePickRes = await FilePicker.platform.pickFiles();
+  if (filePickRes == null) return;
+  var filePath = filePickRes.files.first.path;
+  if (filePath == null) return;
+  filePath = filePath.trim();
+  if (filePath == "") return;
+  var invite = await Golib.decodeInvite(filePath);
+  Navigator.of(context, rootNavigator: true)
+      .pushNamed('/verifyInvite', arguments: invite);
+}
+
 class _ChatsListState extends State<_ChatsList> {
   ClientModel get client => widget.client;
   FocusNode get inputFocusNode => widget.inputFocusNode;
@@ -215,11 +229,13 @@ class _ChatsListState extends State<_ChatsList> {
 
   @override
   Widget build(BuildContext context) {
-    void createGC() async {
-      Navigator.of(context, rootNavigator: true).pushNamed('/newGC');
+    void showGroupChat() async {
+      client.createGroupChat = true;
+      client.showAddressBookScreen();
     }
 
     void showAddressBook() async {
+      client.createGroupChat = false;
       client.showAddressBookScreen();
     }
 
@@ -281,12 +297,12 @@ class _ChatsListState extends State<_ChatsList> {
                                         hoverColor: selectedBackgroundColor,
                                         splashRadius: 15,
                                         iconSize: 25,
-                                        tooltip: "Create a group chat",
-                                        onPressed: () => createGC(),
+                                        tooltip: "Create new group chat",
+                                        onPressed: showGroupChat,
                                         icon: Icon(
                                             size: 25,
                                             color: darkTextColor,
-                                            Icons.add))),
+                                            Icons.people_outline))),
                                 Material(
                                     color:
                                         selectedBackgroundColor.withOpacity(0),
@@ -294,12 +310,12 @@ class _ChatsListState extends State<_ChatsList> {
                                         hoverColor: selectedBackgroundColor,
                                         splashRadius: 15,
                                         iconSize: 25,
-                                        tooltip: "Address Book",
-                                        onPressed: () => showAddressBook(),
+                                        tooltip: "New Message",
+                                        onPressed: showAddressBook,
                                         icon: Icon(
                                             size: 25,
                                             color: darkTextColor,
-                                            Icons.add))),
+                                            Icons.edit_outlined))),
                                 Material(
                                     color:
                                         selectedBackgroundColor.withOpacity(0),
@@ -316,7 +332,7 @@ class _ChatsListState extends State<_ChatsList> {
                                         icon: Icon(
                                             size: 25,
                                             color: darkTextColor,
-                                            Icons.get_app_sharp))),
+                                            Icons.get_app_outlined))),
                                 Material(
                                     color:
                                         selectedBackgroundColor.withOpacity(0),
@@ -332,7 +348,7 @@ class _ChatsListState extends State<_ChatsList> {
                                         icon: Icon(
                                             size: 25,
                                             color: darkTextColor,
-                                            Icons.list_rounded))),
+                                            Icons.list_outlined))),
                                 Material(
                                     color:
                                         selectedBackgroundColor.withOpacity(0),
@@ -348,7 +364,7 @@ class _ChatsListState extends State<_ChatsList> {
                                         icon: Icon(
                                             size: 25,
                                             color: darkTextColor,
-                                            Icons.people)))
+                                            Icons.add_outlined)))
                               ]))
                     ]),
               ));
@@ -395,12 +411,12 @@ class _ChatsListState extends State<_ChatsList> {
                                 hoverColor: selectedBackgroundColor,
                                 splashRadius: 15,
                                 iconSize: 15,
-                                tooltip: "Address Book",
-                                onPressed: () => showAddressBook(),
+                                tooltip: "New Message",
+                                onPressed: showAddressBook,
                                 icon: Icon(
                                     size: 20,
                                     color: darkTextColor,
-                                    Icons.add))))
+                                    Icons.edit_outlined))))
                     : const Empty(),
                 Positioned(
                     bottom: 5,
@@ -412,9 +428,11 @@ class _ChatsListState extends State<_ChatsList> {
                             splashRadius: 15,
                             iconSize: 15,
                             tooltip: "Create new group chat",
-                            onPressed: createGC,
+                            onPressed: showGroupChat,
                             icon: Icon(
-                                size: 20, color: darkTextColor, Icons.add)))),
+                                size: 20,
+                                color: darkTextColor,
+                                Icons.people_outline)))),
                 Positioned(
                     bottom: 5,
                     right: 60,
@@ -433,7 +451,7 @@ class _ChatsListState extends State<_ChatsList> {
                             icon: Icon(
                                 size: 20,
                                 color: darkTextColor,
-                                Icons.get_app_sharp)))),
+                                Icons.get_app_outlined)))),
                 Positioned(
                     bottom: 5,
                     right: 90,
@@ -449,7 +467,7 @@ class _ChatsListState extends State<_ChatsList> {
                             icon: Icon(
                                 size: 20,
                                 color: darkTextColor,
-                                Icons.list_rounded)))),
+                                Icons.list_outlined)))),
                 Positioned(
                     bottom: 5,
                     right: 120,
@@ -464,7 +482,9 @@ class _ChatsListState extends State<_ChatsList> {
                                 : "Cannot generate invite while offline",
                             onPressed: client.isOnline ? genInvite : null,
                             icon: Icon(
-                                size: 20, color: darkTextColor, Icons.people))))
+                                size: 20,
+                                color: darkTextColor,
+                                Icons.add_outlined))))
               ]),
             ));
   }

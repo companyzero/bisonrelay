@@ -485,6 +485,31 @@ class ClientModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  void createNewGCAndInvite(
+      String gcName, List<ChatModel> usersToInvite) async {
+    if (gcName == "") return;
+
+    try {
+      await Golib.createGC(gcName);
+      await readAddressBook();
+      var newChat = getExistingChatByNick(gcName, true);
+      if (newChat != null) {
+        startChat(newChat, false);
+        for (var user in usersToInvite) {
+          await Golib.inviteToGC(InviteToGC(newChat.id, user.id));
+          newChat.append(
+              ChatEventModel(
+                  SynthChatEvent(
+                      "Inviting ${user.nick} to ${newChat.nick}", SCE_sent),
+                  null),
+              false);
+        }
+      }
+    } catch (exception) {
+      //showErrorSnackbar(context, 'Unable to create GC: $exception');
+    }
+  }
+
   String _savedHiddenChats = "";
   String get savedHiddenChats => _savedHiddenChats;
   set savedHiddenChats(String b) {
@@ -503,6 +528,13 @@ class ClientModel extends ChangeNotifier {
   bool get hasUnreadChats => _hasUnreadChats;
   void set hasUnreadChats(bool b) {
     _hasUnreadChats = b;
+    notifyListeners();
+  }
+
+  bool _createGroupChat = false;
+  bool get createGroupChat => _createGroupChat;
+  set createGroupChat(bool b) {
+    _createGroupChat = b;
     notifyListeners();
   }
 
@@ -545,6 +577,11 @@ class ClientModel extends ChangeNotifier {
         newSortedChats.add(_sortedChats[i]);
       }
       _sortedChats = newSortedChats;
+      if (chat.isGC) {
+        _subGCMenus[chat.id] = buildGCMenu(chat);
+      } else {
+        _subUserMenus[chat.id] = buildUserChatMenu(chat);
+      }
       _hiddenChats.remove(chat);
       if (_savedHiddenChats.contains(chat.nick)) {
         var savedHiddenChatsSplit = _savedHiddenChats.split(",");
@@ -560,11 +597,6 @@ class ClientModel extends ChangeNotifier {
         }
         _savedHiddenChats = newChatSplitStr;
         StorageManager.saveData('chatHiddenList', _savedHiddenChats);
-        if (chat.isGC) {
-          _subGCMenus[chat.id] = buildGCMenu(chat);
-        } else {
-          _subUserMenus[chat.id] = buildUserChatMenu(chat);
-        }
       }
     }
     active = chat;
@@ -753,7 +785,6 @@ class ClientModel extends ChangeNotifier {
         ChatModel? source;
         if (!mine) {
           source = getExistingChatByNick(chatHistory[i].from, false);
-          print("source ${chatHistory[i].from} is ${source?.id ?? 'fooo'}");
         }
 
         var m = GCMsg(id, chatHistory[i].from, chatHistory[i].message,
