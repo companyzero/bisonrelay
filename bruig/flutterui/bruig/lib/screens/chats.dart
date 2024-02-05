@@ -309,7 +309,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
 
   // check if ln wallet has balance. busywait, needs to be changed into a ntf.
   void keepCheckingLNHasBalance() async {
-    if (client.userChats.isNotEmpty) {
+    if (client.sortedChats.isNotEmpty) {
       // Doesn't matter, we already have contacts, so won't show onboard pages.
       return;
     }
@@ -389,9 +389,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
     var theme = Theme.of(context);
     var backgroundColor = theme.backgroundColor;
 
-    if (client.userChats.isEmpty &&
-        client.hiddenUsers.isEmpty &&
-        !client.loadingAddressBook) {
+    if (client.sortedChats.isEmpty && !client.loadingAddressBook) {
       if (!hasLNBalance) {
         // Only show f user never had any contacts.
         return const _FundsNeededPage();
