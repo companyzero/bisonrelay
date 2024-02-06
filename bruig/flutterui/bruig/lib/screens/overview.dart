@@ -324,7 +324,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
                                   arguments: PageTabs(0, [], null));
                             })
                         : Container(
-                            margin: EdgeInsets.all(5),
+                            margin: EdgeInsets.all(10),
                             child: InkWell(
                                 onTap: () {
                                   switchScreen(SettingsScreen.routeName);

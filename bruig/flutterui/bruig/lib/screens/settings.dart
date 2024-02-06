@@ -12,6 +12,7 @@ import 'package:golib_plugin/golib_plugin.dart';
 import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/storage_manager.dart';
 import 'package:bruig/models/menus.dart';
+import 'package:bruig/components/copyable.dart';
 
 class SettingsScreenTitle extends StatelessWidget {
   const SettingsScreenTitle({super.key});
@@ -151,40 +152,75 @@ class _SettingsScreenState extends State<SettingsScreen> {
               body: ListView(
                 children: [
                   ListTile(
-                      title: Container(
-                          margin: EdgeInsets.all(5),
-                          child: InkWell(
-                              onTap: pickAvatarFile,
-                              child: CircleAvatar(
-                                  radius: 100,
-                                  backgroundColor: colorFromNick(client.nick),
-                                  backgroundImage: client.myAvatar,
-                                  child: client.myAvatar != null
-                                      ? const Empty()
-                                      : Text(client.nick[0].toUpperCase(),
-                                          style: TextStyle(
-                                              color: avatarTextColor,
-                                              fontSize: theme
-                                                  .getLargeFont(context))))))),
+                      title: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                        Container(
+                            margin: EdgeInsets.all(10),
+                            child: InkWell(
+                                onTap: pickAvatarFile,
+                                child: CircleAvatar(
+                                    radius: 50,
+                                    backgroundColor: colorFromNick(client.nick),
+                                    backgroundImage: client.myAvatar,
+                                    child: client.myAvatar != null
+                                        ? const Empty()
+                                        : Text(client.nick[0].toUpperCase(),
+                                            style: TextStyle(
+                                                color: avatarTextColor,
+                                                fontSize: theme
+                                                    .getLargeFont(context)))))),
+                        Column(children: [
+                          Text(client.nick,
+                              style: TextStyle(
+                                  fontSize: theme.getMediumFont(context),
+                                  color: textColor)),
+                          SizedBox(
+                              width: 150,
+                              child: Copyable(
+                                client.publicID,
+                                TextStyle(
+                                    fontSize: theme.getSmallFont(context),
+                                    color: textColor),
+                                textOverflow: TextOverflow.ellipsis,
+                              ))
+                        ])
+                      ])),
                   ListTile(
+                      onTap: () {
+                        print("account");
+                      },
+                      hoverColor: backgroundColor,
                       leading: const Icon(Icons.person_outline),
                       title: Text("Account",
                           style: TextStyle(
                               fontSize: theme.getMediumFont(context),
                               color: textColor))),
                   ListTile(
+                      onTap: () {
+                        print("account");
+                      },
+                      hoverColor: backgroundColor,
                       leading: const Icon(Icons.brightness_medium_outlined),
                       title: Text("Appearance",
                           style: TextStyle(
                               fontSize: theme.getMediumFont(context),
                               color: textColor))),
                   ListTile(
+                      onTap: () {
+                        print("account");
+                      },
+                      hoverColor: backgroundColor,
                       leading: const Icon(Icons.notifications_outlined),
                       title: Text("Notifications",
                           style: TextStyle(
                               fontSize: theme.getMediumFont(context),
                               color: textColor))),
                   ListTile(
+                      onTap: () {
+                        print("account");
+                      },
+                      hoverColor: backgroundColor,
                       leading: const SidebarSvgIcon(
                           "assets/icons/icons-menu-lnmng.svg"),
                       title: Text("LN Management",
@@ -192,6 +228,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               fontSize: theme.getMediumFont(context),
                               color: textColor))),
                   ListTile(
+                      onTap: () {
+                        print("account");
+                      },
+                      hoverColor: backgroundColor,
                       leading: const SidebarSvgIcon(
                           "assets/icons/icons-menu-files.svg"),
                       title: Text("Manage Content",
@@ -199,6 +239,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               fontSize: theme.getMediumFont(context),
                               color: textColor))),
                   ListTile(
+                      onTap: () {
+                        print("account");
+                      },
+                      hoverColor: backgroundColor,
                       leading: const SidebarSvgIcon(
                           "assets/icons/icons-menu-stats.svg"),
                       title: Text("Stats",
@@ -206,12 +250,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               fontSize: theme.getMediumFont(context),
                               color: textColor))),
                   ListTile(
+                      onTap: () {
+                        print("account");
+                      },
+                      hoverColor: backgroundColor,
                       leading: const Icon(Icons.list_outlined),
                       title: Text("Logs",
                           style: TextStyle(
                               fontSize: theme.getMediumFont(context),
                               color: textColor))),
                   ListTile(
+                      onTap: () {
+                        print("about");
+                      },
+                      hoverColor: backgroundColor,
                       leading: Icon(Icons.question_mark_outlined),
                       title: Text("About Bison Relay",
                           style: TextStyle(
