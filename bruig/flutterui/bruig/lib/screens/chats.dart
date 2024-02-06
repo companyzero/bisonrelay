@@ -384,7 +384,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
   @override
   Widget build(BuildContext context) {
     if (client.showAddressBook) {
-      return AddressBook(client, inputFocusNode);
+      return AddressBook(client, inputFocusNode, client.createGroupChat);
     }
     var theme = Theme.of(context);
     var backgroundColor = theme.backgroundColor;

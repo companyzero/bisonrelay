@@ -33,7 +33,6 @@ import 'package:bruig/screens/needs_funds.dart';
 import 'package:bruig/screens/needs_in_channel.dart';
 import 'package:bruig/screens/needs_out_channel.dart';
 import 'package:bruig/screens/new_config.dart';
-import 'package:bruig/screens/new_gc.dart';
 import 'package:bruig/screens/shutdown.dart';
 import 'package:bruig/screens/unlock_ln.dart';
 import 'package:bruig/screens/verify_invite.dart';
@@ -322,7 +321,6 @@ class _AppState extends State<App> with WindowListener {
                 '/generateInvite': (context) => const GenerateInviteScreen(),
                 '/verifyInvite': (context) => const VerifyInviteScreen(),
                 '/fetchInvite': (context) => const FetchInviteScreen(),
-                '/newGC': (context) => const NewGCScreen(),
                 '/ln/confirmRecvChannelPay': (context) =>
                     const LNConfirmRecvChanPaymentScreen(),
                 '/confirmFileDownload': (context) =>
