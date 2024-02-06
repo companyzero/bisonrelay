@@ -11,6 +11,7 @@ import 'package:bruig/models/client.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/storage_manager.dart';
+import 'package:bruig/models/menus.dart';
 
 class SettingsScreenTitle extends StatelessWidget {
   const SettingsScreenTitle({super.key});
@@ -132,6 +133,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     var theme = Theme.of(context);
     var backgroundColor = theme.backgroundColor;
     var textColor = theme.focusColor;
+    var canvasColor = theme.canvasColor;
 
     var avatarColor = colorFromNick(client.nick);
     var darkTextColor = theme.indicatorColor;
@@ -141,6 +143,83 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ? hightLightTextColor
             : darkTextColor;
 
+    bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
+    if (isScreenSmall) {
+      return Consumer<ThemeNotifier>(
+          builder: (context, theme, _) => Scaffold(
+              backgroundColor: canvasColor,
+              body: ListView(
+                children: [
+                  ListTile(
+                      title: Container(
+                          margin: EdgeInsets.all(5),
+                          child: InkWell(
+                              onTap: pickAvatarFile,
+                              child: CircleAvatar(
+                                  radius: 100,
+                                  backgroundColor: colorFromNick(client.nick),
+                                  backgroundImage: client.myAvatar,
+                                  child: client.myAvatar != null
+                                      ? const Empty()
+                                      : Text(client.nick[0].toUpperCase(),
+                                          style: TextStyle(
+                                              color: avatarTextColor,
+                                              fontSize: theme
+                                                  .getLargeFont(context))))))),
+                  ListTile(
+                      leading: const Icon(Icons.person_outline),
+                      title: Text("Account",
+                          style: TextStyle(
+                              fontSize: theme.getMediumFont(context),
+                              color: textColor))),
+                  ListTile(
+                      leading: const Icon(Icons.brightness_medium_outlined),
+                      title: Text("Appearance",
+                          style: TextStyle(
+                              fontSize: theme.getMediumFont(context),
+                              color: textColor))),
+                  ListTile(
+                      leading: const Icon(Icons.notifications_outlined),
+                      title: Text("Notifications",
+                          style: TextStyle(
+                              fontSize: theme.getMediumFont(context),
+                              color: textColor))),
+                  ListTile(
+                      leading: const SidebarSvgIcon(
+                          "assets/icons/icons-menu-lnmng.svg"),
+                      title: Text("LN Management",
+                          style: TextStyle(
+                              fontSize: theme.getMediumFont(context),
+                              color: textColor))),
+                  ListTile(
+                      leading: const SidebarSvgIcon(
+                          "assets/icons/icons-menu-files.svg"),
+                      title: Text("Manage Content",
+                          style: TextStyle(
+                              fontSize: theme.getMediumFont(context),
+                              color: textColor))),
+                  ListTile(
+                      leading: const SidebarSvgIcon(
+                          "assets/icons/icons-menu-stats.svg"),
+                      title: Text("Stats",
+                          style: TextStyle(
+                              fontSize: theme.getMediumFont(context),
+                              color: textColor))),
+                  ListTile(
+                      leading: const Icon(Icons.list_outlined),
+                      title: Text("Logs",
+                          style: TextStyle(
+                              fontSize: theme.getMediumFont(context),
+                              color: textColor))),
+                  ListTile(
+                      leading: Icon(Icons.question_mark_outlined),
+                      title: Text("About Bison Relay",
+                          style: TextStyle(
+                              fontSize: theme.getMediumFont(context),
+                              color: textColor))),
+                ],
+              )));
+    }
     return Consumer<ThemeNotifier>(
       builder: (context, theme, _) => Container(
         margin: const EdgeInsets.all(1),

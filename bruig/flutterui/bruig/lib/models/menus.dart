@@ -93,7 +93,7 @@ final List<MainMenuItem> mainMenu = [
       const SidebarSvgIcon("assets/icons/icons-menu-lnmng.svg"),
       LnScreenSub),
   MainMenuItem(
-      "Pages Browser",
+      "Pages",
       ViewPageScreen.routeName,
       (context) => Consumer2<ClientModel, ResourcesModel>(
           builder: (context, client, resources, child) =>

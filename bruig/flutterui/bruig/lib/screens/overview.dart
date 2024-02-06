@@ -14,11 +14,14 @@ import 'package:bruig/screens/chats.dart';
 import 'package:bruig/screens/feed.dart';
 import 'package:bruig/screens/feed/post_content.dart';
 import 'package:bruig/notification_service.dart';
+import 'package:bruig/screens/settings.dart';
+import 'package:bruig/screens/viewpage_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:bruig/theme_manager.dart';
 import 'package:provider/provider.dart';
+import 'package:bruig/util.dart';
 
 class _OverviewScreenTitle extends StatefulWidget {
   final MainMenuModel mainMenu;
@@ -96,6 +99,8 @@ class _OverviewScreenState extends State<OverviewScreen> {
   ServerSessionState connState = ServerSessionState.empty();
   GlobalKey<NavigatorState> navKey = GlobalKey(debugLabel: "overview nav key");
 
+  bool removeBottomBar = false;
+  var selectedIndex = 0;
   void clientChanged() {
     var newConnState = client.connState;
     if (newConnState.state != connState.state ||
@@ -254,99 +259,174 @@ class _OverviewScreenState extends State<OverviewScreen> {
         break;
     }
 
+    void _onItemTapped(int index) {
+      setState(() {
+        switch (index) {
+          case 0:
+            switchScreen(ChatsScreen.routeName);
+            //Navigator.pop(context);
+            break;
+          case 1:
+            switchScreen(FeedScreen.routeName);
+            //Navigator.pop(context);
+            break;
+          case 2:
+            switchScreen(ViewPageScreen.routeName);
+            // Navigator.pop(context);
+            break;
+        }
+        selectedIndex = index;
+      });
+    }
+
+    var avatarColor = colorFromNick(client.nick);
+    var darkTextColor = theme.indicatorColor;
+    var hightLightTextColor = theme.dividerColor; // NAME TEXT COLOR
+    var avatarTextColor =
+        ThemeData.estimateBrightnessForColor(avatarColor) == Brightness.dark
+            ? hightLightTextColor
+            : darkTextColor;
     bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
     return Scaffold(
-        backgroundColor: theme.canvasColor,
-        appBar: isScreenSmall
-            ? AppBar(
-                titleSpacing: 0.0,
-                title: _OverviewScreenTitle(widget.mainMenu),
-                leading: Builder(builder: (BuildContext context) {
-                  return client.active != null || client.showAddressBook
-                      ? IconButton(
-                          iconSize: 20,
-                          splashRadius: 20,
-                          onPressed: () => client.activeSubMenu.isNotEmpty
+      backgroundColor: theme.canvasColor,
+      appBar: isScreenSmall
+          ? AppBar(
+              titleSpacing: 0.0,
+              title: _OverviewScreenTitle(widget.mainMenu),
+              leading: Builder(builder: (BuildContext context) {
+                return removeBottomBar ||
+                        client.active != null ||
+                        client.showAddressBook
+                    ? IconButton(
+                        iconSize: 20,
+                        splashRadius: 20,
+                        onPressed: () {
+                          client.activeSubMenu.isNotEmpty
                               ? client.activeSubMenu = []
-                              : client.active = null,
-                          icon: Icon(Icons.keyboard_arrow_left_rounded,
-                              color: Theme.of(context).focusColor))
-                      : feed.active != null
-                          ? IconButton(
-                              iconSize: 20,
-                              splashRadius: 20,
-                              icon: Icon(Icons.keyboard_arrow_left_rounded,
-                                  color: Theme.of(context).focusColor),
-                              onPressed: () {
-                                feed.active = null;
-                                navKey.currentState!.pushReplacementNamed(
-                                    '/feed',
-                                    arguments: PageTabs(0, [], null));
-                              })
-                          : IconButton(
-                              iconSize: 20,
-                              splashRadius: 20,
-                              icon: const Icon(Icons.menu_rounded),
-                              onPressed: () =>
-                                  Scaffold.of(context).openDrawer(),
-                            );
-                }),
-              )
-            : AppBar(
-                titleSpacing: 0.0,
-                title: Row(children: [
-                  _OverviewScreenTitle(widget.mainMenu),
-                ]),
-                leadingWidth: 156,
-                leading: Row(children: [
-                  IconButton(
-                      tooltip: "About Bison Relay",
-                      splashRadius: 20,
-                      iconSize: 40,
-                      onPressed: goToAbout,
-                      icon: Image.asset(
-                        "assets/images/icon.png",
-                      )),
-                  IconButton(
-                      splashRadius: 20,
-                      tooltip: "Create a new post",
-                      onPressed: goToNewPost,
-                      color: Colors.red,
-                      iconSize: 20,
-                      icon: Icon(
-                          color: theme.dividerColor, size: 20, Icons.mode)),
-                  IconButton(
-                      splashRadius: 20,
-                      tooltip: connStateLabel,
-                      onPressed: connStateAction,
-                      color: theme.dividerColor,
-                      iconSize: 20,
-                      icon: Icon(
-                          color: theme.dividerColor, size: 20, connectedIcon)),
-                  const SizedBox(width: 20),
-                ]),
-              ),
-        drawer: Drawer(
-          backgroundColor: sidebarBackground,
-          child: ListView.separated(
-              separatorBuilder: (context, index) =>
-                  Divider(height: 3, color: unselectedTextColor),
-              itemCount: widget.mainMenu.menus.length,
-              itemBuilder: (context, index) {
-                var menuItem = widget.mainMenu.menus.elementAt(index);
-                return menuItem.subMenuInfo.isEmpty
-                    ? ListTile(
-                        hoverColor: scaffoldBackgroundColor,
-                        selected:
-                            widget.mainMenu.activeMenu.label == menuItem.label,
-                        selectedColor: selectedColor,
-                        iconColor: unselectedTextColor,
-                        textColor: unselectedTextColor,
-                        selectedTileColor: hoverColor,
-                        onTap: () {
-                          switchScreen(menuItem.routeName);
-                          Navigator.pop(context);
+                              : client.active = null;
+                          if (removeBottomBar) {
+                            removeBottomBar = false;
+                            switchScreen(ChatsScreen.routeName);
+                            selectedIndex = 0;
+                          }
                         },
+                        icon: Icon(Icons.keyboard_arrow_left_rounded,
+                            color: Theme.of(context).focusColor))
+                    : feed.active != null
+                        ? IconButton(
+                            iconSize: 20,
+                            splashRadius: 20,
+                            icon: Icon(Icons.keyboard_arrow_left_rounded,
+                                color: Theme.of(context).focusColor),
+                            onPressed: () {
+                              feed.active = null;
+                              navKey.currentState!.pushReplacementNamed('/feed',
+                                  arguments: PageTabs(0, [], null));
+                            })
+                        : Container(
+                            margin: EdgeInsets.all(5),
+                            child: InkWell(
+                                onTap: () {
+                                  switchScreen(SettingsScreen.routeName);
+                                  removeBottomBar = true;
+                                  //Navigator.pop(context);
+                                },
+                                child: CircleAvatar(
+                                    //radius: 10,
+                                    backgroundColor: colorFromNick(client.nick),
+                                    backgroundImage: client.myAvatar,
+                                    child: client.myAvatar != null
+                                        ? const Empty()
+                                        : Text(client.nick[0].toUpperCase(),
+                                            style: TextStyle(
+                                                color: avatarTextColor,
+                                                fontSize: 20)))));
+              }),
+            )
+          : AppBar(
+              titleSpacing: 0.0,
+              title: Row(children: [
+                _OverviewScreenTitle(widget.mainMenu),
+              ]),
+              leadingWidth: 156,
+              leading: Row(children: [
+                IconButton(
+                    tooltip: "About Bison Relay",
+                    splashRadius: 20,
+                    iconSize: 40,
+                    onPressed: goToAbout,
+                    icon: Image.asset(
+                      "assets/images/icon.png",
+                    )),
+                IconButton(
+                    splashRadius: 20,
+                    tooltip: "Create a new post",
+                    onPressed: goToNewPost,
+                    color: Colors.red,
+                    iconSize: 20,
+                    icon:
+                        Icon(color: theme.dividerColor, size: 20, Icons.mode)),
+                IconButton(
+                    splashRadius: 20,
+                    tooltip: connStateLabel,
+                    onPressed: connStateAction,
+                    color: theme.dividerColor,
+                    iconSize: 20,
+                    icon: Icon(
+                        color: theme.dividerColor, size: 20, connectedIcon)),
+                const SizedBox(width: 20),
+              ]),
+            ),
+      drawer: Drawer(
+        backgroundColor: sidebarBackground,
+        child: ListView.separated(
+            separatorBuilder: (context, index) =>
+                Divider(height: 3, color: unselectedTextColor),
+            itemCount: widget.mainMenu.menus.length,
+            itemBuilder: (context, index) {
+              var menuItem = widget.mainMenu.menus.elementAt(index);
+              return menuItem.subMenuInfo.isEmpty
+                  ? ListTile(
+                      hoverColor: scaffoldBackgroundColor,
+                      selected:
+                          widget.mainMenu.activeMenu.label == menuItem.label,
+                      selectedColor: selectedColor,
+                      iconColor: unselectedTextColor,
+                      textColor: unselectedTextColor,
+                      selectedTileColor: hoverColor,
+                      onTap: () {
+                        switchScreen(menuItem.routeName);
+                        Navigator.pop(context);
+                      },
+                      leading: (menuItem.label == "Chats" &&
+                                  client.hasUnreadChats) ||
+                              (menuItem.label == "Feed" &&
+                                  widget.feed.hasUnreadPostsComments)
+                          ? Stack(children: [
+                              Container(
+                                  padding: const EdgeInsets.all(3),
+                                  child: menuItem.icon ?? const Empty()),
+                              const Positioned(
+                                  top: 1,
+                                  right: 1,
+                                  child: CircleAvatar(
+                                      backgroundColor: Colors.red, radius: 4)),
+                            ])
+                          : Container(
+                              padding: const EdgeInsets.all(3),
+                              child: menuItem.icon),
+                      title: Consumer<ThemeNotifier>(
+                          builder: (context, theme, child) => Text(
+                              menuItem.label,
+                              style: TextStyle(
+                                  fontSize: theme.getMediumFont(context)))))
+                  : Theme(
+                      data: Theme.of(context)
+                          .copyWith(dividerColor: Colors.transparent),
+                      child: ExpansionTile(
+                        title: Text(menuItem.label),
+                        initiallyExpanded:
+                            widget.mainMenu.activeMenu.label == menuItem.label,
                         leading: (menuItem.label == "Chats" &&
                                     client.hasUnreadChats) ||
                                 (menuItem.label == "Feed" &&
@@ -365,87 +445,112 @@ class _OverviewScreenState extends State<OverviewScreen> {
                             : Container(
                                 padding: const EdgeInsets.all(3),
                                 child: menuItem.icon),
-                        title: Consumer<ThemeNotifier>(
-                            builder: (context, theme, child) => Text(
-                                menuItem.label,
-                                style: TextStyle(
-                                    fontSize: theme.getMediumFont(context)))))
-                    : Theme(
-                        data: Theme.of(context)
-                            .copyWith(dividerColor: Colors.transparent),
-                        child: ExpansionTile(
-                          title: Text(menuItem.label),
-                          initiallyExpanded: widget.mainMenu.activeMenu.label ==
-                              menuItem.label,
-                          leading: (menuItem.label == "Chats" &&
-                                      client.hasUnreadChats) ||
-                                  (menuItem.label == "Feed" &&
-                                      widget.feed.hasUnreadPostsComments)
-                              ? Stack(children: [
-                                  Container(
-                                      padding: const EdgeInsets.all(3),
-                                      child: menuItem.icon ?? const Empty()),
-                                  const Positioned(
-                                      top: 1,
-                                      right: 1,
-                                      child: CircleAvatar(
-                                          backgroundColor: Colors.red,
-                                          radius: 4)),
-                                ])
-                              : Container(
-                                  padding: const EdgeInsets.all(3),
-                                  child: menuItem.icon),
-                          children: (menuItem.subMenuInfo.map((e) => ListTile(
-                              hoverColor: scaffoldBackgroundColor,
-                              selected: widget.mainMenu.activeMenu.label ==
-                                      menuItem.label &&
-                                  widget.mainMenu.activePageTab == e.pageTab,
-                              selectedColor: selectedColor,
-                              iconColor: unselectedTextColor,
-                              textColor: unselectedTextColor,
-                              selectedTileColor: hoverColor,
-                              title: Text(e.label),
-                              onTap: () => goToSubMenuPage(
-                                  menuItem.routeName, e.pageTab)))).toList(),
-                        ));
-              }),
-        ),
-        body: SnackbarDisplayer(
-            widget.snackBar,
-            Row(children: [
-              isScreenSmall
-                  ? const Empty()
-                  : Sidebar(widget.client, widget.mainMenu, widget.ntfns,
-                      navKey, widget.feed),
-              Expanded(
-                child: Navigator(
-                  key: navKey,
-                  initialRoute: widget.initialRoute == ""
-                      ? ChatsScreen.routeName
-                      : widget.initialRoute,
-                  onGenerateRoute: (settings) {
-                    String routeName = settings.name!;
-                    MainMenuItem? menu =
-                        widget.mainMenu.menuForRoute(routeName);
+                        children: (menuItem.subMenuInfo.map((e) => ListTile(
+                            hoverColor: scaffoldBackgroundColor,
+                            selected: widget.mainMenu.activeMenu.label ==
+                                    menuItem.label &&
+                                widget.mainMenu.activePageTab == e.pageTab,
+                            selectedColor: selectedColor,
+                            iconColor: unselectedTextColor,
+                            textColor: unselectedTextColor,
+                            selectedTileColor: hoverColor,
+                            title: Text(e.label),
+                            onTap: () => goToSubMenuPage(
+                                menuItem.routeName, e.pageTab)))).toList(),
+                      ));
+            }),
+      ),
+      body: SnackbarDisplayer(
+          widget.snackBar,
+          Row(children: [
+            isScreenSmall
+                ? const Empty()
+                : Sidebar(widget.client, widget.mainMenu, widget.ntfns, navKey,
+                    widget.feed),
+            Expanded(
+              child: Navigator(
+                key: navKey,
+                initialRoute: widget.initialRoute == ""
+                    ? ChatsScreen.routeName
+                    : widget.initialRoute,
+                onGenerateRoute: (settings) {
+                  String routeName = settings.name!;
+                  MainMenuItem? menu = widget.mainMenu.menuForRoute(routeName);
 
-                    // This update needs to be on a timer so that it is decoupled to
-                    // the widget build stack frame.
-                    Timer(const Duration(milliseconds: 1),
-                        () async => widget.mainMenu.activeRoute = routeName);
+                  // This update needs to be on a timer so that it is decoupled to
+                  // the widget build stack frame.
+                  Timer(const Duration(milliseconds: 1),
+                      () async => widget.mainMenu.activeRoute = routeName);
 
-                    return PageRouteBuilder(
-                      pageBuilder: (context, animation, secondaryAnimation) =>
-                          menu != null
-                              ? menu.builder(context)
-                              : RouteErrorPage(settings.name ?? "",
-                                  OverviewScreen.routeName),
-                      transitionDuration: Duration.zero,
-                      //reverseTransitionDuration: Duration.zero,
-                      settings: settings,
-                    );
-                  },
+                  return PageRouteBuilder(
+                    pageBuilder: (context, animation, secondaryAnimation) =>
+                        menu != null
+                            ? menu.builder(context)
+                            : RouteErrorPage(
+                                settings.name ?? "", OverviewScreen.routeName),
+                    transitionDuration: Duration.zero,
+                    //reverseTransitionDuration: Duration.zero,
+                    settings: settings,
+                  );
+                },
+              ),
+            )
+          ])),
+      bottomNavigationBar: isScreenSmall && !removeBottomBar
+          ? BottomNavigationBar(
+              iconSize: 40,
+              items: <BottomNavigationBarItem>[
+                BottomNavigationBarItem(
+                  icon: client.hasUnreadChats
+                      ? Stack(children: [
+                          Container(
+                              padding: const EdgeInsets.all(3),
+                              child: const SidebarSvgIcon(
+                                  "assets/icons/icons-menu-chat.svg")),
+                          const Positioned(
+                              top: 1,
+                              right: 1,
+                              child: CircleAvatar(
+                                  backgroundColor: Colors.red, radius: 4)),
+                        ])
+                      : Container(
+                          padding: const EdgeInsets.all(3),
+                          child: const SidebarSvgIcon(
+                              "assets/icons/icons-menu-chat.svg")),
+                  label: 'Chat',
                 ),
-              )
-            ])));
+                BottomNavigationBarItem(
+                  icon: widget.feed.hasUnreadPostsComments
+                      ? Stack(children: [
+                          Container(
+                              padding: const EdgeInsets.all(3),
+                              child: const SidebarSvgIcon(
+                                  "assets/icons/icons-menu-news.svg")),
+                          const Positioned(
+                              top: 1,
+                              right: 1,
+                              child: CircleAvatar(
+                                  backgroundColor: Colors.red, radius: 4)),
+                        ])
+                      : Container(
+                          padding: const EdgeInsets.all(3),
+                          child: const SidebarSvgIcon(
+                              "assets/icons/icons-menu-news.svg")),
+                  label: 'Feed',
+                ),
+                BottomNavigationBarItem(
+                  icon: Container(
+                      padding: const EdgeInsets.all(3),
+                      child: const SidebarSvgIcon(
+                          "assets/icons/icons-menu-pages.svg")),
+                  label: 'Pages',
+                ),
+              ],
+
+              currentIndex: selectedIndex, //New
+              onTap: _onItemTapped, //New
+            )
+          : null,
+    );
   }
 }
