@@ -493,6 +493,49 @@ func (as *appState) trackLNChannelEvents() {
 	}
 }
 
+func (as *appState) prettyArgs(args *mdembeds.EmbeddedArgs) string {
+	var s string
+
+	// Embedded file.
+	if args.Download.IsEmpty() {
+		switch {
+		case len(args.Data) == 0:
+			s += "[Empty link and data]"
+		case args.Typ == "":
+			s += "[Embedded untyped data]"
+		default:
+			name := "Embedded file"
+			if args.Name != "" {
+				name = args.Name
+			}
+			s += fmt.Sprintf("[%s (%s - %q)]", name, hbytes(int64(len(args.Data))), args.Typ)
+		}
+
+		return s
+	}
+
+	// Download link.
+	downloadedFilePath, err := as.c.HasDownloadedFile(args.Download)
+	filename := strescape.PathElement(args.Filename)
+	if filename == "" {
+		filename = args.Download.ShortLogID()
+	}
+	if err != nil {
+		s += fmt.Sprintf("[Error checking file: %v", err)
+	} else if downloadedFilePath != "" {
+		s += fmt.Sprintf("[File %s]", filename)
+	} else {
+		dcrPrice, _ := as.rates.Get()
+		dcrCost := dcrutil.Amount(int64(args.Cost))
+		usdCost := dcrPrice * dcrCost.ToCoin()
+		s += fmt.Sprintf("[Download File %s (size:%s cost:%0.8f DCR / %0.8f USD)]",
+			filename,
+			hbytes(int64(args.Size)),
+			dcrCost.ToCoin(), usdCost)
+	}
+	return s
+}
+
 // processInboundMsgs processes inbound msgs (PMs and GCMs) in a serialized way.
 func (as *appState) processInboundMsgs() {
 

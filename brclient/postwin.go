@@ -16,7 +16,6 @@ import (
 	"github.com/companyzero/bisonrelay/internal/strescape"
 	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/companyzero/bisonrelay/zkidentity"
-	"github.com/decred/dcrd/dcrutil/v4"
 	"github.com/muesli/reflow/wordwrap"
 	"github.com/muesli/reflow/wrap"
 )
@@ -351,33 +350,7 @@ func (pw *postWindow) renderPost() {
 			s += " "
 		}
 
-		switch {
-		case args.Download.IsEmpty() && (len(args.Data) == 0):
-			s += "[Empty link and data]"
-		case args.Download.IsEmpty() && args.Typ == "":
-			s += "[Embedded untyped data]"
-		case args.Download.IsEmpty():
-			s += fmt.Sprintf("[Embedded data of type %q]", args.Typ)
-		default:
-			downloadedFilePath, err := pw.as.c.HasDownloadedFile(args.Download)
-			filename := strescape.PathElement(args.Filename)
-			if filename == "" {
-				filename = args.Download.ShortLogID()
-			}
-			if err != nil {
-				s += fmt.Sprintf("[Error checking file: %v", err)
-			} else if downloadedFilePath != "" {
-				s += fmt.Sprintf("[File %s]", filename)
-			} else {
-				dcrPrice, _ := pw.as.rates.Get()
-				dcrCost := dcrutil.Amount(int64(args.Cost))
-				usdCost := dcrPrice * dcrCost.ToCoin()
-				s += fmt.Sprintf("[Download File %s (size:%s cost:%0.8f DCR / %0.8f USD)]",
-					filename,
-					hbytes(int64(args.Size)),
-					dcrCost.ToCoin(), usdCost)
-			}
-		}
+		s += pw.as.prettyArgs(&args)
 
 		style := styles.embed
 		if idx == pw.selEmbed {

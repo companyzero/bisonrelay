@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -22,7 +21,6 @@ import (
 	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/companyzero/bisonrelay/zkidentity"
 	"github.com/decred/dcrd/chaincfg/v3"
-	"github.com/decred/dcrd/dcrutil/v4"
 	"github.com/decred/dcrlnd/lnrpc"
 	"github.com/decred/dcrlnd/zpay32"
 )
@@ -709,35 +707,7 @@ func (cw *chatWindow) renderMsgElements(winW int, as *appState, elements []*chat
 					s += " "
 				}
 
-				switch {
-				case args.Download.IsEmpty() && (len(args.Data) == 0):
-					s += "[Empty link and data]"
-				case args.Download.IsEmpty() && args.Typ == "":
-					s += "[Embedded untyped data]"
-				case args.Download.IsEmpty():
-					s += fmt.Sprintf("[Embedded data of type %q]", args.Typ)
-				default:
-					filePath, err := as.c.HasDownloadedFile(args.Download)
-					filename := strescape.PathElement(args.Filename)
-					if filePath != "" {
-						filename = filepath.Base(filePath)
-					} else if filename == "" {
-						filename = args.Download.ShortLogID()
-					}
-					if err != nil {
-						s += fmt.Sprintf("[Error checking file: %v", err)
-					} else if filePath != "" {
-						s += fmt.Sprintf("[File %s]", filename)
-					} else {
-						dcrPrice, _ := as.rates.Get()
-						dcrCost := dcrutil.Amount(int64(args.Cost))
-						usdCost := dcrPrice * dcrCost.ToCoin()
-						s += fmt.Sprintf("[Download File %s (size:%s cost:%0.8f DCR / %0.8f USD)]",
-							filename,
-							hbytes(int64(args.Size)),
-							dcrCost.ToCoin(), usdCost)
-					}
-				}
+				s += as.prettyArgs(args)
 
 				style := styles.embed
 				if cw.maxSelectable == cw.selElIndex {
