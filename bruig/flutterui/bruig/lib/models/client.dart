@@ -462,12 +462,20 @@ class ClientModel extends ChangeNotifier {
     if (b != "") {
       for (int i = 0; i < _sortedChats.length; i++) {
         if (_sortedChats[i].nick.toLowerCase().contains(b.toLowerCase())) {
-          _filteredSearch.add(_sortedChats[i]);
+          if (!createGroupChat) {
+            _filteredSearch.add(_sortedChats[i]);
+          } else if (!_sortedChats[i].isGC) {
+            _filteredSearch.add(_sortedChats[i]);
+          }
         }
       }
       for (int i = 0; i < _hiddenChats.length; i++) {
         if (_hiddenChats[i].nick.toLowerCase().contains(b.toLowerCase())) {
-          _filteredSearch.add(_hiddenChats[i]);
+          if (!createGroupChat) {
+            _filteredSearch.add(_hiddenChats[i]);
+          } else if (!_hiddenChats[i].isGC) {
+            _filteredSearch.add(_hiddenChats[i]);
+          }
         }
       }
     }

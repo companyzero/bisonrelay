@@ -130,7 +130,8 @@ class AddressBook extends StatefulWidget {
   final ClientModel client;
   final FocusNode inputFocusNode;
   final bool createGroupChat;
-  const AddressBook(this.client, this.inputFocusNode, this.createGroupChat, {Key? key})
+  const AddressBook(this.client, this.inputFocusNode, this.createGroupChat,
+      {Key? key})
       : super(key: key);
 
   @override
@@ -140,7 +141,6 @@ class AddressBook extends StatefulWidget {
 class _AddressBookState extends State<AddressBook> {
   ClientModel get client => widget.client;
   FocusNode get inputFocusNode => widget.inputFocusNode;
-  bool createGroupChat = false;
   List<ChatModel> usersToInvite = [];
   bool confirmNewGC = false;
   String newGcName = "";
@@ -149,7 +149,6 @@ class _AddressBookState extends State<AddressBook> {
   @override
   void initState() {
     super.initState();
-    createGroupChat = widget.createGroupChat;
     combinedChatList = client.hiddenChats + client.sortedChats;
     combinedChatList
         .sort((a, b) => a.nick.toLowerCase().compareTo(b.nick.toLowerCase()));
@@ -161,22 +160,16 @@ class _AddressBookState extends State<AddressBook> {
 
   void createNewGroupChat() {
     setState(() {
-      createGroupChat = true;
+      client.createGroupChat = true;
       usersToInvite = [];
-      combinedChatList = combinedChatList.where((e) => !e.isGC).toList();
-      combinedChatList
-          .sort((a, b) => a.nick.toLowerCase().compareTo(b.nick.toLowerCase()));
     });
   }
 
   void cancelCreateNewGroupChat() {
     setState(() {
-      createGroupChat = false;
+      client.createGroupChat = false;
       usersToInvite = [];
       newGcName = "";
-      combinedChatList = client.hiddenChats + client.sortedChats;
-      combinedChatList
-          .sort((a, b) => a.nick.toLowerCase().compareTo(b.nick.toLowerCase()));
     });
   }
 
@@ -213,13 +206,10 @@ class _AddressBookState extends State<AddressBook> {
 
   void cancelCreateNewGC() {
     setState(() {
+      client.createGroupChat = false;
       confirmNewGC = false;
-      createGroupChat = false;
       usersToInvite = [];
       newGcName = "";
-      combinedChatList = client.hiddenChats + client.sortedChats;
-      combinedChatList
-          .sort((a, b) => a.nick.toLowerCase().compareTo(b.nick.toLowerCase()));
     });
   }
 
@@ -230,6 +220,14 @@ class _AddressBookState extends State<AddressBook> {
     var darkTextColor = theme.indicatorColor;
     var dividerColor = theme.highlightColor;
     bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
+
+    if (client.createGroupChat) {
+      combinedChatList = combinedChatList.where((e) => !e.isGC).toList();
+    } else {
+      combinedChatList = client.hiddenChats + client.sortedChats;
+    }
+    combinedChatList
+        .sort((a, b) => a.nick.toLowerCase().compareTo(b.nick.toLowerCase()));
     if (confirmNewGC) {
       return Consumer<ThemeNotifier>(
           builder: (context, theme, _) => Column(children: [
@@ -254,8 +252,8 @@ class _AddressBookState extends State<AddressBook> {
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
                       OutlinedButton.icon(
-                          onPressed: () =>
-                              newGcName != "" ? createNewGCFromList() : null,
+                          onPressed:
+                              newGcName != "" ? createNewGCFromList : null,
                           icon: Icon(
                             color: normalTextColor,
                             Icons.group_rounded,
@@ -263,7 +261,6 @@ class _AddressBookState extends State<AddressBook> {
                           ),
                           label: Text('Create group chat',
                               style: TextStyle(
-                                  color: normalTextColor,
                                   fontSize: theme.getLargeFont(context))),
                           style: OutlinedButton.styleFrom(
                               foregroundColor: normalTextColor,
@@ -272,11 +269,7 @@ class _AddressBookState extends State<AddressBook> {
                               shape: const StadiumBorder())),
                       OutlinedButton.icon(
                         onPressed: cancelCreateNewGC,
-                        icon: Icon(
-                          color: normalTextColor,
-                          Icons.group_rounded,
-                          size: 24.0,
-                        ),
+                        icon: const Empty(),
                         label: Text('Cancel',
                             style: TextStyle(
                                 color: normalTextColor,
@@ -312,7 +305,7 @@ class _AddressBookState extends State<AddressBook> {
                                               client,
                                               usersToInvite.contains(
                                                   usersToInvite[index]),
-                                              createGroupChat
+                                              client.createGroupChat
                                                   ? addToInviteGCList
                                                   : null,
                                               true))),
@@ -325,7 +318,10 @@ class _AddressBookState extends State<AddressBook> {
               Container(
                   padding: const EdgeInsets.all(20),
                   child: Row(children: [
-                    Text(!createGroupChat ? "New message" : "New group chat",
+                    Text(
+                        !client.createGroupChat
+                            ? "New message"
+                            : "New group chat",
                         textAlign: TextAlign.left,
                         style: TextStyle(
                             color: normalTextColor,
@@ -333,7 +329,9 @@ class _AddressBookState extends State<AddressBook> {
                   ])),
               Row(children: [
                 const SizedBox(width: 20),
-                Expanded(child: Input(client, inputFocusNode, createGroupChat)),
+                Expanded(
+                    child:
+                        Input(client, inputFocusNode, client.createGroupChat)),
                 Material(
                     color: dividerColor.withOpacity(0),
                     child: isScreenSmall
@@ -346,7 +344,7 @@ class _AddressBookState extends State<AddressBook> {
                             onPressed: () => hideAddressBook(),
                             icon: Icon(color: normalTextColor, Icons.cancel))),
               ]),
-              !createGroupChat
+              !client.createGroupChat
                   ? Column(children: [
                       const SizedBox(height: 20),
                       Row(children: [
@@ -438,7 +436,7 @@ class _AddressBookState extends State<AddressBook> {
                                                       usersToInvite.contains(
                                                           client.filteredSearch[
                                                               index]),
-                                                      createGroupChat
+                                                      client.createGroupChat
                                                           ? addToInviteGCList
                                                           : null,
                                                       false)))
@@ -488,7 +486,7 @@ class _AddressBookState extends State<AddressBook> {
                                                           usersToInvite.contains(
                                                               combinedChatList[
                                                                   index]),
-                                                          createGroupChat
+                                                          client.createGroupChat
                                                               ? addToInviteGCList
                                                               : null,
                                                           false))),
