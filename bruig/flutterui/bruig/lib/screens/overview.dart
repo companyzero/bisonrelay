@@ -293,55 +293,73 @@ class _OverviewScreenState extends State<OverviewScreen> {
           ? AppBar(
               titleSpacing: 0.0,
               title: _OverviewScreenTitle(widget.mainMenu),
-              leading: Builder(builder: (BuildContext context) {
-                return removeBottomBar ||
-                        client.active != null ||
-                        client.showAddressBook
-                    ? IconButton(
-                        iconSize: 20,
-                        splashRadius: 20,
-                        onPressed: () {
-                          client.activeSubMenu.isNotEmpty
-                              ? client.activeSubMenu = []
-                              : client.active = null;
-                          if (removeBottomBar) {
-                            removeBottomBar = false;
-                            switchScreen(ChatsScreen.routeName);
-                            selectedIndex = 0;
-                          }
-                        },
-                        icon: Icon(Icons.keyboard_arrow_left_rounded,
-                            color: Theme.of(context).focusColor))
-                    : feed.active != null
-                        ? IconButton(
-                            iconSize: 20,
-                            splashRadius: 20,
-                            icon: Icon(Icons.keyboard_arrow_left_rounded,
-                                color: Theme.of(context).focusColor),
-                            onPressed: () {
-                              feed.active = null;
-                              navKey.currentState!.pushReplacementNamed('/feed',
-                                  arguments: PageTabs(0, [], null));
-                            })
-                        : Container(
-                            margin: EdgeInsets.all(10),
-                            child: InkWell(
-                                onTap: () {
-                                  switchScreen(SettingsScreen.routeName);
-                                  removeBottomBar = true;
-                                  //Navigator.pop(context);
-                                },
-                                child: CircleAvatar(
-                                    //radius: 10,
-                                    backgroundColor: colorFromNick(client.nick),
-                                    backgroundImage: client.myAvatar,
-                                    child: client.myAvatar != null
-                                        ? const Empty()
-                                        : Text(client.nick[0].toUpperCase(),
-                                            style: TextStyle(
-                                                color: avatarTextColor,
-                                                fontSize: 20)))));
-              }),
+              leading: client.settingsPageTitle != "Settings"
+                  ? Builder(builder: (BuildContext context) {
+                      return IconButton(
+                          iconSize: 20,
+                          splashRadius: 20,
+                          onPressed: () {
+                            //client.settingsPageTitle = "Settings";
+                            switchScreen(SettingsScreen.routeName);
+                          },
+                          icon: Icon(Icons.keyboard_arrow_left_rounded,
+                              color: Theme.of(context).focusColor));
+                    })
+                  : Builder(builder: (BuildContext context) {
+                      return removeBottomBar ||
+                              client.active != null ||
+                              client.showAddressBook
+                          ? IconButton(
+                              iconSize: 20,
+                              splashRadius: 20,
+                              onPressed: () {
+                                client.activeSubMenu.isNotEmpty
+                                    ? client.activeSubMenu = []
+                                    : client.active = null;
+                                if (removeBottomBar) {
+                                  removeBottomBar = false;
+                                  switchScreen(ChatsScreen.routeName);
+                                  selectedIndex = 0;
+                                }
+                              },
+                              icon: Icon(Icons.keyboard_arrow_left_rounded,
+                                  color: Theme.of(context).focusColor))
+                          : feed.active != null
+                              ? IconButton(
+                                  iconSize: 20,
+                                  splashRadius: 20,
+                                  icon: Icon(Icons.keyboard_arrow_left_rounded,
+                                      color: Theme.of(context).focusColor),
+                                  onPressed: () {
+                                    feed.active = null;
+                                    navKey.currentState!.pushReplacementNamed(
+                                        '/feed',
+                                        arguments: PageTabs(0, [], null));
+                                  })
+                              : Container(
+                                  margin: const EdgeInsets.all(10),
+                                  child: InkWell(
+                                      onTap: () {
+                                        switchScreen(SettingsScreen.routeName);
+                                        removeBottomBar = true;
+                                        //Navigator.pop(context);
+                                      },
+                                      child: CircleAvatar(
+                                          //radius: 10,
+                                          backgroundColor:
+                                              colorFromNick(client.nick),
+                                          backgroundImage: client.myAvatar,
+                                          child: client.myAvatar != null
+                                              ? const Empty()
+                                              : Text(
+                                                  client.nick != ""
+                                                      ? client.nick[0]
+                                                          .toUpperCase()
+                                                      : "",
+                                                  style: TextStyle(
+                                                      color: avatarTextColor,
+                                                      fontSize: 20)))));
+                    }),
             )
           : AppBar(
               titleSpacing: 0.0,

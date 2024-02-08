@@ -436,6 +436,13 @@ class ClientModel extends ChangeNotifier {
     _handleRescanWalletProgress();
   }
 
+  String _settingsPageTitle = "Settings";
+  String get settingsPageTitle => _settingsPageTitle;
+  set settingsPageTitle(String s) {
+    _settingsPageTitle = s;
+    notifyListeners();
+  }
+
   List<ChatModel> _sortedChats = [];
   UnmodifiableListView<ChatModel> get sortedChats =>
       UnmodifiableListView(_sortedChats);

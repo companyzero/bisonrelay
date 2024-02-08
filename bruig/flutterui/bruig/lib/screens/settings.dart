@@ -1,6 +1,11 @@
 import 'dart:io';
 
 import 'package:bruig/components/empty_widget.dart';
+import 'package:bruig/main.dart';
+import 'package:bruig/screens/ln_management.dart';
+import 'package:bruig/screens/log.dart';
+import 'package:bruig/screens/manage_content/manage_content.dart';
+import 'package:bruig/screens/paystats.dart';
 import 'package:bruig/util.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -14,13 +19,18 @@ import 'package:bruig/storage_manager.dart';
 import 'package:bruig/models/menus.dart';
 import 'package:bruig/components/copyable.dart';
 
+typedef ChangePageCB = void Function(String);
+typedef NotficationsCB = void Function(bool);
+typedef ResetKXCB = void Function(BuildContext);
+
 class SettingsScreenTitle extends StatelessWidget {
   const SettingsScreenTitle({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<ThemeNotifier>(
-        builder: (context, theme, child) => Text("Settings",
+    return Consumer2<ClientModel, ThemeNotifier>(
+        builder: (context, client, theme, child) => Text(
+            client.settingsPageTitle,
             style: TextStyle(
                 fontSize: theme.getLargeFont(context),
                 color: Theme.of(context).focusColor)));
@@ -41,6 +51,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   ServerSessionState connState = ServerSessionState.empty();
   bool loading = false;
   bool notificationsEnabled = false;
+  String settingsPage = "main";
 
   void clientUpdated() async {
     setState(() {
@@ -101,12 +112,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  void changePage(String newPage) {
+    setState(() {
+      client.settingsPageTitle = newPage;
+      settingsPage = newPage;
+    });
+  }
+
   @override
   void initState() {
     super.initState();
     clientUpdated();
     client.addListener(clientUpdated);
-
     StorageManager.readData('notifications').then((value) {
       if (value != null) {
         setState(() {
@@ -125,6 +142,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance
+        .addPostFrameCallback((_) => client.settingsPageTitle = "Settings");
     client.removeListener(clientUpdated);
     super.dispose();
   }
@@ -145,132 +164,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
             : darkTextColor;
 
     bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
+    Widget settingsView =
+        MainSettingsScreen(client, pickAvatarFile, changePage);
+    switch (settingsPage) {
+      case "Account":
+        settingsView =
+            AccountSettingsScreen(client, resetAllOldKX1s, resetAllOldKX);
+        break;
+      case "Appearance":
+        settingsView = AppearanceSettingsScreen(client);
+        break;
+      case "Notifications":
+        settingsView = NotificationsSettingsScreen(
+            client, updateNotificationSettings, notificationsEnabled);
+        break;
+      default:
+        break;
+    }
     if (isScreenSmall) {
       return Consumer<ThemeNotifier>(
           builder: (context, theme, _) => Scaffold(
-              backgroundColor: canvasColor,
-              body: ListView(
-                children: [
-                  ListTile(
-                      title: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                        Container(
-                            margin: EdgeInsets.all(10),
-                            child: InkWell(
-                                onTap: pickAvatarFile,
-                                child: CircleAvatar(
-                                    radius: 50,
-                                    backgroundColor: colorFromNick(client.nick),
-                                    backgroundImage: client.myAvatar,
-                                    child: client.myAvatar != null
-                                        ? const Empty()
-                                        : Text(client.nick[0].toUpperCase(),
-                                            style: TextStyle(
-                                                color: avatarTextColor,
-                                                fontSize: theme
-                                                    .getLargeFont(context)))))),
-                        Column(children: [
-                          Text(client.nick,
-                              style: TextStyle(
-                                  fontSize: theme.getMediumFont(context),
-                                  color: textColor)),
-                          SizedBox(
-                              width: 150,
-                              child: Copyable(
-                                client.publicID,
-                                TextStyle(
-                                    fontSize: theme.getSmallFont(context),
-                                    color: textColor),
-                                textOverflow: TextOverflow.ellipsis,
-                              ))
-                        ])
-                      ])),
-                  ListTile(
-                      onTap: () {
-                        print("account");
-                      },
-                      hoverColor: backgroundColor,
-                      leading: const Icon(Icons.person_outline),
-                      title: Text("Account",
-                          style: TextStyle(
-                              fontSize: theme.getMediumFont(context),
-                              color: textColor))),
-                  ListTile(
-                      onTap: () {
-                        print("account");
-                      },
-                      hoverColor: backgroundColor,
-                      leading: const Icon(Icons.brightness_medium_outlined),
-                      title: Text("Appearance",
-                          style: TextStyle(
-                              fontSize: theme.getMediumFont(context),
-                              color: textColor))),
-                  ListTile(
-                      onTap: () {
-                        print("account");
-                      },
-                      hoverColor: backgroundColor,
-                      leading: const Icon(Icons.notifications_outlined),
-                      title: Text("Notifications",
-                          style: TextStyle(
-                              fontSize: theme.getMediumFont(context),
-                              color: textColor))),
-                  ListTile(
-                      onTap: () {
-                        print("account");
-                      },
-                      hoverColor: backgroundColor,
-                      leading: const SidebarSvgIcon(
-                          "assets/icons/icons-menu-lnmng.svg"),
-                      title: Text("LN Management",
-                          style: TextStyle(
-                              fontSize: theme.getMediumFont(context),
-                              color: textColor))),
-                  ListTile(
-                      onTap: () {
-                        print("account");
-                      },
-                      hoverColor: backgroundColor,
-                      leading: const SidebarSvgIcon(
-                          "assets/icons/icons-menu-files.svg"),
-                      title: Text("Manage Content",
-                          style: TextStyle(
-                              fontSize: theme.getMediumFont(context),
-                              color: textColor))),
-                  ListTile(
-                      onTap: () {
-                        print("account");
-                      },
-                      hoverColor: backgroundColor,
-                      leading: const SidebarSvgIcon(
-                          "assets/icons/icons-menu-stats.svg"),
-                      title: Text("Stats",
-                          style: TextStyle(
-                              fontSize: theme.getMediumFont(context),
-                              color: textColor))),
-                  ListTile(
-                      onTap: () {
-                        print("account");
-                      },
-                      hoverColor: backgroundColor,
-                      leading: const Icon(Icons.list_outlined),
-                      title: Text("Logs",
-                          style: TextStyle(
-                              fontSize: theme.getMediumFont(context),
-                              color: textColor))),
-                  ListTile(
-                      onTap: () {
-                        print("about");
-                      },
-                      hoverColor: backgroundColor,
-                      leading: Icon(Icons.question_mark_outlined),
-                      title: Text("About Bison Relay",
-                          style: TextStyle(
-                              fontSize: theme.getMediumFont(context),
-                              color: textColor))),
-                ],
-              )));
+                backgroundColor: canvasColor,
+                body: settingsView,
+              ));
     }
     return Consumer<ThemeNotifier>(
       builder: (context, theme, _) => Container(
@@ -411,5 +327,338 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ]),
       ),
     );
+  }
+}
+
+class MainSettingsScreen extends StatelessWidget {
+  final ClientModel client;
+  final VoidCallback pickAvatarFile;
+  final ChangePageCB changePage;
+  const MainSettingsScreen(this.client, this.pickAvatarFile, this.changePage,
+      {Key? key})
+      : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    var theme = Theme.of(context);
+    var backgroundColor = theme.backgroundColor;
+    var textColor = theme.focusColor;
+
+    var avatarColor = colorFromNick(client.nick);
+    var darkTextColor = theme.indicatorColor;
+    var hightLightTextColor = theme.dividerColor; // NAME TEXT COLOR
+    var avatarTextColor =
+        ThemeData.estimateBrightnessForColor(avatarColor) == Brightness.dark
+            ? hightLightTextColor
+            : darkTextColor;
+    return Consumer<ThemeNotifier>(
+        builder: (context, theme, _) => ListView(
+              children: [
+                ListTile(
+                    title: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                      Container(
+                          margin: const EdgeInsets.all(10),
+                          child: InkWell(
+                              onTap: pickAvatarFile,
+                              child: CircleAvatar(
+                                  radius: 50,
+                                  backgroundColor: colorFromNick(client.nick),
+                                  backgroundImage: client.myAvatar,
+                                  child: client.myAvatar != null
+                                      ? const Empty()
+                                      : Text(client.nick[0].toUpperCase(),
+                                          style: TextStyle(
+                                              color: avatarTextColor,
+                                              fontSize: theme
+                                                  .getLargeFont(context)))))),
+                      Column(children: [
+                        Text(client.nick,
+                            style: TextStyle(
+                                fontSize: theme.getMediumFont(context),
+                                color: textColor)),
+                        SizedBox(
+                            width: 150,
+                            child: Copyable(
+                              client.publicID,
+                              TextStyle(
+                                  fontSize: theme.getSmallFont(context),
+                                  color: textColor),
+                              textOverflow: TextOverflow.ellipsis,
+                            ))
+                      ])
+                    ])),
+                ListTile(
+                    onTap: () => changePage("Account"),
+                    hoverColor: backgroundColor,
+                    leading: const Icon(Icons.person_outline),
+                    title: Text("Account",
+                        style: TextStyle(
+                            fontSize: theme.getMediumFont(context),
+                            color: textColor))),
+                ListTile(
+                    onTap: () => changePage("Appearance"),
+                    hoverColor: backgroundColor,
+                    leading: const Icon(Icons.brightness_medium_outlined),
+                    title: Text("Appearance",
+                        style: TextStyle(
+                            fontSize: theme.getMediumFont(context),
+                            color: textColor))),
+                ListTile(
+                    onTap: () => changePage("Notifications"),
+                    hoverColor: backgroundColor,
+                    leading: const Icon(Icons.notifications_outlined),
+                    title: Text("Notifications",
+                        style: TextStyle(
+                            fontSize: theme.getMediumFont(context),
+                            color: textColor))),
+                ListTile(
+                    onTap: () {
+                      Navigator.of(context)
+                          .pushReplacementNamed(LNScreen.routeName);
+                    },
+                    hoverColor: backgroundColor,
+                    leading: const SidebarSvgIcon(
+                        "assets/icons/icons-menu-lnmng.svg"),
+                    title: Text("LN Management",
+                        style: TextStyle(
+                            fontSize: theme.getMediumFont(context),
+                            color: textColor))),
+                ListTile(
+                    onTap: () {
+                      Navigator.of(context)
+                          .pushReplacementNamed(ManageContent.routeName);
+                    },
+                    hoverColor: backgroundColor,
+                    leading: const SidebarSvgIcon(
+                        "assets/icons/icons-menu-files.svg"),
+                    title: Text("Manage Content",
+                        style: TextStyle(
+                            fontSize: theme.getMediumFont(context),
+                            color: textColor))),
+                ListTile(
+                    onTap: () {
+                      Navigator.of(context)
+                          .pushReplacementNamed(PayStatsScreen.routeName);
+                    },
+                    hoverColor: backgroundColor,
+                    leading: const SidebarSvgIcon(
+                        "assets/icons/icons-menu-stats.svg"),
+                    title: Text("Stats",
+                        style: TextStyle(
+                            fontSize: theme.getMediumFont(context),
+                            color: textColor))),
+                ListTile(
+                    onTap: () {
+                      Navigator.of(context)
+                          .pushReplacementNamed(LogScreen.routeName);
+                    },
+                    hoverColor: backgroundColor,
+                    leading: const Icon(Icons.list_outlined),
+                    title: Text("Logs",
+                        style: TextStyle(
+                            fontSize: theme.getMediumFont(context),
+                            color: textColor))),
+                ListTile(
+                    onTap: () {
+                      print("about");
+                    },
+                    hoverColor: backgroundColor,
+                    leading: Icon(Icons.question_mark_outlined),
+                    title: Text("About Bison Relay",
+                        style: TextStyle(
+                            fontSize: theme.getMediumFont(context),
+                            color: textColor))),
+              ],
+            ));
+  }
+}
+
+class AccountSettingsScreen extends StatelessWidget {
+  final ClientModel client;
+  final ResetKXCB resetAllKXCB;
+  final ResetKXCB resetKXCB;
+  const AccountSettingsScreen(this.client, this.resetAllKXCB, this.resetKXCB,
+      {Key? key})
+      : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    var theme = Theme.of(context);
+    var backgroundColor = theme.backgroundColor;
+    var textColor = theme.focusColor;
+    var canvasColor = theme.canvasColor;
+
+    var avatarColor = colorFromNick(client.nick);
+    var darkTextColor = theme.indicatorColor;
+    var hightLightTextColor = theme.dividerColor; // NAME TEXT COLOR
+    var avatarTextColor =
+        ThemeData.estimateBrightnessForColor(avatarColor) == Brightness.dark
+            ? hightLightTextColor
+            : darkTextColor;
+    return Consumer<ThemeNotifier>(
+        builder: (context, theme, _) => ListView(children: [
+              ListTile(
+                title: Text("Reset all KX",
+                    style: TextStyle(
+                        fontSize: theme.getLargeFont(context),
+                        color: textColor)),
+                onTap: () => resetAllKXCB(context),
+              ),
+              ListTile(
+                title: Text("Reset KX from users 30d stale",
+                    style: TextStyle(
+                        fontSize: theme.getLargeFont(context),
+                        color: textColor)),
+                onTap: () => resetKXCB(context),
+              )
+            ]));
+  }
+}
+
+enum FontChoices { small, medium, large, xlarge }
+
+class AppearanceSettingsScreen extends StatefulWidget {
+  final ClientModel client;
+  const AppearanceSettingsScreen(this.client, {Key? key}) : super(key: key);
+  @override
+  State<AppearanceSettingsScreen> createState() =>
+      _AppearanceSettingsScreenState();
+}
+
+/// This is the private State class that goes with MyStatefulWidget.
+class _AppearanceSettingsScreenState extends State<AppearanceSettingsScreen> {
+  ClientModel get client => widget.client;
+  FontChoices _fontChoices = FontChoices.medium;
+
+  @override
+  Widget build(BuildContext context) {
+    var theme = Theme.of(context);
+    var backgroundColor = theme.backgroundColor;
+    var textColor = theme.focusColor;
+
+    return Consumer<ThemeNotifier>(
+        builder: (context, theme, _) => ListView(
+              children: [
+                ListTile(
+                    onTap: () => showDialog(
+                          context: context,
+                          builder: (BuildContext context) {
+                            return Dialog(
+                                shadowColor: backgroundColor,
+                                insetPadding: const EdgeInsets.symmetric(
+                                    horizontal: 40.0, vertical: 255.0),
+                                backgroundColor: backgroundColor,
+                                shape: const RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.all(
+                                        Radius.circular(16.0))),
+                                child: Container(
+                                    margin: const EdgeInsets.all(20),
+                                    child: Column(children: [
+                                      Row(children: [
+                                        Text("Message font size",
+                                            style: TextStyle(
+                                                fontSize:
+                                                    theme.getLargeFont(context),
+                                                color: textColor)),
+                                      ]),
+                                      ListTile(
+                                          title: const Text('Small'),
+                                          leading: Radio<FontChoices>(
+                                            value: FontChoices.small,
+                                            groupValue: _fontChoices,
+                                            onChanged: (FontChoices? value) {
+                                              setState(() {
+                                                _fontChoices = value!;
+                                                theme.setFontSize(1);
+                                                Navigator.of(context).pop();
+                                              });
+                                            },
+                                          )),
+                                      ListTile(
+                                          title: const Text('Medium'),
+                                          leading: Radio<FontChoices>(
+                                            value: FontChoices.medium,
+                                            groupValue: _fontChoices,
+                                            onChanged: (FontChoices? value) {
+                                              setState(() {
+                                                _fontChoices = value!;
+                                                theme.setFontSize(2);
+                                                Navigator.of(context).pop();
+                                              });
+                                            },
+                                          )),
+                                      ListTile(
+                                          title: const Text('Large'),
+                                          leading: Radio<FontChoices>(
+                                            value: FontChoices.large,
+                                            groupValue: _fontChoices,
+                                            onChanged: (FontChoices? value) {
+                                              setState(() {
+                                                _fontChoices = value!;
+                                                theme.setFontSize(3);
+                                                Navigator.of(context).pop();
+                                              });
+                                            },
+                                          )),
+                                      ListTile(
+                                          title: const Text('Extra Large'),
+                                          leading: Radio<FontChoices>(
+                                            value: FontChoices.xlarge,
+                                            groupValue: _fontChoices,
+                                            onChanged: (FontChoices? value) {
+                                              setState(() {
+                                                _fontChoices = value!;
+                                                theme.setFontSize(4);
+                                                Navigator.of(context).pop();
+                                              });
+                                            },
+                                          )),
+                                    ])));
+                          },
+                        ),
+                    hoverColor: backgroundColor,
+                    leading: const Icon(Icons.person_outline),
+                    title: Text("Message font size",
+                        style: TextStyle(
+                            fontSize: theme.getMediumFont(context),
+                            color: textColor))),
+              ],
+            ));
+  }
+}
+
+class NotificationsSettingsScreen extends StatelessWidget {
+  final ClientModel client;
+  final NotficationsCB notficationsCB;
+  final bool notificationsEnabled;
+  const NotificationsSettingsScreen(
+      this.client, this.notficationsCB, this.notificationsEnabled,
+      {Key? key})
+      : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<ThemeNotifier>(
+        builder: (context, theme, _) => ListView(children: [
+              ListTile(
+                  leading: Text("Notifications",
+                      style: TextStyle(
+                          fontSize: theme.getLargeFont(context),
+                          color: Theme.of(context).focusColor)),
+                  trailing: Switch(
+                    // thumb color (round icon)
+                    activeColor: Theme.of(context).focusColor,
+                    activeTrackColor: Theme.of(context).highlightColor,
+                    inactiveThumbColor: Theme.of(context).indicatorColor,
+                    inactiveTrackColor: Theme.of(context).dividerColor,
+                    //splashRadius: 20.0,
+                    // boolean variable value
+                    value: notificationsEnabled,
+                    // changes the state of the switch
+                    onChanged: (value) => notficationsCB(value),
+                  ))
+            ]));
   }
 }
