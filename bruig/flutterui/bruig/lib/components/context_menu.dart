@@ -65,7 +65,7 @@ class _ContextMenuState extends State<ContextMenu> {
               iconSize: 20,
               splashRadius: 20,
               onPressed: () => _showContextMenu(context),
-              icon: Icon(Icons.keyboard_arrow_left_rounded,
+              icon: Icon(Icons.more_vert_outlined,
                   color: Theme.of(context).focusColor))
           : widget.child,
     );
