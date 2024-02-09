@@ -1,11 +1,11 @@
 import 'dart:io';
 
 import 'package:bruig/components/empty_widget.dart';
-import 'package:bruig/main.dart';
 import 'package:bruig/screens/ln_management.dart';
 import 'package:bruig/screens/log.dart';
 import 'package:bruig/screens/manage_content/manage_content.dart';
 import 'package:bruig/screens/paystats.dart';
+import 'package:bruig/screens/about.dart';
 import 'package:bruig/util.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -177,6 +177,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       case "Notifications":
         settingsView = NotificationsSettingsScreen(
             client, updateNotificationSettings, notificationsEnabled);
+        break;
+      case "About":
+        settingsView = AboutScreen(settings: true);
         break;
       default:
         break;
@@ -461,11 +464,9 @@ class MainSettingsScreen extends StatelessWidget {
                             fontSize: theme.getMediumFont(context),
                             color: textColor))),
                 ListTile(
-                    onTap: () {
-                      Navigator.of(context).pushReplacementNamed("/about");
-                    },
+                    onTap: () => changePage("About"),
                     hoverColor: backgroundColor,
-                    leading: Icon(Icons.question_mark_outlined),
+                    leading: const Icon(Icons.question_mark_outlined),
                     title: Text("About Bison Relay",
                         style: TextStyle(
                             fontSize: theme.getMediumFont(context),

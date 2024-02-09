@@ -1,11 +1,13 @@
 import 'package:bruig/components/buttons.dart';
+import 'package:bruig/components/empty_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:bruig/theme_manager.dart';
 import 'package:provider/provider.dart';
 
 class AboutScreen extends StatefulWidget {
-  const AboutScreen({super.key});
+  final bool settings;
+  const AboutScreen({this.settings = false, super.key});
 
   @override
   State<AboutScreen> createState() => _AboutScreenState();
@@ -148,7 +150,7 @@ class _AboutScreenState extends State<AboutScreen> {
                                                                           .copyright)),
                                                               TextSpan(
                                                                   text:
-                                                                      "2022-2023 Company 0, LLC",
+                                                                      "2022-2024 Company 0, LLC",
                                                                   style: TextStyle(
                                                                       color:
                                                                           textColor,
@@ -165,15 +167,17 @@ class _AboutScreenState extends State<AboutScreen> {
                             ],
                           ),
                           const SizedBox(height: 89),
-                          Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                LoadingScreenButton(
-                                  empty: true,
-                                  onPressed: () => goBack(context),
-                                  text: "Go Back",
-                                ),
-                              ]),
+                          widget.settings
+                              ? const Empty()
+                              : Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                      LoadingScreenButton(
+                                        empty: true,
+                                        onPressed: () => goBack(context),
+                                        text: "Go Back",
+                                      ),
+                                    ]),
                         ],
                       )),
                 ]))));
