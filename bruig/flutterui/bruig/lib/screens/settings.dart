@@ -462,7 +462,7 @@ class MainSettingsScreen extends StatelessWidget {
                             color: textColor))),
                 ListTile(
                     onTap: () {
-                      print("about");
+                      Navigator.of(context).pushReplacementNamed("/about");
                     },
                     hoverColor: backgroundColor,
                     leading: Icon(Icons.question_mark_outlined),

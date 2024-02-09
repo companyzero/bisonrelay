@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:bruig/components/context_menu.dart';
 import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/models/menus.dart';
+import 'package:bruig/models/client.dart';
 import 'package:provider/provider.dart';
 import 'package:bruig/screens/overview.dart';
 
@@ -12,9 +13,11 @@ class PageContextMenu extends StatelessWidget {
       {super.key,
       required this.menuItem,
       required this.subMenu,
+      required this.contextMenu,
       required this.navKey});
   final MainMenuItem menuItem;
   final List<SubMenuInfo> subMenu;
+  final List<ChatMenuItem?> contextMenu;
   final GlobalKey<NavigatorState> navKey;
 
   void goToSubMenuPage(
@@ -27,10 +30,38 @@ class PageContextMenu extends StatelessWidget {
     //Navigator.pop(context);
   }
 
+  void executeContextMenuItem(BuildContext context, ClientModel client,
+      List<ChatMenuItem> contextMenuList, String result) {
+    for (var contextItem in contextMenuList) {
+      if (contextItem.label == result) {
+        contextItem.onSelected(context, client);
+        return;
+      }
+    }
+    //Navigator.pop(context);
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (contextMenu.isNotEmpty) {
+      List<ChatMenuItem> contextMenuFill =
+          contextMenu.whereType<ChatMenuItem>().toList();
+      return Consumer2<MainMenuModel, ClientModel>(
+          builder: (context, mainMenu, client, child) => ContextMenu(
+                handleItemTap: (result) => result != null
+                    ? executeContextMenuItem(
+                        context, client, contextMenuFill, result)
+                    : {},
+                items: contextMenuFill
+                    .map((e) =>
+                        PopupMenuItem(value: e.label, child: Text(e.label)))
+                    .toList(),
+                pageContextMenu: true,
+                child: const Empty(),
+              ));
+    }
     return Consumer<MainMenuModel>(
-        builder: (context, mainMenu, chil) => ContextMenu(
+        builder: (context, mainMenu, child) => ContextMenu(
               handleItemTap: (result) => result != null
                   ? goToSubMenuPage(
                       context, mainMenu, menuItem.routeName, result)

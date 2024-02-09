@@ -1,3 +1,4 @@
+import 'package:bruig/components/chats_list.dart';
 import 'package:bruig/components/pay_tip.dart';
 import 'package:bruig/components/rename_chat.dart';
 import 'package:bruig/components/suggest_kx.dart';
@@ -21,6 +22,7 @@ import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:path/path.dart' as path;
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:bruig/screens/contacts_msg_times.dart';
 
 class MainMenuItem {
   final String label;
@@ -68,7 +70,7 @@ final List<SubMenuInfo> LnScreenSub = [
 
 final List<MainMenuItem> mainMenu = [
   MainMenuItem(
-      "Chats",
+      "Chat",
       ChatsScreen.routeName,
       (context) => Consumer2<ClientModel, AppNotifications>(
           builder: (context, client, ntfns, child) =>
@@ -132,7 +134,7 @@ final List<MainMenuItem> mainMenu = [
           Consumer<LogModel>(builder: (context, log, child) => LogScreen(log)),
       (context) => const LogScreenTitle(),
       const SidebarIcon(Icons.list_rounded, false),
-      <SubMenuInfo>[]),
+      <SubMenuInfo>[])
 ];
 
 class MainMenuModel extends ChangeNotifier {
@@ -176,6 +178,44 @@ class ChatMenuItem {
   final String label;
   final Function(BuildContext context, ClientModel chats) onSelected;
   const ChatMenuItem(this.label, this.onSelected);
+}
+
+List<ChatMenuItem?> buildChatContextMenu() {
+  void showGroupChat(ClientModel client) async {
+    client.createGroupChat = true;
+    client.showAddressBookScreen();
+  }
+
+  void showAddressBook(ClientModel client) async {
+    client.createGroupChat = false;
+    client.showAddressBookScreen();
+  }
+
+  void generateInvite(BuildContext context) {
+    Navigator.of(context, rootNavigator: true).pushNamed('/generateInvite');
+  }
+
+  void fetchInvite(BuildContext context) {
+    Navigator.of(context, rootNavigator: true).pushNamed('/fetchInvite');
+  }
+
+  void gotoContactsLastMsgTimeScreen(BuildContext context) {
+    Navigator.of(context, rootNavigator: true)
+        .pushNamed(ContactsLastMsgTimesScreen.routeName);
+  }
+
+  return <ChatMenuItem?>[
+    ChatMenuItem("New Message", (context, client) => showAddressBook(client)),
+    ChatMenuItem(
+      "Create Group Chat",
+      (context, client) => showGroupChat(client),
+    ),
+    ChatMenuItem(
+        "Generate Invite", (context, client) => generateInvite(context)),
+    ChatMenuItem("Fetch Invite", (context, client) => fetchInvite(context)),
+    ChatMenuItem("List last messages received",
+        (context, client) => gotoContactsLastMsgTimeScreen(context)),
+  ];
 }
 
 List<ChatMenuItem?> buildUserChatMenu(ChatModel chat) {

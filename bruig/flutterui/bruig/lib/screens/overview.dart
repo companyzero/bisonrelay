@@ -240,6 +240,10 @@ class _OverviewScreenState extends State<OverviewScreen> {
     var hoverColor = theme.hoverColor;
 
     var connectedIcon = Icons.cloud;
+    List<ChatMenuItem?> contextMenu = [];
+    if (widget.mainMenu.activeMenu.label == "Chat") {
+      contextMenu = buildChatContextMenu();
+    }
     String connStateLabel;
     GestureTapCallback connStateAction;
 
@@ -361,10 +365,16 @@ class _OverviewScreenState extends State<OverviewScreen> {
                                                       fontSize: 20)))));
                     }),
               actions: [
-                  widget.mainMenu.activeMenu.subMenuInfo.isNotEmpty
+                  // Only render page context menu if the mainMenu ONLY has
+                  // a context menu OR a sub page menu.
+                  (widget.mainMenu.activeMenu.subMenuInfo.isNotEmpty &&
+                              contextMenu.isEmpty) ||
+                          (contextMenu.isNotEmpty &&
+                              widget.mainMenu.activeMenu.subMenuInfo.isEmpty)
                       ? PageContextMenu(
                           menuItem: widget.mainMenu.activeMenu,
                           subMenu: widget.mainMenu.activeMenu.subMenuInfo,
+                          contextMenu: contextMenu,
                           navKey: navKey,
                         )
                       : const Empty()
@@ -423,23 +433,24 @@ class _OverviewScreenState extends State<OverviewScreen> {
                         switchScreen(menuItem.routeName);
                         Navigator.pop(context);
                       },
-                      leading: (menuItem.label == "Chats" &&
-                                  client.hasUnreadChats) ||
-                              (menuItem.label == "Feed" &&
-                                  widget.feed.hasUnreadPostsComments)
-                          ? Stack(children: [
-                              Container(
+                      leading:
+                          (menuItem.label == "Chat" && client.hasUnreadChats) ||
+                                  (menuItem.label == "Feed" &&
+                                      widget.feed.hasUnreadPostsComments)
+                              ? Stack(children: [
+                                  Container(
+                                      padding: const EdgeInsets.all(3),
+                                      child: menuItem.icon ?? const Empty()),
+                                  const Positioned(
+                                      top: 1,
+                                      right: 1,
+                                      child: CircleAvatar(
+                                          backgroundColor: Colors.red,
+                                          radius: 4)),
+                                ])
+                              : Container(
                                   padding: const EdgeInsets.all(3),
-                                  child: menuItem.icon ?? const Empty()),
-                              const Positioned(
-                                  top: 1,
-                                  right: 1,
-                                  child: CircleAvatar(
-                                      backgroundColor: Colors.red, radius: 4)),
-                            ])
-                          : Container(
-                              padding: const EdgeInsets.all(3),
-                              child: menuItem.icon),
+                                  child: menuItem.icon),
                       title: Consumer<ThemeNotifier>(
                           builder: (context, theme, child) => Text(
                               menuItem.label,
@@ -452,7 +463,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
                         title: Text(menuItem.label),
                         initiallyExpanded:
                             widget.mainMenu.activeMenu.label == menuItem.label,
-                        leading: (menuItem.label == "Chats" &&
+                        leading: (menuItem.label == "Chat" &&
                                     client.hasUnreadChats) ||
                                 (menuItem.label == "Feed" &&
                                     widget.feed.hasUnreadPostsComments)
