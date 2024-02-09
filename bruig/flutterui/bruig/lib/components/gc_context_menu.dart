@@ -71,7 +71,7 @@ class GcContexMenu extends StatelessWidget {
       disabled: disabled,
       handleItemTap: _handleItemTap(context),
       items: _buildUserMenu(),
-      mobile: (context) => mobile!(context),
+      mobile: (context) => mobile != null ? mobile!(context) : {},
       child: child,
     );
   }

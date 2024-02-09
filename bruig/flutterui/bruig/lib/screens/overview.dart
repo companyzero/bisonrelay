@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:bruig/components/page_context_menu.dart';
 import 'package:bruig/components/route_error.dart';
 import 'package:bruig/components/sidebar.dart';
 import 'package:bruig/components/snackbars.dart';
@@ -342,7 +343,6 @@ class _OverviewScreenState extends State<OverviewScreen> {
                                       onTap: () {
                                         switchScreen(SettingsScreen.routeName);
                                         removeBottomBar = true;
-                                        //Navigator.pop(context);
                                       },
                                       child: CircleAvatar(
                                           //radius: 10,
@@ -360,7 +360,15 @@ class _OverviewScreenState extends State<OverviewScreen> {
                                                       color: avatarTextColor,
                                                       fontSize: 20)))));
                     }),
-            )
+              actions: [
+                  widget.mainMenu.activeMenu.subMenuInfo.isNotEmpty
+                      ? PageContextMenu(
+                          menuItem: widget.mainMenu.activeMenu,
+                          subMenu: widget.mainMenu.activeMenu.subMenuInfo,
+                          navKey: navKey,
+                        )
+                      : const Empty()
+                ])
           : AppBar(
               titleSpacing: 0.0,
               title: Row(children: [
@@ -393,8 +401,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
                     icon: Icon(
                         color: theme.dividerColor, size: 20, connectedIcon)),
                 const SizedBox(width: 20),
-              ]),
-            ),
+              ])),
       drawer: Drawer(
         backgroundColor: sidebarBackground,
         child: ListView.separated(
