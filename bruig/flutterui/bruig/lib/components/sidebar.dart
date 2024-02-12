@@ -191,7 +191,7 @@ class _SidebarState extends State<Sidebar> {
         items: mainMenu.menus
             .map((e) => SidebarXItem(
                   label: e.label,
-                  iconWidget: (e.label == "Chats" && client.hasUnreadChats) ||
+                  iconWidget: (e.label == "Chat" && client.hasUnreadChats) ||
                           (e.label == "Feed" && feed.hasUnreadPostsComments)
                       ? Stack(children: [
                           Container(

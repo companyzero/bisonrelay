@@ -9,13 +9,15 @@ class ContextMenu extends StatefulWidget {
       required this.items,
       required this.handleItemTap,
       this.disabled,
-      this.mobile});
+      this.mobile,
+      this.pageContextMenu});
 
   final bool? disabled;
   final Widget child;
   final PopMenuList items;
   final void Function(dynamic) handleItemTap;
   final void Function(BuildContext)? mobile;
+  final bool? pageContextMenu;
 
   @override
   State<ContextMenu> createState() => _ContextMenuState();
@@ -30,6 +32,7 @@ class _ContextMenuState extends State<ContextMenu> {
     final List<PopupMenuItem> items =
         widget.items.whereType<PopupMenuItem>().toList();
     final result = await showMenu(
+      shadowColor: Theme.of(context).backgroundColor,
       context: context,
       position: RelativeRect.fromRect(
         Rect.fromPoints(
@@ -49,7 +52,7 @@ class _ContextMenuState extends State<ContextMenu> {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      child: widget.child,
+      onTap: () => widget.pageContextMenu ?? _showContextMenu(context),
       onLongPress: () => widget.disabled == true
           ? null
           : widget.mobile != null
@@ -57,6 +60,14 @@ class _ContextMenuState extends State<ContextMenu> {
               : _showContextMenu(context),
       onSecondaryTap: () =>
           widget.disabled == true ? null : _showContextMenu(context),
+      child: widget.pageContextMenu == true
+          ? IconButton(
+              iconSize: 20,
+              splashRadius: 20,
+              onPressed: () => _showContextMenu(context),
+              icon: Icon(Icons.more_vert_outlined,
+                  color: Theme.of(context).focusColor))
+          : widget.child,
     );
   }
 }
