@@ -25,7 +25,7 @@ type Rates struct {
 	mtx         sync.Mutex
 	dcrPrice    float64
 	btcPrice    float64
-	lastUpdated int64
+	lastUpdated time.Time
 }
 
 func New(cfg Config) *Rates {
@@ -79,6 +79,8 @@ func (r *Rates) Run(ctx context.Context) {
 			// spam in the UI.
 			failedTries++
 			if failedTries == triesBeforeErr {
+				r.Set(0, 0) // Unset rates
+
 				r.cfg.Log.Errorf("Unable to fetch recent exchange rate. Will keep retrying.")
 			}
 			t.Reset(shortTimeout)
@@ -97,13 +99,13 @@ func (r *Rates) Get() (float64, float64) {
 
 // Set manually sets the USD/DCR and USD/BTC prices.
 func (r *Rates) Set(dcrPrice, btcPrice float64) {
-	r.cfg.Log.Infof("Setting manual exchange rate: DCR:%0.2f BTC:%0.2f",
+	r.cfg.Log.Infof("Exchange rate set manually: DCR:%0.2f BTC:%0.2f",
 		dcrPrice, btcPrice)
 
 	r.mtx.Lock()
 	r.dcrPrice = dcrPrice
 	r.btcPrice = btcPrice
-	r.lastUpdated = time.Now().Unix()
+	r.lastUpdated = time.Now()
 	r.mtx.Unlock()
 }
 
@@ -133,7 +135,7 @@ func (r *Rates) dcrData(ctx context.Context) error {
 	r.mtx.Lock()
 	r.dcrPrice = dcrDataExchange.DCRPrice
 	r.btcPrice = dcrDataExchange.BTCPrice
-	r.lastUpdated = time.Now().Unix()
+	r.lastUpdated = time.Now()
 	r.mtx.Unlock()
 
 	return nil
@@ -172,7 +174,7 @@ func (r *Rates) dcrAPI(ctx context.Context) error {
 	r.mtx.Lock()
 	r.dcrPrice = dcrAPIExchange.DCRPrice
 	r.btcPrice = dcrAPIExchange.BTCPrice
-	r.lastUpdated = now.Unix()
+	r.lastUpdated = now
 	r.mtx.Unlock()
 
 	return nil
