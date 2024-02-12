@@ -198,6 +198,18 @@ func (s *Store) handleCart(ctx context.Context, uid clientintf.UserID,
 func (s *Store) handlePlaceOrder(ctx context.Context, uid clientintf.UserID,
 	request *rpc.RMFetchResource) (*rpc.RMFetchResourceReply, error) {
 
+	var exchangeRate float64
+	if s.cfg.ExchangeRateProvider != nil {
+		exchangeRate = s.cfg.ExchangeRateProvider()
+	}
+	if exchangeRate <= 0 {
+		s.log.Warnf("order rejected due to invalid exchange rate")
+		return &rpc.RMFetchResourceReply{
+			Status: rpc.ResourceStatusBadRequest,
+			Data:   []byte("store has an invalid exchange rate"),
+		}, nil
+	}
+
 	cartFname := filepath.Join(s.root, cartsDir, uid.String())
 	var cart Cart
 
@@ -262,14 +274,15 @@ func (s *Store) handlePlaceOrder(ctx context.Context, uid clientintf.UserID,
 
 	id := lastID.ID + 1
 	order := &Order{
-		User:       uid,
-		Cart:       cart,
-		ID:         OrderID(id),
-		Status:     StatusPlaced,
-		PlacedTS:   time.Now(),
-		ShipCharge: s.cfg.ShipCharge,
-		ShipAddr:   shipAddr,
-		ExpiresTS:  time.Now().Add(time.Hour),
+		User:         uid,
+		Cart:         cart,
+		ID:           OrderID(id),
+		Status:       StatusPlaced,
+		PlacedTS:     time.Now(),
+		ShipCharge:   s.cfg.ShipCharge,
+		ShipAddr:     shipAddr,
+		ExpiresTS:    time.Now().Add(time.Hour),
+		ExchangeRate: exchangeRate,
 	}
 
 	// Build the message to send to the remote user, and present it to the
@@ -319,10 +332,6 @@ func (s *Store) handlePlaceOrder(ctx context.Context, uid clientintf.UserID,
 		wpm("Total amount: $%.2f USD\n", order.Total())
 	} else {
 		wpm("Total amount: $%.2f USD\n", order.Total())
-	}
-
-	if s.cfg.ExchangeRateProvider != nil {
-		order.ExchangeRate = s.cfg.ExchangeRateProvider()
 	}
 
 	totalDCR := order.TotalDCR()

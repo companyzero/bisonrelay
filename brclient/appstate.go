@@ -528,11 +528,19 @@ func (as *appState) prettyArgs(args *mdembeds.EmbeddedArgs) string {
 		dcrPrice, _ := as.rates.Get()
 		dcrCost := dcrutil.Amount(int64(args.Cost))
 		usdCost := dcrPrice * dcrCost.ToCoin()
-		s += fmt.Sprintf("[Download File %s (size:%s cost:%0.8f DCR / %0.8f USD)]",
+
+		var cost string
+		if dcrPrice == 0 {
+			cost = "invalid exchange rate"
+		} else {
+			cost = fmt.Sprintf("cost: %0.8f DCR / %0.8f USD", dcrCost.ToCoin(), usdCost)
+		}
+		s += fmt.Sprintf("[Download File %s (size:%s %s)]",
 			filename,
 			hbytes(int64(args.Size)),
-			dcrCost.ToCoin(), usdCost)
+			cost)
 	}
+
 	return s
 }
 
@@ -3277,7 +3285,11 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 				pf("Filename   : %q", meta.Filename)
 				pf("Description: %q", meta.Description)
 				pf("Size       : %d", meta.Size)
-				pf("Cost       : %.8f DCR / %0.8f USD", dcrCost, usdCost)
+				if dcrPrice == 0 {
+					pf("Cost       : invalid exchange rate")
+				} else {
+					pf("Cost       : %.8f DCR / %0.8f USD", dcrCost, usdCost)
+				}
 				pf("Hash       : %q", meta.Hash)
 				pf("Signature  : %q", meta.Signature)
 				pf("")
@@ -3492,14 +3504,6 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 
 				// Check the basic LN requirements.
 				err := client.CheckLNWalletUsable(ctx, lnRPC, lnNode)
-				if err == nil {
-					// Check for a valid exchange rate.
-					dcrPrice, _ := as.rates.Get()
-					if dcrPrice == 0 {
-						err = fmt.Errorf("Exchange rate is zero")
-					}
-				}
-
 				if err == nil {
 					// All good!
 					return nil
