@@ -115,13 +115,6 @@ class ChatModel extends ChangeNotifier {
   final String id; // RemoteUID or GC ID
   final bool isGC;
 
-  bool _isSubscribed = false;
-  bool get isSubscribed => _isSubscribed;
-  void set isSubscribed(bool b) {
-    _isSubscribed = b;
-    //notifyListeners();
-  }
-
   String _nick; // Nick or GC name
   String get nick => _nick;
   void set nick(String nn) {
@@ -130,6 +123,13 @@ class ChatModel extends ChangeNotifier {
   }
 
   ChatModel(this.id, this._nick, this.isGC);
+
+  bool _isSubscribed = false;
+  bool get isSubscribed => _isSubscribed;
+  void set isSubscribed(bool b) {
+    _isSubscribed = b;
+    //notifyListeners();
+  }
 
   int _unreadMsgCount = 0;
   int get unreadMsgCount => _unreadMsgCount;
@@ -156,6 +156,13 @@ class ChatModel extends ChangeNotifier {
   String get userPostListID => _userPostListID;
   set userPostListID(String b) {
     _userPostListID = b;
+    notifyListeners();
+  }
+
+  int _scrollPosition = 0;
+  int get scrollPosition => _scrollPosition;
+  set scrollPosition(int s) {
+    _scrollPosition = s;
     notifyListeners();
   }
 

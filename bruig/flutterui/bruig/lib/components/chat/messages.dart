@@ -5,6 +5,8 @@ import 'package:bruig/models/client.dart';
 import 'package:bruig/components/chat/events.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 
+PageStorageBucket _pageStorageBucket = PageStorageBucket();
+
 /// TODO: make restoreScrollOffset work.
 /// For some reason when trying to use PageStorage the app throws:
 /// 'type 'ItemPosition' is not a subtype of type 'double?' in type cast'
@@ -31,7 +33,6 @@ class _MessagesState extends State<Messages> {
   ClientModel get client => widget.client;
   ChatModel get chat => widget.chat;
   String get nick => widget.nick;
-  bool shouldHoldPosition = false;
   int _maxItem = 0;
   bool _showFAB = false;
   late ChatModel _lastChat;
@@ -68,6 +69,11 @@ class _MessagesState extends State<Messages> {
               _showFAB = false;
             });
           }
+          if (_maxItem < chat.msgs.length - 2) {
+            chat.scrollPosition = newMaxItem;
+          } else {
+            chat.scrollPosition = 0;
+          }
         }
       });
     });
@@ -82,16 +88,6 @@ class _MessagesState extends State<Messages> {
     super.didUpdateWidget(oldWidget);
     oldWidget.chat.removeListener(onChatChanged);
     chat.addListener(onChatChanged);
-    var isSameChat = chat.id == _lastChat.id;
-    var anotherSender =
-        chat.msgs.isNotEmpty && chat.msgs.last.source?.id != client.publicID;
-    var receivedNewMsg = isSameChat && anotherSender;
-    // user received a msg and is reading history (not on scroll maxExtent)
-    if (receivedNewMsg && _maxItem < _lastChat.msgs.length - 2) {
-      shouldHoldPosition = true;
-    } else {
-      shouldHoldPosition = false;
-    }
     _maybeScrollToFirstUnread();
     _maybeScrollToBottom();
     onChatChanged();
@@ -122,8 +118,7 @@ class _MessagesState extends State<Messages> {
     final firstUnreadIndex = chat.firstUnreadIndex();
     if (chat.msgs.isNotEmpty &&
         firstUnreadIndex == -1 &&
-        !shouldHoldPosition &&
-        _maxItem < chat.msgs.length - 1) {
+        chat.scrollPosition == 0) {
       _scrollToBottom();
     }
   }
@@ -177,48 +172,54 @@ class _MessagesState extends State<Messages> {
     var textColor = theme.dividerColor;
     var backgroundColor = theme.highlightColor;
     return Scaffold(
-      floatingActionButton: _getFAB(textColor, backgroundColor),
-      body: SelectionArea(
-        child: ScrollablePositionedList.builder(
-          itemCount: chat.isGC ? calculateTotalMessageCount() : chat.msgs.length,
-          physics: const ClampingScrollPhysics(),
-          itemBuilder: chat.isGC
-              ? (context, index) {
-                  int count = 0;
-                  for (var dayGCMsgs in chat.dayGCMsgs) {
-                    if (index == count) {
-                      // This is a day change message
-                      return Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          DateChange(
-                            child: Text(
-                              dayGCMsgs.date,
-                              style: TextStyle(color: textColor),
-                            ),
-                          ),
-                        ],
-                      );
+        floatingActionButton: _getFAB(textColor, backgroundColor),
+        body: PageStorage(
+          bucket: _pageStorageBucket,
+          child: SelectionArea(
+            child: ScrollablePositionedList.builder(
+              key: PageStorageKey<String>('chat ${chat.nick}'),
+              itemCount:
+                  chat.isGC ? calculateTotalMessageCount() : chat.msgs.length,
+              physics: const ClampingScrollPhysics(),
+              itemBuilder: chat.isGC
+                  ? (context, index) {
+                      int count = 0;
+                      for (var dayGCMsgs in chat.dayGCMsgs) {
+                        if (index == count) {
+                          // This is a day change message
+                          return Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              DateChange(
+                                child: Text(
+                                  dayGCMsgs.date,
+                                  style: TextStyle(color: textColor),
+                                ),
+                              ),
+                            ],
+                          );
+                        }
+                        count++; // for the day change message
+                        if (index < count + dayGCMsgs.msgs.length) {
+                          var msg = dayGCMsgs.msgs[index - count];
+                          return Container(
+                            color: backgroundColor,
+                            child:
+                                Event(chat, msg, nick, client, _scrollToBottom),
+                          );
+                        }
+                        count += dayGCMsgs.msgs.length;
+                      }
+                      return const SizedBox.shrink();
                     }
-                    count++; // for the day change message
-                    if (index < count + dayGCMsgs.msgs.length) {
-                      var msg = dayGCMsgs.msgs[index - count];
-                      return Container(
-                        color: backgroundColor,
-                        child: Event(chat, msg, nick, client, _scrollToBottom),
-                      );
-                    }
-                    count += dayGCMsgs.msgs.length;
-                  }
-                  return const SizedBox.shrink();
-                }
-              : (context, index) {
-                  return Event(chat, chat.msgs[index], nick, client, _scrollToBottom);
-                },
-          itemScrollController: widget.itemScrollController,
-          itemPositionsListener: widget.itemPositionsListener,
-        ),
-      ),
-    );
+                  : (context, index) {
+                      return Event(chat, chat.msgs[index], nick, client,
+                          _scrollToBottom);
+                    },
+              itemScrollController: widget.itemScrollController,
+              itemPositionsListener: widget.itemPositionsListener,
+            ),
+          ),
+        ));
   }
 }
