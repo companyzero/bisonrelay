@@ -110,8 +110,8 @@ class _PostListsScreenState extends State<PostListsScreen> {
     }
   }
 
-  void unsub(ChatModel chat) async {
-    await chat.unsubscribeToPosts();
+  void unsub(ChatModel chat) {
+    chat.unsubscribeToPosts();
     loadLists();
   }
 
