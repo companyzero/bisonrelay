@@ -154,6 +154,7 @@ class _AppState extends State<App> with WindowListener {
       InitClient initArgs = InitClient(
         cfg.dbRoot,
         cfg.downloadsDir,
+        cfg.embedsDir,
         cfg.serverAddr,
         cfg.lnRPCHost,
         cfg.lnTLSCert,

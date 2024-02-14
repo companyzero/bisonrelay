@@ -19,6 +19,7 @@ type initClient struct {
 	ServerAddr        string `json:"server_addr"`
 	DBRoot            string `json:"dbroot"`
 	DownloadsDir      string `json:"downloads_dir"`
+	EmbedsDir         string `json:"embeds_dir"`
 	LNRPCHost         string `json:"ln_rpc_host"`
 	LNTLSCertPath     string `json:"ln_tls_cert_path"`
 	LNMacaroonPath    string `json:"ln_macaroon_path"`

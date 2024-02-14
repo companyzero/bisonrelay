@@ -1024,3 +1024,46 @@ func (db *DB) ListOutstandingDownloads(tx ReadTx) ([]FileDownload, error) {
 
 	return res, nil
 }
+
+func (db *DB) PruneEmbeds(age time.Duration) error {
+	if db.embedsDir == "" {
+		return fmt.Errorf("embeds directory not set")
+	}
+
+	files, err := os.ReadDir(db.embedsDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+
+	now := time.Now()
+	for _, file := range files {
+		info, err := file.Info()
+		if err != nil {
+			return err
+		}
+		if now.Sub(info.ModTime()) > age {
+			fpath := filepath.Join(db.embedsDir, file.Name())
+			if err := os.Remove(fpath); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func (db *DB) SaveEmbed(filename string, data []byte) (string, error) {
+	filePath := filepath.Join(db.embedsDir, filename)
+
+	if _, err := os.Stat(filePath); err == nil {
+		return filePath, nil
+	}
+
+	if err := os.MkdirAll(db.embedsDir, 0o700); err != nil {
+		return filePath, err
+	}
+	return filePath, os.WriteFile(filePath, data, 0o600)
+}

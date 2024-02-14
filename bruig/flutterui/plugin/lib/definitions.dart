@@ -18,6 +18,8 @@ class InitClient {
   final String dbRoot;
   @JsonKey(name: "downloads_dir")
   final String downloadsDir;
+  @JsonKey(name: "embeds_dir")
+  final String embedsDir;
   @JsonKey(name: 'server_addr')
   final String serverAddr;
   @JsonKey(name: 'ln_rpc_host')
@@ -68,6 +70,7 @@ class InitClient {
   InitClient(
     this.dbRoot,
     this.downloadsDir,
+    this.embedsDir,
     this.serverAddr,
     this.lnRPCHost,
     this.lnTLSCertPath,

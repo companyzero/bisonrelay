@@ -52,6 +52,9 @@ type Config struct {
 
 	// DownloadsRoot is where to put final downloaded files.
 	DownloadsRoot string
+
+	// EmbedsRoot is where to put embedded files.
+	EmbedsRoot string
 }
 
 type DB struct {
@@ -60,6 +63,7 @@ type DB struct {
 	rnd          io.Reader
 	root         string
 	downloadsDir string
+	embedsDir    string
 	idb          *inidb.INIDB
 	invites      *inidb.INIDB
 
@@ -86,6 +90,10 @@ func New(cfg Config) (*DB, error) {
 	downloadsDir, err := filepath.Abs(cfg.DownloadsRoot)
 	if err != nil {
 		return nil, fmt.Errorf("unable to determine downloads root: %v", err)
+	}
+	embedsDir, err := filepath.Abs(cfg.EmbedsRoot)
+	if err != nil {
+		return nil, fmt.Errorf("unable to determine embeds root: %v", err)
 	}
 
 	finfo, err := os.Stat(root)
@@ -147,6 +155,7 @@ func New(cfg Config) (*DB, error) {
 	db := &DB{
 		root:         root,
 		downloadsDir: downloadsDir,
+		embedsDir:    embedsDir,
 		log:          log,
 		cfg:          cfg,
 		rnd:          rand.Reader,

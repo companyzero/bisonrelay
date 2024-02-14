@@ -115,6 +115,7 @@ func testDB(t testing.TB, id *zkidentity.FullIdentity, log slog.Logger) *clientd
 	cfg := clientdb.Config{
 		Root:          tempDir,
 		DownloadsRoot: filepath.Join(tempDir, "downloads"),
+		EmbedsRoot:    filepath.Join(tempDir, "embeds"),
 		Logger:        log,
 		ChunkSize:     8,
 	}
