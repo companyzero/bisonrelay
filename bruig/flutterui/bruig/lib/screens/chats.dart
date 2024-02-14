@@ -34,7 +34,7 @@ class ChatsScreenTitle extends StatelessWidget {
       var activeHeading = client.active;
       if (activeHeading == null) {
         return Row(mainAxisAlignment: MainAxisAlignment.start, children: [
-          Text("Chat",
+          Text("Bison Relay",
               textAlign: TextAlign.center,
               style: TextStyle(
                   fontSize: theme.getLargeFont(context),
@@ -43,7 +43,7 @@ class ChatsScreenTitle extends StatelessWidget {
       }
       if (client.showAddressBook) {
         return Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-          Text("Chat / Address Book",
+          Text("Bison Relay",
               style: TextStyle(
                   fontSize: theme.getLargeFont(context),
                   color: Theme.of(context).focusColor))
@@ -52,7 +52,7 @@ class ChatsScreenTitle extends StatelessWidget {
       var chat = client.getExistingChat(activeHeading.id);
       if (chat == null) {
         return Row(mainAxisAlignment: MainAxisAlignment.start, children: [
-          Text("Chat",
+          Text("Bison Relay",
               textAlign: TextAlign.center,
               style: TextStyle(
                   fontSize: theme.getLargeFont(context),
@@ -74,46 +74,47 @@ class ChatsScreenTitle extends StatelessWidget {
             ThemeData.estimateBrightnessForColor(avatarColor) == Brightness.dark
                 ? hightLightTextColor
                 : darkTextColor;
-        return Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
-          Text("Chat$suffix$profileSuffix",
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                  fontSize: theme.getLargeFont(context),
-                  color: Theme.of(context).focusColor)),
-          Expanded(
-              child: Container(
-            width: 40,
-            margin: const EdgeInsets.only(top: 0, bottom: 0, left: 0, right: 5),
-            child: chat.isGC
-                ? GcContexMenu(
-                    mobile: isScreenSmall
-                        ? (context) => client.showSubMenu(chat.isGC, chat.id)
-                        : null,
-                    targetGcChat: chat,
-                    child: InteractiveAvatar(
-                      bgColor: selectedBackgroundColor,
-                      chatNick: chat.nick,
-                      onTap: () {
-                        client.showSubMenu(chat.isGC, chat.id);
-                      },
-                      avatarColor: avatarColor,
-                      avatarTextColor: avatarTextColor,
-                    ),
-                  )
-                : UserContextMenu(
-                    targetUserChat: chat,
-                    child: InteractiveAvatar(
-                      bgColor: selectedBackgroundColor,
-                      chatNick: chat.nick,
-                      onTap: () {
-                        client.showSubMenu(chat.isGC, chat.id);
-                      },
-                      avatarColor: avatarColor,
-                      avatarTextColor: avatarTextColor,
-                    ),
-                  ),
-          )),
-        ]);
+        return Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(chat.nick,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                      fontSize: theme.getLargeFont(context),
+                      color: Theme.of(context).focusColor)),
+              Container(
+                width: 40,
+                margin:
+                    const EdgeInsets.only(top: 0, bottom: 0, left: 0, right: 5),
+                child: chat.isGC
+                    ? GcContexMenu(
+                        mobile: (context) =>
+                            client.showSubMenu(chat.isGC, chat.id),
+                        targetGcChat: chat,
+                        child: InteractiveAvatar(
+                          bgColor: selectedBackgroundColor,
+                          chatNick: chat.nick,
+                          onTap: () {
+                            client.showSubMenu(chat.isGC, chat.id);
+                          },
+                          avatarColor: avatarColor,
+                          avatarTextColor: avatarTextColor,
+                        ),
+                      )
+                    : UserContextMenu(
+                        targetUserChat: chat,
+                        child: InteractiveAvatar(
+                          bgColor: selectedBackgroundColor,
+                          chatNick: chat.nick,
+                          onTap: () {
+                            client.showSubMenu(chat.isGC, chat.id);
+                          },
+                          avatarColor: avatarColor,
+                          avatarTextColor: avatarTextColor,
+                        ),
+                      ),
+              ),
+            ]);
       }
       return Text("Chat$suffix$profileSuffix",
           style: TextStyle(

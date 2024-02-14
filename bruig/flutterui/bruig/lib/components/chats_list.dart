@@ -245,11 +245,9 @@ class _ChatsListState extends State<_ChatsList> {
     }
 
     var theme = Theme.of(context);
-    var sidebarBackground = theme.backgroundColor;
     var hoverColor = theme.hoverColor;
     var darkTextColor = theme.dividerColor;
     var selectedBackgroundColor = theme.highlightColor;
-    var dividerColor = theme.highlightColor;
     var backgroundColor = theme.backgroundColor;
 
     var sortedList = client.sortedChats.toList();
@@ -297,8 +295,8 @@ class _ChatsListState extends State<_ChatsList> {
                     end: Alignment.centerLeft,
                     colors: [
                       hoverColor,
-                      sidebarBackground,
-                      sidebarBackground,
+                      backgroundColor,
+                      backgroundColor,
                     ],
                     stops: const [
                       0,

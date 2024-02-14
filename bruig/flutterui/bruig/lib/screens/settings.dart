@@ -448,7 +448,7 @@ class MainSettingsScreen extends StatelessWidget {
                     hoverColor: backgroundColor,
                     leading: const SidebarSvgIcon(
                         "assets/icons/icons-menu-stats.svg"),
-                    title: Text("Stats",
+                    title: Text("Payment Stats",
                         style: TextStyle(
                             fontSize: theme.getMediumFont(context),
                             color: textColor))),
