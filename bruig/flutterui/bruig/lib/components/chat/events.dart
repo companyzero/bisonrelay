@@ -537,12 +537,12 @@ class GCUserEventW extends StatelessWidget {
     return Consumer<ThemeNotifier>(builder: (context, theme, _) {
       if (evnt.source != null) {
         return ServerEvent(
-            child: SelectableText("${evnt.source!.nick}:  ${evnt.event.msg}",
+            child: Text("${evnt.source!.nick}:  ${evnt.event.msg}",
                 style: TextStyle(
                     fontSize: theme.getSmallFont(context), color: textColor)));
       } else {
         return ServerEvent(
-            child: SelectableText(evnt.event.msg,
+            child: Text(evnt.event.msg,
                 style: TextStyle(
                     fontSize: theme.getSmallFont(context), color: textColor)));
       }
@@ -595,7 +595,7 @@ class _JoinGCEventWState extends State<JoinGCEventW> {
                       color: textColor)));
         case CMS_errored:
           return ServerEvent(
-              child: SelectableText(
+              child: Text(
                   "Unable to join GC ${invite.name}: ${event.sendError}",
                   style: TextStyle(
                       fontSize: theme.getSmallFont(context),
@@ -857,7 +857,7 @@ class PostEventW extends StatelessWidget {
     var textColor = theme.dividerColor;
     return Consumer<ThemeNotifier>(
         builder: (context, theme, _) => ServerEvent(
-            child: SelectableText("Received post '${event.title}'",
+            child: Text("Received post '${event.title}'",
                 style: TextStyle(
                     fontSize: theme.getSmallFont(context), color: textColor))));
   }
@@ -899,7 +899,7 @@ class _PostSubscriptionEventWState extends State<PostSubscriptionEventW> {
 
     return Consumer<ThemeNotifier>(
         builder: (context, theme, _) => ServerEvent(
-            child: SelectableText(msg,
+            child: Text(msg,
                 style: TextStyle(
                     fontSize: theme.getSmallFont(context), color: textColor))));
   }
@@ -916,8 +916,7 @@ class PostsSubscriberUpdatedW extends StatelessWidget {
     var subTxt = event.subscribed ? "subscribed to" : "unsubscribed from";
     return Consumer<ThemeNotifier>(
         builder: (context, theme, _) => ServerEvent(
-            child: SelectableText(
-                "${event.nick} $subTxt the local client's posts.",
+            child: Text("${event.nick} $subTxt the local client's posts.",
                 style: TextStyle(
                     fontSize: theme.getSmallFont(context), color: textColor))));
   }
@@ -953,7 +952,7 @@ class FileDownloadedEventW extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 10),
-                    SelectableText(
+                    Text(
                       "Downloaded file ${event.diskPath}",
                       style: TextStyle(
                           fontSize: theme.getSmallFont(context),
@@ -981,7 +980,7 @@ class GCVersionWarnW extends StatelessWidget {
             decoration: BoxDecoration(
                 color: bgColor,
                 borderRadius: const BorderRadius.all(Radius.circular(5))),
-            child: SelectableText(
+            child: Text(
                 "Received GC definitions with unsupported version ${event.version}. Please update the software to interact in this GC.",
                 style: TextStyle(
                     fontSize: theme.getSmallFont(context), color: textColor))));
@@ -1009,7 +1008,7 @@ class GCAddedMembersW extends StatelessWidget {
 
     return Consumer<ThemeNotifier>(
         builder: (context, theme, _) => ServerEvent(
-            child: SelectableText(msg,
+            child: Text(msg,
                 style: TextStyle(
                     fontSize: theme.getSmallFont(context), color: textColor))));
   }
@@ -1037,7 +1036,7 @@ class GCPartedMemberW extends StatelessWidget {
 
     return Consumer<ThemeNotifier>(
         builder: (context, theme, _) => ServerEvent(
-            child: SelectableText(msg,
+            child: Text(msg,
                 style: TextStyle(
                     fontSize: theme.getSmallFont(context), color: textColor))));
   }
@@ -1055,7 +1054,7 @@ class GCUpgradedVersionW extends StatelessWidget {
         "GC Upgraded from version ${event.oldVersion} to ${event.newVersion}";
     return Consumer<ThemeNotifier>(
         builder: (context, theme, _) => ServerEvent(
-            child: SelectableText(msg,
+            child: Text(msg,
                 style: TextStyle(
                     fontSize: theme.getSmallFont(context), color: textColor))));
   }
@@ -1091,7 +1090,7 @@ class GCAdminsChangedW extends StatelessWidget {
 
     return Consumer<ThemeNotifier>(
         builder: (context, theme, _) => ServerEvent(
-            child: SelectableText(msg,
+            child: Text(msg,
                 style: TextStyle(
                     fontSize: theme.getSmallFont(context), color: textColor))));
   }
@@ -1147,7 +1146,7 @@ class _KXSuggestedWState extends State<KXSuggestedW> {
                       color: textColor)));
         case Suggestion_errored:
           return ServerEvent(
-              child: SelectableText(
+              child: Text(
                   "Unable to accept suggestion from  '${suggest.inviteenick}' to '${suggest.targetnick}'",
                   style: TextStyle(
                       fontSize: theme.getSmallFont(context),
@@ -1215,7 +1214,7 @@ class TipUserProgressW extends StatelessWidget {
 
     return Consumer<ThemeNotifier>(
         builder: (context, theme, _) => ServerEvent(
-            child: SelectableText(msg,
+            child: Text(msg,
                 style: TextStyle(
                     fontSize: theme.getSmallFont(context), color: textColor))));
   }
