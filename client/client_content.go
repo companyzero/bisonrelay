@@ -2,10 +2,12 @@ package client
 
 import (
 	"context"
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/companyzero/bisonrelay/client/clientdb"
@@ -1009,6 +1011,24 @@ func (c *Client) handleFTSendFile(ru *RemoteUser, sf rpc.RMFTSendFile) error {
 	ru.log.Infof("Starting remote-user-initiated download of %q (%s)",
 		sf.Metadata.Filename, fid)
 	return nil
+}
+
+func (c *Client) SaveEmbed(data []byte, typ string) (string, error) {
+	var filePath string
+	err := c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
+		sp := strings.Split(typ, "/")
+		if len(sp) != 2 {
+			return fmt.Errorf("invalid mimetype")
+		}
+
+		var err error
+		fileName := fmt.Sprintf("%x.%s", sha256.Sum256(data), sp[1])
+
+		filePath, err = c.db.SaveEmbed(fileName, data)
+		return err
+	})
+
+	return filePath, err
 }
 
 // restartDownloads is called during client startup to restart all downloads.

@@ -108,11 +108,16 @@ func handleInitClient(handle uint32, args initClient) error {
 		Root:          args.DBRoot,
 		MsgsRoot:      args.MsgsRoot,
 		DownloadsRoot: args.DownloadsDir,
+		EmbedsRoot:    args.EmbedsDir,
 		Logger:        logBknd.logger("FDDB"),
 		ChunkSize:     rpc.MaxChunkSize,
 	})
 	if err != nil {
 		return fmt.Errorf("unable to initialize DB: %v", err)
+	}
+	// Prune embedded file cache.
+	if err = db.PruneEmbeds(0); err != nil {
+		return fmt.Errorf("unable to prune cache: %v", err)
 	}
 
 	// Initialize pay client.

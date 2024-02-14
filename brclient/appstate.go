@@ -2370,18 +2370,13 @@ func (as *appState) viewEmbed(embedded mdembeds.EmbeddedArgs) (tea.Cmd, error) {
 		return nil, fmt.Errorf("no external viewer configured for %v", embedded.Typ)
 	}
 
-	// Save to downloads/users/file?
-	f, err := os.CreateTemp("", tempFileTemplate)
+	filePath, err := as.c.SaveEmbed(embedded.Data, embedded.Typ)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create temp file: %v", err)
+		return nil, err
 	}
-	if _, err = f.Write(embedded.Data); err != nil {
-		return nil, fmt.Errorf("failed to write temp file: %v", err)
-	}
-	f.Close()
-	c := exec.Command(prog, f.Name())
+
+	c := exec.Command(prog, filePath)
 	cmd := tea.ExecProcess(c, func(error) tea.Msg {
-		os.Remove(f.Name())
 		return externalViewer{err: err}
 	})
 	return cmd, nil
@@ -2651,11 +2646,16 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		Root:          args.DBRoot,
 		MsgsRoot:      args.MsgRoot,
 		DownloadsRoot: args.DownloadsRoot,
+		EmbedsRoot:    args.EmbedsRoot,
 		Logger:        logBknd.logger("FDDB"),
 		ChunkSize:     rpc.MaxChunkSize,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("unable to initialize DB: %v", err)
+	}
+	// Prune embedded file cache.
+	if err = db.PruneEmbeds(0); err != nil {
+		return nil, fmt.Errorf("unable to prune cache: %v", err)
 	}
 
 	ctx := context.Background()

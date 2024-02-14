@@ -83,6 +83,7 @@ type config struct {
 	DBRoot            string
 	MsgRoot           string
 	DownloadsRoot     string
+	EmbedsRoot        string
 	LNRPCHost         string
 	LNTLSCertPath     string
 	LNMacaroonPath    string
@@ -483,6 +484,7 @@ func loadConfig() (*config, error) {
 		Root:               *flagRootDir,
 		DBRoot:             filepath.Join(*flagRootDir, "db"),
 		DownloadsRoot:      filepath.Join(*flagRootDir, "downloads"),
+		EmbedsRoot:         filepath.Join(*flagRootDir, "embeds"),
 		WalletType:         *flagWalletType,
 		MsgRoot:            *flagMsgRoot,
 		LNRPCHost:          *flagLNHost,

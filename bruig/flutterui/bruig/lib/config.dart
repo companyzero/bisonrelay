@@ -65,6 +65,7 @@ class Config {
   late final String appDataDir;
   late final String dbRoot;
   late final String downloadsDir;
+  late final String embedsDir;
   late final String serverAddr;
   late final String lnRPCHost;
   late final String lnTLSCert;
@@ -97,6 +98,7 @@ class Config {
       {this.appDataDir: "",
       this.dbRoot: "",
       this.downloadsDir: "",
+      this.embedsDir: "",
       this.serverAddr: "",
       this.lnRPCHost: "",
       this.lnTLSCert: "",
@@ -129,6 +131,7 @@ class Config {
         appDataDir: cfg.appDataDir,
         dbRoot: cfg.dbRoot,
         downloadsDir: cfg.downloadsDir,
+        embedsDir: cfg.embedsDir,
         serverAddr: cfg.serverAddr,
         lnRPCHost: rpcHost,
         lnTLSCert: tlsCert,
@@ -256,6 +259,7 @@ Future<Config> loadConfig(String filepath) async {
   c.appDataDir = appDataDir;
   c.dbRoot = path.join(appDataDir, "db");
   c.downloadsDir = path.join(appDataDir, "downloads");
+  c.embedsDir = path.join(appDataDir, "embeds");
   c.serverAddr = f.get("default", "server") ?? "localhost:12345";
   c.logFile = logfile;
   c.msgRoot = msgRoot;
