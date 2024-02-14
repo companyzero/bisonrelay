@@ -308,6 +308,7 @@ class _AppState extends State<App> with WindowListener {
   Widget build(BuildContext context) {
     return Consumer<ThemeNotifier>(
         builder: (context, theme, _) => MaterialApp(
+              debugShowCheckedModeBanner: false,
               title: 'Bison Relay',
               theme: theme.getTheme(),
               navigatorKey: navkey,

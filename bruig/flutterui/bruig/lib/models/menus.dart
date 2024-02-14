@@ -1,4 +1,5 @@
 import 'package:bruig/components/chats_list.dart';
+import 'package:bruig/components/confirmation_dialog.dart';
 import 'package:bruig/components/pay_tip.dart';
 import 'package:bruig/components/rename_chat.dart';
 import 'package:bruig/components/suggest_kx.dart';
@@ -300,6 +301,12 @@ List<ChatMenuItem?> buildUserChatMenu(ChatModel chat) {
     client.updateUserMenu(chat.id, buildUserChatMenu(chat));
   }
 
+  void unsubscribeToPosts(
+      BuildContext context, ClientModel client, ChatModel chat) async {
+    chat.unsubscribeToPosts();
+    client.updateUserMenu(chat.id, buildUserChatMenu(chat));
+  }
+
   return <ChatMenuItem?>[
     ChatMenuItem(
         "User Profile", (context, chats) => chats.profile = chats.active),
@@ -319,7 +326,17 @@ List<ChatMenuItem?> buildUserChatMenu(ChatModel chat) {
     chat.isSubscribed
         ? ChatMenuItem(
             "Unsubscribe to Posts",
-            (context, chats) => chats.active!.unsubscribeToPosts(),
+            (context, chats) {
+              confirmationDialog(context, () {
+                unsubscribeToPosts(context, chats, chats.active!);
+                Navigator.of(context).pop();
+              },
+                  () => Navigator.of(context).pop(),
+                  "Unsubscribe",
+                  "Are you sure you want to unsubscribe from ${chats.active!.nick}'s posts?",
+                  "Confirm",
+                  "Cancel");
+            },
           )
         : !chat.isSubscribing
             ? ChatMenuItem(

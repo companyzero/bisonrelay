@@ -394,11 +394,11 @@ class ChatModel extends ChangeNotifier {
     })();
   }
 
-  Future<void> unsubscribeToPosts() {
+  void unsubscribeToPosts() {
     var event = SynthChatEvent("Unsubscribing from user's posts");
     event.state = SCE_sending;
     append(ChatEventModel(event, null), false);
-    return (() async {
+    (() async {
       try {
         await Golib.unsubscribeToPosts(id);
         event.state = SCE_sent;
