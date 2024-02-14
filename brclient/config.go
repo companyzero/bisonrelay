@@ -357,6 +357,9 @@ func loadConfig() (*config, error) {
 	if err != nil {
 		return nil, fmt.Errorf("invalid value for flag 'autoremoveidleusersinterval': %v", err)
 	}
+	if autoRemoveInterval <= autoHandshakeInterval {
+		return nil, fmt.Errorf("invalid values: 'autoremoveinterval' is not greater than 'autohandshakeinterval'")
+	}
 
 	// Clean paths.
 	*flagRootDir = expandPath(homeDir, *flagRootDir)
