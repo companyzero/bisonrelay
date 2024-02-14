@@ -24,6 +24,8 @@ import 'package:bruig/theme_manager.dart';
 import 'package:provider/provider.dart';
 import 'package:bruig/util.dart';
 
+final GlobalKey<ScaffoldState> scaffoldKey = GlobalKey<ScaffoldState>();
+
 class _OverviewScreenTitle extends StatefulWidget {
   final MainMenuModel mainMenu;
 
@@ -293,6 +295,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
             : darkTextColor;
     bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
     return Scaffold(
+      key: scaffoldKey,
       backgroundColor: theme.canvasColor,
       appBar: isScreenSmall
           ? AppBar(

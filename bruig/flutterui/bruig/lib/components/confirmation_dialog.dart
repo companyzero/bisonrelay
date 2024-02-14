@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:bruig/screens/overview.dart';
 
 void confirmationDialog(
     BuildContext context,
     VoidCallback confirm,
-    VoidCallback cancel,
     String title,
     String content,
     String confirmButtonText,
@@ -17,11 +17,15 @@ void confirmationDialog(
           actions: [
             // The "Yes" button
             TextButton(
-                onPressed: confirm,
+                onPressed: () {
+                  confirm();
+                  Navigator.of(scaffoldKey.currentContext!).pop();
+                },
                 child: Text(
                     confirmButtonText != "" ? confirmButtonText : "Confirm")),
             TextButton(
-                onPressed: cancel,
+                onPressed: () =>
+                    Navigator.of(scaffoldKey.currentContext!).pop(),
                 child:
                     Text(cancelButtonText != "" ? cancelButtonText : "Cancel"))
           ],
