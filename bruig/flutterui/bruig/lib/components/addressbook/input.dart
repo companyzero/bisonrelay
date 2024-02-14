@@ -69,7 +69,7 @@ class _InputState extends State<Input> {
                   children: [
                     Expanded(
                         child: TextField(
-                      autofocus: true,
+                      autofocus: false,
                       focusNode: widget.inputFocusNode,
                       style: TextStyle(
                         fontSize: theme.getMediumFont(context),
