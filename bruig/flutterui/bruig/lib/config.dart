@@ -280,6 +280,10 @@ Future<Config> loadConfig(String filepath) async {
       defaultAutoRemoveIgnoreList;
   c.autoSubPosts = getBoolDefaultTrue("default", "autosubposts");
 
+  if (c.autoRemoveIdleUsersInterval <= c.autoHandshakeInterval) {
+	throw "invalid values: 'autoremoveinterval' is not greater than 'autohandshakeinterval'";
+  }
+
   if (c.walletType != "disabled") {
     c.lnRPCHost = f.get("payment", "lnrpchost") ?? "localhost:10009";
     c.lnTLSCert =
