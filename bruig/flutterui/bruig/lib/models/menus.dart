@@ -329,9 +329,7 @@ List<ChatMenuItem?> buildUserChatMenu(ChatModel chat) {
             (context, chats) {
               confirmationDialog(context, () {
                 unsubscribeToPosts(context, chats, chats.active!);
-                Navigator.of(context).pop();
               },
-                  () => Navigator.of(context).pop(),
                   "Unsubscribe",
                   "Are you sure you want to unsubscribe from ${chats.active!.nick}'s posts?",
                   "Confirm",
@@ -339,11 +337,15 @@ List<ChatMenuItem?> buildUserChatMenu(ChatModel chat) {
             },
           )
         : !chat.isSubscribing
-            ? ChatMenuItem(
-                "Subscribe to Posts",
-                (context, chats) =>
-                    subscribeToPosts(context, chats, chats.active!),
-              )
+            ? ChatMenuItem("Subscribe to Posts", (context, chats) {
+                confirmationDialog(context, () {
+                  subscribeToPosts(context, chats, chats.active!);
+                },
+                    "Subscribe",
+                    "Are you sure you want to subscribe to ${chats.active!.nick}'s posts?",
+                    "Confirm",
+                    "Cancel");
+              })
             : ChatMenuItem(
                 "Subscribing to Posts",
                 (context, chats) => null,
