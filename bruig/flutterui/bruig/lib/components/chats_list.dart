@@ -65,26 +65,58 @@ class _ChatHeadingWState extends State<_ChatHeadingW> {
     var unreadCount = chat.unreadMsgCount > 1000 ? "1k+" : chat.unreadMsgCount;
 
     Widget? trailing;
-    if (chat.active) {
-      // Do we want to do any text color changes on active?
-    } else if (chat.unreadMsgCount > 0) {
+    if (chat.unreadMsgCount > 0) {
       textColor = hightLightTextColor;
       trailing = Consumer<ThemeNotifier>(
-          builder: (context, theme, _) => Container(
-              margin: const EdgeInsets.all(1),
-              child: CircleAvatar(
-                  backgroundColor: unreadMessageIconColor,
-                  radius: 10,
-                  child: Text("$unreadCount",
-                      style: TextStyle(
-                          color: hightLightTextColor,
-                          fontSize: theme.getSmallFont(context))))));
+          builder: (context, theme, _) =>
+              Row(mainAxisSize: MainAxisSize.min, children: [
+                chat.isGC
+                    ? Text("(gc)",
+                        style: TextStyle(
+                            color: darkTextColor,
+                            fontSize: theme.getMediumFont(context)))
+                    : const Empty(),
+                const SizedBox(width: 5),
+                Container(
+                    margin: const EdgeInsets.all(1),
+                    child: CircleAvatar(
+                        backgroundColor: unreadMessageIconColor,
+                        radius: 10,
+                        child: Text("$unreadCount",
+                            style: TextStyle(
+                                color: hightLightTextColor,
+                                fontSize: theme.getSmallFont(context)))))
+              ]));
     } else if (chat.unreadEventCount > 0) {
       textColor = hightLightTextColor;
-      trailing = Container(
-          margin: const EdgeInsets.all(1),
-          child:
-              CircleAvatar(backgroundColor: unreadMessageIconColor, radius: 3));
+      trailing = Consumer<ThemeNotifier>(
+          builder: (context, theme, _) =>
+              Row(mainAxisSize: MainAxisSize.min, children: [
+                chat.isGC
+                    ? Text("(gc)",
+                        style: TextStyle(
+                            color: darkTextColor,
+                            fontSize: theme.getMediumFont(context)))
+                    : const Empty(),
+                const SizedBox(width: 5),
+                Container(
+                    margin: const EdgeInsets.all(1),
+                    child: CircleAvatar(
+                        backgroundColor: unreadMessageIconColor, radius: 3))
+              ]));
+    } else {
+      trailing = Consumer<ThemeNotifier>(
+          builder: (context, theme, _) =>
+              Row(mainAxisSize: MainAxisSize.min, children: [
+                chat.isGC
+                    ? Text("(gc)",
+                        style: TextStyle(
+                            color: darkTextColor,
+                            fontSize: theme.getMediumFont(context)))
+                    : const Empty(),
+                const SizedBox(width: 5),
+                const SizedBox(width: 21),
+              ]));
     }
 
     var avatarColor = colorFromNick(chat.nick);
@@ -121,12 +153,18 @@ class _ChatHeadingWState extends State<_ChatHeadingW> {
                       client: client,
                       targetGcChat: chat,
                       child: ListTile(
+                        horizontalTitleGap: 10,
+                        contentPadding:
+                            const EdgeInsets.only(left: 10, right: 8),
                         enabled: true,
-                        title: Text(chat.nick,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                                fontSize: theme.getMediumFont(context),
-                                color: textColor)),
+                        title: Container(
+                          padding: const EdgeInsets.only(left: 5),
+                          child: Text(chat.nick,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                  color: textColor,
+                                  fontSize: theme.getLargeFont(context))),
+                        ),
                         leading: popMenuButton,
                         trailing: trailing,
                         selected: chat.active,
@@ -138,12 +176,17 @@ class _ChatHeadingWState extends State<_ChatHeadingW> {
                       client: client,
                       targetUserChat: chat,
                       child: ListTile(
+                        horizontalTitleGap: 10,
+                        contentPadding:
+                            const EdgeInsets.only(left: 10, right: 8),
                         enabled: true,
-                        title: Text(chat.nick,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                                fontSize: theme.getMediumFont(context),
-                                color: textColor)),
+                        title: Container(
+                            padding: const EdgeInsets.only(left: 5),
+                            child: Text(chat.nick,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                    fontSize: theme.getLargeFont(context),
+                                    color: textColor))),
                         leading: popMenuButton,
                         trailing: trailing,
                         selected: chat.active,
@@ -265,14 +308,14 @@ class _ChatsListState extends State<_ChatsList> {
                 decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(3),
                     color: backgroundColor),
-                padding: const EdgeInsets.all(5),
+                padding: const EdgeInsets.all(0),
                 child: Column(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Expanded(
                           child: Container(
                               padding: const EdgeInsets.only(
-                                  left: 10, right: 5, top: 5, bottom: 5),
+                                  left: 0, right: 5, top: 5, bottom: 5),
                               child: ListView.builder(
                                   physics: const ScrollPhysics(),
                                   controller: sortedListScroll,
@@ -336,7 +379,7 @@ class _ChatsListState extends State<_ChatsList> {
                     : const Empty(),
                 Positioned(
                     bottom: 5,
-                    right: 30,
+                    right: 40,
                     child: Material(
                         color: selectedBackgroundColor.withOpacity(0),
                         child: IconButton(
@@ -351,7 +394,7 @@ class _ChatsListState extends State<_ChatsList> {
                                 Icons.people_outline)))),
                 Positioned(
                     bottom: 5,
-                    right: 60,
+                    right: 80,
                     child: Material(
                         color: selectedBackgroundColor.withOpacity(0),
                         child: IconButton(
@@ -370,7 +413,7 @@ class _ChatsListState extends State<_ChatsList> {
                                 Icons.get_app_outlined)))),
                 Positioned(
                     bottom: 5,
-                    right: 90,
+                    right: 120,
                     child: Material(
                         color: selectedBackgroundColor.withOpacity(0),
                         child: IconButton(
@@ -386,7 +429,7 @@ class _ChatsListState extends State<_ChatsList> {
                                 Icons.list_outlined)))),
                 Positioned(
                     bottom: 5,
-                    right: 120,
+                    right: 160,
                     child: Material(
                         color: selectedBackgroundColor.withOpacity(0),
                         child: IconButton(

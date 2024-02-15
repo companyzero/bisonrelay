@@ -296,6 +296,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
       backgroundColor: theme.canvasColor,
       appBar: isScreenSmall
           ? AppBar(
+              leadingWidth: 60,
               titleSpacing: 0.0,
               title: _OverviewScreenTitle(widget.mainMenu),
               leading: Builder(builder: (BuildContext context) {
@@ -336,7 +337,6 @@ class _OverviewScreenState extends State<OverviewScreen> {
                                   removeBottomBar = true;
                                 },
                                 child: CircleAvatar(
-                                    //radius: 10,
                                     backgroundColor: colorFromNick(client.nick),
                                     backgroundImage: client.myAvatar,
                                     child: client.myAvatar != null
