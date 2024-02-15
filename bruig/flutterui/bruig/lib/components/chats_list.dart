@@ -73,6 +73,7 @@ class _ChatHeadingWState extends State<_ChatHeadingW> {
                 chat.isGC
                     ? Text("(gc)",
                         style: TextStyle(
+                            fontStyle: FontStyle.italic,
                             color: darkTextColor,
                             fontSize: theme.getMediumFont(context)))
                     : const Empty(),
@@ -96,6 +97,7 @@ class _ChatHeadingWState extends State<_ChatHeadingW> {
                     ? Text("(gc)",
                         style: TextStyle(
                             color: darkTextColor,
+                            fontStyle: FontStyle.italic,
                             fontSize: theme.getMediumFont(context)))
                     : const Empty(),
                 const SizedBox(width: 5),
@@ -111,6 +113,7 @@ class _ChatHeadingWState extends State<_ChatHeadingW> {
                 chat.isGC
                     ? Text("(gc)",
                         style: TextStyle(
+                            fontStyle: FontStyle.italic,
                             color: darkTextColor,
                             fontSize: theme.getMediumFont(context)))
                     : const Empty(),
