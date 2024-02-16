@@ -253,7 +253,15 @@ func programByMimeType(mimeMap map[string]string, t string) string {
 	if n, exists := mimeMap[catchall]; exists {
 		return n
 	}
-	return ""
+
+	switch runtime.GOOS {
+	case "darwin":
+		return "open"
+	case "windows":
+		return "start"
+	default:
+		return "xdg-open"
+	}
 }
 
 func fromHex(h string) []byte {
