@@ -404,7 +404,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
     bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
     return !isScreenSmall
         ? Flex(direction: Axis.horizontal, children: [
-            SizedBox(width: 163, child: ChatDrawerMenu(inputFocusNode)),
+            SizedBox(width: 200, child: ChatDrawerMenu(inputFocusNode)),
             Expanded(
                 child: Container(
               margin: const EdgeInsets.all(1),
