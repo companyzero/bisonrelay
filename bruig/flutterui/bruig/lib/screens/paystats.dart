@@ -15,7 +15,7 @@ class PayStatsScreenTitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Consumer<ThemeNotifier>(
-        builder: (context, theme, child) => Text("Pay Stats",
+        builder: (context, theme, child) => Text("Payment Stats",
             style: TextStyle(
                 fontSize: theme.getLargeFont(context),
                 color: Theme.of(context).focusColor)));
@@ -118,8 +118,37 @@ class _PayStatsScreenState extends State<PayStatsScreen> {
                   color: backgroundColor),
               padding: const EdgeInsets.all(16),
               child: Column(children: [
+                ListTile(
+                  contentPadding: const EdgeInsets.all(0),
+                  title: Container(
+                      margin: const EdgeInsets.only(top: 0, bottom: 0),
+                      padding: const EdgeInsets.only(
+                          left: 8, top: 10, right: 8, bottom: 10),
+                      color: backgroundColor,
+                      child: Row(children: [
+                        SizedBox(
+                            width: 100,
+                            child: Text("User",
+                                style: TextStyle(
+                                    color: textColor,
+                                    fontSize: theme.getSmallFont(context)))),
+                        SizedBox(
+                          width: 105,
+                          child: Text("Sent (atoms)",
+                              style: TextStyle(
+                                  color: textColor,
+                                  fontSize: theme.getSmallFont(context))),
+                        ),
+                        SizedBox(
+                            width: 110,
+                            child: Text(" Received (atoms) ",
+                                style: TextStyle(
+                                    color: textColor,
+                                    fontSize: theme.getSmallFont(context)))),
+                      ])),
+                ),
                 Expanded(
-                  flex: 2,
+                  flex: 5,
                   child: ListView.builder(
                       itemCount: stats.length,
                       padding: const EdgeInsets.all(0),
@@ -143,28 +172,17 @@ class _PayStatsScreenState extends State<PayStatsScreen> {
                                           style: TextStyle(
                                               fontSize: theme
                                                   .getSmallFont(context)))),
-                                  Text(" Sent ",
-                                      style: TextStyle(
-                                          fontSize:
-                                              theme.getSmallFont(context))),
                                   SizedBox(
                                       width: 110,
                                       child: Text(
-                                          formatDCR(milliatomsToDCR(
-                                              stats[index].item3.totalSent)),
+                                          "${stats[index].item3.totalSent}",
                                           style: TextStyle(
                                               fontSize: theme
                                                   .getSmallFont(context)))),
-                                  Text(" Received ",
-                                      style: TextStyle(
-                                          fontSize:
-                                              theme.getSmallFont(context))),
                                   SizedBox(
                                       width: 110,
                                       child: Text(
-                                          formatDCR(milliatomsToDCR(stats[index]
-                                              .item3
-                                              .totalReceived)),
+                                          "${stats[index].item3.totalReceived}",
                                           style: TextStyle(
                                               fontSize: theme
                                                   .getSmallFont(context)))),

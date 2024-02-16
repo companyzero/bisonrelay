@@ -96,6 +96,7 @@ class _InputState extends State<Input> {
     var textColor = theme.dividerColor;
     var cardColor = theme.cardColor;
     var secondaryTextColor = theme.focusColor;
+    bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
     return Consumer<ThemeNotifier>(
         builder: (context, theme, _) => RawKeyboardListener(
               focusNode: node,
@@ -103,7 +104,7 @@ class _InputState extends State<Input> {
               child: Container(
                   margin: const EdgeInsets.only(bottom: 5),
                   child: TextField(
-                    autofocus: true,
+                    autofocus: isScreenSmall ? false : true,
                     focusNode: widget.inputFocusNode,
                     style: TextStyle(
                       fontSize: theme.getMediumFont(context),
