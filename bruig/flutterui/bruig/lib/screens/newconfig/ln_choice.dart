@@ -1,4 +1,5 @@
 import 'package:bruig/models/newconfig.dart';
+import 'package:bruig/screens/startupscreen.dart';
 import 'package:flutter/material.dart';
 import 'package:bruig/components/buttons.dart';
 import 'package:provider/provider.dart';
@@ -35,69 +36,42 @@ class LNChoicePage extends StatelessWidget {
       Navigator.of(context).pushNamed("/about");
     }
 
-    return Consumer<ThemeNotifier>(
-        builder: (context, theme, _) => Container(
-            color: backgroundColor,
-            child: Stack(children: [
-              Container(
-                  decoration: const BoxDecoration(
-                      image: DecorationImage(
-                          fit: BoxFit.fill,
-                          image: AssetImage("assets/images/loading-bg.png")))),
-              Container(
-                  decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                          begin: Alignment.bottomLeft,
-                          end: Alignment.topRight,
-                          colors: [
-                        cardColor,
-                        const Color(0xFF07051C),
-                        backgroundColor.withOpacity(0.34),
-                      ],
-                          stops: const [
-                        0,
-                        0.17,
-                        1
-                      ])),
-                  padding: const EdgeInsets.all(10),
-                  child: Column(children: [
-                    Row(children: [
-                      IconButton(
-                          alignment: Alignment.topLeft,
-                          tooltip: "About Bison Relay",
-                          iconSize: 50,
-                          onPressed: goToAbout,
-                          icon: Image.asset(
-                            "assets/images/icon.png",
-                          )),
-                    ]),
-                    const SizedBox(height: 208),
-                    Text("Setting up Bison Relay",
-                        style: TextStyle(
-                            color: textColor,
-                            fontSize: theme.getHugeFont(context),
-                            fontWeight: FontWeight.w200)),
-                    const SizedBox(height: 20),
-                    Text("Choose Network Mode",
-                        style: TextStyle(
-                            color: secondaryTextColor,
-                            fontSize: theme.getLargeFont(context),
-                            fontWeight: FontWeight.w300)),
-                    const SizedBox(height: 34),
-                    Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                      LoadingScreenButton(
-                          onPressed: () =>
-                              setChoice(context, LNNodeType.internal),
-                          text: "Internal",
-                          empty: true),
-                      const SizedBox(width: 13),
-                      LoadingScreenButton(
-                          onPressed: () =>
-                              setChoice(context, LNNodeType.external),
-                          text: "External",
-                          empty: true),
-                    ])
-                  ])),
+    return StartupScreen(Consumer<ThemeNotifier>(
+        builder: (context, theme, _) => Column(children: [
+              Row(children: [
+                IconButton(
+                    alignment: Alignment.topLeft,
+                    tooltip: "About Bison Relay",
+                    iconSize: 50,
+                    onPressed: goToAbout,
+                    icon: Image.asset(
+                      "assets/images/icon.png",
+                    )),
+              ]),
+              const SizedBox(height: 208),
+              Text("Setting up Bison Relay",
+                  style: TextStyle(
+                      color: textColor,
+                      fontSize: theme.getHugeFont(context),
+                      fontWeight: FontWeight.w200)),
+              const SizedBox(height: 20),
+              Text("Choose Network Mode",
+                  style: TextStyle(
+                      color: secondaryTextColor,
+                      fontSize: theme.getLargeFont(context),
+                      fontWeight: FontWeight.w300)),
+              const SizedBox(height: 34),
+              Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                LoadingScreenButton(
+                    onPressed: () => setChoice(context, LNNodeType.internal),
+                    text: "Internal",
+                    empty: true),
+                const SizedBox(width: 13),
+                LoadingScreenButton(
+                    onPressed: () => setChoice(context, LNNodeType.external),
+                    text: "External",
+                    empty: true),
+              ]),
               Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                 TextButton(
                   onPressed: () => goBack(context),

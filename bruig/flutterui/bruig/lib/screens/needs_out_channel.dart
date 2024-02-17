@@ -7,6 +7,7 @@ import 'package:bruig/components/info_grid.dart';
 import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/models/notifications.dart';
+import 'package:bruig/screens/startupscreen.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:golib_plugin/util.dart';
@@ -178,231 +179,179 @@ open channels to other LN nodes.''';
 
   @override
   Widget build(BuildContext context) {
-    var backgroundColor = const Color(0xFF19172C);
-    var cardColor = const Color(0xFF05031A);
-    var textColor = const Color(0xFF8E8D98);
-    var secondaryTextColor = const Color(0xFFE4E3E6);
-    var darkTextColor = const Color(0xFF5A5968);
-
-    return Consumer<ThemeNotifier>(
-        builder: (context, theme, child) => Scaffold(
-              body: Container(
-                color: backgroundColor,
-                child: Stack(children: [
-                  Container(
-                      decoration: const BoxDecoration(
-                          image: DecorationImage(
-                              fit: BoxFit.fill,
-                              image:
-                                  AssetImage("assets/images/loading-bg.png")))),
-                  Container(
-                    decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                            begin: Alignment.bottomLeft,
-                            end: Alignment.topRight,
-                            colors: [
-                          cardColor,
-                          const Color(0xFF07051C),
-                          backgroundColor.withOpacity(0.34),
-                        ],
-                            stops: const [
-                          0,
-                          0.17,
-                          1
-                        ])),
-                    padding: const EdgeInsets.all(10),
-                    child: ListView(
-                      physics: const ClampingScrollPhysics(),
-                      children: [
-                        const SizedBox(height: 89),
-                        Center(
-                          child: Text("Setting up Bison Relay",
-                              style: TextStyle(
-                                  color: textColor,
-                                  fontSize: theme.getHugeFont(context),
-                                  fontWeight: FontWeight.w200)),
-                        ),
-                        const SizedBox(height: 20),
-                        Center(
-                          child: Text("Add Outbound Capacity",
-                              style: TextStyle(
-                                  color: secondaryTextColor,
-                                  fontSize: theme.getLargeFont(context),
-                                  fontWeight: FontWeight.w300)),
-                        ),
-                        const SizedBox(height: 34),
-                        Center(
-                          child: SizedBox(
-                              width: 650,
-                              child: Text(
-                                '''
+    return StartupScreen(Consumer<ThemeNotifier>(
+      builder: (context, theme, child) => ListView(
+        physics: const ClampingScrollPhysics(),
+        children: [
+          const SizedBox(height: 89),
+          Center(
+            child: Text("Setting up Bison Relay",
+                style: TextStyle(
+                    color: theme.getTheme().dividerColor,
+                    fontSize: theme.getHugeFont(context),
+                    fontWeight: FontWeight.w200)),
+          ),
+          const SizedBox(height: 20),
+          Center(
+            child: Text("Add Outbound Capacity",
+                style: TextStyle(
+                    color: theme.getTheme().focusColor,
+                    fontSize: theme.getLargeFont(context),
+                    fontWeight: FontWeight.w300)),
+          ),
+          const SizedBox(height: 34),
+          Center(
+            child: SizedBox(
+                width: 650,
+                child: Text(
+                  '''
 The wallet requires LN channels with outbound capacity to send funds ("bandwidth") in order to pay for messages to and from the server and to pay other users for their content.
 
 Open a channel to an existing LN node, by entering its details below.
 
 Note that Lightning Network channels require managing off-chain data, and as such the wallet seed is NOT sufficient to restore their state.
                       ''',
-                                style: TextStyle(
-                                    color: secondaryTextColor,
-                                    fontSize: theme.getMediumFont(context),
-                                    fontWeight: FontWeight.w300),
-                              )),
-                        ),
-                        const SizedBox(height: 21),
-                        Container(
-                            margin: const EdgeInsets.only(
-                                left: 324 + 22, right: 324 + 20),
-                            child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Text(
-                                      textAlign: TextAlign.left,
-                                      "Wallet Balance:",
-                                      style: TextStyle(
-                                          color: darkTextColor,
-                                          fontSize: theme.getSmallFont(context),
-                                          fontWeight: FontWeight.w300)),
-                                  Text(
-                                      textAlign: TextAlign.right,
-                                      formatDCR(atomsToDCR(walletBalance)),
-                                      style: TextStyle(
-                                          color: darkTextColor,
-                                          fontSize: theme.getSmallFont(context),
-                                          fontWeight: FontWeight.w300)),
-                                ])),
-                        const SizedBox(height: 3),
-                        Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                  textAlign: TextAlign.left,
-                                  "Outbound Channel Capacity:",
-                                  style: TextStyle(
-                                      color: darkTextColor,
-                                      fontSize: theme.getSmallFont(context),
-                                      fontWeight: FontWeight.w300)),
-                              Text(
-                                  textAlign: TextAlign.right,
-                                  formatDCR(atomsToDCR(maxOutAmount)),
-                                  style: TextStyle(
-                                      color: darkTextColor,
-                                      fontSize: theme.getSmallFont(context),
-                                      fontWeight: FontWeight.w300))
-                            ]),
-                        Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                  textAlign: TextAlign.left,
-                                  "Pending Channels:",
-                                  style: TextStyle(
-                                      color: darkTextColor,
-                                      fontSize: theme.getSmallFont(context),
-                                      fontWeight: FontWeight.w300)),
-                              Text(
-                                  textAlign: TextAlign.right,
-                                  "$numPendingChannels",
-                                  style: TextStyle(
-                                      color: darkTextColor,
-                                      fontSize: theme.getSmallFont(context),
-                                      fontWeight: FontWeight.w300))
-                            ]),
-                        Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                  textAlign: TextAlign.left,
-                                  "Active Channels:",
-                                  style: TextStyle(
-                                      color: darkTextColor,
-                                      fontSize: theme.getSmallFont(context),
-                                      fontWeight: FontWeight.w300)),
-                              Text(
-                                  textAlign: TextAlign.right,
-                                  "$numChannels",
-                                  style: TextStyle(
-                                      color: darkTextColor,
-                                      fontSize: theme.getSmallFont(context),
-                                      fontWeight: FontWeight.w300))
-                            ]),
-                        const SizedBox(height: 10),
-                        preventMsg == ""
-                            ? Center(
-                                child: LoadingScreenButton(
-                                  empty: true,
-                                  onPressed: showAdvanced
-                                      ? hideAdvancedArea
-                                      : showAdvancedArea,
-                                  text: showAdvanced
-                                      ? "Hide Advanced"
-                                      : "Show Advanced",
-                                ),
-                              )
-                            : const Empty(),
-                        const SizedBox(height: 10),
-                        preventMsg == ""
-                            ? ListView(
-                                physics: const NeverScrollableScrollPhysics(),
-                                shrinkWrap: true,
-                                padding: const EdgeInsets.all(15.0),
-                                children: <Widget>[
-                                    SimpleInfoGrid([
-                                      Tuple2(
-                                          Text("Amount",
-                                              style: TextStyle(
-                                                  color: darkTextColor,
-                                                  fontSize: theme
-                                                      .getSmallFont(context),
-                                                  fontWeight: FontWeight.w300)),
-                                          SizedBox(
-                                            width: 150,
-                                            child: dcrInput(
-                                                controller: amountCtrl),
-                                          )),
-                                      Tuple2(
-                                          const SizedBox(height: 50),
-                                          LoadingScreenButton(
-                                            onPressed:
-                                                !loading ? openChannel : null,
-                                            text: "Request Outbound Channel",
-                                          ))
-                                    ]),
-                                    showAdvanced
-                                        ? SimpleInfoGrid([
-                                            Tuple2(
-                                                Text("Peer ID and Address",
-                                                    style: TextStyle(
-                                                        color: darkTextColor,
-                                                        fontSize:
-                                                            theme.getSmallFont(
-                                                                context),
-                                                        fontWeight:
-                                                            FontWeight.w300)),
-                                                TextField(
-                                                  controller: peerCtrl,
-                                                  decoration: const InputDecoration(
-                                                      hintText:
-                                                          "node-pub-key@addr:port"),
-                                                )),
-                                          ])
-                                        : const Empty(),
-                                  ])
-                            : Column(children: [
-                                const SizedBox(height: 30),
-                                Text(preventMsg,
-                                    style: TextStyle(color: textColor))
-                              ]),
-                        Center(
-                          child: LoadingScreenButton(
-                            onPressed: () => Navigator.of(context).pop(),
-                            text: "Skip",
-                          ),
-                        )
-                      ],
-                    ),
+                  style: TextStyle(
+                      color: theme.getTheme().focusColor,
+                      fontSize: theme.getMediumFont(context),
+                      fontWeight: FontWeight.w300),
+                )),
+          ),
+          const SizedBox(height: 21),
+          Container(
+              margin: const EdgeInsets.only(left: 324 + 22, right: 324 + 20),
+              child:
+                  Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                Text(
+                    textAlign: TextAlign.left,
+                    "Wallet Balance:",
+                    style: TextStyle(
+                        color: theme.getTheme().indicatorColor,
+                        fontSize: theme.getSmallFont(context),
+                        fontWeight: FontWeight.w300)),
+                Text(
+                    textAlign: TextAlign.right,
+                    formatDCR(atomsToDCR(walletBalance)),
+                    style: TextStyle(
+                        color: theme.getTheme().indicatorColor,
+                        fontSize: theme.getSmallFont(context),
+                        fontWeight: FontWeight.w300)),
+              ])),
+          const SizedBox(height: 3),
+          Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+            Text(
+                textAlign: TextAlign.left,
+                "Outbound Channel Capacity:",
+                style: TextStyle(
+                    color: theme.getTheme().indicatorColor,
+                    fontSize: theme.getSmallFont(context),
+                    fontWeight: FontWeight.w300)),
+            Text(
+                textAlign: TextAlign.right,
+                formatDCR(atomsToDCR(maxOutAmount)),
+                style: TextStyle(
+                    color: theme.getTheme().indicatorColor,
+                    fontSize: theme.getSmallFont(context),
+                    fontWeight: FontWeight.w300))
+          ]),
+          Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+            Text(
+                textAlign: TextAlign.left,
+                "Pending Channels:",
+                style: TextStyle(
+                    color: theme.getTheme().indicatorColor,
+                    fontSize: theme.getSmallFont(context),
+                    fontWeight: FontWeight.w300)),
+            Text(
+                textAlign: TextAlign.right,
+                "$numPendingChannels",
+                style: TextStyle(
+                    color: theme.getTheme().indicatorColor,
+                    fontSize: theme.getSmallFont(context),
+                    fontWeight: FontWeight.w300))
+          ]),
+          Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+            Text(
+                textAlign: TextAlign.left,
+                "Active Channels:",
+                style: TextStyle(
+                    color: theme.getTheme().indicatorColor,
+                    fontSize: theme.getSmallFont(context),
+                    fontWeight: FontWeight.w300)),
+            Text(
+                textAlign: TextAlign.right,
+                "$numChannels",
+                style: TextStyle(
+                    color: theme.getTheme().indicatorColor,
+                    fontSize: theme.getSmallFont(context),
+                    fontWeight: FontWeight.w300))
+          ]),
+          const SizedBox(height: 10),
+          preventMsg == ""
+              ? Center(
+                  child: LoadingScreenButton(
+                    empty: true,
+                    onPressed:
+                        showAdvanced ? hideAdvancedArea : showAdvancedArea,
+                    text: showAdvanced ? "Hide Advanced" : "Show Advanced",
                   ),
+                )
+              : const Empty(),
+          const SizedBox(height: 10),
+          preventMsg == ""
+              ? ListView(
+                  physics: const NeverScrollableScrollPhysics(),
+                  shrinkWrap: true,
+                  padding: const EdgeInsets.all(15.0),
+                  children: <Widget>[
+                      SimpleInfoGrid([
+                        Tuple2(
+                            Text("Amount",
+                                style: TextStyle(
+                                    color: theme.getTheme().indicatorColor,
+                                    fontSize: theme.getSmallFont(context),
+                                    fontWeight: FontWeight.w300)),
+                            SizedBox(
+                              width: 150,
+                              child: dcrInput(controller: amountCtrl),
+                            )),
+                        Tuple2(
+                            const SizedBox(height: 50),
+                            LoadingScreenButton(
+                              onPressed: !loading ? openChannel : null,
+                              text: "Request Outbound Channel",
+                            ))
+                      ]),
+                      showAdvanced
+                          ? SimpleInfoGrid([
+                              Tuple2(
+                                  Text("Peer ID and Address",
+                                      style: TextStyle(
+                                          color:
+                                              theme.getTheme().indicatorColor,
+                                          fontSize: theme.getSmallFont(context),
+                                          fontWeight: FontWeight.w300)),
+                                  TextField(
+                                    controller: peerCtrl,
+                                    decoration: const InputDecoration(
+                                        hintText: "node-pub-key@addr:port"),
+                                  )),
+                            ])
+                          : const Empty(),
+                    ])
+              : Column(children: [
+                  const SizedBox(height: 30),
+                  Text(preventMsg,
+                      style: TextStyle(color: theme.getTheme().dividerColor))
                 ]),
-              ),
-            ));
+          Center(
+            child: LoadingScreenButton(
+              onPressed: () => Navigator.of(context).pop(),
+              text: "Skip",
+            ),
+          )
+        ],
+      ),
+    ));
   }
 }

@@ -6,6 +6,7 @@ import 'package:bruig/components/copyable.dart';
 import 'package:bruig/components/dcr_input.dart';
 import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/components/snackbars.dart';
+import 'package:bruig/screens/startupscreen.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
@@ -79,8 +80,9 @@ class _GenerateInviteScreenState extends State<GenerateInviteScreen> {
   }
 
   Widget buildSendFundsWidget(BuildContext context) {
-    var textColor = const Color(0xFF8E8D98);
-    var darkTextColor = const Color(0xFF5A5968);
+    var theme = Theme.of(context);
+    var textColor = theme.dividerColor;
+    var darkTextColor = theme.indicatorColor;
 
     if (!hasExtraAccounts) {
       return SizedBox(
@@ -147,7 +149,8 @@ class _GenerateInviteScreenState extends State<GenerateInviteScreen> {
   }
 
   List<Widget> buildGeneratedInvite(BuildContext context) {
-    var textColor = const Color(0xFF8E8D98);
+    var theme = Theme.of(context);
+    var textColor = theme.dividerColor;
     var ts = TextStyle(color: textColor);
     var gen = generated!;
     return [
@@ -169,7 +172,7 @@ class _GenerateInviteScreenState extends State<GenerateInviteScreen> {
 
   List<Widget> buildGeneratePanel(BuildContext context) {
     var theme = Theme.of(context);
-    var textColor = const Color(0xFF8E8D98);
+    var textColor = theme.dividerColor;
     return [
       SizedBox(
           width: 400,
@@ -215,51 +218,19 @@ class _GenerateInviteScreenState extends State<GenerateInviteScreen> {
 
   @override
   Widget build(BuildContext context) {
-    var backgroundColor = const Color(0xFF19172C);
-    var cardColor = const Color(0xFF05031A);
-    var textColor = const Color(0xFF8E8D98);
-    return Consumer<ThemeNotifier>(
-        builder: (context, theme, child) => Scaffold(
-            body: Container(
-                color: backgroundColor,
-                child: Stack(children: [
-                  Container(
-                      decoration: const BoxDecoration(
-                          image: DecorationImage(
-                              fit: BoxFit.fill,
-                              image:
-                                  AssetImage("assets/images/loading-bg.png")))),
-                  Center(
-                      child: Container(
-                          decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                  begin: Alignment.bottomLeft,
-                                  end: Alignment.topRight,
-                                  colors: [
-                                cardColor,
-                                const Color(0xFF07051C),
-                                backgroundColor.withOpacity(0.34),
-                              ],
-                                  stops: const [
-                                0,
-                                0.17,
-                                1
-                              ])),
-                          padding: const EdgeInsets.all(10),
-                          child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Expanded(child: Empty()),
-                                Text("Generate Invite",
-                                    style: TextStyle(
-                                        color: textColor,
-                                        fontSize: theme.getHugeFont(context),
-                                        fontWeight: FontWeight.w200)),
-                                const SizedBox(height: 20),
-                                ...(generated == null
-                                    ? buildGeneratePanel(context)
-                                    : buildGeneratedInvite(context)),
-                              ])))
-                ]))));
+    return StartupScreen(Consumer<ThemeNotifier>(
+        builder: (context, theme, child) =>
+            Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+              const Expanded(child: Empty()),
+              Text("Generate Invite",
+                  style: TextStyle(
+                      color: theme.getTheme().dividerColor,
+                      fontSize: theme.getHugeFont(context),
+                      fontWeight: FontWeight.w200)),
+              const SizedBox(height: 20),
+              ...(generated == null
+                  ? buildGeneratePanel(context)
+                  : buildGeneratedInvite(context)),
+            ])));
   }
 }

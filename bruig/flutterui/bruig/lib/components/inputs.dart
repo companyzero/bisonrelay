@@ -30,7 +30,7 @@ Widget intInput({
         builder: (context, theme, _) => TextField(
             style: TextStyle(
                 fontSize: theme.getSmallFont(context),
-                color: const Color(0xFF8E8D98)),
+                color: theme.getTheme().dividerColor),
             controller: controller,
             onChanged: (String v) {
               try {
@@ -45,7 +45,7 @@ Widget intInput({
             decoration: InputDecoration(
               hintStyle: TextStyle(
                   fontSize: theme.getSmallFont(context),
-                  color: const Color(0xFF8E8D98)),
+                  color: theme.getTheme().dividerColor),
               filled: true,
-              fillColor: const Color(0xFF121026),
+              fillColor: theme.getTheme().hoverColor,
             )));

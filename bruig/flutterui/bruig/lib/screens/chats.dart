@@ -141,8 +141,8 @@ class _FundsNeededPage extends StatelessWidget {
   Widget build(BuildContext context) {
     var theme = Theme.of(context);
     var backgroundColor = theme.backgroundColor;
-    var textColor = const Color(0xFF8E8D98);
-    var secondaryTextColor = const Color(0xFFE4E3E6);
+    var textColor = theme.dividerColor;
+    var secondaryTextColor = theme.focusColor;
     bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
 
     return Consumer<ThemeNotifier>(
@@ -200,7 +200,7 @@ class _LoadingAddressBookPage extends StatelessWidget {
   Widget build(BuildContext context) {
     var theme = Theme.of(context);
     var backgroundColor = theme.backgroundColor;
-    var textColor = const Color(0xFF8E8D98);
+    var textColor = theme.dividerColor;
 
     return Consumer<ThemeNotifier>(
         builder: (context, theme, child) => Container(
@@ -250,8 +250,8 @@ class _InviteNeededPageState extends State<_InviteNeededPage> {
   Widget build(BuildContext context) {
     var theme = Theme.of(context);
     var backgroundColor = theme.backgroundColor;
-    var textColor = const Color(0xFF8E8D98);
-    var secondaryTextColor = const Color(0xFFE4E3E6);
+    var textColor = theme.dividerColor;
+    var secondaryTextColor = theme.focusColor;
     bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
     return Consumer<ThemeNotifier>(
         builder: (context, theme, child) => Container(

@@ -6,6 +6,7 @@ import 'package:bruig/components/info_grid.dart';
 import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/models/notifications.dart';
+import 'package:bruig/screens/startupscreen.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:golib_plugin/util.dart';
@@ -186,63 +187,31 @@ cNPr8Y+sSs2MHf6xMNBQzV4KuIlPIg==
 
   @override
   Widget build(BuildContext context) {
-    var backgroundColor = const Color(0xFF19172C);
-    var cardColor = const Color(0xFF05031A);
-    var textColor = const Color(0xFF8E8D98);
-    var secondaryTextColor = const Color(0xFFE4E3E6);
-    var darkTextColor = const Color(0xFF5A5968);
-
-    return Consumer<ThemeNotifier>(
-        builder: (context, theme, child) => Scaffold(
-              body: Container(
-                color: backgroundColor,
-                child: Stack(children: [
-                  Container(
-                      decoration: const BoxDecoration(
-                          image: DecorationImage(
-                              fit: BoxFit.fill,
-                              image:
-                                  AssetImage("assets/images/loading-bg.png")))),
-                  Container(
-                    decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                            begin: Alignment.bottomLeft,
-                            end: Alignment.topRight,
-                            colors: [
-                          cardColor,
-                          const Color(0xFF07051C),
-                          backgroundColor.withOpacity(0.34),
-                        ],
-                            stops: const [
-                          0,
-                          0.17,
-                          1
-                        ])),
-                    padding: const EdgeInsets.all(10),
-                    child: ListView(
-                      physics: const ClampingScrollPhysics(),
-                      children: [
-                        const SizedBox(height: 89),
-                        Center(
-                          child: Text("Setting up Bison Relay",
-                              style: TextStyle(
-                                  color: textColor,
-                                  fontSize: theme.getHugeFont(context),
-                                  fontWeight: FontWeight.w200)),
-                        ),
-                        const SizedBox(height: 20),
-                        Center(
-                          child: Text("Add Inbound Capacity",
-                              style: TextStyle(
-                                  color: secondaryTextColor,
-                                  fontSize: theme.getLargeFont(context),
-                                  fontWeight: FontWeight.w300)),
-                        ),
-                        const SizedBox(height: 34),
-                        Center(
-                            child: SizedBox(
-                          width: 650,
-                          child: Text('''
+    return StartupScreen(Consumer<ThemeNotifier>(
+      builder: (context, theme, child) => ListView(
+        physics: const ClampingScrollPhysics(),
+        children: [
+          const SizedBox(height: 89),
+          Center(
+            child: Text("Setting up Bison Relay",
+                style: TextStyle(
+                    color: theme.getTheme().dividerColor,
+                    fontSize: theme.getHugeFont(context),
+                    fontWeight: FontWeight.w200)),
+          ),
+          const SizedBox(height: 20),
+          Center(
+            child: Text("Add Inbound Capacity",
+                style: TextStyle(
+                    color: theme.getTheme().focusColor,
+                    fontSize: theme.getLargeFont(context),
+                    fontWeight: FontWeight.w300)),
+          ),
+          const SizedBox(height: 34),
+          Center(
+              child: SizedBox(
+            width: 650,
+            child: Text('''
 The wallet requires LN channels with inbound capacity to receive funds to be able to receive payments from other users.
 
 One way of opening a channel with inbound capacity is to pay for a node to open a channel back to your LN wallet. This is done through a "Liquidity Provider" service.
@@ -251,171 +220,152 @@ Note that having a channel with inbound capacity is not for sending or receiving
 
 After the channel is opened, it may take up to 6 confirmations for it to be broadcast through the network. Individual peers may take longer to detect and to consider the channel to send payments.
                 ''',
-                              style: TextStyle(
-                                  color: secondaryTextColor,
-                                  fontSize: theme.getMediumFont(context),
-                                  fontWeight: FontWeight.w300)),
-                        )),
-                        const SizedBox(height: 21),
-                        Container(
-                            margin: const EdgeInsets.only(
-                                left: 324 + 22, right: 324 + 20),
-                            child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Text(
-                                      textAlign: TextAlign.left,
-                                      "Outbound Channel Capacity:",
-                                      style: TextStyle(
-                                          color: darkTextColor,
-                                          fontSize: theme.getSmallFont(context),
-                                          fontWeight: FontWeight.w300)),
-                                  Text(
-                                      textAlign: TextAlign.right,
-                                      formatDCR(atomsToDCR(maxOutAmount)),
-                                      style: TextStyle(
-                                          color: darkTextColor,
-                                          fontSize: theme.getSmallFont(context),
-                                          fontWeight: FontWeight.w300)),
-                                ])),
-                        const SizedBox(height: 3),
-                        Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                  textAlign: TextAlign.left,
-                                  "Inbound Channel Capacity:",
-                                  style: TextStyle(
-                                      color: darkTextColor,
-                                      fontSize: theme.getSmallFont(context),
-                                      fontWeight: FontWeight.w300)),
-                              Text(
-                                  textAlign: TextAlign.right,
-                                  formatDCR(atomsToDCR(maxInAmount)),
-                                  style: TextStyle(
-                                      color: darkTextColor,
-                                      fontSize: theme.getSmallFont(context),
-                                      fontWeight: FontWeight.w300))
-                            ]),
-                        Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                  textAlign: TextAlign.left,
-                                  "Pending Channels:",
-                                  style: TextStyle(
-                                      color: darkTextColor,
-                                      fontSize: theme.getSmallFont(context),
-                                      fontWeight: FontWeight.w300)),
-                              Text(
-                                  textAlign: TextAlign.right,
-                                  "$numPendingChannels",
-                                  style: TextStyle(
-                                      color: darkTextColor,
-                                      fontSize: theme.getSmallFont(context),
-                                      fontWeight: FontWeight.w300))
-                            ]),
-                        Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                  textAlign: TextAlign.left,
-                                  "Active Channels:",
-                                  style: TextStyle(
-                                      color: darkTextColor,
-                                      fontSize: theme.getSmallFont(context),
-                                      fontWeight: FontWeight.w300)),
-                              Text(
-                                  textAlign: TextAlign.right,
-                                  "$numChannels",
-                                  style: TextStyle(
-                                      color: darkTextColor,
-                                      fontSize: theme.getSmallFont(context),
-                                      fontWeight: FontWeight.w300))
-                            ]),
-                        const SizedBox(height: 10),
-                        preventMsg == ""
-                            ? Center(
-                                child: LoadingScreenButton(
-                                  empty: true,
-                                  onPressed: showAdvanced
-                                      ? hideAdvancedArea
-                                      : showAdvancedArea,
-                                  text: showAdvanced
-                                      ? "Hide Advanced"
-                                      : "Show Advanced",
-                                ),
-                              )
-                            : Empty(),
-                        const SizedBox(height: 10),
-                        preventMsg == ""
-                            ? ListView(
-                                physics: const NeverScrollableScrollPhysics(),
-                                shrinkWrap: true,
-                                padding: const EdgeInsets.all(15.0),
-                                children: [
-                                    Text("Amount",
-                                        style: TextStyle(
-                                            color: darkTextColor,
-                                            fontSize:
-                                                theme.getSmallFont(context),
-                                            fontWeight: FontWeight.w300)),
-                                    SizedBox(
-                                      width: 150,
-                                      child: dcrInput(controller: amountCtrl),
-                                    ),
-                                    const SizedBox(height: 50),
-                                    LoadingScreenButton(
-                                      onPressed:
-                                          !loading ? requestRecvCapacity : null,
-                                      text: "Request Inbound Channel",
-                                    ),
-                                    if (showAdvanced) ...[
-                                      const SizedBox(height: 10),
-                                      Text("LP Server Address",
-                                          style: TextStyle(
-                                              color: darkTextColor,
-                                              fontSize:
-                                                  theme.getSmallFont(context),
-                                              fontWeight: FontWeight.w300)),
-                                      TextField(
-                                        controller: serverCtrl,
-                                        decoration: const InputDecoration(
-                                            hintText:
-                                                "https://lpd-server:port"),
-                                      ),
-                                      const SizedBox(height: 10),
-                                      Text("LP Server Cert",
-                                          style: TextStyle(
-                                              color: darkTextColor,
-                                              fontSize:
-                                                  theme.getSmallFont(context),
-                                              fontWeight: FontWeight.w300)),
-                                      TextField(
-                                        controller: certCtrl,
-                                        maxLines: null,
-                                        keyboardType: TextInputType.multiline,
-                                      )
-                                    ]
-                                  ])
-                            : Column(children: [
-                                const SizedBox(height: 30),
-                                Text(
-                                  preventMsg,
-                                  style: TextStyle(color: textColor),
-                                )
-                              ]),
-                        Center(
-                          child: LoadingScreenButton(
-                            onPressed: () => Navigator.of(context).pop(),
-                            text: "Skip",
-                          ),
-                        )
-                      ],
-                    ),
+                style: TextStyle(
+                    color: theme.getTheme().focusColor,
+                    fontSize: theme.getMediumFont(context),
+                    fontWeight: FontWeight.w300)),
+          )),
+          const SizedBox(height: 21),
+          Container(
+              margin: const EdgeInsets.only(left: 324 + 22, right: 324 + 20),
+              child:
+                  Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                Text(
+                    textAlign: TextAlign.left,
+                    "Outbound Channel Capacity:",
+                    style: TextStyle(
+                        color: theme.getTheme().indicatorColor,
+                        fontSize: theme.getSmallFont(context),
+                        fontWeight: FontWeight.w300)),
+                Text(
+                    textAlign: TextAlign.right,
+                    formatDCR(atomsToDCR(maxOutAmount)),
+                    style: TextStyle(
+                        color: theme.getTheme().indicatorColor,
+                        fontSize: theme.getSmallFont(context),
+                        fontWeight: FontWeight.w300)),
+              ])),
+          const SizedBox(height: 3),
+          Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+            Text(
+                textAlign: TextAlign.left,
+                "Inbound Channel Capacity:",
+                style: TextStyle(
+                    color: theme.getTheme().indicatorColor,
+                    fontSize: theme.getSmallFont(context),
+                    fontWeight: FontWeight.w300)),
+            Text(
+                textAlign: TextAlign.right,
+                formatDCR(atomsToDCR(maxInAmount)),
+                style: TextStyle(
+                    color: theme.getTheme().indicatorColor,
+                    fontSize: theme.getSmallFont(context),
+                    fontWeight: FontWeight.w300))
+          ]),
+          Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+            Text(
+                textAlign: TextAlign.left,
+                "Pending Channels:",
+                style: TextStyle(
+                    color: theme.getTheme().indicatorColor,
+                    fontSize: theme.getSmallFont(context),
+                    fontWeight: FontWeight.w300)),
+            Text(
+                textAlign: TextAlign.right,
+                "$numPendingChannels",
+                style: TextStyle(
+                    color: theme.getTheme().indicatorColor,
+                    fontSize: theme.getSmallFont(context),
+                    fontWeight: FontWeight.w300))
+          ]),
+          Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+            Text(
+                textAlign: TextAlign.left,
+                "Active Channels:",
+                style: TextStyle(
+                    color: theme.getTheme().indicatorColor,
+                    fontSize: theme.getSmallFont(context),
+                    fontWeight: FontWeight.w300)),
+            Text(
+                textAlign: TextAlign.right,
+                "$numChannels",
+                style: TextStyle(
+                    color: theme.getTheme().indicatorColor,
+                    fontSize: theme.getSmallFont(context),
+                    fontWeight: FontWeight.w300))
+          ]),
+          const SizedBox(height: 10),
+          preventMsg == ""
+              ? Center(
+                  child: LoadingScreenButton(
+                    empty: true,
+                    onPressed:
+                        showAdvanced ? hideAdvancedArea : showAdvancedArea,
+                    text: showAdvanced ? "Hide Advanced" : "Show Advanced",
                   ),
+                )
+              : Empty(),
+          const SizedBox(height: 10),
+          preventMsg == ""
+              ? ListView(
+                  physics: const NeverScrollableScrollPhysics(),
+                  shrinkWrap: true,
+                  padding: const EdgeInsets.all(15.0),
+                  children: [
+                      Text("Amount",
+                          style: TextStyle(
+                              color: theme.getTheme().indicatorColor,
+                              fontSize: theme.getSmallFont(context),
+                              fontWeight: FontWeight.w300)),
+                      SizedBox(
+                        width: 150,
+                        child: dcrInput(controller: amountCtrl),
+                      ),
+                      const SizedBox(height: 50),
+                      LoadingScreenButton(
+                        onPressed: !loading ? requestRecvCapacity : null,
+                        text: "Request Inbound Channel",
+                      ),
+                      if (showAdvanced) ...[
+                        const SizedBox(height: 10),
+                        Text("LP Server Address",
+                            style: TextStyle(
+                                color: theme.getTheme().indicatorColor,
+                                fontSize: theme.getSmallFont(context),
+                                fontWeight: FontWeight.w300)),
+                        TextField(
+                          controller: serverCtrl,
+                          decoration: const InputDecoration(
+                              hintText: "https://lpd-server:port"),
+                        ),
+                        const SizedBox(height: 10),
+                        Text("LP Server Cert",
+                            style: TextStyle(
+                                color: theme.getTheme().indicatorColor,
+                                fontSize: theme.getSmallFont(context),
+                                fontWeight: FontWeight.w300)),
+                        TextField(
+                          controller: certCtrl,
+                          maxLines: null,
+                          keyboardType: TextInputType.multiline,
+                        )
+                      ]
+                    ])
+              : Column(children: [
+                  const SizedBox(height: 30),
+                  Text(
+                    preventMsg,
+                    style: TextStyle(color: theme.getTheme().dividerColor),
+                  )
                 ]),
-              ),
-            ));
+          Center(
+            child: LoadingScreenButton(
+              onPressed: () => Navigator.of(context).pop(),
+              text: "Skip",
+            ),
+          )
+        ],
+      ),
+    ));
   }
 }

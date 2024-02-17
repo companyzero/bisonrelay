@@ -7,6 +7,7 @@ import 'package:bruig/components/recent_log.dart';
 import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/models/log.dart';
 import 'package:bruig/models/notifications.dart';
+import 'package:bruig/screens/startupscreen.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
@@ -324,53 +325,26 @@ Cancelling onboarding means the wallet setup, including obtaining on-chain funds
       ];
     }
 
-    return Scaffold(
-        body: Container(
-            color: backgroundColor,
-            child: Stack(children: [
-              Container(
-                  decoration: const BoxDecoration(
-                      image: DecorationImage(
-                          fit: BoxFit.fill,
-                          image: AssetImage("assets/images/loading-bg.png")))),
-              Container(
-                  decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                          begin: Alignment.bottomLeft,
-                          end: Alignment.topRight,
-                          colors: [
-                        cardColor,
-                        const Color(0xFF07051C),
-                        backgroundColor.withOpacity(0.34),
-                      ],
-                          stops: const [
-                        0,
-                        0.17,
-                        1
-                      ])),
-                  padding: const EdgeInsets.all(10),
-                  child: Column(children: [
-                    Row(children: [
-                      IconButton(
-                          alignment: Alignment.topLeft,
-                          tooltip: "About Bison Relay",
-                          iconSize: 50,
-                          onPressed: goToAbout,
-                          icon: Image.asset(
-                            "assets/images/icon.png",
-                          )),
-                    ]),
-                    const SizedBox(height: 39),
-                    Consumer<ThemeNotifier>(
-                        builder: (context, theme, child) => Text(
-                            "Setting up Bison Relay",
-                            style: TextStyle(
-                                color: textColor,
-                                fontSize: theme.getHugeFont(context),
-                                fontWeight: FontWeight.w200))),
-                    const SizedBox(height: 20),
-                    ...children,
-                  ]))
-            ])));
+    return StartupScreen(Column(children: [
+      Row(children: [
+        IconButton(
+            alignment: Alignment.topLeft,
+            tooltip: "About Bison Relay",
+            iconSize: 50,
+            onPressed: goToAbout,
+            icon: Image.asset(
+              "assets/images/icon.png",
+            )),
+      ]),
+      const SizedBox(height: 39),
+      Consumer<ThemeNotifier>(
+          builder: (context, theme, child) => Text("Setting up Bison Relay",
+              style: TextStyle(
+                  color: textColor,
+                  fontSize: theme.getHugeFont(context),
+                  fontWeight: FontWeight.w200))),
+      const SizedBox(height: 20),
+      ...children,
+    ]));
   }
 }

@@ -28,7 +28,8 @@ class _UserLastMsgTime extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    var textColor = const Color(0xFF8E8D98);
+    var theme = Theme.of(context);
+    var textColor = theme.dividerColor;
     return Container(
       margin: const EdgeInsets.only(top: 5),
       child: Row(children: [
@@ -94,7 +95,8 @@ class _ContactsLastMsgTimesScreenState
 
   @override
   Widget build(BuildContext context) {
-    var textColor = const Color(0xFF8E8D98);
+    var theme = Theme.of(context);
+    var textColor = theme.dividerColor;
     return Consumer<ThemeNotifier>(
         builder: (context, theme, child) => Scaffold(
               body: Center(

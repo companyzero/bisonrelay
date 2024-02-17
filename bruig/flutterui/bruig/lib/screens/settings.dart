@@ -198,7 +198,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
             borderRadius: BorderRadius.circular(3), color: backgroundColor),
         padding: const EdgeInsets.all(10),
         child: Column(children: [
-          /*
           // XXX HIDING THEME BUTTON UNTIL LIGHT THEME PROVIDED
           ElevatedButton(
             onPressed: () => {
@@ -210,7 +209,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ? Text('Set Light Theme')
                 : Text('Set Dark Theme'),
           ),
-          */
           Tooltip(
               message: "User avatar. Click to select a new image.",
               child: InkWell(

@@ -6,6 +6,7 @@ import 'package:bruig/models/newconfig.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:bruig/theme_manager.dart';
+import 'package:bruig/screens/startupscreen.dart';
 
 class LNExternalWalletPage extends StatefulWidget {
   final NewConfigModel newconf;
@@ -77,171 +78,141 @@ class _LNExternalWalletPageState extends State<LNExternalWalletPage> {
 
   @override
   Widget build(BuildContext context) {
-    var backgroundColor = const Color(0xFF19172C);
-    var cardColor = const Color(0xFF05031A);
-    var textColor = const Color(0xFF8E8D98);
-    var secondaryTextColor = const Color(0xFFE4E3E6);
-    var darkTextColor = const Color(0xFF5A5968);
-
     void goToAbout() {
       Navigator.of(context).pushNamed("/about");
     }
 
-    return Consumer<ThemeNotifier>(
-        builder: (context, theme, _) => Container(
-            color: backgroundColor,
-            child: Stack(children: [
-              Container(
-                  decoration: const BoxDecoration(
-                      image: DecorationImage(
-                          fit: BoxFit.fill,
-                          image: AssetImage("assets/images/loading-bg.png")))),
-              Container(
-                  decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                          begin: Alignment.bottomLeft,
-                          end: Alignment.topRight,
-                          colors: [
-                        cardColor,
-                        const Color(0xFF07051C),
-                        backgroundColor.withOpacity(0.34),
-                      ],
-                          stops: const [
-                        0,
-                        0.17,
-                        1
-                      ])),
-                  padding: const EdgeInsets.all(10),
-                  child: Column(children: [
-                    Row(children: [
-                      IconButton(
-                          alignment: Alignment.topLeft,
-                          tooltip: "About Bison Relay",
-                          iconSize: 50,
-                          onPressed: goToAbout,
-                          icon: Image.asset(
-                            "assets/images/icon.png",
-                          )),
-                    ]),
-                    const SizedBox(height: 39),
-                    Text("Setting up Bison Relay",
+    return StartupScreen(Consumer<ThemeNotifier>(
+        builder: (context, theme, _) => Column(children: [
+              Row(children: [
+                IconButton(
+                    alignment: Alignment.topLeft,
+                    tooltip: "About Bison Relay",
+                    iconSize: 50,
+                    onPressed: goToAbout,
+                    icon: Image.asset(
+                      "assets/images/icon.png",
+                    )),
+              ]),
+              const SizedBox(height: 39),
+              Text("Setting up Bison Relay",
+                  style: TextStyle(
+                      color: theme.getTheme().dividerColor,
+                      fontSize: theme.getHugeFont(context),
+                      fontWeight: FontWeight.w200)),
+              const SizedBox(height: 20),
+              Text("External dcrlnd Config",
+                  style: TextStyle(
+                      color: theme.getTheme().focusColor,
+                      fontSize: theme.getLargeFont(context),
+                      fontWeight: FontWeight.w300)),
+              const SizedBox(height: 34),
+              Column(children: [
+                SizedBox(
+                    width: 377,
+                    child: Text("RPC Host",
+                        textAlign: TextAlign.left,
                         style: TextStyle(
-                            color: textColor,
-                            fontSize: theme.getHugeFont(context),
-                            fontWeight: FontWeight.w200)),
-                    const SizedBox(height: 20),
-                    Text("External dcrlnd Config",
+                            color: theme.getTheme().indicatorColor,
+                            fontSize: theme.getSmallFont(context),
+                            fontWeight: FontWeight.w300))),
+                const SizedBox(height: 5),
+                Center(
+                    child: SizedBox(
+                        width: 377,
+                        child: TextField(
+                            cursorColor: theme.getTheme().focusColor,
+                            decoration: InputDecoration(
+                                border: InputBorder.none,
+                                hintText: "RPC Host",
+                                hintStyle: TextStyle(
+                                    fontSize: theme.getLargeFont(context),
+                                    color: theme.getTheme().dividerColor),
+                                filled: true,
+                                fillColor: theme.getTheme().cardColor),
+                            style: TextStyle(
+                                color: theme.getTheme().focusColor,
+                                fontSize: theme.getLargeFont(context)),
+                            controller: hostCtrl))),
+                const SizedBox(height: 13),
+                SizedBox(
+                    width: 377,
+                    child: Text("TLS Cert Path",
+                        textAlign: TextAlign.left,
                         style: TextStyle(
-                            color: secondaryTextColor,
-                            fontSize: theme.getLargeFont(context),
-                            fontWeight: FontWeight.w300)),
-                    const SizedBox(height: 34),
-                    Column(children: [
-                      SizedBox(
-                          width: 377,
-                          child: Text("RPC Host",
-                              textAlign: TextAlign.left,
-                              style: TextStyle(
-                                  color: darkTextColor,
-                                  fontSize: theme.getSmallFont(context),
-                                  fontWeight: FontWeight.w300))),
-                      const SizedBox(height: 5),
-                      Center(
-                          child: SizedBox(
-                              width: 377,
-                              child: TextField(
-                                  cursorColor: secondaryTextColor,
-                                  decoration: InputDecoration(
-                                      border: InputBorder.none,
-                                      hintText: "RPC Host",
-                                      hintStyle: TextStyle(
-                                          fontSize: theme.getLargeFont(context),
-                                          color: textColor),
-                                      filled: true,
-                                      fillColor: cardColor),
-                                  style: TextStyle(
-                                      color: secondaryTextColor,
-                                      fontSize: theme.getLargeFont(context)),
-                                  controller: hostCtrl))),
-                      const SizedBox(height: 13),
-                      SizedBox(
-                          width: 377,
-                          child: Text("TLS Cert Path",
-                              textAlign: TextAlign.left,
-                              style: TextStyle(
-                                  color: darkTextColor,
-                                  fontSize: theme.getSmallFont(context),
-                                  fontWeight: FontWeight.w300))),
-                      const SizedBox(height: 5),
-                      Center(
-                          child: SizedBox(
-                              width: 377,
-                              child: TextField(
-                                  cursorColor: secondaryTextColor,
-                                  decoration: InputDecoration(
-                                      border: InputBorder.none,
-                                      hintText: "TLS Cert Path",
-                                      hintStyle: TextStyle(
-                                          fontSize: theme.getLargeFont(context),
-                                          color: textColor),
-                                      filled: true,
-                                      fillColor: cardColor),
-                                  style: TextStyle(
-                                      color: secondaryTextColor,
-                                      fontSize: theme.getLargeFont(context)),
-                                  controller: tlsCtrl))),
-                      const SizedBox(height: 13),
-                      SizedBox(
-                          width: 377,
-                          child: Text("Macarooon Path",
-                              textAlign: TextAlign.left,
-                              style: TextStyle(
-                                  color: darkTextColor,
-                                  fontSize: theme.getSmallFont(context),
-                                  fontWeight: FontWeight.w300))),
-                      const SizedBox(height: 5),
-                      Center(
-                          child: SizedBox(
-                              width: 377,
-                              child: TextField(
-                                  cursorColor: secondaryTextColor,
-                                  decoration: InputDecoration(
-                                      border: InputBorder.none,
-                                      hintText: "Macaroon Path",
-                                      hintStyle: TextStyle(
-                                          fontSize: theme.getLargeFont(context),
-                                          color: textColor),
-                                      filled: true,
-                                      fillColor: cardColor),
-                                  style: TextStyle(
-                                      color: secondaryTextColor,
-                                      fontSize: theme.getLargeFont(context)),
-                                  controller: macaroonCtrl))),
-                      const SizedBox(height: 34),
-                      Center(
-                          child: SizedBox(
-                              width: 283,
-                              child: Row(children: [
-                                const SizedBox(width: 35),
-                                LoadingScreenButton(
-                                  onPressed: !loading ? done : null,
-                                  text: "Connect Wallet",
-                                ),
-                                const SizedBox(width: 10),
-                                loading
-                                    ? SizedBox(
-                                        height: 25,
-                                        width: 25,
-                                        child: CircularProgressIndicator(
-                                            value: null,
-                                            backgroundColor: backgroundColor,
-                                            color: textColor,
-                                            strokeWidth: 2),
-                                      )
-                                    : const SizedBox(width: 25),
-                              ])))
-                    ])
-                  ]))
+                            color: theme.getTheme().indicatorColor,
+                            fontSize: theme.getSmallFont(context),
+                            fontWeight: FontWeight.w300))),
+                const SizedBox(height: 5),
+                Center(
+                    child: SizedBox(
+                        width: 377,
+                        child: TextField(
+                            cursorColor: theme.getTheme().focusColor,
+                            decoration: InputDecoration(
+                                border: InputBorder.none,
+                                hintText: "TLS Cert Path",
+                                hintStyle: TextStyle(
+                                    fontSize: theme.getLargeFont(context),
+                                    color: theme.getTheme().dividerColor),
+                                filled: true,
+                                fillColor: theme.getTheme().cardColor),
+                            style: TextStyle(
+                                color: theme.getTheme().focusColor,
+                                fontSize: theme.getLargeFont(context)),
+                            controller: tlsCtrl))),
+                const SizedBox(height: 13),
+                SizedBox(
+                    width: 377,
+                    child: Text("Macarooon Path",
+                        textAlign: TextAlign.left,
+                        style: TextStyle(
+                            color: theme.getTheme().indicatorColor,
+                            fontSize: theme.getSmallFont(context),
+                            fontWeight: FontWeight.w300))),
+                const SizedBox(height: 5),
+                Center(
+                    child: SizedBox(
+                        width: 377,
+                        child: TextField(
+                            cursorColor: theme.getTheme().focusColor,
+                            decoration: InputDecoration(
+                                border: InputBorder.none,
+                                hintText: "Macaroon Path",
+                                hintStyle: TextStyle(
+                                    fontSize: theme.getLargeFont(context),
+                                    color: theme.getTheme().dividerColor),
+                                filled: true,
+                                fillColor: theme.getTheme().cardColor),
+                            style: TextStyle(
+                                color: theme.getTheme().focusColor,
+                                fontSize: theme.getLargeFont(context)),
+                            controller: macaroonCtrl))),
+                const SizedBox(height: 34),
+                Center(
+                    child: SizedBox(
+                        width: 283,
+                        child: Row(children: [
+                          const SizedBox(width: 35),
+                          LoadingScreenButton(
+                            onPressed: !loading ? done : null,
+                            text: "Connect Wallet",
+                          ),
+                          const SizedBox(width: 10),
+                          loading
+                              ? SizedBox(
+                                  height: 25,
+                                  width: 25,
+                                  child: CircularProgressIndicator(
+                                      value: null,
+                                      backgroundColor:
+                                          theme.getTheme().backgroundColor,
+                                      color: theme.getTheme().dividerColor,
+                                      strokeWidth: 2),
+                                )
+                              : const SizedBox(width: 25),
+                        ])))
+              ])
             ])));
   }
 }

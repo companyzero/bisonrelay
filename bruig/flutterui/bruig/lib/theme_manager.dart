@@ -51,31 +51,31 @@ class ThemeNotifier with ChangeNotifier {
       fontFamily: "Inter",
       fontFamilyFallback: [emojifont],
       //primarySwatch: Colors.blue,
-      primaryColor: Colors.black,
-      brightness: Brightness.dark,
-      backgroundColor: const Color(0xFF19172C),
-      highlightColor: const Color(0xFF252438),
-      dividerColor: const Color(0xFF8E8D98),
-      canvasColor: const Color(0xFF05031A),
-      cardColor: const Color(0xFF05031A),
+      primaryColor: Colors.white,
+      brightness: Brightness.light,
+      backgroundColor: Color(0xFFE8E7F0),
+      highlightColor: Color(0xFFDFDFE9),
+      dividerColor: Color(0xFF232225),
+      canvasColor: Color(0xFFEDEBF8),
+      cardColor: Color(0xFFEDEBF8),
       errorColor: Colors.red,
-      focusColor: const Color(0xFFE4E3E6),
-      hoverColor: const Color(0xFF121026),
-      scaffoldBackgroundColor: const Color(0xFF19172C),
+      focusColor: Color(0xFF06030A),
+      hoverColor: Color(0xFFDFDDEC),
+      scaffoldBackgroundColor: Color(0xFFE8E7F3),
       bottomAppBarColor: const Color(0xFF0175CE),
-      indicatorColor: const Color(0xFF5A5968),
-      selectedRowColor: Colors.black38,
+      indicatorColor: Color(0xFF3A3A3F),
+      selectedRowColor: Colors.white38,
       shadowColor: const Color(0xFFE44B00),
-      dialogBackgroundColor: const Color(0xFF3A384B),
-      iconTheme: const IconThemeData(color: Color(0xFF8E8D98)),
+      dialogBackgroundColor: Color(0xFF6C6B74),
+      iconTheme: const IconThemeData(color: Color.fromARGB(255, 101, 100, 110)),
       textTheme: const TextTheme(
           headline5: TextStyle(
-            color: Colors.white,
+            color: Colors.black,
             fontSize: 46,
             fontWeight: FontWeight.w800,
           ),
-          bodyText1: TextStyle(color: Colors.white),
-          bodyText2: TextStyle(color: Colors.black)));
+          bodyText1: TextStyle(color: Colors.black),
+          bodyText2: TextStyle(color: Colors.white)));
 
   late ThemeData _themeData = lightTheme;
   ThemeData getTheme() => _themeData;
@@ -125,9 +125,27 @@ class ThemeNotifier with ChangeNotifier {
       var themeMode = value ?? 'light';
       if (themeMode == 'light') {
         _themeData = lightTheme;
-      } else {
+      } else if (themeMode == 'dark') {
         debugPrint('setting dark theme');
         _themeData = darkTheme;
+      } else if (themeMode == 'system') {
+        // only check system if on mobile
+        if (Platform.isIOS || Platform.isAndroid) {
+          debugPrint('setting system theme');
+          var brightness =
+              WidgetsBinding.instance.platformDispatcher.platformBrightness;
+          if (brightness == Brightness.light) {
+            _themeData = lightTheme;
+          } else if (brightness == Brightness.dark) {
+            _themeData = darkTheme;
+          } else {
+            _themeData = lightTheme;
+          }
+        } else {
+          _themeData = lightTheme;
+        }
+      } else {
+        _themeData = lightTheme;
       }
       notifyListeners();
     });
@@ -147,6 +165,12 @@ class ThemeNotifier with ChangeNotifier {
   void setLightMode() async {
     _themeData = lightTheme;
     StorageManager.saveData('themeMode', 'light');
+    notifyListeners();
+  }
+
+  void setSystemMode() async {
+    _themeData = lightTheme;
+    StorageManager.saveData('themeMode', 'system');
     notifyListeners();
   }
 

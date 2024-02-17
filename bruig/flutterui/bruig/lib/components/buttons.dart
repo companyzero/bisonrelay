@@ -51,7 +51,7 @@ ButtonStyle emptyButtonStyle(ThemeData theme) {
 ButtonStyle readMoreButton(ThemeData theme) {
   return ElevatedButton.styleFrom(
     padding: const EdgeInsets.only(left: 10, top: 10, right: 10, bottom: 10),
-    foregroundColor: const Color(0xFF8E8D98),
+    foregroundColor: theme.dividerColor,
     //padding: EdgeInsets.symmetric(horizontal: 16),
     shape: RoundedRectangleBorder(
         borderRadius: const BorderRadius.all(Radius.circular(30)),

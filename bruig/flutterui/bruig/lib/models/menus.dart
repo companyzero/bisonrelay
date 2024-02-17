@@ -432,10 +432,11 @@ class SidebarSvgIcon extends StatelessWidget {
   Widget build(BuildContext context) {
     var theme = Theme.of(context);
     var unselectedTextColor = theme.iconTheme.color;
+    var dividerColor = theme.dividerColor;
     return SvgPicture.asset(
       assetName,
       colorFilter: ColorFilter.mode(
-          unselectedTextColor ?? const Color(0xFF8E8D98), BlendMode.srcIn),
+          unselectedTextColor ?? dividerColor, BlendMode.srcIn),
     );
   }
 }
