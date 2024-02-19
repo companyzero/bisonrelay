@@ -26,7 +26,6 @@ class NewLNWalletSeedPage extends StatelessWidget {
       Navigator.of(context).pushNamed("/about");
     }
 
-    var backgroundColor = const Color(0xFF19172C);
     var seedWords = newconf.newWalletSeed.split(' ');
 
     return StartupScreen(Consumer<ThemeNotifier>(
@@ -63,7 +62,7 @@ class NewLNWalletSeedPage extends StatelessWidget {
                       ? Container(
                           padding: const EdgeInsets.only(
                               left: 8, top: 3, right: 8, bottom: 3),
-                          color: backgroundColor,
+                          color: theme.getTheme().backgroundColor,
                           child: Text(i,
                               style: TextStyle(
                                   color: theme.getTheme().dividerColor,
@@ -87,7 +86,7 @@ class NewLNWalletSeedPage extends StatelessWidget {
                     margin: EdgeInsets.all(5),
                     padding:
                         EdgeInsets.only(left: 8, top: 3, right: 8, bottom: 3),
-                    color: backgroundColor,
+                    color: theme.getTheme().backgroundColor,
                     child: Text(seedWords[index],
                         style: TextStyle(
                             color: theme.getTheme().dividerColor,

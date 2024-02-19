@@ -56,8 +56,6 @@ class _ConfirmLNWalletSeedPageState extends State<ConfirmLNWalletSeedPage> {
       Navigator.of(context).pushNamed("/about");
     }
 
-    var textColor = const Color(0xFF8E8D98);
-    var secondaryTextColor = const Color(0xFFE4E3E6);
     var confirmSeedWords = widget.newconf.confirmSeedWords;
 
     return StartupScreen(Consumer<ThemeNotifier>(
@@ -75,13 +73,13 @@ class _ConfirmLNWalletSeedPageState extends State<ConfirmLNWalletSeedPage> {
         const SizedBox(height: 39),
         Text("Setting up Bison Relay",
             style: TextStyle(
-                color: textColor,
+                color: theme.getTheme().dividerColor,
                 fontSize: theme.getHugeFont(context),
                 fontWeight: FontWeight.w200)),
         const SizedBox(height: 20),
         Text("Confirm New Wallet Seed",
             style: TextStyle(
-                color: secondaryTextColor,
+                color: theme.getTheme().focusColor,
                 fontSize: theme.getLargeFont(context),
                 fontWeight: FontWeight.w300)),
         const SizedBox(height: 34),
@@ -95,7 +93,7 @@ class _ConfirmLNWalletSeedPageState extends State<ConfirmLNWalletSeedPage> {
               : Column(children: [
                   Text("Seed Confirmed",
                       style: TextStyle(
-                          color: textColor,
+                          color: theme.getTheme().dividerColor,
                           fontSize: theme.getLargeFont(context),
                           fontWeight: FontWeight.w200)),
                   const SizedBox(height: 20),
@@ -122,13 +120,12 @@ class QuestionArea extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
-    var textColor = const Color(0xFF8E8D98);
     return Consumer<ThemeNotifier>(
         builder: (context, theme, _) => Column(children: [
               Center(
                   child: Text("Word #${currentWords.position + 1}",
                       style: TextStyle(
-                          color: textColor,
+                          color: theme.getTheme().dividerColor,
                           fontSize: theme.getHugeFont(context),
                           fontWeight: FontWeight.w200))),
               const SizedBox(height: 20),
@@ -157,7 +154,6 @@ class IncorrectArea extends StatelessWidget {
   const IncorrectArea(this.goBackCB, {Key? key}) : super(key: key);
   @override
   Widget build(BuildContext context) {
-    var textColor = const Color(0xFF8E8D98);
     return Consumer<ThemeNotifier>(
         builder: (context, theme, _) => Column(children: [
               Center(
@@ -165,7 +161,7 @@ class IncorrectArea extends StatelessWidget {
                       "Incorrect, please go back and copy the seed again.",
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                          color: textColor,
+                          color: theme.getTheme().dividerColor,
                           fontSize: theme.getLargeFont(context),
                           fontWeight: FontWeight.w200))),
               const SizedBox(height: 20),

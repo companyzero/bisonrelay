@@ -39,10 +39,6 @@ class _DeleteOldWalletPageState extends State<DeleteOldWalletPage> {
 
   @override
   Widget build(BuildContext context) {
-    var backgroundColor = const Color(0xFF19172C);
-    var cardColor = const Color(0xFF05031A);
-    var textColor = const Color(0xFF8E8D98);
-
     void goToAbout() {
       Navigator.of(context).pushNamed("/about");
     }
@@ -62,7 +58,7 @@ class _DeleteOldWalletPageState extends State<DeleteOldWalletPage> {
               const SizedBox(height: 39),
               Text("Remove old wallet",
                   style: TextStyle(
-                      color: textColor,
+                      color: theme.getTheme().dividerColor,
                       fontSize: theme.getHugeFont(context),
                       fontWeight: FontWeight.w200)),
               const SizedBox(height: 20),
@@ -72,7 +68,7 @@ class _DeleteOldWalletPageState extends State<DeleteOldWalletPage> {
                     child: Text(_warnMsg,
                         textAlign: TextAlign.left,
                         style: TextStyle(
-                            color: textColor,
+                            color: theme.getTheme().dividerColor,
                             fontSize: theme.getMediumFont(context),
                             fontWeight: FontWeight.w300))),
                 Center(
@@ -80,10 +76,11 @@ class _DeleteOldWalletPageState extends State<DeleteOldWalletPage> {
                       width: 377,
                       child: CheckboxListTile(
                         title: Text("Wallet does not have any funds",
-                            style: TextStyle(color: textColor)),
-                        activeColor: textColor,
+                            style: TextStyle(
+                                color: theme.getTheme().dividerColor)),
+                        activeColor: theme.getTheme().dividerColor,
                         value: deleteAccepted,
-                        side: BorderSide(color: textColor),
+                        side: BorderSide(color: theme.getTheme().dividerColor),
                         onChanged: (val) {
                           setState(() {
                             deleteAccepted = val ?? false;

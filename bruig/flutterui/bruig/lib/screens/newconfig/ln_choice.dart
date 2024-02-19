@@ -27,11 +27,6 @@ class LNChoicePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    var backgroundColor = const Color(0xFF19172C);
-    var cardColor = const Color(0xFF05031A);
-    var textColor = const Color(0xFF8E8D98);
-    var secondaryTextColor = const Color(0xFFE4E3E6);
-
     void goToAbout() {
       Navigator.of(context).pushNamed("/about");
     }
@@ -51,13 +46,13 @@ class LNChoicePage extends StatelessWidget {
               const SizedBox(height: 208),
               Text("Setting up Bison Relay",
                   style: TextStyle(
-                      color: textColor,
+                      color: theme.getTheme().dividerColor,
                       fontSize: theme.getHugeFont(context),
                       fontWeight: FontWeight.w200)),
               const SizedBox(height: 20),
               Text("Choose Network Mode",
                   style: TextStyle(
-                      color: secondaryTextColor,
+                      color: theme.getTheme().focusColor,
                       fontSize: theme.getLargeFont(context),
                       fontWeight: FontWeight.w300)),
               const SizedBox(height: 34),
@@ -75,7 +70,8 @@ class LNChoicePage extends StatelessWidget {
               Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                 TextButton(
                   onPressed: () => goBack(context),
-                  child: Text("Go Back", style: TextStyle(color: textColor)),
+                  child: Text("Go Back",
+                      style: TextStyle(color: theme.getTheme().dividerColor)),
                 )
               ])
             ])));

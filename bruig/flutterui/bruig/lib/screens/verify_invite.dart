@@ -56,34 +56,41 @@ class _VerifyInviteScreenState extends State<VerifyInviteScreen> {
   }
 
   Widget buildFundsWidget(BuildContext context, InviteFunds funds) {
-    var textColor = const Color(0xFF8E8D98);
-    var ts = TextStyle(color: textColor);
-
     if (redeemed != null) {
       var total = formatDCR(atomsToDCR(redeemed!.total));
-      return Column(children: [
-        Text("Redeemed $total on the following tx:", style: ts),
-        Copyable(redeemed!.txid, ts),
-        Text("The funds will be available after the tx is mined.", style: ts),
-      ]);
+      return StartupScreen(Consumer<ThemeNotifier>(
+          builder: (context, theme, child) => Column(children: [
+                Text("Redeemed $total on the following tx:",
+                    style: TextStyle(color: theme.getTheme().dividerColor)),
+                Copyable(redeemed!.txid,
+                    TextStyle(color: theme.getTheme().dividerColor)),
+                Text("The funds will be available after the tx is mined.",
+                    style: TextStyle(color: theme.getTheme().dividerColor)),
+              ])));
     }
 
     if (redeeming) {
-      return Text("Attempting to redeem funds...", style: ts);
+      return StartupScreen(Consumer<ThemeNotifier>(
+          builder: (context, theme, child) => Text(
+              "Attempting to redeem funds...",
+              style: TextStyle(color: theme.getTheme().dividerColor))));
     }
 
-    return Column(children: [
-      Column(children: [
-        Text("This invite contains funds stored in the following UTXO:",
-            style: ts),
-        Copyable("${funds.txid}:${funds.index}", ts),
-        Text("Attempt to redeem funds?", style: ts),
-      ]),
-      const SizedBox(height: 10),
-      ElevatedButton(
-          onPressed: () => redeemFunds(context, funds),
-          child: const Text("Redeem Funds")),
-    ]);
+    return StartupScreen(Consumer<ThemeNotifier>(
+        builder: (context, theme, child) => Column(children: [
+              Column(children: [
+                Text("This invite contains funds stored in the following UTXO:",
+                    style: TextStyle(color: theme.getTheme().dividerColor)),
+                Copyable("${funds.txid}:${funds.index}",
+                    TextStyle(color: theme.getTheme().dividerColor)),
+                Text("Attempt to redeem funds?",
+                    style: TextStyle(color: theme.getTheme().dividerColor)),
+              ]),
+              const SizedBox(height: 10),
+              ElevatedButton(
+                  onPressed: () => redeemFunds(context, funds),
+                  child: const Text("Redeem Funds")),
+            ])));
   }
 
   @override
