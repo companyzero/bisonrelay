@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/components/recent_log.dart';
 import 'package:bruig/models/log.dart';
+import 'package:bruig/screens/startupscreen.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
@@ -67,21 +68,22 @@ class _ShutdownScreenState extends State<ShutdownScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<ThemeNotifier>(
-        builder: (context, theme, child) => Container(
-            padding: const EdgeInsets.all(10),
-            child: Column(children: [
-              const SizedBox(height: 89),
-              Text("Shutting Down Bison Relay",
-                  style: TextStyle(
-                      color: theme.getTheme().dividerColor,
-                      fontSize: theme.getHugeFont(context),
-                      fontWeight: FontWeight.w200)),
-              clientStopErr != null ? Text(clientStopErr!) : const Empty(),
-              const SizedBox(height: 20),
-              const Divider(),
-              const SizedBox(height: 20),
-              Expanded(child: LogLines(widget.log))
-            ])));
+    return Scaffold(
+        body: StartupScreen(Consumer<ThemeNotifier>(
+            builder: (context, theme, child) => Container(
+                padding: const EdgeInsets.all(10),
+                child: Column(children: [
+                  const SizedBox(height: 89),
+                  Text("Shutting Down Bison Relay",
+                      style: TextStyle(
+                          color: theme.getTheme().dividerColor,
+                          fontSize: theme.getHugeFont(context),
+                          fontWeight: FontWeight.w200)),
+                  clientStopErr != null ? Text(clientStopErr!) : const Empty(),
+                  const SizedBox(height: 20),
+                  const Divider(),
+                  const SizedBox(height: 20),
+                  Expanded(child: LogLines(widget.log))
+                ])))));
   }
 }
