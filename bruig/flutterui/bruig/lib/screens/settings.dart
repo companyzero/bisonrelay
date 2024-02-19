@@ -518,6 +518,8 @@ class AccountSettingsScreen extends StatelessWidget {
 
 enum FontChoices { small, medium, large, xlarge }
 
+enum ThemeChoices { light, dark, system }
+
 class AppearanceSettingsScreen extends StatefulWidget {
   final ClientModel client;
   const AppearanceSettingsScreen(this.client, {Key? key}) : super(key: key);
@@ -530,6 +532,25 @@ class AppearanceSettingsScreen extends StatefulWidget {
 class _AppearanceSettingsScreenState extends State<AppearanceSettingsScreen> {
   ClientModel get client => widget.client;
   FontChoices _fontChoices = FontChoices.medium;
+  ThemeChoices _themeChoices = ThemeChoices.dark;
+
+  @override
+  void initState() {
+    Consumer<ThemeNotifier>(builder: (context, theme, _) {
+      ThemeChoices currentChoice = ThemeChoices.light;
+      if (theme.getThemeMode() == "dark") {
+        currentChoice = ThemeChoices.dark;
+      } else if (theme.getThemeMode() == "system") {
+        currentChoice = ThemeChoices.system;
+      }
+      setState(() {
+        _themeChoices = currentChoice;
+      });
+      return const Empty();
+    });
+
+    super.initState();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -540,6 +561,77 @@ class _AppearanceSettingsScreenState extends State<AppearanceSettingsScreen> {
     return Consumer<ThemeNotifier>(
         builder: (context, theme, _) => ListView(
               children: [
+                ListTile(
+                    onTap: () => showDialog(
+                          context: context,
+                          builder: (BuildContext context) {
+                            return Dialog(
+                                shadowColor: backgroundColor,
+                                insetPadding: const EdgeInsets.symmetric(
+                                    horizontal: 40.0, vertical: 275.0),
+                                backgroundColor: backgroundColor,
+                                shape: const RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.all(
+                                        Radius.circular(16.0))),
+                                child: Container(
+                                    margin: const EdgeInsets.all(20),
+                                    child: Column(children: [
+                                      Row(children: [
+                                        Text("Theme",
+                                            style: TextStyle(
+                                                fontSize:
+                                                    theme.getLargeFont(context),
+                                                color: textColor)),
+                                      ]),
+                                      ListTile(
+                                          title: const Text('Light'),
+                                          leading: Radio<ThemeChoices>(
+                                            value: ThemeChoices.light,
+                                            groupValue: _themeChoices,
+                                            onChanged: (ThemeChoices? value) {
+                                              setState(() {
+                                                _themeChoices = value!;
+                                                theme.setLightMode();
+                                                Navigator.of(context).pop();
+                                              });
+                                            },
+                                          )),
+                                      ListTile(
+                                          title: const Text('Dark'),
+                                          leading: Radio<ThemeChoices>(
+                                            value: ThemeChoices.dark,
+                                            groupValue: _themeChoices,
+                                            onChanged: (ThemeChoices? value) {
+                                              setState(() {
+                                                _themeChoices = value!;
+                                                theme.setDarkMode();
+                                                Navigator.of(context).pop();
+                                              });
+                                            },
+                                          )),
+                                      ListTile(
+                                          title:
+                                              const Text('Use System Default'),
+                                          leading: Radio<ThemeChoices>(
+                                            value: ThemeChoices.system,
+                                            groupValue: _themeChoices,
+                                            onChanged: (ThemeChoices? value) {
+                                              setState(() {
+                                                _themeChoices = value!;
+                                                theme.setSystemMode();
+                                                Navigator.of(context).pop();
+                                              });
+                                            },
+                                          )),
+                                    ])));
+                          },
+                        ),
+                    hoverColor: backgroundColor,
+                    leading: const Icon(Icons.person_outline),
+                    title: Text("Theme",
+                        style: TextStyle(
+                            fontSize: theme.getMediumFont(context),
+                            color: textColor))),
                 ListTile(
                     onTap: () => showDialog(
                           context: context,

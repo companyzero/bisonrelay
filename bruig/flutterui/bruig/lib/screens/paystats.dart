@@ -108,7 +108,7 @@ class _PayStatsScreenState extends State<PayStatsScreen> {
     var textColor = theme.focusColor;
     var backgroundColor = theme.backgroundColor;
     var otherBackgroundColor = theme.indicatorColor;
-    var otherTextColor = theme.dividerColor;
+    var otherTextColor = theme.highlightColor;
     var highlightColor = theme.highlightColor;
     return Consumer<ThemeNotifier>(
         builder: (context, theme, child) => Container(
@@ -170,6 +170,9 @@ class _PayStatsScreenState extends State<PayStatsScreen> {
                                               ? stats[index].item2
                                               : "User fees",
                                           style: TextStyle(
+                                              color: index.isOdd
+                                                  ? textColor
+                                                  : otherTextColor,
                                               fontSize: theme
                                                   .getSmallFont(context)))),
                                   SizedBox(
@@ -177,6 +180,9 @@ class _PayStatsScreenState extends State<PayStatsScreen> {
                                       child: Text(
                                           "${stats[index].item3.totalSent}",
                                           style: TextStyle(
+                                              color: index.isOdd
+                                                  ? textColor
+                                                  : otherTextColor,
                                               fontSize: theme
                                                   .getSmallFont(context)))),
                                   SizedBox(
@@ -184,6 +190,9 @@ class _PayStatsScreenState extends State<PayStatsScreen> {
                                       child: Text(
                                           "${stats[index].item3.totalReceived}",
                                           style: TextStyle(
+                                              color: index.isOdd
+                                                  ? textColor
+                                                  : otherTextColor,
                                               fontSize: theme
                                                   .getSmallFont(context)))),
                                   Expanded(

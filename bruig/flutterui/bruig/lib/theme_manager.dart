@@ -55,7 +55,7 @@ class ThemeNotifier with ChangeNotifier {
       brightness: Brightness.light,
       backgroundColor: Color(0xFFE8E7F0),
       highlightColor: Color(0xFFDFDFE9),
-      dividerColor: Color(0xFF232225),
+      dividerColor: Color.fromARGB(255, 104, 101, 110),
       canvasColor: Color(0xFFEDEBF8),
       cardColor: Color(0xFFEDEBF8),
       errorColor: Colors.red,
@@ -63,7 +63,7 @@ class ThemeNotifier with ChangeNotifier {
       hoverColor: Color(0xFFDFDDEC),
       scaffoldBackgroundColor: Color(0xFFE8E7F3),
       bottomAppBarColor: const Color(0xFF0175CE),
-      indicatorColor: Color(0xFF3A3A3F),
+      indicatorColor: const Color(0xFF5A5968),
       selectedRowColor: Colors.white38,
       shadowColor: const Color(0xFFE44B00),
       dialogBackgroundColor: Color(0xFF6C6B74),
@@ -79,6 +79,9 @@ class ThemeNotifier with ChangeNotifier {
 
   late ThemeData _themeData = lightTheme;
   ThemeData getTheme() => _themeData;
+
+  late String _themeMode = "";
+  String getThemeMode() => _themeMode;
 
   late double _fontSize = defaultFontSize;
   double getFontCoef() => _fontSize;
@@ -125,10 +128,13 @@ class ThemeNotifier with ChangeNotifier {
       var themeMode = value ?? 'light';
       if (themeMode == 'light') {
         _themeData = lightTheme;
+        _themeMode = 'light';
       } else if (themeMode == 'dark') {
         debugPrint('setting dark theme');
         _themeData = darkTheme;
+        _themeMode = 'dark';
       } else if (themeMode == 'system') {
+        _themeMode = 'system';
         // only check system if on mobile
         if (Platform.isIOS || Platform.isAndroid) {
           debugPrint('setting system theme');
@@ -145,6 +151,7 @@ class ThemeNotifier with ChangeNotifier {
           _themeData = lightTheme;
         }
       } else {
+        _themeMode = 'light';
         _themeData = lightTheme;
       }
       notifyListeners();
@@ -157,19 +164,30 @@ class ThemeNotifier with ChangeNotifier {
   }
 
   void setDarkMode() async {
+    _themeMode = 'dark';
     _themeData = darkTheme;
     StorageManager.saveData('themeMode', 'dark');
     notifyListeners();
   }
 
   void setLightMode() async {
+    _themeMode = 'light';
     _themeData = lightTheme;
     StorageManager.saveData('themeMode', 'light');
     notifyListeners();
   }
 
   void setSystemMode() async {
-    _themeData = lightTheme;
+    _themeMode = 'system';
+    var brightness =
+        WidgetsBinding.instance.platformDispatcher.platformBrightness;
+    if (brightness == Brightness.light) {
+      _themeData = lightTheme;
+    } else if (brightness == Brightness.dark) {
+      _themeData = darkTheme;
+    } else {
+      _themeData = lightTheme;
+    }
     StorageManager.saveData('themeMode', 'system');
     notifyListeners();
   }

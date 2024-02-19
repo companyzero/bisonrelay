@@ -348,10 +348,8 @@ class _LNChainSyncPageState extends State<_LNChainSyncPage> {
       Navigator.of(context).pushNamed("/about");
     }
 
-    return Consumer<ThemeNotifier>(
-        builder: (context, theme, child) => Container(
-            padding: const EdgeInsets.all(10),
-            child: Column(children: [
+    return StartupScreen(Consumer<ThemeNotifier>(
+        builder: (context, theme, child) => Column(children: [
               Row(children: [
                 IconButton(
                     alignment: Alignment.topLeft,
@@ -471,7 +469,6 @@ class _LNChainSyncPageState extends State<_LNChainSyncPage> {
                     ])),
               )
             ])));
-    ;
   }
 }
 

@@ -10,8 +10,6 @@ class StartupScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     print("is child null? ${child != null}");
     bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
-    var wideBG = const DecorationImage(
-        fit: BoxFit.fill, image: AssetImage("assets/images/loading-bg.png"));
     var mobileBG = const DecorationImage(
         fit: BoxFit.fill, image: AssetImage("assets/images/testBG.gif"));
     return Consumer<ThemeNotifier>(
@@ -19,8 +17,19 @@ class StartupScreen extends StatelessWidget {
             color: theme.getTheme().backgroundColor,
             child: Stack(children: [
               Container(
-                  decoration:
-                      BoxDecoration(image: isScreenSmall ? mobileBG : wideBG)),
+                  decoration: BoxDecoration(
+                      image: isScreenSmall
+                          ? theme.getTheme().brightness == Brightness.light
+                              ? null
+                              : mobileBG
+                          : DecorationImage(
+                              fit: BoxFit.fill,
+                              image: const AssetImage(
+                                  "assets/images/loading-bg.png"),
+                              opacity: theme.getTheme().brightness ==
+                                      Brightness.light
+                                  ? 0.25
+                                  : 1))),
               Container(
                   decoration: isScreenSmall
                       ? null
