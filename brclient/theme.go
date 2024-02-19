@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/hex"
 	"fmt"
 	"strings"
 
@@ -38,8 +39,10 @@ type theme struct {
 
 func textToColor(in string) (lipgloss.Color, error) {
 	var c lipgloss.Color
-	if len(in) > 0 && in[0] == '#' {
-		return lipgloss.Color(in), nil
+	if len(in) == 6 {
+		if _, err := hex.DecodeString(in); err == nil {
+			return lipgloss.Color("#" + in), nil
+		}
 	}
 
 	switch strings.ToLower(in) {

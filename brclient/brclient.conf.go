@@ -101,7 +101,10 @@ savehistory = false
 # Whether to log pings.
 # pings = false
 
-# Valid ui colors: na, black, red, green, yellow, blue, magenta, cyan and white
+# Valid predefined UI colors: na, black, red, green, yellow, blue, magenta,
+# cyan and white.
+# Colors may also be specified by using a hex code without the '#'.
+#
 # Valid attributes are: none, underline and bold
 # format is: attribute:foreground:background
 [theme]
@@ -109,7 +112,6 @@ nickcolor = bold:na:na
 gcothercolor = bold:green:na
 pmothercolor = bold:cyan:na
 blinkcursor = true
-
 
 [payment]
 
