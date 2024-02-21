@@ -58,7 +58,7 @@ class _ChatHeadingWState extends State<_ChatHeadingW> {
     var textColor = theme.dividerColor;
     var hightLightTextColor = theme.focusColor;
     var selectedBackgroundColor = theme.highlightColor;
-    var unreadMessageIconColor = theme.indicatorColor;
+    var unreadMessageIconColor = theme.indicatorColor.withOpacity(0.5);
     var darkTextColor = theme.indicatorColor;
 
     // Show 1k+ if unread cound goes about 1000
@@ -71,7 +71,7 @@ class _ChatHeadingWState extends State<_ChatHeadingW> {
           builder: (context, theme, _) =>
               Row(mainAxisSize: MainAxisSize.min, children: [
                 chat.isGC
-                    ? Text("(gc)",
+                    ? Text("gc",
                         style: TextStyle(
                             fontStyle: FontStyle.italic,
                             color: darkTextColor,
@@ -94,7 +94,7 @@ class _ChatHeadingWState extends State<_ChatHeadingW> {
           builder: (context, theme, _) =>
               Row(mainAxisSize: MainAxisSize.min, children: [
                 chat.isGC
-                    ? Text("(gc)",
+                    ? Text("gc",
                         style: TextStyle(
                             color: darkTextColor,
                             fontStyle: FontStyle.italic,
