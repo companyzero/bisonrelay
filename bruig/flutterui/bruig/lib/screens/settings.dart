@@ -172,14 +172,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
             AccountSettingsScreen(client, resetAllOldKX1s, resetAllOldKX);
         break;
       case "Appearance":
-        settingsView = AppearanceSettingsScreen(client);
+        settingsView = Consumer<ThemeNotifier>(
+            builder: (context, theme, _) =>
+                AppearanceSettingsScreen(client, theme));
         break;
       case "Notifications":
         settingsView = NotificationsSettingsScreen(
             client, updateNotificationSettings, notificationsEnabled);
         break;
       case "About":
-        settingsView = AboutScreen(settings: true);
+        settingsView = const AboutScreen(settings: true);
         break;
       default:
         break;
@@ -522,7 +524,9 @@ enum ThemeChoices { light, dark, system }
 
 class AppearanceSettingsScreen extends StatefulWidget {
   final ClientModel client;
-  const AppearanceSettingsScreen(this.client, {Key? key}) : super(key: key);
+  final ThemeNotifier theme;
+  const AppearanceSettingsScreen(this.client, this.theme, {Key? key})
+      : super(key: key);
   @override
   State<AppearanceSettingsScreen> createState() =>
       _AppearanceSettingsScreenState();
@@ -531,25 +535,36 @@ class AppearanceSettingsScreen extends StatefulWidget {
 /// This is the private State class that goes with MyStatefulWidget.
 class _AppearanceSettingsScreenState extends State<AppearanceSettingsScreen> {
   ClientModel get client => widget.client;
+  ThemeNotifier get theme => widget.theme;
   FontChoices _fontChoices = FontChoices.medium;
   ThemeChoices _themeChoices = ThemeChoices.dark;
 
   @override
   void initState() {
-    Consumer<ThemeNotifier>(builder: (context, theme, _) {
-      ThemeChoices currentChoice = ThemeChoices.light;
+    setState(() {
       if (theme.getThemeMode() == "dark") {
-        currentChoice = ThemeChoices.dark;
+        _themeChoices = ThemeChoices.dark;
       } else if (theme.getThemeMode() == "system") {
-        currentChoice = ThemeChoices.system;
+        _themeChoices = ThemeChoices.system;
+      } else if (theme.getThemeMode() == "light") {
+        _themeChoices = ThemeChoices.system;
       }
-      setState(() {
-        _themeChoices = currentChoice;
-      });
-      return const Empty();
     });
-
     super.initState();
+  }
+
+  @override
+  void didUpdateWidget(AppearanceSettingsScreen oldWidget) {
+    setState(() {
+      if (theme.getThemeMode() == "dark") {
+        _themeChoices = ThemeChoices.dark;
+      } else if (theme.getThemeMode() == "system") {
+        _themeChoices = ThemeChoices.system;
+      } else if (theme.getThemeMode() == "light") {
+        _themeChoices = ThemeChoices.light;
+      }
+    });
+    super.didUpdateWidget(oldWidget);
   }
 
   @override
