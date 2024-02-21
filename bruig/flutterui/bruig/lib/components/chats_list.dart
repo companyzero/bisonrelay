@@ -111,7 +111,7 @@ class _ChatHeadingWState extends State<_ChatHeadingW> {
           builder: (context, theme, _) =>
               Row(mainAxisSize: MainAxisSize.min, children: [
                 chat.isGC
-                    ? Text("(gc)",
+                    ? Text("gc",
                         style: TextStyle(
                             fontStyle: FontStyle.italic,
                             color: darkTextColor,
