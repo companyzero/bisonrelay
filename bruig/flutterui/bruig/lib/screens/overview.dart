@@ -299,6 +299,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
       backgroundColor: theme.canvasColor,
       appBar: isScreenSmall
           ? AppBar(
+              backgroundColor: sidebarBackground,
               leadingWidth: 60,
               titleSpacing: 0.0,
               title: _OverviewScreenTitle(widget.mainMenu),
@@ -368,6 +369,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
                       : const Empty()
                 ])
           : AppBar(
+              backgroundColor: sidebarBackground,
               titleSpacing: 0.0,
               title: Row(children: [
                 _OverviewScreenTitle(widget.mainMenu),

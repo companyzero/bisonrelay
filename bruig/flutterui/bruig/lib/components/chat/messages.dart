@@ -170,7 +170,7 @@ class _MessagesState extends State<Messages> {
   Widget build(BuildContext context) {
     var theme = Theme.of(context);
     var textColor = theme.dividerColor;
-    var backgroundColor = theme.highlightColor;
+    var backgroundColor = theme.backgroundColor;
     return Scaffold(
         floatingActionButton: _getFAB(textColor, backgroundColor),
         body: PageStorage(

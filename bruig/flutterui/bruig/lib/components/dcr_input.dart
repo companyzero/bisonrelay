@@ -15,7 +15,7 @@ Widget dcrInput(
         builder: (context, theme, _) => TextField(
             style: TextStyle(
                 fontSize: theme.getSmallFont(context),
-                color: Color(0xFF8E8D98)),
+                color: theme.getTheme().dividerColor),
             controller: controller,
             onChanged: (String v) {
               double amount = v != "" ? double.parse(v) : 0;
@@ -28,9 +28,9 @@ Widget dcrInput(
             decoration: InputDecoration(
               hintStyle: TextStyle(
                   fontSize: theme.getSmallFont(context),
-                  color: Color(0xFF8E8D98)),
+                  color: theme.getTheme().dividerColor),
               filled: true,
-              fillColor: const Color.fromARGB(255, 84, 84, 89),
+              fillColor: theme.getTheme().indicatorColor,
               hintText: "0.00",
               suffixText: "DCR",
             )));

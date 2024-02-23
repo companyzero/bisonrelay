@@ -5,6 +5,7 @@ import 'package:bruig/components/buttons.dart';
 import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/models/notifications.dart';
+import 'package:bruig/screens/startupscreen.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
@@ -115,10 +116,9 @@ class _NeedsFundsScreenState extends State<NeedsFundsScreen> {
   }
 
   Widget buildFundsWidget(BuildContext context) {
-    var secondaryTextColor = const Color(0xFFE4E3E6);
     return Consumer<ThemeNotifier>(builder: (context, theme, child) {
       var ts = TextStyle(
-          color: secondaryTextColor,
+          color: theme.getTheme().focusColor,
           fontSize: theme.getMediumFont(context),
           fontWeight: FontWeight.w300);
 
@@ -151,55 +151,24 @@ to redeem it by clicking in the button.
 
   @override
   Widget build(BuildContext context) {
-    var backgroundColor = const Color(0xFF19172C);
-    var cardColor = const Color(0xFF05031A);
-    var textColor = const Color(0xFF8E8D98);
-    var secondaryTextColor = const Color(0xFFE4E3E6);
-    var darkTextColor = const Color(0xFF5A5968);
-
-    return Consumer<ThemeNotifier>(
-        builder: (context, theme, child) => Scaffold(
-            body: Container(
-                color: backgroundColor,
-                child: Stack(children: [
-                  Container(
-                      decoration: const BoxDecoration(
-                          image: DecorationImage(
-                              fit: BoxFit.fill,
-                              image:
-                                  AssetImage("assets/images/loading-bg.png")))),
-                  Container(
-                      decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                              begin: Alignment.bottomLeft,
-                              end: Alignment.topRight,
-                              colors: [
-                            cardColor,
-                            const Color(0xFF07051C),
-                            backgroundColor.withOpacity(0.34),
-                          ],
-                              stops: const [
-                            0,
-                            0.17,
-                            1
-                          ])),
-                      padding: const EdgeInsets.all(10),
-                      child: Column(
-                        children: [
-                          const Expanded(child: Empty()),
-                          Text("Setting up Bison Relay",
-                              style: TextStyle(
-                                  color: textColor,
-                                  fontSize: theme.getHugeFont(context),
-                                  fontWeight: FontWeight.w200)),
-                          const SizedBox(height: 20),
-                          Text("Receive Wallet Funds",
-                              style: TextStyle(
-                                  color: secondaryTextColor,
-                                  fontSize: theme.getLargeFont(context),
-                                  fontWeight: FontWeight.w300)),
-                          const SizedBox(height: 20),
-                          Text('''
+    return StartupScreen(
+      Consumer<ThemeNotifier>(
+          builder: (context, theme, child) => Column(
+                children: [
+                  const Expanded(child: Empty()),
+                  Text("Setting up Bison Relay",
+                      style: TextStyle(
+                          color: theme.getTheme().dividerColor,
+                          fontSize: theme.getHugeFont(context),
+                          fontWeight: FontWeight.w200)),
+                  const SizedBox(height: 20),
+                  Text("Receive Wallet Funds",
+                      style: TextStyle(
+                          color: theme.getTheme().focusColor,
+                          fontSize: theme.getLargeFont(context),
+                          fontWeight: FontWeight.w300)),
+                  const SizedBox(height: 20),
+                  Text('''
 The wallet requires on-chain DCR funds to be able to open Lightning Network (LN) channels
 and perform payments to the server and other users of the Bison Relay network.
 
@@ -207,78 +176,78 @@ Send DCR funds to the following address to receive funds in your wallet. Note th
 wallet seed will be needed to recover these funds if the wallet data in this computer is
 corrupted or lost.
 ''',
-                              style: TextStyle(
-                                  color: secondaryTextColor,
-                                  fontSize: theme.getMediumFont(context),
-                                  fontWeight: FontWeight.w300)),
-                          buildFundsWidget(context),
-                          const SizedBox(height: 13),
-                          Container(
-                              margin: const EdgeInsets.all(10),
-                              color: Colors.white,
-                              child: QrImageView(
-                                data: addr,
-                                version: QrVersions.auto,
-                                size: 200.0,
-                              )),
-                          const SizedBox(height: 13),
-                          Container(
-                              color: cardColor,
-                              padding: const EdgeInsets.only(
-                                  left: 22, top: 18, right: 22, bottom: 18),
-                              child: Copyable(
-                                  addr,
-                                  TextStyle(
-                                      color: textColor,
-                                      fontSize: theme.getMediumFont(context)))),
-                          const SizedBox(height: 9),
-                          Container(
-                              padding: const EdgeInsets.only(
-                                  left: 324 + 22, right: 324 + 20),
-                              child: Row(children: [
-                                Text(
-                                    textAlign: TextAlign.left,
-                                    "Unconfirmed wallet balance:",
-                                    style: TextStyle(
-                                        color: darkTextColor,
-                                        fontSize: theme.getSmallFont(context),
-                                        fontWeight: FontWeight.w300)),
-                                Text(
-                                    textAlign: TextAlign.right,
-                                    formatDCR(atomsToDCR(unconfirmedBalance)),
-                                    style: TextStyle(
-                                        color: darkTextColor,
-                                        fontSize: theme.getSmallFont(context),
-                                        fontWeight: FontWeight.w300)),
-                              ])),
-                          const SizedBox(height: 3),
-                          Container(
-                              padding: const EdgeInsets.only(
-                                  left: 324 + 22, right: 324 + 20),
-                              child: Row(children: [
-                                Text(
-                                    textAlign: TextAlign.left,
-                                    "Confirmed wallet balance:",
-                                    style: TextStyle(
-                                        color: darkTextColor,
-                                        fontSize: theme.getSmallFont(context),
-                                        fontWeight: FontWeight.w300)),
-                                Text(
-                                    textAlign: TextAlign.right,
-                                    formatDCR(atomsToDCR(confirmedBalance)),
-                                    style: TextStyle(
-                                        color: darkTextColor,
-                                        fontSize: theme.getSmallFont(context),
-                                        fontWeight: FontWeight.w300))
-                              ])),
-                          const SizedBox(height: 20),
-                          LoadingScreenButton(
-                            onPressed: () => Navigator.of(context).pop(),
-                            text: "Finish",
-                          ),
-                          const Expanded(child: Empty()),
-                        ],
+                      style: TextStyle(
+                          color: theme.getTheme().focusColor,
+                          fontSize: theme.getMediumFont(context),
+                          fontWeight: FontWeight.w300)),
+                  buildFundsWidget(context),
+                  const SizedBox(height: 13),
+                  Container(
+                      margin: const EdgeInsets.all(10),
+                      color: Colors.white,
+                      child: QrImageView(
+                        data: addr,
+                        version: QrVersions.auto,
+                        size: 200.0,
                       )),
-                ]))));
+                  const SizedBox(height: 13),
+                  Container(
+                      color: theme.getTheme().cardColor,
+                      padding: const EdgeInsets.only(
+                          left: 22, top: 18, right: 22, bottom: 18),
+                      child: Copyable(
+                          addr,
+                          TextStyle(
+                              color: theme.getTheme().dividerColor,
+                              fontSize: theme.getMediumFont(context)))),
+                  const SizedBox(height: 9),
+                  Container(
+                      padding: const EdgeInsets.only(
+                          left: 324 + 22, right: 324 + 20),
+                      child: Row(children: [
+                        Text(
+                            textAlign: TextAlign.left,
+                            "Unconfirmed wallet balance:",
+                            style: TextStyle(
+                                color: theme.getTheme().indicatorColor,
+                                fontSize: theme.getSmallFont(context),
+                                fontWeight: FontWeight.w300)),
+                        Text(
+                            textAlign: TextAlign.right,
+                            formatDCR(atomsToDCR(unconfirmedBalance)),
+                            style: TextStyle(
+                                color: theme.getTheme().indicatorColor,
+                                fontSize: theme.getSmallFont(context),
+                                fontWeight: FontWeight.w300)),
+                      ])),
+                  const SizedBox(height: 3),
+                  Container(
+                      padding: const EdgeInsets.only(
+                          left: 324 + 22, right: 324 + 20),
+                      child: Row(children: [
+                        Text(
+                            textAlign: TextAlign.left,
+                            "Confirmed wallet balance:",
+                            style: TextStyle(
+                                color: theme.getTheme().indicatorColor,
+                                fontSize: theme.getSmallFont(context),
+                                fontWeight: FontWeight.w300)),
+                        Text(
+                            textAlign: TextAlign.right,
+                            formatDCR(atomsToDCR(confirmedBalance)),
+                            style: TextStyle(
+                                color: theme.getTheme().indicatorColor,
+                                fontSize: theme.getSmallFont(context),
+                                fontWeight: FontWeight.w300))
+                      ])),
+                  const SizedBox(height: 20),
+                  LoadingScreenButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    text: "Finish",
+                  ),
+                  const Expanded(child: Empty()),
+                ],
+              )),
+    );
   }
 }

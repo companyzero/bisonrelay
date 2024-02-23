@@ -1,6 +1,7 @@
 import 'package:bruig/components/copyable.dart';
 import 'package:bruig/models/snackbar.dart';
 import 'package:flutter/material.dart';
+import 'package:bruig/theme_manager.dart';
 import 'package:provider/provider.dart';
 
 class SnackbarDisplayer extends StatefulWidget {
@@ -29,9 +30,10 @@ class _SnackbarDisplayerState extends State<SnackbarDisplayer> {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             backgroundColor:
                 snackBarMsg.error ? Colors.red[300] : Colors.green[300],
-            content: Copyable(
-                snackBarMsg.msg, const TextStyle(color: Color(0xFFE4E3E6)),
-                showSnackbar: false)));
+            content: Consumer<ThemeNotifier>(
+                builder: (context, theme, _) => Copyable(snackBarMsg.msg,
+                    TextStyle(color: theme.getTheme().focusColor),
+                    showSnackbar: false))));
       }
     }
   }

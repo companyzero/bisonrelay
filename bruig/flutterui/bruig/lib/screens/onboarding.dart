@@ -7,6 +7,7 @@ import 'package:bruig/components/recent_log.dart';
 import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/models/log.dart';
 import 'package:bruig/models/notifications.dart';
+import 'package:bruig/screens/startupscreen.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
@@ -172,11 +173,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    var backgroundColor = const Color(0xFF19172C);
-    var cardColor = const Color(0xFF05031A);
-    var textColor = const Color(0xFF8E8D98);
-    var errorColor = const Color(0xFFFF0000);
-
     void goToAbout() {
       Navigator.of(context).pushNamed("/about");
     }
@@ -184,7 +180,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     List<Widget> children;
     if (readingState) {
       children = [
-        Text("Reading onboarding state...", style: TextStyle(color: textColor))
+        Consumer<ThemeNotifier>(
+            builder: (context, theme, child) => Text(
+                "Reading onboarding state...",
+                style: TextStyle(color: theme.getTheme().dividerColor)))
       ];
     } else if (ostate == null) {
       children = [
@@ -203,19 +202,28 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       ];
     } else if (starting) {
       children = [
-        Text("Starting onboarding procedure...",
-            style: TextStyle(color: textColor))
+        Consumer<ThemeNotifier>(
+            builder: (context, theme, child) => Text(
+                "Starting onboarding procedure...",
+                style: TextStyle(color: theme.getTheme().dividerColor)))
       ];
     } else {
-      var ts = TextStyle(color: textColor);
       var line = ((String s, String tt) => [
-            Tooltip(message: tt, child: Text(s, style: ts)),
+            Consumer<ThemeNotifier>(
+                builder: (context, theme, child) => Tooltip(
+                    message: tt,
+                    child: Text(s,
+                        style:
+                            TextStyle(color: theme.getTheme().dividerColor)))),
             const SizedBox(height: 10),
           ]);
       var copyable = ((String lbl, String txt, String tt) => [
             Tooltip(
                 message: tt,
-                child: Copyable("$lbl: $txt", ts, textToCopy: txt)),
+                child: Consumer<ThemeNotifier>(
+                    builder: (context, theme, child) => Copyable("$lbl: $txt",
+                        TextStyle(color: theme.getTheme().dividerColor),
+                        textToCopy: txt))),
             const SizedBox(height: 10),
           ]);
 
@@ -275,8 +283,12 @@ The receive balance is how much the local client may receive through LN payments
         const SizedBox(height: 10),
         ...(oerror != ""
             ? [
-                Copyable("Error: ${oerror}",
-                    TextStyle(color: errorColor, fontWeight: FontWeight.bold)),
+                Consumer<ThemeNotifier>(
+                    builder: (context, theme, child) => Copyable(
+                        "Error: ${oerror}",
+                        TextStyle(
+                            color: theme.getTheme().errorColor,
+                            fontWeight: FontWeight.bold))),
                 const SizedBox(height: 20)
               ]
             : []),
@@ -317,60 +329,34 @@ Cancelling onboarding means the wallet setup, including obtaining on-chain funds
         Consumer<ThemeNotifier>(
             builder: (context, theme, child) => Text("Recent Log",
                 style: TextStyle(
-                    color: textColor, fontSize: theme.getMediumFont(context)))),
+                    color: theme.getTheme().dividerColor,
+                    fontSize: theme.getMediumFont(context)))),
         Expanded(
             child: Consumer<LogModel>(
                 builder: (context, logModel, child) => LogLines(logModel))),
       ];
     }
 
-    return Scaffold(
-        body: Container(
-            color: backgroundColor,
-            child: Stack(children: [
-              Container(
-                  decoration: const BoxDecoration(
-                      image: DecorationImage(
-                          fit: BoxFit.fill,
-                          image: AssetImage("assets/images/loading-bg.png")))),
-              Container(
-                  decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                          begin: Alignment.bottomLeft,
-                          end: Alignment.topRight,
-                          colors: [
-                        cardColor,
-                        const Color(0xFF07051C),
-                        backgroundColor.withOpacity(0.34),
-                      ],
-                          stops: const [
-                        0,
-                        0.17,
-                        1
-                      ])),
-                  padding: const EdgeInsets.all(10),
-                  child: Column(children: [
-                    Row(children: [
-                      IconButton(
-                          alignment: Alignment.topLeft,
-                          tooltip: "About Bison Relay",
-                          iconSize: 50,
-                          onPressed: goToAbout,
-                          icon: Image.asset(
-                            "assets/images/icon.png",
-                          )),
-                    ]),
-                    const SizedBox(height: 39),
-                    Consumer<ThemeNotifier>(
-                        builder: (context, theme, child) => Text(
-                            "Setting up Bison Relay",
-                            style: TextStyle(
-                                color: textColor,
-                                fontSize: theme.getHugeFont(context),
-                                fontWeight: FontWeight.w200))),
-                    const SizedBox(height: 20),
-                    ...children,
-                  ]))
-            ])));
+    return StartupScreen(Column(children: [
+      Row(children: [
+        IconButton(
+            alignment: Alignment.topLeft,
+            tooltip: "About Bison Relay",
+            iconSize: 50,
+            onPressed: goToAbout,
+            icon: Image.asset(
+              "assets/images/icon.png",
+            )),
+      ]),
+      const SizedBox(height: 39),
+      Consumer<ThemeNotifier>(
+          builder: (context, theme, child) => Text("Setting up Bison Relay",
+              style: TextStyle(
+                  color: theme.getTheme().dividerColor,
+                  fontSize: theme.getHugeFont(context),
+                  fontWeight: FontWeight.w200))),
+      const SizedBox(height: 20),
+      ...children,
+    ]));
   }
 }
