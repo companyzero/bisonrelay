@@ -442,8 +442,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
                                   padding: const EdgeInsets.all(3),
                                   child: menuItem.icon),
                       title: Consumer<ThemeNotifier>(
-                          builder: (context, theme, child) => Text(
-                              menuItem.label,
+                          builder: (context, theme, _) => Text(menuItem.label,
                               style: TextStyle(
                                   fontSize: theme.getMediumFont(context)))))
                   : Theme(
@@ -523,59 +522,70 @@ class _OverviewScreenState extends State<OverviewScreen> {
             )
           ])),
       bottomNavigationBar: isScreenSmall && !removeBottomBar
-          ? BottomNavigationBar(
-              iconSize: 40,
-              items: <BottomNavigationBarItem>[
-                BottomNavigationBarItem(
-                  icon: client.hasUnreadChats
-                      ? Stack(children: [
-                          Container(
-                              padding: const EdgeInsets.all(3),
-                              child: const SidebarSvgIcon(
-                                  "assets/icons/icons-menu-chat.svg")),
-                          const Positioned(
-                              top: 1,
-                              right: 1,
-                              child: CircleAvatar(
-                                  backgroundColor: Colors.red, radius: 4)),
-                        ])
-                      : Container(
-                          padding: const EdgeInsets.all(3),
-                          child: const SidebarSvgIcon(
-                              "assets/icons/icons-menu-chat.svg")),
-                  label: 'Chat',
-                ),
-                BottomNavigationBarItem(
-                  icon: widget.feed.hasUnreadPostsComments
-                      ? Stack(children: [
-                          Container(
-                              padding: const EdgeInsets.all(3),
-                              child: const SidebarSvgIcon(
-                                  "assets/icons/icons-menu-news.svg")),
-                          const Positioned(
-                              top: 1,
-                              right: 1,
-                              child: CircleAvatar(
-                                  backgroundColor: Colors.red, radius: 4)),
-                        ])
-                      : Container(
-                          padding: const EdgeInsets.all(3),
-                          child: const SidebarSvgIcon(
-                              "assets/icons/icons-menu-news.svg")),
-                  label: 'Feed',
-                ),
-                BottomNavigationBarItem(
-                  icon: Container(
-                      padding: const EdgeInsets.all(3),
-                      child: const SidebarSvgIcon(
-                          "assets/icons/icons-menu-pages.svg")),
-                  label: 'Pages',
-                ),
-              ],
+          ? Consumer<ThemeNotifier>(
+              builder: (context, theme, _) => BottomNavigationBar(
+                    selectedFontSize: theme.getLargeFont(context),
+                    unselectedFontSize: theme.getMediumFont(context),
+                    selectedItemColor: selectedColor,
+                    unselectedItemColor: unselectedTextColor,
+                    selectedLabelStyle:
+                        const TextStyle(fontWeight: FontWeight.w700),
+                    unselectedLabelStyle:
+                        const TextStyle(fontWeight: FontWeight.w200),
+                    iconSize: 40,
+                    items: <BottomNavigationBarItem>[
+                      BottomNavigationBarItem(
+                        icon: client.hasUnreadChats
+                            ? Stack(children: [
+                                Container(
+                                    padding: const EdgeInsets.all(3),
+                                    child: const SidebarSvgIcon(
+                                        "assets/icons/icons-menu-chat.svg")),
+                                const Positioned(
+                                    top: 1,
+                                    right: 1,
+                                    child: CircleAvatar(
+                                        backgroundColor: Colors.red,
+                                        radius: 4)),
+                              ])
+                            : Container(
+                                padding: const EdgeInsets.all(3),
+                                child: const SidebarSvgIcon(
+                                    "assets/icons/icons-menu-chat.svg")),
+                        label: 'Chat',
+                      ),
+                      BottomNavigationBarItem(
+                        icon: widget.feed.hasUnreadPostsComments
+                            ? Stack(children: [
+                                Container(
+                                    padding: const EdgeInsets.all(3),
+                                    child: const SidebarSvgIcon(
+                                        "assets/icons/icons-menu-news.svg")),
+                                const Positioned(
+                                    top: 1,
+                                    right: 1,
+                                    child: CircleAvatar(
+                                        backgroundColor: Colors.red,
+                                        radius: 4)),
+                              ])
+                            : Container(
+                                padding: const EdgeInsets.all(3),
+                                child: const SidebarSvgIcon(
+                                    "assets/icons/icons-menu-news.svg")),
+                        label: 'Feed',
+                      ),
+                      BottomNavigationBarItem(
+                        icon: Container(
+                            padding: const EdgeInsets.all(3),
+                            child: const SidebarSvgIcon(
+                                "assets/icons/icons-menu-pages.svg")),
+                        label: 'Pages',
+                      ),
+                    ],
 
-              currentIndex: selectedIndex, //New
-              onTap: _onItemTapped, //New
-            )
+                    currentIndex: selectedIndex, //New
+                    onTap: _onItemTapped, //New
+                  ))
           : null,
     );
   }

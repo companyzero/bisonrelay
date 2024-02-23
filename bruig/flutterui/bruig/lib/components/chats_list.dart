@@ -295,6 +295,7 @@ class _ChatsListState extends State<_ChatsList> {
     var darkTextColor = theme.dividerColor;
     var selectedBackgroundColor = theme.highlightColor;
     var backgroundColor = theme.backgroundColor;
+    var newMessageHoverColor = theme.indicatorColor;
 
     var sortedList = client.sortedChats.toList();
 
@@ -307,29 +308,60 @@ class _ChatsListState extends State<_ChatsList> {
     if (isScreenSmall) {
       return Consumer<ThemeNotifier>(
           builder: (context, theme, _) => Container(
-                margin: const EdgeInsets.all(1),
-                decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(3),
-                    color: backgroundColor),
-                padding: const EdgeInsets.all(0),
-                child: Column(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                          child: Container(
-                              padding: const EdgeInsets.only(
-                                  left: 0, right: 5, top: 5, bottom: 5),
-                              child: ListView.builder(
-                                  physics: const ScrollPhysics(),
-                                  controller: sortedListScroll,
-                                  scrollDirection: Axis.vertical,
-                                  shrinkWrap: true,
-                                  itemCount: sortedList.length,
-                                  itemBuilder: (context, index) =>
-                                      _ChatHeadingW(sortedList[index], client,
-                                          makeActive, showSubMenu)))),
-                    ]),
-              ));
+              margin: const EdgeInsets.all(1),
+              decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(3),
+                  color: backgroundColor),
+              padding: const EdgeInsets.all(0),
+              child: Stack(children: [
+                Expanded(
+                    child: Container(
+                        padding: const EdgeInsets.only(
+                            left: 0, right: 5, top: 5, bottom: 5),
+                        child: ListView.builder(
+                            physics: const ScrollPhysics(),
+                            controller: sortedListScroll,
+                            scrollDirection: Axis.vertical,
+                            shrinkWrap: true,
+                            itemCount: sortedList.length,
+                            itemBuilder: (context, index) => _ChatHeadingW(
+                                sortedList[index],
+                                client,
+                                makeActive,
+                                showSubMenu)))),
+                Positioned(
+                    bottom: 20,
+                    right: 10,
+                    child: Material(
+                        borderRadius: BorderRadius.circular(30),
+                        color: selectedBackgroundColor,
+                        child: IconButton(
+                            hoverColor: newMessageHoverColor.withOpacity(0.25),
+                            splashRadius: 28,
+                            iconSize: 40,
+                            tooltip: "New Message",
+                            onPressed: showAddressBook,
+                            icon: Icon(
+                                size: 40,
+                                color: darkTextColor,
+                                Icons.edit_outlined)))),
+                Positioned(
+                    bottom: 90,
+                    right: 10,
+                    child: Material(
+                        borderRadius: BorderRadius.circular(30),
+                        color: selectedBackgroundColor,
+                        child: IconButton(
+                            hoverColor: newMessageHoverColor.withOpacity(0.25),
+                            splashRadius: 28,
+                            iconSize: 40,
+                            tooltip: "Create new group chat",
+                            onPressed: showGroupChat,
+                            icon: Icon(
+                                size: 40,
+                                color: darkTextColor,
+                                Icons.people_outline)))),
+              ])));
     }
     return Consumer<ThemeNotifier>(
         builder: (context, theme, _) => Container(
