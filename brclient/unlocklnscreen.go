@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/charmbracelet/bubbles/cursor"
 	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
@@ -191,6 +192,10 @@ func newUnlockLNScreen(cfg *config, lndc *embeddeddcrlnd.Dcrlnd,
 		panic(err)
 	}
 
+	c := cursor.New()
+	c.Style = theme.cursor
+	c.SetMode(cursor.CursorBlink)
+
 	txtPass := textinput.New()
 	txtPass.Placeholder = ""
 	txtPass.Prompt = "Wallet Passphrase: "
@@ -199,7 +204,7 @@ func newUnlockLNScreen(cfg *config, lndc *embeddeddcrlnd.Dcrlnd,
 	txtPass.PromptStyle = theme.focused
 	txtPass.TextStyle = theme.focused
 	txtPass.Width = 100
-	txtPass.SetCursorMode(textinput.CursorBlink)
+	txtPass.Cursor = c
 
 	viewport := viewport.Model{
 		YPosition: 15,

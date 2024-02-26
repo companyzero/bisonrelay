@@ -3,6 +3,7 @@ package main
 import (
 	"strings"
 
+	"github.com/charmbracelet/bubbles/cursor"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/companyzero/bisonrelay/internal/strescape"
@@ -75,14 +76,18 @@ func (input *textInputHelper) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func newTextInputHelper(styles *theme, opts ...textInputHelperOption) *textInputHelper {
+	// TODO: parametrize based on styles.blink
+	c := cursor.New()
+	c.Style = styles.cursor
+	c.SetMode(cursor.CursorBlink)
+
+	model := textinput.New()
+	model.Cursor = c
+
 	input := textInputHelper{
 		styles: styles,
-		Model:  textinput.NewModel(),
+		Model:  model,
 	}
-
-	// TODO: parametrize based on styles.blink (textinput.Model needs static
-	// cursor mode).
-	input.Model.SetCursorMode(textinput.CursorBlink)
 
 	for _, opt := range opts {
 		opt(&input.Model)

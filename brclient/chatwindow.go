@@ -806,7 +806,7 @@ func (cw *chatWindow) renderPage(winW int, as *appState, b *strings.Builder) {
 		nick, _ := as.c.UserNick(cw.page.UID)
 		fmt.Fprintf(b, "Source : %s (%s)\n", strescape.Nick(nick), cw.page.UID)
 		fmt.Fprintf(b, "Path %s: %s\n", loadingTxt, strescape.Nick(strings.Join(cw.page.Request.Path, "/")))
-		fmt.Fprintf(b, strings.Repeat("―", winW))
+		fmt.Fprintf(b, "%s", strings.Repeat("―", winW))
 		b.WriteRune('\n')
 	}
 
