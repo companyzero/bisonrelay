@@ -683,7 +683,7 @@ func newMainWindowState(as *appState) (mainWindowState, tea.Cmd) {
 	mws := mainWindowState{
 		as:           as,
 		embedContent: make(map[string][]byte),
-		formInput:    textinput.NewModel(),
+		formInput:    textinput.New(),
 	}
 	styles := as.styles.Load()
 

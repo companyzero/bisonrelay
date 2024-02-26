@@ -38,7 +38,7 @@ func runSetupWizard(cfgFilePath string) (*config, *embeddeddcrlnd.Dcrlnd, bool, 
 
 	if sws.err != nil {
 		if sws.crashStack != nil {
-			fmt.Fprintf(os.Stderr, string(sws.crashStack))
+			fmt.Fprintf(os.Stderr, "%s\n", string(sws.crashStack))
 		}
 		return nil, sws.lndc, false, fmt.Errorf("error during setup wizard: %v", sws.err)
 	}
