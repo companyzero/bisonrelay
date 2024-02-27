@@ -66,11 +66,8 @@ class _InputState extends State<Input> {
   void handleKeyPress(event) {
     if (event is RawKeyUpEvent) {
       bool modPressed = event.isShiftPressed || event.isControlPressed;
-      final val = controller.value;
       if (event.data.logicalKey.keyLabel == "Enter" && !modPressed) {
         sendMsg();
-      } else {
-        widget.chat.workingMsg = val.text.trim();
       }
     }
   }
@@ -104,6 +101,7 @@ class _InputState extends State<Input> {
               child: Container(
                   margin: const EdgeInsets.only(bottom: 5),
                   child: TextField(
+                    onChanged: (value) => widget.chat.workingMsg = value,
                     autofocus: isScreenSmall ? false : true,
                     focusNode: widget.inputFocusNode,
                     style: TextStyle(
