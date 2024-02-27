@@ -75,7 +75,6 @@ class _InputState extends State<Input> {
       ];
       final isShiftPressed = shiftKeys.contains(event.logicalKey);
       final isControlPressed = ctlKeys.contains(event.logicalKey);
-
       bool modPressed = isShiftPressed || isControlPressed;
       if (event.logicalKey.keyLabel == "Enter" && !modPressed) {
         sendMsg();
