@@ -442,9 +442,12 @@ class _ChatsListState extends State<_ChatsList> {
                             onPressed: client.isOnline
                                 ? () => fetchInvite(context)
                                 : null,
+                            disabledColor: backgroundColor,
                             icon: Icon(
                                 size: 20,
-                                color: darkTextColor,
+                                color: client.isOnline
+                                    ? darkTextColor
+                                    : hoverColor,
                                 Icons.get_app_outlined)))),
                 Positioned(
                     bottom: 5,
@@ -475,9 +478,12 @@ class _ChatsListState extends State<_ChatsList> {
                                 ? "Generate Invite"
                                 : "Cannot generate invite while offline",
                             onPressed: client.isOnline ? genInvite : null,
+                            disabledColor: backgroundColor,
                             icon: Icon(
                                 size: 20,
-                                color: darkTextColor,
+                                color: client.isOnline
+                                    ? darkTextColor
+                                    : hoverColor,
                                 Icons.add_outlined))))
               ]),
             ));
