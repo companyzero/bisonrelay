@@ -57,7 +57,6 @@ const (
 
 	// PingLimit is how long to wait for a ping before disconnect.
 	// DefaultPingInterval is how long to wait to send the next ping.
-	PingLimit           = 45 * time.Second
 	DefaultPingInterval = 30 * time.Second
 
 	// MaxChunkSize is the maximum size of a file chunk used in file
@@ -265,6 +264,11 @@ const (
 	// the server.
 	PropMaxMsgSizeVersion        = "maxmsgsizeversion"
 	PropMaxMsgSizeVersionDefault = MaxMsgSizeV0
+
+	// PropPingLimit is the ping limit the server expects, after which it
+	// will disconnect a client.
+	PropPingLimit        = "pinglimit"
+	PropPingLimitDefault = 5 * time.Minute
 )
 
 func SupportedServerProperties() []ServerProperty {
@@ -318,6 +322,12 @@ func SupportedServerProperties() []ServerProperty {
 		Required: false,
 	}
 
+	DefaultPropPingLimit := ServerProperty{
+		Key:      PropPingLimit,
+		Value:    strconv.Itoa(int(PropPingLimitDefault / time.Second)),
+		Required: false,
+	}
+
 	// optional
 	DefaultPropServerLNNode := ServerProperty{
 		Key:      PropServerLNNode,
@@ -341,6 +351,7 @@ func SupportedServerProperties() []ServerProperty {
 
 		// optional
 		DefaultPropServerLNNode,
+		DefaultPropPingLimit,
 
 		// TODO: make it required once clients upgrade.
 		{

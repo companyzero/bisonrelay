@@ -146,6 +146,8 @@ func (z *ZKS) welcome(kx *session.KX) error {
 			properties[k].Value = strconv.FormatInt(int64(z.settings.MaxPushInvoices), 10)
 		case rpc.PropMaxMsgSizeVersion:
 			properties[k].Value = strconv.FormatUint(uint64(z.settings.MaxMsgSizeVersion), 10)
+		case rpc.PropPingLimit:
+			properties[k].Value = strconv.FormatInt(int64(z.settings.PingLimit/time.Second), 10)
 		}
 	}
 
@@ -451,7 +453,7 @@ func NewServer(cfg *settings.Settings) (*ZKS, error) {
 		log:         logBknd.logger("SERV"),
 		logConn:     logBknd.logger("CONN"),
 		subscribers: make(map[ratchet.RVPoint]*sessionContext),
-		pingLimit:   rpc.PingLimit,
+		pingLimit:   cfg.PingLimit,
 		dbCtx:       dbCtx,
 		dbCtxCancel: dbCtxCancel,
 	}

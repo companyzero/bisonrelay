@@ -13,6 +13,7 @@ import (
 	"github.com/companyzero/bisonrelay/rpc"
 	brpgdb "github.com/companyzero/bisonrelay/server/internal/pgdb"
 	"github.com/vaughan0/go-ini"
+	strduration "github.com/xhit/go-str2duration/v2"
 )
 
 const (
@@ -38,6 +39,7 @@ type Settings struct {
 	// policy section
 	ExpirationDays    int // How many days after which to expire data
 	MaxMsgSizeVersion rpc.MaxMsgSizeVersion
+	PingLimit         time.Duration
 
 	// payment section
 	PayScheme           string
@@ -90,6 +92,7 @@ func New() *Settings {
 		// Policy
 		ExpirationDays:    rpc.PropExpirationDaysDefault,
 		MaxMsgSizeVersion: rpc.PropMaxMsgSizeVersionDefault,
+		PingLimit:         rpc.PropPingLimitDefault,
 
 		// payment
 		PayScheme:           "free",
@@ -262,6 +265,14 @@ func (s *Settings) Load(filename string) error {
 	}
 	s.MaxPushInvoices = maxPushInvoices
 
+	err = iniDuration(cfg, &s.PingLimit, "policy", "pinglimit")
+	if err != nil && !errors.Is(err, errIniNotFound) {
+		return err
+	}
+	if s.PingLimit < time.Second {
+		return fmt.Errorf("pinglimit must be at least one second")
+	}
+
 	err = iniMaxMsgSize(cfg, &s.MaxMsgSizeVersion, "policy", "maxmsgsizeversion")
 	if err != nil && !errors.Is(err, errIniNotFound) {
 		return err
@@ -311,6 +322,19 @@ func iniInt(cfg ini.File, p *int, section, key string) error {
 	i64, err := strconv.ParseInt(v, 10, 64)
 	if err == nil {
 		*p = int(i64)
+	}
+	return err
+}
+
+func iniDuration(cfg ini.File, p *time.Duration, section, key string) error {
+	v, ok := cfg.Get(section, key)
+	if !ok {
+		return errIniNotFound
+	}
+
+	dur, err := strduration.ParseDuration(v)
+	if err == nil {
+		*p = dur
 	}
 	return err
 }
