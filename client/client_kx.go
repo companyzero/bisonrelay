@@ -758,6 +758,16 @@ func (c *Client) unsubIdleUsers(limitInterval, lastHandshakeInterval time.Durati
 		adminGCs = append(adminGCs, &gcs[i])
 	}
 
+	// Make a map of all subscribers to our posts.
+	ids, err := c.ListPostSubscribers()
+	if err != nil {
+		return err
+	}
+	postSubs := make(map[clientintf.UserID]struct{}, len(ids))
+	for _, id := range ids {
+		postSubs[id] = struct{}{}
+	}
+
 	c.log.Debugf("Starting auto unsubscribe of idle users with limitDate %s "+
 		"and limitHandshakeDate %s", limitDate.Format(time.RFC3339),
 		limitHandshakeDate.Format(time.RFC3339))
@@ -817,28 +827,49 @@ func (c *Client) unsubIdleUsers(limitInterval, lastHandshakeInterval time.Durati
 			continue
 		}
 
-		ru.log.Infof("User %s is idle (last received msg time is %s, "+
-			"last handshake attempt time is %s). Removing from all "+
-			"active subscriptions and GCs.",
+		// If this user is not a member of any GC we admin and is not
+		// subbed to our posts, skip it.
+		var gcsToUnsub []clientintf.ID
+		for _, gc := range adminGCs {
+			if slices.Contains(gc.Members, uid) {
+				gcsToUnsub = append(gcsToUnsub, gc.ID)
+			}
+		}
+		_, isSubbedToPosts := postSubs[uid]
+
+		msg := fmt.Sprintf("User %s is idle (last received msg time is %s, "+
+			"last handshake attempt time is %s).",
 			strescape.Nick(ru.Nick()), lastDecTime.Format(time.RFC3339),
 			ab.LastHandshakeAttempt.Format(time.RFC3339))
+		if len(gcsToUnsub) == 0 && !isSubbedToPosts {
+			msg += fmt.Sprintf(" No actions to take (gcsToUnsub=%d isSubbedToPosts=%v).",
+				len(gcsToUnsub), isSubbedToPosts)
+			ru.log.Debugf(msg)
+			continue
+		}
+
+		if isSubbedToPosts {
+			msg += " Unsubscribing from local posts."
+		}
+		if len(gcsToUnsub) > 0 {
+			msg += fmt.Sprintf(" Removing from %d GCs.", len(gcsToUnsub))
+		}
+		ru.log.Info(msg)
 		c.ntfns.notifyUnsubscribingIdleRemote(ru, lastDecTime)
 
 		// Forcibly make user unsub from posts.
-		go func() {
-			err := c.unsubRemoteFromLocalPosts(ru, false)
-			if err != nil {
-				ru.log.Warnf("Unable to unsubscribe from local posts: %v", err)
-			}
-		}()
+		if isSubbedToPosts {
+			go func() {
+				err := c.unsubRemoteFromLocalPosts(ru, false)
+				if err != nil {
+					ru.log.Warnf("Unable to unsubscribe from local posts: %v", err)
+				}
+			}()
+		}
 
 		// Remove user from any GCs we admin.
-		for _, gc := range adminGCs {
-			if !slices.Contains(gc.Members, uid) {
-				continue
-			}
-
-			gcid := gc.ID
+		for _, gcid := range gcsToUnsub {
+			gcid := gcid
 			uid := uid
 			go func() {
 				err := c.GCKick(gcid, uid, "User is idle for too long")
