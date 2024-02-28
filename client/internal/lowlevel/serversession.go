@@ -514,7 +514,7 @@ func (sess *serverSession) sendLoop(ctx context.Context) error {
 	lastWriteTime := time.Now().Round(0) // real time
 	writeMsg := func(msg *rpc.Message, payload interface{}) error {
 		timeSince := time.Since(lastWriteTime)
-		if timeSince > rpc.PingLimit {
+		if sess.policy.PingLimit > 0 && timeSince > sess.policy.PingLimit {
 			// Client took too long to send a message. Close session.
 			return fmt.Errorf("sendLoop stalled for %s", timeSince)
 		}

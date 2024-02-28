@@ -74,6 +74,10 @@ type ServerPolicy struct {
 	// SubPayRate is the rate (in milli-atoms) to subscribe to an RV point
 	// on the server.
 	SubPayRate uint64
+
+	// PingLimit is the deadline for writing messages (including ping) to
+	// the server.
+	PingLimit time.Duration
 }
 
 // ServerSessionIntf is the interface available from serverSession to

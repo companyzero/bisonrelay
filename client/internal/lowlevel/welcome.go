@@ -189,6 +189,8 @@ func (ck *ConnKeeper) attemptWelcome(conn clientintf.Conn, kx msgReaderWriter) (
 		spr    uint64 = 0
 		lnNode string = ""
 
+		pingLimit time.Duration
+
 		// TODO: modify to zero once clients are updated to force
 		// server to send an appropriate value.
 		expd int64 = rpc.PropExpirationDaysDefault
@@ -260,6 +262,13 @@ func (ck *ConnKeeper) attemptWelcome(conn clientintf.Conn, kx msgReaderWriter) (
 				return nil, fmt.Errorf("invalid max msg size version: %v", err)
 			}
 			maxMsgSizeVersion = rpc.MaxMsgSizeVersion(mmv)
+
+		case rpc.PropPingLimit:
+			pl, err := strconv.ParseInt(v.Value, 10, 64)
+			if err != nil {
+				return nil, fmt.Errorf("invalid ping limit: %v", err)
+			}
+			pingLimit = time.Duration(pl) * time.Second
 
 		default:
 			if v.Required {
@@ -351,6 +360,29 @@ func (ck *ConnKeeper) attemptWelcome(conn clientintf.Conn, kx msgReaderWriter) (
 		pc = ck.cfg.PC
 	}
 
+	// If the server specified a ping limit and the user has enabled
+	// pinging, determine if we need to adjust or error out compared to the
+	// user's expected ping interval.
+	pingInterval := ck.cfg.PingInterval
+	userExpectedPingLimit := pingInterval + pingInterval/4
+	if pingLimit > time.Second && pingLimit < userExpectedPingLimit && pingInterval > 0 {
+		// When the server provided ping interval is less than 30
+		// seconds, error out unless our own ping interval is lower.
+		// This prevents the server from requesting pings too often.
+		if pingLimit < time.Second*30 && pingInterval > pingLimit {
+			return nil, fmt.Errorf("%w: server specified a ping limit of %s "+
+				"which is too short given our ping interval of %s",
+				errShortPingLimit, pingLimit, pingInterval)
+		}
+
+		// Otherwise, use a ping interval that should ensure we don't
+		// get disconnected too often.
+		pingInterval = pingLimit * 3 / 4
+		ck.log.Warnf("Reducing ping interval to %s", pingInterval)
+	} else if pingLimit < time.Second {
+		pingLimit = rpc.PropPingLimitDefault
+	}
+
 	// Reduce the tagstack depth by 1 to ensure the last tag is left for
 	// sending pings.
 	td -= 1
@@ -360,7 +392,7 @@ func (ck *ConnKeeper) attemptWelcome(conn clientintf.Conn, kx msgReaderWriter) (
 	sess.pc = pc
 	sess.payScheme = ps
 	sess.lnNode = lnNode
-	sess.pingInterval = ck.cfg.PingInterval
+	sess.pingInterval = pingInterval
 	sess.pushedRoutedMsgsHandler = ck.cfg.PushedRoutedMsgsHandler
 	sess.logPings = ck.cfg.LogPings
 	sess.policy = clientintf.ServerPolicy{
@@ -371,6 +403,7 @@ func (ck *ConnKeeper) attemptWelcome(conn clientintf.Conn, kx msgReaderWriter) (
 		PushPayRate:         ppr,
 		SubPayRate:          spr,
 		ExpirationDays:      int(expd),
+		PingLimit:           pingLimit,
 	}
 
 	ck.log.Infof("Connected to server %s", conn.RemoteAddr())

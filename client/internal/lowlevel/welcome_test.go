@@ -463,3 +463,101 @@ func TestAttemptsWelcomeUnknownProtocolVersion(t *testing.T) {
 	err = assert.ChanWritten(t, unwelcomeErrChan)
 	assert.ErrorIs(t, err, UnwelcomeError{})
 }
+
+func TestAttemptsWelcomePingLimit(t *testing.T) {
+	tests := []struct {
+		name         string
+		pingInterval time.Duration
+		pingLimit    string // seconds, encoded as string
+		wantErr      error
+		want         time.Duration
+	}{{
+		name:         "default ping interval",
+		pingInterval: rpc.DefaultPingInterval,
+		pingLimit:    strconv.Itoa(int(rpc.PropPingLimitDefault / time.Second)),
+		want:         rpc.DefaultPingInterval,
+	}, {
+		name:         "long ping interval",
+		pingInterval: 2 * time.Minute,
+		pingLimit:    "300", // 5 minutes
+		want:         2 * time.Minute,
+	}, {
+		name:         "ping interval higher than ping limit",
+		pingInterval: 10 * time.Minute,
+		pingLimit:    "300", // 5 minutes
+		want:         5 * time.Minute * 3 / 4,
+	}, {
+		name:         "short ping interval with short ping limit",
+		pingInterval: 5 * time.Second,
+		pingLimit:    "10",
+		want:         5 * time.Second,
+	}, {
+		name:         "zero ping interval",
+		pingInterval: 0,
+		pingLimit:    "300",
+		want:         0,
+	}, {
+		name:         "zero ping interval with short ping limit",
+		pingInterval: 0,
+		pingLimit:    "10",
+		want:         0,
+	}, {
+		name:         "long ping interval with short ping limit",
+		pingInterval: time.Minute,
+		pingLimit:    "10",
+		wantErr:      errShortPingLimit,
+	}}
+
+	type res struct {
+		err  error
+		sess *serverSession
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := ConnKeeperCfg{
+				PingInterval: tc.pingInterval,
+			}
+			unwelcomeErrChan := make(chan error, 5)
+			cfg.OnUnwelcomeError = func(err error) {
+				unwelcomeErrChan <- err
+			}
+
+			ck := NewConnKeeper(cfg)
+			cc := offlineConn{}
+			serverKX := newMockKX()
+
+			// Prepare the welcome msg.
+			wmsg := rpc.Welcome{
+				Version:    rpc.ProtocolVersion,
+				ServerTime: time.Now().Unix(),
+				Properties: rpc.SupportedServerProperties(),
+			}
+			for i := range wmsg.Properties {
+				prop := &wmsg.Properties[i]
+				switch prop.Key {
+				case rpc.PropServerTime:
+					prop.Value = strconv.FormatInt(time.Now().Unix(), 10)
+				case rpc.PropPingLimit:
+					prop.Value = tc.pingLimit
+				}
+			}
+			msg := &rpc.Message{Command: rpc.SessionCmdWelcome}
+
+			// Attempting welcome should fail.
+			resChan := make(chan res, 1)
+			go func() {
+				sess, err := ck.attemptWelcome(cc, serverKX)
+				resChan <- res{sess: sess, err: err}
+			}()
+			serverKX.pushReadMsg(t, msg, wmsg)
+			gotRes := assert.ChanWritten(t, resChan)
+			assert.ErrorIs(t, gotRes.err, tc.wantErr)
+			if gotRes.sess != nil {
+				assert.DeepEqual(t, gotRes.sess.pingInterval, tc.want)
+			}
+		})
+	}
+
+}

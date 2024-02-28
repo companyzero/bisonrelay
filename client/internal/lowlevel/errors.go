@@ -14,7 +14,8 @@ var (
 
 	errNoPeerTLSCert = errors.New("server did not send any TLS certs")
 
-	errPongTimeout = errors.New("pong timeout")
+	errPongTimeout    = errors.New("pong timeout")
+	errShortPingLimit = errors.New("short ping limit")
 
 	// errSessRequestedClose is a guard error to signal the session was
 	// closed on request.

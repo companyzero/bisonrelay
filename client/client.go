@@ -192,6 +192,11 @@ type Config struct {
 	// AutoSubscribeToPosts flags whether to automatically subscribe to
 	// posts when kx'ing for the first time with an user.
 	AutoSubscribeToPosts bool
+
+	// PingInterval sets how often to send pings to the server to keep
+	// the connection open. If unset, defaults to the RPC default ping
+	// interval. If negative, pings are not sent.
+	PingInterval time.Duration
 }
 
 // logger creates a logger for the given subsystem in the configured backend.
@@ -229,6 +234,10 @@ func (cfg *Config) setDefaults() {
 
 	if cfg.MaxAutoKXMediateIDRequests == 0 {
 		cfg.MaxAutoKXMediateIDRequests = 3
+	}
+
+	if cfg.PingInterval == 0 {
+		cfg.PingInterval = rpc.DefaultPingInterval
 	}
 
 	// These following GCMQ times were obtained by profiling a client
@@ -421,7 +430,7 @@ func New(cfg Config) (*Client, error) {
 		Dialer:                  cfg.Dialer,
 		CertConf:                certConfirmer,
 		ReconnectDelay:          cfg.ReconnectDelay,
-		PingInterval:            rpc.DefaultPingInterval,
+		PingInterval:            cfg.PingInterval,
 		PushedRoutedMsgsHandler: rmgr.HandlePushedRMs,
 		Log:                     cfg.logger("CONN"),
 		LogPings:                cfg.LogPings,
