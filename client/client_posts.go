@@ -292,35 +292,7 @@ func (c *Client) shareWithPostSubscribers(subs []clientintf.UserID,
 
 	// Store queue of msgs in db.
 	payEvent := fmt.Sprintf("posts.%s.%s", pid.ShortLogID(), payType)
-	sqid, err := c.addToSendQ(payEvent, rm, priorityDefault, subs...)
-	if err != nil {
-		return err
-	}
-
-	for _, uid := range subs {
-		ru, err := c.rul.byID(uid)
-		if errors.Is(err, userNotFoundError{}) {
-			c.log.Warnf("unable to find subscriber to share post with: %v", err)
-			continue
-		}
-		if err != nil {
-			return err
-		}
-
-		// Send as a goroutine so all shares are concurrent.
-		go func() {
-			err := ru.sendRM(rm, payEvent)
-			if err != nil {
-				if !errors.Is(err, clientintf.ErrSubsysExiting) {
-					ru.log.Errorf("unable to send RMPostShare: %v", err)
-				}
-				return
-			}
-			c.removeFromSendQ(sqid, ru.ID())
-			ru.log.Debugf("Shared post %s with user", pid)
-		}()
-	}
-	return nil
+	return c.sendWithSendQ(payEvent, rm, subs...)
 }
 
 // CreatePost creates a new post and shares it with all current subscribers.
@@ -892,14 +864,8 @@ func (c *Client) handlePostStatus(ru *RemoteUser, rmps rpc.RMPostStatus) error {
 		errMsg := err.Error()
 		reply.Error = &errMsg
 	}
-	go func() {
-		payEvent := fmt.Sprintf("posts.%s.statusreply", rmps.Link[:16])
-		err := ru.sendRM(reply, payEvent)
-		if err != nil {
-			ru.log.Errorf("Unable to send post status reply: %v", err)
-		}
-	}()
-	return err
+	payEvent := fmt.Sprintf("posts.%s.statusreply", rmps.Link[:16])
+	return c.sendWithSendQ(payEvent, reply, ru.ID())
 }
 
 func (c *Client) handlePostStatusReply(ru *RemoteUser, reply rpc.RMPostStatusReply) error {
