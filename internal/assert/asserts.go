@@ -36,6 +36,20 @@ func ChanWrittenWithVal[T any](t testing.TB, c chan T, want T) T {
 	return got
 }
 
+// ChanWrittenWithValTimeout asserts the chan c was written with a value that
+// DeepEquals v before the timeout expires.
+func ChanWrittenWithValTimeout[T any](t testing.TB, c chan T, want T, timeout time.Duration) T {
+	t.Helper()
+	var got T
+	select {
+	case got = <-c:
+	case <-time.After(timeout):
+		t.Fatal("timeout waiting for chan read")
+	}
+	DeepEqual(t, got, want)
+	return got
+}
+
 // ChanNotWritten asserts that the chan is not written at least until the passed
 // timeout value.
 func ChanNotWritten[T any](t testing.TB, c chan T, timeout time.Duration) {
