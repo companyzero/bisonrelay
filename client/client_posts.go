@@ -1000,7 +1000,6 @@ func (c *Client) relayPost(postFrom clientintf.UserID, pid clientintf.PostID,
 	users ...clientintf.UserID) error {
 
 	var post rpc.PostMetadata
-	var updates []rpc.PostMetadataStatus
 	err := c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
 		var err error
 		post, err = c.db.ReadPost(tx, postFrom, pid)
@@ -1011,12 +1010,12 @@ func (c *Client) relayPost(postFrom clientintf.UserID, pid clientintf.PostID,
 	}
 
 	// Log the event.
-	var from interface{}
-	if from, err = c.rul.byID(postFrom); err != nil {
-		from = postFrom
+	from := postFrom.String()
+	if ruFrom, err := c.rul.byID(postFrom); err == nil {
+		from = ruFrom.String()
 	}
 	c.log.Infof("Relaying post %s from %s to %d subscribers",
-		pid, len(updates), from, len(users))
+		pid, from, len(users))
 
 	// Relay post.
 	rm := rpc.RMPostShare(post)
