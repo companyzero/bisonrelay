@@ -90,7 +90,6 @@ type RVManager struct {
 	runDone     chan struct{}
 	isUpToDate  chan chan bool
 	db          RVManagerDB
-	nextInvoice string
 	subDoneCB   func()
 
 	// subsDelayer is used to do some hysteresis around the full
@@ -330,7 +329,9 @@ func (rmgr *RVManager) IsUpToDate() bool {
 	}
 }
 
-func (rmgr *RVManager) fetchNextInvoice(ctx context.Context, sess clientintf.ServerSessionIntf) error {
+// fetchNextInvoice fetches the next invoice to use to pay for subscriptions
+// with the passed session.
+func (rmgr *RVManager) fetchNextInvoice(ctx context.Context, sess clientintf.ServerSessionIntf) (string, error) {
 	msg := rpc.Message{Command: rpc.TaggedCmdGetInvoice}
 	pc := sess.PayClient()
 	payload := &rpc.GetInvoice{
@@ -343,7 +344,7 @@ func (rmgr *RVManager) fetchNextInvoice(ctx context.Context, sess clientintf.Ser
 	replyChan := make(chan interface{})
 	err := sess.SendPRPC(msg, payload, replyChan)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	// Wait to get the invoice back.
@@ -351,38 +352,38 @@ func (rmgr *RVManager) fetchNextInvoice(ctx context.Context, sess clientintf.Ser
 	select {
 	case reply = <-replyChan:
 	case <-ctx.Done():
-		return ctx.Err()
+		return "", ctx.Err()
 	}
 
 	switch reply := reply.(type) {
 	case *rpc.GetInvoiceReply:
-		rmgr.nextInvoice = reply.Invoice
-		rmgr.log.Tracef("Received invoice reply: %q", rmgr.nextInvoice)
+		nextInvoice := reply.Invoice
+		rmgr.log.Tracef("Received invoice reply: %q", nextInvoice)
 
 		// Decode invoice and sanity check it.
-		decoded, err := pc.DecodeInvoice(ctx, rmgr.nextInvoice)
+		decoded, err := pc.DecodeInvoice(ctx, nextInvoice)
 		if err != nil {
-			return fmt.Errorf("unable to decode received invoice: %v", err)
+			return "", fmt.Errorf("unable to decode received invoice: %v", err)
 		}
 		if decoded.IsExpired(rpc.InvoiceExpiryAffordance) {
-			return fmt.Errorf("server sent expired invoice")
+			return "", fmt.Errorf("server sent expired invoice")
 		}
 		if decoded.MAtoms != 0 {
-			return fmt.Errorf("server sent invoice with amount instead of zero")
+			return "", fmt.Errorf("server sent invoice with amount instead of zero")
 		}
 
-		return nil
+		return nextInvoice, nil
 	case error:
-		return reply
+		return "", reply
 	default:
-		return fmt.Errorf("unknown reply from server: %v", err)
+		return "", fmt.Errorf("unknown reply from server: %v", err)
 	}
 }
 
 // payForSubs pays for any unpaid RVs contained in the passed list. Returns the
 // list of (previously) unpaid RVs.
 func (rmgr *RVManager) payForSubs(ctx context.Context, subsNeedPay map[ratchet.RVPoint]rdzvSub,
-	sess clientintf.ServerSessionIntf) ([]ratchet.RVPoint, error) {
+	nextInvoice string, sess clientintf.ServerSessionIntf) ([]ratchet.RVPoint, error) {
 
 	// Determine payment amount. The amount to pay depends on how many
 	// unpaid for RVs we have.
@@ -398,11 +399,11 @@ func (rmgr *RVManager) payForSubs(ctx context.Context, subsNeedPay map[ratchet.R
 	if len(unpaidRVs) == 0 {
 		// No need to pay.
 		return nil, nil
-	} else if rmgr.nextInvoice == "" {
+	} else if nextInvoice == "" {
 		needsInvoice = true
 	} else {
 		// Decode invoice, check if it's expired.
-		decoded, err := pc.DecodeInvoice(ctx, rmgr.nextInvoice)
+		decoded, err := pc.DecodeInvoice(ctx, nextInvoice)
 		if err != nil {
 			needsInvoice = true
 		} else if decoded.IsExpired(rpc.InvoiceExpiryAffordance) {
@@ -413,7 +414,7 @@ func (rmgr *RVManager) payForSubs(ctx context.Context, subsNeedPay map[ratchet.R
 	}
 
 	if needsInvoice {
-		err := rmgr.fetchNextInvoice(ctx, sess)
+		nextInvoice, err = rmgr.fetchNextInvoice(ctx, sess)
 		if err != nil {
 			return nil, err
 		}
@@ -422,13 +423,12 @@ func (rmgr *RVManager) payForSubs(ctx context.Context, subsNeedPay map[ratchet.R
 	subPayRate := sess.Policy().SubPayRate
 	amt := len(unpaidRVs) * int(subPayRate)
 
-	// Pay for it. Independently of payment result, clear the invoice to pay.
+	// Pay for it.
 	ctx, cancel := multiCtx(ctx, sess.Context())
 	rmgr.log.Debugf("Attempting to pay %d MAtoms for new subs %s", amt,
 		joinRVList(unpaidRVs))
-	totalFees, err := pc.PayInvoiceAmount(ctx, rmgr.nextInvoice, int64(amt))
+	totalFees, err := pc.PayInvoiceAmount(ctx, nextInvoice, int64(amt))
 	cancel()
-	rmgr.nextInvoice = ""
 
 	// If the payment completed, track the stats for the previously unpaid
 	// subs.
@@ -456,18 +456,19 @@ func (rmgr *RVManager) payForSubs(ctx context.Context, subsNeedPay map[ratchet.R
 	return unpaidRVs, err
 }
 
-// updatePayloadSubscriptions (re-)subscribes to all rendezvous points in subs on
-// the given server session.
+// updatePayloadSubscriptions (re-)subscribes to all rendezvous points in subs
+// on the given server session. If successful, it may return the next invoice
+// to use to pay for the next round of subscriptions.
 func (rmgr *RVManager) updatePayloadSubscriptions(ctx context.Context,
 	add, del, mark []ratchet.RVPoint, subsNeedPay map[RVID]rdzvSub,
-	sess clientintf.ServerSessionIntf) error {
+	nextInvoice string, sess clientintf.ServerSessionIntf) (string, error) {
 
 	// Pay for the subs we haven't paid yet. This includes both
 	// subscriptions to add and to mark as paid in the server and excludes
 	// subs that have been prepaid.
-	unpaidRVs, err := rmgr.payForSubs(ctx, subsNeedPay, sess)
+	unpaidRVs, err := rmgr.payForSubs(ctx, subsNeedPay, nextInvoice, sess)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	rmgr.log.Debugf("Updating server subscription with +%d-%d$%d RVs", len(add),
@@ -483,7 +484,7 @@ func (rmgr *RVManager) updatePayloadSubscriptions(ctx context.Context,
 	replyChan := make(chan interface{})
 	err = sess.SendPRPC(msg, payload, replyChan)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	// Wait for the reply.
@@ -491,7 +492,7 @@ func (rmgr *RVManager) updatePayloadSubscriptions(ctx context.Context,
 	select {
 	case reply = <-replyChan:
 	case <-ctx.Done():
-		return ctx.Err()
+		return "", ctx.Err()
 	}
 
 	// Resolve the subscription reply.
@@ -502,19 +503,17 @@ func (rmgr *RVManager) updatePayloadSubscriptions(ctx context.Context,
 			// in order to clear the paid flag from the local DB.
 			errUnpaid := rpc.ParseErrUnpaidSubscriptionRV(reply.Error)
 			if errUnpaid != nil {
-				return errUnpaid
+				return "", errUnpaid
 			}
-			return AckError{ErrorStr: reply.Error}
+			return "", AckError{ErrorStr: reply.Error}
 		}
 
 		// Store invoice for next sub.
-		if reply.NextInvoice != "" {
-			rmgr.nextInvoice = reply.NextInvoice
-		}
+		nextInvoice = reply.NextInvoice
 	case error:
-		return reply
+		return "", reply
 	default:
-		return fmt.Errorf("unknown reply from server: %v", err)
+		return "", fmt.Errorf("unknown reply from server: %v", err)
 	}
 
 	// Mark the unpaid RVs as paid (since server ack'd).
@@ -531,7 +530,7 @@ func (rmgr *RVManager) updatePayloadSubscriptions(ctx context.Context,
 		rmgr.log.Debugf("RV subscriptions changed +%d -%d", len(add), len(del))
 	}
 
-	return nil
+	return nextInvoice, nil
 }
 
 // handleInSubs calls the handler for the given subscription, passing as
@@ -586,7 +585,14 @@ func (rmgr *RVManager) Run(ctx context.Context) error {
 
 	// updateResChan gets the result of the async call to
 	// updatePayloadSubscriptions().
-	updateResChan := make(chan error)
+	type updateRes struct {
+		nextInvoice string
+		err         error
+	}
+	updateResChan := make(chan updateRes, 1)
+
+	// nextInvoice to use to pay for subscriptions.
+	var nextInvoice string
 
 	// lastUpdateDone tracks whether the last update of the subscriptions
 	// to the server was done. This is needed to ensure there's ever only
@@ -611,7 +617,7 @@ loop:
 		case newSess := <-rmgr.sessionChan:
 			rmgr.log.Debugf("Using new server session %v", newSess)
 			sess = newSess
-			rmgr.nextInvoice = ""
+			nextInvoice = ""
 
 			// We're about to send the full set, so clear
 			// out delayChan to avoid duplicate
@@ -679,8 +685,10 @@ loop:
 
 			continue loop
 
-		case updateErr := <-updateResChan:
+		case updateRes := <-updateResChan:
 			// Received reply to latest subscription attempt.
+			updateErr := updateRes.err
+			nextInvoice = updateRes.nextInvoice
 			lastUpdateDone = true
 			lastUpdateSuccess = updateErr == nil
 			if updateErr != nil {
@@ -763,12 +771,13 @@ loop:
 		delayChan = nil
 		needsUpdate = false
 		subsNeedPay := selectSubsNeedPay(append(toAdd, toMark...), subs)
-		go func(add, del, mark []ratchet.RVPoint, sess clientintf.ServerSessionIntf) {
+		go func(add, del, mark []ratchet.RVPoint, nextInvoice string, sess clientintf.ServerSessionIntf) {
+			nextInvoice, err := rmgr.updatePayloadSubscriptions(ctx, add, del, mark, subsNeedPay, nextInvoice, sess)
 			select {
-			case updateResChan <- rmgr.updatePayloadSubscriptions(ctx, add, del, mark, subsNeedPay, sess):
+			case updateResChan <- updateRes{nextInvoice: nextInvoice, err: err}:
 			case <-ctx.Done():
 			}
-		}(toAdd, toDel, toMark, sess)
+		}(toAdd, toDel, toMark, nextInvoice, sess)
 		toAdd = nil
 		toDel = nil
 		toMark = nil
