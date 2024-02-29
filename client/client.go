@@ -102,10 +102,6 @@ type Config struct {
 	// download with the user.
 	FileDownloadConfirmer func(user *RemoteUser, fm rpc.FileMetadata) bool
 
-	// TransitiveEvent is called whenever a request is made by source for
-	// the local client to forward a message to dst.
-	TransitiveEvent func(src, dst UserID, event TransitiveEvent)
-
 	// TipUserRestartDelay is how long to wait after client start and
 	// initial server connection to restart TipUser attempts. If unset,
 	// a default value of 1 minute is used.

@@ -38,9 +38,7 @@ func (c *Client) handleRMHandshake(ru *RemoteUser, msg interface{}) error {
 }
 
 func (c *Client) handleTransitiveMsg(ru *RemoteUser, tm rpc.RMTransitiveMessage) error {
-	if c.cfg.TransitiveEvent != nil {
-		c.cfg.TransitiveEvent(ru.ID(), tm.For, TEMsgForward)
-	}
+	c.ntfns.notifyTransitiveEvent(ru.ID(), tm.For, TEMsgForward)
 
 	target, err := c.rul.byID(tm.For)
 	if err != nil {

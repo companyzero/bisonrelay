@@ -3382,6 +3382,27 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		as.repaintIfActive(cw)
 	}))
 
+	ntfns.Register(client.OnTransitiveEvent(func(src, dst client.UserID, event client.TransitiveEvent) {
+		srcRU, err := as.c.UserByID(src)
+		if err != nil {
+			as.diagMsg("Unknown source %s for transitive event %q", event)
+			return
+		}
+
+		dstRU, _ := as.c.UserByID(dst)
+		var msg string
+		if dstRU == nil {
+			msg = fmt.Sprintf("Received "+
+				"transitive %q from %q targeted to unknown user %s",
+				event, srcRU.Nick(), dst)
+		} else {
+			msg = fmt.Sprintf("Received "+
+				"transitive %q from %q targeted to user %q",
+				event, srcRU.Nick(), dstRU.Nick())
+		}
+		as.diagMsg(msg)
+	}))
+
 	// Initialize resources router.
 	var sstore *simplestore.Store
 	resRouter := resources.NewRouter()
@@ -3537,27 +3558,6 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 					}
 				}
 			}
-		},
-
-		TransitiveEvent: func(src, dst client.UserID, event client.TransitiveEvent) {
-			srcRU, err := as.c.UserByID(src)
-			if err != nil {
-				as.diagMsg("Unknown source %s for transitive event %q", event)
-				return
-			}
-
-			dstRU, _ := as.c.UserByID(dst)
-			var msg string
-			if dstRU == nil {
-				msg = fmt.Sprintf("Received "+
-					"transitive %q from %q targeted to unknown user %s",
-					event, srcRU.Nick(), dst)
-			} else {
-				msg = fmt.Sprintf("Received "+
-					"transitive %q from %q targeted to user %q",
-					event, srcRU.Nick(), dstRU.Nick())
-			}
-			as.diagMsg(msg)
 		},
 
 		KXSuggestion: func(user *client.RemoteUser, pii zkidentity.PublicIdentity) {

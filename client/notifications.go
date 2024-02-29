@@ -355,6 +355,22 @@ type OnProfileUpdated func(ru *RemoteUser, ab *clientdb.AddressBookEntry, fields
 
 func (_ OnProfileUpdated) typ() string { return onProfileUpdatedType }
 
+const onTransitiveEventType = "onTransitiveEvent"
+
+// OnTransitiveEvent is called whenever a request is made by source for the
+// local client to forward a message to dst.
+type OnTransitiveEvent func(src, dst UserID, event TransitiveEvent)
+
+func (_ OnTransitiveEvent) typ() string { return onTransitiveEventType }
+
+const onRequestingMediateIDType = "onReqMediateID"
+
+// OnRequestingMediateID is called whenever an autokx attempt is requesting a
+// mediator to mediate id between the local client and a target.
+type OnRequestingMediateID func(mediator, target UserID)
+
+func (_ OnRequestingMediateID) typ() string { return onRequestingMediateIDType }
+
 // The following is used only in tests.
 
 const onTestNtfnType = "testNtfnType"
@@ -706,6 +722,17 @@ func (nmgr *NotificationManager) notifyProfileUpdated(ru *RemoteUser, ab *client
 		visit(func(h OnProfileUpdated) { h(ru, ab, fields) })
 }
 
+func (nmgr *NotificationManager) notifyTransitiveEvent(src, tgt clientintf.UserID,
+	event TransitiveEvent) {
+	nmgr.handlers[onTransitiveEventType].(*handlersFor[OnTransitiveEvent]).
+		visit(func(h OnTransitiveEvent) { h(src, tgt, event) })
+}
+
+func (nmgr *NotificationManager) notifyRequestingMediateID(mediator, target clientintf.UserID) {
+	nmgr.handlers[onRequestingMediateIDType].(*handlersFor[OnRequestingMediateID]).
+		visit(func(h OnRequestingMediateID) { h(mediator, target) })
+}
+
 func NewNotificationManager() *NotificationManager {
 	return &NotificationManager{
 		handlers: map[string]handlersRegistry{
@@ -722,6 +749,7 @@ func NewNotificationManager() *NotificationManager {
 			onReceiveReceipt:         &handlersFor[OnReceiveReceipt]{},
 			onRMReceived:             &handlersFor[OnRMReceived]{},
 			onProfileUpdatedType:     &handlersFor[OnProfileUpdated]{},
+			onTransitiveEventType:    &handlersFor[OnTransitiveEvent]{},
 
 			onPostSubscriberUpdated:    &handlersFor[OnPostSubscriberUpdated]{},
 			onPostsListReceived:        &handlersFor[OnPostsListReceived]{},
@@ -739,6 +767,7 @@ func NewNotificationManager() *NotificationManager {
 			onFileDownloadCompleted:    &handlersFor[OnFileDownloadCompleted]{},
 			onFileDownloadProgress:     &handlersFor[OnFileDownloadProgress]{},
 			onServerUnwelcomeError:     &handlersFor[OnServerUnwelcomeError]{},
+			onRequestingMediateIDType:  &handlersFor[OnRequestingMediateID]{},
 
 			onKXSearchCompletedNtfnType:       &handlersFor[OnKXSearchCompleted]{},
 			onInvoiceGenFailedNtfnType:        &handlersFor[OnInvoiceGenFailedNtfn]{},
