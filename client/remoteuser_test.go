@@ -232,3 +232,87 @@ func TestAttemptMaxRMSize(t *testing.T) {
 	err = aliceRemote.sendRM(pm, "")
 	assert.ErrorIs(t, err, errRMTooLarge)
 }
+
+// TestWaitsHandlerDone asserts that a remote user's run() method does not return
+// until all handlers finish processing.
+func TestWaitsHandlerDone(t *testing.T) {
+	t.Parallel()
+
+	rnd := testRand(t)
+	svr := newMockRMServer(t)
+
+	aliceRemote, bobRemote := newRemoteUserTestPair(t, rnd, svr, "alice", "bob")
+	aliceRun, bobRun := make(chan error), make(chan error)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go func() { aliceRun <- aliceRemote.run(ctx) }()
+	go func() { bobRun <- bobRemote.run(ctx) }()
+
+	gotBobRM, returnFromBobHandler := make(chan struct{}, 1), make(chan struct{}, 1)
+	bobRemote.rmHandler = func(_ *RemoteUser, h *rpc.RMHeader, p interface{}, ts time.Time) {
+		gotBobRM <- struct{}{}
+		<-returnFromBobHandler
+	}
+
+	// Alice sends the PM.
+	assert.NilErr(t, aliceRemote.sendPM("test"))
+
+	// Bob receives it.
+	assert.ChanWritten(t, gotBobRM)
+
+	// Clients are asked to shut down.
+	cancelTime := time.Now()
+	cancel()
+
+	// Alice already finished, but Bob did not (up to 1/2 of the expected
+	// timeout).
+	assert.ErrorIs(t, assert.ChanWritten(t, aliceRun), context.Canceled)
+	testDuration := remoteUserStopHandlerTimeout/2 - time.Since(cancelTime)
+	assert.ChanNotWritten(t, bobRun, testDuration)
+
+	// Bob finishes processing.
+	returnFromBobHandler <- struct{}{}
+
+	// Finally, Bob's run() method returns.
+	assert.ErrorIs(t, assert.ChanWritten(t, bobRun), context.Canceled)
+}
+
+// TestTimesoutSlowHandler asserts that a remote user's run() method returns
+// if a handler takes too long to return.
+func TestTimesoutSlowHandler(t *testing.T) {
+	t.Parallel()
+
+	rnd := testRand(t)
+	svr := newMockRMServer(t)
+
+	aliceRemote, bobRemote := newRemoteUserTestPair(t, rnd, svr, "alice", "bob")
+	aliceRun, bobRun := make(chan error), make(chan error)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go func() { aliceRun <- aliceRemote.run(ctx) }()
+	go func() { bobRun <- bobRemote.run(ctx) }()
+
+	gotBobRM, returnFromBobHandler := make(chan struct{}, 1), make(chan struct{}, 1)
+	bobRemote.rmHandler = func(_ *RemoteUser, h *rpc.RMHeader, p interface{}, ts time.Time) {
+		gotBobRM <- struct{}{}
+		<-returnFromBobHandler
+	}
+
+	// Alice sends the PM.
+	assert.NilErr(t, aliceRemote.sendPM("test"))
+
+	// Bob receives it.
+	assert.ChanWritten(t, gotBobRM)
+
+	// Clients are asked to shut down.
+	cancel()
+
+	// Alice already finished.
+	assert.ErrorIs(t, assert.ChanWritten(t, aliceRun), context.Canceled)
+
+	// Bob's run() method returns with the timeout error.
+	assert.ErrorIs(t, assert.ChanWritten(t, bobRun), errTimeoutWaitingHandlers)
+
+	// Clean up handler goroutine.
+	returnFromBobHandler <- struct{}{}
+}

@@ -32,6 +32,11 @@ const (
 	priorityGC      = 1
 	priorityDefault = 2
 	priorityUpload  = 4
+
+	// remoteUserStopHandlerTimeout is the timeout that a remote user's
+	// run() method uses to wait for all handlers to finish before
+	// returning.
+	remoteUserStopHandlerTimeout = 10 * time.Second
 )
 
 type UserID = clientintf.UserID
@@ -74,6 +79,7 @@ type RemoteUser struct {
 	ratchetChan     chan *ratchet.Ratchet
 	decryptedRMChan chan error
 	sentRMChan      chan error
+	handlingChan    chan int // +1 means handling, -1 means handling done
 	compressLevel   int
 	myResetRV       clientdb.RawRVID
 	theirResetRV    clientdb.RawRVID
@@ -87,10 +93,6 @@ type RemoteUser struct {
 	// rmHandler is called whenever we receive a RM from this user. This is
 	// called as a goroutine.
 	rmHandler func(ru *RemoteUser, h *rpc.RMHeader, c interface{}, ts time.Time)
-
-	// rmHandlerWG tracks calls to the rmHandler that need to complete
-	// before run() returns.
-	rmHandlerWG sync.WaitGroup
 
 	// wq* keeps track of inflight calls to this user that need to be done
 	// one at a time, because there's no way to demux replies.
@@ -122,6 +124,7 @@ func newRemoteUser(q rmqIntf, rmgr rdzvManagerIntf, db *clientdb.DB,
 		ratchetChan:     make(chan *ratchet.Ratchet),
 		decryptedRMChan: make(chan error),
 		sentRMChan:      make(chan error),
+		handlingChan:    make(chan int),
 	}
 	ru.setNick(remoteID.Nick)
 	return ru
@@ -570,10 +573,17 @@ func (ru *RemoteUser) handleReceivedEncrypted(recvBlob lowlevel.RVBlob) error {
 
 	// Handle every received msg in a different goroutine.
 	if ru.rmHandler != nil {
-		ru.rmHandlerWG.Add(1)
+		select {
+		case ru.handlingChan <- +1:
+		case <-ru.runDone:
+			return errRemoteUserExiting
+		}
 		go func() {
 			ru.rmHandler(ru, h, c, recvBlob.ServerTS)
-			ru.rmHandlerWG.Done()
+			select {
+			case ru.handlingChan <- -1:
+			case <-ru.runDone:
+			}
 		}()
 	}
 
@@ -664,6 +674,10 @@ func (ru *RemoteUser) stop() {
 }
 
 func (ru *RemoteUser) run(ctx context.Context) error {
+
+	// How many handlers are processing messages.
+	var nbHandlers int
+
 	// Perform initial subscription to the ratchet receive RVs.
 	var emptyRV ratchet.RVPoint
 	handler := ru.handleReceivedEncrypted
@@ -702,6 +716,11 @@ nextAction:
 			err = ru.saveRatchet(nil, nil, "")
 			ru.rLock.Unlock()
 
+		case delta := <-ru.handlingChan:
+			nbHandlers += delta
+			ru.log.Tracef("Got handling chan delta %d new %d",
+				delta, nbHandlers)
+
 		case <-ctx.Done():
 			err = ctx.Err()
 		}
@@ -715,9 +734,6 @@ nextAction:
 			lastDrainRV, handler)
 	}
 
-	// Prevent new stuff coming in.
-	close(ru.runDone)
-
 	// Unsub from the last subscribed RVs. Safe to ignore errors here, as
 	// we're quitting anyway.
 	if lastDrainRV != emptyRV {
@@ -730,17 +746,27 @@ nextAction:
 	// Wait until all handlers complete or at most 10 seconds. In general,
 	// handlers aren't slow, so this protects against deadlocks preventing
 	// shutdown.
-	handlersDone := make(chan struct{})
-	go func() {
-		ru.rmHandlerWG.Wait()
-		close(handlersDone)
-	}()
-	select {
-	case <-handlersDone:
-	case <-time.After(10 * time.Second):
-		ru.log.Warnf("Timeout waiting for some handlers to finish")
+	timeoutChan := time.After(remoteUserStopHandlerTimeout)
+	for nbHandlers > 0 {
+		select {
+		case delta := <-ru.handlingChan:
+			nbHandlers += delta
+			ru.log.Tracef("Got shutdown handling chan delta %d new %d",
+				delta, nbHandlers)
+
+		case <-timeoutChan:
+			ru.log.Warnf(fmt.Sprintf("Timeout waiting for %d handlers to finish",
+				nbHandlers))
+			if errors.Is(err, context.Canceled) {
+				err = fmt.Errorf("%w: %d handlers still processing",
+					errTimeoutWaitingHandlers, nbHandlers)
+			}
+			nbHandlers = 0
+		}
 	}
 
+	// All done.
+	close(ru.runDone)
 	ru.log.Tracef("Finished running user. err=%v", err)
 	return err
 }
