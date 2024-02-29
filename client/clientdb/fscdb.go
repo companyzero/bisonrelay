@@ -60,6 +60,7 @@ const (
 	cachedGCMsDir       = "cachedgcms"
 	unkxdUsersDir       = "unkxd"
 	filtersDir          = "contentfilters"
+	earlyPostStatusFile = "earlypoststatus.json"
 
 	pageSessionsDir         = "pagesessions"
 	pageSessionOverviewFile = "overview.json"

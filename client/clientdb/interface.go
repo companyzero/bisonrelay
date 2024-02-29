@@ -457,6 +457,12 @@ type ReceiveReceipt struct {
 	ClientTime int64  `json:"client_time"` // Unix Millisecond timestamp
 }
 
+// EarlyPostStatus stores data about a post status received before a post.
+type EarlyPostStatus struct {
+	PID    PostID          `json:"pid"`
+	Status rpc.RMPostShare `json:"status"`
+}
+
 var (
 	ErrLocalIDEmpty         = errors.New("local ID is not initialized")
 	ErrServerIDEmpty        = errors.New("server ID is not known")
