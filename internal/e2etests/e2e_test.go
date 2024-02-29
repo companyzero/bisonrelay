@@ -402,8 +402,8 @@ func (ts *testScaffold) newClientWithCfg(nccfg *clientCfg, opts ...newClientOpt)
 		GCMQMaxLifetime:  time.Second,
 		GCMQInitialDelay: time.Second,
 
-		RecentMediateIDThreshold:   time.Second,
-		UnkxdWarningTimeout:        time.Millisecond * 250,
+		RecentMediateIDThreshold:   chooseTimeout(time.Second, 3*time.Second),
+		UnkxdWarningTimeout:        chooseTimeout(250*time.Millisecond, time.Second),
 		MaxAutoKXMediateIDRequests: 3,
 
 		AutoHandshakeInterval:       time.Second * 8,

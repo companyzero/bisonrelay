@@ -10,8 +10,6 @@ import (
 	"golang.org/x/exp/slices"
 )
 
-var timeout = 30 * time.Second
-
 // ChanWritten returns the value written to chan c or times out.
 func ChanWritten[T any](t testing.TB, c chan T) T {
 	t.Helper()

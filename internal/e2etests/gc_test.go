@@ -893,7 +893,7 @@ func TestGCCrossedMediatedKX(t *testing.T) {
 	assertEmptyRMQ(t, bob)
 	assertEmptyRMQ(t, charlie)
 	assertEmptyRMQ(t, alice)
-	ts.log.Infof("Test setup done")
+	alice.Logger().Infof("Test setup done")
 
 	// Bob and Charlie go offline.
 	assertGoesOffline(t, bob)
@@ -905,7 +905,7 @@ func TestGCCrossedMediatedKX(t *testing.T) {
 	assert.NilErr(t, alice.InviteToGroupChat(gcID2, bob.PublicID()))
 	assert.NilErr(t, alice.InviteToGroupChat(gcID1, charlie.PublicID()))
 	assertEmptyRMQ(t, alice)
-	ts.log.Infof("Bob and Charlie cross-invited")
+	alice.Logger().Infof("Bob and Charlie cross-invited")
 
 	// Alice goes offline to prevent sending the GC lists just yet. Bob
 	// and Charlie come online and accept the invite.
@@ -916,7 +916,7 @@ func TestGCCrossedMediatedKX(t *testing.T) {
 	assert.NilErrFromChan(t, charlieAcceptedChan)
 	assertEmptyRMQ(t, bob)
 	assertEmptyRMQ(t, charlie)
-	ts.log.Infof("Bob and Charlie accepted invites")
+	alice.Logger().Infof("Bob and Charlie accepted invites")
 
 	// Bob and Charlie go offline to prevent the mediate kx to be requested
 	// immediately. Alice comes online and sends the GC lists.
@@ -926,9 +926,9 @@ func TestGCCrossedMediatedKX(t *testing.T) {
 	for i := 0; i < 2; i++ {
 		assert.ChanWritten(t, aliceAcceptedInvitesChan)
 	}
-	time.Sleep(500 * time.Millisecond)
+	sleep(250*time.Millisecond, 4)
 	assertEmptyRMQ(t, alice)
-	ts.log.Infof("Alice sent GC lists")
+	alice.Logger().Infof("Alice sent GC lists")
 
 	// Handlers for notification about Bob and Charlie requesting autokx.
 	bobRequestMI := make(chan struct{}, 5)
@@ -958,10 +958,10 @@ func TestGCCrossedMediatedKX(t *testing.T) {
 	assert.ChanWritten(t, charlieUpdatedChan)
 	assert.ChanWritten(t, bobRequestMI)
 	assert.ChanWritten(t, charlieRequestMI)
-	time.Sleep(500 * time.Millisecond)
+	sleep(250*time.Millisecond, 4)
 	assertEmptyRMQ(t, bob)
 	assertEmptyRMQ(t, charlie)
-	ts.log.Infof("Bob and Charlie sent RMMediateIdentity")
+	alice.Logger().Infof("Bob and Charlie sent RMMediateIdentity")
 
 	// Charlie and Bob go offline. Alice comes online, receives the
 	// RMMediateIdentity, sends RMInvite towards the target.
@@ -969,9 +969,9 @@ func TestGCCrossedMediatedKX(t *testing.T) {
 	assertGoesOffline(t, charlie)
 	assertGoesOnline(t, alice)
 	assertNextTransEventsAre(client.TEMediateID)
-	time.Sleep(500 * time.Millisecond)
+	sleep(250*time.Millisecond, 4)
 	assertEmptyRMQ(t, alice)
-	ts.log.Infof("Alice sent RMInvites")
+	alice.Logger().Infof("Alice sent RMInvites")
 
 	// Handlers for Bob and Charlie receiving the RMInvite.
 	bobTransEventChan := make(chan client.TransitiveEvent, 5)
@@ -994,10 +994,10 @@ func TestGCCrossedMediatedKX(t *testing.T) {
 	assertGoesOnline(t, charlie)
 	assert.ChanWrittenWithVal(t, bobTransEventChan, client.TERequestInvite)
 	assert.ChanWrittenWithVal(t, charlieTransEventChan, client.TERequestInvite)
-	time.Sleep(500 * time.Millisecond)
+	sleep(500*time.Millisecond, 4)
 	assertEmptyRMQ(t, bob)
 	assertEmptyRMQ(t, charlie)
-	ts.log.Infof("Bob and Charlie sent RMTransitiveMessage")
+	alice.Logger().Infof("Bob and Charlie sent RMTransitiveMessage")
 
 	// Charlie and Bob go offline. Alice comes online, sends the
 	// RMTransitiveMessageFwd messages.
@@ -1005,9 +1005,9 @@ func TestGCCrossedMediatedKX(t *testing.T) {
 	assertGoesOffline(t, charlie)
 	assertGoesOnline(t, alice)
 	assertNextTransEventsAre(client.TEMsgForward)
-	time.Sleep(500 * time.Millisecond)
+	sleep(500*time.Millisecond, 4)
 	assertEmptyRMQ(t, alice)
-	ts.log.Infof("Alice sent RMTransitiveMessageFwds")
+	alice.Logger().Infof("Alice sent RMTransitiveMessageFwds")
 
 	// Alice goes offline. Charlie and Bob come online, receive the
 	// forwarded invites. Both will attempt to accept the corresponding
