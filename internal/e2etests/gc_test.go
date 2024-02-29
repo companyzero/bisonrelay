@@ -821,6 +821,38 @@ func TestGCCrossedMediatedKX(t *testing.T) {
 		aliceAcceptedInvitesChan <- user.ID()
 	}))
 
+	// Helper to check that Alice is receiving the correct transient events
+	// form Bob and Charlie.
+	type transEvent struct {
+		src clientintf.UserID
+		tgt clientintf.UserID
+		e   client.TransitiveEvent
+	}
+	aliceTransEvent := make(chan transEvent, 10)
+	alice.handle(client.OnTransitiveEvent(func(src, tgt clientintf.UserID, e client.TransitiveEvent) {
+		aliceTransEvent <- transEvent{src: src, tgt: tgt, e: e}
+	}))
+	assertNextTransEventsAre := func(e client.TransitiveEvent) {
+		t.Helper()
+
+		// The events in this test are symmetrical, so Bob sends one
+		// and Charlie sends one and they are the same type.
+		e1 := assert.ChanWritten(t, aliceTransEvent)
+		e2 := assert.ChanWritten(t, aliceTransEvent)
+		if (e1.src != e2.tgt) || (e1.tgt != e2.src) {
+			t.Fatal("events src and tgt are not crossed")
+		}
+		if e1.src != bob.PublicID() && e2.src != bob.PublicID() {
+			t.Fatal("bob did not send one of the events")
+		}
+		if e1.src != charlie.PublicID() && e2.src != charlie.PublicID() {
+			t.Fatal("charlie did not send one of the events")
+		}
+		if e1.e != e || e2.e != e {
+			t.Fatal("one of the events was incorrect")
+		}
+	}
+
 	// Bob and Charlie will join the GCs.
 	bobJoinedChan, bobUpdatedChan := make(chan struct{}, 2), make(chan struct{}, 2)
 	bob.handle(client.OnJoinedGCNtfn(func(_ rpc.RMGroupList) { bobJoinedChan <- struct{}{} }))
@@ -894,9 +926,23 @@ func TestGCCrossedMediatedKX(t *testing.T) {
 	for i := 0; i < 2; i++ {
 		assert.ChanWritten(t, aliceAcceptedInvitesChan)
 	}
-	time.Sleep(200 * time.Millisecond)
+	time.Sleep(500 * time.Millisecond)
 	assertEmptyRMQ(t, alice)
 	ts.log.Infof("Alice sent GC lists")
+
+	// Handlers for notification about Bob and Charlie requesting autokx.
+	bobRequestMI := make(chan struct{}, 5)
+	bob.handle(client.OnRequestingMediateID(func(mediator, target clientintf.UserID) {
+		if mediator == alice.PublicID() && target == charlie.PublicID() {
+			bobRequestMI <- struct{}{}
+		}
+	}))
+	charlieRequestMI := make(chan struct{}, 5)
+	charlie.handle(client.OnRequestingMediateID(func(mediator, target clientintf.UserID) {
+		if mediator == alice.PublicID() && target == bob.PublicID() {
+			charlieRequestMI <- struct{}{}
+		}
+	}))
 
 	// Alice goes offline to prevent the mediate kx to be processed. Bob
 	// and Charlie come online, receive the GC lists for the GC just joined
@@ -910,7 +956,9 @@ func TestGCCrossedMediatedKX(t *testing.T) {
 	assert.ChanWritten(t, charlieJoinedChan)
 	assert.ChanWritten(t, bobUpdatedChan)
 	assert.ChanWritten(t, charlieUpdatedChan)
-	time.Sleep(200 * time.Millisecond)
+	assert.ChanWritten(t, bobRequestMI)
+	assert.ChanWritten(t, charlieRequestMI)
+	time.Sleep(500 * time.Millisecond)
 	assertEmptyRMQ(t, bob)
 	assertEmptyRMQ(t, charlie)
 	ts.log.Infof("Bob and Charlie sent RMMediateIdentity")
@@ -920,16 +968,33 @@ func TestGCCrossedMediatedKX(t *testing.T) {
 	assertGoesOffline(t, bob)
 	assertGoesOffline(t, charlie)
 	assertGoesOnline(t, alice)
-	time.Sleep(200 * time.Millisecond)
+	assertNextTransEventsAre(client.TEMediateID)
+	time.Sleep(500 * time.Millisecond)
 	assertEmptyRMQ(t, alice)
 	ts.log.Infof("Alice sent RMInvites")
+
+	// Handlers for Bob and Charlie receiving the RMInvite.
+	bobTransEventChan := make(chan client.TransitiveEvent, 5)
+	bob.handle(client.OnTransitiveEvent(func(src, tgt clientintf.UserID, e client.TransitiveEvent) {
+		if src == alice.PublicID() && tgt == charlie.PublicID() {
+			bobTransEventChan <- e
+		}
+	}))
+	charlieTransEventChan := make(chan client.TransitiveEvent, 5)
+	charlie.handle(client.OnTransitiveEvent(func(src, tgt clientintf.UserID, e client.TransitiveEvent) {
+		if src == alice.PublicID() && tgt == bob.PublicID() {
+			charlieTransEventChan <- e
+		}
+	}))
 
 	// Alice goes offline. Charlie and Bob come online, receive the
 	// RMInvite, send the RMTransitiveMessage to Alice.
 	assertGoesOffline(t, alice)
 	assertGoesOnline(t, bob)
 	assertGoesOnline(t, charlie)
-	time.Sleep(200 * time.Millisecond)
+	assert.ChanWrittenWithVal(t, bobTransEventChan, client.TERequestInvite)
+	assert.ChanWrittenWithVal(t, charlieTransEventChan, client.TERequestInvite)
+	time.Sleep(500 * time.Millisecond)
 	assertEmptyRMQ(t, bob)
 	assertEmptyRMQ(t, charlie)
 	ts.log.Infof("Bob and Charlie sent RMTransitiveMessage")
@@ -939,7 +1004,8 @@ func TestGCCrossedMediatedKX(t *testing.T) {
 	assertGoesOffline(t, bob)
 	assertGoesOffline(t, charlie)
 	assertGoesOnline(t, alice)
-	time.Sleep(200 * time.Millisecond)
+	assertNextTransEventsAre(client.TEMsgForward)
+	time.Sleep(500 * time.Millisecond)
 	assertEmptyRMQ(t, alice)
 	ts.log.Infof("Alice sent RMTransitiveMessageFwds")
 
@@ -1156,7 +1222,7 @@ func TestGCChangesOwner(t *testing.T) {
 	// Alice makes Bob the owner. This is processed and Alice remains in the
 	// GC.
 	assert.NilErr(t, alice.ModifyGCOwner(gcID, bob.PublicID(), "test"))
-	time.Sleep(time.Millisecond * 200)
+	time.Sleep(time.Millisecond * 500)
 	assertIsGCOwner(t, gcID, alice, bob)
 	assertIsGCOwner(t, gcID, bob, bob)
 	assertIsGCOwner(t, gcID, charlie, bob)

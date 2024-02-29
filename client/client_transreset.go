@@ -70,9 +70,7 @@ func (c *Client) RequestTransitiveReset(mediator, target UserID) error {
 }
 
 func (c *Client) handleRMTransitiveReset(mediator *RemoteUser, target UserID, tr rpc.RMTransitiveReset) error {
-	if c.cfg.TransitiveEvent != nil {
-		c.cfg.TransitiveEvent(mediator.ID(), target, TEResetRequest)
-	}
+	c.ntfns.notifyTransitiveEvent(mediator.ID(), target, TEResetRequest)
 
 	ru, err := c.rul.byID(target)
 	if err != nil {
@@ -121,9 +119,7 @@ func (c *Client) handleRMTransitiveReset(mediator *RemoteUser, target UserID, tr
 func (c *Client) handleRMTransitiveResetReply(mediator *RemoteUser,
 	target UserID, trr rpc.RMTransitiveResetReply) error {
 
-	if c.cfg.TransitiveEvent != nil {
-		c.cfg.TransitiveEvent(mediator.ID(), target, TEResetReply)
-	}
+	c.ntfns.notifyTransitiveEvent(mediator.ID(), target, TEResetReply)
 
 	ru, err := c.rul.byID(target)
 	if err != nil {

@@ -137,13 +137,17 @@ func (c *Client) maybeRequestMediateID(mediator, target UserID) error {
 	mu.log.Infof("Asking to mediate identity to target %s", target)
 	mi := rpc.RMMediateIdentity{Identity: target}
 	payEvent := fmt.Sprintf("mediateid.%s", target)
-	return c.sendWithSendQ(payEvent, mi, mediator)
+	err = c.sendWithSendQ(payEvent, mi, mediator)
+	if err != nil {
+		return err
+	}
+
+	c.ntfns.notifyRequestingMediateID(mediator, target)
+	return nil
 }
 
 func (c *Client) handleMediateID(ru *RemoteUser, mi rpc.RMMediateIdentity) error {
-	if c.cfg.TransitiveEvent != nil {
-		c.cfg.TransitiveEvent(ru.ID(), mi.Identity, TEMediateID)
-	}
+	c.ntfns.notifyTransitiveEvent(ru.ID(), mi.Identity, TEMediateID)
 
 	target, err := c.rul.byID(mi.Identity)
 	if err != nil {
@@ -166,9 +170,7 @@ func (c *Client) handleMediateID(ru *RemoteUser, mi rpc.RMMediateIdentity) error
 func (c *Client) handleRMInvite(ru *RemoteUser, iv rpc.RMInvite) error {
 	ru.log.Infof("Requested invite on behalf of %s (%q)", iv.Invitee.Identity,
 		iv.Invitee.Nick)
-	if c.cfg.TransitiveEvent != nil {
-		c.cfg.TransitiveEvent(ru.ID(), iv.Invitee.Identity, TERequestInvite)
-	}
+	c.ntfns.notifyTransitiveEvent(ru.ID(), iv.Invitee.Identity, TERequestInvite)
 
 	// Generate an invite.
 	mediatorID := ru.ID()
@@ -210,9 +212,7 @@ func (c *Client) handleTransitiveIDInvite(ru *RemoteUser, pii rpc.OOBPublicIdent
 
 	ru.log.Infof("Accepting transitive invite from %s (%q)", pii.Public.Identity,
 		pii.Public.Nick)
-	if c.cfg.TransitiveEvent != nil {
-		c.cfg.TransitiveEvent(ru.ID(), pii.Public.Identity, TEReceivedInvite)
-	}
+	c.ntfns.notifyTransitiveEvent(ru.ID(), pii.Public.Identity, TEReceivedInvite)
 
 	err = c.kxl.acceptInvite(pii, false, true)
 	if errors.Is(err, errUserBlocked) {
