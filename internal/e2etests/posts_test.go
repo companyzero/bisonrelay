@@ -310,3 +310,81 @@ func TestAutoSubToPosts(t *testing.T) {
 	assert.ChanWrittenWithVal(t, charlieSubChan, bob.PublicID())
 	assert.ChanNotWritten(t, aliceSubChan, 150*time.Millisecond)
 }
+
+// TestEarlyPostStatus verifies that receiving a post status before a post is
+// received caches the status and makes it be shown after the post is received.
+func TestEarlyPostStatus(t *testing.T) {
+	t.Parallel()
+
+	// Setup Alice and Bob and have them KX.
+	tcfg := testScaffoldCfg{}
+	ts := newTestScaffold(t, tcfg)
+	alice := ts.newClient("alice")
+	bob := ts.newClient("bob")
+
+	// Setup handlers.
+	bobRecvPosts := make(chan rpc.PostMetadata, 1)
+	bob.handle(client.OnPostRcvdNtfn(func(ru *client.RemoteUser, summary clientdb.PostSummary, pm rpc.PostMetadata) {
+		bobRecvPosts <- pm
+	}))
+	bobRecvComments := make(chan string)
+	bob.handle(client.OnPostStatusRcvdNtfn(func(user *client.RemoteUser, pid clientintf.PostID,
+		statusFrom client.UserID, status rpc.PostMetadataStatus) {
+		bobRecvComments <- status.Attributes[rpc.RMPSComment]
+	}))
+	bobSubChanged := make(chan bool, 3)
+	bob.handle(client.OnRemoteSubscriptionChangedNtfn(func(user *client.RemoteUser, subscribed bool) {
+		bobSubChanged <- subscribed
+	}))
+
+	ts.kxUsers(alice, bob)
+
+	// Alice creates posts before any subscriptions.
+	firstPost, err := alice.CreatePost("first", "")
+	assert.NilErr(t, err)
+	secondPost, err := alice.CreatePost("second", "")
+	assert.NilErr(t, err)
+
+	// Alice writes comments on the posts. This is used to verify if all
+	// status were sent when getting the post.
+	firstComment := "firstComment"
+	_, err = alice.CommentPost(alice.PublicID(), firstPost.ID, firstComment, nil)
+	assert.NilErr(t, err)
+	_, err = alice.CommentPost(alice.PublicID(), secondPost.ID, firstComment, nil)
+	assert.NilErr(t, err)
+
+	// Bob should _not_ get a notification.
+	assert.ChanNotWritten(t, bobRecvPosts, 250*time.Millisecond)
+
+	// Bob subscribes to Alice's posts.
+	err = bob.SubscribeToPosts(alice.PublicID())
+	assert.NilErr(t, err)
+	assert.ChanWrittenWithVal(t, bobSubChanged, true)
+
+	// Alice writes a comment on the post from before bob subscribed. Bob
+	// should cache it but not yet notify the user.
+	wantComment := "second comment"
+	_, err = alice.CommentPost(alice.PublicID(), firstPost.ID, wantComment, nil)
+	assert.NilErr(t, err)
+	_, err = alice.CommentPost(alice.PublicID(), secondPost.ID, wantComment, nil)
+	assert.NilErr(t, err)
+	assert.ChanNotWritten(t, bobRecvComments, 250*time.Millisecond)
+
+	// Bob explicitly fetches the first post without asking for updates, to
+	// ensure the update we do get is the early one.
+	assert.NilErr(t, bob.GetUserPost(alice.PublicID(), firstPost.ID, false))
+	assert.ChanWritten(t, bobRecvPosts)
+	assert.ChanWrittenWithVal(t, bobRecvComments, wantComment)
+	assert.ChanNotWritten(t, bobRecvComments, 250*time.Millisecond)
+
+	// Bob explicitly fetches the second post, this time asking for updates.
+	// Both comments should be received. Comments could be received out of
+	// order, so check without considering the order.
+	assert.NilErr(t, bob.GetUserPost(alice.PublicID(), secondPost.ID, true))
+	assert.ChanWritten(t, bobRecvPosts)
+	var gotComments []string
+	gotComments = append(gotComments, assert.ChanWritten(t, bobRecvComments))
+	gotComments = append(gotComments, assert.ChanWritten(t, bobRecvComments))
+	assert.Contains(t, gotComments, firstComment)
+	assert.Contains(t, gotComments, wantComment)
+}

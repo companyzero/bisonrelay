@@ -451,6 +451,7 @@ func (c *Client) handlePostShare(ru *RemoteUser, ps rpc.RMPostShare) error {
 
 	var summ clientdb.PostSummary
 	var isUpdate bool
+	var earlyPostStatus []rpc.RMPostShare
 	from := ru.ID()
 	err := c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
 		// Ensure this came from someone we're subscribed.
@@ -464,6 +465,11 @@ func (c *Client) handlePostShare(ru *RemoteUser, ps rpc.RMPostShare) error {
 		if exists, err := c.db.PostExists(tx, from, pid); err != nil {
 			return err
 		} else if !exists && rpc.IsPostStatus(p.Attributes) {
+			// Save status received early.
+			if err := c.db.StoreEarlyPostStatusUpdate(tx, from, pid, ps); err != nil {
+				return err
+			}
+
 			return errStatusWithoutPost
 		} else if exists {
 			// Verify post status signature.
@@ -542,7 +548,17 @@ func (c *Client) handlePostShare(ru *RemoteUser, ps rpc.RMPostShare) error {
 
 		// Post does not exist. Save it.
 		pid, summ, err = c.db.SaveReceivedPost(tx, from, p)
-		return err
+		if err != nil {
+			return err
+		}
+
+		// If there are any early status updates, process them.
+		earlyPostStatus, err = c.db.PopEarlyPostStatusUpdate(tx, from, pid)
+		if err != nil {
+			return err
+		}
+
+		return nil
 	})
 	if err != nil {
 		// Ignore duplicate post status for the purposes of error (we
@@ -596,7 +612,22 @@ func (c *Client) handlePostShare(ru *RemoteUser, ps rpc.RMPostShare) error {
 		}
 		ru.log.Debugf("Sending receive receipt for domain %q (ID: %v, SubID: %v)",
 			rr.Domain, rr.ID, rr.SubID)
-		return c.sendWithSendQ("posts.%s.recvreceipt", rr, ru.ID())
+		err := c.sendWithSendQ("posts.%s.recvreceipt", rr, ru.ID())
+		if err != nil {
+			return err
+		}
+	}
+
+	// Process early post status updates.
+	if len(earlyPostStatus) > 0 {
+		ru.log.Infof("Re-processing %d early status updates for post %s",
+			len(earlyPostStatus), pid)
+	}
+	for _, eps := range earlyPostStatus {
+		err := c.handlePostShare(ru, eps)
+		if err != nil {
+			return fmt.Errorf("error processing early post status: %v", err)
+		}
 	}
 
 	return nil
@@ -898,7 +929,7 @@ func (c *Client) GetUserPost(from UserID, pid clientintf.PostID, includeStatus b
 	}
 
 	// See if we're subscribed to the posts, otherwise this will fail.
-	err = c.dbView(func(tx clientdb.ReadTx) error {
+	err = c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
 		subs, err := c.db.ListPostSubscriptions(tx)
 		if err != nil {
 			return err
@@ -913,6 +944,16 @@ func (c *Client) GetUserPost(from UserID, pid clientintf.PostID, includeStatus b
 
 		if !isSubbed {
 			return fmt.Errorf("not subscribed to user posts")
+		}
+
+		// When fetching post status as well, remove early post status
+		// from this post to avoid duplicate processing of the status.
+		if includeStatus {
+			earlyStatus, err := c.db.PopEarlyPostStatusUpdate(tx, from, pid)
+			if err != nil {
+				return err
+			}
+			ru.log.Debugf("Removed %d early status updates", len(earlyStatus))
 		}
 		return nil
 	})

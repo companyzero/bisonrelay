@@ -6,6 +6,8 @@ import (
 	"reflect"
 	"testing"
 	"time"
+
+	"golang.org/x/exp/slices"
 )
 
 var timeout = 30 * time.Second
@@ -154,5 +156,13 @@ func BoolIs(t testing.TB, got, want bool) {
 	t.Helper()
 	if got != want {
 		t.Fatalf("unexpected bool. got %v, want %v", got, want)
+	}
+}
+
+// Contains asserts that s contains e.
+func Contains[S ~[]E, E comparable](t testing.TB, s S, e E) {
+	t.Helper()
+	if !slices.Contains(s, e) {
+		t.Fatalf("slice %v does not contain element %v", s, e)
 	}
 }

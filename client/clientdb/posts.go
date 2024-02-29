@@ -975,3 +975,63 @@ func (db *DB) RemoveRelayedPostCopies(author UserID, pid PostID) error {
 
 	return nil
 }
+
+// StoreEarlyPostStatusUpdate stores a post status update that was received
+// "early" (before the actual post was received) from the user. Only a few
+// of these are stored for any given user and new status replace old status.
+func (db *DB) StoreEarlyPostStatusUpdate(tx ReadWriteTx, from UserID, pid PostID, rmps rpc.RMPostShare) error {
+	fname := filepath.Join(db.root, inboundDir, from.String(), earlyPostStatusFile)
+
+	const maxEarlyPostStatus = 20
+
+	var earlyStatus []*EarlyPostStatus
+	if fileExists(fname) {
+		err := db.readJsonFile(fname, &earlyStatus)
+		if err != nil {
+			return err
+		}
+
+		// Cap the max number of early post status maintained per user.
+		if len(earlyStatus) >= maxEarlyPostStatus {
+			earlyStatus = earlyStatus[1:]
+		}
+	}
+
+	earlyStatus = append(earlyStatus, &EarlyPostStatus{PID: pid, Status: rmps})
+	return db.saveJsonFile(fname, earlyStatus)
+}
+
+// PopEarlyPostStatusUpdate returns any early post status updates stored for
+// a post received from the passed user and post id and removes them from the
+// list of early status posts.
+func (db *DB) PopEarlyPostStatusUpdate(tx ReadWriteTx, from UserID, pid PostID) ([]rpc.RMPostShare, error) {
+	fname := filepath.Join(db.root, inboundDir, from.String(), earlyPostStatusFile)
+
+	var earlyStatus []*EarlyPostStatus
+	err := db.readJsonFile(fname, &earlyStatus)
+	if errors.Is(err, ErrNotFound) {
+		// Not found means there are no early post status.
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	var res []rpc.RMPostShare
+	for i := 0; i < len(earlyStatus); i++ {
+		eps := earlyStatus[i]
+		if eps.PID != pid {
+			i += 1
+			continue
+		}
+
+		res = append(res, eps.Status)
+		copy(earlyStatus[i:], earlyStatus[i+1:])
+		earlyStatus = earlyStatus[:len(earlyStatus)-1]
+	}
+	if err := db.saveJsonFile(fname, earlyStatus); err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
