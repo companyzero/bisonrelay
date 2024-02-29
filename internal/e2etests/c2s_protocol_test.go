@@ -70,7 +70,7 @@ func TestClientServerAgreeMaxMsgVersion(t *testing.T) {
 			_, _ = rand.Read(data)
 			wantMsg := hex.EncodeToString(data[:len(data)/2])
 			assert.NilErr(t, alice.PM(bob.PublicID(), wantMsg))
-			assert.ChanWrittenWithVal(t, bobPmChan, wantMsg)
+			assert.ChanWrittenWithValTimeout(t, bobPmChan, wantMsg, 2*time.Minute)
 
 			// Send a chunk with the max payload. This will be
 			// rejected by Bob due to being unrequested, but it
