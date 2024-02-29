@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/companyzero/bisonrelay/client/clientdb"
@@ -419,57 +418,10 @@ func (c *Client) sendToGCMembers(gcID zkidentity.ShortID,
 
 		ids = append(ids, uid)
 	}
-	sqid, err := c.addToSendQ(payEvent, msg, priorityGC, ids...)
+
+	err := c.sendWithSendQPriority(payEvent, msg, priorityGC, progressChan, ids...)
 	if err != nil {
-		return fmt.Errorf("Unable to add gc msg to send queue: %v", err)
-	}
-
-	// These will be used to track the sending progress.
-	var progressMtx sync.Mutex
-	var sent, total int
-
-	// Start the sending process for each member.
-	for _, id := range members {
-		if id == localID {
-			continue
-		}
-
-		ru, err := c.rul.byID(id)
-		if err != nil {
-			continue
-		}
-
-		progressMtx.Lock() // Unlikely, but could race with the result.
-		total += 1
-		progressMtx.Unlock()
-
-		// Send as a goroutine to fulfill for all users concurrently.
-		go func() {
-			err := ru.sendRMPriority(msg, payEvent, priorityGC)
-			if errors.Is(err, clientintf.ErrSubsysExiting) {
-				return
-			}
-
-			// Remove from sendq independently of error.
-			c.removeFromSendQ(sqid, ru.ID())
-			if err != nil {
-				c.log.Errorf("Unable to send %T on gc %q to user %s: %v",
-					msg, gcID.String(), ru, err)
-				return
-			}
-
-			// Alert about progress.
-			if progressChan != nil {
-				progressMtx.Lock()
-				sent += 1
-				progressChan <- SendProgress{
-					Sent:  sent,
-					Total: total,
-					Err:   err,
-				}
-				progressMtx.Unlock()
-			}
-		}()
+		return fmt.Errorf("unable send GC msgs: %v", err)
 	}
 
 	// Early return if there are no members that are missing kx.
