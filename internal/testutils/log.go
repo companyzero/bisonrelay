@@ -85,7 +85,7 @@ func NewTestLogBackend(t testing.TB, opts ...TestLogBackendOption) *TestLogBacke
 
 // TestLoggerSys returns an slog.Logger that logs by issuing t.Log calls.
 func TestLoggerSys(t testing.TB, sys string) slog.Logger {
-	bknd := slog.NewBackend(NewTestLogBackend(t))
+	bknd := slog.NewBackend(NewTestLogBackend(t, WithShowLog(true)))
 	logg := bknd.Logger(sys)
 	logg.SetLevel(slog.LevelTrace)
 	return logg

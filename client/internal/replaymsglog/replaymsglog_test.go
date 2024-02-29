@@ -295,7 +295,7 @@ func TestReadingAfterBlankPages(t *testing.T) {
 		RootDir: testutils.TempTestDir(t, "replaymsglog"),
 		Prefix:  "rl",
 		MaxSize: uint32(maxSize),
-		Log:     testutils.TestLoggerSys(t, "XXXX"),
+		//Log:     testutils.TestLoggerSys(t, "XXXX"),
 	}
 	rl, err := New(cfg)
 	assert.NilErr(t, err)
