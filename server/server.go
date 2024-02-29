@@ -123,7 +123,7 @@ func (z *ZKS) writeMessage(kx *session.KX, msg *RPCWrapper) error {
 
 func (z *ZKS) welcome(kx *session.KX) error {
 	var err error
-	properties := rpc.SupportedServerProperties
+	properties := rpc.SupportedServerProperties()
 	for k, v := range properties {
 		switch v.Key {
 		case rpc.PropTagDepth:
@@ -153,8 +153,11 @@ func (z *ZKS) welcome(kx *session.KX) error {
 	// current setting is different than the default. This allows old
 	// clients still to work while the prop is the old amount.
 	if z.settings.ExpirationDays != rpc.PropExpirationDaysDefault {
-		prop := rpc.DefaultPropExpirationDays
-		prop.Value = strconv.Itoa(z.settings.ExpirationDays)
+		prop := rpc.ServerProperty{
+			Key:      rpc.PropExpirationDays,
+			Value:    strconv.Itoa(z.settings.ExpirationDays),
+			Required: false,
+		}
 		properties = append(properties, prop)
 	}
 

@@ -267,64 +267,66 @@ const (
 	PropMaxMsgSizeVersionDefault = MaxMsgSizeV0
 )
 
-var (
+func SupportedServerProperties() []ServerProperty {
 	// required
-	DefaultPropTagDepth = ServerProperty{
+	DefaultPropTagDepth := ServerProperty{
 		Key:      PropTagDepth,
 		Value:    PropTagDepthDefault,
 		Required: true,
 	}
-	DefaultServerTime = ServerProperty{
+	DefaultServerTime := ServerProperty{
 		Key:      PropServerTime,
 		Value:    "", // int64 unix time
 		Required: true,
 	}
-	DefaultPropPaymentScheme = ServerProperty{
+	DefaultPropPaymentScheme := ServerProperty{
 		Key:      PropPaymentScheme,
 		Value:    PropPaymentSchemeDefault,
 		Required: true,
 	}
-	DefaultPropPushPaymentRate = ServerProperty{
+	DefaultPropPushPaymentRate := ServerProperty{
 		Key:      PropPushPaymentRate,
 		Value:    strconv.Itoa(PropPushPaymentRateDefault),
 		Required: true,
 	}
-	DefaultPropSubPaymentRate = ServerProperty{
+	DefaultPropSubPaymentRate := ServerProperty{
 		Key:      PropSubPaymentRate,
 		Value:    strconv.Itoa(PropSubPaymentRateDefault),
 		Required: true,
 	}
 
-	// TODO: make this a required prop once clients have updated.
-	DefaultPropExpirationDays = ServerProperty{
-		Key:      PropExpirationDays,
-		Value:    strconv.Itoa(PropExpirationDaysDefault),
-		Required: false,
-	}
+	/*
+		// TODO: make this a required prop once clients have updated.
+		DefaultPropExpirationDays := ServerProperty{
+			Key:      PropExpirationDays,
+			Value:    strconv.Itoa(PropExpirationDaysDefault),
+			Required: false,
+		}
+	*/
 
 	// TODO: make this a required prop once clients have updated.
-	DefaultPropPushPaymentLifetime = ServerProperty{
+	DefaultPropPushPaymentLifetime := ServerProperty{
 		Key:      PropPushPaymentLifetime,
 		Value:    strconv.Itoa(PropPushPaymentLifetimeDefault),
 		Required: false,
 	}
 
 	// TODO: make this a required prop once clients have updated.
-	DefaultPropMaxPushInvoices = ServerProperty{
+	DefaultPropMaxPushInvoices := ServerProperty{
 		Key:      PropMaxPushInvoices,
 		Value:    strconv.Itoa(PropMaxPushInvoicesDefault),
 		Required: false,
 	}
 
 	// optional
-	DefaultPropServerLNNode = ServerProperty{
+	DefaultPropServerLNNode := ServerProperty{
 		Key:      PropServerLNNode,
 		Value:    "",
 		Required: false,
 	}
 
 	// All properties must exist in this array.
-	SupportedServerProperties = []ServerProperty{
+	SupportedServerProperties := []ServerProperty{
 		// required
 		DefaultPropTagDepth,
 		DefaultServerTime,
@@ -347,7 +349,9 @@ var (
 			Required: false,
 		},
 	}
-)
+
+	return SupportedServerProperties
+}
 
 // Ping is a PRPC that is used to determine if the server is alive.
 // This command must be acknowledged by the remote side.

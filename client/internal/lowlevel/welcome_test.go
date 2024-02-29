@@ -328,7 +328,7 @@ func TestAttemptsWelcomeUnknownProps(t *testing.T) {
 	wmsg := rpc.Welcome{
 		Version:    rpc.ProtocolVersion,
 		ServerTime: time.Now().Unix(),
-		Properties: rpc.SupportedServerProperties,
+		Properties: rpc.SupportedServerProperties(),
 	}
 	for i := range wmsg.Properties {
 		prop := &wmsg.Properties[i]
@@ -400,7 +400,7 @@ func TestAttemptsWelcomeUnknownMaxMsgSizeVersion(t *testing.T) {
 	wmsg := rpc.Welcome{
 		Version:    rpc.ProtocolVersion,
 		ServerTime: time.Now().Unix(),
-		Properties: rpc.SupportedServerProperties,
+		Properties: rpc.SupportedServerProperties(),
 	}
 	for i := range wmsg.Properties {
 		prop := &wmsg.Properties[i]
@@ -445,7 +445,7 @@ func TestAttemptsWelcomeUnknownProtocolVersion(t *testing.T) {
 	wmsg := rpc.Welcome{
 		Version:    rpc.ProtocolVersion + 1,
 		ServerTime: time.Now().Unix(),
-		Properties: rpc.SupportedServerProperties,
+		Properties: rpc.SupportedServerProperties(),
 	}
 	msg := &rpc.Message{Command: rpc.SessionCmdWelcome}
 
