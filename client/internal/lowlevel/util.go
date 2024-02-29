@@ -105,19 +105,18 @@ func rvMapKeys(m map[RVID]rdzvSub) ([]ratchet.RVPoint, []ratchet.RVPoint) {
 	return toAdd, toMark
 }
 
-// removePrepaidSubs removes RVs from needsPay where the corresponding sub is
-// marked as prepaid.
-func removePrepaidSubs(needsPay []ratchet.RVPoint, subs map[RVID]rdzvSub) []ratchet.RVPoint {
-	for i := 0; i < len(needsPay); {
-		if !subs[needsPay[i]].prepaid {
-			i += 1
+// selectSubsNeedPay creates a new map with subs that require payment from the
+// subs map.
+func selectSubsNeedPay(needsPay []ratchet.RVPoint, subs map[RVID]rdzvSub) map[RVID]rdzvSub {
+	res := make(map[RVID]rdzvSub, len(needsPay))
+	for _, rv := range needsPay {
+		if subs[rv].prepaid {
 			continue
 		}
 
-		needsPay[i] = needsPay[len(needsPay)-1]
-		needsPay = needsPay[:len(needsPay)-1]
+		res[rv] = subs[rv]
 	}
-	return needsPay
+	return res
 }
 
 // multiCtx returns a context that is canceled once any one of the passed

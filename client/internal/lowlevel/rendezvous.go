@@ -10,6 +10,7 @@ import (
 	"github.com/companyzero/bisonrelay/ratchet"
 	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/decred/slog"
+	"golang.org/x/exp/maps"
 )
 
 type RVID = ratchet.RVPoint
@@ -380,11 +381,12 @@ func (rmgr *RVManager) fetchNextInvoice(ctx context.Context, sess clientintf.Ser
 
 // payForSubs pays for any unpaid RVs contained in the passed list. Returns the
 // list of (previously) unpaid RVs.
-func (rmgr *RVManager) payForSubs(ctx context.Context, rlist []ratchet.RVPoint,
-	subs map[RVID]rdzvSub, sess clientintf.ServerSessionIntf) ([]ratchet.RVPoint, error) {
+func (rmgr *RVManager) payForSubs(ctx context.Context, subsNeedPay map[ratchet.RVPoint]rdzvSub,
+	sess clientintf.ServerSessionIntf) ([]ratchet.RVPoint, error) {
 
 	// Determine payment amount. The amount to pay depends on how many
 	// unpaid for RVs we have.
+	rlist := maps.Keys(subsNeedPay)
 	unpaidRVs, err := rmgr.db.UnpaidRVs(rlist, sess.Policy().ExpirationDays)
 	if err != nil {
 		return nil, err
@@ -432,7 +434,7 @@ func (rmgr *RVManager) payForSubs(ctx context.Context, rlist []ratchet.RVPoint,
 	// subs.
 	if err == nil {
 		for i, id := range unpaidRVs {
-			sub, ok := subs[id]
+			sub, ok := subsNeedPay[id]
 			if !ok {
 				// Should not happen.
 				return nil, fmt.Errorf("unpaid RV not in subs map: %s", id)
@@ -457,13 +459,13 @@ func (rmgr *RVManager) payForSubs(ctx context.Context, rlist []ratchet.RVPoint,
 // updatePayloadSubscriptions (re-)subscribes to all rendezvous points in subs on
 // the given server session.
 func (rmgr *RVManager) updatePayloadSubscriptions(ctx context.Context,
-	add, del, mark []ratchet.RVPoint, subs map[RVID]rdzvSub, sess clientintf.ServerSessionIntf) error {
+	add, del, mark []ratchet.RVPoint, subsNeedPay map[RVID]rdzvSub,
+	sess clientintf.ServerSessionIntf) error {
 
 	// Pay for the subs we haven't paid yet. This includes both
 	// subscriptions to add and to mark as paid in the server and excludes
 	// subs that have been prepaid.
-	needsPay := removePrepaidSubs(append(add, mark...), subs)
-	unpaidRVs, err := rmgr.payForSubs(ctx, needsPay, subs, sess)
+	unpaidRVs, err := rmgr.payForSubs(ctx, subsNeedPay, sess)
 	if err != nil {
 		return err
 	}
@@ -760,9 +762,10 @@ loop:
 		unsubs = nil
 		delayChan = nil
 		needsUpdate = false
+		subsNeedPay := selectSubsNeedPay(append(toAdd, toMark...), subs)
 		go func(add, del, mark []ratchet.RVPoint, sess clientintf.ServerSessionIntf) {
 			select {
-			case updateResChan <- rmgr.updatePayloadSubscriptions(ctx, add, del, mark, subs, sess):
+			case updateResChan <- rmgr.updatePayloadSubscriptions(ctx, add, del, mark, subsNeedPay, sess):
 			case <-ctx.Done():
 			}
 		}(toAdd, toDel, toMark, sess)
