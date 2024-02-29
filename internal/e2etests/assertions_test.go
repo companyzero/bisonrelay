@@ -200,6 +200,8 @@ func assertClientsCanGCM(t testing.TB, gcID zkidentity.ShortID, clients ...*test
 // assertClientsCanSeeGCM asserts that one client sends and all the other clients
 // receive a GCM.
 func assertClientsCanSeeGCM(t testing.TB, gcID zkidentity.ShortID, src *testClient, targets ...*testClient) {
+	t.Helper()
+
 	regs := make([]client.NotificationRegistration, len(targets))
 	chans := make([]chan string, len(targets))
 

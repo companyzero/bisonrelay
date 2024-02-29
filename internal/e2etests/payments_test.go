@@ -382,6 +382,7 @@ func TestTipUserWithRestarts(t *testing.T) {
 	// Helper to test error received in progressErrChan. Assertion is made
 	// by string because the error travels through the server.
 	assertAliceProgrChanErrored := func(wantErr error) {
+		t.Helper()
 		err := assert.ChanWritten(t, progressErrChan)
 		if err == nil || err.Error() != wantErr.Error() {
 			t.Fatalf("Unexpected error: got %v, want %v", err, wantErr)
@@ -406,7 +407,7 @@ func TestTipUserWithRestarts(t *testing.T) {
 
 	// (2)
 	err := alice.TipUser(bob.PublicID(), float64(payMAtoms)/1e11, maxAttempts)
-	time.Sleep(50 * time.Millisecond)
+	sleep(500*time.Millisecond, 3)
 	assertEmptyRMQ(t, alice)
 	assert.NilErr(t, err)
 	ts.stopClient(alice)
@@ -415,7 +416,8 @@ func TestTipUserWithRestarts(t *testing.T) {
 	bob = ts.recreateStoppedClient(bob)
 	hookBob()
 	assert.ChanWritten(t, bobSentInvoice)
-	time.Sleep(time.Millisecond * 250) // Wait msg to be sent
+	sleep(500*time.Millisecond, 3)
+	assertEmptyRMQ(t, bob)
 	ts.stopClient(bob)
 
 	// (4)
@@ -432,7 +434,8 @@ func TestTipUserWithRestarts(t *testing.T) {
 	bob = ts.recreateStoppedClient(bob)
 	hookBob()
 	assert.ChanWritten(t, bobSentInvoice)
-	time.Sleep(time.Millisecond * 250) // Wait msg to be sent
+	sleep(500*time.Millisecond, 3)
+	assertEmptyRMQ(t, bob)
 	ts.stopClient(bob)
 
 	// (6)
@@ -446,7 +449,8 @@ func TestTipUserWithRestarts(t *testing.T) {
 	bob = ts.recreateStoppedClient(bob)
 	hookBob()
 	assert.ChanWritten(t, bobSentInvoice)
-	time.Sleep(time.Millisecond * 250) // Wait msg to be sent
+	sleep(500*time.Millisecond, 3)
+	assertEmptyRMQ(t, bob)
 	ts.stopClient(bob)
 
 	// (8)
@@ -957,8 +961,10 @@ func TestRecvTipPersistsSuccess(t *testing.T) {
 
 	payMAtoms, payDcr := int64(1e11), 1.0
 	customInvoice := "custom invoice"
+	bobSentInvoice := make(chan struct{}, 5)
 	bob.mpc.HookGetInvoice(func(amt int64, cb func(int64)) (string, error) {
 		if amt == payMAtoms {
+			bobSentInvoice <- struct{}{}
 			return customInvoice, nil
 		}
 		return fmt.Sprintf("invoice for %d", amt), nil
@@ -983,6 +989,9 @@ func TestRecvTipPersistsSuccess(t *testing.T) {
 	}))
 
 	assert.NilErr(t, alice.TipUser(bob.PublicID(), payDcr, 1))
+	assert.ChanWritten(t, bobSentInvoice)
+	sleep(250*time.Millisecond, 4)
+	assertEmptyRMQ(t, bob)
 	assert.ChanNotWritten(t, bobTipRecvChan, time.Second)
 
 	// Setup next Bob's mpc hooked to track payments so that on restart,

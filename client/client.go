@@ -484,6 +484,11 @@ func New(cfg Config) (*Client, error) {
 	return c, nil
 }
 
+// Log returns the main client logger.
+func (c *Client) Logger() slog.Logger {
+	return c.log
+}
+
 func (c *Client) dbView(f func(tx clientdb.ReadTx) error) error {
 	return c.db.View(c.dbCtx, f)
 }
