@@ -21,7 +21,6 @@ class InitLocalIDScreenState extends State<InitLocalIDScreen> {
   bool connecting = false;
 
   String name = "";
-  String nick = "";
 
   void connectPressed() async {
     if (connecting) return;
@@ -31,7 +30,7 @@ class InitLocalIDScreenState extends State<InitLocalIDScreen> {
     setState(() => connecting = true);
 
     try {
-      await Golib.initID(IDInit(name, nick));
+      await Golib.initID(IDInit(name, name));
     } catch (exception) {
       showErrorSnackbar(context, 'Unable to connect to server: $exception');
     } finally {
@@ -74,22 +73,6 @@ class InitLocalIDScreenState extends State<InitLocalIDScreen> {
                       validator: (String? value) {
                         if (value != null && value.trim().isEmpty) {
                           return 'Cannot be blank';
-                        }
-                        return null;
-                      },
-                    ),
-                    TextFormField(
-                      decoration: const InputDecoration(
-                          icon: Icon(Icons.person_outline),
-                          labelText: 'Nick',
-                          hintText: 'Short alias (ex."jd")'),
-                      onSaved: (String? v) => nick = v!,
-                      validator: (String? value) {
-                        if (value != null && value.trim().isEmpty) {
-                          return 'Cannot be blank';
-                        }
-                        if (value!.contains(RegExp(r"[\W]"))) {
-                          return 'Must be a single word without special chars';
                         }
                         return null;
                       },

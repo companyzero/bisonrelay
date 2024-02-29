@@ -64,9 +64,19 @@ class _InputState extends State<Input> {
   }
 
   void handleKeyPress(event) {
-    if (event is RawKeyUpEvent) {
-      bool modPressed = event.isShiftPressed || event.isControlPressed;
-      if (event.data.logicalKey.keyLabel == "Enter" && !modPressed) {
+    if (event is KeyUpEvent) {
+      final shiftKeys = [
+        LogicalKeyboardKey.shiftLeft,
+        LogicalKeyboardKey.shiftRight
+      ];
+      final ctlKeys = [
+        LogicalKeyboardKey.controlLeft,
+        LogicalKeyboardKey.controlRight
+      ];
+      final isShiftPressed = shiftKeys.contains(event.logicalKey);
+      final isControlPressed = ctlKeys.contains(event.logicalKey);
+      bool modPressed = isShiftPressed || isControlPressed;
+      if (event.logicalKey.keyLabel == "Enter" && !modPressed) {
         sendMsg();
       }
     }
@@ -95,9 +105,9 @@ class _InputState extends State<Input> {
     var secondaryTextColor = theme.focusColor;
     bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
     return Consumer<ThemeNotifier>(
-        builder: (context, theme, _) => RawKeyboardListener(
+        builder: (context, theme, _) => KeyboardListener(
               focusNode: node,
-              onKey: handleKeyPress,
+              onKeyEvent: handleKeyPress,
               child: Container(
                   margin: const EdgeInsets.only(bottom: 5),
                   child: TextField(
