@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync/atomic"
 	"time"
 
 	"github.com/companyzero/bisonrelay/client/clientdb"
@@ -65,16 +66,22 @@ func (c *Client) removeFromSendQ(id clientdb.SendQID, dest clientintf.UserID) {
 	}
 }
 
-// sendWithSendQPriority adds the given message to the sendq with the given type and
-// sends it to the specified destinations. Each sending is done asynchronously,
-// so this returns immediately after enqueing.
+// sendWithSendQPriority adds the given message to the sendq with the given
+// type and sends it to the specified destinations. Each sending is done
+// asynchronously, so this returns immediately after enqueing.
+//
+// If progressChan is specified, updates about the sending progress are sent
+// there.
 func (c *Client) sendWithSendQPriority(typ string, msg interface{}, priority uint,
-	dests ...clientintf.UserID) error {
+	progressChan chan SendProgress, dests ...clientintf.UserID) error {
 
 	sqid, err := c.addToSendQ(typ, msg, priority, dests...)
 	if err != nil {
 		return err
 	}
+
+	var sent, total atomic.Int64
+	total.Store(int64(len(dests)))
 
 	// Send the msg to each destination.
 	for _, dest := range dests {
@@ -99,6 +106,7 @@ func (c *Client) sendWithSendQPriority(typ string, msg interface{}, priority uin
 		err = ru.queueRMPriority(msg, priority, replyChan, typ)
 		if err != nil {
 			failed(err)
+			total.Add(-1)
 			continue
 		}
 
@@ -110,6 +118,16 @@ func (c *Client) sendWithSendQPriority(typ string, msg interface{}, priority uin
 			} else {
 				c.removeFromSendQ(sqid, uid)
 			}
+
+			// Alert about progress.
+			if !errors.Is(err, clientintf.ErrSubsysExiting) && (progressChan != nil) {
+				vSent := int(sent.Add(1))
+				progressChan <- SendProgress{
+					Sent:  vSent,
+					Total: int(total.Load()),
+					Err:   err,
+				}
+			}
 		}()
 	}
 
@@ -118,7 +136,7 @@ func (c *Client) sendWithSendQPriority(typ string, msg interface{}, priority uin
 
 // sendWithSendQ sends a msg using the send queue with default priority.
 func (c *Client) sendWithSendQ(typ string, msg interface{}, dests ...clientintf.UserID) error {
-	return c.sendWithSendQPriority(typ, msg, priorityDefault, dests...)
+	return c.sendWithSendQPriority(typ, msg, priorityDefault, nil, dests...)
 }
 
 // runSendQ sends outstanding msgs from the DB send queue.

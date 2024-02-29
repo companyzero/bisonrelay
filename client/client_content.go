@@ -982,7 +982,7 @@ func (c *Client) SendFile(uid UserID, filepath string) error {
 			Chunk:  chunk,
 		}
 		payEvent := fmt.Sprintf("ftsendfile.%s.%d", sf.FID.ShortLogID(), i)
-		if err = c.sendWithSendQPriority(payEvent, rmSFC, priorityUpload, uid); err != nil {
+		if err = c.sendWithSendQPriority(payEvent, rmSFC, priorityUpload, nil, uid); err != nil {
 			return err
 		}
 	}
