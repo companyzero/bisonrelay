@@ -32,7 +32,7 @@ private class CmdResultLoop: NSObject, FlutterStreamHandler {
 
     override init() {
         super.init()
-        Golib.GolibCmdResultLoop(self)
+        Golib.GolibCmdResultLoop(self, false)
     }
 
     public func onListen(withArguments args: Any?, eventSink events: @escaping FlutterEventSink) -> FlutterError? {
@@ -50,6 +50,10 @@ extension CmdResultLoop : GolibCmdResultLoopCBProtocol {
     func f(_ s: Int32, typ: Int32, payload: String?, err: String?) {
       var d: [String: Any] = ["id":s, "type":typ, "payload": payload, "error": err]
         self.eventSink?(d)
+    }
+
+    func pm(_: String?, nick: String?, msg: String?, ts: Int64) {
+      // TODO: show background notification.
     }
 }
 
