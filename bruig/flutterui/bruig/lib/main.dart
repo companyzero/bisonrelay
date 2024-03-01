@@ -403,6 +403,8 @@ class _AppState extends State<App> with WindowListener {
                   page = const ExportLogScreen();
                 } else if (settings.name! == LogSettingsScreen.routeName) {
                   page = const LogSettingsScreen();
+                } else if (settings.name! == ManualCfgModifyScreen.routeName) {
+                  page = const ManualCfgModifyScreen();
                 } else {
                   page = RouteErrorPage(
                       settings.name ?? "", OverviewScreen.routeName);
