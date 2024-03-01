@@ -41,16 +41,6 @@ class PageContextMenu extends StatelessWidget {
     //Navigator.pop(context);
   }
 
-  bool isMenuItemEnabled(BuildContext context, ClientModel client,
-      List<ChatMenuItem> contextMenuList, String label) {
-    for (var contextItem in contextMenuList) {
-      if (contextItem.label == label) {
-        return contextItem.onSelected(context, client) != null;
-      }
-    }
-    return false;
-  }
-
   @override
   Widget build(BuildContext context) {
     if (contextMenu.isNotEmpty) {
@@ -63,11 +53,8 @@ class PageContextMenu extends StatelessWidget {
                         context, client, contextMenuFill, result)
                     : {},
                 items: contextMenuFill
-                    .map((e) => PopupMenuItem(
-                        enabled: isMenuItemEnabled(
-                            context, client, contextMenuFill, e.label),
-                        value: e.label,
-                        child: Text(e.label)))
+                    .map((e) =>
+                        PopupMenuItem(value: e.label, child: Text(e.label)))
                     .toList(),
                 pageContextMenu: true,
                 child: const Empty(),
