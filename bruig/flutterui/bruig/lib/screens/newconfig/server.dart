@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/components/buttons.dart';
 import 'package:bruig/main.dart';
@@ -32,7 +33,8 @@ class _ServerPageState extends State<ServerPage> {
         serverCtrl.text = "216.128.136.239:65432";
         break;
       case NetworkType.simnet:
-        serverCtrl.text = Platform.isAndroid ? "10.0.2.2:12345" : "127.0.0.1:12345";
+        serverCtrl.text =
+            Platform.isAndroid ? "10.0.2.2:12345" : "127.0.0.1:12345";
         break;
     }
   }
@@ -53,22 +55,9 @@ class _ServerPageState extends State<ServerPage> {
 
   @override
   Widget build(BuildContext context) {
-    void goToAbout() {
-      Navigator.of(context).pushNamed("/about");
-    }
-
     return StartupScreen(Consumer<ThemeNotifier>(
         builder: (context, theme, _) => Column(children: [
-              Row(children: [
-                IconButton(
-                    alignment: Alignment.topLeft,
-                    tooltip: "About Bison Relay",
-                    iconSize: 50,
-                    onPressed: goToAbout,
-                    icon: Image.asset(
-                      "assets/images/icon.png",
-                    )),
-              ]),
+              const SetupScreenAbountButton(),
               const SizedBox(height: 39),
               Text("Setting up Bison Relay",
                   style: TextStyle(
@@ -107,6 +96,7 @@ class _ServerPageState extends State<ServerPage> {
                 onPressed: done,
                 text: "Connect",
               ),
+              const Expanded(child: Empty()),
             ])));
   }
 }
