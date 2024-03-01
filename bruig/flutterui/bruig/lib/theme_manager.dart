@@ -33,7 +33,6 @@ class ThemeNotifier with ChangeNotifier {
       scaffoldBackgroundColor: const Color(0xFF19172C),
       bottomAppBarColor: const Color(0xFF0175CE),
       indicatorColor: const Color(0xFF5A5968),
-      selectedRowColor: Colors.black38,
       shadowColor: const Color(0xFFE44B00),
       dialogBackgroundColor: const Color(0xFF3A384B),
       iconTheme: const IconThemeData(color: Color(0xFF8E8D98)),
@@ -64,9 +63,8 @@ class ThemeNotifier with ChangeNotifier {
       scaffoldBackgroundColor: Color(0xFFE8E7F3),
       bottomAppBarColor: const Color(0xFF0175CE),
       indicatorColor: const Color(0xFF5A5968),
-      selectedRowColor: Colors.white38,
       shadowColor: const Color(0xFFE44B00),
-      dialogBackgroundColor: Color(0xFF6C6B74),
+      dialogBackgroundColor: Color(0xFFC6C5CF),
       iconTheme: const IconThemeData(color: Color.fromARGB(255, 101, 100, 110)),
       textTheme: const TextTheme(
           headline5: TextStyle(
@@ -87,36 +85,32 @@ class ThemeNotifier with ChangeNotifier {
   double getFontCoef() => _fontSize;
 
   double getSmallFont(BuildContext context) {
-    var mediaQuery = MediaQuery.of(context);
-    if (mediaQuery.size.width <= 500) {
-      return mediaQuery.textScaleFactor * 12;
+    if (MediaQuery.of(context).size.width <= 500) {
+      return MediaQuery.textScalerOf(context).scale(12);
     } else {
       return ((_fontSize * .15) + 0.85) * 12;
     }
   }
 
   double getMediumFont(BuildContext context) {
-    var mediaQuery = MediaQuery.of(context);
-    if (mediaQuery.size.width <= 500) {
-      return mediaQuery.textScaleFactor * 15;
+    if (MediaQuery.of(context).size.width <= 500) {
+      return MediaQuery.textScalerOf(context).scale(15);
     } else {
       return ((_fontSize * .15) + 0.85) * 15;
     }
   }
 
   double getLargeFont(BuildContext context) {
-    var mediaQuery = MediaQuery.of(context);
-    if (mediaQuery.size.width <= 500) {
-      return mediaQuery.textScaleFactor * 20;
+    if (MediaQuery.of(context).size.width <= 500) {
+      return MediaQuery.textScalerOf(context).scale(20);
     } else {
       return ((_fontSize * .15) + 0.85) * 20;
     }
   }
 
   double getHugeFont(BuildContext context) {
-    var mediaQuery = MediaQuery.of(context);
-    if (mediaQuery.size.width <= 500) {
-      return mediaQuery.textScaleFactor * 30;
+    if (MediaQuery.of(context).size.width <= 500) {
+      return MediaQuery.textScalerOf(context).scale(30);
     } else {
       return ((_fontSize * .15) + 0.85) * 30;
     }
