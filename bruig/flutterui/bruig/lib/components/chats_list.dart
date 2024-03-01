@@ -166,7 +166,7 @@ class _ChatHeadingWState extends State<_ChatHeadingW> {
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                   color: textColor,
-                                  fontSize: theme.getLargeFont(context))),
+                                  fontSize: theme.getMediumFont(context))),
                         ),
                         leading: popMenuButton,
                         trailing: trailing,
@@ -188,7 +188,7 @@ class _ChatHeadingWState extends State<_ChatHeadingW> {
                             child: Text(chat.nick,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
-                                    fontSize: theme.getLargeFont(context),
+                                    fontSize: theme.getMediumFont(context),
                                     color: textColor))),
                         leading: popMenuButton,
                         trailing: trailing,
@@ -314,21 +314,20 @@ class _ChatsListState extends State<_ChatsList> {
                   color: backgroundColor),
               padding: const EdgeInsets.all(0),
               child: Stack(children: [
-                Expanded(
-                    child: Container(
-                        padding: const EdgeInsets.only(
-                            left: 0, right: 5, top: 5, bottom: 5),
-                        child: ListView.builder(
-                            physics: const ScrollPhysics(),
-                            controller: sortedListScroll,
-                            scrollDirection: Axis.vertical,
-                            shrinkWrap: true,
-                            itemCount: sortedList.length,
-                            itemBuilder: (context, index) => _ChatHeadingW(
-                                sortedList[index],
-                                client,
-                                makeActive,
-                                showSubMenu)))),
+                Container(
+                    padding: const EdgeInsets.only(
+                        left: 0, right: 5, top: 5, bottom: 5),
+                    child: ListView.builder(
+                        physics: const ScrollPhysics(),
+                        controller: sortedListScroll,
+                        scrollDirection: Axis.vertical,
+                        shrinkWrap: true,
+                        itemCount: sortedList.length,
+                        itemBuilder: (context, index) => _ChatHeadingW(
+                            sortedList[index],
+                            client,
+                            makeActive,
+                            showSubMenu))),
                 Positioned(
                     bottom: 20,
                     right: 10,
