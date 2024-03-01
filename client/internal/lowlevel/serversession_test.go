@@ -616,9 +616,13 @@ func TestSessionPingPongs(t *testing.T) {
 	// Wait 3/4 of the time until the next ping, and write a dummy message.
 	// Expect the next ping message to be delayed until the pingInterval
 	// has elapsed from the dummy message.
-	go kx.popWrittenMsg(t)
 	time.Sleep(pingInterval * 3 / 4)
-	ss.SendPRPC(rpc.Message{Command: rpc.TaggedCmdRouteMessage}, rpc.RouteMessage{}, nil)
+	go ss.SendPRPC(rpc.Message{Command: rpc.TaggedCmdRouteMessage}, rpc.RouteMessage{}, nil)
+	gotMsg, _ = kx.popWrittenMsg(t)
+	if gotMsg.Command != rpc.TaggedCmdRouteMessage {
+		t.Fatalf("unexpected command: got %s, want %s", gotMsg.Command,
+			rpc.TaggedCmdPing)
+	}
 	ss.log.Debugf("MockKX: Wrote dummy msg")
 	lastMsgTime := time.Now()
 
