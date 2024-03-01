@@ -13,6 +13,11 @@ import android.app.PendingIntent
 import golib.Golib
 
 import io.flutter.embedding.engine.plugins.FlutterPlugin
+import io.flutter.embedding.engine.plugins.activity.ActivityAware
+import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
+import io.flutter.embedding.engine.plugins.lifecycle.HiddenLifecycleReference
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.Lifecycle
 import android.os.Handler
 import android.os.Looper
 import java.util.concurrent.ExecutorService
@@ -24,7 +29,7 @@ import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
 
 /** GolibPlugin */
-class GolibPlugin: FlutterPlugin, MethodCallHandler {
+class GolibPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
   /// The MethodChannel that will the communication between Flutter and native Android
   ///
   /// This local reference serves to register the plugin with the Flutter Engine and unregister it
@@ -172,6 +177,7 @@ class GolibPlugin: FlutterPlugin, MethodCallHandler {
     val handler = Handler(Looper.getMainLooper())
     val channel : EventChannel = EventChannel(flutterPluginBinding.binaryMessenger, "cmdResultLoop")
     var sink : EventChannel.EventSink? = null;
+    var ntfManager = setUpNotificationChannels();
 
     channel.setStreamHandler(object : EventChannel.StreamHandler {
       override fun onListen(listener: Any?, newSink: EventChannel.EventSink?) {
@@ -190,7 +196,13 @@ class GolibPlugin: FlutterPlugin, MethodCallHandler {
         val res: Map<String,Any> = mapOf("id" to id, "type" to typ, "payload" to payload, "error" to err)
         handler.post{ sink?.success(res) }
       }
-    })
+
+      // PM notification called when app was in background but still attached to
+      // flutter engine.
+      override fun pm(uid: String, nick: String, msg: String, ts: Long) {
+        showNotification(ntfManager, nick, msg, ts)
+      }
+    }, false)
     loopsIds.add(id);
   }
 
@@ -203,11 +215,38 @@ class GolibPlugin: FlutterPlugin, MethodCallHandler {
 
     // Attach background notification loop.
     var ntfManager = setUpNotificationChannels();
-    var id = Golib.backgroundNtfnsLoop(object : golib.BackgroundNtfnsLoopCB {
+    var id = Golib.cmdResultLoop(object : golib.CmdResultLoopCB {
+      override fun f(id: Int, typ: Int, payload: String, err: String) {
+        // Ignored because the flutter engine is detached.
+      }
+
+      // PM notification called when app was in background _and_ flutter engine
+      // was detached.
       override fun pm(uid: String, nick: String, msg: String, ts: Long) {
         showNotification(ntfManager, nick, msg, ts)
       }
-    })
+    }, true)
     loopsIds.add(id);
   }
+
+
+  override fun onAttachedToActivity(binding: ActivityPluginBinding) {
+    (binding.lifecycle as HiddenLifecycleReference)
+            .lifecycle
+            .addObserver(LifecycleEventObserver { source, event ->
+              if (event == Lifecycle.Event.ON_STOP) {
+                // App went into background.
+                Golib.asyncCallStr(0x84, 0, 0, null) // 0x84 == CTEnableBackgroundNtfs
+              } else if (event == Lifecycle.Event.ON_START) {
+                // App came back from background.
+                Golib.asyncCallStr(0x85, 0, 0, null) // 0x84 == CTDisableBackgroundNtfs
+              }
+            });
+  }
+
+  override fun onDetachedFromActivity() {}
+
+  override fun onDetachedFromActivityForConfigChanges() {}
+
+  override fun onReattachedToActivityForConfigChanges(binding: ActivityPluginBinding) {}
 }

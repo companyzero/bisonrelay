@@ -3098,6 +3098,8 @@ const int CTListPostCommentRecvReceipts = 0x80;
 const int CTMyAvatarSet = 0x81;
 const int CTMyAvatarGet = 0x82;
 const int CTRunState = 0x83;
+const int CTEnableBackgroundNtfs = 0x84;
+const int CTDisableBackgroundNtfs = 0x85;
 
 const int notificationsStartID = 0x1000;
 
