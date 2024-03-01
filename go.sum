@@ -387,8 +387,8 @@ cloud.google.com/go/workflows v1.8.0/go.mod h1:ysGhmEajwZxGn1OhGOGKsTXc5PyxOc0vf
 cloud.google.com/go/workflows v1.9.0/go.mod h1:ZGkj1aFIOd9c8Gerkjjq7OW7I5+l6cSvT3ujaO/WwSA=
 decred.org/cspp/v2 v2.1.0 h1:HeHb9+BFqrBaAPc6CsPiUpPFmC1uyBM2mJZUAbUXkRw=
 decred.org/cspp/v2 v2.1.0/go.mod h1:9nO3bfvCheOPIFZw5f6sRQ42CjBFB5RKSaJ9Iq6G4MA=
-decred.org/dcrwallet/v3 v3.1.1-0.20240123171509-cb3222c211b9 h1:pzXtrLFRbHUeyz/SrgJ8Xez15lk65yCXkZqx+lxLUsQ=
-decred.org/dcrwallet/v3 v3.1.1-0.20240123171509-cb3222c211b9/go.mod h1:KYWzL2R6ghBLSvB7XXU9S29QwgcqnApCvONMDJ6KCR0=
+decred.org/dcrwallet/v3 v3.1.1-0.20240219233943-89327b1f292f h1:U7Hqknl9iWt1VXK1e++4ezMWXr8QDg1PMZv5yq4fzZQ=
+decred.org/dcrwallet/v3 v3.1.1-0.20240219233943-89327b1f292f/go.mod h1:KYWzL2R6ghBLSvB7XXU9S29QwgcqnApCvONMDJ6KCR0=
 dmitri.shuralyov.com/gpu/mtl v0.0.0-20190408044501-666a987793e9/go.mod h1:H6x//7gZCb22OMCxBHrMx7a5I7Hp++hsVxbQ4BYO7hU=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802/go.mod h1:IVnqGOEym/WlBOVXweHU+Q+/VP0lqqI8lqeDx9IjBqo=
@@ -553,8 +553,8 @@ github.com/decred/dcrd/wire v1.2.0/go.mod h1:/JKOsLInOJu6InN+/zH5AyCq3YDIOW/Eqcf
 github.com/decred/dcrd/wire v1.5.0/go.mod h1:fzAjVqw32LkbAZIt5mnrvBR751GTa3e0rRQdOIhPY3w=
 github.com/decred/dcrd/wire v1.6.0 h1:YOGwPHk4nzGr6OIwUGb8crJYWDiVLpuMxfDBCCF7s/o=
 github.com/decred/dcrd/wire v1.6.0/go.mod h1:XQ8Xv/pN/3xaDcb7sH8FBLS9cdgVctT7HpBKKGsIACk=
-github.com/decred/dcrlnd v0.5.1-0.20240123175816-ae2058fde3dd h1:/vsIDpg//5OzT5W8vLxHj4Y0BeDVaKaaNE4VKLguhUk=
-github.com/decred/dcrlnd v0.5.1-0.20240123175816-ae2058fde3dd/go.mod h1:cyp2hwnvNc+PU4OTMT/5WtPsG48C62RzvranYFURp2I=
+github.com/decred/dcrlnd v0.5.1-0.20240220145029-ac6673a2bc7f h1:HeNCXks0/4ApaWaMQKEJf/RoumhpQKHMjhUCpKkZB5M=
+github.com/decred/dcrlnd v0.5.1-0.20240220145029-ac6673a2bc7f/go.mod h1:KMGegIx5s6S+zfs8neIysOyySIjcwxmgOCLWlrG665o=
 github.com/decred/dcrlnlpd v0.0.0-20240123180445-e796ee43935f h1:CE8F4oPnp5bhqDUxFZEGq/uePCQ/DyIQmtHg+xcNzJs=
 github.com/decred/dcrlnlpd v0.0.0-20240123180445-e796ee43935f/go.mod h1:QTOHLmpDApLg20eOnGJu+DTjrMEOus/6Rfa/7u3hrgE=
 github.com/decred/dcrtest/dcrdtest v1.0.0 h1:M50BpCPwkCJLtRa2MAo7QMs9sQFgZdCjTnZahnak594=

@@ -18,7 +18,7 @@ require (
 	github.com/decred/dcrd/dcrutil/v4 v4.0.1
 	github.com/decred/dcrd/txscript/v4 v4.1.0
 	github.com/decred/dcrd/wire v1.6.0
-	github.com/decred/dcrlnd v0.5.1-0.20240123175816-ae2058fde3dd
+	github.com/decred/dcrlnd v0.5.1-0.20240220145029-ac6673a2bc7f
 	github.com/decred/dcrlnlpd v0.0.0-20240123180445-e796ee43935f
 	github.com/decred/go-socks v1.1.0
 	github.com/decred/slog v1.2.0
@@ -51,7 +51,7 @@ require (
 
 require (
 	decred.org/cspp/v2 v2.1.0 // indirect
-	decred.org/dcrwallet/v3 v3.1.1-0.20240123171509-cb3222c211b9 // indirect
+	decred.org/dcrwallet/v3 v3.1.1-0.20240219233943-89327b1f292f // indirect
 	github.com/NebulousLabs/go-upnp v0.0.0-20181203152547-b32978b8ccbf // indirect
 	github.com/Yawning/aez v0.0.0-20211027044916-e49e68abd344 // indirect
 	github.com/agl/ed25519 v0.0.0-20170116200512-5312a6153412 // indirect
