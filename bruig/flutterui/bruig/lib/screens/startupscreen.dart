@@ -8,7 +8,6 @@ class StartupScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    print("is child null? ${child != null}");
     bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
     var mobileBG = const DecorationImage(
         fit: BoxFit.fill, image: AssetImage("assets/images/testBG.gif"));
