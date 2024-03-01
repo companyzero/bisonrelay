@@ -8,6 +8,7 @@ import 'package:bruig/config.dart';
 import 'package:bruig/models/log.dart';
 import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:bruig/theme_manager.dart';
 import 'package:flutter/services.dart';
@@ -92,6 +93,7 @@ class _ExportLogScreenState extends State<ExportLogScreen> {
   bool golibLogs = true;
   bool lnLogs = true;
   bool exporting = false;
+  int debugModeGotoCfgCounter = 0;
 
   @override
   void initState() {
@@ -101,7 +103,7 @@ class _ExportLogScreenState extends State<ExportLogScreen> {
     () async {
       try {
         var dir = isMobile
-            ? (await getApplicationCacheDirectory()).path
+            ? (await getApplicationCacheDirectory())?.path
             : await getDownloadsDirectory();
         setState(() {
           destPath = "$dir/${zipFilename()}";
@@ -180,7 +182,23 @@ class _ExportLogScreenState extends State<ExportLogScreen> {
                       style: TextStyle(
                           color: textColor,
                           fontSize: theme.getLargeFont(context))),
-                  const SizedBox(height: 20),
+                  kReleaseMode
+                      ? const SizedBox(height: 20)
+                      : InkWell(
+                          onTap: () {
+                            debugModeGotoCfgCounter += 1;
+                            if (debugModeGotoCfgCounter == 3) {
+                              showSuccessSnackbar(context,
+                                  "Going to manual config file with 3 more taps");
+                            }
+                            if (debugModeGotoCfgCounter == 6) {
+                              Navigator.of(context, rootNavigator: true)
+                                  .pushNamed(ManualCfgModifyScreen.routeName);
+                            }
+                          },
+                          child: Container(
+                              height: 20, width: 40),
+                        ),
                   TextButton(
                       onPressed: chooseDestPath,
                       child: destPath != ""
@@ -411,6 +429,103 @@ class _LogSettingsScreenState extends State<LogSettingsScreen> {
                         ElevatedButton(
                             onPressed: confirmApply,
                             child: const Text("Apply")),
+                        CancelButton(onPressed: () {
+                          Navigator.of(context).pop();
+                        }),
+                      ]),
+                  const SizedBox(height: 20),
+                ]))));
+  }
+}
+
+class ManualCfgModifyScreen extends StatefulWidget {
+  static String routeName = "/manualScreenModify";
+  const ManualCfgModifyScreen({super.key});
+
+  @override
+  State<ManualCfgModifyScreen> createState() => _ManualCfgModifyScreenState();
+}
+
+class _ManualCfgModifyScreenState extends State<ManualCfgModifyScreen> {
+  TextEditingController txtCtrl = TextEditingController();
+
+  void loadConfig() async {
+    var content = await File(mainConfigFilename).readAsString();
+    setState(() {
+      txtCtrl.text = content;
+    });
+  }
+
+  void doOverwriteConfig() async {
+    try {
+      await File(mainConfigFilename).writeAsString(txtCtrl.text);
+      if (mounted) {
+        confirmationDialog(context, () {
+          if (Platform.isAndroid || Platform.isIOS) {
+            Restart.restartApp();
+          } else {
+            SystemNavigator.pop();
+          }
+        },
+            "Restart app?",
+            "The changes will be applied only after restarting the app.",
+            "Restart App",
+            "Cancel");
+      }
+    } catch (exception) {
+      showErrorSnackbar(context, "Unable to modify config file: $exception");
+    }
+  }
+
+  void confirmAply() async {
+    confirmationDialog(
+        context,
+        doOverwriteConfig,
+        "Overwrite config file",
+        "Really modify the config file?\n\nTHIS MAY MAKE THE APP UNABLE TO RUN",
+        "Overwite",
+        "Cancel");
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    loadConfig();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    var theme = Theme.of(context);
+    var textColor = theme.focusColor;
+    var backgroundColor = theme.backgroundColor;
+    return Scaffold(
+        body: Consumer<ThemeNotifier>(
+            builder: (context, theme, child) => Container(
+                margin: const EdgeInsets.only(
+                    left: 1, top: 20, right: 1, bottom: 1),
+                decoration: BoxDecoration(
+                  color: backgroundColor,
+                  borderRadius: BorderRadius.circular(3),
+                ),
+                padding: const EdgeInsets.all(16),
+                child: Column(children: [
+                  const SizedBox(height: 20),
+                  Text("Manual Config Modification",
+                      style: TextStyle(
+                          color: textColor,
+                          fontSize: theme.getLargeFont(context))),
+                  const SizedBox(height: 20),
+                  Expanded(
+                      child: TextField(
+                    controller: txtCtrl,
+                    maxLines: null,
+                  )),
+                  const SizedBox(height: 20),
+                  Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        ElevatedButton(
+                            onPressed: confirmAply, child: const Text("Apply")),
                         CancelButton(onPressed: () {
                           Navigator.of(context).pop();
                         }),
