@@ -119,21 +119,22 @@ class _AppState extends State<App> with WindowListener {
   final navkey = GlobalKey<NavigatorState>(debugLabel: "main-navigator");
   final StreamController<ConfNotification> shutdownNtfs =
       StreamController<ConfNotification>();
+  final isMobile = Platform.isIOS || Platform.isAndroid;
   bool pushedToShutdown = false;
 
   @override
   void initState() {
     super.initState();
-    windowManager.addListener(this);
+    !isMobile ? windowManager.addListener(this) : null;
     handleNotifications();
     initClient();
-    windowManager.setPreventClose(true);
+    !isMobile ? windowManager.setPreventClose(true) : null;
     NotificationService().init();
   }
 
   @override
   void dispose() {
-    windowManager.removeListener(this);
+    !isMobile ? windowManager.removeListener(this) : null;
     super.dispose();
   }
 
