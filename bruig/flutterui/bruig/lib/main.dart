@@ -188,14 +188,14 @@ class _AppState extends State<App> with WindowListener {
       if ("$exception".contains("client already initialized")) {
         // Not a fatal error, just resuming from a prior state. Consider the
         // addressbook loaded and start fetching client data.
-        addressBookLoaded();
+        addressBookLoaded(true);
         return;
       }
       navkey.currentState!.pushNamed('/fatalError', arguments: exception);
     }
   }
 
-  Future<void> doWalletChecks() async {
+  Future<void> doWalletChecks(bool wasAlreadyRunning) async {
     var ntfns = Provider.of<AppNotifications>(context, listen: false);
     try {
       var balances = await Golib.lnGetBalances();
@@ -216,6 +216,14 @@ class _AppState extends State<App> with WindowListener {
         // Do not perform other checks because they'll be taken care of during onboarding.
         return;
       }
+
+      // The following checks are only done if this is not resuming from a background
+      // transition (e.g. mobile notification received) to avoid showing them
+      // multiple times.
+      if (wasAlreadyRunning) {
+        return;
+      }
+
       if (balances.wallet.totalBalance == 0) {
         ntfns.addNtfn(AppNtfn(AppNtfnType.walletNeedsFunds));
         navkey.currentState!.pushNamed("/needsFunds");
@@ -240,9 +248,9 @@ class _AppState extends State<App> with WindowListener {
     }
   }
 
-  Future<void> addressBookLoaded() async {
+  Future<void> addressBookLoaded(bool wasAlreadyRunning) async {
     navkey.currentState!.pushReplacementNamed(OverviewScreen.routeName);
-    await doWalletChecks();
+    await doWalletChecks(wasAlreadyRunning);
     var client = Provider.of<ClientModel>(context, listen: false);
     await client.fetchNetworkInfo();
     await client.readAddressBook();
@@ -310,7 +318,7 @@ class _AppState extends State<App> with WindowListener {
           break;
 
         case NTAddressBookLoaded:
-          await addressBookLoaded();
+          await addressBookLoaded(false);
           break;
         default:
           developer.log("Unknown conf ntf received ${ntf.type}");
