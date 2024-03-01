@@ -136,6 +136,8 @@ const (
 	CTMyAvatarSet                         = 0x81
 	CTMyAvatarGet                         = 0x82
 	CTGetRunState                         = 0x83
+	CTEnableBackgroundNtfs                = 0x84
+	CTDisableBackgroundNtfs               = 0x85
 
 	NTInviteReceived         = 0x1001
 	NTInviteAccepted         = 0x1002
@@ -204,6 +206,7 @@ type CmdResult struct {
 
 type CmdResultLoopCB interface {
 	F(id int32, typ int32, payload string, err string)
+	PM(uid string, nick string, msg string, ts int64)
 }
 
 var cmdResultChan = make(chan *CmdResult)
@@ -296,7 +299,7 @@ func call(cmd *cmd) *CmdResult {
 		resPayload, err = json.Marshal(v)
 	}
 
-	return &CmdResult{ID: cmd.ID, Err: err, Payload: resPayload}
+	return &CmdResult{ID: cmd.ID, Type: cmd.Type, Err: err, Payload: resPayload}
 }
 
 func AsyncCall(typ CmdType, id, clientHandle int32, payload []byte) {
@@ -345,10 +348,37 @@ var (
 	cmdResultLoopsCount int32
 )
 
+// emitBackgroundNtfns emits background notifications to the callback object.
+func emitBackgroundNtfns(r *CmdResult, cb CmdResultLoopCB) {
+	switch r.Type {
+	case NTPM:
+		var pm pm
+		err := json.Unmarshal(r.Payload, &pm)
+		if err != nil {
+			return
+		}
+
+		// Remove embeds.
+		msg := mdembeds.ReplaceEmbeds(pm.Msg, func(args mdembeds.EmbeddedArgs) string {
+			if strings.HasPrefix(args.Typ, "image/") {
+				return "[image]"
+			}
+			return ""
+		})
+
+		cb.PM(pm.UID.String(), pm.Nick, msg, pm.TimeStamp)
+
+	default:
+		// Ignore every other notification.
+	}
+}
+
 // CmdResultLoop runs the loop that fetches async results in a goroutine and
 // calls cb.F() with the results. Returns an ID that may be passed to
 // StopCmdResultLoop to stop this goroutine.
-func CmdResultLoop(cb CmdResultLoopCB) int32 {
+//
+// If onlyBgNtfns is specified, only background notifications are sent.
+func CmdResultLoop(cb CmdResultLoopCB, onlyBgNtfns bool) int32 {
 	cmdResultLoopsMtx.Lock()
 	id := cmdResultLoopsCount + 1
 	cmdResultLoopsCount += 1
@@ -356,6 +386,11 @@ func CmdResultLoop(cb CmdResultLoopCB) int32 {
 	cmdResultLoops[id] = ch
 	cmdResultLoopsLive.Add(1)
 	cmdResultLoopsMtx.Unlock()
+
+	// onlyBgNtfns == true when this is called from the native plugin
+	// code while the flutter engine is _not_ attached to it.
+	deliverBackgroundNtfns := onlyBgNtfns
+
 	go func() {
 		for {
 			var r *CmdResult
@@ -364,14 +399,37 @@ func CmdResultLoop(cb CmdResultLoopCB) int32 {
 			case <-ch:
 				return
 			}
-			var errMsg, payload string
-			if r.Err != nil {
-				errMsg = r.Err.Error()
+
+			// Process the special commands that toggle calling
+			// native code with background ntfn events.
+			switch r.Type {
+			case CTEnableBackgroundNtfs:
+				deliverBackgroundNtfns = true
+				continue
+			case CTDisableBackgroundNtfs:
+				deliverBackgroundNtfns = false
+				continue
 			}
-			if len(r.Payload) > 0 {
-				payload = string(r.Payload)
+
+			// If the flutter engine is attached to the process,
+			// deliver the event so that it can be processed.
+			if !onlyBgNtfns {
+				var errMsg, payload string
+				if r.Err != nil {
+					errMsg = r.Err.Error()
+				}
+				if len(r.Payload) > 0 {
+					payload = string(r.Payload)
+				}
+				cb.F(r.ID, r.Type, payload, errMsg)
 			}
-			cb.F(r.ID, r.Type, payload, errMsg)
+
+			// Emit a background ntfn if the flutter engine is
+			// deatched or if it is attached but paused/on
+			// background.
+			if deliverBackgroundNtfns {
+				emitBackgroundNtfns(r, cb)
+			}
 		}
 	}()
 
@@ -401,49 +459,4 @@ func StopAllCmdResultLoops() {
 	for _, ch := range chans {
 		close(ch)
 	}
-}
-
-// BackgroundNtfnsLoopCB defines the callbacks called when events that should
-// generate background notifications happen.
-type BackgroundNtfnsLoopCB interface {
-	PM(uid string, nick string, msg string, ts int64)
-}
-
-// cmdLoopBackgroundNtfnsFilter adapts BackgroundNtfnsLoopCB into
-// CmdResultLoopCB.
-type cmdLoopBackgroundNtfnsFilter struct {
-	cb BackgroundNtfnsLoopCB
-}
-
-func (lcb cmdLoopBackgroundNtfnsFilter) F(id int32, typ int32, payload string, err string) {
-	switch typ {
-	case NTPM:
-		var pm pm
-		err := json.Unmarshal([]byte(payload), &pm)
-		if err != nil {
-			return
-		}
-
-		// Remove embeds.
-		msg := mdembeds.ReplaceEmbeds(pm.Msg, func(args mdembeds.EmbeddedArgs) string {
-			if strings.HasPrefix(args.Typ, "image/") {
-				return "[image]"
-			}
-			return ""
-		})
-
-		lcb.cb.PM(pm.UID.String(), pm.Nick, msg, pm.TimeStamp)
-
-	default:
-		// Ignore every other notification.
-	}
-}
-
-// BackgroundNtfnsLoop starts a loop in a goroutine to send background message
-// notifications to the passed callabck. There are _not_ the full set of
-// client notifications, only those relevant to create notifications when the
-// main app UI is not shown (on mobile).
-func BackgroundNtfnsLoop(cb BackgroundNtfnsLoopCB) int32 {
-	lcb := cmdLoopBackgroundNtfnsFilter{cb: cb}
-	return CmdResultLoop(lcb)
 }
