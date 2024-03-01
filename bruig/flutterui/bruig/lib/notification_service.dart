@@ -219,7 +219,8 @@ class NotificationService {
             break;
         }
       },
-      onDidReceiveBackgroundNotificationResponse: notificationTapBackground,
+      onDidReceiveBackgroundNotificationResponse:
+          (Platform.isAndroid) ? null : notificationTapBackground,
     );
     if (Platform.isAndroid) {
       await _notificationService.isAndroidPermissionGranted();
