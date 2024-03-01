@@ -25,6 +25,8 @@ class GolibPlugin: FlutterPlugin, MethodCallHandler {
 
   private val executorService: ExecutorService = Executors.newFixedThreadPool(2)
 
+  private val loopsIds = mutableListOf<Int>()
+
 
   override fun onAttachedToEngine(@NonNull flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
     channel = MethodChannel(flutterPluginBinding.binaryMessenger, "golib_plugin")
@@ -115,18 +117,24 @@ class GolibPlugin: FlutterPlugin, MethodCallHandler {
       }
     });
 
-    Golib.cmdResultLoop(object : golib.CmdResultLoopCB {
+    var id = Golib.cmdResultLoop(object : golib.CmdResultLoopCB {
       override fun f(id: Int, typ: Int, payload: String, err: String) {
         val res: Map<String,Any> = mapOf("id" to id, "type" to typ, "payload" to payload, "error" to err)
         handler.post{ sink?.success(res) }
       }
     })
+    loopsIds.add(id);
   }
 
   
   override fun onDetachedFromEngine(@NonNull binding: FlutterPlugin.FlutterPluginBinding) {
     channel.setMethodCallHandler(null)
 
-    // TODO: stop readstream?
+    // Stop all async goroutines.
+    val iterator = loopsIds.iterator()
+    while (iterator.hasNext()) {
+      Golib.stopCmdResultLoop(iterator.next());
+      iterator.remove();
+    }
   }
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
@@ -326,10 +327,29 @@ func NextCmdResult() *CmdResult {
 	}
 }
 
-func CmdResultLoop(cb CmdResultLoopCB) {
+var (
+	cmdResultLoopsMtx   sync.Mutex
+	cmdResultLoops      = map[int32]chan struct{}{}
+	cmdResultLoopsCount int32
+)
+
+// CmdResultLoop runs the loop that fetches async results in a goroutine and
+// calls cb.F() with the results. Returns an ID that may be passed to
+// StopCmdResultLoop to stop this goroutine.
+func CmdResultLoop(cb CmdResultLoopCB) int32 {
+	cmdResultLoopsMtx.Lock()
+	id := cmdResultLoopsCount + 1
+	ch := make(chan struct{})
+	cmdResultLoops[id] = ch
+	cmdResultLoopsMtx.Unlock()
 	go func() {
 		for {
-			r := <-cmdResultChan
+			var r *CmdResult
+			select {
+			case r = <-cmdResultChan:
+			case <-ch:
+				return
+			}
 			var errMsg, payload string
 			if r.Err != nil {
 				errMsg = r.Err.Error()
@@ -340,4 +360,18 @@ func CmdResultLoop(cb CmdResultLoopCB) {
 			cb.F(r.ID, r.Type, payload, errMsg)
 		}
 	}()
+
+	return id
+}
+
+// StopCmdResultLoop stops an async goroutine created with CmdResultLoop. Does
+// nothing if this goroutine is already stopped.
+func StopCmdResultLoop(id int32) {
+	cmdResultLoopsMtx.Lock()
+	ch := cmdResultLoops[id]
+	delete(cmdResultLoops, id)
+	cmdResultLoopsMtx.Unlock()
+	if ch != nil {
+		close(ch)
+	}
 }
