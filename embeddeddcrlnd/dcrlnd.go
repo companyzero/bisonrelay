@@ -9,6 +9,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -415,7 +416,12 @@ func RunDcrlnd(ctx context.Context, cfg Config) (*Dcrlnd, error) {
 		// standard simnet dcrd node and the standard dcrlnd 3 node
 		// setup. This is needed so that the simnet node can actually
 		// sync.
-		conf.Dcrwallet.SPVConnect = []string{"127.0.0.1:19555"}
+		if runtime.GOOS == "android" {
+			// Android emulator default proxy IP.
+			conf.Dcrwallet.SPVConnect = []string{"10.0.2.2:19555"}
+		} else {
+			conf.Dcrwallet.SPVConnect = []string{"127.0.0.1:19555"}
+		}
 	default:
 		return nil, fmt.Errorf("unrecognized network %q", network)
 	}

@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
@@ -195,6 +196,9 @@ func (c *Client) onboardOpenOutboundChan(ctx context.Context, onchainAmount dcru
 	case "simnet":
 		key = "029398ddb14e4b3cb92fc64d61fcaaa2f3b590951b0b05ba1ecc04a7504d333213"
 		server = "127.0.0.1:20202"
+		if runtime.GOOS == "android" {
+			server = "10.0.2.2:20202" // Proxy from emulator to local machine.
+		}
 	default:
 		return "", false, fmt.Errorf("network %q does not have default hub", info.Chains[0].Network)
 	}
