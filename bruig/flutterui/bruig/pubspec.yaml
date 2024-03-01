@@ -63,6 +63,7 @@ dependencies:
   optimize_battery: ^0.0.4
   dropdown_button2: ^2.3.8
   restart_app: ^1.2.1
+  share_plus: ^7.2.2
 
 msix_config:
   display_name: Bison Relay GUI

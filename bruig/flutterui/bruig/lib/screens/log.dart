@@ -17,6 +17,7 @@ import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:restart_app/restart_app.dart';
+import 'package:share_plus/share_plus.dart';
 
 class LogScreenTitle extends StatelessWidget {
   const LogScreenTitle({super.key});
@@ -99,7 +100,9 @@ class _ExportLogScreenState extends State<ExportLogScreen> {
     // Set default dir. The app should be allowed to write to this on mobile.
     () async {
       try {
-        var dir = (await getExternalStorageDirectory())?.path;
+        var dir = isMobile
+            ? (await getApplicationCacheDirectory()).path
+            : await getDownloadsDirectory();
         setState(() {
           destPath = "$dir/${zipFilename()}";
         });
@@ -131,8 +134,12 @@ class _ExportLogScreenState extends State<ExportLogScreen> {
     var args = ZipLogsArgs(golibLogs, lnLogs, !allFiles, destPath);
     try {
       await Golib.zipLogs(args);
-      if (mounted) {
-        showSuccessSnackbar(context, "Exported logs!");
+      if (!isMobile) {
+        if (mounted) {
+          showSuccessSnackbar(context, "Exported logs!");
+        }
+      } else {
+        Share.shareXFiles([XFile(destPath)], text: "bruig logs");
       }
       setState(() {
         // Replace filename to ensure generating again won't overwrite.
@@ -384,19 +391,6 @@ class _LogSettingsScreenState extends State<LogSettingsScreen> {
                       ),
                     ),
                   ]),
-                  /*
-                  Row(children: [
-                    Checkbox(
-                        value: logPings,
-                        onChanged: (bool? value) {
-                          setState(() {
-                            logPings = value ?? false;
-                          });
-                        }),
-                    // const SizedBox(width: 20),
-                    Text("Log Pings", style: TextStyle(color: textColor)),
-                  ]),
-                  */
                   InkWell(
                     onTap: () => setState(() => logPings = !logPings),
                     child: Row(children: [
