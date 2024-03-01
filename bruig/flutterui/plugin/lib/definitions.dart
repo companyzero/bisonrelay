@@ -2035,6 +2035,18 @@ class ProfileUpdated extends ChatEvent {
       _$ProfileUpdatedFromJson(json);
 }
 
+@JsonSerializable()
+class RunState {
+  @JsonKey(name: "dcrlnd_running")
+  final bool dcrlndRunning;
+  @JsonKey(name: "client_running")
+  final bool clientRunning;
+
+  RunState({required this.dcrlndRunning, required this.clientRunning});
+  factory RunState.fromJson(Map<String, dynamic> json) =>
+      _$RunStateFromJson(json);
+}
+
 mixin NtfStreams {
   StreamController<RemoteUser> ntfAcceptedInvites =
       StreamController<RemoteUser>();
@@ -2961,6 +2973,9 @@ abstract class PluginPlatform {
 
   Future<Uint8List?> getMyAvatar() async =>
       base64ToUint8list(await asyncCall(CTMyAvatarGet, null));
+
+  Future<RunState> getRunState() async =>
+      RunState.fromJson(await asyncCall(CTRunState, null));
 }
 
 const int CTUnknown = 0x00;
@@ -3082,6 +3097,7 @@ const int CTListPostRecvReceipts = 0x7f;
 const int CTListPostCommentRecvReceipts = 0x80;
 const int CTMyAvatarSet = 0x81;
 const int CTMyAvatarGet = 0x82;
+const int CTRunState = 0x83;
 
 const int notificationsStartID = 0x1000;
 

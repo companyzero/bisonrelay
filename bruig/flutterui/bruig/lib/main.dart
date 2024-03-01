@@ -70,7 +70,9 @@ void main(List<String> args) async {
   try {
     Config cfg = await configFromArgs(args);
     await Golib.createLockFile(cfg.dbRoot);
-    if (cfg.walletType == "internal") {
+
+    var runState = await Golib.getRunState();
+    if (cfg.walletType == "internal" && !runState.dcrlndRunning) {
       await runUnlockDcrlnd(cfg);
       return;
     }
@@ -183,6 +185,12 @@ class _AppState extends State<App> with WindowListener {
       await Golib.initClient(initArgs);
     } catch (exception) {
       print("XXXXXX $exception");
+      if ("$exception".contains("client already initialized")) {
+        // Not a fatal error, just resuming from a prior state. Consider the
+        // addressbook loaded and start fetching client data.
+        addressBookLoaded();
+        return;
+      }
       navkey.currentState!.pushNamed('/fatalError', arguments: exception);
     }
   }
@@ -230,6 +238,15 @@ class _AppState extends State<App> with WindowListener {
       ntfns.addNtfn(AppNtfn(AppNtfnType.error,
           msg: "Unable to perform initial wallet checks: $exception"));
     }
+  }
+
+  Future<void> addressBookLoaded() async {
+    navkey.currentState!.pushReplacementNamed(OverviewScreen.routeName);
+    await doWalletChecks();
+    var client = Provider.of<ClientModel>(context, listen: false);
+    await client.fetchNetworkInfo();
+    await client.readAddressBook();
+    await client.fetchMyAvatar();
   }
 
   void handleNotifications() async {
@@ -293,12 +310,7 @@ class _AppState extends State<App> with WindowListener {
           break;
 
         case NTAddressBookLoaded:
-          navkey.currentState!.pushReplacementNamed(OverviewScreen.routeName);
-          await doWalletChecks();
-          var client = Provider.of<ClientModel>(context, listen: false);
-          await client.fetchNetworkInfo();
-          await client.readAddressBook();
-          await client.fetchMyAvatar();
+          await addressBookLoaded();
           break;
         default:
           developer.log("Unknown conf ntf received ${ntf.type}");

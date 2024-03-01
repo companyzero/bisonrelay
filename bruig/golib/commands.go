@@ -132,6 +132,7 @@ const (
 	CTListPostCommentRecvReceipts         = 0x80
 	CTMyAvatarSet                         = 0x81
 	CTMyAvatarGet                         = 0x82
+	CTGetRunState                         = 0x83
 
 	NTInviteReceived         = 0x1001
 	NTInviteAccepted         = 0x1002
@@ -263,6 +264,13 @@ func call(cmd *cmd) *CmdResult {
 		var args string
 		decode(&args)
 		err = handleCloseLockFile(args)
+
+	case CTGetRunState:
+		v = runState{
+			DcrlndRunning: isDcrlndRunning(),
+			ClientRunning: isClientRunning(uint32(cmd.ClientHandle)),
+		}
+		err = nil
 
 	default:
 		// Calls that need a client. Figure out the client.

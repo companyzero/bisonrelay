@@ -471,3 +471,8 @@ type profileUpdated struct {
 	AbEntry       addressBookEntry            `json:"addressbook_entry"`
 	UpdatedFields []client.ProfileUpdateField `json:"updated_fields"`
 }
+
+type runState struct {
+	DcrlndRunning bool `json:"dcrlnd_running"`
+	ClientRunning bool `json:"client_running"`
+}

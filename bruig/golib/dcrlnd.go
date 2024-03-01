@@ -25,3 +25,10 @@ func runDcrlnd(ctx context.Context, cfg embeddeddcrlnd.Config) (*embeddeddcrlnd.
 
 	return lndc, nil
 }
+
+func isDcrlndRunning() bool {
+	currentLndcMtx.Lock()
+	res := currentLndc != nil
+	currentLndcMtx.Unlock()
+	return res
+}

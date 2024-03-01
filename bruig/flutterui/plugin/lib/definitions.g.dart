@@ -2077,3 +2077,13 @@ Map<String, dynamic> _$ProfileUpdatedToJson(ProfileUpdated instance) =>
       'addressbook_entry': instance.abEntry,
       'updated_fields': instance.updatedFields,
     };
+
+RunState _$RunStateFromJson(Map<String, dynamic> json) => RunState(
+      dcrlndRunning: json['dcrlnd_running'] as bool,
+      clientRunning: json['client_running'] as bool,
+    );
+
+Map<String, dynamic> _$RunStateToJson(RunState instance) => <String, dynamic>{
+      'dcrlnd_running': instance.dcrlndRunning,
+      'client_running': instance.clientRunning,
+    };
