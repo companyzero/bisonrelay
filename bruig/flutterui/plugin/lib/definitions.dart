@@ -66,6 +66,8 @@ class InitClient {
   final bool sendRecvReceipts;
   @JsonKey(name: 'auto_sub_posts')
   final bool autoSubPosts;
+  @JsonKey(name: 'log_pings')
+  final bool logPings;
 
   InitClient(
     this.dbRoot,
@@ -94,6 +96,7 @@ class InitClient {
     this.autoRemoveIdleUsersIgnore,
     this.sendRecvReceipts,
     this.autoSubPosts,
+    this.logPings,
   );
 
   Map<String, dynamic> toJson() => _$InitClientToJson(this);
@@ -1251,6 +1254,8 @@ class LNInitDcrlnd {
   final bool torIsolation;
   @JsonKey(name: "sync_free_list")
   final bool syncFreeList;
+  @JsonKey(name: "debug_level")
+  final String debugLevel;
 
   LNInitDcrlnd(
       this.rootDir,
@@ -1260,7 +1265,8 @@ class LNInitDcrlnd {
       this.multiChanBackup,
       this.proxyaddr,
       this.torIsolation,
-      this.syncFreeList);
+      this.syncFreeList,
+      this.debugLevel);
   Map<String, dynamic> toJson() => _$LNInitDcrlndToJson(this);
 }
 
@@ -2047,6 +2053,22 @@ class RunState {
       _$RunStateFromJson(json);
 }
 
+@JsonSerializable()
+class ZipLogsArgs {
+  @JsonKey(name: "include_golib")
+  final bool includeGolib;
+  @JsonKey(name: "include_ln")
+  final bool includeLn;
+  @JsonKey(name: "only_last_file")
+  final bool onlyLastFile;
+  @JsonKey(name: "dest_path")
+  final String destPath;
+
+  ZipLogsArgs(
+      this.includeGolib, this.includeLn, this.onlyLastFile, this.destPath);
+  Map<String, dynamic> toJson() => _$ZipLogsArgsToJson(this);
+}
+
 mixin NtfStreams {
   StreamController<RemoteUser> ntfAcceptedInvites =
       StreamController<RemoteUser>();
@@ -2750,17 +2772,24 @@ abstract class PluginPlatform {
       Uint8List? multiChanBackup,
       String proxyaddr,
       bool torIsolation,
-      bool syncFreeList) async {
+      bool syncFreeList,
+      String debugLevel) async {
     var req = LNInitDcrlnd(rootPath, network, password, existingSeed,
-        multiChanBackup, proxyaddr, torIsolation, syncFreeList);
+        multiChanBackup, proxyaddr, torIsolation, syncFreeList, debugLevel);
     var res = await asyncCall(CTLNInitDcrlnd, req);
     return LNNewWalletSeed.fromJson(res);
   }
 
-  Future<String> lnRunDcrlnd(String rootPath, String network, String password,
-      String proxyaddr, bool torIsolation, bool syncFreeList) async {
+  Future<String> lnRunDcrlnd(
+      String rootPath,
+      String network,
+      String password,
+      String proxyaddr,
+      bool torIsolation,
+      bool syncFreeList,
+      String debugLevel) async {
     var req = LNInitDcrlnd(rootPath, network, password, [], null, proxyaddr,
-        torIsolation, syncFreeList);
+        torIsolation, syncFreeList, debugLevel);
     var res = await asyncCall(CTLNRunDcrlnd, req);
     return res;
   }
@@ -2976,6 +3005,9 @@ abstract class PluginPlatform {
 
   Future<RunState> getRunState() async =>
       RunState.fromJson(await asyncCall(CTRunState, null));
+
+  Future<void> zipLogs(ZipLogsArgs args) async =>
+      await asyncCall(CTZipLogs, args);
 }
 
 const int CTUnknown = 0x00;
@@ -3100,6 +3132,7 @@ const int CTMyAvatarGet = 0x82;
 const int CTRunState = 0x83;
 const int CTEnableBackgroundNtfs = 0x84;
 const int CTDisableBackgroundNtfs = 0x85;
+const int CTZipLogs = 0x86;
 
 const int notificationsStartID = 0x1000;
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -138,6 +139,7 @@ const (
 	CTGetRunState                         = 0x83
 	CTEnableBackgroundNtfs                = 0x84
 	CTDisableBackgroundNtfs               = 0x85
+	CTZipLogs                             = 0x86
 
 	NTInviteReceived         = 0x1001
 	NTInviteAccepted         = 0x1002
@@ -391,11 +393,46 @@ func CmdResultLoop(cb CmdResultLoopCB, onlyBgNtfns bool) int32 {
 	// code while the flutter engine is _not_ attached to it.
 	deliverBackgroundNtfns := onlyBgNtfns
 
+	cmtx.Lock()
+	if cs != nil && cs[0x12131400] != nil {
+		cc := cs[0x12131400]
+		cc.log.Infof("CmdResultLoop: starting new run for pid %d id %d",
+			os.Getpid(), id)
+	}
+	cmtx.Unlock()
+
 	go func() {
+		minuteTicker := time.NewTicker(time.Minute)
+		defer minuteTicker.Stop()
+		startTime := time.Now()
+		wallStartTime := startTime.Round(0)
+		lastTime := startTime
+		lastCPUTimes := make([]cpuTime, 6)
+
+		defer func() {
+			cmtx.Lock()
+			if cs != nil && cs[0x12131400] != nil {
+				elapsed := time.Since(startTime).Truncate(time.Millisecond)
+				elapsedWall := time.Now().Round(0).Sub(wallStartTime).Truncate(time.Millisecond)
+				cc := cs[0x12131400]
+				cc.log.Infof("CmdResultLoop: finishing "+
+					"goroutine for pid %d id %d after %s (wall %s)",
+					os.Getpid(), id, elapsed, elapsedWall)
+			}
+			cmtx.Unlock()
+		}()
+
 		for {
 			var r *CmdResult
 			select {
 			case r = <-cmdResultChan:
+			case <-minuteTicker.C:
+				// This is being used to debug background issues
+				// on mobile. It may be removed in the future.
+				go reportCmdResultLoop(startTime, lastTime, id, lastCPUTimes)
+				lastTime = time.Now()
+				continue
+
 			case <-ch:
 				return
 			}
@@ -459,4 +496,21 @@ func StopAllCmdResultLoops() {
 	for _, ch := range chans {
 		close(ch)
 	}
+}
+
+// ClientExists returns true if the client with the specified handle is running.
+func ClientExists(handle int32) bool {
+	cmtx.Lock()
+	exists := cs != nil && cs[0x12131400] != nil
+	cmtx.Unlock()
+	return exists
+}
+
+func LogInfo(id int32, s string) {
+	cmtx.Lock()
+	if cs != nil && cs[uint32(id)] != nil {
+		cs[uint32(id)].log.Info(s)
+	}
+	cmtx.Unlock()
+
 }

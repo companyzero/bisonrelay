@@ -1,6 +1,7 @@
 package golib
 
 import (
+	"archive/zip"
 	"bufio"
 	"bytes"
 	"context"
@@ -11,9 +12,12 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
+	"syscall"
 	"time"
 
 	"github.com/companyzero/bisonrelay/client"
@@ -45,7 +49,9 @@ type clientCtx struct {
 	cancel func()
 	runMtx sync.Mutex
 	runErr error
-	log    slog.Logger
+
+	log     slog.Logger
+	logBknd *logBackend
 
 	// skipWalletCheckChan is called if we should skip the next wallet
 	// check.
@@ -75,6 +81,10 @@ var (
 	cmtx sync.Mutex
 	cs   map[uint32]*clientCtx
 	lfs  map[string]*lockfile.LockFile = map[string]*lockfile.LockFile{}
+
+	// The following are debug vars.
+	sigUrgCount       atomic.Uint64
+	isServerConnected atomic.Bool
 )
 
 func handleHello(name string) (string, error) {
@@ -337,6 +347,7 @@ func handleInitClient(handle uint32, args initClient) error {
 		if connected {
 			state = ConnStateOnline
 		}
+		isServerConnected.Store(connected)
 		st := serverSessState{State: state}
 		notify(NTServerSessChanged, st, nil)
 		cctx.expirationDays = uint64(policy.ExpirationDays)
@@ -456,6 +467,7 @@ func handleInitClient(handle uint32, args initClient) error {
 		Dialer:            brDialer,
 		PayClient:         pc,
 		Logger:            logBknd.logger,
+		LogPings:          args.LogPings,
 		ReconnectDelay:    5 * time.Second,
 		CompressLevel:     4,
 		Notifications:     ntfns,
@@ -684,11 +696,12 @@ func handleInitClient(handle uint32, args initClient) error {
 	go r.Run(ctx)
 
 	cctx = &clientCtx{
-		c:      c,
-		lnpc:   lnpc,
-		ctx:    ctx,
-		cancel: cancel,
-		log:    logBknd.logger("GOLB"),
+		c:       c,
+		lnpc:    lnpc,
+		ctx:     ctx,
+		cancel:  cancel,
+		log:     logBknd.logger("GOLB"),
+		logBknd: logBknd,
 
 		skipWalletCheckChan: make(chan struct{}, 1),
 		initIDChan:          initIDChan,
@@ -700,6 +713,30 @@ func handleInitClient(handle uint32, args initClient) error {
 		httpClient: &httpClient,
 		rates:      r,
 	}
+
+	if len(cs) == 0 {
+		// Listen to signals on the first newly created client.
+		cctx.log.Infof("Golib: installing signal catcher for pid %d", os.Getpid())
+		ch := make(chan os.Signal, 10)
+		signal.Notify(ch)
+		go func() {
+			cctx.log.Infof("Golib: running signal catcher loop")
+			for ctx.Err() == nil {
+				select {
+				case <-ctx.Done():
+				case sig := <-ch:
+					if sig == syscall.SIGURG {
+						sigUrgCount.Add(1)
+					} else {
+						cctx.log.Infof("Golib: received signal %s (%d)",
+							sig.String(), sig)
+					}
+				}
+			}
+			cctx.log.Infof("Golib: signal loop done")
+		}()
+	}
+
 	cs[handle] = cctx
 
 	if sstore != nil {
@@ -1935,6 +1972,85 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		pub := c.Public()
 		return pub.Avatar, nil
 
+	case CTZipLogs:
+		var args zipLogsArgs
+		if err := cmd.decode(&args); err != nil {
+			return nil, err
+		}
+
+		destFile, err := os.OpenFile(args.DestPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0600)
+		if err != nil {
+			return nil, err
+		}
+		defer destFile.Close()
+
+		zipFile := zip.NewWriter(destFile)
+
+		cc.log.Infof("Zipping logs to %s (appLogs=%v, oldAppLogs=%v)",
+			args.DestPath, args.IncludeGolib,
+			args.IncludeGolib && !args.OnlyLastFile)
+
+		var numFiles int
+
+		// Prevent new log lines in main logger and log rotation while
+		// creating the archive.
+		//
+		// TODO: sanitize log when including in archive.
+		cc.logBknd.mtx.Lock()
+		err = func() error {
+			if args.IncludeGolib {
+				w, err := createZipFileFromFile(zipFile,
+					cc.logBknd.logFile, "applogs")
+				if err != nil {
+					return err
+				}
+
+				err = copyFileToWriter(cc.logBknd.logFile, w)
+				if err != nil {
+					return err
+				}
+				numFiles += 1
+			}
+			if args.IncludeGolib && !args.OnlyLastFile {
+				n, err := archiveOldLogs(zipFile, cc.logBknd.logFile, "applogs")
+				if err != nil {
+					return err
+				}
+				numFiles += n
+			}
+			return nil
+		}()
+		cc.logBknd.mtx.Unlock()
+		if err != nil {
+			cc.log.Errorf("Unable to export logs: %s", err)
+			return nil, err
+		}
+
+		lndc := runningDcrlnd()
+		if lndc != nil && args.IncludeLn {
+			w, err := createZipFileFromFile(zipFile, lndc.LogFullPath(), "ln-wallet")
+			if err != nil {
+				return nil, err
+			}
+
+			err = copyFileToWriter(lndc.LogFullPath(), w)
+			if err != nil {
+				return nil, err
+			}
+
+			numFiles += 1
+		}
+		if lndc != nil && args.IncludeLn && !args.OnlyLastFile {
+			n, err := archiveOldLogs(zipFile, lndc.LogFullPath(), "ln-wallet")
+			if err != nil {
+				return nil, err
+			}
+			numFiles += n
+		}
+
+		cc.log.Infof("Zipped %d log files", numFiles)
+		return nil, zipFile.Close()
+
 	}
 	return nil, nil
 
@@ -1973,7 +2089,8 @@ func handleLNInitDcrlnd(ctx context.Context, args lnInitDcrlnd) (*lnNewWalletSee
 	lndCfg := embeddeddcrlnd.Config{
 		RootDir:      args.RootDir,
 		Network:      args.Network,
-		DebugLevel:   "info", // XXX
+		DebugLevel:   args.DebugLevel,
+		MaxLogFiles:  defaultMaxLogFiles,
 		TorAddr:      args.ProxyAddr,
 		TorIsolation: args.TorIsolation,
 		DialFunc:     dialFunc,
@@ -2027,8 +2144,9 @@ func handleLNRunDcrlnd(ctx context.Context, args lnInitDcrlnd) (string, error) {
 		lndCfg := embeddeddcrlnd.Config{
 			RootDir:      args.RootDir,
 			Network:      args.Network,
-			DebugLevel:   "info", // XXX
+			DebugLevel:   args.DebugLevel,
 			TorAddr:      args.ProxyAddr,
+			MaxLogFiles:  defaultMaxLogFiles,
 			TorIsolation: args.TorIsolation,
 			DialFunc:     dialFunc,
 			SyncFreeList: args.SyncFreeList,

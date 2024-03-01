@@ -5,13 +5,19 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/decred/slog"
 	"github.com/jrick/logrotate/rotator"
 )
 
+const defaultMaxLogFiles = 100
+
 type logBackend struct {
-	logRotator      *rotator.Rotator
+	mtx        sync.Mutex
+	logRotator *rotator.Rotator
+
+	logFile         string
 	bknd            *slog.Backend
 	defaultLogLevel slog.Level
 	logLevels       map[string]slog.Level
@@ -26,13 +32,14 @@ func newLogBackend(logFile, debugLevel string) (*logBackend, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to create log directory: %v\n", err)
 		}
-		logRotator, err = rotator.New(logFile, 1024*1024, false, 3)
+		logRotator, err = rotator.New(logFile, 1024, false, defaultMaxLogFiles)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create file rotator: %v\n", err)
 		}
 	}
 
 	b := &logBackend{
+		logFile:         logFile,
 		logRotator:      logRotator,
 		defaultLogLevel: slog.LevelInfo,
 		logLevels:       make(map[string]slog.Level),
@@ -60,7 +67,9 @@ func newLogBackend(logFile, debugLevel string) (*logBackend, error) {
 func (bknd *logBackend) Write(b []byte) (int, error) {
 	os.Stdout.Write(b)
 	if bknd.logRotator != nil {
+		bknd.mtx.Lock()
 		bknd.logRotator.Write(b)
+		bknd.mtx.Unlock()
 	}
 	if bknd.notify {
 		go func() { notify(NTLogLine, string(b), nil) }()

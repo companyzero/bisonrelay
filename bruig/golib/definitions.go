@@ -30,6 +30,7 @@ type initClient struct {
 	ResourcesUpstream string `json:"resources_upstream"`
 	NoLoadChatHistory bool   `json:"no_load_chat_history"`
 	SendRecvReceipts  bool   `json:"send_recv_receipts"`
+	LogPings          bool   `json:"log_pings"`
 
 	SimpleStorePayType    string  `json:"simplestore_pay_type"`
 	SimpleStoreAccount    string  `json:"simplestore_account"`
@@ -257,6 +258,7 @@ type lnInitDcrlnd struct {
 	ProxyAddr       string   `json:"proxyaddr"`
 	TorIsolation    bool     `json:"torisolation"`
 	SyncFreeList    bool     `json:"sync_free_list"`
+	DebugLevel      string   `json:"debug_level"`
 }
 
 type lnNewWalletSeed struct {
@@ -476,4 +478,11 @@ type profileUpdated struct {
 type runState struct {
 	DcrlndRunning bool `json:"dcrlnd_running"`
 	ClientRunning bool `json:"client_running"`
+}
+
+type zipLogsArgs struct {
+	IncludeGolib bool   `json:"include_golib"`
+	IncludeLn    bool   `json:"include_ln"`
+	OnlyLastFile bool   `json:"only_last_file"`
+	DestPath     string `json:"dest_path"`
 }

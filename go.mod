@@ -31,7 +31,9 @@ require (
 	github.com/mattn/go-runewidth v0.0.15
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/muesli/reflow v0.3.0
+	github.com/pbnjay/memory v0.0.0-20210728143218-7b4eea64cf58
 	github.com/pelletier/go-toml v1.9.5
+	github.com/prometheus/procfs v0.12.0
 	github.com/puzpuzpuz/xsync/v2 v2.4.1
 	github.com/rogpeppe/go-internal v1.10.0
 	github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
@@ -125,7 +127,6 @@ require (
 	github.com/prometheus/client_golang v1.15.0 // indirect
 	github.com/prometheus/client_model v0.3.0 // indirect
 	github.com/prometheus/common v0.42.0 // indirect
-	github.com/prometheus/procfs v0.9.0 // indirect
 	github.com/rivo/uniseg v0.4.6 // indirect
 	github.com/rogpeppe/fastuuid v1.2.0 // indirect
 	github.com/sirupsen/logrus v1.9.0 // indirect

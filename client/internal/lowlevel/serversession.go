@@ -531,14 +531,23 @@ loop:
 		select {
 		case <-pongChan:
 			gotPong = true
+			if sess.logPings {
+				sess.log.Debugf("Received pong from server")
+			}
 			continue loop
 
 		case <-pingChan:
 			if !gotPong {
+				if sess.logPings {
+					sess.log.Warnf("Pong timeout")
+				}
 				err = errPongTimeout
 				break loop
 			}
 			gotPong = false
+			if sess.logPings {
+				sess.log.Debugf("Sending ping to server")
+			}
 			err = writeMsg(pingMsg, rpc.Ping{})
 
 		case wm := <-taggedSendChan:

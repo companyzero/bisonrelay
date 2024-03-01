@@ -75,6 +75,7 @@ type Dcrlnd struct {
 	macaroonPath string
 	tlsCertPath  string
 	interceptor  *signal.Interceptor
+	logPath      string
 
 	mtx      sync.Mutex
 	unlocked bool
@@ -96,6 +97,11 @@ func (lndc *Dcrlnd) TLSCertPath() string {
 // MacaroonPath returns the path to the macaroon file of the dcrlnd instance.
 func (lndc *Dcrlnd) MacaroonPath() string {
 	return lndc.macaroonPath
+}
+
+// LogFilename returns the full path to the log file.
+func (lndc *Dcrlnd) LogFullPath() string {
+	return lndc.logPath
 }
 
 // TryUnlock attempts to unlock the wallet with the given passphrase.
@@ -372,6 +378,7 @@ func RunDcrlnd(ctx context.Context, cfg Config) (*Dcrlnd, error) {
 	conf.ConfigFile = filepath.Join(rootDir, "dcrlnd.conf")
 	conf.LogDir = filepath.Join(rootDir, "logs")
 	conf.MaxLogFiles = cfg.MaxLogFiles
+	conf.MaxLogFileSize = 1 // MB
 	conf.TLSCertPath = filepath.Join(rootDir, "tls.cert")
 	conf.TLSKeyPath = filepath.Join(rootDir, "tls.key")
 	conf.TLSDisableAutofill = true // FIXME: parametrize
@@ -440,6 +447,7 @@ func RunDcrlnd(ctx context.Context, cfg Config) (*Dcrlnd, error) {
 			network, "admin.macaroon"),
 		tlsCertPath: conf.TLSCertPath,
 		interceptor: &inter,
+		logPath:     filepath.Join(conf.LogDir, "decred", network, "lnd.log"),
 	}
 	go func() {
 		err := dcrlnd.Main(
