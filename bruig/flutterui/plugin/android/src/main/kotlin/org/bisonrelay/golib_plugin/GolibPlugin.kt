@@ -4,6 +4,7 @@ import androidx.annotation.NonNull
 
 import androidx.core.app.NotificationCompat
 import android.app.NotificationManager
+import android.app.ActivityManager;
 import androidx.core.app.Person
 import android.content.Context
 import android.app.NotificationChannel
@@ -14,6 +15,8 @@ import golib.Golib
 
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.embedding.engine.plugins.activity.ActivityAware
+import io.flutter.embedding.engine.plugins.service.ServiceAware
+import io.flutter.embedding.engine.plugins.service.ServicePluginBinding
 import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
 import io.flutter.embedding.engine.plugins.lifecycle.HiddenLifecycleReference
 import androidx.lifecycle.LifecycleEventObserver
@@ -29,7 +32,7 @@ import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
 
 /** GolibPlugin */
-class GolibPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
+class GolibPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, ServiceAware {
   /// The MethodChannel that will the communication between Flutter and native Android
   ///
   /// This local reference serves to register the plugin with the Flutter Engine and unregister it
@@ -45,6 +48,24 @@ class GolibPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
   companion object {
     private const val CHANNEL_NEW_MESSAGES = "new_messages"
   }
+
+  fun logProcessState() {
+    var activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+    var runningProcesses = activityManager.getRunningAppProcesses();
+    for (processInfo in runningProcesses) {
+      if (processInfo.pid != android.os.Process.myPid()) {
+        continue;
+      }
+
+      // Here 'importance' is an integer that represents the process state
+      var imp = processInfo.importance
+      var impReason = processInfo.importanceReasonCode
+      var compName = processInfo.importanceReasonComponent
+      var lastTrim = processInfo.lastTrimLevel
+      Golib.logInfo(0x12131400, "NativePlugin: process state imp=$imp reason=$impReason comp=$compName trim=$lastTrim")
+    }
+  }
+
 
   fun setUpNotificationChannels(): NotificationManager  {
       var notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -175,6 +196,7 @@ class GolibPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
     detachExistingLoops()
     Golib.stopAllCmdResultLoops() // Remove background ntfn loop from prior engine
     Golib.logInfo(0x12131400, "NativePlugin: Initing new CmdResultLoop")
+    logProcessState()
 
     val handler = Handler(Looper.getMainLooper())
     val channel : EventChannel = EventChannel(flutterPluginBinding.binaryMessenger, "cmdResultLoop")
@@ -208,10 +230,10 @@ class GolibPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
     }, false)
     loopsIds.add(id);
   }
-
   
   override fun onDetachedFromEngine(@NonNull binding: FlutterPlugin.FlutterPluginBinding) {
     Golib.logInfo(0x12131400, "NativePlugin: detached from engine")
+    logProcessState()
     channel.setMethodCallHandler(null)
 
     detachExistingLoops()
@@ -240,6 +262,7 @@ class GolibPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
             .lifecycle
             .addObserver(LifecycleEventObserver { source, event ->
               Golib.logInfo(0x12131400, "NativePlugin: state changed to ${event}")
+              logProcessState()
               if (event == Lifecycle.Event.ON_STOP) {
                 // App went into background.
                 Golib.asyncCallStr(0x84, 0, 0, null) // 0x84 == CTEnableBackgroundNtfs
@@ -250,9 +273,23 @@ class GolibPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
             });
   }
 
-  override fun onDetachedFromActivity() {}
+  override fun onDetachedFromActivity() {
+    Golib.logInfo(0x12131400, "NativePlugin: onDetachedFromActivity")
+  }
 
-  override fun onDetachedFromActivityForConfigChanges() {}
+  override fun onDetachedFromActivityForConfigChanges() {
+    Golib.logInfo(0x12131400, "NativePlugin: onDetachedFromActivityForConfigChanges")
+  }
 
-  override fun onReattachedToActivityForConfigChanges(binding: ActivityPluginBinding) {}
+  override fun onReattachedToActivityForConfigChanges(binding: ActivityPluginBinding) {
+    Golib.logInfo(0x12131400, "NativePlugin: onReattachedToActivityForConfigChanges")
+  }
+
+  override fun onAttachedToService(binding: ServicePluginBinding) {
+    Golib.logInfo(0x12131400, "NativePlugin: onAttachedToService")
+  }
+
+  override fun onDetachedFromService() {
+    Golib.logInfo(0x12131400, "NativePlugin: onDetachedFromService")
+  }
 }
