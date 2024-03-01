@@ -11,7 +11,10 @@ import (
 
 // LockFile holds the lockfile.
 type LockFile struct {
-	f *lockedfile.File
+	f       *lockedfile.File
+	pid     int
+	host    string
+	process string
 }
 
 // Close closes the lockfile.
@@ -20,6 +23,20 @@ func (lf *LockFile) Close() error {
 		return fmt.Errorf("nil internal locked file")
 	}
 	return lf.f.Close()
+}
+
+func (lf *LockFile) String() string {
+	return fmt.Sprintf("pid=%d, host=%s, process=%s", lf.pid, lf.host, lf.process)
+}
+
+// ProcInfo returns info about the current process.
+func ProcInfo() (pid int, host string, process string) {
+	pid = os.Getpid()
+	host, _ = os.Hostname()
+	if len(os.Args) > 0 {
+		process = os.Args[0]
+	}
+	return
 }
 
 // Create initializes a new lock file.
@@ -40,18 +57,17 @@ func Create(ctx context.Context, filePath string) (*LockFile, error) {
 
 	select {
 	case f := <-cf:
+		pid, host, process := ProcInfo()
+
 		// Opened the locked file. Write out the current host name and
 		// pid to ease debugging. We ignore errors here as it's
 		// not fatal for our purposes.
-		f.WriteString(fmt.Sprintf("PID=%d\n", os.Getpid()))
-		host, _ := os.Hostname()
+		f.WriteString(fmt.Sprintf("PID=%d\n", pid))
 		f.WriteString(fmt.Sprintf("Host=%q\n", host))
-		procName := ""
-		if len(os.Args) > 0 {
-			procName = os.Args[0]
-		}
-		f.WriteString(fmt.Sprintf("Process=%q\n", procName))
-		return &LockFile{f: f}, nil
+		f.WriteString(fmt.Sprintf("Process=%q\n", process))
+
+		lf := &LockFile{f: f, pid: pid, host: host, process: process}
+		return lf, nil
 
 	case err := <-cerr:
 		// Opening errored out.

@@ -2066,15 +2066,23 @@ func handleCaptureDcrlndLog() {
 
 func handleCreateLockFile(rootDir string) error {
 	filePath := filepath.Join(rootDir, clientintf.LockFileName)
+
+	cmtx.Lock()
+	defer cmtx.Unlock()
+
+	lf := lfs[filePath]
+	if lf != nil {
+		// Already running on this DB from this process.
+		return nil
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	lf, err := lockfile.Create(ctx, filePath)
 	cancel()
 	if err != nil {
 		return fmt.Errorf("unable to create lockfile %q: %v", filePath, err)
 	}
-	cmtx.Lock()
 	lfs[filePath] = lf
-	cmtx.Unlock()
 	return nil
 }
 
