@@ -1,3 +1,4 @@
+import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/models/newconfig.dart';
 import 'package:bruig/screens/startupscreen.dart';
 import 'package:flutter/material.dart';
@@ -22,23 +23,11 @@ class NetworkChoicePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
-    void goToAbout() {
-      Navigator.of(context).pushNamed("/about");
-    }
 
     return StartupScreen(Consumer<ThemeNotifier>(
         builder: (context, theme, _) => Column(children: [
-              Row(children: [
-                IconButton(
-                    alignment: Alignment.topLeft,
-                    tooltip: "About Bison Relay",
-                    iconSize: 50,
-                    onPressed: goToAbout,
-                    icon: Image.asset(
-                      "assets/images/icon.png",
-                    )),
-              ]),
-              //const SizedBox(height: 208),
+              const SetupScreenAbountButton(),
+              const Expanded(child: Empty()),
               Text("Setting up Bison Relay",
                   style: TextStyle(
                       color: theme.getTheme().dividerColor,
@@ -77,6 +66,7 @@ class NetworkChoicePage extends StatelessWidget {
                         text: "Simnet",
                         empty: true),
                   ]),
+              const Expanded(child: Empty()),
               Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                 TextButton(
                   onPressed: () => goBack(context),

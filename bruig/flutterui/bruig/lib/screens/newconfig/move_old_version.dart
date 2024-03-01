@@ -58,22 +58,9 @@ class _MoveOldVersionWalletPageState extends State<MoveOldVersionWalletPage> {
 
   @override
   Widget build(BuildContext context) {
-    void goToAbout() {
-      Navigator.of(context).pushNamed("/about");
-    }
-
     return StartupScreen(Consumer<ThemeNotifier>(
         builder: (context, theme, _) => Column(children: [
-              Row(children: [
-                IconButton(
-                    alignment: Alignment.topLeft,
-                    tooltip: "About Bison Relay",
-                    iconSize: 50,
-                    onPressed: goToAbout,
-                    icon: Image.asset(
-                      "assets/images/icon.png",
-                    )),
-              ]),
+              const SetupScreenAbountButton(),
               const SizedBox(height: 39),
               unableToMove
                   ? Column(children: [

@@ -68,22 +68,9 @@ class _RestoreWalletPageState extends State<RestoreWalletPage> {
 
   @override
   Widget build(BuildContext context) {
-    void goToAbout() {
-      Navigator.of(context).pushNamed("/about");
-    }
-
     return StartupScreen(Consumer<ThemeNotifier>(
         builder: (context, theme, _) => Column(children: [
-              Row(children: [
-                IconButton(
-                    alignment: Alignment.topLeft,
-                    tooltip: "About Bison Relay",
-                    iconSize: 50,
-                    onPressed: goToAbout,
-                    icon: Image.asset(
-                      "assets/images/icon.png",
-                    )),
-              ]),
+              const SetupScreenAbountButton(),
               const SizedBox(height: 39),
               Text("Restoring wallet",
                   style: TextStyle(
@@ -139,6 +126,7 @@ class _RestoreWalletPageState extends State<RestoreWalletPage> {
                   text: "Continue",
                 ),
               ]),
+              const SizedBox(height: 34),
               Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                 TextButton(
                   onPressed: () => goBack(context),

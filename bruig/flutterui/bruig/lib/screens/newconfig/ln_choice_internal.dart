@@ -67,29 +67,18 @@ class _LNInternalWalletPageState extends State<LNInternalWalletPage> {
 
   @override
   Widget build(BuildContext context) {
-    void goToAbout() {
-      Navigator.of(context).pushNamed("/about");
-    }
+    bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
 
     return StartupScreen(Consumer<ThemeNotifier>(
         builder: (context, theme, _) => Column(children: [
-              Row(children: [
-                IconButton(
-                    alignment: Alignment.topLeft,
-                    tooltip: "About Bison Relay",
-                    iconSize: 50,
-                    onPressed: goToAbout,
-                    icon: Image.asset(
-                      "assets/images/icon.png",
-                    )),
-              ]),
-              const SizedBox(height: 39),
+              const SetupScreenAbountButton(),
+              SizedBox(height: isScreenSmall ? 5 : 39),
               Text("Setting up Bison Relay",
                   style: TextStyle(
                       color: theme.getTheme().dividerColor,
                       fontSize: theme.getHugeFont(context),
                       fontWeight: FontWeight.w200)),
-              const SizedBox(height: 20),
+              SizedBox(height: isScreenSmall ? 8 : 20),
               Text(
                   newconf.seedToRestore.isEmpty
                       ? "Creating New Wallet"
@@ -98,7 +87,7 @@ class _LNInternalWalletPageState extends State<LNInternalWalletPage> {
                       color: theme.getTheme().focusColor,
                       fontSize: theme.getLargeFont(context),
                       fontWeight: FontWeight.w300)),
-              const SizedBox(height: 34),
+              SizedBox(height: isScreenSmall ? 8 : 34),
               Column(children: [
                 SizedBox(
                     width: 377,
@@ -155,7 +144,7 @@ class _LNInternalWalletPageState extends State<LNInternalWalletPage> {
                           controller: passRepeatCtrl,
                           obscureText: true)),
                 ),
-                const SizedBox(height: 34),
+                SizedBox(height: isScreenSmall ? 12 : 35),
                 Center(
                     child: SizedBox(
                         width: 278,
