@@ -44,8 +44,7 @@ mixin BaseMobilePlatform on ChanneledPlatform, NtfStreams {
 
       // Pseudo-encode errors as json to imitate desktop.
       if (isError) {
-        jsonPayload =
-            "\"$err\"".trim().replaceAll("\n", "").replaceAll("\n", "");
+        jsonPayload = jsonEncode(err);
       }
 
       var c = calls[id];
