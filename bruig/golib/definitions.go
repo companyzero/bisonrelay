@@ -78,6 +78,7 @@ type pm struct {
 	Msg       string            `json:"msg"`
 	Mine      bool              `json:"mine"`
 	TimeStamp int64             `json:"timestamp"`
+	Nick      string            `json:"nick"`
 }
 
 type addressBookEntry struct {

@@ -2,6 +2,14 @@ package org.bisonrelay.golib_plugin
 
 import androidx.annotation.NonNull
 
+import androidx.core.app.NotificationCompat
+import android.app.NotificationManager
+import androidx.core.app.Person
+import android.content.Context
+import android.app.NotificationChannel
+import android.content.Intent
+import android.app.PendingIntent
+
 import golib.Golib
 
 import io.flutter.embedding.engine.plugins.FlutterPlugin
@@ -23,12 +31,58 @@ class GolibPlugin: FlutterPlugin, MethodCallHandler {
   /// when the Flutter Engine is detached from the Activity
   private lateinit var channel : MethodChannel
 
+  private lateinit var context : Context
+
   private val executorService: ExecutorService = Executors.newFixedThreadPool(2)
 
   private val loopsIds = mutableListOf<Int>()
 
+  companion object {
+    private const val CHANNEL_NEW_MESSAGES = "new_messages"
+  }
+
+  fun setUpNotificationChannels(): NotificationManager  {
+      var notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+      if (notificationManager.getNotificationChannel(CHANNEL_NEW_MESSAGES) == null) {
+          notificationManager.createNotificationChannel(
+              NotificationChannel(
+                  CHANNEL_NEW_MESSAGES,
+                  "New Messages",
+                  // The importance must be IMPORTANCE_HIGH to show Bubbles.
+                  NotificationManager.IMPORTANCE_HIGH
+              )
+          )
+      }
+      return notificationManager;
+  }
+
+  fun showNotification(notificationManager: NotificationManager, nick: String, msg: String, ts: Long) {
+    // Intent to open app when clicking the notification.
+    val resultIntent = Intent("org.bisonrelay.bruig.NTFN")// Intent(context, "MainActivity")
+    val pendingIntent = PendingIntent.getActivity(context, 0, resultIntent, PendingIntent.FLAG_UPDATE_CURRENT)
+
+    // Sender styling.
+    val user = Person.Builder().setName(nick).build()
+    // var icon = Icon(Icons.Rounded.Menu, contentDescription = "Localized description");
+    val person: Person? = null
+
+    // Create message.
+    val m = NotificationCompat.MessagingStyle.Message(msg, ts*1000, person)
+    val messagingStyle = NotificationCompat.MessagingStyle(user)
+    messagingStyle.addMessage(m)
+    val builder = NotificationCompat.Builder(context, CHANNEL_NEW_MESSAGES)
+      .setStyle(messagingStyle)
+      .setSmallIcon(/*R.drawable.stat_notify_chat*/ 0x01080077)
+      .setWhen(ts*1000)
+      .setContentIntent(pendingIntent)
+
+    // Send notification.
+    val contactID: Long = 1000
+    notificationManager.notify(contactID.toInt(), builder.build())
+  }
 
   override fun onAttachedToEngine(@NonNull flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
+    context = flutterPluginBinding.applicationContext
     channel = MethodChannel(flutterPluginBinding.binaryMessenger, "golib_plugin")
     channel.setMethodCallHandler(this)
     this.initReadStream(flutterPluginBinding)
@@ -101,7 +155,20 @@ class GolibPlugin: FlutterPlugin, MethodCallHandler {
     })
   }
 
+  fun detachExistingLoops() {
+    // Stop all async goroutines.
+    val iterator = loopsIds.iterator()
+    while (iterator.hasNext()) {
+      var id = iterator.next()
+      Golib.stopCmdResultLoop(id);
+      iterator.remove();
+    }
+  }
+
   fun initCmdResultLoop(@NonNull flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
+    detachExistingLoops()
+    Golib.stopAllCmdResultLoops() // Remove background ntfn loop from prior engine
+
     val handler = Handler(Looper.getMainLooper())
     val channel : EventChannel = EventChannel(flutterPluginBinding.binaryMessenger, "cmdResultLoop")
     var sink : EventChannel.EventSink? = null;
@@ -113,6 +180,7 @@ class GolibPlugin: FlutterPlugin, MethodCallHandler {
       }
 
       override fun onCancel(listener: Any?) {
+        sink?.endOfStream();
         sink = null;
       }
     });
@@ -130,11 +198,16 @@ class GolibPlugin: FlutterPlugin, MethodCallHandler {
   override fun onDetachedFromEngine(@NonNull binding: FlutterPlugin.FlutterPluginBinding) {
     channel.setMethodCallHandler(null)
 
-    // Stop all async goroutines.
-    val iterator = loopsIds.iterator()
-    while (iterator.hasNext()) {
-      Golib.stopCmdResultLoop(iterator.next());
-      iterator.remove();
-    }
+    detachExistingLoops()
+    Golib.stopAllCmdResultLoops()
+
+    // Attach background notification loop.
+    var ntfManager = setUpNotificationChannels();
+    var id = Golib.backgroundNtfnsLoop(object : golib.BackgroundNtfnsLoopCB {
+      override fun pm(uid: String, nick: String, msg: String, ts: Long) {
+        showNotification(ntfManager, nick, msg, ts)
+      }
+    })
+    loopsIds.add(id);
   }
 }

@@ -156,7 +156,12 @@ func handleInitClient(handle uint32, args initClient) error {
 	ntfns := client.NewNotificationManager()
 	ntfns.Register(client.OnPMNtfn(func(user *client.RemoteUser, msg rpc.RMPrivateMessage, ts time.Time) {
 		// TODO: replace PM{} for types.ReceivedPM{}.
-		pm := pm{UID: user.ID(), Msg: msg.Message, TimeStamp: ts.Unix()}
+		pm := pm{
+			UID:       user.ID(),
+			Msg:       msg.Message,
+			TimeStamp: ts.Unix(),
+			Nick:      user.Nick(),
+		}
 		notify(NTPM, pm, nil)
 	},
 	))

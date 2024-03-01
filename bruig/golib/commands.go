@@ -4,9 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
+	"github.com/companyzero/bisonrelay/internal/mdembeds"
 	"github.com/davecgh/go-spew/spew"
 )
 
@@ -338,6 +341,7 @@ func NextCmdResult() *CmdResult {
 var (
 	cmdResultLoopsMtx   sync.Mutex
 	cmdResultLoops      = map[int32]chan struct{}{}
+	cmdResultLoopsLive  atomic.Int32
 	cmdResultLoopsCount int32
 )
 
@@ -347,8 +351,10 @@ var (
 func CmdResultLoop(cb CmdResultLoopCB) int32 {
 	cmdResultLoopsMtx.Lock()
 	id := cmdResultLoopsCount + 1
+	cmdResultLoopsCount += 1
 	ch := make(chan struct{})
 	cmdResultLoops[id] = ch
+	cmdResultLoopsLive.Add(1)
 	cmdResultLoopsMtx.Unlock()
 	go func() {
 		for {
@@ -378,8 +384,66 @@ func StopCmdResultLoop(id int32) {
 	cmdResultLoopsMtx.Lock()
 	ch := cmdResultLoops[id]
 	delete(cmdResultLoops, id)
+	cmdResultLoopsLive.Add(-1)
 	cmdResultLoopsMtx.Unlock()
 	if ch != nil {
 		close(ch)
 	}
+}
+
+// StopAllCmdResultLoops stops all async goroutines created by CmdResultLoop.
+func StopAllCmdResultLoops() {
+	cmdResultLoopsMtx.Lock()
+	chans := cmdResultLoops
+	cmdResultLoops = map[int32]chan struct{}{}
+	cmdResultLoopsLive.Store(0)
+	cmdResultLoopsMtx.Unlock()
+	for _, ch := range chans {
+		close(ch)
+	}
+}
+
+// BackgroundNtfnsLoopCB defines the callbacks called when events that should
+// generate background notifications happen.
+type BackgroundNtfnsLoopCB interface {
+	PM(uid string, nick string, msg string, ts int64)
+}
+
+// cmdLoopBackgroundNtfnsFilter adapts BackgroundNtfnsLoopCB into
+// CmdResultLoopCB.
+type cmdLoopBackgroundNtfnsFilter struct {
+	cb BackgroundNtfnsLoopCB
+}
+
+func (lcb cmdLoopBackgroundNtfnsFilter) F(id int32, typ int32, payload string, err string) {
+	switch typ {
+	case NTPM:
+		var pm pm
+		err := json.Unmarshal([]byte(payload), &pm)
+		if err != nil {
+			return
+		}
+
+		// Remove embeds.
+		msg := mdembeds.ReplaceEmbeds(pm.Msg, func(args mdembeds.EmbeddedArgs) string {
+			if strings.HasPrefix(args.Typ, "image/") {
+				return "[image]"
+			}
+			return ""
+		})
+
+		lcb.cb.PM(pm.UID.String(), pm.Nick, msg, pm.TimeStamp)
+
+	default:
+		// Ignore every other notification.
+	}
+}
+
+// BackgroundNtfnsLoop starts a loop in a goroutine to send background message
+// notifications to the passed callabck. There are _not_ the full set of
+// client notifications, only those relevant to create notifications when the
+// main app UI is not shown (on mobile).
+func BackgroundNtfnsLoop(cb BackgroundNtfnsLoopCB) int32 {
+	lcb := cmdLoopBackgroundNtfnsFilter{cb: cb}
+	return CmdResultLoop(lcb)
 }
