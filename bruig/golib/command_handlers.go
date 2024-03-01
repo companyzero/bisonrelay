@@ -84,6 +84,16 @@ func handleHello(name string) (string, error) {
 	return "hello " + name, nil
 }
 
+func isClientRunning(handle uint32) bool {
+	cmtx.Lock()
+	var res bool
+	if cs != nil {
+		res = cs[handle] != nil
+	}
+	cmtx.Unlock()
+	return res
+}
+
 func handleInitClient(handle uint32, args initClient) error {
 	cmtx.Lock()
 	defer cmtx.Unlock()
