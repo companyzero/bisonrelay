@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/components/buttons.dart';
 import 'package:bruig/main.dart';
@@ -31,7 +32,7 @@ class _ServerPageState extends State<ServerPage> {
         serverCtrl.text = "216.128.136.239:65432";
         break;
       case NetworkType.simnet:
-        serverCtrl.text = "127.0.0.1:12345";
+        serverCtrl.text = Platform.isAndroid ? "10.0.2.2:12345" : "127.0.0.1:12345";
         break;
     }
   }
