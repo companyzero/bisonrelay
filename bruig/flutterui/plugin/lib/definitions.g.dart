@@ -35,6 +35,7 @@ InitClient _$InitClientFromJson(Map<String, dynamic> json) => InitClient(
           .toList(),
       json['send_recv_receipts'] as bool,
       json['auto_sub_posts'] as bool,
+      json['log_pings'] as bool,
     );
 
 Map<String, dynamic> _$InitClientToJson(InitClient instance) =>
@@ -65,6 +66,7 @@ Map<String, dynamic> _$InitClientToJson(InitClient instance) =>
       'auto_remove_idle_users_ignore': instance.autoRemoveIdleUsersIgnore,
       'send_recv_receipts': instance.sendRecvReceipts,
       'auto_sub_posts': instance.autoSubPosts,
+      'log_pings': instance.logPings,
     };
 
 IDInit _$IDInitFromJson(Map<String, dynamic> json) => IDInit(
@@ -1225,6 +1227,7 @@ LNInitDcrlnd _$LNInitDcrlndFromJson(Map<String, dynamic> json) => LNInitDcrlnd(
       json['proxyaddr'] as String,
       json['torisolation'] as bool,
       json['sync_free_list'] as bool,
+      json['debug_level'] as String,
     );
 
 Map<String, dynamic> _$LNInitDcrlndToJson(LNInitDcrlnd instance) =>
@@ -1237,6 +1240,7 @@ Map<String, dynamic> _$LNInitDcrlndToJson(LNInitDcrlnd instance) =>
       'proxyaddr': instance.proxyaddr,
       'torisolation': instance.torIsolation,
       'sync_free_list': instance.syncFreeList,
+      'debug_level': instance.debugLevel,
     };
 
 LNNewWalletSeed _$LNNewWalletSeedFromJson(Map<String, dynamic> json) =>
@@ -2086,4 +2090,19 @@ RunState _$RunStateFromJson(Map<String, dynamic> json) => RunState(
 Map<String, dynamic> _$RunStateToJson(RunState instance) => <String, dynamic>{
       'dcrlnd_running': instance.dcrlndRunning,
       'client_running': instance.clientRunning,
+    };
+
+ZipLogsArgs _$ZipLogsArgsFromJson(Map<String, dynamic> json) => ZipLogsArgs(
+      json['include_golib'] as bool,
+      json['include_ln'] as bool,
+      json['only_last_file'] as bool,
+      json['dest_path'] as String,
+    );
+
+Map<String, dynamic> _$ZipLogsArgsToJson(ZipLogsArgs instance) =>
+    <String, dynamic>{
+      'include_golib': instance.includeGolib,
+      'include_ln': instance.includeLn,
+      'only_last_file': instance.onlyLastFile,
+      'dest_path': instance.destPath,
     };

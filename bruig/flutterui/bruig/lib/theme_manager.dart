@@ -118,7 +118,6 @@ class ThemeNotifier with ChangeNotifier {
 
   ThemeNotifier() {
     StorageManager.readData('themeMode').then((value) {
-      debugPrint('value read from storage: ${value.toString()}');
       var themeMode = value ?? 'light';
       if (themeMode == 'light') {
         _themeData = lightTheme;
@@ -151,7 +150,6 @@ class ThemeNotifier with ChangeNotifier {
       notifyListeners();
     });
     StorageManager.readData('fontCoef').then((value) {
-      debugPrint('value read from storage: ${value.toString()}');
       _fontSize = double.parse(value ?? "1");
       notifyListeners();
     });

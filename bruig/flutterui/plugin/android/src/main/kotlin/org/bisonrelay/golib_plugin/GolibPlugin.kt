@@ -87,6 +87,7 @@ class GolibPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
   }
 
   override fun onAttachedToEngine(@NonNull flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
+    Golib.logInfo(0x12131400, "NativePlugin: attached to engine") // 0x88 == CTLogInfo
     context = flutterPluginBinding.applicationContext
     channel = MethodChannel(flutterPluginBinding.binaryMessenger, "golib_plugin")
     channel.setMethodCallHandler(this)
@@ -173,6 +174,7 @@ class GolibPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
   fun initCmdResultLoop(@NonNull flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
     detachExistingLoops()
     Golib.stopAllCmdResultLoops() // Remove background ntfn loop from prior engine
+    Golib.logInfo(0x12131400, "NativePlugin: Initing new CmdResultLoop")
 
     val handler = Handler(Looper.getMainLooper())
     val channel : EventChannel = EventChannel(flutterPluginBinding.binaryMessenger, "cmdResultLoop")
@@ -200,6 +202,7 @@ class GolibPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
       // PM notification called when app was in background but still attached to
       // flutter engine.
       override fun pm(uid: String, nick: String, msg: String, ts: Long) {
+        Golib.logInfo(0x12131400, "NativePlugin: background PM from $nick") // 0x88 == CTLogInfo
         showNotification(ntfManager, nick, msg, ts)
       }
     }, false)
@@ -208,6 +211,7 @@ class GolibPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
 
   
   override fun onDetachedFromEngine(@NonNull binding: FlutterPlugin.FlutterPluginBinding) {
+    Golib.logInfo(0x12131400, "NativePlugin: detached from engine")
     channel.setMethodCallHandler(null)
 
     detachExistingLoops()
@@ -223,6 +227,7 @@ class GolibPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
       // PM notification called when app was in background _and_ flutter engine
       // was detached.
       override fun pm(uid: String, nick: String, msg: String, ts: Long) {
+        Golib.logInfo(0x12131400, "NativePlugin: background detached PM from $nick")
         showNotification(ntfManager, nick, msg, ts)
       }
     }, true)
@@ -234,6 +239,7 @@ class GolibPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
     (binding.lifecycle as HiddenLifecycleReference)
             .lifecycle
             .addObserver(LifecycleEventObserver { source, event ->
+              Golib.logInfo(0x12131400, "NativePlugin: state changed to ${event}")
               if (event == Lifecycle.Event.ON_STOP) {
                 // App went into background.
                 Golib.asyncCallStr(0x84, 0, 0, null) // 0x84 == CTEnableBackgroundNtfs

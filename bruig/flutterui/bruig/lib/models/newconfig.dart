@@ -77,7 +77,7 @@ class NewConfigModel extends ChangeNotifier {
       walletType: newWalletSeed != "" ? "internal" : "external",
       network: NetworkTypeStr(netType),
     );
-    await cfg.saveConfig(await configFileName(appArgs));
+    await cfg.saveNewConfig(await configFileName(appArgs));
     cfg = await configFromArgs(appArgs); // Reload to fill defaults.
     cfg = Config.newWithRPCHost(cfg, rpcHost, tlsCertPath, macaroonPath);
     return cfg;
@@ -135,8 +135,16 @@ class NewConfigModel extends ChangeNotifier {
       String password, List<String> existingSeed) async {
     var rootPath = await lnWalletDir();
     await Directory(rootPath).create(recursive: true);
-    var res = await Golib.lnInitDcrlnd(rootPath, NetworkTypeStr(netType),
-        password, existingSeed, multichanBackupRestore, "", false, true);
+    var res = await Golib.lnInitDcrlnd(
+        rootPath,
+        NetworkTypeStr(netType),
+        password,
+        existingSeed,
+        multichanBackupRestore,
+        "",
+        false,
+        true,
+        "info");
     tlsCertPath = path.join(rootPath, "tls.cert");
     macaroonPath = path.join(rootPath, "data", "chain", "decred",
         NetworkTypeStr(netType), "admin.macaroon");

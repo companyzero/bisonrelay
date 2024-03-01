@@ -12,6 +12,8 @@ const defaultAutoRemoveIgnoreList = [
   "ad716557157c1f191d8b5f8c6757ea41af49de27dc619fc87f337ca85be325ee", // GC bot
 ];
 
+String mainConfigFilename = ""; // Set at the begining of main().
+
 String homeDir() {
   var env = Platform.environment;
   if (Platform.isWindows) {
@@ -70,6 +72,7 @@ class Config {
   late final String lnRPCHost;
   late final String lnTLSCert;
   late final String lnMacaroonPath;
+  late final String lnDebugLevel;
   late final String logFile;
   late final String msgRoot;
   late final String debugLevel;
@@ -92,6 +95,7 @@ class Config {
   late final List<String> autoRemoveIgnoreList;
   late final bool sendRecvReceipts;
   late final bool autoSubPosts;
+  late final bool logPings;
 
   Config();
   Config.filled(
@@ -106,6 +110,7 @@ class Config {
       this.logFile: "",
       this.msgRoot: "",
       this.debugLevel: "",
+      this.lnDebugLevel: "info",
       this.walletType: "",
       this.network: "",
       this.internalWalletDir: "",
@@ -124,7 +129,8 @@ class Config {
       this.autoRemoveIdleUsersInterval: 60 * 24 * 60 * 60,
       this.autoRemoveIgnoreList: defaultAutoRemoveIgnoreList,
       this.sendRecvReceipts: true,
-      this.autoSubPosts: true});
+      this.autoSubPosts: true,
+      this.logPings: false});
   factory Config.newWithRPCHost(
           Config cfg, String rpcHost, String tlsCert, String macaroonPath) =>
       Config.filled(
@@ -139,6 +145,7 @@ class Config {
         logFile: cfg.logFile,
         msgRoot: cfg.msgRoot,
         debugLevel: cfg.debugLevel,
+        lnDebugLevel: cfg.lnDebugLevel,
         walletType: cfg.walletType,
         network: cfg.network,
         internalWalletDir: cfg.internalWalletDir,
@@ -158,9 +165,11 @@ class Config {
         autoRemoveIgnoreList: cfg.autoRemoveIgnoreList,
         sendRecvReceipts: cfg.sendRecvReceipts,
         autoSubPosts: cfg.autoSubPosts,
+        logPings: cfg.logPings,
       );
 
-  Future<void> saveConfig(String filepath) async {
+  // Save a new config from scratch.
+  Future<void> saveNewConfig(String filepath) async {
     var f = ini.Config.fromString("\n[payment]\n");
     var set = (String section, String opt, String val) =>
         val != "" ? f.set(section, opt, val) : null;
@@ -184,6 +193,31 @@ class Config {
     await File(filepath).parent.create(recursive: true);
     await File(filepath).writeAsString(f.toString());
   }
+}
+
+// replaceConfig replaces the settings that can be modified by the GUI, while
+// preserving manual chages made to the config file.
+Future<void> replaceConfig(String filepath,
+    {String? debugLevel, String? lnDebugLevel, bool? logPings}) async {
+  var f = ini.Config.fromStrings(File(filepath).readAsLinesSync());
+
+  void set(String section, String opt, String? val) {
+    if (val == null) return;
+    if (section != "default" && !f.hasSection(section)) {
+      f.addSection(section);
+    }
+    f.set(section, opt, val);
+  }
+
+  void setBool(String section, String opt, bool? val) {
+    if (val == null) return;
+    set(section, opt, val ? "1" : "0");
+  }
+
+  set("log", "debuglevel", debugLevel);
+  setBool("log", "pings", logPings);
+  set("payment", "lndebuglevel", lnDebugLevel);
+  await File(filepath).writeAsString(f.toString());
 }
 
 Future<Config> loadConfig(String filepath) async {
@@ -264,6 +298,7 @@ Future<Config> loadConfig(String filepath) async {
   c.logFile = logfile;
   c.msgRoot = msgRoot;
   c.debugLevel = f.get("log", "debuglevel") ?? "info";
+  c.logPings = getBool("log", "pings");
   c.walletType = f.get("payment", "wallettype") ?? "disabled";
   c.network = f.get("payment", "network") ?? "mainnet";
   c.internalWalletDir = path.join(appDataDir, "ln-wallet");
@@ -285,7 +320,7 @@ Future<Config> loadConfig(String filepath) async {
   c.autoSubPosts = getBoolDefaultTrue("default", "autosubposts");
 
   if (c.autoRemoveIdleUsersInterval <= c.autoHandshakeInterval) {
-	throw "invalid values: 'autoremoveinterval' is not greater than 'autohandshakeinterval'";
+    throw "invalid values: 'autoremoveinterval' is not greater than 'autohandshakeinterval'";
   }
 
   if (c.walletType != "disabled") {
@@ -302,6 +337,7 @@ Future<Config> loadConfig(String filepath) async {
     c.lnTLSCert = "";
     c.lnMacaroonPath = "";
   }
+  c.lnDebugLevel = f.get("payment", "lndebuglevel") ?? "info";
 
   var resUpstream = f.get("resources", "resourcesupstream") ?? "";
   if (resUpstream.startsWith("pages:")) {

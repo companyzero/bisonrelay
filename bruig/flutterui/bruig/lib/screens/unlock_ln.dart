@@ -79,8 +79,14 @@ class __LNUnlockPageState extends State<_LNUnlockPage> {
         return;
       }
       var cfg = widget.cfg;
-      var rpcHost = await Golib.lnRunDcrlnd(cfg.internalWalletDir, cfg.network,
-          passCtrl.text, cfg.proxyaddr, cfg.torIsolation, cfg.syncFreeList);
+      var rpcHost = await Golib.lnRunDcrlnd(
+          cfg.internalWalletDir,
+          cfg.network,
+          passCtrl.text,
+          cfg.proxyaddr,
+          cfg.torIsolation,
+          cfg.syncFreeList,
+          cfg.lnDebugLevel);
       var tlsCert = path.join(cfg.internalWalletDir, "tls.cert");
       var macaroonPath = path.join(cfg.internalWalletDir, "data", "chain",
           "decred", cfg.network, "admin.macaroon");

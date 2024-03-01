@@ -14,6 +14,7 @@ import 'package:bruig/models/snackbar.dart';
 import 'package:bruig/screens/contacts_msg_times.dart';
 import 'package:bruig/screens/fetch_invite.dart';
 import 'package:bruig/screens/generate_invite.dart';
+import 'package:bruig/screens/log.dart';
 import 'package:bruig/screens/onboarding.dart';
 import 'package:bruig/screens/server_unwelcome_error.dart';
 import 'package:bruig/theme_manager.dart';
@@ -68,6 +69,7 @@ void main(List<String> args) async {
   developer.log("Default app dir: $defAppDir");
 
   try {
+    mainConfigFilename = await configFileName(args);
     Config cfg = await configFromArgs(args);
     await Golib.createLockFile(cfg.dbRoot);
 
@@ -181,6 +183,7 @@ class _AppState extends State<App> with WindowListener {
         cfg.autoRemoveIgnoreList,
         cfg.sendRecvReceipts,
         cfg.autoSubPosts,
+        cfg.logPings,
       );
       await Golib.initClient(initArgs);
     } catch (exception) {
@@ -396,6 +399,10 @@ class _AppState extends State<App> with WindowListener {
                   page = Consumer2<AppNotifications, ClientModel>(
                       builder: (context, ntfns, client, child) =>
                           NeedsOutChannelScreen(ntfns, client));
+                } else if (settings.name! == ExportLogScreen.routeName) {
+                  page = const ExportLogScreen();
+                } else if (settings.name! == LogSettingsScreen.routeName) {
+                  page = const LogSettingsScreen();
                 } else {
                   page = RouteErrorPage(
                       settings.name ?? "", OverviewScreen.routeName);

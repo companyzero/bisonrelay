@@ -32,3 +32,11 @@ func isDcrlndRunning() bool {
 	currentLndcMtx.Unlock()
 	return res
 }
+
+func runningDcrlnd() *embeddeddcrlnd.Dcrlnd {
+	currentLndcMtx.Lock()
+	res := currentLndc
+	currentLndcMtx.Unlock()
+	return res
+
+}
