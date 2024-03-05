@@ -2371,10 +2371,20 @@ var lnCommands = []tuicmd{
 				return err
 			}
 
-			msg := fmt.Sprintf("Channel Balance: %.8f, Max Inbound: %.8f, "+
-				"Max Outbound: %.8f", dcrutil.Amount(bal.Balance).ToCoin(),
+			var localBalance, remoteBalance uint64
+			if bal.LocalBalance != nil {
+				localBalance = bal.LocalBalance.Atoms
+			}
+			if bal.RemoteBalance != nil {
+				remoteBalance = bal.RemoteBalance.Atoms
+			}
+			msg := fmt.Sprintf("Local Balance: %.8f, Remote Balance: %.8f\n"+
+				"Max Inbound: %.8f, Max Outbound: %.8f",
+				dcrutil.Amount(localBalance).ToCoin(),
+				dcrutil.Amount(remoteBalance).ToCoin(),
 				dcrutil.Amount(bal.MaxInboundAmount).ToCoin(),
 				dcrutil.Amount(bal.MaxOutboundAmount).ToCoin())
+
 			as.cwHelpMsg(msg)
 			return nil
 		},
