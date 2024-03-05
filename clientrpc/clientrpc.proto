@@ -23,6 +23,8 @@ service VersionService {
 
 /* ChatService is the service for interacting with a BR client chat messages. */
 service ChatService {
+  /* UserPublicIdentity returns public information from user's br client  */
+  rpc UserPublicIdentity(PublicIdentityReq) returns (PublicIdentity);
   /* PM sends a private message to a user of the client. */
   rpc PM(PMRequest) returns (PMResponse);
 
@@ -810,6 +812,10 @@ message PostMetadataStatus {
   string link = 3;
   /* attributes is the list of post update attributes. */
   map<string,string> attributes = 4;
+}
+
+/* PublicIdentityReq is a request to get PublicIdentity. */
+message PublicIdentityReq {
 }
 
 /* PublicIdentity is the lowlevel public identity. */
