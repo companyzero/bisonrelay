@@ -26,6 +26,7 @@ import (
 	"github.com/decred/dcrlnd/lnrpc/wtclientrpc"
 	"github.com/decred/dcrlnd/macaroons"
 	"github.com/decred/dcrlnd/signal"
+	"github.com/jessevdk/go-flags"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
@@ -195,13 +196,16 @@ func (lndc *Dcrlnd) Create(ctx context.Context, pass string, existingSeed []stri
 		if err == nil {
 			mac := &macaroon.Macaroon{}
 			if err = mac.UnmarshalBinary(macBytes); err == nil {
-				// Recreate the conn, now using the macaroon file.
-				opt := grpc.WithPerRPCCredentials(macaroons.NewMacaroonCredential(mac))
-				lndc.connOpts = append(lndc.connOpts, opt)
-				if err := lndc.reconnect(ctx); err != nil {
-					return nil, fmt.Errorf("unable to reconnect after create: %v", err)
+				macOpt, err := macaroons.NewMacaroonCredential(mac)
+				if err == nil {
+					// Recreate the conn, now using the macaroon file.
+					opt := grpc.WithPerRPCCredentials(macOpt)
+					lndc.connOpts = append(lndc.connOpts, opt)
+					if err := lndc.reconnect(ctx); err != nil {
+						return nil, fmt.Errorf("unable to reconnect after create: %v", err)
+					}
+					break
 				}
-				break
 			}
 		}
 
@@ -387,7 +391,7 @@ func RunDcrlnd(ctx context.Context, cfg Config) (*Dcrlnd, error) {
 	conf.DisableListen = true
 	conf.BackupFilePath = filepath.Join(rootDir, "channels.backup")
 	conf.Decred.Node = "dcrw"
-	conf.DB.Bolt.SyncFreelist = cfg.SyncFreeList
+	conf.DB.Bolt.NoFreelistSync = !cfg.SyncFreeList
 	conf.DebugLevel = cfg.DebugLevel
 	conf.ProtocolOptions = &lncfg.ProtocolOptions{}
 	conf.WtClient = &lncfg.WtClient{}
@@ -435,10 +439,17 @@ func RunDcrlnd(ctx context.Context, cfg Config) (*Dcrlnd, error) {
 
 	inter := signal.InterceptNoSignal()
 
-	validConf, err := dcrlnd.ValidateConfig(conf, "", inter)
+	emptyParser := flags.NewParser(&conf, flags.Default)
+	_, err := emptyParser.ParseArgs(nil)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing empty args: %v", err)
+	}
+
+	validConf, err := dcrlnd.ValidateConfig(conf, inter, emptyParser, emptyParser)
 	if err != nil {
 		return nil, fmt.Errorf("error validating dcrlnd conf: %v", err)
 	}
+	implCfg := validConf.ImplementationConfig(inter)
 
 	lndc := &Dcrlnd{
 		runDone: make(chan struct{}),
@@ -451,7 +462,7 @@ func RunDcrlnd(ctx context.Context, cfg Config) (*Dcrlnd, error) {
 	}
 	go func() {
 		err := dcrlnd.Main(
-			validConf, dcrlnd.ListenerCfg{}, inter,
+			validConf, dcrlnd.ListenerCfg{}, implCfg, inter,
 		)
 		if err != nil {
 			err = fmt.Errorf("dcrlnd.Main error: %v", err)
@@ -497,7 +508,11 @@ func RunDcrlnd(ctx context.Context, cfg Config) (*Dcrlnd, error) {
 		if err = mac.UnmarshalBinary(macBytes); err != nil {
 			return nil, fmt.Errorf("unable to read macaroon file: %v", err)
 		}
-		opts = append(opts, grpc.WithPerRPCCredentials(macaroons.NewMacaroonCredential(mac)))
+		macOpt, err := macaroons.NewMacaroonCredential(mac)
+		if err != nil {
+			return nil, fmt.Errorf("unable to create macaroon credentials: %v", err)
+		}
+		opts = append(opts, grpc.WithPerRPCCredentials(macOpt))
 	}
 	lndc.connOpts = opts
 
