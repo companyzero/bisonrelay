@@ -72,9 +72,13 @@ func NewDcrlndPaymentClient(ctx context.Context, cfg DcrlnPaymentClientCfg) (*Dc
 	}
 
 	// Now we append the macaroon credentials to the dial options.
+	macOpt, err := macaroons.NewMacaroonCredential(mac)
+	if err != nil {
+		return nil, err
+	}
 	opts = append(
 		opts,
-		grpc.WithPerRPCCredentials(macaroons.NewMacaroonCredential(mac)),
+		grpc.WithPerRPCCredentials(macOpt),
 	)
 
 	conn, err := grpc.Dial(cfg.Address, opts...)
