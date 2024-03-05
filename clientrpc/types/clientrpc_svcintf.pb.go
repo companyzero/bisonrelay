@@ -105,6 +105,8 @@ func VersionServiceDefn() ServiceDefn {
 
 // ChatServiceClient is the client API for ChatService service.
 type ChatServiceClient interface {
+	// UserPublicIdentity returns public information from user's br client
+	UserPublicIdentity(ctx context.Context, in *PublicIdentityReq, out *PublicIdentity) error
 	// PM sends a private message to a user of the client.
 	PM(ctx context.Context, in *PMRequest, out *PMResponse) error
 	// PMStream returns a stream that gets PMs received by the client.
@@ -144,6 +146,11 @@ type ChatServiceClient interface {
 type client_ChatService struct {
 	c    ClientConn
 	defn ServiceDefn
+}
+
+func (c *client_ChatService) UserPublicIdentity(ctx context.Context, in *PublicIdentityReq, out *PublicIdentity) error {
+	const method = "UserPublicIdentity"
+	return c.defn.Methods[method].ClientHandler(c.c, ctx, in, out)
 }
 
 func (c *client_ChatService) PM(ctx context.Context, in *PMRequest, out *PMResponse) error {
@@ -241,6 +248,8 @@ func NewChatServiceClient(c ClientConn) ChatServiceClient {
 
 // ChatServiceServer is the server API for ChatService service.
 type ChatServiceServer interface {
+	// UserPublicIdentity returns public information from user's br client
+	UserPublicIdentity(context.Context, *PublicIdentityReq, *PublicIdentity) error
 	// PM sends a private message to a user of the client.
 	PM(context.Context, *PMRequest, *PMResponse) error
 	// PMStream returns a stream that gets PMs received by the client.
@@ -293,6 +302,21 @@ func ChatServiceDefn() ServiceDefn {
 	return ServiceDefn{
 		Name: "ChatService",
 		Methods: map[string]MethodDefn{
+			"UserPublicIdentity": {
+				IsStreaming:  false,
+				NewRequest:   func() proto.Message { return new(PublicIdentityReq) },
+				NewResponse:  func() proto.Message { return new(PublicIdentity) },
+				RequestDefn:  func() protoreflect.MessageDescriptor { return new(PublicIdentityReq).ProtoReflect().Descriptor() },
+				ResponseDefn: func() protoreflect.MessageDescriptor { return new(PublicIdentity).ProtoReflect().Descriptor() },
+				Help:         "UserPublicIdentity returns public information from user's br client",
+				ServerHandler: func(x interface{}, ctx context.Context, request, response proto.Message) error {
+					return x.(ChatServiceServer).UserPublicIdentity(ctx, request.(*PublicIdentityReq), response.(*PublicIdentity))
+				},
+				ClientHandler: func(conn ClientConn, ctx context.Context, request, response proto.Message) error {
+					method := "ChatService.UserPublicIdentity"
+					return conn.Request(ctx, method, request, response)
+				},
+			},
 			"PM": {
 				IsStreaming:  false,
 				NewRequest:   func() proto.Message { return new(PMRequest) },
@@ -1741,6 +1765,9 @@ var help_messages = map[string]map[string]string{
 		"from":       "from is the UID of the original status creator.",
 		"link":       "link is the ID of the post.",
 		"attributes": "attributes is the list of post update attributes.",
+	},
+	"PublicIdentityReq": {
+		"@": "PublicIdentityReq is a request to get PublicIdentity.",
 	},
 	"PublicIdentity": {
 		"@":         "PublicIdentity is the lowlevel public identity.",

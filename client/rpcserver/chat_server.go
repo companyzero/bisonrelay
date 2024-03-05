@@ -63,6 +63,17 @@ func (c *chatServer) SendFile(_ context.Context, req *types.SendFileRequest, _ *
 	return c.c.SendFile(user.ID(), req.Filename)
 }
 
+func (c *chatServer) UserPublicIdentity(_ context.Context, req *types.PublicIdentityReq, res *types.PublicIdentity) error {
+	*res = types.PublicIdentity{
+		Name:     c.c.Public().Name,
+		Nick:     c.c.Public().Nick,
+		Identity: c.c.Public().Identity.Bytes(),
+		SigKey:   c.c.Public().SigKey.Bytes(),
+	}
+
+	return nil
+}
+
 func (c *chatServer) PM(ctx context.Context, req *types.PMRequest, res *types.PMResponse) error {
 	if req.Msg == nil {
 		return fmt.Errorf("msg is nil")
