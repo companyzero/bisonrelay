@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/companyzero/bisonrelay/client/clientintf"
 	"github.com/companyzero/bisonrelay/internal/assert"
 	"github.com/companyzero/bisonrelay/rpc"
 	"golang.org/x/exp/slices"
@@ -603,4 +604,107 @@ func TestRendezvousManagerFetchPrepaidWorks(t *testing.T) {
 
 	// Got the correct blob.
 	assert.NilErrFromChan(t, errChan)
+}
+
+// TestRendezvousManagerInvoicesCorrectly asserts that the RV manager handles
+// invoicing for subscriptions correctly.
+func TestRendezvousManagerInvoicesCorrectly(t *testing.T) {
+	t.Parallel()
+
+	rmgr := NewRVManager(nil, &mockRvMgrDB{alwaysPaid: false}, nil, nil)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	runErr := make(chan error, 1)
+	go func() { runErr <- rmgr.Run(ctx) }()
+
+	sess := newMockServerSession()
+	rmgr.BindToSession(sess)
+
+	// Hook to check for payment attempts.
+	paidInvoiceChan := make(chan string, 5)
+	sess.mpc.HookPayInvoice(func(invoice string) (int64, error) {
+		paidInvoiceChan <- invoice
+		return 1000, nil
+	})
+
+	// Register subscription. It should require fetching a new invoice.
+	subDoneChan := make(chan error, 5)
+	rv01 := rvidFromStr("rv01")
+	go func() { subDoneChan <- rmgr.Sub(rv01, nil, nil) }()
+	sess.replyNextPRPC(t, &rpc.GetInvoiceReply{Invoice: "first invoice"})
+	assert.ChanWrittenWithVal(t, paidInvoiceChan, "first invoice")
+	sess.replyNextPRPC(t, &rpc.SubscribeRoutedMessagesReply{NextInvoice: "second invoice"})
+	assert.ChanWritten(t, subDoneChan)
+
+	// Add a new sub. This should make the second invoice (sent with the first
+	// registration) be paid.
+	go func() { subDoneChan <- rmgr.Sub(rvidFromStr("rv02"), nil, nil) }()
+	assert.ChanWrittenWithVal(t, paidInvoiceChan, "second invoice")
+	sess.replyNextPRPC(t, &rpc.SubscribeRoutedMessagesReply{NextInvoice: "third invoice"})
+
+	// Unsubscribe and resubscribe. This should not require a new invoice.
+	go func() { subDoneChan <- rmgr.Unsub(rv01) }()
+	sess.replyNextPRPC(t, &rpc.SubscribeRoutedMessagesReply{})
+	assert.ChanWritten(t, subDoneChan)
+	go func() { subDoneChan <- rmgr.Sub(rv01, nil, nil) }()
+	sess.replyNextPRPC(t, &rpc.SubscribeRoutedMessagesReply{})
+	assert.ChanWritten(t, subDoneChan)
+	assert.ChanNotWritten(t, paidInvoiceChan, 200*time.Millisecond)
+
+	// Disconnect and reconnect to server. This should not require a new invoice.
+	rmgr.BindToSession(nil)
+	rmgr.BindToSession(sess)
+	sess.replyNextPRPC(t, &rpc.SubscribeRoutedMessagesReply{})
+	time.Sleep(time.Millisecond * 200)
+	assert.DeepEqual(t, true, rmgr.IsUpToDate())
+	assert.ChanNotWritten(t, paidInvoiceChan, 200*time.Millisecond)
+
+	// Add a new sub. This should require a new invoice to be fetched
+	// (because the connection to the server was closed).
+	go func() { subDoneChan <- rmgr.Sub(rvidFromStr("rv03"), nil, nil) }()
+	sess.replyNextPRPC(t, &rpc.GetInvoiceReply{Invoice: "fourth invoice"})
+	assert.ChanWrittenWithVal(t, paidInvoiceChan, "fourth invoice")
+	sess.replyNextPRPC(t, &rpc.SubscribeRoutedMessagesReply{NextInvoice: "fifth invoice"})
+
+	// Timeout the previous invoice and add a new sub. A new invoice will
+	// be fetched.
+	sess.mpc.HookDecodeInvoice(func(invoice string) (clientintf.DecodedInvoice, error) {
+		res, _ := sess.mpc.DefaultDecodeInvoice(invoice)
+		if invoice == "fifth invoice" {
+			res.ExpiryTime = time.Now().Add(-time.Second)
+		}
+		return res, nil
+	})
+	go func() { subDoneChan <- rmgr.Sub(rvidFromStr("rv04"), nil, nil) }()
+	sess.replyNextPRPC(t, &rpc.GetInvoiceReply{Invoice: "sixth invoice"})
+	assert.ChanWrittenWithVal(t, paidInvoiceChan, "sixth invoice")
+	sess.replyNextPRPC(t, &rpc.SubscribeRoutedMessagesReply{NextInvoice: "fifth invoice"})
+
+	// Disconnect and reconnect to server and server replies first
+	// subscription with an invoice. The next sub attempt should be using
+	// this invoice.
+	rmgr.BindToSession(nil)
+	rmgr.BindToSession(sess)
+	sess.replyNextPRPC(t, &rpc.SubscribeRoutedMessagesReply{NextInvoice: "seventh invoice"})
+	time.Sleep(time.Millisecond * 200)
+	assert.DeepEqual(t, true, rmgr.IsUpToDate())
+	assert.ChanNotWritten(t, paidInvoiceChan, 200*time.Millisecond)
+	go func() { subDoneChan <- rmgr.Sub(rvidFromStr("rv05"), nil, nil) }()
+	assert.ChanWrittenWithVal(t, paidInvoiceChan, "seventh invoice")
+	sess.replyNextPRPC(t, &rpc.SubscribeRoutedMessagesReply{NextInvoice: "eighth invoice"})
+
+	// Disconnect and reconnect to server. The first RV is returned as
+	// unpaid. This marks the rv as unpaid in the DB and causes a new
+	// attempt at paying.
+	rmgr.BindToSession(nil)
+	rmgr.BindToSession(sess)
+	sess.replyNextPRPC(t, &rpc.SubscribeRoutedMessagesReply{Error: rpc.ErrUnpaidSubscriptionRV(rv01).Error()})
+	time.Sleep(time.Millisecond * 200)
+	assert.DeepEqual(t, false, rmgr.IsUpToDate())
+	rmgr.BindToSession(sess)
+	sess.replyNextPRPC(t, &rpc.GetInvoiceReply{Invoice: "ninth invoice"})
+	assert.ChanWrittenWithVal(t, paidInvoiceChan, "ninth invoice")
+	sess.replyNextPRPC(t, &rpc.SubscribeRoutedMessagesReply{NextInvoice: "ninth invoice"})
+	time.Sleep(time.Millisecond * 200)
+	assert.DeepEqual(t, true, rmgr.IsUpToDate())
 }
