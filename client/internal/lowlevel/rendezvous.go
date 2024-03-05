@@ -101,9 +101,9 @@ type RVManager struct {
 func NewRVManager(log slog.Logger, db RVManagerDB, subsDelayer func() <-chan time.Time, subDoneCB func()) *RVManager {
 	// Default is to use a delayer that never delays (by returning a closed
 	// chan it always writes the empty value immediately).
-	closedTimeChan := make(chan time.Time)
-	close(closedTimeChan)
 	if subsDelayer == nil {
+		closedTimeChan := make(chan time.Time)
+		close(closedTimeChan)
 		subsDelayer = func() <-chan time.Time {
 			return closedTimeChan
 		}
@@ -503,13 +503,16 @@ func (rmgr *RVManager) updatePayloadSubscriptions(ctx context.Context,
 			// in order to clear the paid flag from the local DB.
 			errUnpaid := rpc.ParseErrUnpaidSubscriptionRV(reply.Error)
 			if errUnpaid != nil {
-				return "", errUnpaid
+				return reply.NextInvoice, errUnpaid
 			}
 			return "", AckError{ErrorStr: reply.Error}
 		}
 
-		// Store invoice for next sub.
-		nextInvoice = reply.NextInvoice
+		// Store invoice for next sub. When no payment was needed, keep
+		// the old invoice.
+		if len(unpaidRVs) != 0 || reply.NextInvoice != "" {
+			nextInvoice = reply.NextInvoice
+		}
 	case error:
 		return "", reply
 	default:
@@ -517,15 +520,13 @@ func (rmgr *RVManager) updatePayloadSubscriptions(ctx context.Context,
 	}
 
 	// Mark the unpaid RVs as paid (since server ack'd).
-	if sess.PayClient().PayScheme() != rpc.PaySchemeFree {
-		if err := rmgr.db.SavePaidRVs(unpaidRVs); err != nil {
-			rmgr.log.Warnf("Unable to save paid RVs: %v", err)
-		}
+	if err := rmgr.db.SavePaidRVs(unpaidRVs); err != nil {
+		rmgr.log.Warnf("Unable to save paid RVs: %v", err)
 	}
 
 	if rmgr.log.Level() <= slog.LevelTrace {
-		rmgr.log.Tracef("RV subcriptions changed +%d [%s] -%d [%s]", len(add),
-			joinRVList(add), len(del), joinRVList(del))
+		rmgr.log.Tracef("RV subcriptions changed +%d [%s] -%d [%s] nextInvoice %s", len(add),
+			joinRVList(add), len(del), joinRVList(del), nextInvoice)
 	} else {
 		rmgr.log.Debugf("RV subscriptions changed +%d -%d", len(add), len(del))
 	}
@@ -632,6 +633,7 @@ loop:
 				toDel = append(toDel, unsub.id)
 			}
 			toAdd, toMark = rvMapKeys(subs)
+			needsUpdate = len(subs) > 0 || len(toDel) > 0
 
 		case sub := <-rmgr.subChan:
 			if _, ok := subs[sub.id]; ok {
@@ -781,6 +783,7 @@ loop:
 		toAdd = nil
 		toDel = nil
 		toMark = nil
+		nextInvoice = ""
 	}
 
 	close(rmgr.runDone)
