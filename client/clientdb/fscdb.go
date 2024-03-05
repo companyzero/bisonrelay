@@ -678,6 +678,10 @@ func (db *DB) Backup(_ ReadTx, rootDir, destPath string) (string, error) {
 	gz := gzip.NewWriter(f)
 	tw := tar.NewWriter(gz)
 	err = filepath.Walk(rootDir, func(filePath string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
 		// Skip applogs and logs directories.
 		if strings.HasPrefix(filePath, appLogDir) ||
 			strings.HasPrefix(filePath, logDir) {
