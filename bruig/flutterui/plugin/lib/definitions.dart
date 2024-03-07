@@ -1254,6 +1254,10 @@ class LNInitDcrlnd {
   final bool torIsolation;
   @JsonKey(name: "sync_free_list")
   final bool syncFreeList;
+  @JsonKey(name: "autocompact")
+  final bool autoCompact;
+  @JsonKey(name: "autocompact_min_age")
+  final int autoCompactMinAge;
   @JsonKey(name: "debug_level")
   final String debugLevel;
 
@@ -1266,6 +1270,8 @@ class LNInitDcrlnd {
       this.proxyaddr,
       this.torIsolation,
       this.syncFreeList,
+      this.autoCompact,
+      this.autoCompactMinAge,
       this.debugLevel);
   Map<String, dynamic> toJson() => _$LNInitDcrlndToJson(this);
 }
@@ -2773,9 +2779,12 @@ abstract class PluginPlatform {
       String proxyaddr,
       bool torIsolation,
       bool syncFreeList,
+      bool autoCompact,
+      int autoCompactMinAge,
       String debugLevel) async {
     var req = LNInitDcrlnd(rootPath, network, password, existingSeed,
-        multiChanBackup, proxyaddr, torIsolation, syncFreeList, debugLevel);
+        multiChanBackup, proxyaddr, torIsolation, syncFreeList,
+        autoCompact, autoCompactMinAge, debugLevel);
     var res = await asyncCall(CTLNInitDcrlnd, req);
     return LNNewWalletSeed.fromJson(res);
   }
@@ -2787,9 +2796,11 @@ abstract class PluginPlatform {
       String proxyaddr,
       bool torIsolation,
       bool syncFreeList,
+      bool autoCompact,
+      int autoCompactMinAge,
       String debugLevel) async {
     var req = LNInitDcrlnd(rootPath, network, password, [], null, proxyaddr,
-        torIsolation, syncFreeList, debugLevel);
+        torIsolation, syncFreeList, autoCompact, autoCompactMinAge, debugLevel);
     var res = await asyncCall(CTLNRunDcrlnd, req);
     return res;
   }

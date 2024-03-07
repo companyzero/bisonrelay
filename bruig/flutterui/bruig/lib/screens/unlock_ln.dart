@@ -86,6 +86,8 @@ class __LNUnlockPageState extends State<_LNUnlockPage> {
           cfg.proxyaddr,
           cfg.torIsolation,
           cfg.syncFreeList,
+          cfg.autoCompact,
+          cfg.autoCompactMinAge,
           cfg.lnDebugLevel);
       var tlsCert = path.join(cfg.internalWalletDir, "tls.cert");
       var macaroonPath = path.join(cfg.internalWalletDir, "data", "chain",

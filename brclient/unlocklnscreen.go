@@ -42,15 +42,17 @@ func (ulns unlockLNScreen) Init() tea.Cmd {
 	var cmds []tea.Cmd
 	if ulns.lndc == nil {
 		cfg := embeddeddcrlnd.Config{
-			RootDir:      defaultLNWalletDir(ulns.cfg.Root),
-			Network:      ulns.cfg.Network,
-			DebugLevel:   ulns.cfg.LNDebugLevel,
-			MaxLogFiles:  ulns.cfg.LNMaxLogFiles,
-			RPCAddresses: ulns.cfg.LNRPCListen,
-			DialFunc:     ulns.cfg.dialFunc,
-			TorAddr:      ulns.cfg.ProxyAddr,
-			TorIsolation: ulns.cfg.TorIsolation,
-			SyncFreeList: ulns.cfg.SyncFreeList,
+			RootDir:           defaultLNWalletDir(ulns.cfg.Root),
+			Network:           ulns.cfg.Network,
+			DebugLevel:        ulns.cfg.LNDebugLevel,
+			MaxLogFiles:       ulns.cfg.LNMaxLogFiles,
+			RPCAddresses:      ulns.cfg.LNRPCListen,
+			DialFunc:          ulns.cfg.dialFunc,
+			TorAddr:           ulns.cfg.ProxyAddr,
+			TorIsolation:      ulns.cfg.TorIsolation,
+			SyncFreeList:      ulns.cfg.SyncFreeList,
+			AutoCompact:       ulns.cfg.AutoCompact,
+			AutoCompactMinAge: ulns.cfg.AutoCompactMinAge,
 		}
 
 		cmd := func() tea.Msg {

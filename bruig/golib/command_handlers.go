@@ -889,7 +889,7 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		if err := cmd.decode(&gcName); err != nil {
 			return nil, err
 		}
-		_, err := c.NewGroupChat(gcName) // XXX return ID
+		_, err := c.NewGroupChat(gcName) // TODO: return ID
 		return nil, err
 
 	case CTInviteToGroupChat:
@@ -2087,14 +2087,16 @@ func handleLNInitDcrlnd(ctx context.Context, args lnInitDcrlnd) (*lnNewWalletSee
 	}
 
 	lndCfg := embeddeddcrlnd.Config{
-		RootDir:      args.RootDir,
-		Network:      args.Network,
-		DebugLevel:   args.DebugLevel,
-		MaxLogFiles:  defaultMaxLogFiles,
-		TorAddr:      args.ProxyAddr,
-		TorIsolation: args.TorIsolation,
-		DialFunc:     dialFunc,
-		SyncFreeList: args.SyncFreeList,
+		RootDir:           args.RootDir,
+		Network:           args.Network,
+		DebugLevel:        args.DebugLevel,
+		MaxLogFiles:       defaultMaxLogFiles,
+		TorAddr:           args.ProxyAddr,
+		TorIsolation:      args.TorIsolation,
+		DialFunc:          dialFunc,
+		SyncFreeList:      args.SyncFreeList,
+		AutoCompact:       args.AutoCompact,
+		AutoCompactMinAge: args.AutoCompactMinAge,
 	}
 	lndc, err := runDcrlnd(ctx, lndCfg)
 	if err != nil {
@@ -2142,14 +2144,16 @@ func handleLNRunDcrlnd(ctx context.Context, args lnInitDcrlnd) (string, error) {
 
 		var err error
 		lndCfg := embeddeddcrlnd.Config{
-			RootDir:      args.RootDir,
-			Network:      args.Network,
-			DebugLevel:   args.DebugLevel,
-			TorAddr:      args.ProxyAddr,
-			MaxLogFiles:  defaultMaxLogFiles,
-			TorIsolation: args.TorIsolation,
-			DialFunc:     dialFunc,
-			SyncFreeList: args.SyncFreeList,
+			RootDir:           args.RootDir,
+			Network:           args.Network,
+			DebugLevel:        args.DebugLevel,
+			TorAddr:           args.ProxyAddr,
+			MaxLogFiles:       defaultMaxLogFiles,
+			TorIsolation:      args.TorIsolation,
+			DialFunc:          dialFunc,
+			SyncFreeList:      args.SyncFreeList,
+			AutoCompact:       args.AutoCompact,
+			AutoCompactMinAge: args.AutoCompactMinAge,
 		}
 		lndc, err = runDcrlnd(ctx, lndCfg)
 		if err != nil {

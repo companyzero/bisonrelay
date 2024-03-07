@@ -64,6 +64,12 @@ type Config struct {
 
 	// SyncFreeList sets the SyncFreeList flag in the DB.
 	SyncFreeList bool
+
+	// AutoCompact sets the AutoCompact flag in the DB.
+	AutoCompact bool
+
+	// AutoCompactMinAge sets the AutoCompactMinAge value in the DB.
+	AutoCompactMinAge time.Duration
 }
 
 // Dcrlnd is a running instance of an embedded dcrlnd instance.
@@ -392,6 +398,8 @@ func RunDcrlnd(ctx context.Context, cfg Config) (*Dcrlnd, error) {
 	conf.BackupFilePath = filepath.Join(rootDir, "channels.backup")
 	conf.Decred.Node = "dcrw"
 	conf.DB.Bolt.NoFreelistSync = !cfg.SyncFreeList
+	conf.DB.Bolt.AutoCompact = cfg.AutoCompact
+	conf.DB.Bolt.AutoCompactMinAge = cfg.AutoCompactMinAge
 	conf.DebugLevel = cfg.DebugLevel
 	conf.ProtocolOptions = &lncfg.ProtocolOptions{}
 	conf.WtClient = &lncfg.WtClient{}
