@@ -114,7 +114,10 @@ type config struct {
 	AutoRemoveIdleUsersInterval time.Duration
 	AutoRemoveIdleUsersIgnore   []string
 
-	SyncFreeList bool
+	// DB Options
+	SyncFreeList      bool
+	AutoCompact       bool
+	AutoCompactMinAge time.Duration
 
 	ProxyAddr    string
 	ProxyUser    string
@@ -283,7 +286,8 @@ func loadConfig() (*config, error) {
 
 	flagBellCmd := fs.String("bellcmd", "", "Bell command on new msgs")
 	flagSyncFreeList := fs.Bool("syncfreelist", true, "")
-
+	flagAutoCompact := fs.Bool("autocompact", true, "")
+	flagAutoCompactMinAge := fs.String("autocompactminage", "14d", "how often to auto compact")
 	flagExternalEditorForComments := fs.Bool("externaleditorforcomments", false, "")
 	flagNoLoadChatHistory := fs.Bool("noloadchathistory", false, "Whether to read chat logs to build chat history")
 
@@ -360,6 +364,10 @@ func loadConfig() (*config, error) {
 	}
 	if autoRemoveInterval <= autoHandshakeInterval {
 		return nil, fmt.Errorf("invalid values: 'autoremoveinterval' is not greater than 'autohandshakeinterval'")
+	}
+	autoCompactMinAge, err := strduration.ParseDuration(*flagAutoCompactMinAge)
+	if err != nil {
+		return nil, fmt.Errorf("invalid value for flag 'autocompactminage': %v", err)
 	}
 
 	// Clean paths.
@@ -533,6 +541,8 @@ func loadConfig() (*config, error) {
 		AutoSubPosts:                *flagAutoSubPosts,
 
 		SyncFreeList:              *flagSyncFreeList,
+		AutoCompact:               *flagAutoCompact,
+		AutoCompactMinAge:         autoCompactMinAge,
 		ExternalEditorForComments: *flagExternalEditorForComments,
 
 		SimpleStorePayType:    ssPayType,

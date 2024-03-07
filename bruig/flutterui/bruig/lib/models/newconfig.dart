@@ -141,9 +141,11 @@ class NewConfigModel extends ChangeNotifier {
         password,
         existingSeed,
         multichanBackupRestore,
-        "",
-        false,
-        true,
+        "",			// proxyaddr
+        false,			// torisolation
+        true,			// syncfreelist
+        true,			// autocompact
+        60 * 60 * 24 * 14,	// autocompact_min_age (14 days)
         "info");
     tlsCertPath = path.join(rootPath, "tls.cert");
     macaroonPath = path.join(rootPath, "data", "chain", "decred",

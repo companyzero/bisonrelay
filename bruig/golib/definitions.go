@@ -250,15 +250,17 @@ type lnTryExternalDcrlnd struct {
 }
 
 type lnInitDcrlnd struct {
-	RootDir         string   `json:"root_dir"`
-	Network         string   `json:"network"`
-	Password        string   `json:"password"`
-	ExistingSeed    []string `json:"existingseed"`
-	MultiChanBackup []byte   `json:"multichanbackup"`
-	ProxyAddr       string   `json:"proxyaddr"`
-	TorIsolation    bool     `json:"torisolation"`
-	SyncFreeList    bool     `json:"sync_free_list"`
-	DebugLevel      string   `json:"debug_level"`
+	RootDir           string        `json:"root_dir"`
+	Network           string        `json:"network"`
+	Password          string        `json:"password"`
+	ExistingSeed      []string      `json:"existingseed"`
+	MultiChanBackup   []byte        `json:"multichanbackup"`
+	ProxyAddr         string        `json:"proxyaddr"`
+	TorIsolation      bool          `json:"torisolation"`
+	SyncFreeList      bool          `json:"sync_free_list"`
+	AutoCompact       bool          `json:"autocompact"`
+	AutoCompactMinAge time.Duration `json:"autocompact_min_age"`
+	DebugLevel        string        `json:"debug_level"`
 }
 
 type lnNewWalletSeed struct {

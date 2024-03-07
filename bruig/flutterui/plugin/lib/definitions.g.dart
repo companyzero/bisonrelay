@@ -1227,6 +1227,8 @@ LNInitDcrlnd _$LNInitDcrlndFromJson(Map<String, dynamic> json) => LNInitDcrlnd(
       json['proxyaddr'] as String,
       json['torisolation'] as bool,
       json['sync_free_list'] as bool,
+      json['autocompact'] as bool,
+      json['autocompact_min_age'] as int,
       json['debug_level'] as String,
     );
 
@@ -1240,6 +1242,8 @@ Map<String, dynamic> _$LNInitDcrlndToJson(LNInitDcrlnd instance) =>
       'proxyaddr': instance.proxyaddr,
       'torisolation': instance.torIsolation,
       'sync_free_list': instance.syncFreeList,
+      'autocompact': instance.autoCompact,
+      'autocompact_min_age': instance.autoCompactMinAge,
       'debug_level': instance.debugLevel,
     };
 

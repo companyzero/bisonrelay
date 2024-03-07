@@ -90,6 +90,8 @@ class Config {
   late final int circuitLimit;
   late final bool noLoadChatHistory;
   late final bool syncFreeList;
+  late final bool autoCompact;
+  late final int autoCompactMinAge;
   late final int autoHandshakeInterval;
   late final int autoRemoveIdleUsersInterval;
   late final List<String> autoRemoveIgnoreList;
@@ -125,6 +127,8 @@ class Config {
       this.circuitLimit: 32,
       this.noLoadChatHistory: true,
       this.syncFreeList: true,
+      this.autoCompact: true,
+      this.autoCompactMinAge: 14 * 24 * 60 * 60,
       this.autoHandshakeInterval: 21 * 24 * 60 * 60,
       this.autoRemoveIdleUsersInterval: 60 * 24 * 60 * 60,
       this.autoRemoveIgnoreList: defaultAutoRemoveIgnoreList,
@@ -160,6 +164,8 @@ class Config {
         circuitLimit: cfg.circuitLimit,
         noLoadChatHistory: cfg.noLoadChatHistory,
         syncFreeList: cfg.syncFreeList,
+        autoCompact: cfg.autoCompact,
+        autoCompactMinAge: cfg.autoCompactMinAge,
         autoHandshakeInterval: cfg.autoHandshakeInterval,
         autoRemoveIdleUsersInterval: cfg.autoRemoveIdleUsersInterval,
         autoRemoveIgnoreList: cfg.autoRemoveIgnoreList,
@@ -310,7 +316,9 @@ Future<Config> loadConfig(String filepath) async {
   c.circuitLimit = getInt("default", "circuitlimit") ?? 32;
   c.noLoadChatHistory = getBool("default", "noloadchathistory");
   c.syncFreeList = getBoolDefaultTrue("default", "syncfreelist");
-
+  c.autoCompact = getBoolDefaultTrue("default", "autocompact");
+  c.autoCompactMinAge = parseDurationSeconds(
+      f.get("default", "autocompact_min_age") ?? "14d");
   c.autoHandshakeInterval =
       parseDurationSeconds(f.get("default", "autohandshakeinterval") ?? "21d");
   c.autoRemoveIdleUsersInterval = parseDurationSeconds(

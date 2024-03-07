@@ -54,6 +54,12 @@ root = {{ .Root }}
 # improves running performance while worsening startup performance.
 # syncfreelist = true
 
+# Whether to enable or disable bbolt's autocompaction option.
+# autocompact = true
+
+# How often to autocompact the various databases if autocompact is true.
+# autocompactminage = 14d
+
 # The interval to perform automatic handshake. If no message has been received
 # from a remote client after this interval, the local client will automatically
 # attempt a handshake to verify if the user is still active.
