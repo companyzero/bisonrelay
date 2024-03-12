@@ -2397,6 +2397,10 @@ abstract class PluginPlatform {
 
   Future<bool> hasServer() async => throw "unimplemented";
 
+  // These are only implemented in android.
+  Future<void> startForegroundSvc() => throw "unimplemented";
+  Future<void> stopForegroundSvc() => throw "unimplemented";
+
   Future<dynamic> asyncCall(int cmd, dynamic payload) async =>
       throw "unimplemented";
 

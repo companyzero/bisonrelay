@@ -47,7 +47,6 @@ import 'package:provider/provider.dart';
 import 'package:window_manager/window_manager.dart';
 import './screens/app_start.dart';
 import 'package:optimize_battery/optimize_battery.dart';
-import 'package:flutter_foreground_service/flutter_foreground_service.dart';
 
 final Random random = Random();
 
@@ -72,7 +71,7 @@ void main(List<String> args) async {
   bool fgService = Platform.isAndroid &&
       (await StorageManager.readData(StorageManager.ntfnFgSvcKey) as bool? ??
           false);
-  if (fgService) ForegroundService().start();
+  if (fgService) Golib.startForegroundSvc();
 
   // The MockGolib was mostly useful during early stages of development.
   //UseMockGolib();
@@ -199,13 +198,13 @@ class _AppState extends State<App> with WindowListener {
       );
       await Golib.initClient(initArgs);
     } catch (exception) {
-      print("XXXXXX $exception");
       if ("$exception".contains("client already initialized")) {
         // Not a fatal error, just resuming from a prior state. Consider the
         // addressbook loaded and start fetching client data.
         addressBookLoaded(true);
         return;
       }
+      print("XXXXXX $exception");
       navkey.currentState!.pushNamed('/fatalError', arguments: exception);
     }
   }

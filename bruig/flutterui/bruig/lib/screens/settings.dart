@@ -18,7 +18,6 @@ import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/storage_manager.dart';
 import 'package:bruig/models/menus.dart';
 import 'package:bruig/components/copyable.dart';
-import 'package:flutter_foreground_service/flutter_foreground_service.dart';
 
 typedef ChangePageCB = void Function(String);
 typedef NotficationsCB = void Function(bool?, bool?);
@@ -66,9 +65,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (foregroundSvc != null) {
       StorageManager.saveData(StorageManager.ntfnFgSvcKey, foregroundSvc);
       if (foregroundSvc) {
-        ForegroundService().start();
+        Golib.startForegroundSvc();
       } else {
-        ForegroundService().stop();
+        Golib.stopForegroundSvc();
       }
     }
     setState(() {

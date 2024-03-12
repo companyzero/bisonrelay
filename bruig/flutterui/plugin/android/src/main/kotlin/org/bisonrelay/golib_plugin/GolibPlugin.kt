@@ -9,7 +9,10 @@ import androidx.core.app.Person
 import android.content.Context
 import android.app.NotificationChannel
 import android.content.Intent
+import android.content.ComponentName
 import android.app.PendingIntent
+import android.app.Service
+import android.os.IBinder
 
 import golib.Golib
 
@@ -45,8 +48,11 @@ class GolibPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, ServiceAware
 
   private val loopsIds = mutableListOf<Int>()
 
+  private var fgSvcEnabled: Boolean = false;
+
   companion object {
     private const val CHANNEL_NEW_MESSAGES = "new_messages"
+    private const val CHANNEL_FGSVC = "fg_svc"
   }
 
   fun logProcessState() {
@@ -79,6 +85,16 @@ class GolibPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, ServiceAware
               )
           )
       }
+      if (notificationManager.getNotificationChannel(CHANNEL_FGSVC) == null) {
+        notificationManager.createNotificationChannel(
+            NotificationChannel(
+                CHANNEL_FGSVC,
+                "Foreground Svc",
+                // The importance must be IMPORTANCE_HIGH to show Bubbles.
+                NotificationManager.IMPORTANCE_DEFAULT,
+            )
+        )
+    }
       return notificationManager;
   }
 
@@ -154,6 +170,11 @@ class GolibPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, ServiceAware
       val handle: Int = call.argument("handle") ?: 0
       val payload: String? = call.argument("payload")
       Golib.asyncCallStr(typ, id, handle, payload)
+    } else if (call.method == "startFgSvc") {
+      fgSvcEnabled = true;
+    } else if (call.method == "stopFgSvc") {
+      fgSvcEnabled = false;
+      context.stopService(Intent(context, FgSvc::class.java))
     } else {
       result.notImplemented()
     }
@@ -254,6 +275,11 @@ class GolibPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, ServiceAware
       }
     }, true)
     loopsIds.add(id);
+
+    // Run the foreground service.
+    if (fgSvcEnabled) {
+      context.startService(Intent(context, FgSvc::class.java))
+    }
   }
 
 
@@ -266,9 +292,15 @@ class GolibPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, ServiceAware
               if (event == Lifecycle.Event.ON_STOP) {
                 // App went into background.
                 Golib.asyncCallStr(0x84, 0, 0, null) // 0x84 == CTEnableBackgroundNtfs
+                if (fgSvcEnabled) {
+                  context.startService(Intent(context, FgSvc::class.java))
+                }
               } else if (event == Lifecycle.Event.ON_START) {
                 // App came back from background.
                 Golib.asyncCallStr(0x85, 0, 0, null) // 0x84 == CTDisableBackgroundNtfs
+                if (fgSvcEnabled) {
+                  context.stopService(Intent(context, FgSvc::class.java))
+                }
               }
             });
   }
@@ -291,5 +323,57 @@ class GolibPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, ServiceAware
 
   override fun onDetachedFromService() {
     Golib.logInfo(0x12131400, "NativePlugin: onDetachedFromService")
+  }
+
+  class FgSvc : Service() {
+    override fun onBind(intent: Intent?): IBinder? {
+      Golib.logInfo(0x12131400, "NativePlugin: FgSvc.onBind")
+      return null
+    }
+
+    override fun onCreate() {
+      Golib.logInfo(0x12131400, "NativePlugin: FgSvc.onCreate")
+      showNtfn()
+    }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+      super.onStartCommand(intent, flags, startId)
+      showNtfn()
+      return START_STICKY
+    }
+
+    override fun onLowMemory() {
+      Golib.logInfo(0x12131400, "NativePlugin: FgSvc.onLowMemory")
+    }
+
+    override fun onTrimMemory(level: Int) {
+      Golib.logInfo(0x12131400, "NativePlugin: FgSvc.onTrimMemory level $level")
+    }
+
+    override fun onDestroy() {
+      Golib.logInfo(0x12131400, "NativePlugin: FgSvc.onDestroy")
+      super.onDestroy()
+    }
+
+    private fun showNtfn() {
+      Golib.logInfo(0x12131400, "NativePlugin: FgSvc.showNtfn")
+      val targetComp = ComponentName("org.bisonrelay.bruig", ".MainActivity")
+      var actionIntent = Intent(/* "org.bisonrelay.bruig.NTFN" */"android.intent.action.MAIN")
+        .setComponent(targetComp)
+        .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+      val pendingIntent = PendingIntent.getActivity(getApplication(), 0, actionIntent, Intent.FLAG_ACTIVITY_NEW_TASK)
+      val notification = NotificationCompat.Builder(getApplication(), CHANNEL_FGSVC)
+        .setContentTitle("Bison Relay")
+        .setContentText("BR background service is waiting for messages")
+        .setContentIntent(pendingIntent)
+        .setPriority(NotificationCompat.PRIORITY_MIN)
+        .setWhen(0)
+        .setSmallIcon(0x01080067)
+        .setSilent(true)
+        .build()
+
+      var foreground_id = 123482823
+      startForeground(foreground_id, notification)
+    }
   }
 }
