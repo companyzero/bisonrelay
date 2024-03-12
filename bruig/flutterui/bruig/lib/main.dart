@@ -47,6 +47,7 @@ import 'package:provider/provider.dart';
 import 'package:window_manager/window_manager.dart';
 import './screens/app_start.dart';
 import 'package:optimize_battery/optimize_battery.dart';
+import 'package:flutter_foreground_service/flutter_foreground_service.dart';
 
 final Random random = Random();
 
@@ -68,6 +69,10 @@ void main(List<String> args) async {
 
   // Get user to stop optimizing battery usage on Android.
   if (Platform.isAndroid) OptimizeBattery.stopOptimizingBatteryUsage();
+  bool fgService = Platform.isAndroid &&
+      (await StorageManager.readData(StorageManager.ntfnFgSvcKey) as bool? ??
+          false);
+  if (fgService) ForegroundService().start();
 
   // The MockGolib was mostly useful during early stages of development.
   //UseMockGolib();
