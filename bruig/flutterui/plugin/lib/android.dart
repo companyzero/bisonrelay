@@ -9,4 +9,12 @@ class AndroidPlugin extends PluginPlatform
   AndroidPlugin() {
     readAsyncResults();
   }
+
+  @override
+  Future<void> startForegroundSvc() async =>
+      await channel.invokeMethod('startFgSvc');
+
+  @override
+  Future<void> stopForegroundSvc() async =>
+      await channel.invokeMethod('stopFgSvc');
 }

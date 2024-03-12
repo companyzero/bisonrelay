@@ -528,6 +528,8 @@ func LogInfo(id int32, s string) {
 	cmtx.Lock()
 	if cs != nil && cs[uint32(id)] != nil {
 		cs[uint32(id)].log.Info(s)
+	} else {
+		fmt.Println(s)
 	}
 	cmtx.Unlock()
 

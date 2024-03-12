@@ -4,6 +4,7 @@
    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"/>
    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+   <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
    <application
         android:label="bisonrelay"
         android:icon="@mipmap/app_icon">
@@ -50,5 +51,11 @@
             android:name="flutterEmbedding"
             android:value="2" />
         <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ActionBroadcastReceiver" />
+
+
+        <service
+            android:enabled="true"
+            android:name="org.bisonrelay.golib_plugin.GolibPlugin$FgSvc"
+            android:exported="false"/>
     </application>
 </manifest>
