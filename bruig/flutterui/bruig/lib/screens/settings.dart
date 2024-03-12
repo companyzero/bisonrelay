@@ -63,6 +63,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void updateNotificationSettings(bool? value, bool? foregroundSvc) {
     if (value != null) {
       StorageManager.saveData(StorageManager.notificationsKey, value);
+      if (Platform.isAndroid) {
+        Golib.setNtfnsEnabled(value);
+      }
     }
     if (foregroundSvc != null) {
       StorageManager.saveData(StorageManager.ntfnFgSvcKey, foregroundSvc);
@@ -786,7 +789,9 @@ class NotificationsSettingsScreen extends StatelessWidget {
                     // boolean variable value
                     value: notificationsEnabled,
                     // changes the state of the switch
-                    onChanged: (value) => notficationsCB(value, null),
+                    onChanged: (value) =>
+                        // When disabling notifications, also disable foreground service.
+                        notficationsCB(value, !value ? false : null),
                   )),
               Platform.isAndroid
                   ? ListTile(

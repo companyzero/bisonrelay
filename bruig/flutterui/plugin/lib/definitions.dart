@@ -2394,6 +2394,7 @@ abstract class PluginPlatform {
   // These are only implemented in android.
   Future<void> startForegroundSvc() => throw "unimplemented";
   Future<void> stopForegroundSvc() => throw "unimplemented";
+  Future<void> setNtfnsEnabled(bool enabled) => throw "unimplemented";
 
   Future<dynamic> asyncCall(int cmd, dynamic payload) async =>
       throw "unimplemented";
