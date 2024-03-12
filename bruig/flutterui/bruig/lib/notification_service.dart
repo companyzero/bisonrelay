@@ -3,7 +3,7 @@ import 'dart:io';
 
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:golib_plugin/definitions.dart';
-import 'package:permission_handler/permission_handler.dart';
+// import 'package:permission_handler/permission_handler.dart';
 import 'package:bruig/storage_manager.dart';
 
 int id = 0;
@@ -113,6 +113,8 @@ class NotificationService {
   }
 
   Future<bool> allowNotifications() async {
+    // Android notifications are done through the native plugin.
+    if (Platform.isAndroid) return false;
     if (!_notificationsGranted) return false;
     bool notificationsEnabled = false;
     await StorageManager.readData('notifications').then((value) {
@@ -124,8 +126,10 @@ class NotificationService {
   }
 
   Future<void> init() async {
+    /*
     const AndroidInitializationSettings initializationSettingsAndroid =
         AndroidInitializationSettings('app_icon');
+    */
 
     final List<DarwinNotificationCategory> darwinNotificationCategories =
         <DarwinNotificationCategory>[
@@ -199,7 +203,7 @@ class NotificationService {
     );
     final InitializationSettings initializationSettings =
         InitializationSettings(
-      android: initializationSettingsAndroid,
+      // android: initializationSettingsAndroid,
       iOS: initializationSettingsDarwin,
       macOS: initializationSettingsDarwin,
       linux: initializationSettingsLinux,
@@ -222,9 +226,11 @@ class NotificationService {
       onDidReceiveBackgroundNotificationResponse:
           (Platform.isAndroid) ? null : notificationTapBackground,
     );
+    /*
     if (Platform.isAndroid) {
       await _notificationService.isAndroidPermissionGranted();
     }
+    */
     _notificationService.requestPermissions();
   }
 
@@ -276,6 +282,7 @@ class NotificationService {
     });
   }
 
+  /*
   Future<bool> isAndroidPermissionGranted() async {
     if (Platform.isAndroid) {
       bool granted = await flutterLocalNotificationsPlugin
@@ -291,6 +298,7 @@ class NotificationService {
     }
     return true;
   }
+  */
 
   Future<void> requestPermissions() async {
     if (Platform.isIOS || Platform.isMacOS) {
@@ -310,7 +318,7 @@ class NotificationService {
             badge: true,
             sound: true,
           );
-    } else if (Platform.isAndroid) {
+    } /* else if (Platform.isAndroid) {
       final AndroidFlutterLocalNotificationsPlugin? androidImplementation =
           flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
               AndroidFlutterLocalNotificationsPlugin>();
@@ -319,7 +327,7 @@ class NotificationService {
           await androidImplementation?.requestNotificationsPermission();
 
       _notificationsGranted = grantedNotificationPermission ?? false;
-    }
+    } */
   }
 
   // showChatNotification displays basic GC and PM notifications
@@ -327,6 +335,7 @@ class NotificationService {
       String message, String sender, bool isGC, String gcName) async {
     // If notifications aren't enabled, just skip
     if (!await allowNotifications()) return;
+    /*
     const AndroidNotificationDetails androidNotificationDetails =
         AndroidNotificationDetails(
             'BR Chat Notifications', 'Chat Notifications',
@@ -335,11 +344,13 @@ class NotificationService {
             importance: Importance.max,
             priority: Priority.high,
             ticker: 'ticker');
+    */
     const LinuxNotificationDetails linuxNotificationDetails =
         LinuxNotificationDetails(
             actions: []); //LinuxNotificationAction(key: "key", label: "label")]);
     const NotificationDetails notificationDetails = NotificationDetails(
-        android: androidNotificationDetails, linux: linuxNotificationDetails);
+        /*android: androidNotificationDetails,*/ linux:
+            linuxNotificationDetails);
     var ntfnTitle = sender;
     if (isGC) {
       ntfnTitle = "$sender ($gcName)";
@@ -362,14 +373,16 @@ class NotificationService {
   Future<void> showPostNotification(PostSummary post) async {
     // If notifications aren't enabled, just skip
     if (!await allowNotifications()) return;
+    /*
     const AndroidNotificationDetails androidNotificationDetails =
         AndroidNotificationDetails('BR Post Notifcations', 'Post Notifications',
             channelDescription: 'Alerts for newly received posts in Feed',
             importance: Importance.max,
             priority: Priority.high,
             ticker: 'ticker');
+    */
     const NotificationDetails notificationDetails =
-        NotificationDetails(android: androidNotificationDetails);
+        NotificationDetails(/*android: androidNotificationDetails*/);
     var ntfnTitle = "New Post by ${post.authorNick}";
     await _notificationService.flutterLocalNotificationsPlugin.show(
         id++, ntfnTitle, post.title, notificationDetails,
@@ -382,6 +395,7 @@ class NotificationService {
       PostSummary post, String sender, String comment) async {
     // If notifications aren't enabled, just skip
     if (!await allowNotifications()) return;
+    /*
     const AndroidNotificationDetails androidNotificationDetails =
         AndroidNotificationDetails(
             'BR Comment Notifications', 'Comment Notifications',
@@ -389,8 +403,9 @@ class NotificationService {
             importance: Importance.max,
             priority: Priority.high,
             ticker: 'ticker');
+    */
     const NotificationDetails notificationDetails =
-        NotificationDetails(android: androidNotificationDetails);
+        NotificationDetails(/*android: androidNotificationDetails*/);
     var ntfnTitle =
         "New Comment from $sender on '${post.title.substring(0, post.title.length < 20 ? post.title.length - 1 : 20)}...'";
     await _notificationService.flutterLocalNotificationsPlugin.show(
