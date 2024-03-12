@@ -6,6 +6,7 @@ import 'package:bruig/components/recent_log.dart';
 import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/config.dart';
 import 'package:bruig/models/log.dart';
+import 'package:bruig/storage_manager.dart';
 import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
@@ -285,9 +286,13 @@ class _LogSettingsScreenState extends State<LogSettingsScreen> {
   String appLogLevel = "info";
   String lnLogLevel = "info";
   bool logPings = false;
+  bool enableGoProfiler = false;
 
   void readConfig() async {
     var cfg = await loadConfig(mainConfigFilename);
+    var goProfilerEnabled =
+        await StorageManager.readData(StorageManager.goProfilerEnabledKey) ??
+            false;
     setState(() {
       if (logLevels.contains(cfg.debugLevel)) {
         appLogLevel = cfg.debugLevel;
@@ -296,6 +301,7 @@ class _LogSettingsScreenState extends State<LogSettingsScreen> {
         lnLogLevel = cfg.lnDebugLevel;
       }
       logPings = cfg.logPings;
+      enableGoProfiler = goProfilerEnabled;
     });
   }
 
@@ -313,6 +319,8 @@ class _LogSettingsScreenState extends State<LogSettingsScreen> {
           debugLevel: appLogLevel,
           lnDebugLevel: lnLogLevel,
           logPings: logPings);
+      await StorageManager.saveData(
+          StorageManager.goProfilerEnabledKey, enableGoProfiler);
 
       if (mounted) {
         confirmationDialog(
@@ -419,6 +427,20 @@ class _LogSettingsScreenState extends State<LogSettingsScreen> {
                       ),
                       // const SizedBox(width: 20),
                       Text("Log Pings", style: TextStyle(color: textColor)),
+                    ]),
+                  ),
+                  InkWell(
+                    onTap: () =>
+                        setState(() => enableGoProfiler = !enableGoProfiler),
+                    child: Row(children: [
+                      Checkbox(
+                        value: enableGoProfiler,
+                        onChanged: (bool? value) =>
+                            setState(() => enableGoProfiler = value ?? false),
+                      ),
+                      // const SizedBox(width: 20),
+                      Text("Enable Go Profiler",
+                          style: TextStyle(color: textColor)),
                     ]),
                   ),
                   const Expanded(child: Empty()),

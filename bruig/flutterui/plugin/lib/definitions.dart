@@ -3133,6 +3133,7 @@ const int CTRunState = 0x83;
 const int CTEnableBackgroundNtfs = 0x84;
 const int CTDisableBackgroundNtfs = 0x85;
 const int CTZipLogs = 0x86;
+const int CTEnableProfiler = 0x87;
 
 const int notificationsStartID = 0x1000;
 

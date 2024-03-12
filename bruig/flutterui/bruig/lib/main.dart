@@ -17,6 +17,7 @@ import 'package:bruig/screens/generate_invite.dart';
 import 'package:bruig/screens/log.dart';
 import 'package:bruig/screens/onboarding.dart';
 import 'package:bruig/screens/server_unwelcome_error.dart';
+import 'package:bruig/storage_manager.dart';
 import 'package:bruig/theme_manager.dart';
 import 'package:bruig/config.dart';
 import 'package:bruig/models/downloads.dart';
@@ -38,6 +39,7 @@ import 'package:bruig/screens/shutdown.dart';
 import 'package:bruig/screens/unlock_ln.dart';
 import 'package:bruig/screens/verify_invite.dart';
 import 'package:bruig/screens/verify_server.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
@@ -57,6 +59,11 @@ void main(List<String> args) async {
   Golib.platformVersion
       .then((value) => developer.log("Platform Version: $value"));
   Golib.captureDcrlndLog();
+  bool goProfilerEnabled =
+      await StorageManager.readData(StorageManager.goProfilerEnabledKey)
+              as bool? ??
+          false;
+  if (goProfilerEnabled) Golib.asyncCall(CTEnableProfiler, "");
   // DartVLC.initialize();
 
   // Get user to stop optimizing battery usage on Android.
