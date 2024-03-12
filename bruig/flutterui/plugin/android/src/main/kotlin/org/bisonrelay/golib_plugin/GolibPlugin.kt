@@ -51,6 +51,7 @@ class GolibPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, ServiceAware
   private val loopsIds = mutableListOf<Int>()
 
   private var fgSvcEnabled: Boolean = false;
+  private var ntfnsEnabled : Boolean = false;
 
   companion object {
     private const val CHANNEL_NEW_MESSAGES = "new_messages"
@@ -187,6 +188,10 @@ class GolibPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, ServiceAware
     } else if (call.method == "stopFgSvc") {
       fgSvcEnabled = false;
       context.stopService(Intent(context, FgSvc::class.java))
+    } else if (call.method == "setNtfnsEnabled") {
+      val enabled: Boolean = call.argument("enabled") ?: false
+      Golib.logInfo(0x12131400, "NativePlugin: toggling notifications to $enabled")
+      ntfnsEnabled = false;
     } else {
       result.notImplemented()
     }

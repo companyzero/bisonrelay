@@ -17,4 +17,8 @@ class AndroidPlugin extends PluginPlatform
   @override
   Future<void> stopForegroundSvc() async =>
       await channel.invokeMethod('stopFgSvc');
+
+  @override
+  Future<void> setNtfnsEnabled(bool enabled) async => await channel
+      .invokeMethod('setNtfnsEnabled', <String, dynamic>{"enabled": enabled});
 }
