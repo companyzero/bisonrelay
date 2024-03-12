@@ -30,6 +30,7 @@ class _UserProfileState extends State<UserProfile> {
   bool isIgnored = false;
   bool loading = false;
   bool firstLoading = true;
+  ScrollController gridScrollCtrl = ScrollController();
 
   void readProfile() async {
     try {
@@ -181,76 +182,80 @@ class _UserProfileState extends State<UserProfile> {
                           fontWeight: FontWeight.bold)),
                 ],
               ),
-              Text(chat.id,
-                  style:
-                      TextStyle(color: textColor, fontWeight: FontWeight.w100)),
+              Copyable(chat.id,
+                  TextStyle(color: textColor, fontWeight: FontWeight.w100)),
               const SizedBox(height: 20),
-              isIgnored
-                  ? ElevatedButton(
-                      onPressed: !loading ? unignore : null,
-                      child: const Text("Un-ignore user"))
-                  : ElevatedButton(
-                      onPressed: !loading ? ignore : null,
-                      child: const Text("Ignore user")),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: !loading ? hide : null,
-                child: const Text("Hide Chat"),
-              ),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: !loading ? confirmBlock : null,
-                style: ElevatedButton.styleFrom(backgroundColor: errorColor),
-                child: const Text("Block User"),
-              ),
+              Wrap(spacing: 10, runSpacing: 10, children: [
+                isIgnored
+                    ? ElevatedButton(
+                        onPressed: !loading ? unignore : null,
+                        child: const Text("Un-ignore user"))
+                    : ElevatedButton(
+                        onPressed: !loading ? ignore : null,
+                        child: const Text("Ignore user")),
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: !loading ? hide : null,
+                  child: const Text("Hide Chat"),
+                ),
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: !loading ? confirmBlock : null,
+                  style: ElevatedButton.styleFrom(backgroundColor: errorColor),
+                  child: const Text("Block User"),
+                ),
+              ]),
               const SizedBox(height: 20),
               Text("Ratchet Debug Info",
                   style: TextStyle(
                       color: textColor,
                       fontSize: theme.getMediumFont(context))),
               const SizedBox(height: 10),
-              SimpleInfoGrid([
-                Tuple2(Text("First Created", style: headTS),
-                    Text(abEntry.firstCreated.toIso8601String(), style: txtTS)),
-                Tuple2(
-                    Text("Last Handshake Attempt", style: headTS),
-                    Text(abEntry.lastHandshakeAttempt.toIso8601String(),
-                        style: txtTS)),
-                Tuple2(
-                    Text("Last Sent Time", style: headTS),
-                    Text(ratchetInfo.lastEncTime.toIso8601String(),
-                        style: txtTS)),
-                Tuple2(
-                    Text("Last Received Time", style: headTS),
-                    Text(ratchetInfo.lastDecTime.toIso8601String(),
-                        style: txtTS)),
-                Tuple2(
-                    Text("Send RV", style: headTS),
-                    Copyable(
-                        "${ratchetInfo.sendRVPlain} (${_shortLog(ratchetInfo.sendRV)}...)",
-                        txtTS)),
-                Tuple2(
-                    Text("Receive RV", style: headTS),
-                    Copyable(
-                        "${ratchetInfo.recvRVPlain} (${_shortLog(ratchetInfo.recvRV)}...)",
-                        txtTS)),
-                Tuple2(
-                    Text("Drain RV", style: headTS),
-                    Copyable(
-                        "${ratchetInfo.drainRVPlain} (${_shortLog(ratchetInfo.drainRV)}...)",
-                        txtTS)),
-                Tuple2(Text("My Reset RV", style: headTS),
-                    Copyable(ratchetInfo.myResetRV, txtTS)),
-                Tuple2(Text("Their Reset RV", style: headTS),
-                    Copyable(ratchetInfo.theirResetRV, txtTS)),
-                Tuple2(Text("Saved Keys", style: headTS),
-                    Text(ratchetInfo.nbSavedKeys.toString(), style: txtTS)),
-                Tuple2(Text("Will Ratchet", style: headTS),
-                    Text(ratchetInfo.willRatchet.toString(), style: txtTS)),
-              ]),
-              const Expanded(
-                child: Text(""),
-              ),
+              Expanded(
+                  child: SimpleInfoGrid(
+                [
+                  Tuple2(
+                      Text("First Created", style: headTS),
+                      Text(abEntry.firstCreated.toIso8601String(),
+                          style: txtTS)),
+                  Tuple2(
+                      Text("Last Handshake Attempt", style: headTS),
+                      Text(abEntry.lastHandshakeAttempt.toIso8601String(),
+                          style: txtTS)),
+                  Tuple2(
+                      Text("Last Sent Time", style: headTS),
+                      Text(ratchetInfo.lastEncTime.toIso8601String(),
+                          style: txtTS)),
+                  Tuple2(
+                      Text("Last Received Time", style: headTS),
+                      Text(ratchetInfo.lastDecTime.toIso8601String(),
+                          style: txtTS)),
+                  Tuple2(
+                      Text("Send RV", style: headTS),
+                      Copyable(
+                          "${ratchetInfo.sendRVPlain} (${_shortLog(ratchetInfo.sendRV)}...)",
+                          txtTS)),
+                  Tuple2(
+                      Text("Receive RV", style: headTS),
+                      Copyable(
+                          "${ratchetInfo.recvRVPlain} (${_shortLog(ratchetInfo.recvRV)}...)",
+                          txtTS)),
+                  Tuple2(
+                      Text("Drain RV", style: headTS),
+                      Copyable(
+                          "${ratchetInfo.drainRVPlain} (${_shortLog(ratchetInfo.drainRV)}...)",
+                          txtTS)),
+                  Tuple2(Text("My Reset RV", style: headTS),
+                      Copyable(ratchetInfo.myResetRV, txtTS)),
+                  Tuple2(Text("Their Reset RV", style: headTS),
+                      Copyable(ratchetInfo.theirResetRV, txtTS)),
+                  Tuple2(Text("Saved Keys", style: headTS),
+                      Text(ratchetInfo.nbSavedKeys.toString(), style: txtTS)),
+                  Tuple2(Text("Will Ratchet", style: headTS),
+                      Text(ratchetInfo.willRatchet.toString(), style: txtTS)),
+                ],
+                controller: gridScrollCtrl,
+              )),
               isScreenSmall
                   ? const Empty()
                   : ElevatedButton(
