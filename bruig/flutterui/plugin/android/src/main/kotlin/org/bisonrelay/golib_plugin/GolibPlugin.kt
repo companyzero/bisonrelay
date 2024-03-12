@@ -13,6 +13,8 @@ import android.content.ComponentName
 import android.app.PendingIntent
 import android.app.Service
 import android.os.IBinder
+import android.graphics.drawable.Icon
+import androidx.core.graphics.drawable.IconCompat
 
 import golib.Golib
 
@@ -100,12 +102,22 @@ class GolibPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, ServiceAware
 
   fun showNotification(notificationManager: NotificationManager, nick: String, msg: String, ts: Long) {
     // Intent to open app when clicking the notification.
-    val resultIntent = Intent("org.bisonrelay.bruig.NTFN")// Intent(context, "MainActivity")
-    val pendingIntent = PendingIntent.getActivity(context, 0, resultIntent, PendingIntent.FLAG_UPDATE_CURRENT)
+    val targetComp = ComponentName("org.bisonrelay.bruig", ".MainActivity")
+    var actionIntent = Intent(/* "org.bisonrelay.bruig.NTFN" */"android.intent.action.MAIN")
+      .setComponent(targetComp)
+      .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED or Intent.FLAG_FROM_BACKGROUND)
+    val pendingIntent = PendingIntent.getActivity(context, 0, actionIntent, PendingIntent.FLAG_UPDATE_CURRENT)
+
+    val iconID = context.resources.getIdentifier(
+              "ic_launcher",
+              "mipmap",
+              context.packageName
+    ) // 0x01080077
+    val icon = Icon.createWithResource(context, iconID)
+    val iconCompat = IconCompat.createFromIcon(icon)
 
     // Sender styling.
-    val user = Person.Builder().setName(nick).build()
-    // var icon = Icon(Icons.Rounded.Menu, contentDescription = "Localized description");
+    val user = Person.Builder().setName(nick).setIcon(iconCompat).build()
     val person: Person? = null
 
     // Create message.
@@ -114,7 +126,7 @@ class GolibPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, ServiceAware
     messagingStyle.addMessage(m)
     val builder = NotificationCompat.Builder(context, CHANNEL_NEW_MESSAGES)
       .setStyle(messagingStyle)
-      .setSmallIcon(/*R.drawable.stat_notify_chat*/ 0x01080077)
+      .setSmallIcon(iconID)
       .setWhen(ts*1000)
       .setContentIntent(pendingIntent)
 
@@ -189,7 +201,7 @@ class GolibPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, ServiceAware
       override fun onListen(listener: Any?, newSink: EventChannel.EventSink?) {
         // TODO: support multiple readers?
         sink = newSink;
-      }    
+      }
 
       override fun onCancel(listener: Any?) {
         sink = null;
@@ -251,7 +263,7 @@ class GolibPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, ServiceAware
     }, false)
     loopsIds.add(id);
   }
-  
+
   override fun onDetachedFromEngine(@NonNull binding: FlutterPlugin.FlutterPluginBinding) {
     Golib.logInfo(0x12131400, "NativePlugin: detached from engine")
     logProcessState()
@@ -358,17 +370,26 @@ class GolibPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, ServiceAware
     private fun showNtfn() {
       Golib.logInfo(0x12131400, "NativePlugin: FgSvc.showNtfn")
       val targetComp = ComponentName("org.bisonrelay.bruig", ".MainActivity")
-      var actionIntent = Intent(/* "org.bisonrelay.bruig.NTFN" */"android.intent.action.MAIN")
+      //var actionIntent = Intent("org.bisonrelay.bruig.NTFN")
+      var actionIntent = Intent("android.intent.action.MAIN")
+        .addCategory("android.intent.category.LAUNCHER")
         .setComponent(targetComp)
-        .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        .setFlags(/*Intent.FLAG_ACTIVITY_NEW_TASK*/ 0x30000000)
       val pendingIntent = PendingIntent.getActivity(getApplication(), 0, actionIntent, Intent.FLAG_ACTIVITY_NEW_TASK)
+
+      val iconID = getApplication().resources.getIdentifier(
+              "ic_launcher",
+              "mipmap",
+              getApplication().packageName
+      ) // 0x01080067
+
       val notification = NotificationCompat.Builder(getApplication(), CHANNEL_FGSVC)
         .setContentTitle("Bison Relay")
         .setContentText("BR background service is waiting for messages")
         .setContentIntent(pendingIntent)
         .setPriority(NotificationCompat.PRIORITY_MIN)
         .setWhen(0)
-        .setSmallIcon(0x01080067)
+        .setSmallIcon(iconID)
         .setSilent(true)
         .build()
 
