@@ -61,7 +61,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void updateNotificationSettings(bool? value, bool? foregroundSvc) {
-    if (value != null) StorageManager.saveData('notifications', value);
+    if (value != null) {
+      StorageManager.saveData(StorageManager.notificationsKey, value);
+    }
     if (foregroundSvc != null) {
       StorageManager.saveData(StorageManager.ntfnFgSvcKey, foregroundSvc);
       if (foregroundSvc) {
@@ -134,7 +136,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     super.initState();
     clientUpdated();
     client.addListener(clientUpdated);
-    StorageManager.readData('notifications').then((value) {
+    StorageManager.readData(StorageManager.notificationsKey).then((value) {
       if (value != null) {
         setState(() {
           notificationsEnabled = value;
