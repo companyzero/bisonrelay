@@ -392,6 +392,7 @@ func RunDcrlnd(ctx context.Context, cfg Config) (*Dcrlnd, error) {
 	conf.BackupFilePath = filepath.Join(rootDir, "channels.backup")
 	conf.Decred.Node = "dcrw"
 	conf.DB.Bolt.NoFreelistSync = !cfg.SyncFreeList
+	conf.DB.Bolt.AutoCompact = true
 	conf.DebugLevel = cfg.DebugLevel
 	conf.ProtocolOptions = &lncfg.ProtocolOptions{}
 	conf.WtClient = &lncfg.WtClient{}
