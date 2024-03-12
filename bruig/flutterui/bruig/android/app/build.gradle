@@ -34,9 +34,9 @@ android {
     }
 
     defaultConfig {
-        multiDexEnabled true       
+        multiDexEnabled true
         applicationId "org.bisonrelay.bruig"
-        minSdkVersion flutter.minSdkVersion
+        minSdkVersion 23
         targetSdkVersion 33
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
@@ -68,6 +68,7 @@ dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
     implementation 'androidx.window:window:1.0.0'
     implementation 'androidx.window:window-java:1.0.0'
+    implementation 'com.android.support:multidex:1.0.3'
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:1.2.2'
     
     api project(":golib")

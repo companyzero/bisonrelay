@@ -18,9 +18,10 @@ import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/storage_manager.dart';
 import 'package:bruig/models/menus.dart';
 import 'package:bruig/components/copyable.dart';
+import 'package:flutter_foreground_service/flutter_foreground_service.dart';
 
 typedef ChangePageCB = void Function(String);
-typedef NotficationsCB = void Function(bool);
+typedef NotficationsCB = void Function(bool?, bool?);
 typedef ResetKXCB = void Function(BuildContext);
 
 class SettingsScreenTitle extends StatelessWidget {
@@ -51,6 +52,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   ServerSessionState connState = ServerSessionState.empty();
   bool loading = false;
   bool notificationsEnabled = false;
+  bool foregroundService = false;
   String settingsPage = "main";
 
   void clientUpdated() async {
@@ -59,10 +61,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
     });
   }
 
-  void updateNotificationSettings(bool value) {
-    StorageManager.saveData('notifications', value);
+  void updateNotificationSettings(bool? value, bool? foregroundSvc) {
+    if (value != null) StorageManager.saveData('notifications', value);
+    if (foregroundSvc != null) {
+      StorageManager.saveData(StorageManager.ntfnFgSvcKey, foregroundSvc);
+      if (foregroundSvc) {
+        ForegroundService().start();
+      } else {
+        ForegroundService().stop();
+      }
+    }
     setState(() {
-      notificationsEnabled = value;
+      notificationsEnabled = value ?? notificationsEnabled;
+      foregroundService = foregroundSvc ?? foregroundService;
     });
   }
 
@@ -131,6 +142,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
         });
       }
     });
+    StorageManager.readData(StorageManager.ntfnFgSvcKey).then((value) {
+      if (value != null) {
+        setState(() {
+          foregroundService = value;
+        });
+      }
+    });
   }
 
   @override
@@ -178,7 +196,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
         break;
       case "Notifications":
         settingsView = NotificationsSettingsScreen(
-            client, updateNotificationSettings, notificationsEnabled);
+            client,
+            updateNotificationSettings,
+            notificationsEnabled,
+            foregroundService);
         break;
       case "About":
         settingsView = const AboutScreen(settings: true);
@@ -243,7 +264,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 value: notificationsEnabled,
                 // changes the state of the switch
                 onChanged: (value) =>
-                    setState(() => updateNotificationSettings(value))),
+                    setState(() => updateNotificationSettings(value, null))),
           ]),
           const SizedBox(height: 20),
           ElevatedButton(
@@ -739,8 +760,9 @@ class NotificationsSettingsScreen extends StatelessWidget {
   final ClientModel client;
   final NotficationsCB notficationsCB;
   final bool notificationsEnabled;
-  const NotificationsSettingsScreen(
-      this.client, this.notficationsCB, this.notificationsEnabled,
+  final bool foregroundService;
+  const NotificationsSettingsScreen(this.client, this.notficationsCB,
+      this.notificationsEnabled, this.foregroundService,
       {Key? key})
       : super(key: key);
 
@@ -763,8 +785,27 @@ class NotificationsSettingsScreen extends StatelessWidget {
                     // boolean variable value
                     value: notificationsEnabled,
                     // changes the state of the switch
-                    onChanged: (value) => notficationsCB(value),
-                  ))
+                    onChanged: (value) => notficationsCB(value, null),
+                  )),
+              Platform.isAndroid
+                  ? ListTile(
+                      leading: Text("Use Foreground Service",
+                          style: TextStyle(
+                              fontSize: theme.getLargeFont(context),
+                              color: Theme.of(context).focusColor)),
+                      trailing: Switch(
+                        // thumb color (round icon)
+                        activeColor: Theme.of(context).focusColor,
+                        activeTrackColor: Theme.of(context).highlightColor,
+                        inactiveThumbColor: Theme.of(context).indicatorColor,
+                        inactiveTrackColor: Theme.of(context).dividerColor,
+                        //splashRadius: 20.0,
+                        // boolean variable value
+                        value: foregroundService,
+                        // changes the state of the switch
+                        onChanged: (value) => notficationsCB(null, value),
+                      ))
+                  : const Empty(),
             ]));
   }
 }

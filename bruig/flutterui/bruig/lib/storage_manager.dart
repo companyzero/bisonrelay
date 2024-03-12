@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 
 class StorageManager {
   static const String goProfilerEnabledKey = "goProfilerEnabled";
+  static const String ntfnFgSvcKey = "foregroundService";
 
   static Future<void> saveData(String key, dynamic value) async {
     final prefs = await SharedPreferences.getInstance();
