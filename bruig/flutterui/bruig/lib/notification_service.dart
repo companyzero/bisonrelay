@@ -117,7 +117,8 @@ class NotificationService {
     if (Platform.isAndroid) return false;
     if (!_notificationsGranted) return false;
     bool notificationsEnabled = false;
-    await StorageManager.readData('notifications').then((value) {
+    await StorageManager.readData(StorageManager.notificationsKey)
+        .then((value) {
       if (value != null) {
         notificationsEnabled = value;
       }

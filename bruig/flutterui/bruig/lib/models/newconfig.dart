@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:math';
 
 import 'package:bruig/config.dart';
+import 'package:bruig/storage_manager.dart';
 import 'package:bruig/wordlist.dart';
 import 'package:bruig/screens/unlock_ln.dart';
 import 'package:bruig/main.dart';
@@ -80,6 +81,16 @@ class NewConfigModel extends ChangeNotifier {
     await cfg.saveNewConfig(await configFileName(appArgs));
     cfg = await configFromArgs(appArgs); // Reload to fill defaults.
     cfg = Config.newWithRPCHost(cfg, rpcHost, tlsCertPath, macaroonPath);
+
+    // Flutter App settings.
+    var isMobile = Platform.isAndroid || Platform.isIOS;
+
+    // Set notifications as enabled by default on mobile because app goes to
+    // background and is hidden. Enable foreground service on android by default
+    // because it continues to work even after flutter is detached.
+    StorageManager.saveData(StorageManager.notificationsKey, isMobile);
+    StorageManager.saveData(StorageManager.ntfnFgSvcKey, Platform.isAndroid);
+
     return cfg;
   }
 
