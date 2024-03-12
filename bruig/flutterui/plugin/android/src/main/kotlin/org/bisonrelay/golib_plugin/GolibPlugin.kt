@@ -53,6 +53,8 @@ class GolibPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, ServiceAware
   private var fgSvcEnabled: Boolean = false;
   private var ntfnsEnabled : Boolean = false;
 
+  private var lastNtfnTS : Long = 0;
+
   companion object {
     private const val CHANNEL_NEW_MESSAGES = "new_messages"
     private const val CHANNEL_FGSVC = "fg_svc"
@@ -130,6 +132,16 @@ class GolibPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, ServiceAware
       .setSmallIcon(iconID)
       .setWhen(ts*1000)
       .setContentIntent(pendingIntent)
+
+    // Silence notifications when they are less than 30 seconds from the latest
+    // non-silenced one.
+    val now = System.currentTimeMillis()
+    val silent = now - lastNtfnTS < 30000
+    builder.setSilent(silent)
+    if (!silent) {
+      lastNtfnTS = now
+    }
+
 
     // Send notification.
     val contactID: Long = 1000
