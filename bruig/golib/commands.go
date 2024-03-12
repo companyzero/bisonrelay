@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"strings"
 	"sync"
@@ -140,6 +142,7 @@ const (
 	CTEnableBackgroundNtfs                = 0x84
 	CTDisableBackgroundNtfs               = 0x85
 	CTZipLogs                             = 0x86
+	CTEnableProfiler                      = 0x87
 
 	NTInviteReceived         = 0x1001
 	NTInviteAccepted         = 0x1002
@@ -279,6 +282,21 @@ func call(cmd *cmd) *CmdResult {
 			ClientRunning: isClientRunning(uint32(cmd.ClientHandle)),
 		}
 		err = nil
+
+	case CTEnableProfiler:
+		var args string
+		decode(&args)
+		if args == "" {
+			args = "0.0.0.0:8118"
+		}
+		fmt.Printf("Enabling profiler on %s\n", args)
+		go func() {
+			err := http.ListenAndServe(args, nil)
+			if err != nil {
+				fmt.Printf("Unable to listen on profiler %s: %v\n",
+					args, err)
+			}
+		}()
 
 	default:
 		// Calls that need a client. Figure out the client.
