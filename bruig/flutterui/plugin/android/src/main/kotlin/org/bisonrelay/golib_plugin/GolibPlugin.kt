@@ -109,7 +109,7 @@ class GolibPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, ServiceAware
     var actionIntent = Intent(/* "org.bisonrelay.bruig.NTFN" */"android.intent.action.MAIN")
       .setComponent(targetComp)
       .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED or Intent.FLAG_FROM_BACKGROUND)
-    val pendingIntent = PendingIntent.getActivity(context, 0, actionIntent, PendingIntent.FLAG_UPDATE_CURRENT)
+    val pendingIntent = PendingIntent.getActivity(context, 0, actionIntent, PendingIntent.FLAG_IMMUTABLE)
 
     val iconID = context.resources.getIdentifier(
               "ic_launcher",
@@ -392,7 +392,8 @@ class GolibPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, ServiceAware
         .addCategory("android.intent.category.LAUNCHER")
         .setComponent(targetComp)
         .setFlags(/*Intent.FLAG_ACTIVITY_NEW_TASK*/ 0x30000000)
-      val pendingIntent = PendingIntent.getActivity(getApplication(), 0, actionIntent, Intent.FLAG_ACTIVITY_NEW_TASK)
+      val pendingIntent = PendingIntent.getActivity(getApplication(), 0, actionIntent, 
+        PendingIntent.FLAG_IMMUTABLE)
 
       val iconID = getApplication().resources.getIdentifier(
               "ic_launcher",
