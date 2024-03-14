@@ -320,7 +320,7 @@ func (mws mainWindowState) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 		case msg.Type == tea.KeyCtrlDown:
-			if !mws.isPage {
+			if !mws.isPage && cw != nil {
 				if cw.changeSelected(1) {
 					mws.updateViewportContent()
 					mws.resetFormInput()
@@ -328,7 +328,7 @@ func (mws mainWindowState) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 		case msg.Type == tea.KeyCtrlUp:
-			if !mws.isPage {
+			if !mws.isPage && cw != nil {
 				if cw.changeSelected(-1) {
 					mws.updateViewportContent()
 					mws.resetFormInput()
