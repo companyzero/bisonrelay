@@ -152,6 +152,9 @@ type appState struct {
 	postStatus  []rpc.PostMetadataStatus
 	unreadPosts map[clientintf.PostID]struct{}
 
+	// If set, filter the feed window by author
+	feedAuthor *clientintf.UserID
+
 	contentMtx  sync.Mutex
 	remoteFiles map[clientintf.UserID]map[clientdb.FileID]clientdb.RemoteFile
 	progressMsg map[clientdb.FileID]*chatMsg
@@ -1969,10 +1972,25 @@ func (as *appState) loadPosts() {
 	}
 }
 
-func (as *appState) allPosts() ([]clientdb.PostSummary, map[clientintf.PostID]struct{}) {
+func (as *appState) getPosts(author *clientintf.UserID) ([]clientdb.PostSummary, map[clientintf.PostID]struct{}) {
+	var res []clientdb.PostSummary
+	var m map[clientintf.PostID]struct{}
+
 	as.postsMtx.Lock()
-	res := as.posts
-	m := maps.Clone(as.unreadPosts)
+	// get all posts
+	if author != nil {
+		for _, ps := range as.posts {
+			if !ps.AuthorID.IsEqual(author) {
+				continue
+			}
+			res = append(res, ps)
+		}
+		// TODO: filter unread
+	} else {
+		res = as.posts
+	}
+	m = maps.Clone(as.unreadPosts)
+
 	as.postsMtx.Unlock()
 	return res, m
 }

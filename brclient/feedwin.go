@@ -16,6 +16,7 @@ import (
 // properly start.
 type feedWindow struct {
 	as     *appState
+	author *clientintf.UserID
 	posts  []clientdb.PostSummary
 	unread map[clientintf.PostID]struct{}
 	idx    int
@@ -85,8 +86,8 @@ func (fw *feedWindow) renderPostSumm(post clientdb.PostSummary,
 	b.WriteString("\n\n")
 }
 
-func (fw *feedWindow) listPosts() {
-	fw.posts, fw.unread = fw.as.allPosts()
+func (fw *feedWindow) listPosts(author *clientintf.UserID) {
+	fw.posts, fw.unread = fw.as.getPosts(author)
 	_, summ, _, _ := fw.as.activePost()
 	if fw.idx == -1 {
 		idx := 0
@@ -182,7 +183,7 @@ func (fw feedWindow) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case feedUpdated, rpc.PostMetadataStatus:
-		fw.listPosts()
+		fw.listPosts(nil)
 		fw.renderPosts()
 
 	case currentTimeChanged:
@@ -217,11 +218,11 @@ func (fw feedWindow) View() string {
 	)
 }
 
-func newFeedWindow(as *appState, feedActiveIdx, yOffsetHint int) (feedWindow, tea.Cmd) {
+func newFeedWindow(as *appState, feedActiveIdx, yOffsetHint int, author *clientintf.UserID) (feedWindow, tea.Cmd) {
 	as.loadPosts()
 	as.markWindowSeen(activeCWFeed)
-	fw := feedWindow{as: as, idx: -1}
-	fw.listPosts()
+	fw := feedWindow{as: as, idx: -1, author: author}
+	fw.listPosts(author)
 	if feedActiveIdx > -1 && feedActiveIdx < len(fw.posts) {
 		fw.idx = feedActiveIdx
 		fw.viewport.YOffset = yOffsetHint

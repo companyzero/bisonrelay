@@ -757,7 +757,7 @@ func (pw postWindow) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			} else {
 				// Return to feed window
 				return newFeedWindow(pw.as, pw.feedActiveIdx,
-					pw.feedYOffsetHint)
+					pw.feedYOffsetHint, pw.as.feedAuthor)
 			}
 
 		case (pw.commenting || pw.relaying) && (msg.Type == tea.KeyUp || msg.Type == tea.KeyDown):

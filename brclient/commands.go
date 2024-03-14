@@ -3673,7 +3673,7 @@ var commands = []tuicmd{
 	}, {
 		cmd:           "win",
 		usableOffline: true,
-		usage:         "<number | 'log' | 'console' | 'feed'>",
+		usage:         "<number | 'log' | 'console' | 'feed [user]'>",
 		aliases:       []string{"w"},
 		descr:         "Change the current window",
 		handler: func(args []string, as *appState) error {
@@ -3687,6 +3687,16 @@ var commands = []tuicmd{
 			} else if args[0] == "0" || args[0] == "console" {
 				as.changeActiveWindow(activeCWDiag)
 			} else if args[0] == "feed" {
+				if len(args) > 1 {
+					ru, err := as.c.UserByNick(args[1])
+					if err != nil {
+						return err
+					}
+					authorID := ru.ID()
+					as.feedAuthor = &authorID
+				} else {
+					as.feedAuthor = nil
+				}
 				as.changeActiveWindow(activeCWFeed)
 			} else {
 				win, err := strconv.ParseInt(args[0], 10, 32)
@@ -3698,6 +3708,12 @@ var commands = []tuicmd{
 				// 1-based to preserve legacy UX.
 				win -= 1
 				as.changeActiveWindow(int(win))
+			}
+			return nil
+		},
+		completer: func(args []string, arg string, as *appState) []string {
+			if len(args) > 1 && args[0] == "feed" {
+				return nickCompleter(arg, as)
 			}
 			return nil
 		},

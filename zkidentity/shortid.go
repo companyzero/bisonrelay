@@ -21,6 +21,16 @@ func (u ShortID) String() string {
 	return hex.EncodeToString(u[:])
 }
 
+func (u *ShortID) IsEqual(target *ShortID) bool {
+	if u == nil && target == nil {
+		return true
+	}
+	if u == nil || target == nil {
+		return false
+	}
+	return *u == *target
+}
+
 // ShortLogID returns the first 8 bytes in hex format (16 chars), useful as a
 // short log ID.
 func (u ShortID) ShortLogID() string {
