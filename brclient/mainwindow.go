@@ -218,7 +218,7 @@ func (mws mainWindowState) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	// Switch to the feed window if it got activated.
 	if mws.as.isFeedWinActive() {
-		return newFeedWindow(mws.as, -1, -1)
+		return newFeedWindow(mws.as, -1, -1, mws.as.feedAuthor)
 	}
 
 	if mws.ew.active() {
@@ -596,7 +596,7 @@ func (mws mainWindowState) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case showFeedWindow:
 		mws.as.workingCmd = ""
-		return newFeedWindow(mws.as, -1, -1)
+		return newFeedWindow(mws.as, -1, -1, msg.author)
 
 	case msgLNRequestRecv:
 		mws.as.workingCmd = ""

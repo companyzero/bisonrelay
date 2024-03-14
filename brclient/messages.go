@@ -112,7 +112,9 @@ type currentTimeChanged struct{}
 type showNewPostWindow struct{}
 
 // showFeedWindow shows the feed window.
-type showFeedWindow struct{}
+type showFeedWindow struct {
+	author *clientintf.UserID
+}
 
 // feedUpdated when the feed of posts should be updated.
 type feedUpdated struct {
