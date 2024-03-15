@@ -2096,7 +2096,7 @@ func handleLNInitDcrlnd(ctx context.Context, args lnInitDcrlnd) (*lnNewWalletSee
 		DialFunc:          dialFunc,
 		SyncFreeList:      args.SyncFreeList,
 		AutoCompact:       args.AutoCompact,
-		AutoCompactMinAge: args.AutoCompactMinAge,
+		AutoCompactMinAge: time.Duration(args.AutoCompactMinAge) * time.Second,
 	}
 	lndc, err := runDcrlnd(ctx, lndCfg)
 	if err != nil {
@@ -2153,7 +2153,7 @@ func handleLNRunDcrlnd(ctx context.Context, args lnInitDcrlnd) (string, error) {
 			DialFunc:          dialFunc,
 			SyncFreeList:      args.SyncFreeList,
 			AutoCompact:       args.AutoCompact,
-			AutoCompactMinAge: args.AutoCompactMinAge,
+			AutoCompactMinAge: time.Duration(args.AutoCompactMinAge) * time.Second,
 		}
 		lndc, err = runDcrlnd(ctx, lndCfg)
 		if err != nil {
