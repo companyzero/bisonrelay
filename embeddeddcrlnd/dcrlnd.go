@@ -115,7 +115,9 @@ func (lndc *Dcrlnd) LogFullPath() string {
 func (lndc *Dcrlnd) TryUnlock(ctx context.Context, pass string) error {
 	lnUnlocker := lnrpc.NewWalletUnlockerClient(lndc.conn)
 
+retry:
 	for {
+		// Try unlock.
 		uwr := lnrpc.UnlockWalletRequest{
 			WalletPassword: []byte(pass),
 		}
@@ -127,8 +129,12 @@ func (lndc *Dcrlnd) TryUnlock(ctx context.Context, pass string) error {
 			return ctx.Err()
 		}
 		if err != nil && isRPCStartingErr(err) {
-			time.Sleep(time.Second)
-			continue
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-time.After(time.Second):
+				continue retry
+			}
 		}
 		if err != nil {
 			return err
@@ -526,6 +532,26 @@ func RunDcrlnd(ctx context.Context, cfg Config) (*Dcrlnd, error) {
 
 	if err := lndc.reconnect(ctx); err != nil {
 		return nil, fmt.Errorf("unable to connect to ln wallet: %v", err)
+	}
+
+	// Wait until the RPC services start.
+	lnState := lnrpc.NewStateClient(lndc.conn)
+	for ok := false; !ok; {
+		res, err := lnState.GetState(ctx, &lnrpc.GetStateRequest{})
+		if err != nil {
+			return nil, err
+		}
+		switch res.State {
+		case lnrpc.WalletState_WAITING_TO_START:
+			select {
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			case <-time.After(time.Second):
+			}
+		default:
+			// Any other state means ready to unlock or use.
+			ok = true
+		}
 	}
 
 	// Initialization succeeded, clear cleanup.
