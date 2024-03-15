@@ -10,6 +10,7 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/companyzero/bisonrelay/brclient/internal/sloglinesbuffer"
 	"github.com/companyzero/bisonrelay/embeddeddcrlnd"
 	"github.com/decred/dcrlnd/lnrpc/initchainsyncrpc"
@@ -29,13 +30,17 @@ type unlockLNScreen struct {
 	connCtx    context.Context
 	connCancel func()
 
-	viewHeight, viewWidth int
-	viewport              viewport.Model
+	viewWidth int
+	viewport  viewport.Model
 
 	txtPass    textinput.Model
 	unlocking  bool
 	unlockErr  string
 	crashStack []byte
+
+	compactingDb   bool
+	migratingDb    bool
+	compactErrored bool
 }
 
 func (ulns unlockLNScreen) Init() tea.Cmd {
@@ -91,11 +96,9 @@ func (ulns unlockLNScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		ulns.viewHeight = msg.Height - 15
 		ulns.viewWidth = msg.Width - 1
 		ulns.viewport.Width = msg.Width - 1
-		ulns.viewport.YPosition = 15
-		ulns.viewport.Height = msg.Height - ulns.viewport.YPosition
+		ulns.viewport.Height = msg.Height - ulns.viewport.YPosition - 3
 		return ulns, nil
 
 	case runDcrlndErrMsg:
@@ -131,7 +134,10 @@ func (ulns unlockLNScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return ulns, nil
 
 	case logUpdated:
-		logLines := ulns.lndLogLines.LastLogLines(ulns.viewport.Height)
+		logLines := ulns.lndLogLines.LastLogLines(20)
+		ulns.compactingDb = stringsContains(logLines, "Compacting database file at")
+		ulns.migratingDb = stringsContains(logLines, "Performing database schema migration")
+		ulns.compactErrored = stringsContains(logLines, "error during compact")
 		logTxt := wordwrap.String(strings.Join(logLines, ""), ulns.viewWidth-1)
 		ulns.viewport.SetContent(logTxt)
 		ulns.viewport.GotoBottom()
@@ -156,33 +162,76 @@ func (ulns unlockLNScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (ulns unlockLNScreen) View() string {
-	if ulns.lndc == nil {
-		return "Initializing internal dcrlnd instance"
-	}
-	if ulns.unlocking {
-		return "Unlocking internal wallet"
-	}
-	if ulns.needsUnlock {
-		return "Unlock internal dcrlnd wallet\n\n" +
-			ulns.txtPass.View() + "\n\n" +
-			ulns.styles.err.Render(ulns.unlockErr)
-	}
-
-	if ulns.updt == nil {
-		return "Initial sync"
-	}
-
 	var b strings.Builder
-	ts := time.Unix(ulns.updt.BlockTimestamp, 0).Format("2006-01-02 15:04:05")
 	pf := func(s string, args ...interface{}) {
 		b.WriteString(fmt.Sprintf(s, args...))
 	}
-	pf("Initial Sync\n\n")
-	pf("Block Hash: %x\n", ulns.updt.BlockHash)
-	pf("Block Height: %d\n", ulns.updt.BlockHeight)
-	pf("Block Timestamp: %s\n\n", ts)
+
+	titleStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("5")).Bold(true)
+	migrateStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("214"))
+
+	var lines int
+	switch {
+	case ulns.lndc == nil:
+		pf(titleStyle.Render("Initializing internal dcrlnd instance"))
+		pf("\n\n")
+		lines += 2
+
+		// Additional info.
+		extraLines := true
+		switch {
+		case ulns.compactErrored:
+			pf(ulns.styles.err.Render("Compaction error. Look at the log to see actual error"))
+		case ulns.migratingDb:
+			pf(migrateStyle.Render("Performing DB upgrade. This might take a while."))
+		case ulns.compactingDb:
+			pf(migrateStyle.Render("Compacting DB. This might take a while."))
+		default:
+			extraLines = false
+		}
+		if extraLines {
+			pf("\n\n")
+			lines += 2
+		}
+
+	case ulns.unlocking:
+		pf(titleStyle.Render("Unlocking internal wallet"))
+		pf("\n\n")
+		lines += 2
+
+	case ulns.needsUnlock:
+		pf(titleStyle.Render("Unlock internal dcrlnd wallet"))
+		pf("\n\n")
+		pf(ulns.txtPass.View())
+		pf("\n\n")
+		errMsg := wordwrap.String(ulns.unlockErr, ulns.viewWidth)
+		pf(ulns.styles.err.Render(errMsg))
+		pf("\n")
+		lines += 2 + 2 + 1 + countNewLines(errMsg)
+
+	case ulns.updt == nil:
+		pf(titleStyle.Render("Initial Sync"))
+		pf("\n\n")
+		lines += 2
+
+	default:
+		ts := time.Unix(ulns.updt.BlockTimestamp, 0).Format("2006-01-02 15:04:05")
+		pf(titleStyle.Render("Initial Sync"))
+		pf("\n\n")
+		pf("Block Hash: %x\n", ulns.updt.BlockHash)
+		pf("Block Height: %d\n", ulns.updt.BlockHeight)
+		pf("Block Timestamp: %s\n\n", ts)
+		lines += 6
+	}
+
+	for i := lines; i < ulns.viewport.YPosition; i++ {
+		pf("\n")
+	}
+	// ulns.viewport.YPosition = lines + 1
+
 	pf("Latest Log Lines:\n\n")
 	pf(ulns.viewport.View())
+	pf("\n")
 	return b.String()
 }
 
@@ -209,7 +258,7 @@ func newUnlockLNScreen(cfg *config, lndc *embeddeddcrlnd.Dcrlnd,
 	txtPass.Cursor = c
 
 	viewport := viewport.Model{
-		YPosition: 15,
+		YPosition: 9,
 		Height:    10,
 	}
 	logLines := lndLogLines.LastLogLines(viewport.Height)

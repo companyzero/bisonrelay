@@ -117,6 +117,16 @@ func countNewLines(s string) int {
 	return strings.Count(s, "\n")
 }
 
+// stringsContains returns true if any of the strings contains the substring.
+func stringsContains(s []string, substr string) bool {
+	for i := range s {
+		if strings.Contains(s[i], substr) {
+			return true
+		}
+	}
+	return false
+}
+
 // batchCmds maybe batches the list of cmds if needed.
 func batchCmds(cmds []tea.Cmd) tea.Cmd {
 	switch len(cmds) {
