@@ -10,7 +10,16 @@ class LogModel extends ChangeNotifier {
     _handleDcrlndLogLines();
   }
 
-  ListQueue<String> _log = ListQueue();
+  bool _compactingDb = false;
+  get compactingDb => _compactingDb;
+
+  bool _compactingDbErrored = false;
+  get compactingDbErrored => _compactingDbErrored;
+
+  bool _migratingDb = false;
+  get migratingDb => _migratingDb;
+
+  final ListQueue<String> _log = ListQueue();
   Iterable<String> get log => UnmodifiableListView(_log);
 
   void _handleDcrlndLogLines() async {
@@ -21,6 +30,13 @@ class LogModel extends ChangeNotifier {
       while (_log.length > maxLogLines) {
         _log.removeFirst();
       }
+
+      if (line.contains("Compacting database file at")) _compactingDb = true;
+      if (line.contains("error during compact")) _compactingDbErrored = true;
+      if (line.contains("Performing database schema migration")) {
+        _migratingDb = true;
+      }
+
       notifyListeners();
     }
   }
