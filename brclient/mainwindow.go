@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -13,6 +14,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/companyzero/bisonrelay/internal/mdembeds"
+	"golang.org/x/exp/maps"
 )
 
 type mainWindowState struct {
@@ -41,6 +43,9 @@ type mainWindowState struct {
 	header string
 
 	debug string
+
+	// windowMsgs is only used during debug.
+	windowMsgs map[string]int
 }
 
 func (mws *mainWindowState) updateHeader(styles *theme) {
@@ -202,6 +207,11 @@ func (mws mainWindowState) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmd  tea.Cmd
 		cmds []tea.Cmd
 	)
+
+	if mws.windowMsgs != nil {
+		msgKey := fmt.Sprintf("%T", msg)
+		mws.windowMsgs[msgKey] = mws.windowMsgs[msgKey] + 1
+	}
 
 	/*
 		// Enable to debug msgs.
@@ -524,6 +534,31 @@ func (mws mainWindowState) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case mws.isPage:
 			// Do not process command input when a page is active
 			// (to capture form input).
+
+		case msg.Type == tea.KeyF8:
+			// Debug window message counts.
+			if mws.windowMsgs == nil {
+				mws.windowMsgs = make(map[string]int)
+			}
+			keys := maps.Keys(mws.windowMsgs)
+			sort.Slice(keys, func(i, j int) bool {
+				ci, cj := mws.windowMsgs[keys[i]], mws.windowMsgs[keys[j]]
+				return ci > cj
+			})
+			var maxKey int
+			for i := 0; i < len(keys); i++ {
+				maxKey = max(maxKey, len(keys[i]))
+			}
+			mws.as.manyDiagMsgsCb(func(pf printf) {
+				pf("")
+				if len(mws.windowMsgs) == 0 {
+					pf("Starting to capture window message counts.")
+				}
+				for _, k := range keys {
+					pf("%[1]*[2]s: %[3]d", maxKey, k,
+						mws.windowMsgs[k])
+				}
+			})
 
 		default:
 			// Process line input.

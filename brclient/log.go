@@ -8,7 +8,6 @@ import (
 	"strings"
 	"sync"
 
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/companyzero/bisonrelay/brclient/internal/sloglinesbuffer"
 	"github.com/decred/slog"
 	"github.com/jrick/logrotate/rotator"
@@ -28,12 +27,12 @@ type logBackend struct {
 	loggersMtx sync.Mutex
 	loggers    map[string]slog.Logger
 
-	sendMsg  func(tea.Msg)
+	logCb    func(string)
 	errorMsg func(string)
 	logLines *sloglinesbuffer.Buffer
 }
 
-func newLogBackend(sendMsg func(tea.Msg), errMsg func(string),
+func newLogBackend(logCb func(string), errMsg func(string),
 	logFile, debugLevel string, maxLogFiles int) (*logBackend, error) {
 
 	var logRotator *rotator.Rotator
@@ -54,7 +53,7 @@ func newLogBackend(sendMsg func(tea.Msg), errMsg func(string),
 		defaultLogLevel: slog.LevelInfo,
 		logLevels:       make(map[string]slog.Level),
 		logLines:        new(sloglinesbuffer.Buffer),
-		sendMsg:         sendMsg,
+		logCb:           logCb,
 		errorMsg:        errMsg,
 		loggers:         make(map[string]slog.Logger),
 	}
@@ -89,12 +88,13 @@ func (bknd *logBackend) Write(b []byte) (int, error) {
 		return n, err
 	}
 
-	line := string(b)
-	if bknd.sendMsg != nil {
-		bknd.sendMsg(logUpdated{line: line})
+	if bknd.logCb != nil {
+		line := string(b)
+		bknd.logCb(line)
 	}
 	if bknd.errorMsg != nil && errMsgRE.Match(b) {
-		bknd.errorMsg(line[24:])
+		line := string(b[24:])
+		bknd.errorMsg(line)
 	}
 
 	return len(b), nil
