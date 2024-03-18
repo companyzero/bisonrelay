@@ -274,7 +274,11 @@ func (as *appState) run() error {
 	go as.processInboundMsgs()
 
 	// Listen to lnd log lines.
-	lndLogCb := as.lndLogLines.Listen(func(s string) { as.sendMsg(lndLogUpdated(s)) })
+	lndLogCb := as.lndLogLines.Listen(func(s string) {
+		if as.isLndLogWinActive() {
+			as.sendMsg(lndLogUpdated(strings.TrimSpace(s)))
+		}
+	})
 
 	// Update the time in footer every minute.
 	go func() {
@@ -2632,7 +2636,12 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 	}
 
 	// Initialize logging.
-	logBknd, err := newLogBackend(sendMsg, errMsg, args.LogFile,
+	logCb := func(s string) {
+		if as != nil && as.isLogWinActive() {
+			sendMsg(logUpdated{line: s})
+		}
+	}
+	logBknd, err := newLogBackend(logCb, errMsg, args.LogFile,
 		args.DebugLevel, args.MaxLogFiles)
 	if err != nil {
 		return nil, err
