@@ -5,6 +5,7 @@ import 'dart:async';
 
 import 'package:bruig/components/buttons.dart';
 import 'package:bruig/components/empty_widget.dart';
+import 'package:bruig/components/image_selection.dart';
 import 'package:bruig/components/local_content_dropdown.dart';
 import 'package:bruig/components/snackbars.dart';
 import 'package:file_picker/file_picker.dart';
@@ -160,7 +161,9 @@ class _AttachFileScreenState extends State<AttachFileScreen> {
     var textColor = theme.focusColor;
 
     return Consumer<ThemeNotifier>(
-        builder: (context, theme, _) => Scaffold(
+        builder: (context, theme, _) =>
+            const ImageSelection(title: "Pick an attachment")
+        /*
               body: Container(
                 padding: const EdgeInsets.all(40),
                 child: Center(
@@ -211,5 +214,7 @@ class _AttachFileScreenState extends State<AttachFileScreen> {
                 ),
               ),
             ));
+            */
+        );
   }
 }

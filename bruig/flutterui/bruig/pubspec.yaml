@@ -64,6 +64,9 @@ dependencies:
   dropdown_button2: ^2.3.8
   restart_app: ^1.2.1
   share_plus: ^7.2.2
+  image_picker: ^1.0.7
+  image_picker_platform_interface: ^2.8.0
+  mime: ^1.0.4
 
 msix_config:
   display_name: Bison Relay GUI

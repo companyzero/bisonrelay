@@ -3,6 +3,7 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
+  file_selector_linux
   golib_plugin
   screen_retriever
   url_launcher_linux
