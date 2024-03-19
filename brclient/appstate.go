@@ -185,8 +185,9 @@ type appState struct {
 	footerFull       string
 
 	// balances
-	balMtx sync.RWMutex
-	bal    balance
+	balMtx       sync.RWMutex
+	bal          balance
+	checkBalChan chan struct{}
 
 	setupMtx           sync.Mutex
 	setupNeedsFunds    bool
@@ -344,11 +345,19 @@ func (as *appState) run() error {
 	return err
 }
 
+// recheckLNBalance schedules a re-check of the wallet balance. This blocks
+// until the request is made to the trackLNBalances goroutine.
+func (as *appState) recheckLNBalance() {
+	select {
+	case as.checkBalChan <- struct{}{}:
+	case <-as.ctx.Done():
+	}
+}
+
 func (as *appState) trackLNBalances() {
-	const shortTimeout = time.Second / 2
-	const longTimeout = time.Second * 10
+	const minTimeout = 500 * time.Millisecond
+	const maxTimeout = 4 * time.Minute
 	var timeout time.Duration // Execute first check immediately
-	var sameBalCount int
 	var lastBal balance
 	var checkedSetupNeeds bool
 	var lastUnconf dcrutil.Amount
@@ -356,7 +365,12 @@ func (as *appState) trackLNBalances() {
 		select {
 		case <-as.ctx.Done():
 			return
+
+		case <-as.checkBalChan:
+			timeout = minTimeout
+
 		case <-time.After(timeout):
+
 			// TODO
 			if as.lnRPC == nil {
 				continue
@@ -431,20 +445,17 @@ func (as *appState) trackLNBalances() {
 				checkedSetupNeeds = true
 			}
 
-			// Switch between from the short to the long
-			// timeout if the balance isn't changing.
+			// Increase the time until next query to avoid doing
+			// useless work.
 			if sameBal {
-				sameBalCount += 1
+				timeout *= 2
+				if timeout > maxTimeout {
+					timeout = maxTimeout
+				}
 			} else {
-				sameBalCount = 0
+				timeout = minTimeout
 				as.footerInvalidate()
 				as.sendMsg(struct{}{})
-			}
-			useLongTimeout := sameBal && sameBalCount > 20
-			if useLongTimeout {
-				timeout = longTimeout
-			} else {
-				timeout = shortTimeout
 			}
 		}
 	}
@@ -3090,6 +3101,7 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		nick := strescape.Nick(ru.Nick())
 		if completed {
 			as.diagMsg("Completed tip payment of %s to %s", amtStr, nick)
+			as.recheckLNBalance()
 		} else {
 			as.diagMsg("Unable to complete tip payment of %s to %s "+
 				"after %d attempts: %v",
@@ -3244,6 +3256,7 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		msg := fmt.Sprintf("Received tip of %.8f DCR", dcrAmount)
 		cw.newInternalMsg(msg)
 		as.repaintIfActive(cw)
+		as.recheckLNBalance()
 	}))
 
 	ntfns.Register(client.OnPostSubscriberUpdated(func(user *client.RemoteUser, subscribed bool) {
@@ -3428,6 +3441,16 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 				event, srcRU.Nick(), dstRU.Nick())
 		}
 		as.diagMsg(msg)
+	}))
+
+	ntfns.Register(client.OnRMReceived(func(ru *client.RemoteUser, h *rpc.RMHeader, p interface{}, ts time.Time) {
+		// Handler is already async. so it does not need another goroutine.
+		as.recheckLNBalance()
+	}))
+
+	ntfns.Register(client.OnRMSent(func(ru *client.RemoteUser, p interface{}) {
+		// Handler is already async. so it does not need another goroutine.
+		as.recheckLNBalance()
 	}))
 
 	// Initialize resources router.
@@ -3862,6 +3885,7 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		minWalletBal: args.MinWalletBal,
 		minRecvBal:   args.MinRecvBal,
 		minSendBal:   args.MinSendBal,
+		checkBalChan: make(chan struct{}),
 
 		cmdHistoryFile: cmdHistoryFile,
 		cmdHistory:     cmdHistory,
