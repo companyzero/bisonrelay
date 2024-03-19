@@ -134,6 +134,7 @@ func (c *Client) initRemoteUser(id *zkidentity.PublicIdentity, r *ratchet.Ratche
 	ru.rmHandler = c.handleUserRM
 	ru.myResetRV = myResetRV
 	ru.theirResetRV = theirResetRV
+	ru.ntfns = c.ntfns
 	if nickAlias != "" {
 		ru.setNick(nickAlias)
 	}

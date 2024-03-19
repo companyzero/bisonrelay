@@ -93,6 +93,8 @@ type RemoteUser struct {
 	// called as a goroutine.
 	rmHandler func(ru *RemoteUser, h *rpc.RMHeader, c interface{}, ts time.Time)
 
+	ntfns *NotificationManager
+
 	rLock  sync.Mutex
 	r      *ratchet.Ratchet
 	rError error
@@ -308,6 +310,10 @@ func (ru *RemoteUser) queueRMPriority(payload interface{}, priority uint,
 			// Alert run() of result of send.
 			select {
 			case ru.sentRMChan <- err:
+				if err == nil && ru.ntfns != nil {
+					ru.ntfns.notifyRMSent(ru, payload)
+				}
+
 			case <-ru.runDone:
 			}
 		case <-ru.runDone:
