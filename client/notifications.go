@@ -329,6 +329,15 @@ type OnRMReceived func(ru *RemoteUser, h *rpc.RMHeader, p interface{}, ts time.T
 
 func (_ OnRMReceived) typ() string { return onRMReceived }
 
+const onRMSent = "onRMSent"
+
+// OnRMSent is a notification sent whenever a message has been delivered to
+// the server directed to a remote user. Note: this is called _after_ the RM
+// has been acknowledged by the server.
+type OnRMSent func(ru *RemoteUser, p interface{})
+
+func (_ OnRMSent) typ() string { return onRMSent }
+
 const onServerUnwelcomeError = "onServerUnwelcomeError"
 
 // OnServerUnwelcomeError is a notification sent, when attempting to connect
@@ -711,6 +720,11 @@ func (nmgr *NotificationManager) notifyRMReceived(ru *RemoteUser, rmh *rpc.RMHea
 		visit(func(h OnRMReceived) { h(ru, rmh, p, ts) })
 }
 
+func (nmgr *NotificationManager) notifyRMSent(ru *RemoteUser, p interface{}) {
+	nmgr.handlers[onRMSent].(*handlersFor[OnRMSent]).
+		visit(func(h OnRMSent) { h(ru, p) })
+}
+
 func (nmgr *NotificationManager) notifyServerUnwelcomeError(err error) {
 	nmgr.handlers[onServerUnwelcomeError].(*handlersFor[OnServerUnwelcomeError]).
 		visit(func(h OnServerUnwelcomeError) { h(err) })
@@ -748,6 +762,7 @@ func NewNotificationManager() *NotificationManager {
 			onTipReceivedNtfnType:    &handlersFor[OnTipReceivedNtfn]{},
 			onReceiveReceipt:         &handlersFor[OnReceiveReceipt]{},
 			onRMReceived:             &handlersFor[OnRMReceived]{},
+			onRMSent:                 &handlersFor[OnRMSent]{},
 			onProfileUpdatedType:     &handlersFor[OnProfileUpdated]{},
 			onTransitiveEventType:    &handlersFor[OnTransitiveEvent]{},
 
