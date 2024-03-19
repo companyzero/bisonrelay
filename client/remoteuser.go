@@ -14,7 +14,6 @@ import (
 	"github.com/companyzero/bisonrelay/client/clientdb"
 	"github.com/companyzero/bisonrelay/client/clientintf"
 	"github.com/companyzero/bisonrelay/client/internal/lowlevel"
-	"github.com/companyzero/bisonrelay/client/internal/waitingq"
 	"github.com/companyzero/bisonrelay/ratchet"
 	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/companyzero/bisonrelay/sw"
@@ -94,10 +93,6 @@ type RemoteUser struct {
 	// called as a goroutine.
 	rmHandler func(ru *RemoteUser, h *rpc.RMHeader, c interface{}, ts time.Time)
 
-	// wq* keeps track of inflight calls to this user that need to be done
-	// one at a time, because there's no way to demux replies.
-	wqSubPosts *waitingq.WaitingReplyQueue
-
 	rLock  sync.Mutex
 	r      *ratchet.Ratchet
 	rError error
@@ -120,7 +115,6 @@ func newRemoteUser(q rmqIntf, rmgr rdzvManagerIntf, db *clientdb.DB,
 		runDone:         make(chan struct{}),
 		stopChan:        make(chan struct{}),
 		nextRMChan:      make(chan *remoteUserRM),
-		wqSubPosts:      new(waitingq.WaitingReplyQueue),
 		ratchetChan:     make(chan *ratchet.Ratchet),
 		decryptedRMChan: make(chan error),
 		sentRMChan:      make(chan error),
