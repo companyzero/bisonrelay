@@ -583,7 +583,7 @@ func (sess *serverSession) Run(ctx context.Context) error {
 	g.Go(func() error {
 		err := sess.recvLoop(gctx)
 		if err != nil && !errors.Is(err, context.Canceled) {
-			sess.log.Debugf("recvLoop errored: %v", err)
+			sess.log.Errorf("recvLoop errored: %v", err)
 			return err
 		}
 		sess.log.Tracef("recvLoop ending with err: %v", err)
@@ -593,7 +593,7 @@ func (sess *serverSession) Run(ctx context.Context) error {
 	g.Go(func() error {
 		err := sess.taggingLoop(gctx)
 		if err != nil && !errors.Is(err, context.Canceled) {
-			sess.log.Debugf("taggingLoop errored: %v", err)
+			sess.log.Errorf("taggingLoop errored: %v", err)
 			return err
 		}
 		sess.log.Tracef("taggingLoop ending with err: %v", err)
@@ -603,7 +603,7 @@ func (sess *serverSession) Run(ctx context.Context) error {
 	g.Go(func() error {
 		err := sess.sendLoop(gctx)
 		if err != nil && !errors.Is(err, context.Canceled) {
-			sess.log.Debugf("sendLoop errored: %v", err)
+			sess.log.Errorf("sendLoop errored: %v", err)
 			return err
 		}
 		sess.log.Tracef("sendLoop ending with err: %v", err)
@@ -628,7 +628,7 @@ func (sess *serverSession) Run(ctx context.Context) error {
 	// Ensure the connection is closed.
 	closeErr := sess.conn.Close()
 	if closeErr != nil {
-		sess.log.Debugf("Connection close error: %v", closeErr)
+		sess.log.Errorf("Connection close error: %v", closeErr)
 	}
 
 	sess.log.Tracef("Finished running session %s with err %v",

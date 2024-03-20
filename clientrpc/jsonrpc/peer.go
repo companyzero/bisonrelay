@@ -246,7 +246,7 @@ func (p *peer) handleRequest(ctx context.Context, in inboundMsg) {
 	_, svc, methodDefn, err := p.services.SvcForMethod(method)
 	if err != nil {
 		p.queueResponse(ctx, in.ID, nil, err)
-		p.log.Debugf("Error calling SvcForMethod %s: %v", method, err)
+		p.log.Errorf("Error calling SvcForMethod %s: %v", method, err)
 		return
 	}
 
@@ -255,7 +255,7 @@ func (p *peer) handleRequest(ctx context.Context, in inboundMsg) {
 	if err := unmarshalOpts.Unmarshal(in.Params, protoReq); err != nil {
 		err = newError(ErrInvalidParams, fmt.Sprintf("unable to decode params: %v", err))
 		p.queueResponse(ctx, in.ID, nil, err)
-		p.log.Debugf("Error unmarshalling request for %T: %v", protoReq, err)
+		p.log.Errorf("Error unmarshalling request for %T: %v", protoReq, err)
 		return
 	}
 
@@ -272,7 +272,7 @@ func (p *peer) handleRequest(ctx context.Context, in inboundMsg) {
 		res = methodDefn.NewResponse()
 		err = methodDefn.ServerHandler(svc, ctx, protoReq, res)
 		if err != nil {
-			p.log.Debugf("Error handling request %s: %v", method, err)
+			p.log.Errorf("Error handling request %s: %v", method, err)
 		}
 	}
 
@@ -359,13 +359,13 @@ loop:
 
 		default:
 			// Unrecognized message. Log error.
-			p.log.Debugf("Received unrecognized message: %v", in)
+			p.log.Warnf("Received unrecognized message: %v", in)
 
 		}
 	}
 
 	if !errors.Is(loopErr, context.Canceled) {
-		p.log.Debugf("readLoop exiting due to unexpected error: %v", loopErr)
+		p.log.Errorf("readLoop exiting due to unexpected error: %v", loopErr)
 	}
 
 	// Decide what to do regarding outstanding requests.
@@ -444,7 +444,7 @@ loop:
 	}
 
 	if !errors.Is(loopErr, context.Canceled) {
-		p.log.Debugf("Exiting readLoop due to unexpected error: %v", loopErr)
+		p.log.Errorf("Exiting readLoop due to unexpected error: %v", loopErr)
 	}
 	return loopErr
 }

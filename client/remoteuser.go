@@ -471,7 +471,7 @@ func (ru *RemoteUser) saveRatchet(encrypted []byte, rv *clientintf.RawRVID,
 	}
 
 	if err != nil {
-		ru.log.Warnf("Error while saving updated ratchet: %v", err)
+		ru.log.Errorf("Error while saving updated ratchet: %v", err)
 	} else {
 		ru.log.Debugf("Updated ratchet state in DB")
 	}
@@ -656,7 +656,7 @@ func (ru *RemoteUser) maybeUpdateRVs(lastRecvRV, lastDrainRV ratchet.RVPoint, ha
 		// This ordinarily shouldn't happen if our assumptions
 		// are correct, but isn't a fatal error, so log it as a
 		// debug msg and keep going.
-		ru.log.Debugf("Unexpected non-fatal error: %v", err)
+		ru.log.Errorf("Unexpected non-fatal error: %v", err)
 	default:
 		// Other errors are fatal.
 		return emptyRV, emptyRV, err
