@@ -172,7 +172,7 @@ func (c *Client) handleKXSearch(ru *RemoteUser, search rpc.RMKXSearch) error {
 			}
 
 		default:
-			ru.log.Debugf("Received unknown type of ref in kx search: %q", ref.Type)
+			ru.log.Warnf("Received unknown type of ref in kx search: %q", ref.Type)
 		}
 	}
 

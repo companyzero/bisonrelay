@@ -400,7 +400,7 @@ func (q *RMQ) sendToSession(ctx context.Context, rmm *rmmsg, sess clientintf.Ser
 
 	// Pay for the RM.
 	if err := q.payForRM(ctx, rmm, invoice, sess); err != nil {
-		q.log.Debugf("Unable to pay for RM %s: %v", rmm.orm, err)
+		q.log.Errorf("Unable to pay for RM %s: %v", rmm.orm, err)
 
 		// Request connection close so that we reconnect and try to
 		// pay again.
@@ -421,7 +421,7 @@ func (q *RMQ) sendToSession(ctx context.Context, rmm *rmmsg, sess clientintf.Ser
 	sendTime := time.Now()
 	if err != nil {
 		// Connection will be dropped, try again with next connection.
-		q.log.Debugf("Error sending rm %s at RV %s: %v", rmm.orm, rmm.rv, err)
+		q.log.Errorf("Error sending rm %s at RV %s: %v", rmm.orm, rmm.rv, err)
 		return
 	}
 
@@ -712,7 +712,7 @@ loop:
 				var err error
 				rmm.rv, rmm.encrypted, err = rmm.orm.EncryptedMsg()
 				if err != nil {
-					q.log.Debugf("Error encrypting RM %s: %v",
+					q.log.Errorf("Error encrypting RM %s: %v",
 						rmm.orm, err)
 					// This is a fatal error for this RM.
 					// We cannot send it anymore, so inform
