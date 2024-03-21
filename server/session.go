@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -16,10 +17,15 @@ import (
 	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/companyzero/bisonrelay/server/internal/tagstack"
 	"github.com/companyzero/bisonrelay/session"
-	"github.com/companyzero/bisonrelay/zkidentity"
 	"github.com/decred/slog"
 	"golang.org/x/sync/errgroup"
 )
+
+type sessionID [16]byte
+
+func (id sessionID) String() string {
+	return hex.EncodeToString(id[:])
+}
 
 type sessionContext struct {
 	writer   chan *RPCWrapper
@@ -27,6 +33,7 @@ type sessionContext struct {
 	conn     net.Conn
 	tagStack *tagstack.TagStack
 	log      slog.Logger
+	id       sessionID
 
 	// subscriptions
 	msgC    chan ratchet.RVPoint
@@ -94,16 +101,6 @@ func (z *ZKS) sessionSubscribe(ctx context.Context, sc *sessionContext) error {
 	// operations and lock contention for memory consumption.
 	sessSubs := make(map[ratchet.RVPoint]struct{})
 
-	defer func() {
-		// Remove all of this session's subscriptions.
-		z.Lock()
-		for rv := range sessSubs {
-			delete(z.subscribers, rv)
-		}
-		z.Unlock()
-		sc.log.Tracef("subscribers quit: %v", sessSubs)
-	}()
-
 loop:
 	for {
 		var rvsToCheck []ratchet.RVPoint
@@ -113,6 +110,8 @@ loop:
 			break loop
 
 		case s := <-sc.msgSetC:
+			// Check if any of the added RVs have been pushed to
+			// already.
 			rvsToCheck = s.AddRendezvous
 
 			z.Lock()
@@ -127,15 +126,17 @@ loop:
 			}
 
 			// Add new subscriptions.
-			for i := 0; i < len(rvsToCheck); i++ {
-				rv := rvsToCheck[i]
+			for _, rv := range rvsToCheck {
 				if other, ok := z.subscribers[rv]; ok && sc != other {
 					// Someone tried to subscribe to an RV
 					// that another session was already
-					// subscribed to. Skip this RV.
-					copy(rvsToCheck[i:], rvsToCheck[i+1:])
-					rvsToCheck = rvsToCheck[:len(rvsToCheck)-1]
-					continue
+					// subscribed to. Remove prior sub.
+					sc.log.Debugf("Removing prior duplicate "+
+						"subscription to RV %s from "+
+						"session %s", rv, other.id)
+
+					// Del the older one from the stats.
+					z.stats.activeSubs.Add(-1)
 				}
 				z.subscribers[rv] = sc
 				sessSubs[rv] = struct{}{}
@@ -145,11 +146,13 @@ loop:
 			z.Unlock()
 
 			sc.log.Tracef("subscribers added %v deleted %v",
-				s.AddRendezvous, s.DelRendezvous)
+				rvsToCheck, s.DelRendezvous)
 
 			// Fallthrough
 
 		case rv := <-sc.msgC:
+			// Someone pushed to this RV the session is subscribed
+			// to.
 			sc.log.Tracef("subscribers read: %v", rv)
 			rvsToCheck = []ratchet.RVPoint{rv}
 
@@ -219,8 +222,11 @@ loop:
 	// Remove session subscriptions.
 	z.Lock()
 	for rv := range sessSubs {
-		delete(z.subscribers, rv)
-		z.stats.activeSubs.Add(-1)
+		if other, ok := z.subscribers[rv]; ok && other == sc {
+			sc.log.Tracef("subscribers: unsubbing rv %s", rv)
+			delete(z.subscribers, rv)
+			z.stats.activeSubs.Add(-1)
+		}
 	}
 	z.Unlock()
 
@@ -424,12 +430,13 @@ func (z *ZKS) sessionReader(ctx context.Context, sc *sessionContext) error {
 }
 
 func (z *ZKS) runNewSession(ctx context.Context, conn net.Conn, kx *session.KX) {
-	var rid zkidentity.ShortID
+	var rid sessionID
 	rand.Read(rid[:])
-	log := z.logBknd.untrackedLogger(fmt.Sprintf("SESS %s", rid.ShortLogID()))
+	log := z.logBknd.untrackedLogger(fmt.Sprintf("SESS %s", rid))
 
 	// create session context
 	sc := sessionContext{
+		id:         rid,
 		writer:     make(chan *RPCWrapper, tagDepth),
 		kx:         kx,
 		conn:       conn,
