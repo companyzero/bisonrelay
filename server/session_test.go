@@ -228,3 +228,140 @@ func TestServerRecvMaxMsgSize(t *testing.T) {
 		})
 	}
 }
+
+// TestPushesToLastSub verifies the server pushes an RM to the session that
+// subscribed last to it (and only to it).
+func TestPushesToLastSub(t *testing.T) {
+	tests := []struct {
+		name       string
+		disconnect bool
+	}{{
+		name:       "does not disconnect before push",
+		disconnect: false,
+	}, {
+		name:       "disconnects before push",
+		disconnect: true,
+	}}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			svr := newTestServer(t)
+			runTestServer(t, svr)
+			addr := serverBoundAddr(t, svr)
+			dialer := clientintf.NetDialer(addr, slog.Disabled)
+			ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+			defer cancel()
+
+			// Open three sessions to the server (two to subscribe, one to push).
+			conn1, _, err := dialer(ctx)
+			assert.NilErr(t, err)
+			kx1 := kxServerConn(t, conn1)
+			conn2, _, err := dialer(ctx)
+			assert.NilErr(t, err)
+			kx2 := kxServerConn(t, conn2)
+			conn3, _, err := dialer(ctx)
+			assert.NilErr(t, err)
+			kx3 := kxServerConn(t, conn3)
+
+			// Sub message.
+			rv := ratchet.RVPoint{1: 0xff}
+			msgSub := rpc.Message{
+				Command: rpc.TaggedCmdSubscribeRoutedMessages,
+				Tag:     1,
+			}
+			sub := rpc.SubscribeRoutedMessages{
+				AddRendezvous: []ratchet.RVPoint{rv},
+			}
+
+			// Subscribe in the first session.
+			writeServerMsg(t, kx1, msgSub, sub)
+			readNextServerMsg(t, kx1) // reply
+
+			// Subscribe in the second session.
+			writeServerMsg(t, kx2, msgSub, sub)
+			readNextServerMsg(t, kx2) // reply
+
+			// When the test case requires it, disconnect from
+			// the first connection.
+			if tc.disconnect {
+				assert.NilErr(t, conn1.Close())
+			}
+
+			// Push in the third session.
+			msgRM := rpc.Message{
+				Command: rpc.TaggedCmdRouteMessage,
+				Tag:     1,
+			}
+			rm := rpc.RouteMessage{
+				Rendezvous: rv,
+				Message:    []byte{0x01, 0x02, 0x03},
+			}
+			writeServerMsg(t, kx3, msgRM, rm)
+			readNextServerMsg(t, kx3) // reply
+
+			// The RM should be pushed in the second session.
+			_, gotPayload := readNextServerMsg(t, kx2)
+			pushedRM, ok := gotPayload.(*rpc.PushRoutedMessage)
+			assert.DeepEqual(t, ok, true)
+			assert.DeepEqual(t, pushedRM.RV, rv)
+			assert.DeepEqual(t, pushedRM.Payload, rm.Message)
+
+			// It should not be pushed to the first session.
+			if !tc.disconnect {
+				kx1Msgs := drainServerMsgs(t, kx1)
+				assert.ChanNotWritten(t, kx1Msgs, time.Second)
+			}
+		})
+	}
+}
+
+// TestReceivesStoredRM verifies the server pushes an RM to the session when
+// that RM was already stored.
+func TestReceivesStoredRM(t *testing.T) {
+	svr := newTestServer(t)
+	runTestServer(t, svr)
+	addr := serverBoundAddr(t, svr)
+	dialer := clientintf.NetDialer(addr, slog.Disabled)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+
+	rv := ratchet.RVPoint{1: 0xee}
+
+	// Open the conn and push the RM.
+	conn1, _, err := dialer(ctx)
+	assert.NilErr(t, err)
+	kx1 := kxServerConn(t, conn1)
+	msgRM := rpc.Message{
+		Command: rpc.TaggedCmdRouteMessage,
+		Tag:     1,
+	}
+	rm := rpc.RouteMessage{
+		Rendezvous: rv,
+		Message:    []byte{0x01, 0x02, 0x03},
+	}
+	writeServerMsg(t, kx1, msgRM, rm)
+	readNextServerMsg(t, kx1) // reply
+
+	// Open the second conn and subscribe.
+	conn2, _, err := dialer(ctx)
+	assert.NilErr(t, err)
+	kx2 := kxServerConn(t, conn2)
+	msgSub := rpc.Message{
+		Command: rpc.TaggedCmdSubscribeRoutedMessages,
+		Tag:     1,
+	}
+	sub := rpc.SubscribeRoutedMessages{
+		AddRendezvous: []ratchet.RVPoint{rv},
+	}
+
+	writeServerMsg(t, kx2, msgSub, sub)
+	readNextServerMsg(t, kx2) // reply
+
+	// The RM should be pushed in the second session.
+	_, gotPayload := readNextServerMsg(t, kx2)
+	pushedRM, ok := gotPayload.(*rpc.PushRoutedMessage)
+	assert.DeepEqual(t, ok, true)
+	assert.DeepEqual(t, pushedRM.RV, rv)
+	assert.DeepEqual(t, pushedRM.Payload, rm.Message)
+}

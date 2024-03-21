@@ -164,6 +164,54 @@ func writeServerMsg(t testing.TB, kx *session.KX, msg rpc.Message, payload inter
 	assert.NilErr(t, err)
 }
 
+// readNextServerMsg reads the next message sent in the kx session.
+func readNextServerMsg(t testing.TB, kx *session.KX) (rpc.Message, interface{}) {
+	t.Helper()
+	resChan := make(chan interface{}, 1)
+	go func() {
+		rawMsg, err := kx.Read()
+		if err != nil {
+			resChan <- err
+		} else {
+			resChan <- rawMsg
+		}
+	}()
+
+	var msg rpc.Message
+	var payload interface{}
+
+	res := assert.ChanWritten(t, resChan)
+	switch res := res.(type) {
+	case error:
+		t.Fatal(res)
+	case []byte:
+		msg, payload = decodeServerMsg(t, res)
+	default:
+		t.Fatalf("unknown response type %T", res)
+	}
+
+	return msg, payload
+}
+
+// drainServerMsgs creates a channel that gets sent messages read by the
+// given kx channel.
+func drainServerMsgs(t testing.TB, kx *session.KX) chan interface{} {
+	resChan := make(chan interface{}, 16)
+	go func() {
+		for {
+			rawMsg, err := kx.Read()
+			if err != nil {
+				resChan <- err
+				return
+			} else {
+				resChan <- rawMsg
+			}
+		}
+	}()
+
+	return resChan
+}
+
 func decodeServerMsg(t testing.TB, rawMsg []byte) (rpc.Message, interface{}) {
 	t.Helper()
 	var msg rpc.Message
