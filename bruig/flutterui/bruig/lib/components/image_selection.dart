@@ -294,7 +294,7 @@ class _ImageSelectionState extends State<ImageSelection> {
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: <Widget>[
           Material(
-              color: backgroundColor,3
+              color: backgroundColor,
               child: Center(
                   child: Ink(
                       decoration: ShapeDecoration(

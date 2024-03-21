@@ -3,10 +3,9 @@ import 'dart:io';
 import 'dart:math';
 import 'dart:async';
 
-import 'package:bruig/components/buttons.dart';
+import 'package:bruig/components/chat/types.dart';
 import 'package:bruig/components/empty_widget.dart';
-import 'package:bruig/components/image_selection.dart';
-import 'package:bruig/components/local_content_dropdown.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:bruig/components/snackbars.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -14,6 +13,9 @@ import 'package:flutter/services.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:bruig/theme_manager.dart';
 import 'package:provider/provider.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:mime/mime.dart';
 
 class AttachmentEmbed {
   String? mime;
@@ -58,8 +60,8 @@ class AttachmentEmbed {
 }
 
 class AttachFileScreen extends StatefulWidget {
-  static String routeName = "/attachFile";
-  const AttachFileScreen({super.key});
+  final SendMsg _send;
+  const AttachFileScreen(this._send, {super.key});
 
   @override
   State<AttachFileScreen> createState() => _AttachFileScreenState();
@@ -72,11 +74,60 @@ class _AttachFileScreenState extends State<AttachFileScreen> {
   TextEditingController altTxtCtrl = TextEditingController();
   SharedFileAndShares? linkedFile;
   Timer? _debounce;
+  late Future<Directory?> _futureGetPath;
+  List<dynamic> listImagePath = [];
+  Directory _fetchedPath = Directory.systemTemp;
+  bool _permissionStatus = false;
+
+  dynamic _pickImageError;
+  final ImagePicker _picker = ImagePicker();
+  String? selectedAttachmentPath;
+
+  @override
+  void initState() {
+    super.initState();
+    _listenForPermissionStatus();
+    _futureGetPath = _getPath();
+  }
 
   @override
   dispose() {
     _debounce?.cancel();
     super.dispose();
+  }
+
+  // Check for storage permission
+  void _listenForPermissionStatus() async {
+    if (Platform.isAndroid || Platform.isIOS) {
+      final status = await Permission.storage.request().isGranted;
+      // setState() triggers build again
+      setState(() => _permissionStatus = status);
+    } else {
+      setState(() => _permissionStatus = true);
+    }
+  }
+
+  Future<Directory?> _getPath() async {
+    if (Platform.isAndroid) {
+      return await getExternalStorageDirectory();
+    }
+    return await getDownloadsDirectory();
+  }
+
+  _fetchFiles(Directory dir) {
+    List<dynamic> listImage = [];
+    dir.list().forEach((element) {
+      RegExp regExp =
+          RegExp(".(gif|jpe?g|tiff?|png|webp|bmp)", caseSensitive: false);
+      // Only add in List if path is an image
+      if (regExp.hasMatch('$element')) listImage.add(element);
+      setState(() {
+        listImagePath = listImage;
+      });
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => setState(() {
+          _fetchedPath = dir;
+        }));
   }
 
   void loadFile() async {
@@ -144,6 +195,63 @@ class _AttachFileScreenState extends State<AttachFileScreen> {
     });
   }
 
+  Future<void> _onImageButtonPressed(
+    ImageSource source, {
+    required BuildContext context,
+  }) async {
+    try {
+      final XFile? pickedFile = await _picker.pickImage(
+        source: source,
+      );
+      if (pickedFile == null) {
+        throw "Unable to load chosen image";
+      }
+
+      var data = await pickedFile.readAsBytes();
+      if (data.length > 1024 * 1024) {
+        throw "File is too large to attach (limit: 1MiB)";
+      }
+      var mimeType = lookupMimeType(pickedFile.path);
+      setState(() {
+        selectedAttachmentPath = pickedFile.path;
+        fileData = data;
+        if (mimeType != null) {
+          mime = mimeType;
+        }
+      });
+    } catch (e) {
+      showErrorSnackbar(context, "Unable to attach file: $e");
+      setState(() {
+        _pickImageError = e;
+      });
+    }
+  }
+
+  Future<void> _onImagePressed(
+    File image, {
+    required BuildContext context,
+  }) async {
+    try {
+      var data = await image.readAsBytes();
+      if (data.length > 1024 * 1024) {
+        throw "File is too large to attach (limit: 1MiB)";
+      }
+      var mimeType = lookupMimeType(image.path);
+      setState(() {
+        selectedAttachmentPath = image.path;
+        fileData = data;
+        if (mimeType != null) {
+          mime = mimeType;
+        }
+      });
+    } catch (e) {
+      showErrorSnackbar(context, "Unable to select image: $e");
+      setState(() {
+        _pickImageError = e;
+      });
+    }
+  }
+
   void attach() {
     var id = (Random().nextInt(1 << 30)).toRadixString(16);
     String? alt;
@@ -152,7 +260,13 @@ class _AttachFileScreenState extends State<AttachFileScreen> {
     }
     var embed = AttachmentEmbed(id,
         data: fileData, linkedFile: linkedFile, alt: alt, mime: mime);
-    Navigator.of(context).pop(embed);
+    widget._send(embed.embedString());
+
+    setState(() {
+      mime = "";
+      fileData = null;
+      selectedAttachmentPath = "";
+    });
   }
 
   @override
@@ -161,8 +275,91 @@ class _AttachFileScreenState extends State<AttachFileScreen> {
     var textColor = theme.focusColor;
 
     return Consumer<ThemeNotifier>(
-        builder: (context, theme, _) =>
-            const ImageSelection(title: "Pick an attachment")
+        builder: (context, theme, _) => selectedAttachmentPath != null &&
+                mime.startsWith('image/')
+            ? Container(
+                margin: const EdgeInsets.symmetric(vertical: 8.0),
+                height: 200.0,
+                child: Image.file(
+                  File(selectedAttachmentPath!),
+                  errorBuilder: (BuildContext context, Object error,
+                      StackTrace? stackTrace) {
+                    return const Center(
+                        child: Text('This image type is not supported'));
+                  },
+                ))
+            : Column(mainAxisAlignment: MainAxisAlignment.start, children: [
+                FutureBuilder(
+                  future: _futureGetPath,
+                  builder: (BuildContext context, AsyncSnapshot snapshot) {
+                    if (snapshot.hasData) {
+                      var dir = snapshot.data;
+                      if (_permissionStatus && _fetchedPath != dir) {
+                        _fetchFiles(dir);
+                      }
+                      return const Empty();
+                    } else {
+                      return const Text("Loading gallery");
+                    }
+                  },
+                ),
+                Container(
+                    margin: const EdgeInsets.symmetric(vertical: 8.0),
+                    height: 200.0,
+                    child: ListView(
+                        scrollDirection: Axis.horizontal,
+                        primary: false,
+                        padding: const EdgeInsets.all(20),
+                        children: [
+                          for (var i = 0; i < listImagePath.length; i++)
+                            InkWell(
+                                borderRadius:
+                                    const BorderRadius.all(Radius.circular(30)),
+                                hoverColor: Theme.of(context).hoverColor,
+                                onTap: () => _onImagePressed(listImagePath[i],
+                                    context: context),
+                                child: Container(
+                                  height: 100,
+                                  width: 100,
+                                  margin: const EdgeInsets.symmetric(
+                                      horizontal: 2, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    borderRadius: const BorderRadius.all(
+                                        Radius.circular(8.0)),
+                                    image: DecorationImage(
+                                        image:
+                                            Image.file(listImagePath[i]).image,
+                                        fit: BoxFit.contain),
+                                  ),
+                                )),
+                          IconButton(
+                            splashRadius: 100,
+                            padding: const EdgeInsets.all(20),
+                            onPressed: () {
+                              _onImageButtonPressed(ImageSource.gallery,
+                                  context: context);
+                            },
+                            tooltip: 'Pick Image from gallery',
+                            icon: Icon(Icons.photo, size: 40, color: textColor),
+                          )
+                        ])),
+                fileData != null && fileData!.isNotEmpty
+                    ? Row(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        children: [
+                            IconButton(
+                                padding: const EdgeInsets.all(0),
+                                iconSize: 25,
+                                onPressed:
+                                    fileData != null && fileData!.isNotEmpty
+                                        ? attach
+                                        : null,
+                                icon: const Icon(Icons.attach_file_outlined),
+                                color: textColor)
+                          ])
+                    : const Empty(),
+                //const ImageSelection()
+              ])
         /*
               body: Container(
                 padding: const EdgeInsets.all(40),

@@ -1,11 +1,15 @@
+import 'dart:io';
+
 import 'package:bruig/components/attach_file.dart';
-import 'package:bruig/components/image_selection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:bruig/components/chat/types.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/theme_manager.dart';
 import 'package:provider/provider.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:image_picker/image_picker.dart';
 
 class Input extends StatefulWidget {
   final SendMsg _send;
@@ -94,20 +98,6 @@ class _InputState extends State<Input> {
     setState(() {
       isAttaching = false;
     });
-    /*
-    var res = await Navigator.of(context, rootNavigator: true)
-        .pushNamed(AttachFileScreen.routeName);
-    if (res == null) {
-      return;
-    }
-    var embed = res as AttachmentEmbed;
-    embeds.add(embed);
-    setState(() {
-      controller.text = "${controller.text}${embed.displayString()} ";
-      widget.chat.workingMsg = controller.text;
-      widget.inputFocusNode.requestFocus();
-    });
-    */
   }
 
   @override
@@ -119,20 +109,17 @@ class _InputState extends State<Input> {
     bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
     return Consumer<ThemeNotifier>(
         builder: (context, theme, _) => isAttaching
-            ? Expanded(
-                child: Column(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    children: [
-                    Row(mainAxisAlignment: MainAxisAlignment.start, children: [
-                      IconButton(
-                          padding: const EdgeInsets.all(0),
-                          iconSize: 25,
-                          onPressed: cancelAttach,
-                          icon: const Icon(Icons.keyboard_arrow_left_outlined),
-                          color: textColor)
-                    ]),
-                    const ImageSelection()
-                  ]))
+            ? Column(children: [
+                Row(mainAxisAlignment: MainAxisAlignment.start, children: [
+                  IconButton(
+                      padding: const EdgeInsets.all(0),
+                      iconSize: 25,
+                      onPressed: cancelAttach,
+                      icon: const Icon(Icons.keyboard_arrow_left_outlined),
+                      color: textColor)
+                ]),
+                AttachFileScreen(widget._send)
+              ])
             : Row(children: [
                 IconButton(
                     padding: const EdgeInsets.all(0),

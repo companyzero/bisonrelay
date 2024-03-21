@@ -364,10 +364,6 @@ class _AppState extends State<App> with WindowListener {
                     Consumer2<ClientModel, DownloadsModel>(
                         builder: (context, client, downloads, child) =>
                             ConfirmFileDownloadScreen(client, downloads)),
-                AttachFileScreen.routeName: (context) =>
-                    Consumer2<ClientModel, DownloadsModel>(
-                        builder: (context, client, downloads, child) =>
-                            const AttachFileScreen()),
                 '/needsFunds': (context) => Consumer<AppNotifications>(
                     builder: (context, ntfns, child) =>
                         NeedsFundsScreen(ntfns)),
