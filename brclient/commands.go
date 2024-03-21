@@ -3712,7 +3712,7 @@ var commands = []tuicmd{
 			return nil
 		},
 		completer: func(args []string, arg string, as *appState) []string {
-			if len(args) > 1 && args[0] == "feed" {
+			if len(args) > 0 && args[0] == "feed" {
 				return nickCompleter(arg, as)
 			}
 			return nil
