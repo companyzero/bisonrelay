@@ -120,7 +120,10 @@ class _AttachFileScreenState extends State<AttachFileScreen> {
 
   Future<Directory?> _getPath() async {
     if (Platform.isAndroid) {
-      return await getExternalStorageDirectory();
+      var directory = await getExternalStorageDirectory();
+      if (directory != null) {
+        return Directory("${directory.path}/Downloads");
+      }
     }
     return await getDownloadsDirectory();
   }
@@ -323,6 +326,7 @@ class _AttachFileScreenState extends State<AttachFileScreen> {
                     margin: const EdgeInsets.symmetric(vertical: 8.0),
                     height: 150.0,
                     child: ListView(
+                        controller: ScrollController(),
                         scrollDirection: Axis.horizontal,
                         primary: false,
                         padding: const EdgeInsets.all(20),
@@ -356,41 +360,58 @@ class _AttachFileScreenState extends State<AttachFileScreen> {
                                                         .image,
                                                 fit: BoxFit.contain),
                                           ),
-                                        )))),
-                          const SizedBox(width: 10),
-                          Material(
-                              shape: const RoundedRectangleBorder(
-                                  borderRadius:
-                                      BorderRadius.all(Radius.circular(10))),
-                              child: SizedBox(
-                                  width: 100,
-                                  child: IconButton(
-                                    splashRadius: 200,
-                                    padding: const EdgeInsets.all(20),
-                                    onPressed: () {
-                                      _onImageButtonPressed(ImageSource.gallery,
-                                          context: context);
-                                    },
-                                    tooltip: 'Pick Image from gallery',
-                                    icon: Icon(Icons.photo,
-                                        size: 40, color: textColor),
-                                  ))),
-                          const SizedBox(width: 20),
-                          Material(
-                              shape: const RoundedRectangleBorder(
-                                  borderRadius:
-                                      BorderRadius.all(Radius.circular(10))),
-                              child: SizedBox(
-                                  width: 100,
-                                  child: IconButton(
-                                    splashRadius: 100,
-                                    padding: const EdgeInsets.all(20),
-                                    onPressed: loadFile,
-                                    tooltip: 'Pick File from gallery',
-                                    icon: Icon(Icons.insert_drive_file_outlined,
-                                        size: 40, color: textColor),
-                                  )))
+                                        ))))
                         ])),
+                Row(children: [
+                  const SizedBox(width: 10),
+                  Expanded(
+                      child: Material(
+                          shape: const RoundedRectangleBorder(
+                              borderRadius:
+                                  BorderRadius.all(Radius.circular(10))),
+                          child: InkWell(
+                              onTap: () {
+                                _onImageButtonPressed(ImageSource.gallery,
+                                    context: context);
+                              },
+                              child: SizedBox(
+                                  height: 100,
+                                  child: Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.photo,
+                                            size: 40, color: textColor),
+                                        Text("Gallery",
+                                            style: TextStyle(
+                                                fontSize: theme
+                                                    .getMediumFont(context),
+                                                color: textColor))
+                                      ]))))),
+                  const SizedBox(width: 20),
+                  Expanded(
+                    child: Material(
+                        shape: const RoundedRectangleBorder(
+                            borderRadius:
+                                BorderRadius.all(Radius.circular(10))),
+                        child: InkWell(
+                            onTap: loadFile,
+                            child: SizedBox(
+                                height: 100,
+                                child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.insert_drive_file_outlined,
+                                          size: 40, color: textColor),
+                                      Text("File",
+                                          style: TextStyle(
+                                              fontSize:
+                                                  theme.getMediumFont(context),
+                                              color: textColor))
+                                    ])))),
+                  ),
+                  const SizedBox(width: 10),
+                ])
               ]));
   }
 }
