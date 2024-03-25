@@ -93,7 +93,7 @@ class _AttachFileScreenState extends State<AttachFileScreen> {
   dynamic _pickImageError;
   final ImagePicker _picker = ImagePicker();
   String? selectedAttachmentPath;
-
+  ScrollController scrollCtrl = ScrollController();
   @override
   void initState() {
     super.initState();
@@ -313,7 +313,10 @@ class _AttachFileScreenState extends State<AttachFileScreen> {
                       if (_permissionStatus && _fetchedPath != dir) {
                         _fetchFiles(dir);
                       }
-                      return const Empty();
+                      return Text(dir.path,
+                          style: TextStyle(
+                              fontSize: theme.getMediumFont(context),
+                              color: textColor));
                     } else {
                       return Text("Loading gallery",
                           style: TextStyle(
@@ -322,46 +325,51 @@ class _AttachFileScreenState extends State<AttachFileScreen> {
                     }
                   },
                 ),
-                Container(
-                    margin: const EdgeInsets.symmetric(vertical: 8.0),
-                    height: 150.0,
-                    child: ListView(
-                        controller: ScrollController(),
-                        scrollDirection: Axis.horizontal,
-                        primary: false,
-                        padding: const EdgeInsets.all(20),
-                        children: [
-                          for (var i = 0; i < listImagePath.length; i++)
-                            Padding(
-                                padding: const EdgeInsets.all(10),
-                                child: Material(
-                                    shape: const RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.all(
-                                            Radius.circular(10))),
-                                    child: InkWell(
-                                        borderRadius: const BorderRadius.all(
-                                            Radius.circular(10)),
-                                        hoverColor:
-                                            Theme.of(context).hoverColor,
-                                        onTap: () => _onImagePressed(
-                                            listImagePath[i],
-                                            context: context),
-                                        child: Container(
-                                          width: 100,
-                                          margin: const EdgeInsets.symmetric(
-                                              horizontal: 2, vertical: 2),
-                                          decoration: BoxDecoration(
+                listImagePath.isNotEmpty
+                    ? Container(
+                        margin: const EdgeInsets.symmetric(vertical: 8.0),
+                        height: 150.0,
+                        child: ListView(
+                            controller: scrollCtrl,
+                            scrollDirection: Axis.horizontal,
+                            primary: false,
+                            padding: const EdgeInsets.all(10),
+                            children: [
+                              for (var i = 0; i < listImagePath.length; i++)
+                                Padding(
+                                    padding: const EdgeInsets.all(10),
+                                    child: Material(
+                                        shape: const RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.all(
+                                                Radius.circular(10))),
+                                        child: InkWell(
                                             borderRadius:
                                                 const BorderRadius.all(
-                                                    Radius.circular(8.0)),
-                                            image: DecorationImage(
-                                                image:
-                                                    Image.file(listImagePath[i])
+                                                    Radius.circular(10)),
+                                            hoverColor:
+                                                Theme.of(context).hoverColor,
+                                            onTap: () => _onImagePressed(
+                                                listImagePath[i],
+                                                context: context),
+                                            child: Container(
+                                              width: 100,
+                                              margin:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 2,
+                                                      vertical: 2),
+                                              decoration: BoxDecoration(
+                                                borderRadius:
+                                                    const BorderRadius.all(
+                                                        Radius.circular(8.0)),
+                                                image: DecorationImage(
+                                                    image: Image.file(
+                                                            listImagePath[i])
                                                         .image,
-                                                fit: BoxFit.contain),
-                                          ),
-                                        ))))
-                        ])),
+                                                    fit: BoxFit.contain),
+                                              ),
+                                            ))))
+                            ]))
+                    : const Empty(),
                 Row(children: [
                   const SizedBox(width: 10),
                   Expanded(
