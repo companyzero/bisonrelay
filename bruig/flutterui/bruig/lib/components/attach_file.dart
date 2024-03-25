@@ -120,10 +120,13 @@ class _AttachFileScreenState extends State<AttachFileScreen> {
 
   Future<Directory?> _getPath() async {
     if (Platform.isAndroid) {
-      var directory = await getExternalStorageDirectory();
-      if (directory != null) {
-        return Directory("${directory.path}/Downloads");
+      Directory? directory = Directory('/storage/emulated/0/Download');
+      // Put file in global download folder, if for an unknown reason it didn't exist, we fallback
+      // ignore: avoid_slow_async_io
+      if (!await directory.exists()) {
+        directory = await getExternalStorageDirectory();
       }
+      return directory;
     }
     return await getDownloadsDirectory();
   }
