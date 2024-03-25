@@ -57,8 +57,6 @@ class _ServerPageState extends State<ServerPage> {
   Widget build(BuildContext context) {
     return StartupScreen(Consumer<ThemeNotifier>(
         builder: (context, theme, _) => Column(children: [
-              const SetupScreenAbountButton(),
-              const SizedBox(height: 39),
               Text("Setting up Bison Relay",
                   style: TextStyle(
                       color: theme.getTheme().dividerColor,

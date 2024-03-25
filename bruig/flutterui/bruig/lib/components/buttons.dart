@@ -177,29 +177,20 @@ class FeedReadMoreButton extends StatelessWidget {
 // Generic about button.
 class AboutButton extends StatelessWidget {
   const AboutButton({super.key});
-
   @override
   Widget build(BuildContext context) {
-    return IconButton(
-        alignment: Alignment.topLeft,
-        tooltip: "About Bison Relay",
-        iconSize: 50,
-        onPressed: () {
-          Navigator.of(context).pushNamed("/about");
-        },
-        icon: Image.asset(
-          "assets/images/icon.png",
-        ));
-  }
-}
-
-// About button meant to be used in the initial setup screens.
-class SetupScreenAbountButton extends StatelessWidget {
-  const SetupScreenAbountButton({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Flexible(
-        child: Align(alignment: Alignment.topLeft, child: AboutButton()));
+    bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
+    return SizedBox(
+        height: isScreenSmall ? 100 : 150,
+        width: isScreenSmall ? 100 : 150,
+        child: IconButton(
+            alignment: Alignment.topLeft,
+            tooltip: "About Bison Relay",
+            onPressed: () {
+              Navigator.of(context).pushNamed("/about");
+            },
+            icon: Image.asset(
+              "assets/images/icon.png",
+            )));
   }
 }
