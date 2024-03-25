@@ -17,6 +17,17 @@ import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:mime/mime.dart';
 
+List<String> allowedMimeTypes = [
+  "text/plain",
+  "image/avif",
+  "image/bmp",
+  "image/gif",
+  "image/jpeg",
+  "image/jxl",
+  "image/png",
+  "image/webp"
+];
+
 class AttachmentEmbed {
   String? mime;
   Uint8List? data;
@@ -131,10 +142,12 @@ class _AttachFileScreenState extends State<AttachFileScreen> {
   }
 
   void loadFile() async {
-    try {
-      if (_debounce?.isActive ?? false) _debounce!.cancel();
-      _debounce = Timer(const Duration(milliseconds: 500), () async {
-        var filePickRes = await FilePicker.platform.pickFiles();
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    _debounce = Timer(const Duration(milliseconds: 500), () async {
+      try {
+        var filePickRes = await FilePicker.platform.pickFiles(
+          type: FileType.any,
+        );
         if (filePickRes == null) return;
         var firstFile = filePickRes.files.first;
         var filePath = firstFile.path;
@@ -147,46 +160,24 @@ class _AttachFileScreenState extends State<AttachFileScreen> {
           throw "File is too large to attach (limit: 1MiB)";
         }
 
-        var mime = "";
-        switch (firstFile.extension) {
-          case "txt":
-            mime = "text/plain";
-            break;
-          case "avif":
-            mime = "image/avif";
-            break;
-          case "bmp":
-            mime = "image/bmp";
-            break;
-          case "gif":
-            mime = "image/gif";
-            break;
-          case "jpg":
-          case "jpeg":
-            mime = "image/jpeg";
-            break;
-          case "jxl":
-            mime = "image/jxl";
-            break;
-          case "png":
-            mime = "image/png";
-            break;
-          case "webp":
-            mime = "image/webp";
-            break;
-          default:
-            throw "Unable to recognize type of embed";
+        var mimeType = lookupMimeType(filePath);
+        if (mimeType == null) {
+          throw "Unable to lookup file type";
         }
-
+        if (!allowedMimeTypes.contains(mimeType)) {
+          throw "Selected file ($filePath) type not allowed, only $allowedMimeTypes currently allowed";
+        }
         setState(() {
           this.filePath = filePath!;
           fileData = data;
-          this.mime = mime;
+          mime = mimeType;
         });
-      });
-    } catch (exception) {
-      showErrorSnackbar(context, "Unable to attach file: $exception");
-    }
+      } on Exception catch (exception) {
+        showErrorSnackbar(context, "Unable to attach file: $exception");
+      } catch (exception) {
+        showErrorSnackbar(context, "Unable to attach file: $exception");
+      }
+    });
   }
 
   void onLinkChanged(SharedFileAndShares? newLink) {
@@ -204,7 +195,7 @@ class _AttachFileScreenState extends State<AttachFileScreen> {
         source: source,
       );
       if (pickedFile == null) {
-        throw "Unable to load chosen image";
+        return;
       }
 
       var data = await pickedFile.readAsBytes();
@@ -275,19 +266,41 @@ class _AttachFileScreenState extends State<AttachFileScreen> {
     var textColor = theme.focusColor;
 
     return Consumer<ThemeNotifier>(
-        builder: (context, theme, _) => selectedAttachmentPath != null &&
+        builder: (context, theme, _) => selectedAttachmentPath != null
+            ? Column(children: [
                 mime.startsWith('image/')
-            ? Container(
-                margin: const EdgeInsets.symmetric(vertical: 8.0),
-                height: 200.0,
-                child: Image.file(
-                  File(selectedAttachmentPath!),
-                  errorBuilder: (BuildContext context, Object error,
-                      StackTrace? stackTrace) {
-                    return const Center(
-                        child: Text('This image type is not supported'));
-                  },
-                ))
+                    ? Container(
+                        margin: const EdgeInsets.symmetric(vertical: 8.0),
+                        height: 200.0,
+                        child: Image.file(File(selectedAttachmentPath!),
+                            errorBuilder: (BuildContext context, Object error,
+                                StackTrace? stackTrace) {
+                          return const Center(
+                              child: Text('This image type is not supported'));
+                        }))
+                    : mime.startsWith('text/')
+                        ? Container(
+                            margin: const EdgeInsets.symmetric(vertical: 8.0),
+                            height: 100.0,
+                            child: Text(selectedAttachmentPath!,
+                                style: TextStyle(
+                                    fontSize: theme.getLargeFont(context),
+                                    color: textColor)))
+                        : const Empty(),
+                fileData != null && fileData!.isNotEmpty
+                    ? Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+                        IconButton(
+                            tooltip: "Send Attachment",
+                            padding: const EdgeInsets.all(0),
+                            iconSize: 25,
+                            onPressed: fileData != null && fileData!.isNotEmpty
+                                ? attach
+                                : null,
+                            icon: const Icon(Icons.send_outlined),
+                            color: textColor)
+                      ])
+                    : const Empty(),
+              ])
             : Column(mainAxisAlignment: MainAxisAlignment.start, children: [
                 FutureBuilder(
                   future: _futureGetPath,
@@ -299,119 +312,85 @@ class _AttachFileScreenState extends State<AttachFileScreen> {
                       }
                       return const Empty();
                     } else {
-                      return const Text("Loading gallery");
+                      return Text("Loading gallery",
+                          style: TextStyle(
+                              fontSize: theme.getLargeFont(context),
+                              color: textColor));
                     }
                   },
                 ),
                 Container(
                     margin: const EdgeInsets.symmetric(vertical: 8.0),
-                    height: 200.0,
+                    height: 150.0,
                     child: ListView(
                         scrollDirection: Axis.horizontal,
                         primary: false,
                         padding: const EdgeInsets.all(20),
                         children: [
                           for (var i = 0; i < listImagePath.length; i++)
-                            InkWell(
-                                borderRadius:
-                                    const BorderRadius.all(Radius.circular(30)),
-                                hoverColor: Theme.of(context).hoverColor,
-                                onTap: () => _onImagePressed(listImagePath[i],
-                                    context: context),
-                                child: Container(
-                                  height: 100,
+                            Padding(
+                                padding: const EdgeInsets.all(10),
+                                child: Material(
+                                    shape: const RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.all(
+                                            Radius.circular(10))),
+                                    child: InkWell(
+                                        borderRadius: const BorderRadius.all(
+                                            Radius.circular(10)),
+                                        hoverColor:
+                                            Theme.of(context).hoverColor,
+                                        onTap: () => _onImagePressed(
+                                            listImagePath[i],
+                                            context: context),
+                                        child: Container(
+                                          width: 100,
+                                          margin: const EdgeInsets.symmetric(
+                                              horizontal: 2, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            borderRadius:
+                                                const BorderRadius.all(
+                                                    Radius.circular(8.0)),
+                                            image: DecorationImage(
+                                                image:
+                                                    Image.file(listImagePath[i])
+                                                        .image,
+                                                fit: BoxFit.contain),
+                                          ),
+                                        )))),
+                          const SizedBox(width: 10),
+                          Material(
+                              shape: const RoundedRectangleBorder(
+                                  borderRadius:
+                                      BorderRadius.all(Radius.circular(10))),
+                              child: SizedBox(
                                   width: 100,
-                                  margin: const EdgeInsets.symmetric(
-                                      horizontal: 2, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    borderRadius: const BorderRadius.all(
-                                        Radius.circular(8.0)),
-                                    image: DecorationImage(
-                                        image:
-                                            Image.file(listImagePath[i]).image,
-                                        fit: BoxFit.contain),
-                                  ),
-                                )),
-                          IconButton(
-                            splashRadius: 100,
-                            padding: const EdgeInsets.all(20),
-                            onPressed: () {
-                              _onImageButtonPressed(ImageSource.gallery,
-                                  context: context);
-                            },
-                            tooltip: 'Pick Image from gallery',
-                            icon: Icon(Icons.photo, size: 40, color: textColor),
-                          )
+                                  child: IconButton(
+                                    splashRadius: 200,
+                                    padding: const EdgeInsets.all(20),
+                                    onPressed: () {
+                                      _onImageButtonPressed(ImageSource.gallery,
+                                          context: context);
+                                    },
+                                    tooltip: 'Pick Image from gallery',
+                                    icon: Icon(Icons.photo,
+                                        size: 40, color: textColor),
+                                  ))),
+                          const SizedBox(width: 20),
+                          Material(
+                              shape: const RoundedRectangleBorder(
+                                  borderRadius:
+                                      BorderRadius.all(Radius.circular(10))),
+                              child: SizedBox(
+                                  width: 100,
+                                  child: IconButton(
+                                    splashRadius: 100,
+                                    padding: const EdgeInsets.all(20),
+                                    onPressed: loadFile,
+                                    tooltip: 'Pick File from gallery',
+                                    icon: Icon(Icons.insert_drive_file_outlined,
+                                        size: 40, color: textColor),
+                                  )))
                         ])),
-                fileData != null && fileData!.isNotEmpty
-                    ? Row(
-                        mainAxisAlignment: MainAxisAlignment.start,
-                        children: [
-                            IconButton(
-                                padding: const EdgeInsets.all(0),
-                                iconSize: 25,
-                                onPressed:
-                                    fileData != null && fileData!.isNotEmpty
-                                        ? attach
-                                        : null,
-                                icon: const Icon(Icons.attach_file_outlined),
-                                color: textColor)
-                          ])
-                    : const Empty(),
-                //const ImageSelection()
-              ])
-        /*
-              body: Container(
-                padding: const EdgeInsets.all(40),
-                child: Center(
-                  child: Column(children: [
-                    Text("Attach File",
-                        style: TextStyle(
-                            fontSize: theme.getLargeFont(context),
-                            color: textColor)),
-                    const SizedBox(height: 20),
-                    Row(children: [
-                      filePath != ""
-                          ? Expanded(
-                              child: Text(
-                                "File: $filePath",
-                                style: TextStyle(color: textColor),
-                              ),
-                            )
-                          : const Empty(),
-                      ElevatedButton(
-                          onPressed: loadFile, child: const Text("Load File")),
-                    ]),
-                    const SizedBox(height: 20),
-                    Row(children: [
-                      Text("Alt Text:", style: TextStyle(color: textColor)),
-                      const SizedBox(width: 41),
-                      Flexible(child: TextField(controller: altTxtCtrl)),
-                    ]),
-                    const SizedBox(height: 20),
-                    Row(children: [
-                      Text("Linking to: ", style: TextStyle(color: textColor)),
-                      const SizedBox(width: 20),
-                      Flexible(
-                          child: LocalContentDropDown(
-                        true,
-                        onChanged: onLinkChanged,
-                      )),
-                    ]),
-                    const Expanded(child: Empty()),
-                    Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                      ElevatedButton(
-                          onPressed: attach, child: const Text("Attach")),
-                      const SizedBox(width: 10),
-                      CancelButton(onPressed: () {
-                        Navigator.of(context).pop();
-                      }),
-                    ]),
-                  ]),
-                ),
-              ),
-            ));
-            */
-        );
+              ]));
   }
 }
