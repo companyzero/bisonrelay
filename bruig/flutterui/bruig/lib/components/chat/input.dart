@@ -40,6 +40,7 @@ class _InputState extends State<Input> {
     super.didUpdateWidget(oldWidget);
     var workingMsg = widget.chat.workingMsg;
     if (workingMsg != controller.text) {
+      isAttaching = false;
       controller.text = workingMsg;
       controller.selection = TextSelection(
           baseOffset: workingMsg.length, extentOffset: workingMsg.length);
