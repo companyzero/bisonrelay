@@ -69,10 +69,8 @@ class _LNInternalWalletPageState extends State<LNInternalWalletPage> {
   Widget build(BuildContext context) {
     bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
 
-    return StartupScreen(Consumer<ThemeNotifier>(
-        builder: (context, theme, _) => Column(children: [
-              const SetupScreenAbountButton(),
-              SizedBox(height: isScreenSmall ? 5 : 39),
+    return Consumer<ThemeNotifier>(
+        builder: (context, theme, _) => StartupScreen(Column(children: [
               Text("Setting up Bison Relay",
                   style: TextStyle(
                       color: theme.getTheme().dividerColor,
