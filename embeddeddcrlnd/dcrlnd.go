@@ -403,6 +403,7 @@ func RunDcrlnd(ctx context.Context, cfg Config) (*Dcrlnd, error) {
 	conf.TLSDisableAutofill = true // FIXME: parametrize
 	conf.RawRPCListeners = rpcAddrs
 	conf.DisableRest = true
+	conf.RejectHTLC = true
 	conf.DisableListen = true
 	conf.BackupFilePath = filepath.Join(rootDir, "channels.backup")
 	conf.Decred.Node = "dcrw"
