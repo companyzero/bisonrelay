@@ -316,10 +316,12 @@ class _AttachFileScreenState extends State<AttachFileScreen> {
                       if (_permissionStatus && _fetchedPath != dir) {
                         _fetchFiles(dir);
                       }
-                      return Text(dir.path,
-                          style: TextStyle(
-                              fontSize: theme.getMediumFont(context),
-                              color: textColor));
+                      return listImagePath.isNotEmpty
+                          ? Text(dir.path,
+                              style: TextStyle(
+                                  fontSize: theme.getMediumFont(context),
+                                  color: textColor))
+                          : const Empty();
                     } else {
                       return Text("Loading gallery",
                           style: TextStyle(
