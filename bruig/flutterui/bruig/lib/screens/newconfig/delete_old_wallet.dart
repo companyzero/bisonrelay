@@ -39,10 +39,8 @@ class _DeleteOldWalletPageState extends State<DeleteOldWalletPage> {
 
   @override
   Widget build(BuildContext context) {
-    return StartupScreen(Consumer<ThemeNotifier>(
-        builder: (context, theme, _) => Column(children: [
-              const SetupScreenAbountButton(),
-              const SizedBox(height: 39),
+    return Consumer<ThemeNotifier>(
+        builder: (context, theme, _) => StartupScreen([
               Text("Remove old wallet",
                   style: TextStyle(
                       color: theme.getTheme().dividerColor,
@@ -90,6 +88,6 @@ class _DeleteOldWalletPageState extends State<DeleteOldWalletPage> {
                           const SizedBox(width: 10),
                         ])))
               ]),
-            ])));
+            ]));
   }
 }

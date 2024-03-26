@@ -512,17 +512,8 @@ class AccountSettingsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     var theme = Theme.of(context);
-    var backgroundColor = theme.backgroundColor;
     var textColor = theme.focusColor;
-    var canvasColor = theme.canvasColor;
 
-    var avatarColor = colorFromNick(client.nick);
-    var darkTextColor = theme.indicatorColor;
-    var hightLightTextColor = theme.dividerColor; // NAME TEXT COLOR
-    var avatarTextColor =
-        ThemeData.estimateBrightnessForColor(avatarColor) == Brightness.dark
-            ? hightLightTextColor
-            : darkTextColor;
     return Consumer<ThemeNotifier>(
         builder: (context, theme, _) => ListView(children: [
               ListTile(

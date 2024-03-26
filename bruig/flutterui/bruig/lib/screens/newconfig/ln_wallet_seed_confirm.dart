@@ -54,10 +54,8 @@ class _ConfirmLNWalletSeedPageState extends State<ConfirmLNWalletSeedPage> {
 
     var confirmSeedWords = widget.newconf.confirmSeedWords;
 
-    return StartupScreen(Consumer<ThemeNotifier>(
-      builder: (context, theme, _) => Column(children: [
-        const SetupScreenAbountButton(),
-        const SizedBox(height: 39),
+    return Consumer<ThemeNotifier>(
+      builder: (context, theme, _) => StartupScreen([
         Text("Setting up Bison Relay",
             style: TextStyle(
                 color: theme.getTheme().dividerColor,
@@ -93,7 +91,7 @@ class _ConfirmLNWalletSeedPageState extends State<ConfirmLNWalletSeedPage> {
         ),
         const SizedBox(height: 34),
       ]),
-    ));
+    );
   }
 }
 

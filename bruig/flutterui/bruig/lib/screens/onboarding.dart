@@ -337,7 +337,7 @@ Cancelling onboarding means the wallet setup, including obtaining on-chain funds
       ];
     }
 
-    return StartupScreen(Column(children: [
+    return StartupScreen([
       Row(children: [
         IconButton(
             alignment: Alignment.topLeft,
@@ -357,6 +357,6 @@ Cancelling onboarding means the wallet setup, including obtaining on-chain funds
                   fontWeight: FontWeight.w200))),
       const SizedBox(height: 20),
       ...children,
-    ]));
+    ]);
   }
 }

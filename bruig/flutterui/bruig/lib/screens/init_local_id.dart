@@ -42,8 +42,8 @@ class InitLocalIDScreenState extends State<InitLocalIDScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return StartupScreen(Consumer<ThemeNotifier>(
-      builder: (context, theme, child) => Column(children: [
+    return Consumer<ThemeNotifier>(
+      builder: (context, theme, child) => StartupScreen([
         const SizedBox(height: 89),
         Text("Setting up Bison Relay",
             style: TextStyle(
@@ -88,6 +88,6 @@ class InitLocalIDScreenState extends State<InitLocalIDScreen> {
               ]))
         ]),
       ]),
-    ));
+    );
   }
 }

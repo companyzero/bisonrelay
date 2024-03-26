@@ -55,10 +55,8 @@ class _ServerPageState extends State<ServerPage> {
 
   @override
   Widget build(BuildContext context) {
-    return StartupScreen(Consumer<ThemeNotifier>(
-        builder: (context, theme, _) => Column(children: [
-              const SetupScreenAbountButton(),
-              const SizedBox(height: 39),
+    return Consumer<ThemeNotifier>(
+        builder: (context, theme, _) => StartupScreen([
               Text("Setting up Bison Relay",
                   style: TextStyle(
                       color: theme.getTheme().dividerColor,
@@ -97,6 +95,6 @@ class _ServerPageState extends State<ServerPage> {
                 text: "Connect",
               ),
               const Expanded(child: Empty()),
-            ])));
+            ]));
   }
 }

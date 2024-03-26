@@ -115,86 +115,79 @@ class __LNUnlockPageState extends State<_LNUnlockPage> {
   @override
   Widget build(BuildContext context) {
     bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
-    return StartupScreen(Consumer<ThemeNotifier>(
-      builder: (context, theme, _) {
-        return Column(children: [
-          const SetupScreenAbountButton(),
-          Text("Connect to Bison Relay",
-              style: TextStyle(
-                  color: theme.getTheme().dividerColor,
-                  fontSize: theme.getHugeFont(context),
-                  fontWeight: FontWeight.w200)),
-          SizedBox(height: isScreenSmall ? 8 : 34),
-          Column(children: [
-            SizedBox(
+    return Consumer<ThemeNotifier>(
+      builder: (context, theme, _) => StartupScreen(<Widget>[
+        Text("Connect to Bison Relay",
+            style: TextStyle(
+                color: theme.getTheme().dividerColor,
+                fontSize: theme.getHugeFont(context),
+                fontWeight: FontWeight.w200)),
+        SizedBox(height: isScreenSmall ? 8 : 34),
+        SizedBox(
+            width: 377,
+            child: Text("Password",
+                textAlign: TextAlign.left,
+                style: TextStyle(
+                    color: theme.getTheme().indicatorColor,
+                    fontSize: theme.getMediumFont(context),
+                    fontWeight: FontWeight.w300))),
+        const SizedBox(height: 5),
+        Center(
+            child: SizedBox(
                 width: 377,
-                child: Text("Password",
-                    textAlign: TextAlign.left,
+                child: TextField(
+                    autofocus: true,
+                    cursorColor: theme.getTheme().indicatorColor,
+                    decoration: InputDecoration(
+                        errorText: _validate,
+                        border: InputBorder.none,
+                        hintText: "Password",
+                        hintStyle: TextStyle(
+                            fontSize: theme.getLargeFont(context),
+                            color: theme.getTheme().dividerColor),
+                        filled: true,
+                        fillColor: theme.getTheme().cardColor),
                     style: TextStyle(
                         color: theme.getTheme().indicatorColor,
-                        fontSize: theme.getMediumFont(context),
-                        fontWeight: FontWeight.w300))),
-            const SizedBox(height: 5),
-            Center(
-                child: SizedBox(
-                    width: 377,
-                    child: TextField(
-                        autofocus: true,
-                        cursorColor: theme.getTheme().indicatorColor,
-                        decoration: InputDecoration(
-                            errorText: _validate,
-                            border: InputBorder.none,
-                            hintText: "Password",
-                            hintStyle: TextStyle(
-                                fontSize: theme.getLargeFont(context),
-                                color: theme.getTheme().dividerColor),
-                            filled: true,
-                            fillColor: theme.getTheme().cardColor),
-                        style: TextStyle(
-                            color: theme.getTheme().indicatorColor,
-                            fontSize: theme.getLargeFont(context)),
-                        controller: passCtrl,
-                        obscureText: true,
-                        onSubmitted: (value) {
-                          if (!loading) {
-                            unlock();
-                          }
-                        },
-                        onChanged: (value) {
-                          setState(() {
-                            _validate =
-                                value.isEmpty ? "Password cannot be empty" : "";
-                          });
-                        }))),
-            SizedBox(height: isScreenSmall ? 8 : 34),
-            Center(
-                child: SizedBox(
-                    width: 283,
-                    child: Row(children: [
-                      const SizedBox(width: 35),
-                      LoadingScreenButton(
-                        onPressed: !loading ? unlock : null,
-                        text: "Unlock Wallet",
-                      ),
-                      const SizedBox(width: 10),
-                      loading
-                          ? SizedBox(
-                              height: 25,
-                              width: 25,
-                              child: CircularProgressIndicator(
-                                  value: null,
-                                  backgroundColor:
-                                      theme.getTheme().backgroundColor,
-                                  color: theme.getTheme().dividerColor,
-                                  strokeWidth: 2),
-                            )
-                          : const SizedBox(width: 25),
-                    ]))),
-          ]),
-          const Expanded(child: Empty()),
-        ]);
-      },
-    ));
+                        fontSize: theme.getLargeFont(context)),
+                    controller: passCtrl,
+                    obscureText: true,
+                    onSubmitted: (value) {
+                      if (!loading) {
+                        unlock();
+                      }
+                    },
+                    onChanged: (value) {
+                      setState(() {
+                        _validate =
+                            value.isEmpty ? "Password cannot be empty" : "";
+                      });
+                    }))),
+        SizedBox(height: isScreenSmall ? 8 : 34),
+        Center(
+            child: SizedBox(
+                width: 283,
+                child: Row(children: [
+                  const SizedBox(width: 35),
+                  LoadingScreenButton(
+                    onPressed: !loading ? unlock : null,
+                    text: "Unlock Wallet",
+                  ),
+                  const SizedBox(width: 10),
+                  loading
+                      ? SizedBox(
+                          height: 25,
+                          width: 25,
+                          child: CircularProgressIndicator(
+                              value: null,
+                              backgroundColor: theme.getTheme().backgroundColor,
+                              color: theme.getTheme().dividerColor,
+                              strokeWidth: 2),
+                        )
+                      : const SizedBox(width: 25),
+                ]))),
+      ]),
+    );
   }
 }
 
@@ -255,10 +248,8 @@ class _LNChainSyncPageState extends State<_LNChainSyncPage> {
   Widget build(BuildContext context) {
     bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
 
-    return StartupScreen(Consumer<ThemeNotifier>(
-        builder: (context, theme, child) => Column(children: [
-              const SetupScreenAbountButton(),
-              const SizedBox(height: 39),
+    return Consumer<ThemeNotifier>(
+        builder: (context, theme, child) => StartupScreen([
               Text("Setting up Bison Relay",
                   style: TextStyle(
                       color: theme.getTheme().dividerColor,
@@ -366,7 +357,7 @@ class _LNChainSyncPageState extends State<_LNChainSyncPage> {
                               optionalTextColor: theme.getTheme().dividerColor))
                     ])),
               )
-            ])));
+            ]));
   }
 }
 

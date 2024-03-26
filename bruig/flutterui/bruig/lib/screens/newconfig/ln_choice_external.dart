@@ -1,6 +1,5 @@
 import 'dart:io';
 
-import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/components/buttons.dart';
 import 'package:bruig/models/newconfig.dart';
@@ -79,10 +78,8 @@ class _LNExternalWalletPageState extends State<LNExternalWalletPage> {
 
   @override
   Widget build(BuildContext context) {
-    return StartupScreen(Consumer<ThemeNotifier>(
-        builder: (context, theme, _) => Column(children: [
-              const SetupScreenAbountButton(),
-              const SizedBox(height: 39),
+    return Consumer<ThemeNotifier>(
+        builder: (context, theme, _) => StartupScreen([
               Text("Setting up Bison Relay",
                   style: TextStyle(
                       color: theme.getTheme().dividerColor,
@@ -201,6 +198,6 @@ class _LNExternalWalletPageState extends State<LNExternalWalletPage> {
                               : const SizedBox(width: 25),
                         ]))),
               ])
-            ])));
+            ]));
   }
 }

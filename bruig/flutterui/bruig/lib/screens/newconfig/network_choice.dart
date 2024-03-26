@@ -24,10 +24,8 @@ class NetworkChoicePage extends StatelessWidget {
   Widget build(BuildContext context) {
     bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
 
-    return StartupScreen(Consumer<ThemeNotifier>(
-        builder: (context, theme, _) => Column(children: [
-              const SetupScreenAbountButton(),
-              const Expanded(child: Empty()),
+    return Consumer<ThemeNotifier>(
+        builder: (context, theme, _) => StartupScreen([
               Text("Setting up Bison Relay",
                   style: TextStyle(
                       color: theme.getTheme().dividerColor,
@@ -74,6 +72,6 @@ class NetworkChoicePage extends StatelessWidget {
                       style: TextStyle(color: theme.getTheme().dividerColor)),
                 )
               ])
-            ])));
+            ]));
   }
 }

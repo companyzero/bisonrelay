@@ -1,4 +1,3 @@
-import 'package:bruig/components/buttons.dart';
 import 'package:bruig/models/newconfig.dart';
 import 'package:bruig/screens/startupscreen.dart';
 import 'package:flutter/material.dart';
@@ -36,16 +35,14 @@ class _InitializingNewConfPageState extends State<InitializingNewConfPage> {
 
   @override
   Widget build(BuildContext context) {
-    return StartupScreen(Consumer<ThemeNotifier>(
-        builder: (context, theme, _) => Column(children: [
-              const SetupScreenAbountButton(),
-              const SizedBox(height: 39),
+    return Consumer<ThemeNotifier>(
+        builder: (context, theme, _) => StartupScreen([
               Text("Setting up Bison Relay",
                   style: TextStyle(
                       color: theme.getTheme().dividerColor,
                       fontSize: theme.getHugeFont(context),
                       fontWeight: FontWeight.w200)),
               const SizedBox(height: 20),
-            ])));
+            ]));
   }
 }

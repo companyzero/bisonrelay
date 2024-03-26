@@ -38,9 +38,10 @@ class _AboutScreenState extends State<AboutScreen> {
   Widget build(BuildContext context) {
     bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
 
-    return StartupScreen(Consumer<ThemeNotifier>(
-        builder: (context, theme, child) => Column(
-              children: [
+    return Consumer<ThemeNotifier>(
+        builder: (context, theme, child) => StartupScreen(
+              about: true,
+              [
                 const SizedBox(height: 89),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -140,6 +141,6 @@ class _AboutScreenState extends State<AboutScreen> {
                             ),
                           ]),
               ],
-            )));
+            ));
   }
 }

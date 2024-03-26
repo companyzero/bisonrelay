@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:bruig/theme_manager.dart';
+import 'package:flutter/widgets.dart';
 import 'package:provider/provider.dart';
 
 class CancelButton extends StatelessWidget {
@@ -177,29 +178,16 @@ class FeedReadMoreButton extends StatelessWidget {
 // Generic about button.
 class AboutButton extends StatelessWidget {
   const AboutButton({super.key});
-
   @override
   Widget build(BuildContext context) {
     return IconButton(
-        alignment: Alignment.topLeft,
         tooltip: "About Bison Relay",
-        iconSize: 50,
         onPressed: () {
           Navigator.of(context).pushNamed("/about");
         },
         icon: Image.asset(
+          fit: BoxFit.contain,
           "assets/images/icon.png",
         ));
-  }
-}
-
-// About button meant to be used in the initial setup screens.
-class SetupScreenAbountButton extends StatelessWidget {
-  const SetupScreenAbountButton({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Flexible(
-        child: Align(alignment: Alignment.topLeft, child: AboutButton()));
   }
 }

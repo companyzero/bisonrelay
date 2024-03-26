@@ -154,8 +154,6 @@ class _GroupChatNameInputState extends State<GroupChatNameInput> {
   void handleKeyPress(event) {
     if (event is RawKeyUpEvent) {
       bool modPressed = event.isShiftPressed || event.isControlPressed;
-      final val = controller.value;
-      //client.filteredSearchString = val.text;
       if (event.data.logicalKey.keyLabel == "Enter" && !modPressed) {
         controller.value = const TextEditingValue(
             text: "", selection: TextSelection.collapsed(offset: 0));
