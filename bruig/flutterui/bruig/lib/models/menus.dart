@@ -1,4 +1,3 @@
-import 'package:bruig/components/chats_list.dart';
 import 'package:bruig/components/confirmation_dialog.dart';
 import 'package:bruig/components/pay_tip.dart';
 import 'package:bruig/components/rename_chat.dart';

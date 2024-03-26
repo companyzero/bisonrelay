@@ -104,7 +104,7 @@ class _ExportLogScreenState extends State<ExportLogScreen> {
     () async {
       try {
         var dir = isMobile
-            ? (await getApplicationCacheDirectory())?.path
+            ? (await getApplicationCacheDirectory()).path
             : await getDownloadsDirectory();
         setState(() {
           destPath = "$dir/${zipFilename()}";
@@ -197,8 +197,7 @@ class _ExportLogScreenState extends State<ExportLogScreen> {
                                   .pushNamed(ManualCfgModifyScreen.routeName);
                             }
                           },
-                          child: Container(
-                              height: 20, width: 40),
+                          child: Container(height: 20, width: 40),
                         ),
                   TextButton(
                       onPressed: chooseDestPath,

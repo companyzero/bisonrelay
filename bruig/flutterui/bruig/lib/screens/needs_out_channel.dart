@@ -2,8 +2,6 @@ import 'dart:async';
 
 import 'package:bruig/components/buttons.dart';
 import 'package:bruig/components/dcr_input.dart';
-import 'package:bruig/components/empty_widget.dart';
-import 'package:bruig/components/info_grid.dart';
 import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/models/notifications.dart';
@@ -11,7 +9,6 @@ import 'package:bruig/screens/startupscreen.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:golib_plugin/util.dart';
-import 'package:tuple/tuple.dart';
 import 'package:bruig/theme_manager.dart';
 import 'package:provider/provider.dart';
 

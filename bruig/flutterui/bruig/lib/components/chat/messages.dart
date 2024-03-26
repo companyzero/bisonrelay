@@ -35,7 +35,6 @@ class _MessagesState extends State<Messages> {
   String get nick => widget.nick;
   int _maxItem = 0;
   bool _showFAB = false;
-  late ChatModel _lastChat;
   Timer? _debounce;
 
   void onChatChanged() {
@@ -80,7 +79,6 @@ class _MessagesState extends State<Messages> {
     chat.addListener(onChatChanged);
     _maybeScrollToFirstUnread();
     _maybeScrollToBottom();
-    _lastChat = chat;
   }
 
   @override
@@ -91,7 +89,6 @@ class _MessagesState extends State<Messages> {
     _maybeScrollToFirstUnread();
     _maybeScrollToBottom();
     onChatChanged();
-    _lastChat = chat;
   }
 
   @override
