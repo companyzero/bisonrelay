@@ -55,45 +55,43 @@ class _ConfirmLNWalletSeedPageState extends State<ConfirmLNWalletSeedPage> {
     var confirmSeedWords = widget.newconf.confirmSeedWords;
 
     return Consumer<ThemeNotifier>(
-        builder: (context, theme, _) => StartupScreen(
-              Column(children: [
-                Text("Setting up Bison Relay",
-                    style: TextStyle(
-                        color: theme.getTheme().dividerColor,
-                        fontSize: theme.getHugeFont(context),
-                        fontWeight: FontWeight.w200)),
-                const SizedBox(height: 20),
-                Text("Confirm New Wallet Seed",
-                    style: TextStyle(
-                        color: theme.getTheme().focusColor,
-                        fontSize: theme.getLargeFont(context),
-                        fontWeight: FontWeight.w300)),
-                const SizedBox(height: 34),
-                AnimatedOpacity(
-                  opacity: _visible ? 1.0 : 0.0,
-                  duration: const Duration(milliseconds: 500),
-                  child: currentQuestion < confirmSeedWords.length
-                      ? !answerWrong
-                          ? QuestionArea(
-                              confirmSeedWords[currentQuestion], checkAnswer)
-                          : IncorrectArea(goBack)
-                      : Column(children: [
-                          Text("Seed Confirmed",
-                              style: TextStyle(
-                                  color: theme.getTheme().dividerColor,
-                                  fontSize: theme.getLargeFont(context),
-                                  fontWeight: FontWeight.w200)),
-                          const SizedBox(height: 20),
-                          Center(
-                              child: LoadingScreenButton(
-                            onPressed: done,
-                            text: "Continue",
-                          ))
-                        ]),
-                ),
-                const SizedBox(height: 34),
-              ]),
-            ));
+      builder: (context, theme, _) => StartupScreen([
+        Text("Setting up Bison Relay",
+            style: TextStyle(
+                color: theme.getTheme().dividerColor,
+                fontSize: theme.getHugeFont(context),
+                fontWeight: FontWeight.w200)),
+        const SizedBox(height: 20),
+        Text("Confirm New Wallet Seed",
+            style: TextStyle(
+                color: theme.getTheme().focusColor,
+                fontSize: theme.getLargeFont(context),
+                fontWeight: FontWeight.w300)),
+        const SizedBox(height: 34),
+        AnimatedOpacity(
+          opacity: _visible ? 1.0 : 0.0,
+          duration: const Duration(milliseconds: 500),
+          child: currentQuestion < confirmSeedWords.length
+              ? !answerWrong
+                  ? QuestionArea(confirmSeedWords[currentQuestion], checkAnswer)
+                  : IncorrectArea(goBack)
+              : Column(children: [
+                  Text("Seed Confirmed",
+                      style: TextStyle(
+                          color: theme.getTheme().dividerColor,
+                          fontSize: theme.getLargeFont(context),
+                          fontWeight: FontWeight.w200)),
+                  const SizedBox(height: 20),
+                  Center(
+                      child: LoadingScreenButton(
+                    onPressed: done,
+                    text: "Continue",
+                  ))
+                ]),
+        ),
+        const SizedBox(height: 34),
+      ]),
+    );
   }
 }
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:bruig/theme_manager.dart';
+import 'package:flutter/widgets.dart';
 import 'package:provider/provider.dart';
 
 class CancelButton extends StatelessWidget {
@@ -179,18 +180,14 @@ class AboutButton extends StatelessWidget {
   const AboutButton({super.key});
   @override
   Widget build(BuildContext context) {
-    bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
-    return SizedBox(
-        height: isScreenSmall ? 100 : 150,
-        width: isScreenSmall ? 100 : 150,
-        child: IconButton(
-            alignment: Alignment.topLeft,
-            tooltip: "About Bison Relay",
-            onPressed: () {
-              Navigator.of(context).pushNamed("/about");
-            },
-            icon: Image.asset(
-              "assets/images/icon.png",
-            )));
+    return IconButton(
+        tooltip: "About Bison Relay",
+        onPressed: () {
+          Navigator.of(context).pushNamed("/about");
+        },
+        icon: Image.asset(
+          fit: BoxFit.contain,
+          "assets/images/icon.png",
+        ));
   }
 }

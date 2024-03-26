@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:bruig/components/dcr_input.dart';
 import 'package:bruig/components/buttons.dart';
-import 'package:bruig/components/info_grid.dart';
 import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/models/notifications.dart';
@@ -10,7 +9,6 @@ import 'package:bruig/screens/startupscreen.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:golib_plugin/util.dart';
-import 'package:tuple/tuple.dart';
 import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/theme_manager.dart';
 import 'package:provider/provider.dart';
@@ -187,18 +185,14 @@ cNPr8Y+sSs2MHf6xMNBQzV4KuIlPIg==
 
   @override
   Widget build(BuildContext context) {
-    return StartupScreen(Consumer<ThemeNotifier>(
-      builder: (context, theme, child) => ListView(
-        physics: const ClampingScrollPhysics(),
-        children: [
-          const SizedBox(height: 89),
-          Center(
-            child: Text("Setting up Bison Relay",
-                style: TextStyle(
-                    color: theme.getTheme().dividerColor,
-                    fontSize: theme.getHugeFont(context),
-                    fontWeight: FontWeight.w200)),
-          ),
+    return Consumer<ThemeNotifier>(
+      builder: (context, theme, child) => StartupScreen(
+        [
+          Text("Setting up Bison Relay",
+              style: TextStyle(
+                  color: theme.getTheme().dividerColor,
+                  fontSize: theme.getHugeFont(context),
+                  fontWeight: FontWeight.w200)),
           const SizedBox(height: 20),
           Center(
             child: Text("Add Inbound Capacity",
@@ -207,7 +201,7 @@ cNPr8Y+sSs2MHf6xMNBQzV4KuIlPIg==
                     fontSize: theme.getLargeFont(context),
                     fontWeight: FontWeight.w300)),
           ),
-          const SizedBox(height: 34),
+          const SizedBox(height: 20),
           Center(
               child: SizedBox(
             width: 650,
@@ -225,26 +219,23 @@ After the channel is opened, it may take up to 6 confirmations for it to be broa
                     fontSize: theme.getMediumFont(context),
                     fontWeight: FontWeight.w300)),
           )),
-          const SizedBox(height: 21),
-          Container(
-              margin: const EdgeInsets.only(left: 324 + 22, right: 324 + 20),
-              child:
-                  Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                Text(
-                    textAlign: TextAlign.left,
-                    "Outbound Channel Capacity:",
-                    style: TextStyle(
-                        color: theme.getTheme().indicatorColor,
-                        fontSize: theme.getSmallFont(context),
-                        fontWeight: FontWeight.w300)),
-                Text(
-                    textAlign: TextAlign.right,
-                    formatDCR(atomsToDCR(maxOutAmount)),
-                    style: TextStyle(
-                        color: theme.getTheme().indicatorColor,
-                        fontSize: theme.getSmallFont(context),
-                        fontWeight: FontWeight.w300)),
-              ])),
+          const SizedBox(height: 10),
+          Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+            Text(
+                textAlign: TextAlign.left,
+                "Outbound Channel Capacity:",
+                style: TextStyle(
+                    color: theme.getTheme().indicatorColor,
+                    fontSize: theme.getSmallFont(context),
+                    fontWeight: FontWeight.w300)),
+            Text(
+                textAlign: TextAlign.right,
+                formatDCR(atomsToDCR(maxOutAmount)),
+                style: TextStyle(
+                    color: theme.getTheme().indicatorColor,
+                    fontSize: theme.getSmallFont(context),
+                    fontWeight: FontWeight.w300)),
+          ]),
           const SizedBox(height: 3),
           Row(mainAxisAlignment: MainAxisAlignment.center, children: [
             Text(
@@ -296,61 +287,58 @@ After the channel is opened, it may take up to 6 confirmations for it to be broa
           ]),
           const SizedBox(height: 10),
           preventMsg == ""
-              ? Center(
-                  child: LoadingScreenButton(
+              ? Column(children: [
+                  Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                    Text("Amount",
+                        style: TextStyle(
+                            color: theme.getTheme().indicatorColor,
+                            fontSize: theme.getSmallFont(context),
+                            fontWeight: FontWeight.w300)),
+                    const SizedBox(
+                      width: 10,
+                    ),
+                    SizedBox(
+                      width: 150,
+                      child: dcrInput(controller: amountCtrl),
+                    ),
+                  ]),
+                  const SizedBox(height: 10),
+                  LoadingScreenButton(
                     empty: true,
                     onPressed:
                         showAdvanced ? hideAdvancedArea : showAdvancedArea,
                     text: showAdvanced ? "Hide Advanced" : "Show Advanced",
                   ),
-                )
-              : Empty(),
-          const SizedBox(height: 10),
-          preventMsg == ""
-              ? ListView(
-                  physics: const NeverScrollableScrollPhysics(),
-                  shrinkWrap: true,
-                  padding: const EdgeInsets.all(15.0),
-                  children: [
-                      Text("Amount",
-                          style: TextStyle(
-                              color: theme.getTheme().indicatorColor,
-                              fontSize: theme.getSmallFont(context),
-                              fontWeight: FontWeight.w300)),
-                      SizedBox(
-                        width: 150,
-                        child: dcrInput(controller: amountCtrl),
-                      ),
-                      const SizedBox(height: 50),
-                      LoadingScreenButton(
-                        onPressed: !loading ? requestRecvCapacity : null,
-                        text: "Request Inbound Channel",
-                      ),
-                      if (showAdvanced) ...[
-                        const SizedBox(height: 10),
-                        Text("LP Server Address",
-                            style: TextStyle(
-                                color: theme.getTheme().indicatorColor,
-                                fontSize: theme.getSmallFont(context),
-                                fontWeight: FontWeight.w300)),
-                        TextField(
-                          controller: serverCtrl,
-                          decoration: const InputDecoration(
-                              hintText: "https://lpd-server:port"),
-                        ),
-                        const SizedBox(height: 10),
-                        Text("LP Server Cert",
-                            style: TextStyle(
-                                color: theme.getTheme().indicatorColor,
-                                fontSize: theme.getSmallFont(context),
-                                fontWeight: FontWeight.w300)),
-                        TextField(
-                          controller: certCtrl,
-                          maxLines: null,
-                          keyboardType: TextInputType.multiline,
-                        )
-                      ]
-                    ])
+                  const SizedBox(height: 10),
+                  LoadingScreenButton(
+                    onPressed: !loading ? requestRecvCapacity : null,
+                    text: "Request Inbound Channel",
+                  ),
+                  if (showAdvanced) ...[
+                    const SizedBox(height: 10),
+                    Text("LP Server Address",
+                        style: TextStyle(
+                            color: theme.getTheme().indicatorColor,
+                            fontSize: theme.getSmallFont(context),
+                            fontWeight: FontWeight.w300)),
+                    TextField(
+                      controller: serverCtrl,
+                      decoration: const InputDecoration(
+                          hintText: "https://lpd-server:port"),
+                    ),
+                    const SizedBox(height: 10),
+                    Text("LP Server Cert",
+                        style: TextStyle(
+                            color: theme.getTheme().indicatorColor,
+                            fontSize: theme.getSmallFont(context),
+                            fontWeight: FontWeight.w300)),
+                    TextField(
+                      controller: certCtrl,
+                      maxLines: null,
+                      keyboardType: TextInputType.multiline,
+                    )
+                  ]
+                ])
               : Column(children: [
                   const SizedBox(height: 30),
                   Text(
@@ -358,14 +346,13 @@ After the channel is opened, it may take up to 6 confirmations for it to be broa
                     style: TextStyle(color: theme.getTheme().dividerColor),
                   )
                 ]),
-          Center(
-            child: LoadingScreenButton(
-              onPressed: () => Navigator.of(context).pop(),
-              text: "Skip",
-            ),
-          )
+          const SizedBox(height: 10),
+          LoadingScreenButton(
+            onPressed: () => Navigator.of(context).pop(),
+            text: "Skip",
+          ),
         ],
       ),
-    ));
+    );
   }
 }

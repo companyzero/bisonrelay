@@ -59,7 +59,7 @@ class _MoveOldVersionWalletPageState extends State<MoveOldVersionWalletPage> {
   @override
   Widget build(BuildContext context) {
     return Consumer<ThemeNotifier>(
-        builder: (context, theme, _) => StartupScreen(Column(children: [
+        builder: (context, theme, _) => StartupScreen([
               unableToMove
                   ? Column(children: [
                       Text("Move old wallet",
@@ -142,6 +142,6 @@ class _MoveOldVersionWalletPageState extends State<MoveOldVersionWalletPage> {
                                 ])))
                       ]),
                     ])
-            ])));
+            ]));
   }
 }

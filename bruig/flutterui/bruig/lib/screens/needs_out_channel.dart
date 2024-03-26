@@ -179,11 +179,9 @@ open channels to other LN nodes.''';
 
   @override
   Widget build(BuildContext context) {
-    return StartupScreen(Consumer<ThemeNotifier>(
-      builder: (context, theme, child) => ListView(
-        physics: const ClampingScrollPhysics(),
-        children: [
-          const SizedBox(height: 89),
+    return Consumer<ThemeNotifier>(
+      builder: (context, theme, child) => StartupScreen(
+        [
           Center(
             child: Text("Setting up Bison Relay",
                 style: TextStyle(
@@ -199,7 +197,7 @@ open channels to other LN nodes.''';
                     fontSize: theme.getLargeFont(context),
                     fontWeight: FontWeight.w300)),
           ),
-          const SizedBox(height: 34),
+          const SizedBox(height: 20),
           Center(
             child: SizedBox(
                 width: 650,
@@ -217,26 +215,23 @@ Note that Lightning Network channels require managing off-chain data, and as suc
                       fontWeight: FontWeight.w300),
                 )),
           ),
-          const SizedBox(height: 21),
-          Container(
-              margin: const EdgeInsets.only(left: 324 + 22, right: 324 + 20),
-              child:
-                  Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                Text(
-                    textAlign: TextAlign.left,
-                    "Wallet Balance:",
-                    style: TextStyle(
-                        color: theme.getTheme().indicatorColor,
-                        fontSize: theme.getSmallFont(context),
-                        fontWeight: FontWeight.w300)),
-                Text(
-                    textAlign: TextAlign.right,
-                    formatDCR(atomsToDCR(walletBalance)),
-                    style: TextStyle(
-                        color: theme.getTheme().indicatorColor,
-                        fontSize: theme.getSmallFont(context),
-                        fontWeight: FontWeight.w300)),
-              ])),
+          const SizedBox(height: 10),
+          Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+            Text(
+                textAlign: TextAlign.left,
+                "Wallet Balance:",
+                style: TextStyle(
+                    color: theme.getTheme().indicatorColor,
+                    fontSize: theme.getSmallFont(context),
+                    fontWeight: FontWeight.w300)),
+            Text(
+                textAlign: TextAlign.right,
+                formatDCR(atomsToDCR(walletBalance)),
+                style: TextStyle(
+                    color: theme.getTheme().indicatorColor,
+                    fontSize: theme.getSmallFont(context),
+                    fontWeight: FontWeight.w300)),
+          ]),
           const SizedBox(height: 3),
           Row(mainAxisAlignment: MainAxisAlignment.center, children: [
             Text(
@@ -288,70 +283,68 @@ Note that Lightning Network channels require managing off-chain data, and as suc
           ]),
           const SizedBox(height: 10),
           preventMsg == ""
-              ? Center(
-                  child: LoadingScreenButton(
+              ? Column(children: [
+                  Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                    Text("Amount",
+                        style: TextStyle(
+                            color: theme.getTheme().indicatorColor,
+                            fontSize: theme.getSmallFont(context),
+                            fontWeight: FontWeight.w300)),
+                    const SizedBox(
+                      width: 10,
+                    ),
+                    SizedBox(
+                      width: 150,
+                      child: dcrInput(controller: amountCtrl),
+                    )
+                  ]),
+                  const SizedBox(height: 10),
+                  LoadingScreenButton(
                     empty: true,
                     onPressed:
                         showAdvanced ? hideAdvancedArea : showAdvancedArea,
                     text: showAdvanced ? "Hide Advanced" : "Show Advanced",
                   ),
-                )
-              : const Empty(),
-          const SizedBox(height: 10),
-          preventMsg == ""
-              ? ListView(
-                  physics: const NeverScrollableScrollPhysics(),
-                  shrinkWrap: true,
-                  padding: const EdgeInsets.all(15.0),
-                  children: <Widget>[
-                      SimpleInfoGrid([
-                        Tuple2(
-                            Text("Amount",
-                                style: TextStyle(
-                                    color: theme.getTheme().indicatorColor,
-                                    fontSize: theme.getSmallFont(context),
-                                    fontWeight: FontWeight.w300)),
-                            SizedBox(
-                              width: 150,
-                              child: dcrInput(controller: amountCtrl),
-                            )),
-                        Tuple2(
-                            const SizedBox(height: 50),
-                            LoadingScreenButton(
-                              onPressed: !loading ? openChannel : null,
-                              text: "Request Outbound Channel",
-                            ))
-                      ]),
-                      showAdvanced
-                          ? SimpleInfoGrid([
-                              Tuple2(
-                                  Text("Peer ID and Address",
-                                      style: TextStyle(
-                                          color:
-                                              theme.getTheme().indicatorColor,
-                                          fontSize: theme.getSmallFont(context),
-                                          fontWeight: FontWeight.w300)),
-                                  TextField(
-                                    controller: peerCtrl,
-                                    decoration: const InputDecoration(
-                                        hintText: "node-pub-key@addr:port"),
-                                  )),
-                            ])
-                          : const Empty(),
-                    ])
-              : Column(children: [
-                  const SizedBox(height: 30),
-                  Text(preventMsg,
-                      style: TextStyle(color: theme.getTheme().dividerColor))
-                ]),
-          Center(
-            child: LoadingScreenButton(
-              onPressed: () => Navigator.of(context).pop(),
-              text: "Skip",
-            ),
-          )
+                  const SizedBox(height: 10),
+                  LoadingScreenButton(
+                    onPressed: !loading ? openChannel : null,
+                    text: "Request Outbound Channel",
+                  ),
+                  showAdvanced
+                      ? Column(children: [
+                          const SizedBox(height: 10),
+                          Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text("Peer ID and Address",
+                                    style: TextStyle(
+                                        color: theme.getTheme().indicatorColor,
+                                        fontSize: theme.getSmallFont(context),
+                                        fontWeight: FontWeight.w300)),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                    child: TextField(
+                                  style: TextStyle(
+                                      color: theme.getTheme().focusColor,
+                                      fontSize: theme.getSmallFont(context),
+                                      fontWeight: FontWeight.w300),
+                                  controller: peerCtrl,
+                                  decoration: const InputDecoration(
+                                      hintText: "node-pub-key@addr:port"),
+                                ))
+                              ]),
+                          const SizedBox(height: 10),
+                        ])
+                      : const SizedBox(height: 10),
+                ])
+              : Text(preventMsg,
+                  style: TextStyle(color: theme.getTheme().dividerColor)),
+          LoadingScreenButton(
+            onPressed: () => Navigator.of(context).pop(),
+            text: "Skip",
+          ),
         ],
       ),
-    ));
+    );
   }
 }

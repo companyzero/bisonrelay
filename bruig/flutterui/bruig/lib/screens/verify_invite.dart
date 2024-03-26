@@ -58,39 +58,38 @@ class _VerifyInviteScreenState extends State<VerifyInviteScreen> {
   Widget buildFundsWidget(BuildContext context, InviteFunds funds) {
     if (redeemed != null) {
       var total = formatDCR(atomsToDCR(redeemed!.total));
-      return StartupScreen(Consumer<ThemeNotifier>(
-          builder: (context, theme, child) => Column(children: [
+      return Consumer<ThemeNotifier>(
+          builder: (context, theme, child) => StartupScreen([
                 Text("Redeemed $total on the following tx:",
                     style: TextStyle(color: theme.getTheme().dividerColor)),
                 Copyable(redeemed!.txid,
                     TextStyle(color: theme.getTheme().dividerColor)),
                 Text("The funds will be available after the tx is mined.",
                     style: TextStyle(color: theme.getTheme().dividerColor)),
-              ])));
+              ]));
     }
 
     if (redeeming) {
-      return StartupScreen(Consumer<ThemeNotifier>(
-          builder: (context, theme, child) => Text(
-              "Attempting to redeem funds...",
-              style: TextStyle(color: theme.getTheme().dividerColor))));
+      return Consumer<ThemeNotifier>(
+          builder: (context, theme, child) => StartupScreen([
+                Text("Attempting to redeem funds...",
+                    style: TextStyle(color: theme.getTheme().dividerColor))
+              ]));
     }
 
-    return StartupScreen(Consumer<ThemeNotifier>(
-        builder: (context, theme, child) => Column(children: [
-              Column(children: [
-                Text("This invite contains funds stored in the following UTXO:",
-                    style: TextStyle(color: theme.getTheme().dividerColor)),
-                Copyable("${funds.txid}:${funds.index}",
-                    TextStyle(color: theme.getTheme().dividerColor)),
-                Text("Attempt to redeem funds?",
-                    style: TextStyle(color: theme.getTheme().dividerColor)),
-              ]),
+    return Consumer<ThemeNotifier>(
+        builder: (context, theme, child) => StartupScreen([
+              Text("This invite contains funds stored in the following UTXO:",
+                  style: TextStyle(color: theme.getTheme().dividerColor)),
+              Copyable("${funds.txid}:${funds.index}",
+                  TextStyle(color: theme.getTheme().dividerColor)),
+              Text("Attempt to redeem funds?",
+                  style: TextStyle(color: theme.getTheme().dividerColor)),
               const SizedBox(height: 10),
               ElevatedButton(
                   onPressed: () => redeemFunds(context, funds),
                   child: const Text("Redeem Funds")),
-            ])));
+            ]));
   }
 
   @override
@@ -98,9 +97,8 @@ class _VerifyInviteScreenState extends State<VerifyInviteScreen> {
     var invite = ModalRoute.of(context)!.settings.arguments as Invitation;
 
     var errorColor = Colors.red;
-    return StartupScreen(Consumer<ThemeNotifier>(
-        builder: (context, theme, child) => Column(children: [
-              const Expanded(child: Empty()),
+    return Consumer<ThemeNotifier>(
+        builder: (context, theme, child) => StartupScreen([
               Text("Accept Invite",
                   style: TextStyle(
                       color: theme.getTheme().dividerColor,
@@ -137,6 +135,6 @@ class _VerifyInviteScreenState extends State<VerifyInviteScreen> {
                   onPressed: () => onDenyInvite(context),
                   child: const Text("Deny")),
               const Expanded(child: Empty()),
-            ])));
+            ]));
   }
 }

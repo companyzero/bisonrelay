@@ -29,7 +29,7 @@ class LNChoicePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Consumer<ThemeNotifier>(
-        builder: (context, theme, _) => StartupScreen(Column(children: [
+        builder: (context, theme, _) => StartupScreen([
               Text("Setting up Bison Relay",
                   style: TextStyle(
                       color: theme.getTheme().dividerColor,
@@ -61,6 +61,6 @@ class LNChoicePage extends StatelessWidget {
                       style: TextStyle(color: theme.getTheme().dividerColor)),
                 )
               ])
-            ])));
+            ]));
   }
 }
