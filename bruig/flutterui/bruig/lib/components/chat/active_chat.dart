@@ -117,7 +117,7 @@ class _ActiveChatState extends State<ActiveChat> {
     var selectedBackgroundColor = theme.highlightColor;
     var subMenuBorderColor = theme.canvasColor;
     var hightLightTextColor = theme.focusColor; // NAME TEXT COLOR
-    var avatarColor = colorFromNick(chat!.nick);
+    var avatarColor = colorFromNick(chat.nick);
     var avatarTextColor =
         ThemeData.estimateBrightnessForColor(avatarColor) == Brightness.dark
             ? hightLightTextColor

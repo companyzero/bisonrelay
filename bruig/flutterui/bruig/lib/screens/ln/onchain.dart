@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:bruig/components/accounts_dropdown.dart';
 import 'package:bruig/components/copyable.dart';
 import 'package:bruig/components/dcr_input.dart';

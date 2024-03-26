@@ -97,7 +97,10 @@ class _FeedScreenState extends State<FeedScreen> {
   }
 
   void onItemChanged(int index, PostContentScreenArgs? args) {
-    setState(() => {showPost = args, tabIndex = index});
+    setState(() {
+      showPost = args;
+      tabIndex = index;
+    });
     Timer(const Duration(milliseconds: 1),
         () async => widget.mainMenu.activePageTab = index);
   }

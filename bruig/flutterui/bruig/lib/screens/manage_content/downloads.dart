@@ -2,7 +2,6 @@ import 'package:bruig/models/downloads.dart';
 import 'package:flutter/material.dart';
 import 'package:bruig/theme_manager.dart';
 import 'package:provider/provider.dart';
-import 'package:bruig/theme_manager.dart';
 
 class _FileDownloadW extends StatefulWidget {
   final FileDownloadModel fd;

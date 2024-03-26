@@ -1,4 +1,3 @@
-import 'package:bruig/components/buttons.dart';
 import 'package:bruig/models/newconfig.dart';
 import 'package:bruig/screens/startupscreen.dart';
 import 'package:flutter/material.dart';
