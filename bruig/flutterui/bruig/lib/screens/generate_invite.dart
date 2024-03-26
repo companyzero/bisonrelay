@@ -218,10 +218,8 @@ class _GenerateInviteScreenState extends State<GenerateInviteScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return StartupScreen(Consumer<ThemeNotifier>(
-        builder: (context, theme, child) =>
-            Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-              const Expanded(child: Empty()),
+    return Consumer<ThemeNotifier>(
+        builder: (context, theme, child) => StartupScreen([
               Text("Generate Invite",
                   style: TextStyle(
                       color: theme.getTheme().dividerColor,
@@ -231,6 +229,6 @@ class _GenerateInviteScreenState extends State<GenerateInviteScreen> {
               ...(generated == null
                   ? buildGeneratePanel(context)
                   : buildGeneratedInvite(context)),
-            ])));
+            ]));
   }
 }
