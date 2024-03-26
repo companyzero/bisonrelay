@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:bruig/components/attach_file.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -5,6 +7,9 @@ import 'package:bruig/components/chat/types.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/theme_manager.dart';
 import 'package:provider/provider.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:image_picker/image_picker.dart';
 
 class Input extends StatefulWidget {
   final SendMsg _send;
@@ -22,6 +27,7 @@ class _InputState extends State<Input> {
 
   final FocusNode node = FocusNode();
   List<AttachmentEmbed> embeds = [];
+  bool isAttaching = false;
 
   @override
   void initState() {
@@ -34,6 +40,7 @@ class _InputState extends State<Input> {
     super.didUpdateWidget(oldWidget);
     var workingMsg = widget.chat.workingMsg;
     if (workingMsg != controller.text) {
+      isAttaching = false;
       controller.text = workingMsg;
       controller.selection = TextSelection(
           baseOffset: workingMsg.length, extentOffset: workingMsg.length);
@@ -82,18 +89,15 @@ class _InputState extends State<Input> {
     }
   }
 
-  void attachFile() async {
-    var res = await Navigator.of(context, rootNavigator: true)
-        .pushNamed(AttachFileScreen.routeName);
-    if (res == null) {
-      return;
-    }
-    var embed = res as AttachmentEmbed;
-    embeds.add(embed);
+  void attachFile() {
     setState(() {
-      controller.text = "${controller.text}${embed.displayString()} ";
-      widget.chat.workingMsg = controller.text;
-      widget.inputFocusNode.requestFocus();
+      isAttaching = true;
+    });
+  }
+
+  void cancelAttach() {
+    setState(() {
+      isAttaching = false;
     });
   }
 
@@ -105,63 +109,83 @@ class _InputState extends State<Input> {
     var secondaryTextColor = theme.focusColor;
     bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
     return Consumer<ThemeNotifier>(
-        builder: (context, theme, _) => KeyboardListener(
-              focusNode: node,
-              onKeyEvent: handleKeyPress,
-              child: Container(
-                  margin: const EdgeInsets.only(bottom: 5),
-                  child: TextField(
-                    onChanged: (value) => widget.chat.workingMsg = value,
-                    autofocus: isScreenSmall ? false : true,
-                    focusNode: widget.inputFocusNode,
-                    style: TextStyle(
-                      fontSize: theme.getMediumFont(context),
-                      color: secondaryTextColor,
-                    ),
-                    controller: controller,
-                    minLines: 1,
-                    maxLines: null,
-                    //textInputAction: TextInputAction.done,
-                    //style: normalTextStyle,
-                    keyboardType: TextInputType.multiline,
-                    decoration: InputDecoration(
-                      errorBorder: const OutlineInputBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(30.0)),
-                        borderSide: BorderSide(color: Colors.red, width: 2.0),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius:
-                            const BorderRadius.all(Radius.circular(30.0)),
-                        borderSide:
-                            BorderSide(color: secondaryTextColor, width: 2.0),
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius:
-                            const BorderRadius.all(Radius.circular(30.0)),
-                        borderSide: BorderSide(color: cardColor, width: 2.0),
-                      ),
-                      hintText: "Start a message",
-                      hintStyle: TextStyle(
+        builder: (context, theme, _) => isAttaching
+            ? Column(children: [
+                Row(mainAxisAlignment: MainAxisAlignment.start, children: [
+                  IconButton(
+                      padding: const EdgeInsets.all(0),
+                      iconSize: 25,
+                      onPressed: cancelAttach,
+                      icon: const Icon(Icons.keyboard_arrow_left_outlined),
+                      color: textColor)
+                ]),
+                AttachFileScreen(widget._send)
+              ])
+            : Row(children: [
+                IconButton(
+                    padding: const EdgeInsets.all(0),
+                    iconSize: 25,
+                    onPressed: attachFile,
+                    icon: const Icon(Icons.add_outlined),
+                    color: textColor),
+                const SizedBox(width: 5),
+                Expanded(
+                  child: KeyboardListener(
+                      focusNode: node,
+                      onKeyEvent: handleKeyPress,
+                      child: TextField(
+                        onChanged: (value) => widget.chat.workingMsg = value,
+                        autofocus: isScreenSmall ? false : true,
+                        focusNode: widget.inputFocusNode,
+                        style: TextStyle(
                           fontSize: theme.getMediumFont(context),
-                          letterSpacing: 0.5,
-                          fontWeight: FontWeight.w300,
-                          color: textColor),
-                      filled: true,
-                      fillColor: cardColor,
-                      prefixIcon: IconButton(
-                          padding: const EdgeInsets.all(0),
-                          iconSize: 25,
-                          onPressed: attachFile,
-                          icon: const Icon(Icons.attach_file)),
-                      prefixIconColor: textColor,
-                      suffixIcon: IconButton(
-                          padding: const EdgeInsets.all(0),
-                          iconSize: 25,
-                          onPressed: sendMsg,
-                          icon: const Icon(Icons.send)),
-                      suffixIconColor: textColor,
-                    ),
-                  )),
-            ));
+                          color: secondaryTextColor,
+                        ),
+                        controller: controller,
+                        minLines: 1,
+                        maxLines: null,
+                        //textInputAction: TextInputAction.done,
+                        //style: normalTextStyle,
+                        keyboardType: TextInputType.multiline,
+                        decoration: InputDecoration(
+                          isDense: true,
+                          contentPadding: const EdgeInsets.only(
+                              left: 10, right: 10, top: 5, bottom: 5),
+                          errorBorder: const OutlineInputBorder(
+                            borderRadius:
+                                BorderRadius.all(Radius.circular(30.0)),
+                            borderSide:
+                                BorderSide(color: Colors.red, width: 2.0),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius:
+                                const BorderRadius.all(Radius.circular(30.0)),
+                            borderSide: BorderSide(
+                                color: secondaryTextColor, width: 2.0),
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius:
+                                const BorderRadius.all(Radius.circular(30.0)),
+                            borderSide:
+                                BorderSide(color: cardColor, width: 2.0),
+                          ),
+                          hintText: "Start a message",
+                          hintStyle: TextStyle(
+                              fontSize: theme.getMediumFont(context),
+                              letterSpacing: 0.5,
+                              fontWeight: FontWeight.w300,
+                              color: textColor),
+                          filled: true,
+                          fillColor: cardColor,
+                          suffixIcon: IconButton(
+                              padding: const EdgeInsets.all(0),
+                              iconSize: 20,
+                              onPressed: sendMsg,
+                              icon: const Icon(Icons.send)),
+                          suffixIconColor: textColor,
+                        ),
+                      )),
+                )
+              ]));
   }
 }

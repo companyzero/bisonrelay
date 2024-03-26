@@ -3,6 +3,7 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
+  file_selector_windows
   golib_plugin
   permission_handler_windows
   screen_retriever
