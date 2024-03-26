@@ -5,9 +5,9 @@ import 'package:provider/provider.dart';
 import 'package:bruig/theme_manager.dart';
 
 class StartupScreen extends StatelessWidget {
-  final Widget? child;
+  final List<Widget> widgetList;
   final bool? about;
-  const StartupScreen(this.child, {this.about = false, Key? key})
+  const StartupScreen(this.widgetList, {this.about = false, Key? key})
       : super(key: key);
 
   @override
@@ -35,30 +35,43 @@ class StartupScreen extends StatelessWidget {
                                       ? 0.25
                                       : 1))),
                   Container(
-                    decoration: isScreenSmall
-                        ? null
-                        : BoxDecoration(
-                            gradient: LinearGradient(
-                                begin: Alignment.bottomLeft,
-                                end: Alignment.topRight,
-                                colors: [
-                                theme.getTheme().canvasColor,
-                                theme.getTheme().backgroundColor,
-                                theme.getTheme().canvasColor.withOpacity(0.34),
-                              ],
-                                stops: const [
-                                0,
-                                0.17,
-                                1
-                              ])),
-                    padding: const EdgeInsets.all(30),
-                  ),
-                  Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [Expanded(child: Center(child: this.child))]),
+                      decoration: isScreenSmall
+                          ? null
+                          : BoxDecoration(
+                              gradient: LinearGradient(
+                                  begin: Alignment.bottomLeft,
+                                  end: Alignment.topRight,
+                                  colors: [
+                                  theme.getTheme().canvasColor,
+                                  theme.getTheme().backgroundColor,
+                                  theme
+                                      .getTheme()
+                                      .canvasColor
+                                      .withOpacity(0.34),
+                                ],
+                                  stops: const [
+                                  0,
+                                  0.17,
+                                  1
+                                ])),
+                      padding: const EdgeInsets.all(30),
+                      child: Center(
+                          child: ListView(
+                        shrinkWrap: true,
+                        children: [
+                          Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [...widgetList])
+                        ],
+                      ))),
                   about == null || about == false
-                      ? const Positioned(
-                          top: 10, left: 10, child: AboutButton())
+                      ? Positioned(
+                          top: 5,
+                          left: 5,
+                          child: SizedBox(
+                              height: isScreenSmall ? 70 : 100,
+                              width: isScreenSmall ? 70 : 100,
+                              child: const Center(child: AboutButton())))
                       : const Empty(),
                 ]))));
   }

@@ -70,9 +70,8 @@ class _FetchInviteScreenState extends State<FetchInviteScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return StartupScreen(Consumer<ThemeNotifier>(
-        builder: (context, theme, child) =>
-            Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+    return Consumer<ThemeNotifier>(
+        builder: (context, theme, child) => StartupScreen([
               const Expanded(child: Empty()),
               Text("Fetch Invite",
                   style: TextStyle(
@@ -110,6 +109,6 @@ class _FetchInviteScreenState extends State<FetchInviteScreen> {
               ElevatedButton(
                   onPressed: () => Navigator.pop(context),
                   child: const Text("Cancel"))
-            ])));
+            ]));
   }
 }

@@ -69,7 +69,7 @@ class _RestoreWalletPageState extends State<RestoreWalletPage> {
   @override
   Widget build(BuildContext context) {
     return Consumer<ThemeNotifier>(
-        builder: (context, theme, _) => StartupScreen(Column(children: [
+        builder: (context, theme, _) => StartupScreen([
               Text("Restoring wallet",
                   style: TextStyle(
                       color: theme.getTheme().dividerColor,
@@ -132,6 +132,6 @@ class _RestoreWalletPageState extends State<RestoreWalletPage> {
                       style: TextStyle(color: theme.getTheme().dividerColor)),
                 )
               ])
-            ])));
+            ]));
   }
 }

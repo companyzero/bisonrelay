@@ -27,9 +27,8 @@ class _VerifyServerScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return StartupScreen(Consumer<ThemeNotifier>(
-        builder: (context, theme, child) => Column(children: [
-              const SizedBox(height: 258),
+    return Consumer<ThemeNotifier>(
+        builder: (context, theme, child) => StartupScreen([
               Text("Accept Server Fingerprint",
                   style: TextStyle(
                       color: theme.getTheme().dividerColor,
@@ -51,7 +50,6 @@ class _VerifyServerScreen extends StatelessWidget {
                   onPressed: () => onAcceptServerCreds(context),
                   child: const Text("Accept")),
               Container(height: 10)
-            ])));
-    ;
+            ]));
   }
 }

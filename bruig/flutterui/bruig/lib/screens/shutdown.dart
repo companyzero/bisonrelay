@@ -68,22 +68,18 @@ class _ShutdownScreenState extends State<ShutdownScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-        body: StartupScreen(Consumer<ThemeNotifier>(
-            builder: (context, theme, child) => Container(
-                padding: const EdgeInsets.all(10),
-                child: Column(children: [
-                  const SizedBox(height: 89),
-                  Text("Shutting Down Bison Relay",
-                      style: TextStyle(
-                          color: theme.getTheme().dividerColor,
-                          fontSize: theme.getHugeFont(context),
-                          fontWeight: FontWeight.w200)),
-                  clientStopErr != null ? Text(clientStopErr!) : const Empty(),
-                  const SizedBox(height: 20),
-                  const Divider(),
-                  const SizedBox(height: 20),
-                  Expanded(child: LogLines(widget.log))
-                ])))));
+    return Consumer<ThemeNotifier>(
+        builder: (context, theme, child) => StartupScreen([
+              Text("Shutting Down Bison Relay",
+                  style: TextStyle(
+                      color: theme.getTheme().dividerColor,
+                      fontSize: theme.getHugeFont(context),
+                      fontWeight: FontWeight.w200)),
+              clientStopErr != null ? Text(clientStopErr!) : const Empty(),
+              const SizedBox(height: 20),
+              const Divider(),
+              const SizedBox(height: 20),
+              Expanded(child: LogLines(widget.log))
+            ]));
   }
 }
