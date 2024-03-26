@@ -9,6 +9,7 @@ import 'package:bruig/main.dart';
 import 'package:bruig/models/log.dart';
 import 'package:bruig/screens/startupscreen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:path/path.dart' as path;
 import 'package:provider/provider.dart';
@@ -61,11 +62,34 @@ class __LNUnlockPageState extends State<_LNUnlockPage> {
   bool loading = false;
   final TextEditingController passCtrl = TextEditingController();
   String _validate = "";
+  bool compactingDb = false;
+  bool compactingDbErrored = false;
+  bool migratingDb = false;
+
+  void logUpdated() {
+    var log = globalLogModel;
+    if (compactingDb != log.compactingDb ||
+        compactingDbErrored != log.compactingDbErrored ||
+        migratingDb != log.migratingDb) {
+      setState(() {
+        compactingDb = log.compactingDb;
+        compactingDbErrored = log.compactingDbErrored;
+        migratingDb = log.migratingDb;
+      });
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    globalLogModel.addListener(logUpdated);
+  }
 
   @override
   void dispose() {
     passCtrl.dispose();
     super.dispose();
+    globalLogModel.removeListener(logUpdated);
   }
 
   Future<void> unlock() async {
@@ -108,13 +132,28 @@ class __LNUnlockPageState extends State<_LNUnlockPage> {
     }
   }
 
-  void goToAbout() {
-    Navigator.of(context).pushNamed("/about");
-  }
-
   @override
   Widget build(BuildContext context) {
     bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
+
+    Widget extraInfo = const Empty();
+    if (loading && migratingDb) {
+      extraInfo = const Text(
+        "Upgrading DB. This might take a while.",
+        style: TextStyle(color: Colors.amber, fontWeight: FontWeight.w500),
+      );
+    } else if (loading && compactingDbErrored) {
+      extraInfo = const Text(
+        "Compacting DB errored. Look at the logs to see the cause.",
+        style: TextStyle(color: Colors.red),
+      );
+    } else if (loading && compactingDb) {
+      extraInfo = const Text(
+        "Compacting DB. This might take a while.",
+        style: TextStyle(color: Colors.amber, fontWeight: FontWeight.w500),
+      );
+    }
+
     return StartupScreen(Consumer<ThemeNotifier>(
       builder: (context, theme, _) {
         return Column(children: [
@@ -191,7 +230,18 @@ class __LNUnlockPageState extends State<_LNUnlockPage> {
                           : const SizedBox(width: 25),
                     ]))),
           ]),
-          const Expanded(child: Empty()),
+          const SizedBox(height: 10),
+          extraInfo,
+          const SizedBox(height: 10),
+          loading
+              ? Expanded(
+                  child: SizedBox(
+                      // width: 400,
+                      // height: 200,
+                      child: LogLines(globalLogModel,
+                          maxLines: 15,
+                          optionalTextColor: theme.getTheme().dividerColor)))
+              : const Expanded(child: Empty()),
         ]);
       },
     ));
