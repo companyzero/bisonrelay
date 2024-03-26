@@ -5,8 +5,8 @@ import 'package:bruig/theme_manager.dart';
 import 'package:provider/provider.dart';
 
 class SnackbarDisplayer extends StatefulWidget {
-  SnackBarModel snackBar;
-  Widget child;
+  final SnackBarModel snackBar;
+  final Widget child;
   SnackbarDisplayer(this.snackBar, this.child, {super.key});
 
   @override

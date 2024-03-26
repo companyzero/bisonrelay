@@ -57,7 +57,6 @@ class _ReceiveReceipt extends StatelessWidget {
     var theme = Theme.of(context);
     var darkTextColor = theme.indicatorColor;
     var nick = client.getNick(rr.user);
-    var rrTxtStyle = TextStyle(color: darkTextColor);
     var rrdt =
         DateTime.fromMillisecondsSinceEpoch(rr.serverTime).toIso8601String();
 

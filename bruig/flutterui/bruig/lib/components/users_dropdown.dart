@@ -139,10 +139,10 @@ class _UsersDropdownState extends State<UsersDropdown> {
           dropdownStyleData: const DropdownStyleData(maxHeight: 200),
           menuItemStyleData: MenuItemStyleData(
             overlayColor: MaterialStateProperty.resolveWith((states) {
-              // If the button is pressed, return green, otherwise blue
               if (states.contains(MaterialState.hovered)) {
                 return backgroundColor;
               }
+              return highlightColor;
             }),
             height: 40,
           ),

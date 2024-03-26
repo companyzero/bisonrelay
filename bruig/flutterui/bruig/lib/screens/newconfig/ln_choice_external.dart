@@ -1,6 +1,5 @@
 import 'dart:io';
 
-import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/components/buttons.dart';
 import 'package:bruig/models/newconfig.dart';

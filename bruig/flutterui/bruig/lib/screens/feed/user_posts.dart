@@ -8,7 +8,6 @@ import 'package:golib_plugin/definitions.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:bruig/components/user_context_menu.dart';
 import 'package:bruig/util.dart';
-import 'package:provider/provider.dart';
 import 'package:bruig/theme_manager.dart';
 
 class UserPostW extends StatefulWidget {
