@@ -94,7 +94,6 @@ class _ServerPageState extends State<ServerPage> {
                 onPressed: done,
                 text: "Connect",
               ),
-              const Expanded(child: Empty()),
             ]));
   }
 }

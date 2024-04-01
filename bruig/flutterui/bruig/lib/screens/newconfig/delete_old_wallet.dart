@@ -47,47 +47,45 @@ class _DeleteOldWalletPageState extends State<DeleteOldWalletPage> {
                       fontSize: theme.getHugeFont(context),
                       fontWeight: FontWeight.w200)),
               const SizedBox(height: 20),
-              Column(children: [
-                SizedBox(
+              SizedBox(
+                  width: 377,
+                  child: Text(_warnMsg,
+                      textAlign: TextAlign.left,
+                      style: TextStyle(
+                          color: theme.getTheme().dividerColor,
+                          fontSize: theme.getMediumFont(context),
+                          fontWeight: FontWeight.w300))),
+              Center(
+                child: SizedBox(
                     width: 377,
-                    child: Text(_warnMsg,
-                        textAlign: TextAlign.left,
-                        style: TextStyle(
-                            color: theme.getTheme().dividerColor,
-                            fontSize: theme.getMediumFont(context),
-                            fontWeight: FontWeight.w300))),
-                Center(
+                    child: CheckboxListTile(
+                      title: Text("Wallet does not have any funds",
+                          style:
+                              TextStyle(color: theme.getTheme().dividerColor)),
+                      activeColor: theme.getTheme().dividerColor,
+                      value: deleteAccepted,
+                      side: BorderSide(color: theme.getTheme().dividerColor),
+                      onChanged: (val) {
+                        setState(() {
+                          deleteAccepted = val ?? false;
+                        });
+                      },
+                    )),
+              ),
+              const SizedBox(height: 34),
+              Center(
                   child: SizedBox(
-                      width: 377,
-                      child: CheckboxListTile(
-                        title: Text("Wallet does not have any funds",
-                            style: TextStyle(
-                                color: theme.getTheme().dividerColor)),
-                        activeColor: theme.getTheme().dividerColor,
-                        value: deleteAccepted,
-                        side: BorderSide(color: theme.getTheme().dividerColor),
-                        onChanged: (val) {
-                          setState(() {
-                            deleteAccepted = val ?? false;
-                          });
-                        },
-                      )),
-                ),
-                const SizedBox(height: 34),
-                Center(
-                    child: SizedBox(
-                        width: 278,
-                        child: Row(children: [
-                          const SizedBox(width: 35),
-                          LoadingScreenButton(
-                            onPressed: deleteAccepted && !deleting
-                                ? () => deleteWalletDir(context)
-                                : null,
-                            text: "Delete Wallet",
-                          ),
-                          const SizedBox(width: 10),
-                        ])))
-              ]),
+                      width: 278,
+                      child: Row(children: [
+                        const SizedBox(width: 35),
+                        LoadingScreenButton(
+                          onPressed: deleteAccepted && !deleting
+                              ? () => deleteWalletDir(context)
+                              : null,
+                          text: "Delete Wallet",
+                        ),
+                        const SizedBox(width: 10),
+                      ])))
             ]));
   }
 }

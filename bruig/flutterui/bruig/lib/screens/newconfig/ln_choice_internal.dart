@@ -167,7 +167,6 @@ class _LNInternalWalletPageState extends State<LNInternalWalletPage> {
                               : const SizedBox(width: 25),
                         ]))),
               ]),
-              const Expanded(child: Empty()),
               Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                 !newconf.advancedSetup
                     ? TextButton(

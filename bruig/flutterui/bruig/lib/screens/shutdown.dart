@@ -79,7 +79,7 @@ class _ShutdownScreenState extends State<ShutdownScreen> {
               const SizedBox(height: 20),
               const Divider(),
               const SizedBox(height: 20),
-              Expanded(child: LogLines(widget.log))
+              LogLines(widget.log)
             ]));
   }
 }

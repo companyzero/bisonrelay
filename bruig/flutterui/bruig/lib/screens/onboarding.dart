@@ -197,7 +197,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         const SizedBox(height: 10),
         ElevatedButton(
             onPressed: startOnboard, child: const Text("Start Onboard")),
-        const Expanded(child: Empty()),
+        const SizedBox(height: 10),
         CancelButton(onPressed: skipOnboarding, label: "Skip Onboarding")
       ];
     } else if (starting) {
@@ -325,30 +325,19 @@ Cancelling onboarding means the wallet setup, including obtaining on-chain funds
           const SizedBox(width: 20),
         ]),
         const SizedBox(height: 20),
-        const Expanded(child: Empty()),
         Consumer<ThemeNotifier>(
             builder: (context, theme, child) => Text("Recent Log",
                 style: TextStyle(
                     color: theme.getTheme().dividerColor,
                     fontSize: theme.getMediumFont(context)))),
-        Expanded(
+        SizedBox(
+            height: 300,
             child: Consumer<LogModel>(
                 builder: (context, logModel, child) => LogLines(logModel))),
       ];
     }
 
     return StartupScreen([
-      Row(children: [
-        IconButton(
-            alignment: Alignment.topLeft,
-            tooltip: "About Bison Relay",
-            iconSize: 50,
-            onPressed: goToAbout,
-            icon: Image.asset(
-              "assets/images/icon.png",
-            )),
-      ]),
-      const SizedBox(height: 39),
       Consumer<ThemeNotifier>(
           builder: (context, theme, child) => Text("Setting up Bison Relay",
               style: TextStyle(
