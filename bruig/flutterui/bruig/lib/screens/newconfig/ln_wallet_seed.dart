@@ -84,7 +84,6 @@ class NewLNWalletSeedPage extends StatelessWidget {
           onPressed: done,
           text: "I have copied the seed",
         ),
-        const Expanded(child: Empty()),
       ]),
     );
   }

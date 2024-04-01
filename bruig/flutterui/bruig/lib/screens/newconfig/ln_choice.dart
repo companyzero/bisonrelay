@@ -53,7 +53,6 @@ class LNChoicePage extends StatelessWidget {
                     text: "External",
                     empty: true),
               ]),
-              const Expanded(child: Empty()),
               Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                 TextButton(
                   onPressed: () => goBack(context),

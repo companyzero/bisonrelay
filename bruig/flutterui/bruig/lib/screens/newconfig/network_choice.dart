@@ -64,7 +64,6 @@ class NetworkChoicePage extends StatelessWidget {
                         text: "Simnet",
                         empty: true),
                   ]),
-              const Expanded(child: Empty()),
               Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                 TextButton(
                   onPressed: () => goBack(context),
