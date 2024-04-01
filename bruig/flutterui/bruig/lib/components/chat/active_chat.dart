@@ -8,6 +8,7 @@ import 'package:bruig/models/client.dart';
 import 'package:flutter/material.dart';
 import 'package:bruig/components/profile.dart';
 import 'package:bruig/components/chat/messages.dart';
+import 'package:flutter/widgets.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import 'package:bruig/components/chat/input.dart';
 import 'package:bruig/components/snackbars.dart';
@@ -206,7 +207,7 @@ class _ActiveChatState extends State<ActiveChat> {
                           _itemScrollController, _itemPositionsListener),
                     ),
                     Container(
-                        padding: const EdgeInsets.all(10),
+                        padding: const EdgeInsets.all(5),
                         child: Input(sendMsg, chat, inputFocusNode))
                   ]),
                 ),
