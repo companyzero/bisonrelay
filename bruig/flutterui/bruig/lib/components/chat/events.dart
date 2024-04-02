@@ -166,53 +166,121 @@ class _ReceivedSentPMState extends State<ReceivedSentPM> {
                 )),
               ])
             : const Empty());
-    var msgWidget = Provider<DownloadSource>(
-        create: (context) => DownloadSource(sourceID),
-        child: Expanded(
+    var isOwnMessage = widget.userNick == widget.nick;
+
+    List<Widget> getMessage(BuildContext context) {
+      return <Widget>[
+        Provider<DownloadSource>(
+            create: (context) => DownloadSource(sourceID),
             child: MarkdownArea(
                 msg,
                 widget.userNick != widget.nick &&
-                    msg.contains(widget.userNick))));
+                    msg.contains(widget.userNick)))
+      ];
+    }
+
+    bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
     return Consumer<ThemeNotifier>(
         builder: (context, theme, _) => Column(children: [
               firstUnread,
-              widget.evnt.sameUser ? const Empty() : const SizedBox(height: 10),
-              Row(children: [
-                Column(
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  children: [
-                    widget.evnt.sameUser
-                        ? Container(
-                            width: 28,
-                            margin: const EdgeInsets.only(
-                                top: 0, bottom: 0, left: 10, right: 0),
-                          )
-                        : SelectionContainer.disabled(
-                            child: Container(
-                              height: 28,
-                              width: 28,
-                              margin: const EdgeInsets.only(
-                                  top: 0, bottom: 0, left: 10, right: 0),
-                              child: UserContextMenu(
-                                targetUserChat: widget.evnt.source,
-                                child: InteractiveAvatar(
-                                    bgColor: selectedBackgroundColor,
-                                    chatNick: widget.nick,
-                                    avatarColor: avatarColor,
-                                    avatarTextColor: avatarTextColor,
-                                    avatar: widget.evnt.source != null
-                                        ? widget.evnt.source?.avatar
-                                        : widget.client.myAvatar,
-                                    onTap: widget.isGC
-                                        ? null
-                                        : () {
-                                            widget.showSubMenu(
-                                                widget.isGC, widget.id);
-                                          }),
-                              ),
+              Container(
+                  margin: EdgeInsets.only(top: widget.evnt.sameUser ? 2 : 10),
+                  child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      mainAxisAlignment: isOwnMessage
+                          ? MainAxisAlignment.end
+                          : MainAxisAlignment.start,
+                      children: <Widget>[
+                        widget.evnt.showAvatar
+                            ? Opacity(
+                                opacity: widget.evnt.showAvatar && !isOwnMessage
+                                    ? 1
+                                    : 0,
+                                child: SelectionContainer.disabled(
+                                    child: Container(
+                                  height: 28,
+                                  width: 28,
+                                  margin: const EdgeInsets.only(
+                                      top: 0, bottom: 10, left: 10, right: 10),
+                                  child: UserContextMenu(
+                                    targetUserChat: widget.evnt.source,
+                                    child: InteractiveAvatar(
+                                        bgColor: selectedBackgroundColor,
+                                        chatNick: widget.nick,
+                                        avatarColor: avatarColor,
+                                        avatarTextColor: avatarTextColor,
+                                        avatar: widget.evnt.source != null
+                                            ? widget.evnt.source?.avatar
+                                            : widget.client.myAvatar,
+                                        onTap: widget.isGC
+                                            ? null
+                                            : () {
+                                                widget.showSubMenu(
+                                                    widget.isGC, widget.id);
+                                              }),
+                                  ),
+                                )))
+                            : const SizedBox(width: 48),
+                        ConstrainedBox(
+                            constraints: BoxConstraints(
+                              maxWidth: isScreenSmall
+                                  ? MediaQuery.of(context).size.width * 0.7
+                                  : MediaQuery.of(context).size.width * 0.4,
                             ),
-                          ),
-                    // Now put reply/dm button here if GC
+                            child: Column(
+                                crossAxisAlignment: isOwnMessage
+                                    ? CrossAxisAlignment.end
+                                    : CrossAxisAlignment.start,
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: <Widget>[
+                                  Container(
+                                    padding: const EdgeInsets.all(5),
+                                    decoration: BoxDecoration(
+                                      color: isOwnMessage
+                                          ? Colors.blue
+                                          : selectedBackgroundColor,
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment: isOwnMessage
+                                          ? CrossAxisAlignment.end
+                                          : CrossAxisAlignment.start,
+                                      children: <Widget>[
+                                        widget.evnt.sameUser || isOwnMessage
+                                            ? const Empty()
+                                            : Text(widget.nick,
+                                                style: TextStyle(
+                                                  fontSize: theme
+                                                      .getMediumFont(context),
+                                                  color: avatarColor,
+                                                  fontWeight: FontWeight.w500,
+                                                  letterSpacing: 0.5,
+                                                )),
+                                        Wrap(
+                                          children: getMessage(context),
+                                        ),
+                                        SelectionContainer.disabled(
+                                          child: Padding(
+                                            padding:
+                                                const EdgeInsets.only(top: 5),
+                                            child: Tooltip(
+                                              message: fullDate,
+                                              child: Text(
+                                                hour,
+                                                style: TextStyle(
+                                                    fontSize: theme
+                                                        .getSmallFont(context),
+                                                    color: darkTextColor),
+                                              ),
+                                            ),
+                                          ),
+                                        )
+                                      ],
+                                    ),
+                                  ),
+                                ])),
+/*
+                    // Now put reply/dm button /here if GC
                     widget.isGC &&
                             widget.userNick != widget.nick &&
                             !widget.evnt.sameUser
@@ -227,52 +295,9 @@ class _ReceivedSentPMState extends State<ReceivedSentPM> {
                                     widget.openReplyDM(false, widget.nick),
                                 icon: const Icon(size: 28, Icons.reply)))
                         : const Empty(),
-                  ],
-                ),
-                const SizedBox(width: 10),
-                // Middle column
-                Expanded(
-                    child: Column(
-                        mainAxisAlignment: MainAxisAlignment.start,
-                        children: [
-                      widget.evnt.sameUser
-                          ? const Empty()
-                          : Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                  Text(widget.nick,
-                                      style: TextStyle(
-                                        fontSize: theme.getMediumFont(context),
-                                        color: hightLightTextColor,
-                                        fontWeight: FontWeight.w500,
-                                        letterSpacing: 0.5,
-                                      )),
-                                ]),
-                      Row(children: [msgWidget]),
-                    ])),
-                // Third (timestamp) column
-                Column(children: [
-                  SizedBox(
-                      width: 50,
-                      child: SelectionContainer.disabled(
-                        child: Padding(
-                          padding: const EdgeInsets.all(4.0),
-                          child: Tooltip(
-                              message: fullDate,
-                              child: Text(
-                                widget.evnt.sentState == CMS_sent ||
-                                        widget.evnt.sentState == CMS_unknown
-                                    ? hour
-                                    : prefix,
-                                style: TextStyle(
-                                    fontSize: theme.getSmallFont(context),
-                                    color: darkTextColor), // DATE COLOR
-                              )),
-                        ),
-                      )),
-                ]),
-              ]),
-              widget.evnt.sameUser ? const SizedBox(height: 20) : const Empty()
+                        
+            */
+                      ]))
             ]));
   }
 }
