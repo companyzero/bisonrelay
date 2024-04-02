@@ -99,6 +99,13 @@ class ChatEventModel extends ChangeNotifier {
     _sameUser = b;
     notifyListeners();
   }
+
+  bool _showAvatar = false;
+  bool get showAvatar => _showAvatar;
+  void set showAvatar(bool b) {
+    _showAvatar = b;
+    notifyListeners();
+  }
 }
 
 class DayGCMessages {
@@ -215,6 +222,25 @@ class ChatModel extends ChangeNotifier {
         _msgs[_msgs.length - 1].source?.nick == msg.source?.nick) {
       msg.sameUser = true;
     }
+
+    // Logic to show avatar on left of message.  Should only show on the bottom
+    // message if multiple messages from a user.
+    if (_msgs.isEmpty) {
+      // If there are no messages yet, just show avatar on the new message
+      msg.showAvatar = true;
+    } else if (_msgs.isNotEmpty &&
+        _msgs[_msgs.length - 1].source?.nick == msg.source?.nick) {
+      // If there are messages then check to see if the previous message has the
+      // same or different nick; if same remove avatar from previous and add
+      // to new message. If different then just showAvatar on the new message
+      // and keep previous message set to true.
+      _msgs[msgs.length - 1].showAvatar = false;
+      msg.showAvatar = true;
+    } else if (_msgs.isNotEmpty &&
+        _msgs[_msgs.length - 1].source?.nick != msg.source?.nick) {
+      msg.showAvatar = true;
+    }
+
     var timestamp = 0;
     var evnt = msg.event;
     if (evnt is PM) {
