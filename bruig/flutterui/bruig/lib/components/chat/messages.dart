@@ -58,9 +58,10 @@ class _MessagesState extends State<Messages> {
                         : max)
                 .index
             : 0;
+        print("old maxItem $_maxItem newMaxItem $newMaxItem");
         if (mounted && newMaxItem != _maxItem) {
           _maxItem = newMaxItem;
-          if (_maxItem < chat.msgs.length - 5) {
+          if (_maxItem < 5) {
             setState(() {
               _showFAB = true;
             });
@@ -69,7 +70,7 @@ class _MessagesState extends State<Messages> {
               _showFAB = false;
             });
           }
-          if (_maxItem < chat.msgs.length - 2) {
+          if (_maxItem < 2) {
             chat.scrollPosition = newMaxItem;
           } else {
             chat.scrollPosition = 0;
@@ -78,8 +79,8 @@ class _MessagesState extends State<Messages> {
       });
     });
     chat.addListener(onChatChanged);
-    _maybeScrollToFirstUnread();
-    _maybeScrollToBottom();
+    //_maybeScrollToFirstUnread();
+    //_maybeScrollToBottom();
     _lastChat = chat;
   }
 
@@ -88,8 +89,8 @@ class _MessagesState extends State<Messages> {
     super.didUpdateWidget(oldWidget);
     oldWidget.chat.removeListener(onChatChanged);
     chat.addListener(onChatChanged);
-    _maybeScrollToFirstUnread();
-    _maybeScrollToBottom();
+    //_maybeScrollToFirstUnread();
+    //_maybeScrollToBottom();
     onChatChanged();
     _lastChat = chat;
   }
@@ -105,7 +106,7 @@ class _MessagesState extends State<Messages> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (mounted) {
         widget.itemScrollController.scrollTo(
-          index: chat.msgs.length - 1,
+          index: 0,
           alignment: 0.0,
           duration: const Duration(
               microseconds: 1), // a little bit smoother than a jump
@@ -172,50 +173,20 @@ class _MessagesState extends State<Messages> {
     var textColor = theme.dividerColor;
     var backgroundColor = theme.backgroundColor;
     return Scaffold(
+        resizeToAvoidBottomInset: true,
         floatingActionButton: _getFAB(textColor, backgroundColor),
-        body: PageStorage(
-          bucket: _pageStorageBucket,
-          child: SelectionArea(
+        body: SelectionArea(
+          child: PageStorage(
+            bucket: _pageStorageBucket,
             child: ScrollablePositionedList.builder(
+              reverse: true,
               key: PageStorageKey<String>('chat ${chat.nick}'),
-              itemCount:
-                  chat.isGC ? calculateTotalMessageCount() : chat.msgs.length,
+              itemCount: chat.msgs.length,
               physics: const ClampingScrollPhysics(),
-              itemBuilder: chat.isGC
-                  ? (context, index) {
-                      int count = 0;
-                      for (var dayGCMsgs in chat.dayGCMsgs) {
-                        if (index == count) {
-                          // This is a day change message
-                          return Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              DateChange(
-                                child: Text(
-                                  dayGCMsgs.date,
-                                  style: TextStyle(color: textColor),
-                                ),
-                              ),
-                            ],
-                          );
-                        }
-                        count++; // for the day change message
-                        if (index < count + dayGCMsgs.msgs.length) {
-                          var msg = dayGCMsgs.msgs[index - count];
-                          return Container(
-                            color: backgroundColor,
-                            child:
-                                Event(chat, msg, nick, client, _scrollToBottom),
-                          );
-                        }
-                        count += dayGCMsgs.msgs.length;
-                      }
-                      return const SizedBox.shrink();
-                    }
-                  : (context, index) {
-                      return Event(chat, chat.msgs[index], nick, client,
-                          _scrollToBottom);
-                    },
+              itemBuilder: (context, index) {
+                return Event(
+                    chat, chat.msgs[index], nick, client, _scrollToBottom);
+              },
               itemScrollController: widget.itemScrollController,
               itemPositionsListener: widget.itemPositionsListener,
             ),

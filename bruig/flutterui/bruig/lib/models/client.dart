@@ -112,7 +112,7 @@ class DayGCMessages {
   List<ChatEventModel> _msgs = [];
   UnmodifiableListView<ChatEventModel> get msgs => UnmodifiableListView(_msgs);
   void append(ChatEventModel msg) {
-    _msgs.add(msg);
+    _msgs.insert(0, msg);
   }
 
   String date = "";
@@ -259,7 +259,7 @@ class ChatModel extends ChangeNotifier {
         _msgs.add(ChatEventModel(dateChange, null));
       } else {
         var lastTimestamp = 0;
-        for (var i = _msgs.length - 1; i >= 0; i--) {
+        for (var i = 0; i < _msgs.length; i++) {
           var oldEvent = _msgs[i].event;
           if (oldEvent is PM) {
             lastTimestamp = _msgs[i].source?.nick == null
@@ -277,13 +277,12 @@ class ChatModel extends ChangeNotifier {
           var lastDate = DateChangeEvent(
               DateTime.fromMillisecondsSinceEpoch(lastTimestamp));
           if (lastDate.msg != dateChange.msg) {
-            _msgs.add(ChatEventModel(dateChange, null));
+            _msgs.insert(0, (ChatEventModel(dateChange, null)));
           }
         }
       }
     }
-
-    _msgs.add(msg);
+    _msgs.insert(0, msg);
     if (!history) {
       if (!_active) {
         if (msg.event is PM || msg.event is GCMsg) {
@@ -316,7 +315,7 @@ class ChatModel extends ChangeNotifier {
     bool dayFound = false;
     for (int i = 0; i < dayGCMsgs.length; i++) {
       if (dayGCMsgs[i].date == DateFormat("EEE - d MMM y").format(date)) {
-        dayGCMsgs[i]._msgs.add(msg);
+        dayGCMsgs[i]._msgs.insert(0, (msg));
         dayFound = true;
       }
     }
@@ -324,7 +323,7 @@ class ChatModel extends ChangeNotifier {
       var dayGCMsg = DayGCMessages();
       dayGCMsg._msgs = [msg];
       dayGCMsg.date = DateFormat("EEE - d MMM y").format(date);
-      _dayGCMsgs.add(dayGCMsg);
+      _dayGCMsgs.insert(0, dayGCMsg);
     }
   }
 
@@ -339,7 +338,7 @@ class ChatModel extends ChangeNotifier {
 
   void payTip(double amount) async {
     var tip = await Golib.payTip(id, amount);
-    _msgs.add(ChatEventModel(tip, this));
+    _msgs.insert(0, ChatEventModel(tip, this));
     notifyListeners();
   }
 
@@ -357,7 +356,7 @@ class ChatModel extends ChangeNotifier {
       if (_msgs.isNotEmpty && _msgs[_msgs.length - 1].source == null) {
         evnt.sameUser = true;
       }
-      _msgs.add(evnt);
+      _msgs.insert(0, (evnt));
 
       appendDayGCMsgs(evnt, DateTime.fromMillisecondsSinceEpoch(timestamp));
 
@@ -377,7 +376,7 @@ class ChatModel extends ChangeNotifier {
       if (_msgs.isNotEmpty && _msgs[_msgs.length - 1].source == null) {
         evnt.sameUser = true;
       }
-      _msgs.add(evnt);
+      _msgs.insert(0, evnt);
       notifyListeners();
 
       try {
