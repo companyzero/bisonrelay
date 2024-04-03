@@ -229,14 +229,13 @@ class __LNUnlockPageState extends State<_LNUnlockPage> {
         extraInfo,
         const SizedBox(height: 10),
         loading
-            ? Expanded(
-                child: SizedBox(
-                    // width: 400,
-                    // height: 200,
-                    child: LogLines(globalLogModel,
-                        maxLines: 15,
-                        optionalTextColor: theme.getTheme().dividerColor)))
-            : const Expanded(child: Empty()),
+            ? SizedBox(
+                // width: 400,
+                // height: 200,
+                child: LogLines(globalLogModel,
+                    maxLines: 15,
+                    optionalTextColor: theme.getTheme().dividerColor))
+            : const Empty(),
       ]),
     );
   }
