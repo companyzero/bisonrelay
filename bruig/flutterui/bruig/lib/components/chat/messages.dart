@@ -52,16 +52,15 @@ class _MessagesState extends State<Messages> {
                 .itemPositionsListener.itemPositions.value.isNotEmpty
             ? widget.itemPositionsListener.itemPositions.value
                 .where((ItemPosition position) => position.itemLeadingEdge < 1)
-                .reduce((ItemPosition max, ItemPosition position) =>
-                    position.itemLeadingEdge > max.itemLeadingEdge
-                        ? position
-                        : max)
-                .index
+                .reduce((ItemPosition max, ItemPosition position) {
+                return position.itemLeadingEdge < max.itemLeadingEdge
+                    ? position
+                    : max;
+              }).index
             : 0;
-        print("old maxItem $_maxItem newMaxItem $newMaxItem");
         if (mounted && newMaxItem != _maxItem) {
           _maxItem = newMaxItem;
-          if (_maxItem < 5) {
+          if (_maxItem > 5) {
             setState(() {
               _showFAB = true;
             });
@@ -70,7 +69,7 @@ class _MessagesState extends State<Messages> {
               _showFAB = false;
             });
           }
-          if (_maxItem < 2) {
+          if (_maxItem > 2) {
             chat.scrollPosition = newMaxItem;
           } else {
             chat.scrollPosition = 0;
@@ -79,8 +78,8 @@ class _MessagesState extends State<Messages> {
       });
     });
     chat.addListener(onChatChanged);
-    //_maybeScrollToFirstUnread();
-    //_maybeScrollToBottom();
+    _maybeScrollToFirstUnread();
+    _maybeScrollToBottom();
     _lastChat = chat;
   }
 
@@ -89,8 +88,8 @@ class _MessagesState extends State<Messages> {
     super.didUpdateWidget(oldWidget);
     oldWidget.chat.removeListener(onChatChanged);
     chat.addListener(onChatChanged);
-    //_maybeScrollToFirstUnread();
-    //_maybeScrollToBottom();
+    _maybeScrollToFirstUnread();
+    _maybeScrollToBottom();
     onChatChanged();
     _lastChat = chat;
   }

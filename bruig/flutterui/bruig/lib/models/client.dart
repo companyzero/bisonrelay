@@ -218,8 +218,7 @@ class ChatModel extends ChangeNotifier {
         msg.firstUnread = true;
       }
     }
-    if (_msgs.isNotEmpty &&
-        _msgs[_msgs.length - 1].source?.nick == msg.source?.nick) {
+    if (_msgs.isNotEmpty && _msgs[0].source?.nick == msg.source?.nick) {
       msg.sameUser = true;
     }
 
@@ -228,13 +227,12 @@ class ChatModel extends ChangeNotifier {
     if (_msgs.isEmpty) {
       // If there are no messages yet, just show avatar on the new message
       msg.showAvatar = true;
-    } else if (_msgs.isNotEmpty &&
-        _msgs[_msgs.length - 1].source?.nick == msg.source?.nick) {
+    } else if (_msgs.isNotEmpty && _msgs[0].source?.nick == msg.source?.nick) {
       // If there are messages then check to see if the previous message has the
       // same or different nick; if same remove avatar from previous and add
       // to new message. If different then just showAvatar on the new message
       // and keep previous message set to true.
-      _msgs[msgs.length - 1].showAvatar = false;
+      _msgs[0].showAvatar = false;
       msg.showAvatar = true;
     } else if (_msgs.isNotEmpty &&
         _msgs[_msgs.length - 1].source?.nick != msg.source?.nick) {
@@ -870,8 +868,8 @@ class ClientModel extends ChangeNotifier {
       // If unreadMsgCount are both 0, then check last message timestamps;
       var bTimeStamp = 0;
       var aTimeStamp = 0;
-      var bLastMessage = b._msgs[b._msgs.length - 1];
-      var bLastMessageEvent = b._msgs[b._msgs.length - 1].event;
+      var bLastMessage = b._msgs[0];
+      var bLastMessageEvent = b._msgs[0].event;
       if (bLastMessageEvent is PM) {
         bTimeStamp = bLastMessage.source?.nick == null
             ? bLastMessageEvent.timestamp
@@ -882,8 +880,8 @@ class ClientModel extends ChangeNotifier {
             : bLastMessageEvent.timestamp * 1000;
       }
 
-      var aLastMessage = a._msgs[a._msgs.length - 1];
-      var aLastMessageEvent = a._msgs[a._msgs.length - 1].event;
+      var aLastMessage = a._msgs[0];
+      var aLastMessageEvent = a._msgs[0].event;
       if (aLastMessageEvent is PM) {
         aTimeStamp = aLastMessage.source?.nick == null
             ? aLastMessageEvent.timestamp
