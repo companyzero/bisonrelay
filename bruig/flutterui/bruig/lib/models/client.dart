@@ -111,7 +111,7 @@ class DayGCMessages {
   List<ChatEventModel> _msgs = [];
   UnmodifiableListView<ChatEventModel> get msgs => UnmodifiableListView(_msgs);
   void append(ChatEventModel msg) {
-    _msgs.add(msg);
+    _msgs.insert(0, msg);
   }
 
   String date = "";
@@ -217,8 +217,7 @@ class ChatModel extends ChangeNotifier {
         msg.firstUnread = true;
       }
     }
-    if (_msgs.isNotEmpty &&
-        _msgs[_msgs.length - 1].source?.nick == msg.source?.nick) {
+    if (_msgs.isNotEmpty && _msgs[0].source?.nick == msg.source?.nick) {
       msg.sameUser = true;
     }
 
@@ -227,13 +226,12 @@ class ChatModel extends ChangeNotifier {
     if (_msgs.isEmpty) {
       // If there are no messages yet, just show avatar on the new message
       msg.showAvatar = true;
-    } else if (_msgs.isNotEmpty &&
-        _msgs[_msgs.length - 1].source?.nick == msg.source?.nick) {
+    } else if (_msgs.isNotEmpty && _msgs[0].source?.nick == msg.source?.nick) {
       // If there are messages then check to see if the previous message has the
       // same or different nick; if same remove avatar from previous and add
       // to new message. If different then just showAvatar on the new message
       // and keep previous message set to true.
-      _msgs[msgs.length - 1].showAvatar = false;
+      _msgs[0].showAvatar = false;
       msg.showAvatar = true;
     } else if (_msgs.isNotEmpty &&
         _msgs[_msgs.length - 1].source?.nick != msg.source?.nick) {
@@ -258,7 +256,7 @@ class ChatModel extends ChangeNotifier {
         _msgs.add(ChatEventModel(dateChange, null));
       } else {
         var lastTimestamp = 0;
-        for (var i = _msgs.length - 1; i >= 0; i--) {
+        for (var i = 0; i < _msgs.length; i++) {
           var oldEvent = _msgs[i].event;
           if (oldEvent is PM) {
             lastTimestamp = _msgs[i].source?.nick == null
@@ -276,13 +274,12 @@ class ChatModel extends ChangeNotifier {
           var lastDate = DateChangeEvent(
               DateTime.fromMillisecondsSinceEpoch(lastTimestamp));
           if (lastDate.msg != dateChange.msg) {
-            _msgs.add(ChatEventModel(dateChange, null));
+            _msgs.insert(0, (ChatEventModel(dateChange, null)));
           }
         }
       }
     }
-
-    _msgs.add(msg);
+    _msgs.insert(0, msg);
     if (!history) {
       if (!_active) {
         if (msg.event is PM || msg.event is GCMsg) {
@@ -315,7 +312,7 @@ class ChatModel extends ChangeNotifier {
     bool dayFound = false;
     for (int i = 0; i < dayGCMsgs.length; i++) {
       if (dayGCMsgs[i].date == DateFormat("EEE - d MMM y").format(date)) {
-        dayGCMsgs[i]._msgs.add(msg);
+        dayGCMsgs[i]._msgs.insert(0, (msg));
         dayFound = true;
       }
     }
@@ -323,7 +320,7 @@ class ChatModel extends ChangeNotifier {
       var dayGCMsg = DayGCMessages();
       dayGCMsg._msgs = [msg];
       dayGCMsg.date = DateFormat("EEE - d MMM y").format(date);
-      _dayGCMsgs.add(dayGCMsg);
+      _dayGCMsgs.insert(0, dayGCMsg);
     }
   }
 
@@ -338,7 +335,7 @@ class ChatModel extends ChangeNotifier {
 
   void payTip(double amount) async {
     var tip = await Golib.payTip(id, amount);
-    _msgs.add(ChatEventModel(tip, this));
+    _msgs.insert(0, ChatEventModel(tip, this));
     notifyListeners();
   }
 
@@ -356,7 +353,7 @@ class ChatModel extends ChangeNotifier {
       if (_msgs.isNotEmpty && _msgs[_msgs.length - 1].source == null) {
         evnt.sameUser = true;
       }
-      _msgs.add(evnt);
+      _msgs.insert(0, (evnt));
 
       appendDayGCMsgs(evnt, DateTime.fromMillisecondsSinceEpoch(timestamp));
 
@@ -376,7 +373,7 @@ class ChatModel extends ChangeNotifier {
       if (_msgs.isNotEmpty && _msgs[_msgs.length - 1].source == null) {
         evnt.sameUser = true;
       }
-      _msgs.add(evnt);
+      _msgs.insert(0, evnt);
       notifyListeners();
 
       try {
@@ -870,8 +867,8 @@ class ClientModel extends ChangeNotifier {
       // If unreadMsgCount are both 0, then check last message timestamps;
       var bTimeStamp = 0;
       var aTimeStamp = 0;
-      var bLastMessage = b._msgs[b._msgs.length - 1];
-      var bLastMessageEvent = b._msgs[b._msgs.length - 1].event;
+      var bLastMessage = b._msgs[0];
+      var bLastMessageEvent = b._msgs[0].event;
       if (bLastMessageEvent is PM) {
         bTimeStamp = bLastMessage.source?.nick == null
             ? bLastMessageEvent.timestamp
@@ -882,8 +879,8 @@ class ClientModel extends ChangeNotifier {
             : bLastMessageEvent.timestamp * 1000;
       }
 
-      var aLastMessage = a._msgs[a._msgs.length - 1];
-      var aLastMessageEvent = a._msgs[a._msgs.length - 1].event;
+      var aLastMessage = a._msgs[0];
+      var aLastMessageEvent = a._msgs[0].event;
       if (aLastMessageEvent is PM) {
         aTimeStamp = aLastMessage.source?.nick == null
             ? aLastMessageEvent.timestamp
