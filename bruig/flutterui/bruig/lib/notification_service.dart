@@ -127,6 +127,9 @@ class NotificationService {
   }
 
   Future<void> init() async {
+    // Android notifications are done through the native plugin.
+    if (Platform.isAndroid) return;
+
     /*
     const AndroidInitializationSettings initializationSettingsAndroid =
         AndroidInitializationSettings('app_icon');
@@ -240,6 +243,9 @@ class NotificationService {
   // startup when messages are received from when BR was not in use.  When
   // a new message is received and notification created, the timer is reset.
   void _startNotificationTimer() {
+    // Android notifications are done through the native plugin.
+    if (Platform.isAndroid) return;
+
     notificationChecker = Timer(const Duration(seconds: 10), () async {
       if (_notificationsToBeSent.isNotEmpty) {
         var set = Set<String>();
