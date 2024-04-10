@@ -8,6 +8,7 @@ import 'package:bruig/models/notifications.dart';
 import 'package:bruig/screens/startupscreen.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:golib_plugin/util.dart';
@@ -137,12 +138,10 @@ class _NeedsFundsScreenState extends State<NeedsFundsScreen> {
         ]);
       }
 
-      return Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-        Text('''
-If someone sent you an invite file with funds, you  may also attempt
-to redeem it by clicking in the button.
-''', style: ts),
-        const SizedBox(width: 18),
+      return Column(mainAxisAlignment: MainAxisAlignment.start, children: [
+        SizedBox(width: 650, child: Text('''
+If someone sent you an invite file with funds, you may also attempt to redeem it by clicking the button.
+''', style: ts)),
         ElevatedButton(
             onPressed: redeemFunds, child: const Text("Redeem Funds")),
       ]);
@@ -166,18 +165,17 @@ to redeem it by clicking in the button.
                   fontSize: theme.getLargeFont(context),
                   fontWeight: FontWeight.w300)),
           const SizedBox(height: 20),
-          Text('''
-The wallet requires on-chain DCR funds to be able to open Lightning Network (LN) channels
-and perform payments to the server and other users of the Bison Relay network.
+          SizedBox(
+              width: 650,
+              child: Text('''
+The wallet requires on-chain DCR funds to be able to open Lightning Network (LN) channels and perform payments to the server and other users of the Bison Relay network.
 
-Send DCR funds to the following address to receive funds in your wallet. Note that the
-wallet seed will be needed to recover these funds if the wallet data in this computer is
-corrupted or lost.
+Send DCR funds to the following address to receive funds in your wallet. Note that the wallet seed will be needed to recover these funds if the wallet data in this computer is corrupted or lost.
 ''',
-              style: TextStyle(
-                  color: theme.getTheme().focusColor,
-                  fontSize: theme.getMediumFont(context),
-                  fontWeight: FontWeight.w300)),
+                  style: TextStyle(
+                      color: theme.getTheme().focusColor,
+                      fontSize: theme.getMediumFont(context),
+                      fontWeight: FontWeight.w300))),
           buildFundsWidget(context),
           const SizedBox(height: 13),
           Container(
@@ -199,49 +197,49 @@ corrupted or lost.
                       color: theme.getTheme().dividerColor,
                       fontSize: theme.getMediumFont(context)))),
           const SizedBox(height: 9),
-          Container(
-              padding: const EdgeInsets.only(left: 324 + 22, right: 324 + 20),
-              child: Row(children: [
-                Text(
-                    textAlign: TextAlign.left,
-                    "Unconfirmed wallet balance:",
-                    style: TextStyle(
-                        color: theme.getTheme().indicatorColor,
-                        fontSize: theme.getSmallFont(context),
-                        fontWeight: FontWeight.w300)),
-                Text(
-                    textAlign: TextAlign.right,
-                    formatDCR(atomsToDCR(unconfirmedBalance)),
-                    style: TextStyle(
-                        color: theme.getTheme().indicatorColor,
-                        fontSize: theme.getSmallFont(context),
-                        fontWeight: FontWeight.w300)),
-              ])),
+          SizedBox(
+              width: 400,
+              child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text("Unconfirmed wallet balance:",
+                        style: TextStyle(
+                            color: theme.getTheme().indicatorColor,
+                            fontSize: theme.getSmallFont(context),
+                            fontWeight: FontWeight.w300)),
+                    Text(formatDCR(atomsToDCR(unconfirmedBalance)),
+                        style: TextStyle(
+                            color: theme.getTheme().indicatorColor,
+                            fontSize: theme.getSmallFont(context),
+                            fontWeight: FontWeight.w300)),
+                  ])),
           const SizedBox(height: 3),
-          Container(
-              padding: const EdgeInsets.only(left: 324 + 22, right: 324 + 20),
-              child: Row(children: [
-                Text(
-                    textAlign: TextAlign.left,
-                    "Confirmed wallet balance:",
-                    style: TextStyle(
-                        color: theme.getTheme().indicatorColor,
-                        fontSize: theme.getSmallFont(context),
-                        fontWeight: FontWeight.w300)),
-                Text(
-                    textAlign: TextAlign.right,
-                    formatDCR(atomsToDCR(confirmedBalance)),
-                    style: TextStyle(
-                        color: theme.getTheme().indicatorColor,
-                        fontSize: theme.getSmallFont(context),
-                        fontWeight: FontWeight.w300))
-              ])),
-          const SizedBox(height: 20),
+          SizedBox(
+              width: 400,
+              child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                        textAlign: TextAlign.left,
+                        "Confirmed wallet balance:",
+                        style: TextStyle(
+                            color: theme.getTheme().indicatorColor,
+                            fontSize: theme.getSmallFont(context),
+                            fontWeight: FontWeight.w300)),
+                    Text(
+                        textAlign: TextAlign.right,
+                        formatDCR(atomsToDCR(confirmedBalance)),
+                        style: TextStyle(
+                            color: theme.getTheme().indicatorColor,
+                            fontSize: theme.getSmallFont(context),
+                            fontWeight: FontWeight.w300))
+                  ])),
+          const SizedBox(height: 10),
           LoadingScreenButton(
             onPressed: () => Navigator.of(context).pop(),
             text: "Finish",
           ),
-          const Expanded(child: Empty()),
+          //const Expanded(child: Empty()),
         ],
       ),
     );

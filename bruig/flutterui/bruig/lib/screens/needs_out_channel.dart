@@ -201,10 +201,6 @@ open channels to other LN nodes.''';
                 child: Text(
                   '''
 The wallet requires LN channels with outbound capacity to send funds ("bandwidth") in order to pay for messages to and from the server and to pay other users for their content.
-
-Open a channel to an existing LN node, by entering its details below.
-
-Note that Lightning Network channels require managing off-chain data, and as such the wallet seed is NOT sufficient to restore their state.
                       ''',
                   style: TextStyle(
                       color: theme.getTheme().focusColor,
@@ -213,71 +209,87 @@ Note that Lightning Network channels require managing off-chain data, and as suc
                 )),
           ),
           const SizedBox(height: 10),
-          Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-            Text(
-                textAlign: TextAlign.left,
-                "Wallet Balance:",
-                style: TextStyle(
-                    color: theme.getTheme().indicatorColor,
-                    fontSize: theme.getSmallFont(context),
-                    fontWeight: FontWeight.w300)),
-            Text(
-                textAlign: TextAlign.right,
-                formatDCR(atomsToDCR(walletBalance)),
-                style: TextStyle(
-                    color: theme.getTheme().indicatorColor,
-                    fontSize: theme.getSmallFont(context),
-                    fontWeight: FontWeight.w300)),
-          ]),
+          ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 400),
+              child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                        textAlign: TextAlign.left,
+                        "Wallet Balance:",
+                        style: TextStyle(
+                            color: theme.getTheme().indicatorColor,
+                            fontSize: theme.getSmallFont(context),
+                            fontWeight: FontWeight.w300)),
+                    Text(
+                        textAlign: TextAlign.right,
+                        formatDCR(atomsToDCR(walletBalance)),
+                        style: TextStyle(
+                            color: theme.getTheme().indicatorColor,
+                            fontSize: theme.getSmallFont(context),
+                            fontWeight: FontWeight.w300)),
+                  ])),
           const SizedBox(height: 3),
-          Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-            Text(
-                textAlign: TextAlign.left,
-                "Outbound Channel Capacity:",
-                style: TextStyle(
-                    color: theme.getTheme().indicatorColor,
-                    fontSize: theme.getSmallFont(context),
-                    fontWeight: FontWeight.w300)),
-            Text(
-                textAlign: TextAlign.right,
-                formatDCR(atomsToDCR(maxOutAmount)),
-                style: TextStyle(
-                    color: theme.getTheme().indicatorColor,
-                    fontSize: theme.getSmallFont(context),
-                    fontWeight: FontWeight.w300))
-          ]),
-          Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-            Text(
-                textAlign: TextAlign.left,
-                "Pending Channels:",
-                style: TextStyle(
-                    color: theme.getTheme().indicatorColor,
-                    fontSize: theme.getSmallFont(context),
-                    fontWeight: FontWeight.w300)),
-            Text(
-                textAlign: TextAlign.right,
-                "$numPendingChannels",
-                style: TextStyle(
-                    color: theme.getTheme().indicatorColor,
-                    fontSize: theme.getSmallFont(context),
-                    fontWeight: FontWeight.w300))
-          ]),
-          Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-            Text(
-                textAlign: TextAlign.left,
-                "Active Channels:",
-                style: TextStyle(
-                    color: theme.getTheme().indicatorColor,
-                    fontSize: theme.getSmallFont(context),
-                    fontWeight: FontWeight.w300)),
-            Text(
-                textAlign: TextAlign.right,
-                "$numChannels",
-                style: TextStyle(
-                    color: theme.getTheme().indicatorColor,
-                    fontSize: theme.getSmallFont(context),
-                    fontWeight: FontWeight.w300))
-          ]),
+          ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 400),
+              child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                        textAlign: TextAlign.left,
+                        "Outbound Channel Capacity:",
+                        style: TextStyle(
+                            color: theme.getTheme().indicatorColor,
+                            fontSize: theme.getSmallFont(context),
+                            fontWeight: FontWeight.w300)),
+                    Text(
+                        textAlign: TextAlign.right,
+                        formatDCR(atomsToDCR(maxOutAmount)),
+                        style: TextStyle(
+                            color: theme.getTheme().indicatorColor,
+                            fontSize: theme.getSmallFont(context),
+                            fontWeight: FontWeight.w300))
+                  ])),
+          ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 400),
+              child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                        textAlign: TextAlign.left,
+                        "Pending Channels:",
+                        style: TextStyle(
+                            color: theme.getTheme().indicatorColor,
+                            fontSize: theme.getSmallFont(context),
+                            fontWeight: FontWeight.w300)),
+                    Text(
+                        textAlign: TextAlign.right,
+                        "$numPendingChannels",
+                        style: TextStyle(
+                            color: theme.getTheme().indicatorColor,
+                            fontSize: theme.getSmallFont(context),
+                            fontWeight: FontWeight.w300))
+                  ])),
+          ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 400),
+              child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                        textAlign: TextAlign.left,
+                        "Active Channels:",
+                        style: TextStyle(
+                            color: theme.getTheme().indicatorColor,
+                            fontSize: theme.getSmallFont(context),
+                            fontWeight: FontWeight.w300)),
+                    Text(
+                        textAlign: TextAlign.right,
+                        "$numChannels",
+                        style: TextStyle(
+                            color: theme.getTheme().indicatorColor,
+                            fontSize: theme.getSmallFont(context),
+                            fontWeight: FontWeight.w300))
+                  ])),
           const SizedBox(height: 10),
           preventMsg == ""
               ? Column(children: [
@@ -285,7 +297,7 @@ Note that Lightning Network channels require managing off-chain data, and as suc
                     Text("Amount",
                         style: TextStyle(
                             color: theme.getTheme().indicatorColor,
-                            fontSize: theme.getSmallFont(context),
+                            fontSize: theme.getMediumFont(context),
                             fontWeight: FontWeight.w300)),
                     const SizedBox(
                       width: 10,

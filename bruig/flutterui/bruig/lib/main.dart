@@ -39,7 +39,6 @@ import 'package:bruig/screens/shutdown.dart';
 import 'package:bruig/screens/unlock_ln.dart';
 import 'package:bruig/screens/verify_invite.dart';
 import 'package:bruig/screens/verify_server.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
