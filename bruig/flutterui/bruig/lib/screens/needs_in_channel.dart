@@ -7,6 +7,7 @@ import 'package:bruig/models/client.dart';
 import 'package:bruig/models/notifications.dart';
 import 'package:bruig/screens/startupscreen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:golib_plugin/util.dart';
 import 'package:bruig/theme_manager.dart';
@@ -206,12 +207,6 @@ cNPr8Y+sSs2MHf6xMNBQzV4KuIlPIg==
             width: 650,
             child: Text('''
 The wallet requires LN channels with inbound capacity to receive funds to be able to receive payments from other users.
-
-One way of opening a channel with inbound capacity is to pay for a node to open a channel back to your LN wallet. This is done through a "Liquidity Provider" service.
-
-Note that having a channel with inbound capacity is not for sending or receiving messages. It is only required in order to receive payments from other users.
-
-After the channel is opened, it may take up to 6 confirmations for it to be broadcast through the network. Individual peers may take longer to detect and to consider the channel to send payments.
                 ''',
                 style: TextStyle(
                     color: theme.getTheme().focusColor,
@@ -219,71 +214,87 @@ After the channel is opened, it may take up to 6 confirmations for it to be broa
                     fontWeight: FontWeight.w300)),
           )),
           const SizedBox(height: 10),
-          Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-            Text(
-                textAlign: TextAlign.left,
-                "Outbound Channel Capacity:",
-                style: TextStyle(
-                    color: theme.getTheme().indicatorColor,
-                    fontSize: theme.getSmallFont(context),
-                    fontWeight: FontWeight.w300)),
-            Text(
-                textAlign: TextAlign.right,
-                formatDCR(atomsToDCR(maxOutAmount)),
-                style: TextStyle(
-                    color: theme.getTheme().indicatorColor,
-                    fontSize: theme.getSmallFont(context),
-                    fontWeight: FontWeight.w300)),
-          ]),
+          ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 400),
+              child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                        textAlign: TextAlign.left,
+                        "Outbound Channel Capacity:",
+                        style: TextStyle(
+                            color: theme.getTheme().indicatorColor,
+                            fontSize: theme.getSmallFont(context),
+                            fontWeight: FontWeight.w300)),
+                    Text(
+                        textAlign: TextAlign.right,
+                        formatDCR(atomsToDCR(maxOutAmount)),
+                        style: TextStyle(
+                            color: theme.getTheme().indicatorColor,
+                            fontSize: theme.getSmallFont(context),
+                            fontWeight: FontWeight.w300)),
+                  ])),
           const SizedBox(height: 3),
-          Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-            Text(
-                textAlign: TextAlign.left,
-                "Inbound Channel Capacity:",
-                style: TextStyle(
-                    color: theme.getTheme().indicatorColor,
-                    fontSize: theme.getSmallFont(context),
-                    fontWeight: FontWeight.w300)),
-            Text(
-                textAlign: TextAlign.right,
-                formatDCR(atomsToDCR(maxInAmount)),
-                style: TextStyle(
-                    color: theme.getTheme().indicatorColor,
-                    fontSize: theme.getSmallFont(context),
-                    fontWeight: FontWeight.w300))
-          ]),
-          Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-            Text(
-                textAlign: TextAlign.left,
-                "Pending Channels:",
-                style: TextStyle(
-                    color: theme.getTheme().indicatorColor,
-                    fontSize: theme.getSmallFont(context),
-                    fontWeight: FontWeight.w300)),
-            Text(
-                textAlign: TextAlign.right,
-                "$numPendingChannels",
-                style: TextStyle(
-                    color: theme.getTheme().indicatorColor,
-                    fontSize: theme.getSmallFont(context),
-                    fontWeight: FontWeight.w300))
-          ]),
-          Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-            Text(
-                textAlign: TextAlign.left,
-                "Active Channels:",
-                style: TextStyle(
-                    color: theme.getTheme().indicatorColor,
-                    fontSize: theme.getSmallFont(context),
-                    fontWeight: FontWeight.w300)),
-            Text(
-                textAlign: TextAlign.right,
-                "$numChannels",
-                style: TextStyle(
-                    color: theme.getTheme().indicatorColor,
-                    fontSize: theme.getSmallFont(context),
-                    fontWeight: FontWeight.w300))
-          ]),
+          ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 400),
+              child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                        textAlign: TextAlign.left,
+                        "Inbound Channel Capacity:",
+                        style: TextStyle(
+                            color: theme.getTheme().indicatorColor,
+                            fontSize: theme.getSmallFont(context),
+                            fontWeight: FontWeight.w300)),
+                    Text(
+                        textAlign: TextAlign.right,
+                        formatDCR(atomsToDCR(maxInAmount)),
+                        style: TextStyle(
+                            color: theme.getTheme().indicatorColor,
+                            fontSize: theme.getSmallFont(context),
+                            fontWeight: FontWeight.w300))
+                  ])),
+          ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 400),
+              child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                        textAlign: TextAlign.left,
+                        "Pending Channels:",
+                        style: TextStyle(
+                            color: theme.getTheme().indicatorColor,
+                            fontSize: theme.getSmallFont(context),
+                            fontWeight: FontWeight.w300)),
+                    Text(
+                        textAlign: TextAlign.right,
+                        "$numPendingChannels",
+                        style: TextStyle(
+                            color: theme.getTheme().indicatorColor,
+                            fontSize: theme.getSmallFont(context),
+                            fontWeight: FontWeight.w300))
+                  ])),
+          ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 400),
+              child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                        textAlign: TextAlign.left,
+                        "Active Channels:",
+                        style: TextStyle(
+                            color: theme.getTheme().indicatorColor,
+                            fontSize: theme.getSmallFont(context),
+                            fontWeight: FontWeight.w300)),
+                    Text(
+                        textAlign: TextAlign.right,
+                        "$numChannels",
+                        style: TextStyle(
+                            color: theme.getTheme().indicatorColor,
+                            fontSize: theme.getSmallFont(context),
+                            fontWeight: FontWeight.w300))
+                  ])),
           const SizedBox(height: 10),
           preventMsg == ""
               ? Column(children: [
@@ -291,7 +302,7 @@ After the channel is opened, it may take up to 6 confirmations for it to be broa
                     Text("Amount",
                         style: TextStyle(
                             color: theme.getTheme().indicatorColor,
-                            fontSize: theme.getSmallFont(context),
+                            fontSize: theme.getMediumFont(context),
                             fontWeight: FontWeight.w300)),
                     const SizedBox(
                       width: 10,
@@ -350,6 +361,22 @@ After the channel is opened, it may take up to 6 confirmations for it to be broa
             onPressed: () => Navigator.of(context).pop(),
             text: "Skip",
           ),
+          const SizedBox(height: 10),
+          Center(
+              child: SizedBox(
+            width: 650,
+            child: Text('''
+One way of opening a channel with inbound capacity is to pay for a node to open a channel back to your LN wallet. This is done through a "Liquidity Provider" service.
+
+Note that having a channel with inbound capacity is not for sending or receiving messages. It is only required in order to receive payments from other users.
+
+After the channel is opened, it may take up to 6 confirmations for it to be broadcast through the network. Individual peers may take longer to detect and to consider the channel to send payments.
+                ''',
+                style: TextStyle(
+                    color: theme.getTheme().focusColor,
+                    fontSize: theme.getMediumFont(context),
+                    fontWeight: FontWeight.w300)),
+          )),
         ],
       ),
     );

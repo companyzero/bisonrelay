@@ -58,6 +58,7 @@ class _LNBackupsPageState extends State<LNBackupsPage> {
     var darkTextColor = theme.indicatorColor;
     var dividerColor = theme.highlightColor;
     var backgroundColor = theme.backgroundColor;
+    bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
 
     return Consumer<ThemeNotifier>(
         builder: (context, theme, _) => Container(
@@ -84,29 +85,46 @@ class _LNBackupsPageState extends State<LNBackupsPage> {
                   )),
                 ]),
                 const SizedBox(height: 30),
-                Text(
-                  '''LN funds are locked in channels which cannot be recovered from the seed alone.
-Static Channel Backup (SCB) files are needed to request that remote hosts 
-close channels with the local wallet after the wallet is restored from
-seed. This backup file needs to be updated every time a channel is opened or
-closed, or users are at risk of losing access to their funds.
+                Center(
+                    child: SizedBox(
+                        width: 650,
+                        child: Text('''
+LN funds are locked in channels which cannot be recovered from the seed alone. 
+
+Static Channel Backup (SCB) files are needed to request that remote hosts close channels with the local wallet after the wallet is restored from seed. 
+
+This backup file needs to be updated every time a channel is opened or closed, or users are at risk of losing access to their funds.
 ''',
-                  style: TextStyle(color: darkTextColor),
-                ),
+                            style: TextStyle(
+                                color: theme.getTheme().focusColor,
+                                fontSize: theme.getMediumFont(context),
+                                fontWeight: FontWeight.w300)))),
                 const SizedBox(height: 30),
-                ElevatedButton(
-                    onPressed: saveSCB,
-                    child: Text("Save SCB file",
-                        style: TextStyle(
-                            fontSize: theme.getSmallFont(context),
-                            color: textColor))),
-                const SizedBox(height: 30),
-                ElevatedButton(
-                    onPressed: restoreSCB,
-                    child: Text("Restore SCB file",
-                        style: TextStyle(
-                            fontSize: theme.getSmallFont(context),
-                            color: textColor))),
+                Center(
+                    child: ConstrainedBox(
+                        constraints:
+                            const BoxConstraints(maxWidth: 400, maxHeight: 100),
+                        child: Flex(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            direction:
+                                isScreenSmall ? Axis.vertical : Axis.horizontal,
+                            children: [
+                              ElevatedButton(
+                                  onPressed: saveSCB,
+                                  child: Text("Save SCB file",
+                                      style: TextStyle(
+                                          fontSize:
+                                              theme.getMediumFont(context),
+                                          color: textColor))),
+                              ElevatedButton(
+                                  onPressed: restoreSCB,
+                                  child: Text("Restore SCB file",
+                                      style: TextStyle(
+                                          fontSize:
+                                              theme.getMediumFont(context),
+                                          color: textColor))),
+                            ])))
               ],
             )));
   }
