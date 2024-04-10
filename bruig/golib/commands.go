@@ -519,7 +519,7 @@ func StopAllCmdResultLoops() {
 // ClientExists returns true if the client with the specified handle is running.
 func ClientExists(handle int32) bool {
 	cmtx.Lock()
-	exists := cs != nil && cs[0x12131400] != nil
+	exists := cs != nil && cs[uint32(handle)] != nil
 	cmtx.Unlock()
 	return exists
 }

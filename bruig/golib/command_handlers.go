@@ -751,6 +751,9 @@ func handleInitClient(handle uint32, args initClient) error {
 		cctx.runMtx.Lock()
 		cctx.runErr = err
 		cctx.runMtx.Unlock()
+		cmtx.Lock()
+		delete(cs, handle)
+		cmtx.Unlock()
 		notify(NTClientStopped, nil, err)
 	}()
 
@@ -2181,6 +2184,9 @@ func handleLNStopDcrlnd() error {
 	go func() {
 		ctx := context.Background()
 		err := lndc.Wait(ctx)
+		currentLndcMtx.Lock()
+		currentLndc = nil
+		currentLndcMtx.Unlock()
 		notify(NTLNDcrlndStopped, nil, err)
 	}()
 	return nil

@@ -289,6 +289,10 @@ class GolibPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, ServiceAware
     detachExistingLoops()
     Golib.stopAllCmdResultLoops()
 
+    if (!ntfnsEnabled) {
+      return;
+    }
+
     // Attach background notification loop.
     var ntfManager = setUpNotificationChannels();
     var id = Golib.cmdResultLoop(object : golib.CmdResultLoopCB {
