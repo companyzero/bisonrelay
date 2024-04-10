@@ -394,7 +394,7 @@ func RunDcrlnd(ctx context.Context, cfg Config) (*Dcrlnd, error) {
 	conf.ConfigFile = filepath.Join(rootDir, "dcrlnd.conf")
 	conf.LogDir = filepath.Join(rootDir, "logs")
 	conf.MaxLogFiles = cfg.MaxLogFiles
-	conf.MaxLogFileSize = 1 // MB
+	conf.MaxLogFileSize = 5 // MB
 	conf.TLSCertPath = filepath.Join(rootDir, "tls.cert")
 	conf.TLSKeyPath = filepath.Join(rootDir, "tls.key")
 	conf.TLSDisableAutofill = true // FIXME: parametrize
