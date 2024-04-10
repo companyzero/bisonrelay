@@ -242,6 +242,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
     var hoverColor = theme.hoverColor;
 
     var connectedIcon = Icons.cloud;
+    Widget connectedTag = const Empty(); // Used in small screens.
     List<ChatMenuItem?> contextMenu = [];
     if (widget.mainMenu.activeMenu.label == "Chat") {
       contextMenu = buildChatContextMenu();
@@ -254,11 +255,19 @@ class _OverviewScreenState extends State<OverviewScreen> {
         connectedIcon = Icons.cloud_off;
         connStateLabel = "Skip Wallet Check";
         connStateAction = skipWalletCheck;
+        connectedTag = const Image(
+          color: null,
+          image: AssetImage("assets/images/checktag.png"),
+        );
         break;
       case connStateOffline:
         connectedIcon = Icons.cloud_off;
         connStateLabel = "Go Online";
         connStateAction = goOnline;
+        connectedTag = const Image(
+          color: null,
+          image: AssetImage("assets/images/offlinetag.png"),
+        );
         break;
       default:
         connStateLabel = "Go Offline";
@@ -304,54 +313,54 @@ class _OverviewScreenState extends State<OverviewScreen> {
               titleSpacing: 0.0,
               title: _OverviewScreenTitle(widget.mainMenu),
               leading: Builder(builder: (BuildContext context) {
-                return removeBottomBar ||
-                        client.active != null ||
-                        client.showAddressBook
-                    ? IconButton(
-                        iconSize: 20,
-                        splashRadius: 20,
-                        onPressed: () {
-                          client.activeSubMenu.isNotEmpty
-                              ? client.activeSubMenu = []
-                              : client.active = null;
-                          if (removeBottomBar) {
-                            removeBottomBar = false;
-                            switchScreen(ChatsScreen.routeName);
-                            selectedIndex = 0;
-                          }
-                        },
-                        icon: Icon(Icons.keyboard_arrow_left_rounded,
-                            color: Theme.of(context).focusColor))
-                    : feed.active != null
-                        ? IconButton(
-                            iconSize: 20,
-                            splashRadius: 20,
-                            icon: Icon(Icons.keyboard_arrow_left_rounded,
-                                color: Theme.of(context).focusColor),
-                            onPressed: () {
-                              feed.active = null;
-                              navKey.currentState!.pushReplacementNamed('/feed',
-                                  arguments: PageTabs(0, [], null));
-                            })
-                        : Container(
-                            margin: const EdgeInsets.all(10),
-                            child: InkWell(
-                                onTap: () {
-                                  switchScreen(SettingsScreen.routeName);
-                                  removeBottomBar = true;
-                                },
-                                child: CircleAvatar(
-                                    backgroundColor: colorFromNick(client.nick),
-                                    backgroundImage: client.myAvatar,
-                                    child: client.myAvatar != null
-                                        ? const Empty()
-                                        : Text(
-                                            client.nick != ""
-                                                ? client.nick[0].toUpperCase()
-                                                : "",
-                                            style: TextStyle(
-                                                color: avatarTextColor,
-                                                fontSize: 20)))));
+                return InkWell(
+                    onTap: () {
+                      if (removeBottomBar ||
+                          client.active != null ||
+                          client.showAddressBook) {
+                        client.activeSubMenu.isNotEmpty
+                            ? client.activeSubMenu = []
+                            : client.active = null;
+                        if (removeBottomBar) {
+                          removeBottomBar = false;
+                          switchScreen(ChatsScreen.routeName);
+                          selectedIndex = 0;
+                        }
+                      } else if (feed.active != null) {
+                        feed.active = null;
+                        navKey.currentState!.pushReplacementNamed('/feed',
+                            arguments: PageTabs(0, [], null));
+                      } else {
+                        switchScreen(SettingsScreen.routeName);
+                        removeBottomBar = true;
+                      }
+                    },
+                    child: Stack(children: [
+                      removeBottomBar ||
+                              client.active != null ||
+                              client.showAddressBook ||
+                              feed.active != null
+                          ? Positioned(
+                              left: 25,
+                              top: 17,
+                              child: Icon(Icons.keyboard_arrow_left_rounded,
+                                  color: Theme.of(context).focusColor))
+                          : Container(
+                              margin: const EdgeInsets.all(10),
+                              child: CircleAvatar(
+                                  backgroundColor: colorFromNick(client.nick),
+                                  backgroundImage: client.myAvatar,
+                                  child: client.myAvatar != null
+                                      ? const Empty()
+                                      : Text(
+                                          client.nick != ""
+                                              ? client.nick[0].toUpperCase()
+                                              : "",
+                                          style: TextStyle(
+                                              color: avatarTextColor,
+                                              fontSize: 20)))),
+                      connectedTag, // Tag when offline/checking wallet.
+                    ]));
               }),
               actions: [
                   // Only render page context menu if the mainMenu ONLY has
