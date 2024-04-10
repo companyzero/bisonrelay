@@ -1,10 +1,12 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/components/recent_log.dart';
 import 'package:bruig/models/log.dart';
 import 'package:bruig/screens/startupscreen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:window_manager/window_manager.dart';
@@ -25,6 +27,14 @@ class ShutdownScreen extends StatefulWidget {
 class _ShutdownScreenState extends State<ShutdownScreen> {
   String? clientStopErr;
 
+  void quitApp() {
+    if (Platform.isAndroid || Platform.isIOS) {
+      SystemChannels.platform.invokeMethod('SystemNavigator.pop');
+    } else {
+      windowManager.destroy();
+    }
+  }
+
   void handleNotifications() async {
     await for (var ntf in widget.ntfs) {
       switch (ntf.type) {
@@ -38,12 +48,12 @@ class _ShutdownScreenState extends State<ShutdownScreen> {
           if (widget.internalDcrlnd) {
             Golib.lnStopDcrlnd();
           } else {
-            windowManager.destroy();
+            quitApp();
           }
           break;
 
         case NTLNDcrlndStopped:
-          Timer(const Duration(seconds: 1), windowManager.destroy);
+          Timer(const Duration(seconds: 1), quitApp);
           break;
 
         default:
@@ -57,6 +67,10 @@ class _ShutdownScreenState extends State<ShutdownScreen> {
 
     // Ensure we ask for the shutdown only after hooking into the
     // confirmations() stream.
+    if (Platform.isAndroid) {
+      Golib.setNtfnsEnabled(false);
+      Golib.stopForegroundSvc();
+    }
     Timer(const Duration(milliseconds: 100), Golib.stopClient);
   }
 

@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:bruig/components/confirmation_dialog.dart';
 import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/screens/ln_management.dart';
 import 'package:bruig/screens/log.dart';
@@ -9,6 +10,7 @@ import 'package:bruig/screens/about.dart';
 import 'package:bruig/util.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:bruig/theme_manager.dart';
 import 'package:provider/provider.dart';
@@ -22,6 +24,7 @@ import 'package:bruig/components/copyable.dart';
 typedef ChangePageCB = void Function(String);
 typedef NotficationsCB = void Function(bool?, bool?);
 typedef ResetKXCB = void Function(BuildContext);
+typedef ShutdownCB = void Function();
 
 class SettingsScreenTitle extends StatelessWidget {
   const SettingsScreenTitle({super.key});
@@ -134,6 +137,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
     });
   }
 
+  void shutdown() {
+    Navigator.of(context, rootNavigator: true)
+        .pushReplacementNamed("/shutdown");
+  }
+
   @override
   void initState() {
     super.initState();
@@ -187,7 +195,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
     Widget settingsView =
-        MainSettingsScreen(client, pickAvatarFile, changePage);
+        MainSettingsScreen(client, pickAvatarFile, changePage, shutdown);
     switch (settingsPage) {
       case "Account":
         settingsView =
@@ -362,7 +370,9 @@ class MainSettingsScreen extends StatelessWidget {
   final ClientModel client;
   final VoidCallback pickAvatarFile;
   final ChangePageCB changePage;
-  const MainSettingsScreen(this.client, this.pickAvatarFile, this.changePage,
+  final ShutdownCB shutdown;
+  const MainSettingsScreen(
+      this.client, this.pickAvatarFile, this.changePage, this.shutdown,
       {Key? key})
       : super(key: key);
 
@@ -477,6 +487,24 @@ class MainSettingsScreen extends StatelessWidget {
                         style: TextStyle(
                             fontSize: theme.getMediumFont(context),
                             color: textColor))),
+                client.connState.state == connStateCheckingWallet
+                    ? ListTile(
+                        onTap: () {
+                          confirmationDialog(
+                              context,
+                              Golib.skipWalletCheck,
+                              "Confirm skip wallet check?",
+                              "Wallet is offline due to: ${client.connState.checkWalletErr}.\n\nSkipping the check may not actually work.",
+                              "Skip",
+                              "Cancel");
+                        },
+                        hoverColor: backgroundColor,
+                        leading: const Icon(Icons.cloud_off),
+                        title: Text("Skip Wallet Check",
+                            style: TextStyle(
+                                fontSize: theme.getMediumFont(context),
+                                color: textColor)))
+                    : const Empty(),
                 ListTile(
                     onTap: () {
                       Navigator.of(context)
@@ -493,6 +521,14 @@ class MainSettingsScreen extends StatelessWidget {
                     hoverColor: backgroundColor,
                     leading: const Icon(Icons.question_mark_outlined),
                     title: Text("About Bison Relay",
+                        style: TextStyle(
+                            fontSize: theme.getMediumFont(context),
+                            color: textColor))),
+                ListTile(
+                    onTap: shutdown,
+                    hoverColor: backgroundColor,
+                    leading: const Icon(Icons.exit_to_app),
+                    title: Text("Quit Bison Relay",
                         style: TextStyle(
                             fontSize: theme.getMediumFont(context),
                             color: textColor))),
