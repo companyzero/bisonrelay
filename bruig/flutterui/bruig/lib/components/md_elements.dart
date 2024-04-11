@@ -18,6 +18,7 @@ import 'package:tuple/tuple.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:bruig/theme_manager.dart';
 import 'package:bruig/components/image_dialog.dart';
+import 'package:pdfrx/pdfrx.dart';
 
 class DownloadSource {
   final String uid;
@@ -151,6 +152,10 @@ class EmbedInlineSyntax extends md.InlineSyntax {
         } catch (exception) {
           data = "Unable to decode plain text contents: $exception";
         }
+        break;
+      case "application/pdf":
+        print("hey it's a pdf!");
+        tag = "pdf";
         break;
       default:
         return true;
@@ -450,6 +455,7 @@ class MarkdownArea extends StatelessWidget {
                 ...md.ExtensionSet.gitHubFlavored.inlineSyntaxes
               ]),
               builders: {
+                "pdf": PDFMarkdownElementBuilder(),
                 //"video": VideoMarkdownElementBuilder(basedir),
                 "codeblock": CodeblockMarkdownElementBuilder(),
                 "image": ImageMarkdownElementBuilder(),
@@ -551,6 +557,34 @@ class CodeblockMarkdownElementBuilder extends MarkdownElementBuilder {
       TextSpan(text: text.text),
       style: style,
     );
+  }
+}
+
+class PDFMarkdownElementBuilder extends MarkdownElementBuilder {
+  @override
+  Widget visitElementAfter(md.Element element, TextStyle? preferredStyle) {
+    Uint8List pdfBytes;
+    try {
+      pdfBytes = const Base64Decoder().convert(element.textContent);
+    } catch (exception) {
+      return Text("Unable to decode pdf: $exception");
+    }
+
+    try {
+      return ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 400, maxHeight: 400),
+          child: PdfViewer(
+            PdfDocumentRefData(pdfBytes, sourceName: "data"),
+          ));
+    } catch (exception) {
+      print("Unable to decode pdf: $exception");
+      return Image.asset(
+        "assets/images/invalidimg.png",
+        width: 300,
+        height: 300,
+        fit: BoxFit.cover,
+      );
+    }
   }
 }
 
