@@ -17,11 +17,13 @@ import (
 	"github.com/decred/dcrd/dcrutil/v4"
 	"github.com/decred/dcrd/txscript/v4/stdaddr"
 	"github.com/decred/dcrd/wire"
+	"github.com/decred/dcrlnd/funding"
 	"github.com/decred/dcrlnd/lnrpc"
 	"github.com/decred/dcrlnd/lnrpc/chainrpc"
 	"github.com/decred/dcrlnd/lnrpc/invoicesrpc"
 	"github.com/decred/dcrlnd/lnrpc/routerrpc"
 	"github.com/decred/dcrlnd/lnrpc/walletrpc"
+	"github.com/decred/dcrlnd/lnwire"
 	"github.com/decred/dcrlnd/macaroons"
 	"github.com/decred/slog"
 	"golang.org/x/sync/errgroup"
@@ -117,6 +119,10 @@ func (pc *DcrlnPaymentClient) LNRPC() lnrpc.LightningClient {
 
 func (pc *DcrlnPaymentClient) LNWallet() walletrpc.WalletKitClient {
 	return pc.lnWallet
+}
+
+func (pc *DcrlnPaymentClient) LNChain() chainrpc.ChainNotifierClient {
+	return pc.lnChain
 }
 
 func (pc *DcrlnPaymentClient) PayScheme() string {
@@ -927,4 +933,31 @@ func chanPointToStr(cp *lnrpc.ChannelPoint) string {
 		return fmt.Sprintf("[%v]", err)
 	}
 	return fmt.Sprintf("%s:%d", tx, cp.OutputIndex)
+}
+
+// copied from dcrlnd code.
+func confsNeededForChanSize(chanAmt dcrutil.Amount) uint16 {
+	minConf := uint64(3)
+	maxConf := uint64(6)
+
+	// If this is a wumbo channel, then we'll require the
+	// max amount of confirmations.
+	if chanAmt > funding.MaxFundingAmount {
+		return uint16(maxConf)
+	}
+
+	// If not we return a value scaled linearly
+	// between 3 and 6, depending on channel size.
+	maxChannelSize := uint64(
+		lnwire.NewMAtomsFromAtoms(funding.MaxFundingAmount),
+	)
+	stake := lnwire.NewMAtomsFromAtoms(chanAmt)
+	conf := maxConf * uint64(stake) / maxChannelSize
+	if conf < minConf {
+		conf = minConf
+	}
+	if conf > maxConf {
+		conf = maxConf
+	}
+	return uint16(conf)
 }

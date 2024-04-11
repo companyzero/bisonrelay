@@ -23,6 +23,8 @@ Map<OnboardStage, String> _stageTitle = {
       "Waiting for on-chain funds to confirm",
   OnboardStage.stageOpeningOutbound:
       "Waiting for outbound LN channel to confirm", // Remove step heading
+  OnboardStage.stageWaitingOutMined:
+      "Waiting for outbound LN channel tx to be mined",
   OnboardStage.stageWaitingOutConfirm:
       "Waiting for outbound LN channel to confirm",
   OnboardStage.stageOpeningInbound: "Opening inbound LN channel",
@@ -41,8 +43,10 @@ Map<OnboardStage, String> _stageTips = {
       "An on-chain transaction to redeem the on-chain funds was created and broadcast and now needs to be included in the blockchain.",
   OnboardStage.stageOpeningOutbound:
       "The local client is attempting to create an LN channel with its on-chain funds to have outbound capacity to make payments through the Lightning Network.",
+  OnboardStage.stageWaitingOutMined:
+      "An LN channel with outbound capacity has been created and now needs to be included in the blockchain (mined).",
   OnboardStage.stageWaitingOutConfirm:
-      "An LN channel with outbound capacity has been created and now needs to be included in the blockchain with enough confirmation blocks to be usable (typically 3).",
+      "An LN channel with outbound capacity has been mined and now additional blocks need to be mined to make it usable (typically 3).",
   OnboardStage.stageOpeningInbound:
       "The local client is attempting to request that an LN node open a channel back to the cliet so that is can receive payments through the Lightning Network.",
   OnboardStage.stageInitialKX:
@@ -278,6 +282,12 @@ The receive balance is how much the local client may receive through LN payments
             ? [
                 ...copyable("Inbound channel ID", ost.inChannelID,
                     "The channelpoint (or ID) of the LN channel opened to a hub with inbound funds")
+              ]
+            : []),
+        ...(ost.stage == OnboardStage.stageWaitingOutConfirm
+            ? [
+                ...copyable("Confirmations left", "${ost.outChannelConfsLeft}",
+                    "How many confirmations left to enable the channel for use")
               ]
             : []),
         const SizedBox(height: 10),

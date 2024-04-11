@@ -161,8 +161,10 @@ func (os onboardScreen) View() string {
 			niceStage = "Waiting on-chain funds to confirm"
 		case clientintf.StageOpeningOutbound:
 			niceStage = "Opening outbound LN channel"
+		case clientintf.StageWaitingOutMined:
+			niceStage = "Waiting outbound LN channel to be mined"
 		case clientintf.StageWaitingOutConfirm:
-			niceStage = "Waiting outbound LN channel to confirm"
+			niceStage = "Waiting confirmation of outbound LN channel"
 		case clientintf.StageOpeningInbound:
 			niceStage = "Opening inbound LN channel"
 		case clientintf.StageInitialKX:
@@ -206,6 +208,10 @@ func (os onboardScreen) View() string {
 		pf("Outbound Channel ID: %s", ostate.OutChannelID)
 	}
 	pf("\n")
+	if ostate.Stage == clientintf.StageWaitingOutConfirm {
+		pf("Confirmations left: %d\n", ostate.OutChannelConfsLeft)
+		nbLines += 1
+	}
 	nbLines += 1
 	if ostate.InChannelID != "" {
 		pf("Inbound Channel ID: %s", ostate.InChannelID)

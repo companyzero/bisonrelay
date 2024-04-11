@@ -1808,6 +1808,8 @@ enum OnboardStage {
   stageInviteNoFunds,
   @JsonValue("redeeming_funds")
   stageRedeemingFunds,
+  @JsonValue("waiting_funds_mined")
+  stageWaitingOutMined,
   @JsonValue("waiting_funds_confirm")
   stageWaitingFundsConfirm,
   @JsonValue("opening_outbound")
@@ -1834,9 +1836,16 @@ class OnboardState {
   final String outChannelID;
   @JsonKey(name: "in_channel_id")
   final String inChannelID;
+  @JsonKey(name: "out_channel_height_hint", defaultValue: 0)
+  final int outChannelHeightHint;
+  @JsonKey(name: "out_channel_mined_height", defaultValue: 0)
+  final int outChannelMinedHeight;    
+  @JsonKey(name: "out_channel_confs_left", defaultValue: 0)
+  final int outChannelConfsLeft;     
 
   OnboardState(this.stage, this.key, this.invite, this.redeemTx,
-      this.redeemAmount, this.outChannelID, this.inChannelID);
+      this.redeemAmount, this.outChannelID, this.inChannelID, this.outChannelHeightHint,
+      this.outChannelMinedHeight, this.outChannelConfsLeft);
   factory OnboardState.fromJson(Map<String, dynamic> json) =>
       _$OnboardStateFromJson(json);
 }
@@ -2787,9 +2796,18 @@ abstract class PluginPlatform {
       bool autoCompact,
       int autoCompactMinAge,
       String debugLevel) async {
-    var req = LNInitDcrlnd(rootPath, network, password, existingSeed,
-        multiChanBackup, proxyaddr, torIsolation, syncFreeList,
-        autoCompact, autoCompactMinAge, debugLevel);
+    var req = LNInitDcrlnd(
+        rootPath,
+        network,
+        password,
+        existingSeed,
+        multiChanBackup,
+        proxyaddr,
+        torIsolation,
+        syncFreeList,
+        autoCompact,
+        autoCompactMinAge,
+        debugLevel);
     var res = await asyncCall(CTLNInitDcrlnd, req);
     return LNNewWalletSeed.fromJson(res);
   }
