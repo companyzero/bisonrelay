@@ -390,7 +390,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
     var theme = Theme.of(context);
     var backgroundColor = theme.backgroundColor;
 
-    if (client.sortedChats.isEmpty && !client.loadingAddressBook) {
+    if (!client.hasChats && !client.loadingAddressBook) {
       if (!hasLNBalance) {
         // Only show f user never had any contacts.
         return const _FundsNeededPage();
