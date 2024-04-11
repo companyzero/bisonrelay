@@ -16,11 +16,13 @@ class CancelButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    var errorColor = Theme.of(context).errorColor; // ERROR COLOR;
+    var theme = Theme.of(context);
+    var errorColor = theme.colorScheme.error; // ERROR COLOR;
+    var txtColor = theme.colorScheme.onError;
     return ElevatedButton(
         style: ElevatedButton.styleFrom(backgroundColor: errorColor),
         onPressed: !loading ? onPressed : null,
-        child: Text(label));
+        child: Text(label, style: TextStyle(color: txtColor)));
   }
 }
 
