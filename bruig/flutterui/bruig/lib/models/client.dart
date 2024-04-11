@@ -792,6 +792,8 @@ class ClientModel extends ChangeNotifier {
     return null;
   }
 
+  bool get hasChats => _activeChats.isNotEmpty;
+
   Future<ChatModel> _newChat(
       String id, String alias, bool isGC, bool startup) async {
     alias = alias.trim();
@@ -1049,6 +1051,12 @@ class ClientModel extends ChangeNotifier {
     });
     var gcs = await Golib.listGCs();
     gcs.forEach((v) => _newChat(v.id, v.name, true, true));
+
+    if (gcs.isEmpty && ab.length == 1 && _sortedChats.isEmpty) {
+      // On newly setup clients, add the first contact to the list of contacts to
+      // avoid confusing users before they sent their first message.
+      _sortedChats.add(getExistingChat(ab[0].id)!);
+    }
 
     loadingAddressBook = false;
   }
