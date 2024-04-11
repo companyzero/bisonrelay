@@ -154,7 +154,6 @@ class EmbedInlineSyntax extends md.InlineSyntax {
         }
         break;
       case "application/pdf":
-        print("hey it's a pdf!");
         tag = "pdf";
         break;
       default:

@@ -175,7 +175,6 @@ class _AttachFileScreenState extends State<AttachFileScreen> {
         if (!allowedMimeTypes.contains(mimeType)) {
           throw "Selected file ($filePath) type not allowed, only $allowedMimeTypes currently allowed";
         }
-        print("$data");
         setState(() {
           selectedAttachmentPath = filePath;
           this.filePath = filePath!;
