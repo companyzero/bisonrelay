@@ -44,7 +44,7 @@ dependencies:
   markdown: ^7.0.0
   file_picker: ^6.1.1
   path_provider: ^2.0.11
-  url_launcher: ^6.1.6
+  url_launcher: ^6.2.5
   msix: ^3.6.3
   qr_flutter: ^4.1.0
   file_icon: ^1.0.0
