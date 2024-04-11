@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
@@ -17,7 +18,10 @@ import (
 	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/decred/dcrd/chaincfg/chainhash"
 	"github.com/decred/dcrd/dcrutil/v4"
+	"github.com/decred/dcrd/wire"
 	"github.com/decred/dcrlnd/lnrpc"
+	"github.com/decred/dcrlnd/lnrpc/chainrpc"
+	"github.com/decred/dcrlnd/lnrpc/walletrpc"
 	lpclient "github.com/decred/dcrlnlpd/client"
 )
 
@@ -173,21 +177,21 @@ func (c *Client) onboardRedeemOnchainFunds(ctx context.Context, funds *rpc.Invit
 }
 
 // onboardOpenOutboundChan opens the outbound LN channel.
-func (c *Client) onboardOpenOutboundChan(ctx context.Context, onchainAmount dcrutil.Amount) (string, bool, error) {
+func (c *Client) onboardOpenOutboundChan(ctx context.Context, onchainAmount dcrutil.Amount) (string, bool, uint32, error) {
 	pc, ok := c.pc.(*DcrlnPaymentClient)
 	if !ok {
-		return "", false, fmt.Errorf("payment client is not a dcrlnd payment client")
+		return "", false, 0, fmt.Errorf("payment client is not a dcrlnd payment client")
 	}
 
 	lnRPC := pc.LNRPC()
 	info, err := lnRPC.GetInfo(ctx, &lnrpc.GetInfoRequest{})
 	if err != nil {
-		return "", false, err
+		return "", false, 0, err
 	}
 
 	var key, server string
 	if len(info.Chains) == 0 || info.Chains[0].Chain != "decred" {
-		return "", false, fmt.Errorf("not connected to decred LN")
+		return "", false, 0, fmt.Errorf("not connected to decred LN")
 	}
 	switch info.Chains[0].Network {
 	case "mainnet":
@@ -200,7 +204,7 @@ func (c *Client) onboardOpenOutboundChan(ctx context.Context, onchainAmount dcru
 			server = "10.0.2.2:20202" // Proxy from emulator to local machine.
 		}
 	default:
-		return "", false, fmt.Errorf("network %q does not have default hub", info.Chains[0].Network)
+		return "", false, 0, fmt.Errorf("network %q does not have default hub", info.Chains[0].Network)
 	}
 
 	// Check if connecting to the node was successful.
@@ -215,7 +219,7 @@ func (c *Client) onboardOpenOutboundChan(ctx context.Context, onchainAmount dcru
 	_, err = lnRPC.ConnectPeer(ctx, req)
 	if err != nil &&
 		!strings.Contains(err.Error(), "already connected") {
-		return "", false, err
+		return "", false, 0, err
 	}
 
 	// Determine how much to fund the outbound channel. This is a guess,
@@ -228,7 +232,7 @@ func (c *Client) onboardOpenOutboundChan(ctx context.Context, onchainAmount dcru
 
 	npk, err := hex.DecodeString(key)
 	if err != nil {
-		return "", false, fmt.Errorf("unable to decode pubkey: %w", err)
+		return "", false, 0, fmt.Errorf("unable to decode pubkey: %w", err)
 	}
 
 	ocr := lnrpc.OpenChannelRequest{
@@ -238,12 +242,12 @@ func (c *Client) onboardOpenOutboundChan(ctx context.Context, onchainAmount dcru
 	}
 	openStream, err := lnRPC.OpenChannel(ctx, &ocr)
 	if err != nil {
-		return "", false, err
+		return "", false, 0, err
 	}
 
 	res, err := openStream.Recv()
 	if err != nil {
-		return "", false, err
+		return "", false, 0, err
 	}
 
 	var cp string
@@ -252,7 +256,7 @@ func (c *Client) onboardOpenOutboundChan(ctx context.Context, onchainAmount dcru
 	case *lnrpc.OpenStatusUpdate_ChanPending:
 		tx, err := chainhash.NewHash(updt.ChanPending.Txid)
 		if err != nil {
-			return "", false, err
+			return "", false, 0, err
 		}
 		cp = fmt.Sprintf("%s:%d", tx, updt.ChanPending.OutputIndex)
 		c.log.Infof("Outbound channel pending in output %s", cp)
@@ -263,17 +267,85 @@ func (c *Client) onboardOpenOutboundChan(ctx context.Context, onchainAmount dcru
 		c.log.Infof("Outbound channel opened in output %s", cp)
 
 	default:
-		return "", false, fmt.Errorf("unknown OpenStatusUpdate type %T", res.Update)
+		return "", false, 0, fmt.Errorf("unknown OpenStatusUpdate type %T", res.Update)
 	}
 
-	return cp, opened, nil
+	// Height where to start looking for the channel to be mined.
+	heightHint := info.BlockHeight - 1
+	return cp, opened, heightHint, nil
+}
+
+// onboardWaitOutChannelMined waits until the outbound channel has at least one
+// confirmation.
+func (c *Client) onboardWaitOutChannelMined(ctx context.Context, cp string, heightHint uint32) (uint32, int32, error) {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	pc, ok := c.pc.(*DcrlnPaymentClient)
+	if !ok {
+		return 0, 0, fmt.Errorf("payment client is not a dcrlnd payment client")
+	}
+
+	txid, err := chainhash.NewHashFromStr(cp[:64])
+	if err != nil {
+		return 0, 0, err
+	}
+	outputIdx, err := strconv.Atoi(cp[65:])
+	if err != nil {
+		return 0, 0, err
+	}
+
+	walletTx, err := pc.LNWallet().GetWalletTx(ctx, &walletrpc.GetWalletTxRequest{Txid: txid[:]})
+	if err != nil {
+		return 0, 0, fmt.Errorf("Error on getWalletTx: %w", err)
+	}
+	tx := wire.NewMsgTx()
+	if err := tx.FromBytes(walletTx.RawTx); err != nil {
+		return 0, 0, err
+	}
+	if outputIdx >= len(tx.TxOut) {
+		return 0, 0, fmt.Errorf("outputIdx >= len(tx.TxOut)")
+	}
+
+	outScript := tx.TxOut[outputIdx].PkScript
+	chanCapacity := dcrutil.Amount(tx.TxOut[outputIdx].Value)
+	lnChain := pc.LNChain()
+	confReq := &chainrpc.ConfRequest{
+		Txid:       txid[:],
+		NumConfs:   1,
+		Script:     outScript,
+		HeightHint: heightHint,
+	}
+	stream, err := lnChain.RegisterConfirmationsNtfn(ctx, confReq)
+	if err != nil {
+		return 0, 0, fmt.Errorf("error waiting for confs: %w", err)
+	}
+
+	for {
+		confEvent, err := stream.Recv()
+		if err != nil {
+			return 0, 0, err
+		}
+		if confDet := confEvent.GetConf(); confDet != nil {
+			confsNeeded := int32(confsNeededForChanSize(chanCapacity))
+			confsGotten := int32(1)
+			confsLeft := confsNeeded - confsGotten
+			c.log.Infof("Oubound channel %s confirmed at height %d "+
+				"with %d confs left", cp, confDet.BlockHeight,
+				confsLeft)
+			return confDet.BlockHeight, confsLeft, nil
+		}
+	}
 }
 
 // onboardWaitChannelOpened waits until a channel is opened to the local node.
-func (c *Client) onboardWaitChannelOpened(ctx context.Context, cp string) error {
+func (c *Client) onboardWaitChannelOpened(ctx context.Context, cp string, minedHeight uint32) (bool, int32, error) {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
 	pc, ok := c.pc.(*DcrlnPaymentClient)
 	if !ok {
-		return fmt.Errorf("payment client is not a dcrlnd payment client")
+		return false, 0, fmt.Errorf("payment client is not a dcrlnd payment client")
 	}
 
 	lnRPC := pc.LNRPC()
@@ -284,56 +356,106 @@ func (c *Client) onboardWaitChannelOpened(ctx context.Context, cp string) error 
 	defer cancel()
 	eventsStream, err := lnRPC.SubscribeChannelEvents(streamCtx, &lnrpc.ChannelEventSubscription{})
 	if err != nil {
-		return err
+		return false, 0, err
 	}
 
 	// See if the channel is already opened.
 	listRes, err := lnRPC.ListChannels(ctx, &lnrpc.ListChannelsRequest{})
 	if err != nil {
-		return err
+		return false, 0, err
 	}
 	for _, c := range listRes.Channels {
 		if c.ChannelPoint == cp {
-			return nil
+			// Already opened.
+			return true, 0, nil
 		}
 	}
 
 	// See if the channel is pending.
 	isPending := false
+	var chanCapacity dcrutil.Amount
 	pendingRes, err := lnRPC.PendingChannels(ctx, &lnrpc.PendingChannelsRequest{})
 	if err != nil {
-		return err
+		return false, 0, err
 	}
-	for _, c := range pendingRes.PendingOpenChannels {
-		if c.Channel.ChannelPoint == cp {
+	for _, ch := range pendingRes.PendingOpenChannels {
+		if ch.Channel.ChannelPoint == cp {
+			chanCapacity = dcrutil.Amount(ch.Channel.Capacity)
 			isPending = true
 			break
 		}
 	}
 	if !isPending {
-		return fmt.Errorf("channel %s is not pending", cp)
+		return false, 0, fmt.Errorf("channel %s is not pending", cp)
 	}
 
-	for {
-		event, err := eventsStream.Recv()
+	// Wait for one of either a channel event or a new block.
+	chanBlock, chanEvent := make(chan interface{}, 1), make(chan interface{}, 1)
+	go func() {
+		_, height, err := pc.WaitNextBlock(ctx)
 		if err != nil {
-			return err
+			chanBlock <- err
+		} else {
+			// Delay sending this to give a chance for the channel
+			// to complete first.
+			time.Sleep(250 * time.Millisecond)
+			chanBlock <- height
 		}
+	}()
+	go func() {
+		for {
+			event, err := eventsStream.Recv()
+			if err != nil {
+				chanEvent <- err
+				return
+			}
 
-		opened := event.GetOpenChannel()
-		if opened != nil && opened.ChannelPoint == cp {
-			break
+			opened := event.GetOpenChannel()
+			if opened != nil && opened.ChannelPoint == cp {
+				chanEvent <- event
+				return
+			}
 		}
+	}()
+
+	select {
+	case blockEvent := <-chanBlock:
+		if err, ok := blockEvent.(error); ok {
+			return false, 0, err
+		} else {
+			// New block, increasing confirmation. Calc how many
+			// confs are left.
+			blockHeight := blockEvent.(uint32)
+			confsNeeded := int32(confsNeededForChanSize(chanCapacity))
+			confsGotten := int32(blockHeight - minedHeight + 1)
+			if minedHeight == 0 {
+				// Only onboarding started in old versions have
+				// minedHeight == 0.
+				confsGotten = 1
+			}
+			confsLeft := confsNeeded - confsGotten
+			c.log.Infof("Onboarding outbound channel %s mined at "+
+				"%d current height %d confs needed %d confs "+
+				"left %d", cp, minedHeight, blockHeight,
+				confsNeeded, confsLeft)
+			return false, confsLeft, nil
+		}
+	case event := <-chanEvent:
+		if err, ok := event.(error); ok {
+			return false, 0, err
+		}
+	case <-ctx.Done():
+		return false, 0, ctx.Err()
 	}
 
 	// After opening, wait an additional time to ensure channel operations
 	// are started.
 	select {
 	case <-time.After(5 * time.Second):
+		return true, 0, nil
 	case <-ctx.Done():
-		return ctx.Err()
+		return false, 0, ctx.Err()
 	}
-	return nil
 }
 
 // onboardOpenInboundChan requests to the LPD that the inbound channel be
@@ -570,18 +692,39 @@ func (c *Client) runOnboarding(ctx context.Context, ostate clientintf.OnboardSta
 			c.log.Infof("Attempting to open outbound channel from "+
 				"%s of on-chain funds", ostate.RedeemAmount)
 			var opened bool
-			ostate.OutChannelID, opened, runErr = c.onboardOpenOutboundChan(ctx, ostate.RedeemAmount)
-			if opened {
+			ostate.OutChannelID, opened, ostate.OutChannelHeightHint, runErr = c.onboardOpenOutboundChan(ctx, ostate.RedeemAmount)
+			switch {
+			case runErr != nil:
+			case opened:
 				ostate.Stage = clientintf.StageOpeningInbound
-			} else {
+			default:
+				ostate.Stage = clientintf.StageWaitingOutMined
+			}
+
+		case ostate.Stage == clientintf.StageWaitingOutMined && ostate.OutChannelHeightHint == 0:
+			// Some old onboards don't have the height hint set, so
+			// we can't listen on this event. Skip to next stage.
+			ostate.Stage = clientintf.StageWaitingOutConfirm
+
+		case ostate.Stage == clientintf.StageWaitingOutMined:
+			// Wait until the outbound channel is mined on-chain.
+			c.log.Infof("Onboarding waiting until channel %s is mined",
+				ostate.OutChannelID)
+			ostate.OutChannelMinedHeight, ostate.OutChannelConfsLeft, runErr = c.onboardWaitOutChannelMined(ctx,
+				ostate.OutChannelID, ostate.OutChannelHeightHint)
+			if runErr == nil {
 				ostate.Stage = clientintf.StageWaitingOutConfirm
 			}
 
 		case ostate.Stage == clientintf.StageWaitingOutConfirm:
+			// Wait until the outbound channel is considered open
+			// by the local node.
 			c.log.Infof("Onboarding waiting until channel %s is confirmed open",
 				ostate.OutChannelID)
-			runErr = c.onboardWaitChannelOpened(ctx, ostate.OutChannelID)
-			if runErr == nil {
+			var opened bool
+			opened, ostate.OutChannelConfsLeft, runErr = c.onboardWaitChannelOpened(ctx, ostate.OutChannelID,
+				ostate.OutChannelMinedHeight)
+			if opened && runErr == nil {
 				ostate.Stage = clientintf.StageOpeningInbound
 			}
 

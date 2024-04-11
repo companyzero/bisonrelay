@@ -1822,6 +1822,9 @@ OnboardState _$OnboardStateFromJson(Map<String, dynamic> json) => OnboardState(
       json['redeemAmount'] as int? ?? 0,
       json['out_channel_id'] as String,
       json['in_channel_id'] as String,
+      json['out_channel_height_hint'] as int? ?? 0,
+      json['out_channel_mined_height'] as int? ?? 0,
+      json['out_channel_confs_left'] as int? ?? 0,
     );
 
 Map<String, dynamic> _$OnboardStateToJson(OnboardState instance) =>
@@ -1833,6 +1836,9 @@ Map<String, dynamic> _$OnboardStateToJson(OnboardState instance) =>
       'redeemAmount': instance.redeemAmount,
       'out_channel_id': instance.outChannelID,
       'in_channel_id': instance.inChannelID,
+      'out_channel_height_hint': instance.outChannelHeightHint,
+      'out_channel_mined_height': instance.outChannelMinedHeight,
+      'out_channel_confs_left': instance.outChannelConfsLeft,
     };
 
 const _$OnboardStageEnumMap = {
@@ -1841,6 +1847,7 @@ const _$OnboardStageEnumMap = {
   OnboardStage.stageRedeemingFunds: 'redeeming_funds',
   OnboardStage.stageWaitingFundsConfirm: 'waiting_funds_confirm',
   OnboardStage.stageOpeningOutbound: 'opening_outbound',
+  OnboardStage.stageWaitingOutMined: 'waiting_out_mined',
   OnboardStage.stageWaitingOutConfirm: 'waiting_out_confirm',
   OnboardStage.stageOpeningInbound: 'opening_inbound',
   OnboardStage.stageInitialKX: 'initial_kx',

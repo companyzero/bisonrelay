@@ -169,6 +169,7 @@ const (
 	StageRedeemingFunds      OnboardStage = "redeeming_funds"
 	StageWaitingFundsConfirm OnboardStage = "waiting_funds_confirm"
 	StageOpeningOutbound     OnboardStage = "opening_outbound"
+	StageWaitingOutMined     OnboardStage = "waiting_out_mined"
 	StageWaitingOutConfirm   OnboardStage = "waiting_out_confirm"
 	StageOpeningInbound      OnboardStage = "opening_inbound"
 	StageInitialKX           OnboardStage = "initial_kx"
@@ -184,6 +185,13 @@ type OnboardState struct {
 	RedeemAmount dcrutil.Amount               `json:"redeem_amount"`
 	OutChannelID string                       `json:"out_channel_id"`
 	InChannelID  string                       `json:"in_channel_id"`
+
+	// The following fields were added in the second version of onboarding.
+	// Onboards done on older versions do not have these fields set.
+
+	OutChannelHeightHint  uint32 `json:"out_channel_height_hint"`
+	OutChannelMinedHeight uint32 `json:"out_channel_mined_height"`
+	OutChannelConfsLeft   int32  `json:"out_channel_confs_left"`
 }
 
 // PagesSessionID is a type that represents a page navigation session.
