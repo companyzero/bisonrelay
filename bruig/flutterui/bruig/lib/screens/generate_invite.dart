@@ -164,7 +164,6 @@ class _GenerateInviteScreenState extends State<GenerateInviteScreen> {
               Copyable(gen.funds!.txid, ts),
             ]
           : []),
-      const Expanded(child: Empty()),
       ElevatedButton(
           onPressed: () => Navigator.pop(context), child: const Text("Done"))
     ];
@@ -208,7 +207,7 @@ class _GenerateInviteScreenState extends State<GenerateInviteScreen> {
       ElevatedButton(
           onPressed: !loading && path != "" ? generateInvite : null,
           child: const Text("Generate invite")),
-      const Expanded(child: Empty()),
+      const SizedBox(height: 20),
       ElevatedButton(
           style: ElevatedButton.styleFrom(backgroundColor: theme.errorColor),
           onPressed: () => Navigator.pop(context),

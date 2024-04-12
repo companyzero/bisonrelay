@@ -72,7 +72,6 @@ class _FetchInviteScreenState extends State<FetchInviteScreen> {
   Widget build(BuildContext context) {
     return Consumer<ThemeNotifier>(
         builder: (context, theme, child) => StartupScreen([
-              const Expanded(child: Empty()),
               Text("Fetch Invite",
                   style: TextStyle(
                       color: theme.getTheme().dividerColor,
@@ -105,7 +104,7 @@ class _FetchInviteScreenState extends State<FetchInviteScreen> {
                   onPressed:
                       !loading && path != "" && hasKey ? loadInvite : null,
                   child: const Text("Fetch invite")),
-              const Expanded(child: Empty()),
+              const SizedBox(height: 10),
               ElevatedButton(
                   onPressed: () => Navigator.pop(context),
                   child: const Text("Cancel"))

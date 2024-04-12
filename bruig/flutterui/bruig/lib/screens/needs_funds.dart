@@ -239,7 +239,6 @@ Send DCR funds to the following address to receive funds in your wallet. Note th
             onPressed: () => Navigator.of(context).pop(),
             text: "Finish",
           ),
-          //const Expanded(child: Empty()),
         ],
       ),
     );

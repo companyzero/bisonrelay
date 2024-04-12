@@ -134,7 +134,6 @@ class _VerifyInviteScreenState extends State<VerifyInviteScreen> {
                   style: ElevatedButton.styleFrom(backgroundColor: errorColor),
                   onPressed: () => onDenyInvite(context),
                   child: const Text("Deny")),
-              const Expanded(child: Empty()),
             ]));
   }
 }
