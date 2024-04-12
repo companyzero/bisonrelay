@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:math';
 import 'dart:async';
 
+import 'package:bruig/components/md_elements.dart';
 import 'package:bruig/components/chat/types.dart';
 import 'package:bruig/components/empty_widget.dart';
 import 'package:image_picker/image_picker.dart';
@@ -25,7 +26,8 @@ List<String> allowedMimeTypes = [
   "image/jpeg",
   "image/jxl",
   "image/png",
-  "image/webp"
+  "image/webp",
+  "application/pdf"
 ];
 
 class AttachmentEmbed {
@@ -174,6 +176,7 @@ class _AttachFileScreenState extends State<AttachFileScreen> {
           throw "Selected file ($filePath) type not allowed, only $allowedMimeTypes currently allowed";
         }
         setState(() {
+          selectedAttachmentPath = filePath;
           this.filePath = filePath!;
           fileData = data;
           mime = mimeType;
@@ -292,7 +295,16 @@ class _AttachFileScreenState extends State<AttachFileScreen> {
                                 style: TextStyle(
                                     fontSize: theme.getLargeFont(context),
                                     color: textColor)))
-                        : const Empty(),
+                        : mime.contains('pdf')
+                            ? MarkdownArea(
+                                AttachmentEmbed('pdf',
+                                        data: fileData,
+                                        linkedFile: linkedFile,
+                                        alt: "",
+                                        mime: mime)
+                                    .embedString(),
+                                false)
+                            : const Empty(),
                 fileData != null && fileData!.isNotEmpty
                     ? Row(mainAxisAlignment: MainAxisAlignment.end, children: [
                         IconButton(

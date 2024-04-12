@@ -67,6 +67,7 @@ dependencies:
   image_picker: ^1.0.7
   image_picker_platform_interface: ^2.8.0
   mime: ^1.0.4
+  pdfrx: ^1.0.54
 
 msix_config:
   display_name: Bison Relay GUI
