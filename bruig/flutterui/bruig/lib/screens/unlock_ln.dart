@@ -228,20 +228,23 @@ class __LNUnlockPageState extends State<_LNUnlockPage> {
         const SizedBox(height: 10),
         extraInfo,
         const SizedBox(height: 10),
-        Collapsable("Recent Log",
-            child: ConstrainedBox(
-                constraints:
-                    const BoxConstraints(maxHeight: 300, maxWidth: 600),
-                child: Container(
-                    margin: const EdgeInsets.all(10),
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: theme.getTheme().cardColor,
-                      borderRadius: const BorderRadius.all(Radius.circular(5)),
-                    ),
-                    child: LogLines(globalLogModel,
-                        maxLines: 15,
-                        optionalTextColor: theme.getTheme().dividerColor))))
+        loading
+            ? Collapsable("Recent Log",
+                child: ConstrainedBox(
+                    constraints:
+                        const BoxConstraints(maxHeight: 300, maxWidth: 600),
+                    child: Container(
+                        margin: const EdgeInsets.all(10),
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: theme.getTheme().cardColor,
+                          borderRadius:
+                              const BorderRadius.all(Radius.circular(5)),
+                        ),
+                        child: LogLines(globalLogModel,
+                            maxLines: 15,
+                            optionalTextColor: theme.getTheme().dividerColor))))
+            : const Empty()
       ]),
     );
   }
