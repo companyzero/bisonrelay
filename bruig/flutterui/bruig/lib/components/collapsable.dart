@@ -43,7 +43,12 @@ class _CollapsableState extends State<Collapsable> {
                 : Icons.arrow_drop_up_outlined),
             Text(widget.title, style: titleStyle),
           ])),
-      child,
+      AnimatedCrossFade(
+          firstChild: child,
+          secondChild: const Empty(),
+          sizeCurve: Curves.easeIn,
+          crossFadeState: CrossFadeState.showFirst,
+          duration: const Duration(milliseconds: 200))
     ]);
   }
 }

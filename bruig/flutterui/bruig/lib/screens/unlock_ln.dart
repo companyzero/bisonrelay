@@ -2,6 +2,7 @@ import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/components/recent_log.dart';
 import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/components/buttons.dart';
+import 'package:bruig/components/collapsable.dart';
 import 'package:bruig/models/snackbar.dart';
 import 'package:bruig/screens/about.dart';
 import 'package:bruig/config.dart';
@@ -9,7 +10,6 @@ import 'package:bruig/main.dart';
 import 'package:bruig/models/log.dart';
 import 'package:bruig/screens/startupscreen.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:path/path.dart' as path;
 import 'package:provider/provider.dart';
@@ -229,13 +229,22 @@ class __LNUnlockPageState extends State<_LNUnlockPage> {
         extraInfo,
         const SizedBox(height: 10),
         loading
-            ? SizedBox(
-                // width: 400,
-                // height: 200,
-                child: LogLines(globalLogModel,
-                    maxLines: 15,
-                    optionalTextColor: theme.getTheme().dividerColor))
-            : const Empty(),
+            ? Collapsable("Recent Log",
+                child: ConstrainedBox(
+                    constraints:
+                        const BoxConstraints(maxHeight: 300, maxWidth: 600),
+                    child: Container(
+                        margin: const EdgeInsets.all(10),
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: theme.getTheme().cardColor,
+                          borderRadius:
+                              const BorderRadius.all(Radius.circular(5)),
+                        ),
+                        child: LogLines(globalLogModel,
+                            maxLines: 15,
+                            optionalTextColor: theme.getTheme().dividerColor))))
+            : const Empty()
       ]),
     );
   }
@@ -305,13 +314,13 @@ class _LNChainSyncPageState extends State<_LNChainSyncPage> {
                       color: theme.getTheme().dividerColor,
                       fontSize: theme.getHugeFont(context),
                       fontWeight: FontWeight.w200)),
-              SizedBox(height: isScreenSmall ? 8 : 89),
+              SizedBox(height: isScreenSmall ? 8 : 50),
               Text("Network Sync",
                   style: TextStyle(
                       color: theme.getTheme().focusColor,
                       fontSize: theme.getLargeFont(context),
                       fontWeight: FontWeight.w300)),
-              SizedBox(height: isScreenSmall ? 8 : 50),
+              SizedBox(height: isScreenSmall ? 8 : 20),
               Center(
                   child: SizedBox(
                       width: 740,
@@ -336,77 +345,89 @@ class _LNChainSyncPageState extends State<_LNChainSyncPage> {
                                 fontSize: theme.getMediumFont(context),
                                 fontWeight: FontWeight.w300))
                       ]))),
-              const SizedBox(height: 21),
+              const SizedBox(height: 10),
               Center(
-                child: Container(
-                    margin: const EdgeInsets.all(0),
-                    width: 610,
-                    height: 251,
-                    padding: const EdgeInsets.all(10),
-                    color: theme.getTheme().cardColor,
-                    child: Column(children: [
-                      Flex(
-                          direction:
-                              isScreenSmall ? Axis.vertical : Axis.horizontal,
-                          children: [
-                            RichText(
-                                text: TextSpan(children: [
-                              TextSpan(
-                                  text: "Block Height: ",
-                                  style: TextStyle(
-                                      color: theme.getTheme().dividerColor,
-                                      fontSize: theme.getSmallFont(context),
-                                      fontWeight: FontWeight.w300)),
-                              TextSpan(
-                                  text: "$blockHeight",
-                                  style: TextStyle(
-                                      color: theme.getTheme().dividerColor,
-                                      fontSize: theme.getSmallFont(context),
-                                      fontWeight: FontWeight.w300))
-                            ])),
-                            isScreenSmall
-                                ? const SizedBox(height: 5)
-                                : const SizedBox(width: 21),
-                            RichText(
-                                text: TextSpan(children: [
-                              TextSpan(
-                                  text: "Block Hash: ",
-                                  style: TextStyle(
-                                      color: theme.getTheme().dividerColor,
-                                      fontSize: theme.getSmallFont(context),
-                                      fontWeight: FontWeight.w300)),
-                              TextSpan(
-                                  text: "$blockHeight",
-                                  style: TextStyle(
-                                      color: theme.getTheme().dividerColor,
-                                      fontSize: theme.getSmallFont(context),
-                                      fontWeight: FontWeight.w300))
-                            ])),
-                            isScreenSmall
-                                ? const SizedBox(height: 5)
-                                : const SizedBox(width: 21),
-                            RichText(
-                                text: TextSpan(children: [
-                              TextSpan(
-                                  text: "Block Time: ",
-                                  style: TextStyle(
-                                      color: theme.getTheme().dividerColor,
-                                      fontSize: theme.getSmallFont(context),
-                                      fontWeight: FontWeight.w300)),
-                              TextSpan(
-                                  text: blockTimestamp.toString(),
-                                  style: TextStyle(
-                                      color: theme.getTheme().dividerColor,
-                                      fontSize: theme.getSmallFont(context),
-                                      fontWeight: FontWeight.w300))
-                            ]))
-                          ]),
-                      Expanded(
+                  child: Container(
+                      margin: const EdgeInsets.all(0),
+                      width: 610,
+                      padding: const EdgeInsets.all(10),
+                      color: theme.getTheme().cardColor,
+                      child: Column(children: [
+                        Flex(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            direction:
+                                isScreenSmall ? Axis.vertical : Axis.horizontal,
+                            children: [
+                              RichText(
+                                  text: TextSpan(children: [
+                                TextSpan(
+                                    text: "Block Height: ",
+                                    style: TextStyle(
+                                        color: theme.getTheme().dividerColor,
+                                        fontSize: theme.getSmallFont(context),
+                                        fontWeight: FontWeight.w300)),
+                                TextSpan(
+                                    text: "$blockHeight",
+                                    style: TextStyle(
+                                        color: theme.getTheme().dividerColor,
+                                        fontSize: theme.getSmallFont(context),
+                                        fontWeight: FontWeight.w300))
+                              ])),
+                              isScreenSmall
+                                  ? const SizedBox(height: 5)
+                                  : const SizedBox(width: 21),
+                              RichText(
+                                  text: TextSpan(children: [
+                                TextSpan(
+                                    text: "Block Hash: ",
+                                    style: TextStyle(
+                                        color: theme.getTheme().dividerColor,
+                                        fontSize: theme.getSmallFont(context),
+                                        fontWeight: FontWeight.w300)),
+                                TextSpan(
+                                    text: "$blockHeight",
+                                    style: TextStyle(
+                                        color: theme.getTheme().dividerColor,
+                                        fontSize: theme.getSmallFont(context),
+                                        fontWeight: FontWeight.w300))
+                              ])),
+                              isScreenSmall
+                                  ? const SizedBox(height: 5)
+                                  : const SizedBox(width: 21),
+                              RichText(
+                                  text: TextSpan(children: [
+                                TextSpan(
+                                    text: "Block Time: ",
+                                    style: TextStyle(
+                                        color: theme.getTheme().dividerColor,
+                                        fontSize: theme.getSmallFont(context),
+                                        fontWeight: FontWeight.w300)),
+                                TextSpan(
+                                    text: blockTimestamp.toString(),
+                                    style: TextStyle(
+                                        color: theme.getTheme().dividerColor,
+                                        fontSize: theme.getSmallFont(context),
+                                        fontWeight: FontWeight.w300))
+                              ]))
+                            ]),
+                      ]))),
+              const SizedBox(height: 10),
+              Collapsable("Recent Log",
+                  child: ConstrainedBox(
+                      constraints:
+                          const BoxConstraints(maxHeight: 300, maxWidth: 600),
+                      child: Container(
+                          margin: const EdgeInsets.all(10),
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: theme.getTheme().cardColor,
+                            borderRadius:
+                                const BorderRadius.all(Radius.circular(5)),
+                          ),
                           child: LogLines(globalLogModel,
                               maxLines: 15,
-                              optionalTextColor: theme.getTheme().dividerColor))
-                    ])),
-              )
+                              optionalTextColor:
+                                  theme.getTheme().dividerColor))))
             ]));
   }
 }
