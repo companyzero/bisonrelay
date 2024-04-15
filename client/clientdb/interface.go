@@ -117,6 +117,12 @@ type AddressBookEntry struct {
 	// NickAlias is a local alias to the user (a replacement to the
 	// original nick stored in the PublicIdentity). Only used if non-empty.
 	NickAlias string `json:"nick_alias"`
+
+	// LastCompletedKX is the last time a KX was completed with this user
+	// (either the initial KX or a reset).
+	//
+	// Note: old gc entries may have a zeroed value for this field.
+	LastCompletedKX time.Time `json:"last_completed_kx"`
 }
 
 // Nick returns the nick of the user.

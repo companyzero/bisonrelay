@@ -193,12 +193,13 @@ func (c *Client) initRemoteUser(id *zkidentity.PublicIdentity, r *ratchet.Ratche
 			}
 
 			newEntry := &clientdb.AddressBookEntry{
-				ID:           id,
-				MyResetRV:    myResetRV,
-				TheirResetRV: theirResetRV,
-				Ignored:      ignored,
-				FirstCreated: firstCreated,
-				NickAlias:    nickAlias,
+				ID:              id,
+				MyResetRV:       myResetRV,
+				TheirResetRV:    theirResetRV,
+				Ignored:         ignored,
+				FirstCreated:    firstCreated,
+				NickAlias:       nickAlias,
+				LastCompletedKX: time.Now(),
 
 				// LastHandshakeAttempt is reset due to the
 				// new KX.
