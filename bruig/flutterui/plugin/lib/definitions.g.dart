@@ -355,6 +355,7 @@ AddressBookEntry _$AddressBookEntryFromJson(Map<String, dynamic> json) =>
       DateTime.parse(json['first_created'] as String),
       DateTime.parse(json['last_handshake_attempt'] as String),
       base64ToUint8list(json['avatar'] as String?),
+      DateTime.parse(json['last_completed_kx'] as String),
     );
 
 Map<String, dynamic> _$AddressBookEntryToJson(AddressBookEntry instance) =>
@@ -366,6 +367,7 @@ Map<String, dynamic> _$AddressBookEntryToJson(AddressBookEntry instance) =>
       'first_created': instance.firstCreated.toIso8601String(),
       'last_handshake_attempt': instance.lastHandshakeAttempt.toIso8601String(),
       'avatar': instance.avatar,
+      'last_completed_kx': instance.lastCompletedKx.toIso8601String(),
     };
 
 ShareFileArgs _$ShareFileArgsFromJson(Map<String, dynamic> json) =>
@@ -1845,9 +1847,9 @@ const _$OnboardStageEnumMap = {
   OnboardStage.stageFetchingInvite: 'fetching_invite',
   OnboardStage.stageInviteNoFunds: 'invite_no_funds',
   OnboardStage.stageRedeemingFunds: 'redeeming_funds',
+  OnboardStage.stageWaitingOutMined: 'waiting_out_mined',
   OnboardStage.stageWaitingFundsConfirm: 'waiting_funds_confirm',
   OnboardStage.stageOpeningOutbound: 'opening_outbound',
-  OnboardStage.stageWaitingOutMined: 'waiting_out_mined',
   OnboardStage.stageWaitingOutConfirm: 'waiting_out_confirm',
   OnboardStage.stageOpeningInbound: 'opening_inbound',
   OnboardStage.stageInitialKX: 'initial_kx',
