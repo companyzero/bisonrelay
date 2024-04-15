@@ -379,9 +379,18 @@ class AddressBookEntry {
   final DateTime lastHandshakeAttempt;
   @JsonKey(fromJson: base64ToUint8list)
   final Uint8List? avatar;
+  @JsonKey(name: "last_completed_kx")
+  final DateTime lastCompletedKx;
 
-  AddressBookEntry(this.id, this.nick, this.name, this.ignored,
-      this.firstCreated, this.lastHandshakeAttempt, this.avatar);
+  AddressBookEntry(
+      this.id,
+      this.nick,
+      this.name,
+      this.ignored,
+      this.firstCreated,
+      this.lastHandshakeAttempt,
+      this.avatar,
+      this.lastCompletedKx);
 
   factory AddressBookEntry.empty() => AddressBookEntry(
       "",
@@ -390,7 +399,8 @@ class AddressBookEntry {
       false,
       DateTime.fromMicrosecondsSinceEpoch(0),
       DateTime.fromMicrosecondsSinceEpoch(0),
-      null);
+      null,
+      DateTime.fromMicrosecondsSinceEpoch(0));
 
   factory AddressBookEntry.fromJson(Map<String, dynamic> json) =>
       _$AddressBookEntryFromJson(json);
@@ -1808,7 +1818,7 @@ enum OnboardStage {
   stageInviteNoFunds,
   @JsonValue("redeeming_funds")
   stageRedeemingFunds,
-  @JsonValue("waiting_funds_mined")
+  @JsonValue("waiting_out_mined")
   stageWaitingOutMined,
   @JsonValue("waiting_funds_confirm")
   stageWaitingFundsConfirm,

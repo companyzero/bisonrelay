@@ -219,6 +219,10 @@ class _UserProfileState extends State<UserProfile> {
                       Text(abEntry.firstCreated.toIso8601String(),
                           style: txtTS)),
                   Tuple2(
+                      Text("Last Completed KX", style: headTS),
+                      Text(abEntry.lastCompletedKx.toIso8601String(),
+                          style: txtTS)),
+                  Tuple2(
                       Text("Last Handshake Attempt", style: headTS),
                       Text(abEntry.lastHandshakeAttempt.toIso8601String(),
                           style: txtTS)),

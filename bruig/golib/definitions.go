@@ -90,6 +90,7 @@ type addressBookEntry struct {
 	FirstCreated         time.Time         `json:"first_created"`
 	LastHandshakeAttempt time.Time         `json:"last_handshake_attempt"`
 	Avatar               []byte            `json:"avatar"`
+	LastCompletedKX      time.Time         `json:"last_completed_kx"`
 }
 
 func abEntryFromDB(entry *clientdb.AddressBookEntry) addressBookEntry {
@@ -100,6 +101,7 @@ func abEntryFromDB(entry *clientdb.AddressBookEntry) addressBookEntry {
 		Ignored:              entry.Ignored,
 		FirstCreated:         entry.FirstCreated,
 		LastHandshakeAttempt: entry.LastHandshakeAttempt,
+		LastCompletedKX:      entry.LastCompletedKX,
 		Avatar:               entry.ID.Avatar,
 	}
 }
