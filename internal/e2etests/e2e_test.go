@@ -92,9 +92,13 @@ type clientCfg struct {
 	pcIniter  func(loggerSubsysIniter) clientintf.PaymentClient
 	ntfns     *client.NotificationManager
 
-	sendRecvReceipts bool
-	autoSubToPosts   bool
+	sendRecvReceipts     bool
+	autoSubToPosts       bool
+	disableAutoUnsubIdle bool
+	disableAutoHandshake bool
 }
+
+const defaultAutoUnsubIdleUserInterval = 14 * time.Second
 
 type newClientOpt func(*clientCfg)
 
@@ -145,6 +149,18 @@ func withNtfns(ntfns *client.NotificationManager) newClientOpt {
 func withAutoSubToPosts() newClientOpt {
 	return func(cfg *clientCfg) {
 		cfg.autoSubToPosts = true
+	}
+}
+
+func withDisableAutoUnsubIdle() newClientOpt {
+	return func(cfg *clientCfg) {
+		cfg.disableAutoUnsubIdle = true
+	}
+}
+
+func withDisableAutoHandshake() newClientOpt {
+	return func(cfg *clientCfg) {
+		cfg.disableAutoHandshake = true
 	}
 }
 
@@ -379,6 +395,15 @@ func (ts *testScaffold) newClientWithCfg(nccfg *clientCfg, opts ...newClientOpt)
 	pc := nccfg.pcIniter(logBknd)
 	mpc, _ := pc.(*testutils.MockPayClient)
 
+	autoHandshakeInterval := time.Second * 8
+	if nccfg.disableAutoHandshake {
+		autoHandshakeInterval = 0
+	}
+	autoUnsubleIdleUsers := defaultAutoUnsubIdleUserInterval
+	if nccfg.disableAutoUnsubIdle {
+		autoUnsubleIdleUsers = 0
+	}
+
 	cfg := client.Config{
 		ReconnectDelay: 500 * time.Millisecond,
 		Dialer:         dialer,
@@ -406,8 +431,8 @@ func (ts *testScaffold) newClientWithCfg(nccfg *clientCfg, opts ...newClientOpt)
 		UnkxdWarningTimeout:        chooseTimeout(250*time.Millisecond, time.Second),
 		MaxAutoKXMediateIDRequests: 3,
 
-		AutoHandshakeInterval:       time.Second * 8,
-		AutoRemoveIdleUsersInterval: time.Second * 14,
+		AutoHandshakeInterval:       autoHandshakeInterval,
+		AutoRemoveIdleUsersInterval: autoUnsubleIdleUsers,
 		SendReceiveReceipts:         nccfg.sendRecvReceipts,
 		AutoSubscribeToPosts:        nccfg.autoSubToPosts,
 

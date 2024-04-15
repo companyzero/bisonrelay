@@ -529,6 +529,100 @@ func TestUnsubsIdleClients(t *testing.T) {
 	assert.ChanWritten(t, bobKicked)
 }
 
+// TestDisabledAutoUnsubIdle asserts that idle clients are NOT unsubbed when
+// the options to disable autounsub or autohandshake are set.
+func TestDisabledAutoUnsubIdle(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		opts []newClientOpt
+	}{{
+		name: "no auto unsub",
+		opts: []newClientOpt{withDisableAutoUnsubIdle()},
+	}, {
+		name: "no auto handshake",
+		opts: []newClientOpt{withDisableAutoHandshake()},
+	}}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			tcfg := testScaffoldCfg{}
+			ts := newTestScaffold(t, tcfg)
+			alice := ts.newClient("alice", tc.opts...)
+			bob := ts.newClient("bob")
+
+			ts.kxUsers(alice, bob)
+
+			alicePostSub := make(chan bool, 3)
+			alice.handle(client.OnPostSubscriberUpdated(func(ru *client.RemoteUser, subscribed bool) {
+				if ru.ID() != bob.PublicID() {
+					return
+				}
+				alicePostSub <- subscribed
+			}))
+
+			aliceUnsubbing := make(chan struct{}, 3)
+			alice.handle(client.OnUnsubscribingIdleRemoteClient(func(ru *client.RemoteUser, lastDecTime time.Time) {
+				if ru.ID() != bob.PublicID() {
+					return
+				}
+				aliceUnsubbing <- struct{}{}
+			}))
+
+			bobPostSub := make(chan bool, 3)
+			bob.handle(client.OnRemoteSubscriptionChangedNtfn(func(ru *client.RemoteUser, subscribed bool) {
+				if ru.ID() != alice.PublicID() {
+					return
+				}
+				bobPostSub <- subscribed
+			}))
+
+			aliceKicked := make(chan struct{}, 3)
+			alice.handle(client.OnGCUserPartedNtfn(func(gcid client.GCID, uid client.UserID, reason string, kicked bool) {
+				if uid != bob.PublicID() {
+					return
+				}
+				aliceKicked <- struct{}{}
+			}))
+
+			bobKicked := make(chan struct{}, 3)
+			bob.handle(client.OnGCUserPartedNtfn(func(gcid client.GCID, uid client.UserID, reason string, kicked bool) {
+				if uid != bob.PublicID() {
+					return
+				}
+				bobKicked <- struct{}{}
+			}))
+
+			// Bob subscribes to Alice's post.
+			assert.NilErr(t, bob.SubscribeToPosts(alice.PublicID()))
+			assert.ChanWrittenWithVal(t, alicePostSub, true)
+			assert.ChanWrittenWithVal(t, bobPostSub, true)
+
+			// Bob joins Alice's GC.
+			gcid, err := alice.NewGroupChat("testgc")
+			assert.NilErr(t, err)
+			assertClientJoinsGC(t, gcid, alice, bob)
+
+			// Bob goes idle.
+			assertGoesOffline(t, bob)
+
+			// Wait for the interval of idle delay unsub to elapse.
+			time.Sleep(defaultAutoUnsubIdleUserInterval + time.Second)
+
+			// Flick Alice. Bob should not be unsubbed or kicked
+			// from GC.
+			assertGoesOffline(t, alice)
+			assertGoesOnline(t, alice)
+			assert.ChanNotWritten(t, aliceUnsubbing, time.Second)
+			assert.ChanNotWritten(t, aliceKicked, time.Second)
+		})
+	}
+}
+
 // TestUserNickAlias performs tests around duplicate and aliased users.
 func TestUserNickAlias(t *testing.T) {
 	t.Parallel()

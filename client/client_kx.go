@@ -736,8 +736,16 @@ func (c *Client) unsubIdleUsers() error {
 	}
 	limitDate := time.Now().Add(-limitInterval)
 
+	// Determine limit date for autohandshake when it is enabled.
+	var limitHandshakeDate time.Time
 	lastHandshakeInterval := c.cfg.AutoHandshakeInterval / 2
-	limitHandshakeDate := time.Now().Add(-lastHandshakeInterval)
+	if lastHandshakeInterval == 0 {
+		// Auto handshake disabled.
+		c.log.Debugf("Auto removal of idle users is disabled due to " +
+			"autohandshake disabled")
+		return nil
+	}
+	limitHandshakeDate = time.Now().Add(-lastHandshakeInterval)
 
 	// Make a map of all GCs we admin.
 	gcs, err := c.ListGCs()
@@ -798,6 +806,9 @@ func (c *Client) unsubIdleUsers() error {
 		// than the limit date.
 		_, lastDecTime := ru.LastRatchetTimes()
 		if lastDecTime.After(limitDate) {
+			ru.log.Tracef("Ignoring auto unsubscribe due to "+
+				"lastDecTime %s > limitDate %s", lastDecTime,
+				limitDate)
 			continue
 		}
 
@@ -807,6 +818,9 @@ func (c *Client) unsubIdleUsers() error {
 			continue
 		}
 		if ab.FirstCreated.After(limitDate) {
+			ru.log.Tracef("Ignoring auto unsubscribe due to "+
+				"firstCreated %s > limitDate %s",
+				ab.FirstCreated, limitDate)
 			continue
 		}
 
@@ -817,9 +831,12 @@ func (c *Client) unsubIdleUsers() error {
 		//
 		// This check only takes effect if automatic handshaking is
 		// enabled.
-		handshakeTooRecent := !limitHandshakeDate.IsZero() &&
-			(ab.LastHandshakeAttempt.IsZero() || ab.LastHandshakeAttempt.After(limitHandshakeDate))
+		handshakeTooRecent := ab.LastHandshakeAttempt.IsZero() ||
+			ab.LastHandshakeAttempt.After(limitHandshakeDate)
 		if handshakeTooRecent {
+			ru.log.Tracef("Ignoring auto unsubscribe due to "+
+				"recent handshake %s with limitHandshakeDate %s",
+				ab.LastHandshakeAttempt, limitHandshakeDate)
 			continue
 		}
 
