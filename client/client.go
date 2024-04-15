@@ -1045,12 +1045,12 @@ func (c *Client) maybeResetAllKXAfterConn(expDays int) {
 			limitDate)
 
 		// Start automatic handshake with idle users.
-		if err := c.handshakeIdleUsers(0); err != nil {
+		if err := c.handshakeIdleUsers(); err != nil {
 			c.log.Errorf("Unable to handshake idle users: %v", err)
 		}
 
 		// Remove idle clients users from GCs and posts.
-		if err := c.unsubIdleUsers(0, 0); err != nil {
+		if err := c.unsubIdleUsers(); err != nil {
 			c.log.Errorf("Unable to unsubscribe idle users: %v", err)
 		}
 

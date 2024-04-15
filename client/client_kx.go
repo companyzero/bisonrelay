@@ -668,16 +668,14 @@ func (c *Client) ListUsersLastReceivedTime() ([]LastUserReceivedTime, error) {
 // handshakeIdleUsers attempts to handshake any users from which no message has
 // been received for the passed limitInterval and for which no handshake attempt
 // has been made in the given interval as well.
-func (c *Client) handshakeIdleUsers(limitInterval time.Duration) error {
+func (c *Client) handshakeIdleUsers() error {
 	<-c.abLoaded
 
+	limitInterval := c.cfg.AutoHandshakeInterval
 	if limitInterval == 0 {
-		limitInterval = c.cfg.AutoHandshakeInterval
-		if limitInterval == 0 {
-			// Autohandshake disabled.
-			c.log.Debugf("Auto handshake with idle users is disabled")
-			return nil
-		}
+		// Autohandshake disabled.
+		c.log.Debugf("Auto handshake with idle users is disabled")
+		return nil
 	}
 	limitDate := time.Now().Add(-limitInterval)
 
@@ -727,21 +725,18 @@ func (c *Client) handshakeIdleUsers(limitInterval time.Duration) error {
 // admins any users from which no messages have been received since
 // limitInterval and from which the last handshake attempt was made at least
 // lastHandshakeInterval in the past.
-func (c *Client) unsubIdleUsers(limitInterval, lastHandshakeInterval time.Duration) error {
+func (c *Client) unsubIdleUsers() error {
 	<-c.abLoaded
 
+	limitInterval := c.cfg.AutoRemoveIdleUsersInterval
 	if limitInterval == 0 {
-		limitInterval = c.cfg.AutoRemoveIdleUsersInterval
-		if limitInterval == 0 {
-			// Auto unsubscribe disabled.
-			c.log.Debugf("Auto removal of idle users is disabled")
-			return nil
-		}
+		// Auto unsubscribe disabled.
+		c.log.Debugf("Auto removal of idle users is disabled")
+		return nil
 	}
 	limitDate := time.Now().Add(-limitInterval)
-	if lastHandshakeInterval == 0 {
-		lastHandshakeInterval = c.cfg.AutoHandshakeInterval / 2
-	}
+
+	lastHandshakeInterval := c.cfg.AutoHandshakeInterval / 2
 	limitHandshakeDate := time.Now().Add(-lastHandshakeInterval)
 
 	// Make a map of all GCs we admin.
