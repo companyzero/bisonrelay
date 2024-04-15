@@ -12,12 +12,10 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"os/signal"
 	"path/filepath"
 	"strings"
 	"sync"
 	"sync/atomic"
-	"syscall"
 	"time"
 
 	"github.com/companyzero/bisonrelay/client"
@@ -712,29 +710,6 @@ func handleInitClient(handle uint32, args initClient) error {
 
 		httpClient: &httpClient,
 		rates:      r,
-	}
-
-	if len(cs) == 0 {
-		// Listen to signals on the first newly created client.
-		cctx.log.Infof("Golib: installing signal catcher for pid %d", os.Getpid())
-		ch := make(chan os.Signal, 10)
-		signal.Notify(ch)
-		go func() {
-			cctx.log.Infof("Golib: running signal catcher loop")
-			for ctx.Err() == nil {
-				select {
-				case <-ctx.Done():
-				case sig := <-ch:
-					if sig == syscall.SIGURG {
-						sigUrgCount.Add(1)
-					} else {
-						cctx.log.Infof("Golib: received signal %s (%d)",
-							sig.String(), sig)
-					}
-				}
-			}
-			cctx.log.Infof("Golib: signal loop done")
-		}()
 	}
 
 	cs[handle] = cctx
