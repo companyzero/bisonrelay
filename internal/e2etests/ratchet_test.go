@@ -623,6 +623,138 @@ func TestDisabledAutoUnsubIdle(t *testing.T) {
 	}
 }
 
+// TestUnsubsIdleClientsAfterResetBug tests an old bug where an user was
+// autounsubbed after a reset.
+func TestUnsubsIdleClientsAfterResetBug(t *testing.T) {
+	t.Parallel()
+
+	tcfg := testScaffoldCfg{}
+	ts := newTestScaffold(t, tcfg)
+	alice := ts.newClient("alice")
+	bob := ts.newClient("bob", withDisableAutoUnsubIdle(),
+		withDisableAutoHandshake())
+
+	ts.kxUsers(alice, bob)
+
+	alicePostSub := make(chan bool, 3)
+	alice.handle(client.OnPostSubscriberUpdated(func(ru *client.RemoteUser, subscribed bool) {
+		if ru.ID() != bob.PublicID() {
+			return
+		}
+		alicePostSub <- subscribed
+	}))
+
+	aliceUnsubbing := make(chan struct{}, 3)
+	alice.handle(client.OnUnsubscribingIdleRemoteClient(func(ru *client.RemoteUser, lastDecTime time.Time) {
+		if ru.ID() != bob.PublicID() {
+			return
+		}
+		aliceUnsubbing <- struct{}{}
+	}))
+
+	bobPostSub := make(chan bool, 3)
+	bob.handle(client.OnRemoteSubscriptionChangedNtfn(func(ru *client.RemoteUser, subscribed bool) {
+		if ru.ID() != alice.PublicID() {
+			return
+		}
+		bobPostSub <- subscribed
+	}))
+
+	aliceKicked := make(chan struct{}, 3)
+	alice.handle(client.OnGCUserPartedNtfn(func(gcid client.GCID, uid client.UserID, reason string, kicked bool) {
+		if uid != bob.PublicID() {
+			return
+		}
+		aliceKicked <- struct{}{}
+	}))
+	aliceHandshake := make(chan string, 3)
+	alice.handle(client.OnHandshakeStageNtfn(func(ru *client.RemoteUser, msgType string) {
+		aliceHandshake <- msgType
+	}))
+	aliceKxCompleted := make(chan struct{}, 3)
+	alice.handle(client.OnKXCompleted(func(_ *clientintf.RawRVID, ru *client.RemoteUser, isNew bool) {
+		aliceKxCompleted <- struct{}{}
+	}))
+	aliceSYNSent := make(chan struct{}, 3)
+	alice.handle(client.OnRMSent(func(ru *client.RemoteUser, p interface{}) {
+		if _, ok := p.(rpc.RMHandshakeSYN); ok {
+			aliceSYNSent <- struct{}{}
+		}
+	}))
+
+	bobKicked := make(chan struct{}, 3)
+	bob.handle(client.OnGCUserPartedNtfn(func(gcid client.GCID, uid client.UserID, reason string, kicked bool) {
+		if uid != bob.PublicID() {
+			return
+		}
+		bobKicked <- struct{}{}
+	}))
+	bobHandshake := make(chan string, 3)
+	bob.handle(client.OnHandshakeStageNtfn(func(ru *client.RemoteUser, msgType string) {
+		bobHandshake <- msgType
+	}))
+
+	// Bob subscribes to Alice's post.
+	assert.NilErr(t, bob.SubscribeToPosts(alice.PublicID()))
+	assert.ChanWrittenWithVal(t, alicePostSub, true)
+	assert.ChanWrittenWithVal(t, bobPostSub, true)
+
+	// Bob joins Alice's GC.
+	gcid, err := alice.NewGroupChat("testgc")
+	assert.NilErr(t, err)
+	assertClientJoinsGC(t, gcid, alice, bob)
+
+	// Bob goes idle.
+	assertGoesOffline(t, bob)
+
+	// Wait until the alice will send a handshake attempt.
+	start := time.Now()
+	time.Sleep(alice.cfg.AutoHandshakeInterval)
+
+	// Flick alice. She sends the handshake but does not yet perform the
+	// unsub.
+	assertGoesOffline(t, alice)
+	assertGoesOnline(t, alice)
+	assert.ChanWritten(t, aliceSYNSent)
+	assert.ChanNotWritten(t, aliceUnsubbing, time.Second)
+
+	// Bob comes back online and responds to the handshake. He also resets
+	// the ratchet, which zeros the last decryption time.
+	assertGoesOnline(t, bob)
+	assert.ChanWrittenWithVal(t, bobHandshake, "SYN")
+	assert.ChanWrittenWithVal(t, aliceHandshake, "SYNACK")
+	assert.ChanWrittenWithVal(t, bobHandshake, "ACK")
+	assert.NilErr(t, bob.ResetRatchet(alice.PublicID()))
+	assert.ChanWritten(t, aliceKxCompleted)
+	resetTime := time.Now()
+
+	// Bob goes offline again.
+	assertGoesOffline(t, bob)
+
+	// The time from the last handshake sent by alice and now should not yet
+	// cause the unsub to happen. This is because the reset should have
+	// also reset the autohandshake inverval.
+	time.Sleep(alice.cfg.AutoRemoveIdleUsersInterval - time.Since(start))
+	assertGoesOffline(t, alice)
+	assertGoesOnline(t, alice)
+	assert.ChanNotWritten(t, aliceUnsubbing, time.Second)
+
+	// Wait until alice should've sent the handshake attempt and flick her.
+	time.Sleep(alice.cfg.AutoHandshakeInterval - time.Since(resetTime))
+	assertGoesOffline(t, alice)
+	assertGoesOnline(t, alice)
+	assert.ChanWritten(t, aliceSYNSent)
+
+	// Finally, wait until the autoremove _should_ be sent and verify all
+	// unsubs were done.
+	time.Sleep(alice.cfg.AutoRemoveIdleUsersInterval - time.Since(resetTime))
+	assertGoesOffline(t, alice)
+	assertGoesOnline(t, alice)
+	assert.ChanWritten(t, aliceUnsubbing)
+	assert.ChanWrittenWithVal(t, alicePostSub, false)
+	assert.ChanWritten(t, aliceKicked)
+}
+
 // TestUserNickAlias performs tests around duplicate and aliased users.
 func TestUserNickAlias(t *testing.T) {
 	t.Parallel()

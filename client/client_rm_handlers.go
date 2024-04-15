@@ -14,6 +14,20 @@ import (
 	"github.com/decred/slog"
 )
 
+// clearLastHandshakeAttemptTime clears the last handshake attempt time for
+// the given user.
+func (c *Client) clearLastHandshakeAttemptTime(ru *RemoteUser) error {
+	return c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
+		entry, err := c.db.GetAddressBookEntry(tx, ru.id)
+		if err != nil {
+			return err
+		}
+
+		entry.LastHandshakeAttempt = time.Time{}
+		return c.db.UpdateAddressBookEntry(tx, entry)
+	})
+}
+
 // handleRMHandshake handles all handshake messages.
 func (c *Client) handleRMHandshake(ru *RemoteUser, msg interface{}) error {
 	switch msg.(type) {
@@ -24,11 +38,17 @@ func (c *Client) handleRMHandshake(ru *RemoteUser, msg interface{}) error {
 
 	case rpc.RMHandshakeSYNACK:
 		ru.log.Infof("Received handshake SYN/ACK. Replying with ACK. User ratchet is fully synced.")
+		if err := c.clearLastHandshakeAttemptTime(ru); err != nil {
+			return err
+		}
 		c.ntfns.notifyHandshakeStage(ru, "SYNACK")
 		return c.sendWithSendQ("synack", rpc.RMHandshakeACK{}, ru.ID())
 
 	case rpc.RMHandshakeACK:
 		ru.log.Infof("Received handshake ACK. User ratchet is fully synced.")
+		if err := c.clearLastHandshakeAttemptTime(ru); err != nil {
+			return err
+		}
 		c.ntfns.notifyHandshakeStage(ru, "ACK")
 		return nil
 
