@@ -179,11 +179,9 @@ func (c *Client) initRemoteUser(id *zkidentity.PublicIdentity, r *ratchet.Ratche
 		}
 		var ignored bool
 		firstCreated := time.Now()
-		var lastHandshakeAttempt time.Time
 		if oldEntry != nil {
 			ignored = oldEntry.Ignored
 			firstCreated = oldEntry.FirstCreated
-			lastHandshakeAttempt = oldEntry.LastHandshakeAttempt
 			nickAlias = oldEntry.NickAlias
 		}
 		if updateAB {
@@ -195,13 +193,16 @@ func (c *Client) initRemoteUser(id *zkidentity.PublicIdentity, r *ratchet.Ratche
 			}
 
 			newEntry := &clientdb.AddressBookEntry{
-				ID:                   id,
-				MyResetRV:            myResetRV,
-				TheirResetRV:         theirResetRV,
-				Ignored:              ignored,
-				FirstCreated:         firstCreated,
-				LastHandshakeAttempt: lastHandshakeAttempt,
-				NickAlias:            nickAlias,
+				ID:           id,
+				MyResetRV:    myResetRV,
+				TheirResetRV: theirResetRV,
+				Ignored:      ignored,
+				FirstCreated: firstCreated,
+				NickAlias:    nickAlias,
+
+				// LastHandshakeAttempt is reset due to the
+				// new KX.
+				LastHandshakeAttempt: time.Time{},
 			}
 			if err := c.db.UpdateAddressBookEntry(tx, newEntry); err != nil {
 				return err
@@ -693,13 +694,13 @@ func (c *Client) handshakeIdleUsers() error {
 			continue
 		}
 
-		// Skip if we attempted a handshake with this user more recently
-		// than the limit date.
+		// Skip if we already attempted a handshake with this user that
+		// has not completed.
 		ab, err := c.getAddressBookEntry(uid)
 		if err != nil {
 			continue
 		}
-		if ab.LastHandshakeAttempt.After(limitDate) {
+		if !ab.LastHandshakeAttempt.IsZero() {
 			continue
 		}
 
