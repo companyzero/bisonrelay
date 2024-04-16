@@ -73,6 +73,8 @@ type clientCtx struct {
 	// expirationDays are the expirtation days provided by the server when
 	// connected
 	expirationDays uint64
+
+	serverState atomic.Value
 }
 
 var (
@@ -347,6 +349,7 @@ func handleInitClient(handle uint32, args initClient) error {
 		}
 		isServerConnected.Store(connected)
 		st := serverSessState{State: state}
+		cctx.serverState.Store(st)
 		notify(NTServerSessChanged, st, nil)
 		cctx.expirationDays = uint64(policy.ExpirationDays)
 	}))
@@ -524,6 +527,7 @@ func handleInitClient(handle uint32, args initClient) error {
 			}
 
 			st := serverSessState{State: ConnStateCheckingWallet}
+			cctx.serverState.Store(st)
 			notify(NTServerSessChanged, st, nil)
 
 			backoff := 10 * time.Second
@@ -545,7 +549,11 @@ func handleInitClient(handle uint32, args initClient) error {
 				cctx.log.Debugf("Wallet check failed due to: %v", err)
 				cctx.log.Debugf("Performing next wallet check in %s", backoff)
 				errMsg := err.Error()
-				st.CheckWalletErr = &errMsg
+				st := serverSessState{
+					State:          ConnStateCheckingWallet,
+					CheckWalletErr: &errMsg,
+				}
+				cctx.serverState.Store(st)
 				notify(NTServerSessChanged, st, nil)
 
 				select {
@@ -2028,6 +2036,10 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 
 		cc.log.Infof("Zipped %d log files", numFiles)
 		return nil, zipFile.Close()
+
+	case CTNotifyServerSessionState:
+		state := cc.serverState.Load().(serverSessState)
+		go notify(NTServerSessChanged, state, nil)
 
 	}
 	return nil, nil

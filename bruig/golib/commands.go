@@ -143,6 +143,7 @@ const (
 	CTDisableBackgroundNtfs               = 0x85
 	CTZipLogs                             = 0x86
 	CTEnableProfiler                      = 0x87
+	CTNotifyServerSessionState            = 0x88
 
 	NTInviteReceived         = 0x1001
 	NTInviteAccepted         = 0x1002
@@ -532,5 +533,4 @@ func LogInfo(id int32, s string) {
 		fmt.Println(s)
 	}
 	cmtx.Unlock()
-
 }

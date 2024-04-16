@@ -1839,13 +1839,21 @@ class OnboardState {
   @JsonKey(name: "out_channel_height_hint", defaultValue: 0)
   final int outChannelHeightHint;
   @JsonKey(name: "out_channel_mined_height", defaultValue: 0)
-  final int outChannelMinedHeight;    
+  final int outChannelMinedHeight;
   @JsonKey(name: "out_channel_confs_left", defaultValue: 0)
-  final int outChannelConfsLeft;     
+  final int outChannelConfsLeft;
 
-  OnboardState(this.stage, this.key, this.invite, this.redeemTx,
-      this.redeemAmount, this.outChannelID, this.inChannelID, this.outChannelHeightHint,
-      this.outChannelMinedHeight, this.outChannelConfsLeft);
+  OnboardState(
+      this.stage,
+      this.key,
+      this.invite,
+      this.redeemTx,
+      this.redeemAmount,
+      this.outChannelID,
+      this.inChannelID,
+      this.outChannelHeightHint,
+      this.outChannelMinedHeight,
+      this.outChannelConfsLeft);
   factory OnboardState.fromJson(Map<String, dynamic> json) =>
       _$OnboardStateFromJson(json);
 }
@@ -3042,6 +3050,9 @@ abstract class PluginPlatform {
 
   Future<void> zipLogs(ZipLogsArgs args) async =>
       await asyncCall(CTZipLogs, args);
+
+  Future<void> notifyServerSessionState() async =>
+      await asyncCall(CTNotifyServerSessionState, null);
 }
 
 const int CTUnknown = 0x00;
@@ -3168,6 +3179,7 @@ const int CTEnableBackgroundNtfs = 0x84;
 const int CTDisableBackgroundNtfs = 0x85;
 const int CTZipLogs = 0x86;
 const int CTEnableProfiler = 0x87;
+const int CTNotifyServerSessionState = 0x88;
 
 const int notificationsStartID = 0x1000;
 
