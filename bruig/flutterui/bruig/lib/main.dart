@@ -234,6 +234,8 @@ class _AppState extends State<App> with WindowListener {
       // transition (e.g. mobile notification received) to avoid showing them
       // multiple times.
       if (wasAlreadyRunning) {
+        // Determine server connection state.
+        await Golib.notifyServerSessionState();
         return;
       }
 
