@@ -69,6 +69,7 @@ void main(List<String> args) async {
   if (Platform.isAndroid) OptimizeBattery.stopOptimizingBatteryUsage();
 
   // Set the internal plugin flags around notification.
+  await StorageManager.setupDefaults();
   bool fgService = Platform.isAndroid &&
       (await StorageManager.readData(StorageManager.ntfnFgSvcKey) as bool? ??
           false);

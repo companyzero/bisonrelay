@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart';
 
@@ -28,5 +30,21 @@ class StorageManager {
   static Future<bool> deleteData(String key) async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.remove(key);
+  }
+
+  static Future<void> setupDefaults() async {
+    if (Platform.isAndroid) {
+      if ((await StorageManager.readData(StorageManager.ntfnFgSvcKey)
+              as bool?) ==
+          null) {
+        await StorageManager.saveData(StorageManager.ntfnFgSvcKey, true);
+      }
+    }
+
+    if ((await StorageManager.readData(StorageManager.notificationsKey)
+            as bool?) ==
+        null) {
+      await StorageManager.saveData(StorageManager.notificationsKey, true);
+    }
   }
 }
