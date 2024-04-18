@@ -67,10 +67,17 @@ void main(List<String> args) async {
 
   // Get user to stop optimizing battery usage on Android.
   if (Platform.isAndroid) OptimizeBattery.stopOptimizingBatteryUsage();
+
+  // Set the internal plugin flags around notification.
   bool fgService = Platform.isAndroid &&
       (await StorageManager.readData(StorageManager.ntfnFgSvcKey) as bool? ??
           false);
   if (fgService) Golib.startForegroundSvc();
+  bool ntfnsEnabled = Platform.isAndroid &&
+      (await StorageManager.readData(StorageManager.notificationsKey)
+              as bool? ??
+          false);
+  if (ntfnsEnabled) Golib.setNtfnsEnabled(true);
 
   // The MockGolib was mostly useful during early stages of development.
   //UseMockGolib();
