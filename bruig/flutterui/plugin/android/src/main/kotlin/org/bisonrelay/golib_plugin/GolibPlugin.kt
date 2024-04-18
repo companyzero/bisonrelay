@@ -203,7 +203,7 @@ class GolibPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, ServiceAware
     } else if (call.method == "setNtfnsEnabled") {
       val enabled: Boolean = call.argument("enabled") ?: false
       Golib.logInfo(0x12131400, "NativePlugin: toggling notifications to $enabled")
-      ntfnsEnabled = false;
+      ntfnsEnabled = enabled;
     } else {
       result.notImplemented()
     }
@@ -290,6 +290,7 @@ class GolibPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, ServiceAware
     Golib.stopAllCmdResultLoops()
 
     if (!ntfnsEnabled) {
+      Golib.logInfo(0x12131400, "NativePlugin: all done after detach (ntfns disabled)")
       return;
     }
 
@@ -308,6 +309,7 @@ class GolibPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, ServiceAware
       }
     }, true)
     loopsIds.add(id);
+    Golib.logInfo(0x12131400, "NativePlugin: Started new loop id $id")
 
     // Run the foreground service.
     if (fgSvcEnabled) {
@@ -325,13 +327,13 @@ class GolibPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, ServiceAware
               if (event == Lifecycle.Event.ON_STOP) {
                 // App went into background.
                 Golib.asyncCallStr(0x84, 0, 0, null) // 0x84 == CTEnableBackgroundNtfs
-                if (fgSvcEnabled) {
+                if (ntfnsEnabled && fgSvcEnabled) {
                   context.startService(Intent(context, FgSvc::class.java))
                 }
               } else if (event == Lifecycle.Event.ON_START) {
                 // App came back from background.
                 Golib.asyncCallStr(0x85, 0, 0, null) // 0x84 == CTDisableBackgroundNtfs
-                if (fgSvcEnabled) {
+                if (ntfnsEnabled && fgSvcEnabled) {
                   context.stopService(Intent(context, FgSvc::class.java))
                 }
               }
