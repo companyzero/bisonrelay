@@ -296,7 +296,11 @@ func (c *Client) payTipInvoice(ru *RemoteUser, invoice string, amtMAtoms int64, 
 func (c *Client) handleInvoice(ru *RemoteUser, invoice rpc.RMInvoice) error {
 
 	// Decode invoice to determine if it's valid.
-	decoded, decodedErr := c.pc.DecodeInvoice(c.ctx, invoice.Invoice)
+	var decoded clientintf.DecodedInvoice
+	var decodedErr error
+	if invoice.Error == nil {
+		decoded, decodedErr = c.pc.DecodeInvoice(c.ctx, invoice.Invoice)
+	}
 
 	var ta clientdb.TipUserAttempt
 	var invoiceErr error
