@@ -202,6 +202,9 @@ class _AppState extends State<App> with WindowListener {
         cfg.sendRecvReceipts,
         cfg.autoSubPosts,
         cfg.logPings,
+        Platform.isAndroid || Platform.isIOS // Use longer interval on mobile
+            ? 210 * 1000 // 210 = 3m30s
+            : 0, // Use whatever is default
       );
       await Golib.initClient(initArgs);
     } catch (exception) {
