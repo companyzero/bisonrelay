@@ -68,6 +68,8 @@ class InitClient {
   final bool autoSubPosts;
   @JsonKey(name: 'log_pings')
   final bool logPings;
+  @JsonKey(name: 'ping_interval_ms')
+  final int pingIntervalMs;
 
   InitClient(
     this.dbRoot,
@@ -97,6 +99,7 @@ class InitClient {
     this.sendRecvReceipts,
     this.autoSubPosts,
     this.logPings,
+    this.pingIntervalMs,
   );
 
   Map<String, dynamic> toJson() => _$InitClientToJson(this);

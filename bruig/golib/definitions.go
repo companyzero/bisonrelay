@@ -31,6 +31,7 @@ type initClient struct {
 	NoLoadChatHistory bool   `json:"no_load_chat_history"`
 	SendRecvReceipts  bool   `json:"send_recv_receipts"`
 	LogPings          bool   `json:"log_pings"`
+	PingIntervalMs    int64  `json:"ping_interval_ms"`
 
 	SimpleStorePayType    string  `json:"simplestore_pay_type"`
 	SimpleStoreAccount    string  `json:"simplestore_account"`

@@ -469,6 +469,7 @@ func handleInitClient(handle uint32, args initClient) error {
 		PayClient:         pc,
 		Logger:            logBknd.logger,
 		LogPings:          args.LogPings,
+		PingInterval:      time.Duration(args.PingIntervalMs) * time.Millisecond,
 		ReconnectDelay:    5 * time.Second,
 		CompressLevel:     4,
 		Notifications:     ntfns,

@@ -36,6 +36,7 @@ InitClient _$InitClientFromJson(Map<String, dynamic> json) => InitClient(
       json['send_recv_receipts'] as bool,
       json['auto_sub_posts'] as bool,
       json['log_pings'] as bool,
+      json['ping_interval_ms'] as int,
     );
 
 Map<String, dynamic> _$InitClientToJson(InitClient instance) =>
@@ -67,6 +68,7 @@ Map<String, dynamic> _$InitClientToJson(InitClient instance) =>
       'send_recv_receipts': instance.sendRecvReceipts,
       'auto_sub_posts': instance.autoSubPosts,
       'log_pings': instance.logPings,
+      'ping_interval_ms': instance.pingIntervalMs,
     };
 
 IDInit _$IDInitFromJson(Map<String, dynamic> json) => IDInit(
