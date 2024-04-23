@@ -155,6 +155,7 @@ class _GenerateInviteScreenState extends State<GenerateInviteScreen> {
     var gen = generated!;
     return [
       Text("Generated invite with key", style: ts),
+      const SizedBox(height: 20),
       Copyable(gen.key, ts),
       ...(gen.funds != null
           ? [
@@ -164,6 +165,14 @@ class _GenerateInviteScreenState extends State<GenerateInviteScreen> {
               Copyable(gen.funds!.txid, ts),
             ]
           : []),
+      const SizedBox(height: 20),
+      SizedBox(
+          width: 600,
+          child: Text(
+              "Note: invite keys are NOT public. They should ONLY be sent to the intended " +
+                  "recipient using a secure communication channel, such as an encrypted chat system.",
+              style: TextStyle(color: textColor, fontStyle: FontStyle.italic))),
+      const SizedBox(height: 20),
       ElevatedButton(
           onPressed: () => Navigator.pop(context), child: const Text("Done"))
     ];

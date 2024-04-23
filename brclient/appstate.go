@@ -1412,7 +1412,9 @@ func (as *appState) writeInvite(filename string, gcID zkidentity.ShortID, funds 
 			filename, filepath.Base(filename))
 		pf("Prepaid invite written to RV %s", inviteKey.RVPoint())
 		pf("Key for fetching invite: %s", as.styles.Load().nick.Render(encodedKey))
-
+		pf("")
+		pf("NOTE: invite keys are NOT public. They should ONLY be sent to the intended")
+		pf("recipient using a secure communication channel, such as an encrypted chat system.")
 	})
 }
 
