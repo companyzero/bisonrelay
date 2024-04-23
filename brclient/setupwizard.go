@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/bubbles/cursor"
 	"github.com/charmbracelet/bubbles/textinput"
@@ -29,6 +31,8 @@ const (
 	swsStageWalletRestore
 	swsStageCreatingWallet
 	swsStageSeed
+	swsStageConfirmSeed
+	swsStageConfirmSeedFailed
 )
 
 type setupWizardScreen struct {
@@ -64,6 +68,8 @@ type setupWizardScreen struct {
 	seedWords      []string
 	seed           []byte
 	mcbBytes       []byte
+
+	seedConfirmIndices []int
 }
 
 func (sws setupWizardScreen) Init() tea.Cmd {
@@ -140,6 +146,29 @@ func (sws *setupWizardScreen) initInputsExternalDetails() tea.Cmd {
 	return batchCmds(sws.setFocus(0))
 }
 
+func (sws *setupWizardScreen) initInputsConfirmSeed() tea.Cmd {
+	c := cursor.New()
+	c.SetMode(cursor.CursorBlink)
+
+	if len(sws.seedConfirmIndices) == 0 {
+		// Select a random subset of the 24 words.
+		rnd := rand.New(rand.NewSource(time.Now().UnixNano()))
+		for i := 0; i < 6; i++ {
+			idx := i*4 + rnd.Intn(4)
+			sws.seedConfirmIndices = append(sws.seedConfirmIndices, idx)
+		}
+	}
+
+	txtOk := textinput.New()
+	txtOk.Placeholder = ""
+	txtOk.Prompt = fmt.Sprintf("Type the seed word #%d: ", sws.seedConfirmIndices[0]+1)
+	txtOk.Width = sws.winW
+	txtOk.Cursor = c
+
+	sws.inputs = []textinput.Model{txtOk}
+	return batchCmds(sws.setFocus(0))
+}
+
 func (sws *setupWizardScreen) initInputsServer() tea.Cmd {
 	c := cursor.New()
 	c.SetMode(cursor.CursorBlink)
@@ -206,20 +235,6 @@ func (sws *setupWizardScreen) initInputsWalletPass() tea.Cmd {
 	txtPassDup.Cursor = c
 
 	sws.inputs = []textinput.Model{txtPass, txtPassDup}
-	return batchCmds(sws.setFocus(0))
-}
-
-func (sws *setupWizardScreen) initConfirmSeedInputs() tea.Cmd {
-	c := cursor.New()
-	c.SetMode(cursor.CursorBlink)
-
-	txtOk := textinput.New()
-	txtOk.Placeholder = ""
-	txtOk.Prompt = "Type OK to proceed: "
-	txtOk.Width = sws.winW
-	txtOk.Cursor = c
-
-	sws.inputs = []textinput.Model{txtOk}
 	return batchCmds(sws.setFocus(0))
 }
 
@@ -291,7 +306,6 @@ func (sws setupWizardScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		// Skip seed reviewing and go to server stage directly.
 		if !sws.isRestore() {
-			sws.initConfirmSeedInputs()
 			sws.stage = swsStageSeed
 		} else {
 			sws.initInputsServer()
@@ -543,12 +557,44 @@ func (sws setupWizardScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return sws, cmd
 		}
 
-		if strings.ToLower(sws.inputs[0].Value()) != "ok" {
+		sws.stage = swsStageConfirmSeed
+		cmd = sws.initInputsConfirmSeed()
+		return sws, cmd
+
+	case swsStageConfirmSeed:
+		cmd := sws.updateFocused(msg)
+		if !isEnterMsg(msg) {
+			return sws, cmd
+		}
+
+		confIdx := sws.seedConfirmIndices[0]
+		wantWord := strings.ToLower(strings.Split(string(sws.seed), " ")[confIdx])
+		gotWord := strings.TrimSpace(strings.ToLower(sws.inputs[0].Value()))
+		if wantWord != gotWord {
+			// Wrong seed word.
+			sws.stage = swsStageConfirmSeedFailed
+			sws.seedConfirmIndices = nil
 			return sws, nil
 		}
 
-		sws.stage = swsStageServer
-		cmd = sws.initInputsServer()
+		sws.seedConfirmIndices = sws.seedConfirmIndices[1:]
+		if len(sws.seedConfirmIndices) == 0 {
+			// Seed confirmation done.
+			sws.stage = swsStageServer
+			cmd = sws.initInputsServer()
+			return sws, cmd
+		}
+
+		cmd = sws.initInputsConfirmSeed()
+		return sws, cmd
+
+	case swsStageConfirmSeedFailed:
+		if !isEnterMsg(msg) {
+			return sws, nil
+		}
+
+		sws.stage = swsStageSeed
+		cmd := sws.initInputsConfirmSeed()
 		return sws, cmd
 	}
 
@@ -606,12 +652,24 @@ func (sws setupWizardScreen) innerView() string {
 		b.WriteString("location. LOSING ACCESS TO THE SEED MAY RESULT IN\n")
 		b.WriteString("LOSS OF FUNDS.\n\n")
 
+		b.WriteString(sws.styles.focused.Render("Continue"))
+
+		return b.String()
+
+	case swsStageConfirmSeed:
+		var b strings.Builder
+		b.WriteString("Confirm the seed was written down.\n\n")
 		for i := range sws.inputs {
 			b.WriteString(sws.inputs[i].View())
 			b.WriteString("\n\n")
 		}
-		b.WriteString(sws.styles.err.Render(sws.validationErr))
+		return b.String()
 
+	case swsStageConfirmSeedFailed:
+		var b strings.Builder
+		b.WriteString(sws.styles.err.Render("Seed confirmation failed."))
+		b.WriteString("\n\n")
+		b.WriteString(sws.styles.focused.Render("Review Seed"))
 		return b.String()
 
 	default:
