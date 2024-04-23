@@ -148,7 +148,7 @@ type appState struct {
 	posts       []clientdb.PostSummary
 	post        *rpc.PostMetadata
 	postSumm    clientdb.PostSummary
-	myComments  []string // Unreplicated comments
+	myComments  map[clientintf.PostID][]string // Unreplicated comments
 	postStatus  []rpc.PostMetadataStatus
 	unreadPosts map[clientintf.PostID]struct{}
 
@@ -2023,7 +2023,7 @@ func (as *appState) activePost() (rpc.PostMetadata, clientdb.PostSummary,
 	}
 	summ := as.postSumm
 	status := as.postStatus
-	myComments := as.myComments
+	myComments := as.myComments[summ.ID]
 	as.postsMtx.Unlock()
 
 	return res, summ, status, myComments
@@ -2061,7 +2061,7 @@ func (as *appState) commentPost(from clientintf.UserID, pid clientintf.PostID,
 	}
 
 	as.postsMtx.Lock()
-	as.myComments = append(as.myComments, comment)
+	as.myComments[pid] = append(as.myComments[pid], comment)
 	as.sortPosts()
 	as.postsMtx.Unlock()
 	as.sendMsg(sentPostComment{})
@@ -2832,13 +2832,12 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		if user == nil || statusFrom == as.c.PublicID() {
 			// Comment from me. Remove comment from list of
 			// unsent.
-			for i, cmt := range as.myComments {
+			for i, cmt := range as.myComments[pid] {
 				if cmt != status.Attributes[rpc.RMPSComment] {
 					continue
 				}
 
-				copy(as.myComments[i:], as.myComments[i+1:])
-				as.myComments = as.myComments[:len(as.myComments)-1]
+				as.myComments[pid] = slices.Delete(as.myComments[pid], i, i+1)
 				break
 			}
 		}
@@ -3910,6 +3909,7 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 
 		collator: collate.New(language.Und),
 
+		myComments:  make(map[clientintf.PostID][]string),
 		unreadPosts: make(map[clientintf.PostID]struct{}),
 
 		inboundMsgs:     &genericlist.List[inboundRemoteMsg]{},
