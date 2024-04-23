@@ -3066,6 +3066,9 @@ abstract class PluginPlatform {
 
   Future<void> notifyServerSessionState() async =>
       await asyncCall(CTNotifyServerSessionState, null);
+
+  Future<void> zipProfilingLogs(String destPath) async =>
+      await asyncCall(CTZipTimedProfilingLogs, destPath);
 }
 
 const int CTUnknown = 0x00;
@@ -3193,6 +3196,8 @@ const int CTDisableBackgroundNtfs = 0x85;
 const int CTZipLogs = 0x86;
 const int CTEnableProfiler = 0x87;
 const int CTNotifyServerSessionState = 0x88;
+const int CTEnableTimedProfiling = 0x89;
+const int CTZipTimedProfilingLogs = 0x8a;
 
 const int notificationsStartID = 0x1000;
 
