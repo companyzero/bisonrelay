@@ -961,7 +961,7 @@ func (pw postWindow) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case rpc.PostMetadataStatus:
 		pw.as.postsMtx.Lock()
-		pw.myComments = pw.as.myComments
+		pw.myComments = pw.as.myComments[pw.summ.ID]
 		pw.as.postsMtx.Unlock()
 
 		pw.updatePost()
@@ -976,7 +976,7 @@ func (pw postWindow) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case sentPostComment:
 		pw.as.postsMtx.Lock()
-		pw.myComments = pw.as.myComments
+		pw.myComments = pw.as.myComments[pw.summ.ID]
 		pw.as.postsMtx.Unlock()
 
 		wasAtBottom := pw.viewport.AtBottom()
