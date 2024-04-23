@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 
 class StorageManager {
   static const String goProfilerEnabledKey = "goProfilerEnabled";
+  static const String goTimedProfilingKey = "goTimedProfiling";
   static const String ntfnFgSvcKey = "foregroundService";
   static const String notificationsKey = "notifications";
 
@@ -26,6 +27,11 @@ class StorageManager {
     dynamic obj = prefs.get(key);
     return obj;
   }
+
+  static Future<bool> readBool(String key, {defaultVal = false}) async =>
+      await readData(key) as bool? ?? defaultVal;
+  static Future<void> saveBool(String key, bool value) async =>
+      await saveData(key, value);
 
   static Future<bool> deleteData(String key) async {
     final prefs = await SharedPreferences.getInstance();

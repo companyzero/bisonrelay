@@ -21,6 +21,14 @@ import 'package:provider/provider.dart';
 import 'package:restart_app/restart_app.dart';
 import 'package:share_plus/share_plus.dart';
 
+Future<String> timedProfilingDir() async {
+  bool isMobile = Platform.isIOS || Platform.isAndroid;
+  String base = isMobile
+      ? (await getApplicationCacheDirectory()).path
+      : (await getDownloadsDirectory())?.path ?? "";
+  return path.join(base, "perfprofiles");
+}
+
 class LogScreenTitle extends StatelessWidget {
   const LogScreenTitle({super.key});
 
@@ -90,11 +98,13 @@ class ExportLogScreen extends StatefulWidget {
 class _ExportLogScreenState extends State<ExportLogScreen> {
   final bool isMobile = Platform.isIOS || Platform.isAndroid;
   String destPath = "";
+  String destProfilingPath = "";
   bool allFiles = false;
   bool golibLogs = true;
   bool lnLogs = true;
   bool exporting = false;
   int debugModeGotoCfgCounter = 0;
+  bool timedProfilingEnabled = false;
 
   @override
   void initState() {
@@ -105,9 +115,13 @@ class _ExportLogScreenState extends State<ExportLogScreen> {
       try {
         var dir = isMobile
             ? (await getApplicationCacheDirectory()).path
-            : await getDownloadsDirectory();
+            : (await getDownloadsDirectory())?.path ?? "";
+        bool goTimedProfilingEnabled =
+            await StorageManager.readBool(StorageManager.goTimedProfilingKey);
         setState(() {
-          destPath = "$dir/${zipFilename()}";
+          destPath = path.join(dir, zipFilename());
+          destProfilingPath = path.join(dir, profilingZipFilename());
+          timedProfilingEnabled = goTimedProfilingEnabled;
         });
       } catch (exception) {
         print("Unable to determine downloads dir: $exception");
@@ -120,13 +134,19 @@ class _ExportLogScreenState extends State<ExportLogScreen> {
     return "bruig-logs-$nowStr.zip";
   }
 
+  String profilingZipFilename() {
+    var nowStr = DateTime.now().toIso8601String().replaceAll(":", "_");
+    return "bruig-profile-$nowStr.zip";
+  }
+
   void chooseDestPath() async {
     var dir = await FilePicker.platform.getDirectoryPath(
       dialogTitle: "Select log export dir",
     );
     if (dir == null) return;
     setState(() {
-      destPath = "$dir/${zipFilename()}";
+      destPath = path.join(dir, zipFilename());
+      destProfilingPath = path.join(dir, profilingZipFilename());
     });
   }
 
@@ -147,13 +167,45 @@ class _ExportLogScreenState extends State<ExportLogScreen> {
       setState(() {
         // Replace filename to ensure generating again won't overwrite.
         var dir = path.dirname(destPath);
-        destPath = "$dir/${zipFilename()}";
+        destPath = path.join(dir, zipFilename());
       });
     } catch (exception) {
       if (mounted) {
         showErrorSnackbar(context, "Unable to export logs: $exception");
       } else {
         print("Unable to export logs: $exception");
+      }
+    } finally {
+      setState(() {
+        exporting = false;
+      });
+    }
+  }
+
+  void doExportProfilings() async {
+    setState(() {
+      exporting = true;
+    });
+    try {
+      await Golib.zipProfilingLogs(destProfilingPath);
+      if (!isMobile) {
+        if (mounted) {
+          showSuccessSnackbar(
+              context, "Exported profiles to $destProfilingPath");
+        }
+      } else {
+        Share.shareXFiles([XFile(destProfilingPath)], text: "bruig profile");
+      }
+      setState(() {
+        // Replace filename to ensure generating again won't overwrite.
+        var dir = path.dirname(destProfilingPath);
+        destProfilingPath = path.join(dir, profilingZipFilename());
+      });
+    } catch (exception) {
+      if (mounted) {
+        showErrorSnackbar(context, "Unable to export profiles: $exception");
+      } else {
+        print("Unable to export profiles: $exception");
       }
     } finally {
       setState(() {
@@ -267,6 +319,13 @@ class _ExportLogScreenState extends State<ExportLogScreen> {
                         }),
                       ]),
                   const SizedBox(height: 20),
+                  timedProfilingEnabled
+                      ? ElevatedButton(
+                          onPressed: destProfilingPath != "" && !exporting
+                              ? doExportProfilings
+                              : null,
+                          child: const Text("Export Performance Profiles"))
+                      : const Empty(),
                 ]))));
   }
 }
@@ -286,12 +345,14 @@ class _LogSettingsScreenState extends State<LogSettingsScreen> {
   String lnLogLevel = "info";
   bool logPings = false;
   bool enableGoProfiler = false;
+  bool enableTimedProfiling = false;
 
   void readConfig() async {
     var cfg = await loadConfig(mainConfigFilename);
     var goProfilerEnabled =
-        await StorageManager.readData(StorageManager.goProfilerEnabledKey) ??
-            false;
+        await StorageManager.readBool(StorageManager.goProfilerEnabledKey);
+    var goTimedProfilingEnabled =
+        await StorageManager.readBool(StorageManager.goTimedProfilingKey);
     setState(() {
       if (logLevels.contains(cfg.debugLevel)) {
         appLogLevel = cfg.debugLevel;
@@ -301,6 +362,7 @@ class _LogSettingsScreenState extends State<LogSettingsScreen> {
       }
       logPings = cfg.logPings;
       enableGoProfiler = goProfilerEnabled;
+      enableTimedProfiling = goTimedProfilingEnabled;
     });
   }
 
@@ -320,6 +382,8 @@ class _LogSettingsScreenState extends State<LogSettingsScreen> {
           logPings: logPings);
       await StorageManager.saveData(
           StorageManager.goProfilerEnabledKey, enableGoProfiler);
+      await StorageManager.saveData(
+          StorageManager.goTimedProfilingKey, enableTimedProfiling);
 
       if (mounted) {
         confirmationDialog(
@@ -439,6 +503,20 @@ class _LogSettingsScreenState extends State<LogSettingsScreen> {
                       ),
                       // const SizedBox(width: 20),
                       Text("Enable Go Profiler",
+                          style: TextStyle(color: textColor)),
+                    ]),
+                  ),
+                  InkWell(
+                    onTap: () => setState(
+                        () => enableTimedProfiling = !enableTimedProfiling),
+                    child: Row(children: [
+                      Checkbox(
+                        value: enableTimedProfiling,
+                        onChanged: (bool? value) => setState(
+                            () => enableTimedProfiling = value ?? false),
+                      ),
+                      // const SizedBox(width: 20),
+                      Text("Enable Continous Hourly Profiling",
                           style: TextStyle(color: textColor)),
                     ]),
                   ),

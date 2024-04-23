@@ -144,6 +144,8 @@ const (
 	CTZipLogs                             = 0x86
 	CTEnableProfiler                      = 0x87
 	CTNotifyServerSessionState            = 0x88
+	CTEnableTimedProfiling                = 0x89
+	CTZipTimedProfilingLogs               = 0x8a
 
 	NTInviteReceived         = 0x1001
 	NTInviteAccepted         = 0x1002
@@ -298,6 +300,16 @@ func call(cmd *cmd) *CmdResult {
 					args, err)
 			}
 		}()
+
+	case CTEnableTimedProfiling:
+		var args string
+		decode(&args)
+		go globalProfiler.Run(args)
+
+	case CTZipTimedProfilingLogs:
+		var args string
+		decode(&args)
+		err = globalProfiler.zipLogs(args)
 
 	default:
 		// Calls that need a client. Figure out the client.

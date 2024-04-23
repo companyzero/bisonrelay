@@ -42,6 +42,7 @@ import 'package:bruig/screens/verify_server.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:window_manager/window_manager.dart';
 import './screens/app_start.dart';
@@ -59,10 +60,20 @@ void main(List<String> args) async {
       .then((value) => developer.log("Platform Version: $value"));
   Golib.captureDcrlndLog();
   bool goProfilerEnabled =
-      await StorageManager.readData(StorageManager.goProfilerEnabledKey)
-              as bool? ??
-          false;
+      await StorageManager.readBool(StorageManager.goProfilerEnabledKey);
   if (goProfilerEnabled) Golib.asyncCall(CTEnableProfiler, "");
+  bool goTimedProfilingEnabled =
+      await StorageManager.readBool(StorageManager.goTimedProfilingKey);
+  if (goTimedProfilingEnabled) {
+    Golib.asyncCall(CTEnableTimedProfiling, await timedProfilingDir());
+  } else {
+    // Remove any old profile files when profiling is disabled.
+    var profileDir = Directory(await timedProfilingDir());
+    if (await profileDir.exists()) {
+      profileDir.delete(recursive: true);
+    }
+  }
+
   // DartVLC.initialize();
 
   // Get user to stop optimizing battery usage on Android.
