@@ -77,7 +77,6 @@ class _MessagesState extends State<Messages> {
       });
     });
     chat.addListener(onChatChanged);
-    _maybeScrollToFirstUnread();
     _maybeScrollToBottom();
   }
 
@@ -86,7 +85,6 @@ class _MessagesState extends State<Messages> {
     super.didUpdateWidget(oldWidget);
     oldWidget.chat.removeListener(onChatChanged);
     chat.addListener(onChatChanged);
-    _maybeScrollToFirstUnread();
     _maybeScrollToBottom();
     onChatChanged();
   }
@@ -120,13 +118,13 @@ class _MessagesState extends State<Messages> {
     }
   }
 
-  void _maybeScrollToFirstUnread() {
+  void _scrollToFirstUnread() {
     final firstUnreadIndex = chat.firstUnreadIndex();
     if (chat.msgs.isNotEmpty && firstUnreadIndex != -1) {
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         if (mounted) {
           widget.itemScrollController.scrollTo(
-            index: firstUnreadIndex,
+            index: firstUnreadIndex <= 5 ? 0 : firstUnreadIndex - 5,
             alignment: 0.0,
             duration: const Duration(
                 microseconds: 1), // a little bit smoother than a jump
@@ -137,7 +135,22 @@ class _MessagesState extends State<Messages> {
   }
 
   Widget _getFAB(Color textColor, Color backgroundColor) {
-    if (_showFAB) {
+    if (chat.firstUnreadIndex() != -1 &&
+        chat.firstUnreadIndex() - _maxItem > 5) {
+      return FloatingActionButton(
+        onPressed: _scrollToFirstUnread,
+        tooltip: "Scroll to last unread recent message",
+        foregroundColor: textColor,
+        backgroundColor: backgroundColor,
+        elevation: 0,
+        hoverElevation: 0,
+        mini: true,
+        shape: RoundedRectangleBorder(
+            side: BorderSide(width: 2, color: textColor),
+            borderRadius: BorderRadius.circular(100)),
+        child: const Icon(Icons.keyboard_arrow_up_outlined),
+      );
+    } else if (_showFAB) {
       return FloatingActionButton(
         onPressed: _scrollToBottom,
         tooltip: "Scroll to most recent messages",
@@ -149,9 +162,10 @@ class _MessagesState extends State<Messages> {
         shape: RoundedRectangleBorder(
             side: BorderSide(width: 2, color: textColor),
             borderRadius: BorderRadius.circular(100)),
-        child: const Icon(Icons.keyboard_arrow_down),
+        child: const Icon(Icons.keyboard_arrow_down_outlined),
       );
     }
+
     return const Empty();
   }
 
