@@ -39,7 +39,9 @@ import 'package:bruig/screens/shutdown.dart';
 import 'package:bruig/screens/unlock_ln.dart';
 import 'package:bruig/screens/verify_invite.dart';
 import 'package:bruig/screens/verify_server.dart';
+import 'package:duration/duration.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:path_provider/path_provider.dart';
@@ -154,11 +156,17 @@ class _AppState extends State<App> with WindowListener {
       StreamController<ConfNotification>();
   final isMobile = Platform.isIOS || Platform.isAndroid;
   bool pushedToShutdown = false;
+  late final AppLifecycleListener lifecycleListener;
+  Timer? forceDetachTimer;
 
   @override
   void initState() {
     super.initState();
     !isMobile ? windowManager.addListener(this) : null;
+    isMobile
+        ? lifecycleListener =
+            AppLifecycleListener(onStateChange: onAppStateChanged)
+        : null;
     handleNotifications();
     initClient();
     !isMobile ? windowManager.setPreventClose(true) : null;
@@ -169,6 +177,22 @@ class _AppState extends State<App> with WindowListener {
   void dispose() {
     !isMobile ? windowManager.removeListener(this) : null;
     super.dispose();
+  }
+
+  void forceDetachApp() {
+    forceDetachTimer = null;
+    SystemChannels.platform.invokeMethod('SystemNavigator.pop');
+  }
+
+  void onAppStateChanged(AppLifecycleState state) async {
+    if (state == AppLifecycleState.paused) {
+      // After 120 seconds, force detach the app so the UI doesn't consume
+      // resources on mobile. The native plugin keeps background services running.
+      forceDetachTimer = Timer(seconds(120), forceDetachApp);
+    } else {
+      forceDetachTimer?.cancel();
+      forceDetachTimer = null;
+    }
   }
 
   @override
