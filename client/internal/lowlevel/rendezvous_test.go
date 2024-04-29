@@ -431,9 +431,10 @@ func TestRendezvousManagerNilSession(t *testing.T) {
 	}
 }
 
-// TestRendezvousManagerPrepaysWorks asserts that prepaying for an RV
-// does not cause the manager to subscribe to that RV, and (erroneously)
-// receiving the message does not cause any errors.
+// TestRendezvousManagerPrepaysWorks asserts that prepaying for an RV does not
+// cause the manager to subscribe to that RV, (erroneously) receiving the
+// message does not cause any errors and immediately subscribing to the RV
+// works.
 func TestRendezvousManagerPrepaysWorks(t *testing.T) {
 	t.Parallel()
 
@@ -482,6 +483,21 @@ func TestRendezvousManagerPrepaysWorks(t *testing.T) {
 	}
 	assert.NilErr(t, rmgr.HandlePushedRMs(msg))
 	assert.ChanNotWritten(t, runErr, 100*time.Millisecond)
+
+	// Attempt to subscribe to RV on the same rmgr instance. This should
+	// not error.
+	go func() { errChan <- rmgr.Sub(id, nil, nil) }()
+	gotMsg2 := sess.replyNextPRPC(t, &rpc.SubscribeRoutedMessagesReply{})
+	assert.NilErrFromChan(t, errChan)
+	assert.ChanNotWritten(t, gotPayInvoice, time.Millisecond*100) // Already paid.
+	gotSubMsg2 := gotMsg2.(*rpc.SubscribeRoutedMessages)
+	if len(gotSubMsg2.MarkPaid) != 0 {
+		t.Fatalf("wrong nb of MarkPaid elements: got %d, want 0", len(gotSubMsg2.MarkPaid))
+	}
+	if len(gotSubMsg2.AddRendezvous) != 1 {
+		t.Fatalf("wrong nb of AddRendezvous elements: got %d, want 1", len(gotSubMsg2.AddRendezvous))
+	}
+	assert.DeepEqual(t, gotSubMsg2.AddRendezvous[0], id)
 }
 
 // TestRendezvousManagerFetchPrepaidCancellable tests that attempting to fetch

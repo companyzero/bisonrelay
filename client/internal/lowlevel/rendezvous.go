@@ -728,6 +728,12 @@ loop:
 					sub.subDoneChan = nil
 					subs[id] = sub
 				}
+
+				// If this was only meant to be marked as paid,
+				// remove from list of subs.
+				if sub.onlyMarkPaid {
+					delete(subs, id)
+				}
 			}
 
 			// Alert any outstanding unsub that is was done.
@@ -742,12 +748,6 @@ loop:
 			// Call global sub done CB.
 			if rmgr.subDoneCB != nil {
 				rmgr.subDoneCB()
-			}
-
-			// Remove the onlyMarkPaid subs from the main map, as
-			// they are no longer needed.
-			for _, id := range toMark {
-				delete(subs, id)
 			}
 
 			continue loop
