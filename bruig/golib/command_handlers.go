@@ -1749,7 +1749,9 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		}
 
 		b := bytes.NewBuffer(nil)
-		invite, err := c.FetchPrepaidInvite(cc.ctx, pik, b)
+		ctx, cancel := context.WithTimeout(cc.ctx, time.Second*30)
+		defer cancel()
+		invite, err := c.FetchPrepaidInvite(ctx, pik, b)
 		if err != nil {
 			return nil, err
 		}
