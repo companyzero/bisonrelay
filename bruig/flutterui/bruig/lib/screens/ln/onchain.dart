@@ -1,4 +1,5 @@
 import 'package:bruig/components/accounts_dropdown.dart';
+import 'package:bruig/components/confirmation_dialog.dart';
 import 'package:bruig/components/copyable.dart';
 import 'package:bruig/components/dcr_input.dart';
 import 'package:bruig/components/empty_widget.dart';
@@ -76,28 +77,9 @@ class _LNOnChainPageState extends State<LNOnChainPage> {
     var amount = amountCtrl.amount;
     var sendAddr = sendAddrCtrl.text;
     var account = sendAccount!;
-    showModalBottomSheet(
-        context: context,
-        builder: (BuildContext context) => Container(
-            padding: const EdgeInsets.all(30),
-            child: Row(children: [
-              Text("Send $amount DCR to $sendAddr?",
-                  style: TextStyle(color: Theme.of(context).focusColor)),
-              IconButton(
-                onPressed: () => Navigator.pop(context),
-                icon: const Icon(Icons.cancel),
-                tooltip: "Cancel",
-              ),
-              const Expanded(child: Empty()),
-              IconButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  doSend(amount, sendAddr, account);
-                },
-                icon: const Icon(Icons.attach_money),
-                tooltip: "Send (cannot be undone)",
-              ),
-            ])));
+    confirmationDialog(context, () {
+      doSend(amount, sendAddr, account);
+    }, "Confirm Send", "Send $amount DCR to $sendAddr?", "Send", "Cancel");
   }
 
   void rescanProgressed() {
