@@ -1,7 +1,10 @@
 import 'dart:async';
 
+import 'package:bruig/components/buttons.dart';
 import 'package:bruig/components/copyable.dart';
+import 'package:bruig/components/info_grid.dart';
 import 'package:bruig/components/snackbars.dart';
+import 'package:bruig/screens/manage_content/manage_content.dart';
 import 'package:bruig/screens/needs_out_channel.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
@@ -9,6 +12,7 @@ import 'package:golib_plugin/golib_plugin.dart';
 import 'package:golib_plugin/util.dart';
 import 'package:provider/provider.dart';
 import 'package:bruig/theme_manager.dart';
+import 'package:tuple/tuple.dart';
 
 typedef CloseChanCB = Future<void> Function(LNChannel chan);
 
@@ -26,6 +30,7 @@ class _ChanW extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    var themeNtf = Provider.of<ThemeNotifier>(context);
     var theme = Theme.of(context);
     var textColor = theme.focusColor;
     var secondaryTextColor = theme.dividerColor;
@@ -33,94 +38,60 @@ class _ChanW extends StatelessWidget {
     var localBalance = atomsToDCR(chan.localBalance).toStringAsFixed(8);
     var remoteBalance = atomsToDCR(chan.remoteBalance).toStringAsFixed(8);
     var state = chan.active ? "Active" : "Inactive";
-    var errorColor = theme.errorColor;
+    var labelTs = TextStyle(
+        fontSize: themeNtf.getSmallFont(context), color: secondaryTextColor);
+    var valTs =
+        TextStyle(fontSize: themeNtf.getSmallFont(context), color: textColor);
+    bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
     return Consumer<ThemeNotifier>(
         builder: (context, theme, _) => Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 13),
-                Row(children: [
-                  Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text("State:",
-                            style: TextStyle(
-                                fontSize: theme.getSmallFont(context),
-                                color: secondaryTextColor)),
-                        const SizedBox(height: 8),
-                        Text("Remote Node:",
-                            style: TextStyle(
-                                fontSize: theme.getSmallFont(context),
-                                color: secondaryTextColor)),
-                        const SizedBox(height: 8),
-                        Text("Channel Point:",
-                            style: TextStyle(
-                                fontSize: theme.getSmallFont(context),
-                                color: secondaryTextColor)),
-                        const SizedBox(height: 8),
-                        Text("Channel Capacity:",
-                            style: TextStyle(
-                                fontSize: theme.getSmallFont(context),
-                                color: secondaryTextColor)),
-                        const SizedBox(height: 8),
-                        Text("Relative Balances:",
-                            style: TextStyle(
-                                fontSize: theme.getSmallFont(context),
-                                color: secondaryTextColor))
-                      ]),
-                  const SizedBox(width: 10),
-                  Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(state,
-                            style: TextStyle(
-                                fontSize: theme.getSmallFont(context),
-                                color: textColor)),
-                        const SizedBox(height: 8),
-                        Copyable(
-                            chan.remotePubkey,
-                            TextStyle(
-                                fontSize: theme.getSmallFont(context),
-                                color: textColor)),
-                        const SizedBox(height: 8),
-                        Copyable(
-                            chan.channelPoint,
-                            TextStyle(
-                                fontSize: theme.getSmallFont(context),
-                                color: textColor)),
-                        const SizedBox(height: 8),
-                        Text("$capacity DCR",
-                            style: TextStyle(
-                                fontSize: theme.getSmallFont(context),
-                                color: textColor)),
-                        const SizedBox(height: 8),
-                        Row(children: [
-                          Text("$localBalance DCR",
-                              style: TextStyle(
-                                  fontSize: theme.getSmallFont(context),
-                                  color: textColor)),
-                          const SizedBox(width: 8),
-                          Text("Local <--> Remote",
-                              style: TextStyle(
-                                  fontSize: theme.getSmallFont(context),
-                                  color: secondaryTextColor)),
-                          const SizedBox(width: 8),
-                          Text("$remoteBalance DCR",
-                              style: TextStyle(
-                                  fontSize: theme.getSmallFont(context),
-                                  color: textColor)),
-                        ])
-                      ]),
-                ]),
+                SimpleInfoGrid(
+                    colLabelSize: 110,
+                    colValueFlex: 8,
+                    separatorWidth: 10,
+                    [
+                      Tuple2(Text("State:", style: labelTs),
+                          Text(state, style: valTs)),
+                      Tuple2(
+                          Text("Remote Node:", style: labelTs),
+                          Copyable(
+                              textOverflow: TextOverflow.ellipsis,
+                              chan.remotePubkey,
+                              valTs)),
+                      Tuple2(
+                          Text("Channel Point:", style: labelTs),
+                          Copyable(
+                              textOverflow: TextOverflow.ellipsis,
+                              chan.channelPoint,
+                              valTs)),
+                      Tuple2(Text("Channel Capacity:", style: labelTs),
+                          Text("$capacity DCR", style: valTs)),
+                      ...(isScreenSmall
+                          ? [
+                              Tuple2(Text("Local Balance:", style: labelTs),
+                                  Text("$localBalance DCR", style: valTs)),
+                              Tuple2(Text("Remote Balance:", style: labelTs),
+                                  Text("$remoteBalance DCR", style: valTs)),
+                            ]
+                          : [
+                              Tuple2(
+                                  Text("Relative Balances:", style: labelTs),
+                                  Wrap(children: [
+                                    Text("$localBalance DCR", style: valTs),
+                                    const SizedBox(width: 8),
+                                    Text("Local <--> Remote", style: labelTs),
+                                    const SizedBox(width: 8),
+                                    Text("$remoteBalance DCR", style: valTs),
+                                  ])),
+                            ]),
+                    ]),
                 const SizedBox(height: 13),
-                ElevatedButton(
+                CancelButton(
+                  label: "Close Channel",
                   onPressed: () => closeChan(chan),
-                  style: ElevatedButton.styleFrom(
-                      textStyle: TextStyle(
-                          color: textColor,
-                          fontSize: theme.getSmallFont(context)),
-                      backgroundColor: errorColor),
-                  child: const Text("Close Channel"),
                 ),
                 const SizedBox(height: 13),
               ],
@@ -365,12 +336,12 @@ class _LNChannelsPageState extends State<LNChannelsPage> {
                   style: TextStyle(color: textColor));
             },
           )),
-          Row(children: [
+          const SizedBox(height: 10),
+          Wrap(runSpacing: 10, spacing: 20, children: [
             ElevatedButton(
                 onPressed: () => Navigator.of(context, rootNavigator: true)
                     .pushNamed(NeedsOutChannelScreen.routeName),
                 child: const Text("Open Outbound Channel")),
-            const SizedBox(width: 20),
             ElevatedButton(
                 onPressed: () => Navigator.of(context, rootNavigator: true)
                     .pushNamed("/needsInChannel"),
