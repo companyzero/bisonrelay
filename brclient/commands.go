@@ -679,17 +679,35 @@ var inviteCommands = []tuicmd{
 			if err != nil {
 				return err
 			}
-			defer f.Close()
 
-			ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
-			defer cancel()
-			_, err = as.c.FetchPrepaidInvite(ctx, key, f)
-			if err != nil {
-				return err
-			}
+			as.diagMsg("Attempting to fetch invite on server (timeout: 1 minute)")
+			go func() {
+				ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+				defer cancel()
+				defer f.Close()
 
-			as.diagMsg("Fetched invite stored in RV %s and saved "+
-				"in file %s", key.RVPoint(), filename)
+				invite, err := as.c.FetchPrepaidInvite(ctx, key, f)
+				errStyle := as.styles.Load().err
+				switch {
+				case errors.Is(err, context.DeadlineExceeded):
+					as.diagMsg(errStyle.Render("Timeout waiting for invite on server"))
+					as.diagMsg("Maybe invite was already fetched?")
+
+				case err != nil:
+					msg := fmt.Sprintf("Unable to fetch invite on server: %v", err)
+					as.diagMsg(errStyle.Render(msg))
+
+				default:
+					as.diagMsg("Fetched invite stored in RV %s and saved "+
+						"in file %s", key.RVPoint(), filename)
+					if invite.Funds == nil {
+						as.diagMsg("Invite has no funds")
+					} else {
+						as.diagMsg("Invite has funds on output %s:%d",
+							invite.Funds.Tx, invite.Funds.Index)
+					}
+				}
+			}()
 			return nil
 		},
 		completer: func(args []string, arg string, as *appState) []string {
