@@ -25,6 +25,7 @@ import (
 	genericlist "github.com/bahlo/generic-list-go"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/exp/term/ansi"
 	"github.com/companyzero/bisonrelay/brclient/internal/sloglinesbuffer"
 	"github.com/companyzero/bisonrelay/brclient/internal/version"
 	"github.com/companyzero/bisonrelay/client"
@@ -48,7 +49,6 @@ import (
 	"github.com/decred/dcrlnd/zpay32"
 	lpclient "github.com/decred/dcrlnlpd/client"
 	"github.com/decred/slog"
-	"github.com/muesli/reflow/wordwrap"
 	"github.com/puzpuzpuz/xsync/v2"
 	"golang.org/x/exp/maps"
 	"golang.org/x/exp/slices"
@@ -65,6 +65,8 @@ const (
 	activeCWLog    = -3             // log window
 	activeCWLndLog = -4             // lnd log window
 	lastCWWindow   = activeCWLndLog // Must *ALWAYS* match the last item.
+
+	wordBreakpoints = ""
 )
 
 const (
@@ -704,14 +706,14 @@ func (as *appState) skipNextWalletCheck() {
 func (as *appState) lastLogLines(nbLines int) string {
 	// TODO: This is inneficient. Improve to a streaming method.
 	log := strings.Join(as.logBknd.lastLogLines(nbLines), "")
-	log = wordwrap.String(log, as.winW-5)
+	log = ansi.Wrap(log, as.winW-5, wordBreakpoints)
 	log = as.styles.Load().help.Render(log)
 	return log
 }
 
 func (as *appState) lastLndLogLines(nbLines int) string {
 	log := strings.Join(as.lndLogLines.LastLogLines(nbLines), "")
-	log = wordwrap.String(log, as.winW-5)
+	log = ansi.Wrap(log, as.winW-5, wordBreakpoints)
 	log = as.styles.Load().help.Render(log)
 	return log
 }
@@ -756,7 +758,7 @@ func (as *appState) getDiagMsgs() string {
 	as.diagMsgsMtx.Lock()
 	var b strings.Builder
 	for _, m := range as.diagMsgs {
-		b.WriteString(wordwrap.String(m, as.winW-2))
+		b.WriteString(ansi.Wordwrap(m, as.winW-2, wordBreakpoints))
 		b.WriteString("\n")
 	}
 	as.diagMsgsMtx.Unlock()

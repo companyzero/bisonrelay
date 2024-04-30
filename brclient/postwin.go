@@ -9,6 +9,7 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/exp/term/ansi"
 	"github.com/companyzero/bisonrelay/client"
 	"github.com/companyzero/bisonrelay/client/clientdb"
 	"github.com/companyzero/bisonrelay/client/clientintf"
@@ -16,8 +17,6 @@ import (
 	"github.com/companyzero/bisonrelay/internal/strescape"
 	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/companyzero/bisonrelay/zkidentity"
-	"github.com/muesli/reflow/wordwrap"
-	"github.com/muesli/reflow/wrap"
 )
 
 const (
@@ -283,7 +282,7 @@ func (pw *postWindow) renderComment(cmt *comment, write func(s string), idx int)
 	// TODO: Markdown, escape.
 	lines := strings.Split(cmt.comment, "\n")
 	for _, l := range lines {
-		wrappedLine := wordwrap.String(l, pw.as.winW-2-totIndent)
+		wrappedLine := ansi.Wordwrap(l, pw.as.winW-2-totIndent, wordBreakpoints)
 		wlines := strings.Split(wrappedLine, "\n")
 
 		for _, l := range wlines {
@@ -364,7 +363,7 @@ func (pw *postWindow) renderPost() {
 
 	// TODO: render markdown.
 	lineLimit := pw.as.winW - 2
-	content = wrap.String(wordwrap.String(content, lineLimit), lineLimit)
+	content = ansi.Wordwrap(content, lineLimit, wordBreakpoints)
 	write(content)
 	write("\n\n")
 

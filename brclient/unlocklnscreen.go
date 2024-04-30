@@ -11,10 +11,10 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/exp/term/ansi"
 	"github.com/companyzero/bisonrelay/brclient/internal/sloglinesbuffer"
 	"github.com/companyzero/bisonrelay/embeddeddcrlnd"
 	"github.com/decred/dcrlnd/lnrpc/initchainsyncrpc"
-	"github.com/muesli/reflow/wordwrap"
 )
 
 type unlockLNScreen struct {
@@ -138,7 +138,7 @@ func (ulns unlockLNScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		ulns.compactingDb = stringsContains(logLines, "Compacting database file at")
 		ulns.migratingDb = stringsContains(logLines, "Performing database schema migration")
 		ulns.compactErrored = stringsContains(logLines, "error during compact")
-		logTxt := wordwrap.String(strings.Join(logLines, ""), ulns.viewWidth-1)
+		logTxt := ansi.Wordwrap(strings.Join(logLines, ""), ulns.viewWidth-1, wordBreakpoints)
 		ulns.viewport.SetContent(logTxt)
 		ulns.viewport.GotoBottom()
 		return ulns, nil
@@ -204,7 +204,7 @@ func (ulns unlockLNScreen) View() string {
 		pf("\n\n")
 		pf(ulns.txtPass.View())
 		pf("\n\n")
-		errMsg := wordwrap.String(ulns.unlockErr, ulns.viewWidth)
+		errMsg := ansi.Wordwrap(ulns.unlockErr, ulns.viewWidth, wordBreakpoints)
 		pf(ulns.styles.err.Render(errMsg))
 		pf("\n")
 		lines += 2 + 2 + 1 + countNewLines(errMsg)

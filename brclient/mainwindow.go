@@ -100,9 +100,18 @@ func (mws *mainWindowState) recalcViewportSize() {
 	footerHeight := lipgloss.Height(mws.footerView(styles))
 	editHeight := textAreaHeight
 
+	// Ensure viewport width is zero to disable all padding/wrapping.
+	// Wrapping is done when building the messages (in chatwindow or
+	// appstate).
+	mws.viewport.Style = mws.viewport.Style.Width(0).
+		Underline(false).
+		UnderlineSpaces(false).
+		Strikethrough(false).
+		StrikethroughSpaces(false)
+	mws.viewport.Width = 0
+
 	verticalMarginHeight := headerHeight + footerHeight + editHeight
 	mws.viewport.YPosition = headerHeight + 1
-	mws.viewport.Width = mws.as.winW
 	mws.viewport.Height = mws.as.winH - verticalMarginHeight
 }
 
@@ -721,13 +730,17 @@ func (mws mainWindowState) View() string {
 		opt = styles.help.Render(opt)
 	}
 
-	return fmt.Sprintf("%s\n%s\n%s\n%s%s",
+	vwview := mws.viewport.View()
+
+	res := fmt.Sprintf("%s\n%s\n%s\n%s%s",
 		mws.header,
-		mws.viewport.View(),
+		vwview,
 		mws.footerView(styles),
 		textAreaView,
 		opt,
 	)
+
+	return res
 }
 
 func newMainWindowState(as *appState) (mainWindowState, tea.Cmd) {
