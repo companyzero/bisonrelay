@@ -8,9 +8,9 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/exp/term/ansi"
 	"github.com/companyzero/bisonrelay/client"
 	"github.com/companyzero/bisonrelay/client/clientintf"
-	"github.com/muesli/reflow/wordwrap"
 )
 
 type onboardScreen struct {
@@ -222,7 +222,7 @@ func (os onboardScreen) View() string {
 	pf("\n")
 	nbLines += 1
 	if os.oerr != nil {
-		errMsg := wordwrap.String(styles.err.Render(os.oerr.Error()), os.as.winW-1)
+		errMsg := ansi.Wordwrap(styles.err.Render(os.oerr.Error()), os.as.winW-1, wordBreakpoints)
 		pf(errMsg)
 		pf("\n")
 		nbLines += countNewLines(errMsg) + 1

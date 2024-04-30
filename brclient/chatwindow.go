@@ -642,17 +642,20 @@ func writeWrappedURL(b *strings.Builder, offset, winW int, url string) int {
 	if offset+len(url) > winW {
 		b.WriteRune('\n')
 		offset = 0
+		if len(url) > winW {
+			url = url[:winW]
+		}
 	}
 
-	// This is supposed to work, but doesn't. Bubbletea bug? see:
+	// This is supposed to work, but doesn't when the URL is long.
+	// Bubbletea bug or terminal bug? see:
 	// https://gist.github.com/egmontkob/eb114294efbcd5adb1944c9f3cb5feda
 	//
-	//s := "\x1b]8;id=100;" + url + "\x1b\\" + url +
-	//		"\x1b]8;;\x1b\\"
+	//        OSC 8      url      ST     text     OSC 8   ST
+	// s := "\x1b]8;;" + url + "\x1b\\" + url + "\x1b]8;;\x1b\\"
 	b.WriteString(url)
 	offset += len(url)
 	if offset > winW {
-		b.WriteRune('\n')
 		offset = 0
 	}
 	return offset
