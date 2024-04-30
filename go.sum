@@ -195,10 +195,8 @@ github.com/decred/dcrd/wire v1.2.0/go.mod h1:/JKOsLInOJu6InN+/zH5AyCq3YDIOW/Eqcf
 github.com/decred/dcrd/wire v1.5.0/go.mod h1:fzAjVqw32LkbAZIt5mnrvBR751GTa3e0rRQdOIhPY3w=
 github.com/decred/dcrd/wire v1.6.0 h1:YOGwPHk4nzGr6OIwUGb8crJYWDiVLpuMxfDBCCF7s/o=
 github.com/decred/dcrd/wire v1.6.0/go.mod h1:XQ8Xv/pN/3xaDcb7sH8FBLS9cdgVctT7HpBKKGsIACk=
-github.com/decred/dcrlnd v0.6.1-0.20240326141352-a9cd7e4b73e0 h1:4Ur4HwBRJG4BmVDs+I2m+2MDHEx7b8ZYCFQu7HuoE+M=
-github.com/decred/dcrlnd v0.6.1-0.20240326141352-a9cd7e4b73e0/go.mod h1:IKhiY/hr0gSa06/i+tD/8KMo1C09urJrD5lRN2OBzWA=
-github.com/decred/dcrlnd v0.6.1-0.20240422124737-a49df7d51b0e h1:rkez231dE3HzYArJak0abWk0nC6wCe3m0d7zO+V8SB0=
-github.com/decred/dcrlnd v0.6.1-0.20240422124737-a49df7d51b0e/go.mod h1:6fkQGDYa6IfFjlx+hDr5uJN2wq4UGMZ+RbWRp16O3dk=
+github.com/decred/dcrlnd v0.6.1-0.20240422171210-ae2a7c7c8dc1 h1:K/mWcf8/IcSjh0gP9Fgp+BS2QaqERQPzz0BuC6pepdU=
+github.com/decred/dcrlnd v0.6.1-0.20240422171210-ae2a7c7c8dc1/go.mod h1:6fkQGDYa6IfFjlx+hDr5uJN2wq4UGMZ+RbWRp16O3dk=
 github.com/decred/dcrlnlpd v0.0.0-20240123180445-e796ee43935f h1:CE8F4oPnp5bhqDUxFZEGq/uePCQ/DyIQmtHg+xcNzJs=
 github.com/decred/dcrlnlpd v0.0.0-20240123180445-e796ee43935f/go.mod h1:QTOHLmpDApLg20eOnGJu+DTjrMEOus/6Rfa/7u3hrgE=
 github.com/decred/dcrtest/dcrdtest v1.0.1-0.20231217203517-3d06801da382 h1:8BmWipm7/z/HwcN1hD+JMne7xF66SqJEGASs/qBmN0o=
