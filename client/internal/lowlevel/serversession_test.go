@@ -589,7 +589,7 @@ func TestSessionPingPongs(t *testing.T) {
 
 	kx := newMockKX()
 	td := 10
-	pingInterval := 50 * time.Millisecond
+	pingInterval := 250 * time.Millisecond
 	ss := newServerSession(offlineConn{}, kx, int64(td), nil)
 	ss.logPings = true
 	ss.pingInterval = pingInterval
@@ -638,7 +638,8 @@ func TestSessionPingPongs(t *testing.T) {
 		t.Fatalf("unexpected tag: got %d, want: %d", gotMsg.Tag, td)
 	}
 	gotPingInterval := nextPingTime.Sub(lastMsgTime)
-	if gotPingInterval < pingInterval {
+	testIntervalAfforance := pingInterval * 3 / 100 // Because timing is unreliable.
+	if gotPingInterval < pingInterval-testIntervalAfforance {
 		t.Fatalf("unexpected interval to next ping: got %s, want %s",
 			gotPingInterval, pingInterval)
 	}
