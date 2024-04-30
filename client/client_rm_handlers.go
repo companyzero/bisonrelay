@@ -309,12 +309,11 @@ func (c *Client) handleUserRM(ru *RemoteUser, h *rpc.RMHeader, p interface{}, ts
 	c.gcmq.RMReceived(ru.ID(), ts)
 	err := c.innerHandleUserRM(ru, h, p, ts)
 	if err != nil {
+		ru.log.Errorf("Error handling %q (payload %T) from user: %v",
+			h.Command, p, err)
 		if ru.log.Level() <= slog.LevelDebug {
-			ru.log.Errorf("Error handling %q (payload %T) from user: %v; %s",
-				h.Command, p, err, spew.Sdump(p))
-		} else {
-			ru.log.Errorf("Error handling %q (payload %T) from user: %v",
-				h.Command, p, err)
+			ru.logPayloads.Debugf("Payload for error %v: %s",
+				err, spew.Sdump(p))
 		}
 	} else {
 		ru.log.Tracef("Finished handling %T", p)
