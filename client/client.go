@@ -852,6 +852,12 @@ func (c *Client) AddressBook() []*clientdb.AddressBookEntry {
 	return res
 }
 
+// AllRemoteUsers returns a list of all existing remote users.
+func (c *Client) AllRemoteUsers() []*RemoteUser {
+	<-c.abLoaded
+	return c.rul.allUsers()
+}
+
 // AddressBookEntry returns the address book information of a given user.
 func (c *Client) AddressBookEntry(uid UserID) (*clientdb.AddressBookEntry, error) {
 	return c.getAddressBookEntry(uid)

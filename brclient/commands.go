@@ -3611,19 +3611,18 @@ var commands = []tuicmd{
 				return nil
 			}
 
-			ab := as.c.AddressBook()
+			ab := as.c.AllRemoteUsers()
 			var maxNickLen int
 			for i := range ab {
-				ab[i].NickAlias = strescape.Nick(ab[i].Nick())
-				l := lipgloss.Width(ab[i].ID.Nick)
+				l := lipgloss.Width(ab[i].Nick())
 				if l > maxNickLen {
 					maxNickLen = l
 				}
 			}
 			maxNickLen = clamp(maxNickLen, 5, as.winW-64-10)
 			sort.Slice(ab, func(i, j int) bool {
-				ni := ab[i].NickAlias
-				nj := ab[j].NickAlias
+				ni := ab[i].Nick()
+				nj := ab[j].Nick()
 				return as.collator.CompareString(ni, nj) < 0
 			})
 			as.cwHelpMsgs(func(pf printf) {
@@ -3631,11 +3630,12 @@ var commands = []tuicmd{
 				pf("Address Book")
 				for _, entry := range ab {
 					ignored := ""
-					if entry.Ignored {
+					if entry.IsIgnored() {
 						ignored = " (ignored)"
 					}
-					pf("%*s - %s%s", maxNickLen, entry.NickAlias,
-						entry.ID, ignored)
+					pf("%*s - %s%s", maxNickLen,
+						strescape.Nick(entry.Nick()),
+						entry.ID(), ignored)
 				}
 			})
 			return nil
