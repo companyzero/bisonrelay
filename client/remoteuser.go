@@ -895,3 +895,15 @@ func (rul *remoteUserList) modifyUserNick(ru *RemoteUser, newNick string) {
 	ru.setNick(newNick)
 	rul.Unlock()
 }
+
+func (rul *remoteUserList) allUsers() []*RemoteUser {
+	rul.Lock()
+	res := make([]*RemoteUser, len(rul.m))
+	var i int
+	for _, ru := range rul.m {
+		res[i] = ru
+		i++
+	}
+	rul.Unlock()
+	return res
+}
