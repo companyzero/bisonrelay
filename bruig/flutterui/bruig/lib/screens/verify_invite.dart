@@ -1,5 +1,4 @@
 import 'package:bruig/components/copyable.dart';
-import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/models/client.dart';
 import 'package:flutter/material.dart';
@@ -55,41 +54,39 @@ class _VerifyInviteScreenState extends State<VerifyInviteScreen> {
     }
   }
 
-  Widget buildFundsWidget(BuildContext context, InviteFunds funds) {
+  List<Widget> buildFundsWidget(
+      BuildContext context, InviteFunds funds, ThemeNotifier theme) {
     if (redeemed != null) {
       var total = formatDCR(atomsToDCR(redeemed!.total));
-      return Consumer<ThemeNotifier>(
-          builder: (context, theme, child) => StartupScreen([
-                Text("Redeemed $total on the following tx:",
-                    style: TextStyle(color: theme.getTheme().dividerColor)),
-                Copyable(redeemed!.txid,
-                    TextStyle(color: theme.getTheme().dividerColor)),
-                Text("The funds will be available after the tx is mined.",
-                    style: TextStyle(color: theme.getTheme().dividerColor)),
-              ]));
+      return [
+        Text("Redeemed $total on the following tx:",
+            style: TextStyle(color: theme.getTheme().dividerColor)),
+        Copyable(
+            redeemed!.txid, TextStyle(color: theme.getTheme().dividerColor)),
+        Text("The funds will be available after the tx is mined.",
+            style: TextStyle(color: theme.getTheme().dividerColor)),
+      ];
     }
 
     if (redeeming) {
-      return Consumer<ThemeNotifier>(
-          builder: (context, theme, child) => StartupScreen([
-                Text("Attempting to redeem funds...",
-                    style: TextStyle(color: theme.getTheme().dividerColor))
-              ]));
+      return [
+        Text("Attempting to redeem funds...",
+            style: TextStyle(color: theme.getTheme().dividerColor))
+      ];
     }
 
-    return Consumer<ThemeNotifier>(
-        builder: (context, theme, child) => StartupScreen([
-              Text("This invite contains funds stored in the following UTXO:",
-                  style: TextStyle(color: theme.getTheme().dividerColor)),
-              Copyable("${funds.txid}:${funds.index}",
-                  TextStyle(color: theme.getTheme().dividerColor)),
-              Text("Attempt to redeem funds?",
-                  style: TextStyle(color: theme.getTheme().dividerColor)),
-              const SizedBox(height: 10),
-              ElevatedButton(
-                  onPressed: () => redeemFunds(context, funds),
-                  child: const Text("Redeem Funds")),
-            ]));
+    return [
+      Text("This invite contains funds stored in the following UTXO:",
+          style: TextStyle(color: theme.getTheme().dividerColor)),
+      Copyable("${funds.txid}:${funds.index}",
+          TextStyle(color: theme.getTheme().dividerColor)),
+      Text("Attempt to redeem funds?",
+          style: TextStyle(color: theme.getTheme().dividerColor)),
+      const SizedBox(height: 10),
+      ElevatedButton(
+          onPressed: () => redeemFunds(context, funds),
+          child: const Text("Redeem Funds")),
+    ];
   }
 
   @override
@@ -105,9 +102,9 @@ class _VerifyInviteScreenState extends State<VerifyInviteScreen> {
                       fontSize: theme.getHugeFont(context),
                       fontWeight: FontWeight.w200)),
               const SizedBox(height: 34),
-              invite.invite.funds != null
-                  ? buildFundsWidget(context, invite.invite.funds!)
-                  : const Empty(),
+              ...(invite.invite.funds != null
+                  ? buildFundsWidget(context, invite.invite.funds!, theme)
+                  : []),
               const SizedBox(height: 20),
               Text("Name: ${invite.invite.public.name}",
                   style: TextStyle(
