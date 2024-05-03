@@ -1055,7 +1055,8 @@ class ClientModel extends ChangeNotifier {
     if (gcs.isEmpty && ab.length == 1 && _sortedChats.isEmpty) {
       // On newly setup clients, add the first contact to the list of contacts to
       // avoid confusing users before they sent their first message.
-      _sortedChats.add(getExistingChat(ab[0].id)!);
+      var firstChat = getExistingChat(ab[0].id)!;
+      startChat(firstChat, firstChat._msgs.isNotEmpty);
     }
 
     loadingAddressBook = false;
