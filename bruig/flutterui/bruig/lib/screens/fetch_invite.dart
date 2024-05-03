@@ -47,7 +47,7 @@ class _FetchInviteScreenState extends State<FetchInviteScreen> {
   void loadInvite() async {
     setState(() => loading = true);
     try {
-      var key = keyCtrl.text;
+      var key = keyCtrl.text.trim().toLowerCase();
       var res = await Future.any([
         Golib.fetchInvite(key, path),
         Future.delayed(const Duration(seconds: 30), () => null)

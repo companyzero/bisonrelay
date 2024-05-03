@@ -148,7 +148,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   void startOnboard() async {
     setState(() => starting = true);
     try {
-      await Golib.startOnboard(keyCtrl.text);
+      await Golib.startOnboard(keyCtrl.text.trim().toLowerCase());
     } catch (exception) {
       showErrorSnackbar(context, "Unable to start onboarding: $exception");
     } finally {
