@@ -488,3 +488,17 @@ func randomHex(rnd io.Reader, len int) string {
 	}
 	return hex.EncodeToString(b)
 }
+
+func publicIDIsLess(c1, c2 *testClient) bool {
+	c1pub := c1.PublicID()
+	c2pub := c2.PublicID()
+	return c1pub.Less(&c2pub)
+}
+
+func mustNewIDFromRNG(nick string, rng *rand.Rand) *zkidentity.FullIdentity {
+	id, err := zkidentity.NewWithRNG(nick, nick, rng)
+	if err != nil {
+		panic(err)
+	}
+	return id
+}

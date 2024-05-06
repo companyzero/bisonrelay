@@ -20,6 +20,8 @@ import (
 	"github.com/companyzero/bisonrelay/zkidentity"
 	"github.com/decred/slog"
 	"golang.org/x/sync/errgroup"
+	"golang.org/x/text/collate"
+	"golang.org/x/text/language"
 )
 
 type TransitiveEvent string
@@ -197,6 +199,10 @@ type Config struct {
 	// the connection open. If unset, defaults to the RPC default ping
 	// interval. If negative, pings are not sent.
 	PingInterval time.Duration
+
+	// Collator is used to compare nick and other strings to determine
+	// equality and sorting order.
+	Collator *collate.Collator
 }
 
 // logger creates a logger for the given subsystem in the configured backend.
@@ -238,6 +244,10 @@ func (cfg *Config) setDefaults() {
 
 	if cfg.PingInterval == 0 {
 		cfg.PingInterval = rpc.DefaultPingInterval
+	}
+
+	if cfg.Collator == nil {
+		cfg.Collator = collate.New(language.Und)
 	}
 
 	// These following GCMQ times were obtained by profiling a client
@@ -457,7 +467,7 @@ func New(cfg Config) (*Client, error) {
 		q:     q,
 		rmgr:  rmgr,
 		log:   cfg.logger("CLNT"),
-		rul:   newRemoteUserList(),
+		rul:   newRemoteUserList(cfg.Collator),
 		ntfns: ntfns,
 
 		abLoaded:         make(chan struct{}),

@@ -54,7 +54,6 @@ import (
 	"golang.org/x/exp/maps"
 	"golang.org/x/exp/slices"
 	"golang.org/x/text/collate"
-	"golang.org/x/text/language"
 )
 
 type connState int
@@ -3475,6 +3474,7 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		Notifications:     ntfns,
 		ResourcesProvider: resRouter,
 		NoLoadChatHistory: args.NoLoadChatHistory,
+		Collator:          preferredCollator(),
 
 		SendReceiveReceipts: args.SendRecvReceipts,
 
@@ -3912,7 +3912,7 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		bellCmd:            bellCmd,
 		inviteFundsAccount: args.InviteFundsAccount,
 
-		collator: collate.New(language.Und),
+		collator: cfg.Collator,
 
 		myComments:  make(map[clientintf.PostID][]string),
 		unreadPosts: make(map[clientintf.PostID]struct{}),
