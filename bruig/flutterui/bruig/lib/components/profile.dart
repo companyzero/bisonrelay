@@ -1,3 +1,4 @@
+import 'package:bruig/components/buttons.dart';
 import 'package:bruig/components/copyable.dart';
 import 'package:bruig/components/info_grid.dart';
 import 'package:bruig/components/snackbars.dart';
@@ -199,10 +200,9 @@ class _UserProfileState extends State<UserProfile> {
                   child: const Text("Hide Chat"),
                 ),
                 const SizedBox(height: 20),
-                ElevatedButton(
+                CancelButton(
                   onPressed: !loading ? confirmBlock : null,
-                  style: ElevatedButton.styleFrom(backgroundColor: errorColor),
-                  child: const Text("Block User"),
+                  label: "Block User",
                 ),
               ]),
               const SizedBox(height: 20),
@@ -213,6 +213,8 @@ class _UserProfileState extends State<UserProfile> {
               const SizedBox(height: 10),
               Expanded(
                   child: SimpleInfoGrid(
+                colLabelSize: 160,
+                separatorWidth: 0,
                 [
                   Tuple2(
                       Text("First Created", style: headTS),
