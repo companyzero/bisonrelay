@@ -1108,6 +1108,12 @@ class ClientModel extends ChangeNotifier {
       chat.append(
           ChatEventModel(SynthChatEvent("KX Completed", SCE_received), null),
           false);
+
+      // Load user's avatar (async).
+      (() async {
+        var abEntry = await Golib.addressBookEntry(remoteUser.uid);
+        chat.loadAvatar(abEntry.avatar);
+      })();
     }
   }
 
