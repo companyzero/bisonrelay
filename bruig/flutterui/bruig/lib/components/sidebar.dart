@@ -109,7 +109,7 @@ class _SidebarState extends State<Sidebar> {
         theme: SidebarXTheme(
           margin: const EdgeInsets.all(1),
           padding: const EdgeInsets.all(2),
-          width: 63,
+          width: 70,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(3),
             gradient: LinearGradient(
