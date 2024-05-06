@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"hash/maphash"
 	"net"
+	"os"
 	"runtime"
 	"strconv"
 	"strings"
@@ -18,6 +19,8 @@ import (
 	"github.com/decred/dcrd/dcrutil/v4"
 	"github.com/decred/dcrlnd/lnrpc"
 	"github.com/decred/dcrlnd/zpay32"
+	"golang.org/x/text/collate"
+	"golang.org/x/text/language"
 )
 
 const (
@@ -402,4 +405,48 @@ func payReqStrAmount(payReq *zpay32.Invoice) string {
 	}
 
 	return dcrutil.Amount(*payReq.MilliAt / 1000).String()
+}
+
+// preferredCollator creates the preferred collator for strings.
+func preferredCollator() *collate.Collator {
+	// Get POSIX locale following POSIX rules for env var priority.
+	posixLocale := os.Getenv("LC_ALL")
+	if posixLocale == "" {
+		posixLocale = os.Getenv("LC_COLLATE")
+	}
+	if posixLocale == "" {
+		posixLocale = os.Getenv("LANG")
+	}
+	if posixLocale == "" {
+		posixLocale = "en-US.UTF-8"
+	}
+
+	// Remove any charset or modifier components
+	localeComponents := strings.Split(posixLocale, ".")
+	baseLocale := localeComponents[0]
+
+	// Remove any modifier (e.g., @euro)
+	baseLocaleComponents := strings.Split(baseLocale, "@")
+	baseLocale = baseLocaleComponents[0]
+
+	// Replace underscores with hyphens to create an approximate BCP 47 language tag
+	bcp47Tag := strings.Replace(baseLocale, "_", "-", -1)
+
+	// Parse the BCP 47 value to ensure it's well-formed
+	tag, err := language.Parse(bcp47Tag)
+	if err != nil {
+		tag = language.Und
+
+		// Ignore C/POSIX languages as they are default.
+		if bcp47Tag != "C" && bcp47Tag != "POSIX" {
+			internalLog.Warnf("Unable to parse lang %q: %v", bcp47Tag, err)
+		}
+	} else {
+		internalLog.Debugf("Using collator for lang %s: %s", bcp47Tag,
+			tag)
+	}
+
+	// TODO: parametrize the options?
+	opts := []collate.Option{collate.Loose}
+	return collate.New(tag, opts...)
 }

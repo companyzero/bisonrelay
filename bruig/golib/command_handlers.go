@@ -38,6 +38,8 @@ import (
 	lpclient "github.com/decred/dcrlnlpd/client"
 	"github.com/decred/go-socks/socks"
 	"github.com/decred/slog"
+	"golang.org/x/text/collate"
+	"golang.org/x/text/language"
 )
 
 type clientCtx struct {
@@ -475,6 +477,7 @@ func handleInitClient(handle uint32, args initClient) error {
 		Notifications:     ntfns,
 		ResourcesProvider: resRouter,
 		NoLoadChatHistory: args.NoLoadChatHistory,
+		Collator:          collate.New(language.Und, collate.Loose),
 
 		SendReceiveReceipts: args.SendRecvReceipts,
 

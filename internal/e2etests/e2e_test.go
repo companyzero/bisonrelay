@@ -26,6 +26,7 @@ import (
 	"github.com/companyzero/bisonrelay/zkidentity"
 	"github.com/decred/slog"
 	"golang.org/x/exp/slices"
+	"golang.org/x/text/collate"
 )
 
 type testScaffoldCfg struct {
@@ -91,6 +92,7 @@ type clientCfg struct {
 	netDialer func(context.Context) (clientintf.Conn, *tls.ConnectionState, error)
 	pcIniter  func(loggerSubsysIniter) clientintf.PaymentClient
 	ntfns     *client.NotificationManager
+	collator  *collate.Collator
 
 	sendRecvReceipts     bool
 	autoSubToPosts       bool
@@ -161,6 +163,23 @@ func withDisableAutoUnsubIdle() newClientOpt {
 func withDisableAutoHandshake() newClientOpt {
 	return func(cfg *clientCfg) {
 		cfg.disableAutoHandshake = true
+	}
+}
+
+func withCollator(col *collate.Collator) newClientOpt {
+	return func(cfg *clientCfg) {
+		cfg.collator = col
+	}
+}
+
+func withID(id *zkidentity.FullIdentity) newClientOpt {
+	return func(cfg *clientCfg) {
+		cfg.id = id
+		cfg.idIniter = func(context.Context) (*zkidentity.FullIdentity, error) {
+			c := new(zkidentity.FullIdentity)
+			*c = *id
+			return c, nil
+		}
 	}
 }
 
@@ -417,6 +436,7 @@ func (ts *testScaffold) newClientWithCfg(nccfg *clientCfg, opts ...newClientOpt)
 		PayClient:     pc,
 		Notifications: nccfg.ntfns,
 		CompressLevel: zlib.NoCompression,
+		Collator:      nccfg.collator,
 
 		TipUserRestartDelay:          2 * time.Second,
 		TipUserReRequestInvoiceDelay: time.Second,

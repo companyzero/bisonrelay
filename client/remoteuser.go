@@ -22,6 +22,7 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/decred/slog"
 	"golang.org/x/sync/errgroup"
+	"golang.org/x/text/collate"
 )
 
 const (
@@ -775,11 +776,14 @@ nextAction:
 type remoteUserList struct {
 	sync.Mutex
 	m map[UserID]*RemoteUser
+
+	collator *collate.Collator
 }
 
-func newRemoteUserList() *remoteUserList {
+func newRemoteUserList(collator *collate.Collator) *remoteUserList {
 	return &remoteUserList{
-		m: make(map[UserID]*RemoteUser),
+		m:        make(map[UserID]*RemoteUser),
+		collator: collator,
 	}
 }
 
@@ -792,15 +796,17 @@ func (rul *remoteUserList) uniqueNick(nick string, uid UserID, myNick string) st
 
 	for i := 2; ; i++ {
 		// Ensure no one has the same nick.
-		isDupe := nick == myNick
+		isDupe := rul.collator.CompareString(nick, myNick) == 0
 		for ruid, ru := range rul.m {
+			if isDupe {
+				break
+			}
 			if ruid == uid {
 				continue
 			}
-			if ru.Nick() == nick || strings.HasPrefix(ruid.String(), nick) {
-				isDupe = true
-				break
-			}
+			isDupe = isDupe ||
+				rul.collator.CompareString(ru.Nick(), nick) == 0 ||
+				strings.HasPrefix(ruid.String(), nick)
 		}
 
 		if isDupe {
@@ -851,7 +857,7 @@ func (rul *remoteUserList) byNick(nick string) (*RemoteUser, error) {
 	rul.Lock()
 	var res *RemoteUser
 	for uid, ru := range rul.m {
-		if strings.EqualFold(ru.Nick(), nick) || len(nick) > 4 && strings.HasPrefix(uid.String(), nick) {
+		if rul.collator.CompareString(ru.Nick(), nick) == 0 || len(nick) > 4 && strings.HasPrefix(uid.String(), nick) {
 			res = ru
 			break
 		}
@@ -882,7 +888,12 @@ func (rul *remoteUserList) nicksWithPrefix(prefix string) []string {
 	var res []string
 	for _, ru := range rul.m {
 		nick := ru.Nick()
-		if strings.HasPrefix(nick, prefix) {
+		if len(nick) < len(prefix) {
+			continue
+		}
+
+		// Not a perfect prefix search.
+		if rul.collator.CompareString(nick[:len(prefix)], prefix) == 0 {
 			res = append(res, nick)
 		}
 	}

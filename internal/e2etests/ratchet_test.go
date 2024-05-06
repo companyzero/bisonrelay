@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"math/rand"
 	"testing"
 	"time"
 
@@ -14,6 +15,8 @@ import (
 	"github.com/companyzero/bisonrelay/internal/assert"
 	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/companyzero/bisonrelay/zkidentity"
+	"golang.org/x/text/collate"
+	"golang.org/x/text/language"
 )
 
 // TestResendsUnackedRM tests shutting down the client while there are
@@ -759,54 +762,88 @@ func TestUnsubsIdleClientsAfterResetBug(t *testing.T) {
 func TestUserNickAlias(t *testing.T) {
 	t.Parallel()
 
+	// The Bobs initialized in the test need to be ordered by id. Use an
+	// rng with a fixed seed to generate them, to ensure the test is not
+	// stuck generating the Bobs.
+	const seed = 0x10000
+	rng := rand.New(rand.NewSource(seed))
+
 	tcfg := testScaffoldCfg{}
 	ts := newTestScaffold(t, tcfg)
 	alice := ts.newClient("alice")
 
 	// First bob.
-	bob1 := ts.newClient("bob")
+	bob1 := ts.newClient("bob", withID(mustNewIDFromRNG("bob", rng)))
+	t.Logf("bob1: %s", bob1.PublicID())
 	ts.kxUsers(alice, bob1)
 	assertUserNick(t, alice, bob1, "bob")
 
 	// Second bob. Create in a loop until the ID for bob2 is < the id for
 	// bob1.
-	bob2 := ts.newClient("bob")
-	for bytes.Compare(bob2.PublicID().Bytes(), bob1.PublicID().Bytes()) >= 0 {
-		bob2 = ts.newClient("bob")
+	bob2 := ts.newClient("bob", withID(mustNewIDFromRNG("bob", rng)))
+	for publicIDIsLess(bob1, bob2) {
+		bob2 = ts.newClient("bob", withID(mustNewIDFromRNG("bob", rng)))
 	}
+	t.Logf("bob2: %s", bob2.PublicID())
 
 	ts.kxUsers(alice, bob2)
 	assertUserNick(t, alice, bob2, "bob_2")
 
 	// Third bob. Create in a loop until the ID for bob3 is > the id for bob1.
-	bob3 := ts.newClient("bob")
-	for bytes.Compare(bob3.PublicID().Bytes(), bob1.PublicID().Bytes()) < 0 {
-		bob3 = ts.newClient("bob")
+	bob3 := ts.newClient("bob", withID(mustNewIDFromRNG("bob", rng)))
+	for publicIDIsLess(bob3, bob1) {
+		bob3 = ts.newClient("bob", withID(mustNewIDFromRNG("bob", rng)))
 	}
+	t.Logf("bob3: %s", bob3.PublicID())
 
 	ts.kxUsers(alice, bob3)
 	assertUserNick(t, alice, bob3, "bob_3")
 
-	// Dupe alice.
+	// Dupe alice. Given this is the same nick, the first Alice will see
+	// it as alice_2.
 	alice2 := ts.newClient("alice")
 	ts.kxUsers(alice, alice2)
 	assertUserNick(t, alice, alice2, "alice_2")
+
+	// Create bob4 with a case sensitive change. The default collator
+	// is case-sensitive.
+	bob4 := ts.newClient("BOB", withID(mustNewIDFromRNG("BOB", rng)))
+	for publicIDIsLess(bob4, bob3) {
+		bob4 = ts.newClient("BOB", withID(mustNewIDFromRNG("BOB", rng)))
+	}
+	t.Logf("bob4: %s", bob4.PublicID())
+	ts.kxUsers(alice, bob4)
+	assertUserNick(t, alice, bob4, "BOB")
+
+	bob5 := ts.newClient("böb", withID(mustNewIDFromRNG("böb", rng)))
+	for publicIDIsLess(bob5, bob4) {
+		bob5 = ts.newClient("böb", withID(mustNewIDFromRNG("böb", rng)))
+	}
+	t.Logf("bob5: %s", bob5.PublicID())
+	ts.kxUsers(alice, bob5)
+	assertUserNick(t, alice, bob5, "böb")
 
 	// Restart alice. Bobs should be the same.
 	alice = ts.recreateClient(alice)
 	assertUserNick(t, alice, bob1, "bob")
 	assertUserNick(t, alice, bob2, "bob_2")
 	assertUserNick(t, alice, bob3, "bob_3")
+	assertUserNick(t, alice, bob4, "BOB")
+	assertUserNick(t, alice, bob5, "böb")
 
 	// Rename bob_2 to bob2_renamed and assert.
 	assert.NilErr(t, alice.RenameUser(bob2.PublicID(), "bob2_renamed"))
 	assertUserNick(t, alice, bob1, "bob")
 	assertUserNick(t, alice, bob2, "bob2_renamed")
 	assertUserNick(t, alice, bob3, "bob_3")
+	assertUserNick(t, alice, bob4, "BOB")
+	assertUserNick(t, alice, bob5, "böb")
 	alice = ts.recreateClient(alice)
 	assertUserNick(t, alice, bob1, "bob")
 	assertUserNick(t, alice, bob2, "bob2_renamed")
 	assertUserNick(t, alice, bob3, "bob_3")
+	assertUserNick(t, alice, bob4, "BOB")
+	assertUserNick(t, alice, bob5, "böb")
 
 	// Manually (locally) rename bob2 to bob2_localrename. This requires
 	// recreating the client because the local identity is only loaded at
@@ -828,10 +865,14 @@ func TestUserNickAlias(t *testing.T) {
 	assertUserNick(t, alice, bob1, "bob")
 	assertUserNick(t, alice, bob2, "bob2_renamed")
 	assertUserNick(t, alice, bob3, "bob_3")
+	assertUserNick(t, alice, bob4, "BOB")
+	assertUserNick(t, alice, bob5, "böb")
 	alice = ts.recreateClient(alice)
 	assertUserNick(t, alice, bob1, "bob")
 	assertUserNick(t, alice, bob2, "bob2_renamed")
 	assertUserNick(t, alice, bob3, "bob_3")
+	assertUserNick(t, alice, bob4, "BOB")
+	assertUserNick(t, alice, bob5, "böb")
 
 	// Manually (locally) rename bob1 to bob1_localrename. This requires
 	// recreating the client because the local identity is only loaded at
@@ -853,10 +894,25 @@ func TestUserNickAlias(t *testing.T) {
 	assertUserNick(t, alice, bob1, "bob")
 	assertUserNick(t, alice, bob2, "bob2_renamed")
 	assertUserNick(t, alice, bob3, "bob_3")
+	assertUserNick(t, alice, bob4, "BOB")
+	assertUserNick(t, alice, bob5, "böb")
 	alice = ts.recreateClient(alice)
 	assertUserNick(t, alice, bob1, "bob")
 	assertUserNick(t, alice, bob2, "bob2_renamed")
 	assertUserNick(t, alice, bob3, "bob_3")
+	assertUserNick(t, alice, bob4, "BOB")
+	assertUserNick(t, alice, bob5, "böb")
+
+	// Recreate Alice with a new loose (case-insensitive,
+	// diacritic-insensitive) collator. bob4 ("BOB") will now be BOB_2,
+	// böb will be böb_4.
+	collator := collate.New(language.Afrikaans, collate.Loose)
+	alice = ts.recreateClient(alice, withCollator(collator))
+	assertUserNick(t, alice, bob1, "bob")
+	assertUserNick(t, alice, bob2, "bob2_renamed")
+	assertUserNick(t, alice, bob3, "bob_3")
+	assertUserNick(t, alice, bob4, "BOB_2")
+	assertUserNick(t, alice, bob5, "böb_4")
 }
 
 func TestUpdateProfileAvatar(t *testing.T) {
