@@ -2,9 +2,9 @@ import 'dart:async';
 
 import 'package:bruig/components/buttons.dart';
 import 'package:bruig/components/copyable.dart';
+import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/components/info_grid.dart';
 import 'package:bruig/components/snackbars.dart';
-import 'package:bruig/screens/manage_content/manage_content.dart';
 import 'package:bruig/screens/needs_out_channel.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
@@ -99,75 +99,61 @@ class _ChanW extends StatelessWidget {
   }
 }
 
-Widget pendingChanSummary(LNPendingChannel chan, String state, Color textColor,
-    Color secondaryTextColor) {
+Widget pendingChanSummary(BuildContext context, LNPendingChannel chan,
+    String state, Color textColor, Color secondaryTextColor,
+    {String? closingTx}) {
+  var themeNtf = Provider.of<ThemeNotifier>(context);
   var capacity = atomsToDCR(chan.capacity).toStringAsFixed(8);
   var localBalance = atomsToDCR(chan.localBalance).toStringAsFixed(8);
   var remoteBalance = atomsToDCR(chan.remoteBalance).toStringAsFixed(8);
-  return Consumer<ThemeNotifier>(
-      builder: (context, theme, _) => Row(children: [
-            Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text("State:",
-                  style: TextStyle(
-                      fontSize: theme.getSmallFont(context),
-                      color: secondaryTextColor)),
-              const SizedBox(height: 8),
-              Text("Remote Node:",
-                  style: TextStyle(
-                      fontSize: theme.getSmallFont(context),
-                      color: secondaryTextColor)),
-              const SizedBox(height: 8),
-              Text("Channel Point:",
-                  style: TextStyle(
-                      fontSize: theme.getSmallFont(context),
-                      color: secondaryTextColor)),
-              const SizedBox(height: 8),
-              Text("Channel Capacity:",
-                  style: TextStyle(
-                      fontSize: theme.getSmallFont(context),
-                      color: secondaryTextColor)),
-              const SizedBox(height: 8),
-              Text("Relative Balances:",
-                  style: TextStyle(
-                      fontSize: theme.getSmallFont(context),
-                      color: secondaryTextColor))
-            ]),
-            const SizedBox(width: 10),
-            Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(state,
-                  style: TextStyle(
-                      fontSize: theme.getSmallFont(context), color: textColor)),
-              const SizedBox(height: 8),
-              Text(chan.remoteNodePub,
-                  style: TextStyle(
-                      fontSize: theme.getSmallFont(context), color: textColor)),
-              const SizedBox(height: 8),
-              Text(chan.channelPoint,
-                  style: TextStyle(
-                      fontSize: theme.getSmallFont(context), color: textColor)),
-              const SizedBox(height: 8),
-              Text("$capacity DCR",
-                  style: TextStyle(
-                      fontSize: theme.getSmallFont(context), color: textColor)),
-              const SizedBox(height: 8),
-              Row(children: [
-                Text("$localBalance DCR",
-                    style: TextStyle(
-                        fontSize: theme.getSmallFont(context),
-                        color: textColor)),
-                const SizedBox(width: 8),
-                Text("Local <--> Remote",
-                    style: TextStyle(
-                        fontSize: theme.getSmallFont(context),
-                        color: secondaryTextColor)),
-                const SizedBox(width: 8),
-                Text("$remoteBalance DCR",
-                    style: TextStyle(
-                        fontSize: theme.getSmallFont(context),
-                        color: textColor)),
-              ])
-            ]),
-          ]));
+  var labelTs = TextStyle(
+      fontSize: themeNtf.getSmallFont(context), color: secondaryTextColor);
+  var valTs =
+      TextStyle(fontSize: themeNtf.getSmallFont(context), color: textColor);
+  bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
+  return SimpleInfoGrid(
+      colLabelSize: 110,
+      colValueFlex: 8,
+      separatorWidth: 10,
+      [
+        Tuple2(Text("State:", style: labelTs), Text(state, style: valTs)),
+        Tuple2(
+            Text("Remote Node:", style: labelTs),
+            Copyable(
+                textOverflow: TextOverflow.ellipsis,
+                chan.remoteNodePub,
+                valTs)),
+        Tuple2(
+            Text("Channel Point:", style: labelTs),
+            Copyable(
+                textOverflow: TextOverflow.ellipsis, chan.channelPoint, valTs)),
+        Tuple2(Text("Channel Capacity:", style: labelTs),
+            Text("$capacity DCR", style: valTs)),
+        ...(isScreenSmall
+            ? [
+                Tuple2(Text("Local Balance:", style: labelTs),
+                    Text("$localBalance DCR", style: valTs)),
+                Tuple2(Text("Remote Balance:", style: labelTs),
+                    Text("$remoteBalance DCR", style: valTs)),
+              ]
+            : [
+                Tuple2(
+                    Text("Relative Balances:", style: labelTs),
+                    Wrap(children: [
+                      Text("$localBalance DCR", style: valTs),
+                      const SizedBox(width: 8),
+                      Text("Local <--> Remote", style: labelTs),
+                      const SizedBox(width: 8),
+                      Text("$remoteBalance DCR", style: valTs),
+                    ])),
+              ]),
+        ...(closingTx != null
+            ? [
+                Tuple2(Text("Closing Tx:", style: labelTs),
+                    Copyable(closingTx, valTs))
+              ]
+            : []),
+      ]);
 }
 
 class _PendingOpenChanW extends StatelessWidget {
@@ -181,7 +167,8 @@ class _PendingOpenChanW extends StatelessWidget {
     var theme = Theme.of(context);
     var textColor = theme.focusColor;
     var secondaryTextColor = theme.dividerColor;
-    return pendingChanSummary(chan, state, textColor, secondaryTextColor);
+    return pendingChanSummary(
+        context, chan, state, textColor, secondaryTextColor);
   }
 }
 
@@ -196,7 +183,8 @@ class _WaitingCloseChanW extends StatelessWidget {
     var theme = Theme.of(context);
     var textColor = theme.focusColor;
     var secondaryTextColor = theme.dividerColor;
-    return pendingChanSummary(chan, state, textColor, secondaryTextColor);
+    return pendingChanSummary(
+        context, chan, state, textColor, secondaryTextColor);
   }
 }
 
@@ -211,13 +199,9 @@ class _PendingForceCloseChanW extends StatelessWidget {
     var theme = Theme.of(context);
     var textColor = theme.focusColor;
     var secondaryTextColor = theme.dividerColor;
-    return Column(
-      children: [
-        pendingChanSummary(chan, state, textColor, secondaryTextColor),
-        Text("Closing TX", style: TextStyle(color: textColor)),
-        SelectableText(pending.closingTxid, style: TextStyle(color: textColor)),
-      ],
-    );
+    return pendingChanSummary(
+        context, chan, state, textColor, secondaryTextColor,
+        closingTx: pending.closingTxid);
   }
 }
 
