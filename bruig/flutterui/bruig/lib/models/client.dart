@@ -1043,12 +1043,12 @@ class ClientModel extends ChangeNotifier {
     _publicID = info.id;
     _nick = info.nick;
     var ab = await Golib.addressBook();
-    ab.forEach((v) async {
+    for (var v in ab) {
       var c = await _newChat(v.id, v.nick, false, true);
       if (v.avatar != null) {
         c.loadAvatar(v.avatar);
       }
-    });
+    }
     var gcs = await Golib.listGCs();
     gcs.forEach((v) => _newChat(v.id, v.name, true, true));
 
