@@ -5,40 +5,6 @@ See bisonrelay-v0.2.0-manifest.txt and the other manifest files for SHA-256 hash
 See [README.md](./README.md#verifying-binaries) for more info on verifying the files.
 
 
-# brclient
-
-brclient has been given a lot of improvements for general usage and user
-experience for 0.2.0.  There has been a revamp of how exchange rates are
-consistently polled so that information can be available more often for the
-various subsystem that require it.  
-
-There was a bump of the underlying dcrlnd to v0.6.0.  This involved over 
-590 commits across more than 645 files.  Those changes can be reviewed [here](https://github.com/decred/dcrlnd/compare/v0.5.0...v0.6.0). Overall, this will
-lead to improved stability and efficiency with all the core LN infrastructure
-that BR utilizes.
-
-
-## Improvements
-
-- Add spinner/loading animation to fetched pages loading.
-
-- Add seed confirmation to all new wallet/BR set up.
-
-- Add warning about invite keys is now shown to users about how to handle
-  their invite keys.
-
-- Make invite fetch async.
-
-- Show last completed KX time of all counterparties.
-
-- Add autosubscribe to posts whenever a user is KX'd with a novel user.
-
-## Bug fixes
-
-- Fix unable to subscribe to prepaid RV.
-
-- Fix issue with reset causing autounsub with idle clients.
-
 # Bison Relay GUI (bruig)
 
 Bison Relay GUI was given an almost full design change for mobile and most of
@@ -98,6 +64,41 @@ KX'd with them and will update in their clients automatically.
 - Properly scroll position.
 
 - Scroll to last read now properly reacting to user interaction.
+
+
+# brclient
+
+brclient has been given a lot of improvements for general usage and user
+experience for 0.2.0.  There has been a revamp of how exchange rates are
+consistently polled so that information can be available more often for the
+various subsystems that require it.  
+
+There was a bump of the underlying dcrlnd to v0.6.0.  This involved over 
+590 commits across more than 645 files.  Those changes can be reviewed [here](https://github.com/decred/dcrlnd/compare/v0.5.0...v0.6.0). Overall, this will
+lead to improved stability and efficiency with all the core LN infrastructure
+that BR utilizes.
+
+
+## Improvements
+
+- Add spinner/loading animation to fetched pages loading.
+
+- Add seed confirmation to all new wallet/BR set up.
+
+- Add warning about invite keys is now shown to users about how to handle
+  their invite keys.
+
+- Make invite fetch async.
+
+- Show last completed KX time of all counterparties.
+
+- Add autosubscribe to posts whenever a user is KX'd with a new user.
+
+## Bug fixes
+
+- Fix unable to subscribe to prepaid RV.
+
+- Fix issue with reset causing autounsub with idle clients.
 
 ### Code Contributors (alphabetical order):
 
