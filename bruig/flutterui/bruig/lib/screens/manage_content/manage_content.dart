@@ -376,7 +376,6 @@ class _ManageContentState extends State<ManageContent> {
   }
 
   Future<void> addContent(String filename, String nick, double cost) async {
-    print("share file $nick");
     await Golib.shareFile(filename, nick, cost, "");
     await loadSharedContent();
   }

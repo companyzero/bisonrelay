@@ -29,7 +29,6 @@ class _TransResetModalState extends State<TransResetModal> {
     if (loading) return;
     if (userToTarget == null) return;
     setState(() => loading = true);
-    print("${chat.id}  ${userToTarget!.id}");
     try {
       await Golib.transReset(chat.id, userToTarget!.id);
       showSuccessSnackbar(context, 'Sent transitive reset to ${chat.nick}');
