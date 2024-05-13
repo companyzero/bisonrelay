@@ -68,14 +68,15 @@ class _UserPostWState extends State<UserPostW> {
 
     var theme = Theme.of(context);
     var bgColor = theme.highlightColor;
-    var darkTextColor = theme.indicatorColor;
     var hightLightTextColor = theme.dividerColor; // NAME TEXT COLOR
-    var avatarColor = colorFromNick(authorNick);
+    var avatarColor = colorFromNick(authorNick, theme.brightness);
     var borderDividerColor = theme.dialogBackgroundColor;
+    var darkAvatarTextColor = theme.primaryColorDark;
+    var lightAvatarTextColor = theme.primaryColorLight;
     var avatarTextColor =
         ThemeData.estimateBrightnessForColor(avatarColor) == Brightness.dark
-            ? hightLightTextColor
-            : darkTextColor;
+            ? darkAvatarTextColor
+            : lightAvatarTextColor;
 
     return Container(
         //height: 100,

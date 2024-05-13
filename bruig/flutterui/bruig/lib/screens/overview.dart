@@ -295,13 +295,13 @@ class _OverviewScreenState extends State<OverviewScreen> {
       });
     }
 
-    var avatarColor = colorFromNick(client.nick);
-    var darkTextColor = theme.indicatorColor;
-    var hightLightTextColor = theme.dividerColor; // NAME TEXT COLOR
+    var avatarColor = colorFromNick(client.nick, theme.brightness);
+    var darkAvatarTextColor = theme.primaryColorDark;
+    var lightAvatarTextColor = theme.primaryColorLight;
     var avatarTextColor =
         ThemeData.estimateBrightnessForColor(avatarColor) == Brightness.dark
-            ? hightLightTextColor
-            : darkTextColor;
+            ? darkAvatarTextColor
+            : lightAvatarTextColor;
     bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
     return Scaffold(
       key: scaffoldKey,
@@ -348,7 +348,8 @@ class _OverviewScreenState extends State<OverviewScreen> {
                           : Container(
                               margin: const EdgeInsets.all(10),
                               child: CircleAvatar(
-                                  backgroundColor: colorFromNick(client.nick),
+                                  backgroundColor: colorFromNick(
+                                      client.nick, theme.brightness),
                                   backgroundImage: client.myAvatar,
                                   child: client.myAvatar != null
                                       ? const Empty()

@@ -81,15 +81,15 @@ class _FeedPostWState extends State<FeedPostW> {
 
     var theme = Theme.of(context);
     var bgColor = theme.highlightColor;
-    var darkTextColor = theme.indicatorColor;
     var hightLightTextColor = theme.dividerColor; // NAME TEXT COLOR
-    var avatarColor = colorFromNick(authorNick);
+    var avatarColor = colorFromNick(authorNick, theme.brightness);
     var borderDividerColor = theme.backgroundColor;
-
+    var darkAvatarTextColor = theme.primaryColorDark;
+    var lightAvatarTextColor = theme.primaryColorLight;
     var avatarTextColor =
         ThemeData.estimateBrightnessForColor(avatarColor) == Brightness.dark
-            ? hightLightTextColor
-            : darkTextColor;
+            ? darkAvatarTextColor
+            : lightAvatarTextColor;
     var markdownData = widget.post.summ.title;
     if (widget.post.summ.title.contains("--embed[type=")) {
       // This will pluck the first embed in a post.  Then we can display just

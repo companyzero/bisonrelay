@@ -65,17 +65,20 @@ class _AddressBookListingWState extends State<_AddressBookListingW> {
     var darkTextColor = theme.indicatorColor;
     var alreadyOpened = false;
     alreadyOpened = client.sortedChats.contains(chat);
-    var avatarColor = colorFromNick(chat.nick);
+    var avatarColor = colorFromNick(chat.nick, theme.brightness);
+    var darkAvatarTextColor = theme.primaryColorDark;
+    var lightAvatarTextColor = theme.primaryColorLight;
     var avatarTextColor =
         ThemeData.estimateBrightnessForColor(avatarColor) == Brightness.dark
-            ? hightLightTextColor
-            : darkTextColor;
+            ? darkAvatarTextColor
+            : lightAvatarTextColor;
     var popMenuButton = InteractiveAvatar(
         bgColor: selectedBackgroundColor,
         chatNick: chat.nick,
         onTap: () {},
         avatarColor: avatarColor,
-        avatarTextColor: avatarTextColor);
+        avatarTextColor: avatarTextColor,
+        avatar: chat.avatar);
     addToGroupChat = widget.alreadySelected;
     return Consumer<ThemeNotifier>(
         builder: (context, theme, _) => Container(

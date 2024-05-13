@@ -185,13 +185,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
     var textColor = theme.focusColor;
     var canvasColor = theme.canvasColor;
 
-    var avatarColor = colorFromNick(client.nick);
-    var darkTextColor = theme.indicatorColor;
-    var hightLightTextColor = theme.dividerColor; // NAME TEXT COLOR
+    var avatarColor = colorFromNick(client.nick, theme.brightness);
+    var darkAvatarTextColor = theme.primaryColorDark;
+    var lightAvatarTextColor = theme.primaryColorLight;
     var avatarTextColor =
         ThemeData.estimateBrightnessForColor(avatarColor) == Brightness.dark
-            ? hightLightTextColor
-            : darkTextColor;
+            ? darkAvatarTextColor
+            : lightAvatarTextColor;
 
     bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
     Widget settingsView =
@@ -250,7 +250,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   onTap: pickAvatarFile,
                   child: CircleAvatar(
                     radius: 50,
-                    backgroundColor: colorFromNick(client.nick),
+                    backgroundColor:
+                        colorFromNick(client.nick, theme.getTheme().brightness),
                     backgroundImage: client.myAvatar,
                     child: client.myAvatar != null
                         ? const Empty()
@@ -382,13 +383,13 @@ class MainSettingsScreen extends StatelessWidget {
     var backgroundColor = theme.backgroundColor;
     var textColor = theme.focusColor;
 
-    var avatarColor = colorFromNick(client.nick);
-    var darkTextColor = theme.indicatorColor;
-    var hightLightTextColor = theme.dividerColor; // NAME TEXT COLOR
+    var avatarColor = colorFromNick(client.nick, theme.brightness);
+    var darkAvatarTextColor = theme.primaryColorDark;
+    var lightAvatarTextColor = theme.primaryColorLight;
     var avatarTextColor =
         ThemeData.estimateBrightnessForColor(avatarColor) == Brightness.dark
-            ? hightLightTextColor
-            : darkTextColor;
+            ? darkAvatarTextColor
+            : lightAvatarTextColor;
     return Consumer<ThemeNotifier>(
         builder: (context, theme, _) => ListView(
               children: [
@@ -402,7 +403,8 @@ class MainSettingsScreen extends StatelessWidget {
                               onTap: pickAvatarFile,
                               child: CircleAvatar(
                                   radius: 50,
-                                  backgroundColor: colorFromNick(client.nick),
+                                  backgroundColor: colorFromNick(
+                                      client.nick, theme.getTheme().brightness),
                                   backgroundImage: client.myAvatar,
                                   child: client.myAvatar != null
                                       ? const Empty()

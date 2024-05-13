@@ -55,17 +55,16 @@ class _ReceiveReceipt extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     var theme = Theme.of(context);
-    var darkTextColor = theme.indicatorColor;
     var nick = client.getNick(rr.user);
     var rrdt =
         DateTime.fromMillisecondsSinceEpoch(rr.serverTime).toIso8601String();
-
-    var hightLightTextColor = theme.dividerColor;
-    var avatarColor = colorFromNick(nick);
+    var avatarColor = colorFromNick(nick, theme.brightness);
+    var darkAvatarTextColor = theme.primaryColorDark;
+    var lightAvatarTextColor = theme.primaryColorLight;
     var avatarTextColor =
         ThemeData.estimateBrightnessForColor(avatarColor) == Brightness.dark
-            ? hightLightTextColor
-            : darkTextColor;
+            ? darkAvatarTextColor
+            : lightAvatarTextColor;
 
     return Container(
       width: 28,
@@ -221,12 +220,14 @@ class _CommentWState extends State<_CommentW> {
     var theme = Theme.of(context);
     var hightLightTextColor = theme.dividerColor;
     var commentBorderColor = theme.dialogBackgroundColor;
-    var avatarColor = colorFromNick(nick);
+    var avatarColor = colorFromNick(nick, theme.brightness);
     var darkTextColor = theme.indicatorColor;
+    var darkAvatarTextColor = theme.primaryColorDark;
+    var lightAvatarTextColor = theme.primaryColorLight;
     var avatarTextColor =
         ThemeData.estimateBrightnessForColor(avatarColor) == Brightness.dark
-            ? hightLightTextColor
-            : darkTextColor;
+            ? darkAvatarTextColor
+            : lightAvatarTextColor;
     var textColor = theme.focusColor;
     var darkAddCommentColor = theme.hoverColor;
     var selectedBackgroundColor = theme.highlightColor;
@@ -719,12 +720,14 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
       }
     }
 
-    var avatarColor = colorFromNick(authorNick);
+    var avatarColor = colorFromNick(authorNick, theme.brightness);
     var darkTextColor = theme.indicatorColor;
+    var darkAvatarTextColor = theme.primaryColorDark;
+    var lightAvatarTextColor = theme.primaryColorLight;
     var avatarTextColor =
         ThemeData.estimateBrightnessForColor(avatarColor) == Brightness.dark
-            ? hightLightTextColor
-            : darkTextColor;
+            ? darkAvatarTextColor
+            : lightAvatarTextColor;
 
     List<Widget> commentsWidgets = [];
     var newComments = widget.args.post.newComments;
