@@ -184,7 +184,9 @@ class _ReceivedSentPMState extends State<ReceivedSentPM> {
         builder: (context, theme, _) => Column(children: [
               firstUnread,
               Container(
-                  margin: EdgeInsets.only(top: widget.evnt.sameUser ? 2 : 10),
+                  margin: EdgeInsets.only(
+                      top: widget.evnt.sameUser ? 2 : 10,
+                      right: isOwnMessage ? 10 : 0),
                   child: Row(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       mainAxisAlignment: isOwnMessage

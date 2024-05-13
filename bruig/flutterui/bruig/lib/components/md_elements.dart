@@ -414,6 +414,8 @@ class MarkdownArea extends StatelessWidget {
         builder: (context, theme, payments, _) => MarkdownBody(
               codeBlockMaxHeight: 200,
               styleSheet: MarkdownStyleSheet(
+                a: TextStyle(
+                    color: textColor, decoration: TextDecoration.underline),
                 p: TextStyle(
                     fontSize: theme.getMediumFont(context),
                     color: textColor,
