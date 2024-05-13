@@ -116,12 +116,13 @@ class _ActiveChatState extends State<ActiveChat> {
     var darkTextColor = theme.indicatorColor;
     var selectedBackgroundColor = theme.highlightColor;
     var subMenuBorderColor = theme.canvasColor;
-    var hightLightTextColor = theme.focusColor; // NAME TEXT COLOR
-    var avatarColor = colorFromNick(chat.nick);
+    var avatarColor = colorFromNick(chat.nick, theme.brightness);
+    var darkAvatarTextColor = theme.primaryColorDark;
+    var lightAvatarTextColor = theme.primaryColorLight;
     var avatarTextColor =
         ThemeData.estimateBrightnessForColor(avatarColor) == Brightness.dark
-            ? hightLightTextColor
-            : darkTextColor;
+            ? darkAvatarTextColor
+            : lightAvatarTextColor;
 
     bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
     List<ChatMenuItem> activeSubMenu =
@@ -138,11 +139,14 @@ class _ActiveChatState extends State<ActiveChat> {
                           child: CircleAvatar(
                             radius: 75,
                             backgroundColor: avatarColor,
-                            child: Text(
-                              nickCapitalLetter(),
-                              style: TextStyle(
-                                  color: avatarTextColor, fontSize: 75),
-                            ),
+                            backgroundImage: chat.avatar,
+                            child: chat.avatar != null
+                                ? const Empty()
+                                : Text(
+                                    nickCapitalLetter(),
+                                    style: TextStyle(
+                                        color: avatarTextColor, fontSize: 75),
+                                  ),
                           ),
                         ),
                         Visibility(
@@ -227,11 +231,14 @@ class _ActiveChatState extends State<ActiveChat> {
                           child: CircleAvatar(
                             radius: 75,
                             backgroundColor: avatarColor,
-                            child: Text(
-                              nickCapitalLetter(),
-                              style: TextStyle(
-                                  color: avatarTextColor, fontSize: 75),
-                            ),
+                            backgroundImage: chat.avatar,
+                            child: chat.avatar != null
+                                ? const Empty()
+                                : Text(
+                                    nickCapitalLetter(),
+                                    style: TextStyle(
+                                        color: avatarTextColor, fontSize: 75),
+                                  ),
                           ),
                         ),
                         Visibility(

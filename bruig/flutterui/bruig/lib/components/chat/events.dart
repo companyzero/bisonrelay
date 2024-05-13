@@ -132,12 +132,13 @@ class _ReceivedSentPMState extends State<ReceivedSentPM> {
         "  \n"); // Replace newlines with <space space newline> for proper md render
     var theme = Theme.of(context);
     var darkTextColor = theme.indicatorColor;
-    var hightLightTextColor = theme.dividerColor; // NAME TEXT COLOR
-    var avatarColor = colorFromNick(widget.nick);
+    var avatarColor = colorFromNick(widget.nick, theme.brightness);
+    var darkAvatarTextColor = theme.primaryColorDark;
+    var lightAvatarTextColor = theme.primaryColorLight;
     var avatarTextColor =
         ThemeData.estimateBrightnessForColor(avatarColor) == Brightness.dark
-            ? hightLightTextColor
-            : darkTextColor;
+            ? darkAvatarTextColor
+            : lightAvatarTextColor;
     var selectedBackgroundColor = theme.highlightColor;
     var textColor = theme.dividerColor;
     // Will show a divider and text before the last unread message.

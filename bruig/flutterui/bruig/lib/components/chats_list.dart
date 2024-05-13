@@ -60,6 +60,8 @@ class _ChatHeadingWState extends State<_ChatHeadingW> {
     var selectedBackgroundColor = theme.highlightColor;
     var unreadMessageIconColor = theme.indicatorColor.withOpacity(0.5);
     var darkTextColor = theme.indicatorColor;
+    var darkAvatarTextColor = theme.primaryColorDark;
+    var lightAvatarTextColor = theme.primaryColorLight;
 
     // Show 1k+ if unread cound goes about 1000
     var unreadCount = chat.unreadMsgCount > 1000 ? "1k+" : chat.unreadMsgCount;
@@ -122,11 +124,11 @@ class _ChatHeadingWState extends State<_ChatHeadingW> {
               ]));
     }
 
-    var avatarColor = colorFromNick(chat.nick);
+    var avatarColor = colorFromNick(chat.nick, theme.brightness);
     var avatarTextColor =
         ThemeData.estimateBrightnessForColor(avatarColor) == Brightness.dark
-            ? hightLightTextColor
-            : darkTextColor;
+            ? darkAvatarTextColor
+            : lightAvatarTextColor;
     var popMenuButton = InteractiveAvatar(
         bgColor: selectedBackgroundColor,
         chatNick: chat.nick,

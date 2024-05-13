@@ -26,8 +26,6 @@ class ChatsScreenTitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     var theme = Theme.of(context);
-    var darkTextColor = theme.indicatorColor;
-    var hightLightTextColor = theme.dividerColor;
     var selectedBackgroundColor = theme.highlightColor;
     return Consumer2<ClientModel, ThemeNotifier>(
         builder: (context, client, theme, child) {
@@ -69,11 +67,13 @@ class ChatsScreenTitle extends StatelessWidget {
 
       bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
       if (isScreenSmall) {
-        var avatarColor = colorFromNick(chat.nick);
+        var avatarColor = colorFromNick(chat.nick, theme.getTheme().brightness);
+        var darkAvatarTextColor = theme.getTheme().primaryColorDark;
+        var lightAvatarTextColor = theme.getTheme().primaryColorLight;
         var avatarTextColor =
             ThemeData.estimateBrightnessForColor(avatarColor) == Brightness.dark
-                ? hightLightTextColor
-                : darkTextColor;
+                ? darkAvatarTextColor
+                : lightAvatarTextColor;
         return Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -99,6 +99,7 @@ class ChatsScreenTitle extends StatelessWidget {
                           },
                           avatarColor: avatarColor,
                           avatarTextColor: avatarTextColor,
+                          avatar: chat.avatar,
                         ),
                       )
                     : UserContextMenu(
@@ -111,6 +112,7 @@ class ChatsScreenTitle extends StatelessWidget {
                           },
                           avatarColor: avatarColor,
                           avatarTextColor: avatarTextColor,
+                          avatar: chat.avatar,
                         ),
                       ),
               ),
