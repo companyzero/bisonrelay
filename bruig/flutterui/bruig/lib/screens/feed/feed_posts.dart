@@ -33,7 +33,7 @@ class _FeedPostWState extends State<FeedPostW> {
   FeedPostModel get post => widget.post;
   showContent(BuildContext context) {
     feed.active = post;
-    widget.onTabChange(0, PostContentScreenArgs(widget.post));
+    widget.onTabChange(0, PostContentScreenArgs(post));
   }
 
   void authorUpdated() => setState(() {});
