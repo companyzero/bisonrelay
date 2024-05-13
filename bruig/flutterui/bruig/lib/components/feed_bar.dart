@@ -40,7 +40,7 @@ class _FeedBarState extends State<FeedBar> {
     return Consumer<ThemeNotifier>(
         builder: (context, theme, _) => Container(
               margin: const EdgeInsets.all(1),
-              width: 118,
+              width: 130,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(5),
                 gradient: LinearGradient(
