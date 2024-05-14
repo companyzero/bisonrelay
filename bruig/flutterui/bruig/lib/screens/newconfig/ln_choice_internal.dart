@@ -2,6 +2,7 @@ import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/components/buttons.dart';
 import 'package:bruig/models/newconfig.dart';
+import 'package:bruig/screens/config_network.dart';
 import 'package:bruig/screens/startupscreen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -167,6 +168,7 @@ class _LNInternalWalletPageState extends State<LNInternalWalletPage> {
                               : const SizedBox(width: 25),
                         ]))),
               ]),
+              const SizedBox(height: 10),
               Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                 !newconf.advancedSetup
                     ? TextButton(
@@ -184,6 +186,13 @@ class _LNInternalWalletPageState extends State<LNInternalWalletPage> {
                                 color: theme.getTheme().dividerColor)),
                       )
                     : const Empty(),
+                TextButton(
+                    onPressed: () {
+                      Navigator.of(context)
+                          .pushNamed(ConfigNetworkScreen.routeName);
+                    },
+                    child: Text("Network Config",
+                        style: TextStyle(color: theme.getTheme().dividerColor)))
               ])
             ]));
   }

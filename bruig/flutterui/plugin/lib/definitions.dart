@@ -1262,9 +1262,17 @@ class LNInitDcrlnd {
   final List<String> existingSeed;
   @JsonKey(toJson: uint8listToBase64, fromJson: base64ToUint8list)
   final Uint8List? multiChanBackup;
+
   final String proxyaddr;
   @JsonKey(name: "torisolation")
   final bool torIsolation;
+  @JsonKey(name: "proxy_username")
+  final String proxyUsername;
+  @JsonKey(name: "proxy_password")
+  final String proxyPassword;
+  @JsonKey(name: "circuit_limit")
+  final int circuitLimit;
+
   @JsonKey(name: "sync_free_list")
   final bool syncFreeList;
   @JsonKey(name: "autocompact")
@@ -1282,6 +1290,9 @@ class LNInitDcrlnd {
       this.multiChanBackup,
       this.proxyaddr,
       this.torIsolation,
+      this.proxyUsername,
+      this.proxyPassword,
+      this.circuitLimit,
       this.syncFreeList,
       this.autoCompact,
       this.autoCompactMinAge,
@@ -2813,6 +2824,9 @@ abstract class PluginPlatform {
       Uint8List? multiChanBackup,
       String proxyaddr,
       bool torIsolation,
+      String proxyUsername,
+      String proxyPassword,
+      int circuitLimit,
       bool syncFreeList,
       bool autoCompact,
       int autoCompactMinAge,
@@ -2825,6 +2839,9 @@ abstract class PluginPlatform {
         multiChanBackup,
         proxyaddr,
         torIsolation,
+        proxyUsername,
+        proxyPassword,
+        circuitLimit,
         syncFreeList,
         autoCompact,
         autoCompactMinAge,
@@ -2839,12 +2856,28 @@ abstract class PluginPlatform {
       String password,
       String proxyaddr,
       bool torIsolation,
+      String proxyUsername,
+      String proxyPassword,
+      int circuitLimit,
       bool syncFreeList,
       bool autoCompact,
       int autoCompactMinAge,
       String debugLevel) async {
-    var req = LNInitDcrlnd(rootPath, network, password, [], null, proxyaddr,
-        torIsolation, syncFreeList, autoCompact, autoCompactMinAge, debugLevel);
+    var req = LNInitDcrlnd(
+        rootPath,
+        network,
+        password,
+        [],
+        null,
+        proxyaddr,
+        torIsolation,
+        proxyUsername,
+        proxyPassword,
+        circuitLimit,
+        syncFreeList,
+        autoCompact,
+        autoCompactMinAge,
+        debugLevel);
     var res = await asyncCall(CTLNRunDcrlnd, req);
     return res;
   }

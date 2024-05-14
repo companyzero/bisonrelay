@@ -195,6 +195,12 @@ class Config {
       set("payment", "lnmacaroonpath", lnMacaroonPath);
     }
 
+    set("default", "proxyaddr", proxyaddr);
+    set("default", "proxyuser", proxyUsername);
+    set("default", "proxypass", proxyPassword);
+    set("default", "circuitlimit", "$circuitLimit");
+    set("default", "torisolation", torIsolation ? "1" : "0");
+
     // Create the dir and write the config file.
     await File(filepath).parent.create(recursive: true);
     await File(filepath).writeAsString(f.toString());
@@ -203,8 +209,17 @@ class Config {
 
 // replaceConfig replaces the settings that can be modified by the GUI, while
 // preserving manual chages made to the config file.
-Future<void> replaceConfig(String filepath,
-    {String? debugLevel, String? lnDebugLevel, bool? logPings}) async {
+Future<void> replaceConfig(
+  String filepath, {
+  String? debugLevel,
+  String? lnDebugLevel,
+  bool? logPings,
+  String? proxyAddr,
+  String? proxyUsername,
+  String? proxyPassword,
+  int? torCircuitLimit,
+  bool? torIsolation,
+}) async {
   var f = ini.Config.fromStrings(File(filepath).readAsLinesSync());
 
   void set(String section, String opt, String? val) {
@@ -220,9 +235,21 @@ Future<void> replaceConfig(String filepath,
     set(section, opt, val ? "1" : "0");
   }
 
+  void setInt(String section, String opt, int? val) {
+    if (val == null) return;
+    set(section, opt, "$val");
+  }
+
   set("log", "debuglevel", debugLevel);
   setBool("log", "pings", logPings);
   set("payment", "lndebuglevel", lnDebugLevel);
+
+  set("default", "proxyaddr", proxyAddr);
+  set("default", "proxyuser", proxyUsername);
+  set("default", "proxypass", proxyPassword);
+  setInt("default", "circuitlimit", torCircuitLimit);
+  setBool("default", "torisolation", torIsolation);
+
   await File(filepath).writeAsString(f.toString());
 }
 
@@ -317,8 +344,8 @@ Future<Config> loadConfig(String filepath) async {
   c.noLoadChatHistory = getBool("default", "noloadchathistory");
   c.syncFreeList = getBoolDefaultTrue("default", "syncfreelist");
   c.autoCompact = getBoolDefaultTrue("default", "autocompact");
-  c.autoCompactMinAge = parseDurationSeconds(
-      f.get("default", "autocompact_min_age") ?? "14d");
+  c.autoCompactMinAge =
+      parseDurationSeconds(f.get("default", "autocompact_min_age") ?? "14d");
   c.autoHandshakeInterval =
       parseDurationSeconds(f.get("default", "autohandshakeinterval") ?? "21d");
   c.autoRemoveIdleUsersInterval = parseDurationSeconds(
