@@ -11,6 +11,7 @@ import 'package:bruig/models/resources.dart';
 import 'package:bruig/notification_service.dart';
 import 'package:bruig/screens/about.dart';
 import 'package:bruig/models/snackbar.dart';
+import 'package:bruig/screens/config_network.dart';
 import 'package:bruig/screens/contacts_msg_times.dart';
 import 'package:bruig/screens/fetch_invite.dart';
 import 'package:bruig/screens/generate_invite.dart';
@@ -426,6 +427,8 @@ class _AppState extends State<App> with WindowListener {
                 '/fatalError': (context) => const FatalErrorScreen(),
                 ServerUnwelcomeErrorScreen.routeName: (context) =>
                     const ServerUnwelcomeErrorScreen(),
+                ConfigNetworkScreen.routeName: (context) =>
+                    const ConfigNetworkScreen(),
                 '/shutdown': (context) => Consumer<LogModel>(
                     builder: (context, log, child) => ShutdownScreen(
                         widget.cfg.walletType == "internal",

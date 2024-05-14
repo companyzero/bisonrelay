@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:bruig/components/confirmation_dialog.dart';
 import 'package:bruig/components/empty_widget.dart';
+import 'package:bruig/screens/config_network.dart';
 import 'package:bruig/screens/ln_management.dart';
 import 'package:bruig/screens/log.dart';
 import 'package:bruig/screens/manage_content/manage_content.dart';
@@ -361,6 +362,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ])),
           ]),
           const SizedBox(height: 20),
+          ElevatedButton(
+              onPressed: () {
+                Navigator.of(context, rootNavigator: true)
+                    .pushNamed(ConfigNetworkScreen.routeName);
+              },
+              child: const Text("Configure Network")),
         ]),
       ),
     );
@@ -450,6 +457,15 @@ class MainSettingsScreen extends StatelessWidget {
                     hoverColor: backgroundColor,
                     leading: const Icon(Icons.notifications_outlined),
                     title: Text("Notifications",
+                        style: TextStyle(
+                            fontSize: theme.getMediumFont(context),
+                            color: textColor))),
+                ListTile(
+                    onTap: () => Navigator.of(context, rootNavigator: true)
+                        .pushNamed(ConfigNetworkScreen.routeName),
+                    hoverColor: backgroundColor,
+                    leading: const Icon(Icons.shield),
+                    title: Text("Network",
                         style: TextStyle(
                             fontSize: theme.getMediumFont(context),
                             color: textColor))),

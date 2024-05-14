@@ -58,6 +58,12 @@ class NewConfigModel extends ChangeNotifier {
   Uint8List? multichanBackupRestore;
   List<ConfirmSeedWords> confirmSeedWords = [];
 
+  String proxyAddr = "";
+  String proxyUser = "";
+  String proxyPassword = "";
+  int torCircuitLimit = 32;
+  bool torIsolation = false;
+
   Future<LNInfo> tryExternalDcrlnd(
       String host, String tlsPath, String macaroonPath) async {
     var res = await Golib.lnTryExternalDcrlnd(host, tlsPath, macaroonPath);
@@ -77,6 +83,11 @@ class NewConfigModel extends ChangeNotifier {
       lnMacaroonPath: macaroonPath,
       walletType: newWalletSeed != "" ? "internal" : "external",
       network: NetworkTypeStr(netType),
+      proxyaddr: proxyAddr,
+      proxyUsername: proxyUser,
+      proxyPassword: proxyPassword,
+      circuitLimit: torCircuitLimit,
+      torIsolation: torIsolation,
     );
     await cfg.saveNewConfig(await configFileName(appArgs));
     cfg = await configFromArgs(appArgs); // Reload to fill defaults.
@@ -152,11 +163,14 @@ class NewConfigModel extends ChangeNotifier {
         password,
         existingSeed,
         multichanBackupRestore,
-        "",			// proxyaddr
-        false,			// torisolation
-        true,			// syncfreelist
-        true,			// autocompact
-        60 * 60 * 24 * 14,	// autocompact_min_age (14 days)
+        proxyAddr,
+        torIsolation,
+        proxyUser,
+        proxyPassword,
+        torCircuitLimit,
+        true, // syncfreelist
+        true, // autocompact
+        60 * 60 * 24 * 14, // autocompact_min_age (14 days)
         "info");
     tlsCertPath = path.join(rootPath, "tls.cert");
     macaroonPath = path.join(rootPath, "data", "chain", "decred",

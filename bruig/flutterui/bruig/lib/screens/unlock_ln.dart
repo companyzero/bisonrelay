@@ -8,6 +8,7 @@ import 'package:bruig/screens/about.dart';
 import 'package:bruig/config.dart';
 import 'package:bruig/main.dart';
 import 'package:bruig/models/log.dart';
+import 'package:bruig/screens/config_network.dart';
 import 'package:bruig/screens/startupscreen.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/golib_plugin.dart';
@@ -39,6 +40,7 @@ class _UnlockLNAppState extends State<UnlockLNApp> {
       initialRoute: widget.initialRoute,
       routes: {
         "/": (context) => _LNUnlockPage(widget.cfg, widget.setCfg),
+        ConfigNetworkScreen.routeName: (context) => const ConfigNetworkScreen(),
         "/sync": (context) => _LNChainSyncPage(widget.cfg),
         '/about': (context) => const AboutScreen(),
       },
@@ -109,6 +111,9 @@ class __LNUnlockPageState extends State<_LNUnlockPage> {
           passCtrl.text,
           cfg.proxyaddr,
           cfg.torIsolation,
+          cfg.proxyUsername,
+          cfg.proxyPassword,
+          cfg.circuitLimit,
           cfg.syncFreeList,
           cfg.autoCompact,
           cfg.autoCompactMinAge,
@@ -225,6 +230,18 @@ class __LNUnlockPageState extends State<_LNUnlockPage> {
                         )
                       : const SizedBox(width: 25),
                 ]))),
+        ...(!loading
+            ? [
+                const SizedBox(height: 10),
+                TextButton(
+                    onPressed: () {
+                      Navigator.of(context, rootNavigator: true)
+                          .pushNamed(ConfigNetworkScreen.routeName);
+                    },
+                    child: Text("Network Config",
+                        style: TextStyle(color: theme.getTheme().dividerColor)))
+              ]
+            : []),
         const SizedBox(height: 10),
         extraInfo,
         const SizedBox(height: 10),

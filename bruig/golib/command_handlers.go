@@ -2077,9 +2077,15 @@ func handleLNInitDcrlnd(ctx context.Context, args lnInitDcrlnd) (*lnNewWalletSee
 	if args.ProxyAddr != "" {
 		proxy := socks.Proxy{
 			Addr:         args.ProxyAddr,
+			Username:     args.ProxyUsername,
+			Password:     args.ProxyPassword,
 			TorIsolation: args.TorIsolation,
 		}
-		dialFunc = proxy.DialContext
+		if args.TorIsolation && args.CircuitLimit > 0 {
+			dialFunc = socks.NewPool(proxy, args.CircuitLimit).DialContext
+		} else {
+			dialFunc = proxy.DialContext
+		}
 	}
 
 	lndCfg := embeddeddcrlnd.Config{
@@ -2133,9 +2139,15 @@ func handleLNRunDcrlnd(ctx context.Context, args lnInitDcrlnd) (string, error) {
 		if args.ProxyAddr != "" {
 			proxy := socks.Proxy{
 				Addr:         args.ProxyAddr,
+				Username:     args.ProxyUsername,
+				Password:     args.ProxyPassword,
 				TorIsolation: args.TorIsolation,
 			}
-			dialFunc = proxy.DialContext
+			if args.TorIsolation && args.CircuitLimit > 0 {
+				dialFunc = socks.NewPool(proxy, args.CircuitLimit).DialContext
+			} else {
+				dialFunc = proxy.DialContext
+			}
 		}
 
 		var err error

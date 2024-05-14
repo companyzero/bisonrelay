@@ -7,7 +7,8 @@ void confirmationDialog(
     String title,
     String content,
     String confirmButtonText,
-    String cancelButtonText) {
+    String cancelButtonText,
+    {VoidCallback? onCancel}) {
   showDialog(
       context: context,
       builder: (BuildContext ctx) {
@@ -19,13 +20,21 @@ void confirmationDialog(
             TextButton(
                 onPressed: () {
                   confirm();
-                  Navigator.of(scaffoldKey.currentContext!).pop();
+                  if (scaffoldKey.currentContext != null) {
+                    Navigator.of(scaffoldKey.currentContext!).pop();
+                  }
                 },
                 child: Text(
                     confirmButtonText != "" ? confirmButtonText : "Confirm")),
             TextButton(
-                onPressed: () =>
-                    Navigator.of(scaffoldKey.currentContext!).pop(),
+                onPressed: () {
+                  if (scaffoldKey.currentContext != null) {
+                    Navigator.of(scaffoldKey.currentContext!).pop();
+                  }
+                  if (onCancel != null) {
+                    onCancel();
+                  }
+                },
                 child:
                     Text(cancelButtonText != "" ? cancelButtonText : "Cancel"))
           ],

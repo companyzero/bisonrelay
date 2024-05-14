@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/models/newconfig.dart';
 import 'package:bruig/models/snackbar.dart';
+import 'package:bruig/screens/config_network.dart';
 import 'package:bruig/screens/newconfig/delete_old_wallet.dart';
 import 'package:bruig/screens/newconfig/initializing.dart';
 import 'package:bruig/screens/newconfig/ln_choice.dart';
@@ -71,6 +72,9 @@ class _NewConfigScreenState extends State<NewConfigScreen> {
           "/newconf/server": (context) => ServerPage(newconf),
           "/newconf/seed": (context) => NewLNWalletSeedPage(newconf),
           "/newconf/restore": (context) => RestoreWalletPage(newconf),
+          ConfigNetworkScreen.routeName: (context) => ConfigNetworkScreen(
+                newConf: newconf,
+              ),
         },
         builder: (BuildContext context, Widget? child) => Scaffold(
           body: SnackbarDisplayer(snackBar, Center(child: child)),
