@@ -141,6 +141,7 @@ class _ReceivedSentPMState extends State<ReceivedSentPM> {
             : lightAvatarTextColor;
     var selectedBackgroundColor = theme.highlightColor;
     var textColor = theme.dividerColor;
+    var sentBackgroundColor = theme.dialogBackgroundColor;
     // Will show a divider and text before the last unread message.
     var firstUnread = Consumer<ThemeNotifier>(
         builder: (context, theme, _) => widget.evnt.firstUnread
@@ -240,7 +241,7 @@ class _ReceivedSentPMState extends State<ReceivedSentPM> {
                                     padding: const EdgeInsets.all(5),
                                     decoration: BoxDecoration(
                                       color: isOwnMessage
-                                          ? Colors.blue
+                                          ? sentBackgroundColor
                                           : selectedBackgroundColor,
                                       borderRadius: BorderRadius.circular(10),
                                     ),
