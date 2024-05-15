@@ -1,4 +1,5 @@
 import 'package:bruig/components/empty_widget.dart';
+import 'package:bruig/models/menus.dart';
 import 'package:bruig/util.dart';
 import 'package:bruig/components/md_elements.dart';
 import 'package:bruig/components/snackbars.dart';
@@ -150,7 +151,10 @@ class _CommentWState extends State<_CommentW> {
   }
 
   void subscibeToPosts(ChatModel? chat) {
-    if (chat != null) chat.subscribeToPosts();
+    if (chat != null) {
+      chat.subscribeToPosts();
+      widget.client.updateUserMenu(chat.id, buildUserChatMenu(chat));
+    }
   }
 
   void chatUpdated() => setState(() {});

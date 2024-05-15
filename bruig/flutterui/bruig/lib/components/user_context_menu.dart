@@ -1,3 +1,4 @@
+import 'package:bruig/models/menus.dart';
 import 'package:flutter/material.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/components/context_menu.dart';
@@ -34,9 +35,13 @@ class UserContextMenu extends StatelessWidget {
           break;
         case 'subscribe':
           targetUserChat!.subscribeToPosts();
+          client!.updateUserMenu(
+              targetUserChat!.id, buildUserChatMenu(targetUserChat!));
           break;
         case 'unsubscribe':
           targetUserChat!.unsubscribeToPosts();
+          client!.updateUserMenu(
+              targetUserChat!.id, buildUserChatMenu(targetUserChat!));
           break;
         case 'rename':
           showRenameModalBottom(context, targetUserChat!);

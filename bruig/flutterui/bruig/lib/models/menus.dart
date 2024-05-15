@@ -298,13 +298,13 @@ List<ChatMenuItem?> buildUserChatMenu(ChatModel chat) {
 
   void subscribeToPosts(
       BuildContext context, ClientModel client, ChatModel chat) async {
-    chat.subscribeToPosts();
+    await chat.subscribeToPosts();
     client.updateUserMenu(chat.id, buildUserChatMenu(chat));
   }
 
   void unsubscribeToPosts(
       BuildContext context, ClientModel client, ChatModel chat) async {
-    chat.unsubscribeToPosts();
+    await chat.unsubscribeToPosts();
     client.updateUserMenu(chat.id, buildUserChatMenu(chat));
   }
 
