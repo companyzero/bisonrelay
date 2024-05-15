@@ -3188,7 +3188,7 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		}
 
 		cw := as.findOrNewPagesChatWindow(fr.SessionID)
-		cw.replacePage(fr)
+		cw.replacePage(nick, fr)
 		sendMsg(msgPageFetched{
 			uid:  uid,
 			nick: nick,

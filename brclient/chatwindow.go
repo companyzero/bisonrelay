@@ -539,7 +539,7 @@ func (cw *chatWindow) newRecvdMsg(from, msg string, fromUID *zkidentity.ShortID,
 	return m
 }
 
-func (cw *chatWindow) replacePage(fr clientdb.FetchedResource) {
+func (cw *chatWindow) replacePage(nick string, fr clientdb.FetchedResource) {
 	cw.Lock()
 	var msg *chatMsg
 	if len(cw.msgs) == 0 {
@@ -553,6 +553,7 @@ func (cw *chatWindow) replacePage(fr clientdb.FetchedResource) {
 	cw.page = &fr
 	cw.selElIndex = 0
 	cw.pageRequested = nil
+	cw.alias = fmt.Sprintf("%v/%v", nick, strings.Join(fr.Request.Path, "/"))
 	cw.Unlock()
 }
 
