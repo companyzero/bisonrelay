@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:bruig/models/client.dart';
+import 'package:bruig/screens/chats.dart';
 import 'package:bruig/screens/contacts_msg_times.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -218,7 +219,7 @@ void gotoContactsLastMsgTimeScreen(BuildContext context) {
 
 class _ChatsList extends StatefulWidget {
   final ClientModel client;
-  final FocusNode inputFocusNode;
+  final CustomInputFocusNode inputFocusNode;
   const _ChatsList(this.client, this.inputFocusNode, {Key? key})
       : super(key: key);
 
@@ -241,7 +242,7 @@ Future<void> loadInvite(BuildContext context) async {
 
 class _ChatsListState extends State<_ChatsList> {
   ClientModel get client => widget.client;
-  FocusNode get inputFocusNode => widget.inputFocusNode;
+  FocusNode get inputFocusNode => widget.inputFocusNode.inputFocusNode;
   Timer? _debounce;
   bool showAddressbookRoomsButton = false;
   bool showAddressbookUsersButton = false;
@@ -492,7 +493,7 @@ class _ChatsListState extends State<_ChatsList> {
 }
 
 class ChatDrawerMenu extends StatelessWidget {
-  final FocusNode inputFocusNode;
+  final CustomInputFocusNode inputFocusNode;
   const ChatDrawerMenu(this.inputFocusNode, {Key? key}) : super(key: key);
 
   @override

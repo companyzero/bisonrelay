@@ -9,6 +9,7 @@ import 'package:bruig/models/notifications.dart';
 import 'package:bruig/screens/needs_out_channel.dart';
 import 'package:bruig/theme_manager.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:provider/provider.dart';
@@ -301,11 +302,58 @@ After the invitation is accepted, you'll be able to chat with them, and if they 
   }
 }
 
+// This class is a hack to pass a FocusNode down the component stack along with
+// callbacks for the Input() class to know when to send vs when to add new lines
+// to the input component. There should to be a better way to do this.
+class CustomInputFocusNode {
+  bool ctrlLeft = false;
+  bool ctrlRight = false;
+  bool shiftLeft = false;
+  bool shiftRight = false;
+  bool altLeft = false;
+  bool altRight = false;
+  bool get anyMod =>
+      ctrlLeft || altLeft || shiftLeft || ctrlRight || altRight || shiftRight;
+
+  late final FocusNode inputFocusNode;
+
+  Function? noModEnterKeyHandler;
+
+  CustomInputFocusNode() {
+    inputFocusNode = FocusNode(onKeyEvent: (node, event) {
+      if (event.logicalKey.keyId == LogicalKeyboardKey.controlLeft.keyId) {
+        ctrlLeft = !ctrlLeft;
+      } else if (event.logicalKey.keyId ==
+          LogicalKeyboardKey.controlRight.keyId) {
+        ctrlRight = !ctrlRight;
+      } else if (event.logicalKey.keyId == LogicalKeyboardKey.altLeft.keyId) {
+        altLeft = !altLeft;
+      } else if (event.logicalKey.keyId == LogicalKeyboardKey.altRight.keyId) {
+        altRight = !altRight;
+      } else if (event.logicalKey.keyId == LogicalKeyboardKey.shiftLeft.keyId) {
+        shiftLeft = !shiftLeft;
+      } else if (event.logicalKey.keyId ==
+          LogicalKeyboardKey.shiftRight.keyId) {
+        shiftRight = !shiftRight;
+      } else if (event.logicalKey.keyId == LogicalKeyboardKey.enter.keyId) {
+        // When a special handler is set, call it to bypass standard processing
+        // of the key and return the 'handled' result.
+        if (noModEnterKeyHandler != null && !anyMod) {
+          noModEnterKeyHandler!();
+          return KeyEventResult.handled;
+        }
+      }
+
+      return KeyEventResult.ignored;
+    });
+  }
+}
+
 class _ChatsScreenState extends State<ChatsScreen> {
   ClientModel get client => widget.client;
   AppNotifications get ntfns => widget.ntfns;
   ServerSessionState connState = ServerSessionState.empty();
-  FocusNode inputFocusNode = FocusNode();
+  CustomInputFocusNode inputFocusNode = CustomInputFocusNode();
   bool hasLNBalance = false;
   List<PostListItem> userPostList = [];
   Timer? checkLNTimer;

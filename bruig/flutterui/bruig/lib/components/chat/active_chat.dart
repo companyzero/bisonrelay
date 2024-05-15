@@ -3,12 +3,12 @@ import 'dart:async';
 import 'package:bruig/components/copyable.dart';
 import 'package:bruig/components/manage_gc.dart';
 import 'package:bruig/models/menus.dart';
+import 'package:bruig/screens/chats.dart';
 import 'package:bruig/util.dart';
 import 'package:bruig/models/client.dart';
 import 'package:flutter/material.dart';
 import 'package:bruig/components/profile.dart';
 import 'package:bruig/components/chat/messages.dart';
-import 'package:flutter/widgets.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import 'package:bruig/components/chat/input.dart';
 import 'package:bruig/components/snackbars.dart';
@@ -18,7 +18,7 @@ import 'package:bruig/components/empty_widget.dart';
 
 class ActiveChat extends StatefulWidget {
   final ClientModel client;
-  final FocusNode inputFocusNode;
+  final CustomInputFocusNode inputFocusNode;
   const ActiveChat(this.client, this.inputFocusNode, {Key? key})
       : super(key: key);
 
@@ -30,7 +30,7 @@ class ActiveChat extends StatefulWidget {
 /// this way we can get rid of the "initial jump flicker"
 class _ActiveChatState extends State<ActiveChat> {
   ClientModel get client => widget.client;
-  FocusNode get inputFocusNode => widget.inputFocusNode;
+  CustomInputFocusNode get inputFocusNode => widget.inputFocusNode;
   ChatModel? chat;
   late ItemScrollController _itemScrollController;
   late ItemPositionsListener _itemPositionsListener;
