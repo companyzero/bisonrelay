@@ -1,4 +1,5 @@
 import 'package:bruig/models/client.dart';
+import 'package:bruig/screens/chats.dart';
 import 'package:flutter/material.dart';
 import 'package:bruig/util.dart';
 import 'package:bruig/components/interactive_avatar.dart';
@@ -131,7 +132,7 @@ class _AddressBookListingWState extends State<_AddressBookListingW> {
 
 class AddressBook extends StatefulWidget {
   final ClientModel client;
-  final FocusNode inputFocusNode;
+  final CustomInputFocusNode inputFocusNode;
   final bool createGroupChat;
   const AddressBook(this.client, this.inputFocusNode, this.createGroupChat,
       {Key? key})
@@ -143,7 +144,7 @@ class AddressBook extends StatefulWidget {
 
 class _AddressBookState extends State<AddressBook> {
   ClientModel get client => widget.client;
-  FocusNode get inputFocusNode => widget.inputFocusNode;
+  CustomInputFocusNode get inputFocusNode => widget.inputFocusNode;
   List<ChatModel> usersToInvite = [];
   bool confirmNewGC = false;
   String newGcName = "";

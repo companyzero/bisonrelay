@@ -1,3 +1,4 @@
+import 'package:bruig/screens/chats.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:bruig/models/client.dart';
@@ -6,7 +7,7 @@ import 'package:provider/provider.dart';
 
 class Input extends StatefulWidget {
   final ClientModel client;
-  final FocusNode inputFocusNode;
+  final CustomInputFocusNode inputFocusNode;
   final bool createGroupChat;
   const Input(this.client, this.inputFocusNode, this.createGroupChat,
       {Key? key})
@@ -38,7 +39,7 @@ class _InputState extends State<Input> {
   @override
   void didUpdateWidget(Input oldWidget) {
     super.didUpdateWidget(oldWidget);
-    widget.inputFocusNode.requestFocus();
+    widget.inputFocusNode.inputFocusNode.requestFocus();
   }
 
   void handleKeyPress(event) {
@@ -71,7 +72,7 @@ class _InputState extends State<Input> {
                     Expanded(
                         child: TextField(
                       autofocus: isScreenSmall ? false : true,
-                      focusNode: widget.inputFocusNode,
+                      focusNode: widget.inputFocusNode.inputFocusNode,
                       style: TextStyle(
                         fontSize: theme.getMediumFont(context),
                         color: textColor,
@@ -116,7 +117,7 @@ typedef GroupChatNameInputCB = void Function(String);
 
 class GroupChatNameInput extends StatefulWidget {
   final GroupChatNameInputCB updateGcName;
-  final FocusNode inputFocusNode;
+  final CustomInputFocusNode inputFocusNode;
   final String gcName;
   const GroupChatNameInput(this.updateGcName, this.inputFocusNode, this.gcName,
       {Key? key})
@@ -142,13 +143,14 @@ class _GroupChatNameInputState extends State<GroupChatNameInput> {
 
   @override
   void dispose() {
+    widget.inputFocusNode.noModEnterKeyHandler = null;
     super.dispose();
   }
 
   @override
   void didUpdateWidget(GroupChatNameInput oldWidget) {
     super.didUpdateWidget(oldWidget);
-    widget.inputFocusNode.requestFocus();
+    widget.inputFocusNode.inputFocusNode.requestFocus();
   }
 
   void handleKeyPress(event) {
@@ -178,7 +180,7 @@ class _GroupChatNameInputState extends State<GroupChatNameInput> {
                     Expanded(
                         child: TextField(
                       autofocus: true,
-                      focusNode: widget.inputFocusNode,
+                      focusNode: widget.inputFocusNode.inputFocusNode,
                       style: TextStyle(
                         fontSize: theme.getMediumFont(context),
                         color: textColor,
