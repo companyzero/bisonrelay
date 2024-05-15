@@ -1,6 +1,7 @@
 import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/models/client.dart';
+import 'package:bruig/models/menus.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:provider/provider.dart';
@@ -110,8 +111,12 @@ class _PostListsScreenState extends State<PostListsScreen> {
     }
   }
 
-  void unsub(ChatModel chat) {
-    chat.unsubscribeToPosts();
+  void unsub(ChatModel chat) async {
+    await chat.unsubscribeToPosts();
+    client.updateUserMenu(
+        chat.id,
+        buildUserChatMenu(
+            chat)); // XXX: This should go inside chat.unsubscribeToPosts().
     loadLists();
   }
 

@@ -203,6 +203,7 @@ class _ReceivedSentPMState extends State<ReceivedSentPM> {
                                   margin: const EdgeInsets.only(
                                       top: 0, bottom: 10, left: 10, right: 10),
                                   child: UserContextMenu(
+                                    client: widget.client,
                                     targetUserChat: widget.evnt.source,
                                     child: InteractiveAvatar(
                                         bgColor: selectedBackgroundColor,

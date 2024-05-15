@@ -211,7 +211,7 @@ class ChatModel extends ChangeNotifier {
 
   List<ChatEventModel> _msgs = [];
   UnmodifiableListView<ChatEventModel> get msgs => UnmodifiableListView(_msgs);
-  void append(ChatEventModel msg, bool history) {
+  void append(ChatEventModel msg, bool history, {doNotifyListeners = true}) {
     if (!history) {
       if (!_active && _unreadMsgCount == 0 && _msgs.isNotEmpty) {
         msg.firstUnread = true;
@@ -296,7 +296,9 @@ class ChatModel extends ChangeNotifier {
       appendDayGCMsgs(msg, dt);
     }
 
-    notifyListeners();
+    if (doNotifyListeners) {
+      notifyListeners();
+    }
 
     if (evnt is ProfileUpdated) {
       loadAvatar(evnt.abEntry.avatar);
@@ -400,34 +402,33 @@ class ChatModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  void subscribeToPosts() {
+  Future<void> subscribeToPosts() async {
     var event = SynthChatEvent("Subscribing to user's posts");
     event.state = SCE_sending;
-    isSubscribing = true;
+    _isSubscribing = true;
     append(ChatEventModel(event, null), false);
-    (() async {
-      try {
-        await Golib.subscribeToPosts(id);
-        event.state = SCE_sent;
-      } catch (error) {
-        event.error = Exception(error);
-        isSubscribing = false;
-      }
-    })();
+    try {
+      await Golib.subscribeToPosts(id);
+      event.state = SCE_sent;
+    } catch (error) {
+      event.error = Exception(error);
+      isSubscribing = false;
+    }
   }
 
-  void unsubscribeToPosts() {
+  Future<void> unsubscribeToPosts() async {
     var event = SynthChatEvent("Unsubscribing from user's posts");
     event.state = SCE_sending;
     append(ChatEventModel(event, null), false);
-    (() async {
-      try {
-        await Golib.unsubscribeToPosts(id);
-        event.state = SCE_sent;
-      } catch (error) {
-        event.error = Exception(error);
-      }
-    })();
+    try {
+      await Golib.unsubscribeToPosts(id);
+      _isSubscribed = false;
+      _isSubscribing = false;
+      event.state = SCE_sent;
+      notifyListeners();
+    } catch (error) {
+      event.error = Exception(error);
+    }
   }
 
   void requestKXReset() {
@@ -976,16 +977,18 @@ class ClientModel extends ChangeNotifier {
         }
       }
       if (evnt is PostSubscriptionResult) {
+        var chat = getExistingChat(evnt.id);
+        chat?.isSubscribing = false;
         if (evnt.wasSubRequest && evnt.error == "") {
-          var chat = getExistingChat(evnt.id);
-          chat!.isSubscribed = true;
-          chat.isSubscribing = false;
-          updateUserMenu(evnt.id, buildUserChatMenu(chat));
+          chat?.isSubscribed = true;
         } else if (evnt.error == "") {
-          var chat = getExistingChat(evnt.id);
-          chat!.isSubscribed = false;
-          updateUserMenu(evnt.id, buildUserChatMenu(chat));
+          chat?.isSubscribed = false;
+        } else if (evnt.error.contains("already subscribed")) {
+          chat?.isSubscribed = true;
+        } else if (evnt.error.contains("not subscribed")) {
+          chat?.isSubscribed = false;
         }
+        chat != null ? updateUserMenu(evnt.id, buildUserChatMenu(chat)) : null;
       }
 
       var isGC =

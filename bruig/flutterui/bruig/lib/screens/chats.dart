@@ -102,6 +102,7 @@ class ChatsScreenTitle extends StatelessWidget {
                         ),
                       )
                     : UserContextMenu(
+                        client: client,
                         targetUserChat: chat,
                         child: InteractiveAvatar(
                           bgColor: selectedBackgroundColor,
