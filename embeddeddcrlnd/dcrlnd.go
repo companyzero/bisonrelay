@@ -70,6 +70,9 @@ type Config struct {
 
 	// AutoCompactMinAge sets the AutoCompactMinAge value in the DB.
 	AutoCompactMinAge time.Duration
+
+	// DisableRelayTx disables mempool transactions.
+	DisableRelayTx bool
 }
 
 // Dcrlnd is a running instance of an embedded dcrlnd instance.
@@ -416,8 +419,9 @@ func RunDcrlnd(ctx context.Context, cfg Config) (*Dcrlnd, error) {
 	conf.SubRPCServers.WatchtowerRPC = &watchtowerrpc.Config{}
 	conf.SubRPCServers.WatchtowerClientRPC = &wtclientrpc.Config{}
 	conf.Dcrwallet = &lncfg.DcrwalletConfig{
-		SPV:      true,
-		DialFunc: cfg.DialFunc,
+		SPV:            true,
+		DialFunc:       cfg.DialFunc,
+		DisableRelayTx: cfg.DisableRelayTx,
 	}
 	if cfg.TorAddr != "" {
 		if _, _, err := net.SplitHostPort(cfg.TorAddr); err != nil {

@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -2099,6 +2100,7 @@ func handleLNInitDcrlnd(ctx context.Context, args lnInitDcrlnd) (*lnNewWalletSee
 		SyncFreeList:      args.SyncFreeList,
 		AutoCompact:       args.AutoCompact,
 		AutoCompactMinAge: time.Duration(args.AutoCompactMinAge) * time.Second,
+		DisableRelayTx:    runtime.GOOS == "android" || runtime.GOOS == "ios",
 	}
 	lndc, err := runDcrlnd(ctx, lndCfg)
 	if err != nil {
@@ -2162,6 +2164,7 @@ func handleLNRunDcrlnd(ctx context.Context, args lnInitDcrlnd) (string, error) {
 			SyncFreeList:      args.SyncFreeList,
 			AutoCompact:       args.AutoCompact,
 			AutoCompactMinAge: time.Duration(args.AutoCompactMinAge) * time.Second,
+			DisableRelayTx:    runtime.GOOS == "android" || runtime.GOOS == "ios",
 		}
 		lndc, err = runDcrlnd(ctx, lndCfg)
 		if err != nil {
