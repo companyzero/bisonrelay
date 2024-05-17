@@ -5,7 +5,7 @@ import 'package:golib_plugin/golib_plugin.dart';
 import 'package:bruig/theme_manager.dart';
 import 'package:provider/provider.dart';
 
-typedef void OnAccountChanged(String);
+typedef OnAccountChanged = void Function(String);
 
 class AccountsDropDown extends StatefulWidget {
   final OnAccountChanged? onChanged;
@@ -32,7 +32,7 @@ class _AccountsDropDownState extends State<AccountsDropDown> {
         if (accounts.isNotEmpty && selected == null) {
           selected = accounts[0].name;
           if (widget.onChanged != null) {
-            widget.onChanged!(selected);
+            widget.onChanged!(selected!);
           }
         }
       });
@@ -52,30 +52,34 @@ class _AccountsDropDownState extends State<AccountsDropDown> {
     var theme = Theme.of(context);
     var textColor = theme.focusColor;
     var backgroundColor = theme.backgroundColor;
+    var tsSelected = TextStyle(color: backgroundColor);
+    var tsRegular = TextStyle(color: textColor);
     return Consumer<ThemeNotifier>(
         builder: (context, theme, _) => DropdownButton<String?>(
-              focusColor: Colors.red,
               isDense: true,
               isExpanded: true,
               icon: Icon(
                 Icons.arrow_downward,
                 color: textColor,
               ),
-              dropdownColor: backgroundColor,
               underline: Container(),
               value: selected,
+              padding: EdgeInsets.zero,
+              style: TextStyle(
+                  color: textColor, fontSize: theme.getSmallFont(context)),
+              selectedItemBuilder: (context) {
+                return accounts
+                    // This is backwards than what you'd expect (tsRegular vs tsSelected)
+                    // because otherwise it doesn't look correct. Maybe a misuse or
+                    // bug in DropDownMenu.
+                    .map((e) => Text(e.name, style: tsRegular))
+                    .toList();
+              },
               items: (accounts
                   .map<DropdownMenuItem<String?>>((e) => DropdownMenuItem(
                         value: e.name,
-                        child: Container(
-                            margin: const EdgeInsets.all(0),
-                            width: double.infinity,
-                            alignment: Alignment.centerLeft,
-                            child: Text(e.name,
-                                style: TextStyle(
-                                  color: textColor,
-                                  fontSize: theme.getSmallFont(context),
-                                ))),
+                        child: Text(e.name,
+                            style: e.name == selected ? tsSelected : tsRegular),
                       ))).toList(),
               onChanged: (newValue) {
                 var didChange = newValue != selected;
@@ -83,7 +87,7 @@ class _AccountsDropDownState extends State<AccountsDropDown> {
                   selected = newValue;
                 });
                 if (didChange && widget.onChanged != null) {
-                  widget.onChanged!(newValue);
+                  widget.onChanged!(newValue!);
                 }
               },
             ));
