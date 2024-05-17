@@ -400,20 +400,23 @@ final usageException = Exception("Usage Displayed");
 final newConfigNeededException = Exception("Config needed");
 final unableToMoveOldWallet = Exception("Existing wallet in new location");
 
-Future<String> configFileName(List<String> args) async {
+Future<ArgParser> appArgParser() async {
   var defaultCfgFile = path.join(await defaultAppDataDir(), "${APPNAME}.conf");
   var p = ArgParser();
-  p.addOption("configfile", abbr: "c", defaultsTo: defaultCfgFile);
+  p.addFlag("help", abbr: "h", help: "Display usage info", negatable: false);
+  p.addOption("configfile",
+      abbr: "c", defaultsTo: defaultCfgFile, help: "Path to config file");
+  return p;
+}
+
+Future<String> configFileName(List<String> args) async {
+  var p = await appArgParser();
   var res = p.parse(args);
   return res["configfile"];
 }
 
 Future<Config> configFromArgs(List<String> args) async {
-  var p = ArgParser();
-  var defaultCfgFile = path.join(await defaultAppDataDir(), "${APPNAME}.conf");
-  p.addFlag("help", abbr: "h", help: "Display usage info", negatable: false);
-  p.addOption("configfile",
-      abbr: "c", defaultsTo: defaultCfgFile, help: "Path to config file");
+  var p = await appArgParser();
   var res = p.parse(args);
 
   if (res["help"]) {
