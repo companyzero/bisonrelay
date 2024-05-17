@@ -24,7 +24,7 @@ dependencies:
   io: ^1.0.4
   flutter:
     sdk: flutter
-  flutter_local_notifications: ^17.1.2
+  flutter_local_notifications: ^16.2.0
   cupertino_icons: ^1.0.2
   #dart_vlc: 0.1.8
   #dart_vlc_ffi: 0.1.5
@@ -40,15 +40,15 @@ dependencies:
   window_manager: ^0.3.1
   shared_preferences: ^2.0.15
   intl: ^0.18.1
-  sidebarx: ^0.17.1
+  sidebarx: ^0.16.1
   markdown: ^7.0.0
-  file_picker: ^8.0.3
+  file_picker: ^6.1.1
   path_provider: ^2.0.11
   url_launcher: ^6.2.5
   msix: ^3.6.3
   qr_flutter: ^4.1.0
   file_icon: ^1.0.0
-  package_info_plus: ^8.0.0
+  package_info_plus: ^4.1.0
   open_filex: ^4.3.2
   loading_animation_widget: ^1.2.0
   scrollable_positioned_list: ^0.3.8
@@ -59,15 +59,15 @@ dependencies:
       url: https://github.com/tiagoalvesdulce/packages
       ref: main
       path: packages/flutter_markdown
-  permission_handler: ^11.3.1
+  permission_handler: ^10.4.5
   optimize_battery: ^0.0.4
   dropdown_button2: ^2.3.8
   restart_app: ^1.2.1
-  share_plus: ^9.0.0
+  share_plus: ^7.2.2
   image_picker: ^1.0.7
   image_picker_platform_interface: ^2.8.0
   mime: ^1.0.4
-  pdfrx: ^1.0.62
+  pdfrx: ^1.0.54
 
 msix_config:
   display_name: Bison Relay GUI
@@ -79,7 +79,7 @@ msix_config:
   capabilities: "internetClient"
 
 dev_dependencies:
-  flutter_lints: ^3.0.2
+  flutter_lints: ^2.0.1
   flutter_test:
     sdk: flutter
   flutter_launcher_icons: ^0.13.1

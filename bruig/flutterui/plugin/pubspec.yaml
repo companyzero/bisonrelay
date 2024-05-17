@@ -16,7 +16,7 @@ dependencies:
   shelf: ^1.2.0
   shelf_web_socket: ^1.0.1
   json_annotation: ^4.0.0
-  file_picker: ^8.0.3
+  file_picker: ^6.1.1
   path_provider: ^2.0.6
   blake_hash: ^1.0.2
   convert: ^3.0.2
