@@ -2,16 +2,15 @@ import 'dart:io';
 
 import 'package:bruig/components/confirmation_dialog.dart';
 import 'package:bruig/components/empty_widget.dart';
+import 'package:bruig/components/interactive_avatar.dart';
 import 'package:bruig/screens/config_network.dart';
 import 'package:bruig/screens/ln_management.dart';
 import 'package:bruig/screens/log.dart';
 import 'package:bruig/screens/manage_content/manage_content.dart';
 import 'package:bruig/screens/paystats.dart';
 import 'package:bruig/screens/about.dart';
-import 'package:bruig/util.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:bruig/theme_manager.dart';
 import 'package:provider/provider.dart';
@@ -125,7 +124,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     var fileData = await File(filePath).readAsBytes();
     try {
       await Golib.setMyAvatar(fileData);
-      client.myAvatar = MemoryImage(fileData);
+      client.myAvatar.loadAvatar(fileData);
     } catch (exception) {
       showErrorSnackbar(context, "Unable to set avatar: $exception");
     }
@@ -186,14 +185,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     var textColor = theme.focusColor;
     var canvasColor = theme.canvasColor;
 
-    var avatarColor = colorFromNick(client.nick, theme.brightness);
-    var darkAvatarTextColor = theme.primaryColorDark;
-    var lightAvatarTextColor = theme.primaryColorLight;
-    var avatarTextColor =
-        ThemeData.estimateBrightnessForColor(avatarColor) == Brightness.dark
-            ? darkAvatarTextColor
-            : lightAvatarTextColor;
-
     bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
     Widget settingsView =
         MainSettingsScreen(client, pickAvatarFile, changePage, shutdown);
@@ -242,25 +233,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   : theme.setDarkMode(),
             },
             child: theme.getTheme().brightness == Brightness.dark
-                ? Text('Set Light Theme')
-                : Text('Set Dark Theme'),
+                ? const Text('Set Light Theme')
+                : const Text('Set Dark Theme'),
           ),
           Tooltip(
-              message: "User avatar. Click to select a new image.",
-              child: InkWell(
-                  onTap: pickAvatarFile,
-                  child: CircleAvatar(
-                    radius: 50,
-                    backgroundColor:
-                        colorFromNick(client.nick, theme.getTheme().brightness),
-                    backgroundImage: client.myAvatar,
-                    child: client.myAvatar != null
-                        ? const Empty()
-                        : Text(client.nick[0].toUpperCase(),
-                            style: TextStyle(
-                                color: avatarTextColor,
-                                fontSize: theme.getLargeFont(context))),
-                  ))),
+            message: "User avatar. Click to select a new image.",
+            child: SelfAvatar(client, onTap: pickAvatarFile),
+          ),
           Row(mainAxisAlignment: MainAxisAlignment.end, children: [
             Text("Notifications",
                 style: TextStyle(
@@ -390,13 +369,6 @@ class MainSettingsScreen extends StatelessWidget {
     var backgroundColor = theme.backgroundColor;
     var textColor = theme.focusColor;
 
-    var avatarColor = colorFromNick(client.nick, theme.brightness);
-    var darkAvatarTextColor = theme.primaryColorDark;
-    var lightAvatarTextColor = theme.primaryColorLight;
-    var avatarTextColor =
-        ThemeData.estimateBrightnessForColor(avatarColor) == Brightness.dark
-            ? darkAvatarTextColor
-            : lightAvatarTextColor;
     return Consumer<ThemeNotifier>(
         builder: (context, theme, _) => ListView(
               children: [
@@ -405,21 +377,9 @@ class MainSettingsScreen extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
                       Container(
-                          margin: const EdgeInsets.all(10),
-                          child: InkWell(
-                              onTap: pickAvatarFile,
-                              child: CircleAvatar(
-                                  radius: 50,
-                                  backgroundColor: colorFromNick(
-                                      client.nick, theme.getTheme().brightness),
-                                  backgroundImage: client.myAvatar,
-                                  child: client.myAvatar != null
-                                      ? const Empty()
-                                      : Text(client.nick[0].toUpperCase(),
-                                          style: TextStyle(
-                                              color: avatarTextColor,
-                                              fontSize: theme
-                                                  .getLargeFont(context)))))),
+                        margin: const EdgeInsets.all(10),
+                        child: SelfAvatar(client, onTap: pickAvatarFile),
+                      ),
                       Column(children: [
                         Text(client.nick,
                             style: TextStyle(

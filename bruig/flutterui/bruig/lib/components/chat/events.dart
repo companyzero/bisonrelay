@@ -64,9 +64,19 @@ class ReceivedSentPM extends StatefulWidget {
   final bool isGC;
   final OpenReplyDMCB openReplyDM;
   final ClientModel client;
+  final ChatModel chat;
 
-  const ReceivedSentPM(this.evnt, this.nick, this.timestamp, this.showSubMenu,
-      this.id, this.userNick, this.isGC, this.openReplyDM, this.client,
+  const ReceivedSentPM(
+      this.evnt,
+      this.nick,
+      this.timestamp,
+      this.showSubMenu,
+      this.id,
+      this.userNick,
+      this.isGC,
+      this.openReplyDM,
+      this.client,
+      this.chat,
       {Key? key})
       : super(key: key);
 
@@ -104,17 +114,13 @@ class _ReceivedSentPMState extends State<ReceivedSentPM> {
 
   @override
   Widget build(BuildContext context) {
-    var prefix = "";
     var suffix = "";
     switch (widget.evnt.sentState) {
       case CMS_sending:
-        prefix = "…";
         break;
       case CMS_sent:
-        prefix = "✓";
         break;
       case CMS_errored:
-        prefix = "✗";
         suffix = "\n\n${widget.evnt.sendError}";
         break;
       default:
@@ -133,12 +139,7 @@ class _ReceivedSentPMState extends State<ReceivedSentPM> {
     var theme = Theme.of(context);
     var darkTextColor = theme.indicatorColor;
     var avatarColor = colorFromNick(widget.nick, theme.brightness);
-    var darkAvatarTextColor = theme.primaryColorDark;
-    var lightAvatarTextColor = theme.primaryColorLight;
-    var avatarTextColor =
-        ThemeData.estimateBrightnessForColor(avatarColor) == Brightness.dark
-            ? darkAvatarTextColor
-            : lightAvatarTextColor;
+
     var selectedBackgroundColor = theme.highlightColor;
     var textColor = theme.dividerColor;
     var sentBackgroundColor = theme.dialogBackgroundColor;
@@ -209,20 +210,14 @@ class _ReceivedSentPMState extends State<ReceivedSentPM> {
                                   child: UserContextMenu(
                                     client: widget.client,
                                     targetUserChat: widget.evnt.source,
-                                    child: InteractiveAvatar(
-                                        bgColor: selectedBackgroundColor,
-                                        chatNick: widget.nick,
-                                        avatarColor: avatarColor,
-                                        avatarTextColor: avatarTextColor,
-                                        avatar: widget.evnt.source != null
-                                            ? widget.evnt.source?.avatar
-                                            : widget.client.myAvatar,
-                                        onTap: widget.isGC
-                                            ? null
-                                            : () {
-                                                widget.showSubMenu(
-                                                    widget.isGC, widget.id);
-                                              }),
+                                    child: UserMenuAvatar(
+                                      widget.client,
+                                      widget.evnt.source ?? widget.chat,
+                                      onTap: () {
+                                        widget.showSubMenu(
+                                            widget.isGC, widget.id);
+                                      },
+                                    ),
                                   ),
                                 )))
                             : const SizedBox(width: 48),
@@ -507,7 +502,9 @@ class PMW extends StatelessWidget {
   final String nick;
   final ShowSubMenuCB showSubMenu;
   final ClientModel client;
-  const PMW(this.evnt, this.nick, this.showSubMenu, this.client, {Key? key})
+  final ChatModel chat;
+  const PMW(this.evnt, this.nick, this.showSubMenu, this.client, this.chat,
+      {Key? key})
       : super(key: key);
 
   @override
@@ -526,8 +523,17 @@ class PMW extends StatelessWidget {
       return ReceivedSentMobilePM(evnt, evnt.source?.nick ?? nick, timestamp,
           showSubMenu, evnt.source?.id ?? "", nick, false, client);
     }
-    return ReceivedSentPM(evnt, evnt.source?.nick ?? nick, timestamp,
-        showSubMenu, evnt.source?.id ?? "", nick, false, openReplyDM, client);
+    return ReceivedSentPM(
+        evnt,
+        evnt.source?.nick ?? nick,
+        timestamp,
+        showSubMenu,
+        evnt.source?.id ?? "",
+        nick,
+        false,
+        openReplyDM,
+        client,
+        chat);
   }
 }
 
@@ -537,8 +543,9 @@ class GCMW extends StatelessWidget {
   final ShowSubMenuCB showSubMenu;
   final OpenReplyDMCB openReplyDM;
   final ClientModel client;
-  const GCMW(
-      this.evnt, this.nick, this.showSubMenu, this.openReplyDM, this.client,
+  final ChatModel chat;
+  const GCMW(this.evnt, this.nick, this.showSubMenu, this.openReplyDM,
+      this.client, this.chat,
       {Key? key})
       : super(key: key);
 
@@ -551,8 +558,17 @@ class GCMW extends StatelessWidget {
           evnt.source?.nick == null ? event.timestamp : event.timestamp * 1000;
     }
 
-    return ReceivedSentPM(evnt, evnt.source?.nick ?? nick, timestamp,
-        showSubMenu, evnt.source?.id ?? "", nick, true, openReplyDM, client);
+    return ReceivedSentPM(
+        evnt,
+        evnt.source?.nick ?? nick,
+        timestamp,
+        showSubMenu,
+        evnt.source?.id ?? "",
+        nick,
+        true,
+        openReplyDM,
+        client,
+        chat);
   }
 }
 
@@ -1405,7 +1421,7 @@ class Event extends StatelessWidget {
     }
 
     if (event.event is PM) {
-      return PMW(event, nick, showSubMenu, client);
+      return PMW(event, nick, showSubMenu, client, chat);
     }
 
     if (event.event is InflightTip) {
@@ -1413,7 +1429,7 @@ class Event extends StatelessWidget {
     }
 
     if (event.event is GCMsg) {
-      return GCMW(event, nick, showSubMenu, openReplyDM, client);
+      return GCMW(event, nick, showSubMenu, openReplyDM, client, chat);
     }
 
     if (event.event is GCUserEvent) {

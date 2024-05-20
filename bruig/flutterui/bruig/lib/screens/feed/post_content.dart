@@ -1,4 +1,5 @@
 import 'package:bruig/components/empty_widget.dart';
+import 'package:bruig/components/interactive_avatar.dart';
 import 'package:bruig/models/menus.dart';
 import 'package:bruig/util.dart';
 import 'package:bruig/components/md_elements.dart';
@@ -55,39 +56,17 @@ class _ReceiveReceipt extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    var theme = Theme.of(context);
     var nick = client.getNick(rr.user);
     var rrdt =
         DateTime.fromMillisecondsSinceEpoch(rr.serverTime).toIso8601String();
-    var avatarColor = colorFromNick(nick, theme.brightness);
-    var darkAvatarTextColor = theme.primaryColorDark;
-    var lightAvatarTextColor = theme.primaryColorLight;
-    var avatarTextColor =
-        ThemeData.estimateBrightnessForColor(avatarColor) == Brightness.dark
-            ? darkAvatarTextColor
-            : lightAvatarTextColor;
 
     return Container(
       width: 28,
       margin: const EdgeInsets.only(top: 0, bottom: 0, left: 5),
       child: Tooltip(
           message: "$nick - $rrdt",
-          child: CircleAvatar(
-            backgroundColor: avatarColor,
-            child: Text(nick[0].toUpperCase(),
-                style: TextStyle(color: avatarTextColor, fontSize: 20)),
-          )),
+          child: UserAvatarFromID(client, rr.user, disableTooltip: true)),
     );
-
-    /*
-    return Row(children: [
-      const SizedBox(width: 10),
-      Text(DateTime.fromMillisecondsSinceEpoch(rr.serverTime).toIso8601String(),
-          style: rrTxtStyle),
-      const SizedBox(width: 10),
-      Text(nick, style: rrTxtStyle)
-    ]);
-    */
   }
 }
 
@@ -224,14 +203,7 @@ class _CommentWState extends State<_CommentW> {
     var theme = Theme.of(context);
     var hightLightTextColor = theme.dividerColor;
     var commentBorderColor = theme.dialogBackgroundColor;
-    var avatarColor = colorFromNick(nick, theme.brightness);
     var darkTextColor = theme.indicatorColor;
-    var darkAvatarTextColor = theme.primaryColorDark;
-    var lightAvatarTextColor = theme.primaryColorLight;
-    var avatarTextColor =
-        ThemeData.estimateBrightnessForColor(avatarColor) == Brightness.dark
-            ? darkAvatarTextColor
-            : lightAvatarTextColor;
     var textColor = theme.focusColor;
     var darkAddCommentColor = theme.hoverColor;
     var selectedBackgroundColor = theme.highlightColor;
@@ -249,18 +221,8 @@ class _CommentWState extends State<_CommentW> {
                   Container(
                     width: 28,
                     margin: const EdgeInsets.only(top: 0, bottom: 0, left: 5),
-                    child: UserContextMenu(
-                      client: widget.client,
-                      targetUserChat: chat,
-                      targetUserId: widget.comment.uid,
-                      disabled: mine,
-                      postFrom: widget.post.summ.from,
-                      child: CircleAvatar(
-                          backgroundColor: avatarColor,
-                          child: Text(nick[0].toUpperCase(),
-                              style: TextStyle(
-                                  color: avatarTextColor, fontSize: 20))),
-                    ),
+                    child: UserOrSelfAvatar(widget.client, chat,
+                        postFrom: widget.post.summ.from),
                   ),
                   const SizedBox(width: 6),
                   Row(children: [
@@ -1005,19 +967,9 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
                                     width: 28,
                                     margin: const EdgeInsets.only(
                                         top: 0, bottom: 0, left: 5, right: 0),
-                                    child: UserContextMenu(
-                                      client: widget.client,
-                                      targetUserChat: authorChat,
-                                      disabled: myPost,
-                                      postFrom: widget.args.post.summ.from,
-                                      child: CircleAvatar(
-                                          backgroundColor: avatarColor,
-                                          child: Text(
-                                              authorNick[0].toUpperCase(),
-                                              style: TextStyle(
-                                                  color: avatarTextColor,
-                                                  fontSize: 20))),
-                                    ),
+                                    child: UserOrSelfAvatar(
+                                        widget.client, authorChat,
+                                        postFrom: widget.args.post.summ.from),
                                   ),
                                   const SizedBox(width: 6),
                                   Text(authorNick,

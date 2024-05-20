@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:bruig/components/indicator.dart';
+import 'package:bruig/components/interactive_avatar.dart';
 import 'package:bruig/components/page_context_menu.dart';
 import 'package:bruig/components/route_error.dart';
 import 'package:bruig/components/sidebar.dart';
@@ -22,7 +24,6 @@ import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:bruig/theme_manager.dart';
 import 'package:provider/provider.dart';
-import 'package:bruig/util.dart';
 
 final GlobalKey<ScaffoldState> scaffoldKey = GlobalKey<ScaffoldState>();
 
@@ -295,13 +296,6 @@ class _OverviewScreenState extends State<OverviewScreen> {
       });
     }
 
-    var avatarColor = colorFromNick(client.nick, theme.brightness);
-    var darkAvatarTextColor = theme.primaryColorDark;
-    var lightAvatarTextColor = theme.primaryColorLight;
-    var avatarTextColor =
-        ThemeData.estimateBrightnessForColor(avatarColor) == Brightness.dark
-            ? darkAvatarTextColor
-            : lightAvatarTextColor;
     bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
     return Scaffold(
       key: scaffoldKey,
@@ -347,19 +341,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
                                   color: Theme.of(context).focusColor))
                           : Container(
                               margin: const EdgeInsets.all(10),
-                              child: CircleAvatar(
-                                  backgroundColor: colorFromNick(
-                                      client.nick, theme.brightness),
-                                  backgroundImage: client.myAvatar,
-                                  child: client.myAvatar != null
-                                      ? const Empty()
-                                      : Text(
-                                          client.nick != ""
-                                              ? client.nick[0].toUpperCase()
-                                              : "",
-                                          style: TextStyle(
-                                              color: avatarTextColor,
-                                              fontSize: 20)))),
+                              child: SelfAvatar(client)),
                       connectedTag, // Tag when offline/checking wallet.
                     ]));
               }),
@@ -444,9 +426,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
                                   const Positioned(
                                       top: 1,
                                       right: 1,
-                                      child: CircleAvatar(
-                                          backgroundColor: Colors.red,
-                                          radius: 4)),
+                                      child: RedDotIndicator()),
                                 ])
                               : Container(
                                   padding: const EdgeInsets.all(3),
@@ -471,11 +451,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
                                     padding: const EdgeInsets.all(3),
                                     child: menuItem.icon ?? const Empty()),
                                 const Positioned(
-                                    top: 1,
-                                    right: 1,
-                                    child: CircleAvatar(
-                                        backgroundColor: Colors.red,
-                                        radius: 4)),
+                                    top: 1, right: 1, child: RedDotIndicator()),
                               ])
                             : Container(
                                 padding: const EdgeInsets.all(3),
@@ -552,11 +528,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
                                     child: const SidebarSvgIcon(
                                         "assets/icons/icons-menu-chat.svg")),
                                 const Positioned(
-                                    top: 1,
-                                    right: 1,
-                                    child: CircleAvatar(
-                                        backgroundColor: Colors.red,
-                                        radius: 4)),
+                                    top: 1, right: 1, child: RedDotIndicator()),
                               ])
                             : Container(
                                 padding: const EdgeInsets.all(3),
@@ -572,11 +544,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
                                     child: const SidebarSvgIcon(
                                         "assets/icons/icons-menu-news.svg")),
                                 const Positioned(
-                                    top: 1,
-                                    right: 1,
-                                    child: CircleAvatar(
-                                        backgroundColor: Colors.red,
-                                        radius: 4)),
+                                    top: 1, right: 1, child: RedDotIndicator()),
                               ])
                             : Container(
                                 padding: const EdgeInsets.all(3),

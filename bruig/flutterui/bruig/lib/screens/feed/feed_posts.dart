@@ -1,3 +1,4 @@
+import 'package:bruig/components/interactive_avatar.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/models/feed.dart';
 import 'package:bruig/components/buttons.dart';
@@ -7,10 +8,22 @@ import 'package:provider/provider.dart';
 import 'package:bruig/components/md_elements.dart';
 import 'package:bruig/components/empty_widget.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:bruig/components/user_context_menu.dart';
-import 'package:bruig/util.dart';
 import 'package:duration/duration.dart';
 import 'package:bruig/theme_manager.dart';
+
+class _AvatarOrUnread extends StatelessWidget {
+  final ClientModel client;
+  final ChatModel? chat;
+  final bool hasUnread;
+  const _AvatarOrUnread(this.client, this.chat, this.hasUnread, {super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return hasUnread
+        ? const Icon(Icons.new_releases_outlined, color: Colors.amber)
+        : UserOrSelfAvatar(client, chat);
+  }
+}
 
 class FeedPostW extends StatefulWidget {
   final FeedModel feed;
@@ -82,14 +95,8 @@ class _FeedPostWState extends State<FeedPostW> {
     var theme = Theme.of(context);
     var bgColor = theme.highlightColor;
     var hightLightTextColor = theme.dividerColor; // NAME TEXT COLOR
-    var avatarColor = colorFromNick(authorNick, theme.brightness);
     var borderDividerColor = theme.backgroundColor;
-    var darkAvatarTextColor = theme.primaryColorDark;
-    var lightAvatarTextColor = theme.primaryColorLight;
-    var avatarTextColor =
-        ThemeData.estimateBrightnessForColor(avatarColor) == Brightness.dark
-            ? darkAvatarTextColor
-            : lightAvatarTextColor;
+
     var markdownData = widget.post.summ.title;
     if (widget.post.summ.title.contains("--embed[type=")) {
       // This will pluck the first embed in a post.  Then we can display just
@@ -124,20 +131,8 @@ class _FeedPostWState extends State<FeedPostW> {
                             width: 35,
                             margin: const EdgeInsets.only(
                                 top: 0, bottom: 0, left: 5, right: 0),
-                            child: UserContextMenu(
-                              client: widget.client,
-                              targetUserChat: widget.author,
-                              disabled: mine,
-                              child: hasUnreadPost
-                                  ? const Icon(Icons.new_releases_outlined,
-                                      color: Colors.amber)
-                                  : CircleAvatar(
-                                      backgroundColor: avatarColor,
-                                      child: Text(authorNick[0].toUpperCase(),
-                                          style: TextStyle(
-                                              color: avatarTextColor,
-                                              fontSize: 20))),
-                            ),
+                            child: _AvatarOrUnread(
+                                widget.client, widget.author, hasUnreadPost),
                           ),
                           const SizedBox(width: 10),
                           Expanded(
@@ -225,20 +220,8 @@ class _FeedPostWState extends State<FeedPostW> {
                         width: 28,
                         margin: const EdgeInsets.only(
                             top: 0, bottom: 0, left: 5, right: 0),
-                        child: UserContextMenu(
-                          client: widget.client,
-                          targetUserChat: widget.author,
-                          disabled: mine,
-                          child: hasUnreadPost
-                              ? const Icon(Icons.new_releases_outlined,
-                                  color: Colors.amber)
-                              : CircleAvatar(
-                                  backgroundColor: avatarColor,
-                                  child: Text(authorNick[0].toUpperCase(),
-                                      style: TextStyle(
-                                          color: avatarTextColor,
-                                          fontSize: 20))),
-                        ),
+                        child: _AvatarOrUnread(
+                            widget.client, widget.author, hasUnreadPost),
                       ),
                       const SizedBox(width: 6),
                       Expanded(

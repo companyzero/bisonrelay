@@ -1,7 +1,6 @@
 import 'package:bruig/models/client.dart';
 import 'package:bruig/screens/chats.dart';
 import 'package:flutter/material.dart';
-import 'package:bruig/util.dart';
 import 'package:bruig/components/interactive_avatar.dart';
 import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/components/addressbook/input.dart';
@@ -61,25 +60,12 @@ class _AddressBookListingWState extends State<_AddressBookListingW> {
   Widget build(BuildContext context) {
     var theme = Theme.of(context);
     var textColor = theme.dividerColor;
-    var hightLightTextColor = theme.focusColor;
     var selectedBackgroundColor = theme.highlightColor;
     var darkTextColor = theme.indicatorColor;
     var alreadyOpened = false;
     alreadyOpened = client.sortedChats.contains(chat);
-    var avatarColor = colorFromNick(chat.nick, theme.brightness);
-    var darkAvatarTextColor = theme.primaryColorDark;
-    var lightAvatarTextColor = theme.primaryColorLight;
-    var avatarTextColor =
-        ThemeData.estimateBrightnessForColor(avatarColor) == Brightness.dark
-            ? darkAvatarTextColor
-            : lightAvatarTextColor;
-    var popMenuButton = InteractiveAvatar(
-        bgColor: selectedBackgroundColor,
-        chatNick: chat.nick,
-        onTap: () {},
-        avatarColor: avatarColor,
-        avatarTextColor: avatarTextColor,
-        avatar: chat.avatar);
+
+    var popMenuButton = UserMenuAvatar(client, chat);
     addToGroupChat = widget.alreadySelected;
     return Consumer<ThemeNotifier>(
         builder: (context, theme, _) => Container(

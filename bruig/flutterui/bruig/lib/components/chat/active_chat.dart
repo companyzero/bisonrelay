@@ -1,10 +1,10 @@
 import 'dart:async';
 
 import 'package:bruig/components/copyable.dart';
+import 'package:bruig/components/interactive_avatar.dart';
 import 'package:bruig/components/manage_gc.dart';
 import 'package:bruig/models/menus.dart';
 import 'package:bruig/screens/chats.dart';
-import 'package:bruig/util.dart';
 import 'package:bruig/models/client.dart';
 import 'package:flutter/material.dart';
 import 'package:bruig/components/profile.dart';
@@ -116,13 +116,6 @@ class _ActiveChatState extends State<ActiveChat> {
     var darkTextColor = theme.indicatorColor;
     var selectedBackgroundColor = theme.highlightColor;
     var subMenuBorderColor = theme.canvasColor;
-    var avatarColor = colorFromNick(chat.nick, theme.brightness);
-    var darkAvatarTextColor = theme.primaryColorDark;
-    var lightAvatarTextColor = theme.primaryColorLight;
-    var avatarTextColor =
-        ThemeData.estimateBrightnessForColor(avatarColor) == Brightness.dark
-            ? darkAvatarTextColor
-            : lightAvatarTextColor;
 
     bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
     List<ChatMenuItem> activeSubMenu =
@@ -136,18 +129,7 @@ class _ActiveChatState extends State<ActiveChat> {
                       Column(children: [
                         Container(
                           margin: const EdgeInsets.only(top: 20, bottom: 20),
-                          child: CircleAvatar(
-                            radius: 75,
-                            backgroundColor: avatarColor,
-                            backgroundImage: chat.avatar,
-                            child: chat.avatar != null
-                                ? const Empty()
-                                : Text(
-                                    nickCapitalLetter(),
-                                    style: TextStyle(
-                                        color: avatarTextColor, fontSize: 75),
-                                  ),
-                          ),
+                          child: UserMenuAvatar(client, chat, radius: 75),
                         ),
                         Visibility(
                           visible: chat.isGC,
@@ -228,18 +210,7 @@ class _ActiveChatState extends State<ActiveChat> {
                       Column(children: [
                         Container(
                           margin: const EdgeInsets.only(top: 20, bottom: 20),
-                          child: CircleAvatar(
-                            radius: 75,
-                            backgroundColor: avatarColor,
-                            backgroundImage: chat.avatar,
-                            child: chat.avatar != null
-                                ? const Empty()
-                                : Text(
-                                    nickCapitalLetter(),
-                                    style: TextStyle(
-                                        color: avatarTextColor, fontSize: 75),
-                                  ),
-                          ),
+                          child: UserMenuAvatar(client, chat, radius: 75),
                         ),
                         Visibility(
                           visible: chat.isGC,

@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:bruig/components/buttons.dart';
 import 'package:bruig/components/chats_list.dart';
 import 'package:bruig/components/addressbook/addressbook.dart';
-import 'package:bruig/components/gc_context_menu.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/models/notifications.dart';
 import 'package:bruig/screens/needs_out_channel.dart';
@@ -16,8 +15,6 @@ import 'package:provider/provider.dart';
 import 'package:bruig/components/chat/active_chat.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 
-import 'package:bruig/util.dart';
-import 'package:bruig/components/user_context_menu.dart';
 import 'package:bruig/components/interactive_avatar.dart';
 import 'package:bruig/screens/overview.dart';
 
@@ -26,8 +23,6 @@ class ChatsScreenTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    var theme = Theme.of(context);
-    var selectedBackgroundColor = theme.highlightColor;
     return Consumer2<ClientModel, ThemeNotifier>(
         builder: (context, client, theme, child) {
       var activeHeading = client.active;
@@ -68,13 +63,6 @@ class ChatsScreenTitle extends StatelessWidget {
 
       bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
       if (isScreenSmall) {
-        var avatarColor = colorFromNick(chat.nick, theme.getTheme().brightness);
-        var darkAvatarTextColor = theme.getTheme().primaryColorDark;
-        var lightAvatarTextColor = theme.getTheme().primaryColorLight;
-        var avatarTextColor =
-            ThemeData.estimateBrightnessForColor(avatarColor) == Brightness.dark
-                ? darkAvatarTextColor
-                : lightAvatarTextColor;
         return Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -84,40 +72,12 @@ class ChatsScreenTitle extends StatelessWidget {
                       fontSize: theme.getLargeFont(context),
                       color: Theme.of(context).focusColor)),
               Container(
-                width: 40,
-                margin:
-                    const EdgeInsets.only(top: 0, bottom: 0, left: 0, right: 5),
-                child: chat.isGC
-                    ? GcContexMenu(
-                        mobile: (context) =>
-                            client.showSubMenu(chat.isGC, chat.id),
-                        targetGcChat: chat,
-                        child: InteractiveAvatar(
-                          bgColor: selectedBackgroundColor,
-                          chatNick: chat.nick,
-                          onTap: () {
-                            client.showSubMenu(chat.isGC, chat.id);
-                          },
-                          avatarColor: avatarColor,
-                          avatarTextColor: avatarTextColor,
-                          avatar: chat.avatar,
-                        ),
-                      )
-                    : UserContextMenu(
-                        client: client,
-                        targetUserChat: chat,
-                        child: InteractiveAvatar(
-                          bgColor: selectedBackgroundColor,
-                          chatNick: chat.nick,
-                          onTap: () {
-                            client.showSubMenu(chat.isGC, chat.id);
-                          },
-                          avatarColor: avatarColor,
-                          avatarTextColor: avatarTextColor,
-                          avatar: chat.avatar,
-                        ),
-                      ),
-              ),
+                  width: 40,
+                  margin: const EdgeInsets.only(
+                      top: 0, bottom: 0, left: 0, right: 5),
+                  child: UserMenuAvatar(client, chat, onTap: () {
+                    client.showSubMenu(chat.isGC, chat.id);
+                  })),
             ]);
       }
       return Text("Chat$suffix$profileSuffix",
