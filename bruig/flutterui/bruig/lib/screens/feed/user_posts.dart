@@ -1,3 +1,4 @@
+import 'package:bruig/components/interactive_avatar.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/models/feed.dart';
 import 'package:bruig/screens/feed/feed_posts.dart';
@@ -7,7 +8,6 @@ import 'package:bruig/components/md_elements.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:bruig/components/user_context_menu.dart';
-import 'package:bruig/util.dart';
 import 'package:bruig/theme_manager.dart';
 
 class UserPostW extends StatefulWidget {
@@ -69,14 +69,7 @@ class _UserPostWState extends State<UserPostW> {
     var theme = Theme.of(context);
     var bgColor = theme.highlightColor;
     var hightLightTextColor = theme.dividerColor; // NAME TEXT COLOR
-    var avatarColor = colorFromNick(authorNick, theme.brightness);
     var borderDividerColor = theme.dialogBackgroundColor;
-    var darkAvatarTextColor = theme.primaryColorDark;
-    var lightAvatarTextColor = theme.primaryColorLight;
-    var avatarTextColor =
-        ThemeData.estimateBrightnessForColor(avatarColor) == Brightness.dark
-            ? darkAvatarTextColor
-            : lightAvatarTextColor;
 
     return Container(
         //height: 100,
@@ -98,12 +91,7 @@ class _UserPostWState extends State<UserPostW> {
                     child: UserContextMenu(
                       client: widget.client,
                       targetUserChat: widget.author,
-                      child: CircleAvatar(
-                          backgroundColor: avatarColor,
-                          child: Text(authorNick[0].toUpperCase(),
-                              style: TextStyle(
-                                  color: avatarTextColor,
-                                  fontSize: theme.getLargeFont(context)))),
+                      child: UserOrSelfAvatar(widget.client, widget.author),
                     ),
                   ),
                   const SizedBox(width: 6),

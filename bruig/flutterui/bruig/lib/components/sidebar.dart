@@ -1,5 +1,6 @@
 import 'package:bruig/components/app_notifications.dart';
 import 'package:bruig/components/empty_widget.dart';
+import 'package:bruig/components/indicator.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/models/feed.dart';
 import 'package:bruig/models/menus.dart';
@@ -198,10 +199,7 @@ class _SidebarState extends State<Sidebar> {
                               padding: const EdgeInsets.all(3),
                               child: e.icon ?? const Empty()),
                           const Positioned(
-                              top: 1,
-                              right: 1,
-                              child: CircleAvatar(
-                                  backgroundColor: Colors.red, radius: 4)),
+                              top: 1, right: 1, child: RedDotIndicator()),
                         ])
                       : Container(
                           padding: const EdgeInsets.all(3), child: e.icon),

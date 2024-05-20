@@ -9,7 +9,6 @@ import 'package:bruig/components/user_context_menu.dart';
 import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/components/gc_context_menu.dart';
 import 'package:bruig/components/chat/types.dart';
-import 'package:bruig/util.dart';
 import 'package:bruig/theme_manager.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:file_picker/file_picker.dart';
@@ -61,8 +60,6 @@ class _ChatHeadingWState extends State<_ChatHeadingW> {
     var selectedBackgroundColor = theme.highlightColor;
     var unreadMessageIconColor = theme.indicatorColor.withOpacity(0.5);
     var darkTextColor = theme.indicatorColor;
-    var darkAvatarTextColor = theme.primaryColorDark;
-    var lightAvatarTextColor = theme.primaryColorLight;
 
     // Show 1k+ if unread cound goes about 1000
     var unreadCount = chat.unreadMsgCount > 1000 ? "1k+" : chat.unreadMsgCount;
@@ -125,21 +122,13 @@ class _ChatHeadingWState extends State<_ChatHeadingW> {
               ]));
     }
 
-    var avatarColor = colorFromNick(chat.nick, theme.brightness);
-    var avatarTextColor =
-        ThemeData.estimateBrightnessForColor(avatarColor) == Brightness.dark
-            ? darkAvatarTextColor
-            : lightAvatarTextColor;
     var popMenuButton = InteractiveAvatar(
-        bgColor: selectedBackgroundColor,
         chatNick: chat.nick,
         onTap: () {
           widget.makeActive(chat);
           widget.showSubMenu(chat.isGC, chat.id);
         },
-        avatarColor: avatarColor,
-        avatarTextColor: avatarTextColor,
-        avatar: chat.avatar);
+        avatar: chat.avatar.image);
 
     bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
     return Consumer<ThemeNotifier>(

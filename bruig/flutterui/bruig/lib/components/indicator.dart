@@ -38,3 +38,12 @@ class _IndeterminateIndicatorState extends State<IndeterminateIndicator>
     );
   }
 }
+
+class RedDotIndicator extends StatelessWidget {
+  const RedDotIndicator({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const CircleAvatar(backgroundColor: Colors.red, radius: 4);
+  }
+}

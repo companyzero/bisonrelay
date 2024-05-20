@@ -117,6 +117,25 @@ class DayGCMessages {
   String date = "";
 }
 
+class AvatarModel extends ChangeNotifier {
+  ImageProvider? _image;
+  ImageProvider? get image => _image;
+  void loadAvatar(Uint8List? newAvatar) async {
+    if (newAvatar == null || newAvatar.isEmpty) {
+      _image = null;
+    } else {
+      try {
+        _image = MemoryImage(newAvatar);
+        // Resize to a smaller size?
+      } catch (exception) {
+        print("Unable to decode avatar: $exception");
+        _image = null;
+      }
+    }
+    notifyListeners();
+  }
+}
+
 class ChatModel extends ChangeNotifier {
   final String id; // RemoteUID or GC ID
   final bool isGC;
@@ -172,22 +191,8 @@ class ChatModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  ImageProvider? _avatar;
-  ImageProvider? get avatar => _avatar;
-  void loadAvatar(Uint8List? newAvatar) async {
-    if (newAvatar == null || newAvatar.isEmpty) {
-      _avatar = null;
-    } else {
-      try {
-        _avatar = MemoryImage(newAvatar);
-        // Resize to a smaller size?
-        notifyListeners();
-      } catch (exception) {
-        print("Unable to decode '$nick' avatar: $exception");
-        _avatar = null;
-      }
-    }
-  }
+  final AvatarModel _avatar = AvatarModel();
+  AvatarModel get avatar => _avatar;
 
   List<PostListItem> _userPostList = [];
   UnmodifiableListView<PostListItem> get userPostList =>
@@ -301,7 +306,7 @@ class ChatModel extends ChangeNotifier {
     }
 
     if (evnt is ProfileUpdated) {
-      loadAvatar(evnt.abEntry.avatar);
+      avatar.loadAvatar(evnt.abEntry.avatar);
     }
   }
 
@@ -1049,7 +1054,7 @@ class ClientModel extends ChangeNotifier {
     for (var v in ab) {
       var c = await _newChat(v.id, v.nick, false, true);
       if (v.avatar != null) {
-        c.loadAvatar(v.avatar);
+        c.avatar.loadAvatar(v.avatar);
       }
     }
     var gcs = await Golib.listGCs();
@@ -1065,17 +1070,12 @@ class ClientModel extends ChangeNotifier {
     loadingAddressBook = false;
   }
 
-  ImageProvider? _myAvatar;
-  ImageProvider? get myAvatar => _myAvatar;
-  set myAvatar(ImageProvider? newAvatar) {
-    _myAvatar = newAvatar;
-    notifyListeners();
-  }
+  AvatarModel myAvatar = AvatarModel();
 
   Future<void> fetchMyAvatar() async {
     var avatarData = await Golib.getMyAvatar();
     try {
-      myAvatar = avatarData != null ? MemoryImage(avatarData) : null;
+      myAvatar.loadAvatar(avatarData);
     } catch (exception) {
       print("unable to decode my avatar: $exception");
     }
@@ -1115,7 +1115,7 @@ class ClientModel extends ChangeNotifier {
       // Load user's avatar (async).
       (() async {
         var abEntry = await Golib.addressBookEntry(remoteUser.uid);
-        chat.loadAvatar(abEntry.avatar);
+        chat.avatar.loadAvatar(abEntry.avatar);
       })();
     }
   }
