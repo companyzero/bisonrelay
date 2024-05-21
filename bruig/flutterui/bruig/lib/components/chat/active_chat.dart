@@ -50,18 +50,6 @@ class _ActiveChatState extends State<ActiveChat> {
     _debounce = Timer(const Duration(milliseconds: 100), () async {
       try {
         await chat?.sendMsg(msg);
-        WidgetsBinding.instance.addPostFrameCallback((_) async {
-          if (mounted && chat != null) {
-            var len = chat?.msgs.length;
-            _itemScrollController.scrollTo(
-              index: len! - 1,
-              alignment: 0.0,
-              curve: Curves.easeOut,
-              duration:
-                  const Duration(milliseconds: 100), // a little bit smoother
-            );
-          }
-        });
         client.newSentMsg(chat);
       } catch (exception) {
         if (mounted) {
