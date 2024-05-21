@@ -52,6 +52,7 @@ class _ChanW extends StatelessWidget {
                     colLabelSize: 110,
                     colValueFlex: 8,
                     separatorWidth: 10,
+                    useListBuilder: false,
                     [
                       Tuple2(Text("State:", style: labelTs),
                           Text(state, style: valTs)),
@@ -117,6 +118,7 @@ Widget pendingChanSummary(BuildContext context, LNPendingChannel chan,
       colLabelSize: 110,
       colValueFlex: 8,
       separatorWidth: 10,
+      useListBuilder: false,
       [
         Tuple2(Text("State:", style: labelTs), Text(state, style: valTs)),
         Tuple2(
