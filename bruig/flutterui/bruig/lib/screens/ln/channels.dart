@@ -220,13 +220,41 @@ class _LNChannelsPageState extends State<LNChannelsPage> {
     try {
       var newChans = await Golib.lnListChannels();
       var newPending = await Golib.lnListPendingChannels();
+      var newChannels = [
+        ...newChans,
+        ...newPending.pendingOpen,
+        ...newPending.waitingClose,
+        ...newPending.pendingForceClose
+      ];
+
+      // Check if any channel changed that needs to be updated.
+      var needsUpdate = newChannels.length != channels.length;
+      for (var i = 0; !needsUpdate && i < newChannels.length; i++) {
+        var c1 = channels[i];
+        var c2 = newChannels[i];
+        if (c1 is LNChannel && c2 is LNChannel) {
+          needsUpdate = c1.active != c2.active ||
+              c1.chanID != c2.chanID ||
+              c1.localBalance != c2.localBalance;
+        } else if (c1 is LNPendingOpenChannel && c2 is LNPendingOpenChannel) {
+          needsUpdate = c1.channel.channelPoint != c2.channel.channelPoint;
+        } else if (c1 is LNWaitingCloseChannel && c2 is LNWaitingCloseChannel) {
+          needsUpdate = c1.channel.channelPoint != c2.channel.channelPoint;
+        } else if (c1 is LNPendingForceClosingChannel &&
+            c2 is LNPendingForceClosingChannel) {
+          needsUpdate = c1.channel.channelPoint != c2.channel.channelPoint ||
+              c1.blocksTilMaturity != c2.blocksTilMaturity;
+        } else {
+          needsUpdate = true;
+        }
+      }
+
+      if (!needsUpdate) {
+        return;
+      }
+
       setState(() {
-        channels = [
-          ...newChans,
-          ...newPending.pendingOpen,
-          ...newPending.waitingClose,
-          ...newPending.pendingForceClose
-        ];
+        channels = newChannels;
       });
     } catch (exception) {
       showErrorSnackbar(context, "Unable to load LN channels: $exception");
@@ -281,7 +309,7 @@ class _LNChannelsPageState extends State<LNChannelsPage> {
     var darkTextColor = theme.indicatorColor;
     var dividerColor = theme.highlightColor;
     var backgroundColor = theme.backgroundColor;
-    if (loading) {
+    if (loading && channels.isEmpty) {
       return Text("Loading...", style: TextStyle(color: textColor));
     }
 
