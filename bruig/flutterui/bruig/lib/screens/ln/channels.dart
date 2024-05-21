@@ -1,8 +1,8 @@
 import 'dart:async';
 
 import 'package:bruig/components/buttons.dart';
+import 'package:bruig/components/confirmation_dialog.dart';
 import 'package:bruig/components/copyable.dart';
-import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/components/info_grid.dart';
 import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/screens/needs_out_channel.dart';
@@ -67,6 +67,8 @@ class _ChanW extends StatelessWidget {
                               textOverflow: TextOverflow.ellipsis,
                               chan.channelPoint,
                               valTs)),
+                      Tuple2(Text("Channel ID:", style: labelTs),
+                          Copyable(chan.shortChanID, valTs)),
                       Tuple2(Text("Channel Capacity:", style: labelTs),
                           Text("$capacity DCR", style: valTs)),
                       ...(isScreenSmall
@@ -127,6 +129,8 @@ Widget pendingChanSummary(BuildContext context, LNPendingChannel chan,
             Text("Channel Point:", style: labelTs),
             Copyable(
                 textOverflow: TextOverflow.ellipsis, chan.channelPoint, valTs)),
+        Tuple2(Text("Channel ID:", style: labelTs),
+            Copyable(chan.shortChanID, valTs)),
         Tuple2(Text("Channel Capacity:", style: labelTs),
             Text("$capacity DCR", style: valTs)),
         ...(isScreenSmall
@@ -245,6 +249,17 @@ class _LNChannelsPageState extends State<LNChannelsPage> {
     loadInfo();
   }
 
+  Future<void> confirmClose(LNChannel chan) async {
+    confirmationDialog(
+      context,
+      () => closeChan(chan),
+      "Close Channel?",
+      "Really close the channel ${chan.shortChanID}?",
+      "Close",
+      "Cancel",
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -305,7 +320,7 @@ class _LNChannelsPageState extends State<LNChannelsPage> {
             itemBuilder: (context, index) {
               var chan = channels[index];
               if (chan is LNChannel) {
-                return _ChanW(chan, closeChan);
+                return _ChanW(chan, confirmClose);
               }
               if (chan is LNPendingOpenChannel) {
                 return _PendingOpenChanW(chan);

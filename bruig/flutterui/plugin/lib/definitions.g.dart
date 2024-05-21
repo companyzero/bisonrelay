@@ -758,6 +758,7 @@ LNChannel _$LNChannelFromJson(Map<String, dynamic> json) => LNChannel(
       json['capacity'] as int,
       json['local_balance'] as int? ?? 0,
       json['remote_balance'] as int? ?? 0,
+      json['short_chan_id'] as String,
     );
 
 Map<String, dynamic> _$LNChannelToJson(LNChannel instance) => <String, dynamic>{
@@ -768,6 +769,7 @@ Map<String, dynamic> _$LNChannelToJson(LNChannel instance) => <String, dynamic>{
       'capacity': instance.capacity,
       'local_balance': instance.localBalance,
       'remote_balance': instance.remoteBalance,
+      'short_chan_id': instance.shortChanID,
     };
 
 LNPendingChannel _$LNPendingChannelFromJson(Map<String, dynamic> json) =>
@@ -778,6 +780,7 @@ LNPendingChannel _$LNPendingChannelFromJson(Map<String, dynamic> json) =>
       json['local_balance'] as int? ?? 0,
       json['remote_balance'] as int? ?? 0,
       json['initiator'] as int? ?? 0,
+      json['short_chan_id'] as String,
     );
 
 Map<String, dynamic> _$LNPendingChannelToJson(LNPendingChannel instance) =>
@@ -788,6 +791,7 @@ Map<String, dynamic> _$LNPendingChannelToJson(LNPendingChannel instance) =>
       'local_balance': instance.localBalance,
       'remote_balance': instance.remoteBalance,
       'initiator': instance.initiator,
+      'short_chan_id': instance.shortChanID,
     };
 
 LNPendingOpenChannel _$LNPendingOpenChannelFromJson(
