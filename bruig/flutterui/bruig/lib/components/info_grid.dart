@@ -8,39 +8,41 @@ class SimpleInfoGrid extends StatelessWidget {
   final int colValueFlex;
   final double colLabelSize;
   final double separatorWidth;
-  const SimpleInfoGrid(this.items,
-      {Key? key,
-      this.colLabelSize = 100,
-      this.colValueFlex = 4,
-      this.separatorWidth = 20,
-      this.controller})
-      : super(key: key);
+  final bool useListBuilder;
+  const SimpleInfoGrid(
+    this.items, {
+    Key? key,
+    this.colLabelSize = 100,
+    this.colValueFlex = 4,
+    this.separatorWidth = 20,
+    this.controller,
+    this.useListBuilder = true,
+  }) : super(key: key);
+
+  Widget buildChild(Tuple2<Widget, Widget> child) => Container(
+      margin: const EdgeInsets.only(bottom: 3),
+      child: Row(
+        children: [
+          SizedBox(width: colLabelSize, child: child.item1),
+          SizedBox(width: separatorWidth),
+          Flexible(
+            flex: colValueFlex,
+            child: child.item2,
+          ),
+        ],
+      ));
 
   @override
   Widget build(BuildContext context) {
-    return ListView.builder(
-        shrinkWrap: true,
-        controller: controller,
-        itemCount: items.length,
-        // physics: const NeverScrollableScrollPhysics(),
-        itemBuilder: (context, index) => Container(
-            margin: const EdgeInsets.only(bottom: 3),
-            child: Row(
-              children: [
-                /*
-                Flexible(
-                  fit: FlexFit.tight,
-                  flex: colLabelFlex,
-                  child: items[index].item1,
-                ),
-                */
-                SizedBox(width: colLabelSize, child: items[index].item1),
-                SizedBox(width: separatorWidth),
-                Flexible(
-                  flex: colValueFlex,
-                  child: items[index].item2,
-                ),
-              ],
-            )));
+    if (useListBuilder) {
+      return ListView.builder(
+          shrinkWrap: true,
+          controller: controller,
+          itemCount: items.length,
+          // physics: const NeverScrollableScrollPhysics(),
+          itemBuilder: (context, index) => buildChild(items[index]));
+    }
+
+    return Column(children: items.map(buildChild).toList());
   }
 }
