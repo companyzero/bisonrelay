@@ -819,8 +819,10 @@ class LNChannel {
   final int localBalance;
   @JsonKey(name: "remote_balance", defaultValue: 0)
   final int remoteBalance;
+  @JsonKey(name: "short_chan_id")
+  final String shortChanID;
   LNChannel(this.active, this.remotePubkey, this.channelPoint, this.chanID,
-      this.capacity, this.localBalance, this.remoteBalance);
+      this.capacity, this.localBalance, this.remoteBalance, this.shortChanID);
   factory LNChannel.fromJson(Map<String, dynamic> json) =>
       _$LNChannelFromJson(json);
 }
@@ -838,9 +840,11 @@ class LNPendingChannel {
   final int remoteBalance;
   @JsonKey(defaultValue: 0)
   final int initiator;
+  @JsonKey(name:"short_chan_id")
+  final String shortChanID;
 
   LNPendingChannel(this.remoteNodePub, this.channelPoint, this.capacity,
-      this.localBalance, this.remoteBalance, this.initiator);
+      this.localBalance, this.remoteBalance, this.initiator, this.shortChanID);
   factory LNPendingChannel.fromJson(Map<String, dynamic> json) =>
       _$LNPendingChannelFromJson(json);
 }
