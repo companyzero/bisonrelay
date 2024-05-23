@@ -201,7 +201,6 @@ class ManageGCScreenState extends State<ManageGCScreenForChat> {
   }
 
   void onDone(BuildContext context) {
-    //Navigator.pushReplacementNamed(context, "/chats");
     Navigator.pop(context);
   }
 

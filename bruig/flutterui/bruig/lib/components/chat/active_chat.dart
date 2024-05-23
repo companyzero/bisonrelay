@@ -83,9 +83,6 @@ class _ActiveChatState extends State<ActiveChat> {
     super.dispose();
   }
 
-  String nickCapitalLetter() =>
-      chat != null && chat!.nick.isNotEmpty ? chat!.nick[0].toUpperCase() : "";
-
   @override
   Widget build(BuildContext context) {
     if (this.chat == null) return Container();

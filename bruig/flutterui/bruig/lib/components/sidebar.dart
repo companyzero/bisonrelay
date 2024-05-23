@@ -30,7 +30,6 @@ class Sidebar extends StatefulWidget {
 class _SidebarState extends State<Sidebar> {
   ClientModel get client => widget.client;
   MainMenuModel get mainMenu => widget.mainMenu;
-  ServerSessionState connState = ServerSessionState.empty();
   SidebarXController ctrl =
       SidebarXController(selectedIndex: 0, extended: true);
   FeedModel get feed => widget.feed;
@@ -39,10 +38,9 @@ class _SidebarState extends State<Sidebar> {
     setState(() {});
   }
 
-  void clientUpdated() async {
-    setState(() {
-      connState = client.connState;
-    });
+  void connStateChanged() async {
+    // Needed because the list of menus changes depending on the connstate.
+    setState(() {});
   }
 
   void switchScreen(String route) {
@@ -58,27 +56,28 @@ class _SidebarState extends State<Sidebar> {
   @override
   void initState() {
     super.initState();
-    clientUpdated();
     feed.addListener(feedUpdated);
-    client.addListener(clientUpdated);
+    client.connState.addListener(connStateChanged);
     mainMenu.addListener(menuUpdated);
   }
 
   @override
   void didUpdateWidget(Sidebar oldWidget) {
-    oldWidget.feed.removeListener(feedUpdated);
-    oldWidget.client.removeListener(clientUpdated);
-    oldWidget.mainMenu.removeListener(menuUpdated);
     super.didUpdateWidget(oldWidget);
-    feed.addListener(feedUpdated);
-    client.addListener(clientUpdated);
-    mainMenu.addListener(menuUpdated);
+    if (oldWidget.client != widget.client) {
+      oldWidget.feed.removeListener(feedUpdated);
+      oldWidget.client.connState.removeListener(connStateChanged);
+      oldWidget.mainMenu.removeListener(menuUpdated);
+      feed.addListener(feedUpdated);
+      client.connState.addListener(connStateChanged);
+      mainMenu.addListener(menuUpdated);
+    }
   }
 
   @override
   void dispose() {
     feed.removeListener(feedUpdated);
-    client.removeListener(clientUpdated);
+    client.connState.removeListener(connStateChanged);
     mainMenu.removeListener(menuUpdated);
     super.dispose();
   }

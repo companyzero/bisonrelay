@@ -105,8 +105,8 @@ class _OverviewScreenState extends State<OverviewScreen> {
 
   bool removeBottomBar = false;
   var selectedIndex = 0;
-  void clientChanged() {
-    var newConnState = client.connState;
+  void connStateChanged() {
+    var newConnState = client.connState.state;
     if (newConnState.state != connState.state ||
         newConnState.checkWalletErr != connState.checkWalletErr) {
       setState(() {
@@ -208,8 +208,8 @@ class _OverviewScreenState extends State<OverviewScreen> {
   @override
   void initState() {
     super.initState();
-    connState = widget.client.connState;
-    widget.client.addListener(clientChanged);
+    connState = widget.client.connState.state;
+    widget.client.connState.addListener(connStateChanged);
     _configureDidReceiveLocalNotificationSubject();
     _configureSelectNotificationSubject();
   }
@@ -217,13 +217,15 @@ class _OverviewScreenState extends State<OverviewScreen> {
   @override
   void didUpdateWidget(OverviewScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-    oldWidget.client.removeListener(clientChanged);
-    widget.client.addListener(clientChanged);
+    if (oldWidget.client != widget.client) {
+      oldWidget.client.connState.removeListener(connStateChanged);
+      widget.client.connState.addListener(connStateChanged);
+    }
   }
 
   @override
   void dispose() {
-    widget.client.removeListener(clientChanged);
+    widget.client.connState.removeListener(connStateChanged);
     NotificationService().didReceiveLocalNotificationStream.close();
     NotificationService().selectNotificationStream.close();
     super.dispose();

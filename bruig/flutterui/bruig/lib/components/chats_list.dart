@@ -427,16 +427,16 @@ class _ChatsListState extends State<_ChatsList> {
                             hoverColor: selectedBackgroundColor,
                             splashRadius: 15,
                             iconSize: 15,
-                            tooltip: client.isOnline
+                            tooltip: client.connState.isOnline
                                 ? "Fetch invite using key"
                                 : "Cannot fetch invite while client is offline",
-                            onPressed: client.isOnline
+                            onPressed: client.connState.isOnline
                                 ? () => fetchInvite(context)
                                 : null,
                             disabledColor: backgroundColor,
                             icon: Icon(
                                 size: 20,
-                                color: client.isOnline
+                                color: client.connState.isOnline
                                     ? darkTextColor
                                     : hoverColor,
                                 Icons.get_app_outlined)))),
@@ -465,14 +465,15 @@ class _ChatsListState extends State<_ChatsList> {
                             hoverColor: selectedBackgroundColor,
                             splashRadius: 15,
                             iconSize: 15,
-                            tooltip: client.isOnline
+                            tooltip: client.connState.isOnline
                                 ? "Generate Invite"
                                 : "Cannot generate invite while offline",
-                            onPressed: client.isOnline ? genInvite : null,
+                            onPressed:
+                                client.connState.isOnline ? genInvite : null,
                             disabledColor: backgroundColor,
                             icon: Icon(
                                 size: 20,
-                                color: client.isOnline
+                                color: client.connState.isOnline
                                     ? darkTextColor
                                     : hoverColor,
                                 Icons.add_outlined))))

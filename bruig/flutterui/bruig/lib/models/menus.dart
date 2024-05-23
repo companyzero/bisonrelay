@@ -210,10 +210,14 @@ List<ChatMenuItem?> buildChatContextMenu() {
       "Create Group Chat",
       (context, client) => showGroupChat(client),
     ),
-    ChatMenuItem("Create Invite",
-        (context, client) => client.isOnline ? generateInvite(context) : null),
-    ChatMenuItem("Fetch Invite",
-        (context, client) => client.isOnline ? fetchInvite(context) : null),
+    ChatMenuItem(
+        "Create Invite",
+        (context, client) =>
+            client.connState.isOnline ? generateInvite(context) : null),
+    ChatMenuItem(
+        "Fetch Invite",
+        (context, client) =>
+            client.connState.isOnline ? fetchInvite(context) : null),
     ChatMenuItem("Received Message Log",
         (context, client) => gotoContactsLastMsgTimeScreen(context)),
   ];
