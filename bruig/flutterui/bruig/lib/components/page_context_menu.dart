@@ -24,7 +24,7 @@ class PageContextMenu extends StatelessWidget {
       BuildContext context, MainMenuModel mainMenu, String route, int pageTab) {
     if (pageTab == mainMenu.activePageTab) return;
     navKey.currentState!
-        .pushReplacementNamed(route, arguments: PageTabs(pageTab, [], null));
+        .pushReplacementNamed(route, arguments: PageTabs(pageTab, null, null));
     Timer(const Duration(milliseconds: 1),
         () async => mainMenu.activePageTab = pageTab);
     //Navigator.pop(context);

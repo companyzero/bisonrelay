@@ -156,12 +156,11 @@ class _UserPostWState extends State<UserPostW> {
 }
 
 class UserPosts extends StatefulWidget {
-  final List<PostListItem> posts;
+  final ChatModel chat;
   final FeedModel feed;
   final ClientModel client;
   final Function tabChange;
-  const UserPosts(this.posts, this.feed, this.client, this.tabChange,
-      {Key? key})
+  const UserPosts(this.chat, this.feed, this.client, this.tabChange, {Key? key})
       : super(key: key);
 
   @override
@@ -171,31 +170,61 @@ class UserPosts extends StatefulWidget {
 class _UserPostsState extends State<UserPosts> {
   FeedModel get feed => widget.feed;
   ClientModel get client => widget.client;
+  ChatModel get chat => widget.chat;
+  List<PostListItem> get userPosts => widget.chat.userPostsList.posts;
+
+  List<PostListItem> notReceived = [];
+  List<FeedPostModel> alreadyReceived = [];
+
+  void updateLists() {
+    var authorID = widget.chat.id;
+    var newAlreadyReceived =
+        widget.feed.posts.where((post) => (post.summ.authorID == authorID));
+    List<PostListItem> newNotReceived = [];
+    for (var post in userPosts) {
+      var found = false;
+      for (var alreadyReceivedPost in newAlreadyReceived) {
+        if (post.id == alreadyReceivedPost.summ.id) {
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        newNotReceived.add(post);
+      }
+    }
+
+    setState(() {
+      alreadyReceived = newAlreadyReceived.toList();
+      notReceived = newNotReceived;
+    });
+  }
 
   @override
   initState() {
     super.initState();
-    widget.feed.addListener(feedChanged);
-  }
-
-  void feedChanged() async {
-    setState(() {});
+    widget.feed.addListener(updateLists);
+    chat.userPostsList.addListener(updateLists);
+    updateLists();
   }
 
   @override
   void didUpdateWidget(UserPosts oldWidget) {
     super.didUpdateWidget(oldWidget);
-    oldWidget.feed.removeListener(feedChanged);
-    widget.feed.addListener(feedChanged);
+    if (oldWidget.feed != widget.feed) {
+      oldWidget.feed.removeListener(updateLists);
+      widget.feed.addListener(updateLists);
+    }
+    if (oldWidget.chat != widget.chat) {
+      oldWidget.chat.userPostsList.removeListener(updateLists);
+      chat.userPostsList.addListener(updateLists);
+    }
   }
 
   @override
   void dispose() {
-    Future.delayed(Duration.zero, () async {
-      widget.client.hideUserPostList();
-    });
-
-    widget.feed.removeListener(feedChanged);
+    widget.feed.removeListener(updateLists);
+    chat.userPostsList.removeListener(updateLists);
     super.dispose();
   }
 
@@ -204,22 +233,7 @@ class _UserPostsState extends State<UserPosts> {
     bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
     var theme = Theme.of(context);
     var backgroundColor = theme.backgroundColor;
-    var authorID = widget.client.activeUserPostAuthorID;
-    var alreadyReceivedUserPosts =
-        widget.feed.posts.where((post) => (post.summ.authorID == authorID));
-    List<PostListItem> notReceived = [];
-    for (var post in widget.posts) {
-      var found = false;
-      for (var alreadyReceivedPost in alreadyReceivedUserPosts) {
-        if (post.id == alreadyReceivedPost.summ.id) {
-          found = true;
-          break;
-        }
-      }
-      if (!found) {
-        notReceived.add(post);
-      }
-    }
+
     return Container(
       margin: const EdgeInsets.all(1),
       decoration: BoxDecoration(
@@ -233,20 +247,22 @@ class _UserPostsState extends State<UserPosts> {
           children: [
             ...notReceived
                 .map((e) => UserPostW(
-                    e,
-                    widget.feed,
-                    widget.client.getExistingChat(authorID),
-                    widget.client,
-                    widget.tabChange))
+                      e,
+                      widget.feed,
+                      widget.chat,
+                      widget.client,
+                      widget.tabChange,
+                    ))
                 .toList(),
-            ...alreadyReceivedUserPosts
+            ...alreadyReceived
                 .map((e) => FeedPostW(
-                    widget.feed,
-                    e,
-                    widget.client.getExistingChat(e.summ.authorID),
-                    widget.client.getExistingChat(e.summ.from),
-                    widget.client,
-                    widget.tabChange))
+                      widget.feed,
+                      e,
+                      widget.client.getExistingChat(e.summ.authorID),
+                      widget.client.getExistingChat(e.summ.from),
+                      widget.client,
+                      widget.tabChange,
+                    ))
                 .toList()
           ],
         ))

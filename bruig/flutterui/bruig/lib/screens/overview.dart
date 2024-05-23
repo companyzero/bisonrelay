@@ -68,7 +68,7 @@ class _OverviewScreenTitleState extends State<_OverviewScreenTitle> {
 
 class PageTabs {
   final int tabIndex;
-  final List<PostListItem> userPostList;
+  final ChatModel? userPostList;
   final PostContentScreenArgs? postScreenArgs;
 
   PageTabs(this.tabIndex, this.userPostList, this.postScreenArgs);
@@ -123,7 +123,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
 
   void goToSubMenuPage(String route, int pageTab) {
     navKey.currentState!
-        .pushReplacementNamed(route, arguments: PageTabs(pageTab, [], null));
+        .pushReplacementNamed(route, arguments: PageTabs(pageTab, null, null));
     Timer(const Duration(milliseconds: 1),
         () async => widget.mainMenu.activePageTab = pageTab);
     Navigator.pop(context);
@@ -131,7 +131,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
 
   void goToNewPost() {
     navKey.currentState!
-        .pushReplacementNamed('/feed', arguments: PageTabs(3, [], null));
+        .pushReplacementNamed('/feed', arguments: PageTabs(3, null, null));
   }
 
   void goToAbout() {
@@ -196,7 +196,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
             var post = feed.getPost(authorID, pid);
             if (post != null) {
               navKey.currentState!.pushReplacementNamed("/feed",
-                  arguments: PageTabs(0, [], PostContentScreenArgs(post)));
+                  arguments: PageTabs(0, null, PostContentScreenArgs(post)));
               feed.active = post;
             }
           }
@@ -325,7 +325,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
                       } else if (feed.active != null) {
                         feed.active = null;
                         navKey.currentState!.pushReplacementNamed('/feed',
-                            arguments: PageTabs(0, [], null));
+                            arguments: PageTabs(0, null, null));
                       } else {
                         switchScreen(SettingsScreen.routeName);
                         removeBottomBar = true;

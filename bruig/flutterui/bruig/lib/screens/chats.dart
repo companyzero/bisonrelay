@@ -345,19 +345,6 @@ class _ChatsScreenState extends State<ChatsScreen> {
     });
   }
 
-  void clientChanged() {
-    var newUserPostList = client.activeUserPostList;
-    if (newUserPostList != userPostList) {
-      if (newUserPostList.isNotEmpty) {
-        Navigator.of(context).pushReplacementNamed('/feed',
-            arguments: PageTabs(4, newUserPostList, null));
-      }
-      setState(() {
-        userPostList = newUserPostList;
-      });
-    }
-  }
-
   void connStateChanged() {
     var newConnState = client.connState.state;
     if (newConnState.state != connState.state ||
@@ -378,7 +365,6 @@ class _ChatsScreenState extends State<ChatsScreen> {
   void initState() {
     super.initState();
     connState = widget.client.connState.state;
-    widget.client.addListener(clientChanged);
     widget.client.connState.addListener(connStateChanged);
     keepCheckingLNHasBalance();
   }
@@ -387,8 +373,6 @@ class _ChatsScreenState extends State<ChatsScreen> {
   void didUpdateWidget(ChatsScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.client != widget.client) {
-      oldWidget.client.removeListener(clientChanged);
-      widget.client.addListener(clientChanged);
       oldWidget.client.connState.removeListener(connStateChanged);
       widget.client.connState.addListener(connStateChanged);
     }
@@ -396,7 +380,6 @@ class _ChatsScreenState extends State<ChatsScreen> {
 
   @override
   void dispose() {
-    widget.client.removeListener(clientChanged);
     checkLNTimer?.cancel();
     super.dispose();
   }

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:bruig/screens/feed.dart';
 import 'package:flutter/material.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/components/chat/types.dart';
@@ -676,66 +677,6 @@ class _JoinGCEventWState extends State<JoinGCEventW> {
   }
 }
 
-class PostsListW extends StatefulWidget {
-  final UserPostList posts;
-  final ChatModel chat;
-  final Function() scrollToBottom;
-  const PostsListW(this.chat, this.posts, this.scrollToBottom, {Key? key})
-      : super(key: key);
-
-  @override
-  State<PostsListW> createState() => _PostsListWState();
-}
-
-class _PostsListWState extends State<PostsListW> {
-  List<PostListItem> get posts => widget.posts.posts;
-  ChatModel get chat => widget.chat;
-
-  void getPost(int index) async {
-    var post = posts[index];
-    var event =
-        SynthChatEvent("Fetching user post '${post.title}'", SCE_sending);
-    widget.scrollToBottom();
-    try {
-      chat.append(ChatEventModel(event, null), false);
-      await Golib.getUserPost(chat.id, post.id);
-      event.state = SCE_sent;
-    } catch (exception) {
-      event.error = Exception("Unable to get user post: $exception");
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    var theme = Theme.of(context);
-    var textColor = theme.focusColor;
-    return ServerEvent(
-        child: Column(
-      children: [
-        Text("User Posts", style: TextStyle(color: textColor)),
-        ListView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: posts.length,
-            itemBuilder: (BuildContext context, int index) {
-              return Row(
-                children: [
-                  IconButton(
-                    onPressed: () {
-                      getPost(index);
-                    },
-                    icon: const Icon(Icons.download),
-                    tooltip: "Fetch post ${posts[index].id}",
-                  ),
-                  Expanded(child: MarkdownArea(posts[index].title, false))
-                ],
-              );
-            }),
-      ],
-    ));
-  }
-}
-
 class InflightTipW extends StatefulWidget {
   final InflightTip tip;
   final ChatModel source;
@@ -965,6 +906,86 @@ class PostsSubscriberUpdatedW extends StatelessWidget {
             child: Text("${event.nick} $subTxt the local client's posts.",
                 style: TextStyle(
                     fontSize: theme.getSmallFont(context), color: textColor))));
+  }
+}
+
+class ListPostsEventW extends StatefulWidget {
+  final ChatEventModel event;
+  final ChatModel chat;
+  const ListPostsEventW(this.event, this.chat, {Key? key}) : super(key: key);
+
+  @override
+  State<ListPostsEventW> createState() => _ListPostsWState();
+}
+
+class _ListPostsWState extends State<ListPostsEventW> {
+  ChatEventModel get event => widget.event;
+  ChatModel get chat => widget.chat;
+
+  String msg = "";
+  bool hasUserPosts = false;
+
+  void update() {
+    setState(() {
+      if (event.sendError != null) {
+        msg = "Unable to list user's posts: ${event.sendError}";
+      } else if (event.sentState == CMS_sending) {
+        msg = "… Listing user's posts";
+      } else if (event.sentState == CMS_sent) {
+        msg = "✓ Listing user's posts";
+      } else {
+        msg = "Unknown state when listing user's post: ${event.sentState}";
+      }
+
+      hasUserPosts = chat.userPostsList.isNotEmpty;
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    update();
+    event.addListener(update);
+    chat.userPostsList.addListener(update);
+  }
+
+  @override
+  void didUpdateWidget(ListPostsEventW oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.event != event) {
+      oldWidget.event.removeListener(update);
+      event.addListener(update);
+      oldWidget.chat.userPostsList.removeListener(update);
+      chat.userPostsList.addListener(update);
+    }
+  }
+
+  @override
+  void dispose() {
+    event.removeListener(update);
+    chat.userPostsList.removeListener(update);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    var theme = Theme.of(context);
+    var textColor = theme.dividerColor;
+
+    return Consumer<ThemeNotifier>(
+        builder: (context, theme, _) => ServerEvent(
+              child: hasUserPosts
+                  ? TextButton(
+                      onPressed: () => FeedScreen.showUsersPosts(context, chat),
+                      child: Text("Show user's posts",
+                          style: TextStyle(
+                              fontSize: theme.getSmallFont(context),
+                              color: textColor)))
+                  : Text(msg,
+                      style: TextStyle(
+                          fontSize: theme.getSmallFont(context),
+                          color: textColor)),
+            ));
   }
 }
 
@@ -1451,11 +1472,7 @@ class Event extends StatelessWidget {
     if (event.event is GCInvitation) {
       return JoinGCEventW(event, event.event as GCInvitation);
     }
-/*
-    if (event.event is UserPostList) {
-      return PostsListW(chat, event.event as UserPostList, scrollToBottom);
-    }
-*/
+
     if (event.event is UserContentList) {
       return UserContentEventW(event.event as UserContentList, chat);
     }
@@ -1467,6 +1484,10 @@ class Event extends StatelessWidget {
 
     if (event.event is PostSubscriberUpdated) {
       return PostsSubscriberUpdatedW(event.event as PostSubscriberUpdated);
+    }
+
+    if (event.event is RequestedUsersPostListEvent) {
+      return ListPostsEventW(event, chat);
     }
 
     if (event.event is GCVersionWarn) {

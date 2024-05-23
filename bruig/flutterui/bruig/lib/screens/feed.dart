@@ -4,7 +4,6 @@ import 'package:bruig/models/client.dart';
 import 'package:bruig/screens/feed/user_posts.dart';
 import 'package:bruig/screens/overview.dart';
 import 'package:flutter/material.dart';
-import 'package:golib_plugin/definitions.dart';
 import 'package:provider/provider.dart';
 import 'package:bruig/models/feed.dart';
 import 'package:bruig/screens/feed/feed_posts.dart';
@@ -41,6 +40,12 @@ class FeedScreenTitle extends StatelessWidget {
 
 class FeedScreen extends StatefulWidget {
   static const routeName = '/feed';
+
+  // Goes to the screen that shows the user's posts.
+  static void showUsersPosts(BuildContext context, ChatModel chat) =>
+      Navigator.of(context).pushReplacementNamed(FeedScreen.routeName,
+          arguments: PageTabs(4, chat, null));
+
   final int tabIndex;
   final MainMenuModel mainMenu;
   const FeedScreen(this.mainMenu, {Key? key, this.tabIndex = 0})
@@ -51,7 +56,7 @@ class FeedScreen extends StatefulWidget {
 }
 
 class _FeedScreenState extends State<FeedScreen> {
-  List<PostListItem> userPostList = [];
+  ChatModel? userPostList;
   int tabIndex = 0;
   PostContentScreenArgs? showPost;
   GlobalKey<NavigatorState> navKey = GlobalKey(debugLabel: "overview nav key");
@@ -84,13 +89,15 @@ class _FeedScreenState extends State<FeedScreen> {
         return Consumer<FeedModel>(
             builder: (context, feed, child) => NewPostScreen(feed));
       case 4:
-        if (showPost == null) {
+        if (showPost == null && userPostList != null) {
           return Consumer2<FeedModel, ClientModel>(
-              builder: (context, feed, client, child) => UserPosts(
-                  client.activeUserPostList, feed, client, onItemChanged));
-        } else {
+              builder: (context, feed, client, child) =>
+                  UserPosts(userPostList!, feed, client, onItemChanged));
+        } else if (showPost != null) {
           return PostContentScreen(
               showPost as PostContentScreenArgs, onItemChanged);
+        } else {
+          return Text("Active tab $tabIndex without post or userPostList");
         }
     }
     return Text("Active is $tabIndex");
@@ -111,6 +118,25 @@ class _FeedScreenState extends State<FeedScreen> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    // Determine if showing a specific user's posts.
+    if (ModalRoute.of(context)?.settings.arguments != null) {
+      final args = ModalRoute.of(context)!.settings.arguments as PageTabs;
+      tabIndex = args.tabIndex;
+      setState(() {
+        if (args.userPostList != null) {
+          userPostList = args.userPostList;
+        }
+        if (args.postScreenArgs != null) {
+          showPost = args.postScreenArgs;
+        }
+      });
+    }
+  }
+
+  @override
   void didUpdateWidget(FeedScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
   }
@@ -123,16 +149,6 @@ class _FeedScreenState extends State<FeedScreen> {
   @override
   Widget build(BuildContext context) {
     bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
-    if (ModalRoute.of(context)!.settings.arguments != null) {
-      final args = ModalRoute.of(context)!.settings.arguments as PageTabs;
-      tabIndex = args.tabIndex;
-      if (args.userPostList.isNotEmpty) {
-        userPostList = args.userPostList;
-      }
-      if (args.postScreenArgs != null) {
-        showPost = args.postScreenArgs;
-      }
-    }
 
     return Row(children: [
       ModalRoute.of(context)!.settings.arguments == null
