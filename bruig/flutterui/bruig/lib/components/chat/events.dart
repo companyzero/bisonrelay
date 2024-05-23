@@ -500,11 +500,10 @@ class _ReceivedSentPMMobileState extends State<ReceivedSentMobilePM> {
 
 class PMW extends StatelessWidget {
   final ChatEventModel evnt;
-  final String nick;
   final ShowSubMenuCB showSubMenu;
   final ClientModel client;
   final ChatModel chat;
-  const PMW(this.evnt, this.nick, this.showSubMenu, this.client, this.chat,
+  const PMW(this.evnt, this.showSubMenu, this.client, this.chat,
       {Key? key})
       : super(key: key);
 
@@ -521,16 +520,16 @@ class PMW extends StatelessWidget {
     bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
 
     if (isScreenSmall) {
-      return ReceivedSentMobilePM(evnt, evnt.source?.nick ?? nick, timestamp,
-          showSubMenu, evnt.source?.id ?? "", nick, false, client);
+      return ReceivedSentMobilePM(evnt, evnt.source?.nick ?? client.nick, timestamp,
+          showSubMenu, evnt.source?.id ?? "", client.nick, false, client);
     }
     return ReceivedSentPM(
         evnt,
-        evnt.source?.nick ?? nick,
+        evnt.source?.nick ?? client.nick,
         timestamp,
         showSubMenu,
         evnt.source?.id ?? "",
-        nick,
+        client.nick,
         false,
         openReplyDM,
         client,
@@ -540,12 +539,11 @@ class PMW extends StatelessWidget {
 
 class GCMW extends StatelessWidget {
   final ChatEventModel evnt;
-  final String nick;
   final ShowSubMenuCB showSubMenu;
   final OpenReplyDMCB openReplyDM;
   final ClientModel client;
   final ChatModel chat;
-  const GCMW(this.evnt, this.nick, this.showSubMenu, this.openReplyDM,
+  const GCMW(this.evnt, this.showSubMenu, this.openReplyDM,
       this.client, this.chat,
       {Key? key})
       : super(key: key);
@@ -561,11 +559,11 @@ class GCMW extends StatelessWidget {
 
     return ReceivedSentPM(
         evnt,
-        evnt.source?.nick ?? nick,
+        evnt.source?.nick ?? client.nick,
         timestamp,
         showSubMenu,
         evnt.source?.id ?? "",
-        nick,
+        client.nick,
         true,
         openReplyDM,
         client,
@@ -1413,12 +1411,8 @@ class ProfileUpdatedW extends StatelessWidget {
 class Event extends StatelessWidget {
   final ChatEventModel event;
   final ChatModel chat;
-  final String nick;
   final ClientModel client;
-  final Function() scrollToBottom;
-  const Event(
-      this.chat, this.event, this.nick, this.client, this.scrollToBottom,
-      {Key? key})
+  const Event(this.chat, this.event, this.client, {Key? key})
       : super(key: key);
 
   showSubMenu(bool isGC, String id) => client.showSubMenu(isGC, id);
@@ -1442,7 +1436,7 @@ class Event extends StatelessWidget {
     }
 
     if (event.event is PM) {
-      return PMW(event, nick, showSubMenu, client, chat);
+      return PMW(event, showSubMenu, client, chat);
     }
 
     if (event.event is InflightTip) {
@@ -1450,7 +1444,7 @@ class Event extends StatelessWidget {
     }
 
     if (event.event is GCMsg) {
-      return GCMW(event, nick, showSubMenu, openReplyDM, client, chat);
+      return GCMW(event, showSubMenu, openReplyDM, client, chat);
     }
 
     if (event.event is GCUserEvent) {
