@@ -51,16 +51,13 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   ClientModel get client => widget.client;
-  ServerSessionState connState = ServerSessionState.empty();
   bool loading = false;
   bool notificationsEnabled = false;
   bool foregroundService = false;
   String settingsPage = "main";
 
-  void clientUpdated() async {
-    setState(() {
-      connState = client.connState;
-    });
+  void connStateChanged() async {
+    setState(() {});
   }
 
   void updateNotificationSettings(bool? value, bool? foregroundSvc) {
@@ -145,8 +142,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   void initState() {
     super.initState();
-    clientUpdated();
-    client.addListener(clientUpdated);
+    client.connState.addListener(connStateChanged);
     StorageManager.readData(StorageManager.notificationsKey).then((value) {
       if (value != null) {
         setState(() {
@@ -165,16 +161,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   void didUpdateWidget(SettingsScreen oldWidget) {
-    oldWidget.client.removeListener(clientUpdated);
     super.didUpdateWidget(oldWidget);
-    client.addListener(clientUpdated);
+    if (oldWidget.client != widget.client) {
+      oldWidget.client.connState.removeListener(connStateChanged);
+      client.connState.addListener(connStateChanged);
+    }
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance
         .addPostFrameCallback((_) => client.settingsPageTitle = "Settings");
-    client.removeListener(clientUpdated);
+    client.connState.removeListener(connStateChanged);
     super.dispose();
   }
 
@@ -465,7 +463,7 @@ class MainSettingsScreen extends StatelessWidget {
                         style: TextStyle(
                             fontSize: theme.getMediumFont(context),
                             color: textColor))),
-                client.connState.state == connStateCheckingWallet
+                client.connState.isCheckingWallet
                     ? ListTile(
                         onTap: () {
                           confirmationDialog(

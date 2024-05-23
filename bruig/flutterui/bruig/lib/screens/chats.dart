@@ -356,7 +356,10 @@ class _ChatsScreenState extends State<ChatsScreen> {
         userPostList = newUserPostList;
       });
     }
-    var newConnState = client.connState;
+  }
+
+  void connStateChanged() {
+    var newConnState = client.connState.state;
     if (newConnState.state != connState.state ||
         newConnState.checkWalletErr != connState.checkWalletErr) {
       setState(() {
@@ -374,16 +377,21 @@ class _ChatsScreenState extends State<ChatsScreen> {
   @override
   void initState() {
     super.initState();
-    connState = widget.client.connState;
+    connState = widget.client.connState.state;
     widget.client.addListener(clientChanged);
+    widget.client.connState.addListener(connStateChanged);
     keepCheckingLNHasBalance();
   }
 
   @override
   void didUpdateWidget(ChatsScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-    oldWidget.client.removeListener(clientChanged);
-    widget.client.addListener(clientChanged);
+    if (oldWidget.client != widget.client) {
+      oldWidget.client.removeListener(clientChanged);
+      widget.client.addListener(clientChanged);
+      oldWidget.client.connState.removeListener(connStateChanged);
+      widget.client.connState.addListener(connStateChanged);
+    }
   }
 
   @override

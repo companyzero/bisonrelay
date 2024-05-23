@@ -461,6 +461,20 @@ class RescanNotifier extends ChangeNotifier {
   }
 }
 
+class ConnStateModel extends ChangeNotifier {
+  ServerSessionState _state = ServerSessionState.empty();
+  ServerSessionState get state => _state;
+
+  bool get isOnline => _state.state == connStateOnline;
+  bool get isCheckingWallet => _state.state == connStateCheckingWallet;
+  String? get checkWalletErr => _state.checkWalletErr;
+
+  _setState(ServerSessionState v) {
+    _state = v;
+    notifyListeners();
+  }
+}
+
 class ClientModel extends ChangeNotifier {
   ClientModel() {
     _handleAcceptedInvites();
@@ -695,9 +709,7 @@ class ClientModel extends ChangeNotifier {
   String _nick = "";
   String get nick => _nick;
 
-  ServerSessionState _connState = ServerSessionState.empty();
-  ServerSessionState get connState => _connState;
-  bool get isOnline => _connState.state == connStateOnline;
+  final ConnStateModel connState = ConnStateModel();
 
   String _network = "";
   String get network => _network;
@@ -1123,7 +1135,7 @@ class ClientModel extends ChangeNotifier {
   void _handleServerSessChanged() async {
     var stream = Golib.serverSessionChanged();
     await for (var state in stream) {
-      _connState = state;
+      connState._setState(state);
       notifyListeners();
     }
   }
