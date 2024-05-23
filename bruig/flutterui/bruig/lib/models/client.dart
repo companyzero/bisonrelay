@@ -53,6 +53,11 @@ class RequestedResourceEvent extends ChatEvent {
       : super(uid, "Fetching user resources");
 }
 
+class RequestedUsersPostListEvent extends ChatEvent {
+  const RequestedUsersPostListEvent(String uid)
+      : super(uid, "Listing user's posts");
+}
+
 const int CMS_unknown = 0;
 const int CMS_sending = 1;
 const int CMS_sent = 2;
@@ -137,6 +142,16 @@ class AvatarModel extends ChangeNotifier {
   }
 }
 
+class PostsListModel extends ChangeNotifier {
+  List<PostListItem> _posts = [];
+  List<PostListItem> get posts => _posts;
+  bool get isNotEmpty => _posts.isNotEmpty;
+  void _populatePosts(List<PostListItem> items) {
+    _posts = items;
+    notifyListeners();
+  }
+}
+
 class ChatModel extends ChangeNotifier {
   final String id; // RemoteUID or GC ID
   final bool isGC;
@@ -178,13 +193,6 @@ class ChatModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  String _userPostListID = "";
-  String get userPostListID => _userPostListID;
-  set userPostListID(String b) {
-    _userPostListID = b;
-    notifyListeners();
-  }
-
   int _scrollPosition = 0;
   int get scrollPosition => _scrollPosition;
   set scrollPosition(int s) {
@@ -195,14 +203,8 @@ class ChatModel extends ChangeNotifier {
   final AvatarModel _avatar = AvatarModel();
   AvatarModel get avatar => _avatar;
 
-  List<PostListItem> _userPostList = [];
-  UnmodifiableListView<PostListItem> get userPostList =>
-      UnmodifiableListView(_userPostList);
-
-  set userPostList(List<PostListItem> us) {
-    _userPostList = us;
-    notifyListeners();
-  }
+  // List of posts from this user.
+  late final PostsListModel userPostsList = PostsListModel();
 
   // return the first unread msg index and -1 if there aren't
   // unread msgs
@@ -725,27 +727,6 @@ class ClientModel extends ChangeNotifier {
   String _network = "";
   String get network => _network;
 
-  String _activeUserPostAuthorID = "";
-  String get activeUserPostAuthorID => _activeUserPostAuthorID;
-  set activeUserPostAuthorID(String b) {
-    _activeUserPostAuthorID = b;
-    notifyListeners();
-  }
-
-  List<PostListItem> _activeUserPostList = [];
-  UnmodifiableListView<PostListItem> get activeUserPostList =>
-      UnmodifiableListView(_activeUserPostList);
-
-  set activeUserPostList(List<PostListItem> us) {
-    _activeUserPostList = us;
-    notifyListeners();
-  }
-
-  void hideUserPostList() {
-    activeUserPostList = [];
-    notifyListeners();
-  }
-
   final ActiveChatModel activeChat = ActiveChatModel();
   ChatModel? get active => activeChat.chat;
 
@@ -768,7 +749,6 @@ class ClientModel extends ChangeNotifier {
 
     hasUnreadChats = unreadChats;
     hideSubMenu();
-    hideUserPostList();
     notifyListeners();
   }
 
@@ -985,10 +965,7 @@ class ClientModel extends ChangeNotifier {
       if (evnt is UserPostList) {
         if (evnt.posts.isNotEmpty) {
           var chat = getExistingChat(evnt.uid);
-          chat?.userPostList = evnt.posts;
-          activeUserPostList = evnt.posts;
-          activeUserPostAuthorID = evnt.uid;
-          notifyListeners();
+          chat?.userPostsList._populatePosts(evnt.posts);
         }
         continue;
       }

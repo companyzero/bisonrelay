@@ -12,7 +12,6 @@ import 'package:golib_plugin/golib_plugin.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:bruig/components/user_context_menu.dart';
 import 'package:bruig/theme_manager.dart';
 
 class PostContentScreenArgs {
@@ -1057,7 +1056,7 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
                   onPressed: () => Navigator.of(context).pushReplacementNamed(
                       '/feed',
                       arguments:
-                          PageTabs(0, [], null)), //widget.tabChange(0, null),
+                          PageTabs(0, null, null)), //widget.tabChange(0, null),
                   icon: Icon(color: darkTextColor, Icons.close_outlined)),
         ]));
   }

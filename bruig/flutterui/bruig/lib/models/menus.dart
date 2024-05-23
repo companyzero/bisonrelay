@@ -13,6 +13,7 @@ import 'package:bruig/screens/feed.dart';
 import 'package:bruig/screens/ln_management.dart';
 import 'package:bruig/screens/log.dart';
 import 'package:bruig/screens/manage_content_screen.dart';
+import 'package:bruig/screens/overview.dart';
 import 'package:bruig/screens/paystats.dart';
 import 'package:bruig/screens/settings.dart';
 import 'package:bruig/screens/viewpage_screen.dart';
@@ -247,18 +248,24 @@ List<ChatMenuItem?> buildUserChatMenu(ChatModel chat) {
 
   void listUserPosts(
       BuildContext context, ClientModel client, ChatModel chat) async {
-    var event = SynthChatEvent("Listing user posts", SCE_sending);
+    if (chat.userPostsList.isNotEmpty) {
+      // Already have user's posts. Show screen with them.
+      FeedScreen.showUsersPosts(context, chat);
+
+      // Request any new items.
+      await Golib.listUserPosts(chat.id);
+      return;
+    }
+
+    // Fetch remote list of posts.
+    var event = ChatEventModel(RequestedUsersPostListEvent(chat.id), null);
+    event.sentState = CMS_sending;
+    chat.append(event, false);
     try {
-      chat.append(ChatEventModel(event, null), false);
-      if (chat.userPostList.isEmpty) {
-        chat.userPostListID = chat.id;
-        await Golib.listUserPosts(chat.id);
-      } else {
-        client.activeUserPostList = chat.userPostList;
-      }
-      event.state = SCE_sent;
+      await Golib.listUserPosts(chat.id);
+      event.sentState = CMS_sent;
     } catch (exception) {
-      event.error = Exception("Unable to list user posts: $exception");
+      event.sendError = "Unable to list user posts: $exception";
     }
   }
 
