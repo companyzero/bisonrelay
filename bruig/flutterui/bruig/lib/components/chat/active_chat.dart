@@ -46,10 +46,15 @@ class _ActiveChatState extends State<ActiveChat> {
   }
 
   void sendMsg(String msg) {
+    if (this.chat == null) {
+      return;
+    }
+    ChatModel chat = this.chat!;
+
     if (_debounce?.isActive ?? false) _debounce!.cancel();
     _debounce = Timer(const Duration(milliseconds: 100), () async {
       try {
-        await chat?.sendMsg(msg);
+        await chat.sendMsg(msg);
         client.newSentMsg(chat);
       } catch (exception) {
         if (mounted) {
