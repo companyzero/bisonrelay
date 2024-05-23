@@ -321,7 +321,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
 
   // check if ln wallet has balance. busywait, needs to be changed into a ntf.
   void keepCheckingLNHasBalance() async {
-    if (client.sortedChats.isNotEmpty) {
+    if (client.activeChats.isNotEmpty) {
       // Doesn't matter, we already have contacts, so won't show onboard pages.
       return;
     }

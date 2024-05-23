@@ -8,7 +8,6 @@ import 'package:bruig/models/notifications.dart';
 import 'package:bruig/theme_manager.dart';
 
 import 'package:flutter/material.dart';
-import 'package:golib_plugin/definitions.dart';
 import 'package:provider/provider.dart';
 import 'package:sidebarx/sidebarx.dart';
 
@@ -33,6 +32,7 @@ class _SidebarState extends State<Sidebar> {
   SidebarXController ctrl =
       SidebarXController(selectedIndex: 0, extended: true);
   FeedModel get feed => widget.feed;
+  bool hasUnreadMsgs = false;
 
   void feedUpdated() async {
     setState(() {});
@@ -53,12 +53,19 @@ class _SidebarState extends State<Sidebar> {
     });
   }
 
+  void hasUnreadMsgsChanged() {
+    setState(() {
+      hasUnreadMsgs = client.hasUnreadChats.val;
+    });
+  }
+
   @override
   void initState() {
     super.initState();
     feed.addListener(feedUpdated);
     client.connState.addListener(connStateChanged);
     mainMenu.addListener(menuUpdated);
+    client.hasUnreadChats.addListener(hasUnreadMsgsChanged);
   }
 
   @override
@@ -68,9 +75,11 @@ class _SidebarState extends State<Sidebar> {
       oldWidget.feed.removeListener(feedUpdated);
       oldWidget.client.connState.removeListener(connStateChanged);
       oldWidget.mainMenu.removeListener(menuUpdated);
+      oldWidget.client.hasUnreadChats.removeListener(hasUnreadMsgsChanged);
       feed.addListener(feedUpdated);
       client.connState.addListener(connStateChanged);
       mainMenu.addListener(menuUpdated);
+      client.hasUnreadChats.addListener(hasUnreadMsgsChanged);
     }
   }
 
@@ -79,6 +88,7 @@ class _SidebarState extends State<Sidebar> {
     feed.removeListener(feedUpdated);
     client.connState.removeListener(connStateChanged);
     mainMenu.removeListener(menuUpdated);
+    client.hasUnreadChats.removeListener(hasUnreadMsgsChanged);
     super.dispose();
   }
 
@@ -191,7 +201,7 @@ class _SidebarState extends State<Sidebar> {
         items: mainMenu.menus
             .map((e) => SidebarXItem(
                   label: e.label,
-                  iconWidget: (e.label == "Chat" && client.hasUnreadChats) ||
+                  iconWidget: (e.label == "Chat" && hasUnreadMsgs) ||
                           (e.label == "Feed" && feed.hasUnreadPostsComments)
                       ? Stack(children: [
                           Container(

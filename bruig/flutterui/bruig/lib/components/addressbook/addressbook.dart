@@ -35,7 +35,7 @@ class _AddressBookListingWState extends State<_AddressBookListingW> {
   void chatUpdated() => setState(() {});
 
   void startChat(bool open) {
-    client.startChat(chat, open);
+    client.active = chat;
   }
 
   @override
@@ -64,7 +64,7 @@ class _AddressBookListingWState extends State<_AddressBookListingW> {
     var selectedBackgroundColor = theme.highlightColor;
     var darkTextColor = theme.indicatorColor;
     var alreadyOpened = false;
-    alreadyOpened = client.sortedChats.contains(chat);
+    alreadyOpened = client.activeChats.contains(chat);
 
     var popMenuButton = UserMenuAvatar(client, chat);
     addToGroupChat = widget.alreadySelected;
@@ -140,7 +140,7 @@ class _AddressBookState extends State<AddressBook> {
   @override
   void initState() {
     super.initState();
-    combinedChatList = client.hiddenChats + client.sortedChats;
+    combinedChatList = client.hiddenChats.sorted + client.activeChats.sorted;
     combinedChatList
         .sort((a, b) => a.nick.toLowerCase().compareTo(b.nick.toLowerCase()));
   }
@@ -219,7 +219,7 @@ class _AddressBookState extends State<AddressBook> {
     if (client.createGroupChat) {
       combinedChatList = combinedChatList.where((e) => !e.isGC).toList();
     } else {
-      combinedChatList = client.hiddenChats + client.sortedChats;
+      combinedChatList = client.hiddenChats.sorted + client.activeChats.sorted;
     }
     combinedChatList
         .sort((a, b) => a.nick.toLowerCase().compareTo(b.nick.toLowerCase()));

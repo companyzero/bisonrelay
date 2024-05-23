@@ -417,22 +417,20 @@ class _OverviewScreenState extends State<OverviewScreen> {
                         switchScreen(menuItem.routeName);
                         Navigator.pop(context);
                       },
-                      leading:
-                          (menuItem.label == "Chat" && client.hasUnreadChats) ||
-                                  (menuItem.label == "Feed" &&
-                                      widget.feed.hasUnreadPostsComments)
-                              ? Stack(children: [
-                                  Container(
-                                      padding: const EdgeInsets.all(3),
-                                      child: menuItem.icon ?? const Empty()),
-                                  const Positioned(
-                                      top: 1,
-                                      right: 1,
-                                      child: RedDotIndicator()),
-                                ])
-                              : Container(
+                      leading: (menuItem.label == "Chat" &&
+                                  client.activeChats.hasUnreadMsgs) ||
+                              (menuItem.label == "Feed" &&
+                                  widget.feed.hasUnreadPostsComments)
+                          ? Stack(children: [
+                              Container(
                                   padding: const EdgeInsets.all(3),
-                                  child: menuItem.icon),
+                                  child: menuItem.icon ?? const Empty()),
+                              const Positioned(
+                                  top: 1, right: 1, child: RedDotIndicator()),
+                            ])
+                          : Container(
+                              padding: const EdgeInsets.all(3),
+                              child: menuItem.icon),
                       title: Consumer<ThemeNotifier>(
                           builder: (context, theme, _) => Text(menuItem.label,
                               style: TextStyle(
@@ -445,7 +443,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
                         initiallyExpanded:
                             widget.mainMenu.activeMenu.label == menuItem.label,
                         leading: (menuItem.label == "Chat" &&
-                                    client.hasUnreadChats) ||
+                                    client.activeChats.hasUnreadMsgs) ||
                                 (menuItem.label == "Feed" &&
                                     widget.feed.hasUnreadPostsComments)
                             ? Stack(children: [
@@ -523,7 +521,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
                     iconSize: 40,
                     items: <BottomNavigationBarItem>[
                       BottomNavigationBarItem(
-                        icon: client.hasUnreadChats
+                        icon: client.activeChats.hasUnreadMsgs
                             ? Stack(children: [
                                 Container(
                                     padding: const EdgeInsets.all(3),
