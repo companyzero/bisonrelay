@@ -114,15 +114,10 @@ class _UserProfileState extends State<UserProfile> {
         loading = true;
       });
       await Golib.blockUser(chat.id);
-      Navigator.of(context, rootNavigator: true)
-          .pushReplacementNamed(OverviewScreen.subRoute(ChatsScreen.routeName));
       widget.client.removeChat(chat);
     } catch (exception) {
       showErrorSnackbar(context, "Unable to block user: $exception");
-    } finally {
-      setState(() {
-        loading = false;
-      });
+      setState(() => loading = false);
     }
   }
 
@@ -152,7 +147,7 @@ class _UserProfileState extends State<UserProfile> {
   Widget build(BuildContext context) {
     var theme = Theme.of(context);
     var textColor = theme.focusColor;
-    var errorColor = theme.errorColor;
+
     return Consumer<ThemeNotifier>(builder: (context, theme, _) {
       var txtTS = TextStyle(
           color: textColor,

@@ -347,7 +347,6 @@ class ManageGCScreenState extends State<ManageGCScreenForChat> {
     try {
       await Golib.killGC(gcID);
       widget.client.removeChat(widget.chat);
-      widget.client.active = null;
     } catch (exception) {
       showErrorSnackbar(context, 'Unable to kill GC: $exception');
     } finally {
@@ -360,7 +359,6 @@ class ManageGCScreenState extends State<ManageGCScreenForChat> {
     try {
       await Golib.partFromGC(gcID);
       widget.client.removeChat(widget.chat);
-      widget.client.active = null;
     } catch (exception) {
       showErrorSnackbar(context, 'Unable to part from GC: $exception');
     } finally {

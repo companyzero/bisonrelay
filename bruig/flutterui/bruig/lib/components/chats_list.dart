@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:collection';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/screens/chats.dart';
 import 'package:bruig/screens/contacts_msg_times.dart';
@@ -232,37 +233,42 @@ Future<void> loadInvite(BuildContext context) async {
 class _ChatsListState extends State<_ChatsList> {
   ClientModel get client => widget.client;
   FocusNode get inputFocusNode => widget.inputFocusNode.inputFocusNode;
-  Timer? _debounce;
   bool showAddressbookRoomsButton = false;
   bool showAddressbookUsersButton = false;
+  UnmodifiableListView<ChatModel> chats = UnmodifiableListView([]);
+  Timer? debounce;
 
-  void clientUpdated() => setState(() {});
+  void doUpdateState() {
+    setState(() => chats = client.activeChats.sorted);
+    debounce = null;
+  }
+
+  void activeChatsListUpdated() {
+    // Limit changes when updating chat list very fast.
+    debounce ??= Timer(const Duration(milliseconds: 250), doUpdateState);
+  }
 
   @override
   void initState() {
     super.initState();
-    client.addListener(clientUpdated);
+    client.activeChats.addListener(activeChatsListUpdated);
+    activeChatsListUpdated();
   }
 
   @override
   void didUpdateWidget(_ChatsList oldWidget) {
     super.didUpdateWidget(oldWidget);
-    oldWidget.client.removeListener(clientUpdated);
-    client.addListener(clientUpdated);
+    if (oldWidget.client != client) {
+      oldWidget.client.activeChats.removeListener(activeChatsListUpdated);
+      client.activeChats.addListener(activeChatsListUpdated);
+      activeChatsListUpdated();
+    }
   }
 
   @override
   void dispose() {
-    client.removeListener(clientUpdated);
-    _debounce?.cancel();
+    client.activeChats.removeListener(activeChatsListUpdated);
     super.dispose();
-  }
-
-  void debouncedLoadInvite(BuildContext context) {
-    if (_debounce?.isActive ?? false) _debounce!.cancel();
-    _debounce = Timer(const Duration(milliseconds: 500), () {
-      loadInvite(context);
-    });
   }
 
   @override
@@ -289,8 +295,6 @@ class _ChatsListState extends State<_ChatsList> {
     var backgroundColor = theme.backgroundColor;
     var newMessageHoverColor = theme.indicatorColor;
 
-    var sortedList = client.sortedChats.toList();
-
     var sortedListScroll = ScrollController();
 
     makeActive(ChatModel? c) => {client.active = c};
@@ -314,12 +318,9 @@ class _ChatsListState extends State<_ChatsList> {
                         controller: sortedListScroll,
                         scrollDirection: Axis.vertical,
                         shrinkWrap: true,
-                        itemCount: sortedList.length,
+                        itemCount: chats.length,
                         itemBuilder: (context, index) => _ChatHeadingW(
-                            sortedList[index],
-                            client,
-                            makeActive,
-                            showSubMenu))),
+                            chats[index], client, makeActive, showSubMenu))),
                 Positioned(
                     bottom: 20,
                     right: 10,
@@ -380,12 +381,9 @@ class _ChatsListState extends State<_ChatsList> {
                         controller: sortedListScroll,
                         scrollDirection: Axis.vertical,
                         shrinkWrap: true,
-                        itemCount: sortedList.length,
+                        itemCount: chats.length,
                         itemBuilder: (context, index) => _ChatHeadingW(
-                            sortedList[index],
-                            client,
-                            makeActive,
-                            showSubMenu))),
+                            chats[index], client, makeActive, showSubMenu))),
                 !client.showAddressBook
                     ? Positioned(
                         bottom: 5,

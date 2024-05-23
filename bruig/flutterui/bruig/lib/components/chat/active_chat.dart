@@ -80,6 +80,7 @@ class _ActiveChatState extends State<ActiveChat> {
     if (oldWidget.client != widget.client) {
       oldWidget.client.removeListener(activeChatChanged);
       client.addListener(activeChatChanged);
+      activeChatChanged();
     }
   }
 

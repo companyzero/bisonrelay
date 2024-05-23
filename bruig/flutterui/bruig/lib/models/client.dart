@@ -446,6 +446,22 @@ class ChatModel extends ChangeNotifier {
   }
 
   Future<void> resendGCList() async => await Golib.resendGCList(id);
+
+  // mostRecentTimestamp returns the most recent timestamp for a message or zero.
+  int mostRecentTimestamp() {
+    int res = 0;
+    for (var m in _msgs) {
+      var event = m.event;
+      if (event is PM) {
+        res = m.source?.nick == null ? event.timestamp : event.timestamp * 1000;
+        break;
+      } else if (event is GCMsg) {
+        res = m.source?.nick == null ? event.timestamp : event.timestamp * 1000;
+        break;
+      }
+    }
+    return res;
+  }
 }
 
 class RescanNotifier extends ChangeNotifier {
@@ -481,6 +497,99 @@ class ActiveChatModel extends ChangeNotifier {
   }
 }
 
+// ChatsListModel tracks a list of chats. These could be either active or inactive
+// ("hiden") chats.
+class ChatsListModel extends ChangeNotifier {
+  final List<ChatModel> _sorted = [];
+  UnmodifiableListView<ChatModel> get sorted => UnmodifiableListView(_sorted);
+
+  bool get isNotEmpty => _sorted.isNotEmpty;
+
+  bool contains(ChatModel? c) => _sorted.contains(c);
+
+  // hasUnreadMsgs is true if any chats have unread messages.
+  bool get hasUnreadMsgs => _sorted.any((c) => c.unreadMsgCount > 0);
+
+  // firstByNick returns the first chatModel with the given nick (if one exists).
+  ChatModel? firstByNick(String nick) {
+    var idx = _sorted.indexWhere((c) => c.nick == nick);
+    return idx == -1 ? null : _sorted[idx];
+  }
+
+  // Sorting algo to attempt to retain order
+  static int _compareFunc(ChatModel a, ChatModel b) {
+    // If both are empty, sort by nick.
+    if (a._msgs.isEmpty && b._msgs.isEmpty) {
+      return a.nick.compareTo(b.nick);
+    }
+
+    // If only one is empty, prioritize the non-empty one.
+    if (a._msgs.isNotEmpty && b._msgs.isEmpty) {
+      return -1;
+    } else if (a._msgs.isEmpty && b._msgs.isNotEmpty) {
+      return 1;
+    }
+
+    // If any have unread msgs, prioritize the one with a higher unread msg count.
+    if (b.unreadMsgCount > 0 || a.unreadMsgCount > 0) {
+      return b.unreadMsgCount.compareTo(a.unreadMsgCount);
+    }
+
+    // If unreadMsgCount are both 0, then check last message timestamps (most
+    // recently communicated first).
+    var ats = a.mostRecentTimestamp();
+    var bts = b.mostRecentTimestamp();
+    return bts.compareTo(ats);
+  }
+
+  void _sort({bool notify = true}) {
+    _sorted.sort(_compareFunc);
+    if (notify) {
+      notifyListeners();
+    }
+  }
+
+  // Add the chat to the list as the most recent chat.
+  void _addActive(ChatModel chat) {
+    if (_sorted.isNotEmpty && _sorted[0] == chat) {
+      // Already the most recent chat.
+      return;
+    }
+
+    _sorted.remove(chat);
+    _sorted.insert(0, chat);
+    notifyListeners();
+  }
+
+  // Adds to the list of chats but does not make it the most recent one.
+  void _addInactive(ChatModel chat) {
+    if (_sorted.contains(chat)) {
+      return;
+    }
+    _sorted.add(chat);
+  }
+
+  void _remove(ChatModel chat) {
+    if (_sorted.remove(chat)) {
+      notifyListeners();
+    }
+  }
+}
+
+// BoolFlagModel is a model that holds a single bool value.
+class BoolFlagModel extends ChangeNotifier {
+  bool _val;
+  bool get val => _val;
+  set val(bool v) {
+    if (v != _val) {
+      _val = v;
+      notifyListeners();
+    }
+  }
+
+  BoolFlagModel({initial = false}) : _val = initial;
+}
+
 class ClientModel extends ChangeNotifier {
   ClientModel() {
     _handleAcceptedInvites();
@@ -498,14 +607,10 @@ class ClientModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  List<ChatModel> _sortedChats = [];
-  UnmodifiableListView<ChatModel> get sortedChats =>
-      UnmodifiableListView(_sortedChats);
-
-  void set sortedChats(List<ChatModel> gc) {
-    _sortedChats = gc;
-    notifyListeners();
-  }
+  // activeChats are chats that have messages in them, hiddenChats are the ones
+  // that have no message or have been explicitly hidden from the chats list.
+  final ChatsListModel activeChats = ChatsListModel();
+  final ChatsListModel hiddenChats = ChatsListModel();
 
   List<ChatModel> _filteredSearch = [];
   UnmodifiableListView<ChatModel> get filteredSearch =>
@@ -521,6 +626,7 @@ class ClientModel extends ChangeNotifier {
   set filteredSearchString(String b) {
     _filteredSearch = [];
     _filteredSearchString = b;
+    var _sortedChats = activeChats.sorted;
     if (b != "") {
       for (int i = 0; i < _sortedChats.length; i++) {
         if (_sortedChats[i].nick.toLowerCase().contains(b.toLowerCase())) {
@@ -531,6 +637,7 @@ class ClientModel extends ChangeNotifier {
           }
         }
       }
+      var _hiddenChats = hiddenChats.sorted;
       for (int i = 0; i < _hiddenChats.length; i++) {
         if (_hiddenChats[i].nick.toLowerCase().contains(b.toLowerCase())) {
           if (!createGroupChat) {
@@ -546,33 +653,29 @@ class ClientModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  List<ChatModel> _hiddenChats = [];
-  UnmodifiableListView<ChatModel> get hiddenChats =>
-      UnmodifiableListView(_hiddenChats);
-
-  set hiddenChats(List<ChatModel> us) {
-    _hiddenChats = us;
-    notifyListeners();
-  }
-
   Future<void> createNewGCAndInvite(
       String gcName, List<ChatModel> usersToInvite) async {
     if (gcName == "") return;
 
+    // Create the GC, create the chat model and make it the active and most
+    // recent chat.
     var gcid = await Golib.createGC(gcName);
     var newChat = await _newChat(gcid, gcName, true, false);
-    active = newChat;
+    _makeActive(newChat, moveToMostRecent: true);
+
+    // Invite users to chat.
     for (var user in usersToInvite) {
+      var userChat = getExistingChat(user.id);
+      if (userChat == null) {
+        // Shouldn't happen.
+        continue;
+      }
+
       await Golib.inviteToGC(InviteToGC(newChat.id, user.id));
-      newChat.append(
-          ChatEventModel(
-              SynthChatEvent(
-                  "Inviting ${user.nick} to ${newChat.nick}", SCE_sent),
-              null),
-          false);
-    }
-    if (usersToInvite.isNotEmpty) {
-      newChat.notifyListeners();
+      var event = ChatEventModel(
+          SynthChatEvent("Inviting ${user.nick} to ${newChat.nick}", SCE_sent),
+          userChat);
+      newChat.append(event, false);
     }
   }
 
@@ -590,12 +693,7 @@ class ClientModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  bool _hasUnreadChats = false;
-  bool get hasUnreadChats => _hasUnreadChats;
-  void set hasUnreadChats(bool b) {
-    _hasUnreadChats = b;
-    notifyListeners();
-  }
+  final BoolFlagModel hasUnreadChats = BoolFlagModel();
 
   bool _createGroupChat = false;
   bool get createGroupChat => _createGroupChat;
@@ -632,40 +730,6 @@ class ClientModel extends ChangeNotifier {
 
   set userPostList(List<PostListItem> us) {
     _userPostList = us;
-    notifyListeners();
-  }
-
-  void startChat(ChatModel chat, bool alreadyOpened) {
-    if (!alreadyOpened) {
-      List<ChatModel> newSortedChats = [];
-      newSortedChats.add(chat);
-      for (int i = 0; i < _sortedChats.length; i++) {
-        newSortedChats.add(_sortedChats[i]);
-      }
-      _sortedChats = newSortedChats;
-      if (chat.isGC) {
-        _subGCMenus[chat.id] = buildGCMenu(chat);
-      } else {
-        _subUserMenus[chat.id] = buildUserChatMenu(chat);
-      }
-      _hiddenChats.remove(chat);
-      if (_savedHiddenChats.contains(chat.nick)) {
-        var savedHiddenChatsSplit = _savedHiddenChats.split(",");
-        var newChatSplitStr = "";
-        for (int i = 0; i < savedHiddenChatsSplit.length; i++) {
-          if (!savedHiddenChatsSplit[i].contains(chat.nick)) {
-            if (newChatSplitStr.isEmpty) {
-              newChatSplitStr = chat.nick;
-            } else {
-              newChatSplitStr += ", ${chat.nick}";
-            }
-          }
-        }
-        _savedHiddenChats = newChatSplitStr;
-        StorageManager.saveData('chatHiddenList', _savedHiddenChats);
-      }
-    }
-    active = chat;
     notifyListeners();
   }
 
@@ -718,28 +782,67 @@ class ClientModel extends ChangeNotifier {
 
   final ActiveChatModel activeChat = ActiveChatModel();
   ChatModel? get active => activeChat.chat;
-
-  void set active(ChatModel? c) {
-    _profile = null;
-    // Remove new posts messages
-    active?.removeFirstUnread();
-    active?._setActive(false);
-    c?._setActive(true);
-    activeChat._setActiveCchat(c);
-    showAddressBook = false;
-
-    // Check for unreadMessages so we can turn off sidebar notification
-    bool unreadChats = false;
-    for (int i = 0; i < _sortedChats.length; i++) {
-      if (_sortedChats[i].unreadMsgCount > 0) {
-        unreadChats = true;
-      }
+  void _makeActive(ChatModel? c, {bool moveToMostRecent: false}) {
+    // Nothing to do if this is already the active chat.
+    if (c == active) {
+      return;
     }
 
-    hasUnreadChats = unreadChats;
+    // Remove/rework these?
+    _profile = null;
+    showAddressBook = false;
     hideSubMenu();
-    notifyListeners();
+
+    // De-active previously active chat.
+    active?.removeFirstUnread();
+    active?._setActive(false);
+
+    // If there are no more active chats, nothing else to do.
+    if (c == null) {
+      activeChat._setActiveCchat(null);
+      return;
+    }
+    ChatModel chat = c;
+
+    // Activate new chat.
+    chat._setActive(true);
+    activeChat._setActiveCchat(chat);
+
+    // Update list of chats.
+    moveToMostRecent
+        ? activeChats._addActive(chat)
+        : activeChats._addInactive(chat);
+    hiddenChats._remove(chat);
+
+    // Check if this cleared the indicator for unread messages.
+    hasUnreadChats.val = activeChats.hasUnreadMsgs;
+
+    // Rework this?
+    if (chat.isGC) {
+      _subGCMenus[chat.id] = buildGCMenu(chat);
+    } else {
+      _subUserMenus[chat.id] = buildUserChatMenu(chat);
+    }
+
+    // Rework this?
+    if (_savedHiddenChats.contains(chat.nick)) {
+      var savedHiddenChatsSplit = _savedHiddenChats.split(",");
+      var newChatSplitStr = "";
+      for (int i = 0; i < savedHiddenChatsSplit.length; i++) {
+        if (!savedHiddenChatsSplit[i].contains(chat.nick)) {
+          if (newChatSplitStr.isEmpty) {
+            newChatSplitStr = chat.nick;
+          } else {
+            newChatSplitStr += ", ${chat.nick}";
+          }
+        }
+      }
+      _savedHiddenChats = newChatSplitStr;
+      StorageManager.saveData('chatHiddenList', _savedHiddenChats);
+    }
   }
+
+  set active(ChatModel? c) => _makeActive(c);
 
   ChatModel? _profile;
   ChatModel? get profile => _profile;
@@ -750,11 +853,9 @@ class ClientModel extends ChangeNotifier {
   }
 
   void setActiveByNick(String nick, bool isGC) {
-    try {
-      var c = _sortedChats.firstWhere((c) => c.nick == nick);
+    var c = activeChats.firstByNick(nick);
+    if (c != null) {
       active = c;
-    } on StateError {
-      // Ignore if chat doesn't exist.
     }
   }
 
@@ -769,15 +870,8 @@ class ClientModel extends ChangeNotifier {
   // newSentMsg marks the chat as having sent a message and reorders the list
   // of chats.
   Future<void> newSentMsg(ChatModel chat) async {
-    if (_sortedChats.isNotEmpty && _sortedChats[0] == chat) {
-      // Already the most recent chat. Nothing to do.
-      return;
-    }
-
-    // Make this the most recent chat.
-    _sortedChats.remove(chat);
-    _sortedChats.insert(0, chat);
-    notifyListeners();
+    activeChats._addActive(chat);
+    hiddenChats._remove(chat);
   }
 
   final Map<String, ChatModel> _activeChats = {};
@@ -848,70 +942,17 @@ class ClientModel extends ChangeNotifier {
       c.append(evnt, true);
     }
 
-    // Sorting algo to attempt to retain order
-    int sortUsedChats(ChatModel a, ChatModel b) {
-      // First check if either is empty, if so prioritize the non-empty one.
-      if (b._msgs.isEmpty) {
-        if (a._msgs.isEmpty) {
-          return 0;
-        } else {
-          return -1;
-        }
-      } else if (a._msgs.isEmpty) {
-        return 1;
-      }
-      // If both are not empty, then check to see if unreadMsgCount is > 0 for
-      // either.
-      if (b.unreadMsgCount > 0 || a.unreadMsgCount > 0) {
-        return b.unreadMsgCount.compareTo(a.unreadMsgCount);
-      }
-      // If unreadMsgCount are both 0, then check last message timestamps;
-      var bTimeStamp = 0;
-      var aTimeStamp = 0;
-      var bLastMessage = b._msgs[0];
-      var bLastMessageEvent = b._msgs[0].event;
-      if (bLastMessageEvent is PM) {
-        bTimeStamp = bLastMessage.source?.nick == null
-            ? bLastMessageEvent.timestamp
-            : bLastMessageEvent.timestamp * 1000;
-      } else if (bLastMessageEvent is GCMsg) {
-        bTimeStamp = bLastMessage.source?.nick == null
-            ? bLastMessageEvent.timestamp
-            : bLastMessageEvent.timestamp * 1000;
-      }
+    // Add the new chat to the list of chats (either hidden or active).
+    if (c._msgs.isEmpty || _savedHiddenChats.contains(c.nick)) {
+      hiddenChats._addInactive(c);
+    } else {
+      activeChats._addInactive(c);
 
-      var aLastMessage = a._msgs[0];
-      var aLastMessageEvent = a._msgs[0].event;
-      if (aLastMessageEvent is PM) {
-        aTimeStamp = aLastMessage.source?.nick == null
-            ? aLastMessageEvent.timestamp
-            : aLastMessageEvent.timestamp * 1000;
-      } else if (aLastMessageEvent is GCMsg) {
-        aTimeStamp = aLastMessage.source?.nick == null
-            ? aLastMessageEvent.timestamp
-            : aLastMessageEvent.timestamp * 1000;
-      }
-      return bTimeStamp.compareTo(aTimeStamp);
-    }
-
-    // TODO: this test should be superflous.
-    if (_sortedChats.indexWhere((c) => c.id == id) == -1 &&
-        ((c._msgs.isNotEmpty && !_savedHiddenChats.contains(c.nick)) ||
-            (c._msgs.isEmpty && !startup))) {
-      // Add to list of chats if not empty or the chat is empty and
-      // not being create via readAddressBook call.
-      _sortedChats.add(c);
-      _sortedChats.sort(sortUsedChats);
       if (isGC) {
         _subGCMenus[c.id] = buildGCMenu(c);
       } else {
         _subUserMenus[c.id] = buildUserChatMenu(c);
       }
-    } else if ((c._msgs.isEmpty || _savedHiddenChats.contains(c.nick)) &&
-        startup) {
-      // Add all empty chats on startup to hiddenGCs list.
-      _hiddenChats.add(c);
-      _hiddenChats.sort((a, b) => b.nick.compareTo(a.nick));
     }
 
     notifyListeners();
@@ -920,27 +961,39 @@ class ClientModel extends ChangeNotifier {
   }
 
   void hideChat(ChatModel chat) {
-    activeChat._setActiveCchat(null);
-    _sortedChats.remove(chat);
-    _hiddenChats.add(chat);
-    _hiddenChats.sort((a, b) => b.nick.compareTo(a.nick));
+    if (chat == active) {
+      active = null;
+    }
+
+    activeChats._remove(chat);
+    hiddenChats._addActive(chat);
+
+    // Save this chat as explicitly hidden.
     if (_savedHiddenChats.isNotEmpty) {
       _savedHiddenChats += ",${chat.nick}";
     } else {
       _savedHiddenChats = chat.nick;
     }
     StorageManager.saveData('chatHiddenList', _savedHiddenChats);
-    notifyListeners();
   }
 
   void removeChat(ChatModel chat) {
-    _sortedChats.remove(chat);
+    activeChats._remove(chat);
+    hiddenChats._remove(chat);
+
+    if (active == chat) {
+      active = null;
+    }
+
+    // Rework this.
+    if (profile == chat) {
+      profile = null;
+    }
     if (chat.isGC) {
       _subGCMenus.remove(chat.id);
     } else {
       _subUserMenus.remove(chat.id);
     }
-    _activeChats.remove(chat.id);
     notifyListeners();
   }
 
@@ -994,18 +1047,13 @@ class ClientModel extends ChangeNotifier {
       if (evnt is PM) {
         if (!evnt.mine) {
           source = chat;
-          hasUnreadChats = true;
         }
       } else if (evnt is GCMsg) {
         source = await _newChat(evnt.senderUID, "", false, false);
-        hasUnreadChats = true;
       } else if (evnt is GCUserEvent) {
         source = await _newChat(evnt.uid, "", false, false);
       } else {
         source = chat;
-      }
-      if (!chat.active) {
-        hasUnreadChats = true;
       }
       chat.append(ChatEventModel(evnt, source), false);
 
@@ -1020,10 +1068,12 @@ class ClientModel extends ChangeNotifier {
       }
 
       // Make this the most recent chat.
-      if (_sortedChats.isEmpty || _sortedChats[0] != chat) {
-        _sortedChats.remove(chat);
-        _sortedChats.insert(0, chat);
-        notifyListeners();
+      activeChats._addActive(chat);
+      hiddenChats._remove(chat);
+
+      // Track that there are unread messages.
+      if (chat.unreadMsgCount > 0) {
+        hasUnreadChats.val = true;
       }
 
       chat.notifyListeners();
@@ -1047,13 +1097,19 @@ class ClientModel extends ChangeNotifier {
       }
     }
     var gcs = await Golib.listGCs();
-    gcs.forEach((v) => _newChat(v.id, v.name, true, true));
+    for (var v in gcs) {
+      await _newChat(v.id, v.name, true, true);
+    }
 
-    if (gcs.isEmpty && ab.length == 1 && _sortedChats.isEmpty) {
+    // Re-sort list of chats.
+    activeChats._sort();
+    hiddenChats._sort();
+
+    if (gcs.isEmpty && ab.length == 1) {
       // On newly setup clients, add the first contact to the list of contacts to
-      // avoid confusing users before they sent their first message.
+      // avoid confusing users before they send their first message.
       var firstChat = getExistingChat(ab[0].id)!;
-      startChat(firstChat, firstChat._msgs.isNotEmpty);
+      active = firstChat;
     }
 
     loadingAddressBook = false;
