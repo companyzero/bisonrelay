@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:collection';
 
+import 'package:bruig/components/chat/active_chat.dart';
 import 'package:bruig/models/menus.dart';
 import 'package:bruig/models/resources.dart';
 import 'package:flutter/foundation.dart';
@@ -475,6 +476,16 @@ class ConnStateModel extends ChangeNotifier {
   }
 }
 
+class ActiveChatModel extends ChangeNotifier {
+  ChatModel? _chat;
+  ChatModel? get chat => _chat;
+
+  void _setActiveCchat(ChatModel? v) {
+    _chat = v;
+    notifyListeners();
+  }
+}
+
 class ClientModel extends ChangeNotifier {
   ClientModel() {
     _handleAcceptedInvites();
@@ -735,17 +746,17 @@ class ClientModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  ChatModel? _active;
-  ChatModel? get active => _active;
+  final ActiveChatModel activeChat = ActiveChatModel();
+  ChatModel? get active => activeChat.chat;
 
   void set active(ChatModel? c) {
     _profile = null;
     // Remove new posts messages
-    _active?.removeFirstUnread();
-    _active?._setActive(false);
-    _active = c;
-    showAddressBook = false;
+    active?.removeFirstUnread();
+    active?._setActive(false);
     c?._setActive(true);
+    activeChat._setActiveCchat(c);
+    showAddressBook = false;
 
     // Check for unreadMessages so we can turn off sidebar notification
     bool unreadChats = false;
@@ -799,7 +810,7 @@ class ClientModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  Map<String, ChatModel> _activeChats = Map<String, ChatModel>();
+  final Map<String, ChatModel> _activeChats = {};
   ChatModel? getExistingChat(String uid) => _activeChats[uid];
   ChatModel? getExistingChatByNick(String nick, bool isGC) {
     for (var chat in _activeChats.values) {
@@ -939,7 +950,7 @@ class ClientModel extends ChangeNotifier {
   }
 
   void hideChat(ChatModel chat) {
-    _active = null;
+    activeChat._setActiveCchat(null);
     _sortedChats.remove(chat);
     _hiddenChats.add(chat);
     _hiddenChats.sort((a, b) => b.nick.compareTo(a.nick));

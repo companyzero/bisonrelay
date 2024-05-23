@@ -36,7 +36,7 @@ class _ActiveChatState extends State<ActiveChat> {
   late ItemPositionsListener _itemPositionsListener;
   Timer? _debounce;
 
-  void clientChanged() {
+  void activeChatChanged() {
     var newChat = client.active;
     if (newChat != chat) {
       setState(() {
@@ -65,20 +65,23 @@ class _ActiveChatState extends State<ActiveChat> {
     _itemScrollController = ItemScrollController();
     _itemPositionsListener = ItemPositionsListener.create();
     chat = client.active;
-    client.addListener(clientChanged);
+    client.activeChat.addListener(activeChatChanged);
   }
 
   @override
   void didUpdateWidget(ActiveChat oldWidget) {
-    oldWidget.client.removeListener(clientChanged);
     super.didUpdateWidget(oldWidget);
-    client.addListener(clientChanged);
+
+    if (oldWidget.client != widget.client) {
+      oldWidget.client.removeListener(activeChatChanged);
+      client.addListener(activeChatChanged);
+    }
   }
 
   @override
   void dispose() {
     _debounce?.cancel();
-    client.removeListener(clientChanged);
+    client.activeChat.removeListener(activeChatChanged);
     //inputFocusNode.dispose();  XXX Does this need to be put back?  Errors with it
     super.dispose();
   }
