@@ -880,8 +880,7 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		if err := cmd.decode(&gcName); err != nil {
 			return nil, err
 		}
-		_, err := c.NewGroupChat(gcName) // TODO: return ID
-		return nil, err
+		return c.NewGroupChat(gcName)
 
 	case CTInviteToGroupChat:
 		var invite inviteToGC
