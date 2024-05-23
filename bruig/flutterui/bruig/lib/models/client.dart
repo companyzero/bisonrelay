@@ -393,13 +393,6 @@ class ChatModel extends ChangeNotifier {
         evnt.sendError = "$exception";
       }
     }
-
-    // This may be triggered by autmation sending messages when the chat window
-    // is not focused (for example, simplestore placed orders).
-    if (!active) {
-      _unreadMsgCount += 1;
-      notifyListeners();
-    }
   }
 
   String workingMsg = "";
@@ -777,16 +770,17 @@ class ClientModel extends ChangeNotifier {
     }
   }
 
-  Future<void> newSentMsg(ChatModel? chat) async {
-    if (chat != null) {
-      _sortedChats.remove(chat);
-      List<ChatModel> newSortedChats = [];
-      newSortedChats.add(chat);
-      for (int i = 0; i < _sortedChats.length; i++) {
-        newSortedChats.add(_sortedChats[i]);
-      }
-      _sortedChats = newSortedChats;
+  // newSentMsg marks the chat as having sent a message and reorders the list
+  // of chats.
+  Future<void> newSentMsg(ChatModel chat) async {
+    if (_sortedChats.isNotEmpty && _sortedChats[0] == chat) {
+      // Already the most recent chat. Nothing to do.
+      return;
     }
+
+    // Make this the most recent chat.
+    _sortedChats.remove(chat);
+    _sortedChats.insert(0, chat);
     notifyListeners();
   }
 
@@ -1029,15 +1023,14 @@ class ClientModel extends ChangeNotifier {
         }
       }
 
-      _sortedChats.remove(chat);
-      List<ChatModel> newSortedChats = [];
-      newSortedChats.add(chat);
-      for (int i = 0; i < _sortedChats.length; i++) {
-        newSortedChats.add(_sortedChats[i]);
+      // Make this the most recent chat.
+      if (_sortedChats.isEmpty || _sortedChats[0] != chat) {
+        _sortedChats.remove(chat);
+        _sortedChats.insert(0, chat);
+        notifyListeners();
       }
-      _sortedChats = newSortedChats;
 
-      notifyListeners();
+      chat.notifyListeners();
     }
   }
 
