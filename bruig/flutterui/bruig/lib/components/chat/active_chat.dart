@@ -166,8 +166,8 @@ class _ActiveChatState extends State<ActiveChat> {
                   )
                 : Column(children: [
                     Expanded(
-                      child: Messages(chat, client.nick, client,
-                          _itemScrollController, _itemPositionsListener),
+                      child: Messages(chat, client, _itemScrollController,
+                          _itemPositionsListener),
                     ),
                     Container(
                         margin: const EdgeInsets.all(10),
@@ -177,8 +177,8 @@ class _ActiveChatState extends State<ActiveChat> {
                 Expanded(
                   child: Column(children: [
                     Expanded(
-                      child: Messages(chat, client.nick, client,
-                          _itemScrollController, _itemPositionsListener),
+                      child: Messages(chat, client, _itemScrollController,
+                          _itemPositionsListener),
                     ),
                     Container(
                         padding: const EdgeInsets.all(5),

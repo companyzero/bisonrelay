@@ -12,11 +12,10 @@ PageStorageBucket _pageStorageBucket = PageStorageBucket();
 /// 'type 'ItemPosition' is not a subtype of type 'double?' in type cast'
 class Messages extends StatefulWidget {
   final ChatModel chat;
-  final String nick;
   final ClientModel client;
   final ItemScrollController itemScrollController;
   final ItemPositionsListener itemPositionsListener;
-  const Messages(this.chat, this.nick, this.client, this.itemScrollController,
+  const Messages(this.chat, this.client, this.itemScrollController,
       this.itemPositionsListener,
       {Key? key})
       : super(key: key);
@@ -32,7 +31,6 @@ class Messages extends StatefulWidget {
 class _MessagesState extends State<Messages> {
   ClientModel get client => widget.client;
   ChatModel get chat => widget.chat;
-  String get nick => widget.nick;
   int _maxItem = 0;
   bool _showFAB = false;
   Timer? _debounce;
@@ -194,8 +192,7 @@ class _MessagesState extends State<Messages> {
               itemCount: chat.msgs.length,
               physics: const ClampingScrollPhysics(),
               itemBuilder: (context, index) {
-                return Event(
-                    chat, chat.msgs[index], nick, client, _scrollToBottom);
+                return Event(chat, chat.msgs[index], client);
               },
               itemScrollController: widget.itemScrollController,
               itemPositionsListener: widget.itemPositionsListener,
