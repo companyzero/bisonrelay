@@ -840,7 +840,7 @@ class LNPendingChannel {
   final int remoteBalance;
   @JsonKey(defaultValue: 0)
   final int initiator;
-  @JsonKey(name:"short_chan_id")
+  @JsonKey(name: "short_chan_id")
   final String shortChanID;
 
   LNPendingChannel(this.remoteNodePub, this.channelPoint, this.capacity,
@@ -2521,7 +2521,8 @@ abstract class PluginPlatform {
 
   Future<void> pm(PM msg) async => asyncCall(CTPM, msg);
 
-  Future<void> createGC(String name) => asyncCall(CTNewGroupChat, name);
+  Future<String> createGC(String name) async =>
+      await asyncCall(CTNewGroupChat, name);
 
   Future<void> inviteToGC(InviteToGC inv) {
     return asyncCall(CTInviteToGroupChat, inv);

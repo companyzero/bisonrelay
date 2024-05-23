@@ -555,28 +555,24 @@ class ClientModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  void createNewGCAndInvite(
+  Future<void> createNewGCAndInvite(
       String gcName, List<ChatModel> usersToInvite) async {
     if (gcName == "") return;
 
-    try {
-      await Golib.createGC(gcName);
-      await readAddressBook();
-      var newChat = getExistingChatByNick(gcName, true);
-      if (newChat != null) {
-        startChat(newChat, false);
-        for (var user in usersToInvite) {
-          await Golib.inviteToGC(InviteToGC(newChat.id, user.id));
-          newChat.append(
-              ChatEventModel(
-                  SynthChatEvent(
-                      "Inviting ${user.nick} to ${newChat.nick}", SCE_sent),
-                  null),
-              false);
-        }
-      }
-    } catch (exception) {
-      //showErrorSnackbar(context, 'Unable to create GC: $exception');
+    var gcid = await Golib.createGC(gcName);
+    var newChat = await _newChat(gcid, gcName, true, false);
+    active = newChat;
+    for (var user in usersToInvite) {
+      await Golib.inviteToGC(InviteToGC(newChat.id, user.id));
+      newChat.append(
+          ChatEventModel(
+              SynthChatEvent(
+                  "Inviting ${user.nick} to ${newChat.nick}", SCE_sent),
+              null),
+          false);
+    }
+    if (usersToInvite.isNotEmpty) {
+      newChat.notifyListeners();
     }
   }
 
