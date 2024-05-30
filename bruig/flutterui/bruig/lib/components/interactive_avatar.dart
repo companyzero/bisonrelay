@@ -131,6 +131,7 @@ class UserMenuAvatar extends StatelessWidget {
   final VoidCallback? onSecondaryTap;
   final double? radius;
   final String? postFrom;
+  final bool showChatSideMenuOnTap;
 
   const UserMenuAvatar(
     this.client,
@@ -139,8 +140,17 @@ class UserMenuAvatar extends StatelessWidget {
     this.onSecondaryTap,
     this.radius,
     this.postFrom,
+    this.showChatSideMenuOnTap = false,
     super.key,
   });
+
+  void _onTap() {
+    if (onTap != null) {
+      onTap!();
+    } else if (showChatSideMenuOnTap) {
+      client.ui.chatSideMenuActive.chat = chat;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -152,7 +162,7 @@ class UserMenuAvatar extends StatelessWidget {
               chat.avatar,
               chat.nick,
               radius: radius,
-              onTap: onTap,
+              onTap: onTap != null || showChatSideMenuOnTap ? _onTap : null,
               onSecondaryTap: onSecondaryTap,
             ),
           )
@@ -165,7 +175,7 @@ class UserMenuAvatar extends StatelessWidget {
               chat.avatar,
               chat.nick,
               radius: radius,
-              onTap: onTap,
+              onTap: onTap != null || showChatSideMenuOnTap ? _onTap : null,
               onSecondaryTap: onSecondaryTap,
             ),
           );
@@ -190,12 +200,15 @@ class UserOrSelfAvatar extends StatelessWidget {
   final ClientModel client;
   final ChatModel? chat;
   final String? postFrom;
-  const UserOrSelfAvatar(this.client, this.chat, {this.postFrom, super.key});
+  final bool showChatSideMenuOnTap;
+  const UserOrSelfAvatar(this.client, this.chat,
+      {this.postFrom, this.showChatSideMenuOnTap = false, super.key});
 
   @override
   Widget build(BuildContext context) {
     return chat != null
-        ? UserMenuAvatar(client, chat!, postFrom: postFrom)
+        ? UserMenuAvatar(client, chat!,
+            postFrom: postFrom, showChatSideMenuOnTap: showChatSideMenuOnTap)
         : SelfAvatar(client);
   }
 }
@@ -207,8 +220,11 @@ class UserAvatarFromID extends StatelessWidget {
   final ClientModel client;
   final String uid;
   final bool disableTooltip;
+  final bool showChatSideMenuOnTap;
   const UserAvatarFromID(this.client, this.uid,
-      {this.disableTooltip = false, super.key});
+      {this.disableTooltip = false,
+      this.showChatSideMenuOnTap = false,
+      super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -218,7 +234,8 @@ class UserAvatarFromID extends StatelessWidget {
 
     var chat = client.getExistingChat(this.uid);
     if (chat != null) {
-      return UserMenuAvatar(client, chat);
+      return UserMenuAvatar(client, chat,
+          showChatSideMenuOnTap: showChatSideMenuOnTap);
     }
 
     if (disableTooltip) {

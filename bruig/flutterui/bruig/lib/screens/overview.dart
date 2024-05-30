@@ -213,6 +213,10 @@ AppBar _buildAppBar(BuildContext context, ClientModel client, FeedModel feed,
             onTap: () {
               if (client.ui.showAddressBook.val) {
                 client.ui.showAddressBook.val = false;
+              } else if (!client.ui.chatSideMenuActive.empty) {
+                client.ui.chatSideMenuActive.chat = null;
+              } else if (client.ui.showProfile.val) {
+                client.ui.showProfile.val = false;
               } else if (!client.ui.overviewActivePath.onActiveBottomTab ||
                   client.active != null) {
                 !client.ui.chatSideMenuActive.empty
@@ -229,15 +233,16 @@ AppBar _buildAppBar(BuildContext context, ClientModel client, FeedModel feed,
                 switchScreen(SettingsScreen.routeName);
               }
             },
-            child: Consumer4<OverviewActivePath, ActiveChatModel,
-                    ShowAddressBookModel, FeedModel>(
+            child: Consumer5<OverviewActivePath, ActiveChatModel,
+                    ShowAddressBookModel, FeedModel, ChatSideMenuActiveModel>(
                 builder: (context, overviewActivePath, activeChat, showAddrBook,
-                        feed, child) =>
+                        feed, chatSideMenuActive, child) =>
                     Stack(children: [
                       !overviewActivePath.onActiveBottomTab ||
                               !activeChat.empty ||
                               showAddrBook.val ||
-                              feed.active != null
+                              feed.active != null ||
+                              !chatSideMenuActive.empty
                           ? Positioned(
                               left: 25,
                               top: 17,

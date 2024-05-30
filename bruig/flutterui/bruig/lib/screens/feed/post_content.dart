@@ -1,7 +1,5 @@
 import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/components/interactive_avatar.dart';
-import 'package:bruig/models/menus.dart';
-import 'package:bruig/util.dart';
 import 'package:bruig/components/md_elements.dart';
 import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/models/client.dart';
@@ -220,7 +218,8 @@ class _CommentWState extends State<_CommentW> {
                     width: 28,
                     margin: const EdgeInsets.only(top: 0, bottom: 0, left: 5),
                     child: UserOrSelfAvatar(widget.client, chat,
-                        postFrom: widget.post.summ.from),
+                        postFrom: widget.post.summ.from,
+                        showChatSideMenuOnTap: true),
                   ),
                   const SizedBox(width: 6),
                   Row(children: [
@@ -684,14 +683,7 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
       }
     }
 
-    var avatarColor = colorFromNick(authorNick, theme.brightness);
     var darkTextColor = theme.indicatorColor;
-    var darkAvatarTextColor = theme.primaryColorDark;
-    var lightAvatarTextColor = theme.primaryColorLight;
-    var avatarTextColor =
-        ThemeData.estimateBrightnessForColor(avatarColor) == Brightness.dark
-            ? darkAvatarTextColor
-            : lightAvatarTextColor;
 
     List<Widget> commentsWidgets = [];
     var newComments = widget.args.post.newComments;
@@ -967,7 +959,8 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
                                         top: 0, bottom: 0, left: 5, right: 0),
                                     child: UserOrSelfAvatar(
                                         widget.client, authorChat,
-                                        postFrom: widget.args.post.summ.from),
+                                        postFrom: widget.args.post.summ.from,
+                                        showChatSideMenuOnTap: true),
                                   ),
                                   const SizedBox(width: 6),
                                   Text(authorNick,

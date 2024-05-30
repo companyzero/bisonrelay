@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:collection';
 import 'package:bruig/models/client.dart';
-import 'package:bruig/models/uistate.dart';
 import 'package:bruig/screens/chats.dart';
 import 'package:bruig/screens/contacts_msg_times.dart';
 import 'package:flutter/material.dart';
@@ -128,7 +127,7 @@ class _ChatHeadingWState extends State<_ChatHeadingW> {
         chatNick: chat.nick,
         onTap: () {
           widget.makeActive(chat);
-          widget.showSubMenu(chat.isGC, chat.id);
+          widget.showSubMenu();
         },
         avatar: chat.avatar.image);
 
@@ -144,7 +143,7 @@ class _ChatHeadingWState extends State<_ChatHeadingW> {
                       mobile: isScreenSmall
                           ? (context) {
                               widget.makeActive(chat);
-                              widget.showSubMenu(chat.isGC, chat.id);
+                              widget.showSubMenu();
                             }
                           : null,
                       client: client,
@@ -288,8 +287,8 @@ class _ActiveChatsListMenuState extends State<ActiveChatsListMenu> {
 
     makeActive(ChatModel? c) => {client.active = c};
 
-    showSubMenu(bool isGC, String id) =>
-        {client.ui.chatSideMenuActive.chat = client.active};
+    showSubMenu() => client.ui.chatSideMenuActive.chat = client.active;
+
     bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
     if (isScreenSmall) {
       return Consumer<ThemeNotifier>(
