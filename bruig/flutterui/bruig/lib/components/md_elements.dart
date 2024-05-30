@@ -456,6 +456,7 @@ class MarkdownArea extends StatelessWidget {
                 ...md.ExtensionSet.gitHubFlavored.inlineSyntaxes
               ]),
               builders: {
+                "pre": PreformattedElementBuilder(),
                 "pdf": PDFMarkdownElementBuilder(),
                 //"video": VideoMarkdownElementBuilder(basedir),
                 "codeblock": CodeblockMarkdownElementBuilder(),
@@ -548,12 +549,32 @@ class ImageMd extends StatelessWidget {
       );
 }
 
+class PreformattedElementBuilder extends MarkdownElementBuilder {
+  @override
+  Widget visitText(md.Text text, TextStyle? preferredStyle) {
+    var style = preferredStyle!.copyWith(
+      backgroundColor: Colors.transparent,
+    );
+
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxHeight: 200),
+      child: SingleChildScrollView(
+          controller: ScrollController(keepScrollOffset: false),
+          child: Text.rich(
+            TextSpan(text: text.text),
+            style: style,
+          )),
+    );
+  }
+}
+
 class CodeblockMarkdownElementBuilder extends MarkdownElementBuilder {
   @override
   Widget visitText(md.Text text, TextStyle? preferredStyle) {
     var style = preferredStyle!.copyWith(
       backgroundColor: Colors.transparent,
     );
+
     return Text.rich(
       TextSpan(text: text.text),
       style: style,
