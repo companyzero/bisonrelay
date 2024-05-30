@@ -44,6 +44,17 @@ class _SidebarState extends State<Sidebar> {
   }
 
   void switchScreen(String route) {
+    // Do not change screen if already there.
+    String currentPath = "";
+    widget.navKey.currentState?.popUntil((route) {
+      currentPath = route.settings.name ?? "";
+      return true;
+    });
+
+    if (currentPath == route) {
+      return;
+    }
+
     widget.navKey.currentState!.pushReplacementNamed(route);
   }
 

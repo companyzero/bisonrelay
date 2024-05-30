@@ -371,6 +371,17 @@ class _OverviewScreenState extends State<OverviewScreen> {
   }
 
   void switchScreen(String route) {
+    // Do not change screen if already there.
+    String currentPath = "";
+    navKey.currentState?.popUntil((route) {
+      currentPath = route.settings.name ?? "";
+      return true;
+    });
+
+    if (currentPath == route) {
+      return;
+    }
+
     navKey.currentState!.pushReplacementNamed(route);
   }
 
