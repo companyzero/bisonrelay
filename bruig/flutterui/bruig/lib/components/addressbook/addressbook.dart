@@ -1,3 +1,5 @@
+import 'dart:collection';
+
 import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/screens/chats.dart';
@@ -34,8 +36,9 @@ class _AddressBookListingWState extends State<_AddressBookListingW> {
 
   void chatUpdated() => setState(() {});
 
-  void startChat(bool open) {
+  void startChat() {
     client.active = chat;
+    client.ui.hideAddressBookScreen();
   }
 
   @override
@@ -76,7 +79,7 @@ class _AddressBookListingWState extends State<_AddressBookListingW> {
               child: ListTile(
                 onTap: () => confirmGCInvite
                     ? null
-                    : widget.addToCreateGCCB ?? startChat(alreadyOpened),
+                    : widget.addToCreateGCCB ?? startChat(),
                 enabled: true,
                 title: Text(chat.nick,
                     style: TextStyle(
@@ -105,7 +108,7 @@ class _AddressBookListingWState extends State<_AddressBookListingW> {
                                     : alreadyOpened
                                         ? "Open Chat"
                                         : "Start Chat",
-                                onPressed: () => startChat(alreadyOpened),
+                                onPressed: () => startChat(),
                                 icon: Icon(
                                     color: darkTextColor,
                                     !alreadyOpened ||
@@ -120,9 +123,7 @@ class _AddressBookListingWState extends State<_AddressBookListingW> {
 class AddressBook extends StatefulWidget {
   final ClientModel client;
   final CustomInputFocusNode inputFocusNode;
-  final bool createGroupChat;
-  const AddressBook(this.client, this.inputFocusNode, this.createGroupChat,
-      {Key? key})
+  const AddressBook(this.client, this.inputFocusNode, {Key? key})
       : super(key: key);
 
   @override
@@ -136,6 +137,8 @@ class _AddressBookState extends State<AddressBook> {
   bool confirmNewGC = false;
   String newGcName = "";
   var combinedChatList = [];
+  String filterSearchString = "";
+  UnmodifiableListView<ChatModel> filteredSearch = UnmodifiableListView([]);
 
   @override
   void initState() {
@@ -145,20 +148,17 @@ class _AddressBookState extends State<AddressBook> {
         .sort((a, b) => a.nick.toLowerCase().compareTo(b.nick.toLowerCase()));
   }
 
-  void hideAddressBook() async {
-    client.hideAddressBookScreen();
-  }
-
   void createNewGroupChat() {
     setState(() {
-      client.createGroupChat = true;
+      client.ui.createGroupChat.val = true;
       usersToInvite = [];
     });
   }
 
   void cancelCreateNewGroupChat() {
+    client.ui.createGroupChat.val =
+        false; // XXX Make an internal bool of the state?
     setState(() {
-      client.createGroupChat = false;
       usersToInvite = [];
       newGcName = "";
     });
@@ -167,6 +167,15 @@ class _AddressBookState extends State<AddressBook> {
   void setGcName(String gcName) {
     setState(() {
       newGcName = gcName;
+    });
+  }
+
+  void onInputChanged(String value) {
+    var newSearchResults =
+        client.searchChats(value, ignoreGC: client.ui.createGroupChat.val);
+    setState(() {
+      filterSearchString = value;
+      filteredSearch = newSearchResults;
     });
   }
 
@@ -188,6 +197,7 @@ class _AddressBookState extends State<AddressBook> {
     if (newGcName == "") return;
     try {
       await client.createNewGCAndInvite(newGcName, usersToInvite);
+      client.ui.hideAddressBookScreen();
     } catch (exception) {
       showErrorSnackbar(context, "Unable to create GC: $exception");
     }
@@ -200,8 +210,8 @@ class _AddressBookState extends State<AddressBook> {
   }
 
   void cancelCreateNewGC() {
+    client.ui.createGroupChat.val = false;
     setState(() {
-      client.createGroupChat = false;
       confirmNewGC = false;
       usersToInvite = [];
       newGcName = "";
@@ -216,7 +226,7 @@ class _AddressBookState extends State<AddressBook> {
     var dividerColor = theme.highlightColor;
     bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
 
-    if (client.createGroupChat) {
+    if (client.ui.createGroupChat.val) {
       combinedChatList = combinedChatList.where((e) => !e.isGC).toList();
     } else {
       combinedChatList = client.hiddenChats.sorted + client.activeChats.sorted;
@@ -300,7 +310,7 @@ class _AddressBookState extends State<AddressBook> {
                                               client,
                                               usersToInvite.contains(
                                                   usersToInvite[index]),
-                                              client.createGroupChat
+                                              client.ui.createGroupChat.val
                                                   ? addToInviteGCList
                                                   : null,
                                               true))),
@@ -314,7 +324,7 @@ class _AddressBookState extends State<AddressBook> {
                   padding: const EdgeInsets.all(20),
                   child: Row(children: [
                     Text(
-                        !client.createGroupChat
+                        !client.ui.createGroupChat.val
                             ? "New message"
                             : "New group chat",
                         textAlign: TextAlign.left,
@@ -325,8 +335,8 @@ class _AddressBookState extends State<AddressBook> {
               Row(children: [
                 const SizedBox(width: 20),
                 Expanded(
-                    child:
-                        Input(client, inputFocusNode, client.createGroupChat)),
+                    child: Input(inputFocusNode, client.ui.createGroupChat.val,
+                        onInputChanged)),
                 Material(
                     color: dividerColor.withOpacity(0),
                     child: isScreenSmall
@@ -336,10 +346,10 @@ class _AddressBookState extends State<AddressBook> {
                             iconSize: 15,
                             hoverColor: dividerColor,
                             tooltip: "Cancel",
-                            onPressed: () => hideAddressBook(),
+                            onPressed: client.ui.hideAddressBookScreen,
                             icon: Icon(color: normalTextColor, Icons.cancel))),
               ]),
-              !client.createGroupChat
+              !client.ui.createGroupChat.val
                   ? Column(children: [
                       const SizedBox(height: 20),
                       Row(children: [
@@ -395,7 +405,7 @@ class _AddressBookState extends State<AddressBook> {
               Expanded(
                   child: Container(
                       padding: const EdgeInsets.all(20),
-                      child: client.filteredSearchString != ""
+                      child: filterSearchString != ""
                           ? Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -418,20 +428,19 @@ class _AddressBookState extends State<AddressBook> {
                                     )),
                                   ]),
                                   const SizedBox(height: 21),
-                                  client.filteredSearch.isNotEmpty
+                                  filteredSearch.isNotEmpty
                                       ? Expanded(
                                           child: ListView.builder(
-                                              itemCount:
-                                                  client.filteredSearch.length,
+                                              itemCount: filteredSearch.length,
                                               itemBuilder: (context, index) =>
                                                   _AddressBookListingW(
-                                                      client.filteredSearch[
-                                                          index],
+                                                      filteredSearch[index],
                                                       client,
                                                       usersToInvite.contains(
-                                                          client.filteredSearch[
+                                                          filteredSearch[
                                                               index]),
-                                                      client.createGroupChat
+                                                      client.ui.createGroupChat
+                                                              .val
                                                           ? addToInviteGCList
                                                           : null,
                                                       false)))
@@ -481,7 +490,10 @@ class _AddressBookState extends State<AddressBook> {
                                                           usersToInvite.contains(
                                                               combinedChatList[
                                                                   index]),
-                                                          client.createGroupChat
+                                                          client
+                                                                  .ui
+                                                                  .createGroupChat
+                                                                  .val
                                                               ? addToInviteGCList
                                                               : null,
                                                           false))),

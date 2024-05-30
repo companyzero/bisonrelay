@@ -313,7 +313,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
                     onTap: () {
                       if (removeBottomBar ||
                           client.active != null ||
-                          client.showAddressBook) {
+                          client.ui.showAddressBook.val) {
                         client.activeSubMenu.isNotEmpty
                             ? client.activeSubMenu = []
                             : client.active = null;
@@ -334,7 +334,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
                     child: Stack(children: [
                       removeBottomBar ||
                               client.active != null ||
-                              client.showAddressBook ||
+                              client.ui.showAddressBook.val ||
                               feed.active != null
                           ? Positioned(
                               left: 25,

@@ -4,7 +4,6 @@ import 'package:bruig/components/info_grid.dart';
 import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/screens/chats.dart';
-import 'package:bruig/screens/overview.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
@@ -14,9 +13,9 @@ import 'package:provider/provider.dart';
 import 'package:bruig/components/empty_widget.dart';
 
 class UserProfile extends StatefulWidget {
+  static String routeName = "${ChatsScreen.routeName}/profile";
   final ClientModel client;
-  final ChatModel chat;
-  const UserProfile(this.client, this.chat, {Key? key}) : super(key: key);
+  const UserProfile(this.client, {Key? key}) : super(key: key);
 
   @override
   State<UserProfile> createState() => _UserProfileState();
@@ -25,7 +24,8 @@ class UserProfile extends StatefulWidget {
 String _shortLog(String s) => s.length < 16 ? s : s.substring(0, 16);
 
 class _UserProfileState extends State<UserProfile> {
-  ChatModel get chat => widget.chat;
+  ClientModel get client => widget.client;
+  ChatModel chat = emptyChatModel;
   RatchetDebugInfo ratchetInfo = RatchetDebugInfo.empty();
   AddressBookEntry abEntry = AddressBookEntry.empty();
   bool isIgnored = false;
@@ -34,6 +34,16 @@ class _UserProfileState extends State<UserProfile> {
   ScrollController gridScrollCtrl = ScrollController();
 
   void readProfile() async {
+    if (chat == emptyChatModel) {
+      setState(() {
+        ratchetInfo = RatchetDebugInfo.empty();
+        abEntry = AddressBookEntry.empty();
+        isIgnored = false;
+        loading = false;
+      });
+      return;
+    }
+
     try {
       var newIgnored = await Golib.isIgnored(chat.id);
       var newAbEntry = await Golib.addressBookEntry(chat.id);
@@ -137,10 +147,33 @@ class _UserProfileState extends State<UserProfile> {
     }
   }
 
+  void activeChatChanged() {
+    setState(() {
+      chat = widget.client.active ?? emptyChatModel;
+      readProfile();
+    });
+  }
+
   @override
   void initState() {
     super.initState();
-    readProfile();
+    client.activeChat.addListener(activeChatChanged);
+    activeChatChanged();
+  }
+
+  @override
+  void didUpdateWidget(UserProfile oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.client != widget.client) {
+      oldWidget.client.activeChat.removeListener(activeChatChanged);
+      client.activeChat.addListener(activeChatChanged);
+    }
+  }
+
+  @override
+  void dispose() {
+    client.activeChat.removeListener(activeChatChanged);
+    super.dispose();
   }
 
   @override
@@ -260,7 +293,7 @@ class _UserProfileState extends State<UserProfile> {
               isScreenSmall
                   ? const Empty()
                   : ElevatedButton(
-                      onPressed: () => widget.client.profile = null,
+                      onPressed: () => client.ui.showProfile.val = false,
                       child: const Text("Done"))
             ],
           ));

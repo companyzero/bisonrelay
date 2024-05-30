@@ -1,15 +1,14 @@
 import 'package:bruig/screens/chats.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:bruig/models/client.dart';
 import 'package:bruig/theme_manager.dart';
 import 'package:provider/provider.dart';
 
 class Input extends StatefulWidget {
-  final ClientModel client;
   final CustomInputFocusNode inputFocusNode;
   final bool createGroupChat;
-  const Input(this.client, this.inputFocusNode, this.createGroupChat,
+  final ValueChanged<String> onChanged;
+  const Input(this.inputFocusNode, this.createGroupChat, this.onChanged,
       {Key? key})
       : super(key: key);
 
@@ -19,15 +18,11 @@ class Input extends StatefulWidget {
 
 class _InputState extends State<Input> {
   final controller = TextEditingController();
-  ClientModel get client => widget.client;
 
   final FocusNode node = FocusNode();
 
   @override
   void initState() {
-    setState(() {
-      controller.text = client.filteredSearchString;
-    });
     super.initState();
   }
 
@@ -45,8 +40,7 @@ class _InputState extends State<Input> {
   void handleKeyPress(event) {
     if (event is RawKeyUpEvent) {
       bool modPressed = event.isShiftPressed || event.isControlPressed;
-      final val = controller.value;
-      client.filteredSearchString = val.text;
+      widget.onChanged(controller.text);
       if (event.data.logicalKey.keyLabel == "Enter" && !modPressed) {
         controller.value = const TextEditingValue(
             text: "", selection: TextSelection.collapsed(offset: 0));
@@ -136,7 +130,6 @@ class _GroupChatNameInputState extends State<GroupChatNameInput> {
   void initState() {
     setState(() {
       controller.text = widget.gcName;
-      //client.filteredSearchString;
     });
     super.initState();
   }

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:collection';
 import 'package:bruig/models/client.dart';
+import 'package:bruig/models/uistate.dart';
 import 'package:bruig/screens/chats.dart';
 import 'package:bruig/screens/contacts_msg_times.dart';
 import 'package:flutter/material.dart';
@@ -233,8 +234,6 @@ Future<void> loadInvite(BuildContext context) async {
 class _ActiveChatsListMenuState extends State<ActiveChatsListMenu> {
   ClientModel get client => widget.client;
   FocusNode get inputFocusNode => widget.inputFocusNode.inputFocusNode;
-  bool showAddressbookRoomsButton = false;
-  bool showAddressbookUsersButton = false;
   UnmodifiableListView<ChatModel> chats = UnmodifiableListView([]);
   Timer? debounce;
 
@@ -273,16 +272,6 @@ class _ActiveChatsListMenuState extends State<ActiveChatsListMenu> {
 
   @override
   Widget build(BuildContext context) {
-    void showGroupChat() async {
-      client.createGroupChat = true;
-      client.showAddressBookScreen();
-    }
-
-    void showAddressBook() async {
-      client.createGroupChat = false;
-      client.showAddressBookScreen();
-    }
-
     void genInvite() async {
       await generateInvite(context);
       inputFocusNode.requestFocus();
@@ -332,7 +321,7 @@ class _ActiveChatsListMenuState extends State<ActiveChatsListMenu> {
                             splashRadius: 28,
                             iconSize: 40,
                             tooltip: "New Message",
-                            onPressed: showAddressBook,
+                            onPressed: client.ui.showAddressBookScreen,
                             icon: Icon(
                                 size: 40,
                                 color: darkTextColor,
@@ -348,7 +337,7 @@ class _ActiveChatsListMenuState extends State<ActiveChatsListMenu> {
                             splashRadius: 28,
                             iconSize: 40,
                             tooltip: "Create new group chat",
-                            onPressed: showGroupChat,
+                            onPressed: client.ui.showCreateGroupChatScreen,
                             icon: Icon(
                                 size: 40,
                                 color: darkTextColor,
@@ -384,23 +373,21 @@ class _ActiveChatsListMenuState extends State<ActiveChatsListMenu> {
                         itemCount: chats.length,
                         itemBuilder: (context, index) => _ChatHeadingW(
                             chats[index], client, makeActive, showSubMenu))),
-                !client.showAddressBook
-                    ? Positioned(
-                        bottom: 5,
-                        right: 0,
-                        child: Material(
-                            color: selectedBackgroundColor.withOpacity(0),
-                            child: IconButton(
-                                hoverColor: selectedBackgroundColor,
-                                splashRadius: 15,
-                                iconSize: 15,
-                                tooltip: "New Message",
-                                onPressed: showAddressBook,
-                                icon: Icon(
-                                    size: 20,
-                                    color: darkTextColor,
-                                    Icons.edit_outlined))))
-                    : const Empty(),
+                Positioned(
+                    bottom: 5,
+                    right: 0,
+                    child: Material(
+                        color: selectedBackgroundColor.withOpacity(0),
+                        child: IconButton(
+                            hoverColor: selectedBackgroundColor,
+                            splashRadius: 15,
+                            iconSize: 15,
+                            tooltip: "New Message",
+                            onPressed: client.ui.showAddressBookScreen,
+                            icon: Icon(
+                                size: 20,
+                                color: darkTextColor,
+                                Icons.edit_outlined)))),
                 Positioned(
                     bottom: 5,
                     right: 40,
@@ -411,7 +398,7 @@ class _ActiveChatsListMenuState extends State<ActiveChatsListMenu> {
                             splashRadius: 15,
                             iconSize: 15,
                             tooltip: "Create new group chat",
-                            onPressed: showGroupChat,
+                            onPressed: client.ui.showCreateGroupChatScreen,
                             icon: Icon(
                                 size: 20,
                                 color: darkTextColor,
