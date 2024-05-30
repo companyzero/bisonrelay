@@ -120,7 +120,7 @@ class _ActiveChatState extends State<ActiveChat> {
     var theme = Theme.of(context);
     var backgroundColor = theme.backgroundColor;
 
-    bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
+    bool isScreenSmall = checkIsScreenSmall(context);
 
     return ScreenWithChatSideMenu(Column(
       children: [

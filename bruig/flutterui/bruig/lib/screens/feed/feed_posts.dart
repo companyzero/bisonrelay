@@ -21,7 +21,7 @@ class _AvatarOrUnread extends StatelessWidget {
   Widget build(BuildContext context) {
     return hasUnread
         ? const Icon(Icons.new_releases_outlined, color: Colors.amber)
-        : UserOrSelfAvatar(client, chat);
+        : UserOrSelfAvatar(client, chat, showChatSideMenuOnTap: true);
   }
 }
 

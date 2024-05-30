@@ -58,9 +58,8 @@ class ChatsScreenTitle extends StatelessWidget {
                   width: 40,
                   margin: const EdgeInsets.only(
                       top: 0, bottom: 0, left: 0, right: 5),
-                  child: UserMenuAvatar(client, chat, onTap: () {
-                    client.ui.chatSideMenuActive.chat = chat;
-                  })),
+                  child: UserMenuAvatar(client, chat,
+                      showChatSideMenuOnTap: true)),
             ]);
       }
 
@@ -383,7 +382,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
       return const _LoadingAddressBookPage();
     }
 
-    bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
+    bool isScreenSmall = checkIsScreenSmall(context);
     return !isScreenSmall
         ? Row(children: [
             SizedBox(

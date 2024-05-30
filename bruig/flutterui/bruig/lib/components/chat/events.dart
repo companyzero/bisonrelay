@@ -59,7 +59,6 @@ class ReceivedSentPM extends StatefulWidget {
   final ChatEventModel evnt;
   final String nick;
   final int timestamp;
-  final ShowSubMenuCB showSubMenu;
   final String id;
   final String userNick;
   final bool isGC;
@@ -67,17 +66,8 @@ class ReceivedSentPM extends StatefulWidget {
   final ClientModel client;
   final ChatModel chat;
 
-  const ReceivedSentPM(
-      this.evnt,
-      this.nick,
-      this.timestamp,
-      this.showSubMenu,
-      this.id,
-      this.userNick,
-      this.isGC,
-      this.openReplyDM,
-      this.client,
-      this.chat,
+  const ReceivedSentPM(this.evnt, this.nick, this.timestamp, this.id,
+      this.userNick, this.isGC, this.openReplyDM, this.client, this.chat,
       {Key? key})
       : super(key: key);
 
@@ -214,10 +204,7 @@ class _ReceivedSentPMState extends State<ReceivedSentPM> {
                                     child: UserMenuAvatar(
                                       widget.client,
                                       widget.evnt.source ?? widget.chat,
-                                      onTap: () {
-                                        widget.showSubMenu(
-                                            widget.isGC, widget.id);
-                                      },
+                                      showChatSideMenuOnTap: true,
                                     ),
                                   ),
                                 )))
@@ -529,17 +516,8 @@ class PMW extends StatelessWidget {
           false,
           client);
     }
-    return ReceivedSentPM(
-        evnt,
-        evnt.source?.nick ?? client.nick,
-        timestamp,
-        showSubMenu,
-        evnt.source?.id ?? "",
-        client.nick,
-        false,
-        openReplyDM,
-        client,
-        chat);
+    return ReceivedSentPM(evnt, evnt.source?.nick ?? client.nick, timestamp,
+        evnt.source?.id ?? "", client.nick, false, openReplyDM, client, chat);
   }
 }
 
@@ -563,17 +541,8 @@ class GCMW extends StatelessWidget {
           evnt.source?.nick == null ? event.timestamp : event.timestamp * 1000;
     }
 
-    return ReceivedSentPM(
-        evnt,
-        evnt.source?.nick ?? client.nick,
-        timestamp,
-        showSubMenu,
-        evnt.source?.id ?? "",
-        client.nick,
-        true,
-        openReplyDM,
-        client,
-        chat);
+    return ReceivedSentPM(evnt, evnt.source?.nick ?? client.nick, timestamp,
+        evnt.source?.id ?? "", client.nick, true, openReplyDM, client, chat);
   }
 }
 
@@ -1420,7 +1389,7 @@ class Event extends StatelessWidget {
   final ClientModel client;
   const Event(this.chat, this.event, this.client, {Key? key}) : super(key: key);
 
-  showSubMenu(bool isGC, String id) => client.ui.chatSideMenuActive.chat = chat;
+  showSubMenu() => client.ui.chatSideMenuActive.chat = chat;
   openReplyDM(bool isGC, String id) => client.setActiveByNick(id, isGC);
   @override
   Widget build(BuildContext context) {

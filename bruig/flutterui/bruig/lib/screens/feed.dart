@@ -1,6 +1,8 @@
 import 'dart:async';
 
+import 'package:bruig/components/chat/chat_side_menu.dart';
 import 'package:bruig/models/client.dart';
+import 'package:bruig/models/uistate.dart';
 import 'package:bruig/screens/feed/user_posts.dart';
 import 'package:bruig/screens/overview.dart';
 import 'package:flutter/material.dart';
@@ -148,15 +150,18 @@ class _FeedScreenState extends State<FeedScreen> {
 
   @override
   Widget build(BuildContext context) {
-    bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
+    bool isScreenSmall = checkIsScreenSmall(context);
+    bool hasArgs = false;
+    if (ModalRoute.of(context)?.settings.arguments is PageTabs) {
+      var args = ModalRoute.of(context)?.settings.arguments as PageTabs;
+      hasArgs = args.postScreenArgs != null || args.userPostList != null;
+    }
 
-    return Row(children: [
-      ModalRoute.of(context)!.settings.arguments == null
-          ? isScreenSmall
-              ? const Empty()
-              : FeedBar(onItemChanged, tabIndex)
+    return ScreenWithChatSideMenu(Row(children: [
+      !isScreenSmall && !hasArgs
+          ? FeedBar(onItemChanged, tabIndex)
           : const Empty(),
       Expanded(child: activeTab())
-    ]);
+    ]));
   }
 }
