@@ -1,9 +1,7 @@
 import 'dart:async';
 
-import 'package:bruig/components/copyable.dart';
-import 'package:bruig/components/interactive_avatar.dart';
+import 'package:bruig/components/chat/chat_side_menu.dart';
 import 'package:bruig/components/manage_gc.dart';
-import 'package:bruig/models/menus.dart';
 import 'package:bruig/models/uistate.dart';
 import 'package:bruig/screens/chats.dart';
 import 'package:bruig/models/client.dart';
@@ -13,9 +11,6 @@ import 'package:bruig/components/chat/messages.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import 'package:bruig/components/chat/input.dart';
 import 'package:bruig/components/snackbars.dart';
-import 'package:bruig/theme_manager.dart';
-import 'package:provider/provider.dart';
-import 'package:bruig/components/empty_widget.dart';
 
 class ActiveChat extends StatefulWidget {
   final ClientModel client;
@@ -68,6 +63,10 @@ class _ActiveChatState extends State<ActiveChat> {
     setState(() {});
   }
 
+  void chatSideMenuActiveChanged() {
+    setState(() {});
+  }
+
   @override
   void initState() {
     super.initState();
@@ -76,6 +75,7 @@ class _ActiveChatState extends State<ActiveChat> {
     chat = client.active;
     client.activeChat.addListener(activeChatChanged);
     ui.showProfile.addListener(showProfileChanged);
+    ui.chatSideMenuActive.addListener(chatSideMenuActiveChanged);
   }
 
   @override
@@ -88,12 +88,16 @@ class _ActiveChatState extends State<ActiveChat> {
       activeChatChanged();
       oldWidget.client.ui.showProfile.removeListener(showProfileChanged);
       ui.showProfile.addListener(showProfileChanged);
+      oldWidget.client.ui.chatSideMenuActive
+          .removeListener(chatSideMenuActiveChanged);
+      ui.chatSideMenuActive.addListener(chatSideMenuActiveChanged);
     }
   }
 
   @override
   void dispose() {
     ui.showProfile.removeListener(showProfileChanged);
+    ui.chatSideMenuActive.removeListener(chatSideMenuActiveChanged);
     _debounce?.cancel();
     client.activeChat.removeListener(activeChatChanged);
     //inputFocusNode.dispose();  XXX Does this need to be put back?  Errors with it
@@ -114,165 +118,23 @@ class _ActiveChatState extends State<ActiveChat> {
     }
 
     var theme = Theme.of(context);
-    var textColor = theme.dividerColor;
-    var darkTextColor = theme.indicatorColor;
-    var selectedBackgroundColor = theme.highlightColor;
-    var subMenuBorderColor = theme.canvasColor;
     var backgroundColor = theme.backgroundColor;
 
     bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
-    List<ChatMenuItem> activeSubMenu =
-        client.activeSubMenu.whereType<ChatMenuItem>().toList();
-    return Consumer<ThemeNotifier>(
-        builder: (context, theme, _) => isScreenSmall
-            ? activeSubMenu.isNotEmpty
-                ? Stack(
-                    alignment: Alignment.topRight,
-                    children: [
-                      Column(children: [
-                        Container(
-                          margin: const EdgeInsets.only(top: 20, bottom: 20),
-                          child: UserMenuAvatar(client, chat, radius: 75),
-                        ),
-                        Visibility(
-                          visible: chat.isGC,
-                          child: Text("Group Chat",
-                              style: TextStyle(
-                                  fontSize: theme.getMediumFont(context),
-                                  color: textColor)),
-                        ),
-                        Text(chat.nick,
-                            style: TextStyle(
-                                fontSize: theme.getMediumFont(context),
-                                color: textColor)),
-                        Expanded(
-                            child: ListView.builder(
-                          shrinkWrap: true,
-                          itemCount: activeSubMenu.length,
-                          itemBuilder: (context, index) => ListTile(
-                              title: Text(activeSubMenu[index].label,
-                                  style: TextStyle(
-                                      fontSize: theme.getSmallFont(context))),
-                              onTap: () {
-                                activeSubMenu[index]
-                                    .onSelected(context, client);
-                                client.hideSubMenu();
-                              },
-                              hoverColor: Colors.black),
-                        )),
-                      ]),
-                      Positioned(
-                        top: 5,
-                        right: 5,
-                        child: Material(
-                          color: selectedBackgroundColor.withOpacity(0),
-                          child: IconButton(
-                            tooltip: "Close",
-                            hoverColor: selectedBackgroundColor,
-                            splashRadius: 15,
-                            iconSize: 15,
-                            onPressed: () => client.hideSubMenu(),
-                            icon: Icon(
-                                color: darkTextColor, Icons.close_outlined),
-                          ),
-                        ),
-                      ),
-                    ],
-                  )
-                : Column(children: [
-                    Expanded(
-                      child: Messages(chat, client, _itemScrollController,
-                          _itemPositionsListener),
-                    ),
-                    Container(
-                        padding: const EdgeInsets.all(10),
-                        color: backgroundColor,
-                        child: Input(sendMsg, chat, inputFocusNode))
-                  ])
-            : Row(children: [
-                Expanded(
-                  child: Column(children: [
-                    Expanded(
-                      child: Messages(chat, client, _itemScrollController,
-                          _itemPositionsListener),
-                    ),
-                    Container(
-                        padding: const EdgeInsets.all(5),
-                        child: Input(sendMsg, chat, inputFocusNode))
-                  ]),
-                ),
-                Visibility(
-                  visible: activeSubMenu.isNotEmpty,
-                  child: Container(
-                    width: 250,
-                    decoration: BoxDecoration(
-                      border: Border(
-                        left: BorderSide(width: 2, color: subMenuBorderColor),
-                      ),
-                    ),
-                    child: Stack(alignment: Alignment.topRight, children: [
-                      Column(children: [
-                        Container(
-                          margin: const EdgeInsets.only(top: 20, bottom: 20),
-                          child: UserMenuAvatar(client, chat, radius: 75),
-                        ),
-                        Visibility(
-                          visible: chat.isGC,
-                          child: Text("Group Chat",
-                              style: TextStyle(
-                                  fontSize: theme.getMediumFont(context),
-                                  color: textColor)),
-                        ),
-                        Text(chat.nick,
-                            style: TextStyle(
-                                fontSize: theme.getMediumFont(context),
-                                color: textColor)),
-                        Container(
-                            margin: const EdgeInsets.all(10),
-                            child: Copyable(
-                                chat.id,
-                                TextStyle(
-                                    fontSize: theme.getSmallFont(context),
-                                    color: textColor,
-                                    overflow: TextOverflow.ellipsis))),
-                        Expanded(
-                            child: ListView.builder(
-                          shrinkWrap: true,
-                          itemCount: activeSubMenu.length,
-                          itemBuilder: (context, index) => ListTile(
-                              title: Text(activeSubMenu[index].label,
-                                  style: TextStyle(
-                                      fontSize: theme.getSmallFont(context))),
-                              onTap: () {
-                                activeSubMenu[index]
-                                    .onSelected(context, client);
-                                client.hideSubMenu();
-                              },
-                              hoverColor: Colors.black),
-                        )),
-                      ]),
-                      isScreenSmall
-                          ? const Empty()
-                          : Positioned(
-                              top: 5,
-                              right: 5,
-                              child: Material(
-                                color: selectedBackgroundColor.withOpacity(0),
-                                child: IconButton(
-                                  tooltip: "Close",
-                                  hoverColor: selectedBackgroundColor,
-                                  splashRadius: 15,
-                                  iconSize: 15,
-                                  onPressed: () => client.hideSubMenu(),
-                                  icon: Icon(
-                                      color: darkTextColor,
-                                      Icons.close_outlined),
-                                ),
-                              ),
-                            ),
-                    ]),
-                  ),
-                )
-              ]));
+
+    return ScreenWithChatSideMenu(Column(
+      children: [
+        Expanded(
+          child: Messages(
+              chat, client, _itemScrollController, _itemPositionsListener),
+        ),
+        Container(
+            padding: isScreenSmall
+                ? const EdgeInsets.all(10)
+                : const EdgeInsets.all(5),
+            color: backgroundColor,
+            child: Input(sendMsg, chat, inputFocusNode))
+      ],
+    ));
   }
 }

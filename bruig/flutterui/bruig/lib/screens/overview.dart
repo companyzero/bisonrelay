@@ -314,8 +314,8 @@ class _OverviewScreenState extends State<OverviewScreen> {
                       if (removeBottomBar ||
                           client.active != null ||
                           client.ui.showAddressBook.val) {
-                        client.activeSubMenu.isNotEmpty
-                            ? client.activeSubMenu = []
+                        !client.ui.chatSideMenuActive.empty
+                            ? client.ui.chatSideMenuActive.clear()
                             : client.active = null;
                         if (removeBottomBar) {
                           removeBottomBar = false;

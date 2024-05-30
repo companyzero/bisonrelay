@@ -2,7 +2,6 @@ import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/components/gc_context_menu.dart';
 import 'package:bruig/components/user_context_menu.dart';
 import 'package:bruig/models/client.dart';
-import 'package:bruig/models/uistate.dart';
 import 'package:bruig/util.dart';
 import 'package:flutter/material.dart';
 import 'package:bruig/theme_manager.dart';
@@ -147,7 +146,7 @@ class UserMenuAvatar extends StatelessWidget {
   Widget build(BuildContext context) {
     return chat.isGC
         ? GcContexMenu(
-            mobile: (context) => client.showSubMenu(chat.isGC, chat.id),
+            mobile: (context) => client.ui.chatSideMenuActive.chat = chat,
             targetGcChat: chat,
             child: AvatarModelAvatar(
               chat.avatar,

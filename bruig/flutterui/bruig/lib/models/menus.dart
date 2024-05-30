@@ -214,7 +214,7 @@ List<ChatMenuItem?> buildChatContextMenu() {
   ];
 }
 
-List<ChatMenuItem?> buildUserChatMenu(ChatModel chat) {
+List<ChatMenuItem> buildUserChatMenu(ChatModel chat) {
   void sendFile(BuildContext context, ChatModel chat) async {
     var filePickRes = await FilePicker.platform.pickFiles();
     if (filePickRes == null) return;
@@ -300,16 +300,14 @@ List<ChatMenuItem?> buildUserChatMenu(ChatModel chat) {
   void subscribeToPosts(
       BuildContext context, ClientModel client, ChatModel chat) async {
     await chat.subscribeToPosts();
-    client.updateUserMenu(chat.id, buildUserChatMenu(chat));
   }
 
   void unsubscribeToPosts(
       BuildContext context, ClientModel client, ChatModel chat) async {
     await chat.unsubscribeToPosts();
-    client.updateUserMenu(chat.id, buildUserChatMenu(chat));
   }
 
-  return <ChatMenuItem?>[
+  return <ChatMenuItem>[
     ChatMenuItem("User Profile", (context, client) {
       client.active = chat;
       client.ui.showProfile.val = true;
@@ -353,12 +351,14 @@ List<ChatMenuItem?> buildUserChatMenu(ChatModel chat) {
                 "Subscribing to Posts",
                 (context, chats) => null,
               ),
-    chat.isSubscribed
-        ? ChatMenuItem(
-            "List Posts",
-            (context, chats) => listUserPosts(context, chats, chats.active!),
-          )
-        : null,
+    ...(chat.isSubscribed
+        ? [
+            ChatMenuItem(
+              "List Posts",
+              (context, chats) => listUserPosts(context, chats, chats.active!),
+            )
+          ]
+        : []),
     ChatMenuItem(
       "Send File",
       (context, chats) => sendFile(context, chats.active!),

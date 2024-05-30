@@ -113,10 +113,6 @@ class _PostListsScreenState extends State<PostListsScreen> {
 
   void unsub(ChatModel chat) async {
     await chat.unsubscribeToPosts();
-    client.updateUserMenu(
-        chat.id,
-        buildUserChatMenu(
-            chat)); // XXX: This should go inside chat.unsubscribeToPosts().
     loadLists();
   }
 

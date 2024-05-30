@@ -59,7 +59,7 @@ class ChatsScreenTitle extends StatelessWidget {
                   margin: const EdgeInsets.only(
                       top: 0, bottom: 0, left: 0, right: 5),
                   child: UserMenuAvatar(client, chat, onTap: () {
-                    client.showSubMenu(chat.isGC, chat.id);
+                    client.ui.chatSideMenuActive.chat = chat;
                   })),
             ]);
       }
@@ -400,8 +400,9 @@ class _ChatsScreenState extends State<ChatsScreen> {
               child: ActiveChat(client, inputFocusNode),
             )),
           ])
-        : client.active == null
-            ? ActiveChatsListMenu(client, inputFocusNode)
-            : ActiveChat(client, inputFocusNode);
+        : Consumer<ActiveChatModel>(
+            builder: (context, activeChat, child) => activeChat.empty
+                ? ActiveChatsListMenu(client, inputFocusNode)
+                : ActiveChat(client, inputFocusNode));
   }
 }
