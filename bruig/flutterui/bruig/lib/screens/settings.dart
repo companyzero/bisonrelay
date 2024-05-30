@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:bruig/components/confirmation_dialog.dart';
 import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/components/interactive_avatar.dart';
+import 'package:bruig/models/uistate.dart';
 import 'package:bruig/screens/config_network.dart';
 import 'package:bruig/screens/ln_management.dart';
 import 'package:bruig/screens/log.dart';
@@ -31,12 +32,12 @@ class SettingsScreenTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer2<ClientModel, ThemeNotifier>(
-        builder: (context, client, theme, child) => Text(
-            client.settingsPageTitle,
+    return Consumer2<SettingsTitleModel, ThemeNotifier>(
+        builder: (context, settingsTitle, themeNtf, child) => Text(
+            settingsTitle.title,
             style: TextStyle(
-                fontSize: theme.getLargeFont(context),
-                color: Theme.of(context).focusColor)));
+                fontSize: themeNtf.getLargeFont(context),
+                color: themeNtf.getTheme().focusColor)));
   }
 }
 
@@ -129,7 +130,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   void changePage(String newPage) {
     setState(() {
-      client.settingsPageTitle = newPage;
+      client.ui.settingsTitle.title = newPage;
       settingsPage = newPage;
     });
   }
@@ -170,8 +171,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   void dispose() {
-    WidgetsBinding.instance
-        .addPostFrameCallback((_) => client.settingsPageTitle = "Settings");
+    WidgetsBinding.instance.addPostFrameCallback(
+        (_) => client.ui.settingsTitle.title = "Settings");
     client.connState.removeListener(connStateChanged);
     super.dispose();
   }

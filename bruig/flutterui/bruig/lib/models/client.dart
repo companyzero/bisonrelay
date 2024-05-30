@@ -612,13 +612,6 @@ class ClientModel extends ChangeNotifier {
     _handleRescanWalletProgress();
   }
 
-  String _settingsPageTitle = "Settings";
-  String get settingsPageTitle => _settingsPageTitle;
-  set settingsPageTitle(String s) {
-    _settingsPageTitle = s;
-    notifyListeners();
-  }
-
   // activeChats are chats that have messages in them, hiddenChats are the ones
   // that have no message or have been explicitly hidden from the chats list.
   final ChatsListModel activeChats = ChatsListModel();
@@ -687,7 +680,7 @@ class ClientModel extends ChangeNotifier {
 
   bool _loadingAddressBook = true;
   bool get loadingAddressBook => _loadingAddressBook;
-  void set loadingAddressBook(bool b) {
+  set loadingAddressBook(bool b) {
     _loadingAddressBook = b;
     notifyListeners();
   }
@@ -1018,7 +1011,7 @@ class ClientModel extends ChangeNotifier {
     active = await _newChat(user.uid, user.nick, false, false);
   }
 
-  List<String> _mediating = [];
+  final List<String> _mediating = [];
   bool requestedMediateID(String target) => _mediating.contains(target);
   void requestMediateID(String mediator, String target) async {
     if (!requestedMediateID(target)) {

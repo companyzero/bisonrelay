@@ -20,12 +20,22 @@ class ChatSideMenuActiveModel extends ChangeNotifier {
   void clear() => chat = null;
 }
 
+class SettingsTitleModel extends ChangeNotifier {
+  String _title = "Settings";
+  String get title => _title;
+  set title(String v) {
+    _title = v;
+    notifyListeners();
+  }
+}
+
 // UIStateModel holds state related to the app's UI.
 class UIStateModel {
   final ShowProfileModel showProfile = ShowProfileModel();
   final ShowAddressBookModel showAddressBook = ShowAddressBookModel();
   final CreateGroupChatModel createGroupChat = CreateGroupChatModel();
   final ChatSideMenuActiveModel chatSideMenuActive = ChatSideMenuActiveModel();
+  final SettingsTitleModel settingsTitle = SettingsTitleModel();
 
   void showCreateGroupChatScreen() {
     chatSideMenuActive.chat = null;

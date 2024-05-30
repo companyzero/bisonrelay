@@ -132,6 +132,7 @@ Future<void> runMainApp(Config cfg) async {
       ChangeNotifierProvider.value(value: client.activeChat),
       ChangeNotifierProvider.value(value: client.ui.showProfile),
       ChangeNotifierProvider.value(value: client.ui.chatSideMenuActive),
+      ChangeNotifierProvider.value(value: client.ui.settingsTitle),
       ChangeNotifierProvider(create: (c) => FeedModel()),
       ChangeNotifierProvider.value(value: globalLogModel),
       ChangeNotifierProvider(create: (c) => DownloadsModel()),
