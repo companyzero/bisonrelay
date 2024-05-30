@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:collection';
 
-import 'package:bruig/models/menus.dart';
 import 'package:bruig/models/resources.dart';
 import 'package:bruig/models/uistate.dart';
 import 'package:flutter/foundation.dart';
@@ -498,6 +497,8 @@ class ActiveChatModel extends ChangeNotifier {
     _chat = v;
     notifyListeners();
   }
+
+  bool get empty => _chat == null;
 }
 
 // ChatsListModel tracks a list of chats. These could be either active or inactive
@@ -693,58 +694,6 @@ class ClientModel extends ChangeNotifier {
 
   final BoolFlagModel hasUnreadChats = BoolFlagModel();
 
-  String _userPostListID = "";
-  String get userPostListID => _userPostListID;
-  set userPostListID(String b) {
-    _userPostListID = b;
-    notifyListeners();
-  }
-
-  List<PostListItem> _userPostList = [];
-  UnmodifiableListView<PostListItem> get userPostList =>
-      UnmodifiableListView(_userPostList);
-
-  set userPostList(List<PostListItem> us) {
-    _userPostList = us;
-    notifyListeners();
-  }
-
-  final Map<String, List<ChatMenuItem>> _subGCMenus = {};
-  UnmodifiableMapView<String, List<ChatMenuItem>> get subGCMenus =>
-      UnmodifiableMapView(_subGCMenus);
-
-  final Map<String, List<ChatMenuItem?>> _subUserMenus = {};
-  UnmodifiableMapView<String, List<ChatMenuItem?>> get subUserMenus =>
-      UnmodifiableMapView(_subUserMenus);
-
-  List<ChatMenuItem?> _activeSubMenu = [];
-  UnmodifiableListView<ChatMenuItem?> get activeSubMenu =>
-      UnmodifiableListView(_activeSubMenu);
-
-  void updateUserMenu(String id, List<ChatMenuItem?> menu) {
-    _subUserMenus[id] = menu;
-    notifyListeners();
-  }
-
-  void set activeSubMenu(List<ChatMenuItem?> sm) {
-    _activeSubMenu = sm;
-    notifyListeners();
-  }
-
-  void showSubMenu(bool isGC, String id) {
-    if (isGC) {
-      activeSubMenu = subGCMenus[id] ?? [];
-    } else {
-      activeSubMenu = subUserMenus[id] ?? [];
-    }
-    notifyListeners();
-  }
-
-  void hideSubMenu() {
-    activeSubMenu = [];
-    notifyListeners();
-  }
-
   String _publicID = "";
   String get publicID => _publicID;
 
@@ -763,9 +712,6 @@ class ClientModel extends ChangeNotifier {
     if (c == active) {
       return;
     }
-
-    // Remove/rework these?
-    // hideSubMenu();
 
     // De-active previously active chat.
     active?.removeFirstUnread();
@@ -790,13 +736,6 @@ class ClientModel extends ChangeNotifier {
 
     // Check if this cleared the indicator for unread messages.
     hasUnreadChats.val = activeChats.hasUnreadMsgs;
-
-    // Rework this?
-    if (chat.isGC) {
-      _subGCMenus[chat.id] = buildGCMenu(chat);
-    } else {
-      _subUserMenus[chat.id] = buildUserChatMenu(chat);
-    }
 
     // Rework this?
     if (_savedHiddenChats.contains(chat.nick)) {
@@ -913,12 +852,6 @@ class ClientModel extends ChangeNotifier {
       hiddenChats._addInactive(c);
     } else {
       activeChats._addInactive(c);
-
-      if (isGC) {
-        _subGCMenus[c.id] = buildGCMenu(c);
-      } else {
-        _subUserMenus[c.id] = buildUserChatMenu(c);
-      }
     }
 
     notifyListeners();
@@ -950,14 +883,6 @@ class ClientModel extends ChangeNotifier {
     if (active == chat) {
       active = null;
     }
-
-    // Rework this.
-    if (chat.isGC) {
-      _subGCMenus.remove(chat.id);
-    } else {
-      _subUserMenus.remove(chat.id);
-    }
-    notifyListeners();
   }
 
   String getNick(String uid) {
@@ -999,7 +924,6 @@ class ClientModel extends ChangeNotifier {
         } else if (evnt.error.contains("not subscribed")) {
           chat?.isSubscribed = false;
         }
-        chat != null ? updateUserMenu(evnt.id, buildUserChatMenu(chat)) : null;
       }
 
       var isGC =

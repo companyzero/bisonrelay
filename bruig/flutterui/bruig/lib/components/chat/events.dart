@@ -503,8 +503,7 @@ class PMW extends StatelessWidget {
   final ShowSubMenuCB showSubMenu;
   final ClientModel client;
   final ChatModel chat;
-  const PMW(this.evnt, this.showSubMenu, this.client, this.chat,
-      {Key? key})
+  const PMW(this.evnt, this.showSubMenu, this.client, this.chat, {Key? key})
       : super(key: key);
 
   @override
@@ -520,8 +519,15 @@ class PMW extends StatelessWidget {
     bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
 
     if (isScreenSmall) {
-      return ReceivedSentMobilePM(evnt, evnt.source?.nick ?? client.nick, timestamp,
-          showSubMenu, evnt.source?.id ?? "", client.nick, false, client);
+      return ReceivedSentMobilePM(
+          evnt,
+          evnt.source?.nick ?? client.nick,
+          timestamp,
+          showSubMenu,
+          evnt.source?.id ?? "",
+          client.nick,
+          false,
+          client);
     }
     return ReceivedSentPM(
         evnt,
@@ -543,8 +549,8 @@ class GCMW extends StatelessWidget {
   final OpenReplyDMCB openReplyDM;
   final ClientModel client;
   final ChatModel chat;
-  const GCMW(this.evnt, this.showSubMenu, this.openReplyDM,
-      this.client, this.chat,
+  const GCMW(
+      this.evnt, this.showSubMenu, this.openReplyDM, this.client, this.chat,
       {Key? key})
       : super(key: key);
 
@@ -1412,10 +1418,9 @@ class Event extends StatelessWidget {
   final ChatEventModel event;
   final ChatModel chat;
   final ClientModel client;
-  const Event(this.chat, this.event, this.client, {Key? key})
-      : super(key: key);
+  const Event(this.chat, this.event, this.client, {Key? key}) : super(key: key);
 
-  showSubMenu(bool isGC, String id) => client.showSubMenu(isGC, id);
+  showSubMenu(bool isGC, String id) => client.ui.chatSideMenuActive.chat = chat;
   openReplyDM(bool isGC, String id) => client.setActiveByNick(id, isGC);
   @override
   Widget build(BuildContext context) {

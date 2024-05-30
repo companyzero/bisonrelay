@@ -1,4 +1,3 @@
-import 'package:bruig/models/menus.dart';
 import 'package:flutter/material.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/components/context_menu.dart';
@@ -7,7 +6,7 @@ import 'package:bruig/components/suggest_kx.dart';
 import 'package:bruig/components/trans_reset.dart';
 import 'package:bruig/components/pay_tip.dart';
 
-class UserContextMenu extends StatelessWidget {
+class UserContextMenu extends StatefulWidget {
   const UserContextMenu(
       {super.key,
       required this.child,
@@ -24,36 +23,38 @@ class UserContextMenu extends StatelessWidget {
   final String? targetUserId;
   final String? postFrom;
 
+  @override
+  State<UserContextMenu> createState() => _UserContextMenuState();
+}
+
+class _UserContextMenuState extends State<UserContextMenu> {
   void Function(dynamic) _handleItemTap(context) {
     return (result) {
       switch (result) {
         case 'tip':
-          showPayTipModalBottom(context, targetUserChat!);
+          showPayTipModalBottom(context, widget.targetUserChat!);
           break;
         case 'reqRatchetReset':
-          targetUserChat!.requestKXReset();
+          widget.targetUserChat!.requestKXReset();
           break;
         case 'subscribe':
-          targetUserChat!.subscribeToPosts();
-          client!.updateUserMenu(
-              targetUserChat!.id, buildUserChatMenu(targetUserChat!));
+          widget.targetUserChat!.subscribeToPosts();
           break;
         case 'unsubscribe':
-          targetUserChat!.unsubscribeToPosts();
-          client!.updateUserMenu(
-              targetUserChat!.id, buildUserChatMenu(targetUserChat!));
+          widget.targetUserChat!.unsubscribeToPosts();
           break;
         case 'rename':
-          showRenameModalBottom(context, targetUserChat!);
+          showRenameModalBottom(context, widget.targetUserChat!);
           break;
         case 'suggestToKX':
-          showSuggestKXModalBottom(context, targetUserChat!);
+          showSuggestKXModalBottom(context, widget.targetUserChat!);
           break;
         case 'transReset':
-          showTransResetModalBottom(context, targetUserChat!);
+          showTransResetModalBottom(context, widget.targetUserChat!);
           break;
         case 'kx':
-          client!.requestMediateID(postFrom!, targetUserId!);
+          widget.client!
+              .requestMediateID(widget.postFrom!, widget.targetUserId!);
           break;
       }
     };
@@ -94,7 +95,7 @@ class UserContextMenu extends StatelessWidget {
         value: 'suggestToKX',
         child: Text('Suggest User to KX'),
       ),
-      PopupMenuItem(
+      const PopupMenuItem(
         value: 'transReset',
         child: Text('Issue Transitive Reset with User'),
       ),
@@ -115,26 +116,26 @@ class UserContextMenu extends StatelessWidget {
     // If we don't have a target user chat, means we are not KXed
     // with user. The Context Menu should show option to attempt
     // to KX.
-    if (targetUserChat == null) {
-      if (postFrom != null && targetUserId != null) {
+    if (widget.targetUserChat == null) {
+      if (widget.postFrom != null && widget.targetUserId != null) {
         return ContextMenu(
-          disabled: disabled,
+          disabled: widget.disabled,
           handleItemTap: _handleItemTap(context),
           items: _buildUserNotKXedMenu(),
-          child: child,
+          child: widget.child,
         );
       }
       // If we don't have a target user chat but don't have postFrom
       // and targetUserId, needed to attempt KX, do nothing and return
       // the child
-      return child;
+      return widget.child;
     }
     // We do have the target user chat, so show complete context user menu
     return ContextMenu(
-      disabled: disabled,
+      disabled: widget.disabled,
       handleItemTap: _handleItemTap(context),
-      items: _buildUserMenu(targetUserChat),
-      child: child,
+      items: _buildUserMenu(widget.targetUserChat),
+      child: widget.child,
     );
   }
 }

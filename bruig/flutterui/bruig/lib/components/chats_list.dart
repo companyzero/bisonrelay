@@ -288,7 +288,8 @@ class _ActiveChatsListMenuState extends State<ActiveChatsListMenu> {
 
     makeActive(ChatModel? c) => {client.active = c};
 
-    showSubMenu(bool isGC, String id) => {client.showSubMenu(isGC, id)};
+    showSubMenu(bool isGC, String id) =>
+        {client.ui.chatSideMenuActive.chat = client.active};
     bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
     if (isScreenSmall) {
       return Consumer<ThemeNotifier>(

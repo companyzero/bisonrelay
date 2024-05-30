@@ -131,7 +131,6 @@ class _CommentWState extends State<_CommentW> {
   void subscibeToPosts(ChatModel? chat) {
     if (chat != null) {
       chat.subscribeToPosts();
-      widget.client.updateUserMenu(chat.id, buildUserChatMenu(chat));
     }
   }
 
