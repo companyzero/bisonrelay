@@ -207,14 +207,14 @@ void gotoContactsLastMsgTimeScreen(BuildContext context) {
       .pushNamed(ContactsLastMsgTimesScreen.routeName);
 }
 
-class _ChatsList extends StatefulWidget {
+class ActiveChatsListMenu extends StatefulWidget {
   final ClientModel client;
   final CustomInputFocusNode inputFocusNode;
-  const _ChatsList(this.client, this.inputFocusNode, {Key? key})
+  const ActiveChatsListMenu(this.client, this.inputFocusNode, {Key? key})
       : super(key: key);
 
   @override
-  State<_ChatsList> createState() => _ChatsListState();
+  State<ActiveChatsListMenu> createState() => _ActiveChatsListMenuState();
 }
 
 Future<void> loadInvite(BuildContext context) async {
@@ -230,7 +230,7 @@ Future<void> loadInvite(BuildContext context) async {
       .pushNamed('/verifyInvite', arguments: invite);
 }
 
-class _ChatsListState extends State<_ChatsList> {
+class _ActiveChatsListMenuState extends State<ActiveChatsListMenu> {
   ClientModel get client => widget.client;
   FocusNode get inputFocusNode => widget.inputFocusNode.inputFocusNode;
   bool showAddressbookRoomsButton = false;
@@ -256,7 +256,7 @@ class _ChatsListState extends State<_ChatsList> {
   }
 
   @override
-  void didUpdateWidget(_ChatsList oldWidget) {
+  void didUpdateWidget(ActiveChatsListMenu oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.client != client) {
       oldWidget.client.activeChats.removeListener(activeChatsListUpdated);
@@ -477,18 +477,5 @@ class _ChatsListState extends State<_ChatsList> {
                                 Icons.add_outlined))))
               ]),
             ));
-  }
-}
-
-class ChatDrawerMenu extends StatelessWidget {
-  final CustomInputFocusNode inputFocusNode;
-  const ChatDrawerMenu(this.inputFocusNode, {Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Consumer<ClientModel>(builder: (context, client, child) {
-      return Column(
-          children: [Expanded(child: _ChatsList(client, inputFocusNode))]);
-    });
   }
 }

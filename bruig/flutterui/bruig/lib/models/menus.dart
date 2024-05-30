@@ -13,7 +13,6 @@ import 'package:bruig/screens/feed.dart';
 import 'package:bruig/screens/ln_management.dart';
 import 'package:bruig/screens/log.dart';
 import 'package:bruig/screens/manage_content_screen.dart';
-import 'package:bruig/screens/overview.dart';
 import 'package:bruig/screens/paystats.dart';
 import 'package:bruig/screens/settings.dart';
 import 'package:bruig/screens/viewpage_screen.dart';
