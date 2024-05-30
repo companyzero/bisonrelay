@@ -13,6 +13,7 @@ import 'package:bruig/models/feed.dart';
 import 'package:bruig/models/menus.dart';
 import 'package:bruig/models/notifications.dart';
 import 'package:bruig/models/snackbar.dart';
+import 'package:bruig/models/uistate.dart';
 import 'package:bruig/screens/chats.dart';
 import 'package:bruig/screens/feed.dart';
 import 'package:bruig/screens/feed/post_content.dart';
@@ -27,42 +28,14 @@ import 'package:provider/provider.dart';
 
 final GlobalKey<ScaffoldState> scaffoldKey = GlobalKey<ScaffoldState>();
 
-class _OverviewScreenTitle extends StatefulWidget {
-  final MainMenuModel mainMenu;
-
-  const _OverviewScreenTitle(this.mainMenu);
-
-  @override
-  State<_OverviewScreenTitle> createState() => _OverviewScreenTitleState();
-}
-
-class _OverviewScreenTitleState extends State<_OverviewScreenTitle> {
-  MainMenuModel get mainMenu => widget.mainMenu;
-
-  void mainMenuUpdated() => setState(() {});
-
-  @override
-  void initState() {
-    super.initState();
-    mainMenu.addListener(mainMenuUpdated);
-  }
-
-  @override
-  void didUpdateWidget(_OverviewScreenTitle oldWidget) {
-    oldWidget.mainMenu.removeListener(mainMenuUpdated);
-    super.didUpdateWidget(oldWidget);
-    mainMenu.addListener(mainMenuUpdated);
-  }
-
-  @override
-  void dispose() {
-    mainMenu.removeListener(mainMenuUpdated);
-    super.dispose();
-  }
+class _OverviewScreenTitle extends StatelessWidget {
+  const _OverviewScreenTitle();
 
   @override
   Widget build(BuildContext context) {
-    return mainMenu.activeMenu.titleBuilder(context);
+    return Consumer<MainMenuModel>(
+        builder: (context, mainMenu, child) =>
+            mainMenu.activeMenu.titleBuilder(context));
   }
 }
 
@@ -93,6 +66,203 @@ class OverviewScreen extends StatefulWidget {
 
   @override
   State<OverviewScreen> createState() => _OverviewScreenState();
+}
+
+class _OverviewScreenAppBarConnState {
+  final IconData icon;
+  final String label;
+  final Widget tag;
+
+  _OverviewScreenAppBarConnState(
+      {required this.icon, required this.label, required this.tag});
+}
+
+final _connStateStyles = {
+  connStateCheckingWallet: _OverviewScreenAppBarConnState(
+      icon: Icons.cloud_off,
+      label: "Skip Wallet Check",
+      tag: const Image(
+        color: null,
+        image: AssetImage("assets/images/checktag.png"),
+      )),
+  connStateOffline: _OverviewScreenAppBarConnState(
+      icon: Icons.cloud_off,
+      label: "Go online",
+      tag: const Image(
+        color: null,
+        image: AssetImage("assets/images/offlinetag.png"),
+      )),
+  connStateOnline: _OverviewScreenAppBarConnState(
+      icon: Icons.cloud, label: "Go offline", tag: const Empty()),
+};
+
+AppBar _buildAppBar(BuildContext context, ClientModel client, FeedModel feed,
+    MainMenuModel mainMenu, GlobalKey<NavigatorState> navKey) {
+  void goToNewPost(BuildContext context) {
+    navKey.currentState
+        ?.pushReplacementNamed('/feed', arguments: PageTabs(3, null, null));
+  }
+
+  void goToAbout(BuildContext context) {
+    Navigator.of(context, rootNavigator: true).pushNamed("/about");
+  }
+
+  void goOnline(BuildContext context) async {
+    try {
+      await Golib.goOnline();
+      showSuccessSnackbar(context, "Going online...");
+    } catch (exception) {
+      showErrorSnackbar(context, "Unable to go online: $exception");
+    }
+  }
+
+  void remainOffline(BuildContext context) async {
+    try {
+      await Golib.remainOffline();
+      showSuccessSnackbar(context, "Going offline...");
+    } catch (exception) {
+      showErrorSnackbar(context, "Unable to go offline: $exception");
+    }
+  }
+
+  void skipWalletCheck(BuildContext context) async {
+    try {
+      await Golib.skipWalletCheck();
+      showSuccessSnackbar(context, "Skipping next wallet check...");
+    } catch (exception) {
+      showErrorSnackbar(context, "Unable to skip wallet check: $exception");
+    }
+  }
+
+  void takeConnStateAction(BuildContext context, int state) {
+    switch (state) {
+      case connStateCheckingWallet:
+        skipWalletCheck(context);
+        break;
+      case connStateOffline:
+        goOnline(context);
+        break;
+      case connStateOnline:
+        remainOffline(context);
+        break;
+    }
+  }
+
+  void switchScreen(String route, {Object? args}) {
+    navKey.currentState!.pushReplacementNamed(route, arguments: args);
+  }
+
+  var theme = Theme.of(context);
+  var sidebarBackground = theme.backgroundColor;
+
+  bool isScreenSmall = checkIsScreenSmall(context);
+
+  if (!isScreenSmall) {
+    return AppBar(
+        backgroundColor: sidebarBackground,
+        titleSpacing: 0.0,
+        title: const _OverviewScreenTitle(),
+        leadingWidth: 156,
+        leading: Row(children: [
+          IconButton(
+              tooltip: "About Bison Relay",
+              splashRadius: 20,
+              iconSize: 40,
+              onPressed: () => goToAbout(context),
+              icon: Image.asset(
+                "assets/images/icon.png",
+              )),
+          IconButton(
+              splashRadius: 20,
+              tooltip: "Create a new post",
+              onPressed: () => goToNewPost(context),
+              color: Colors.red,
+              iconSize: 20,
+              icon: Icon(color: theme.dividerColor, size: 20, Icons.mode)),
+          Consumer<ConnStateModel>(builder: (context, connState, child) {
+            var stateStyle = _connStateStyles[connState.state.state];
+            return IconButton(
+                splashRadius: 20,
+                tooltip: stateStyle?.label ??
+                    "Unknown state ${connState.state.state}",
+                onPressed: () =>
+                    takeConnStateAction(context, connState.state.state),
+                color: theme.dividerColor,
+                iconSize: 20,
+                icon: Icon(
+                    color: theme.dividerColor,
+                    size: 20,
+                    stateStyle?.icon ?? Icons.question_mark));
+          }),
+          const SizedBox(width: 20),
+        ]));
+  }
+
+  List<ChatMenuItem?> contextMenu = [];
+  if (mainMenu.activeMenu.label == "Chat") {
+    contextMenu = buildChatContextMenu();
+  }
+
+  return AppBar(
+      backgroundColor: sidebarBackground,
+      leadingWidth: 60,
+      titleSpacing: 0.0,
+      title: const _OverviewScreenTitle(),
+      leading: Builder(builder: (BuildContext context) {
+        return InkWell(
+            onTap: () {
+              if (client.ui.showAddressBook.val) {
+                client.ui.showAddressBook.val = false;
+              } else if (!client.ui.overviewActivePath.onActiveBottomTab ||
+                  client.active != null) {
+                !client.ui.chatSideMenuActive.empty
+                    ? client.ui.chatSideMenuActive.clear()
+                    : client.active = null;
+                if (!client.ui.overviewActivePath.onActiveBottomTab) {
+                  switchScreen(ChatsScreen.routeName);
+                }
+              } else if (feed.active != null) {
+                feed.active = null;
+                switchScreen(FeedScreen.routeName,
+                    args: PageTabs(0, null, null));
+              } else {
+                switchScreen(SettingsScreen.routeName);
+              }
+            },
+            child: Consumer4<OverviewActivePath, ActiveChatModel,
+                    ShowAddressBookModel, FeedModel>(
+                builder: (context, overviewActivePath, activeChat, showAddrBook,
+                        feed, child) =>
+                    Stack(children: [
+                      !overviewActivePath.onActiveBottomTab ||
+                              !activeChat.empty ||
+                              showAddrBook.val ||
+                              feed.active != null
+                          ? Positioned(
+                              left: 25,
+                              top: 17,
+                              child: Icon(Icons.keyboard_arrow_left_rounded,
+                                  color: Theme.of(context).focusColor))
+                          : Container(
+                              margin: const EdgeInsets.all(10),
+                              child: SelfAvatar(client)),
+                      // connectedTag, // Tag when offline/checking wallet.
+                    ])));
+      }),
+      actions: [
+        // Only render page context menu if the mainMenu ONLY has
+        // a context menu OR a sub page menu.
+        (mainMenu.activeMenu.subMenuInfo.isNotEmpty && contextMenu.isEmpty) ||
+                (contextMenu.isNotEmpty &&
+                    mainMenu.activeMenu.subMenuInfo.isEmpty)
+            ? PageContextMenu(
+                menuItem: mainMenu.activeMenu,
+                subMenu: mainMenu.activeMenu.subMenuInfo,
+                contextMenu: contextMenu,
+                navKey: navKey,
+              )
+            : const Empty()
+      ]);
 }
 
 class _OverviewScreenState extends State<OverviewScreen> {
@@ -127,42 +297,6 @@ class _OverviewScreenState extends State<OverviewScreen> {
     Timer(const Duration(milliseconds: 1),
         () async => widget.mainMenu.activePageTab = pageTab);
     Navigator.pop(context);
-  }
-
-  void goToNewPost() {
-    navKey.currentState!
-        .pushReplacementNamed('/feed', arguments: PageTabs(3, null, null));
-  }
-
-  void goToAbout() {
-    Navigator.of(context).pushNamed("/about");
-  }
-
-  void goOnline() async {
-    try {
-      await Golib.goOnline();
-      showSuccessSnackbar(context, "Going online...");
-    } catch (exception) {
-      showErrorSnackbar(context, "Unable to go online: $exception");
-    }
-  }
-
-  void remainOffline() async {
-    try {
-      await Golib.remainOffline();
-      showSuccessSnackbar(context, "Going offline...");
-    } catch (exception) {
-      showErrorSnackbar(context, "Unable to go offline: $exception");
-    }
-  }
-
-  void skipWalletCheck() async {
-    try {
-      await Golib.skipWalletCheck();
-      showSuccessSnackbar(context, "Skipping next wallet check...");
-    } catch (exception) {
-      showErrorSnackbar(context, "Unable to skip wallet check: $exception");
-    }
   }
 
   void _configureDidReceiveLocalNotificationSubject() {
@@ -235,6 +369,29 @@ class _OverviewScreenState extends State<OverviewScreen> {
     navKey.currentState!.pushReplacementNamed(route);
   }
 
+  void _onItemTapped(int index) {
+    setState(() {
+      switch (index) {
+        case 0:
+          switchScreen(ChatsScreen.routeName);
+          client.ui.smallScreenActiveTab.active = SmallScreenActiveTab.chat;
+          //Navigator.pop(context);
+          break;
+        case 1:
+          switchScreen(FeedScreen.routeName);
+          client.ui.smallScreenActiveTab.active = SmallScreenActiveTab.feed;
+          //Navigator.pop(context);
+          break;
+        case 2:
+          switchScreen(ViewPageScreen.routeName);
+          client.ui.smallScreenActiveTab.active = SmallScreenActiveTab.pages;
+          // Navigator.pop(context);
+          break;
+      }
+      selectedIndex = index;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     var theme = Theme.of(context);
@@ -244,158 +401,11 @@ class _OverviewScreenState extends State<OverviewScreen> {
     var scaffoldBackgroundColor = theme.canvasColor;
     var hoverColor = theme.hoverColor;
 
-    var connectedIcon = Icons.cloud;
-    Widget connectedTag = const Empty(); // Used in small screens.
-    List<ChatMenuItem?> contextMenu = [];
-    if (widget.mainMenu.activeMenu.label == "Chat") {
-      contextMenu = buildChatContextMenu();
-    }
-    String connStateLabel;
-    GestureTapCallback connStateAction;
-
-    switch (connState.state) {
-      case connStateCheckingWallet:
-        connectedIcon = Icons.cloud_off;
-        connStateLabel = "Skip Wallet Check";
-        connStateAction = skipWalletCheck;
-        connectedTag = const Image(
-          color: null,
-          image: AssetImage("assets/images/checktag.png"),
-        );
-        break;
-      case connStateOffline:
-        connectedIcon = Icons.cloud_off;
-        connStateLabel = "Go Online";
-        connStateAction = goOnline;
-        connectedTag = const Image(
-          color: null,
-          image: AssetImage("assets/images/offlinetag.png"),
-        );
-        break;
-      default:
-        connStateLabel = "Go Offline";
-        connStateAction = remainOffline;
-        break;
-    }
-
-    void _onItemTapped(int index) {
-      setState(() {
-        switch (index) {
-          case 0:
-            switchScreen(ChatsScreen.routeName);
-            //Navigator.pop(context);
-            break;
-          case 1:
-            switchScreen(FeedScreen.routeName);
-            //Navigator.pop(context);
-            break;
-          case 2:
-            switchScreen(ViewPageScreen.routeName);
-            // Navigator.pop(context);
-            break;
-        }
-        selectedIndex = index;
-      });
-    }
-
     bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
     return Scaffold(
       key: scaffoldKey,
       backgroundColor: theme.canvasColor,
-      appBar: isScreenSmall
-          ? AppBar(
-              backgroundColor: sidebarBackground,
-              leadingWidth: 60,
-              titleSpacing: 0.0,
-              title: _OverviewScreenTitle(widget.mainMenu),
-              leading: Builder(builder: (BuildContext context) {
-                return InkWell(
-                    onTap: () {
-                      if (removeBottomBar ||
-                          client.active != null ||
-                          client.ui.showAddressBook.val) {
-                        !client.ui.chatSideMenuActive.empty
-                            ? client.ui.chatSideMenuActive.clear()
-                            : client.active = null;
-                        if (removeBottomBar) {
-                          removeBottomBar = false;
-                          switchScreen(ChatsScreen.routeName);
-                          selectedIndex = 0;
-                        }
-                      } else if (feed.active != null) {
-                        feed.active = null;
-                        navKey.currentState!.pushReplacementNamed('/feed',
-                            arguments: PageTabs(0, null, null));
-                      } else {
-                        switchScreen(SettingsScreen.routeName);
-                        removeBottomBar = true;
-                      }
-                    },
-                    child: Stack(children: [
-                      removeBottomBar ||
-                              client.active != null ||
-                              client.ui.showAddressBook.val ||
-                              feed.active != null
-                          ? Positioned(
-                              left: 25,
-                              top: 17,
-                              child: Icon(Icons.keyboard_arrow_left_rounded,
-                                  color: Theme.of(context).focusColor))
-                          : Container(
-                              margin: const EdgeInsets.all(10),
-                              child: SelfAvatar(client)),
-                      connectedTag, // Tag when offline/checking wallet.
-                    ]));
-              }),
-              actions: [
-                  // Only render page context menu if the mainMenu ONLY has
-                  // a context menu OR a sub page menu.
-                  (widget.mainMenu.activeMenu.subMenuInfo.isNotEmpty &&
-                              contextMenu.isEmpty) ||
-                          (contextMenu.isNotEmpty &&
-                              widget.mainMenu.activeMenu.subMenuInfo.isEmpty)
-                      ? PageContextMenu(
-                          menuItem: widget.mainMenu.activeMenu,
-                          subMenu: widget.mainMenu.activeMenu.subMenuInfo,
-                          contextMenu: contextMenu,
-                          navKey: navKey,
-                        )
-                      : const Empty()
-                ])
-          : AppBar(
-              backgroundColor: sidebarBackground,
-              titleSpacing: 0.0,
-              title: Row(children: [
-                _OverviewScreenTitle(widget.mainMenu),
-              ]),
-              leadingWidth: 156,
-              leading: Row(children: [
-                IconButton(
-                    tooltip: "About Bison Relay",
-                    splashRadius: 20,
-                    iconSize: 40,
-                    onPressed: goToAbout,
-                    icon: Image.asset(
-                      "assets/images/icon.png",
-                    )),
-                IconButton(
-                    splashRadius: 20,
-                    tooltip: "Create a new post",
-                    onPressed: goToNewPost,
-                    color: Colors.red,
-                    iconSize: 20,
-                    icon:
-                        Icon(color: theme.dividerColor, size: 20, Icons.mode)),
-                IconButton(
-                    splashRadius: 20,
-                    tooltip: connStateLabel,
-                    onPressed: connStateAction,
-                    color: theme.dividerColor,
-                    iconSize: 20,
-                    icon: Icon(
-                        color: theme.dividerColor, size: 20, connectedIcon)),
-                const SizedBox(width: 20),
-              ])),
+      appBar: _buildAppBar(context, client, feed, widget.mainMenu, navKey),
       drawer: Drawer(
         backgroundColor: sidebarBackground,
         child: ListView.separated(
@@ -486,6 +496,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
                     : widget.initialRoute,
                 onGenerateRoute: (settings) {
                   String routeName = settings.name!;
+                  client.ui.overviewActivePath.route = routeName;
                   MainMenuItem? menu = widget.mainMenu.menuForRoute(routeName);
 
                   // This update needs to be on a timer so that it is decoupled to

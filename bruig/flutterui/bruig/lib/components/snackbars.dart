@@ -64,12 +64,19 @@ class _SnackbarDisplayerState extends State<SnackbarDisplayer> {
 }
 
 void showErrorSnackbar(BuildContext context, String msg) {
+  if (!context.mounted) {
+    debugPrint("Unmounted snackbar error message: $msg");
+  }
   var snackBar = Provider.of<SnackBarModel>(context, listen: false);
 
   snackBar.error(msg);
 }
 
 void showSuccessSnackbar(BuildContext context, String msg) {
+  if (!context.mounted) {
+    debugPrint("Unmounted snackbar success message: $msg");
+    return;
+  }
   var snackBar = Provider.of<SnackBarModel>(context, listen: false);
 
   snackBar.success(msg);
