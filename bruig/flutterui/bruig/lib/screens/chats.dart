@@ -5,6 +5,7 @@ import 'package:bruig/components/chats_list.dart';
 import 'package:bruig/components/addressbook/addressbook.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/models/notifications.dart';
+import 'package:bruig/models/uistate.dart';
 import 'package:bruig/screens/needs_out_channel.dart';
 import 'package:bruig/theme_manager.dart';
 import 'package:flutter/material.dart';
@@ -22,44 +23,27 @@ class ChatsScreenTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer2<ClientModel, ThemeNotifier>(
-        builder: (context, client, theme, child) {
-      var activeHeading = client.active;
-      if (activeHeading == null) {
-        return Row(mainAxisAlignment: MainAxisAlignment.start, children: [
-          Text("Bison Relay",
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                  fontSize: theme.getLargeFont(context),
-                  color: Theme.of(context).focusColor))
-        ]);
-      }
-      if (client.showAddressBook) {
-        return Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-          Text("Bison Relay",
-              style: TextStyle(
-                  fontSize: theme.getLargeFont(context),
-                  color: Theme.of(context).focusColor))
-        ]);
-      }
-      var chat = client.getExistingChat(activeHeading.id);
-      if (chat == null) {
-        return Row(mainAxisAlignment: MainAxisAlignment.start, children: [
-          Text("Bison Relay",
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                  fontSize: theme.getLargeFont(context),
-                  color: Theme.of(context).focusColor))
-        ]);
-      }
-      var profile = client.profile;
-      var suffix = chat.nick != "" ? " / ${chat.nick}" : "";
-      var profileSuffix = profile != null
-          ? chat.isGC
-              ? " / Manage Group Chat"
-              : " / Profile"
-          : "";
+    return Consumer4<ClientModel, ActiveChatModel, ShowProfileModel,
+            ThemeNotifier>(
+        builder: (context, client, activeChat, showProfile, theme, child) {
+      var activeHeading = activeChat.chat;
+      var showAddressBook = client.ui.showAddressBook.val;
 
+      // No active chat or address book page is active.
+      if (activeHeading == null || showAddressBook) {
+        return Row(mainAxisAlignment: MainAxisAlignment.start, children: [
+          Text("Bison Relay",
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                  fontSize: theme.getLargeFont(context),
+                  color: Theme.of(context).focusColor))
+        ]);
+      }
+
+      // Has active chat.
+      ChatModel chat = activeChat.chat!;
+
+      // On small screen, show only chat nick/title.
       bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
       if (isScreenSmall) {
         return Row(
@@ -79,6 +63,16 @@ class ChatsScreenTitle extends StatelessWidget {
                   })),
             ]);
       }
+
+      // Full chat path.
+      bool profile = showProfile.val;
+      var suffix = chat.nick != "" ? " / ${chat.nick}" : "";
+      var profileSuffix = profile
+          ? chat.isGC
+              ? " / Manage Group Chat"
+              : " / Profile"
+          : "";
+
       return Text("Chat$suffix$profileSuffix",
           style: TextStyle(
               fontSize: theme.getLargeFont(context),
@@ -343,28 +337,38 @@ class _ChatsScreenState extends State<ChatsScreen> {
     });
   }
 
+  void showAddressBookChanged() => setState(() {});
+
   @override
   void initState() {
     super.initState();
     keepCheckingLNHasBalance();
+    client.ui.showAddressBook.addListener(showAddressBookChanged);
   }
 
   @override
   void didUpdateWidget(ChatsScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.client != client) {
+      oldWidget.client.ui.showAddressBook
+          .removeListener(showAddressBookChanged);
+      client.ui.showAddressBook.addListener(showAddressBookChanged);
+    }
   }
 
   @override
   void dispose() {
     checkLNTimer?.cancel();
+    client.ui.showAddressBook.removeListener(showAddressBookChanged);
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (client.showAddressBook) {
-      return AddressBook(client, inputFocusNode, client.createGroupChat);
+    if (client.ui.showAddressBook.val) {
+      return AddressBook(client, inputFocusNode);
     }
+
     var theme = Theme.of(context);
     var backgroundColor = theme.backgroundColor;
 

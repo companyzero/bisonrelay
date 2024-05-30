@@ -4,6 +4,7 @@ import 'package:bruig/components/copyable.dart';
 import 'package:bruig/components/interactive_avatar.dart';
 import 'package:bruig/components/manage_gc.dart';
 import 'package:bruig/models/menus.dart';
+import 'package:bruig/models/uistate.dart';
 import 'package:bruig/screens/chats.dart';
 import 'package:bruig/models/client.dart';
 import 'package:flutter/material.dart';
@@ -28,6 +29,7 @@ class ActiveChat extends StatefulWidget {
 
 class _ActiveChatState extends State<ActiveChat> {
   ClientModel get client => widget.client;
+  UIStateModel get ui => widget.client.ui;
   CustomInputFocusNode get inputFocusNode => widget.inputFocusNode;
   ChatModel? chat;
   late ItemScrollController _itemScrollController;
@@ -62,6 +64,10 @@ class _ActiveChatState extends State<ActiveChat> {
     });
   }
 
+  void showProfileChanged() {
+    setState(() {});
+  }
+
   @override
   void initState() {
     super.initState();
@@ -69,6 +75,7 @@ class _ActiveChatState extends State<ActiveChat> {
     _itemPositionsListener = ItemPositionsListener.create();
     chat = client.active;
     client.activeChat.addListener(activeChatChanged);
+    ui.showProfile.addListener(showProfileChanged);
   }
 
   @override
@@ -79,11 +86,14 @@ class _ActiveChatState extends State<ActiveChat> {
       oldWidget.client.removeListener(activeChatChanged);
       client.addListener(activeChatChanged);
       activeChatChanged();
+      oldWidget.client.ui.showProfile.removeListener(showProfileChanged);
+      ui.showProfile.addListener(showProfileChanged);
     }
   }
 
   @override
   void dispose() {
+    ui.showProfile.removeListener(showProfileChanged);
     _debounce?.cancel();
     client.activeChat.removeListener(activeChatChanged);
     //inputFocusNode.dispose();  XXX Does this need to be put back?  Errors with it
@@ -94,15 +104,15 @@ class _ActiveChatState extends State<ActiveChat> {
   Widget build(BuildContext context) {
     if (this.chat == null) return Container();
     var chat = this.chat!;
-    var profile = client.profile;
-    if (profile != null) {
+
+    if (ui.showProfile.val) {
       if (chat.isGC) {
         return const ManageGCScreen();
       } else {
-        return UserProfile(client, profile);
+        return UserProfile(client);
       }
     }
-    //inputFocusNode.requestFocus();
+
     var theme = Theme.of(context);
     var textColor = theme.dividerColor;
     var darkTextColor = theme.indicatorColor;

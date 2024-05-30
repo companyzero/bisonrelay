@@ -1,9 +1,9 @@
 import 'dart:async';
 import 'dart:collection';
 
-import 'package:bruig/components/chat/active_chat.dart';
 import 'package:bruig/models/menus.dart';
 import 'package:bruig/models/resources.dart';
+import 'package:bruig/models/uistate.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
@@ -152,6 +152,8 @@ class PostsListModel extends ChangeNotifier {
   }
 }
 
+final ChatModel emptyChatModel = ChatModel.empty();
+
 class ChatModel extends ChangeNotifier {
   final String id; // RemoteUID or GC ID
   final bool isGC;
@@ -164,6 +166,7 @@ class ChatModel extends ChangeNotifier {
   }
 
   ChatModel(this.id, this._nick, this.isGC);
+  factory ChatModel.empty() => ChatModel("", "", false);
 
   bool _isSubscribed = false;
   bool get isSubscribed => _isSubscribed;
@@ -587,11 +590,19 @@ class BoolFlagModel extends ChangeNotifier {
     }
   }
 
+  void setWithoutNotification(bool v) {
+    _val = v;
+  }
+
   BoolFlagModel({initial = false}) : _val = initial;
 }
 
 class ClientModel extends ChangeNotifier {
+  late final UIStateModel ui;
+
   ClientModel() {
+    ui = UIStateModel();
+
     _handleAcceptedInvites();
     _handleChatMsgs();
     _handleServerSessChanged();
@@ -612,45 +623,32 @@ class ClientModel extends ChangeNotifier {
   final ChatsListModel activeChats = ChatsListModel();
   final ChatsListModel hiddenChats = ChatsListModel();
 
-  List<ChatModel> _filteredSearch = [];
-  UnmodifiableListView<ChatModel> get filteredSearch =>
-      UnmodifiableListView(_filteredSearch);
+  // searchChats searches all chats that match the given string (both actice and
+  // hidden).
+  UnmodifiableListView<ChatModel> searchChats(String b,
+      {bool ignoreGC = false}) {
+    if (b == "") {
+      return UnmodifiableListView([]);
+    }
 
-  set filteredSearch(List<ChatModel> us) {
-    _filteredSearch = us;
-    notifyListeners();
-  }
+    b = b.toLowerCase();
 
-  String _filteredSearchString = "";
-  String get filteredSearchString => _filteredSearchString;
-  set filteredSearchString(String b) {
-    _filteredSearch = [];
-    _filteredSearchString = b;
-    var _sortedChats = activeChats.sorted;
-    if (b != "") {
-      for (int i = 0; i < _sortedChats.length; i++) {
-        if (_sortedChats[i].nick.toLowerCase().contains(b.toLowerCase())) {
-          if (!createGroupChat) {
-            _filteredSearch.add(_sortedChats[i]);
-          } else if (!_sortedChats[i].isGC) {
-            _filteredSearch.add(_sortedChats[i]);
-          }
+    List<ChatModel> res = [];
+    for (var list in [activeChats.sorted, hiddenChats.sorted]) {
+      for (var chat in list) {
+        if (ignoreGC && chat.isGC) {
+          continue;
         }
-      }
-      var _hiddenChats = hiddenChats.sorted;
-      for (int i = 0; i < _hiddenChats.length; i++) {
-        if (_hiddenChats[i].nick.toLowerCase().contains(b.toLowerCase())) {
-          if (!createGroupChat) {
-            _filteredSearch.add(_hiddenChats[i]);
-          } else if (!_hiddenChats[i].isGC) {
-            _filteredSearch.add(_hiddenChats[i]);
-          }
+
+        if (!chat.nick.toLowerCase().contains(b)) {
+          continue;
         }
+
+        res.add(chat);
       }
     }
-    _filteredSearch
-        .sort((a, b) => a._nick.toLowerCase().compareTo(b._nick.toLowerCase()));
-    notifyListeners();
+
+    return UnmodifiableListView(res);
   }
 
   Future<void> createNewGCAndInvite(
@@ -694,28 +692,6 @@ class ClientModel extends ChangeNotifier {
   }
 
   final BoolFlagModel hasUnreadChats = BoolFlagModel();
-
-  bool _createGroupChat = false;
-  bool get createGroupChat => _createGroupChat;
-  set createGroupChat(bool b) {
-    _createGroupChat = b;
-    notifyListeners();
-  }
-
-  bool _showAddressBook = false;
-  bool get showAddressBook => _showAddressBook;
-  set showAddressBook(bool b) {
-    _showAddressBook = b;
-    notifyListeners();
-  }
-
-  void showAddressBookScreen() {
-    showAddressBook = true;
-  }
-
-  void hideAddressBookScreen() {
-    showAddressBook = false;
-  }
 
   String _userPostListID = "";
   String get userPostListID => _userPostListID;
@@ -789,9 +765,7 @@ class ClientModel extends ChangeNotifier {
     }
 
     // Remove/rework these?
-    _profile = null;
-    showAddressBook = false;
-    hideSubMenu();
+    // hideSubMenu();
 
     // De-active previously active chat.
     active?.removeFirstUnread();
@@ -843,14 +817,6 @@ class ClientModel extends ChangeNotifier {
   }
 
   set active(ChatModel? c) => _makeActive(c);
-
-  ChatModel? _profile;
-  ChatModel? get profile => _profile;
-  set profile(ChatModel? c) {
-    _profile = c;
-    //c?._setShowProfile(true);
-    notifyListeners();
-  }
 
   void setActiveByNick(String nick, bool isGC) {
     var c = activeChats.firstByNick(nick);
@@ -986,9 +952,6 @@ class ClientModel extends ChangeNotifier {
     }
 
     // Rework this.
-    if (profile == chat) {
-      profile = null;
-    }
     if (chat.isGC) {
       _subGCMenus.remove(chat.id);
     } else {
@@ -1206,7 +1169,7 @@ class ClientModel extends ChangeNotifier {
     }
   }
 
-  RescanNotifier _rescanNtf = RescanNotifier();
+  final RescanNotifier _rescanNtf = RescanNotifier();
   RescanNotifier get rescanNotifier => _rescanNtf;
   void _handleRescanWalletProgress() async {
     var stream = Golib.rescanWalletProgress();

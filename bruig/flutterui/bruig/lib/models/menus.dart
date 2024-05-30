@@ -181,16 +181,6 @@ class ChatMenuItem {
 }
 
 List<ChatMenuItem?> buildChatContextMenu() {
-  void showGroupChat(ClientModel client) async {
-    client.createGroupChat = true;
-    client.showAddressBookScreen();
-  }
-
-  void showAddressBook(ClientModel client) async {
-    client.createGroupChat = false;
-    client.showAddressBookScreen();
-  }
-
   void generateInvite(BuildContext context) {
     Navigator.of(context, rootNavigator: true).pushNamed('/generateInvite');
   }
@@ -205,10 +195,11 @@ List<ChatMenuItem?> buildChatContextMenu() {
   }
 
   return <ChatMenuItem?>[
-    ChatMenuItem("New Message", (context, client) => showAddressBook(client)),
+    ChatMenuItem(
+        "New Message", (context, client) => client.ui.showAddressBookScreen),
     ChatMenuItem(
       "Create Group Chat",
-      (context, client) => showGroupChat(client),
+      (context, client) => client.ui.showCreateGroupChatScreen,
     ),
     ChatMenuItem(
         "Create Invite",
@@ -319,9 +310,10 @@ List<ChatMenuItem?> buildUserChatMenu(ChatModel chat) {
   }
 
   return <ChatMenuItem?>[
-    ChatMenuItem(
-        "User Profile", (context, chats) => chats.profile = chats.active),
-    //.of(context, rootNavigator: true).pushNamed('/userProfile', arguments: UserProfileArgs(chat))),
+    ChatMenuItem("User Profile", (context, client) {
+      client.active = chat;
+      client.ui.showProfile.val = true;
+    }),
     ChatMenuItem(
       "Pay Tip",
       (context, chats) => showPayTipModalBottom(context, chats.active!),
@@ -396,7 +388,12 @@ List<ChatMenuItem?> buildUserChatMenu(ChatModel chat) {
 
 List<ChatMenuItem> buildGCMenu(ChatModel chat) {
   return [
-    ChatMenuItem("Manage GC", (context, chats) => chats.profile = chats.active),
+    ChatMenuItem(
+        "Manage GC",
+        (context, chats) => Provider.of<ClientModel>(context, listen: false)
+            .ui
+            .showProfile
+            .val = true),
     ChatMenuItem(
       "Rename GC",
       (context, chats) => showRenameModalBottom(context, chats.active!),

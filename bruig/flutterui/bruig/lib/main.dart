@@ -7,6 +7,7 @@ import 'package:bruig/components/route_error.dart';
 import 'package:bruig/models/menus.dart';
 import 'package:bruig/models/payments.dart';
 import 'package:bruig/models/resources.dart';
+import 'package:bruig/models/uistate.dart';
 import 'package:bruig/notification_service.dart';
 import 'package:bruig/screens/about.dart';
 import 'package:bruig/models/snackbar.dart';
@@ -124,9 +125,12 @@ void main(List<String> args) async {
 }
 
 Future<void> runMainApp(Config cfg) async {
+  final ClientModel client = ClientModel();
   runApp(MultiProvider(
     providers: [
-      ChangeNotifierProvider(create: (c) => ClientModel(), lazy: false),
+      ChangeNotifierProvider.value(value: client),
+      ChangeNotifierProvider.value(value: client.activeChat),
+      ChangeNotifierProvider.value(value: client.ui.showProfile),
       ChangeNotifierProvider(create: (c) => FeedModel()),
       ChangeNotifierProvider.value(value: globalLogModel),
       ChangeNotifierProvider(create: (c) => DownloadsModel()),
