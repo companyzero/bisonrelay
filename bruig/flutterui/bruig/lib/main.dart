@@ -3,7 +3,6 @@ import 'dart:io';
 import 'dart:math';
 import 'dart:developer' as developer;
 
-import 'package:bruig/components/attach_file.dart';
 import 'package:bruig/components/route_error.dart';
 import 'package:bruig/models/menus.dart';
 import 'package:bruig/models/payments.dart';
@@ -45,7 +44,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:window_manager/window_manager.dart';
 import './screens/app_start.dart';

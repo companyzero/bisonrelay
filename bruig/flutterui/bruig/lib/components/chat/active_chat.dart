@@ -26,8 +26,6 @@ class ActiveChat extends StatefulWidget {
   State<ActiveChat> createState() => _ActiveChatState();
 }
 
-/// TODO: Figure out a way to estimate list size to set initialOffset.
-/// this way we can get rid of the "initial jump flicker"
 class _ActiveChatState extends State<ActiveChat> {
   ClientModel get client => widget.client;
   CustomInputFocusNode get inputFocusNode => widget.inputFocusNode;
@@ -110,6 +108,7 @@ class _ActiveChatState extends State<ActiveChat> {
     var darkTextColor = theme.indicatorColor;
     var selectedBackgroundColor = theme.highlightColor;
     var subMenuBorderColor = theme.canvasColor;
+    var backgroundColor = theme.backgroundColor;
 
     bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
     List<ChatMenuItem> activeSubMenu =
@@ -176,7 +175,8 @@ class _ActiveChatState extends State<ActiveChat> {
                           _itemPositionsListener),
                     ),
                     Container(
-                        margin: const EdgeInsets.all(10),
+                        padding: const EdgeInsets.all(10),
+                        color: backgroundColor,
                         child: Input(sendMsg, chat, inputFocusNode))
                   ])
             : Row(children: [

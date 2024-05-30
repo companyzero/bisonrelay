@@ -16,7 +16,6 @@ import 'package:bruig/components/chat/active_chat.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 
 import 'package:bruig/components/interactive_avatar.dart';
-import 'package:bruig/screens/overview.dart';
 
 class ChatsScreenTitle extends StatelessWidget {
   const ChatsScreenTitle({super.key});
@@ -313,7 +312,6 @@ class CustomInputFocusNode {
 class _ChatsScreenState extends State<ChatsScreen> {
   ClientModel get client => widget.client;
   AppNotifications get ntfns => widget.ntfns;
-  ServerSessionState connState = ServerSessionState.empty();
   CustomInputFocusNode inputFocusNode = CustomInputFocusNode();
   bool hasLNBalance = false;
   List<PostListItem> userPostList = [];
@@ -345,37 +343,15 @@ class _ChatsScreenState extends State<ChatsScreen> {
     });
   }
 
-  void connStateChanged() {
-    var newConnState = client.connState.state;
-    if (newConnState.state != connState.state ||
-        newConnState.checkWalletErr != connState.checkWalletErr) {
-      setState(() {
-        connState = newConnState;
-      });
-      ntfns.delType(AppNtfnType.walletCheckFailed);
-      if (newConnState.state == connStateCheckingWallet &&
-          newConnState.checkWalletErr != null) {
-        var msg = "LN wallet check failed: ${newConnState.checkWalletErr}";
-        ntfns.addNtfn(AppNtfn(AppNtfnType.walletCheckFailed, msg: msg));
-      }
-    }
-  }
-
   @override
   void initState() {
     super.initState();
-    connState = widget.client.connState.state;
-    widget.client.connState.addListener(connStateChanged);
     keepCheckingLNHasBalance();
   }
 
   @override
   void didUpdateWidget(ChatsScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.client != widget.client) {
-      oldWidget.client.connState.removeListener(connStateChanged);
-      widget.client.connState.addListener(connStateChanged);
-    }
   }
 
   @override
@@ -405,8 +381,11 @@ class _ChatsScreenState extends State<ChatsScreen> {
 
     bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
     return !isScreenSmall
-        ? Flex(direction: Axis.horizontal, children: [
-            SizedBox(width: 200, child: ChatDrawerMenu(inputFocusNode)),
+        ? Row(children: [
+            SizedBox(
+                width: 200,
+                height: double.infinity,
+                child: ActiveChatsListMenu(client, inputFocusNode)),
             Expanded(
                 child: Container(
               margin: const EdgeInsets.all(1),
@@ -417,18 +396,8 @@ class _ChatsScreenState extends State<ChatsScreen> {
               child: ActiveChat(client, inputFocusNode),
             )),
           ])
-        : Flex(direction: Axis.vertical, children: [
-            client.active == null
-                ? Expanded(child: ChatDrawerMenu(inputFocusNode))
-                : Expanded(
-                    child: Container(
-                    margin: const EdgeInsets.all(1),
-                    decoration: BoxDecoration(
-                      color: backgroundColor,
-                      borderRadius: BorderRadius.circular(3),
-                    ),
-                    child: ActiveChat(client, inputFocusNode),
-                  ))
-          ]);
+        : client.active == null
+            ? ActiveChatsListMenu(client, inputFocusNode)
+            : ActiveChat(client, inputFocusNode);
   }
 }
