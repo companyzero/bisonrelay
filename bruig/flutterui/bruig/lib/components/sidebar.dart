@@ -10,6 +10,7 @@ import 'package:bruig/theme_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:sidebarx/sidebarx.dart';
+import 'package:window_manager/window_manager.dart';
 
 class Sidebar extends StatefulWidget {
   final ClientModel client;
@@ -26,13 +27,14 @@ class Sidebar extends StatefulWidget {
   State<Sidebar> createState() => _SidebarState();
 }
 
-class _SidebarState extends State<Sidebar> {
+class _SidebarState extends State<Sidebar> with WindowListener {
   ClientModel get client => widget.client;
   MainMenuModel get mainMenu => widget.mainMenu;
   SidebarXController ctrl =
       SidebarXController(selectedIndex: 0, extended: true);
   FeedModel get feed => widget.feed;
   bool hasUnreadMsgs = false;
+  double prevWindowSize = -1;
 
   void feedUpdated() async {
     setState(() {});
@@ -71,12 +73,37 @@ class _SidebarState extends State<Sidebar> {
   }
 
   @override
+  void onWindowResize() {
+    MediaQueryData queryData;
+    queryData = MediaQuery.of(context);
+    if (prevWindowSize < 0) {
+      prevWindowSize = queryData.size.width;
+      return;
+    }
+
+    // Check current screen size.  If over 1000px and NOT extended, then extend
+    // If NOT over 1000px and extended, then collapse sidebar.
+    var newSize = queryData.size.width;
+
+    if (newSize < prevWindowSize && newSize < 1000 && ctrl.extended == true) {
+      ctrl.setExtended(false);
+    } else if (newSize > prevWindowSize &&
+        newSize > 1000 &&
+        ctrl.extended == false) {
+      ctrl.setExtended(true);
+    }
+
+    prevWindowSize = queryData.size.width;
+  }
+
+  @override
   void initState() {
     super.initState();
     feed.addListener(feedUpdated);
     client.connState.addListener(connStateChanged);
     mainMenu.addListener(menuUpdated);
     client.hasUnreadChats.addListener(hasUnreadMsgsChanged);
+    windowManager.addListener(this);
   }
 
   @override
@@ -100,21 +127,12 @@ class _SidebarState extends State<Sidebar> {
     client.connState.removeListener(connStateChanged);
     mainMenu.removeListener(menuUpdated);
     client.hasUnreadChats.removeListener(hasUnreadMsgsChanged);
+    windowManager.removeListener(this);
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    // Check current screen size.  If over 1000px and NOT extended, then extend
-    // If NOT over 1000px and extended, then collapse sidebar.
-    MediaQueryData queryData;
-    queryData = MediaQuery.of(context);
-    if (queryData.size.width < 1000 && ctrl.extended == true) {
-      ctrl.setExtended(false);
-    } else if (queryData.size.width > 1000 && ctrl.extended == false) {
-      ctrl.setExtended(true);
-    }
-
     var theme = Theme.of(context);
     var textColor = theme.focusColor; // MESSAGE TEXT COLOR
     var selectedColor = theme.highlightColor;
