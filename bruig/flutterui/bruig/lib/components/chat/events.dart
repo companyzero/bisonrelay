@@ -187,27 +187,23 @@ class _ReceivedSentPMState extends State<ReceivedSentPM> {
                           ? MainAxisAlignment.end
                           : MainAxisAlignment.start,
                       children: <Widget>[
-                        widget.evnt.showAvatar
-                            ? Opacity(
-                                opacity: widget.evnt.showAvatar && !isOwnMessage
-                                    ? 1
-                                    : 0,
-                                child: SelectionContainer.disabled(
-                                    child: Container(
-                                  height: 28,
-                                  width: 28,
-                                  margin: const EdgeInsets.only(
-                                      top: 0, bottom: 10, left: 10, right: 10),
-                                  child: UserContextMenu(
-                                    client: widget.client,
-                                    targetUserChat: widget.evnt.source,
-                                    child: UserMenuAvatar(
-                                      widget.client,
-                                      widget.evnt.source ?? widget.chat,
-                                      showChatSideMenuOnTap: true,
-                                    ),
+                        widget.evnt.showAvatar && !isOwnMessage
+                            ? SelectionContainer.disabled(
+                                child: Container(
+                                height: 28,
+                                width: 28,
+                                margin: const EdgeInsets.only(
+                                    top: 0, bottom: 10, left: 10, right: 10),
+                                child: UserContextMenu(
+                                  client: widget.client,
+                                  targetUserChat: widget.evnt.source,
+                                  child: UserMenuAvatar(
+                                    widget.client,
+                                    widget.evnt.source ?? widget.chat,
+                                    showChatSideMenuOnTap: true,
                                   ),
-                                )))
+                                ),
+                              ))
                             : const SizedBox(width: 48),
                         ConstrainedBox(
                             constraints: BoxConstraints(
