@@ -110,6 +110,9 @@ class ChatEventModel extends ChangeNotifier {
     _showAvatar = b;
     notifyListeners();
   }
+
+  // isMessage is true if this event is a PM or GCM.
+  bool get isMessage => (event is PM) || (event is GCMsg);
 }
 
 class DayGCMessages {
@@ -236,15 +239,14 @@ class ChatModel extends ChangeNotifier {
     if (_msgs.isEmpty) {
       // If there are no messages yet, just show avatar on the new message
       msg.showAvatar = true;
-    } else if (_msgs.isNotEmpty && _msgs[0].source?.nick == msg.source?.nick) {
+    } else if (_msgs[0].source?.id == msg.source?.id && msg.isMessage) {
       // If there are messages then check to see if the previous message has the
       // same or different nick; if same remove avatar from previous and add
       // to new message. If different then just showAvatar on the new message
       // and keep previous message set to true.
       _msgs[0].showAvatar = false;
       msg.showAvatar = true;
-    } else if (_msgs.isNotEmpty &&
-        _msgs[_msgs.length - 1].source?.nick != msg.source?.nick) {
+    } else if (_msgs[_msgs.length - 1].source?.id != msg.source?.id) {
       msg.showAvatar = true;
     }
 
