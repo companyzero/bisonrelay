@@ -2952,9 +2952,10 @@ var pagesCommands = []tuicmd{
 			return nil
 		},
 	}, {
-		cmd:   "local",
-		descr: "View local user page",
-		usage: "[<path/to/page>]",
+		cmd:           "local",
+		descr:         "View local user page",
+		usage:         "[<path/to/page>]",
+		usableOffline: true,
 		handler: func(args []string, as *appState) error {
 			pagePath := "index.md"
 			if len(args) > 1 {
