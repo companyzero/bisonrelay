@@ -374,7 +374,7 @@ Future<Config> loadConfig(String filepath) async {
   }
   c.lnDebugLevel = f.get("payment", "lndebuglevel") ?? "info";
 
-  var resUpstream = f.get("resources", "resourcesupstream") ?? "";
+  var resUpstream = f.get("resources", "upstream") ?? "";
   if (resUpstream.startsWith("pages:")) {
     var path = resUpstream.substring("pages:".length);
     path = cleanAndExpandPath(path);
@@ -388,10 +388,10 @@ Future<Config> loadConfig(String filepath) async {
   c.sendRecvReceipts = getBoolDefaultTrue("default", "sendrecvreceipts");
 
   c.resourcesUpstream = resUpstream;
-  c.simpleStorePayType = f.get("resources", "simplestorepaytype") ?? "";
-  c.simpleStoreAccount = f.get("resources", "simplestoreaccount") ?? "";
+  c.simpleStorePayType = f.get("simplestore", "paytype") ?? "";
+  c.simpleStoreAccount = f.get("resources", "account") ?? "";
   c.simpleStoreShipCharge =
-      double.tryParse(f.get("resources", "simplestoreshipcharge") ?? "0") ?? 0;
+      double.tryParse(f.get("resources", "shipcharge") ?? "0") ?? 0;
 
   return c;
 }
