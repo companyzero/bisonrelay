@@ -1,5 +1,6 @@
 import 'dart:collection';
 
+import 'package:bruig/util.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:bruig/notification_service.dart';
 import 'package:bruig/screens/feed/post_content.dart';
@@ -233,6 +234,41 @@ class FeedPostModel extends ChangeNotifier {
   }
 }
 
+class NewPostModel {
+  Map<String, String> embedContents = {};
+  String content = "";
+
+  void clear() {
+    content = "";
+    embedContents = {};
+  }
+
+  // Returns the new ID of the tracked embed.
+  String trackEmbed(String data) {
+    var id = generateRandomString(12);
+    while (embedContents.containsKey(id)) {
+      id = generateRandomString(12);
+    }
+    embedContents[id] = data;
+    return id;
+  }
+
+  // Returns the actual full content that will be included in the post.
+  String getFullContent() {
+    // Replace embedded content with actual content.
+    var fc = content;
+    final pattern = RegExp(r"(--embed\[.*data=)\[content ([a-zA-Z0-9]{12})]");
+    fc = fc.replaceAllMapped(pattern, (match) {
+      var embed = embedContents[match.group(2)];
+      if (embed == null) {
+        throw "Content not found: ${match.group(2)}";
+      }
+      return match.group(1)! + embed;
+    });
+    return fc;
+  }
+}
+
 class FeedModel extends ChangeNotifier {
   List<FeedPostModel> _posts = [];
   Iterable<FeedPostModel> get posts => UnmodifiableListView(_posts);
@@ -354,6 +390,8 @@ class FeedModel extends ChangeNotifier {
     }
     notifyListeners();
   }
+
+  final NewPostModel newPost = NewPostModel();
 
   Future<void> createPost(String content) async {
     var newPost = await Golib.createPost(content);

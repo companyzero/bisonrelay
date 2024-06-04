@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:async';
 
+import 'package:bruig/components/buttons.dart';
 import 'package:bruig/models/feed.dart';
 import 'package:bruig/screens/feed.dart';
 import 'package:bruig/util.dart';
@@ -12,19 +13,22 @@ import 'package:bruig/components/snackbars.dart';
 import 'package:provider/provider.dart';
 import 'package:bruig/theme_manager.dart';
 
-void showAltTextModal(BuildContext context, String mime, String id,
-    TextEditingController contentCtrl) {
+void showAltTextModal(BuildContext context, String mime, String data,
+    NewPostModel post, TextEditingController contentCtrl) {
   showModalBottomSheet(
     context: context,
-    builder: (BuildContext context) => AddAltText(mime, id, contentCtrl),
+    builder: (BuildContext context) =>
+        AddAltText(mime, data, post, contentCtrl),
   );
 }
 
 class AddAltText extends StatefulWidget {
   final String mime;
-  final String id;
+  final String data;
   final TextEditingController contentCtrl;
-  const AddAltText(this.mime, this.id, this.contentCtrl, {super.key});
+  final NewPostModel post;
+  const AddAltText(this.mime, this.data, this.post, this.contentCtrl,
+      {super.key});
 
   @override
   State<AddAltText> createState() => _AddAltTextState();
@@ -34,7 +38,6 @@ class _AddAltTextState extends State<AddAltText> {
   TextEditingController embedAlt = TextEditingController();
 
   String get mime => widget.mime;
-  String get id => widget.id;
   TextEditingController get contentCtrl => widget.contentCtrl;
 
   void _addEmbed() {
@@ -45,6 +48,8 @@ class _AddAltTextState extends State<AddAltText> {
     if (embedAlt.text != "") {
       embed.add("alt=${Uri.encodeComponent(embedAlt.text)}");
     }
+
+    var id = widget.post.trackEmbed(widget.data);
     if (id != "") {
       embed.add("data=[content $id]");
     }
@@ -110,13 +115,11 @@ class NewPostScreen extends StatefulWidget {
 }
 
 class _NewPostScreenState extends State<NewPostScreen> {
+  NewPostModel get post => widget.feed.newPost;
   TextEditingController contentCtrl = TextEditingController();
   bool loading = false;
 
   // Add embed fields.
-  Map<String, String> embedContents = {};
-  String embedData = "";
-  String embedMime = "";
   SharedFile? embedLink;
   int estimatedSize = 0;
   Timer? _debounce;
@@ -126,28 +129,14 @@ class _NewPostScreenState extends State<NewPostScreen> {
     Navigator.pop(context);
   }
 
-  // Returns the actual full content that will be included in the post.
-  String getFullContent() {
-    // Replace embedded content with actual content.
-    var content = contentCtrl.text;
-    final pattern = RegExp(r"(--embed\[.*data=)\[content ([a-zA-Z0-9]{12})]");
-    content = content.replaceAllMapped(pattern, (match) {
-      var content = embedContents[match.group(2)];
-      if (content == null) {
-        throw "Content not found: ${match.group(2)}";
-      }
-      return match.group(1)! + content;
-    });
-    return content;
-  }
-
   void createPost() async {
     setState(() {
       loading = true;
     });
     try {
-      await widget.feed.createPost(getFullContent());
+      await widget.feed.createPost(post.getFullContent());
       setState(() {
+        post.clear();
         contentCtrl.clear();
         estimatedSize = 0;
       });
@@ -166,7 +155,7 @@ class _NewPostScreenState extends State<NewPostScreen> {
     if (_debounceSizeCalc?.isActive ?? false) _debounceSizeCalc!.cancel();
     _debounceSizeCalc = Timer(const Duration(milliseconds: 500), () async {
       try {
-        var estSize = await Golib.estimatePostSize(getFullContent());
+        var estSize = await Golib.estimatePostSize(post.getFullContent());
         setState(() {
           estimatedSize = estSize;
         });
@@ -174,6 +163,11 @@ class _NewPostScreenState extends State<NewPostScreen> {
         showErrorSnackbar(context, "Unable to estimate post size: $exception");
       }
     });
+  }
+
+  void contentChanged() async {
+    post.content = contentCtrl.text;
+    recalcEstimatedSize();
   }
 
   void pickFile(BuildContext context) async {
@@ -239,19 +233,8 @@ class _NewPostScreenState extends State<NewPostScreen> {
       }
 
       var data = const Base64Encoder().convert(f.bytes!);
-      var id = generateRandomString(12);
-      while (embedContents.containsKey(id)) {
-        id = generateRandomString(12);
-      }
 
-      showAltTextModal(context, mime, id, contentCtrl);
-
-      setState(() {
-        embedContents[id] = data;
-        embedMime = mime;
-        embedData = id;
-      });
-      recalcEstimatedSize();
+      showAltTextModal(context, mime, data, post, contentCtrl);
     });
   }
 
@@ -268,6 +251,11 @@ class _NewPostScreenState extends State<NewPostScreen> {
   //   });
   // }
 
+  void clearPost() {
+    post.clear();
+    contentCtrl.text = "";
+  }
+
   @override
   dispose() {
     _debounce?.cancel();
@@ -278,7 +266,8 @@ class _NewPostScreenState extends State<NewPostScreen> {
   @override
   void initState() {
     super.initState();
-    contentCtrl.addListener(recalcEstimatedSize);
+    contentCtrl.text = post.content;
+    contentCtrl.addListener(contentChanged);
   }
 
   @override
@@ -347,13 +336,15 @@ class _NewPostScreenState extends State<NewPostScreen> {
                     style: TextStyle(color: textColor),
                   ),
                   const SizedBox(height: 10),
-                  Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                    const SizedBox(width: 20),
-                    ElevatedButton(
-                        onPressed: !loading && validSize ? createPost : null,
-                        child: const Text("Create Post")),
-                    const SizedBox(width: 20),
-                  ])
+                  Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        ElevatedButton(
+                            onPressed:
+                                !loading && validSize ? createPost : null,
+                            child: const Text("Create Post")),
+                        CancelButton(onPressed: clearPost, label: "Clear Post"),
+                      ])
                 ],
               ),
             ));
