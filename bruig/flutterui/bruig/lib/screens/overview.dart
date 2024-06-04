@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:bruig/components/clipper.dart';
 import 'package:bruig/components/indicator.dart';
 import 'package:bruig/components/interactive_avatar.dart';
 import 'package:bruig/components/page_context_menu.dart';
@@ -22,7 +23,6 @@ import 'package:bruig/screens/settings.dart';
 import 'package:bruig/screens/viewpage_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
-import 'package:golib_plugin/golib_plugin.dart';
 import 'package:bruig/theme_manager.dart';
 import 'package:provider/provider.dart';
 
@@ -69,31 +69,30 @@ class OverviewScreen extends StatefulWidget {
 }
 
 class _OverviewScreenAppBarConnState {
-  final IconData icon;
   final String label;
   final Widget tag;
 
-  _OverviewScreenAppBarConnState(
-      {required this.icon, required this.label, required this.tag});
+  _OverviewScreenAppBarConnState({required this.label, required this.tag});
 }
+
+const _connStateTagClipPath =
+    "M 0.31234165,80.167689 79.855347,0 37.064542,0.10411388 0,37.793339 Z";
 
 final _connStateStyles = {
   connStateCheckingWallet: _OverviewScreenAppBarConnState(
-      icon: Icons.cloud_off,
       label: "Skip Wallet Check",
-      tag: const Image(
-        color: null,
-        image: AssetImage("assets/images/checktag.png"),
-      )),
+      tag: ClipPath(
+          clipper:
+              SVGClipper(_connStateTagClipPath, offset: const Offset(-10, 0)),
+          child: Image.asset("assets/images/checktag.png", width: 50))),
   connStateOffline: _OverviewScreenAppBarConnState(
-      icon: Icons.cloud_off,
       label: "Go online",
-      tag: const Image(
-        color: null,
-        image: AssetImage("assets/images/offlinetag.png"),
-      )),
-  connStateOnline: _OverviewScreenAppBarConnState(
-      icon: Icons.cloud, label: "Go offline", tag: const Empty()),
+      tag: ClipPath(
+          clipper:
+              SVGClipper(_connStateTagClipPath, offset: const Offset(-10, 0)),
+          child: Image.asset("assets/images/offlinetag.png", width: 50))),
+  connStateOnline:
+      _OverviewScreenAppBarConnState(label: "Go offline", tag: const Empty()),
 };
 
 AppBar _buildAppBar(BuildContext context, ClientModel client, FeedModel feed,
@@ -105,47 +104,6 @@ AppBar _buildAppBar(BuildContext context, ClientModel client, FeedModel feed,
 
   void goToAbout(BuildContext context) {
     Navigator.of(context, rootNavigator: true).pushNamed("/about");
-  }
-
-  void goOnline(BuildContext context) async {
-    try {
-      await Golib.goOnline();
-      showSuccessSnackbar(context, "Going online...");
-    } catch (exception) {
-      showErrorSnackbar(context, "Unable to go online: $exception");
-    }
-  }
-
-  void remainOffline(BuildContext context) async {
-    try {
-      await Golib.remainOffline();
-      showSuccessSnackbar(context, "Going offline...");
-    } catch (exception) {
-      showErrorSnackbar(context, "Unable to go offline: $exception");
-    }
-  }
-
-  void skipWalletCheck(BuildContext context) async {
-    try {
-      await Golib.skipWalletCheck();
-      showSuccessSnackbar(context, "Skipping next wallet check...");
-    } catch (exception) {
-      showErrorSnackbar(context, "Unable to skip wallet check: $exception");
-    }
-  }
-
-  void takeConnStateAction(BuildContext context, int state) {
-    switch (state) {
-      case connStateCheckingWallet:
-        skipWalletCheck(context);
-        break;
-      case connStateOffline:
-        goOnline(context);
-        break;
-      case connStateOnline:
-        remainOffline(context);
-        break;
-    }
   }
 
   void switchScreen(String route, {Object? args}) {
@@ -162,16 +120,24 @@ AppBar _buildAppBar(BuildContext context, ClientModel client, FeedModel feed,
         backgroundColor: sidebarBackground,
         titleSpacing: 0.0,
         title: const _OverviewScreenTitle(),
-        leadingWidth: 156,
+        leadingWidth: 112,
         leading: Row(children: [
-          IconButton(
-              tooltip: "About Bison Relay",
-              splashRadius: 20,
-              iconSize: 40,
-              onPressed: () => goToAbout(context),
-              icon: Image.asset(
-                "assets/images/icon.png",
-              )),
+          Consumer<ConnStateModel>(
+              builder: (context, connState, child) => Stack(children: [
+                    Row(children: [
+                      const SizedBox(width: 10),
+                      IconButton(
+                          tooltip: "About Bison Relay",
+                          splashRadius: 20,
+                          iconSize: 40,
+                          onPressed: () => goToAbout(context),
+                          icon: Image.asset(
+                            "assets/images/icon.png",
+                          ))
+                    ]),
+                    _connStateStyles[connState.state.state]?.tag ??
+                        const SizedBox(width: 100),
+                  ])),
           IconButton(
               splashRadius: 20,
               tooltip: "Create a new post",
@@ -179,21 +145,6 @@ AppBar _buildAppBar(BuildContext context, ClientModel client, FeedModel feed,
               color: Colors.red,
               iconSize: 20,
               icon: Icon(color: theme.dividerColor, size: 20, Icons.mode)),
-          Consumer<ConnStateModel>(builder: (context, connState, child) {
-            var stateStyle = _connStateStyles[connState.state.state];
-            return IconButton(
-                splashRadius: 20,
-                tooltip: stateStyle?.label ??
-                    "Unknown state ${connState.state.state}",
-                onPressed: () =>
-                    takeConnStateAction(context, connState.state.state),
-                color: theme.dividerColor,
-                iconSize: 20,
-                icon: Icon(
-                    color: theme.dividerColor,
-                    size: 20,
-                    stateStyle?.icon ?? Icons.question_mark));
-          }),
           const SizedBox(width: 20),
         ]));
   }
@@ -233,10 +184,15 @@ AppBar _buildAppBar(BuildContext context, ClientModel client, FeedModel feed,
                 switchScreen(SettingsScreen.routeName);
               }
             },
-            child: Consumer5<OverviewActivePath, ActiveChatModel,
-                    ShowAddressBookModel, FeedModel, ChatSideMenuActiveModel>(
+            child: Consumer6<
+                    OverviewActivePath,
+                    ActiveChatModel,
+                    ShowAddressBookModel,
+                    FeedModel,
+                    ChatSideMenuActiveModel,
+                    ConnStateModel>(
                 builder: (context, overviewActivePath, activeChat, showAddrBook,
-                        feed, chatSideMenuActive, child) =>
+                        feed, chatSideMenuActive, connState, child) =>
                     Stack(children: [
                       !overviewActivePath.onActiveBottomTab ||
                               !activeChat.empty ||
@@ -251,7 +207,8 @@ AppBar _buildAppBar(BuildContext context, ClientModel client, FeedModel feed,
                           : Container(
                               margin: const EdgeInsets.all(10),
                               child: SelfAvatar(client)),
-                      // connectedTag, // Tag when offline/checking wallet.
+                      _connStateStyles[connState.state.state]?.tag ??
+                          const Empty(),
                     ])));
       }),
       actions: [

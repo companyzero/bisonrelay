@@ -1,6 +1,5 @@
 import 'dart:io';
 
-import 'package:bruig/components/confirmation_dialog.dart';
 import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/components/interactive_avatar.dart';
 import 'package:bruig/models/uistate.dart';
@@ -13,6 +12,7 @@ import 'package:bruig/screens/about.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:bruig/theme_manager.dart';
+import 'package:golib_plugin/definitions.dart';
 import 'package:provider/provider.dart';
 import 'package:bruig/models/client.dart';
 import 'package:golib_plugin/golib_plugin.dart';
@@ -207,6 +207,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
             notificationsEnabled,
             foregroundService);
         break;
+      case "Network":
+        settingsView = NetworkSettingsScreen(client);
+        break;
       case "About":
         settingsView = const AboutScreen(settings: true);
         break;
@@ -267,11 +270,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               onTap: () => changePage("Notifications"),
             ),
             ListTile(
-              title: Text("Network", style: itemTs),
-              onTap: () {
-                Navigator.of(context, rootNavigator: true)
-                    .pushNamed(ConfigNetworkScreen.routeName);
-              },
+              title: Text("Network",
+                  style: settingsPage == "Network" ? selItemTs : itemTs),
+              onTap: () => changePage("Network"),
             ),
           ])),
       Expanded(child: settingsView),
@@ -347,8 +348,7 @@ class MainSettingsScreen extends StatelessWidget {
                             fontSize: theme.getMediumFont(context),
                             color: textColor))),
                 ListTile(
-                    onTap: () => Navigator.of(context, rootNavigator: true)
-                        .pushNamed(ConfigNetworkScreen.routeName),
+                    onTap: () => changePage("Network"),
                     hoverColor: backgroundColor,
                     leading: const Icon(Icons.shield),
                     title: Text("Network",
@@ -391,24 +391,6 @@ class MainSettingsScreen extends StatelessWidget {
                         style: TextStyle(
                             fontSize: theme.getMediumFont(context),
                             color: textColor))),
-                client.connState.isCheckingWallet
-                    ? ListTile(
-                        onTap: () {
-                          confirmationDialog(
-                              context,
-                              Golib.skipWalletCheck,
-                              "Confirm skip wallet check?",
-                              "Wallet is offline due to: ${client.connState.checkWalletErr}.\n\nSkipping the check may not actually work.",
-                              "Skip",
-                              "Cancel");
-                        },
-                        hoverColor: backgroundColor,
-                        leading: const Icon(Icons.cloud_off),
-                        title: Text("Skip Wallet Check",
-                            style: TextStyle(
-                                fontSize: theme.getMediumFont(context),
-                                color: textColor)))
-                    : const Empty(),
                 ListTile(
                     onTap: () {
                       Navigator.of(context)
@@ -759,5 +741,113 @@ class NotificationsSettingsScreen extends StatelessWidget {
                       ))
                   : const Empty(),
             ]));
+  }
+}
+
+class NetworkSettingsScreen extends StatefulWidget {
+  final ClientModel client;
+  const NetworkSettingsScreen(this.client, {Key? key}) : super(key: key);
+  @override
+  State<NetworkSettingsScreen> createState() => _NetworkSettingsScreenState();
+}
+
+/// This is the private State class that goes with MyStatefulWidget.
+class _NetworkSettingsScreenState extends State<NetworkSettingsScreen> {
+  ClientModel get client => widget.client;
+
+  void connStateChanged() {
+    setState(() {});
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    client.connState.addListener(connStateChanged);
+  }
+
+  @override
+  void didUpdateWidget(NetworkSettingsScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.client != client) {
+      oldWidget.client.connState.removeListener(connStateChanged);
+      client.connState.addListener(connStateChanged);
+    }
+  }
+
+  @override
+  void dispose() {
+    client.connState.removeListener(connStateChanged);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    var themeNtf = Provider.of<ThemeNotifier>(context);
+    var theme = themeNtf.getTheme();
+    var backgroundColor = theme.backgroundColor;
+    var textColor = theme.focusColor;
+
+    Widget actionWidget;
+    switch (client.connState.state.state) {
+      case connStateOnline:
+        actionWidget = ListTile(
+            onTap: Golib.remainOffline,
+            hoverColor: backgroundColor,
+            leading: const Icon(Icons.cloud_off),
+            title: Text("Remain Offline",
+                style: TextStyle(
+                    fontSize: themeNtf.getMediumFont(context),
+                    color: textColor)));
+        break;
+
+      case connStateCheckingWallet:
+        actionWidget = ListTile(
+            onTap: Golib.skipWalletCheck,
+            hoverColor: backgroundColor,
+            leading: const Icon(Icons.cloud_off),
+            title: Text("Skip Wallet Check",
+                style: TextStyle(
+                    fontSize: themeNtf.getMediumFont(context),
+                    color: textColor)));
+        break;
+
+      case connStateOffline:
+        actionWidget = ListTile(
+            onTap: Golib.goOnline,
+            hoverColor: backgroundColor,
+            leading: const Icon(Icons.cloud_done),
+            title: Text("Go Online",
+                style: TextStyle(
+                    fontSize: themeNtf.getMediumFont(context),
+                    color: textColor)));
+        break;
+
+      default:
+        actionWidget = const Empty();
+        break;
+    }
+
+    return Column(children: [
+      client.connState.isCheckingWallet && client.connState.checkWalletErr != ""
+          ? Copyable(
+              "Offline due to failed wallet check: ${client.connState.checkWalletErr}",
+              TextStyle(color: textColor))
+          : const Empty(),
+      Expanded(
+          child: ListView(
+        children: [
+          ListTile(
+              onTap: () => Navigator.of(context, rootNavigator: true)
+                  .pushNamed(ConfigNetworkScreen.routeName),
+              hoverColor: backgroundColor,
+              leading: const Icon(Icons.network_ping),
+              title: Text("Proxy Settings",
+                  style: TextStyle(
+                      fontSize: themeNtf.getMediumFont(context),
+                      color: textColor))),
+          actionWidget,
+        ],
+      ))
+    ]);
   }
 }
