@@ -168,6 +168,10 @@ class EmbedInlineSyntax extends md.InlineSyntax {
       el.attributes["alt"] = alt;
     }
 
+    if (parms["type"] != "") {
+      el.attributes["type"] = parms["type"]!;
+    }
+
     parser.addNode(el);
     return true;
   }
@@ -522,7 +526,9 @@ class Downloadable extends StatelessWidget {
 class ImageMd extends StatelessWidget {
   final String tip;
   final Uint8List imgContent;
-  const ImageMd(this.tip, this.imgContent, {Key? key}) : super(key: key);
+  final String type;
+  const ImageMd(this.tip, this.imgContent, this.type, {Key? key})
+      : super(key: key);
 
   @override
   Widget build(BuildContext context) => Tooltip(
@@ -532,7 +538,8 @@ class ImageMd extends StatelessWidget {
           hoverColor: Theme.of(context).hoverColor,
           onTap: () {
             showDialog(
-                context: context, builder: (_) => ImageDialog(imgContent));
+                context: context,
+                builder: (_) => ImageDialog(imgContent, type));
           },
           child: Container(
             constraints: const BoxConstraints(maxHeight: 250, maxWidth: 250),
@@ -630,9 +637,10 @@ class ImageMarkdownElementBuilder extends MarkdownElementBuilder {
     if (download != "") {
       tip += "Click to download file $download";
     }
+    var type = element.attributes["type"] ?? "";
 
     try {
-      return ImageMd(tip, imgBytes);
+      return ImageMd(tip, imgBytes, type);
     } catch (exception) {
       print("Unable to decode image: $exception");
       return Image.asset(
