@@ -48,8 +48,17 @@ class _AddAltTextState extends State<AddAltText> {
     if (id != "") {
       embed.add("data=[content $id]");
     }
-    var embedText = "\n--embed[${embed.join(",")}]--\n";
-    contentCtrl.text += embedText;
+    var embedText = "--embed[${embed.join(",")}]--";
+
+    var insertPos = contentCtrl.selection.start;
+    if (insertPos > -1 && insertPos < contentCtrl.text.length) {
+      contentCtrl.text = contentCtrl.text.substring(0, insertPos) +
+          embedText +
+          contentCtrl.text.substring(insertPos);
+    } else {
+      contentCtrl.text += "\n$embedText\n";
+    }
+
     Navigator.pop(context);
   }
 
@@ -171,7 +180,17 @@ class _NewPostScreenState extends State<NewPostScreen> {
     if (_debounce?.isActive ?? false) _debounce!.cancel();
     _debounce = Timer(const Duration(milliseconds: 500), () async {
       var filePickRes = await FilePicker.platform.pickFiles(
-        allowedExtensions: ["avif", "bmp", "gif", "jpg", "jpeg", "jxl", "png", "webp", "txt"],
+        allowedExtensions: [
+          "avif",
+          "bmp",
+          "gif",
+          "jpg",
+          "jpeg",
+          "jxl",
+          "png",
+          "webp",
+          "txt"
+        ],
         withData: true,
       );
       if (filePickRes == null) return;
