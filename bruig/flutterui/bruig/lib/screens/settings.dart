@@ -12,7 +12,6 @@ import 'package:bruig/screens/paystats.dart';
 import 'package:bruig/screens/about.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:golib_plugin/definitions.dart';
 import 'package:bruig/theme_manager.dart';
 import 'package:provider/provider.dart';
 import 'package:bruig/models/client.dart';
@@ -68,7 +67,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         Golib.setNtfnsEnabled(value);
       }
     }
-    if (foregroundSvc != null) {
+    if (foregroundSvc != null && Platform.isAndroid) {
       StorageManager.saveData(StorageManager.ntfnFgSvcKey, foregroundSvc);
       if (foregroundSvc) {
         Golib.startForegroundSvc();
@@ -179,18 +178,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    var theme = Theme.of(context);
-    var backgroundColor = theme.backgroundColor;
-    var textColor = theme.focusColor;
+    var themeNtf = Provider.of<ThemeNotifier>(context);
+    var theme = themeNtf.getTheme();
     var canvasColor = theme.canvasColor;
+    var unselectedTextColor = theme.dividerColor;
+    var selectedTextColor = theme.focusColor; // MESSAGE TEXT COLOR
+    var sidebarBackground = theme.backgroundColor;
+    var hoverColor = theme.hoverColor;
 
     bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
-    Widget settingsView =
-        MainSettingsScreen(client, pickAvatarFile, changePage, shutdown);
+    Widget settingsView = isScreenSmall
+        ? MainSettingsScreen(client, pickAvatarFile, changePage, shutdown)
+        : const Empty();
     switch (settingsPage) {
       case "Account":
-        settingsView =
-            AccountSettingsScreen(client, resetAllOldKX1s, resetAllOldKX);
+        settingsView = AccountSettingsScreen(
+            client, resetAllOldKX1s, resetAllOldKX, pickAvatarFile);
         break;
       case "Appearance":
         settingsView = Consumer<ThemeNotifier>(
@@ -214,141 +217,65 @@ class _SettingsScreenState extends State<SettingsScreen> {
       return Consumer<ThemeNotifier>(
           builder: (context, theme, _) => Scaffold(
                 backgroundColor: canvasColor,
-                body: settingsView,
+                body: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 3),
+                    child: settingsView),
               ));
     }
-    return Consumer<ThemeNotifier>(
-      builder: (context, theme, _) => Container(
-        margin: const EdgeInsets.all(1),
-        decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(3), color: backgroundColor),
-        padding: const EdgeInsets.all(10),
-        child: Column(children: [
-          // XXX HIDING THEME BUTTON UNTIL LIGHT THEME PROVIDED
-          ElevatedButton(
-            onPressed: () => {
-              theme.getTheme().brightness == Brightness.dark
-                  ? theme.setLightMode()
-                  : theme.setDarkMode(),
-            },
-            child: theme.getTheme().brightness == Brightness.dark
-                ? const Text('Set Light Theme')
-                : const Text('Set Dark Theme'),
+
+    var itemTs = TextStyle(
+        color: unselectedTextColor, fontSize: themeNtf.getSmallFont(context));
+    var selItemTs = TextStyle(
+        color: selectedTextColor, fontSize: themeNtf.getSmallFont(context));
+
+    // Desktop-sized version.
+    return Row(children: [
+      Container(
+          margin: const EdgeInsets.all(1),
+          width: 120,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(5),
+            gradient: LinearGradient(
+                begin: Alignment.centerRight,
+                end: Alignment.centerLeft,
+                colors: [
+                  hoverColor,
+                  sidebarBackground,
+                  sidebarBackground,
+                ],
+                stops: const [
+                  0,
+                  0.51,
+                  1
+                ]),
           ),
-          Tooltip(
-            message: "User avatar. Click to select a new image.",
-            child: SelfAvatar(client, onTap: pickAvatarFile),
-          ),
-          Row(mainAxisAlignment: MainAxisAlignment.end, children: [
-            Text("Notifications",
-                style: TextStyle(
-                    fontSize: theme.getLargeFont(context),
-                    color: Theme.of(context).focusColor)),
-            const SizedBox(width: 50),
-            Switch(
-                // thumb color (round icon)
-                activeColor: Theme.of(context).focusColor,
-                activeTrackColor: Theme.of(context).highlightColor,
-                inactiveThumbColor: Theme.of(context).indicatorColor,
-                inactiveTrackColor: Theme.of(context).dividerColor,
-                //splashRadius: 20.0,
-                // boolean variable value
-                value: notificationsEnabled,
-                // changes the state of the switch
-                onChanged: (value) =>
-                    setState(() => updateNotificationSettings(value, null))),
-          ]),
-          const SizedBox(height: 20),
-          ElevatedButton(
-            onPressed: () => loading ? null : resetAllOldKX(context),
-            child: const Text(
-              "Reset all Older than 30d KX",
+          //color: theme.colorScheme.secondary,
+          child: ListView(children: [
+            ListTile(
+              title: Text("Account",
+                  style: settingsPage == "Account" ? selItemTs : itemTs),
+              onTap: () => changePage("Account"),
             ),
-          ),
-          const SizedBox(height: 20),
-          ElevatedButton(
-            onPressed: () => loading ? null : resetAllOldKX1s(context),
-            child: const Text(
-              "Reset ALL KX",
+            ListTile(
+              title: Text("Appearance",
+                  style: settingsPage == "Appearance" ? selItemTs : itemTs),
+              onTap: () => changePage("Appearance"),
             ),
-          ),
-          const SizedBox(height: 50),
-          Column(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
-            Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
-              Expanded(
-                  child: Container(
-                margin: const EdgeInsets.only(left: 10, right: 10),
-                decoration: const BoxDecoration(
-                    borderRadius: BorderRadius.all(Radius.circular(5.0)),
-                    boxShadow: [
-                      BoxShadow(
-                          color: Colors.black38,
-                          offset: Offset(0.0, 2.0),
-                          blurRadius: 10)
-                    ]),
-                child: Slider(
-                  value: theme.getFontCoef(),
-                  activeColor: Colors.white,
-                  inactiveColor: Colors.white,
-                  onChanged: (double s) => theme.setFontSize(s),
-                  divisions: 3,
-                  min: 0.0,
-                  max: 3.0,
-                ),
-              )),
-            ]),
-            const SizedBox(height: 20),
-            Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
-              Text('Small', style: TextStyle(fontSize: 13, color: textColor)),
-              const SizedBox(width: 35),
-              Text('Normal', style: TextStyle(fontSize: 15, color: textColor)),
-              const SizedBox(width: 20),
-              Text('Large', style: TextStyle(fontSize: 17, color: textColor)),
-              const SizedBox(width: 10),
-              Text('Extra Large',
-                  style: TextStyle(fontSize: 19, color: textColor)),
-            ]),
-            const SizedBox(height: 20),
-            Container(
-                margin: const EdgeInsets.only(left: 20),
-                child: Row(children: [
-                  Text('Current Font Size: ',
-                      style: TextStyle(fontSize: 12, color: textColor)),
-                  const SizedBox(width: 30),
-                  Column(children: [
-                    Text('Small Text',
-                        style: TextStyle(
-                            fontSize: theme.getSmallFont(context),
-                            color: textColor)),
-                    const SizedBox(height: 20),
-                    Text('Medium Text',
-                        style: TextStyle(
-                            fontSize: theme.getMediumFont(context),
-                            color: textColor)),
-                    const SizedBox(height: 20),
-                    Text('Large Text',
-                        style: TextStyle(
-                            fontSize: theme.getLargeFont(context),
-                            color: textColor)),
-                    const SizedBox(height: 20),
-                    Text('Huge Text',
-                        style: TextStyle(
-                            fontSize: theme.getHugeFont(context),
-                            color: textColor)),
-                    const SizedBox(height: 20),
-                  ])
-                ])),
-          ]),
-          const SizedBox(height: 20),
-          ElevatedButton(
-              onPressed: () {
+            ListTile(
+              title: Text("Notifications",
+                  style: settingsPage == "Notifications" ? selItemTs : itemTs),
+              onTap: () => changePage("Notifications"),
+            ),
+            ListTile(
+              title: Text("Network", style: itemTs),
+              onTap: () {
                 Navigator.of(context, rootNavigator: true)
                     .pushNamed(ConfigNetworkScreen.routeName);
               },
-              child: const Text("Configure Network")),
-        ]),
-      ),
-    );
+            ),
+          ])),
+      Expanded(child: settingsView),
+    ]);
   }
 }
 
@@ -518,7 +445,9 @@ class AccountSettingsScreen extends StatelessWidget {
   final ClientModel client;
   final ResetKXCB resetAllKXCB;
   final ResetKXCB resetKXCB;
-  const AccountSettingsScreen(this.client, this.resetAllKXCB, this.resetKXCB,
+  final VoidCallback pickAvatarCB;
+  const AccountSettingsScreen(
+      this.client, this.resetAllKXCB, this.resetKXCB, this.pickAvatarCB,
       {Key? key})
       : super(key: key);
 
@@ -528,21 +457,34 @@ class AccountSettingsScreen extends StatelessWidget {
     var textColor = theme.focusColor;
 
     return Consumer<ThemeNotifier>(
-        builder: (context, theme, _) => ListView(children: [
-              ListTile(
-                title: Text("Reset all KX",
-                    style: TextStyle(
-                        fontSize: theme.getLargeFont(context),
-                        color: textColor)),
-                onTap: () => resetAllKXCB(context),
-              ),
-              ListTile(
-                title: Text("Reset KX from users 30d stale",
-                    style: TextStyle(
-                        fontSize: theme.getLargeFont(context),
-                        color: textColor)),
-                onTap: () => resetKXCB(context),
-              )
+        builder: (context, theme, _) => Column(children: [
+              const SizedBox(height: 10),
+              SizedBox(
+                  width: 100,
+                  height: 100,
+                  child: SelfAvatar(client, onTap: pickAvatarCB)),
+              const SizedBox(height: 10),
+              Text(client.nick, style: TextStyle(color: textColor)),
+              const SizedBox(height: 10),
+              Copyable(client.publicID, TextStyle(color: textColor)),
+              const SizedBox(height: 10),
+              Expanded(
+                  child: ListView(children: [
+                ListTile(
+                  title: Text("Reset all KX",
+                      style: TextStyle(
+                          fontSize: theme.getLargeFont(context),
+                          color: textColor)),
+                  onTap: () => resetAllKXCB(context),
+                ),
+                ListTile(
+                  title: Text("Reset KX from users 30d stale",
+                      style: TextStyle(
+                          fontSize: theme.getLargeFont(context),
+                          color: textColor)),
+                  onTap: () => resetKXCB(context),
+                )
+              ]))
             ]));
   }
 }
