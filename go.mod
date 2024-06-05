@@ -19,7 +19,7 @@ require (
 	github.com/decred/dcrd/dcrutil/v4 v4.0.2
 	github.com/decred/dcrd/txscript/v4 v4.1.1
 	github.com/decred/dcrd/wire v1.7.0
-	github.com/decred/dcrlnd v0.7.0
+	github.com/decred/dcrlnd v0.7.2
 	github.com/decred/dcrlnlpd v0.0.0-20240517140916-2bfee4e5bb86
 	github.com/decred/go-socks v1.1.0
 	github.com/decred/slog v1.2.0
@@ -54,7 +54,7 @@ require (
 
 require (
 	decred.org/cspp/v2 v2.2.0 // indirect
-	decred.org/dcrwallet/v4 v4.0.0 // indirect
+	decred.org/dcrwallet/v4 v4.1.1 // indirect
 	github.com/NebulousLabs/go-upnp v0.0.0-20181203152547-b32978b8ccbf // indirect
 	github.com/Yawning/aez v0.0.0-20211027044916-e49e68abd344 // indirect
 	github.com/agl/ed25519 v0.0.0-20170116200512-5312a6153412 // indirect
@@ -70,7 +70,7 @@ require (
 	github.com/dchest/siphash v1.2.3 // indirect
 	github.com/decred/base58 v1.0.5 // indirect
 	github.com/decred/dcrd v1.8.0 // indirect
-	github.com/decred/dcrd/addrmgr/v2 v2.0.3 // indirect
+	github.com/decred/dcrd/addrmgr/v2 v2.0.4 // indirect
 	github.com/decred/dcrd/blockchain/stake/v5 v5.0.1 // indirect
 	github.com/decred/dcrd/blockchain/standalone/v2 v2.2.1 // indirect
 	github.com/decred/dcrd/chaincfg v1.5.2 // indirect
@@ -82,14 +82,14 @@ require (
 	github.com/decred/dcrd/dcrec v1.0.1 // indirect
 	github.com/decred/dcrd/dcrec/edwards/v2 v2.0.3 // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.3.0 // indirect
-	github.com/decred/dcrd/dcrjson/v4 v4.0.1 // indirect
+	github.com/decred/dcrd/dcrjson/v4 v4.1.0 // indirect
 	github.com/decred/dcrd/gcs/v4 v4.1.0 // indirect
 	github.com/decred/dcrd/hdkeychain/v3 v3.1.2 // indirect
 	github.com/decred/dcrd/lru v1.1.2 // indirect
 	github.com/decred/dcrd/math/uint256 v1.0.1 // indirect
-	github.com/decred/dcrd/mixing v0.1.0 // indirect
+	github.com/decred/dcrd/mixing v0.3.0 // indirect
 	github.com/decred/dcrd/peer/v3 v3.0.2 // indirect
-	github.com/decred/dcrd/rpc/jsonrpc/types/v4 v4.2.0 // indirect
+	github.com/decred/dcrd/rpc/jsonrpc/types/v4 v4.3.0 // indirect
 	github.com/decred/dcrd/rpcclient/v8 v8.0.1 // indirect
 	github.com/decred/dcrtest/dcrdtest v1.0.1-0.20240514160637-ade8c37ad1db // indirect
 	github.com/decred/lightning-onion/v4 v4.0.0 // indirect
