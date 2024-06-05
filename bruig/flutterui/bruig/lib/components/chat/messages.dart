@@ -7,9 +7,6 @@ import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 
 PageStorageBucket _pageStorageBucket = PageStorageBucket();
 
-/// TODO: make restoreScrollOffset work.
-/// For some reason when trying to use PageStorage the app throws:
-/// 'type 'ItemPosition' is not a subtype of type 'double?' in type cast'
 class Messages extends StatefulWidget {
   final ChatModel chat;
   final ClientModel client;
@@ -119,6 +116,9 @@ class _MessagesState extends State<Messages> {
   void _scrollToFirstUnread() {
     final firstUnreadIndex = chat.firstUnreadIndex();
     if (chat.msgs.isNotEmpty && firstUnreadIndex != -1) {
+      // In the future, track messages shown to user and instead of clearing all
+      // unread, move the marker down to keep track of that was read.
+      Timer(const Duration(seconds: 5), chat.removeFirstUnread);
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         if (mounted) {
           widget.itemScrollController.scrollTo(

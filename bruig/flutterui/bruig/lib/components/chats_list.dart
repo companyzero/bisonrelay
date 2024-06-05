@@ -55,6 +55,7 @@ class _ChatHeadingWState extends State<_ChatHeadingW> {
 
   @override
   Widget build(BuildContext context) {
+    var themeNtf = Provider.of<ThemeNotifier>(context);
     var theme = Theme.of(context);
     var textColor = theme.dividerColor;
     var hightLightTextColor = theme.focusColor;
@@ -65,63 +66,42 @@ class _ChatHeadingWState extends State<_ChatHeadingW> {
     // Show 1k+ if unread cound goes about 1000
     var unreadCount = chat.unreadMsgCount > 1000 ? "1k+" : chat.unreadMsgCount;
 
-    Widget? trailing;
+    Widget unreadIndicator;
     if (chat.unreadMsgCount > 0) {
-      textColor = hightLightTextColor;
-      trailing = Consumer<ThemeNotifier>(
-          builder: (context, theme, _) =>
-              Row(mainAxisSize: MainAxisSize.min, children: [
-                chat.isGC
-                    ? Text("gc",
-                        style: TextStyle(
-                            fontStyle: FontStyle.italic,
-                            color: darkTextColor,
-                            fontSize: theme.getMediumFont(context)))
-                    : const Empty(),
-                const SizedBox(width: 5),
-                Container(
-                    margin: const EdgeInsets.all(1),
-                    child: CircleAvatar(
-                        backgroundColor: unreadMessageIconColor,
-                        radius: 10,
-                        child: Text("$unreadCount",
-                            style: TextStyle(
-                                color: hightLightTextColor,
-                                fontSize: theme.getSmallFont(context)))))
-              ]));
+      // Show unread message count.
+      unreadIndicator = Container(
+          margin: const EdgeInsets.all(1),
+          child: CircleAvatar(
+              backgroundColor: unreadMessageIconColor,
+              radius: 10,
+              child: Text("$unreadCount",
+                  style: TextStyle(
+                      color: hightLightTextColor,
+                      fontSize: themeNtf.getSmallFont(context)))));
     } else if (chat.unreadEventCount > 0) {
-      textColor = hightLightTextColor;
-      trailing = Consumer<ThemeNotifier>(
-          builder: (context, theme, _) =>
-              Row(mainAxisSize: MainAxisSize.min, children: [
-                chat.isGC
-                    ? Text("gc",
-                        style: TextStyle(
-                            color: darkTextColor,
-                            fontStyle: FontStyle.italic,
-                            fontSize: theme.getMediumFont(context)))
-                    : const Empty(),
-                const SizedBox(width: 5),
-                Container(
-                    margin: const EdgeInsets.all(1),
-                    child: CircleAvatar(
-                        backgroundColor: unreadMessageIconColor, radius: 3))
-              ]));
+      // Show only a dot indicator.
+      unreadIndicator = Container(
+          margin: const EdgeInsets.all(1),
+          child: CircleAvatar(
+            backgroundColor: unreadMessageIconColor,
+            radius: 3,
+          ));
     } else {
-      trailing = Consumer<ThemeNotifier>(
-          builder: (context, theme, _) =>
-              Row(mainAxisSize: MainAxisSize.min, children: [
-                chat.isGC
-                    ? Text("gc",
-                        style: TextStyle(
-                            fontStyle: FontStyle.italic,
-                            color: darkTextColor,
-                            fontSize: theme.getMediumFont(context)))
-                    : const Empty(),
-                const SizedBox(width: 5),
-                const SizedBox(width: 21),
-              ]));
+      // Show nothing.
+      unreadIndicator = const SizedBox(width: 21);
     }
+
+    var trailing = Row(mainAxisSize: MainAxisSize.min, children: [
+      chat.isGC
+          ? Text("gc",
+              style: TextStyle(
+                  fontStyle: FontStyle.italic,
+                  color: darkTextColor,
+                  fontSize: themeNtf.getMediumFont(context)))
+          : const Empty(),
+      const SizedBox(width: 5),
+      unreadIndicator,
+    ]);
 
     var popMenuButton = InteractiveAvatar(
         chatNick: chat.nick,

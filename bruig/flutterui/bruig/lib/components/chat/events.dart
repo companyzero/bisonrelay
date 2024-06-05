@@ -55,6 +55,37 @@ class DateChange extends StatelessWidget {
   }
 }
 
+class _FirstUnreadIndicator extends StatelessWidget {
+  const _FirstUnreadIndicator({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<ThemeNotifier>(
+        builder: (context, theme, _) => Row(children: [
+              Expanded(
+                  child: Divider(
+                color: theme.getTheme().dividerColor, //color of divider
+                height: 8, //height spacing of divider
+                thickness: 1, //thickness of divier line
+                indent: 5, //spacing at the start of divider
+                endIndent: 5, //spacing at the end of divider
+              )),
+              Text("Last read posts",
+                  style: TextStyle(
+                      fontSize: theme.getSmallFont(context),
+                      color: theme.getTheme().dividerColor)),
+              Expanded(
+                  child: Divider(
+                color: theme.getTheme().dividerColor, //color of divider
+                height: 8, //height spacing of divider
+                thickness: 1, //thickness of divier line
+                indent: 5, //spacing at the start of divider
+                endIndent: 5, //spacing at the end of divider
+              )),
+            ]));
+  }
+}
+
 class ReceivedSentPM extends StatefulWidget {
   final ChatEventModel evnt;
   final String nick;
@@ -132,34 +163,8 @@ class _ReceivedSentPMState extends State<ReceivedSentPM> {
     var avatarColor = colorFromNick(widget.nick, theme.brightness);
 
     var selectedBackgroundColor = theme.highlightColor;
-    var textColor = theme.dividerColor;
     var sentBackgroundColor = theme.dialogBackgroundColor;
-    // Will show a divider and text before the last unread message.
-    var firstUnread = Consumer<ThemeNotifier>(
-        builder: (context, theme, _) => widget.evnt.firstUnread
-            ? Row(children: [
-                Expanded(
-                    child: Divider(
-                  color: textColor, //color of divider
-                  height: 8, //height spacing of divider
-                  thickness: 1, //thickness of divier line
-                  indent: 5, //spacing at the start of divider
-                  endIndent: 5, //spacing at the end of divider
-                )),
-                Text("Last read posts",
-                    style: TextStyle(
-                        fontSize: theme.getSmallFont(context),
-                        color: textColor)),
-                Expanded(
-                    child: Divider(
-                  color: textColor, //color of divider
-                  height: 8, //height spacing of divider
-                  thickness: 1, //thickness of divier line
-                  indent: 5, //spacing at the start of divider
-                  endIndent: 5, //spacing at the end of divider
-                )),
-              ])
-            : const Empty());
+
     var isOwnMessage = widget.userNick == widget.nick;
 
     List<Widget> getMessage(BuildContext context) {
@@ -176,7 +181,9 @@ class _ReceivedSentPMState extends State<ReceivedSentPM> {
     bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
     return Consumer<ThemeNotifier>(
         builder: (context, theme, _) => Column(children: [
-              firstUnread,
+              widget.evnt.firstUnread
+                  ? const _FirstUnreadIndicator()
+                  : const Empty(),
               Container(
                   margin: EdgeInsets.only(
                       top: widget.evnt.sameUser ? 2 : 10,
@@ -263,24 +270,6 @@ class _ReceivedSentPMState extends State<ReceivedSentPM> {
                                     ),
                                   ),
                                 ])),
-/*
-                    // Now put reply/dm button /here if GC
-                    widget.isGC &&
-                            widget.userNick != widget.nick &&
-                            !widget.evnt.sameUser
-                        ? Material(
-                            color: selectedBackgroundColor.withOpacity(0),
-                            child: IconButton(
-                                hoverColor: selectedBackgroundColor,
-                                splashRadius: 15,
-                                iconSize: 25,
-                                tooltip: "Go to DM",
-                                onPressed: () =>
-                                    widget.openReplyDM(false, widget.nick),
-                                icon: const Icon(size: 28, Icons.reply)))
-                        : const Empty(),
-                        
-            */
                       ]))
             ]));
   }
@@ -362,35 +351,13 @@ class _ReceivedSentPMMobileState extends State<ReceivedSentMobilePM> {
         "  \n"); // Replace newlines with <space space newline> for proper md render
     var theme = Theme.of(context);
     var darkTextColor = theme.indicatorColor;
-    var textColor = theme.focusColor;
     var receivedBackgroundColor = theme.highlightColor;
     var sentBackgroundColor = theme.dialogBackgroundColor;
 
     return Consumer<ThemeNotifier>(
         builder: (context, theme, _) => Column(children: [
               widget.evnt.firstUnread
-                  ? Row(children: [
-                      Expanded(
-                          child: Divider(
-                        color: textColor, //color of divider
-                        height: 8, //height spacing of divider
-                        thickness: 1, //thickness of divier line
-                        indent: 5, //spacing at the start of divider
-                        endIndent: 5, //spacing at the end of divider
-                      )),
-                      Text("Last read posts",
-                          style: TextStyle(
-                              fontSize: theme.getSmallFont(context),
-                              color: textColor)),
-                      Expanded(
-                          child: Divider(
-                        color: textColor, //color of divider
-                        height: 8, //height spacing of divider
-                        thickness: 1, //thickness of divier line
-                        indent: 5, //spacing at the start of divider
-                        endIndent: 5, //spacing at the end of divider
-                      )),
-                    ])
+                  ? const _FirstUnreadIndicator()
                   : const Empty(),
               Column(children: [
                 widget.evnt.sameUser
