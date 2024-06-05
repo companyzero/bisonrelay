@@ -215,6 +215,18 @@ List<ChatMenuItem?> buildChatContextMenu() {
 }
 
 List<ChatMenuItem> buildUserChatMenu(ChatModel chat) {
+  void gotoChatScreen(BuildContext context) {
+    var nav = Navigator.of(context);
+    bool onChat = false;
+    nav.popUntil((route) {
+      onChat = route.settings.name == ChatsScreen.routeName;
+      return true;
+    });
+    if (!onChat) {
+      Navigator.of(context).pushReplacementNamed(ChatsScreen.routeName);
+    }
+  }
+
   void sendFile(BuildContext context) async {
     var filePickRes = await FilePicker.platform.pickFiles();
     if (filePickRes == null) return;
@@ -236,7 +248,7 @@ List<ChatMenuItem> buildUserChatMenu(ChatModel chat) {
     }
   }
 
-  void listUserPosts(BuildContext context) async {
+  void listUserPosts(BuildContext context, ClientModel client) async {
     if (chat.userPostsList.isNotEmpty) {
       // Already have user's posts. Show screen with them.
       FeedScreen.showUsersPosts(context, chat);
@@ -247,6 +259,8 @@ List<ChatMenuItem> buildUserChatMenu(ChatModel chat) {
     }
 
     // Fetch remote list of posts.
+    client.active = chat;
+    gotoChatScreen(context);
     var event = ChatEventModel(RequestedUsersPostListEvent(chat.id), null);
     event.sentState = CMS_sending;
     chat.append(event, false);
@@ -308,6 +322,7 @@ List<ChatMenuItem> buildUserChatMenu(ChatModel chat) {
     ChatMenuItem("User Profile", (context, client) {
       client.active = chat;
       client.ui.showProfile.val = true;
+      gotoChatScreen(context);
     }),
     ChatMenuItem(
       "Pay Tip",
@@ -315,12 +330,17 @@ List<ChatMenuItem> buildUserChatMenu(ChatModel chat) {
     ),
     ChatMenuItem(
       "Request Ratchet Reset",
-      (context, chats) => chat.requestKXReset(),
+      (context, client) {
+        client.active = chat;
+        gotoChatScreen(context);
+        chat.requestKXReset();
+      },
     ),
-    ChatMenuItem(
-      "Show Content",
-      (context, chats) => listUserContent(),
-    ),
+    ChatMenuItem("Show Content", (context, client) {
+      client.active = chat;
+      gotoChatScreen(context);
+      listUserContent();
+    }),
     chat.isSubscribed
         ? ChatMenuItem(
             "Unsubscribe to Posts",
@@ -352,7 +372,7 @@ List<ChatMenuItem> buildUserChatMenu(ChatModel chat) {
         ? [
             ChatMenuItem(
               "List Posts",
-              (context, chats) => listUserPosts(context),
+              (context, client) => listUserPosts(context, client),
             )
           ]
         : []),
@@ -360,10 +380,11 @@ List<ChatMenuItem> buildUserChatMenu(ChatModel chat) {
       "Send File",
       (context, chats) => sendFile(context),
     ),
-    ChatMenuItem(
-      "View Pages",
-      (context, chats) => viewPages(context),
-    ),
+    ChatMenuItem("View Pages", (context, client) {
+      client.active = chat;
+      gotoChatScreen(context);
+      viewPages(context);
+    }),
     ChatMenuItem(
       "Rename User",
       (context, chats) => showRenameModalBottom(context, chat),
@@ -376,10 +397,11 @@ List<ChatMenuItem> buildUserChatMenu(ChatModel chat) {
       "Issue Transitive Reset with User",
       (context, chats) => showTransResetModalBottom(context, chat),
     ),
-    ChatMenuItem(
-      "Perform Handshake",
-      (context, chats) => handshake(),
-    ),
+    ChatMenuItem("Perform Handshake", (context, client) {
+      client.active = chat;
+      gotoChatScreen(context);
+      handshake();
+    }),
   ];
 }
 
