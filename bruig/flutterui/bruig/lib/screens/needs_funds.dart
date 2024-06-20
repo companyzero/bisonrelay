@@ -2,13 +2,11 @@ import 'dart:async';
 
 import 'package:bruig/components/copyable.dart';
 import 'package:bruig/components/buttons.dart';
-import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/models/notifications.dart';
 import 'package:bruig/screens/startupscreen.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:golib_plugin/util.dart';
@@ -127,7 +125,7 @@ class _NeedsFundsScreenState extends State<NeedsFundsScreen> {
         var total = formatDCR(atomsToDCR(redeemed!.total));
         return Column(children: [
           Text("Redeemed $total on the following tx:", style: ts),
-          Copyable(redeemed!.txid, ts),
+          Copyable(redeemed!.txid, textStyle: ts),
           Text("The funds will be available after the tx is mined.", style: ts),
         ]);
       }
@@ -191,9 +189,8 @@ Send DCR funds to the following address to receive funds in your wallet. Note th
               color: theme.getTheme().cardColor,
               padding: const EdgeInsets.only(
                   left: 22, top: 18, right: 22, bottom: 18),
-              child: Copyable(
-                  addr,
-                  TextStyle(
+              child: Copyable(addr,
+                  textStyle: TextStyle(
                       color: theme.getTheme().dividerColor,
                       fontSize: theme.getMediumFont(context)))),
           const SizedBox(height: 9),

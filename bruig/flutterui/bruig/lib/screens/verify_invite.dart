@@ -61,8 +61,8 @@ class _VerifyInviteScreenState extends State<VerifyInviteScreen> {
       return [
         Text("Redeemed $total on the following tx:",
             style: TextStyle(color: theme.getTheme().dividerColor)),
-        Copyable(
-            redeemed!.txid, TextStyle(color: theme.getTheme().dividerColor)),
+        Copyable(redeemed!.txid,
+            textStyle: TextStyle(color: theme.getTheme().dividerColor)),
         Text("The funds will be available after the tx is mined.",
             style: TextStyle(color: theme.getTheme().dividerColor)),
       ];
@@ -79,7 +79,7 @@ class _VerifyInviteScreenState extends State<VerifyInviteScreen> {
       Text("This invite contains funds stored in the following UTXO:",
           style: TextStyle(color: theme.getTheme().dividerColor)),
       Copyable("${funds.txid}:${funds.index}",
-          TextStyle(color: theme.getTheme().dividerColor)),
+          textStyle: TextStyle(color: theme.getTheme().dividerColor)),
       Text("Attempt to redeem funds?",
           style: TextStyle(color: theme.getTheme().dividerColor)),
       const SizedBox(height: 10),

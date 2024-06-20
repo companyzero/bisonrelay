@@ -370,90 +370,12 @@ class _OverviewScreenState extends State<OverviewScreen> {
     var theme = Theme.of(context);
     var selectedColor = theme.dividerColor;
     var unselectedTextColor = theme.focusColor;
-    var sidebarBackground = theme.backgroundColor;
-    var scaffoldBackgroundColor = theme.canvasColor;
-    var hoverColor = theme.hoverColor;
 
     bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
     return Scaffold(
       key: scaffoldKey,
       backgroundColor: theme.canvasColor,
       appBar: _buildAppBar(context, client, feed, widget.mainMenu, navKey),
-      drawer: Drawer(
-        backgroundColor: sidebarBackground,
-        child: ListView.separated(
-            separatorBuilder: (context, index) =>
-                Divider(height: 3, color: unselectedTextColor),
-            itemCount: widget.mainMenu.menus.length,
-            itemBuilder: (context, index) {
-              var menuItem = widget.mainMenu.menus.elementAt(index);
-              return menuItem.subMenuInfo.isEmpty
-                  ? ListTile(
-                      hoverColor: scaffoldBackgroundColor,
-                      selected:
-                          widget.mainMenu.activeMenu.label == menuItem.label,
-                      selectedColor: selectedColor,
-                      iconColor: unselectedTextColor,
-                      textColor: unselectedTextColor,
-                      selectedTileColor: hoverColor,
-                      onTap: () {
-                        switchScreen(menuItem.routeName);
-                        Navigator.pop(context);
-                      },
-                      leading: (menuItem.label == "Chat" &&
-                                  client.activeChats.hasUnreadMsgs) ||
-                              (menuItem.label == "Feed" &&
-                                  widget.feed.hasUnreadPostsComments)
-                          ? Stack(children: [
-                              Container(
-                                  padding: const EdgeInsets.all(3),
-                                  child: menuItem.icon ?? const Empty()),
-                              const Positioned(
-                                  top: 1, right: 1, child: RedDotIndicator()),
-                            ])
-                          : Container(
-                              padding: const EdgeInsets.all(3),
-                              child: menuItem.icon),
-                      title: Consumer<ThemeNotifier>(
-                          builder: (context, theme, _) => Text(menuItem.label,
-                              style: TextStyle(
-                                  fontSize: theme.getMediumFont(context)))))
-                  : Theme(
-                      data: Theme.of(context)
-                          .copyWith(dividerColor: Colors.transparent),
-                      child: ExpansionTile(
-                        title: Text(menuItem.label),
-                        initiallyExpanded:
-                            widget.mainMenu.activeMenu.label == menuItem.label,
-                        leading: (menuItem.label == "Chat" &&
-                                    client.activeChats.hasUnreadMsgs) ||
-                                (menuItem.label == "Feed" &&
-                                    widget.feed.hasUnreadPostsComments)
-                            ? Stack(children: [
-                                Container(
-                                    padding: const EdgeInsets.all(3),
-                                    child: menuItem.icon ?? const Empty()),
-                                const Positioned(
-                                    top: 1, right: 1, child: RedDotIndicator()),
-                              ])
-                            : Container(
-                                padding: const EdgeInsets.all(3),
-                                child: menuItem.icon),
-                        children: (menuItem.subMenuInfo.map((e) => ListTile(
-                            hoverColor: scaffoldBackgroundColor,
-                            selected: widget.mainMenu.activeMenu.label ==
-                                    menuItem.label &&
-                                widget.mainMenu.activePageTab == e.pageTab,
-                            selectedColor: selectedColor,
-                            iconColor: unselectedTextColor,
-                            textColor: unselectedTextColor,
-                            selectedTileColor: hoverColor,
-                            title: Text(e.label),
-                            onTap: () => goToSubMenuPage(
-                                menuItem.routeName, e.pageTab)))).toList(),
-                      ));
-            }),
-      ),
       body: SnackbarDisplayer(
           widget.snackBar,
           Row(children: [

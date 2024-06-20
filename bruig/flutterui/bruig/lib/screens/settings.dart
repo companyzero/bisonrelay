@@ -1,7 +1,10 @@
 import 'dart:io';
 
+import 'package:bruig/components/buttons.dart';
+import 'package:bruig/components/containers.dart';
 import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/components/interactive_avatar.dart';
+import 'package:bruig/components/text.dart';
 import 'package:bruig/models/uistate.dart';
 import 'package:bruig/screens/config_network.dart';
 import 'package:bruig/screens/ln_management.dart';
@@ -10,6 +13,7 @@ import 'package:bruig/screens/manage_content/manage_content.dart';
 import 'package:bruig/screens/paystats.dart';
 import 'package:bruig/screens/about.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:bruig/theme_manager.dart';
 import 'package:golib_plugin/definitions.dart';
@@ -178,14 +182,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    var themeNtf = Provider.of<ThemeNotifier>(context);
-    var theme = themeNtf.getTheme();
-    var canvasColor = theme.canvasColor;
-    var unselectedTextColor = theme.dividerColor;
-    var selectedTextColor = theme.focusColor; // MESSAGE TEXT COLOR
-    var sidebarBackground = theme.backgroundColor;
-    var hoverColor = theme.hoverColor;
-
     bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
     Widget settingsView = isScreenSmall
         ? MainSettingsScreen(client, pickAvatarFile, changePage, shutdown)
@@ -217,64 +213,36 @@ class _SettingsScreenState extends State<SettingsScreen> {
         break;
     }
     if (isScreenSmall) {
-      return Consumer<ThemeNotifier>(
-          builder: (context, theme, _) => Scaffold(
-                backgroundColor: canvasColor,
-                body: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 3),
-                    child: settingsView),
-              ));
+      return Scaffold(
+          body: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 3),
+              child: settingsView));
     }
-
-    var itemTs = TextStyle(
-        color: unselectedTextColor, fontSize: themeNtf.getSmallFont(context));
-    var selItemTs = TextStyle(
-        color: selectedTextColor, fontSize: themeNtf.getSmallFont(context));
 
     // Desktop-sized version.
     return Row(children: [
-      Container(
-          margin: const EdgeInsets.all(1),
-          width: 120,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(5),
-            gradient: LinearGradient(
-                begin: Alignment.centerRight,
-                end: Alignment.centerLeft,
-                colors: [
-                  hoverColor,
-                  sidebarBackground,
-                  sidebarBackground,
-                ],
-                stops: const [
-                  0,
-                  0.51,
-                  1
-                ]),
-          ),
-          //color: theme.colorScheme.secondary,
-          child: ListView(children: [
-            ListTile(
-              title: Text("Account",
-                  style: settingsPage == "Account" ? selItemTs : itemTs),
-              onTap: () => changePage("Account"),
-            ),
-            ListTile(
-              title: Text("Appearance",
-                  style: settingsPage == "Appearance" ? selItemTs : itemTs),
-              onTap: () => changePage("Appearance"),
-            ),
-            ListTile(
-              title: Text("Notifications",
-                  style: settingsPage == "Notifications" ? selItemTs : itemTs),
-              onTap: () => changePage("Notifications"),
-            ),
-            ListTile(
-              title: Text("Network",
-                  style: settingsPage == "Network" ? selItemTs : itemTs),
-              onTap: () => changePage("Network"),
-            ),
-          ])),
+      SecondarySideMenuList(width: 120, children: [
+        ListTile(
+          selected: settingsPage == "Account",
+          title: const Txt.S("Account"),
+          onTap: () => changePage("Account"),
+        ),
+        ListTile(
+          selected: settingsPage == "Appearance",
+          title: const Txt.S("Appearance"),
+          onTap: () => changePage("Appearance"),
+        ),
+        ListTile(
+          selected: settingsPage == "Notifications",
+          title: const Txt.S("Notifications"),
+          onTap: () => changePage("Notifications"),
+        ),
+        ListTile(
+          selected: settingsPage == "Network",
+          title: const Txt.S("Network"),
+          onTap: () => changePage("Network"),
+        ),
+      ]),
       Expanded(child: settingsView),
     ]);
   }
@@ -292,10 +260,6 @@ class MainSettingsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    var theme = Theme.of(context);
-    var backgroundColor = theme.backgroundColor;
-    var textColor = theme.focusColor;
-
     return Consumer<ThemeNotifier>(
         builder: (context, theme, _) => ListView(
               children: [
@@ -308,116 +272,70 @@ class MainSettingsScreen extends StatelessWidget {
                         child: SelfAvatar(client, onTap: pickAvatarFile),
                       ),
                       Column(children: [
-                        Text(client.nick,
-                            style: TextStyle(
-                                fontSize: theme.getMediumFont(context),
-                                color: textColor)),
+                        Text(client.nick),
                         SizedBox(
                             width: 150,
-                            child: Copyable(
-                              client.publicID,
-                              TextStyle(
-                                  fontSize: theme.getSmallFont(context),
-                                  color: textColor),
-                              textOverflow: TextOverflow.ellipsis,
+                            child: Copyable.txt(
+                              Txt(client.publicID,
+                                  overflow: TextOverflow.ellipsis),
                             ))
                       ])
                     ])),
                 ListTile(
                     onTap: () => changePage("Account"),
-                    hoverColor: backgroundColor,
                     leading: const Icon(Icons.person_outline),
-                    title: Text("Account",
-                        style: TextStyle(
-                            fontSize: theme.getMediumFont(context),
-                            color: textColor))),
+                    title: const Text("Account")),
                 ListTile(
                     onTap: () => changePage("Appearance"),
-                    hoverColor: backgroundColor,
                     leading: const Icon(Icons.brightness_medium_outlined),
-                    title: Text("Appearance",
-                        style: TextStyle(
-                            fontSize: theme.getMediumFont(context),
-                            color: textColor))),
+                    title: const Text("Appearance")),
                 ListTile(
                     onTap: () => changePage("Notifications"),
-                    hoverColor: backgroundColor,
                     leading: const Icon(Icons.notifications_outlined),
-                    title: Text("Notifications",
-                        style: TextStyle(
-                            fontSize: theme.getMediumFont(context),
-                            color: textColor))),
+                    title: const Text("Notifications")),
                 ListTile(
                     onTap: () => changePage("Network"),
-                    hoverColor: backgroundColor,
                     leading: const Icon(Icons.shield),
-                    title: Text("Network",
-                        style: TextStyle(
-                            fontSize: theme.getMediumFont(context),
-                            color: textColor))),
+                    title: const Text("Network")),
                 ListTile(
                     onTap: () {
                       Navigator.of(context)
                           .pushReplacementNamed(LNScreen.routeName);
                     },
-                    hoverColor: backgroundColor,
                     leading: const SidebarSvgIcon(
                         "assets/icons/icons-menu-lnmng.svg"),
-                    title: Text("LN Management",
-                        style: TextStyle(
-                            fontSize: theme.getMediumFont(context),
-                            color: textColor))),
+                    title: const Text("LN Management")),
                 ListTile(
                     onTap: () {
                       Navigator.of(context)
                           .pushReplacementNamed(ManageContent.routeName);
                     },
-                    hoverColor: backgroundColor,
                     leading: const SidebarSvgIcon(
                         "assets/icons/icons-menu-files.svg"),
-                    title: Text("Manage Content",
-                        style: TextStyle(
-                            fontSize: theme.getMediumFont(context),
-                            color: textColor))),
+                    title: const Text("Manage Content")),
                 ListTile(
                     onTap: () {
                       Navigator.of(context)
                           .pushReplacementNamed(PayStatsScreen.routeName);
                     },
-                    hoverColor: backgroundColor,
                     leading: const SidebarSvgIcon(
                         "assets/icons/icons-menu-stats.svg"),
-                    title: Text("Payment Stats",
-                        style: TextStyle(
-                            fontSize: theme.getMediumFont(context),
-                            color: textColor))),
+                    title: const Text("Payment Stats")),
                 ListTile(
                     onTap: () {
                       Navigator.of(context)
                           .pushReplacementNamed(LogScreen.routeName);
                     },
-                    hoverColor: backgroundColor,
                     leading: const Icon(Icons.list_outlined),
-                    title: Text("Logs",
-                        style: TextStyle(
-                            fontSize: theme.getMediumFont(context),
-                            color: textColor))),
+                    title: const Text("Logs")),
                 ListTile(
                     onTap: () => changePage("About"),
-                    hoverColor: backgroundColor,
                     leading: const Icon(Icons.question_mark_outlined),
-                    title: Text("About Bison Relay",
-                        style: TextStyle(
-                            fontSize: theme.getMediumFont(context),
-                            color: textColor))),
+                    title: const Text("About Bison Relay")),
                 ListTile(
                     onTap: shutdown,
-                    hoverColor: backgroundColor,
                     leading: const Icon(Icons.exit_to_app),
-                    title: Text("Quit Bison Relay",
-                        style: TextStyle(
-                            fontSize: theme.getMediumFont(context),
-                            color: textColor))),
+                    title: const Text("Quit Bison Relay")),
               ],
             ));
   }
@@ -435,43 +353,31 @@ class AccountSettingsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    var theme = Theme.of(context);
-    var textColor = theme.focusColor;
-
-    return Consumer<ThemeNotifier>(
-        builder: (context, theme, _) => Column(children: [
-              const SizedBox(height: 10),
-              SizedBox(
-                  width: 100,
-                  height: 100,
-                  child: SelfAvatar(client, onTap: pickAvatarCB)),
-              const SizedBox(height: 10),
-              Text(client.nick, style: TextStyle(color: textColor)),
-              const SizedBox(height: 10),
-              Copyable(client.publicID, TextStyle(color: textColor)),
-              const SizedBox(height: 10),
-              Expanded(
-                  child: ListView(children: [
-                ListTile(
-                  title: Text("Reset all KX",
-                      style: TextStyle(
-                          fontSize: theme.getLargeFont(context),
-                          color: textColor)),
-                  onTap: () => resetAllKXCB(context),
-                ),
-                ListTile(
-                  title: Text("Reset KX from users 30d stale",
-                      style: TextStyle(
-                          fontSize: theme.getLargeFont(context),
-                          color: textColor)),
-                  onTap: () => resetKXCB(context),
-                )
-              ]))
-            ]));
+    return Column(children: [
+      const SizedBox(height: 10),
+      SizedBox(
+          width: 100,
+          height: 100,
+          child: SelfAvatar(client, onTap: pickAvatarCB)),
+      const SizedBox(height: 10),
+      Text(client.nick),
+      const SizedBox(height: 10),
+      Copyable(client.publicID),
+      const SizedBox(height: 10),
+      Expanded(
+          child: ListView(children: [
+        ListTile(
+          title: const Text("Reset all KX"),
+          onTap: () => resetAllKXCB(context),
+        ),
+        ListTile(
+          title: const Text("Reset KX from users 30d stale"),
+          onTap: () => resetKXCB(context),
+        )
+      ]))
+    ]);
   }
 }
-
-enum FontChoices { small, medium, large, xlarge }
 
 class AppearanceSettingsScreen extends StatefulWidget {
   final ClientModel client;
@@ -483,155 +389,82 @@ class AppearanceSettingsScreen extends StatefulWidget {
       _AppearanceSettingsScreenState();
 }
 
+void _showSelectThemeDialog(BuildContext context, ThemeNotifier theme) {
+  void switchToTheme(BuildContext context, String v) {
+    theme.switchTheme(v);
+    Navigator.of(context).pop();
+  }
+
+  showDialog(
+      context: context,
+      builder: (BuildContext context) => SimpleDialog(
+          backgroundColor: theme.colors.primaryContainer,
+          shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.all(Radius.circular(16.0))),
+          children: appThemes.entries
+              .map((e) => ListTile(
+                  title:
+                      Txt(e.value.descr, color: TextColor.onPrimaryContainer),
+                  onTap: () => switchToTheme(context, e.key),
+                  leading: Radio<String>(
+                    value: e.key,
+                    groupValue: theme.getThemeMode(),
+                    onChanged: (_) => switchToTheme(context, e.key),
+                  )))
+              .toList()));
+}
+
+void _showSelectTextSizeDialog(BuildContext context, ThemeNotifier theme) {
+  void switchFontSize(BuildContext context, String key) {
+    theme.setFontSize(appFontSizes[key]?.scale ?? 1);
+  }
+
+  showDialog(
+      context: context,
+      builder: (BuildContext context) => SimpleDialog(
+          backgroundColor: theme.colors.primaryContainer,
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(Radius.circular(16.0)),
+          ),
+          children: appFontSizes.entries
+              .map((e) => ListTile(
+                  title:
+                      Txt(e.value.descr, color: TextColor.onPrimaryContainer),
+                  onTap: () => switchFontSize(context, e.key),
+                  leading: Radio<String>(
+                    value: e.key,
+                    groupValue: appFontSizeKeyForScale(theme.fontScale),
+                    onChanged: (_) => switchFontSize(context, e.key),
+                  )))
+              .toList()));
+}
+
 /// This is the private State class that goes with MyStatefulWidget.
 class _AppearanceSettingsScreenState extends State<AppearanceSettingsScreen> {
-  ClientModel get client => widget.client;
   ThemeNotifier get theme => widget.theme;
-  FontChoices _fontChoices = FontChoices.medium;
-
-  @override
-  void initState() {
-    super.initState();
-  }
-
-  @override
-  void didUpdateWidget(AppearanceSettingsScreen oldWidget) {
-    super.didUpdateWidget(oldWidget);
-  }
-
-  void switchToTheme(BuildContext context, String v) {
-    setState(() {
-      theme.switchTheme(v);
-      Navigator.of(context).pop();
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
-    var theme = Theme.of(context);
-    var backgroundColor = theme.backgroundColor;
-    var textColor = theme.focusColor;
-
-    return Consumer<ThemeNotifier>(
-        builder: (context, theme, _) => ListView(
-              children: [
-                ListTile(
-                    onTap: () => showDialog(
-                          context: context,
-                          builder: (BuildContext context) {
-                            return SimpleDialog(
-                                shadowColor: backgroundColor,
-                                insetPadding: const EdgeInsets.symmetric(
-                                    horizontal: 40.0, vertical: 275.0),
-                                backgroundColor: backgroundColor,
-                                shape: const RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.all(
-                                        Radius.circular(16.0))),
-                                children: appThemes.entries
-                                    .map((e) => ListTile(
-                                        title: Text(e.value.descr),
-                                        onTap: () =>
-                                            switchToTheme(context, e.key),
-                                        leading: Radio<String>(
-                                          value: e.key,
-                                          groupValue: theme.getThemeMode(),
-                                          onChanged: (_) =>
-                                              switchToTheme(context, e.key),
-                                        )))
-                                    .toList());
-                          },
-                        ),
-                    hoverColor: backgroundColor,
-                    leading: const Icon(Icons.person_outline),
-                    title: Text("Theme",
-                        style: TextStyle(
-                            fontSize: theme.getMediumFont(context),
-                            color: textColor))),
-                ListTile(
-                    onTap: () => showDialog(
-                          context: context,
-                          builder: (BuildContext context) {
-                            return Dialog(
-                                shadowColor: backgroundColor,
-                                insetPadding: const EdgeInsets.symmetric(
-                                    horizontal: 40.0, vertical: 255.0),
-                                backgroundColor: backgroundColor,
-                                shape: const RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.all(
-                                        Radius.circular(16.0))),
-                                child: Container(
-                                    margin: const EdgeInsets.all(20),
-                                    child: Column(children: [
-                                      Row(children: [
-                                        Text("Message font size",
-                                            style: TextStyle(
-                                                fontSize:
-                                                    theme.getLargeFont(context),
-                                                color: textColor)),
-                                      ]),
-                                      ListTile(
-                                          title: const Text('Small'),
-                                          leading: Radio<FontChoices>(
-                                            value: FontChoices.small,
-                                            groupValue: _fontChoices,
-                                            onChanged: (FontChoices? value) {
-                                              setState(() {
-                                                _fontChoices = value!;
-                                                theme.setFontSize(1);
-                                                Navigator.of(context).pop();
-                                              });
-                                            },
-                                          )),
-                                      ListTile(
-                                          title: const Text('Medium'),
-                                          leading: Radio<FontChoices>(
-                                            value: FontChoices.medium,
-                                            groupValue: _fontChoices,
-                                            onChanged: (FontChoices? value) {
-                                              setState(() {
-                                                _fontChoices = value!;
-                                                theme.setFontSize(2);
-                                                Navigator.of(context).pop();
-                                              });
-                                            },
-                                          )),
-                                      ListTile(
-                                          title: const Text('Large'),
-                                          leading: Radio<FontChoices>(
-                                            value: FontChoices.large,
-                                            groupValue: _fontChoices,
-                                            onChanged: (FontChoices? value) {
-                                              setState(() {
-                                                _fontChoices = value!;
-                                                theme.setFontSize(3);
-                                                Navigator.of(context).pop();
-                                              });
-                                            },
-                                          )),
-                                      ListTile(
-                                          title: const Text('Extra Large'),
-                                          leading: Radio<FontChoices>(
-                                            value: FontChoices.xlarge,
-                                            groupValue: _fontChoices,
-                                            onChanged: (FontChoices? value) {
-                                              setState(() {
-                                                _fontChoices = value!;
-                                                theme.setFontSize(4);
-                                                Navigator.of(context).pop();
-                                              });
-                                            },
-                                          )),
-                                    ])));
-                          },
-                        ),
-                    hoverColor: backgroundColor,
-                    leading: const Icon(Icons.person_outline),
-                    title: Text("Message font size",
-                        style: TextStyle(
-                            fontSize: theme.getMediumFont(context),
-                            color: textColor))),
-              ],
-            ));
+    return ListView(
+      children: [
+        ListTile(
+            onTap: () => _showSelectThemeDialog(context, theme),
+            leading: const Icon(Icons.color_lens_outlined),
+            title: const Text("Theme")),
+        ListTile(
+            onTap: () => _showSelectTextSizeDialog(context, theme),
+            leading: const Icon(Icons.text_increase),
+            title: const Text("Message font size")),
+        kDebugMode
+            ? ListTile(
+                title: const Text("Widget Test Screen"),
+                onTap: () {
+                  Navigator.of(context, rootNavigator: true)
+                      .pushNamed(ThemeTestScreen.routeName);
+                })
+            : const Empty(),
+      ],
+    );
   }
 }
 
@@ -647,47 +480,26 @@ class NotificationsSettingsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<ThemeNotifier>(
-        builder: (context, theme, _) => ListView(children: [
-              ListTile(
-                  leading: Text("Notifications",
-                      style: TextStyle(
-                          fontSize: theme.getLargeFont(context),
-                          color: Theme.of(context).focusColor)),
-                  trailing: Switch(
-                    // thumb color (round icon)
-                    activeColor: Theme.of(context).focusColor,
-                    activeTrackColor: Theme.of(context).highlightColor,
-                    inactiveThumbColor: Theme.of(context).indicatorColor,
-                    inactiveTrackColor: Theme.of(context).dividerColor,
-                    //splashRadius: 20.0,
-                    // boolean variable value
-                    value: notificationsEnabled,
-                    // changes the state of the switch
-                    onChanged: (value) =>
-                        // When disabling notifications, also disable foreground service.
-                        notficationsCB(value, !value ? false : null),
-                  )),
-              Platform.isAndroid
-                  ? ListTile(
-                      leading: Text("Use Foreground Service",
-                          style: TextStyle(
-                              fontSize: theme.getLargeFont(context),
-                              color: Theme.of(context).focusColor)),
-                      trailing: Switch(
-                        // thumb color (round icon)
-                        activeColor: Theme.of(context).focusColor,
-                        activeTrackColor: Theme.of(context).highlightColor,
-                        inactiveThumbColor: Theme.of(context).indicatorColor,
-                        inactiveTrackColor: Theme.of(context).dividerColor,
-                        //splashRadius: 20.0,
-                        // boolean variable value
-                        value: foregroundService,
-                        // changes the state of the switch
-                        onChanged: (value) => notficationsCB(null, value),
-                      ))
-                  : const Empty(),
-            ]));
+    return ListView(children: [
+      ListTile(
+          title: const Text("Notifications"),
+          trailing: Switch(
+            value: notificationsEnabled,
+            onChanged: (value) =>
+                // When disabling notifications, also disable foreground service.
+                notficationsCB(value, !value ? false : null),
+          )),
+      Platform.isAndroid
+          ? ListTile(
+              title: const Text("Use Foreground Service"),
+              trailing: Switch(
+                // boolean variable value
+                value: foregroundService,
+                // changes the state of the switch
+                onChanged: (value) => notficationsCB(null, value),
+              ))
+          : const Empty(),
+    ]);
   }
 }
 
@@ -729,44 +541,27 @@ class _NetworkSettingsScreenState extends State<NetworkSettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    var themeNtf = Provider.of<ThemeNotifier>(context);
-    var theme = themeNtf.getTheme();
-    var backgroundColor = theme.backgroundColor;
-    var textColor = theme.focusColor;
-
     Widget actionWidget;
     switch (client.connState.state.state) {
       case connStateOnline:
         actionWidget = ListTile(
             onTap: Golib.remainOffline,
-            hoverColor: backgroundColor,
             leading: const Icon(Icons.cloud_off),
-            title: Text("Remain Offline",
-                style: TextStyle(
-                    fontSize: themeNtf.getMediumFont(context),
-                    color: textColor)));
+            title: const Text("Remain Offline"));
         break;
 
       case connStateCheckingWallet:
         actionWidget = ListTile(
             onTap: Golib.skipWalletCheck,
-            hoverColor: backgroundColor,
             leading: const Icon(Icons.cloud_off),
-            title: Text("Skip Wallet Check",
-                style: TextStyle(
-                    fontSize: themeNtf.getMediumFont(context),
-                    color: textColor)));
+            title: const Text("Skip Wallet Check"));
         break;
 
       case connStateOffline:
         actionWidget = ListTile(
             onTap: Golib.goOnline,
-            hoverColor: backgroundColor,
             leading: const Icon(Icons.cloud_done),
-            title: Text("Go Online",
-                style: TextStyle(
-                    fontSize: themeNtf.getMediumFont(context),
-                    color: textColor)));
+            title: const Text("Go Online"));
         break;
 
       default:
@@ -776,9 +571,10 @@ class _NetworkSettingsScreenState extends State<NetworkSettingsScreen> {
 
     return Column(children: [
       client.connState.isCheckingWallet && client.connState.checkWalletErr != ""
-          ? Copyable(
-              "Offline due to failed wallet check: ${client.connState.checkWalletErr}",
-              TextStyle(color: textColor))
+          ? Container(
+              padding: const EdgeInsets.symmetric(vertical: 1, horizontal: 10),
+              child: Copyable(
+                  "Offline due to failed wallet check: ${client.connState.checkWalletErr}"))
           : const Empty(),
       Expanded(
           child: ListView(
@@ -786,15 +582,428 @@ class _NetworkSettingsScreenState extends State<NetworkSettingsScreen> {
           ListTile(
               onTap: () => Navigator.of(context, rootNavigator: true)
                   .pushNamed(ConfigNetworkScreen.routeName),
-              hoverColor: backgroundColor,
               leading: const Icon(Icons.network_ping),
-              title: Text("Proxy Settings",
-                  style: TextStyle(
-                      fontSize: themeNtf.getMediumFont(context),
-                      color: textColor))),
+              title: const Text("Proxy Settings")),
           actionWidget,
         ],
       ))
     ]);
+  }
+}
+
+const _loremOneLine =
+    "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua";
+
+class ThemeTestScreen extends StatelessWidget {
+  static String routeName = "/themeTest";
+
+  final ThemeNotifier theme;
+  const ThemeTestScreen(this.theme, {super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      floatingActionButton:
+          Column(mainAxisAlignment: MainAxisAlignment.end, children: [
+        IconButton(
+            onPressed: () => _showSelectThemeDialog(context, theme),
+            icon: const Icon(Icons.color_lens_outlined)),
+        IconButton(
+            onPressed: () => _showSelectTextSizeDialog(context, theme),
+            icon: const Icon(Icons.text_increase)),
+        IconButton(
+            icon: const Icon(Icons.cancel_outlined),
+            onPressed: () => Navigator.of(context).pop()),
+      ]),
+      body: SingleChildScrollView(
+          padding: const EdgeInsets.all(40),
+          child: Wrap(runSpacing: 20, spacing: 40, children: [
+            // These are build "manually" for comparison. In parciular, on
+            // material design v3, the "onXXXContainer" for primary and tertiary
+            // are different on dark mode.
+            const SizedBox(
+                width: double.infinity,
+                child: Text("The following are manually specified components")),
+
+            Container(
+              padding: const EdgeInsets.all(20),
+              color: theme.colors.primaryContainer,
+              constraints: const BoxConstraints.tightFor(width: 400),
+              child: Column(children: [
+                const Text("Primary Container"),
+                Text("Text with on color",
+                    style: TextStyle(color: theme.colors.onPrimaryContainer)),
+                const Text(
+                  "Custom color text",
+                  style: TextStyle(color: Colors.amber),
+                )
+              ]),
+            ),
+
+            Container(
+              padding: const EdgeInsets.all(20),
+              color: theme.colors.tertiaryContainer,
+              constraints: const BoxConstraints.tightFor(width: 400),
+              child: Column(children: [
+                const Text("Tertiary Container"),
+                Text("Text with on color",
+                    style: TextStyle(color: theme.colors.onTertiaryContainer)),
+                const Text(
+                  "Custom color text",
+                  style: TextStyle(color: Colors.amber),
+                )
+              ]),
+            ),
+
+            const Divider(),
+            const SizedBox(
+                width: double.infinity,
+                child: Text("Containers specified with app components")),
+
+            // Following are using the custom app components.
+
+            const Box(
+              padding: EdgeInsets.all(20),
+              color: SurfaceColor.primaryContainer,
+              constraints: BoxConstraints.tightFor(width: 400),
+              child: Column(children: [
+                Text("Primary Container"),
+                Txt("Text with on color", color: TextColor.onPrimaryContainer),
+                Text("Custom color text", style: TextStyle(color: Colors.amber))
+              ]),
+            ),
+
+            const Box(
+              padding: EdgeInsets.all(20),
+              color: SurfaceColor.secondaryContainer,
+              constraints: BoxConstraints.tightFor(width: 400),
+              child: Column(children: [
+                Text("Secondary Container"),
+                Txt("Text with on color",
+                    color: TextColor.onSecondaryContainer),
+                Text("Custom color text", style: TextStyle(color: Colors.amber))
+              ]),
+            ),
+
+            const Box(
+              padding: EdgeInsets.all(20),
+              color: SurfaceColor.tertiaryContainer,
+              constraints: BoxConstraints.tightFor(width: 400),
+              child: Column(children: [
+                Text("Tertiary Container"),
+                Txt("Text with on color", color: TextColor.onTertiaryContainer),
+                Text("Custom color text", style: TextStyle(color: Colors.amber))
+              ]),
+            ),
+
+            const Box(
+              padding: EdgeInsets.all(20),
+              color: SurfaceColor.errorContainer,
+              constraints: BoxConstraints.tightFor(width: 400),
+              child: Column(children: [
+                Text("Error Container"),
+                Txt("Text with on color", color: TextColor.onErrorContainer),
+                Text("Custom color text", style: TextStyle(color: Colors.amber))
+              ]),
+            ),
+
+            const Box(
+              padding: EdgeInsets.all(20),
+              color: SurfaceColor.surface,
+              constraints: BoxConstraints.tightFor(width: 400),
+              child: Column(children: [
+                Text("Surface"),
+                Txt("Text with on color", color: TextColor.onSurface),
+                Txt("Text with on variant color",
+                    color: TextColor.onSurfaceVariant),
+                Text("Custom color text", style: TextStyle(color: Colors.amber))
+              ]),
+            ),
+
+            const Box(
+              padding: EdgeInsets.all(20),
+              color: SurfaceColor.surfaceContainer,
+              constraints: BoxConstraints.tightFor(width: 400),
+              child: Column(children: [
+                Text("Surface Container"),
+                Txt("Text with on color", color: TextColor.onSurface),
+                Txt("Text with on variant color",
+                    color: TextColor.onSurfaceVariant),
+                Text("Custom color text", style: TextStyle(color: Colors.amber))
+              ]),
+            ),
+
+            const Box(
+              padding: EdgeInsets.all(20),
+              color: SurfaceColor.surfaceBright,
+              constraints: BoxConstraints.tightFor(width: 400),
+              child: Column(children: [
+                Text("Surface bright"),
+                Txt("Text with on color", color: TextColor.onSurface),
+                Txt("Text with on variant color",
+                    color: TextColor.onSurfaceVariant),
+                Text("Custom color text", style: TextStyle(color: Colors.amber))
+              ]),
+            ),
+
+            const Box(
+              padding: EdgeInsets.all(20),
+              color: SurfaceColor.surfaceDim,
+              constraints: BoxConstraints.tightFor(width: 400),
+              child: Column(children: [
+                Text("Surface dim"),
+                Txt("Text with on color", color: TextColor.onSurface),
+                Txt("Text with on variant color",
+                    color: TextColor.onSurfaceVariant),
+                Text("Custom color text", style: TextStyle(color: Colors.amber))
+              ]),
+            ),
+
+            const Box(
+              padding: EdgeInsets.all(20),
+              color: SurfaceColor.surfaceContainerLowest,
+              constraints: BoxConstraints.tightFor(width: 400),
+              child: Column(children: [
+                Text("Surface container lowest"),
+                Txt("Text with on color", color: TextColor.onSurface),
+                Txt("Text with on variant color",
+                    color: TextColor.onSurfaceVariant),
+                Text("Custom color text", style: TextStyle(color: Colors.amber))
+              ]),
+            ),
+
+            const Box(
+              padding: EdgeInsets.all(20),
+              color: SurfaceColor.surfaceContainerLow,
+              constraints: BoxConstraints.tightFor(width: 400),
+              child: Column(children: [
+                Text("Surface container low"),
+                Txt("Text with on color", color: TextColor.onSurface),
+                Txt("Text with on variant color",
+                    color: TextColor.onSurfaceVariant),
+                Text("Custom color text", style: TextStyle(color: Colors.amber))
+              ]),
+            ),
+
+            const Box(
+              padding: EdgeInsets.all(20),
+              color: SurfaceColor.surfaceContainerHigh,
+              constraints: BoxConstraints.tightFor(width: 400),
+              child: Column(children: [
+                Text("Surface container high"),
+                Txt("Text with on color", color: TextColor.onSurface),
+                Txt("Text with on variant color",
+                    color: TextColor.onSurfaceVariant),
+                Text("Custom color text", style: TextStyle(color: Colors.amber))
+              ]),
+            ),
+
+            const Box(
+              padding: EdgeInsets.all(20),
+              color: SurfaceColor.surfaceContainerHighest,
+              constraints: BoxConstraints.tightFor(width: 400),
+              child: Column(children: [
+                Text("Surface container highest"),
+                Txt("Text with on color", color: TextColor.onSurface),
+                Txt("Text with on variant color",
+                    color: TextColor.onSurfaceVariant),
+                Text("Custom color text", style: TextStyle(color: Colors.amber))
+              ]),
+            ),
+
+            const Box(
+              padding: EdgeInsets.all(20),
+              color: SurfaceColor.inverseSurface,
+              constraints: BoxConstraints.tightFor(width: 400),
+              child: Column(children: [
+                Text("Inverse Surface"),
+                Txt("Text with on color", color: TextColor.onInverseSurface),
+                Txt("Text with on inverse primary",
+                    color: TextColor.inversePrimary),
+                Text("Custom color text", style: TextStyle(color: Colors.amber))
+              ]),
+            ),
+
+            const SizedBox(
+                width: double.infinity,
+                child: Txt("Text on surface (all defaults)")),
+
+            const Divider(),
+            const SizedBox(
+                width: double.infinity,
+                child: Text(
+                    "Active colors (not usually used for containers, only for components)")),
+
+            const Box(
+              padding: EdgeInsets.all(20),
+              color: SurfaceColor.primary,
+              constraints: BoxConstraints.tightFor(width: 400),
+              child: Column(children: [
+                Text("Primary"),
+                Txt("Text with on color", color: TextColor.onPrimary),
+                Text("Custom color text", style: TextStyle(color: Colors.amber))
+              ]),
+            ),
+
+            const Box(
+              padding: EdgeInsets.all(20),
+              color: SurfaceColor.secondary,
+              constraints: BoxConstraints.tightFor(width: 400),
+              child: Column(children: [
+                Text("Secondary"),
+                Txt("Text with on color", color: TextColor.onSecondary),
+                Text("Custom color text", style: TextStyle(color: Colors.amber))
+              ]),
+            ),
+
+            const Box(
+              padding: EdgeInsets.all(20),
+              color: SurfaceColor.tertiary,
+              constraints: BoxConstraints.tightFor(width: 400),
+              child: Column(children: [
+                Text("Tertiary"),
+                Txt("Text with on color", color: TextColor.onTertiary),
+                Text("Custom color text", style: TextStyle(color: Colors.amber))
+              ]),
+            ),
+
+            const Box(
+              padding: EdgeInsets.all(20),
+              color: SurfaceColor.error,
+              constraints: BoxConstraints.tightFor(width: 400),
+              child: Column(children: [
+                Text("Error"),
+                Txt("Text with on color", color: TextColor.onError),
+                Text("Custom color text", style: TextStyle(color: Colors.amber))
+              ]),
+            ),
+
+            const Box(
+              padding: EdgeInsets.all(20),
+              color: SurfaceColor.inversePrimary,
+              constraints: BoxConstraints.tightFor(width: 400),
+              child: Column(children: [
+                Text("Inverse Primary"),
+                Text("(used when the background surface is inverseSurface)"),
+                Txt("Text with on color", color: TextColor.onSurface),
+                Text("Custom color text", style: TextStyle(color: Colors.amber))
+              ]),
+            ),
+
+            const Divider(),
+            const SizedBox(width: double.infinity, child: Text("Typography")),
+
+            const SizedBox(
+                width: double.infinity, child: Txt.S("Small $_loremOneLine")),
+            const SizedBox(
+                width: double.infinity, child: Txt("System $_loremOneLine")),
+            const SizedBox(
+                width: double.infinity, child: Txt.M("Medium $_loremOneLine")),
+            const SizedBox(
+                width: double.infinity, child: Txt.L("Large $_loremOneLine")),
+            const SizedBox(
+                width: double.infinity, child: Txt.H("Huge $_loremOneLine")),
+
+            const Divider(),
+            const SizedBox(width: double.infinity, child: Text("Components")),
+
+            Container(
+              padding: const EdgeInsets.all(20),
+              constraints: const BoxConstraints.tightFor(width: 400),
+              child: Wrap(
+                spacing: 20,
+                runSpacing: 10,
+                children: [
+                  const SizedBox(
+                      width: double.infinity, child: Text("Buttons")),
+                  ElevatedButton(
+                      onPressed: () {}, child: const Text("Elevated Button")),
+                  TextButton(
+                      onPressed: () {}, child: const Text("Text Button")),
+                  FilledButton(
+                      onPressed: () {}, child: const Text("Filled Button")),
+                  FilledButton.tonal(
+                      onPressed: () {},
+                      child: const Text("Filled Tonal Button")),
+                  OutlinedButton(
+                      onPressed: () {}, child: const Text("Outlined Button")),
+                  CancelButton(onPressed: () {}),
+                  IconButton(
+                      onPressed: () {},
+                      icon: const Icon(Icons.baby_changing_station_rounded)),
+                  FloatingActionButton.small(
+                      heroTag: "test.fab.small",
+                      onPressed: () {},
+                      child: const Icon(Icons.settings)),
+                  FloatingActionButton.large(
+                      heroTag: "test.fab.large",
+                      key: const Key("test.fab.large"),
+                      onPressed: () {},
+                      child: const Icon(Icons.checklist_sharp)),
+                  FloatingActionButton.extended(
+                      heroTag: "test.fab.extended",
+                      key: const Key("test.fab.extended"),
+                      onPressed: () {},
+                      label: const Text("Do the thing"),
+                      icon: const Icon(Icons.account_tree)),
+                ],
+              ),
+            ),
+
+            Container(
+              padding: const EdgeInsets.all(20),
+              constraints: const BoxConstraints.tightFor(width: 400),
+              child: const Wrap(
+                spacing: 20,
+                runSpacing: 10,
+                children: [
+                  SizedBox(
+                      width: double.infinity, child: Text("Disabled Buttons")),
+                  ElevatedButton(
+                      onPressed: null, child: Text("Elevated Button")),
+                  TextButton(onPressed: null, child: Text("Text Button")),
+                  FilledButton(onPressed: null, child: Text("Filled Button")),
+                  FilledButton.tonal(
+                      onPressed: null, child: Text("Filled Tonal Button")),
+                  OutlinedButton(
+                      onPressed: null, child: Text("Outlined Button")),
+                  CancelButton(onPressed: null),
+                  IconButton(
+                      onPressed: null,
+                      icon: Icon(Icons.baby_changing_station_rounded)),
+                  FloatingActionButton.small(
+                      heroTag: "test.fab.small.disabled",
+                      onPressed: null,
+                      child: Icon(Icons.settings)),
+                  FloatingActionButton.large(
+                      heroTag: "test.fab.large.disabled",
+                      onPressed: null,
+                      child: Icon(Icons.checklist_sharp)),
+                  FloatingActionButton.extended(
+                      heroTag: "test.fab.extended.disabled",
+                      onPressed: null,
+                      label: Text("Do the thing"),
+                      icon: Icon(Icons.account_tree)),
+                ],
+              ),
+            ),
+
+            Container(
+                padding: const EdgeInsets.all(20),
+                constraints: const BoxConstraints.tightFor(width: 400),
+                child: Wrap(spacing: 20, runSpacing: 10, children: [
+                  const SizedBox(width: double.infinity, child: Text("List")),
+                  SizedBox(
+                      height: 180,
+                      child: ListView.builder(
+                          itemCount: 10,
+                          itemBuilder: (context, index) => ListTile(
+                                selected: index == 6,
+                                title: Txt.S("Item $index"),
+                                onTap: () {},
+                              )))
+                ])),
+          ])),
+    );
   }
 }

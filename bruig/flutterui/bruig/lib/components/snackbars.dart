@@ -7,7 +7,7 @@ import 'package:provider/provider.dart';
 class SnackbarDisplayer extends StatefulWidget {
   final SnackBarModel snackBar;
   final Widget child;
-  SnackbarDisplayer(this.snackBar, this.child, {super.key});
+  const SnackbarDisplayer(this.snackBar, this.child, {super.key});
 
   @override
   State<SnackbarDisplayer> createState() => _SnackbarDisplayerState();
@@ -27,13 +27,17 @@ class _SnackbarDisplayerState extends State<SnackbarDisplayer> {
         setState(() {
           snackBarMsg = newSnackbarMessage;
         });
+        var bgColor = snackBarMsg.error
+            ? SurfaceColor.errorContainer
+            : SurfaceColor.primaryContainer;
+        var textColor = textColorForSurfaceColor[bgColor];
+        var theme = Provider.of<ThemeNotifier>(context, listen: false);
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            backgroundColor:
-                snackBarMsg.error ? Colors.red[300] : Colors.green[300],
-            content: Consumer<ThemeNotifier>(
-                builder: (context, theme, _) => Copyable(snackBarMsg.msg,
-                    TextStyle(color: theme.getTheme().focusColor),
-                    showSnackbar: false))));
+            backgroundColor: theme.surfaceColor(bgColor),
+            content: Copyable(snackBarMsg.msg,
+                textStyle:
+                    theme.textStyleFor(context, TextSize.small, textColor),
+                showSnackbar: false)));
       }
     }
   }

@@ -94,9 +94,8 @@ class _MoveOldVersionWalletPageState extends State<MoveOldVersionWalletPage> {
                                       color: theme.getTheme().dividerColor,
                                       fontSize: theme.getMediumFont(context),
                                       fontWeight: FontWeight.w300)),
-                              Copyable(
-                                  _warnMsg2,
-                                  TextStyle(
+                              Copyable(_warnMsg2,
+                                  textStyle: TextStyle(
                                       color: theme.getTheme().dividerColor,
                                       fontSize: theme.getMediumFont(context),
                                       fontWeight: FontWeight.w300)),

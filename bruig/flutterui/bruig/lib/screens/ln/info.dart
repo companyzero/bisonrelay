@@ -288,9 +288,8 @@ class _LNInfoPageState extends State<LNInfoPage> {
                                               theme.getMediumFont(context),
                                           color: secondaryTextColor)),
                                   const SizedBox(height: 5),
-                                  Copyable(
-                                      info.version.trim(),
-                                      TextStyle(
+                                  Copyable(info.version.trim(),
+                                      textStyle: TextStyle(
                                           letterSpacing: 1,
                                           fontWeight: FontWeight.w300,
                                           fontSize:
@@ -314,9 +313,8 @@ class _LNInfoPageState extends State<LNInfoPage> {
                                               theme.getMediumFont(context),
                                           color: secondaryTextColor)),
                                   const SizedBox(height: 5),
-                                  Copyable(
-                                      info.identityPubkey.trim(),
-                                      TextStyle(
+                                  Copyable(info.identityPubkey.trim(),
+                                      textStyle: TextStyle(
                                           letterSpacing: 1,
                                           fontWeight: FontWeight.w300,
                                           color: textColor,
@@ -346,9 +344,8 @@ class _LNInfoPageState extends State<LNInfoPage> {
                                         borderRadius: BorderRadius.circular(10),
                                       ),
                                       padding: const EdgeInsets.all(8),
-                                      child: Copyable(
-                                          info.blockHash.toString(),
-                                          TextStyle(
+                                      child: Copyable(info.blockHash.toString(),
+                                          textStyle: TextStyle(
                                               letterSpacing: 1,
                                               color: textColor,
                                               fontSize: theme
@@ -364,9 +361,8 @@ class _LNInfoPageState extends State<LNInfoPage> {
                                 text: "New Deposit Address",
                               ),
                               const SizedBox(height: 10),
-                              Copyable(
-                                  depositAddr,
-                                  TextStyle(
+                              Copyable(depositAddr,
+                                  textStyle: TextStyle(
                                       color: textColor,
                                       fontSize: theme.getMediumFont(context))),
                             ])),
@@ -537,21 +533,18 @@ class _LNInfoPageState extends State<LNInfoPage> {
                                   fontSize: theme.getSmallFont(context),
                                   color: textColor)),
                           const SizedBox(height: 8),
-                          Copyable(
-                              info.version.trim(),
-                              TextStyle(
+                          Copyable(info.version.trim(),
+                              textStyle: TextStyle(
                                   fontSize: theme.getSmallFont(context),
                                   color: textColor)),
                           const SizedBox(height: 8),
-                          Copyable(
-                              info.identityPubkey.trim(),
-                              TextStyle(
+                          Copyable(info.identityPubkey.trim(),
+                              textStyle: TextStyle(
                                   color: textColor,
                                   fontSize: theme.getSmallFont(context))),
                           const SizedBox(height: 8),
-                          Copyable(
-                              info.blockHash.toString(),
-                              TextStyle(
+                          Copyable(info.blockHash.toString(),
+                              textStyle: TextStyle(
                                   color: textColor,
                                   fontSize: theme.getSmallFont(context)))
                         ]),
@@ -565,9 +558,8 @@ class _LNInfoPageState extends State<LNInfoPage> {
                                 fontSize: theme.getSmallFont(context),
                                 color: textColor))),
                     const SizedBox(width: 20),
-                    Copyable(
-                        depositAddr,
-                        TextStyle(
+                    Copyable(depositAddr,
+                        textStyle: TextStyle(
                             color: textColor,
                             fontSize: theme.getMediumFont(context))),
                   ]),

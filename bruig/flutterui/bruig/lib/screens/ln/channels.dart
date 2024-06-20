@@ -61,15 +61,15 @@ class _ChanW extends StatelessWidget {
                           Copyable(
                               textOverflow: TextOverflow.ellipsis,
                               chan.remotePubkey,
-                              valTs)),
+                              textStyle: valTs)),
                       Tuple2(
                           Text("Channel Point:", style: labelTs),
                           Copyable(
                               textOverflow: TextOverflow.ellipsis,
                               chan.channelPoint,
-                              valTs)),
+                              textStyle: valTs)),
                       Tuple2(Text("Channel ID:", style: labelTs),
-                          Copyable(chan.shortChanID, valTs)),
+                          Copyable(chan.shortChanID, textStyle: valTs)),
                       Tuple2(Text("Channel Capacity:", style: labelTs),
                           Text("$capacity DCR", style: valTs)),
                       ...(isScreenSmall
@@ -126,13 +126,15 @@ Widget pendingChanSummary(BuildContext context, LNPendingChannel chan,
             Copyable(
                 textOverflow: TextOverflow.ellipsis,
                 chan.remoteNodePub,
-                valTs)),
+                textStyle: valTs)),
         Tuple2(
             Text("Channel Point:", style: labelTs),
             Copyable(
-                textOverflow: TextOverflow.ellipsis, chan.channelPoint, valTs)),
+                textOverflow: TextOverflow.ellipsis,
+                chan.channelPoint,
+                textStyle: valTs)),
         Tuple2(Text("Channel ID:", style: labelTs),
-            Copyable(chan.shortChanID, valTs)),
+            Copyable(chan.shortChanID, textStyle: valTs)),
         Tuple2(Text("Channel Capacity:", style: labelTs),
             Text("$capacity DCR", style: valTs)),
         ...(isScreenSmall
@@ -156,7 +158,7 @@ Widget pendingChanSummary(BuildContext context, LNPendingChannel chan,
         ...(closingTx != null
             ? [
                 Tuple2(Text("Closing Tx:", style: labelTs),
-                    Copyable(closingTx, valTs))
+                    Copyable(closingTx, textStyle: valTs))
               ]
             : []),
       ]);

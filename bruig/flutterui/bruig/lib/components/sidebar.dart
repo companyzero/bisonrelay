@@ -134,14 +134,9 @@ class _SidebarState extends State<Sidebar> with WindowListener {
   @override
   Widget build(BuildContext context) {
     var theme = Theme.of(context);
-    var textColor = theme.focusColor; // MESSAGE TEXT COLOR
     var selectedColor = theme.highlightColor;
-    var unselectedTextColor = theme.dividerColor;
-    var sidebarBackground = theme.backgroundColor;
-    var scaffoldBackgroundColor = theme.canvasColor;
-    var hoverColor = theme.hoverColor;
 
-    final divider = Divider(color: scaffoldBackgroundColor, height: 2);
+    const divider = Divider(height: 2);
     return Consumer2<ClientModel, ThemeNotifier>(
         builder: (context, client, theme, child) {
       return SidebarX(
@@ -151,28 +146,16 @@ class _SidebarState extends State<Sidebar> with WindowListener {
           width: 70,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(3),
-            gradient: LinearGradient(
-                begin: Alignment.centerRight,
-                end: Alignment.centerLeft,
-                colors: [
-                  hoverColor,
-                  sidebarBackground,
-                  sidebarBackground,
-                ],
-                stops: const [
-                  0,
-                  0.51,
-                  1
-                ]),
+            color: theme.colors.surfaceContainerLow,
+            border: Border(
+                right: BorderSide(color: theme.extraColors.sidebarDivider)),
           ),
-          hoverColor: scaffoldBackgroundColor,
-          hoverTextStyle: TextStyle(
-              color: textColor, fontSize: theme.getMediumFont(context)),
-          textStyle: TextStyle(
-              color: unselectedTextColor,
-              fontSize: theme.getMediumFont(context)),
-          selectedTextStyle: TextStyle(
-              color: textColor, fontSize: theme.getMediumFont(context)),
+          hoverTextStyle:
+              theme.textStyleFor(context, null, TextColor.onSurfaceVariant),
+          textStyle:
+              theme.textStyleFor(context, null, TextColor.onSurfaceVariant),
+          selectedTextStyle:
+              theme.textStyleFor(context, null, TextColor.onSurface),
           itemPadding:
               const EdgeInsets.only(top: 7, bottom: 6, left: 12, right: 12),
           itemMargin:
@@ -188,10 +171,10 @@ class _SidebarState extends State<Sidebar> with WindowListener {
           ),
           selectedItemDecoration: BoxDecoration(
             borderRadius: BorderRadius.circular(5),
-            color: selectedColor,
+            color: theme.surfaceColor(SurfaceColor.surfaceContainerHighest),
           ),
           iconTheme: IconThemeData(
-            color: unselectedTextColor,
+            color: theme.colors.onSurfaceVariant,
             size: 21,
           ),
           selectedIconTheme: IconThemeData(
@@ -199,48 +182,28 @@ class _SidebarState extends State<Sidebar> with WindowListener {
             size: 21,
           ),
         ),
-        extendedTheme: SidebarXTheme(
-          margin: const EdgeInsets.all(1),
-          width: 200,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(5),
-            gradient: LinearGradient(
-                begin: Alignment.centerRight,
-                end: Alignment.centerLeft,
-                colors: [
-                  hoverColor,
-                  sidebarBackground,
-                  sidebarBackground,
-                ],
-                stops: const [
-                  0,
-                  0.51,
-                  1
-                ]),
-          ),
-        ),
-        footerDivider: divider,
+        extendedTheme: const SidebarXTheme(width: 200),
+        footerDivider:
+            Divider(height: 2, color: theme.extraColors.sidebarDivider),
         footerBuilder: (context, something) => Container(
             margin: const EdgeInsets.all(5),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(5),
-            ),
             child: NotificationsDrawerHeader(widget.ntfns)),
         controller: ctrl,
         items: mainMenu.menus
             .map((e) => SidebarXItem(
                   label: e.label,
-                  iconWidget: (e.label == "Chat" && hasUnreadMsgs) ||
-                          (e.label == "Feed" && feed.hasUnreadPostsComments)
-                      ? Stack(children: [
-                          Container(
-                              padding: const EdgeInsets.all(3),
-                              child: e.icon ?? const Empty()),
-                          const Positioned(
-                              top: 1, right: 1, child: RedDotIndicator()),
-                        ])
-                      : Container(
-                          padding: const EdgeInsets.all(3), child: e.icon),
+                  iconBuilder: (selected, hovered) =>
+                      (e.label == "Chat" && hasUnreadMsgs) ||
+                              (e.label == "Feed" && feed.hasUnreadPostsComments)
+                          ? Stack(children: [
+                              Container(
+                                  padding: const EdgeInsets.all(3),
+                                  child: e.icon ?? const Empty()),
+                              const Positioned(
+                                  top: 1, right: 1, child: RedDotIndicator()),
+                            ])
+                          : Container(
+                              padding: const EdgeInsets.all(3), child: e.icon),
                   onTap: () => switchScreen(e.routeName),
                 ))
             .toList(),

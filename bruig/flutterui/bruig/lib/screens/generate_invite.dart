@@ -156,13 +156,13 @@ class _GenerateInviteScreenState extends State<GenerateInviteScreen> {
     return [
       Text("Generated invite with key", style: ts),
       const SizedBox(height: 20),
-      Copyable(gen.key, ts),
+      Copyable(gen.key, textStyle: ts),
       ...(gen.funds != null
           ? [
               const SizedBox(height: 20),
               Text("Invite funds available after the following TX is confirmed",
                   style: ts),
-              Copyable(gen.funds!.txid, ts),
+              Copyable(gen.funds!.txid, textStyle: ts),
             ]
           : []),
       const SizedBox(height: 20),

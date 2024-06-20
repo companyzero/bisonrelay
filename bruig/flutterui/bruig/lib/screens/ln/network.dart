@@ -103,9 +103,8 @@ class _QueriedRouteW extends StatelessWidget {
                         fontSize: theme.getSmallFont(context),
                         color: textColor)),
                 const SizedBox(height: 8),
-                Copyable(
-                    h.pubkey,
-                    TextStyle(
+                Copyable(h.pubkey,
+                    textStyle: TextStyle(
                         fontSize: theme.getSmallFont(context),
                         color: textColor)),
                 const SizedBox(height: 8),
@@ -210,9 +209,8 @@ class _NodeInfo extends StatelessWidget {
                         fontSize: theme.getSmallFont(context),
                         color: textColor)),
                 const SizedBox(height: 8),
-                Copyable(
-                    chan.channelPoint,
-                    TextStyle(
+                Copyable(chan.channelPoint,
+                    textStyle: TextStyle(
                         fontSize: theme.getSmallFont(context),
                         color: textColor)),
                 const SizedBox(height: 8),
@@ -241,13 +239,11 @@ class _NodeInfo extends StatelessWidget {
     var secondaryTextColor = theme.dividerColor;
     return Consumer<ThemeNotifier>(
         builder: (context, theme, _) => Column(children: [
-              Copyable(
-                  nodeInfo.node.pubkey,
-                  TextStyle(
+              Copyable(nodeInfo.node.pubkey,
+                  textStyle: TextStyle(
                       fontSize: theme.getSmallFont(context), color: textColor)),
-              Copyable(
-                  nodeInfo.node.alias,
-                  TextStyle(
+              Copyable(nodeInfo.node.alias,
+                  textStyle: TextStyle(
                       fontSize: theme.getSmallFont(context), color: textColor)),
               Text("Number of channels: ${nodeInfo.numChannels}",
                   style: TextStyle(

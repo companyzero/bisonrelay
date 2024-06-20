@@ -501,9 +501,8 @@ class ManageGCScreenState extends State<ManageGCScreenForChat> {
                             fontSize: theme.getSmallFont(context))),
                     SizedBox(
                         width: 200,
-                        child: Copyable(
-                            gcID,
-                            TextStyle(
+                        child: Copyable(gcID,
+                            textStyle: TextStyle(
                                 overflow: TextOverflow.ellipsis,
                                 color: textColor,
                                 fontWeight: FontWeight.w100,

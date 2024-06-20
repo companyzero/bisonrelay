@@ -212,7 +212,8 @@ class _UserProfileState extends State<UserProfile> {
                 ],
               ),
               Copyable(chat.id,
-                  TextStyle(color: textColor, fontWeight: FontWeight.w100)),
+                  textStyle:
+                      TextStyle(color: textColor, fontWeight: FontWeight.w100)),
               const SizedBox(height: 20),
               Wrap(spacing: 10, runSpacing: 10, children: [
                 isIgnored
@@ -268,21 +269,21 @@ class _UserProfileState extends State<UserProfile> {
                       Text("Send RV", style: headTS),
                       Copyable(
                           "${ratchetInfo.sendRVPlain} (${_shortLog(ratchetInfo.sendRV)}...)",
-                          txtTS)),
+                          textStyle: txtTS)),
                   Tuple2(
                       Text("Receive RV", style: headTS),
                       Copyable(
                           "${ratchetInfo.recvRVPlain} (${_shortLog(ratchetInfo.recvRV)}...)",
-                          txtTS)),
+                          textStyle: txtTS)),
                   Tuple2(
                       Text("Drain RV", style: headTS),
                       Copyable(
                           "${ratchetInfo.drainRVPlain} (${_shortLog(ratchetInfo.drainRV)}...)",
-                          txtTS)),
+                          textStyle: txtTS)),
                   Tuple2(Text("My Reset RV", style: headTS),
-                      Copyable(ratchetInfo.myResetRV, txtTS)),
+                      Copyable(ratchetInfo.myResetRV, textStyle: txtTS)),
                   Tuple2(Text("Their Reset RV", style: headTS),
-                      Copyable(ratchetInfo.theirResetRV, txtTS)),
+                      Copyable(ratchetInfo.theirResetRV, textStyle: txtTS)),
                   Tuple2(Text("Saved Keys", style: headTS),
                       Text(ratchetInfo.nbSavedKeys.toString(), style: txtTS)),
                   Tuple2(Text("Will Ratchet", style: headTS),

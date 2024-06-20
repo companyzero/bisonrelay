@@ -1,6 +1,7 @@
 import 'package:bruig/components/copyable.dart';
 import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/components/interactive_avatar.dart';
+import 'package:bruig/components/text.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/models/menus.dart';
 import 'package:bruig/models/uistate.dart';
@@ -72,10 +73,8 @@ class _ChatSideMenuState extends State<ChatSideMenu> {
 
     var themeNtf = Provider.of<ThemeNotifier>(context);
     var theme = themeNtf.getTheme();
-    var textColor = theme.dividerColor;
     var darkTextColor = theme.indicatorColor;
     var selectedBackgroundColor = theme.highlightColor;
-    var itemTS = TextStyle(fontSize: themeNtf.getSmallFont(context));
 
     bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
 
@@ -87,32 +86,26 @@ class _ChatSideMenuState extends State<ChatSideMenu> {
         ),
         Visibility(
           visible: chat.isGC,
-          child: Text("Group Chat",
-              style: TextStyle(
-                  fontSize: themeNtf.getMediumFont(context), color: textColor)),
+          child: const Txt.S("Group Chat", color: TextColor.onSurfaceVariant),
         ),
-        Text(chat.nick,
-            style: TextStyle(
-                fontSize: themeNtf.getMediumFont(context), color: textColor)),
+        Txt.S(chat.nick, color: TextColor.onSurfaceVariant),
         Container(
             margin: const EdgeInsets.all(10),
-            child: Copyable(
-                chat.id,
-                TextStyle(
-                    fontSize: themeNtf.getSmallFont(context),
-                    color: textColor,
-                    overflow: TextOverflow.ellipsis))),
+            child: Copyable.txt(Txt.S(
+              chat.id,
+              // color: TextColor.onSurfaceVariant,
+              overflow: TextOverflow.ellipsis,
+            ))),
         Expanded(
             child: ListView.builder(
                 shrinkWrap: true,
                 itemCount: menus.length,
                 itemBuilder: (context, index) => ListTile(
-                    title: Text(menus[index].label, style: itemTS),
+                    title: Txt.S(menus[index].label),
                     onTap: () {
                       menus[index].onSelected(context, client);
                       client.ui.chatSideMenuActive.clear();
-                    },
-                    hoverColor: Colors.black))),
+                    }))),
       ]),
       isScreenSmall
           ? const Empty()
