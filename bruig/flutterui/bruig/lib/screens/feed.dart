@@ -28,9 +28,10 @@ class FeedScreenTitle extends StatelessWidget {
       if (menu.activePageTab <= 0) {
         return const Txt.L("Feed");
       }
-      var idx = LnScreenSub.indexWhere((e) => e.pageTab == menu.activePageTab);
+      var idx =
+          feedScreenSub.indexWhere((e) => e.pageTab == menu.activePageTab);
 
-      return Txt.L("Feed / ${FeedScreenSub[idx].label}");
+      return Txt.L("Feed / ${feedScreenSub[idx].label}");
     });
   }
 }

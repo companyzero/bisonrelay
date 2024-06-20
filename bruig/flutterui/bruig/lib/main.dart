@@ -259,7 +259,6 @@ class _AppState extends State<App> with WindowListener {
         addressBookLoaded(true);
         return;
       }
-      print("XXXXXX $exception");
       navkey.currentState!.pushNamed('/fatalError', arguments: exception);
     }
   }

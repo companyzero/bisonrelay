@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 // import 'dart:typed_data';
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 
 import 'definitions.dart';
@@ -107,7 +108,7 @@ class MockPlugin with NtfStreams /*implements PluginPlatform*/ {
   String get majorPlatform => "mock";
   String get minorPlatform => "mock";
   Future<void> setTag(String t) async => tag = t;
-  Future<void> hello() async => print("hello from mock");
+  Future<void> hello() async => debugPrint("hello from mock");
   Future<String> getURL(String url) async =>
       _threw(failNextGetURL) ?? "xxx.xxx.xxx.xxx";
 
@@ -330,8 +331,8 @@ class MockPlugin with NtfStreams /*implements PluginPlatform*/ {
 
   Future<void> removeGcUser(String gc, String nick) async {
     if (nick == "fran") throw Exception("bugging out as requested");
-    return Future.delayed(
-        const Duration(seconds: 3), () => print(gcBooks[gc]?.remove(nick)));
+    return Future.delayed(const Duration(seconds: 3),
+        () => debugPrint("${gcBooks[gc]?.remove(nick)}"));
   }
 
   Future<void> confirmGCInvite(InviteToGC invite) => throw "unimplemented";

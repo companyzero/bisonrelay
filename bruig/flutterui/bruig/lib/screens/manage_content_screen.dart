@@ -20,9 +20,10 @@ class ManageContentScreenTitle extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer2<MainMenuModel, ThemeNotifier>(
         builder: (context, menu, theme, child) {
-      var idx = LnScreenSub.indexWhere((e) => e.pageTab == menu.activePageTab);
+      var idx = manageContentScreenSub
+          .indexWhere((e) => e.pageTab == menu.activePageTab);
 
-      return Txt.L("Manage Content / ${ManageContentScreenSub[idx].label}");
+      return Txt.L("Manage Content / ${manageContentScreenSub[idx].label}");
     });
   }
 }

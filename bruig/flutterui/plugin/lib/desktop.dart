@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:ffi/ffi.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'dart:ffi';
 import 'dart:isolate';
@@ -132,7 +133,7 @@ mixin BaseDesktopPlatform on NtfStreams {
     while (true) {
       await for (List cmdReply in rp) {
         if (cmdReply.length < 3) {
-          print("Received wrong nb of elements from isolate: $cmdReply");
+          debugPrint("Received wrong nb of elements from isolate: $cmdReply");
           continue;
         }
         int id = cmdReply[0];
@@ -149,12 +150,13 @@ mixin BaseDesktopPlatform on NtfStreams {
               // Probably a decode error. Keep handling stuff.
               var err =
                   "Unable to handle notification ${cmdType.toRadixString(16)}: $exception\n$trace";
-              print(err);
-              print(jsonPayload);
+              debugPrint(
+                  "Error notification from golib: $err\nPayload: $jsonPayload");
+              // ignore: use_rethrow_when_possible
               (() async => throw exception)();
             }
           } else {
-            print("Received reply for unknown call $id - $cmdReply");
+            debugPrint("Received reply for unknown call $id - $cmdReply");
           }
 
           continue;

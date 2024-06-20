@@ -32,9 +32,9 @@ class LNScreenTitle extends StatelessWidget {
       if (menu.activePageTab <= 0) {
         return const Txt.L("LN");
       }
-      var idx = LnScreenSub.indexWhere((e) => e.pageTab == menu.activePageTab);
+      var idx = lnScreenSub.indexWhere((e) => e.pageTab == menu.activePageTab);
 
-      return Txt.L("LN / ${LnScreenSub[idx].label}");
+      return Txt.L("LN / ${lnScreenSub[idx].label}");
     });
   }
 }

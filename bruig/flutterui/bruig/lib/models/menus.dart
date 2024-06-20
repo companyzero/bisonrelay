@@ -45,20 +45,20 @@ class SubMenuInfo {
   SubMenuInfo(this.pageTab, this.label);
 }
 
-final List<SubMenuInfo> FeedScreenSub = [
+final List<SubMenuInfo> feedScreenSub = [
   SubMenuInfo(0, "Feed"),
   SubMenuInfo(1, "Your Posts"),
   SubMenuInfo(2, "Subscriptions"),
   SubMenuInfo(3, "New Post")
 ];
 
-final List<SubMenuInfo> ManageContentScreenSub = [
+final List<SubMenuInfo> manageContentScreenSub = [
   SubMenuInfo(0, "Add"),
   SubMenuInfo(1, "Shared"),
   SubMenuInfo(2, "Downloads"),
 ];
 
-final List<SubMenuInfo> LnScreenSub = [
+final List<SubMenuInfo> lnScreenSub = [
   SubMenuInfo(0, "Overview"),
   SubMenuInfo(1, "Accounts"),
   SubMenuInfo(2, "On-Chain"),
@@ -85,7 +85,7 @@ final List<MainMenuItem> mainMenu = [
           builder: (context, menu, child) => FeedScreen(menu)),
       (context) => const FeedScreenTitle(),
       const SidebarSvgIcon("assets/icons/icons-menu-news.svg"),
-      FeedScreenSub),
+      feedScreenSub),
   MainMenuItem(
       "LN Management",
       LNScreen.routeName,
@@ -93,7 +93,7 @@ final List<MainMenuItem> mainMenu = [
           builder: (context, menu, child) => LNScreen(menu)),
       (context) => const LNScreenTitle(),
       const SidebarSvgIcon("assets/icons/icons-menu-lnmng.svg"),
-      LnScreenSub),
+      lnScreenSub),
   MainMenuItem(
       "Pages",
       ViewPageScreen.routeName,
@@ -110,7 +110,7 @@ final List<MainMenuItem> mainMenu = [
           builder: (context, menu, child) => ManageContentScreen(menu)),
       (context) => const ManageContentScreenTitle(),
       const SidebarSvgIcon("assets/icons/icons-menu-files.svg"),
-      ManageContentScreenSub),
+      manageContentScreenSub),
   MainMenuItem(
       "Stats",
       PayStatsScreen.routeName,

@@ -152,7 +152,7 @@ class ServerSessionState {
   factory ServerSessionState.fromJson(Map<String, dynamic> json) =>
       _$ServerSessionStateFromJson(json);
   factory ServerSessionState.empty() =>
-      ServerSessionState(connStateOffline, null);
+      const ServerSessionState(connStateOffline, null);
 }
 
 @JsonSerializable()
@@ -426,14 +426,14 @@ class InflightTip extends ChatEvent with ChangeNotifier {
 
   int _state;
   int get state => _state;
-  void set state(int v) {
+  set state(int v) {
     _state = v;
     notifyListeners();
   }
 
   Exception? _error;
   Exception? get error => _error;
-  void set error(Exception? e) {
+  set error(Exception? e) {
     if (e == null) throw Exception("Cannot set error to null");
     _error = e;
     _state = ITS_errored;
@@ -614,7 +614,7 @@ class PostMetadataStatus {
     var versionBytes = Uint8List(32);
     versionBytes.buffer.asByteData().setUint64(0, version, Endian.little);
 
-    var enc = Utf8Encoder();
+    var enc = const Utf8Encoder();
     wattr(String key) {
       var bytes = enc.convert(attributes[key] ?? "");
       h.update(bytes);
@@ -1205,6 +1205,7 @@ class LNOpenChannelRequest {
 }
 
 @JsonSerializable()
+// ignore: camel_case_types
 class LNChannelPoint_FundingTxidStr {
   @JsonKey(name: "fundingTxidStr", defaultValue: "")
   final String fundingTxidStr;
@@ -1214,6 +1215,7 @@ class LNChannelPoint_FundingTxidStr {
 }
 
 @JsonSerializable()
+// ignore: camel_case_types
 class LNChannelPoint_FundingTxidBytes {
   @JsonKey(name: "fundingTxidBytes", defaultValue: "")
   final String fundingTxidBytes;
@@ -2415,7 +2417,7 @@ mixin NtfStreams {
         break;
 
       default:
-        print("Received unknown notification ${cmd.toRadixString(16)}");
+        debugPrint("Received unknown notification ${cmd.toRadixString(16)}");
     }
   }
 }

@@ -185,8 +185,7 @@ class _FooterIconButton extends StatelessWidget {
       {required this.icon,
       required this.tooltip,
       required this.onPressed,
-      this.onlyWhenOnline = false,
-      super.key});
+      this.onlyWhenOnline = false});
 
   @override
   Widget build(BuildContext context) {
@@ -208,10 +207,7 @@ class _SmallScreenFabIconButton extends StatelessWidget {
   final String tooltip;
   final VoidCallback onPressed;
   const _SmallScreenFabIconButton(
-      {required this.icon,
-      required this.tooltip,
-      required this.onPressed,
-      super.key});
+      {required this.icon, required this.tooltip, required this.onPressed});
 
   @override
   Widget build(BuildContext context) {

@@ -8,6 +8,7 @@ class WindowsPlugin extends PluginPlatform
         BaseChanneledCalls,
         NtfStreams,
         BaseDesktopPlatform {
+  @override
   String get minorPlatform => "windows";
 
   WindowsPlugin() {

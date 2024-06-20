@@ -217,7 +217,7 @@ class NewConfigModel extends ChangeNotifier {
   Future<void> moveOldWalletVersion() async {
     //var cfgFile = path.join(Platform.environment["LOCALAPPDATA"]!, APPNAME);
     if (await hasLNWalletDB()) {
-      print("Can't move old windows wallet to better location");
+      debugPrint("Can't move old windows wallet to better location");
       throw unableToMoveOldWallet;
     }
     var oldPath = path.join(Platform.environment["LOCALAPPDATA"]!, "Packages",
@@ -231,7 +231,7 @@ class NewConfigModel extends ChangeNotifier {
         "${APPNAME}_copied");
     var newPath = path.join(Platform.environment["LOCALAPPDATA"]!, APPNAME);
 
-    print("Moving old windows wallet to better location");
+    debugPrint("Moving old windows wallet to better location");
     // Copy data to new location.
     await copyPath(oldPath, newPath);
 

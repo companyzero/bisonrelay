@@ -138,7 +138,7 @@ class AvatarModel extends ChangeNotifier {
         _image = MemoryImage(newAvatar);
         // Resize to a smaller size?
       } catch (exception) {
-        print("Unable to decode avatar: $exception");
+        debugPrint("Unable to decode avatar: $exception");
         _image = null;
       }
     }
@@ -172,12 +172,7 @@ class ChatModel extends ChangeNotifier {
   ChatModel(this.id, this._nick, this.isGC);
   factory ChatModel.empty() => ChatModel("", "", false);
 
-  bool _isSubscribed = false;
-  bool get isSubscribed => _isSubscribed;
-  set isSubscribed(bool b) {
-    _isSubscribed = b;
-    //notifyListeners();
-  }
+  bool isSubscribed = false;
 
   int _unreadMsgCount = 0;
   int get unreadMsgCount => _unreadMsgCount;
@@ -429,7 +424,7 @@ class ChatModel extends ChangeNotifier {
     append(ChatEventModel(event, null), false);
     try {
       await Golib.unsubscribeToPosts(id);
-      _isSubscribed = false;
+      isSubscribed = false;
       _isSubscribing = false;
       event.state = SCE_sent;
       notifyListeners();
@@ -1006,7 +1001,7 @@ class ClientModel extends ChangeNotifier {
     try {
       myAvatar.loadAvatar(avatarData);
     } catch (exception) {
-      print("unable to decode my avatar: $exception");
+      debugPrint("unable to decode my avatar: $exception");
     }
   }
 
@@ -1069,7 +1064,7 @@ class ClientModel extends ChangeNotifier {
     try {
       var order = po.order;
       if (order.user == publicID) {
-        print("Sample of message that would be sent to user: ${po.msg}");
+        debugPrint("Sample of message that would be sent to user: ${po.msg}");
         return;
       }
       var chat = getExistingChat(order.user);

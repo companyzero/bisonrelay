@@ -133,7 +133,7 @@ class _LoadingAddressBookPage extends StatelessWidget {
 }
 
 class _InviteNeededPage extends StatefulWidget {
-  const _InviteNeededPage({super.key});
+  const _InviteNeededPage();
 
   @override
   State<_InviteNeededPage> createState() => _InviteNeededPageState();

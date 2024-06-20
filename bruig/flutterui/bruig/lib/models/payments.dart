@@ -21,7 +21,8 @@ class PaymentInfo extends ChangeNotifier {
       _decoded = await Golib.lnDecodeInvoice(invoice);
       notifyListeners();
     } catch (exception) {
-      print("Unable to decode invoice: $exception");
+      // TODO: this should be stored in an error field and displayed to the user.
+      debugPrint("Unable to decode invoice: $exception");
     }
   }
 
