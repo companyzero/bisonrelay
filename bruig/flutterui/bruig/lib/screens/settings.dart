@@ -473,8 +473,6 @@ class AccountSettingsScreen extends StatelessWidget {
 
 enum FontChoices { small, medium, large, xlarge }
 
-enum ThemeChoices { light, dark, system }
-
 class AppearanceSettingsScreen extends StatefulWidget {
   final ClientModel client;
   final ThemeNotifier theme;
@@ -490,34 +488,22 @@ class _AppearanceSettingsScreenState extends State<AppearanceSettingsScreen> {
   ClientModel get client => widget.client;
   ThemeNotifier get theme => widget.theme;
   FontChoices _fontChoices = FontChoices.medium;
-  ThemeChoices _themeChoices = ThemeChoices.dark;
 
   @override
   void initState() {
-    setState(() {
-      if (theme.getThemeMode() == "dark") {
-        _themeChoices = ThemeChoices.dark;
-      } else if (theme.getThemeMode() == "system") {
-        _themeChoices = ThemeChoices.system;
-      } else if (theme.getThemeMode() == "light") {
-        _themeChoices = ThemeChoices.system;
-      }
-    });
     super.initState();
   }
 
   @override
   void didUpdateWidget(AppearanceSettingsScreen oldWidget) {
-    setState(() {
-      if (theme.getThemeMode() == "dark") {
-        _themeChoices = ThemeChoices.dark;
-      } else if (theme.getThemeMode() == "system") {
-        _themeChoices = ThemeChoices.system;
-      } else if (theme.getThemeMode() == "light") {
-        _themeChoices = ThemeChoices.light;
-      }
-    });
     super.didUpdateWidget(oldWidget);
+  }
+
+  void switchToTheme(BuildContext context, String v) {
+    setState(() {
+      theme.switchTheme(v);
+      Navigator.of(context).pop();
+    });
   }
 
   @override
@@ -533,7 +519,7 @@ class _AppearanceSettingsScreenState extends State<AppearanceSettingsScreen> {
                     onTap: () => showDialog(
                           context: context,
                           builder: (BuildContext context) {
-                            return Dialog(
+                            return SimpleDialog(
                                 shadowColor: backgroundColor,
                                 insetPadding: const EdgeInsets.symmetric(
                                     horizontal: 40.0, vertical: 275.0),
@@ -541,57 +527,18 @@ class _AppearanceSettingsScreenState extends State<AppearanceSettingsScreen> {
                                 shape: const RoundedRectangleBorder(
                                     borderRadius: BorderRadius.all(
                                         Radius.circular(16.0))),
-                                child: Container(
-                                    margin: const EdgeInsets.all(20),
-                                    child: Column(children: [
-                                      Row(children: [
-                                        Text("Theme",
-                                            style: TextStyle(
-                                                fontSize:
-                                                    theme.getLargeFont(context),
-                                                color: textColor)),
-                                      ]),
-                                      ListTile(
-                                          title: const Text('Light'),
-                                          leading: Radio<ThemeChoices>(
-                                            value: ThemeChoices.light,
-                                            groupValue: _themeChoices,
-                                            onChanged: (ThemeChoices? value) {
-                                              setState(() {
-                                                _themeChoices = value!;
-                                                theme.setLightMode();
-                                                Navigator.of(context).pop();
-                                              });
-                                            },
-                                          )),
-                                      ListTile(
-                                          title: const Text('Dark'),
-                                          leading: Radio<ThemeChoices>(
-                                            value: ThemeChoices.dark,
-                                            groupValue: _themeChoices,
-                                            onChanged: (ThemeChoices? value) {
-                                              setState(() {
-                                                _themeChoices = value!;
-                                                theme.setDarkMode();
-                                                Navigator.of(context).pop();
-                                              });
-                                            },
-                                          )),
-                                      ListTile(
-                                          title:
-                                              const Text('Use System Default'),
-                                          leading: Radio<ThemeChoices>(
-                                            value: ThemeChoices.system,
-                                            groupValue: _themeChoices,
-                                            onChanged: (ThemeChoices? value) {
-                                              setState(() {
-                                                _themeChoices = value!;
-                                                theme.setSystemMode();
-                                                Navigator.of(context).pop();
-                                              });
-                                            },
-                                          )),
-                                    ])));
+                                children: appThemes.entries
+                                    .map((e) => ListTile(
+                                        title: Text(e.value.descr),
+                                        onTap: () =>
+                                            switchToTheme(context, e.key),
+                                        leading: Radio<String>(
+                                          value: e.key,
+                                          groupValue: theme.getThemeMode(),
+                                          onChanged: (_) =>
+                                              switchToTheme(context, e.key),
+                                        )))
+                                    .toList());
                           },
                         ),
                     hoverColor: backgroundColor,
