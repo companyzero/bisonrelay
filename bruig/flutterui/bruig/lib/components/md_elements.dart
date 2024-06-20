@@ -200,7 +200,8 @@ class _FormBlockSyntax extends md.BlockSyntax {
   RegExp get pattern => tagPattern;
 
   @override
-  bool canEndBlock(md.BlockParser parser) => parser.current == "--/form--";
+  bool canEndBlock(md.BlockParser parser) =>
+      parser.current.content == "--/form--";
 
   @override
   md.Node? parse(md.BlockParser parser) {
@@ -209,7 +210,7 @@ class _FormBlockSyntax extends md.BlockSyntax {
     List<_FormField> children = [];
 
     while (!parser.isDone && !md.BlockSyntax.isAtBlockEnd(parser)) {
-      if (parser.current == closeTag) {
+      if (parser.current.content == closeTag) {
         parser.advance();
         continue;
       }
