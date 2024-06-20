@@ -4,10 +4,10 @@ import 'dart:typed_data';
 import 'package:bruig/components/containers.dart';
 import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/components/md_elements.dart';
-import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/components/text.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/models/resources.dart';
+import 'package:bruig/models/snackbar.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -136,11 +136,13 @@ class _ViewPageScreenState extends State<ViewPageScreen> {
   void viewLocal() async {
     var uid = widget.client.publicID;
     var path = ["index.md"];
+    var snackbar = SnackBarModel.of(context);
+
     try {
       var sess = await resources.fetchPage(uid, path, 0, 0, null);
       resources.mostRecent = sess;
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to fetch local page: $exception");
+      snackbar.error("Unable to fetch local page: $exception");
     }
   }
 

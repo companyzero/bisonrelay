@@ -5,8 +5,8 @@ import 'package:bruig/components/accounts_dropdown.dart';
 import 'package:bruig/components/buttons.dart';
 import 'package:bruig/components/copyable.dart';
 import 'package:bruig/components/dcr_input.dart';
-import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/components/text.dart';
+import 'package:bruig/models/snackbar.dart';
 import 'package:bruig/screens/startupscreen.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -111,14 +111,15 @@ class _GenerateInviteScreenState extends State<GenerateInviteScreen> {
   }
 
   void generateInvite() async {
+    var snackbar = SnackBarModel.of(context);
     int amount = 0;
     if (sendFunds) {
       if (fundAmountCtrl.amount <= 0) {
-        showErrorSnackbar(context, "Amount to fund in invite cannot be <= 0");
+        snackbar.error("Amount to fund in invite cannot be <= 0");
         return;
       }
       if (account == "") {
-        showErrorSnackbar(context, "Account cannot be empty");
+        snackbar.error("Account cannot be empty");
         return;
       }
       amount = dcrToAtoms(fundAmountCtrl.amount);
@@ -133,7 +134,7 @@ class _GenerateInviteScreenState extends State<GenerateInviteScreen> {
         generated = res;
       });
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to generate invitation: $exception");
+      snackbar.error("Unable to generate invitation: $exception");
     }
     setState(() {
       loading = false;

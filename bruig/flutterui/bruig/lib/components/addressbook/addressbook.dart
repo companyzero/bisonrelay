@@ -1,8 +1,8 @@
 import 'dart:collection';
 
-import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/components/text.dart';
 import 'package:bruig/models/client.dart';
+import 'package:bruig/models/snackbar.dart';
 import 'package:bruig/models/uistate.dart';
 import 'package:bruig/screens/chats.dart';
 import 'package:bruig/screens/ln/components.dart';
@@ -177,11 +177,12 @@ class _AddressBookState extends State<AddressBook> {
 
   void createNewGCFromList() async {
     if (newGcName == "") return;
+    var snackbar = SnackBarModel.of(context);
     try {
       await client.createNewGCAndInvite(newGcName, usersToInvite);
       client.ui.hideAddressBookScreen();
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to create GC: $exception");
+      snackbar.error("Unable to create GC: $exception");
     }
   }
 

@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:bruig/components/snackbars.dart';
+import 'package:bruig/models/snackbar.dart';
 import 'package:bruig/screens/ln/components.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -20,6 +20,7 @@ class _LNBackupsPageState extends State<LNBackupsPage> {
   }
 
   void saveSCB() async {
+    var snackbar = SnackBarModel.of(context);
     var filePath = await FilePicker.platform.saveFile(
       dialogTitle: "Select scb file location",
       fileName: "ln-channel-backup.scb",
@@ -28,13 +29,14 @@ class _LNBackupsPageState extends State<LNBackupsPage> {
     try {
       var data = await Golib.lnSaveMultiSCB();
       await File(filePath).writeAsBytes(data);
-      showSuccessSnackbar(context, "Saved SCB file to $filePath");
+      snackbar.success("Saved SCB file to $filePath");
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to save SCB file: $exception");
+      snackbar.error("Unable to save SCB file: $exception");
     }
   }
 
   void restoreSCB() async {
+    var snackbar = SnackBarModel.of(context);
     try {
       var filePickRes = await FilePicker.platform.pickFiles();
       if (filePickRes == null) return;
@@ -44,9 +46,9 @@ class _LNBackupsPageState extends State<LNBackupsPage> {
       if (filePath == "") return;
       var scb = await File(filePath).readAsBytes();
       await Golib.lnRestoreMultiSCB(scb);
-      showSuccessSnackbar(context, "Restored SCB file");
+      snackbar.success("Restored SCB file");
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to restore SCB file: $exception");
+      snackbar.error("Unable to restore SCB file: $exception");
     }
   }
 

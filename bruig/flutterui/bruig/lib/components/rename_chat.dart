@@ -1,6 +1,7 @@
 import 'package:bruig/components/buttons.dart';
-import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/models/client.dart';
+import 'package:bruig/models/snackbar.dart';
+import 'package:bruig/util.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 
@@ -24,14 +25,16 @@ class _RenameChatModalState extends State<RenameChatModal> {
   TextEditingController nameCtrl = TextEditingController();
 
   void rename() async {
+    var snackbar = SnackBarModel.of(context);
     try {
       var newName = nameCtrl.text;
       await Golib.localRename(chat.id, newName, chat.isGC);
-      Navigator.pop(context);
+      popNavigatorFromState(this);
       chat.nick = newName;
+      snackbar.success("renamed");
     } catch (exception) {
-      Navigator.pop(context);
-      showErrorSnackbar(context, "Unable to rename: $exception");
+      popNavigatorFromState(this);
+      snackbar.error("Unable to rename: $exception");
     }
   }
 
@@ -50,9 +53,7 @@ class _RenameChatModalState extends State<RenameChatModal> {
                 child: TextField(
                     controller: nameCtrl,
                     autofocus: true,
-                    onSubmitted: (_) {
-                      rename();
-                    })),
+                    onSubmitted: (_) => rename())),
             CancelButton(onPressed: () => Navigator.pop(context)),
             OutlinedButton(onPressed: rename, child: const Text("Rename")),
           ]),

@@ -14,7 +14,7 @@ class NewLNWalletSeedPage extends StatelessWidget {
 
   void copySeedToClipboard(BuildContext context) async {
     Clipboard.setData(ClipboardData(text: newconf.newWalletSeed));
-    showSuccessSnackbar(context, "Copied seed to clipboard!");
+    showSuccessSnackbar(this, "Copied seed to clipboard!");
   }
 
   @override

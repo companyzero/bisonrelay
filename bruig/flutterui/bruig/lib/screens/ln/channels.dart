@@ -4,8 +4,8 @@ import 'package:bruig/components/buttons.dart';
 import 'package:bruig/components/confirmation_dialog.dart';
 import 'package:bruig/components/copyable.dart';
 import 'package:bruig/components/info_grid.dart';
-import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/components/text.dart';
+import 'package:bruig/models/snackbar.dart';
 import 'package:bruig/models/uistate.dart';
 import 'package:bruig/screens/ln/components.dart';
 import 'package:bruig/screens/needs_out_channel.dart';
@@ -184,6 +184,7 @@ class _LNChannelsPageState extends State<LNChannelsPage> {
   Timer? loadInfoTimer;
 
   void loadInfo() async {
+    var snackbar = SnackBarModel.of(context);
     setState(() => loading = true);
     try {
       var newChans = await Golib.lnListChannels();
@@ -225,18 +226,19 @@ class _LNChannelsPageState extends State<LNChannelsPage> {
         channels = newChannels;
       });
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to load LN channels: $exception");
+      snackbar.error("Unable to load LN channels: $exception");
     } finally {
       setState(() => loading = false);
     }
   }
 
   Future<void> closeChan(LNChannel chan) async {
+    var snackbar = SnackBarModel.of(context);
     setState(() => loading = true);
     try {
       await Golib.lnCloseChannel(chan.channelPoint, !chan.active);
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to close channel: $exception");
+      snackbar.error("Unable to close channel: $exception");
       return;
     } finally {
       setState(() => loading = false);

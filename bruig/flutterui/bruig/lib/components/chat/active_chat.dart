@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:bruig/components/chat/chat_side_menu.dart';
 import 'package:bruig/components/manage_gc.dart';
+import 'package:bruig/models/snackbar.dart';
 import 'package:bruig/models/uistate.dart';
 import 'package:bruig/screens/chats.dart';
 import 'package:bruig/models/client.dart';
@@ -10,7 +11,6 @@ import 'package:bruig/components/profile.dart';
 import 'package:bruig/components/chat/messages.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import 'package:bruig/components/chat/input.dart';
-import 'package:bruig/components/snackbars.dart';
 
 class ActiveChat extends StatefulWidget {
   final ClientModel client;
@@ -45,6 +45,7 @@ class _ActiveChatState extends State<ActiveChat> {
       return;
     }
     ChatModel chat = this.chat!;
+    var snackbar = SnackBarModel.of(context);
 
     if (_debounce?.isActive ?? false) _debounce!.cancel();
     _debounce = Timer(const Duration(milliseconds: 100), () async {
@@ -54,7 +55,7 @@ class _ActiveChatState extends State<ActiveChat> {
         client.newSentMsg(chat);
       } catch (exception) {
         if (mounted) {
-          showErrorSnackbar(context, "Unable to send message: $exception");
+          snackbar.error("Unable to send message: $exception");
         }
       }
     });

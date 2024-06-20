@@ -67,21 +67,68 @@ class _SnackbarDisplayerState extends State<SnackbarDisplayer> {
   }
 }
 
-void showErrorSnackbar(BuildContext context, String msg) {
-  if (!context.mounted) {
-    debugPrint("Unmounted snackbar error message: $msg");
-  }
-  var snackBar = Provider.of<SnackBarModel>(context, listen: false);
+// NOTE: this only shows the snackbar error if the contextOrState is still
+// mounted. Prefer saving the SnackBarModel across the async gap when the error
+// should be displayed even if the component is unmounted:
+//
+// Future<void> foo(BuildContext) async {
+//   var snackbar = SnackBarModel.of(context);
+//   try {
+//     await bar();
+//   } catch(exception) {
+//     snackbar.error("Unable to bar(): $exception");
+//   }
+// }
+//
+// This function is useful in situations where it would be an error to display
+// the error snackbar message if the component has been unmounted.
+void showErrorSnackbar(dynamic contextOrState, String msg) {
+  BuildContext context;
+  if (contextOrState is BuildContext) {
+    context = contextOrState;
+  } else if (contextOrState is State) {
+    if (!contextOrState.mounted) {
+      debugPrint(
+          "Tried showing error snackbar but state $contextOrState was not mounted: $msg");
+      return;
+    }
 
+    context = contextOrState.context;
+  } else {
+    throw "Passed arg not a State or BuildContext: $contextOrState";
+  }
+
+  if (!context.mounted) {
+    debugPrint("Context is umounted for snackback error msg: $msg");
+    return;
+  }
+
+  var snackBar = Provider.of<SnackBarModel>(context, listen: false);
   snackBar.error(msg);
 }
 
-void showSuccessSnackbar(BuildContext context, String msg) {
+// See showErrorSnackbar for warning.
+void showSuccessSnackbar(dynamic contextOrState, String msg) {
+  BuildContext context;
+  if (contextOrState is BuildContext) {
+    context = contextOrState;
+  } else if (contextOrState is State) {
+    if (!contextOrState.mounted) {
+      debugPrint(
+          "Tried showing error snackbar but state $contextOrState was not mounted: $msg");
+      return;
+    }
+
+    context = contextOrState.context;
+  } else {
+    throw "Passed arg not a State or BuildContext: $contextOrState";
+  }
+
   if (!context.mounted) {
-    debugPrint("Unmounted snackbar success message: $msg");
+    debugPrint("Context is umounted for snackback error msg: $msg");
     return;
   }
-  var snackBar = Provider.of<SnackBarModel>(context, listen: false);
 
+  var snackBar = Provider.of<SnackBarModel>(context, listen: false);
   snackBar.success(msg);
 }

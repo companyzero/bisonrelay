@@ -1,8 +1,8 @@
 import 'package:bruig/components/buttons.dart';
 import 'package:bruig/components/copyable.dart';
-import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/components/text.dart';
 import 'package:bruig/models/client.dart';
+import 'package:bruig/models/snackbar.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
@@ -44,13 +44,15 @@ class _VerifyInviteScreenState extends State<VerifyInviteScreen> {
 
   void redeemFunds(BuildContext context, InviteFunds funds) async {
     setState(() => redeeming = true);
+    var snackbar = SnackBarModel.of(context);
+
     try {
       var res = await Golib.redeemInviteFunds(funds);
       setState(() {
         redeemed = res;
       });
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to redeem funds: $exception");
+      snackbar.error("Unable to redeem funds: $exception");
       setState(() => redeeming = false);
     }
   }

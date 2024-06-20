@@ -1,9 +1,9 @@
 import 'dart:async';
 import 'package:bruig/components/dcr_input.dart';
-import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/components/text.dart';
 import 'package:bruig/components/users_dropdown.dart';
 import 'package:bruig/models/client.dart';
+import 'package:bruig/models/snackbar.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
@@ -29,11 +29,12 @@ class _SharedContentFileState extends State<SharedContentFile> {
   bool loading = false;
 
   removeContent(BuildContext context, String? uid) async {
+    var snackbar = SnackBarModel.of(context);
     setState(() => loading = true);
     try {
       await widget.removeContentCB(widget.file.sf.fid, uid);
     } catch (exception) {
-      showErrorSnackbar(context, 'Unable to unshare content: $exception');
+      snackbar.error('Unable to unshare content: $exception');
     } finally {
       setState(() => loading = false);
     }
@@ -171,6 +172,7 @@ class _AddContentPanelState extends State<AddContentPanel> {
   }
 
   void addContent() async {
+    var snackbar = SnackBarModel.of(context);
     var fname = fnameCtrl.text.trim();
     if (fname == "") return;
     double cost = 0;
@@ -187,7 +189,7 @@ class _AddContentPanelState extends State<AddContentPanel> {
         toCtrl.clear();
       });
     } catch (exception) {
-      showErrorSnackbar(context, 'Unable to share content: $exception');
+      snackbar.error('Unable to share content: $exception');
     } finally {
       setState(() => loading = false);
     }

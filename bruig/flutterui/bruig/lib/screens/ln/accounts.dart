@@ -1,6 +1,6 @@
 import 'package:bruig/components/inputs.dart';
-import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/components/text.dart';
+import 'package:bruig/models/snackbar.dart';
 import 'package:bruig/screens/ln/components.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
@@ -21,20 +21,22 @@ class _LNAccountsPageState extends State<LNAccountsPage> {
   List<Account> accounts = [];
 
   void reloadAccounts() async {
+    var snackbar = SnackBarModel.of(context);
     try {
       var newAccounts = await Golib.listAccounts();
       setState(() {
         accounts = newAccounts;
       });
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to load accounts: $exception");
+      snackbar.error("Unable to load accounts: $exception");
     }
   }
 
   void createAccount() async {
+    var snackbar = SnackBarModel.of(context);
     var name = nameCtrl.text.trim();
     if (name.isEmpty) {
-      showErrorSnackbar(context, "New account name cannot be empty");
+      snackbar.error("New account name cannot be empty");
       return;
     }
 
@@ -43,7 +45,7 @@ class _LNAccountsPageState extends State<LNAccountsPage> {
       await Golib.createAccount(name);
       reloadAccounts();
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to create new account: $exception");
+      snackbar.error("Unable to create new account: $exception");
     }
   }
 

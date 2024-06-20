@@ -5,9 +5,9 @@ import 'package:bruig/components/dcr_input.dart';
 import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/components/indicator.dart';
 import 'package:bruig/components/inputs.dart';
-import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/components/text.dart';
 import 'package:bruig/models/client.dart';
+import 'package:bruig/models/snackbar.dart';
 import 'package:bruig/screens/ln/components.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
@@ -34,6 +34,7 @@ class _LNOnChainPageState extends State<LNOnChainPage> {
   bool loadingTxs = false;
 
   void generateRecvAddr() async {
+    var snackbar = SnackBarModel.of(context);
     if (recvAccount == null) {
       return;
     }
@@ -43,35 +44,37 @@ class _LNOnChainPageState extends State<LNOnChainPage> {
         recvAddr = newAddr;
       });
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to generate address: $exception");
+      snackbar.error("Unable to generate address: $exception");
     }
   }
 
   void doSend(double amount, String addr, String fromAccount) async {
+    var snackbar = SnackBarModel.of(context);
     setState(() {
       sendAddrCtrl.clear();
       amountCtrl.clear();
     });
     try {
       await Golib.sendOnChain(addr, amount, fromAccount);
-      showSuccessSnackbar(context, "Sent on-chain transaction");
+      snackbar.success("Sent on-chain transaction");
       listTransactions();
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to send coins: $exception");
+      snackbar.error("Unable to send coins: $exception");
     }
   }
 
   void confirmSend() async {
+    var snackbar = SnackBarModel.of(context);
     if (sendAddrCtrl.text.isEmpty) {
-      showErrorSnackbar(context, "Address cannot be empty");
+      snackbar.error("Address cannot be empty");
       return;
     }
     if (amountCtrl.amount <= 0) {
-      showErrorSnackbar(context, "Amount must be positive");
+      snackbar.error("Amount must be positive");
       return;
     }
     if (sendAccount == null) {
-      showErrorSnackbar(context, "Source account cannot be empty");
+      snackbar.error("Source account cannot be empty");
       return;
     }
 
@@ -90,6 +93,7 @@ class _LNOnChainPageState extends State<LNOnChainPage> {
   }
 
   void rescan() async {
+    var snackbar = SnackBarModel.of(context);
     var tipHeight = (await Golib.lnGetInfo()).blockHeight;
 
     var rescanNtfn = widget.client.rescanNotifier;
@@ -103,7 +107,7 @@ class _LNOnChainPageState extends State<LNOnChainPage> {
     try {
       await Golib.rescanWallet(0);
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to rescan wallet: $exception");
+      snackbar.error("Unable to rescan wallet: $exception");
     }
 
     rescanNtfn.removeListener(rescanProgressed);
@@ -113,6 +117,7 @@ class _LNOnChainPageState extends State<LNOnChainPage> {
   }
 
   void listTransactions() async {
+    var snackbar = SnackBarModel.of(context);
     setState(() {
       loadingTxs = true;
     });
@@ -122,7 +127,7 @@ class _LNOnChainPageState extends State<LNOnChainPage> {
         transactions = txs;
       });
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to list transactions: $exception");
+      snackbar.error("Unable to list transactions: $exception");
     } finally {
       setState(() {
         loadingTxs = false;

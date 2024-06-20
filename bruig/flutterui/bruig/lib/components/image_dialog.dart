@@ -58,7 +58,7 @@ class ImageDialog extends StatelessWidget {
         }
 
         File(fname).writeAsBytesSync(imgContent);
-        showSuccessSnackbar(context, "Written image file $fname");
+        showSuccessSnackbar(this, "Written image file $fname");
         break;
       case "share":
         if (fname == "") {

@@ -1,6 +1,7 @@
 import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/models/downloads.dart';
+import 'package:bruig/models/snackbar.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
 
@@ -26,11 +27,12 @@ class _SharedContentFileState extends State<SharedContentFile> {
 
   downloadContent(BuildContext context) async {
     setState(() => loading = true);
+    var snackbar = SnackBarModel.of(context);
     try {
       fd = await widget.downloadContentCB(widget.file);
       fd!.addListener(fdUpdated);
     } catch (exception) {
-      showErrorSnackbar(context, 'Unable to download content: $exception');
+      snackbar.error('Unable to download content: $exception');
     } finally {
       setState(() => loading = false);
     }
@@ -46,7 +48,7 @@ class _SharedContentFileState extends State<SharedContentFile> {
       */
     } else {
       // FIXME: externally open file.
-      showErrorSnackbar(context,
+      showErrorSnackbar(this,
           "Don't know how to open file '${widget.file.metadata.filename}'");
     }
   }
@@ -54,7 +56,7 @@ class _SharedContentFileState extends State<SharedContentFile> {
   void fdUpdated() {
     setState(() {});
     if ((fd?.diskPath ?? "") != "") {
-      showSuccessSnackbar(context, "Download ${fd!.diskPath} completed!");
+      showSuccessSnackbar(this, "Download ${fd!.diskPath} completed!");
     }
   }
 

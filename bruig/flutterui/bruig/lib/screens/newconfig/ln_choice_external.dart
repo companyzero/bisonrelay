@@ -1,9 +1,9 @@
 import 'dart:io';
 
-import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/components/buttons.dart';
 import 'package:bruig/components/text.dart';
 import 'package:bruig/models/newconfig.dart';
+import 'package:bruig/models/snackbar.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:bruig/theme_manager.dart';
@@ -24,19 +24,20 @@ class _LNExternalWalletPageState extends State<LNExternalWalletPage> {
   bool loading = false;
 
   void done() async {
+    var snackbar = SnackBarModel.of(context);
     var host = hostCtrl.text.trim();
     var tls = tlsCtrl.text.trim();
     var macaroon = macaroonCtrl.text.trim();
     if (host == "") {
-      showErrorSnackbar(context, "Host cannot be empty");
+      snackbar.error("Host cannot be empty");
       return;
     }
     if (!File(tls).existsSync()) {
-      showErrorSnackbar(context, "TLS path $tls does not exist");
+      snackbar.error("TLS path $tls does not exist");
       return;
     }
     if (!File(macaroon).existsSync()) {
-      showErrorSnackbar(context, "Macaroon path $macaroon does not exist");
+      snackbar.error("Macaroon path $macaroon does not exist");
       return;
     }
     setState(() {
@@ -45,8 +46,7 @@ class _LNExternalWalletPageState extends State<LNExternalWalletPage> {
     try {
       var res = await widget.newconf.tryExternalDcrlnd(host, tls, macaroon);
       if (res.chains.length != 1) {
-        showErrorSnackbar(
-            context, "Wrong number of chains ($res.chains.length)");
+        snackbar.error("Wrong number of chains ($res.chains.length)");
         return;
       }
       String wantNetwork = "";
@@ -62,14 +62,13 @@ class _LNExternalWalletPageState extends State<LNExternalWalletPage> {
           break;
       }
       if (res.chains[0].network != wantNetwork) {
-        showErrorSnackbar(context,
+        snackbar.error(
             "LN running in the wrong network (${res.chains[0].network} vs $wantNetwork)");
         return;
       }
       Navigator.of(context).pushNamed("/newconf/server");
     } catch (exception) {
-      showErrorSnackbar(
-          context, "Unable to connect to external dcrlnd: $exception");
+      snackbar.error("Unable to connect to external dcrlnd: $exception");
     } finally {
       setState(() {
         loading = false;

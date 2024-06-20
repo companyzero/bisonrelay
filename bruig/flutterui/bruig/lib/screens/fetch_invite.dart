@@ -1,10 +1,9 @@
 import 'package:bruig/components/buttons.dart';
-import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/components/text.dart';
+import 'package:bruig/models/snackbar.dart';
 import 'package:bruig/screens/startupscreen.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 
 class FetchInviteScreen extends StatefulWidget {
@@ -44,6 +43,7 @@ class _FetchInviteScreenState extends State<FetchInviteScreen> {
   }
 
   void loadInvite() async {
+    var snackbar = SnackBarModel.of(context);
     setState(() => loading = true);
     try {
       var key = keyCtrl.text.trim().toLowerCase();
@@ -54,14 +54,14 @@ class _FetchInviteScreenState extends State<FetchInviteScreen> {
       if (res == null) {
         throw "No reply after 30 seconds - invite not sent or already fetched";
       }
-      var invite = res as Invitation;
+      var invite = res;
       if (mounted) {
         Navigator.of(context, rootNavigator: true)
             .pushReplacementNamed("/verifyInvite", arguments: invite);
       }
     } catch (exception) {
       if (mounted) {
-        showErrorSnackbar(context, "Unable to fetch invite: $exception");
+        snackbar.error("Unable to fetch invite: $exception");
         setState(() => loading = false);
       }
     }
