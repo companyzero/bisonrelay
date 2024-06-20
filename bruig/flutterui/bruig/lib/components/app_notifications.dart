@@ -1,9 +1,10 @@
 import 'package:bruig/components/empty_widget.dart';
+import 'package:bruig/components/icons.dart';
+import 'package:bruig/components/text.dart';
 import 'package:bruig/models/notifications.dart';
 import 'package:bruig/screens/server_unwelcome_error.dart';
-import 'package:flutter/material.dart';
 import 'package:bruig/theme_manager.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter/material.dart';
 
 class _NotificationW extends StatelessWidget {
   final AppNotifications ntfns;
@@ -14,8 +15,6 @@ class _NotificationW extends StatelessWidget {
   Widget build(BuildContext context) {
     String content = "(unknown ntf type)";
     String tooltip = "";
-    var theme = Theme.of(context);
-    var textColor = theme.dividerColor;
 
     Function() onTap = () {};
 
@@ -93,19 +92,13 @@ class _NotificationW extends StatelessWidget {
         break;
     }
 
-    return Consumer<ThemeNotifier>(
-        builder: (context, theme, _) => ListTile(
-              title: Tooltip(
-                  message: tooltip,
-                  child: Text(
-                    content,
-                    style: TextStyle(
-                        fontSize: theme.getSmallFont(context),
-                        color: textColor),
-                  )),
-              leading: Icon(size: 10, Icons.arrow_forward, color: textColor),
-              onTap: onTap,
-            ));
+    return ListTile(
+      title: Tooltip(
+          message: tooltip,
+          child: Txt.S(content, color: TextColor.onSurfaceVariant)),
+      leading: const Txt.S("→", color: TextColor.onSurfaceVariant),
+      onTap: onTap,
+    );
   }
 }
 
@@ -153,13 +146,12 @@ class _NotificationsDrawerHeaderState extends State<NotificationsDrawerHeader> {
     if (ntfns.count == 0) {
       return const Empty();
     }
-    var theme = Theme.of(context);
-    var appWarning = theme.bottomAppBarTheme.color; // theme.bottomAppBarColor;
     return DrawerHeader(
         child: Column(children: [
-      Align(
+      const Align(
           alignment: Alignment.centerLeft,
-          child: Icon(Icons.warning_amber_outlined, color: appWarning)),
+          child: ColoredIcon(Icons.warning_amber_outlined,
+              color: TextColor.onSurfaceVariant)),
       Expanded(
           child: ListView.builder(
         itemCount: list.length,

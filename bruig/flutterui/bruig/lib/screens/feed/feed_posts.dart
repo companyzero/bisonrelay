@@ -1,15 +1,13 @@
+import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/components/interactive_avatar.dart';
+import 'package:bruig/components/text.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/models/feed.dart';
-import 'package:bruig/components/buttons.dart';
 import 'package:bruig/screens/feed/post_content.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:bruig/components/md_elements.dart';
-import 'package:bruig/components/empty_widget.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:duration/duration.dart';
-import 'package:bruig/theme_manager.dart';
 
 class _AvatarOrUnread extends StatelessWidget {
   final ClientModel client;
@@ -39,6 +37,24 @@ class FeedPostW extends StatefulWidget {
 
   @override
   State<FeedPostW> createState() => _FeedPostWState();
+}
+
+class _NewCommentTag extends StatelessWidget {
+  const _NewCommentTag();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Row(mainAxisSize: MainAxisSize.min, children: [
+      Icon(Icons.new_releases_outlined, color: Colors.amber),
+      SizedBox(width: 10),
+      Text("New Comments",
+          style: TextStyle(
+            fontStyle: FontStyle.italic,
+            fontSize: 12, // fontSize(TextSize.small),
+            color: Colors.amber,
+          ))
+    ]);
+  }
 }
 
 class _FeedPostWState extends State<FeedPostW> {
@@ -86,17 +102,6 @@ class _FeedPostWState extends State<FeedPostW> {
       }
     }
 
-    Future<void> launchUrlAwait(url) async {
-      if (!await launchUrl(Uri.parse(url))) {
-        throw 'Could not launch $url';
-      }
-    }
-
-    var theme = Theme.of(context);
-    var bgColor = theme.highlightColor;
-    var hightLightTextColor = theme.dividerColor; // NAME TEXT COLOR
-    var borderDividerColor = theme.backgroundColor;
-
     var markdownData = widget.post.summ.title;
     if (widget.post.summ.title.contains("--embed[type=")) {
       // This will pluck the first embed in a post.  Then we can display just
@@ -110,199 +115,45 @@ class _FeedPostWState extends State<FeedPostW> {
     var sincePost = prettyDuration(postDifference,
         tersity: DurationTersity.hour, abbreviated: true);
 
-    bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
+    return Card.filled(
+        margin: const EdgeInsets.only(right: 12, bottom: 15),
+        child: Container(
+            padding: const EdgeInsets.all(10),
+            child: Column(children: [
+              // Header row: Avatar, nick and post time.
+              Row(children: [
+                SizedBox(
+                    width: 28,
+                    child: _AvatarOrUnread(
+                        widget.client, widget.author, hasUnreadPost)),
+                const SizedBox(width: 6),
+                Expanded(child: Text(authorNick)),
+                Text(sincePost),
+              ]),
 
-    return Consumer<ThemeNotifier>(builder: (context, theme, child) {
-      return isScreenSmall
-          ? Container(
-              margin: const EdgeInsets.only(bottom: 8),
-              padding: const EdgeInsets.all(0),
-              decoration: BoxDecoration(
-                  color: bgColor, borderRadius: BorderRadius.circular(10)),
-              child: Column(
-                children: [
-                  Container(
-                      padding:
-                          const EdgeInsets.only(left: 10, right: 10, top: 5),
-                      child: SelectionContainer.disabled(
-                          child: Row(
-                        children: [
-                          Container(
-                            width: 35,
-                            margin: const EdgeInsets.only(
-                                top: 0, bottom: 0, left: 5, right: 0),
-                            child: _AvatarOrUnread(
-                                widget.client, widget.author, hasUnreadPost),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                              child: Text(authorNick,
-                                  style: TextStyle(
-                                      color: hightLightTextColor,
-                                      fontSize: theme.getMediumFont(context),
-                                      fontWeight: FontWeight.w500))),
-                          Expanded(
-                              child: Align(
-                                  alignment: Alignment.centerRight,
-                                  child: Text(sincePost,
-                                      style: TextStyle(
-                                          fontSize:
-                                              theme.getMediumFont(context),
-                                          color: hightLightTextColor,
-                                          fontWeight: FontWeight.w300))))
-                        ],
-                      ))),
-                  Divider(
-                    color: borderDividerColor, //color of divider
-                    height: 20, //height spacing of divider
-                    thickness: 2, //thickness of divier line
-                  ),
-                  Container(
-                      padding: const EdgeInsets.only(left: 10, right: 10),
-                      child: Row(children: [
-                        Expanded(
-                            flex: 4,
-                            child: Align(
-                                alignment: Alignment.center,
-                                child: Provider<DownloadSource>(
-                                    create: (context) => DownloadSource(
-                                        widget.post.summ.authorID),
-                                    child: MarkdownArea(markdownData, false))))
+              // Second row: post summary.
+              Provider<DownloadSource>(
+                  create: (context) =>
+                      DownloadSource(widget.post.summ.authorID),
+                  child: MarkdownArea(markdownData, false)),
+
+              // Third row: read more button.
+              const Divider(),
+              SizedBox(
+                  width: double.infinity,
+                  child: Wrap(
+                      alignment: WrapAlignment.spaceBetween,
+                      runSpacing: 10,
+                      children: [
+                        hasUnreadComments
+                            ? const _NewCommentTag()
+                            : const Empty(),
+                        OutlinedButton(
+                          onPressed: () => showContent(context),
+                          child: const Txt.S("Read More"),
+                        )
                       ])),
-                  Divider(
-                    color: borderDividerColor, //color of divider
-                    height: 20, //height spacing of divider
-                    thickness: 2, //thickness of divier line
-                  ),
-                  SelectionContainer.disabled(
-                      child: Container(
-                          padding: const EdgeInsets.only(
-                              left: 10, right: 10, bottom: 10),
-                          child: Row(children: [
-                            hasUnreadComments
-                                ? Row(children: [
-                                    const Icon(Icons.new_releases_outlined,
-                                        color: Colors.amber),
-                                    const SizedBox(width: 10),
-                                    Text("New Comments",
-                                        style: TextStyle(
-                                          fontStyle: FontStyle.italic,
-                                          fontSize: theme.getSmallFont(context),
-                                          color: Colors.amber,
-                                        ))
-                                  ])
-                                : const Empty(),
-                            Expanded(
-                                child: Align(
-                                    alignment: Alignment.centerRight,
-                                    child: FeedReadMoreButton(
-                                      onPressed: () => showContent(context),
-                                      text: "Read More",
-                                    )))
-                          ]))),
-                ],
-              ),
-            )
-          : Container(
-              width: 470,
-              margin: const EdgeInsets.only(bottom: 8),
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                  color: bgColor,
-                  borderRadius:
-                      const BorderRadius.all(Radius.elliptical(5, 5))),
-              child: Column(
-                children: [
-                  SelectionContainer.disabled(
-                      child: Row(
-                    children: [
-                      Container(
-                        width: 28,
-                        margin: const EdgeInsets.only(
-                            top: 0, bottom: 0, left: 5, right: 0),
-                        child: _AvatarOrUnread(
-                            widget.client, widget.author, hasUnreadPost),
-                      ),
-                      const SizedBox(width: 6),
-                      Expanded(
-                          child: Text(authorNick,
-                              style: TextStyle(
-                                  color: hightLightTextColor,
-                                  fontSize: theme.getMediumFont(context),
-                                  fontWeight: FontWeight.w500))),
-                      Expanded(
-                          child: Align(
-                              alignment: Alignment.centerRight,
-                              child: Text(sincePost,
-                                  style: TextStyle(
-                                      fontSize: theme.getMediumFont(context),
-                                      color: hightLightTextColor,
-                                      fontWeight: FontWeight.w300))))
-                    ],
-                  )),
-                  const SizedBox(
-                    height: 10,
-                  ),
-                  Row(children: [
-                    Expanded(
-                        flex: 4,
-                        child: Align(
-                            alignment: Alignment.center,
-                            child: Provider<DownloadSource>(
-                                create: (context) =>
-                                    DownloadSource(widget.post.summ.authorID),
-                                child: MarkdownArea(markdownData, false))))
-                  ]),
-                  const SizedBox(height: 5),
-                  Row(children: [
-                    Expanded(
-                        child: Divider(
-                      color: borderDividerColor, //color of divider
-                      height: 10, //height spacing of divider
-                      thickness: 1, //thickness of divier line
-                      indent: 10, //spacing at the start of divider
-                      endIndent: 10, //spacing at the end of divider
-                    )),
-                  ]),
-                  const SizedBox(height: 5),
-                  SelectionContainer.disabled(
-                      child: Row(children: [
-                    hasUnreadComments
-                        ? Row(children: [
-                            const Icon(Icons.new_releases_outlined,
-                                color: Colors.amber),
-                            const SizedBox(width: 10),
-                            Text("New Comments",
-                                style: TextStyle(
-                                  fontStyle: FontStyle.italic,
-                                  fontSize: theme.getSmallFont(context),
-                                  color: Colors.amber,
-                                ))
-                          ])
-                        : const Empty(),
-                    Expanded(
-                        child: Align(
-                            alignment: Alignment.centerRight,
-                            child: TextButton(
-                              style: TextButton.styleFrom(
-                                  textStyle: TextStyle(
-                                    fontSize: theme.getSmallFont(context),
-                                    color: hightLightTextColor,
-                                  ),
-                                  foregroundColor: hightLightTextColor,
-                                  shape: RoundedRectangleBorder(
-                                      borderRadius: const BorderRadius.all(
-                                          Radius.circular(3)),
-                                      side: BorderSide(
-                                          color: borderDividerColor))),
-                              onPressed: () => showContent(context),
-                              child: const Text("Read More"),
-                            )))
-                  ])),
-                ],
-              ),
-            );
-    });
+            ])));
   }
 }
 
@@ -340,17 +191,12 @@ class _FeedPostsState extends State<FeedPosts> {
   @override
   Widget build(BuildContext context) {
     bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
-    var theme = Theme.of(context);
-    var backgroundColor = theme.backgroundColor;
     var posts = widget.onlyShowOwnPosts
         ? widget.feed.posts
             .where((post) => (post.summ.authorID == widget.client.publicID))
         : widget.feed.posts;
     return SelectionArea(
         child: Container(
-      margin: const EdgeInsets.all(1),
-      decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(3), color: backgroundColor),
       padding: isScreenSmall
           ? const EdgeInsets.only(left: 10, right: 10, top: 10, bottom: 10)
           : const EdgeInsets.only(left: 50, right: 50, top: 10, bottom: 10),

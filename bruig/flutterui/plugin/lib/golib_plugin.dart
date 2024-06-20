@@ -6,23 +6,22 @@ import 'package:golib_plugin/ios.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/linux.dart';
 import 'package:golib_plugin/macos.dart';
-import 'package:golib_plugin/mock.dart';
 import 'package:golib_plugin/windows.dart';
 
 PluginPlatform _newPluginPlatform() {
   if (Platform.isLinux) {
-    return new LinuxPlugin();
+    return LinuxPlugin();
   } else if (Platform.isMacOS) {
-    return new MacOSPlugin();
+    return MacOSPlugin();
   } else if (Platform.isWindows) {
-    return new WindowsPlugin();
+    return WindowsPlugin();
   } else if (Platform.isAndroid) {
-    return new AndroidPlugin();
+    return AndroidPlugin();
   } else if (Platform.isIOS) {
-    return new IOSPlugin();
+    return IOSPlugin();
   }
 
-  throw "unknown platform OS " + Platform.operatingSystem;
+  throw "unknown platform OS ${Platform.operatingSystem}";
 }
 
 /*
@@ -36,4 +35,5 @@ MockPlugin _mockGolib() {
 late final MockPlugin MockGolib = _mockGolib();
 */
 
-late final Golib = _newPluginPlatform();
+// ignore: non_constant_identifier_names
+final Golib = _newPluginPlatform();

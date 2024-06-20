@@ -1,7 +1,6 @@
+import 'package:bruig/components/text.dart';
 import 'package:bruig/models/downloads.dart';
 import 'package:flutter/material.dart';
-import 'package:bruig/theme_manager.dart';
-import 'package:provider/provider.dart';
 
 class _FileDownloadW extends StatefulWidget {
   final FileDownloadModel fd;
@@ -43,50 +42,18 @@ class _FileDownloadWState extends State<_FileDownloadW> {
       progress = 1;
     }
 
-    var theme = Theme.of(context);
-    var textColor = theme.focusColor;
-    var cardColor = theme.cardColor;
-
-    return Consumer<ThemeNotifier>(
-        builder: (context, theme, _) => Container(
-              margin: const EdgeInsets.all(10),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    margin: const EdgeInsets.only(right: 10),
-                    width: 200,
-                    child: LinearProgressIndicator(
-                        minHeight: 8,
-                        value: progress > 1 ? 1 : progress,
-                        color: cardColor,
-                        backgroundColor: cardColor,
-                        valueColor: AlwaysStoppedAnimation<Color>(textColor)),
-                  ),
-                  Expanded(
-                      child: Text(widget.fd.rf.metadata.filename,
-                          style: TextStyle(
-                              color: textColor,
-                              fontSize: theme.getSmallFont(context)))),
-                  Expanded(
-                      child: Text(diskPath,
-                          style: TextStyle(
-                              color: textColor,
-                              fontStyle: FontStyle.italic,
-                              fontSize: theme.getSmallFont(context)))),
-                ],
-              ),
-            ));
-  }
-}
-
-class DownloadsScreenTitle extends StatelessWidget {
-  const DownloadsScreenTitle({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Text("Downloads",
-        style: TextStyle(color: Theme.of(context).focusColor));
+    return Container(
+        margin: const EdgeInsets.all(10),
+        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Container(
+            margin: const EdgeInsets.only(right: 10),
+            width: 200,
+            child: LinearProgressIndicator(
+                minHeight: 8, value: progress > 1 ? 1 : progress),
+          ),
+          Expanded(child: Txt.S(widget.fd.rf.metadata.filename)),
+          Expanded(child: Txt.S(diskPath)),
+        ]));
   }
 }
 
@@ -120,25 +87,16 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    var theme = Theme.of(context);
-    var textColor = theme.focusColor;
-    var backgroundColor = theme.backgroundColor;
-
-    return Consumer<ThemeNotifier>(
-        builder: (context, theme, _) => Container(
-            margin: const EdgeInsets.all(1),
-            decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(3), color: backgroundColor),
-            padding: const EdgeInsets.all(16),
-            child: Column(children: [
-              Text("Downloads",
-                  style: TextStyle(color: textColor, fontSize: 20)),
-              Expanded(
-                  child: ListView.builder(
-                shrinkWrap: true,
-                itemCount: files.length,
-                itemBuilder: (context, index) => _FileDownloadW(files[index]),
-              )),
-            ])));
+    return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Column(children: [
+          const Txt.L("Downloads"),
+          Expanded(
+              child: ListView.builder(
+            shrinkWrap: true,
+            itemCount: files.length,
+            itemBuilder: (context, index) => _FileDownloadW(files[index]),
+          )),
+        ]));
   }
 }

@@ -12,8 +12,6 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:golib_plugin/definitions.dart';
-import 'package:bruig/theme_manager.dart';
-import 'package:provider/provider.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:mime/mime.dart';
@@ -92,7 +90,6 @@ class _AttachFileScreenState extends State<AttachFileScreen> {
   Directory _fetchedPath = Directory.systemTemp;
   bool _permissionStatus = false;
 
-  dynamic _pickImageError;
   final ImagePicker _picker = ImagePicker();
   String? selectedAttachmentPath;
   ScrollController scrollCtrl = ScrollController();
@@ -221,9 +218,6 @@ class _AttachFileScreenState extends State<AttachFileScreen> {
       });
     } catch (e) {
       showErrorSnackbar(context, "Unable to attach file: $e");
-      setState(() {
-        _pickImageError = e;
-      });
     }
   }
 
@@ -246,9 +240,6 @@ class _AttachFileScreenState extends State<AttachFileScreen> {
       });
     } catch (e) {
       showErrorSnackbar(context, "Unable to select image: $e");
-      setState(() {
-        _pickImageError = e;
-      });
     }
   }
 
@@ -271,172 +262,140 @@ class _AttachFileScreenState extends State<AttachFileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    var theme = Theme.of(context);
-    var textColor = theme.focusColor;
-
-    return Consumer<ThemeNotifier>(
-        builder: (context, theme, _) => selectedAttachmentPath != null
-            ? Column(children: [
-                mime.startsWith('image/')
+    return selectedAttachmentPath != null
+        ? Column(children: [
+            mime.startsWith('image/')
+                ? Container(
+                    margin: const EdgeInsets.symmetric(vertical: 8.0),
+                    height: 200.0,
+                    child: Image.file(File(selectedAttachmentPath!),
+                        errorBuilder: (BuildContext context, Object error,
+                            StackTrace? stackTrace) {
+                      return const Center(
+                          child: Text('This image type is not supported'));
+                    }))
+                : mime.startsWith('text/')
                     ? Container(
                         margin: const EdgeInsets.symmetric(vertical: 8.0),
-                        height: 200.0,
-                        child: Image.file(File(selectedAttachmentPath!),
-                            errorBuilder: (BuildContext context, Object error,
-                                StackTrace? stackTrace) {
-                          return const Center(
-                              child: Text('This image type is not supported'));
-                        }))
-                    : mime.startsWith('text/')
-                        ? Container(
-                            margin: const EdgeInsets.symmetric(vertical: 8.0),
-                            height: 100.0,
-                            child: Text(selectedAttachmentPath!,
-                                style: TextStyle(
-                                    fontSize: theme.getLargeFont(context),
-                                    color: textColor)))
-                        : mime.contains('pdf')
-                            ? MarkdownArea(
-                                AttachmentEmbed('pdf',
-                                        data: fileData,
-                                        linkedFile: linkedFile,
-                                        alt: "",
-                                        mime: mime)
-                                    .embedString(),
-                                false)
-                            : const Empty(),
-                fileData != null && fileData!.isNotEmpty
-                    ? Row(mainAxisAlignment: MainAxisAlignment.end, children: [
-                        IconButton(
-                            tooltip: "Send Attachment",
-                            padding: const EdgeInsets.all(0),
-                            iconSize: 25,
-                            onPressed: fileData != null && fileData!.isNotEmpty
-                                ? attach
-                                : null,
-                            icon: const Icon(Icons.send_outlined),
-                            color: textColor)
-                      ])
-                    : const Empty(),
-              ])
-            : Column(mainAxisAlignment: MainAxisAlignment.start, children: [
-                FutureBuilder(
-                  future: _futureGetPath,
-                  builder: (BuildContext context, AsyncSnapshot snapshot) {
-                    if (snapshot.hasData) {
-                      var dir = snapshot.data;
-                      if (_permissionStatus && _fetchedPath != dir) {
-                        _fetchFiles(dir);
-                      }
-                      return listImagePath.isNotEmpty
-                          ? Text(dir.path,
-                              style: TextStyle(
-                                  fontSize: theme.getMediumFont(context),
-                                  color: textColor))
-                          : const Empty();
-                    } else {
-                      return Text("Loading gallery",
-                          style: TextStyle(
-                              fontSize: theme.getLargeFont(context),
-                              color: textColor));
-                    }
-                  },
-                ),
-                listImagePath.isNotEmpty
-                    ? Container(
-                        margin: const EdgeInsets.symmetric(vertical: 8.0),
-                        height: 150.0,
-                        child: ListView(
-                            controller: scrollCtrl,
-                            scrollDirection: Axis.horizontal,
-                            primary: false,
-                            padding: const EdgeInsets.all(10),
-                            children: [
-                              for (var i = 0; i < listImagePath.length; i++)
-                                Padding(
-                                    padding: const EdgeInsets.all(10),
-                                    child: Material(
-                                        shape: const RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.all(
-                                                Radius.circular(10))),
-                                        child: InkWell(
+                        height: 100.0,
+                        child: Text(selectedAttachmentPath!))
+                    : mime.contains('pdf')
+                        ? MarkdownArea(
+                            AttachmentEmbed('pdf',
+                                    data: fileData,
+                                    linkedFile: linkedFile,
+                                    alt: "",
+                                    mime: mime)
+                                .embedString(),
+                            false)
+                        : const Empty(),
+            fileData != null && fileData!.isNotEmpty
+                ? Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+                    IconButton(
+                        tooltip: "Send Attachment",
+                        padding: const EdgeInsets.all(0),
+                        iconSize: 25,
+                        onPressed: fileData != null && fileData!.isNotEmpty
+                            ? attach
+                            : null,
+                        icon: const Icon(Icons.send_outlined))
+                  ])
+                : const Empty(),
+          ])
+        : Column(mainAxisAlignment: MainAxisAlignment.start, children: [
+            FutureBuilder(
+              future: _futureGetPath,
+              builder: (BuildContext context, AsyncSnapshot snapshot) {
+                if (snapshot.hasData) {
+                  var dir = snapshot.data;
+                  if (_permissionStatus && _fetchedPath != dir) {
+                    _fetchFiles(dir);
+                  }
+                  return listImagePath.isNotEmpty
+                      ? Text(dir.path)
+                      : const Empty();
+                } else {
+                  return const Text("Loading gallery");
+                }
+              },
+            ),
+            listImagePath.isNotEmpty
+                ? Container(
+                    margin: const EdgeInsets.symmetric(vertical: 8.0),
+                    height: 150.0,
+                    child: ListView(
+                        controller: scrollCtrl,
+                        scrollDirection: Axis.horizontal,
+                        primary: false,
+                        padding: const EdgeInsets.all(10),
+                        children: [
+                          for (var i = 0; i < listImagePath.length; i++)
+                            Padding(
+                                padding: const EdgeInsets.all(10),
+                                child: Material(
+                                    shape: const RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.all(
+                                            Radius.circular(10))),
+                                    child: InkWell(
+                                        borderRadius: const BorderRadius.all(
+                                            Radius.circular(10)),
+                                        onTap: () => _onImagePressed(
+                                            listImagePath[i],
+                                            context: context),
+                                        child: Container(
+                                          width: 100,
+                                          margin: const EdgeInsets.symmetric(
+                                              horizontal: 2, vertical: 2),
+                                          decoration: BoxDecoration(
                                             borderRadius:
                                                 const BorderRadius.all(
-                                                    Radius.circular(10)),
-                                            hoverColor:
-                                                Theme.of(context).hoverColor,
-                                            onTap: () => _onImagePressed(
-                                                listImagePath[i],
-                                                context: context),
-                                            child: Container(
-                                              width: 100,
-                                              margin:
-                                                  const EdgeInsets.symmetric(
-                                                      horizontal: 2,
-                                                      vertical: 2),
-                                              decoration: BoxDecoration(
-                                                borderRadius:
-                                                    const BorderRadius.all(
-                                                        Radius.circular(8.0)),
-                                                image: DecorationImage(
-                                                    image: Image.file(
-                                                            listImagePath[i])
+                                                    Radius.circular(8.0)),
+                                            image: DecorationImage(
+                                                image:
+                                                    Image.file(listImagePath[i])
                                                         .image,
-                                                    fit: BoxFit.contain),
-                                              ),
-                                            ))))
-                            ]))
-                    : const Empty(),
-                Row(children: [
-                  const SizedBox(width: 10),
-                  Expanded(
-                      child: Material(
-                          shape: const RoundedRectangleBorder(
-                              borderRadius:
-                                  BorderRadius.all(Radius.circular(10))),
-                          child: InkWell(
-                              onTap: () {
-                                _onImageButtonPressed(ImageSource.gallery,
-                                    context: context);
-                              },
-                              child: SizedBox(
-                                  height: 100,
-                                  child: Column(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        Icon(Icons.photo,
-                                            size: 40, color: textColor),
-                                        Text("Gallery",
-                                            style: TextStyle(
-                                                fontSize: theme
-                                                    .getMediumFont(context),
-                                                color: textColor))
-                                      ]))))),
-                  const SizedBox(width: 20),
-                  Expanded(
-                    child: Material(
-                        shape: const RoundedRectangleBorder(
-                            borderRadius:
-                                BorderRadius.all(Radius.circular(10))),
-                        child: InkWell(
-                            onTap: loadFile,
-                            child: SizedBox(
-                                height: 100,
-                                child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(Icons.insert_drive_file_outlined,
-                                          size: 40, color: textColor),
-                                      Text("File",
-                                          style: TextStyle(
-                                              fontSize:
-                                                  theme.getMediumFont(context),
-                                              color: textColor))
-                                    ])))),
-                  ),
-                  const SizedBox(width: 10),
-                ])
-              ]));
+                                                fit: BoxFit.contain),
+                                          ),
+                                        ))))
+                        ]))
+                : const Empty(),
+            Row(children: [
+              const SizedBox(width: 10),
+              Expanded(
+                  child: Material(
+                      shape: const RoundedRectangleBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(10))),
+                      child: InkWell(
+                          onTap: () {
+                            _onImageButtonPressed(ImageSource.gallery,
+                                context: context);
+                          },
+                          child: const SizedBox(
+                              height: 100,
+                              child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.photo, size: 40),
+                                    Text("Gallery")
+                                  ]))))),
+              const SizedBox(width: 20),
+              Expanded(
+                  child: Material(
+                      shape: const RoundedRectangleBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(10))),
+                      child: InkWell(
+                          onTap: loadFile,
+                          child: const SizedBox(
+                              height: 100,
+                              child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.insert_drive_file_outlined,
+                                        size: 40),
+                                    Text("File"),
+                                  ]))))),
+              const SizedBox(width: 10),
+            ])
+          ]);
   }
 }

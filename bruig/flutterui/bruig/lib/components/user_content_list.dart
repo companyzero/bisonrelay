@@ -99,35 +99,13 @@ class _SharedContentFileState extends State<SharedContentFile> {
     if (fd != null && diskPath == "") {
       diskPath = fd!.diskPath;
     }
-    var theme = Theme.of(context);
-    var textColor = theme.focusColor;
     return Row(
       children: [
+        Expanded(flex: 30, child: Text(file.metadata.directory)),
+        Expanded(flex: 100, child: Text(file.metadata.filename)),
+        Expanded(flex: 50, child: Text((file.metadata.cost / 1e8).toString())),
         Expanded(
-            flex: 30,
-            child: Text(
-              file.metadata.directory,
-            )),
-        Expanded(
-            flex: 100,
-            child: Text(
-              file.metadata.filename,
-              style: TextStyle(color: textColor),
-            )),
-        Expanded(
-            flex: 50,
-            child: Text(
-              (file.metadata.cost / 1e8).toString(),
-              style: TextStyle(color: textColor),
-            )),
-        Expanded(
-            flex: 40,
-            child: Text(
-              //file.metadata.hash,
-              file.fid,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(color: textColor),
-            )),
+            flex: 40, child: Text(file.fid, overflow: TextOverflow.ellipsis)),
         Expanded(
             flex: 5,
             child: isDownloading
@@ -167,12 +145,13 @@ class UserContentListW extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListView.builder(
       shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
+      // physics: const NeverScrollableScrollPhysics(),
+      controller: ScrollController(keepScrollOffset: false),
       itemCount: content.files.length,
       itemBuilder: (BuildContext context, int index) {
         return Container(
             margin: const EdgeInsets.only(bottom: 5),
-            padding: const EdgeInsets.only(right: 10),
+            padding: const EdgeInsets.only(right: 20),
             child: SharedContentFile(
                 content.files[index],
                 chat,

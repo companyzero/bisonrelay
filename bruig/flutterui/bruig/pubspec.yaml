@@ -69,6 +69,7 @@ dependencies:
   mime: ^1.0.4
   pdfrx: ^1.0.54
   path_drawing: ^1.0.0
+  collection: ^1.18.0
 
 msix_config:
   display_name: Bison Relay GUI
@@ -198,6 +199,11 @@ flutter:
     - family: notoemoji_unix
       fonts:
         - asset: assets/fonts/NotoColorEmoji-Regular.ttf
+    - family: RobotoMono
+      fonts:
+        - asset: "assets/fonts/RobotoMono-VariableFont_wght.ttf"
+        - asset: "assets/fonts/RobotoMono-Italic-VariableFont_wght.ttf"
+          style: italic
 
   #     fonts:
   #       - asset: fonts/Schyler-Regular.ttf

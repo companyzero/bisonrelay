@@ -39,25 +39,23 @@ class _RenameChatModalState extends State<RenameChatModal> {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(30),
-      child: Row(children: [
-        Text("Rename '${chat.nick}' to: ",
-            style: TextStyle(color: Theme.of(context).focusColor)),
-        const SizedBox(width: 10, height: 10),
-        Expanded(
-            child: Container(
-          margin: const EdgeInsets.only(right: 10),
-          child: TextField(
-            controller: nameCtrl,
-            autofocus: true,
-            onSubmitted: (_) {
-              rename();
-            },
-          ),
-        )),
-        CancelButton(onPressed: () => Navigator.pop(context)),
-        const SizedBox(width: 10, height: 10),
-        ElevatedButton(onPressed: rename, child: const Text("Rename")),
-      ]),
+      child: Wrap(
+          runSpacing: 10,
+          spacing: 10,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            Text("Rename '${chat.nick}' to: "),
+            SizedBox(
+                width: 200,
+                child: TextField(
+                    controller: nameCtrl,
+                    autofocus: true,
+                    onSubmitted: (_) {
+                      rename();
+                    })),
+            CancelButton(onPressed: () => Navigator.pop(context)),
+            OutlinedButton(onPressed: rename, child: const Text("Rename")),
+          ]),
     );
   }
 }

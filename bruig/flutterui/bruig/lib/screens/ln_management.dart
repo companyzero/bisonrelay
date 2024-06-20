@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:bruig/components/buttons.dart';
+import 'package:bruig/components/text.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/screens/ln/accounts.dart';
 import 'package:bruig/screens/ln/backups.dart';
@@ -28,17 +29,11 @@ class LNScreenTitle extends StatelessWidget {
     return Consumer2<MainMenuModel, ThemeNotifier>(
         builder: (context, menu, theme, child) {
       if (menu.activePageTab <= 0) {
-        return Text("LN",
-            style: TextStyle(
-                fontSize: theme.getLargeFont(context),
-                color: Theme.of(context).focusColor));
+        return const Txt.L("LN");
       }
       var idx = LnScreenSub.indexWhere((e) => e.pageTab == menu.activePageTab);
 
-      return Text("LN / ${LnScreenSub[idx].label}",
-          style: TextStyle(
-              fontSize: theme.getLargeFont(context),
-              color: Theme.of(context).focusColor));
+      return Txt.L("LN / ${LnScreenSub[idx].label}");
     });
   }
 }
@@ -136,27 +131,20 @@ class LNConfirmRecvChanPaymentScreen extends StatelessWidget {
 
     var amount = formatDCR(atomsToDCR(est.amount));
 
-    var theme = Theme.of(context);
-    var textColor = theme.focusColor;
-    return Consumer<ThemeNotifier>(
-        builder: (context, theme, child) => Scaffold(
-            body: Container(
-                padding: const EdgeInsets.all(10),
-                child: Column(children: [
-                  Text("Confirm LN Payment to Open Receive Channel",
-                      style: TextStyle(
-                          color: textColor,
-                          fontSize: theme.getLargeFont(context))),
-                  const SizedBox(height: 20),
-                  Text("Amount: $amount", style: TextStyle(color: textColor)),
-                  const SizedBox(height: 20),
-                  Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                    ElevatedButton(
-                        onPressed: () => pay(context),
-                        child: Text("Pay", style: TextStyle(color: textColor))),
-                    const SizedBox(width: 20),
-                    CancelButton(onPressed: () => cancel(context)),
-                  ])
-                ]))));
+    return Scaffold(
+        body: Container(
+            padding: const EdgeInsets.all(10),
+            child: Column(children: [
+              const Txt.L("Confirm LN Payment to Open Receive Channel"),
+              const SizedBox(height: 20),
+              Text("Amount: $amount"),
+              const SizedBox(height: 20),
+              Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                ElevatedButton(
+                    onPressed: () => pay(context), child: const Text("Pay")),
+                const SizedBox(width: 20),
+                CancelButton(onPressed: () => cancel(context)),
+              ])
+            ])));
   }
 }

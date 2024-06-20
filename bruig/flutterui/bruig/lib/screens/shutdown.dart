@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/components/recent_log.dart';
+import 'package:bruig/components/text.dart';
 import 'package:bruig/models/log.dart';
 import 'package:bruig/screens/startupscreen.dart';
 import 'package:flutter/material.dart';
@@ -10,8 +11,6 @@ import 'package:flutter/services.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:window_manager/window_manager.dart';
-import 'package:bruig/theme_manager.dart';
-import 'package:provider/provider.dart';
 
 class ShutdownScreen extends StatefulWidget {
   final bool internalDcrlnd;
@@ -82,18 +81,13 @@ class _ShutdownScreenState extends State<ShutdownScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<ThemeNotifier>(
-        builder: (context, theme, child) => StartupScreen([
-              Text("Shutting Down Bison Relay",
-                  style: TextStyle(
-                      color: theme.getTheme().dividerColor,
-                      fontSize: theme.getHugeFont(context),
-                      fontWeight: FontWeight.w200)),
-              clientStopErr != null ? Text(clientStopErr!) : const Empty(),
-              const SizedBox(height: 20),
-              const Divider(),
-              const SizedBox(height: 20),
-              LogLines(widget.log)
-            ]));
+    return StartupScreen([
+      const Txt.H("Shutting Down Bison Relay"),
+      clientStopErr != null ? Text(clientStopErr!) : const Empty(),
+      const SizedBox(height: 20),
+      const Divider(),
+      const SizedBox(height: 20),
+      LogLines(widget.log)
+    ]);
   }
 }

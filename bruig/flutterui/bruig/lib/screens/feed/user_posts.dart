@@ -1,14 +1,13 @@
 import 'package:bruig/components/interactive_avatar.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/models/feed.dart';
+import 'package:bruig/models/uistate.dart';
 import 'package:bruig/screens/feed/feed_posts.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:bruig/components/md_elements.dart';
 import 'package:golib_plugin/definitions.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:bruig/components/user_context_menu.dart';
-import 'package:bruig/theme_manager.dart';
 
 class UserPostW extends StatefulWidget {
   final PostListItem post;
@@ -60,28 +59,12 @@ class _UserPostWState extends State<UserPostW> {
     var authorNick = widget.author?.nick ?? "";
     var authorId = widget.author?.id ?? "";
 
-    Future<void> launchUrlAwait(url) async {
-      if (!await launchUrl(Uri.parse(url))) {
-        throw 'Could not launch $url';
-      }
-    }
-
-    var theme = Theme.of(context);
-    var bgColor = theme.highlightColor;
-    var hightLightTextColor = theme.dividerColor; // NAME TEXT COLOR
-    var borderDividerColor = theme.dialogBackgroundColor;
-
-    return Container(
-        //height: 100,
-        width: 470,
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-            color: bgColor,
-            borderRadius: const BorderRadius.all(Radius.elliptical(5, 5))),
-        child: Consumer<ThemeNotifier>(
-          builder: (context, theme, _) => Column(
-            children: [
+    return Card.filled(
+        margin: const EdgeInsets.only(right: 12, bottom: 15),
+        child: Container(
+            padding: const EdgeInsets.all(10),
+            child: Column(children: [
+              // First row: header.
               Row(
                 children: [
                   Container(
@@ -95,63 +78,29 @@ class _UserPostWState extends State<UserPostW> {
                     ),
                   ),
                   const SizedBox(width: 6),
-                  Expanded(
-                      child: Text(authorNick,
-                          style: TextStyle(
-                              color: hightLightTextColor,
-                              fontSize: theme.getSmallFont(context)))),
+                  Expanded(child: Text(authorNick)),
                 ],
               ),
-              const SizedBox(
-                height: 10,
-              ),
-              Row(children: [
-                Expanded(
-                    flex: 4,
-                    child: Align(
-                        alignment: Alignment.center,
-                        child: Provider<DownloadSource>(
-                            create: (context) => DownloadSource(authorId),
-                            child: MarkdownArea(widget.post.title, false))))
-              ]),
-              const SizedBox(height: 5),
-              Row(children: [
-                Expanded(
-                    child: Divider(
-                  color: borderDividerColor, //color of divider
-                  height: 10, //height spacing of divider
-                  thickness: 1, //thickness of divier line
-                  indent: 10, //spacing at the start of divider
-                  endIndent: 10, //spacing at the end of divider
-                )),
-              ]),
-              const SizedBox(height: 5),
-              Row(children: [
-                Expanded(
-                    child: Align(
-                        alignment: Alignment.centerRight,
-                        child: TextButton(
-                          style: TextButton.styleFrom(
-                              textStyle: TextStyle(
-                                fontSize: theme.getSmallFont(context),
-                                color: hightLightTextColor,
-                              ),
-                              foregroundColor: hightLightTextColor,
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: const BorderRadius.all(
-                                      Radius.circular(3)),
-                                  side: BorderSide(color: borderDividerColor))),
-                          onPressed: () => widget.feed.gettingUserPost == ""
-                              ? showContent(context)
-                              : null,
-                          child: Text(widget.feed.gettingUserPost != post.id
-                              ? "Get Post"
-                              : "Downloading"),
-                        )))
-              ]),
-            ],
-          ),
-        ));
+
+              // Second row: summary.
+              const SizedBox(height: 10),
+              Provider<DownloadSource>(
+                  create: (context) => DownloadSource(authorId),
+                  child: MarkdownArea(widget.post.title, false)),
+
+              // Third row: footer.
+              const Divider(),
+              Align(
+                  alignment: Alignment.centerRight,
+                  child: FilledButton.tonal(
+                    onPressed: () => widget.feed.gettingUserPost == ""
+                        ? showContent(context)
+                        : null,
+                    child: Text(widget.feed.gettingUserPost != post.id
+                        ? "Get Post"
+                        : "Downloading"),
+                  )),
+            ])));
   }
 }
 
@@ -230,43 +179,33 @@ class _UserPostsState extends State<UserPosts> {
 
   @override
   Widget build(BuildContext context) {
-    bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
-    var theme = Theme.of(context);
-    var backgroundColor = theme.backgroundColor;
+    bool isScreenSmall = checkIsScreenSmall(context);
 
     return Container(
-      margin: const EdgeInsets.all(1),
-      decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(3), color: backgroundColor),
-      padding: isScreenSmall
-          ? const EdgeInsets.only(left: 10, right: 10, top: 10, bottom: 10)
-          : const EdgeInsets.only(left: 50, right: 50, top: 10, bottom: 10),
-      child: Column(children: [
-        Expanded(
-            child: ListView(
-          children: [
-            ...notReceived
-                .map((e) => UserPostW(
-                      e,
-                      widget.feed,
-                      widget.chat,
-                      widget.client,
-                      widget.tabChange,
-                    ))
-                .toList(),
-            ...alreadyReceived
-                .map((e) => FeedPostW(
-                      widget.feed,
-                      e,
-                      widget.client.getExistingChat(e.summ.authorID),
-                      widget.client.getExistingChat(e.summ.from),
-                      widget.client,
-                      widget.tabChange,
-                    ))
-                .toList()
-          ],
-        ))
-      ]),
-    );
+        padding: isScreenSmall
+            ? const EdgeInsets.only(left: 10, right: 10, top: 10, bottom: 10)
+            : const EdgeInsets.only(left: 50, right: 50, top: 10, bottom: 10),
+        child: SingleChildScrollView(
+            child: Column(children: [
+          ...notReceived
+              .map((e) => UserPostW(
+                    e,
+                    widget.feed,
+                    widget.chat,
+                    widget.client,
+                    widget.tabChange,
+                  ))
+              .toList(),
+          ...alreadyReceived
+              .map((e) => FeedPostW(
+                    widget.feed,
+                    e,
+                    widget.client.getExistingChat(e.summ.authorID),
+                    widget.client.getExistingChat(e.summ.from),
+                    widget.client,
+                    widget.tabChange,
+                  ))
+              .toList()
+        ])));
   }
 }

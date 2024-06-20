@@ -26,20 +26,14 @@ class InteractiveAvatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     var nickInitial = chatNick.isNotEmpty ? chatNick[0].toUpperCase() : "?";
-    return Consumer<ThemeNotifier>(builder: (context, themeNtf, _) {
-      var theme = themeNtf.getTheme();
+    return Consumer<ThemeNotifier>(builder: (context, theme, _) {
       var avatarColor = colorFromNick(chatNick, theme.brightness);
-      var darkAvatarTextColor = theme.primaryColorDark;
-      var lightAvatarTextColor = theme.primaryColorLight;
-      var avatarTextColor =
+      var avatarTextTs =
           ThemeData.estimateBrightnessForColor(avatarColor) == Brightness.dark
-              ? darkAvatarTextColor
-              : lightAvatarTextColor;
-      var selectedBackgroundColor = theme.highlightColor;
+              ? theme.extraTextStyles.darkAvatarInitial
+              : theme.extraTextStyles.lightAvatarInitial;
 
-      return Material(
-        color: selectedBackgroundColor.withOpacity(0),
-        child: MouseRegion(
+      return MouseRegion(
           cursor: SystemMouseCursors.click,
           child: GestureDetector(
             onTap: onTap,
@@ -50,13 +44,9 @@ class InteractiveAvatar extends StatelessWidget {
                 backgroundImage: avatar,
                 child: avatar != null
                     ? const Empty()
-                    : Text(nickInitial,
-                        style: TextStyle(
-                            color: avatarTextColor,
-                            fontSize: themeNtf.getLargeFont(context)))),
-          ),
-        ),
-      );
+                    : SelectionContainer.disabled(
+                        child: Text(nickInitial, style: avatarTextTs))),
+          ));
     });
   }
 }
@@ -232,7 +222,7 @@ class UserAvatarFromID extends StatelessWidget {
       return SelfAvatar(client);
     }
 
-    var chat = client.getExistingChat(this.uid);
+    var chat = client.getExistingChat(uid);
     if (chat != null) {
       return UserMenuAvatar(client, chat,
           showChatSideMenuOnTap: showChatSideMenuOnTap);

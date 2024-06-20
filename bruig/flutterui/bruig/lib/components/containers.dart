@@ -13,6 +13,7 @@ class Box extends StatelessWidget {
   final EdgeInsetsGeometry? margin;
   final double? width;
   final double? height;
+  final BorderRadiusGeometry? borderRadius;
   const Box(
       {this.color = SurfaceColor.surface,
       this.child,
@@ -21,6 +22,7 @@ class Box extends StatelessWidget {
       this.margin,
       this.width,
       this.height,
+      this.borderRadius,
       super.key});
 
   @override
@@ -30,7 +32,12 @@ class Box extends StatelessWidget {
               margin: margin,
               padding: padding,
               constraints: constraints,
-              color: theme.surfaceColor(color),
+              color: borderRadius == null ? theme.surfaceColor(color) : null,
+              decoration: borderRadius == null
+                  ? null
+                  : BoxDecoration(
+                      borderRadius: borderRadius,
+                      color: theme.surfaceColor(color)),
               width: width,
               height: height,
               child: DefaultTextStyle.merge(
@@ -38,6 +45,19 @@ class Box extends StatelessWidget {
                       textColorForSurfaceColor[color] ?? TextColor.onSurface),
                   child: child ?? const Empty()),
             ));
+  }
+}
+
+// SecondarySideMenuItem is an individual item (ListTile or similar) of a
+// SecondarySideMenu. This is needed to fix
+// https://github.com/flutter/flutter/issues/59511.
+class SecondarySideMenuItem extends StatelessWidget {
+  final Widget child;
+  const SecondarySideMenuItem(this.child, {super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(child: child);
   }
 }
 
@@ -53,8 +73,8 @@ class SecondarySideMenu extends StatelessWidget {
         builder: (context, theme, _) => Container(
               margin: const EdgeInsets.all(1),
               width: width ?? 120,
-              // color: theme.colors.surfaceContainer,
               decoration: BoxDecoration(
+                  color: theme.colors.surfaceContainerLowest,
                   border: Border(
                       right:
                           BorderSide(color: theme.extraColors.sidebarDivider))),
@@ -65,24 +85,41 @@ class SecondarySideMenu extends StatelessWidget {
 
 class SecondarySideMenuList extends StatelessWidget {
   final double? width;
-  final List<ListTile> children;
-  const SecondarySideMenuList({this.width, required this.children, super.key});
+  final List<ListTile>? items;
+  final ListView? list;
+  final Widget? footer;
+  const SecondarySideMenuList(
+      {this.width, this.items, this.list, this.footer, super.key});
+
+  Widget _child() {
+    if (list != null) {
+      return list!;
+    }
+
+    if (items != null) {
+      return ListView(
+          shrinkWrap: true,
+          children: items!.map((e) => SecondarySideMenuItem(e)).toList());
+    }
+
+    return const Empty();
+  }
 
   @override
   Widget build(BuildContext context) {
-    // The column is needed to work around an issue where setting a background color
-    // to a listView makes hover color not work.
     return Consumer<ThemeNotifier>(
         builder: (context, theme, _) => SecondarySideMenu(
               width: width,
-              child: Column(children: [
-                ListTileTheme.merge(
-                    tileColor: theme.colors.surfaceContainerLowest,
-                    child: ListView(shrinkWrap: true, children: children)),
-                Expanded(
-                    child:
-                        Container(color: theme.colors.surfaceContainerLowest)),
-              ]),
+              child: Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                        child: ListTileTheme.merge(
+                            tileColor: theme.colors.surfaceContainerLowest,
+                            // tileColor: Colors.amber,
+                            child: _child())),
+                    ...(footer != null ? [footer!] : []),
+                  ]),
             ));
   }
 }

@@ -1,21 +1,12 @@
 import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/components/snackbars.dart';
+import 'package:bruig/components/text.dart';
 import 'package:bruig/models/client.dart';
-import 'package:bruig/models/menus.dart';
+import 'package:bruig/screens/ln/components.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:provider/provider.dart';
 import 'package:bruig/theme_manager.dart';
-
-class PostListsScreenTitle extends StatelessWidget {
-  const PostListsScreenTitle({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Text("Subscriptions ",
-        style: TextStyle(color: Theme.of(context).focusColor));
-  }
-}
 
 class PostListsScreen extends StatefulWidget {
   static String routeName = "/postsLists";
@@ -41,13 +32,11 @@ class _SubItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
-    var theme = Theme.of(context);
-    var textColor = theme.focusColor;
-    var highlightColor = theme.highlightColor;
-    var backgroundColor = theme.backgroundColor;
     return Consumer<ThemeNotifier>(
         builder: (context, theme, _) => Container(
-              color: index.isEven ? highlightColor : backgroundColor,
+              color: index.isEven
+                  ? theme.colors.surfaceContainerHigh
+                  : theme.colors.surface,
               margin: isScreenSmall
                   ? const EdgeInsets.only(left: 10, right: 10, top: 8)
                   : const EdgeInsets.only(left: 50, right: 50, top: 8),
@@ -55,22 +44,13 @@ class _SubItem extends StatelessWidget {
                   const EdgeInsets.only(top: 4, bottom: 4, left: 8, right: 8),
               child: Row(
                 children: [
-                  Expanded(
-                      flex: 2,
-                      child: Text(chat?.nick ?? "",
-                          style: TextStyle(
-                              color: textColor,
-                              fontSize: theme.getSmallFont(context)))),
+                  Expanded(flex: 2, child: Txt.S(chat?.nick ?? "")),
                   Expanded(
                       flex: 10,
-                      child: Text(id,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                              color: textColor,
-                              fontSize: theme.getSmallFont(context),
-                              fontWeight: FontWeight.w200))),
+                      child: Txt.S(id, overflow: TextOverflow.ellipsis)),
                   (remoteSub
                       ? IconButton(
+                          visualDensity: VisualDensity.compact,
                           tooltip: "Unsubscribe from users's posts",
                           onPressed: chat != null
                               ? () {
@@ -124,105 +104,39 @@ class _PostListsScreenState extends State<PostListsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    var theme = Theme.of(context);
-    var textColor = theme.focusColor;
-    var backgroundColor = theme.backgroundColor;
-    var darkTextColor = theme.indicatorColor;
-    var dividerColor = theme.highlightColor;
-
     if (firstLoading) {
-      return Consumer<ThemeNotifier>(
-          builder: (context, theme, _) => Center(
-                child: Text("Loading...",
-                    style: TextStyle(
-                        color: textColor,
-                        fontSize: theme.getSmallFont(context))),
-              ));
+      return const Text("Loading...");
     }
+
     return Consumer<ThemeNotifier>(
         builder: (context, theme, _) => Container(
-              margin: const EdgeInsets.all(1),
-              decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(3),
-                  color: backgroundColor),
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  Row(children: [
-                    Expanded(
-                        child: Divider(
-                      color: dividerColor, //color of divider
-                      height: 10, //height spacing of divider
-                      thickness: 1, //thickness of divier line
-                      indent: 10, //spacing at the start of divider
-                      endIndent: 7, //spacing at the end of divider
-                    )),
-                    Text("Subscribers to local posts",
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                            color: darkTextColor,
-                            fontSize: theme.getSmallFont(context))),
-                    Expanded(
-                        child: Divider(
-                      color: dividerColor, //color of divider
-                      height: 10, //height spacing of divider
-                      thickness: 1, //thickness of divier line
-                      indent: 7, //spacing at the start of divider
-                      endIndent: 10, //spacing at the end of divider
-                    )),
-                  ]),
-                  const SizedBox(height: 20),
-                  Expanded(
-                      child: Align(
-                          alignment: Alignment.center,
-                          child: ListView.builder(
-                            controller: subcribersCtrl,
-                            itemCount: subscribers.length,
-                            itemBuilder: (context, index) => _SubItem(
-                                index,
-                                subscribers[index],
-                                client.getExistingChat(subscribers[index]),
-                                false,
-                                unsub),
-                          ))),
-                  const SizedBox(height: 20),
-                  Row(children: [
-                    Expanded(
-                        child: Divider(
-                      color: dividerColor, //color of divider
-                      height: 10, //height spacing of divider
-                      thickness: 1, //thickness of divier line
-                      indent: 10, //spacing at the start of divider
-                      endIndent: 7, //spacing at the end of divider
-                    )),
-                    Text("Subscriptions to remote posters",
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                            color: darkTextColor,
-                            fontSize: theme.getSmallFont(context))),
-                    Expanded(
-                        child: Divider(
-                      color: dividerColor, //color of divider
-                      height: 10, //height spacing of divider
-                      thickness: 1, //thickness of divier line
-                      indent: 7, //spacing at the start of divider
-                      endIndent: 10, //spacing at the end of divider
-                    )),
-                  ]),
-                  const SizedBox(height: 20),
-                  Expanded(
-                      child: ListView.builder(
-                    controller: subscriptnsCtrl,
-                    itemCount: subscriptions.length,
-                    itemBuilder: (context, index) => _SubItem(
-                        index,
-                        subscriptions[index],
-                        client.getExistingChat(subscriptions[index]),
-                        true,
-                        unsub),
-                  )),
-                ],
-              ),
-            ));
+            padding: const EdgeInsets.all(16),
+            child: Column(children: [
+              const LNInfoSectionHeader("Subscribers to local posts"),
+              const SizedBox(height: 20),
+              Expanded(
+                  child: ListView.builder(
+                      controller: subcribersCtrl,
+                      itemCount: subscribers.length,
+                      itemBuilder: (context, index) => _SubItem(
+                          index,
+                          subscribers[index],
+                          client.getExistingChat(subscribers[index]),
+                          false,
+                          unsub))),
+              const LNInfoSectionHeader("Subscriptions to remote posters"),
+              const SizedBox(height: 20),
+              Expanded(
+                  child: ListView.builder(
+                controller: subscriptnsCtrl,
+                itemCount: subscriptions.length,
+                itemBuilder: (context, index) => _SubItem(
+                    index,
+                    subscriptions[index],
+                    client.getExistingChat(subscriptions[index]),
+                    true,
+                    unsub),
+              )),
+            ])));
   }
 }

@@ -1,3 +1,5 @@
+// ignore_for_file: constant_identifier_names, unnecessary_new, deprecated_colon_for_default_value
+
 import 'dart:async';
 import 'dart:collection';
 
@@ -30,14 +32,14 @@ class SynthChatEvent extends ChatEvent with ChangeNotifier {
 
   int _state;
   int get state => _state;
-  void set state(int v) {
+  set state(int v) {
     _state = v;
     notifyListeners();
   }
 
   Exception? _error;
   Exception? get error => _error;
-  void set error(Exception? e) {
+  set error(Exception? e) {
     if (e == null) throw Exception("Cannot set error to null");
     _error = e;
     _state = SCE_errored;
@@ -77,14 +79,14 @@ class ChatEventModel extends ChangeNotifier {
 
   int _sentState = CMS_unknown;
   int get sentState => _sentState;
-  void set sentState(int v) {
+  set sentState(int v) {
     _sentState = v;
     notifyListeners();
   }
 
   String? _sendError;
   String? get sendError => _sendError;
-  void set sendError(String? err) {
+  set sendError(String? err) {
     _sendError = err;
     _sentState = CMS_errored;
     notifyListeners();
@@ -92,21 +94,21 @@ class ChatEventModel extends ChangeNotifier {
 
   bool _firstUnread = false;
   bool get firstUnread => _firstUnread;
-  void set firstUnread(bool b) {
+  set firstUnread(bool b) {
     _firstUnread = b;
     notifyListeners();
   }
 
   bool _sameUser = false;
   bool get sameUser => _sameUser;
-  void set sameUser(bool b) {
+  set sameUser(bool b) {
     _sameUser = b;
     notifyListeners();
   }
 
   bool _showAvatar = false;
   bool get showAvatar => _showAvatar;
-  void set showAvatar(bool b) {
+  set showAvatar(bool b) {
     _showAvatar = b;
     notifyListeners();
   }
@@ -162,7 +164,7 @@ class ChatModel extends ChangeNotifier {
 
   String _nick; // Nick or GC name
   String get nick => _nick;
-  void set nick(String nn) {
+  set nick(String nn) {
     _nick = nn;
     notifyListeners();
   }
@@ -172,7 +174,7 @@ class ChatModel extends ChangeNotifier {
 
   bool _isSubscribed = false;
   bool get isSubscribed => _isSubscribed;
-  void set isSubscribed(bool b) {
+  set isSubscribed(bool b) {
     _isSubscribed = b;
     //notifyListeners();
   }
@@ -222,7 +224,7 @@ class ChatModel extends ChangeNotifier {
     return -1;
   }
 
-  List<ChatEventModel> _msgs = [];
+  final List<ChatEventModel> _msgs = [];
   UnmodifiableListView<ChatEventModel> get msgs => UnmodifiableListView(_msgs);
   void append(ChatEventModel msg, bool history, {doNotifyListeners = true}) {
     if (!history) {
@@ -317,7 +319,7 @@ class ChatModel extends ChangeNotifier {
     }
   }
 
-  List<DayGCMessages> _dayGCMsgs = [];
+  final List<DayGCMessages> _dayGCMsgs = [];
   UnmodifiableListView<DayGCMessages> get dayGCMsgs =>
       UnmodifiableListView(_dayGCMsgs);
 
@@ -471,7 +473,7 @@ class ChatModel extends ChangeNotifier {
 class RescanNotifier extends ChangeNotifier {
   int _height = 0;
   int get progressHeight => _height;
-  void set _progressHeight(int h) {
+  set _progressHeight(int h) {
     _height = h;
     notifyListeners();
   }

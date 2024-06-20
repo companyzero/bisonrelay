@@ -3,6 +3,33 @@ import 'package:flutter/services.dart';
 import 'package:bruig/theme_manager.dart';
 import 'package:provider/provider.dart';
 
+// Text field with default app styling.
+class TextInput extends StatelessWidget {
+  final TextEditingController? controller;
+  final String? hintText;
+  final TextSize textSize;
+  final ValueChanged<String>? onSubmitted;
+  const TextInput(
+      {this.textSize = TextSize.medium,
+      this.controller,
+      this.hintText,
+      this.onSubmitted,
+      super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<ThemeNotifier>(
+        builder: (context, theme, _) => TextField(
+              onSubmitted: onSubmitted,
+              style: theme.textStyleFor(context, textSize, null),
+              controller: controller,
+              decoration: hintText != null
+                  ? InputDecoration(hintText: hintText!)
+                  : null,
+            ));
+  }
+}
+
 class IntEditingController extends TextEditingController {
   int get intvalue => text != "" ? int.parse(text) : 0;
   set intvalue(int v) => text = v.toString();
@@ -28,24 +55,17 @@ Widget intInput({
 }) =>
     Consumer<ThemeNotifier>(
         builder: (context, theme, _) => TextField(
-            style: TextStyle(
-                fontSize: theme.getSmallFont(context),
-                color: theme.getTheme().dividerColor),
-            controller: controller,
-            onChanged: (String v) {
-              try {
-                int val = v != "" ? int.parse(v) : 0;
-                if (onChanged != null) onChanged(val);
-              } catch (exception) {
-                // ignore.
-              }
-            },
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            inputFormatters: [_LimitIntTextInputFormatter()],
-            decoration: InputDecoration(
-              hintStyle: TextStyle(
-                  fontSize: theme.getSmallFont(context),
-                  color: theme.getTheme().dividerColor),
-              filled: true,
-              fillColor: theme.getTheme().hoverColor,
-            )));
+              style: theme.textStyleFor(context, TextSize.small, null),
+              controller: controller,
+              onChanged: (String v) {
+                try {
+                  int val = v != "" ? int.parse(v) : 0;
+                  if (onChanged != null) onChanged(val);
+                } catch (exception) {
+                  // ignore.
+                }
+              },
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: [_LimitIntTextInputFormatter()],
+            ));

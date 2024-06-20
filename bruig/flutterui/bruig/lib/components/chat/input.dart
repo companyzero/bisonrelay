@@ -1,24 +1,24 @@
 import 'package:bruig/components/attach_file.dart';
+import 'package:bruig/models/uistate.dart';
 import 'package:bruig/screens/chats.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:bruig/components/chat/types.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/theme_manager.dart';
 import 'package:provider/provider.dart';
 
-class Input extends StatefulWidget {
+class ChatInput extends StatefulWidget {
   final SendMsg _send;
   final ChatModel chat;
   final CustomInputFocusNode inputFocusNode;
-  const Input(this._send, this.chat, this.inputFocusNode, {Key? key})
+  const ChatInput(this._send, this.chat, this.inputFocusNode, {Key? key})
       : super(key: key);
 
   @override
-  State<Input> createState() => _InputState();
+  State<ChatInput> createState() => _ChatInputState();
 }
 
-class _InputState extends State<Input> {
+class _ChatInputState extends State<ChatInput> {
   final controller = TextEditingController();
 
   final FocusNode node = FocusNode();
@@ -33,7 +33,7 @@ class _InputState extends State<Input> {
   }
 
   @override
-  void didUpdateWidget(Input oldWidget) {
+  void didUpdateWidget(ChatInput oldWidget) {
     super.didUpdateWidget(oldWidget);
     var workingMsg = widget.chat.workingMsg;
     if (workingMsg != controller.text) {
@@ -87,11 +87,7 @@ class _InputState extends State<Input> {
 
   @override
   Widget build(BuildContext context) {
-    var theme = Theme.of(context);
-    var textColor = theme.dividerColor;
-    var cardColor = theme.cardColor;
-    var secondaryTextColor = theme.focusColor;
-    bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
+    bool isScreenSmall = checkIsScreenSmall(context);
     return Consumer<ThemeNotifier>(
         builder: (context, theme, _) => isAttaching
             ? Column(children: [
@@ -100,8 +96,7 @@ class _InputState extends State<Input> {
                       padding: const EdgeInsets.all(0),
                       iconSize: 25,
                       onPressed: cancelAttach,
-                      icon: const Icon(Icons.keyboard_arrow_left_outlined),
-                      color: textColor)
+                      icon: const Icon(Icons.keyboard_arrow_left_outlined))
                 ]),
                 AttachFileScreen(widget._send)
               ])
@@ -110,8 +105,7 @@ class _InputState extends State<Input> {
                     padding: const EdgeInsets.all(0),
                     iconSize: 25,
                     onPressed: attachFile,
-                    icon: const Icon(Icons.add_outlined),
-                    color: textColor),
+                    icon: const Icon(Icons.add_outlined)),
                 const SizedBox(width: 5),
                 Expanded(
                     child: TextField(
@@ -120,49 +114,23 @@ class _InputState extends State<Input> {
                   },
                   autofocus: isScreenSmall ? false : true,
                   focusNode: widget.inputFocusNode.inputFocusNode,
-                  style: TextStyle(
-                    fontSize: theme.getMediumFont(context),
-                    color: secondaryTextColor,
-                  ),
                   controller: controller,
                   minLines: 1,
                   maxLines: null,
-                  //textInputAction: TextInputAction.done,
-                  //style: normalTextStyle,
+                  style: theme.textStyleFor(context, TextSize.medium, null),
                   keyboardType: TextInputType.multiline,
                   decoration: InputDecoration(
                     isDense: true,
-                    contentPadding: const EdgeInsets.only(
-                        left: 10, right: 10, top: 5, bottom: 5),
-                    errorBorder: const OutlineInputBorder(
+                    border: const OutlineInputBorder(
                       borderRadius: BorderRadius.all(Radius.circular(30.0)),
-                      borderSide: BorderSide(color: Colors.red, width: 2.0),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius:
-                          const BorderRadius.all(Radius.circular(30.0)),
-                      borderSide:
-                          BorderSide(color: secondaryTextColor, width: 2.0),
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius:
-                          const BorderRadius.all(Radius.circular(30.0)),
-                      borderSide: BorderSide(color: cardColor, width: 2.0),
+                      borderSide: BorderSide(width: 2.0),
                     ),
                     hintText: "Start a message",
-                    hintStyle: TextStyle(
-                        fontSize: theme.getMediumFont(context),
-                        letterSpacing: 0.5,
-                        fontWeight: FontWeight.w300,
-                        color: textColor),
-                    filled: true,
-                    fillColor: cardColor,
                     suffixIcon: IconButton(
                         padding: const EdgeInsets.all(0),
                         iconSize: 20,
                         onPressed: sendMsg,
                         icon: const Icon(Icons.send)),
-                    suffixIconColor: textColor,
                   ),
                 )),
               ]));

@@ -1,8 +1,10 @@
+import 'package:bruig/components/copyable.dart';
 import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/components/recent_log.dart';
 import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/components/buttons.dart';
 import 'package:bruig/components/collapsable.dart';
+import 'package:bruig/components/text.dart';
 import 'package:bruig/models/snackbar.dart';
 import 'package:bruig/screens/about.dart';
 import 'package:bruig/config.dart';
@@ -35,19 +37,23 @@ class _UnlockLNAppState extends State<UnlockLNApp> {
   Config get cfg => widget.cfg;
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: "Connect to Bison Relay",
-      initialRoute: widget.initialRoute,
-      routes: {
-        "/": (context) => _LNUnlockPage(widget.cfg, widget.setCfg),
-        ConfigNetworkScreen.routeName: (context) => const ConfigNetworkScreen(),
-        "/sync": (context) => _LNChainSyncPage(widget.cfg),
-        '/about': (context) => const AboutScreen(),
-      },
-      builder: (BuildContext context, Widget? child) => Scaffold(
-        body: SnackbarDisplayer(widget.snackBar, child ?? const Empty()),
-      ),
-    );
+    return Consumer<ThemeNotifier>(
+        builder: (context, theme, child) => MaterialApp(
+              title: "Connect to Bison Relay",
+              initialRoute: widget.initialRoute,
+              theme: theme.theme,
+              routes: {
+                "/": (context) => _LNUnlockPage(widget.cfg, widget.setCfg),
+                ConfigNetworkScreen.routeName: (context) =>
+                    const ConfigNetworkScreen(),
+                "/sync": (context) => _LNChainSyncPage(widget.cfg),
+                '/about': (context) => const AboutScreen(),
+              },
+              builder: (BuildContext context, Widget? child) => Scaffold(
+                body:
+                    SnackbarDisplayer(widget.snackBar, child ?? const Empty()),
+              ),
+            ));
   }
 }
 
@@ -139,8 +145,6 @@ class __LNUnlockPageState extends State<_LNUnlockPage> {
 
   @override
   Widget build(BuildContext context) {
-    bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
-
     Widget extraInfo = const Empty();
     if (loading && migratingDb) {
       extraInfo = const Text(
@@ -160,110 +164,58 @@ class __LNUnlockPageState extends State<_LNUnlockPage> {
     }
 
     return Consumer<ThemeNotifier>(
-      builder: (context, theme, _) => StartupScreen(<Widget>[
-        Text("Connect to Bison Relay",
-            style: TextStyle(
-                color: theme.getTheme().dividerColor,
-                fontSize: theme.getHugeFont(context),
-                fontWeight: FontWeight.w200)),
-        SizedBox(height: isScreenSmall ? 8 : 34),
-        SizedBox(
-            width: 377,
-            child: Text("Password",
-                textAlign: TextAlign.left,
-                style: TextStyle(
-                    color: theme.getTheme().indicatorColor,
-                    fontSize: theme.getMediumFont(context),
-                    fontWeight: FontWeight.w300))),
-        const SizedBox(height: 5),
-        Center(
-            child: SizedBox(
-                width: 377,
-                child: TextField(
-                    autofocus: true,
-                    cursorColor: theme.getTheme().indicatorColor,
-                    decoration: InputDecoration(
-                        errorText: _validate,
-                        border: InputBorder.none,
-                        hintText: "Password",
-                        hintStyle: TextStyle(
-                            fontSize: theme.getLargeFont(context),
-                            color: theme.getTheme().dividerColor),
-                        filled: true,
-                        fillColor: theme.getTheme().cardColor),
-                    style: TextStyle(
-                        color: theme.getTheme().indicatorColor,
-                        fontSize: theme.getLargeFont(context)),
-                    controller: passCtrl,
-                    obscureText: true,
-                    onSubmitted: (value) {
-                      if (!loading) {
-                        unlock();
-                      }
-                    },
-                    onChanged: (value) {
-                      setState(() {
-                        _validate =
-                            value.isEmpty ? "Password cannot be empty" : "";
-                      });
-                    }))),
-        SizedBox(height: isScreenSmall ? 8 : 34),
-        Center(
-            child: SizedBox(
-                width: 283,
-                child: Row(children: [
-                  const SizedBox(width: 35),
-                  LoadingScreenButton(
-                    onPressed: !loading ? unlock : null,
-                    text: "Unlock Wallet",
-                  ),
-                  const SizedBox(width: 10),
-                  loading
-                      ? SizedBox(
-                          height: 25,
-                          width: 25,
-                          child: CircularProgressIndicator(
-                              value: null,
-                              backgroundColor: theme.getTheme().backgroundColor,
-                              color: theme.getTheme().dividerColor,
-                              strokeWidth: 2),
-                        )
-                      : const SizedBox(width: 25),
-                ]))),
-        ...(!loading
-            ? [
-                const SizedBox(height: 10),
+        builder: (context, theme, _) =>
+            StartupScreen(childrenWidth: 500, <Widget>[
+              const Txt.H("Connect to Bison Relay",
+                  textAlign: TextAlign.center),
+              const SizedBox(height: 30),
+              TextField(
+                autofocus: true,
+                decoration: InputDecoration(
+                    labelText: "Password",
+                    filled: true,
+                    fillColor: theme.colors.surface),
+                controller: passCtrl,
+                obscureText: true,
+                onSubmitted: (value) {
+                  if (!loading) {
+                    unlock();
+                  }
+                },
+              ),
+              const SizedBox(height: 30),
+              if (!loading) ...[
+                LoadingScreenButton(
+                  onPressed: !loading ? unlock : null,
+                  text: "Unlock Wallet",
+                ),
+                const SizedBox(height: 15),
                 TextButton(
                     onPressed: () {
                       Navigator.of(context, rootNavigator: true)
                           .pushNamed(ConfigNetworkScreen.routeName);
                     },
-                    child: Text("Network Config",
-                        style: TextStyle(color: theme.getTheme().dividerColor)))
-              ]
-            : []),
-        const SizedBox(height: 10),
-        extraInfo,
-        const SizedBox(height: 10),
-        loading
-            ? Collapsable("Recent Log",
-                child: ConstrainedBox(
-                    constraints:
-                        const BoxConstraints(maxHeight: 300, maxWidth: 600),
-                    child: Container(
-                        margin: const EdgeInsets.all(10),
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: theme.getTheme().cardColor,
-                          borderRadius:
-                              const BorderRadius.all(Radius.circular(5)),
-                        ),
-                        child: LogLines(globalLogModel,
-                            maxLines: 15,
-                            optionalTextColor: theme.getTheme().dividerColor))))
-            : const Empty()
-      ]),
-    );
+                    child: const Text("Network Config"))
+              ],
+              if (loading) ...[
+                const CircularProgressIndicator(value: null, strokeWidth: 2),
+                const SizedBox(height: 10),
+                extraInfo,
+                const SizedBox(height: 10),
+                Collapsable("Recent Log",
+                    child: ConstrainedBox(
+                        constraints:
+                            const BoxConstraints(maxHeight: 300, maxWidth: 600),
+                        child: Container(
+                            margin: const EdgeInsets.all(10),
+                            padding: const EdgeInsets.all(10),
+                            decoration: const BoxDecoration(
+                              borderRadius:
+                                  BorderRadius.all(Radius.circular(5)),
+                            ),
+                            child: LogLines(globalLogModel, maxLines: 15))))
+              ],
+            ]));
   }
 }
 
@@ -275,6 +227,30 @@ class _LNChainSyncPage extends StatefulWidget {
   State<_LNChainSyncPage> createState() => _LNChainSyncPageState();
 }
 
+String _formatDuration(Duration d) {
+  var parts = [];
+
+  if (d.inHours == 1) {
+    parts.add("1 hour");
+  } else if (d.inHours > 0) {
+    parts.add("${d.inHours} hours");
+  }
+
+  if (d.inMinutes % 60 == 1) {
+    parts.add("1 minute");
+  } else if (d.inMinutes % 60 != 0) {
+    parts.add("${d.inMinutes % 60} minutes");
+  }
+
+  if (d.inSeconds % 60 == 1) {
+    parts.add("1 second");
+  } else if (d.inSeconds % 60 != 0) {
+    parts.add("${d.inSeconds % 60} seconds");
+  }
+
+  return parts.join(", ");
+}
+
 class _LNChainSyncPageState extends State<_LNChainSyncPage> {
   int blockHeight = 0;
   String blockHash = "";
@@ -284,6 +260,12 @@ class _LNChainSyncPageState extends State<_LNChainSyncPage> {
   static const startBlockTimestamp = 1454907600;
   static const fiveMinBlock = 300;
   double progress = 0;
+  final DateTime startTime = DateTime.now();
+  int initialHeight = -1;
+  Duration elapsed = const Duration();
+  String get elapsedStr => _formatDuration(elapsed);
+  Duration estimated = const Duration();
+  String get estimatedStr => _formatDuration(estimated);
 
   void readSyncProgress() async {
     var stream = Golib.lnInitChainSyncProgress();
@@ -295,8 +277,19 @@ class _LNChainSyncPageState extends State<_LNChainSyncPage> {
           blockTimestamp =
               DateTime.fromMillisecondsSinceEpoch(update.blockTimestamp * 1000);
           synced = update.synced;
-          progress = update.blockHeight /
+          if (initialHeight == -1) {
+            initialHeight = update.blockHeight;
+          }
+          progress = (update.blockHeight - initialHeight) /
               ((currentTimeStamp - startBlockTimestamp) / fiveMinBlock);
+          var now = DateTime.now();
+          elapsed = now.difference(startTime);
+          if (progress > 0) {
+            estimated = Duration(
+                seconds: (elapsed.inSeconds.toDouble() *
+                    (1 - progress) ~/
+                    progress));
+          }
         });
         if (update.synced) {
           syncCompleted();
@@ -322,138 +315,75 @@ class _LNChainSyncPageState extends State<_LNChainSyncPage> {
 
   @override
   Widget build(BuildContext context) {
-    bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
-
     return Consumer<ThemeNotifier>(
-        builder: (context, theme, child) => StartupScreen([
-              Text("Setting up Bison Relay",
-                  style: TextStyle(
-                      color: theme.getTheme().dividerColor,
-                      fontSize: theme.getHugeFont(context),
-                      fontWeight: FontWeight.w200)),
-              SizedBox(height: isScreenSmall ? 8 : 50),
-              Text("Network Sync",
-                  style: TextStyle(
-                      color: theme.getTheme().focusColor,
-                      fontSize: theme.getLargeFont(context),
-                      fontWeight: FontWeight.w300)),
-              SizedBox(height: isScreenSmall ? 8 : 20),
-              Center(
-                  child: SizedBox(
-                      width: 740,
-                      child: Row(children: [
-                        const SizedBox(width: 65),
-                        Expanded(
-                            child: ClipRRect(
-                                borderRadius:
-                                    const BorderRadius.all(Radius.circular(5)),
-                                child: LinearProgressIndicator(
-                                    minHeight: 8,
-                                    value: progress > 1 ? 1 : progress,
-                                    color: theme.getTheme().cardColor,
-                                    backgroundColor: theme.getTheme().cardColor,
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                        theme.getTheme().dividerColor)))),
-                        const SizedBox(width: 20),
-                        Text(
-                            "${((progress > 1 ? 1 : progress) * 100).toStringAsFixed(0)}%",
-                            style: TextStyle(
-                                color: theme.getTheme().dividerColor,
-                                fontSize: theme.getMediumFont(context),
-                                fontWeight: FontWeight.w300))
-                      ]))),
+        builder: (context, theme, child) => StartupScreen(childrenWidth: 700, [
+              const Txt.H("Setting up Bison Relay"),
+              const SizedBox(height: 30),
+              const Txt.L("Network Sync"),
+              const SizedBox(height: 30),
+              Row(children: [
+                Expanded(
+                    child: ClipRRect(
+                        borderRadius:
+                            const BorderRadius.all(Radius.circular(5)),
+                        child: LinearProgressIndicator(
+                            minHeight: 8, value: progress > 1 ? 1 : progress))),
+                const SizedBox(width: 20),
+                Text(
+                    "${((progress > 1 ? 1 : progress) * 100).toStringAsFixed(0)}%")
+              ]),
               const SizedBox(height: 10),
-              Center(
-                  child: Container(
-                      margin: const EdgeInsets.all(0),
-                      width: 610,
-                      padding: const EdgeInsets.all(10),
-                      color: theme.getTheme().cardColor,
-                      child: Column(children: [
-                        Flex(
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                            direction:
-                                isScreenSmall ? Axis.vertical : Axis.horizontal,
-                            children: [
-                              RichText(
-                                  text: TextSpan(children: [
-                                TextSpan(
-                                    text: "Block Height: ",
-                                    style: TextStyle(
-                                        color: theme.getTheme().dividerColor,
-                                        fontSize: theme.getSmallFont(context),
-                                        fontWeight: FontWeight.w300)),
-                                TextSpan(
-                                    text: "$blockHeight",
-                                    style: TextStyle(
-                                        color: theme.getTheme().dividerColor,
-                                        fontSize: theme.getSmallFont(context),
-                                        fontWeight: FontWeight.w300))
-                              ])),
-                              isScreenSmall
-                                  ? const SizedBox(height: 5)
-                                  : const SizedBox(width: 21),
-                              RichText(
-                                  text: TextSpan(children: [
-                                TextSpan(
-                                    text: "Block Hash: ",
-                                    style: TextStyle(
-                                        color: theme.getTheme().dividerColor,
-                                        fontSize: theme.getSmallFont(context),
-                                        fontWeight: FontWeight.w300)),
-                                TextSpan(
-                                    text: "$blockHeight",
-                                    style: TextStyle(
-                                        color: theme.getTheme().dividerColor,
-                                        fontSize: theme.getSmallFont(context),
-                                        fontWeight: FontWeight.w300))
-                              ])),
-                              isScreenSmall
-                                  ? const SizedBox(height: 5)
-                                  : const SizedBox(width: 21),
-                              RichText(
-                                  text: TextSpan(children: [
-                                TextSpan(
-                                    text: "Block Time: ",
-                                    style: TextStyle(
-                                        color: theme.getTheme().dividerColor,
-                                        fontSize: theme.getSmallFont(context),
-                                        fontWeight: FontWeight.w300)),
-                                TextSpan(
-                                    text: blockTimestamp.toString(),
-                                    style: TextStyle(
-                                        color: theme.getTheme().dividerColor,
-                                        fontSize: theme.getSmallFont(context),
-                                        fontWeight: FontWeight.w300))
-                              ]))
-                            ]),
-                      ]))),
+              Column(children: [
+                Wrap(runSpacing: 5, spacing: 20, children: [
+                  if (elapsed.inSeconds > 0)
+                    SizedBox(
+                        width: 300,
+                        child: Txt.S("Elapsed: $elapsedStr",
+                            color: TextColor.onSurfaceVariant)),
+                  if (estimated.inSeconds > 0)
+                    SizedBox(
+                        width: 300,
+                        child: Txt.S("Estimated complete: in $estimatedStr",
+                            color: TextColor.onSurfaceVariant)),
+                  SizedBox(
+                      width: 160,
+                      child: Txt.S("Block Height: $blockHeight",
+                          color: TextColor.onSurfaceVariant)),
+                  Txt.S("Block Time: ${blockTimestamp.toString()}",
+                      color: TextColor.onSurfaceVariant),
+                  SizedBox(
+                      width: 550,
+                      child: Row(children: [
+                        const Txt.S("Block hash: ",
+                            color: TextColor.onSurfaceVariant),
+                        Expanded(
+                            child: Copyable.txt(Txt.S(blockHash,
+                                color: TextColor.onSurfaceVariant,
+                                style: theme.extraTextStyles.monospaced,
+                                overflow: TextOverflow.ellipsis))),
+                      ])),
+                ]),
+              ]),
               const SizedBox(height: 10),
               Collapsable("Recent Log",
-                  child: ConstrainedBox(
-                      constraints:
-                          const BoxConstraints(maxHeight: 300, maxWidth: 600),
-                      child: Container(
-                          margin: const EdgeInsets.all(10),
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: theme.getTheme().cardColor,
-                            borderRadius:
-                                const BorderRadius.all(Radius.circular(5)),
-                          ),
-                          child: LogLines(globalLogModel,
-                              maxLines: 15,
-                              optionalTextColor:
-                                  theme.getTheme().dividerColor))))
+                  child: Container(
+                      height: 300,
+                      margin: const EdgeInsets.all(10),
+                      padding: const EdgeInsets.all(10),
+                      decoration: const BoxDecoration(
+                        borderRadius: BorderRadius.all(Radius.circular(5)),
+                      ),
+                      child: LogLines(globalLogModel, maxLines: 15)))
             ]));
   }
 }
 
 Future<void> runUnlockDcrlnd(Config cfg) async {
+  final theme = await ThemeNotifier.newNotifierWhenLoaded();
   runApp(MultiProvider(
     providers: [
       ChangeNotifierProvider(create: (c) => SnackBarModel()),
-      ChangeNotifierProvider(create: (c) => ThemeNotifier()),
+      ChangeNotifierProvider.value(value: theme),
     ],
     child: Consumer<SnackBarModel>(
         builder: (context, snackBar, child) => UnlockLNApp(cfg, "/", snackBar)),
@@ -461,10 +391,11 @@ Future<void> runUnlockDcrlnd(Config cfg) async {
 }
 
 Future<void> runChainSyncDcrlnd(Config cfg) async {
+  final theme = await ThemeNotifier.newNotifierWhenLoaded();
   runApp(MultiProvider(
     providers: [
       ChangeNotifierProvider(create: (c) => SnackBarModel()),
-      ChangeNotifierProvider(create: (c) => ThemeNotifier()),
+      ChangeNotifierProvider.value(value: theme),
     ],
     child: Consumer<SnackBarModel>(
         builder: (context, snackBar, child) =>
@@ -473,10 +404,11 @@ Future<void> runChainSyncDcrlnd(Config cfg) async {
 }
 
 Future<void> runMovePastWindowsSetup(Config cfg) async {
+  final theme = await ThemeNotifier.newNotifierWhenLoaded();
   runApp(MultiProvider(
     providers: [
       ChangeNotifierProvider(create: (c) => SnackBarModel()),
-      ChangeNotifierProvider(create: (c) => ThemeNotifier()),
+      ChangeNotifierProvider.value(value: theme),
     ],
     child: Consumer<SnackBarModel>(
         builder: (context, snackBar, child) =>

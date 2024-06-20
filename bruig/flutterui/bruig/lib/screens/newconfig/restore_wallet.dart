@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:bruig/components/buttons.dart';
 import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/components/snackbars.dart';
+import 'package:bruig/components/text.dart';
 import 'package:bruig/models/newconfig.dart';
 import 'package:bruig/screens/startupscreen.dart';
 import 'package:file_picker/file_picker.dart';
@@ -69,69 +70,31 @@ class _RestoreWalletPageState extends State<RestoreWalletPage> {
   @override
   Widget build(BuildContext context) {
     return Consumer<ThemeNotifier>(
-        builder: (context, theme, _) => StartupScreen([
-              Text("Restoring wallet",
-                  style: TextStyle(
-                      color: theme.getTheme().dividerColor,
-                      fontSize: theme.getHugeFont(context),
-                      fontWeight: FontWeight.w200)),
+        builder: (context, theme, _) => StartupScreen(childrenWidth: 600, [
+              const Txt.H("Restoring wallet"),
               const SizedBox(height: 20),
-              SizedBox(
-                  width: 577,
-                  child: Text("Seed Words",
-                      textAlign: TextAlign.left,
-                      style: TextStyle(
-                          color: theme.getTheme().indicatorColor,
-                          fontSize: theme.getMediumFont(context),
-                          fontWeight: FontWeight.w300))),
-              Center(
-                  child: SizedBox(
-                      width: 577,
-                      child: TextField(
-                          maxLines: 5,
-                          cursorColor: theme.getTheme().focusColor,
-                          decoration: InputDecoration(
-                              border: InputBorder.none,
-                              hintText: "Seed words",
-                              hintStyle: TextStyle(
-                                  fontSize: theme.getLargeFont(context),
-                                  color: theme.getTheme().dividerColor),
-                              filled: true,
-                              fillColor: theme.getTheme().cardColor),
-                          style: TextStyle(
-                              color: theme.getTheme().focusColor,
-                              fontSize: theme.getLargeFont(context)),
-                          controller: seedCtrl))),
+              TextField(
+                  maxLines: 5,
+                  decoration: InputDecoration(
+                      border: InputBorder.none,
+                      hintText: "abscond ablate ...",
+                      labelText: "Seed Words",
+                      filled: true,
+                      alignLabelWithHint: true,
+                      fillColor: theme.colors.surface),
+                  controller: seedCtrl),
               const SizedBox(height: 10),
-              Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                TextButton(
+              TextButton(
                   onPressed: selectSCB,
-                  child: Text(
-                    "Select optional SCB file To Restore",
-                    style: TextStyle(color: theme.getTheme().dividerColor),
-                  ),
-                ),
-                scbFilename.isNotEmpty
-                    ? Text(scbFilename,
-                        style:
-                            TextStyle(color: theme.getTheme().indicatorColor))
-                    : const Empty(),
-              ]),
+                  child: const Text("Select optional SCB file To Restore")),
+              scbFilename.isNotEmpty ? Txt.S(scbFilename) : const Empty(),
               const SizedBox(height: 34),
-              Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                LoadingScreenButton(
-                  onPressed: useSeed,
-                  text: "Continue",
-                ),
-              ]),
+              LoadingScreenButton(onPressed: useSeed, text: "Continue"),
               const SizedBox(height: 34),
-              Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                TextButton(
-                  onPressed: () => goBack(context),
-                  child: Text("Go Back",
-                      style: TextStyle(color: theme.getTheme().dividerColor)),
-                )
-              ])
+              TextButton(
+                onPressed: () => goBack(context),
+                child: const Text("Go Back"),
+              )
             ]));
   }
 }

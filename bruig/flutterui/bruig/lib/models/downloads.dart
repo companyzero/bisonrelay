@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_return_types_on_setters
+
 import 'dart:collection';
 
 import 'package:flutter/foundation.dart';
@@ -25,11 +27,11 @@ class FileDownloadModel extends ChangeNotifier {
   }
 }
 
-class _unknownDownload {
+class UnknownDownload {
   final String uid;
   final String fid;
 
-  _unknownDownload(this.uid, this.fid);
+  UnknownDownload(this.uid, this.fid);
 }
 
 class DownloadsModel extends ChangeNotifier {
@@ -39,7 +41,7 @@ class DownloadsModel extends ChangeNotifier {
     _handleDownloadProgress();
   }
 
-  List<FileDownloadModel> _downloads = [];
+  final List<FileDownloadModel> _downloads = [];
   Iterable<FileDownloadModel> get downloads => UnmodifiableListView(_downloads);
 
   int _findDownload(String uid, String fid) {
@@ -67,7 +69,7 @@ class DownloadsModel extends ChangeNotifier {
 
   // unknownDownloads are the downloads for which the local client doesn't have
   // metadata information yet.
-  List<_unknownDownload> unknownDownloads = [];
+  List<UnknownDownload> unknownDownloads = [];
 
   Future<FileDownloadModel> getUserFile(ReceivedFile f) async {
     int idx = _findDownload(f.uid, f.fid);
@@ -90,7 +92,7 @@ class DownloadsModel extends ChangeNotifier {
   Future<void> getUnknownUserFile(String uid, String fid) async {
     if (unknownDownloads.indexWhere((v) => v.uid == uid && v.fid == fid) ==
         -1) {
-      unknownDownloads.add(_unknownDownload(uid, fid));
+      unknownDownloads.add(UnknownDownload(uid, fid));
     }
     await Golib.getUserContent(uid, fid);
   }

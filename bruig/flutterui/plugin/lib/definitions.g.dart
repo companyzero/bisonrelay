@@ -1277,7 +1277,7 @@ LNInitialChainSyncUpdate _$LNInitialChainSyncUpdateFromJson(
         Map<String, dynamic> json) =>
     LNInitialChainSyncUpdate(
       json['block_height'] as int? ?? 0,
-      base64ToHex(json['block_hash'] as String),
+      base64ToHexReversed(json['block_hash'] as String),
       json['block_timestamp'] as int? ?? 0,
       json['synced'] as bool? ?? false,
     );
@@ -1832,8 +1832,8 @@ OnboardState _$OnboardStateFromJson(Map<String, dynamic> json) => OnboardState(
           ? null
           : OOBPublicIdentityInvite.fromJson(
               json['invite'] as Map<String, dynamic>),
-      json['redeemTx'] as String?,
-      json['redeemAmount'] as int? ?? 0,
+      dynListToHexReversed(json['redeem_tx'] as List?),
+      json['redeem_amount'] as int? ?? 0,
       json['out_channel_id'] as String,
       json['in_channel_id'] as String,
       json['out_channel_height_hint'] as int? ?? 0,
@@ -1846,8 +1846,8 @@ Map<String, dynamic> _$OnboardStateToJson(OnboardState instance) =>
       'stage': _$OnboardStageEnumMap[instance.stage]!,
       'key': instance.key,
       'invite': instance.invite,
-      'redeemTx': instance.redeemTx,
-      'redeemAmount': instance.redeemAmount,
+      'redeem_tx': instance.redeemTx,
+      'redeem_amount': instance.redeemAmount,
       'out_channel_id': instance.outChannelID,
       'in_channel_id': instance.inChannelID,
       'out_channel_height_hint': instance.outChannelHeightHint,

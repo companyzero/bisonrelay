@@ -1,7 +1,7 @@
 import 'dart:io';
-import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/components/buttons.dart';
+import 'package:bruig/components/text.dart';
 import 'package:bruig/main.dart';
 import 'package:bruig/models/newconfig.dart';
 import 'package:bruig/screens/startupscreen.dart';
@@ -56,39 +56,18 @@ class _ServerPageState extends State<ServerPage> {
   @override
   Widget build(BuildContext context) {
     return Consumer<ThemeNotifier>(
-        builder: (context, theme, _) => StartupScreen([
-              Text("Setting up Bison Relay",
-                  style: TextStyle(
-                      color: theme.getTheme().dividerColor,
-                      fontSize: theme.getHugeFont(context),
-                      fontWeight: FontWeight.w200)),
+        builder: (context, theme, _) => StartupScreen(childrenWidth: 400, [
+              const Txt.H("Setting up Bison Relay"),
               const SizedBox(height: 20),
-              Text("Connect to Server",
-                  style: TextStyle(
-                      color: theme.getTheme().focusColor,
-                      fontSize: theme.getLargeFont(context),
-                      fontWeight: FontWeight.w300)),
+              const Txt.L("Connect to Server"),
               const SizedBox(height: 34),
-              Row(children: [
-                Flexible(
-                    child: Align(
-                        child: SizedBox(
-                            width: 300,
-                            child: TextField(
-                                cursorColor: theme.getTheme().focusColor,
-                                decoration: InputDecoration(
-                                    border: InputBorder.none,
-                                    hintText: "RPC Host",
-                                    hintStyle: TextStyle(
-                                        fontSize: theme.getMediumFont(context),
-                                        color: theme.getTheme().dividerColor),
-                                    filled: true,
-                                    fillColor: theme.getTheme().cardColor),
-                                style: TextStyle(
-                                    color: theme.getTheme().dividerColor,
-                                    fontSize: theme.getMediumFont(context)),
-                                controller: serverCtrl)))),
-              ]),
+              TextField(
+                  decoration: InputDecoration(
+                      border: InputBorder.none,
+                      hintText: "Server Address",
+                      fillColor: theme.colors.surface,
+                      filled: true),
+                  controller: serverCtrl),
               const SizedBox(height: 34),
               LoadingScreenButton(
                 onPressed: done,

@@ -1,17 +1,19 @@
 import 'dart:async';
 
+import 'package:bruig/components/collapsable.dart';
 import 'package:bruig/components/dcr_input.dart';
-import 'package:bruig/components/buttons.dart';
+import 'package:bruig/components/info_grid.dart';
+import 'package:bruig/components/inputs.dart';
 import 'package:bruig/components/snackbars.dart';
+import 'package:bruig/components/text.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/models/notifications.dart';
 import 'package:bruig/screens/startupscreen.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:golib_plugin/util.dart';
 import 'package:bruig/theme_manager.dart';
-import 'package:provider/provider.dart';
+import 'package:tuple/tuple.dart';
 
 class NeedsInChannelScreen extends StatefulWidget {
   final AppNotifications ntfns;
@@ -39,7 +41,6 @@ class _NeedsInChannelScreenState extends State<NeedsInChannelScreen> {
   TextEditingController certCtrl = TextEditingController();
   AmountEditingController amountCtrl = AmountEditingController();
   String preventMsg = "";
-  bool showAdvanced = false;
 
   void getNewAddress() async {
     try {
@@ -157,18 +158,6 @@ cNPr8Y+sSs2MHf6xMNBQzV4KuIlPIg==
     }
   }
 
-  void showAdvancedArea() {
-    setState(() {
-      showAdvanced = true;
-    });
-  }
-
-  void hideAdvancedArea() {
-    setState(() {
-      showAdvanced = false;
-    });
-  }
-
   @override
   void initState() {
     super.initState();
@@ -185,200 +174,107 @@ cNPr8Y+sSs2MHf6xMNBQzV4KuIlPIg==
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<ThemeNotifier>(
-      builder: (context, theme, child) => StartupScreen(
-        [
-          Text("Setting up Bison Relay",
-              style: TextStyle(
-                  color: theme.getTheme().dividerColor,
-                  fontSize: theme.getHugeFont(context),
-                  fontWeight: FontWeight.w200)),
-          const SizedBox(height: 20),
-          Center(
-            child: Text("Add Inbound Capacity",
-                style: TextStyle(
-                    color: theme.getTheme().focusColor,
-                    fontSize: theme.getLargeFont(context),
-                    fontWeight: FontWeight.w300)),
-          ),
-          const SizedBox(height: 20),
-          Center(
-              child: SizedBox(
-            width: 650,
-            child: Text('''
+    return StartupScreen([
+      const Txt.H("Setting up Bison Relay"),
+      const SizedBox(height: 20),
+      const Txt.L("Add Inbound Capacity"),
+      const SizedBox(height: 20),
+      const SizedBox(
+          width: 650,
+          child: Text(
+            '''
 The wallet requires LN channels with inbound capacity to receive funds to be able to receive payments from other users.
                 ''',
-                style: TextStyle(
-                    color: theme.getTheme().focusColor,
-                    fontSize: theme.getMediumFont(context),
-                    fontWeight: FontWeight.w300)),
           )),
-          const SizedBox(height: 10),
-          ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 400),
-              child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                        textAlign: TextAlign.left,
-                        "Outbound Channel Capacity:",
-                        style: TextStyle(
-                            color: theme.getTheme().indicatorColor,
-                            fontSize: theme.getSmallFont(context),
-                            fontWeight: FontWeight.w300)),
-                    Text(
-                        textAlign: TextAlign.right,
-                        formatDCR(atomsToDCR(maxOutAmount)),
-                        style: TextStyle(
-                            color: theme.getTheme().indicatorColor,
-                            fontSize: theme.getSmallFont(context),
-                            fontWeight: FontWeight.w300)),
-                  ])),
-          const SizedBox(height: 3),
-          ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 400),
-              child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                        textAlign: TextAlign.left,
-                        "Inbound Channel Capacity:",
-                        style: TextStyle(
-                            color: theme.getTheme().indicatorColor,
-                            fontSize: theme.getSmallFont(context),
-                            fontWeight: FontWeight.w300)),
-                    Text(
-                        textAlign: TextAlign.right,
-                        formatDCR(atomsToDCR(maxInAmount)),
-                        style: TextStyle(
-                            color: theme.getTheme().indicatorColor,
-                            fontSize: theme.getSmallFont(context),
-                            fontWeight: FontWeight.w300))
-                  ])),
-          ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 400),
-              child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                        textAlign: TextAlign.left,
-                        "Pending Channels:",
-                        style: TextStyle(
-                            color: theme.getTheme().indicatorColor,
-                            fontSize: theme.getSmallFont(context),
-                            fontWeight: FontWeight.w300)),
-                    Text(
-                        textAlign: TextAlign.right,
-                        "$numPendingChannels",
-                        style: TextStyle(
-                            color: theme.getTheme().indicatorColor,
-                            fontSize: theme.getSmallFont(context),
-                            fontWeight: FontWeight.w300))
-                  ])),
-          ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 400),
-              child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                        textAlign: TextAlign.left,
-                        "Active Channels:",
-                        style: TextStyle(
-                            color: theme.getTheme().indicatorColor,
-                            fontSize: theme.getSmallFont(context),
-                            fontWeight: FontWeight.w300)),
-                    Text(
-                        textAlign: TextAlign.right,
-                        "$numChannels",
-                        style: TextStyle(
-                            color: theme.getTheme().indicatorColor,
-                            fontSize: theme.getSmallFont(context),
-                            fontWeight: FontWeight.w300))
-                  ])),
-          const SizedBox(height: 10),
-          preventMsg == ""
-              ? Column(children: [
-                  Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                    Text("Amount",
-                        style: TextStyle(
-                            color: theme.getTheme().indicatorColor,
-                            fontSize: theme.getMediumFont(context),
-                            fontWeight: FontWeight.w300)),
-                    const SizedBox(
-                      width: 10,
-                    ),
-                    SizedBox(
-                      width: 150,
-                      child: dcrInput(controller: amountCtrl),
-                    ),
-                  ]),
-                  const SizedBox(height: 10),
-                  LoadingScreenButton(
-                    empty: true,
-                    onPressed:
-                        showAdvanced ? hideAdvancedArea : showAdvancedArea,
-                    text: showAdvanced ? "Hide Advanced" : "Show Advanced",
-                  ),
-                  const SizedBox(height: 10),
-                  LoadingScreenButton(
-                    onPressed: !loading ? requestRecvCapacity : null,
-                    text: "Request Inbound Channel",
-                  ),
-                  if (showAdvanced) ...[
-                    const SizedBox(height: 10),
-                    Text("LP Server Address",
-                        style: TextStyle(
-                            color: theme.getTheme().indicatorColor,
-                            fontSize: theme.getSmallFont(context),
-                            fontWeight: FontWeight.w300)),
-                    TextField(
-                      controller: serverCtrl,
-                      decoration: const InputDecoration(
-                          hintText: "https://lpd-server:port"),
-                    ),
-                    const SizedBox(height: 10),
-                    Text("LP Server Cert",
-                        style: TextStyle(
-                            color: theme.getTheme().indicatorColor,
-                            fontSize: theme.getSmallFont(context),
-                            fontWeight: FontWeight.w300)),
-                    TextField(
-                      controller: certCtrl,
-                      maxLines: null,
-                      keyboardType: TextInputType.multiline,
-                    )
-                  ]
-                ])
-              : Column(children: [
-                  const SizedBox(height: 30),
-                  Text(
-                    preventMsg,
-                    style: TextStyle(color: theme.getTheme().dividerColor),
-                  )
-                ]),
-          const SizedBox(height: 10),
-          LoadingScreenButton(
-            onPressed: () => Navigator.of(context).pop(),
-            text: "Skip",
-          ),
-          const SizedBox(height: 10),
-          Center(
-              child: SizedBox(
-            width: 650,
-            child: Text('''
+      SizedBox(
+          width: 350,
+          child: SimpleInfoGrid(
+              colLabelSize: 200,
+              separatorWidth: 0,
+              useListBuilder: false,
+              rowAlignment: MainAxisAlignment.spaceBetween,
+              [
+                Tuple2(
+                    const Txt.S("Outbound Channel Capacity:",
+                        color: TextColor.onSurfaceVariant),
+                    Txt.S(formatDCR(atomsToDCR(maxOutAmount)),
+                        color: TextColor.onSurfaceVariant)),
+                Tuple2(
+                    const Txt.S("Inbound Channel Capacity:",
+                        color: TextColor.onSurfaceVariant),
+                    Txt.S(formatDCR(atomsToDCR(maxInAmount)),
+                        color: TextColor.onSurfaceVariant)),
+                Tuple2(
+                    const Txt.S("Pending Channels:",
+                        color: TextColor.onSurfaceVariant),
+                    Txt.S(numPendingChannels.toString(),
+                        color: TextColor.onSurfaceVariant)),
+                Tuple2(
+                    const Txt.S("Active Channels:",
+                        color: TextColor.onSurfaceVariant),
+                    Txt.S(numChannels.toString(),
+                        color: TextColor.onSurfaceVariant)),
+              ])),
+      ...(preventMsg != ""
+          ? [Text(preventMsg)]
+          : [
+              Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                const Text("Amount:"),
+                const SizedBox(width: 10),
+                SizedBox(width: 250, child: dcrInput(controller: amountCtrl)),
+              ]),
+              const SizedBox(height: 20),
+              SizedBox(
+                  width: 600,
+                  child: Collapsable("Advanced Channel Config",
+                      child: Column(children: [
+                        Row(children: [
+                          const SizedBox(
+                              width: 140,
+                              child: Text("LP Server Address:",
+                                  textAlign: TextAlign.right)),
+                          const SizedBox(width: 10),
+                          Expanded(
+                              child: TextInput(
+                                  controller: serverCtrl,
+                                  hintText: "https://lpd-server:port"))
+                        ]),
+                        const SizedBox(height: 20),
+                        Row(children: [
+                          const SizedBox(
+                              width: 140,
+                              child: Text("LP Server Cert:",
+                                  textAlign: TextAlign.right)),
+                          const SizedBox(width: 10),
+                          Expanded(
+                              child: TextField(
+                            controller: certCtrl,
+                            maxLines: 10,
+                            keyboardType: TextInputType.multiline,
+                          ))
+                        ])
+                      ]))),
+              const SizedBox(height: 20),
+              FilledButton.tonal(
+                onPressed: !loading ? requestRecvCapacity : null,
+                child: const Text("Request Inbound Channel"),
+              ),
+            ]),
+      const SizedBox(height: 20),
+      OutlinedButton(
+        onPressed: () => Navigator.of(context).pop(),
+        child: const Text("Skip"),
+      ),
+      const SizedBox(height: 30),
+      const SizedBox(width: 650, child: Text('''
+Explanation of Inbound Channels:
+
 One way of opening a channel with inbound capacity is to pay for a node to open a channel back to your LN wallet. This is done through a "Liquidity Provider" service.
 
 Note that having a channel with inbound capacity is not for sending or receiving messages. It is only required in order to receive payments from other users.
 
 After the channel is opened, it may take up to 6 confirmations for it to be broadcast through the network. Individual peers may take longer to detect and to consider the channel to send payments.
-                ''',
-                style: TextStyle(
-                    color: theme.getTheme().focusColor,
-                    fontSize: theme.getMediumFont(context),
-                    fontWeight: FontWeight.w300)),
-          )),
-        ],
-      ),
-    );
+                ''')),
+    ]);
   }
 }

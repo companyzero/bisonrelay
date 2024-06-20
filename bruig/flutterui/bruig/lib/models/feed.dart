@@ -10,26 +10,26 @@ import 'package:golib_plugin/golib_plugin.dart';
 class FeedCommentModel extends ChangeNotifier {
   String _nick;
   String get nick => _nick;
-  void set nick(String v) {
-    this._nick = nick;
+  set nick(String v) {
+    _nick = nick;
     notifyListeners();
   }
 
   bool _unreadComment = false;
   bool get unreadComment => _unreadComment;
-  void set unreadComment(bool v) {
+  set unreadComment(bool v) {
     _unreadComment = v;
     notifyListeners();
   }
 
   int _level = 0;
   int get level => _level;
-  void set level(int v) {
+  set level(int v) {
     _level = v;
     notifyListeners();
   }
 
-  List<FeedCommentModel> _children = [];
+  final List<FeedCommentModel> _children = [];
   UnmodifiableListView<FeedCommentModel> get children =>
       UnmodifiableListView(_children);
 
@@ -51,21 +51,21 @@ class FeedPostModel extends ChangeNotifier {
 
   DateTime _lastStatusTS = DateTime.fromMillisecondsSinceEpoch(0);
   DateTime get lastStatusTS => _lastStatusTS;
-  void set lastStatusTS(DateTime ts) {
+  set lastStatusTS(DateTime ts) {
     _lastStatusTS = ts;
     notifyListeners();
   }
 
   bool _hasUnreadComments = false;
   bool get hasUnreadComments => _hasUnreadComments;
-  void set hasUnreadComments(bool b) {
+  set hasUnreadComments(bool b) {
     _hasUnreadComments = b;
     notifyListeners();
   }
 
   bool _hasUnreadPost = false;
   bool get hasUnreadPost => _hasUnreadPost;
-  void set hasUnreadPost(bool b) {
+  set hasUnreadPost(bool b) {
     _hasUnreadPost = b;
     notifyListeners();
   }
@@ -109,8 +109,8 @@ class FeedPostModel extends ChangeNotifier {
 
     // Sort by thread. First, build a map of comment by parent.
     List<FeedCommentModel> roots = [];
-    var cmap = Map<String, FeedCommentModel>();
-    var children = Map<String, List<FeedCommentModel>>();
+    var cmap = {};
+    var children = {};
     newComments.forEach((c) {
       cmap[c.id] = c;
       if (c.parentID == "") {
@@ -149,7 +149,7 @@ class FeedPostModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  List<String> _newComments = [];
+  final List<String> _newComments = [];
   Iterable<String> get newComments => UnmodifiableListView(_newComments);
 
   void addNewComment(String comment) {
@@ -270,26 +270,26 @@ class NewPostModel {
 }
 
 class FeedModel extends ChangeNotifier {
-  List<FeedPostModel> _posts = [];
+  final List<FeedPostModel> _posts = [];
   Iterable<FeedPostModel> get posts => UnmodifiableListView(_posts);
 
   bool _hasUnreadPostsComments = false;
   bool get hasUnreadPostsComments => _hasUnreadPostsComments;
-  void set hasUnreadPostsComments(bool b) {
+  set hasUnreadPostsComments(bool b) {
     _hasUnreadPostsComments = b;
     notifyListeners();
   }
 
   String _gettingUserPost = "";
   String get gettingUserPost => _gettingUserPost;
-  void set gettingUserPost(String b) {
+  set gettingUserPost(String b) {
     _gettingUserPost = b;
     notifyListeners();
   }
 
   Function? _tabChange;
   Function? get tabChange => _tabChange;
-  void set tabChange(Function? b) {
+  set tabChange(Function? b) {
     _tabChange = b;
     notifyListeners();
   }
@@ -302,7 +302,7 @@ class FeedModel extends ChangeNotifier {
 
   FeedPostModel? _newUserPost;
   FeedPostModel? get newUserPost => _newUserPost;
-  void set newUserPost(FeedPostModel? f) {
+  set newUserPost(FeedPostModel? f) {
     _newUserPost = f;
     notifyListeners();
   }
@@ -310,7 +310,7 @@ class FeedModel extends ChangeNotifier {
   FeedPostModel? _active;
   FeedPostModel? get active => _active;
 
-  void set active(FeedPostModel? f) {
+  set active(FeedPostModel? f) {
     _active?._setActive(false);
     _active = f;
     f?._setActive(true);

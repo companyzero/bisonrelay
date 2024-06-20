@@ -32,7 +32,6 @@ class _ContextMenuState extends State<ContextMenu> {
     final List<PopupMenuItem> items =
         widget.items.whereType<PopupMenuItem>().toList();
     final result = await showMenu(
-      shadowColor: Theme.of(context).backgroundColor,
       context: context,
       position: RelativeRect.fromRect(
         Rect.fromPoints(
@@ -65,8 +64,7 @@ class _ContextMenuState extends State<ContextMenu> {
               iconSize: 20,
               splashRadius: 20,
               onPressed: () => _showContextMenu(context),
-              icon: Icon(Icons.more_vert_outlined,
-                  color: Theme.of(context).focusColor))
+              icon: const Icon(Icons.more_vert_outlined))
           : widget.child,
     );
   }

@@ -94,4 +94,4 @@ class UIStateModel {
 }
 
 bool checkIsScreenSmall(BuildContext context) =>
-    MediaQuery.of(context).size.width <= 500;
+    MediaQuery.sizeOf(context).width <= 500;

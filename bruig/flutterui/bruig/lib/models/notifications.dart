@@ -14,11 +14,11 @@ class AppNtfn {
   final AppNtfnType type;
   final String? msg;
 
-  AppNtfn(this.type, {this.msg: null});
+  AppNtfn(this.type, {this.msg});
 }
 
 class AppNotifications extends ChangeNotifier {
-  List<AppNtfn> _ntfns = [];
+  final List<AppNtfn> _ntfns = [];
   Iterable<AppNtfn> get ntfns => _ntfns.toList(growable: false);
   int get count => _ntfns.length;
 

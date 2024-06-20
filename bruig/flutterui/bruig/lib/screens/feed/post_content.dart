@@ -1,9 +1,14 @@
+import 'package:bruig/components/buttons.dart';
+import 'package:bruig/components/containers.dart';
 import 'package:bruig/components/empty_widget.dart';
+import 'package:bruig/components/icons.dart';
 import 'package:bruig/components/interactive_avatar.dart';
 import 'package:bruig/components/md_elements.dart';
 import 'package:bruig/components/snackbars.dart';
+import 'package:bruig/components/text.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/models/feed.dart';
+import 'package:bruig/models/uistate.dart';
 import 'package:bruig/screens/overview.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/golib_plugin.dart';
@@ -196,15 +201,6 @@ class _CommentWState extends State<_CommentW> {
     var mine = widget.comment.uid == widget.client.publicID;
     var kxing = widget.client.requestedMediateID(widget.comment.uid);
     var unreadComment = widget.comment.unreadComment;
-    var theme = Theme.of(context);
-    var hightLightTextColor = theme.dividerColor;
-    var commentBorderColor = theme.dialogBackgroundColor;
-    var darkTextColor = theme.indicatorColor;
-    var textColor = theme.focusColor;
-    var darkAddCommentColor = theme.hoverColor;
-    var selectedBackgroundColor = theme.highlightColor;
-    var errorColor = theme.errorColor;
-    var dividerColor = theme.indicatorColor; // DIVIDER COLOR
 
     var relayedByMe = widget.post.summ.from == widget.client.publicID;
 
@@ -223,10 +219,7 @@ class _CommentWState extends State<_CommentW> {
                   ),
                   const SizedBox(width: 6),
                   Row(children: [
-                    Text(nick,
-                        style: TextStyle(
-                            color: hightLightTextColor,
-                            fontSize: theme.getSmallFont(context))),
+                    Txt.S(nick),
                     const SizedBox(width: 8),
                     !mine && !hasChat && !kxing
                         ? SizedBox(
@@ -252,13 +245,13 @@ class _CommentWState extends State<_CommentW> {
                                         ? subscibeToPosts(chat)
                                         : null,
                                     icon: isSubscribing
-                                        ? SizedBox(
+                                        ? const SizedBox(
                                             height: 15,
                                             width: 15,
                                             child: CircularProgressIndicator(
-                                                strokeWidth: 1,
-                                                color: hightLightTextColor))
-                                        : Icon(Icons.follow_the_signs_rounded)))
+                                                strokeWidth: 1))
+                                        : const Icon(
+                                            Icons.follow_the_signs_rounded)))
                             : const Empty(),
                     SizedBox(
                         width: 20,
@@ -283,15 +276,14 @@ class _CommentWState extends State<_CommentW> {
                                 icon: const Icon(Icons.receipt_long)))
                         : const Empty(),
                     unreadComment
-                        ? Row(children: [
-                            const SizedBox(width: 10),
-                            const Icon(Icons.new_releases_outlined,
+                        ? const Row(children: [
+                            SizedBox(width: 10),
+                            Icon(Icons.new_releases_outlined,
                                 color: Colors.amber),
-                            const SizedBox(width: 10),
-                            Text("New Comment",
+                            SizedBox(width: 10),
+                            Txt.S("New Comment",
                                 style: TextStyle(
                                   fontStyle: FontStyle.italic,
-                                  fontSize: theme.getSmallFont(context),
                                   color: Colors.amber,
                                 ))
                           ])
@@ -301,20 +293,13 @@ class _CommentWState extends State<_CommentW> {
                       ? Expanded(
                           child: Align(
                               alignment: Alignment.centerRight,
-                              child: Text(strTimestamp,
-                                  style: TextStyle(
-                                      fontSize: theme.getSmallFont(context),
-                                      color: darkTextColor))))
+                              child: Txt.S(strTimestamp)))
                       : const Empty(),
                   const SizedBox(width: 10)
                 ],
               ),
               Stack(children: [
                 Container(
-                    decoration: BoxDecoration(
-                        border: Border(
-                            left: BorderSide(
-                                width: 2.0, color: commentBorderColor))),
                     margin: EdgeInsets.only(
                         top: 0,
                         left: widget.comment.level == 0 ? 48 : 18,
@@ -323,48 +308,38 @@ class _CommentWState extends State<_CommentW> {
                         const EdgeInsets.only(top: 10, bottom: 10, left: 10),
                     child: Column(children: [
                       SelectionArea(
-                          child: Row(
-                        children: [
-                          Expanded(
-                            child: MarkdownArea(widget.comment.comment, false),
-                          ),
-                        ],
-                      )),
+                          child: Row(children: [
+                        Expanded(
+                            child: MarkdownArea(widget.comment.comment, false))
+                      ])),
                       replying && !sendingReply
                           ? Column(
                               children: [
                                 const SizedBox(height: 20),
-                                Container(
+                                Box(
                                     padding: const EdgeInsets.all(10),
-                                    color: darkAddCommentColor,
+                                    color: SurfaceColor.surfaceContainer,
                                     child: TextField(
                                       minLines: 3,
-                                      style: TextStyle(
-                                          color: textColor,
-                                          fontSize:
-                                              theme.getMediumFont(context),
-                                          letterSpacing: 0.44),
                                       keyboardType: TextInputType.multiline,
                                       maxLines: null,
                                       onChanged: (v) => reply = v,
                                     )),
                                 const SizedBox(height: 20),
-                                Row(
-                                  children: [
-                                    ElevatedButton(
-                                        onPressed: sendReply,
-                                        child: const Text("Reply")),
-                                    const SizedBox(width: 20),
-                                    ElevatedButton(
-                                      onPressed: () {
-                                        replying = false;
-                                      },
-                                      style: ElevatedButton.styleFrom(
-                                          backgroundColor: errorColor),
-                                      child: const Text("Cancel"),
-                                    )
-                                  ],
-                                )
+                                Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: Wrap(
+                                      alignment: WrapAlignment.start,
+                                      runSpacing: 10,
+                                      spacing: 10,
+                                      children: [
+                                        TextButton(
+                                            onPressed: sendReply,
+                                            child: const Text("Reply")),
+                                        CancelButton(
+                                            onPressed: () => replying = false)
+                                      ],
+                                    ))
                               ],
                             )
                           : const Text(""),
@@ -373,32 +348,15 @@ class _CommentWState extends State<_CommentW> {
                           : const Empty(),
                       commentRRs != null
                           ? Row(children: [
-                              Expanded(
-                                  child: Divider(
-                                color: dividerColor, //color of divider
-                                height: 10, //height spacing of divider
-                                thickness: 1, //thickness of divier line
-                                indent: 10, //spacing at the start of divider
-                                endIndent: 7, //spacing at the end of divider
-                              )),
-                              Consumer<ThemeNotifier>(
-                                  builder: (context, theme, _) => Text(
-                                      commentRRs!.isEmpty
-                                          ? "No receive receipts"
-                                          : "Comment receive receipts",
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(
-                                          color: darkTextColor,
-                                          fontSize:
-                                              theme.getSmallFont(context)))),
-                              Expanded(
-                                  child: Divider(
-                                color: dividerColor, //color of divider
-                                height: 10, //height spacing of divider
-                                thickness: 1, //thickness of divier line
-                                indent: 7, //spacing at the start of divider
-                                endIndent: 10, //spacing at the end of divider
-                              )),
+                              const Expanded(child: Divider()),
+                              const SizedBox(width: 8),
+                              Txt.S(
+                                  commentRRs!.isEmpty
+                                      ? "No receive receipts"
+                                      : "Comment receive receipts",
+                                  color: TextColor.onSurfaceVariant),
+                              const SizedBox(width: 8),
+                              const Expanded(child: Divider()),
                             ])
                           : const Empty(),
                       if (commentRRs != null && commentRRs!.isNotEmpty)
@@ -413,19 +371,13 @@ class _CommentWState extends State<_CommentW> {
                 widget.comment.children.isNotEmpty
                     ? Positioned(
                         left: widget.comment.level == 0 ? 29 : -1,
-                        bottom: -10,
-                        child: Material(
-                            color: textColor.withOpacity(0),
-                            child: IconButton(
-                                splashRadius: 9,
-                                iconSize: 22,
-                                hoverColor: selectedBackgroundColor,
-                                onPressed: () => toggleChildren(),
-                                icon: Icon(
-                                    color: darkTextColor,
-                                    showChildren
-                                        ? Icons.do_disturb_on_outlined
-                                        : Icons.add_circle_outline))))
+                        bottom: 0,
+                        child: IconButton(
+                            iconSize: 22,
+                            onPressed: () => toggleChildren(),
+                            icon: Icon(showChildren
+                                ? Icons.do_disturb_on_outlined
+                                : Icons.add_circle_outline)))
                     : const Empty(),
               ]),
               showChildren && widget.comment.children.isNotEmpty
@@ -433,7 +385,8 @@ class _CommentWState extends State<_CommentW> {
                       decoration: BoxDecoration(
                           border: Border(
                               left: BorderSide(
-                                  width: 2.0, color: commentBorderColor))),
+                                  width: 2.0,
+                                  color: theme.colors.outlineVariant))),
                       margin: EdgeInsets.only(
                           top: 0, left: widget.comment.level == 0 ? 48 : 18),
                       padding:
@@ -644,15 +597,6 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
       );
     }
 
-    var theme = Theme.of(context);
-
-    var hightLightTextColor = theme.dividerColor; // NAME TEXT COLOR
-    var dividerColor = theme.indicatorColor; // DIVIDER COLOR
-    var textColor = theme.focusColor;
-    var backgroundColor = theme.backgroundColor;
-    var postBackgroundColor = theme.highlightColor;
-    var darkAddCommentColor = theme.hoverColor;
-
     var authorNick = widget.args.post.summ.authorNick;
     var authorID = widget.args.post.summ.authorID;
     var relayer = "";
@@ -683,95 +627,46 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
       }
     }
 
-    var darkTextColor = theme.indicatorColor;
-
     List<Widget> commentsWidgets = [];
     var newComments = widget.args.post.newComments;
     if (relayedByAuthor) {
       commentsWidgets.addAll([
         const SizedBox(height: 20),
-        Row(children: [
-          Expanded(
-              child: Divider(
-            color: dividerColor, //color of divider
-            height: 10, //height spacing of divider
-            thickness: 1, //thickness of divier line
-            indent: 10, //spacing at the start of divider
-            endIndent: 7, //spacing at the end of divider
-          )),
-          Consumer<ThemeNotifier>(
-              builder: (context, theme, _) => Text("Comments",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                      color: darkTextColor,
-                      fontSize: theme.getSmallFont(context)))),
-          Expanded(
-              child: Divider(
-            color: dividerColor, //color of divider
-            height: 10, //height spacing of divider
-            thickness: 1, //thickness of divier line
-            indent: 7, //spacing at the start of divider
-            endIndent: 10, //spacing at the end of divider
-          )),
+        const Row(children: [
+          Expanded(child: Divider()),
+          SizedBox(width: 8),
+          Txt.S("Comments", color: TextColor.onSurfaceVariant),
+          SizedBox(width: 8),
+          Expanded(child: Divider()),
         ]),
         const SizedBox(height: 20),
         !replying
-            ? Consumer<ThemeNotifier>(
-                builder: (context, theme, _) => Container(
-                    margin: const EdgeInsets.only(left: 55),
-                    child: Row(children: [
-                      ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                              textStyle: TextStyle(
-                                  color: textColor,
-                                  fontSize: theme.getSmallFont(context),
-                                  letterSpacing: 1),
-                              padding: const EdgeInsets.only(
-                                  bottom: 4, top: 4, left: 8, right: 8)),
-                          onPressed: showReply,
-                          child: Text(
-                            "Add Comment",
-                            style: TextStyle(
-                                color: textColor,
-                                fontSize: theme.getSmallFont(context),
-                                letterSpacing: 1),
-                          ))
-                    ])))
+            ? SizedBox(
+                width: 150,
+                child: OutlinedButton(
+                    onPressed: showReply, child: const Txt.S("Add Comment")))
             : Container(
                 padding: const EdgeInsets.only(
                     left: 13, right: 13, top: 11, bottom: 11),
-                margin: const EdgeInsets.only(
-                    left: 55, right: 108, top: 0, bottom: 0),
+                margin: const EdgeInsets.symmetric(horizontal: 30),
                 child: Column(children: [
-                  Consumer<ThemeNotifier>(
-                      builder: (context, theme, _) => Container(
-                          padding: const EdgeInsets.all(10),
-                          color: darkAddCommentColor,
-                          child: TextField(
-                            minLines: 3,
-                            style: TextStyle(
-                                color: textColor,
-                                fontSize: theme.getMediumFont(context),
-                                letterSpacing: 0.44),
-                            controller: newCommentCtrl,
-                            keyboardType: TextInputType.multiline,
-                            maxLines: null,
-                          ))),
+                  Box(
+                      padding: const EdgeInsets.all(10),
+                      color: SurfaceColor.surfaceContainer,
+                      child: TextField(
+                        minLines: 3,
+                        controller: newCommentCtrl,
+                        keyboardType: TextInputType.multiline,
+                        maxLines: null,
+                      )),
                   const SizedBox(height: 20),
                   Row(
                     children: [
-                      ElevatedButton(
+                      OutlinedButton(
                           onPressed: addComment,
                           child: const Text("Add Comment")),
                       const SizedBox(width: 20),
-                      ElevatedButton(
-                        onPressed: () {
-                          replying = false;
-                        },
-                        style: ElevatedButton.styleFrom(
-                            backgroundColor: theme.errorColor),
-                        child: const Text("Cancel"),
-                      )
+                      CancelButton(onPressed: () => replying = false)
                     ],
                   )
                 ])),
@@ -779,145 +674,78 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
             widget.args.post, e, sendReply, widget.client, showingReplyCB)),
         const SizedBox(height: 20),
         newComments.isNotEmpty
-            ? Consumer<ThemeNotifier>(
-                builder: (context, theme, _) => Column(children: [
-                      Row(children: [
-                        Expanded(
-                            child: Divider(
-                          color: dividerColor, //color of divider
-                          height: 10, //height spacing of divider
-                          thickness: 1, //thickness of divier line
-                          indent: 10, //spacing at the start of divider
-                          endIndent: 7, //spacing at the end of divider
-                        )),
-                        Text("Unreplicated Comments",
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                                color: darkTextColor,
-                                fontSize: theme.getSmallFont(context))),
-                        Expanded(
-                            child: Divider(
-                          color: dividerColor, //color of divider
-                          height: 10, //height spacing of divider
-                          thickness: 1, //thickness of divier line
-                          indent: 7, //spacing at the start of divider
-                          endIndent: 10, //spacing at the end of divider
-                        )),
+            ? Column(children: [
+                const Row(children: [
+                  Expanded(child: Divider()),
+                  SizedBox(width: 8),
+                  Txt.S("Unreplicated Comments",
+                      color: TextColor.onSurfaceVariant),
+                  SizedBox(width: 8),
+                  Expanded(child: Divider()),
+                ]),
+                Container(
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 10, horizontal: 40),
+                    child: const Txt.S(
+                      """Unreplicated comments are those that have been sent to the post's relayer for replication but which the relayer has not yet sent back to the local client. Comment replication requires the remote user to be online so it may take some time until the comment is received back.""",
+                      color: TextColor.onSurfaceVariant,
+                    )),
+                ...newComments.map((e) => Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 40),
+                      child: Column(children: [
+                        const SizedBox(width: 300, child: Divider()),
+                        Txt.S(e, color: TextColor.onSurfaceVariant)
                       ]),
-                      Container(
-                          padding: const EdgeInsets.symmetric(
-                              vertical: 10, horizontal: 40),
-                          child: Text(
-                              """Unreplicated comments are those that have been sent to the post's relayer for replication but which the relayer has not yet sent back to the local client. Comment replication requires the remote user to be online so it may take some time until the comment is received back.""",
-                              style: TextStyle(
-                                  color: hightLightTextColor,
-                                  fontSize: theme.getSmallFont(context),
-                                  letterSpacing: 1))),
-                      ...newComments.map((e) => Container(
-                            padding: const EdgeInsets.all(10),
-                            child: Text(e,
-                                style: TextStyle(
-                                    fontSize: theme.getSmallFont(context),
-                                    color: textColor)),
-                          )),
-                    ]))
+                    )),
+              ])
             : const Empty(),
         const SizedBox(height: 20),
       ]);
     } else {
       commentsWidgets.addAll([
-        Row(children: [
-          Expanded(
-              child: Divider(
-            color: dividerColor, //color of divider
-            height: 10, //height spacing of divider
-            thickness: 1, //thickness of divier line
-            indent: 10, //spacing at the start of divider
-            endIndent: 7, //spacing at the end of divider
-          )),
-        ]),
-        Consumer<ThemeNotifier>(
-            builder: (context, theme, _) => Container(
-                padding: const EdgeInsets.only(
-                    top: 10, bottom: 10, left: 40, right: 40),
-                child: Column(children: [
-                  Text("""This is a relayed post and cannot be commented on.""",
-                      style: TextStyle(
-                          color: textColor,
-                          fontSize: theme.getSmallFont(context),
-                          letterSpacing: 1)),
-                  const SizedBox(height: 10),
-                  isKXSearchingAuthor
-                      ? Text(
-                          """Currently attempting to KX search for post author. This may take a long time to complete, as it involves contacting and performing KX with multiple peers.""",
-                          style: TextStyle(
-                              color: textColor,
-                              fontSize: theme.getSmallFont(context),
-                              letterSpacing: 1))
-                      : !knowsAuthor
+        const SizedBox(height: 10),
+        const Divider(),
+        Container(
+            padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 10),
+            child: Column(children: [
+              const Txt.S("This is a relayed post and cannot be commented on."),
+              const SizedBox(height: 10),
+              isKXSearchingAuthor
+                  ? const Txt.S(
+                      """Currently attempting to KX search for post author. This may take a long time to complete, as it involves contacting and performing KX with multiple peers.""")
+                  : !knowsAuthor
+                      ? Column(children: [
+                          const Txt.S(
+                              """In order to comment on the post, the local client needs to KX with the post author and subscribe to their posts. This may be done automatically by using the "KX Search" action. KX search may take a long time to complete, because it depends on remote peers completing KX and referring us to the original author."""),
+                          const SizedBox(height: 20),
+                          OutlinedButton(
+                              onPressed: kxSearchAuthor,
+                              child: const Text("Start KX Search Attempt"))
+                        ])
+                      : !sentSubscribeAttempt
                           ? Column(children: [
-                              Text(
-                                  """In order to comment on the post, the local client needs to KX with the post author and subscribe to their posts. This may be done automatically by using the "KX Search" action. KX search may take a long time to complete, because it depends on remote peers completing KX and referring us to the original author.""",
-                                  style: TextStyle(
-                                      color: textColor,
-                                      fontSize: theme.getSmallFont(context),
-                                      letterSpacing: 1)),
+                              const Txt.S(
+                                  """In order to comment on the post, the local client needs subscribe to the author's posts and then fetch this post. The process to do this can be started automatically, but it may take some time until the author responds."""),
                               const SizedBox(height: 10),
-                              ElevatedButton(
-                                  onPressed: kxSearchAuthor,
-                                  child: const Text("Start KX Search Attempt"))
+                              OutlinedButton(
+                                  onPressed: subscribeAndFetchPost,
+                                  child: const Text("Subscribe and Fetch Post"))
                             ])
-                          : !sentSubscribeAttempt
-                              ? Column(children: [
-                                  Text(
-                                      """In order to comment on the post, the local client needs subscribe to the author's posts and then fetch this post. The process to do this can be started automatically, but it may take some time until the author responds.""",
-                                      style: TextStyle(
-                                          color: textColor,
-                                          fontSize: theme.getSmallFont(context),
-                                          letterSpacing: 1)),
-                                  const SizedBox(height: 10),
-                                  ElevatedButton(
-                                      onPressed: subscribeAndFetchPost,
-                                      child: const Text(
-                                          "Subscribe and Fetch Post"))
-                                ])
-                              : Text(
-                                  """Sent subscription attempt. It may take some time until the author responds.""",
-                                  style: TextStyle(
-                                      color: textColor,
-                                      fontSize: theme.getSmallFont(context),
-                                      letterSpacing: 1)),
-                ]))),
+                          : const Txt.S(
+                              """Sent subscription attempt. It may take some time until the author responds."""),
+            ])),
       ]);
     }
 
     List<Widget> receiveReceiptsWidgets = [];
     if (postRRs.isNotEmpty) {
       receiveReceiptsWidgets = [
-        const SizedBox(height: 20),
-        Row(children: [
-          Expanded(
-              child: Divider(
-            color: dividerColor, //color of divider
-            height: 10, //height spacing of divider
-            thickness: 1, //thickness of divier line
-            indent: 10, //spacing at the start of divider
-            endIndent: 7, //spacing at the end of divider
-          )),
-          Consumer<ThemeNotifier>(
-              builder: (context, theme, _) => Text("Receive Receipts",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                      color: darkTextColor,
-                      fontSize: theme.getSmallFont(context)))),
-          Expanded(
-              child: Divider(
-            color: dividerColor, //color of divider
-            height: 10, //height spacing of divider
-            thickness: 1, //thickness of divier line
-            indent: 7, //spacing at the start of divider
-            endIndent: 10, //spacing at the end of divider
-          )),
+        const Row(children: [
+          Expanded(child: Divider()),
+          SizedBox(width: 8),
+          Txt.S("Receive Receipts", color: TextColor.onSurfaceVariant),
+          SizedBox(width: 8),
+          Expanded(child: Divider()),
         ]),
         const SizedBox(height: 10),
         Wrap(
@@ -927,129 +755,116 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
       ];
     }
 
-    bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
-    return Container(
-        margin: const EdgeInsets.all(1),
-        decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(3), color: backgroundColor),
+    bool isScreenSmall = checkIsScreenSmall(context);
+    return Align(
+        alignment: Alignment.topLeft,
         child: Stack(alignment: Alignment.topLeft, children: [
-          ListView(
-              padding:
-                  const EdgeInsets.only(left: 0, right: 0, top: 10, bottom: 37),
-              children: [
-                Container(
-                  // Post area
-                  margin: isScreenSmall
-                      ? const EdgeInsets.only(
-                          left: 19, right: 10, top: 0, bottom: 0)
-                      : const EdgeInsets.only(
-                          left: 50, right: 50, top: 0, bottom: 0),
-                  decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(3),
-                      color: postBackgroundColor),
-                  padding: const EdgeInsets.all(16),
-                  child: Consumer<ThemeNotifier>(
-                      builder: (context, theme, _) => Column(
-                            children: [
-                              Row(
-                                children: [
-                                  Container(
-                                    width: 28,
-                                    margin: const EdgeInsets.only(
-                                        top: 0, bottom: 0, left: 5, right: 0),
-                                    child: UserOrSelfAvatar(
-                                        widget.client, authorChat,
-                                        postFrom: widget.args.post.summ.from,
-                                        showChatSideMenuOnTap: true),
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Text(authorNick,
-                                      style: TextStyle(
-                                          color: hightLightTextColor,
-                                          fontSize:
-                                              theme.getSmallFont(context))),
-                                  const SizedBox(width: 8),
-                                  !myPost && !hasChat
-                                      ? SizedBox(
-                                          width: 20,
-                                          child: IconButton(
-                                              padding: const EdgeInsets.all(0),
-                                              iconSize: 15,
-                                              tooltip:
-                                                  "Attempt to KX with the author of this comment",
-                                              onPressed: kxSearchAuthor,
-                                              icon: Icon(
-                                                  color: darkTextColor,
-                                                  Icons
-                                                      .connect_without_contact)))
-                                      : const Text(""),
-                                  SizedBox(
+          SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              child:
+                  Column(mainAxisAlignment: MainAxisAlignment.start, children: [
+                const SizedBox(height: 10),
+
+                // Post Area
+                Box(
+                    margin: isScreenSmall
+                        ? const EdgeInsets.only(
+                            left: 19, right: 10, top: 0, bottom: 0)
+                        : const EdgeInsets.only(
+                            left: 50, right: 50, top: 0, bottom: 0),
+                    borderRadius: BorderRadius.circular(3),
+                    color: SurfaceColor.secondaryContainer,
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      children: [
+                        // Header row.
+                        Row(
+                          children: [
+                            Container(
+                              width: 28,
+                              margin: const EdgeInsets.only(left: 5),
+                              child: UserOrSelfAvatar(widget.client, authorChat,
+                                  postFrom: widget.args.post.summ.from,
+                                  showChatSideMenuOnTap: true),
+                            ),
+                            const SizedBox(width: 6),
+                            Txt.S(authorNick),
+                            const SizedBox(width: 8),
+                            !myPost && !hasChat
+                                ? SizedBox(
                                     width: 20,
                                     child: IconButton(
-                                      padding: const EdgeInsets.all(0),
-                                      iconSize: 15,
-                                      tooltip:
-                                          "Relay this post to your subscribers",
-                                      onPressed: relayPostToAll,
-                                      icon: Icon(
-                                          color: darkTextColor, Icons.send),
-                                    ),
-                                  ),
-                                  Expanded(
-                                      child: Align(
-                                          alignment: Alignment.centerRight,
-                                          child: Text(
-                                              widget.args.post.summ.date
-                                                  .toLocal()
-                                                  .toIso8601String(),
-                                              style: TextStyle(
-                                                  fontSize: theme
-                                                      .getSmallFont(context),
-                                                  color: darkTextColor))))
-                                ],
+                                        padding: const EdgeInsets.all(0),
+                                        iconSize: 15,
+                                        tooltip:
+                                            "Attempt to KX with the author of this comment",
+                                        onPressed: kxSearchAuthor,
+                                        icon: const ColoredIcon(
+                                            Icons.connect_without_contact,
+                                            color: TextColor
+                                                .onSecondaryContainer)))
+                                : const Text(""),
+                            SizedBox(
+                              width: 20,
+                              child: IconButton(
+                                padding: const EdgeInsets.all(0),
+                                iconSize: 15,
+                                tooltip: "Relay this post to your subscribers",
+                                onPressed: relayPostToAll,
+                                icon: const ColoredIcon(Icons.send,
+                                    color: TextColor.onSecondaryContainer),
                               ),
-                              const SizedBox(height: 10),
-                              relayer == ""
-                                  ? const Empty()
-                                  : Row(children: [
-                                      Expanded(
-                                          child: Text("Relayed by $relayer",
-                                              style: TextStyle(
-                                                  color: textColor,
-                                                  fontSize: theme
-                                                      .getMediumFont(context),
-                                                  fontStyle: FontStyle.italic)))
-                                    ]),
-                              const SizedBox(height: 10),
-                              SelectionArea(
-                                  child: Container(
-                                      padding: const EdgeInsets.all(15),
-                                      child: Provider<DownloadSource>(
-                                          create: (context) => DownloadSource(
-                                              widget.args.post.summ.authorID),
-                                          child: MarkdownArea(
-                                              markdownData, false)))),
-                            ],
-                          )),
-                ),
+                            ),
+                            Expanded(
+                                child: Align(
+                                    alignment: Alignment.centerRight,
+                                    child: Txt.S(widget.args.post.summ.date
+                                        .toLocal()
+                                        .toIso8601String())))
+                          ],
+                        ),
 
+                        // Relayer line
+                        const SizedBox(height: 10),
+                        relayer == ""
+                            ? const Empty()
+                            : Row(children: [
+                                Expanded(
+                                    child: Txt.S("Relayed by $relayer",
+                                        style: const TextStyle(
+                                            fontStyle: FontStyle.italic)))
+                              ]),
+
+                        // Post content
+                        const SizedBox(height: 10),
+                        SelectionArea(
+                            child: Container(
+                                padding: const EdgeInsets.all(15),
+                                child: Provider<DownloadSource>(
+                                    create: (context) => DownloadSource(
+                                        widget.args.post.summ.authorID),
+                                    child: MarkdownArea(markdownData, false)))),
+                      ],
+                    )),
+
+                // Comments section
                 ...commentsWidgets,
                 ...receiveReceiptsWidgets,
+              ])),
 
-                // end of post area
-              ]),
-          isScreenSmall
-              ? const Empty()
-              : IconButton(
-                  alignment: Alignment.topLeft,
-                  padding: const EdgeInsets.all(15),
-                  iconSize: 15,
-                  tooltip: "Go back",
-                  onPressed: () => Navigator.of(context).pushReplacementNamed(
-                      '/feed',
-                      arguments:
-                          PageTabs(0, null, null)), //widget.tabChange(0, null),
-                  icon: Icon(color: darkTextColor, Icons.close_outlined)),
+          // Back button on desktop.
+          if (!isScreenSmall)
+            IconButton(
+                alignment: Alignment.topLeft,
+                padding: const EdgeInsets.all(15),
+                iconSize: 15,
+                tooltip: "Go back",
+                onPressed: () => Navigator.of(context).pushReplacementNamed(
+                    '/feed',
+                    arguments:
+                        PageTabs(0, null, null)), //widget.tabChange(0, null),
+                icon: const ColoredIcon(Icons.close_outlined,
+                    color: TextColor.onSurface)),
         ]));
   }
 }

@@ -11,7 +11,7 @@ class SnackBarMessage {
 }
 
 class SnackBarModel extends ChangeNotifier {
-  List<SnackBarMessage> _snackBars = [];
+  final List<SnackBarMessage> _snackBars = [];
   UnmodifiableListView<SnackBarMessage> get snackBars =>
       UnmodifiableListView(_snackBars);
   void success(String snackBarMessage) {

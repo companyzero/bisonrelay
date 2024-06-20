@@ -10,12 +10,11 @@ class AmountEditingController extends TextEditingController {
 
 Widget dcrInput(
         {void Function(double amount)? onChanged,
+        TextSize textSize = TextSize.medium,
         AmountEditingController? controller}) =>
     Consumer<ThemeNotifier>(
         builder: (context, theme, _) => TextField(
-            style: TextStyle(
-                fontSize: theme.getSmallFont(context),
-                color: theme.getTheme().focusColor),
+            style: theme.textStyleFor(context, textSize, null),
             controller: controller,
             onChanged: (String v) {
               double amount = v != "" ? double.parse(v) : 0;
@@ -25,30 +24,22 @@ Widget dcrInput(
             inputFormatters: [
               FilteringTextInputFormatter.allow(RegExp(r'[0-9]+\.?[0-9]*'))
             ],
-            decoration: InputDecoration(
-              contentPadding:
-                  const EdgeInsets.only(left: 10, right: 10, top: 5, bottom: 5),
-              errorBorder: const OutlineInputBorder(
-                borderRadius: BorderRadius.all(Radius.circular(30.0)),
-                borderSide: BorderSide(color: Colors.red, width: 2.0),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: const BorderRadius.all(Radius.circular(30.0)),
-                borderSide:
-                    BorderSide(color: theme.getTheme().focusColor, width: 2.0),
-              ),
-              border: OutlineInputBorder(
-                borderRadius: const BorderRadius.all(Radius.circular(30.0)),
-                borderSide:
-                    BorderSide(color: theme.getTheme().cardColor, width: 2.0),
-              ),
+            decoration: const InputDecoration(
+              contentPadding: EdgeInsets.zero,
+              // errorBorder: OutlineInputBorder(
+              //   borderRadius: const BorderRadius.all(Radius.circular(30.0)),
+              //   borderSide: BorderSide(color: theme.colors.error, width: 2.0),
+              // ),
+              // focusedBorder: OutlineInputBorder(
+              //   borderRadius: const BorderRadius.all(Radius.circular(30.0)),
+              //   borderSide: BorderSide(color: theme.colors.outline, width: 2.0),
+              // ),
+              // border: OutlineInputBorder(
+              //   borderRadius: const BorderRadius.all(Radius.circular(30.0)),
+              //   borderSide: BorderSide(color: theme.colors.outline, width: 2.0),
+              // ),
               hintText: "0.00",
-              hintStyle: TextStyle(
-                  fontSize: theme.getMediumFont(context),
-                  letterSpacing: 0.5,
-                  fontWeight: FontWeight.w300,
-                  color: theme.getTheme().dividerColor),
-              filled: true,
-              fillColor: theme.getTheme().cardColor,
+              // filled: true,
+              // fillColor: theme.colors.surfaceContainer,
               suffixText: "DCR",
             )));

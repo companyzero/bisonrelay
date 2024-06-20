@@ -1,14 +1,15 @@
 import 'dart:collection';
 
 import 'package:bruig/components/snackbars.dart';
+import 'package:bruig/components/text.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/screens/chats.dart';
+import 'package:bruig/screens/ln/components.dart';
 import 'package:flutter/material.dart';
 import 'package:bruig/components/interactive_avatar.dart';
 import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/components/addressbook/input.dart';
 import 'package:bruig/theme_manager.dart';
-import 'package:provider/provider.dart';
 import 'package:bruig/components/addressbook/types.dart';
 
 class _AddressBookListingW extends StatefulWidget {
@@ -62,61 +63,41 @@ class _AddressBookListingWState extends State<_AddressBookListingW> {
 
   @override
   Widget build(BuildContext context) {
-    var theme = Theme.of(context);
-    var textColor = theme.dividerColor;
-    var selectedBackgroundColor = theme.highlightColor;
-    var darkTextColor = theme.indicatorColor;
     var alreadyOpened = false;
     alreadyOpened = client.activeChats.contains(chat);
 
     var popMenuButton = UserMenuAvatar(client, chat);
     addToGroupChat = widget.alreadySelected;
-    return Consumer<ThemeNotifier>(
-        builder: (context, theme, _) => Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(3),
-              ),
-              child: ListTile(
-                onTap: () => confirmGCInvite
-                    ? null
-                    : widget.addToCreateGCCB ?? startChat(),
-                enabled: true,
-                title: Text(chat.nick,
-                    style: TextStyle(
-                        fontSize: theme.getMediumFont(context),
-                        color: textColor)),
-                leading: popMenuButton,
-                trailing: confirmGCInvite
-                    ? const Empty()
-                    : widget.addToCreateGCCB != null
-                        ? Checkbox(
-                            value: addToGroupChat,
-                            onChanged: (value) {
-                              setState(() {
-                                addToGroupChat = value!;
-                              });
-                              widget.addToCreateGCCB!(value!, chat);
-                            })
-                        : Material(
-                            color: textColor.withOpacity(0),
-                            child: IconButton(
-                                splashRadius: 15,
-                                iconSize: 15,
-                                hoverColor: selectedBackgroundColor,
-                                tooltip: widget.addToCreateGCCB != null
-                                    ? "Add to group chat"
-                                    : alreadyOpened
-                                        ? "Open Chat"
-                                        : "Start Chat",
-                                onPressed: () => startChat(),
-                                icon: Icon(
-                                    color: darkTextColor,
-                                    !alreadyOpened ||
-                                            widget.addToCreateGCCB != null
-                                        ? Icons.add
-                                        : Icons.arrow_right_alt_outlined))),
-              ),
-            ));
+    return ListTile(
+      onTap: () =>
+          confirmGCInvite ? null : widget.addToCreateGCCB ?? startChat(),
+      enabled: true,
+      title: Text(chat.nick),
+      leading: popMenuButton,
+      trailing: confirmGCInvite
+          ? const Empty()
+          : widget.addToCreateGCCB != null
+              ? Checkbox(
+                  value: addToGroupChat,
+                  onChanged: (value) {
+                    setState(() {
+                      addToGroupChat = value!;
+                    });
+                    widget.addToCreateGCCB!(value!, chat);
+                  })
+              : IconButton(
+                  splashRadius: 15,
+                  iconSize: 15,
+                  tooltip: widget.addToCreateGCCB != null
+                      ? "Add to group chat"
+                      : alreadyOpened
+                          ? "Open Chat"
+                          : "Start Chat",
+                  onPressed: () => startChat(),
+                  icon: Icon(!alreadyOpened || widget.addToCreateGCCB != null
+                      ? Icons.add
+                      : Icons.arrow_right_alt_outlined)),
+    );
   }
 }
 
@@ -220,10 +201,6 @@ class _AddressBookState extends State<AddressBook> {
 
   @override
   Widget build(BuildContext context) {
-    var theme = Theme.of(context);
-    var normalTextColor = theme.focusColor;
-    var darkTextColor = theme.indicatorColor;
-    var dividerColor = theme.highlightColor;
     bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
 
     if (client.ui.createGroupChat.val) {
@@ -234,273 +211,126 @@ class _AddressBookState extends State<AddressBook> {
     combinedChatList
         .sort((a, b) => a.nick.toLowerCase().compareTo(b.nick.toLowerCase()));
     if (confirmNewGC) {
-      return Consumer<ThemeNotifier>(
-          builder: (context, theme, _) => Column(children: [
-                Container(
-                    padding: const EdgeInsets.all(20),
-                    child: Row(children: [
-                      Text("Name this group chat",
-                          textAlign: TextAlign.left,
-                          style: TextStyle(
-                              color: normalTextColor,
-                              fontSize: theme.getLargeFont(context))),
-                    ])),
-                Row(children: [
-                  const SizedBox(width: 20),
-                  Expanded(
-                      child: GroupChatNameInput(
-                          setGcName, inputFocusNode, newGcName)),
-                  isScreenSmall ? const SizedBox(width: 37) : const Empty()
-                ]),
-                const SizedBox(height: 20),
-                Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      OutlinedButton.icon(
-                          onPressed:
-                              newGcName != "" ? createNewGCFromList : null,
-                          icon: Icon(
-                            color: normalTextColor,
-                            Icons.group_rounded,
-                            size: 24.0,
-                          ),
-                          label: Text('Create group chat',
-                              style: TextStyle(
-                                  fontSize: theme.getLargeFont(context))),
-                          style: OutlinedButton.styleFrom(
-                              foregroundColor: normalTextColor,
-                              disabledForegroundColor: darkTextColor,
-                              side: BorderSide.none,
-                              shape: const StadiumBorder())),
-                      OutlinedButton.icon(
+      return Container(
+          padding:
+              const EdgeInsets.only(left: 12, right: 12, top: 5, bottom: 10),
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Txt.L("Name this group chat"),
+            const SizedBox(height: 10),
+            Row(children: [
+              Expanded(
+                  child:
+                      GroupChatNameInput(setGcName, inputFocusNode, newGcName)),
+              const SizedBox(width: 15)
+            ]),
+            const SizedBox(height: 20),
+            Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
+              TextButton.icon(
+                  onPressed: newGcName != "" ? createNewGCFromList : null,
+                  icon: const Icon(Icons.group_rounded, size: 24.0),
+                  label: const Txt.L("Create group chat")),
+              TextButton(
+                  onPressed: cancelCreateNewGC, child: const Txt.L("Cancel")),
+            ]),
+            const SizedBox(height: 10),
+            const Divider(),
+            const SizedBox(height: 10),
+            Expanded(
+                child: ListView.builder(
+                    itemCount: usersToInvite.length,
+                    itemBuilder: (context, index) => _AddressBookListingW(
+                        usersToInvite[index],
+                        client,
+                        usersToInvite.contains(usersToInvite[index]),
+                        client.ui.createGroupChat.val
+                            ? addToInviteGCList
+                            : null,
+                        true))),
+          ]));
+    }
+    return Container(
+        padding: const EdgeInsets.only(left: 12, right: 12, top: 5, bottom: 10),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Txt.L(!client.ui.createGroupChat.val
+              ? "New message"
+              : "New group chat"),
+          const SizedBox(height: 10),
+          Row(children: [
+            Expanded(
+                child: ChatSearchInput(inputFocusNode,
+                    client.ui.createGroupChat.val, onInputChanged)),
+            isScreenSmall
+                ? const SizedBox(width: 15)
+                : IconButton(
+                    splashRadius: 15,
+                    iconSize: 15,
+                    tooltip: "Cancel",
+                    onPressed: client.ui.hideAddressBookScreen,
+                    icon: const Icon(Icons.cancel)),
+          ]),
+          const SizedBox(height: 10),
+          !client.ui.createGroupChat.val
+              ? TextButton.icon(
+                  onPressed: createNewGroupChat,
+                  icon: const Icon(Icons.group_rounded, size: 24.0),
+                  label: const Txt.L("New group chat"),
+                )
+              : Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                      TextButton(
+                          onPressed: usersToInvite.isNotEmpty
+                              ? confirmCreateNewGC
+                              : null,
+                          child: const Txt.L("Confirm group chat")),
+                      TextButton(
                         onPressed: cancelCreateNewGC,
-                        icon: const Empty(),
-                        label: Text('Cancel',
-                            style: TextStyle(
-                                color: normalTextColor,
-                                fontSize: theme.getLargeFont(context))),
-                        style: OutlinedButton.styleFrom(
-                            side: BorderSide.none,
-                            shape: const StadiumBorder()),
+                        child: const Txt.L("Cancel"),
                       ),
                     ]),
-                Expanded(
-                    child: Container(
-                        padding: const EdgeInsets.all(20),
-                        child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(children: [
-                                Expanded(
-                                    child: Divider(
-                                  color: dividerColor, //color of divider
-                                  height: 10, //height spacing of divider
-                                  thickness: 1, //thickness of divier line
-                                  indent: 8, //spacing at the start of divider
-                                  endIndent: 5, //spacing at the end of divider
-                                )),
-                              ]),
-                              const SizedBox(height: 21),
-                              Expanded(
-                                  child: ListView.builder(
-                                      itemCount: usersToInvite.length,
-                                      itemBuilder: (context, index) =>
-                                          _AddressBookListingW(
-                                              usersToInvite[index],
-                                              client,
-                                              usersToInvite.contains(
-                                                  usersToInvite[index]),
-                                              client.ui.createGroupChat.val
-                                                  ? addToInviteGCList
-                                                  : null,
-                                              true))),
-                              const SizedBox(height: 21),
-                            ])))
-              ]));
-    }
-    return Consumer<ThemeNotifier>(
-        builder: (context, theme, _) => Column(children: [
-              Container(
-                  padding: const EdgeInsets.all(20),
-                  child: Row(children: [
-                    Text(
-                        !client.ui.createGroupChat.val
-                            ? "New message"
-                            : "New group chat",
-                        textAlign: TextAlign.left,
-                        style: TextStyle(
-                            color: normalTextColor,
-                            fontSize: theme.getLargeFont(context))),
-                  ])),
-              Row(children: [
-                const SizedBox(width: 20),
-                Expanded(
-                    child: Input(inputFocusNode, client.ui.createGroupChat.val,
-                        onInputChanged)),
-                Material(
-                    color: dividerColor.withOpacity(0),
-                    child: isScreenSmall
-                        ? const SizedBox(width: 37)
-                        : IconButton(
-                            splashRadius: 15,
-                            iconSize: 15,
-                            hoverColor: dividerColor,
-                            tooltip: "Cancel",
-                            onPressed: client.ui.hideAddressBookScreen,
-                            icon: Icon(color: normalTextColor, Icons.cancel))),
-              ]),
-              !client.ui.createGroupChat.val
-                  ? Column(children: [
-                      const SizedBox(height: 20),
-                      Row(children: [
-                        const SizedBox(width: 20),
-                        OutlinedButton.icon(
-                          onPressed: createNewGroupChat,
-                          icon: Icon(
-                            color: normalTextColor,
-                            Icons.group_rounded,
-                            size: 24.0,
-                          ),
-                          label: Text('New group chat',
-                              style: TextStyle(
-                                  color: normalTextColor,
-                                  fontSize: theme.getLargeFont(context))),
-                          style: OutlinedButton.styleFrom(
-                              side: BorderSide.none,
-                              shape: const StadiumBorder()),
-                        ),
-                      ])
-                    ])
-                  : Column(children: [
-                      const SizedBox(height: 20),
-                      Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            OutlinedButton.icon(
-                                onPressed: usersToInvite.isNotEmpty
-                                    ? confirmCreateNewGC
-                                    : null,
-                                icon: const Empty(),
-                                label: Text('Confirm group chat',
-                                    style: TextStyle(
-                                        fontSize: theme.getLargeFont(context))),
-                                style: OutlinedButton.styleFrom(
-                                    foregroundColor: normalTextColor,
-                                    disabledForegroundColor: darkTextColor,
-                                    side: BorderSide.none,
-                                    shape: const StadiumBorder())),
-                            OutlinedButton.icon(
-                              onPressed: cancelCreateNewGC,
-                              icon: const Empty(),
-                              label: Text('Cancel',
-                                  style: TextStyle(
-                                      color: normalTextColor,
-                                      fontSize: theme.getLargeFont(context))),
-                              style: OutlinedButton.styleFrom(
-                                  side: BorderSide.none,
-                                  shape: const StadiumBorder()),
-                            ),
-                          ])
-                    ]),
-              Expanded(
-                  child: Container(
-                      padding: const EdgeInsets.all(20),
-                      child: filterSearchString != ""
-                          ? Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                  Row(children: [
-                                    Text("Matching Chats",
-                                        textAlign: TextAlign.left,
-                                        style: TextStyle(
-                                            color: normalTextColor,
-                                            fontSize:
-                                                theme.getMediumFont(context))),
-                                    Expanded(
-                                        child: Divider(
-                                      color: dividerColor, //color of divider
-                                      height: 10, //height spacing of divider
-                                      thickness: 1, //thickness of divier line
-                                      indent:
-                                          8, //spacing at the start of divider
-                                      endIndent:
-                                          5, //spacing at the end of divider
-                                    )),
-                                  ]),
-                                  const SizedBox(height: 21),
-                                  filteredSearch.isNotEmpty
-                                      ? Expanded(
-                                          child: ListView.builder(
-                                              itemCount: filteredSearch.length,
-                                              itemBuilder: (context, index) =>
-                                                  _AddressBookListingW(
-                                                      filteredSearch[index],
-                                                      client,
-                                                      usersToInvite.contains(
-                                                          filteredSearch[
-                                                              index]),
-                                                      client.ui.createGroupChat
-                                                              .val
-                                                          ? addToInviteGCList
-                                                          : null,
-                                                      false)))
-                                      : Center(
-                                          //padding: const EdgeInsets.only(left: 50),
-                                          child: Text("No Matching Chats",
-                                              textAlign: TextAlign.center,
-                                              style: TextStyle(
-                                                  color: normalTextColor,
-                                                  fontSize: theme.getMediumFont(
-                                                      context)))),
-                                  const SizedBox(height: 21),
-                                ])
-                          : Column(children: [
-                              combinedChatList.isNotEmpty
-                                  ? Expanded(
-                                      child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                          Row(children: [
-                                            Expanded(
-                                                child: Divider(
-                                              color:
-                                                  dividerColor, //color of divider
-                                              height:
-                                                  10, //height spacing of divider
-                                              thickness:
-                                                  1, //thickness of divier line
-                                              indent:
-                                                  8, //spacing at the start of divider
-                                              endIndent:
-                                                  5, //spacing at the end of divider
-                                            )),
-                                          ]),
-                                          const SizedBox(height: 21),
-                                          Expanded(
-                                              child: ListView.builder(
-                                                  itemCount:
-                                                      combinedChatList.length,
-                                                  itemBuilder: (context,
-                                                          index) =>
-                                                      _AddressBookListingW(
-                                                          combinedChatList[
-                                                              index],
-                                                          client,
-                                                          usersToInvite.contains(
-                                                              combinedChatList[
-                                                                  index]),
-                                                          client
-                                                                  .ui
-                                                                  .createGroupChat
-                                                                  .val
-                                                              ? addToInviteGCList
-                                                              : null,
-                                                          false))),
-                                          const SizedBox(height: 21),
-                                        ]))
-                                  : const Empty(),
-                            ]))),
-            ]));
+          const SizedBox(height: 10),
+          ...(filterSearchString != ""
+              ? [
+                  const LNInfoSectionHeader("Matching Chats"),
+                  const SizedBox(height: 10),
+                  filteredSearch.isEmpty
+                      ? const Center(
+                          child: Txt("No Matching Chats",
+                              color: TextColor.onSurfaceVariant))
+                      : Expanded(
+                          child: ListView.builder(
+                              itemCount: filteredSearch.length,
+                              itemBuilder: (context, index) =>
+                                  _AddressBookListingW(
+                                      filteredSearch[index],
+                                      client,
+                                      usersToInvite
+                                          .contains(filteredSearch[index]),
+                                      client.ui.createGroupChat.val
+                                          ? addToInviteGCList
+                                          : null,
+                                      false))),
+                ]
+              : [
+                  const Divider(),
+                  combinedChatList.isEmpty
+                      ? const Txt("No chats available",
+                          color: TextColor.onSurfaceVariant)
+                      : Expanded(
+                          child: ListView.builder(
+                              itemCount: combinedChatList.length,
+                              itemBuilder: (context, index) =>
+                                  _AddressBookListingW(
+                                      combinedChatList[index],
+                                      client,
+                                      usersToInvite
+                                          .contains(combinedChatList[index]),
+                                      client.ui.createGroupChat.val
+                                          ? addToInviteGCList
+                                          : null,
+                                      false))),
+                ]),
+        ]));
   }
 }

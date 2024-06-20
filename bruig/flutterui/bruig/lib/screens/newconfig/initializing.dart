@@ -1,8 +1,7 @@
+import 'package:bruig/components/text.dart';
 import 'package:bruig/models/newconfig.dart';
 import 'package:bruig/screens/startupscreen.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:bruig/theme_manager.dart';
 
 class InitializingNewConfPage extends StatefulWidget {
   final NewConfigModel newconf;
@@ -35,14 +34,8 @@ class _InitializingNewConfPageState extends State<InitializingNewConfPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<ThemeNotifier>(
-        builder: (context, theme, _) => StartupScreen([
-              Text("Setting up Bison Relay",
-                  style: TextStyle(
-                      color: theme.getTheme().dividerColor,
-                      fontSize: theme.getHugeFont(context),
-                      fontWeight: FontWeight.w200)),
-              const SizedBox(height: 20),
-            ]));
+    return const StartupScreen([
+      Txt.H("Setting up Bison Relay"),
+    ]);
   }
 }

@@ -1,12 +1,17 @@
+import 'package:collection/collection.dart';
 import 'package:bruig/components/dcr_input.dart';
+import 'package:bruig/components/info_grid.dart';
+import 'package:bruig/components/inputs.dart';
 import 'package:bruig/components/snackbars.dart';
+import 'package:bruig/components/text.dart';
+import 'package:bruig/screens/ln/components.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:golib_plugin/util.dart';
 import 'package:bruig/components/copyable.dart';
-import 'package:provider/provider.dart';
 import 'package:bruig/theme_manager.dart';
+import 'package:tuple/tuple.dart';
 
 class LNNetworkPage extends StatefulWidget {
   const LNNetworkPage({Key? key}) : super(key: key);
@@ -21,254 +26,24 @@ class _PeerW extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    var theme = Theme.of(context);
-    var textColor = theme.focusColor;
-    var dividerColor = theme.highlightColor;
-    var secondaryTextColor = theme.dividerColor;
-    return Consumer<ThemeNotifier>(
-        builder: (context, theme, _) => Column(children: [
-              const SizedBox(height: 8),
-              Row(children: [
-                SizedBox(
-                    width: 100,
-                    child: Text("Peer ID:",
-                        style: TextStyle(
-                            fontSize: theme.getSmallFont(context),
-                            color: secondaryTextColor))),
-                Text(peer.pubkey,
-                    style: TextStyle(
-                        fontSize: theme.getSmallFont(context),
-                        color: textColor)),
-              ]),
-              const SizedBox(height: 8),
-              Row(children: [
-                SizedBox(
-                    width: 100,
-                    child: Text("Address:",
-                        style: TextStyle(
-                            fontSize: theme.getSmallFont(context),
-                            color: secondaryTextColor))),
-                Text(peer.address,
-                    style: TextStyle(
-                        fontSize: theme.getSmallFont(context),
-                        color: textColor)),
-              ]),
-              const SizedBox(height: 10),
-              Row(children: [
-                Expanded(
-                    child: Divider(
-                  color: dividerColor, //color of divider
-                  height: 10, //height spacing of divider
-                  thickness: 1, //thickness of divier line
-                  endIndent: 5, //spacing at the end of divider
-                ))
-              ]),
-            ]));
-  }
-}
-
-class _QueriedRouteW extends StatelessWidget {
-  final LNQueryRouteResponse res;
-  final String node;
-  final ScrollController scrollCtrl = ScrollController();
-  _QueriedRouteW(this.node, this.res, {Key? key}) : super(key: key);
-
-  Widget buildHop(
-      int route, int hop, Color textColor, Color secondaryTextColor) {
-    var h = res.routes[route].hops[hop];
-    var chanID = shortChanIDToStr(h.chanId);
-    return Consumer<ThemeNotifier>(
-        builder: (context, theme, _) => Row(children: [
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text("Hop:",
-                    style: TextStyle(
-                        fontSize: theme.getSmallFont(context),
-                        color: secondaryTextColor)),
-                const SizedBox(height: 8),
-                Text("Node:",
-                    style: TextStyle(
-                        fontSize: theme.getSmallFont(context),
-                        color: secondaryTextColor)),
-                const SizedBox(height: 8),
-                Text("Channel ID:",
-                    style: TextStyle(
-                        fontSize: theme.getSmallFont(context),
-                        color: secondaryTextColor)),
-                const SizedBox(height: 8),
-              ]),
-              const SizedBox(width: 8),
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text("$hop",
-                    style: TextStyle(
-                        fontSize: theme.getSmallFont(context),
-                        color: textColor)),
-                const SizedBox(height: 8),
-                Copyable(h.pubkey,
-                    textStyle: TextStyle(
-                        fontSize: theme.getSmallFont(context),
-                        color: textColor)),
-                const SizedBox(height: 8),
-                Text(chanID,
-                    style: TextStyle(
-                        fontSize: theme.getSmallFont(context),
-                        color: textColor)),
-                const SizedBox(height: 8)
-              ])
-            ]));
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    var theme = Theme.of(context);
-    var textColor = theme.focusColor;
-    var secondaryTextColor = theme.dividerColor;
-    var successProb = (res.successProb * 100).toStringAsFixed(2);
-    return Consumer<ThemeNotifier>(
-        builder: (context, theme, _) => Column(children: [
-              Text(node,
-                  style: TextStyle(
-                      fontSize: theme.getSmallFont(context), color: textColor)),
-              Text("Success Probability: $successProb%",
-                  style: TextStyle(
-                      fontSize: theme.getSmallFont(context), color: textColor)),
-              const SizedBox(height: 8),
-              res.routes.isEmpty
-                  ? Text("No routes to node",
-                      style: TextStyle(
-                          fontSize: theme.getSmallFont(context),
-                          color: textColor))
-                  : Expanded(
-                      child: ListView.separated(
-                      separatorBuilder: (context, index) => Divider(
-                        height: 5,
-                        thickness: 1,
-                        color: secondaryTextColor,
-                      ),
-                      controller: scrollCtrl,
-                      itemCount: res.routes[0].hops.length,
-                      itemBuilder: (context, index) =>
-                          buildHop(0, index, textColor, secondaryTextColor),
-                    ))
-            ]));
-  }
-}
-
-class _NodeInfo extends StatelessWidget {
-  final LNGetNodeInfoResponse nodeInfo;
-  final ScrollController scrollCtrl = ScrollController();
-  _NodeInfo(this.nodeInfo, {Key? key}) : super(key: key);
-
-  Widget buildChannel(int channel, Color textColor, Color secondaryTextColor) {
-    var chan = nodeInfo.channels[channel];
-    var chanID = shortChanIDToStr(chan.channelID);
-    var capacity = formatDCR(atomsToDCR(chan.capacity));
-    return Consumer<ThemeNotifier>(
-        builder: (context, theme, _) => Row(children: [
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text("Channel ID:",
-                    style: TextStyle(
-                        fontSize: theme.getSmallFont(context),
-                        color: secondaryTextColor)),
-                const SizedBox(height: 8),
-                Text("Last Channel Update:",
-                    style: TextStyle(
-                        fontSize: theme.getSmallFont(context),
-                        color: secondaryTextColor)),
-                const SizedBox(height: 8),
-                Text("Channel Point:",
-                    style: TextStyle(
-                        fontSize: theme.getSmallFont(context),
-                        color: secondaryTextColor)),
-                const SizedBox(height: 8),
-                Text("Channel Capacity:",
-                    style: TextStyle(
-                        fontSize: theme.getSmallFont(context),
-                        color: secondaryTextColor)),
-                const SizedBox(height: 8),
-                Text("Node 1:",
-                    style: TextStyle(
-                        fontSize: theme.getSmallFont(context),
-                        color: secondaryTextColor)),
-                const SizedBox(height: 8),
-                Text("Node 2:",
-                    style: TextStyle(
-                        fontSize: theme.getSmallFont(context),
-                        color: secondaryTextColor))
-              ]),
-              const SizedBox(width: 10),
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(chanID,
-                    style: TextStyle(
-                        fontSize: theme.getSmallFont(context),
-                        color: textColor)),
-                const SizedBox(height: 8),
-                Text(
-                    DateTime.fromMillisecondsSinceEpoch(chan.lastUpdate * 1000)
-                        .toIso8601String(),
-                    style: TextStyle(
-                        fontSize: theme.getSmallFont(context),
-                        color: textColor)),
-                const SizedBox(height: 8),
-                Copyable(chan.channelPoint,
-                    textStyle: TextStyle(
-                        fontSize: theme.getSmallFont(context),
-                        color: textColor)),
-                const SizedBox(height: 8),
-                Text(capacity,
-                    style: TextStyle(
-                        fontSize: theme.getSmallFont(context),
-                        color: textColor)),
-                const SizedBox(height: 8),
-                Text("${chan.node1Pub} disabled: ${chan.node1Policy.disabled}",
-                    style: TextStyle(
-                        fontSize: theme.getSmallFont(context),
-                        color: textColor)),
-                const SizedBox(height: 8),
-                Text("${chan.node2Pub} disabled: ${chan.node2Policy.disabled}",
-                    style: TextStyle(
-                        fontSize: theme.getSmallFont(context),
-                        color: textColor)),
-              ])
-            ]));
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    var theme = Theme.of(context);
-    var textColor = theme.focusColor;
-    var secondaryTextColor = theme.dividerColor;
-    return Consumer<ThemeNotifier>(
-        builder: (context, theme, _) => Column(children: [
-              Copyable(nodeInfo.node.pubkey,
-                  textStyle: TextStyle(
-                      fontSize: theme.getSmallFont(context), color: textColor)),
-              Copyable(nodeInfo.node.alias,
-                  textStyle: TextStyle(
-                      fontSize: theme.getSmallFont(context), color: textColor)),
-              Text("Number of channels: ${nodeInfo.numChannels}",
-                  style: TextStyle(
-                      fontSize: theme.getSmallFont(context), color: textColor)),
-              Text(
-                  "Total Capacity: ${formatDCR(atomsToDCR(nodeInfo.totalCapacity))}",
-                  style: TextStyle(
-                      fontSize: theme.getSmallFont(context), color: textColor)),
-              const SizedBox(height: 8),
-              nodeInfo.channels.isEmpty
-                  ? Text("No channels for node",
-                      style: TextStyle(color: textColor))
-                  : Expanded(
-                      child: ListView.separated(
-                      separatorBuilder: (context, index) => Divider(
-                        height: 5,
-                        thickness: 1,
-                        color: secondaryTextColor,
-                      ),
-                      controller: scrollCtrl,
-                      itemCount: nodeInfo.channels.length,
-                      itemBuilder: (context, index) =>
-                          buildChannel(index, textColor, secondaryTextColor),
-                    ))
-            ]));
+    return Column(children: [
+      const SizedBox(height: 8),
+      Row(children: [
+        const SizedBox(width: 100, child: Txt.S("Peer ID:")),
+        Expanded(child: Txt.S(peer.pubkey)),
+      ]),
+      const SizedBox(height: 8),
+      Row(children: [
+        const SizedBox(
+            width: 100,
+            child: Txt.S(
+              "Address:",
+            )),
+        Txt.S(peer.address),
+      ]),
+      const SizedBox(height: 10),
+      const Divider(),
+    ]);
   }
 }
 
@@ -373,236 +148,170 @@ class _LNNetworkPageState extends State<LNNetworkPage> {
     loadInfo();
   }
 
+  Widget _buildChannel(LNChannelEdge chan) {
+    var chanID = shortChanIDToStr(chan.channelID);
+    var capacity = formatDCR(atomsToDCR(chan.capacity));
+
+    return SimpleInfoGrid(colLabelSize: 130, [
+      Tuple2(const Txt.S("Channel ID:"), Copyable.txt(Txt.S(chanID))),
+      Tuple2(
+          const Txt.S("Last Channel Update:"),
+          Copyable.txt(Txt.S(
+              DateTime.fromMillisecondsSinceEpoch(chan.lastUpdate * 1000)
+                  .toIso8601String()))),
+      Tuple2(const Txt.S("Channel Point:"),
+          Copyable.txt(Txt.S(chan.channelPoint))),
+      Tuple2(const Txt.S("Channel Capacity:"), Txt.S(capacity)),
+      Tuple2(
+          const Txt.S("Node 1:"),
+          Copyable(chan.node1Pub,
+              child: Txt.S(
+                  "${chan.node1Policy.disabled ? '✗' : '✓'} ${chan.node1Pub}"))),
+      Tuple2(
+          const Txt.S("Node 2:"),
+          Copyable(chan.node2Pub,
+              child: Txt.S(
+                  "${chan.node2Policy.disabled ? '✗' : '✓'} ${chan.node2Pub}"))),
+    ]);
+  }
+
+  List<Widget> _buildNodeInfo(BuildContext context) {
+    return [
+      SimpleInfoGrid(colLabelSize: 130, [
+        Tuple2(
+            const Txt.S("PubKey"), Copyable.txt(Txt.S(nodeInfo.node.pubkey))),
+        Tuple2(const Txt.S("Alias"), Copyable.txt(Txt.S(nodeInfo.node.alias))),
+        Tuple2(const Txt.S("Number of Channels"),
+            Txt.S(nodeInfo.numChannels.toString())),
+        Tuple2(const Txt.S("Total Capacity"),
+            Txt.S(formatDCR(atomsToDCR(nodeInfo.totalCapacity)))),
+      ]),
+      const SizedBox(height: 8),
+      const LNInfoSectionHeader("Channels"),
+      const SizedBox(height: 8),
+      ...(nodeInfo.channels.isEmpty
+          ? [const Text("No channels for node")]
+          : nodeInfo.channels.map((chan) => _buildChannel(chan)).toList())
+    ];
+  }
+
+  Widget _buildRouteHop(int hop, LNHop h) {
+    var chanID = shortChanIDToStr(h.chanId);
+
+    return Column(children: [
+      SimpleInfoGrid(colLabelSize: 70, [
+        Tuple2(const Txt.S("Hop:"), Txt.S(hop.toString())),
+        Tuple2(const Txt.S("Node:"), Copyable.txt(Txt.S(h.pubkey))),
+        Tuple2(const Txt.S("Channel ID:"), Copyable.txt(Txt.S(chanID))),
+      ]),
+      const SizedBox(height: 10),
+    ]);
+  }
+
+  List<Widget> _buildRoute(BuildContext context, LNQueryRouteResponse res) {
+    var successProb = (res.successProb * 100).toStringAsFixed(2);
+    return [
+      Txt.S("Success Probability: $successProb%"),
+      const SizedBox(height: 8),
+      const LNInfoSectionHeader("Route"),
+      const SizedBox(height: 8),
+      ...(res.routes.isEmpty
+          ? [const Txt.S("No routes to node")]
+          : res.routes[0].hops
+              .mapIndexed((hop, h) => _buildRouteHop(hop, h))
+              .toList()),
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
-    var theme = Theme.of(context);
-    var textColor = theme.focusColor;
-    var darkTextColor = theme.indicatorColor;
-    var dividerColor = theme.highlightColor;
-    var backgroundColor = theme.backgroundColor;
-    var secondaryTextColor = theme.dividerColor;
-    var inputFill = theme.hoverColor;
     if (loading) {
-      return Text("Loading...", style: TextStyle(color: textColor));
+      return const Text("Loading...");
     }
+
     if (nodeInfo.node.pubkey != "" &&
         lastQueriedNode != "" &&
         queryRouteRes.routes.isNotEmpty) {
-      return Consumer<ThemeNotifier>(
-          builder: (context, theme, _) => Container(
-              margin: const EdgeInsets.all(1),
-              decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(3),
-                  color: backgroundColor),
-              padding: const EdgeInsets.all(16),
-              child: Stack(alignment: Alignment.topRight, children: [
-                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Row(children: [
-                    Text("Node Info",
-                        textAlign: TextAlign.left,
-                        style: TextStyle(
-                            color: darkTextColor,
-                            fontSize: theme.getMediumFont(context))),
-                    Expanded(
-                        child: Divider(
-                      color: dividerColor, //color of divider
-                      height: 10, //height spacing of divider
-                      thickness: 1, //thickness of divier line
-                      indent: 8, //spacing at the start of divider
-                      endIndent: 5, //spacing at the end of divider
-                    )),
-                  ]),
-                  const SizedBox(height: 21),
-                  Expanded(child: _NodeInfo(nodeInfo)),
-                  const SizedBox(height: 21),
-                  Row(children: [
-                    Text("Queried Route Results",
-                        textAlign: TextAlign.left,
-                        style: TextStyle(
-                            color: darkTextColor,
-                            fontSize: theme.getMediumFont(context))),
-                    Expanded(
-                        child: Divider(
-                      color: dividerColor, //color of divider
-                      height: 10, //height spacing of divider
-                      thickness: 1, //thickness of divier line
-                      indent: 8, //spacing at the start of divider
-                      endIndent: 5, //spacing at the end of divider
-                    )),
-                  ]),
-                  const SizedBox(height: 21),
-                  Expanded(
-                      child: _QueriedRouteW(lastQueriedNode, queryRouteRes))
-                ]),
-                Positioned(
-                    top: 5,
-                    right: 5,
-                    child: Material(
-                        color: dividerColor.withOpacity(0),
-                        child: IconButton(
-                            tooltip: "Close",
-                            hoverColor: dividerColor,
-                            splashRadius: 15,
-                            iconSize: 15,
-                            onPressed: () => closeNodeInfo(),
-                            icon: Icon(
-                                color: darkTextColor, Icons.close_outlined))))
-              ])));
+      return Container(
+          padding: const EdgeInsets.all(16),
+          child: Stack(alignment: Alignment.topRight, children: [
+            SingleChildScrollView(
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                  const LNInfoSectionHeader("Node Info"),
+                  const SizedBox(height: 8),
+                  ..._buildNodeInfo(context),
+                  const SizedBox(height: 12),
+                  const LNInfoSectionHeader("Queried Route Results"),
+                  const SizedBox(height: 8),
+                  ..._buildRoute(context, queryRouteRes),
+                ])),
+            Positioned(
+                top: 5,
+                right: 5,
+                child: IconButton(
+                    tooltip: "Close",
+                    iconSize: 15,
+                    onPressed: () => closeNodeInfo(),
+                    icon: const Icon(Icons.close_outlined)))
+          ]));
     }
-    return Consumer<ThemeNotifier>(
-        builder: (context, theme, _) => Container(
-              margin: const EdgeInsets.all(1),
-              decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(3),
-                  color: backgroundColor),
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(children: [
-                      Text("Server Node",
-                          textAlign: TextAlign.left,
-                          style: TextStyle(
-                              color: darkTextColor,
-                              fontSize: theme.getMediumFont(context))),
-                      Expanded(
-                          child: Divider(
-                        color: dividerColor, //color of divider
-                        height: 10, //height spacing of divider
-                        thickness: 1, //thickness of divier line
-                        indent: 8, //spacing at the start of divider
-                        endIndent: 5, //spacing at the end of divider
-                      )),
-                    ]),
-                    const SizedBox(height: 21),
-                    Row(children: [
-                      SizedBox(
-                          width: 100,
-                          child: Text("Node ID:",
-                              style: TextStyle(
-                                  fontSize: theme.getSmallFont(context),
-                                  color: secondaryTextColor))),
-                      Text(serverNode,
-                          style: TextStyle(
-                              fontSize: theme.getSmallFont(context),
-                              color: textColor)),
-                    ]),
-                    const SizedBox(height: 21),
-                    ElevatedButton(
-                        onPressed: !querying ? queryRouteToServer : null,
-                        child: Text("Query Route",
-                            style: TextStyle(
-                                fontSize: theme.getSmallFont(context),
-                                color: textColor))),
-                    const SizedBox(height: 34),
-                    Row(children: [
-                      Text("Peers",
-                          textAlign: TextAlign.left,
-                          style: TextStyle(
-                              color: darkTextColor,
-                              fontSize: theme.getMediumFont(context))),
-                      Expanded(
-                          child: Divider(
-                        color: dividerColor, //color of divider
-                        height: 10, //height spacing of divider
-                        thickness: 1, //thickness of divier line
-                        indent: 8, //spacing at the start of divider
-                        endIndent: 5, //spacing at the end of divider
-                      )),
-                    ]),
-                    const SizedBox(height: 21),
-                    Expanded(
-                        flex: 10,
-                        child: ListView.builder(
-                          itemCount: peers.length,
-                          itemBuilder: (context, index) => _PeerW(peers[index]),
-                        )),
-                    const SizedBox(height: 21),
-                    Row(children: [
-                      SizedBox(
-                          width: 100,
-                          child: Text("Connect to Peer:",
-                              style: TextStyle(
-                                  fontSize: theme.getSmallFont(context),
-                                  color: secondaryTextColor))),
-                      SizedBox(
-                          width: 500,
-                          child: TextField(
-                              style: TextStyle(
-                                  fontSize: theme.getSmallFont(context),
-                                  color: secondaryTextColor),
-                              controller: connectCtrl,
-                              decoration: InputDecoration(
-                                  hintText: "ID",
-                                  hintStyle: TextStyle(
-                                      fontSize: theme.getSmallFont(context),
-                                      color: secondaryTextColor),
-                                  filled: true,
-                                  fillColor: inputFill)))
-                    ]),
-                    ElevatedButton(
-                        onPressed: !connecting ? connectToPeer : null,
-                        child: Text("Connect",
-                            style: TextStyle(
-                                fontSize: theme.getSmallFont(context),
-                                color: textColor))),
-                    const SizedBox(height: 34),
-                    Row(children: [
-                      Text("Query Route",
-                          textAlign: TextAlign.left,
-                          style: TextStyle(
-                              color: darkTextColor,
-                              fontSize: theme.getMediumFont(context))),
-                      Expanded(
-                          child: Divider(
-                        color: dividerColor, //color of divider
-                        height: 10, //height spacing of divider
-                        thickness: 1, //thickness of divier line
-                        indent: 8, //spacing at the start of divider
-                        endIndent: 5, //spacing at the end of divider
-                      )),
-                    ]),
-                    Row(children: [
-                      SizedBox(
-                          width: 100,
-                          child: Text("Node ID:",
-                              style: TextStyle(
-                                  fontSize: theme.getSmallFont(context),
-                                  color: secondaryTextColor))),
-                      SizedBox(
-                          width: 500,
-                          child: TextField(
-                              style: TextStyle(
-                                  fontSize: theme.getSmallFont(context),
-                                  color: secondaryTextColor),
-                              controller: queryRouteCtrl,
-                              decoration: InputDecoration(
-                                  hintText: "Node ID",
-                                  hintStyle: TextStyle(
-                                      fontSize: theme.getSmallFont(context),
-                                      color: secondaryTextColor),
-                                  filled: true,
-                                  fillColor: inputFill)))
-                    ]),
-                    const SizedBox(height: 8),
-                    Row(children: [
-                      SizedBox(
-                          width: 100,
-                          child: Text("Amount:",
-                              style: TextStyle(
-                                  fontSize: theme.getSmallFont(context),
-                                  color: secondaryTextColor))),
-                      SizedBox(
-                          width: 100,
-                          child: dcrInput(controller: queryAmountCtrl))
-                    ]),
-                    ElevatedButton(
-                        onPressed: !querying ? queryRoute : null,
-                        child: Text("Search",
-                            style: TextStyle(
-                                fontSize: theme.getSmallFont(context),
-                                color: textColor))),
-                  ]),
-            ));
+
+    return Container(
+        alignment: Alignment.topLeft,
+        padding: const EdgeInsets.all(16),
+        child: SingleChildScrollView(
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const LNInfoSectionHeader("Server Node"),
+            const SizedBox(height: 8),
+            Row(children: [
+              const SizedBox(width: 100, child: Txt.S("Node ID:")),
+              Expanded(child: Copyable.txt(Txt.S(serverNode))),
+            ]),
+            const SizedBox(height: 8),
+            OutlinedButton(
+                onPressed: !querying ? queryRouteToServer : null,
+                child: const Txt.S("Query Route")),
+            const SizedBox(height: 21),
+            const LNInfoSectionHeader("Peers"),
+            ...peers.map((peer) => _PeerW(peer)).toList(),
+            const SizedBox(height: 8),
+            Row(children: [
+              const SizedBox(width: 110, child: Txt.S("Connect to Peer:")),
+              Expanded(
+                  child: TextInput(
+                      textSize: TextSize.small,
+                      controller: connectCtrl,
+                      hintText: "Pubkey@ip:port"))
+            ]),
+            const SizedBox(height: 8),
+            OutlinedButton(
+                onPressed: !connecting ? connectToPeer : null,
+                child: const Txt.S("Connect")),
+            const SizedBox(height: 21),
+            const LNInfoSectionHeader("Query Route"),
+            Row(children: [
+              const SizedBox(width: 110, child: Txt.S("Node ID:")),
+              Expanded(
+                  child: TextInput(
+                      textSize: TextSize.small,
+                      controller: queryRouteCtrl,
+                      hintText: "Node ID")),
+            ]),
+            const SizedBox(height: 8),
+            Row(children: [
+              const SizedBox(width: 110, child: Txt.S("Amount:")),
+              SizedBox(
+                  width: 150,
+                  child: dcrInput(
+                      textSize: TextSize.small, controller: queryAmountCtrl))
+            ]),
+            OutlinedButton(
+                onPressed: !querying ? queryRoute : null,
+                child: const Text("Search")),
+          ]),
+        ));
   }
 }

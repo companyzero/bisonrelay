@@ -66,20 +66,15 @@ class _LogLinesState extends State<LogLines> {
 
   @override
   Widget build(BuildContext context) {
-    var theme = Theme.of(context);
-    var textColor = widget.optionalTextColor ?? theme.focusColor;
     return Consumer<ThemeNotifier>(
-        builder: (context, theme, _) => TextField(
+        builder: (context, theme, child) => TextField(
               scrollController: ctrl,
               controller: txtCtrl,
               maxLines: null,
               keyboardType: TextInputType.multiline,
               readOnly: true,
-              style: TextStyle(
-                  color: textColor,
-                  fontSize: theme.getSmallFont(context),
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                  height: 1.2),
+              style: theme.extraTextStyles.monospaced
+                  .merge(const TextStyle(fontSize: 12)),
             ));
   }
 }

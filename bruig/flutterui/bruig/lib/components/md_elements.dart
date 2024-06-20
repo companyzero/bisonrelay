@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:ui';
 // import 'package:dart_vlc/dart_vlc.dart' as vlc;
 import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/components/info_grid.dart';
@@ -372,6 +371,32 @@ class VideoMarkdownElementBuilder extends MarkdownElementBuilder {
 }
 */
 class MarkdownArea extends StatelessWidget {
+  static final extensionSet = md.ExtensionSet(
+      md.ExtensionSet.gitHubFlavored.blockSyntaxes,
+      [md.EmojiSyntax(), ...md.ExtensionSet.gitHubFlavored.inlineSyntaxes]);
+
+  static final builders = {
+    "pre": PreformattedElementBuilder(),
+    "pdf": PDFMarkdownElementBuilder(),
+    //"video": VideoMarkdownElementBuilder(basedir),
+    "codeblock": CodeblockMarkdownElementBuilder(),
+    "image": ImageMarkdownElementBuilder(),
+    "download": DownloadLinkElementBuilder(),
+    "form": _FormElementBuilder(),
+    "lnpay": _LNPayURLElementBuilder(),
+  };
+
+  static final inlineSyntaxes = [
+    //VideoInlineSyntax(),
+    //ImageInlineSyntax()
+    EmbedInlineSyntax(),
+    LnpayURLSyntax(),
+  ];
+
+  static final blockSyntaxes = [
+    _FormBlockSyntax(),
+  ];
+
   final String text;
   final bool hasNick;
   const MarkdownArea(this.text, this.hasNick, {Key? key}) : super(key: key);
@@ -411,78 +436,18 @@ class MarkdownArea extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    var theme = Theme.of(context);
-    var darkTextColor = theme.indicatorColor;
-    var textColor = theme.focusColor;
     return Consumer2<ThemeNotifier, PaymentsModel>(
         builder: (context, theme, payments, _) => MarkdownBody(
               codeBlockMaxHeight: 200,
-              styleSheet: MarkdownStyleSheet(
-                a: TextStyle(
-                    color: textColor, decoration: TextDecoration.underline),
-                p: TextStyle(
-                    fontSize: theme.getMediumFont(context),
-                    color: textColor,
-                    fontWeight: hasNick ? FontWeight.w700 : FontWeight.w300,
-                    letterSpacing: 0.44),
-                h1: TextStyle(color: textColor),
-                h2: TextStyle(color: textColor),
-                h3: TextStyle(color: textColor),
-                h4: TextStyle(color: textColor),
-                h5: TextStyle(color: textColor),
-                h6: TextStyle(color: textColor),
-                em: TextStyle(color: textColor),
-                strong: TextStyle(color: textColor),
-                del: TextStyle(color: textColor),
-                listBullet: TextStyle(color: textColor),
-                blockquote: TextStyle(color: textColor),
-                checkbox: TextStyle(color: textColor),
-                tableBody: TextStyle(color: textColor),
-                tableHead: TextStyle(color: textColor),
-                blockquoteDecoration: BoxDecoration(color: darkTextColor),
-                codeblockDecoration: BoxDecoration(
-                    color: Colors.black87,
-                    borderRadius: BorderRadius.circular(2),
-                    border: Border.all(width: 0.5, color: Colors.white24)),
-                code: TextStyle(
-                    fontFeatures: const [FontFeature.tabularFigures()],
-                    color: textColor,
-                    backgroundColor: Colors.black87,
-                    height: 1.2,
-                    fontSize: theme.getMediumFont(context),
-                    fontFamily: 'Inter',
-                    textBaseline: TextBaseline.alphabetic),
-              ),
+              styleSheet: theme.mdStyleSheet,
               data: text.trim(),
-              extensionSet: md.ExtensionSet(
-                  md.ExtensionSet.gitHubFlavored.blockSyntaxes, [
-                md.EmojiSyntax(),
-                ...md.ExtensionSet.gitHubFlavored.inlineSyntaxes
-              ]),
-              builders: {
-                "pre": PreformattedElementBuilder(),
-                "pdf": PDFMarkdownElementBuilder(),
-                //"video": VideoMarkdownElementBuilder(basedir),
-                "codeblock": CodeblockMarkdownElementBuilder(),
-                "image": ImageMarkdownElementBuilder(),
-                "download":
-                    DownloadLinkElementBuilder(TextStyle(color: darkTextColor)),
-                "form": _FormElementBuilder(
-                    labelStyle: TextStyle(color: textColor)),
-                "lnpay": _LNPayURLElementBuilder(payments),
-              },
-              onTapLink: (text, url, blah) {
+              extensionSet: extensionSet,
+              builders: builders,
+              onTapLink: (text, url, _) {
                 launchUrlAwait(context, url);
               },
-              inlineSyntaxes: [
-                //VideoInlineSyntax(),
-                //ImageInlineSyntax()
-                EmbedInlineSyntax(),
-                LnpayURLSyntax(),
-              ],
-              blockSyntaxes: [
-                _FormBlockSyntax(),
-              ],
+              inlineSyntaxes: inlineSyntaxes,
+              blockSyntaxes: blockSyntaxes,
             ));
   }
 }
@@ -514,7 +479,6 @@ class Downloadable extends StatelessWidget {
   Widget build(BuildContext context) => Tooltip(
         message: tip,
         child: InkWell(
-          hoverColor: Theme.of(context).hoverColor,
           onTap: fid != "" ? () => download(context) : null,
           child: Container(
             margin: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
@@ -536,7 +500,6 @@ class ImageMd extends StatelessWidget {
         message: tip,
         child: InkWell(
           borderRadius: const BorderRadius.all(Radius.circular(30)),
-          hoverColor: Theme.of(context).hoverColor,
           onTap: () {
             showDialog(
                 context: context,
@@ -559,18 +522,18 @@ class ImageMd extends StatelessWidget {
 class PreformattedElementBuilder extends MarkdownElementBuilder {
   @override
   Widget visitText(md.Text text, TextStyle? preferredStyle) {
-    var style = preferredStyle!.copyWith(
-      backgroundColor: Colors.transparent,
-    );
-
     return ConstrainedBox(
       constraints: const BoxConstraints(maxHeight: 200),
       child: SingleChildScrollView(
           controller: ScrollController(keepScrollOffset: false),
-          child: Text.rich(
-            TextSpan(text: text.text),
-            style: style,
-          )),
+          child: Consumer<ThemeNotifier>(
+              builder: (context, theme, child) => Text.rich(
+                    TextSpan(text: text.text),
+
+                    // Overwrite <pre> style to use the same as code
+                    // (Markdown component uses same as <p> by default).
+                    style: theme.mdStyleSheet.code,
+                  ))),
     );
   }
 }
@@ -578,13 +541,9 @@ class PreformattedElementBuilder extends MarkdownElementBuilder {
 class CodeblockMarkdownElementBuilder extends MarkdownElementBuilder {
   @override
   Widget visitText(md.Text text, TextStyle? preferredStyle) {
-    var style = preferredStyle!.copyWith(
-      backgroundColor: Colors.transparent,
-    );
-
     return Text.rich(
       TextSpan(text: text.text),
-      style: style,
+      style: preferredStyle,
     );
   }
 }
@@ -618,21 +577,13 @@ class PDFMarkdownElementBuilder extends MarkdownElementBuilder {
 }
 
 class DownloadLinkElementBuilder extends MarkdownElementBuilder {
-  final TextStyle style;
-
-  DownloadLinkElementBuilder(this.style);
+  DownloadLinkElementBuilder();
 
   @override
   Widget visitElementAfter(md.Element element, TextStyle? preferredStyle) {
     var download = element.attributes["fid"] ?? "";
     var tip = "Click to download file $download";
-    return Downloadable(
-        tip,
-        download,
-        Text(
-          element.textContent,
-          style: style,
-        ));
+    return Downloadable(tip, download, Text(element.textContent));
   }
 }
 
@@ -677,7 +628,7 @@ class ImageMarkdownElementBuilder extends MarkdownElementBuilder {
 class _FormSubmitButton extends StatelessWidget {
   final _FormElement form;
   final _FormField submit;
-  const _FormSubmitButton(this.form, this.submit, {super.key});
+  const _FormSubmitButton(this.form, this.submit);
 
   void doSubmit(BuildContext context, _FormElement form) async {
     Map<String, dynamic> formData = {};
@@ -722,8 +673,7 @@ class _FormSubmitButton extends StatelessWidget {
 }
 
 class _FormElementBuilder extends MarkdownElementBuilder {
-  final TextStyle? labelStyle;
-  _FormElementBuilder({this.labelStyle = null});
+  _FormElementBuilder();
 
   @override
   Widget visitElementAfter(md.Element element, TextStyle? preferredStyle) {
@@ -743,8 +693,8 @@ class _FormElementBuilder extends MarkdownElementBuilder {
           if (field.value is String) {
             ctrl.value = field.value;
           }
-          fieldWidgets.add(Tuple2(Text(field.label, style: labelStyle),
-              TextField(onChanged: (String val) {
+          fieldWidgets
+              .add(Tuple2(Text(field.label), TextField(onChanged: (String val) {
             field.value = val;
           })));
           break;
@@ -759,7 +709,7 @@ class _FormElementBuilder extends MarkdownElementBuilder {
           }
           field.value = ctrl.intvalue;
           fieldWidgets.add(Tuple2(
-              Text(field.label, style: labelStyle),
+              Text(field.label),
               intInput(
                   controller: ctrl,
                   onChanged: (int val) {
@@ -788,7 +738,7 @@ class _FormElementBuilder extends MarkdownElementBuilder {
 class _PayReqBtn extends StatefulWidget {
   final PaymentsModel payments;
   final String invoice;
-  const _PayReqBtn(this.payments, this.invoice, {super.key});
+  const _PayReqBtn(this.payments, this.invoice);
 
   @override
   State<_PayReqBtn> createState() => __PayReqBtnState();
@@ -851,11 +801,10 @@ class __PayReqBtnState extends State<_PayReqBtn> {
 }
 
 class _LNPayURLElementBuilder extends MarkdownElementBuilder {
-  final PaymentsModel payments;
-  _LNPayURLElementBuilder(this.payments);
-
   @override
   Widget visitElementAfter(md.Element element, TextStyle? preferredStyle) {
-    return _PayReqBtn(payments, element.textContent);
+    return Consumer<PaymentsModel>(
+        builder: (context, payments, child) =>
+            _PayReqBtn(payments, element.textContent));
   }
 }

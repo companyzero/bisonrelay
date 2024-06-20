@@ -35,12 +35,8 @@ class SettingsScreenTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer2<SettingsTitleModel, ThemeNotifier>(
-        builder: (context, settingsTitle, themeNtf, child) => Text(
-            settingsTitle.title,
-            style: TextStyle(
-                fontSize: themeNtf.getLargeFont(context),
-                color: themeNtf.getTheme().focusColor)));
+    return Consumer<SettingsTitleModel>(
+        builder: (context, settingsTitle, child) => Text(settingsTitle.title));
   }
 }
 
@@ -221,7 +217,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     // Desktop-sized version.
     return Row(children: [
-      SecondarySideMenuList(width: 120, children: [
+      SecondarySideMenuList(width: 120, items: [
         ListTile(
           selected: settingsPage == "Account",
           title: const Txt.S("Account"),

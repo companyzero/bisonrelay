@@ -110,14 +110,10 @@ AppBar _buildAppBar(BuildContext context, ClientModel client, FeedModel feed,
     navKey.currentState!.pushReplacementNamed(route, arguments: args);
   }
 
-  var theme = Theme.of(context);
-  var sidebarBackground = theme.backgroundColor;
-
   bool isScreenSmall = checkIsScreenSmall(context);
 
   if (!isScreenSmall) {
     return AppBar(
-        backgroundColor: sidebarBackground,
         titleSpacing: 0.0,
         title: const _OverviewScreenTitle(),
         leadingWidth: 112,
@@ -142,9 +138,8 @@ AppBar _buildAppBar(BuildContext context, ClientModel client, FeedModel feed,
               splashRadius: 20,
               tooltip: "Create a new post",
               onPressed: () => goToNewPost(context),
-              color: Colors.red,
               iconSize: 20,
-              icon: Icon(color: theme.dividerColor, size: 20, Icons.mode)),
+              icon: const Icon(size: 20, Icons.mode)),
           const SizedBox(width: 20),
         ]));
   }
@@ -155,7 +150,6 @@ AppBar _buildAppBar(BuildContext context, ClientModel client, FeedModel feed,
   }
 
   return AppBar(
-      backgroundColor: sidebarBackground,
       leadingWidth: 60,
       titleSpacing: 0.0,
       title: const _OverviewScreenTitle(),
@@ -199,11 +193,10 @@ AppBar _buildAppBar(BuildContext context, ClientModel client, FeedModel feed,
                               showAddrBook.val ||
                               feed.active != null ||
                               !chatSideMenuActive.empty
-                          ? Positioned(
+                          ? const Positioned(
                               left: 25,
                               top: 17,
-                              child: Icon(Icons.keyboard_arrow_left_rounded,
-                                  color: Theme.of(context).focusColor))
+                              child: Icon(Icons.keyboard_arrow_left_rounded))
                           : Container(
                               margin: const EdgeInsets.all(10),
                               child: SelfAvatar(client)),
@@ -367,14 +360,9 @@ class _OverviewScreenState extends State<OverviewScreen> {
 
   @override
   Widget build(BuildContext context) {
-    var theme = Theme.of(context);
-    var selectedColor = theme.dividerColor;
-    var unselectedTextColor = theme.focusColor;
-
-    bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
+    bool isScreenSmall = checkIsScreenSmall(context);
     return Scaffold(
       key: scaffoldKey,
-      backgroundColor: theme.canvasColor,
       appBar: _buildAppBar(context, client, feed, widget.mainMenu, navKey),
       body: SnackbarDisplayer(
           widget.snackBar,
@@ -416,14 +404,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
       bottomNavigationBar: isScreenSmall && !removeBottomBar
           ? Consumer<ThemeNotifier>(
               builder: (context, theme, _) => BottomNavigationBar(
-                    selectedFontSize: theme.getLargeFont(context),
-                    unselectedFontSize: theme.getMediumFont(context),
-                    selectedItemColor: selectedColor,
-                    unselectedItemColor: unselectedTextColor,
-                    selectedLabelStyle:
-                        const TextStyle(fontWeight: FontWeight.w700),
-                    unselectedLabelStyle:
-                        const TextStyle(fontWeight: FontWeight.w200),
+                    selectedFontSize: fontSize(TextSize.large)!,
                     iconSize: 40,
                     items: <BottomNavigationBarItem>[
                       BottomNavigationBarItem(

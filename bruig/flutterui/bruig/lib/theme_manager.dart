@@ -1,6 +1,9 @@
 import 'dart:io';
 
+import 'package:bruig/util.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:provider/provider.dart';
 import './storage_manager.dart';
 
 enum TextSize {
@@ -9,6 +12,25 @@ enum TextSize {
   medium, // body.medium / label.large. (14 pt).
   large, // body.large / title.medium (16 pt).
   huge, // title.large (22 pt).
+}
+
+// fontSize returns the font size to use given the text size token. When null is
+// passed to size, a null font size ("default" size) is returned.
+double? fontSize(TextSize? size) {
+  switch (size) {
+    case TextSize.small:
+      return 12;
+    case TextSize.system:
+      return null;
+    case TextSize.medium:
+      return 14;
+    case TextSize.large:
+      return 16;
+    case TextSize.huge:
+      return 22;
+    case null:
+      return null;
+  }
 }
 
 enum TextColor {
@@ -34,6 +56,8 @@ enum TextColor {
   onSecondaryFixedVariant,
   onTertiaryFixed,
   onTertiaryFixedVariant,
+
+  error, // Used when only the text is displayed as error.
 }
 
 // SurfaceColor are colors used on surfaces/containers/background.
@@ -78,7 +102,30 @@ enum SurfaceColor {
 class CustomColors {
   final Color sidebarDivider;
 
-  CustomColors({this.sidebarDivider = Colors.black});
+  const CustomColors({
+    this.sidebarDivider = Colors.black,
+  });
+}
+
+class CustomTextStyles {
+  // Used on the small "gc" indicator on the list of chats.
+  final TextStyle chatListGcIndicator;
+
+  // Used on the nick initial on CircleAvatar (when the avatar color is
+  // light or dark).
+  final TextStyle lightAvatarInitial;
+  final TextStyle darkAvatarInitial;
+
+  final TextStyle monospaced;
+
+  const CustomTextStyles({
+    this.chatListGcIndicator = const TextStyle(),
+    this.lightAvatarInitial =
+        const TextStyle(fontSize: 16, color: Color(0xFF0E0D0D)),
+    this.darkAvatarInitial =
+        const TextStyle(fontSize: 16, color: Color(0xC0FCFCFC)),
+    this.monospaced = const TextStyle(fontFamily: "RobotoMono"),
+  });
 }
 
 // Map between a background color token and its corresponding text color ("on"
@@ -331,15 +378,26 @@ class AppTheme {
   final String descr;
   final ThemeData data;
   final CustomColors extraColors;
+  final CustomTextStyles extraTextStyles;
 
-  AppTheme(
-      {required this.key,
-      required this.descr,
-      required this.data,
-      required this.extraColors});
+  // Decoration used to fade the background in StartupScreen components.
+  final BoxDecoration? startupScreenBoxDecoration;
+
+  AppTheme({
+    required this.key,
+    required this.descr,
+    required this.data,
+    required this.extraColors,
+    required this.extraTextStyles,
+    this.startupScreenBoxDecoration,
+  });
 
   factory AppTheme.empty() => AppTheme(
-      key: "", descr: "", data: ThemeData(), extraColors: CustomColors());
+      key: "",
+      descr: "",
+      data: ThemeData(),
+      extraColors: const CustomColors(),
+      extraTextStyles: const CustomTextStyles());
 }
 
 final appThemes = {
@@ -379,7 +437,8 @@ final appThemes = {
       //     color:
       //         Colors.black)))), // USE WITH RANDOM BACKGROUND FOR POSTS
     ),
-    extraColors: CustomColors(),
+    extraColors: const CustomColors(),
+    extraTextStyles: const CustomTextStyles(),
   ),
   "light": AppTheme(
     key: "light",
@@ -415,141 +474,177 @@ final appThemes = {
       //     bodyText1: TextStyle(color: Colors.black),
       //     bodyText2: TextStyle(color: Colors.white)),
     ),
-    extraColors: CustomColors(),
+    extraColors: const CustomColors(),
+    extraTextStyles: const CustomTextStyles(),
   ),
   "dark-m3": AppTheme(
-    key: "dark-m3",
-    descr: "Dark (Material 3)",
-    data: ThemeData.from(
-      // Base Material3 color scheme based on seed
-      useMaterial3: true,
-      textTheme: _interTextTheme,
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: const Color(0xFF19172C),
-        brightness: Brightness.dark,
+      key: "dark-m3",
+      descr: "Dark (Material 3)",
+      data: ThemeData.from(
+        // Base Material3 color scheme based on seed
+        useMaterial3: true,
+        textTheme: _interTextTheme,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF19172C),
+          brightness: Brightness.dark,
 
-        // Color scheme customizations
-        onSurfaceVariant: Colors.grey[600],
-        background: const Color(
-            0xFF19172C), // Same as surface, will be removed in the future.
-        surface: const Color(0xFF19172C),
-        surfaceContainerLow: const Color(0xFF17152A),
-        surfaceContainerLowest: const Color(0xFF161429),
+          // Color scheme customizations
+          onSurfaceVariant: Colors.grey[600],
+          background: const Color(
+              0xFF19172C), // Same as surface, will be removed in the future.
+          surface: const Color(0xFF19172C),
+          surfaceContainerLow: const Color(0xFF17152A),
+          surfaceContainerLowest: const Color(0xFF161429),
+        ),
+      ).copyWith(
+        // Bruig theme customizations.
+        listTileTheme: ListTileThemeData(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
+          selectedTileColor: Colors.grey[850],
+          iconColor: const Color(0xFFe5e1e9), // onSurface
+        ),
+
+        hintColor: const Color(0xFF47464f), // onSurfaceVariant
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Color(0xFF19172C), // suface color.
+          scrolledUnderElevation:
+              0, // Disable the scroll shadow effect on appbar
+        ),
+
+        disabledColor: Colors.grey[850],
       ),
-    ).copyWith(
-      // Bruig theme customizations.
-      listTileTheme: ListTileThemeData(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
-        selectedTileColor: Colors.grey[850],
-        // tileColor: Colors.amber,
-        iconColor:
-            const Color(0xFFe5e1e9), // Same color as onSurface by default.
-        // iconColor: Colors.grey[600],
+      extraColors: const CustomColors(),
+      extraTextStyles: const CustomTextStyles(
+        chatListGcIndicator: TextStyle(
+          fontStyle: FontStyle.italic,
+          color: Color(0xFF47464f), // onSurfaceVariant
+        ),
       ),
-    ),
-    extraColors: CustomColors(),
-  ),
+      startupScreenBoxDecoration: BoxDecoration(
+          gradient: LinearGradient(
+        begin: Alignment.bottomLeft,
+        end: Alignment.topRight,
+        colors: [
+          const Color(0xFF19172C), // surface
+          const Color(0xFF19172C).withOpacity(0.85),
+          const Color(0xFF19172C).withOpacity(0.34),
+        ],
+        stops: const [0, 0.37, 1],
+      ))),
   "light-m3": AppTheme(
-    key: "light-m3",
-    descr: "Light (Material 3)",
-    data: ThemeData.from(
-      // Base Material3 color scheme based on seed
-      useMaterial3: true,
-      textTheme: _interBlackTextTheme,
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: const Color(0xFF19172C),
-        brightness: Brightness.light,
+      key: "light-m3",
+      descr: "Light (Material 3)",
+      data: ThemeData.from(
+        // Base Material3 color scheme based on seed
+        useMaterial3: true,
+        textTheme: _interBlackTextTheme,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFFE8E7F3),
+          brightness: Brightness.light,
+
+          // Color scheme customizations
+          onSurfaceVariant: Colors.grey[600],
+          background: const Color(
+              0xFFE8E7F0), // Same as surface, will be removed in the future.
+          surface: const Color(0xFFE8E7F3),
+          surfaceContainerLow: const Color(0xFFE6E5F2),
+          surfaceContainerLowest: const Color(0xFFE2E1ED),
+        ),
+      ).copyWith(
+        // Bruig theme customizations.
+        listTileTheme: ListTileThemeData(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
+          selectedTileColor: Colors.grey[100],
+          iconColor: const Color(0xFF45464F), // onSurface
+        ),
+
+        hintColor: const Color(0xFF45464F), // onSurfaceVariant
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Color(0xFFE8E7F3), // suface color.
+          scrolledUnderElevation:
+              0, // Disable the scroll shadow effect on appbar
+        ),
+
+        disabledColor: Colors.grey[850],
       ),
-    ).copyWith(
-      // Bruig theme customizations.
-      listTileTheme: ListTileThemeData(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
-        selectedTileColor: Colors.grey[100],
+      extraColors: const CustomColors(
+        sidebarDivider: Colors.white,
       ),
-    ),
-    extraColors: CustomColors(),
-  ),
+      extraTextStyles: const CustomTextStyles(
+        chatListGcIndicator: TextStyle(
+          fontStyle: FontStyle.italic,
+          color: Color(0xFF45464F), // onSurfaceVariant
+        ),
+      ),
+      startupScreenBoxDecoration: BoxDecoration(
+          gradient: LinearGradient(
+        begin: Alignment.bottomLeft,
+        end: Alignment.topRight,
+        colors: [
+          const Color(0xFFE8E7F3), // surface
+          const Color(0xFFE8E7F3).withOpacity(0.95),
+          const Color(0xFFE8E7F3).withOpacity(0.95),
+        ],
+        stops: const [0, 0.5, 1],
+      ))),
   "system": AppTheme(
     key: "system",
     descr: "Use System Default",
     data: ThemeData(),
-    extraColors: CustomColors(),
+    extraColors: const CustomColors(),
+    extraTextStyles: const CustomTextStyles(),
   ),
 };
 
-const _defaultThemeName = "light"; // This MUST exist in the map above.
+const _defaultThemeName = "dark-m3"; // This MUST exist in the map above.
+const double _defaultFontScale = 1;
 
 class ThemeNotifier with ChangeNotifier {
-  final double defaultFontSize = 1;
+  static ThemeNotifier of(BuildContext context, {bool listen = true}) =>
+      Provider.of<ThemeNotifier>(context, listen: listen);
 
   late ThemeData _themeData = appThemes[_defaultThemeName]!.data;
+  late AppTheme _fullTheme = appThemes[_defaultThemeName]!;
 
-  @Deprecated("Use theme, colors or extraColors instead")
-  ThemeData getTheme() => _themeData;
   ThemeData get theme => _themeData;
-
+  AppTheme get fullTheme => _fullTheme;
+  Brightness get brightness => theme.brightness;
   ColorScheme get colors => _themeData.colorScheme;
 
-  late CustomColors _extraColors;
+  CustomColors _extraColors = const CustomColors();
   CustomColors get extraColors => _extraColors;
+
+  CustomTextStyles _extraTextStyles = const CustomTextStyles();
+  CustomTextStyles get extraTextStyles => _extraTextStyles;
 
   late String _themeMode = "";
   String getThemeMode() => _themeMode;
 
-  late double _fontSize = defaultFontSize;
-  double getFontCoef() => _fontSize;
+  late double _fontScale = _defaultFontScale;
+  double get fontScale => _fontScale;
 
-  double get fontScale => _fontSize;
-  set fontScale(double v) {
-    _fontSize = v;
-    StorageManager.saveData('fontScale', v.toString());
-    notifyListeners();
+  bool _themeLoaded = false;
+  bool get themeLoaded => _themeLoaded;
+
+  ThemeNotifier({doLoad = true}) {
+    if (doLoad) _loadThemeFromConfig();
   }
 
-  @Deprecated("Use Txt.S instead")
-  double getSmallFont(BuildContext context) {
-    if (MediaQuery.of(context).size.width <= 500) {
-      return MediaQuery.textScalerOf(context).scale(12);
-    } else {
-      return ((_fontSize * .15) + 0.85) * 12;
-    }
+  // newNotifierWhenLoaded returns a new ThemeNotifier only after it has finished
+  // loading the theme data.
+  static Future<ThemeNotifier> newNotifierWhenLoaded() async {
+    var theme = ThemeNotifier(doLoad: false);
+    await theme._loadThemeFromConfig();
+    return theme;
   }
 
-  @Deprecated("Use Text or Txt.M instead")
-  double getMediumFont(BuildContext context) {
-    if (MediaQuery.of(context).size.width <= 500) {
-      return MediaQuery.textScalerOf(context).scale(15);
-    } else {
-      return ((_fontSize * .15) + 0.85) * 15;
-    }
-  }
-
-  @Deprecated("Use Txt.L instead")
-  double getLargeFont(BuildContext context) {
-    if (MediaQuery.of(context).size.width <= 500) {
-      return MediaQuery.textScalerOf(context).scale(20);
-    } else {
-      return ((_fontSize * .15) + 0.85) * 20;
-    }
-  }
-
-  @Deprecated("Use Txt.H instead")
-  double getHugeFont(BuildContext context) {
-    if (MediaQuery.of(context).size.width <= 500) {
-      return MediaQuery.textScalerOf(context).scale(30);
-    } else {
-      return ((_fontSize * .15) + 0.85) * 30;
-    }
-  }
-
-  ThemeNotifier() {
-    StorageManager.readData('themeMode').then((value) {
-      switchTheme(value);
-    });
-    StorageManager.readData('fontScale').then((value) {
-      _fontSize = double.parse(value ?? "0");
-      notifyListeners();
-    });
+  Future<void> _loadThemeFromConfig() async {
+    var fontScaleCfg =
+        await StorageManager.readData(StorageManager.fontScaleKey);
+    _fontScale = double.parse(fontScaleCfg ?? "0");
+    var themeModeCfg =
+        await StorageManager.readData(StorageManager.themeModeKey);
+    switchTheme(themeModeCfg ?? _defaultThemeName);
   }
 
   void switchTheme(String value) async {
@@ -560,9 +655,9 @@ class ThemeNotifier with ChangeNotifier {
       var brightness =
           WidgetsBinding.instance.platformDispatcher.platformBrightness;
       if (brightness == Brightness.dark) {
-        themeName = "dark";
+        themeName = "dark-m3";
       } else {
-        themeName = "light";
+        themeName = "light-m3";
       }
     } else if (value == "system") {
       themeName = _defaultThemeName;
@@ -574,14 +669,18 @@ class ThemeNotifier with ChangeNotifier {
     _themeData = theme.data;
     _themeMode = value;
     _extraColors = theme.extraColors;
-    await StorageManager.saveData('themeMode', value);
+    _extraTextStyles = theme.extraTextStyles;
+    _fullTheme = theme;
+    await StorageManager.saveData(StorageManager.themeModeKey, value);
     _clearTxtStyleCache();
+    _rebuildMarkdownStyleSheet();
+    _themeLoaded = true;
     notifyListeners();
   }
 
   void setFontSize(double fs) async {
-    _fontSize = fs;
-    StorageManager.saveData('fontCoef', fs.toString());
+    _fontScale = fs;
+    StorageManager.saveData(StorageManager.fontScaleKey, fs.toString());
     _clearTxtStyleCache();
     notifyListeners();
   }
@@ -598,6 +697,7 @@ class ThemeNotifier with ChangeNotifier {
     _txtStyleCache.forEach((k, v) {
       v.clear();
     });
+    _nickTextStyles.clear();
   }
 
   // surfaceColor returns the theme color for the given color token.
@@ -693,6 +793,8 @@ class ThemeNotifier with ChangeNotifier {
         return colors.onTertiaryFixedVariant;
       case TextColor.inversePrimary:
         return colors.inversePrimary;
+      case TextColor.error:
+        return colors.error;
     }
   }
 
@@ -718,33 +820,37 @@ class ThemeNotifier with ChangeNotifier {
       return cached;
     }
 
-    double? fontSize;
-    switch (size) {
-      case null:
-        break;
-      case TextSize.small:
-        fontSize = 12;
-        break;
-      case TextSize.system:
-        // Use system default size.
-        break;
-      case TextSize.medium:
-        fontSize = 14;
-        break;
-      case TextSize.large:
-        fontSize = 16;
-        break;
-      case TextSize.huge:
-        fontSize = 22;
-        break;
-    }
-
     // Null font color means default/inherited color.
     var fontColor = color != null ? textColor(color) : null;
 
     // Cache to reuse.
-    var ts = TextStyle(fontSize: fontSize, color: fontColor);
+    var ts = TextStyle(fontSize: fontSize(size), color: fontColor);
     _txtStyleCache[size]?[color] = ts;
     return ts;
+  }
+
+  final Map<String, TextStyle> _nickTextStyles = {};
+
+  // textStyleForNick returns the text style to use for the given remote user
+  // nick (nick will be the same color as the avatar color).
+  TextStyle textStyleForNick(String nick) {
+    var res = _nickTextStyles[nick];
+    if (res != null) {
+      return res;
+    }
+
+    var color = colorFromNick(nick, brightness);
+    res = TextStyle(color: color);
+    _nickTextStyles[nick] = res;
+    return res;
+  }
+
+  MarkdownStyleSheet _mdStyleSheet = MarkdownStyleSheet();
+  MarkdownStyleSheet get mdStyleSheet => _mdStyleSheet;
+  void _rebuildMarkdownStyleSheet() {
+    _mdStyleSheet = MarkdownStyleSheet(
+      code: extraTextStyles.monospaced,
+    );
+    _mdStyleSheet.styles["pre"] = _mdStyleSheet.code;
   }
 }

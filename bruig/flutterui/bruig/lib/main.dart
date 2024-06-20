@@ -7,7 +7,6 @@ import 'package:bruig/components/route_error.dart';
 import 'package:bruig/models/menus.dart';
 import 'package:bruig/models/payments.dart';
 import 'package:bruig/models/resources.dart';
-import 'package:bruig/models/uistate.dart';
 import 'package:bruig/notification_service.dart';
 import 'package:bruig/screens/about.dart';
 import 'package:bruig/models/snackbar.dart';
@@ -127,6 +126,7 @@ void main(List<String> args) async {
 
 Future<void> runMainApp(Config cfg) async {
   final ClientModel client = ClientModel();
+  final theme = await ThemeNotifier.newNotifierWhenLoaded();
   runApp(MultiProvider(
     providers: [
       ChangeNotifierProvider.value(value: client),
@@ -142,7 +142,7 @@ Future<void> runMainApp(Config cfg) async {
       ChangeNotifierProvider.value(value: globalLogModel),
       ChangeNotifierProvider(create: (c) => DownloadsModel()),
       ChangeNotifierProvider(create: (c) => AppNotifications()),
-      ChangeNotifierProvider(create: (c) => ThemeNotifier()),
+      ChangeNotifierProvider.value(value: theme),
       ChangeNotifierProvider(create: (c) => MainMenuModel()),
       ChangeNotifierProvider(create: (c) => ResourcesModel()),
       ChangeNotifierProvider(create: (c) => SnackBarModel()),
@@ -403,7 +403,7 @@ class _AppState extends State<App> with WindowListener {
         builder: (context, theme, _) => MaterialApp(
               debugShowCheckedModeBanner: false,
               title: 'Bison Relay',
-              theme: theme.getTheme(),
+              theme: theme.theme,
               navigatorKey: navkey,
               initialRoute: '/',
               routes: {

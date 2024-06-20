@@ -4,14 +4,15 @@ import 'package:bruig/components/copyable.dart';
 import 'package:bruig/components/dcr_input.dart';
 import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/components/indicator.dart';
+import 'package:bruig/components/inputs.dart';
 import 'package:bruig/components/snackbars.dart';
+import 'package:bruig/components/text.dart';
 import 'package:bruig/models/client.dart';
+import 'package:bruig/screens/ln/components.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:golib_plugin/util.dart';
-import 'package:provider/provider.dart';
-import 'package:bruig/theme_manager.dart';
 
 class LNOnChainPage extends StatefulWidget {
   final ClientModel client;
@@ -142,205 +143,109 @@ class _LNOnChainPageState extends State<LNOnChainPage> {
 
   @override
   Widget build(BuildContext context) {
-    var theme = Theme.of(context);
-    var textColor = theme.focusColor;
-    var secondaryTextColor = theme.dividerColor;
-    var darkTextColor = theme.indicatorColor;
-    var dividerColor = theme.highlightColor;
-    var backgroundColor = theme.backgroundColor;
-    var inputFill = theme.hoverColor;
-
-    var txTs = TextStyle(color: darkTextColor);
-
-    return Consumer<ThemeNotifier>(
-      builder: (context, theme, _) => Container(
-          margin: const EdgeInsets.all(1),
-          decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(3), color: backgroundColor),
-          padding: const EdgeInsets.all(16),
-          child:
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(children: [
-              Text("Receive On-Chain",
-                  textAlign: TextAlign.left,
-                  style: TextStyle(
-                      color: darkTextColor,
-                      fontSize: theme.getMediumFont(context))),
+    return Container(
+        alignment: Alignment.topLeft,
+        padding: const EdgeInsets.all(16),
+        child: SingleChildScrollView(
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const LNInfoSectionHeader("Receive On-Chain"),
+          const SizedBox(height: 10),
+          Row(children: [
+            const Text("Account: "),
+            const SizedBox(width: 10),
+            Expanded(
+                child: AccountsDropDown(
+                    onChanged: (value) => setState(() {
+                          recvAccount = value;
+                          recvAddr = null;
+                        }))),
+          ]),
+          const SizedBox(height: 10),
+          recvAddr == null
+              ? OutlinedButton(
+                  onPressed: generateRecvAddr,
+                  child: const Text("Generate Address"))
+              : Copyable.txt(Txt(recvAddr!)),
+          const SizedBox(height: 40),
+          const LNInfoSectionHeader("Send On-Chain"),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              const SizedBox(width: 110, child: Text("From Account: ")),
+              const SizedBox(width: 10),
               Expanded(
-                  child: Divider(
-                color: dividerColor, //color of divider
-                height: 10, //height spacing of divider
-                thickness: 1, //thickness of divier line
-                indent: 8, //spacing at the start of divider
-                endIndent: 5, //spacing at the end of divider
-              )),
-            ]),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                Text("Account: ", style: TextStyle(color: darkTextColor)),
-                const SizedBox(width: 10),
-                Expanded(
-                    child: AccountsDropDown(
-                        onChanged: (value) => setState(() {
-                              recvAccount = value;
-                              recvAddr = null;
-                            }))),
-              ],
-            ),
-            const SizedBox(height: 10),
-            recvAddr == null
-                ? FilledButton(
-                    onPressed: generateRecvAddr,
-                    child: const Text("Generate Address"))
-                : Copyable(recvAddr!, textStyle: TextStyle(color: textColor)),
-            const SizedBox(height: 40),
-            Row(children: [
-              Text("Send On-Chain",
-                  textAlign: TextAlign.left,
-                  style: TextStyle(
-                      color: darkTextColor,
-                      fontSize: theme.getMediumFont(context))),
+                  child: AccountsDropDown(
+                      onChanged: (value) => setState(() {
+                            sendAccount = value;
+                          }))),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              const SizedBox(width: 110, child: Text("To Address: ")),
+              const SizedBox(width: 10),
               Expanded(
-                  child: Divider(
-                color: dividerColor, //color of divider
-                height: 10, //height spacing of divider
-                thickness: 1, //thickness of divier line
-                indent: 8, //spacing at the start of divider
-                endIndent: 5, //spacing at the end of divider
+                  child: TextInput(
+                controller: sendAddrCtrl,
+                hintText: "Destination Address",
               )),
-            ]),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                SizedBox(
-                    width: 100,
-                    child: Text("From Account: ",
-                        style: TextStyle(color: darkTextColor))),
-                const SizedBox(width: 10),
-                Expanded(
-                    child: AccountsDropDown(
-                        onChanged: (value) => setState(() {
-                              sendAccount = value;
-                            }))),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                SizedBox(
-                    width: 100,
-                    child: Text("To Address: ",
-                        style: TextStyle(color: darkTextColor))),
-                const SizedBox(width: 10),
-                Expanded(
-                    child: TextField(
-                        style: TextStyle(
-                            fontSize: theme.getSmallFont(context),
-                            color: secondaryTextColor),
-                        controller: sendAddrCtrl,
-                        decoration: InputDecoration(
-                            hintText: "Destination Address",
-                            hintStyle: TextStyle(
-                                fontSize: theme.getSmallFont(context),
-                                color: secondaryTextColor),
-                            filled: true,
-                            fillColor: inputFill))),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                SizedBox(
-                    width: 100,
-                    child: Text("Amount (DCR): ",
-                        style: TextStyle(color: darkTextColor))),
-                const SizedBox(width: 10),
-                Expanded(child: dcrInput(controller: amountCtrl)),
-              ],
-            ),
-            const SizedBox(height: 10),
-            ElevatedButton(
-                onPressed: confirmSend, child: const Text("Send On-Chain")),
-            const SizedBox(height: 10),
-            Row(children: [
-              Text("Rescan",
-                  textAlign: TextAlign.left,
-                  style: TextStyle(
-                      color: darkTextColor,
-                      fontSize: theme.getMediumFont(context))),
-              Expanded(
-                  child: Divider(
-                color: dividerColor, //color of divider
-                height: 10, //height spacing of divider
-                thickness: 1, //thickness of divier line
-                indent: 8, //spacing at the start of divider
-                endIndent: 5, //spacing at the end of divider
-              )),
-            ]),
-            const SizedBox(height: 10),
-            ElevatedButton(
-                onPressed: rescanProgress == -1 ? rescan : null,
-                child: const Text("Rescan Wallet")),
-            const SizedBox(height: 10),
-            rescanProgress < 0
-                ? const Empty()
-                : Text(
-                    "Rescanned through $rescanProgress / $rescanTarget blocks (${(rescanProgress / rescanTarget * 100).toStringAsFixed(2)}%)",
-                    style: TextStyle(color: darkTextColor)),
-            Row(children: [
-              Text("On-Chain Transactions",
-                  textAlign: TextAlign.left,
-                  style: TextStyle(
-                      color: darkTextColor,
-                      fontSize: theme.getMediumFont(context))),
-              if (loadingTxs) ...[
-                const SizedBox(width: 10),
-                const SizedBox(
-                    width: 15,
-                    height: 15,
-                    child: IndeterminateIndicator(strokeWidth: 2.0)),
-              ],
-              Expanded(
-                  child: Divider(
-                color: dividerColor, //color of divider
-                height: 10, //height spacing of divider
-                thickness: 1, //thickness of divier line
-                indent: 8, //spacing at the start of divider
-                endIndent: 5, //spacing at the end of divider
-              )),
-            ]),
-            if (transactions.isNotEmpty)
-              Expanded(
-                  child: ListView.separated(
-                separatorBuilder: (context, index) => Divider(
-                  height: 5,
-                  thickness: 1,
-                  color: dividerColor,
-                ),
-                itemCount: transactions.length,
-                itemBuilder: (BuildContext context, int index) {
-                  var tx = transactions[index];
-                  return Row(children: [
-                    Flexible(
-                        flex: 4,
-                        child: Align(
-                            alignment: Alignment.topRight,
-                            child: Text(formatDCR(atomsToDCR(tx.amount)),
-                                style: txTs))),
-                    const SizedBox(width: 10),
-                    Flexible(
-                        flex: 2,
-                        child: Align(
-                            alignment: Alignment.topRight,
-                            child: Text("${tx.blockHeight}", style: txTs))),
-                    const SizedBox(width: 10),
-                    Flexible(
-                        flex: 15, child: Copyable(tx.txHash, textStyle: txTs)),
-                  ]);
-                },
-              )),
-          ])),
-    );
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              const SizedBox(width: 110, child: Text("Amount (DCR): ")),
+              const SizedBox(width: 10),
+              Expanded(child: dcrInput(controller: amountCtrl)),
+            ],
+          ),
+          const SizedBox(height: 15),
+          OutlinedButton(
+              onPressed: confirmSend, child: const Text("Send On-Chain")),
+          const SizedBox(height: 10),
+          const LNInfoSectionHeader("Rescan"),
+          const SizedBox(height: 10),
+          OutlinedButton(
+              onPressed: rescanProgress == -1 ? rescan : null,
+              child: const Text("Rescan Wallet")),
+          const SizedBox(height: 10),
+          rescanProgress < 0
+              ? const Empty()
+              : Txt.S(
+                  "Rescanned through $rescanProgress / $rescanTarget blocks (${(rescanProgress / rescanTarget * 100).toStringAsFixed(2)}%)"),
+          Row(children: [
+            const Txt.S("On-Chain Transactions"),
+            if (loadingTxs) ...[
+              const SizedBox(width: 8),
+              const SizedBox(
+                  width: 15,
+                  height: 15,
+                  child: IndeterminateIndicator(strokeWidth: 2.0)),
+            ],
+            const SizedBox(width: 8),
+            const Expanded(child: Divider()),
+          ]),
+          const SizedBox(height: 10),
+          if (transactions.isNotEmpty)
+            ...transactions
+                .map((tx) => Row(children: [
+                      Flexible(
+                          flex: 4,
+                          child: Align(
+                              alignment: Alignment.topRight,
+                              child: Txt.S(formatDCR(atomsToDCR(tx.amount))))),
+                      const SizedBox(width: 10),
+                      Flexible(
+                          flex: 2,
+                          child: Align(
+                              alignment: Alignment.topRight,
+                              child: Txt.S("${tx.blockHeight}"))),
+                      const SizedBox(width: 10),
+                      Flexible(flex: 15, child: Copyable.txt(Txt.S(tx.txHash))),
+                    ]))
+                .toList(),
+        ])));
   }
 }

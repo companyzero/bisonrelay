@@ -1,12 +1,11 @@
-import 'package:bruig/components/empty_widget.dart';
+import 'package:bruig/components/buttons.dart';
 import 'package:bruig/components/snackbars.dart';
+import 'package:bruig/components/text.dart';
 import 'package:bruig/screens/startupscreen.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
-import 'package:bruig/theme_manager.dart';
-import 'package:provider/provider.dart';
 
 class FetchInviteScreen extends StatefulWidget {
   const FetchInviteScreen({super.key});
@@ -70,44 +69,34 @@ class _FetchInviteScreenState extends State<FetchInviteScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<ThemeNotifier>(
-        builder: (context, theme, child) => StartupScreen([
-              Text("Fetch Invite",
-                  style: TextStyle(
-                      color: theme.getTheme().dividerColor,
-                      fontSize: theme.getHugeFont(context),
-                      fontWeight: FontWeight.w200)),
-              const SizedBox(height: 20),
-              SizedBox(
-                  width: 400,
-                  child: path != ""
-                      ? Center(
-                          child: Text(
-                          "Save to: $path",
-                          style:
-                              TextStyle(color: theme.getTheme().dividerColor),
-                        ))
-                      : ElevatedButton(
-                          onPressed: selectPath,
-                          child: const Text("Select Path"))),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: 400,
-                child: TextField(
-                  controller: keyCtrl,
-                  decoration:
-                      const InputDecoration(hintText: "Input key (bpik1...)"),
-                ),
-              ),
-              const SizedBox(height: 10),
-              ElevatedButton(
-                  onPressed:
-                      !loading && path != "" && hasKey ? loadInvite : null,
-                  child: const Text("Fetch invite")),
-              const SizedBox(height: 10),
-              ElevatedButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text("Cancel"))
-            ]));
+    return StartupScreen([
+      const Txt.H("Fetch Invite"),
+      const SizedBox(height: 20),
+      SizedBox(
+          width: 400,
+          child: path != ""
+              ? Text("Save to: $path")
+              : ElevatedButton(
+                  onPressed: selectPath, child: const Text("Select Path"))),
+      const SizedBox(height: 20),
+      SizedBox(
+        width: 400,
+        child: TextField(
+          controller: keyCtrl,
+          decoration: const InputDecoration(hintText: "Input key (bpik1...)"),
+        ),
+      ),
+      const SizedBox(height: 20),
+      SizedBox(
+          width: 400,
+          child:
+              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+            OutlinedButton(
+                onPressed: !loading && path != "" && hasKey ? loadInvite : null,
+                child: const Text("Fetch invite")),
+            const SizedBox(height: 10),
+            CancelButton(onPressed: () => Navigator.pop(context))
+          ]))
+    ]);
   }
 }

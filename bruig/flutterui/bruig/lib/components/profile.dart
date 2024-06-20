@@ -2,15 +2,14 @@ import 'package:bruig/components/buttons.dart';
 import 'package:bruig/components/copyable.dart';
 import 'package:bruig/components/info_grid.dart';
 import 'package:bruig/components/snackbars.dart';
+import 'package:bruig/components/text.dart';
 import 'package:bruig/models/client.dart';
+import 'package:bruig/models/uistate.dart';
 import 'package:bruig/screens/chats.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
-import 'package:tuple/tuple.dart';
 import 'package:bruig/theme_manager.dart';
-import 'package:provider/provider.dart';
-import 'package:bruig/components/empty_widget.dart';
 
 class UserProfile extends StatefulWidget {
   static String routeName = "${ChatsScreen.routeName}/profile";
@@ -149,8 +148,12 @@ class _UserProfileState extends State<UserProfile> {
 
   void activeChatChanged() {
     setState(() {
-      chat = widget.client.active ?? emptyChatModel;
-      readProfile();
+      if (widget.client.active == null || widget.client.active!.isGC) {
+        chat = emptyChatModel;
+      } else {
+        chat = widget.client.active!;
+        readProfile();
+      }
     });
   }
 
@@ -178,126 +181,88 @@ class _UserProfileState extends State<UserProfile> {
 
   @override
   Widget build(BuildContext context) {
-    var theme = Theme.of(context);
-    var textColor = theme.focusColor;
-
-    return Consumer<ThemeNotifier>(builder: (context, theme, _) {
-      var txtTS = TextStyle(
-          color: textColor,
-          fontWeight: FontWeight.w100,
-          fontSize: theme.getSmallFont(context));
-      var headTS = TextStyle(
-          color: textColor,
-          fontWeight: FontWeight.w400,
-          fontSize: theme.getSmallFont(context));
-
-      bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
-
-      return Container(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text("User Profile - ",
-                      style: TextStyle(
-                          color: textColor,
-                          fontSize: theme.getMediumFont(context))),
-                  Text(chat.nick,
-                      style: TextStyle(
-                          color: textColor,
-                          fontSize: theme.getMediumFont(context),
-                          fontWeight: FontWeight.bold)),
-                ],
+    bool isScreenSmall = checkIsScreenSmall(context);
+    return Container(
+        padding: const EdgeInsets.only(left: 15, right: 15, top: 8, bottom: 12),
+        child: Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Txt.L("User Profile - "),
+                Txt.L(chat.nick),
+              ],
+            ),
+            Copyable.txt(Txt.S(chat.id)),
+            const SizedBox(height: 20),
+            Wrap(spacing: 10, runSpacing: 10, children: [
+              isIgnored
+                  ? OutlinedButton(
+                      onPressed: !loading ? unignore : null,
+                      child: const Text("Un-ignore user"))
+                  : OutlinedButton(
+                      onPressed: !loading ? ignore : null,
+                      child: const Text("Ignore user")),
+              const SizedBox(height: 20),
+              OutlinedButton(
+                onPressed: !loading ? hide : null,
+                child: const Text("Hide Chat"),
               ),
-              Copyable(chat.id,
-                  textStyle:
-                      TextStyle(color: textColor, fontWeight: FontWeight.w100)),
               const SizedBox(height: 20),
-              Wrap(spacing: 10, runSpacing: 10, children: [
-                isIgnored
-                    ? ElevatedButton(
-                        onPressed: !loading ? unignore : null,
-                        child: const Text("Un-ignore user"))
-                    : ElevatedButton(
-                        onPressed: !loading ? ignore : null,
-                        child: const Text("Ignore user")),
-                const SizedBox(height: 20),
-                ElevatedButton(
-                  onPressed: !loading ? hide : null,
-                  child: const Text("Hide Chat"),
-                ),
-                const SizedBox(height: 20),
-                CancelButton(
-                  onPressed: !loading ? confirmBlock : null,
-                  label: "Block User",
-                ),
-              ]),
-              const SizedBox(height: 20),
-              Text("Ratchet Debug Info",
-                  style: TextStyle(
-                      color: textColor,
-                      fontSize: theme.getMediumFont(context))),
-              const SizedBox(height: 10),
-              Expanded(
-                  child: SimpleInfoGrid(
-                colLabelSize: 160,
-                separatorWidth: 0,
-                [
-                  Tuple2(
-                      Text("First Created", style: headTS),
-                      Text(abEntry.firstCreated.toIso8601String(),
-                          style: txtTS)),
-                  Tuple2(
-                      Text("Last Completed KX", style: headTS),
-                      Text(abEntry.lastCompletedKx.toIso8601String(),
-                          style: txtTS)),
-                  Tuple2(
-                      Text("Last Handshake Attempt", style: headTS),
-                      Text(abEntry.lastHandshakeAttempt.toIso8601String(),
-                          style: txtTS)),
-                  Tuple2(
-                      Text("Last Sent Time", style: headTS),
-                      Text(ratchetInfo.lastEncTime.toIso8601String(),
-                          style: txtTS)),
-                  Tuple2(
-                      Text("Last Received Time", style: headTS),
-                      Text(ratchetInfo.lastDecTime.toIso8601String(),
-                          style: txtTS)),
-                  Tuple2(
-                      Text("Send RV", style: headTS),
-                      Copyable(
-                          "${ratchetInfo.sendRVPlain} (${_shortLog(ratchetInfo.sendRV)}...)",
-                          textStyle: txtTS)),
-                  Tuple2(
-                      Text("Receive RV", style: headTS),
-                      Copyable(
-                          "${ratchetInfo.recvRVPlain} (${_shortLog(ratchetInfo.recvRV)}...)",
-                          textStyle: txtTS)),
-                  Tuple2(
-                      Text("Drain RV", style: headTS),
-                      Copyable(
-                          "${ratchetInfo.drainRVPlain} (${_shortLog(ratchetInfo.drainRV)}...)",
-                          textStyle: txtTS)),
-                  Tuple2(Text("My Reset RV", style: headTS),
-                      Copyable(ratchetInfo.myResetRV, textStyle: txtTS)),
-                  Tuple2(Text("Their Reset RV", style: headTS),
-                      Copyable(ratchetInfo.theirResetRV, textStyle: txtTS)),
-                  Tuple2(Text("Saved Keys", style: headTS),
-                      Text(ratchetInfo.nbSavedKeys.toString(), style: txtTS)),
-                  Tuple2(Text("Will Ratchet", style: headTS),
-                      Text(ratchetInfo.willRatchet.toString(), style: txtTS)),
-                ],
-                controller: gridScrollCtrl,
-              )),
-              isScreenSmall
-                  ? const Empty()
-                  : ElevatedButton(
-                      onPressed: () => client.ui.showProfile.val = false,
-                      child: const Text("Done"))
-            ],
-          ));
-    });
+              CancelButton(
+                onPressed: !loading ? confirmBlock : null,
+                label: "Block User",
+              ),
+            ]),
+            const SizedBox(height: 20),
+            const Text("Ratchet Debug Info"),
+            const SizedBox(height: 10),
+            Expanded(
+                child: SimpleInfoGridAdv(
+                    textSize: TextSize.small,
+                    colLabelSize: 160,
+                    separatorWidth: 0,
+                    items: [
+                  ["First Created", abEntry.firstCreated.toIso8601String()],
+                  [
+                    "Last Completed KX",
+                    abEntry.lastCompletedKx.toIso8601String()
+                  ],
+                  [
+                    "Last Handshake Attempt",
+                    abEntry.lastHandshakeAttempt.toIso8601String()
+                  ],
+                  ["Last Sent Time", ratchetInfo.lastEncTime.toIso8601String()],
+                  [
+                    "Last Received Time",
+                    ratchetInfo.lastDecTime.toIso8601String()
+                  ],
+                  [
+                    "Send RV",
+                    Copyable(
+                        "${ratchetInfo.sendRVPlain} (${_shortLog(ratchetInfo.sendRV)}..."),
+                  ],
+                  [
+                    "Receive RV",
+                    Copyable(
+                        "${ratchetInfo.recvRVPlain} (${_shortLog(ratchetInfo.recvRV)}...)")
+                  ],
+                  [
+                    "Drain RV",
+                    Copyable(
+                        "${ratchetInfo.drainRVPlain} (${_shortLog(ratchetInfo.drainRV)}...)")
+                  ],
+                  ["My Reset RV", Copyable(ratchetInfo.myResetRV)],
+                  ["Their Reset RV", Copyable(ratchetInfo.theirResetRV)],
+                  ["Saved Keys", "${ratchetInfo.nbSavedKeys}"],
+                  ["Will Ratchet", "${ratchetInfo.willRatchet}"],
+                ])),
+            const SizedBox(height: 10),
+            if (!isScreenSmall)
+              ElevatedButton(
+                  onPressed: () => client.ui.showProfile.val = false,
+                  child: const Text("Done"))
+          ],
+        ));
   }
 }

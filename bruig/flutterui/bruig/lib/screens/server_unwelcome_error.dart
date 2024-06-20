@@ -1,4 +1,5 @@
 import 'package:bruig/components/empty_widget.dart';
+import 'package:bruig/components/text.dart';
 import 'package:bruig/screens/overview.dart';
 import 'package:flutter/material.dart';
 
@@ -17,8 +18,7 @@ class ServerUnwelcomeErrorScreen extends StatelessWidget {
         child: Center(
             child: Column(children: [
           const Expanded(child: Empty()),
-          const Text("Client software needs upgrade",
-              style: TextStyle(fontSize: 20)),
+          const Txt.H("Client software needs upgrade"),
           const SizedBox(height: 10),
           Text("Reason: $errMsg"),
           const SizedBox(height: 10),
@@ -26,7 +26,7 @@ class ServerUnwelcomeErrorScreen extends StatelessWidget {
               "None of the actions that require a server connection will work."),
           const Expanded(child: Empty()),
           const SizedBox(height: 10),
-          ElevatedButton(
+          OutlinedButton(
               onPressed: () {
                 Navigator.of(context)
                     .pushReplacementNamed(OverviewScreen.routeName);
