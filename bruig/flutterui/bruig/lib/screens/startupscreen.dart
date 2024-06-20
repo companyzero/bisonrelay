@@ -1,5 +1,6 @@
 import 'package:bruig/components/buttons.dart';
 import 'package:bruig/components/empty_widget.dart';
+import 'package:bruig/models/uistate.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:bruig/theme_manager.dart';
@@ -20,7 +21,7 @@ class StartupScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
+    bool isScreenSmall = checkIsScreenSmall(context);
     return Scaffold(
         body: Consumer<ThemeNotifier>(
             builder: (context, theme, child) => Container(

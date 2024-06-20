@@ -1,3 +1,4 @@
+import 'package:bruig/models/uistate.dart';
 import 'package:bruig/screens/chats.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -49,7 +50,7 @@ class _ChatSearchInputState extends State<ChatSearchInput> {
 
   @override
   Widget build(BuildContext context) {
-    bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
+    bool isScreenSmall = checkIsScreenSmall(context);
     return RawKeyboardListener(
         focusNode: node,
         onKey: handleKeyPress,

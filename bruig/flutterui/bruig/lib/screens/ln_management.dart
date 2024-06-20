@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:bruig/components/buttons.dart';
 import 'package:bruig/components/text.dart';
 import 'package:bruig/models/client.dart';
+import 'package:bruig/models/uistate.dart';
 import 'package:bruig/screens/ln/accounts.dart';
 import 'package:bruig/screens/ln/backups.dart';
 import 'package:bruig/screens/ln/channels.dart';
@@ -94,7 +95,7 @@ class _LNScreenState extends State<LNScreen> {
 
   @override
   Widget build(BuildContext context) {
-    bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
+    bool isScreenSmall = checkIsScreenSmall(context);
     if (ModalRoute.of(context)!.settings.arguments != null) {
       final args = ModalRoute.of(context)!.settings.arguments as PageTabs;
       tabIndex = args.tabIndex;

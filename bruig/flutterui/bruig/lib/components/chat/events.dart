@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:bruig/components/containers.dart';
 import 'package:bruig/components/text.dart';
+import 'package:bruig/models/uistate.dart';
 import 'package:bruig/screens/feed.dart';
 import 'package:flutter/material.dart';
 import 'package:bruig/models/client.dart';
@@ -158,7 +159,7 @@ class _ReceivedSentPMState extends State<ReceivedSentPM> {
     var showAvatar = widget.evnt.showAvatar && !isOwnMessage;
     var showNick = !(widget.evnt.sameUser || isOwnMessage);
 
-    bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
+    bool isScreenSmall = checkIsScreenSmall(context);
     return Consumer<ThemeNotifier>(
         builder: (context, theme, _) => Container(
             padding: showAvatar ? null : const EdgeInsets.only(left: 48),
@@ -425,7 +426,7 @@ class PMW extends StatelessWidget {
     }
 
     openReplyDM(bool isGC, String id) => null;
-    // bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
+    // bool isScreenSmall = checkIsScreenSmall(context);
     // if (isScreenSmall) {
     //   return ReceivedSentMobilePM(
     //       evnt,

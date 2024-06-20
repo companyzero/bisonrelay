@@ -74,16 +74,15 @@ class _SidebarState extends State<Sidebar> with WindowListener {
 
   @override
   void onWindowResize() {
-    MediaQueryData queryData;
-    queryData = MediaQuery.of(context);
+    var size = MediaQuery.sizeOf(context);
     if (prevWindowSize < 0) {
-      prevWindowSize = queryData.size.width;
+      prevWindowSize = size.width;
       return;
     }
 
     // Check current screen size.  If over 1000px and NOT extended, then extend
     // If NOT over 1000px and extended, then collapse sidebar.
-    var newSize = queryData.size.width;
+    var newSize = size.width;
 
     if (newSize < prevWindowSize && newSize < 1000 && ctrl.extended == true) {
       ctrl.setExtended(false);
@@ -93,7 +92,7 @@ class _SidebarState extends State<Sidebar> with WindowListener {
       ctrl.setExtended(true);
     }
 
-    prevWindowSize = queryData.size.width;
+    prevWindowSize = size.width;
   }
 
   @override

@@ -3,6 +3,7 @@ import 'package:bruig/components/interactive_avatar.dart';
 import 'package:bruig/components/text.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/models/feed.dart';
+import 'package:bruig/models/uistate.dart';
 import 'package:bruig/screens/feed/post_content.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -190,7 +191,7 @@ class _FeedPostsState extends State<FeedPosts> {
 
   @override
   Widget build(BuildContext context) {
-    bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
+    bool isScreenSmall = checkIsScreenSmall(context);
     var posts = widget.onlyShowOwnPosts
         ? widget.feed.posts
             .where((post) => (post.summ.authorID == widget.client.publicID))
