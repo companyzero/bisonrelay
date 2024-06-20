@@ -37,23 +37,22 @@ class _ChatSearchInputState extends State<ChatSearchInput> {
     widget.inputFocusNode.inputFocusNode.requestFocus();
   }
 
-  void handleKeyPress(event) {
-    if (event is RawKeyUpEvent) {
-      bool modPressed = event.isShiftPressed || event.isControlPressed;
-      widget.onChanged(controller.text);
-      if (event.data.logicalKey.keyLabel == "Enter" && !modPressed) {
-        controller.value = const TextEditingValue(
-            text: "", selection: TextSelection.collapsed(offset: 0));
-      }
+  void handleKeyPress(KeyEvent event) {
+    bool modPressed = HardwareKeyboard.instance.isShiftPressed ||
+        HardwareKeyboard.instance.isControlPressed;
+    widget.onChanged(controller.text);
+    if (event.logicalKey.keyLabel == "Enter" && !modPressed) {
+      controller.value = const TextEditingValue(
+          text: "", selection: TextSelection.collapsed(offset: 0));
     }
   }
 
   @override
   Widget build(BuildContext context) {
     bool isScreenSmall = checkIsScreenSmall(context);
-    return RawKeyboardListener(
+    return KeyboardListener(
         focusNode: node,
-        onKey: handleKeyPress,
+        onKeyEvent: handleKeyPress,
         child: Container(
             margin: const EdgeInsets.only(bottom: 5),
             child: Row(children: [
@@ -118,21 +117,20 @@ class _GroupChatNameInputState extends State<GroupChatNameInput> {
     widget.inputFocusNode.inputFocusNode.requestFocus();
   }
 
-  void handleKeyPress(event) {
-    if (event is RawKeyUpEvent) {
-      bool modPressed = event.isShiftPressed || event.isControlPressed;
-      if (event.data.logicalKey.keyLabel == "Enter" && !modPressed) {
-        controller.value = const TextEditingValue(
-            text: "", selection: TextSelection.collapsed(offset: 0));
-      }
+  void handleKeyPress(KeyEvent event) {
+    bool modPressed = HardwareKeyboard.instance.isShiftPressed ||
+        HardwareKeyboard.instance.isControlPressed;
+    if (event.logicalKey.keyLabel == "Enter" && !modPressed) {
+      controller.value = const TextEditingValue(
+          text: "", selection: TextSelection.collapsed(offset: 0));
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return RawKeyboardListener(
+    return KeyboardListener(
         focusNode: node,
-        onKey: handleKeyPress,
+        onKeyEvent: handleKeyPress,
         child: Row(children: [
           Expanded(
               child: TextField(
