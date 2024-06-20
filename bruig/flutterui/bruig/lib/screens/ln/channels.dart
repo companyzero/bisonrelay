@@ -6,6 +6,7 @@ import 'package:bruig/components/copyable.dart';
 import 'package:bruig/components/info_grid.dart';
 import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/components/text.dart';
+import 'package:bruig/models/uistate.dart';
 import 'package:bruig/screens/ln/components.dart';
 import 'package:bruig/screens/needs_out_channel.dart';
 import 'package:flutter/material.dart';
@@ -35,7 +36,7 @@ class _ChanW extends StatelessWidget {
     var remoteBalance = atomsToDCR(chan.remoteBalance).toStringAsFixed(8);
     var state = chan.active ? "Active" : "Inactive";
 
-    bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
+    bool isScreenSmall = checkIsScreenSmall(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -97,7 +98,7 @@ Widget pendingChanSummary(
   var localBalance = atomsToDCR(chan.localBalance).toStringAsFixed(8);
   var remoteBalance = atomsToDCR(chan.remoteBalance).toStringAsFixed(8);
 
-  bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
+  bool isScreenSmall = checkIsScreenSmall(context);
   return SimpleInfoGrid(
       colLabelSize: 110,
       colValueFlex: 8,

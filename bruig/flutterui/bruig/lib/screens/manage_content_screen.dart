@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:bruig/components/text.dart';
+import 'package:bruig/models/uistate.dart';
 import 'package:bruig/screens/manage_content/manage_content.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -59,7 +60,7 @@ class _ManageContentScreenState extends State<ManageContentScreen> {
 
   @override
   Widget build(BuildContext context) {
-    bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
+    bool isScreenSmall = checkIsScreenSmall(context);
     if (ModalRoute.of(context)!.settings.arguments != null) {
       final args = ModalRoute.of(context)!.settings.arguments as PageTabs;
       tabIndex = args.tabIndex;

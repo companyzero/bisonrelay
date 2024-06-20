@@ -178,7 +178,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
+    bool isScreenSmall = checkIsScreenSmall(context);
     Widget settingsView = isScreenSmall
         ? MainSettingsScreen(client, pickAvatarFile, changePage, shutdown)
         : const Empty();

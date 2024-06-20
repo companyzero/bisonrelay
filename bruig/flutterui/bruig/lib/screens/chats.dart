@@ -39,7 +39,7 @@ class ChatsScreenTitle extends StatelessWidget {
       ChatModel chat = activeChat.chat!;
 
       // On small screen, show only chat nick/title.
-      bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
+      bool isScreenSmall = checkIsScreenSmall(context);
       if (isScreenSmall) {
         return Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,

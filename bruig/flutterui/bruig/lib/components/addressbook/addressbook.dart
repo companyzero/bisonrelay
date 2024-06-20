@@ -3,6 +3,7 @@ import 'dart:collection';
 import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/components/text.dart';
 import 'package:bruig/models/client.dart';
+import 'package:bruig/models/uistate.dart';
 import 'package:bruig/screens/chats.dart';
 import 'package:bruig/screens/ln/components.dart';
 import 'package:flutter/material.dart';
@@ -201,7 +202,7 @@ class _AddressBookState extends State<AddressBook> {
 
   @override
   Widget build(BuildContext context) {
-    bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
+    bool isScreenSmall = checkIsScreenSmall(context);
 
     if (client.ui.createGroupChat.val) {
       combinedChatList = combinedChatList.where((e) => !e.isGC).toList();

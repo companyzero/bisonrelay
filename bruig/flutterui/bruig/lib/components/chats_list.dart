@@ -3,6 +3,7 @@ import 'dart:collection';
 import 'package:bruig/components/containers.dart';
 import 'package:bruig/components/text.dart';
 import 'package:bruig/models/client.dart';
+import 'package:bruig/models/uistate.dart';
 import 'package:bruig/screens/chats.dart';
 import 'package:bruig/screens/contacts_msg_times.dart';
 import 'package:flutter/material.dart';
@@ -83,7 +84,7 @@ class _ChatHeadingWState extends State<_ChatHeadingW> {
         },
         avatar: chat.avatar.image);
 
-    bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
+    bool isScreenSmall = checkIsScreenSmall(context);
     return Consumer<ThemeNotifier>(
         builder: (context, theme, _) => Container(
               child: chat.isGC
@@ -279,7 +280,7 @@ class _ActiveChatsListMenuState extends State<ActiveChatsListMenu> {
 
   @override
   Widget build(BuildContext context) {
-    bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
+    bool isScreenSmall = checkIsScreenSmall(context);
 
     // Mobile version, display list of chats in entire screen.
     if (isScreenSmall) {
