@@ -8,6 +8,7 @@ class MacOSPlugin extends PluginPlatform
         BaseChanneledCalls,
         NtfStreams,
         BaseDesktopPlatform {
+  @override
   String get minorPlatform => "macos";
 
   MacOSPlugin() {

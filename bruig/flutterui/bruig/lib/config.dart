@@ -421,6 +421,7 @@ Future<Config> configFromArgs(List<String> args) async {
   var res = p.parse(args);
 
   if (res["help"]) {
+    // ignore: avoid_print
     print(p.usage);
     throw usageException;
   }

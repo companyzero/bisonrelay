@@ -253,7 +253,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       this, "Unable to launch browser to $inviteURL");
                 }
               } catch (exception) {
-                print("Unable to launch url: $exception");
+                showErrorSnackbar(
+                    this, "Error launching browser to $inviteURL: $exception");
               }
             },
             child: const Text(inviteURL)),

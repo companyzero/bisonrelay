@@ -4,6 +4,7 @@ import 'mobile.dart';
 
 class AndroidPlugin extends PluginPlatform
     with ChanneledPlatform, BaseChanneledCalls, NtfStreams, BaseMobilePlatform {
+  @override
   String get minorPlatform => "android";
 
   AndroidPlugin() {

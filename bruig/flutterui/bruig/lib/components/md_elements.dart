@@ -567,7 +567,7 @@ class PDFMarkdownElementBuilder extends MarkdownElementBuilder {
             PdfDocumentRefData(pdfBytes, sourceName: "data"),
           ));
     } catch (exception) {
-      print("Unable to decode pdf: $exception");
+      debugPrint("Unable to decode pdf: $exception");
       return Image.asset(
         "assets/images/invalidimg.png",
         width: 300,
@@ -616,7 +616,7 @@ class ImageMarkdownElementBuilder extends MarkdownElementBuilder {
     try {
       return ImageMd(tip, imgBytes, type);
     } catch (exception) {
-      print("Unable to decode image: $exception");
+      debugPrint("Unable to decode image: $exception");
       return Image.asset(
         "assets/images/invalidimg.png",
         width: 300,
@@ -726,7 +726,7 @@ class _FormElementBuilder extends MarkdownElementBuilder {
         case "action":
           break;
         default:
-          print("Unknown field type ${field.type}");
+          debugPrint("Unknown field type ${field.type}");
       }
     }
 

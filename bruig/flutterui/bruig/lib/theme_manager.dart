@@ -414,6 +414,7 @@ final appThemes = {
 
           // Color scheme customizations
           onSurfaceVariant: Colors.grey[600],
+          // ignore: deprecated_member_use
           background: const Color(
               0xFF19172C), // Same as surface, will be removed in the future.
           surface: const Color(0xFF19172C),
@@ -468,6 +469,7 @@ final appThemes = {
 
           // Color scheme customizations
           onSurfaceVariant: Colors.grey[600],
+          // ignore: deprecated_member_use
           background: const Color(
               0xFFE8E7F0), // Same as surface, will be removed in the future.
           surface: const Color(0xFFE8E7F3),

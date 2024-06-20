@@ -114,7 +114,8 @@ class _ExportLogScreenState extends State<ExportLogScreen> {
           timedProfilingEnabled = goTimedProfilingEnabled;
         });
       } catch (exception) {
-        print("Unable to determine downloads dir: $exception");
+        showErrorSnackbar(
+            this, "Unable to determine downloads dir: $exception");
       }
     }();
   }
@@ -161,11 +162,7 @@ class _ExportLogScreenState extends State<ExportLogScreen> {
         destPath = path.join(dir, zipFilename());
       });
     } catch (exception) {
-      if (mounted) {
-        snackbar.error("Unable to export logs: $exception");
-      } else {
-        print("Unable to export logs: $exception");
-      }
+      snackbar.error("Unable to export logs: $exception");
     } finally {
       setState(() {
         exporting = false;
@@ -193,11 +190,7 @@ class _ExportLogScreenState extends State<ExportLogScreen> {
         destProfilingPath = path.join(dir, profilingZipFilename());
       });
     } catch (exception) {
-      if (mounted) {
-        snackbar.error("Unable to export profiles: $exception");
-      } else {
-        print("Unable to export profiles: $exception");
-      }
+      snackbar.error("Unable to export profiles: $exception");
     } finally {
       setState(() {
         exporting = false;

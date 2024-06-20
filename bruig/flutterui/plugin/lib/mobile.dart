@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'all_platforms.dart';
 import 'package:golib_plugin/definitions.dart';
@@ -55,12 +56,13 @@ mixin BaseMobilePlatform on ChanneledPlatform, NtfStreams {
             // Probably a decode error. Keep handling stuff.
             var err =
                 "Unable to handle notification ${cmdType.toRadixString(16)}: $exception\n$trace";
-            print(err);
-            print(jsonPayload);
+            debugPrint(
+                "Error notification from golib: $err\nPayload: $jsonPayload");
+            // ignore: use_rethrow_when_possible
             (() async => throw exception)();
           }
         } else {
-          print("Received reply for unknown call $id - $e");
+          debugPrint("Received reply for unknown call $id - $e");
         }
 
         continue;

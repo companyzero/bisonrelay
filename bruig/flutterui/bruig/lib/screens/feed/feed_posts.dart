@@ -14,7 +14,7 @@ class _AvatarOrUnread extends StatelessWidget {
   final ClientModel client;
   final ChatModel? chat;
   final bool hasUnread;
-  const _AvatarOrUnread(this.client, this.chat, this.hasUnread, {super.key});
+  const _AvatarOrUnread(this.client, this.chat, this.hasUnread);
 
   @override
   Widget build(BuildContext context) {

@@ -23,7 +23,7 @@ class ViewPagesScreenTitle extends StatelessWidget {
 class _ActivePageScreen extends StatefulWidget {
   final PagesSession session;
   final ClientModel client;
-  const _ActivePageScreen(this.session, this.client, {super.key});
+  const _ActivePageScreen(this.session, this.client);
 
   @override
   State<_ActivePageScreen> createState() => _ActivePageScreenState();

@@ -55,7 +55,7 @@ class _PostContentScreenForArgs extends StatefulWidget {
 class _ReceiveReceipt extends StatelessWidget {
   final ClientModel client;
   final ReceiveReceipt rr;
-  const _ReceiveReceipt(this.client, this.rr, {super.key});
+  const _ReceiveReceipt(this.client, this.rr);
 
   @override
   Widget build(BuildContext context) {
