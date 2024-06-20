@@ -1,15 +1,11 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:convert';
-import 'dart:typed_data';
+// import 'dart:typed_data';
 
 import 'package:flutter/services.dart';
-import 'package:path_provider/path_provider.dart';
 
 import 'definitions.dart';
-import 'package:path/path.dart';
-import 'package:crypto/crypto.dart';
-import 'package:shelf/shelf_io.dart' as shelf_io;
+import 'package:path/path.dart' as path;
 import 'package:shelf_web_socket/shelf_web_socket.dart';
 import 'package:json_rpc_2/json_rpc_2.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
@@ -30,31 +26,31 @@ int nextEID() {
 }
 
 class MockPlugin with NtfStreams /*implements PluginPlatform*/ {
-  /********************************************
-   * Fields
-   ********************************************/
+  /// ******************************************
+  /// Fields
+  ///******************************************
   Directory tempRoot = Directory.systemTemp.createTempSync("fd-mock");
   String tag = "";
   StreamController<String> streamCtrl = StreamController<String>();
-  Exception? failNextGetURL = null;
-  Exception? failNextConnect = null;
+  Exception? failNextGetURL;
+  Exception? failNextConnect;
   StreamController<ChatEvent> chatMsgsCtrl = StreamController<ChatEvent>();
   Map<String, List<String>> gcBooks = {
     "Test Group": ["user1", "user2", "user3"],
     "group2": ["bleh", "booo", "fran"],
   };
 
-  /********************************************
-   * Constructor
-   ********************************************/
+  /// ******************************************
+  /// Constructor
+  ///******************************************
   MockPlugin() {
-    final handler = webSocketHandler((WebSocketChannel socket) {
+    webSocketHandler((WebSocketChannel socket) {
       final server = Server(socket.cast<String>());
 
-      server.registerMethod('hello', this.rpcHello);
-      server.registerMethod('failNextGetURL', this.rpcFailNextGetURL);
-      server.registerMethod('failNextConnect', this.rpcFailNextConnect);
-      server.registerMethod('recvMsg', this.rpcRecvMsg);
+      server.registerMethod('hello', rpcHello);
+      server.registerMethod('failNextGetURL', rpcFailNextGetURL);
+      server.registerMethod('failNextConnect', rpcFailNextConnect);
+      server.registerMethod('recvMsg', rpcRecvMsg);
       server.registerMethod('feedPost', rpcFeedPost);
 
       server.listen();
@@ -103,9 +99,9 @@ class MockPlugin with NtfStreams /*implements PluginPlatform*/ {
     */
   }
 
-  /********************************************
-   *  PluginPlatform implementation methods.
-   ********************************************/
+  /// ******************************************
+  ///  PluginPlatform implementation methods.
+  ///******************************************
 
   Future<String?> get platformVersion async => "mock 1.0";
   String get majorPlatform => "mock";
@@ -115,8 +111,7 @@ class MockPlugin with NtfStreams /*implements PluginPlatform*/ {
   Future<String> getURL(String url) async =>
       _threw(failNextGetURL) ?? "xxx.xxx.xxx.xxx";
 
-  Future<String> nextTime() async =>
-      tag + " " + DateTime.now().toIso8601String();
+  Future<String> nextTime() async => "$tag ${DateTime.now().toIso8601String()}";
   Future<void> writeStr(String s) async => streamCtrl.add(s);
   Stream<String> readStream() => streamCtrl.stream;
 
@@ -130,7 +125,7 @@ class MockPlugin with NtfStreams /*implements PluginPlatform*/ {
   Future<void> pm(PM msg) => throw "unimplemented";
 
   Future<bool> hasServer() async =>
-      Future.delayed(Duration(seconds: 3), () => false);
+      Future.delayed(const Duration(seconds: 3), () => false);
 
   Future<List<AddressBookEntry>> addressBook() async => <AddressBookEntry>[
         /*
@@ -220,14 +215,14 @@ class MockPlugin with NtfStreams /*implements PluginPlatform*/ {
   Future<void> sendFile(String uid, String filepath) async =>
       throw "unimplemented";
 
-  /********************************************
-   *  Mock-only Methods (to be added to PluginPlatform)
-   ********************************************/
+  /// ******************************************
+  ///  Mock-only Methods (to be added to PluginPlatform)
+  ///******************************************
 
   Future<ServerInfo> connectToServer(
           String server, String name, String nick) async =>
       Future<ServerInfo>.delayed(
-          Duration(seconds: 3),
+          const Duration(seconds: 3),
           () =>
               _threw(failNextConnect) ??
               ServerInfo(
@@ -256,6 +251,7 @@ class MockPlugin with NtfStreams /*implements PluginPlatform*/ {
     return cm;
   }
 
+  @override
   Stream<ChatEvent> chatEvents() => chatMsgsCtrl.stream;
 
   Future<void> generateInvite(String filepath) async {
@@ -328,13 +324,14 @@ class MockPlugin with NtfStreams /*implements PluginPlatform*/ {
 
   Future<void> inviteGcUser(String gc, String nick) async {
     if (nick == "*bug") throw Exception("bugging out as requested");
-    return Future.delayed(Duration(seconds: 3), () => gcBooks[gc]?.add(nick));
+    return Future.delayed(
+        const Duration(seconds: 3), () => gcBooks[gc]?.add(nick));
   }
 
   Future<void> removeGcUser(String gc, String nick) async {
     if (nick == "fran") throw Exception("bugging out as requested");
     return Future.delayed(
-        Duration(seconds: 3), () => print(gcBooks[gc]?.remove(nick)));
+        const Duration(seconds: 3), () => print(gcBooks[gc]?.remove(nick)));
   }
 
   Future<void> confirmGCInvite(InviteToGC invite) => throw "unimplemented";
@@ -351,9 +348,9 @@ class MockPlugin with NtfStreams /*implements PluginPlatform*/ {
 
   InflightTip payTip(String nick, double amount) {
     var tip = InflightTip(nextEID(), nick, amount);
-    Future.delayed(Duration(seconds: 1), () {
+    Future.delayed(const Duration(seconds: 1), () {
       tip.state = ITS_started;
-      Future.delayed(Duration(seconds: 2), () {
+      Future.delayed(const Duration(seconds: 2), () {
         if (amount == 666) {
           tip.error = Exception("Bugging out as requested");
           return;
@@ -401,12 +398,12 @@ class MockPlugin with NtfStreams /*implements PluginPlatform*/ {
   // extractMdContent extracts the given content (which must be a native bundle
   // format) and returns the dir to the extracted temp bundle.
   Future<String> extractMdContent(String nick, String filename) async =>
-      Future.delayed(Duration(seconds: 3), () async {
+      Future.delayed(const Duration(seconds: 3), () async {
         if (filename == "*bug") {
           throw Exception("Bugging out as requested");
         }
 
-        var dir = Directory(join(tempRoot.path, "sample_md"));
+        var dir = Directory(path.join(tempRoot.path, "sample_md"));
         if (dir.existsSync()) {
           return dir.path;
         }
@@ -415,8 +412,8 @@ class MockPlugin with NtfStreams /*implements PluginPlatform*/ {
         dir.createSync(recursive: true);
         List<String> files = ["index.md", "bunny_small.mp4", "pixabay.jpg"];
         for (var fname in files) {
-          File f = File(join(dir.path, fname));
-          var content = await rootBundle.load("assets/sample_md/${fname}");
+          File f = File(path.join(dir.path, fname));
+          var content = await rootBundle.load("assets/sample_md/$fname");
           var buffer = content.buffer;
           var bytes =
               buffer.asUint8List(content.offsetInBytes, content.lengthInBytes);
@@ -428,9 +425,9 @@ class MockPlugin with NtfStreams /*implements PluginPlatform*/ {
 
   Future<void> subscribeToPosts(String uid) => throw "unimplemented";
 
-  /********************************************
-   *  Mock JSON-RPC handlers.
-   ********************************************/
+  /// ******************************************
+  ///  Mock JSON-RPC handlers.
+  ///******************************************
   String rpcHello() => "is it me you're looking for?";
 
   void rpcFailNextGetURL(Parameters params) {

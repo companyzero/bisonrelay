@@ -111,17 +111,17 @@ class FeedPostModel extends ChangeNotifier {
     List<FeedCommentModel> roots = [];
     var cmap = {};
     var children = {};
-    newComments.forEach((c) {
+    for (var c in newComments) {
       cmap[c.id] = c;
       if (c.parentID == "") {
         roots.add(c);
-        return;
+        continue;
       }
       var pc = cmap[c.parentID];
       if (pc == null) {
         // Comment without knowing parent.
         roots.add(c);
-        return;
+        continue;
       }
       c.level = pc.level + 1;
       if (children.containsKey(c.parentID)) {
@@ -129,7 +129,7 @@ class FeedPostModel extends ChangeNotifier {
       } else {
         children[c.parentID] = [c];
       }
-    });
+    }
 
     // Process comment threads, starting with top level comments.
     List<FeedCommentModel> sorted = [];
