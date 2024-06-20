@@ -350,7 +350,7 @@ class ChatModel extends ChangeNotifier {
   }
 
   void payTip(double amount) async {
-    var tip = await Golib.payTip(id, amount);
+    var tip = Golib.payTip(id, amount);
     _msgs.insert(0, ChatEventModel(tip, this));
     notifyListeners();
   }

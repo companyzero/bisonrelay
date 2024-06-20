@@ -35,7 +35,9 @@ class _DeleteOldWalletPageState extends State<DeleteOldWalletPage> {
       snackbar.error("Unable to delete wallet dir: $exception");
       return;
     }
-    Navigator.of(context).pushReplacementNamed("/newconf/lnChoice/internal");
+    if (mounted && context.mounted) {
+      Navigator.of(context).pushReplacementNamed("/newconf/lnChoice/internal");
+    }
   }
 
   @override

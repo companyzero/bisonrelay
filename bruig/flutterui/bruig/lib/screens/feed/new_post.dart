@@ -133,7 +133,7 @@ class _NewPostScreenState extends State<NewPostScreen> {
         estimatedSize = 0;
       });
       snackbar.success("Created new post");
-      Navigator.of(context).pushNamed(FeedScreen.routeName);
+      pushNavigatorFromState(this, FeedScreen.routeName);
     } catch (exception) {
       snackbar.error("Unable to create post: $exception");
     } finally {
@@ -228,7 +228,9 @@ class _NewPostScreenState extends State<NewPostScreen> {
 
       var data = const Base64Encoder().convert(f.bytes!);
 
-      showAltTextModal(context, mime, data, post, contentCtrl);
+      if (context.mounted) {
+        showAltTextModal(context, mime, data, post, contentCtrl);
+      }
     });
   }
 

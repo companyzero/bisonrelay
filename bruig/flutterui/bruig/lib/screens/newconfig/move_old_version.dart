@@ -4,6 +4,7 @@ import 'package:bruig/config.dart';
 import 'package:bruig/models/newconfig.dart';
 import 'package:bruig/models/snackbar.dart';
 import 'package:bruig/screens/startupscreen.dart';
+import 'package:bruig/util.dart';
 import 'package:flutter/material.dart';
 
 const _errorMoveMsg = "We were unable to move you existing BR wallet/db due "
@@ -52,7 +53,8 @@ class _MoveOldVersionWalletPageState extends State<MoveOldVersionWalletPage> {
       }
       return;
     }
-    Navigator.of(context).pushReplacementNamed("/newconf/lnChoice/internal");
+
+    replaceNavigatorFromState(this, "/newconf/lnChoice/internal");
   }
 
   @override

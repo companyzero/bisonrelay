@@ -137,6 +137,23 @@ void popNavigatorFromState(State s, {bool rootNavigator = false}) => s.mounted
     ? Navigator.of(s.context, rootNavigator: rootNavigator).pop()
     : null;
 
+// Push the given named route to the navigator if the state is still mounted.
+//
+// NOTE: this does nothing if the state is unmounted.
+void pushNavigatorFromState(State s, String name,
+        {bool rootNavigator = false, Object? arguments}) =>
+    s.mounted
+        ? Navigator.of(s.context, rootNavigator: rootNavigator)
+            .pushNamed(name, arguments: arguments)
+        : null;
+
+void replaceNavigatorFromState(State s, String name,
+        {bool rootNavigator = false, Object? arguments}) =>
+    s.mounted
+        ? Navigator.of(s.context, rootNavigator: rootNavigator)
+            .pushReplacementNamed(name, arguments: arguments)
+        : null;
+
 // Convenience function to sleep in async functions.
 Future<void> sleep(Duration d) {
   var p = Completer<void>();

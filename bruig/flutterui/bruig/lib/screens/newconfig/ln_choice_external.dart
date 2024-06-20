@@ -4,6 +4,7 @@ import 'package:bruig/components/buttons.dart';
 import 'package:bruig/components/text.dart';
 import 'package:bruig/models/newconfig.dart';
 import 'package:bruig/models/snackbar.dart';
+import 'package:bruig/util.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:bruig/theme_manager.dart';
@@ -66,7 +67,7 @@ class _LNExternalWalletPageState extends State<LNExternalWalletPage> {
             "LN running in the wrong network (${res.chains[0].network} vs $wantNetwork)");
         return;
       }
-      Navigator.of(context).pushNamed("/newconf/server");
+      pushNavigatorFromState(this, "/newconf/server");
     } catch (exception) {
       snackbar.error("Unable to connect to external dcrlnd: $exception");
     } finally {

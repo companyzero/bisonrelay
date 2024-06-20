@@ -2,6 +2,7 @@ import 'package:bruig/components/buttons.dart';
 import 'package:bruig/components/text.dart';
 import 'package:bruig/models/snackbar.dart';
 import 'package:bruig/screens/startupscreen.dart';
+import 'package:bruig/util.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
@@ -39,7 +40,7 @@ class InitLocalIDScreenState extends State<InitLocalIDScreen> {
       setState(() => connecting = false);
     }
 
-    Navigator.pop(context);
+    popNavigatorFromState(this);
   }
 
   @override

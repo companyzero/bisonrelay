@@ -11,6 +11,7 @@ import 'package:bruig/components/text.dart';
 import 'package:bruig/models/log.dart';
 import 'package:bruig/models/notifications.dart';
 import 'package:bruig/screens/startupscreen.dart';
+import 'package:bruig/util.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
@@ -143,7 +144,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     } catch (exception) {
       // Ignore if the notifications are not added.
     }
-    Navigator.pop(context);
+    popNavigatorFromState(this);
   }
 
   void startOnboard() async {

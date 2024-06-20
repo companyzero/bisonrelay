@@ -12,6 +12,7 @@ import 'package:bruig/main.dart';
 import 'package:bruig/models/log.dart';
 import 'package:bruig/screens/config_network.dart';
 import 'package:bruig/screens/startupscreen.dart';
+import 'package:bruig/util.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:path/path.dart' as path;
@@ -129,7 +130,7 @@ class __LNUnlockPageState extends State<_LNUnlockPage> {
       var macaroonPath = path.join(cfg.internalWalletDir, "data", "chain",
           "decred", cfg.network, "admin.macaroon");
       widget.setCfg(Config.newWithRPCHost(cfg, rpcHost, tlsCert, macaroonPath));
-      Navigator.of(context).pushNamed("/sync");
+      pushNavigatorFromState(this, "/sync");
     } catch (exception) {
       if (exception.toString().contains("invalid passphrase")) {
         _validate = "Incorrect password, please try again.";

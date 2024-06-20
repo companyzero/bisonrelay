@@ -16,13 +16,20 @@ class _InitializingNewConfPageState extends State<InitializingNewConfPage> {
   void checkWallet() async {
     if (await widget.newconf.hasOldVersionWindowsWalletDB()) {
       // Has old windows version wallet that needs to be moved.
-      Navigator.of(context)
-          .pushReplacementNamed("/newconf/moveOldWindowsWallet");
+      if (mounted && context.mounted) {
+        Navigator.of(context)
+            .pushReplacementNamed("/newconf/moveOldWindowsWallet");
+      }
     } else if (await widget.newconf.hasLNWalletDB()) {
       // No config, but LN wallet db exists. Decide what to do.
-      Navigator.of(context).pushReplacementNamed("/newconf/deleteOldWallet");
+      if (mounted && context.mounted) {
+        Navigator.of(context).pushReplacementNamed("/newconf/deleteOldWallet");
+      }
     } else {
-      Navigator.of(context).pushReplacementNamed("/newconf/lnChoice/internal");
+      if (mounted && context.mounted) {
+        Navigator.of(context)
+            .pushReplacementNamed("/newconf/lnChoice/internal");
+      }
     }
   }
 
