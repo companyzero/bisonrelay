@@ -402,84 +402,8 @@ class AppTheme {
 
 final appThemes = {
   "dark": AppTheme(
-    key: "dark",
-    descr: "Dark Theme",
-    data: ThemeData(
-      fontFamily: "Inter",
-      fontFamilyFallback: [_emojifont],
-      primarySwatch: Colors.blue,
-      primaryColor: Colors.black,
-      brightness: Brightness.dark,
-      backgroundColor: const Color(0xFF19172C),
-      highlightColor: const Color(0xFF252438),
-      dividerColor: const Color(0xFF8E8D98),
-      canvasColor: const Color(0xFF05031A),
-      cardColor: const Color(0xFF05031A),
-      errorColor: Colors.red,
-      focusColor: const Color(0xFFE4E3E6),
-      hoverColor: const Color(0xFF121026),
-      scaffoldBackgroundColor: const Color(0xFF19172C),
-      // bottomAppBarColor: const Color(0xFF0175CE),
-      indicatorColor: const Color(0xFF5A5968),
-      shadowColor: const Color(0xFFE44B00),
-      dialogBackgroundColor: const Color(0xFF3A384B),
-      iconTheme: const IconThemeData(color: Color(0xFF8E8D98)),
-      primaryColorDark: Color(0xC0FCFCFC),
-      primaryColorLight: Color(0xFF0E0D0D),
-      // textTheme: const TextTheme(
-      // headline5: TextStyle(
-      //   color: Colors.white,
-      //   fontSize: 46,
-      //   fontWeight: FontWeight.w800,
-      // ),
-      // bodyText1: TextStyle(color: Colors.white),
-      // bodyText2: TextStyle(
-      //     color:
-      //         Colors.black)))), // USE WITH RANDOM BACKGROUND FOR POSTS
-    ),
-    extraColors: const CustomColors(),
-    extraTextStyles: const CustomTextStyles(),
-  ),
-  "light": AppTheme(
-    key: "light",
-    descr: "Light Theme",
-    data: ThemeData(
-      fontFamily: "Inter",
-      fontFamilyFallback: [_emojifont],
-      primarySwatch: Colors.blue,
-      primaryColor: Colors.white,
-      brightness: Brightness.light,
-      backgroundColor: const Color(0xFFE8E7F0),
-      highlightColor: const Color(0xFFDFDFE9),
-      dividerColor: const Color(0xFF68656E),
-      canvasColor: const Color(0xFFEDEBF8),
-      cardColor: const Color(0xFFEDEBF8),
-      errorColor: Colors.red,
-      focusColor: const Color(0xFF06030A),
-      hoverColor: const Color(0xFFDFDDEC),
-      scaffoldBackgroundColor: const Color(0xFFE8E7F3),
-      // bottomAppBarColor: const Color(0xFF0175CE),
-      indicatorColor: const Color(0xFF5A5968),
-      shadowColor: const Color(0xFFE44B00),
-      dialogBackgroundColor: const Color(0xFFC6C5CF),
-      primaryColorDark: Color(0xC0FCFCFC),
-      primaryColorLight: Color(0xFF0E0D0D),
-      iconTheme: const IconThemeData(color: Color.fromARGB(255, 101, 100, 110)),
-      // textTheme: const TextTheme(
-      //     headline5: TextStyle(
-      //       color: Colors.black,
-      //       fontSize: 46,
-      //       fontWeight: FontWeight.w800,
-      //     ),
-      //     bodyText1: TextStyle(color: Colors.black),
-      //     bodyText2: TextStyle(color: Colors.white)),
-    ),
-    extraColors: const CustomColors(),
-    extraTextStyles: const CustomTextStyles(),
-  ),
-  "dark-m3": AppTheme(
-      key: "dark-m3",
-      descr: "Dark (Material 3)",
+      key: "dark",
+      descr: "Dark Theme",
       data: ThemeData.from(
         // Base Material3 color scheme based on seed
         useMaterial3: true,
@@ -531,9 +455,9 @@ final appThemes = {
         ],
         stops: const [0, 0.37, 1],
       ))),
-  "light-m3": AppTheme(
-      key: "light-m3",
-      descr: "Light (Material 3)",
+  "light": AppTheme(
+      key: "light",
+      descr: "Light Theme",
       data: ThemeData.from(
         // Base Material3 color scheme based on seed
         useMaterial3: true,
@@ -596,7 +520,7 @@ final appThemes = {
   ),
 };
 
-const _defaultThemeName = "dark-m3"; // This MUST exist in the map above.
+const _defaultThemeName = "dark"; // This MUST exist in the map above.
 const double _defaultFontScale = 1;
 
 class ThemeNotifier with ChangeNotifier {
