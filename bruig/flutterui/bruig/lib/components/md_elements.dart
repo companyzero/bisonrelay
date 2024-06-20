@@ -686,7 +686,7 @@ class _FormElementBuilder extends MarkdownElementBuilder {
     _FormField? submit;
 
     List<Tuple2<Widget, Widget>> fieldWidgets = [];
-    form.fields.forEach((field) {
+    for (var field in form.fields) {
       switch (field.type) {
         case "txtinput":
           TextEditingController ctrl = TextEditingController();
@@ -725,12 +725,12 @@ class _FormElementBuilder extends MarkdownElementBuilder {
         default:
           print("Unknown field type ${field.type}");
       }
-    });
+    }
 
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       SimpleInfoGrid(fieldWidgets),
       const SizedBox(height: 10),
-      submit != null ? _FormSubmitButton(form, submit!) : const Empty(),
+      submit != null ? _FormSubmitButton(form, submit) : const Empty(),
     ]);
   }
 }

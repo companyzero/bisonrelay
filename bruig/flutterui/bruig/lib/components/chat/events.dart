@@ -850,14 +850,14 @@ class GCAddedMembersW extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     String msg = "Added to GC:\n";
-    event.uids.forEach((uid) {
+    for (var uid in event.uids) {
       var nick = client.getNick(uid);
       if (nick == "") {
         msg += "Unknown user $uid\n";
       } else {
         msg += "User '$nick'\n";
       }
-    });
+    }
 
     return ServerEvent(msg: msg);
   }

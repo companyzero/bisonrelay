@@ -20,6 +20,7 @@ dependencies:
   path_provider: ^2.0.6
   blake_hash: ^1.0.2
   convert: ^3.0.2
+  path: ^1.8.0
 
 
 

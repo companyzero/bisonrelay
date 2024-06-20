@@ -2,7 +2,7 @@ double milliatomsToDCR(int atoms) => (atoms.toDouble() / 1e11);
 
 double atomsToDCR(int atoms) => (atoms.toDouble() / 1e8);
 
-String formatDCR(double dcr) => dcr.toStringAsFixed(8) + " DCR";
+String formatDCR(double dcr) => "${dcr.toStringAsFixed(8)} DCR";
 
 String shortChanIDToStr(int sid) {
   var bh = sid >> 40;

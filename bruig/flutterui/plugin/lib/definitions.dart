@@ -1,3 +1,5 @@
+// ignore_for_file: constant_identifier_names
+
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -613,10 +615,10 @@ class PostMetadataStatus {
     versionBytes.buffer.asByteData().setUint64(0, version, Endian.little);
 
     var enc = Utf8Encoder();
-    var wattr = (String key) {
+    wattr(String key) {
       var bytes = enc.convert(attributes[key] ?? "");
       h.update(bytes);
-    };
+    }
 
     h.update(versionBytes);
     h.update(enc.convert(from));

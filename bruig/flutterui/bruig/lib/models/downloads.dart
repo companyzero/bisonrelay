@@ -113,15 +113,15 @@ class DownloadsModel extends ChangeNotifier {
 
   void _loadDownloads() async {
     var res = await Golib.listDownloads();
-    res.forEach((e) {
+    for (var e in res) {
       if (e.metadata == null) {
         // Change ReceivedFile.metadata to FileMetadata? ?
-        return;
+        continue;
       }
       var rf = ReceivedFile(e.fid, e.uid, "", e.metadata!);
       var f = FileDownloadModel(e.uid, e.fid, rf);
       _downloads.add(f);
-    });
+    }
     notifyListeners();
   }
 
