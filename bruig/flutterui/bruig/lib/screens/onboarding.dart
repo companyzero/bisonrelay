@@ -382,7 +382,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 message: tt,
                 child: Consumer<ThemeNotifier>(
                     builder: (context, theme, child) => Copyable("$lbl: $txt",
-                        TextStyle(color: theme.getTheme().dividerColor),
+                        textStyle:
+                            TextStyle(color: theme.getTheme().dividerColor),
                         textToCopy: txt))),
             const SizedBox(height: 10),
           ]);
@@ -494,7 +495,7 @@ The receive balance is how much the local client may receive through LN payments
                 Consumer<ThemeNotifier>(
                     builder: (context, theme, child) => Copyable(
                         "Error: ${oerror}",
-                        TextStyle(
+                        textStyle: TextStyle(
                             color: theme.getTheme().errorColor,
                             fontWeight: FontWeight.bold))),
                 const SizedBox(height: 20)

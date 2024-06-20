@@ -123,7 +123,8 @@ class MobileScreenButton extends StatelessWidget {
   Widget build(BuildContext context) {
     var theme = Theme.of(context);
     var buttonForeground = theme.backgroundColor;
-    var buttonBackground = theme.bottomAppBarColor;
+    var buttonBackground =
+        theme.bottomAppBarTheme.color; // theme.bottomAppBarColor;
     return Consumer<ThemeNotifier>(
         builder: (context, theme, _) => TextButton(
             style: minSize != 0

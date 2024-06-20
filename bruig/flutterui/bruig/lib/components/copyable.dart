@@ -1,18 +1,27 @@
 import 'dart:math';
 
 import 'package:bruig/components/snackbars.dart';
+import 'package:bruig/components/text.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 class Copyable extends StatelessWidget {
   final String text;
-  final TextStyle textStyle;
+  final TextStyle? textStyle;
   final bool showSnackbar;
   final String? textToCopy;
   final TextOverflow? textOverflow;
-  const Copyable(this.text, this.textStyle,
-      {this.showSnackbar = true, this.textToCopy, this.textOverflow, Key? key})
+  final Widget? child;
+  const Copyable(this.text,
+      {this.textStyle,
+      this.showSnackbar = true,
+      this.child,
+      this.textToCopy,
+      this.textOverflow,
+      Key? key})
       : super(key: key);
+
+  Copyable.txt(Txt txt, {key}) : this(txt.data, child: txt, key: key);
 
   void copy(BuildContext context) {
     var toCopy = textToCopy ?? text;
@@ -33,6 +42,6 @@ class Copyable extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
         onTap: () => copy(context),
-        child: Text(text, overflow: textOverflow, style: textStyle));
+        child: child ?? Text(text, overflow: textOverflow, style: textStyle));
   }
 }

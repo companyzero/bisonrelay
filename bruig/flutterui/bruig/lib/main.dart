@@ -18,6 +18,7 @@ import 'package:bruig/screens/generate_invite.dart';
 import 'package:bruig/screens/log.dart';
 import 'package:bruig/screens/onboarding.dart';
 import 'package:bruig/screens/server_unwelcome_error.dart';
+import 'package:bruig/screens/settings.dart';
 import 'package:bruig/storage_manager.dart';
 import 'package:bruig/theme_manager.dart';
 import 'package:bruig/config.dart';
@@ -437,6 +438,8 @@ class _AppState extends State<App> with WindowListener {
                     const ServerUnwelcomeErrorScreen(),
                 ConfigNetworkScreen.routeName: (context) =>
                     const ConfigNetworkScreen(),
+                ThemeTestScreen.routeName: (context) => Consumer<ThemeNotifier>(
+                    builder: (context, theme, child) => ThemeTestScreen(theme)),
                 '/shutdown': (context) => Consumer<LogModel>(
                     builder: (context, log, child) => ShutdownScreen(
                         widget.cfg.walletType == "internal",
@@ -481,7 +484,15 @@ class _AppState extends State<App> with WindowListener {
                 );
               },
               builder: (context, child) {
-                return child ?? const Text("no child");
+                if (theme.fontScale <= 0) {
+                  // Use system default font scale.
+                  return child ?? const Text("no child");
+                }
+
+                return MediaQuery(
+                    data: MediaQuery.of(context).copyWith(
+                        textScaler: TextScaler.linear(theme.fontScale)),
+                    child: child ?? const Text("no child"));
               },
             ));
   }

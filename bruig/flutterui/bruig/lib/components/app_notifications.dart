@@ -154,7 +154,7 @@ class _NotificationsDrawerHeaderState extends State<NotificationsDrawerHeader> {
       return const Empty();
     }
     var theme = Theme.of(context);
-    var appWarning = theme.bottomAppBarColor;
+    var appWarning = theme.bottomAppBarTheme.color; // theme.bottomAppBarColor;
     return DrawerHeader(
         child: Column(children: [
       Align(

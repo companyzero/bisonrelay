@@ -442,7 +442,7 @@ class SidebarIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     var theme = Theme.of(context);
-    var unselectedTextColor = theme.dividerColor;
+    var unselectedTextColor = theme.colorScheme.onSurfaceVariant;
     if (alert) {
       return Icon(icon, color: Colors.amber);
     } else {
@@ -458,12 +458,10 @@ class SidebarSvgIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     var theme = Theme.of(context);
-    var unselectedTextColor = theme.iconTheme.color;
-    var dividerColor = theme.dividerColor;
+    var unselectedTextColor = theme.colorScheme.onSurfaceVariant;
     return SvgPicture.asset(
       assetName,
-      colorFilter: ColorFilter.mode(
-          unselectedTextColor ?? dividerColor, BlendMode.srcIn),
+      colorFilter: ColorFilter.mode(unselectedTextColor, BlendMode.srcIn),
     );
   }
 }

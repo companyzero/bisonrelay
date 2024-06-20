@@ -368,9 +368,6 @@ class _ChatsScreenState extends State<ChatsScreen> {
       return AddressBook(client, inputFocusNode);
     }
 
-    var theme = Theme.of(context);
-    var backgroundColor = theme.backgroundColor;
-
     if (!client.hasChats && !client.loadingAddressBook) {
       if (!hasLNBalance) {
         // Only show f user never had any contacts.
@@ -392,10 +389,6 @@ class _ChatsScreenState extends State<ChatsScreen> {
             Expanded(
                 child: Container(
               margin: const EdgeInsets.all(1),
-              decoration: BoxDecoration(
-                color: backgroundColor,
-                borderRadius: BorderRadius.circular(3),
-              ),
               child: ActiveChat(client, inputFocusNode),
             )),
           ])

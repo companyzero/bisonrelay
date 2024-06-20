@@ -190,10 +190,10 @@ class _LNOnChainPageState extends State<LNOnChainPage> {
             ),
             const SizedBox(height: 10),
             recvAddr == null
-                ? ElevatedButton(
+                ? FilledButton(
                     onPressed: generateRecvAddr,
                     child: const Text("Generate Address"))
-                : Copyable(recvAddr!, TextStyle(color: textColor)),
+                : Copyable(recvAddr!, textStyle: TextStyle(color: textColor)),
             const SizedBox(height: 40),
             Row(children: [
               Text("Send On-Chain",
@@ -335,7 +335,8 @@ class _LNOnChainPageState extends State<LNOnChainPage> {
                             alignment: Alignment.topRight,
                             child: Text("${tx.blockHeight}", style: txTs))),
                     const SizedBox(width: 10),
-                    Flexible(flex: 15, child: Copyable(tx.txHash, txTs)),
+                    Flexible(
+                        flex: 15, child: Copyable(tx.txHash, textStyle: txTs)),
                   ]);
                 },
               )),
