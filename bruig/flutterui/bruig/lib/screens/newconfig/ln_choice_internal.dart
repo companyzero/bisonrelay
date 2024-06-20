@@ -6,6 +6,7 @@ import 'package:bruig/models/snackbar.dart';
 import 'package:bruig/models/uistate.dart';
 import 'package:bruig/screens/config_network.dart';
 import 'package:bruig/screens/startupscreen.dart';
+import 'package:bruig/util.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:bruig/theme_manager.dart';
@@ -44,14 +45,14 @@ class _LNInternalWalletPageState extends State<LNInternalWalletPage> {
     try {
       await widget.newconf
           .createNewWallet(passCtrl.text, newconf.seedToRestore);
-      Navigator.of(context).pushNamed("/newconf/seed");
+      pushNavigatorFromState(this, "/newconf/seed");
     } catch (exception) {
       snackbar.error("Unable to create new LN wallet: $exception");
       if (newconf.seedToRestore.isNotEmpty) {
         // This assumes if there was a previously existing wallet, the user was
         // already given the choice to delete it.
         newconf.deleteLNWalletDir();
-        Navigator.of(context).pushNamed("/newconf/restore");
+        pushNavigatorFromState(this, "/newconf/restore");
       }
     } finally {
       setState(() {

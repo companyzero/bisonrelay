@@ -170,8 +170,10 @@ Future<void> loadInvite(BuildContext context) async {
   filePath = filePath.trim();
   if (filePath == "") return;
   var invite = await Golib.decodeInvite(filePath);
-  Navigator.of(context, rootNavigator: true)
-      .pushNamed('/verifyInvite', arguments: invite);
+  if (context.mounted) {
+    Navigator.of(context, rootNavigator: true)
+        .pushNamed('/verifyInvite', arguments: invite);
+  }
 }
 
 class _FooterIconButton extends StatelessWidget {

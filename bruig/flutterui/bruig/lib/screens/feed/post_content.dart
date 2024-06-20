@@ -150,7 +150,7 @@ class _CommentWState extends State<_CommentW> {
       });
     } catch (exception) {
       showErrorSnackbar(
-          context, "Unable to load comment receive receipts: $exception");
+          this, "Unable to load comment receive receipts: $exception");
     }
   }
 

@@ -10,6 +10,7 @@ import 'package:bruig/models/client.dart';
 import 'package:bruig/models/notifications.dart';
 import 'package:bruig/models/snackbar.dart';
 import 'package:bruig/screens/startupscreen.dart';
+import 'package:bruig/util.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:golib_plugin/util.dart';
@@ -88,7 +89,7 @@ channel is confirmed to request a new inbound channel''';
         widget.ntfns.delType(AppNtfnType.walletNeedsInChannels);
 
         if (res.channel.maxInboundAmount > initialMaxInAmount) {
-          Navigator.of(context).pop();
+          popNavigatorFromState(this);
         }
       }
     } catch (exception) {

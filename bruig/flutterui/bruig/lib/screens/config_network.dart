@@ -49,6 +49,7 @@ class _ConfigNetworkScreenState extends State<ConfigNetworkScreen> {
           : int.parse(torCirtuitLimitCtrl.text),
       torIsolation: torCircuitIsolation,
     );
+    if (!mounted) return;
     confirmationDialog(
       context,
       doRestart,

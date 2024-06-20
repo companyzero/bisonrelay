@@ -320,9 +320,9 @@ class _AppState extends State<App> with WindowListener {
   }
 
   Future<void> addressBookLoaded(bool wasAlreadyRunning) async {
+    var client = Provider.of<ClientModel>(context, listen: false);
     navkey.currentState!.pushReplacementNamed(OverviewScreen.routeName);
     await doWalletChecks(wasAlreadyRunning);
-    var client = Provider.of<ClientModel>(context, listen: false);
     await client.fetchNetworkInfo();
     await client.readAddressBook();
     await client.fetchMyAvatar();

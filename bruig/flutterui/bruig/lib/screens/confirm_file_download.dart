@@ -33,7 +33,7 @@ class ConfirmFileDownloadScreen extends StatelessWidget {
       } catch (exception) {
         snackbar.error("Unable to confirm file download: $exception");
       } finally {
-        Navigator.pop(context);
+        if (context.mounted) Navigator.pop(context);
       }
     }
 

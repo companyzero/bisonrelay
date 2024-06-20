@@ -8,6 +8,7 @@ import 'package:bruig/components/text.dart';
 import 'package:bruig/models/notifications.dart';
 import 'package:bruig/models/snackbar.dart';
 import 'package:bruig/screens/startupscreen.dart';
+import 'package:bruig/util.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
@@ -64,9 +65,9 @@ class _NeedsFundsScreenState extends State<NeedsFundsScreen> {
           createdNeedsChanNtf = true;
 
           if (forwardIfBalance ?? false) {
-            Navigator.of(context, rootNavigator: true).pop();
-            Navigator.of(context, rootNavigator: true)
-                .pushNamed("/needsOutChannel");
+            popNavigatorFromState(this);
+            pushNavigatorFromState(this, "/needsOutChannel",
+                rootNavigator: true);
             done = true;
           }
           forwardIfBalance = false;

@@ -10,6 +10,7 @@ import 'package:bruig/models/client.dart';
 import 'package:bruig/models/notifications.dart';
 import 'package:bruig/models/snackbar.dart';
 import 'package:bruig/screens/startupscreen.dart';
+import 'package:bruig/util.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:golib_plugin/util.dart';
@@ -93,9 +94,9 @@ open channels to other LN nodes.''';
       }
       var needsInbound = res.channel.maxInboundAmount == 0;
       if (res.channel.maxOutboundAmount > initialMaxOutAmount) {
-        Navigator.of(context).pop();
+        popNavigatorFromState(this);
         if (needsInbound) {
-          Navigator.of(context).pushNamed("/needsInChannel");
+          pushNavigatorFromState(this, "/needsInChannel");
         }
       }
     } catch (exception) {
