@@ -9,12 +9,6 @@ class RequestedResource extends ChangeNotifier {
   RMFetchResourceReply? reply;
 
   RequestedResource(this.uid, this.tag);
-
-  void _replyReceived(RMFetchResource req, RMFetchResourceReply res) {
-    request = req;
-    reply = res;
-    notifyListeners();
-  }
 }
 
 class PagesSession extends ChangeNotifier {

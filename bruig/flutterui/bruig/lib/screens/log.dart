@@ -4,6 +4,7 @@ import 'package:bruig/components/confirmation_dialog.dart';
 import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/components/recent_log.dart';
 import 'package:bruig/components/snackbars.dart';
+import 'package:bruig/components/text.dart';
 import 'package:bruig/config.dart';
 import 'package:bruig/models/log.dart';
 import 'package:bruig/storage_manager.dart';
@@ -17,7 +18,6 @@ import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
-import 'package:provider/provider.dart';
 import 'package:restart_app/restart_app.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -34,11 +34,7 @@ class LogScreenTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<ThemeNotifier>(
-        builder: (context, theme, child) => Text("Logs",
-            style: TextStyle(
-                fontSize: theme.getLargeFont(context),
-                color: Theme.of(context).focusColor)));
+    return const Text("Logs");
   }
 }
 
@@ -49,41 +45,34 @@ class LogScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    var theme = Theme.of(context);
-    var textColor = theme.focusColor;
-    var backgroundColor = theme.backgroundColor;
-    return Consumer<ThemeNotifier>(
-        builder: (context, theme, child) => Container(
-            margin: const EdgeInsets.all(1),
-            decoration: BoxDecoration(
-              color: backgroundColor,
-              borderRadius: BorderRadius.circular(3),
-            ),
-            padding: const EdgeInsets.all(16),
-            child: Column(children: [
-              const SizedBox(height: 20),
-              Text("Recent Log",
-                  style: TextStyle(
-                      color: textColor, fontSize: theme.getLargeFont(context))),
-              const SizedBox(height: 20),
-              Expanded(child: LogLines(log)),
-              const SizedBox(height: 20),
-              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                ElevatedButton(
-                    onPressed: () {
-                      Navigator.of(context, rootNavigator: true)
-                          .pushNamed(ExportLogScreen.routeName);
-                    },
-                    child: const Text("Export Logs")),
-                ElevatedButton(
-                    onPressed: () {
-                      Navigator.of(context, rootNavigator: true)
-                          .pushNamed(LogSettingsScreen.routeName);
-                    },
-                    child: const Text("Settings")),
-              ]),
-              const SizedBox(height: 20),
-            ])));
+    return Container(
+        margin: const EdgeInsets.all(1),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(3),
+        ),
+        padding: const EdgeInsets.all(16),
+        child: Column(children: [
+          const SizedBox(height: 20),
+          const Txt.L("Recent Log"),
+          const SizedBox(height: 20),
+          Expanded(child: LogLines(log)),
+          const SizedBox(height: 20),
+          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+            ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context, rootNavigator: true)
+                      .pushNamed(ExportLogScreen.routeName);
+                },
+                child: const Text("Export Logs")),
+            ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context, rootNavigator: true)
+                      .pushNamed(LogSettingsScreen.routeName);
+                },
+                child: const Text("Settings")),
+          ]),
+          const SizedBox(height: 20),
+        ]));
   }
 }
 
@@ -216,117 +205,108 @@ class _ExportLogScreenState extends State<ExportLogScreen> {
 
   @override
   Widget build(BuildContext context) {
-    var theme = Theme.of(context);
-    var textColor = theme.focusColor;
-    var backgroundColor = theme.backgroundColor;
     return Scaffold(
-        body: Consumer<ThemeNotifier>(
-            builder: (context, theme, child) => Container(
-                margin: const EdgeInsets.only(
-                    left: 1, top: 20, right: 1, bottom: 1),
-                decoration: BoxDecoration(
-                  color: backgroundColor,
-                  borderRadius: BorderRadius.circular(3),
-                ),
-                padding: const EdgeInsets.all(16),
-                child: Column(children: [
-                  const SizedBox(height: 20),
-                  Text("Export Logs",
-                      style: TextStyle(
-                          color: textColor,
-                          fontSize: theme.getLargeFont(context))),
-                  kReleaseMode
-                      ? const SizedBox(height: 20)
-                      : InkWell(
-                          onTap: () {
-                            debugModeGotoCfgCounter += 1;
-                            if (debugModeGotoCfgCounter == 3) {
-                              showSuccessSnackbar(context,
-                                  "Going to manual config file with 3 more taps");
-                            }
-                            if (debugModeGotoCfgCounter == 6) {
-                              Navigator.of(context, rootNavigator: true)
-                                  .pushNamed(ManualCfgModifyScreen.routeName);
-                            }
-                          },
-                          child: Container(height: 20, width: 40),
-                        ),
-                  TextButton(
-                      onPressed: chooseDestPath,
-                      child: destPath != ""
-                          ? Text("Export to: $destPath")
-                          : const Text("Select Destination")),
-                  const SizedBox(height: 20),
-                  ToggleButtons(
-                      borderRadius: const BorderRadius.all(Radius.circular(8)),
-                      constraints:
-                          const BoxConstraints(minHeight: 40, minWidth: 100),
-                      isSelected: [!allFiles, allFiles],
-                      onPressed: (int index) {
-                        setState(() {
-                          allFiles = index == 1;
-                        });
+        body: Container(
+            alignment: Alignment.center,
+            margin: const EdgeInsets.only(left: 1, top: 5, right: 1, bottom: 1),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(3),
+            ),
+            padding: const EdgeInsets.all(16),
+            child: Column(children: [
+              const Txt.L("Export Logs"),
+              kReleaseMode
+                  ? const SizedBox(height: 20)
+                  : InkWell(
+                      onTap: () {
+                        debugModeGotoCfgCounter += 1;
+                        if (debugModeGotoCfgCounter == 3) {
+                          showSuccessSnackbar(context,
+                              "Going to manual config file with 3 more taps");
+                        }
+                        if (debugModeGotoCfgCounter == 6) {
+                          Navigator.of(context, rootNavigator: true)
+                              .pushNamed(ManualCfgModifyScreen.routeName);
+                        }
                       },
-                      children: const [
-                        Text("Latest file"),
-                        Text("All files"),
-                      ]),
-                  ToggleButtons(
-                      borderRadius: const BorderRadius.all(Radius.circular(8)),
-                      constraints:
-                          const BoxConstraints(minHeight: 40, minWidth: 100),
-                      isSelected: [!golibLogs, golibLogs],
-                      onPressed: (int index) {
-                        setState(() {
-                          golibLogs = index == 1;
-                        });
-                      },
-                      children: const [
-                        Text("No app logs"),
-                        Text("App logs"),
-                      ]),
-                  ToggleButtons(
-                      borderRadius: const BorderRadius.all(Radius.circular(8)),
-                      constraints:
-                          const BoxConstraints(minHeight: 40, minWidth: 100),
-                      isSelected: [!lnLogs, lnLogs],
-                      onPressed: (int index) {
-                        setState(() {
-                          lnLogs = index == 1;
-                        });
-                      },
-                      children: const [
-                        Text("No LN logs"),
-                        Text("LN logs"),
-                      ]),
-                  const Expanded(child: Empty()),
-                  Text(
-                      "Note: logs may contain identifying information. Send them only to trusted parties",
-                      style: TextStyle(
-                          color: textColor,
-                          fontSize: 15,
-                          decoration: TextDecoration.none)),
-                  const SizedBox(height: 20),
-                  Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      child: const SizedBox(height: 20, width: 40),
+                    ),
+              TextButton(
+                  onPressed: chooseDestPath,
+                  child: destPath != ""
+                      ? Text("Export to: $destPath")
+                      : const Text("Select Destination")),
+              const SizedBox(height: 20),
+              ToggleButtons(
+                  borderRadius: const BorderRadius.all(Radius.circular(8)),
+                  constraints:
+                      const BoxConstraints(minHeight: 40, minWidth: 100),
+                  isSelected: [!allFiles, allFiles],
+                  onPressed: (int index) {
+                    setState(() {
+                      allFiles = index == 1;
+                    });
+                  },
+                  children: const [
+                    Text("Latest file"),
+                    Text("All files"),
+                  ]),
+              ToggleButtons(
+                  borderRadius: const BorderRadius.all(Radius.circular(8)),
+                  constraints:
+                      const BoxConstraints(minHeight: 40, minWidth: 100),
+                  isSelected: [!golibLogs, golibLogs],
+                  onPressed: (int index) {
+                    setState(() {
+                      golibLogs = index == 1;
+                    });
+                  },
+                  children: const [
+                    Text("No app logs"),
+                    Text("App logs"),
+                  ]),
+              ToggleButtons(
+                  borderRadius: const BorderRadius.all(Radius.circular(8)),
+                  constraints:
+                      const BoxConstraints(minHeight: 40, minWidth: 100),
+                  isSelected: [!lnLogs, lnLogs],
+                  onPressed: (int index) {
+                    setState(() {
+                      lnLogs = index == 1;
+                    });
+                  },
+                  children: const [
+                    Text("No LN logs"),
+                    Text("LN logs"),
+                  ]),
+              const Expanded(child: Empty()),
+              const Txt.S(
+                  "Note: logs may contain identifying information. Send them only to trusted parties",
+                  color: TextColor.onSurfaceVariant),
+              const SizedBox(height: 20),
+              SizedBox(
+                  width: 600,
+                  child: Wrap(
+                      alignment: WrapAlignment.spaceBetween,
+                      runSpacing: 5,
                       children: [
                         ElevatedButton(
                             onPressed:
                                 destPath != "" && !exporting ? doExport : null,
                             child: const Text("Export")),
+                        timedProfilingEnabled
+                            ? ElevatedButton(
+                                onPressed: destProfilingPath != "" && !exporting
+                                    ? doExportProfilings
+                                    : null,
+                                child:
+                                    const Text("Export Performance Profiles"))
+                            : const Empty(),
                         CancelButton(onPressed: () {
                           Navigator.of(context).pop();
                         }),
-                      ]),
-                  const SizedBox(height: 20),
-                  timedProfilingEnabled
-                      ? ElevatedButton(
-                          onPressed: destProfilingPath != "" && !exporting
-                              ? doExportProfilings
-                              : null,
-                          child: const Text("Export Performance Profiles"))
-                      : const Empty(),
-                ]))));
+                      ])),
+            ])));
   }
 }
 
@@ -418,31 +398,18 @@ class _LogSettingsScreenState extends State<LogSettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    var theme = Theme.of(context);
-    var textColor = theme.focusColor;
-    var backgroundColor = theme.backgroundColor;
     return Scaffold(
-        body: Consumer<ThemeNotifier>(
-            builder: (context, theme, child) => Container(
-                margin: const EdgeInsets.only(
-                    left: 1, top: 20, right: 1, bottom: 1),
-                decoration: BoxDecoration(
-                  color: backgroundColor,
-                  borderRadius: BorderRadius.circular(3),
-                ),
+        body: Center(
+            child: Container(
+                width: 600,
+                margin:
+                    const EdgeInsets.only(left: 1, top: 5, right: 1, bottom: 1),
                 padding: const EdgeInsets.all(16),
                 child: Column(children: [
-                  const SizedBox(height: 20),
-                  Text("Log Settings",
-                      style: TextStyle(
-                          color: textColor,
-                          fontSize: theme.getLargeFont(context))),
+                  const Txt.L("Log Settings"),
                   const SizedBox(height: 20),
                   Row(children: [
-                    SizedBox(
-                        width: 100,
-                        child: Text("App log level",
-                            style: TextStyle(color: textColor))),
+                    const SizedBox(width: 100, child: Text("App log level")),
                     const SizedBox(width: 20),
                     DropdownButtonHideUnderline(
                       child: DropdownButton2<String>(
@@ -460,10 +427,7 @@ class _LogSettingsScreenState extends State<LogSettingsScreen> {
                     ),
                   ]),
                   Row(children: [
-                    SizedBox(
-                        width: 100,
-                        child: Text("LN log level",
-                            style: TextStyle(color: textColor))),
+                    const SizedBox(width: 100, child: Text("LN log level")),
                     const SizedBox(width: 20),
                     DropdownButtonHideUnderline(
                       child: DropdownButton2<String>(
@@ -489,7 +453,7 @@ class _LogSettingsScreenState extends State<LogSettingsScreen> {
                             setState(() => logPings = value ?? false),
                       ),
                       // const SizedBox(width: 20),
-                      Text("Log Pings", style: TextStyle(color: textColor)),
+                      const Text("Log Pings"),
                     ]),
                   ),
                   InkWell(
@@ -502,8 +466,7 @@ class _LogSettingsScreenState extends State<LogSettingsScreen> {
                             setState(() => enableGoProfiler = value ?? false),
                       ),
                       // const SizedBox(width: 20),
-                      Text("Enable Go Profiler",
-                          style: TextStyle(color: textColor)),
+                      const Text("Enable Go Profiler"),
                     ]),
                   ),
                   InkWell(
@@ -516,8 +479,7 @@ class _LogSettingsScreenState extends State<LogSettingsScreen> {
                             () => enableTimedProfiling = value ?? false),
                       ),
                       // const SizedBox(width: 20),
-                      Text("Enable Continous Hourly Profiling",
-                          style: TextStyle(color: textColor)),
+                      const Text("Enable Continous Hourly Profiling"),
                     ]),
                   ),
                   const Expanded(child: Empty()),
@@ -532,7 +494,6 @@ class _LogSettingsScreenState extends State<LogSettingsScreen> {
                           Navigator.of(context).pop();
                         }),
                       ]),
-                  const SizedBox(height: 20),
                 ]))));
   }
 }
@@ -594,42 +555,26 @@ class _ManualCfgModifyScreenState extends State<ManualCfgModifyScreen> {
 
   @override
   Widget build(BuildContext context) {
-    var theme = Theme.of(context);
-    var textColor = theme.focusColor;
-    var backgroundColor = theme.backgroundColor;
     return Scaffold(
-        body: Consumer<ThemeNotifier>(
-            builder: (context, theme, child) => Container(
-                margin: const EdgeInsets.only(
-                    left: 1, top: 20, right: 1, bottom: 1),
-                decoration: BoxDecoration(
-                  color: backgroundColor,
-                  borderRadius: BorderRadius.circular(3),
-                ),
-                padding: const EdgeInsets.all(16),
-                child: Column(children: [
-                  const SizedBox(height: 20),
-                  Text("Manual Config Modification",
-                      style: TextStyle(
-                          color: textColor,
-                          fontSize: theme.getLargeFont(context))),
-                  const SizedBox(height: 20),
-                  Expanded(
-                      child: TextField(
-                    controller: txtCtrl,
-                    maxLines: null,
-                  )),
-                  const SizedBox(height: 20),
-                  Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        ElevatedButton(
-                            onPressed: confirmAply, child: const Text("Apply")),
-                        CancelButton(onPressed: () {
-                          Navigator.of(context).pop();
-                        }),
-                      ]),
-                  const SizedBox(height: 20),
-                ]))));
+        body: Container(
+            margin: const EdgeInsets.only(left: 1, top: 5, right: 1, bottom: 1),
+            padding: const EdgeInsets.all(16),
+            child: Column(children: [
+              const Txt.L("Manual Config Modification"),
+              const SizedBox(height: 20),
+              Expanded(
+                  child: TextField(
+                controller: txtCtrl,
+                maxLines: null,
+              )),
+              const SizedBox(height: 20),
+              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                ElevatedButton(
+                    onPressed: confirmAply, child: const Text("Apply")),
+                CancelButton(onPressed: () {
+                  Navigator.of(context).pop();
+                }),
+              ]),
+            ])));
   }
 }

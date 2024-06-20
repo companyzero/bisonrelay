@@ -1,6 +1,7 @@
 import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/components/buttons.dart';
+import 'package:bruig/components/text.dart';
 import 'package:bruig/models/newconfig.dart';
 import 'package:bruig/screens/config_network.dart';
 import 'package:bruig/screens/startupscreen.dart';
@@ -71,128 +72,70 @@ class _LNInternalWalletPageState extends State<LNInternalWalletPage> {
     bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
 
     return Consumer<ThemeNotifier>(
-        builder: (context, theme, _) => StartupScreen([
-              Text("Setting up Bison Relay",
-                  style: TextStyle(
-                      color: theme.getTheme().dividerColor,
-                      fontSize: theme.getHugeFont(context),
-                      fontWeight: FontWeight.w200)),
+        builder: (context, theme, _) => StartupScreen(childrenWidth: 400, [
+              const Txt.H("Setting up Bison Relay"),
               SizedBox(height: isScreenSmall ? 8 : 20),
-              Text(
-                  newconf.seedToRestore.isEmpty
-                      ? "Creating New Wallet"
-                      : "Restoring Wallet",
-                  style: TextStyle(
-                      color: theme.getTheme().focusColor,
-                      fontSize: theme.getLargeFont(context),
-                      fontWeight: FontWeight.w300)),
+              Txt.L(newconf.seedToRestore.isEmpty
+                  ? "Creating New Wallet"
+                  : "Restoring Wallet"),
               SizedBox(height: isScreenSmall ? 8 : 34),
-              Column(children: [
-                SizedBox(
-                    width: 377,
-                    child: Text("Wallet Password",
-                        textAlign: TextAlign.left,
-                        style: TextStyle(
-                            color: theme.getTheme().indicatorColor,
-                            fontSize: theme.getMediumFont(context),
-                            fontWeight: FontWeight.w300))),
-                Center(
-                    child: SizedBox(
-                        width: 377,
-                        child: TextField(
-                            cursorColor: theme.getTheme().focusColor,
-                            decoration: InputDecoration(
-                                border: InputBorder.none,
-                                hintText: "Password",
-                                hintStyle: TextStyle(
-                                    fontSize: theme.getLargeFont(context),
-                                    color: theme.getTheme().dividerColor),
-                                filled: true,
-                                fillColor: theme.getTheme().cardColor),
-                            style: TextStyle(
-                                color: theme.getTheme().focusColor,
-                                fontSize: theme.getLargeFont(context)),
-                            controller: passCtrl,
-                            obscureText: true))),
-                const SizedBox(height: 13),
-                SizedBox(
-                    width: 377,
-                    child: Text("Repeat Password",
-                        textAlign: TextAlign.left,
-                        style: TextStyle(
-                            color: theme.getTheme().indicatorColor,
-                            fontSize: theme.getMediumFont(context),
-                            fontWeight: FontWeight.w300))),
-                Center(
-                  child: SizedBox(
-                      width: 377,
-                      child: TextField(
-                          cursorColor: theme.getTheme().focusColor,
-                          decoration: InputDecoration(
-                              border: InputBorder.none,
-                              hintText: "Confirm",
-                              hintStyle: TextStyle(
-                                  fontSize: theme.getLargeFont(context),
-                                  color: theme.getTheme().dividerColor),
-                              filled: true,
-                              fillColor: theme.getTheme().cardColor),
-                          //decoration: InputDecoration(),
-                          style: TextStyle(
-                              color: theme.getTheme().focusColor,
-                              fontSize: theme.getLargeFont(context)),
-                          controller: passRepeatCtrl,
-                          obscureText: true)),
-                ),
-                SizedBox(height: isScreenSmall ? 12 : 35),
-                Center(
-                    child: SizedBox(
-                        width: 278,
-                        child: Row(children: [
-                          const SizedBox(width: 35),
-                          LoadingScreenButton(
-                            onPressed: !loading ? createWallet : null,
-                            text: "Create Wallet",
-                          ),
-                          const SizedBox(width: 10),
-                          loading
-                              ? SizedBox(
-                                  height: 25,
-                                  width: 25,
-                                  child: CircularProgressIndicator(
-                                      value: null,
-                                      backgroundColor:
-                                          theme.getTheme().backgroundColor,
-                                      color: theme.getTheme().dividerColor,
-                                      strokeWidth: 2),
-                                )
-                              : const SizedBox(width: 25),
-                        ]))),
-              ]),
+              const Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text("Wallet Password")),
+              TextField(
+                  decoration: InputDecoration(
+                    border: InputBorder.none,
+                    hintText: "Password",
+                    filled: true,
+                    fillColor: theme.colors.surface,
+                  ),
+                  controller: passCtrl,
+                  obscureText: true),
+              const Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text("Repeat Password")),
+              TextField(
+                  decoration: InputDecoration(
+                    border: InputBorder.none,
+                    hintText: "Confirm",
+                    filled: true,
+                    fillColor: theme.colors.surface,
+                  ),
+                  controller: passRepeatCtrl,
+                  obscureText: true),
               const SizedBox(height: 10),
+              !loading
+                  ? LoadingScreenButton(
+                      onPressed: !loading ? createWallet : null,
+                      text: "Create Wallet",
+                    )
+                  : const SizedBox(
+                      height: 25,
+                      width: 25,
+                      child: CircularProgressIndicator(
+                          value: null, strokeWidth: 2),
+                    ),
+              const SizedBox(height: 30),
               Wrap(alignment: WrapAlignment.center, runSpacing: 10, children: [
                 !newconf.advancedSetup
                     ? TextButton(
                         onPressed: startAdvancedSetup,
-                        child: Text("Advanced Setup",
-                            style: TextStyle(
-                                color: theme.getTheme().dividerColor)),
-                      )
+                        child: const Txt("Advanced Setup",
+                            color: TextColor.onSurfaceVariant))
                     : const Empty(),
                 newconf.seedToRestore.isEmpty
                     ? TextButton(
                         onPressed: startSeedRestore,
-                        child: Text("Restore from Seed",
-                            style: TextStyle(
-                                color: theme.getTheme().dividerColor)),
-                      )
+                        child: const Txt("Restore from Seed",
+                            color: TextColor.onSurfaceVariant))
                     : const Empty(),
                 TextButton(
                     onPressed: () {
                       Navigator.of(context)
                           .pushNamed(ConfigNetworkScreen.routeName);
                     },
-                    child: Text("Network Config",
-                        style: TextStyle(color: theme.getTheme().dividerColor)))
+                    child: const Txt("Network Config",
+                        color: TextColor.onSurfaceVariant)),
               ])
             ]));
   }

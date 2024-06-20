@@ -12,16 +12,19 @@ class Copyable extends StatelessWidget {
   final String? textToCopy;
   final TextOverflow? textOverflow;
   final Widget? child;
+  final String? tooltip;
   const Copyable(this.text,
       {this.textStyle,
       this.showSnackbar = true,
       this.child,
       this.textToCopy,
       this.textOverflow,
+      this.tooltip,
       Key? key})
       : super(key: key);
 
-  Copyable.txt(Txt txt, {key}) : this(txt.data, child: txt, key: key);
+  Copyable.txt(Txt txt, {tooltip, key})
+      : this(txt.data, child: txt, tooltip: tooltip, key: key);
 
   void copy(BuildContext context) {
     var toCopy = textToCopy ?? text;
@@ -40,8 +43,9 @@ class Copyable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
+    var w = InkWell(
         onTap: () => copy(context),
         child: child ?? Text(text, overflow: textOverflow, style: textStyle));
+    return tooltip == null ? w : Tooltip(message: tooltip, child: w);
   }
 }

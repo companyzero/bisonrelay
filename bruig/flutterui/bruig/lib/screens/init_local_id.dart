@@ -1,5 +1,6 @@
 import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/components/buttons.dart';
+import 'package:bruig/components/text.dart';
 import 'package:bruig/screens/startupscreen.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
@@ -43,50 +44,32 @@ class InitLocalIDScreenState extends State<InitLocalIDScreen> {
   @override
   Widget build(BuildContext context) {
     return Consumer<ThemeNotifier>(
-      builder: (context, theme, child) => StartupScreen([
+      builder: (context, theme, child) => StartupScreen(childrenWidth: 500, [
         const SizedBox(height: 89),
-        Text("Setting up Bison Relay",
-            style: TextStyle(
-                color: theme.getTheme().dividerColor,
-                fontSize: theme.getHugeFont(context),
-                fontWeight: FontWeight.w200)),
+        const Txt.H("Setting up Bison Relay"),
         const SizedBox(height: 20),
-        Text("Choose Username/Nick",
-            style: TextStyle(
-                color: theme.getTheme().focusColor,
-                fontSize: theme.getLargeFont(context),
-                fontWeight: FontWeight.w300)),
+        const Txt.L("Choose Username/Nick"),
         const SizedBox(height: 34),
-        Column(children: [
-          Form(
-              key: _formKey,
-              child: Column(children: [
-                Wrap(
-                  runSpacing: 10,
-                  children: <Widget>[
-                    TextFormField(
-                      decoration: const InputDecoration(
-                          icon: Icon(Icons.person),
-                          labelText: 'User Name',
-                          hintText: 'Full name of the user (ex."John Doe")'),
-                      onSaved: (String? v) => name = v!,
-                      validator: (String? value) {
-                        if (value != null && value.trim().isEmpty) {
-                          return 'Cannot be blank';
-                        }
-                        return null;
-                      },
-                    ),
-                    Container(height: 20),
-                    Center(
-                        child: LoadingScreenButton(
-                      onPressed: !connecting ? connectPressed : null,
-                      text: "Confirm",
-                    ))
-                  ],
-                )
-              ]))
-        ]),
+        Form(
+            key: _formKey,
+            child: TextFormField(
+              decoration: const InputDecoration(
+                  icon: Icon(Icons.person),
+                  labelText: 'User Name',
+                  hintText: 'Nick or alias of user (ex."john10")'),
+              onSaved: (String? v) => name = v!,
+              validator: (String? value) {
+                if (value != null && value.trim().isEmpty) {
+                  return 'Cannot be blank';
+                }
+                return null;
+              },
+            )),
+        const SizedBox(height: 30),
+        LoadingScreenButton(
+          onPressed: !connecting ? connectPressed : null,
+          text: "Confirm",
+        ),
       ]),
     );
   }

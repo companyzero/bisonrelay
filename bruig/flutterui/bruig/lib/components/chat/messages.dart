@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'package:bruig/components/empty_widget.dart';
+import 'package:bruig/theme_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/components/chat/events.dart';
+import 'package:provider/provider.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 
 PageStorageBucket _pageStorageBucket = PageStorageBucket();
@@ -132,39 +134,48 @@ class _MessagesState extends State<Messages> {
     }
   }
 
-  Widget _getFAB(Color textColor, Color backgroundColor) {
-    if (chat.firstUnreadIndex() != -1 &&
-        chat.firstUnreadIndex() - _maxItem > 5) {
-      return FloatingActionButton(
-        onPressed: _scrollToFirstUnread,
-        tooltip: "Scroll to last unread recent message",
-        foregroundColor: textColor,
-        backgroundColor: backgroundColor,
-        elevation: 0,
-        hoverElevation: 0,
-        mini: true,
-        shape: RoundedRectangleBorder(
-            side: BorderSide(width: 2, color: textColor),
-            borderRadius: BorderRadius.circular(100)),
-        child: const Icon(Icons.keyboard_arrow_up_outlined),
-      );
-    } else if (_showFAB) {
-      return FloatingActionButton(
-        onPressed: _scrollToBottom,
-        tooltip: "Scroll to most recent messages",
-        foregroundColor: textColor,
-        backgroundColor: backgroundColor,
-        elevation: 0,
-        hoverElevation: 0,
-        mini: true,
-        shape: RoundedRectangleBorder(
-            side: BorderSide(width: 2, color: textColor),
-            borderRadius: BorderRadius.circular(100)),
-        child: const Icon(Icons.keyboard_arrow_down_outlined),
-      );
+  Widget? _getFAB() {
+    var showScrollToFirstUnread = (chat.firstUnreadIndex() != -1 &&
+        chat.firstUnreadIndex() - _maxItem > 5);
+    var showScrollToMostRecent = _showFAB;
+
+    if (!(showScrollToFirstUnread || showScrollToMostRecent)) {
+      return null;
     }
 
-    return const Empty();
+    return Consumer<ThemeNotifier>(builder: (context, theme, child) {
+      if (showScrollToFirstUnread) {
+        return FloatingActionButton(
+          onPressed: _scrollToFirstUnread,
+          tooltip: "Scroll to first unread message",
+          backgroundColor: theme.colors.surface.withOpacity(0.65),
+          foregroundColor: theme.colors.onSurfaceVariant,
+          elevation: 0,
+          hoverElevation: 0,
+          mini: true,
+          shape: RoundedRectangleBorder(
+              side: BorderSide(width: 2, color: theme.colors.onSurfaceVariant),
+              borderRadius: BorderRadius.circular(100)),
+          child: const Icon(Icons.keyboard_arrow_up_outlined),
+        );
+      } else if (showScrollToMostRecent) {
+        return FloatingActionButton(
+          onPressed: _scrollToBottom,
+          tooltip: "Scroll to most recent messages",
+          backgroundColor: theme.colors.surface.withOpacity(0.65),
+          foregroundColor: theme.colors.onSurfaceVariant,
+          elevation: 0,
+          hoverElevation: 0,
+          mini: true,
+          shape: RoundedRectangleBorder(
+              side: BorderSide(width: 2, color: theme.colors.onSurfaceVariant),
+              borderRadius: BorderRadius.circular(100)),
+          child: const Icon(Icons.keyboard_arrow_down_outlined),
+        );
+      }
+
+      return const Empty();
+    });
   }
 
   int calculateTotalMessageCount() {
@@ -177,12 +188,9 @@ class _MessagesState extends State<Messages> {
 
   @override
   Widget build(BuildContext context) {
-    var theme = Theme.of(context);
-    var textColor = theme.dividerColor;
-    var backgroundColor = theme.backgroundColor;
     return Scaffold(
         resizeToAvoidBottomInset: true,
-        floatingActionButton: _getFAB(textColor, backgroundColor),
+        floatingActionButton: _getFAB(),
         body: SelectionArea(
           child: PageStorage(
             bucket: _pageStorageBucket,
@@ -191,9 +199,8 @@ class _MessagesState extends State<Messages> {
               key: PageStorageKey<String>('chat ${chat.nick}'),
               itemCount: chat.msgs.length,
               physics: const ClampingScrollPhysics(),
-              itemBuilder: (context, index) {
-                return Event(chat, chat.msgs[index], client);
-              },
+              itemBuilder: (context, index) =>
+                  Event(chat, chat.msgs[index], client),
               itemScrollController: widget.itemScrollController,
               itemPositionsListener: widget.itemPositionsListener,
             ),

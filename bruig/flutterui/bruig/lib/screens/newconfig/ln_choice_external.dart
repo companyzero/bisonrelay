@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/components/buttons.dart';
+import 'package:bruig/components/text.dart';
 import 'package:bruig/models/newconfig.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -79,123 +80,49 @@ class _LNExternalWalletPageState extends State<LNExternalWalletPage> {
   @override
   Widget build(BuildContext context) {
     return Consumer<ThemeNotifier>(
-        builder: (context, theme, _) => StartupScreen([
-              Text("Setting up Bison Relay",
-                  style: TextStyle(
-                      color: theme.getTheme().dividerColor,
-                      fontSize: theme.getHugeFont(context),
-                      fontWeight: FontWeight.w200)),
+        builder: (context, theme, _) => StartupScreen(childrenWidth: 400, [
+              const Txt.H("Setting up Bison Relay"),
               const SizedBox(height: 20),
-              Text("External dcrlnd Config",
-                  style: TextStyle(
-                      color: theme.getTheme().focusColor,
-                      fontSize: theme.getLargeFont(context),
-                      fontWeight: FontWeight.w300)),
+              const Txt.L("External dcrlnd Config"),
               const SizedBox(height: 34),
-              SizedBox(
-                  width: 377,
-                  child: Text("RPC Host",
-                      textAlign: TextAlign.left,
-                      style: TextStyle(
-                          color: theme.getTheme().indicatorColor,
-                          fontSize: theme.getSmallFont(context),
-                          fontWeight: FontWeight.w300))),
+              const Align(
+                  alignment: Alignment.centerLeft, child: Text("RPC Host")),
               const SizedBox(height: 5),
-              Center(
-                  child: SizedBox(
-                      width: 377,
-                      child: TextField(
-                          cursorColor: theme.getTheme().focusColor,
-                          decoration: InputDecoration(
-                              border: InputBorder.none,
-                              hintText: "RPC Host",
-                              hintStyle: TextStyle(
-                                  fontSize: theme.getLargeFont(context),
-                                  color: theme.getTheme().dividerColor),
-                              filled: true,
-                              fillColor: theme.getTheme().cardColor),
-                          style: TextStyle(
-                              color: theme.getTheme().focusColor,
-                              fontSize: theme.getLargeFont(context)),
-                          controller: hostCtrl))),
-              const SizedBox(height: 13),
-              SizedBox(
-                  width: 377,
-                  child: Text("TLS Cert Path",
-                      textAlign: TextAlign.left,
-                      style: TextStyle(
-                          color: theme.getTheme().indicatorColor,
-                          fontSize: theme.getSmallFont(context),
-                          fontWeight: FontWeight.w300))),
-              const SizedBox(height: 5),
-              Center(
-                  child: SizedBox(
-                      width: 377,
-                      child: TextField(
-                          cursorColor: theme.getTheme().focusColor,
-                          decoration: InputDecoration(
-                              border: InputBorder.none,
-                              hintText: "TLS Cert Path",
-                              hintStyle: TextStyle(
-                                  fontSize: theme.getLargeFont(context),
-                                  color: theme.getTheme().dividerColor),
-                              filled: true,
-                              fillColor: theme.getTheme().cardColor),
-                          style: TextStyle(
-                              color: theme.getTheme().focusColor,
-                              fontSize: theme.getLargeFont(context)),
-                          controller: tlsCtrl))),
-              const SizedBox(height: 13),
-              SizedBox(
-                  width: 377,
-                  child: Text("Macarooon Path",
-                      textAlign: TextAlign.left,
-                      style: TextStyle(
-                          color: theme.getTheme().indicatorColor,
-                          fontSize: theme.getSmallFont(context),
-                          fontWeight: FontWeight.w300))),
-              const SizedBox(height: 5),
-              Center(
-                  child: SizedBox(
-                      width: 377,
-                      child: TextField(
-                          cursorColor: theme.getTheme().focusColor,
-                          decoration: InputDecoration(
-                              border: InputBorder.none,
-                              hintText: "Macaroon Path",
-                              hintStyle: TextStyle(
-                                  fontSize: theme.getLargeFont(context),
-                                  color: theme.getTheme().dividerColor),
-                              filled: true,
-                              fillColor: theme.getTheme().cardColor),
-                          style: TextStyle(
-                              color: theme.getTheme().focusColor,
-                              fontSize: theme.getLargeFont(context)),
-                          controller: macaroonCtrl))),
-              const SizedBox(height: 34),
-              Center(
-                  child: SizedBox(
-                      width: 283,
-                      child: Row(children: [
-                        const SizedBox(width: 35),
-                        LoadingScreenButton(
-                          onPressed: !loading ? done : null,
-                          text: "Connect Wallet",
-                        ),
-                        const SizedBox(width: 10),
-                        loading
-                            ? SizedBox(
-                                height: 25,
-                                width: 25,
-                                child: CircularProgressIndicator(
-                                    value: null,
-                                    backgroundColor:
-                                        theme.getTheme().backgroundColor,
-                                    color: theme.getTheme().dividerColor,
-                                    strokeWidth: 2),
-                              )
-                            : const SizedBox(width: 25),
-                      ]))),
+              TextField(
+                  decoration: InputDecoration(
+                      border: InputBorder.none,
+                      hintText: "RPC Host",
+                      filled: true,
+                      fillColor: theme.colors.surface),
+                  controller: hostCtrl),
+              const Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text("TLS Cert Path")),
+              TextField(
+                  decoration: InputDecoration(
+                      border: InputBorder.none,
+                      hintText: "TLS Cert Path",
+                      filled: true,
+                      fillColor: theme.colors.surface),
+                  controller: tlsCtrl),
+              const Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text("Macaroon Path")),
+              TextField(
+                  decoration: InputDecoration(
+                      border: InputBorder.none,
+                      hintText: "Macaroon Path",
+                      filled: true,
+                      fillColor: theme.colors.surface),
+                  controller: macaroonCtrl),
+              const SizedBox(height: 20),
+              !loading
+                  ? LoadingScreenButton(
+                      onPressed: !loading ? done : null,
+                      text: "Connect Wallet",
+                    )
+                  : const CircularProgressIndicator(
+                      value: null, strokeWidth: 2),
             ]));
   }
 }

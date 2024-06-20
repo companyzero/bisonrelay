@@ -47,13 +47,11 @@ class _NewConfigScreenState extends State<NewConfigScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer2<NewConfigModel, SnackBarModel>(
-        builder: (context, newconf, snackBar, child) {
+    return Consumer3<NewConfigModel, SnackBarModel, ThemeNotifier>(
+        builder: (context, newconf, snackBar, theme, child) {
       return MaterialApp(
         title: "Setup New Config",
-        theme: ThemeData(
-          primarySwatch: Colors.green, // XXX THEMEDATA HERE??
-        ),
+        theme: theme.theme,
         initialRoute: "/newconf/initializing",
         routes: {
           '/about': (context) => const AboutScreen(),

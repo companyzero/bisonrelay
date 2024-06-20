@@ -5,6 +5,7 @@ import "package:ini/ini.dart" as ini;
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 
+// ignore: constant_identifier_names
 const APPNAME = "bruig";
 
 const defaultAutoRemoveIgnoreList = [
@@ -101,40 +102,40 @@ class Config {
 
   Config();
   Config.filled(
-      {this.appDataDir: "",
-      this.dbRoot: "",
-      this.downloadsDir: "",
-      this.embedsDir: "",
-      this.serverAddr: "",
-      this.lnRPCHost: "",
-      this.lnTLSCert: "",
-      this.lnMacaroonPath: "",
-      this.logFile: "",
-      this.msgRoot: "",
-      this.debugLevel: "",
-      this.lnDebugLevel: "info",
-      this.walletType: "",
-      this.network: "",
-      this.internalWalletDir: "",
-      this.resourcesUpstream: "",
-      this.simpleStorePayType: "",
-      this.simpleStoreAccount: "",
-      this.simpleStoreShipCharge: 0,
-      this.proxyaddr: "",
-      this.torIsolation: false,
-      this.proxyUsername: "",
-      this.proxyPassword: "",
-      this.circuitLimit: 32,
-      this.noLoadChatHistory: true,
-      this.syncFreeList: true,
-      this.autoCompact: true,
-      this.autoCompactMinAge: 14 * 24 * 60 * 60,
-      this.autoHandshakeInterval: 21 * 24 * 60 * 60,
-      this.autoRemoveIdleUsersInterval: 60 * 24 * 60 * 60,
-      this.autoRemoveIgnoreList: defaultAutoRemoveIgnoreList,
-      this.sendRecvReceipts: true,
-      this.autoSubPosts: true,
-      this.logPings: false});
+      {this.appDataDir = "",
+      this.dbRoot = "",
+      this.downloadsDir = "",
+      this.embedsDir = "",
+      this.serverAddr = "",
+      this.lnRPCHost = "",
+      this.lnTLSCert = "",
+      this.lnMacaroonPath = "",
+      this.logFile = "",
+      this.msgRoot = "",
+      this.debugLevel = "",
+      this.lnDebugLevel = "info",
+      this.walletType = "",
+      this.network = "",
+      this.internalWalletDir = "",
+      this.resourcesUpstream = "",
+      this.simpleStorePayType = "",
+      this.simpleStoreAccount = "",
+      this.simpleStoreShipCharge = 0,
+      this.proxyaddr = "",
+      this.torIsolation = false,
+      this.proxyUsername = "",
+      this.proxyPassword = "",
+      this.circuitLimit = 32,
+      this.noLoadChatHistory = true,
+      this.syncFreeList = true,
+      this.autoCompact = true,
+      this.autoCompactMinAge = 14 * 24 * 60 * 60,
+      this.autoHandshakeInterval = 21 * 24 * 60 * 60,
+      this.autoRemoveIdleUsersInterval = 60 * 24 * 60 * 60,
+      this.autoRemoveIgnoreList = defaultAutoRemoveIgnoreList,
+      this.sendRecvReceipts = true,
+      this.autoSubPosts = true,
+      this.logPings = false});
   factory Config.newWithRPCHost(
           Config cfg, String rpcHost, String tlsCert, String macaroonPath) =>
       Config.filled(
@@ -177,7 +178,7 @@ class Config {
   // Save a new config from scratch.
   Future<void> saveNewConfig(String filepath) async {
     var f = ini.Config.fromString("\n[payment]\n");
-    var set = (String section, String opt, String val) =>
+    set(String section, String opt, String val) =>
         val != "" ? f.set(section, opt, val) : null;
 
     // Do not save the root app data path in ios, but rely on defaultAppDataDir()
@@ -269,30 +270,30 @@ Future<Config> loadConfig(String filepath) async {
     return cleanAndExpandPath(iniVal);
   }
 
-  var getBool = (String section, String opt) {
+  getBool(String section, String opt) {
     var v = f.get(section, opt);
     return v == "yes" || v == "true" || v == "1" ? true : false;
-  };
+  }
 
-  var getBoolDefaultTrue = (String section, String opt) {
+  getBoolDefaultTrue(String section, String opt) {
     var v = f.get(section, opt);
     return v == "no" || v == "false" || v == "0" ? false : true;
-  };
+  }
 
-  var getInt = (String section, String opt) {
+  getInt(String section, String opt) {
     var v = f.get(section, opt);
     return v != null && v != "" ? int.tryParse(v) : null;
-  };
+  }
 
-  var getCommaList = (String section, String opt) {
+  getCommaList(String section, String opt) {
     var v = f.get(section, opt);
     return v != null && v != ""
         ? v.split(",").map((e) => e.trim()).toList()
         : null;
-  };
+  }
 
   var iniLogFile = f.get("log", "logfile");
-  String logfile = path.join(appDataDir, "applogs", "${APPNAME}.log");
+  String logfile = path.join(appDataDir, "applogs", "$APPNAME.log");
   if (iniLogFile != null) {
     iniLogFile = iniLogFile.trim();
 
@@ -401,7 +402,7 @@ final newConfigNeededException = Exception("Config needed");
 final unableToMoveOldWallet = Exception("Existing wallet in new location");
 
 Future<ArgParser> appArgParser() async {
-  var defaultCfgFile = path.join(await defaultAppDataDir(), "${APPNAME}.conf");
+  var defaultCfgFile = path.join(await defaultAppDataDir(), "$APPNAME.conf");
   var p = ArgParser();
   p.addFlag("help", abbr: "h", help: "Display usage info", negatable: false);
   p.addOption("configfile",

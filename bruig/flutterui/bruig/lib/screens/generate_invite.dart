@@ -2,18 +2,17 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:bruig/components/accounts_dropdown.dart';
+import 'package:bruig/components/buttons.dart';
 import 'package:bruig/components/copyable.dart';
 import 'package:bruig/components/dcr_input.dart';
-import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/components/snackbars.dart';
+import 'package:bruig/components/text.dart';
 import 'package:bruig/screens/startupscreen.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:golib_plugin/util.dart';
-import 'package:bruig/theme_manager.dart';
-import 'package:provider/provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 class GenerateInviteScreen extends StatefulWidget {
@@ -80,42 +79,35 @@ class _GenerateInviteScreenState extends State<GenerateInviteScreen> {
   }
 
   Widget buildSendFundsWidget(BuildContext context) {
-    var theme = Theme.of(context);
-    var textColor = theme.dividerColor;
-    var darkTextColor = theme.indicatorColor;
-
     if (!hasExtraAccounts) {
-      return SizedBox(
-          width: 400,
-          height: 70,
-          child: Center(
-            child: Text(
-                "Cannot send funds from default account. Create a new account to fund invites.",
-                style: TextStyle(color: textColor)),
-          ));
+      return Container(
+        alignment: Alignment.center,
+        width: 400,
+        height: 70,
+        child: const Text(
+            "Cannot send funds from default account. Create a new account to fund invites."),
+      );
     }
 
-    return Container(
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-            border: Border.all(color: darkTextColor),
-            borderRadius: BorderRadius.circular(8)),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          Text("Amount:", style: TextStyle(color: textColor)),
-          const SizedBox(width: 10),
-          SizedBox(width: 110, child: dcrInput(controller: fundAmountCtrl)),
-          const SizedBox(width: 20),
-          Text("Account:", style: TextStyle(color: textColor)),
-          const SizedBox(width: 10),
-          SizedBox(
-              width: 110,
-              child: AccountsDropDown(
-                excludeDefault: true,
-                onChanged: (v) => setState(() {
-                  account = v;
-                }),
-              )),
-        ]));
+    return Card.outlined(
+        child: Container(
+            padding: const EdgeInsets.all(10),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              const Text("Amount:"),
+              const SizedBox(width: 10),
+              SizedBox(width: 110, child: dcrInput(controller: fundAmountCtrl)),
+              const SizedBox(width: 20),
+              const Text("Account:"),
+              const SizedBox(width: 10),
+              SizedBox(
+                  width: 110,
+                  child: AccountsDropDown(
+                    excludeDefault: true,
+                    onChanged: (v) => setState(() {
+                      account = v;
+                    }),
+                  )),
+            ])));
   }
 
   void generateInvite() async {
@@ -149,29 +141,26 @@ class _GenerateInviteScreenState extends State<GenerateInviteScreen> {
   }
 
   List<Widget> buildGeneratedInvite(BuildContext context) {
-    var theme = Theme.of(context);
-    var textColor = theme.dividerColor;
-    var ts = TextStyle(color: textColor);
     var gen = generated!;
     return [
-      Text("Generated invite with key", style: ts),
+      const Txt.L("Generated invite with key"),
       const SizedBox(height: 20),
-      Copyable(gen.key, textStyle: ts),
+      Copyable(gen.key),
       ...(gen.funds != null
           ? [
               const SizedBox(height: 20),
-              Text("Invite funds available after the following TX is confirmed",
-                  style: ts),
-              Copyable(gen.funds!.txid, textStyle: ts),
+              const Text(
+                  "Invite funds available after the following TX is confirmed"),
+              Copyable(gen.funds!.txid),
             ]
           : []),
       const SizedBox(height: 20),
-      SizedBox(
+      const SizedBox(
           width: 600,
           child: Text(
-              "Note: invite keys are NOT public. They should ONLY be sent to the intended " +
-                  "recipient using a secure communication channel, such as an encrypted chat system.",
-              style: TextStyle(color: textColor, fontStyle: FontStyle.italic))),
+              "Note: invite keys are NOT public. They should ONLY be sent to the intended "
+              "recipient using a secure communication channel, such as an encrypted chat system.",
+              style: TextStyle(fontStyle: FontStyle.italic))),
       const SizedBox(height: 20),
       ElevatedButton(
           onPressed: () => Navigator.pop(context), child: const Text("Done"))
@@ -179,17 +168,12 @@ class _GenerateInviteScreenState extends State<GenerateInviteScreen> {
   }
 
   List<Widget> buildGeneratePanel(BuildContext context) {
-    var theme = Theme.of(context);
-    var textColor = theme.dividerColor;
     return [
-      SizedBox(
+      Container(
+          alignment: Alignment.center,
           width: 400,
           child: path != ""
-              ? Center(
-                  child: Text(
-                  "Path: $path",
-                  style: TextStyle(color: textColor),
-                ))
+              ? Text("Path: $path")
               : ElevatedButton(
                   onPressed: selectPath, child: const Text("Select Path"))),
       const SizedBox(height: 20),
@@ -211,32 +195,28 @@ class _GenerateInviteScreenState extends State<GenerateInviteScreen> {
       const SizedBox(height: 20),
       sendFunds
           ? buildSendFundsWidget(context)
-          : const SizedBox(width: 400, height: 70),
+          : const SizedBox(width: 400, height: 76),
       const SizedBox(height: 20),
-      ElevatedButton(
-          onPressed: !loading && path != "" ? generateInvite : null,
-          child: const Text("Generate invite")),
-      const SizedBox(height: 20),
-      ElevatedButton(
-          style: ElevatedButton.styleFrom(backgroundColor: theme.errorColor),
-          onPressed: () => Navigator.pop(context),
-          child: const Text("Cancel"))
+      SizedBox(
+          width: 400,
+          child:
+              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+            OutlinedButton(
+                onPressed: !loading && path != "" ? generateInvite : null,
+                child: const Text("Generate invite")),
+            CancelButton(onPressed: () => Navigator.pop(context))
+          ])),
     ];
   }
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<ThemeNotifier>(
-        builder: (context, theme, child) => StartupScreen([
-              Text("Generate Invite",
-                  style: TextStyle(
-                      color: theme.getTheme().dividerColor,
-                      fontSize: theme.getHugeFont(context),
-                      fontWeight: FontWeight.w200)),
-              const SizedBox(height: 20),
-              ...(generated == null
-                  ? buildGeneratePanel(context)
-                  : buildGeneratedInvite(context)),
-            ]));
+    return StartupScreen([
+      const Txt.H("Generate Invite"),
+      const SizedBox(height: 20),
+      ...(generated == null
+          ? buildGeneratePanel(context)
+          : buildGeneratedInvite(context)),
+    ]);
   }
 }

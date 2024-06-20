@@ -48,6 +48,7 @@ class _ActiveChatState extends State<ActiveChat> {
 
     if (_debounce?.isActive ?? false) _debounce!.cancel();
     _debounce = Timer(const Duration(milliseconds: 100), () async {
+      if (!mounted) return;
       try {
         await chat.sendMsg(msg);
         client.newSentMsg(chat);
@@ -91,6 +92,8 @@ class _ActiveChatState extends State<ActiveChat> {
       oldWidget.client.ui.chatSideMenuActive
           .removeListener(chatSideMenuActiveChanged);
       ui.chatSideMenuActive.addListener(chatSideMenuActiveChanged);
+    } else if (client.active != chat) {
+      activeChatChanged();
     }
   }
 
@@ -100,7 +103,6 @@ class _ActiveChatState extends State<ActiveChat> {
     ui.chatSideMenuActive.removeListener(chatSideMenuActiveChanged);
     _debounce?.cancel();
     client.activeChat.removeListener(activeChatChanged);
-    //inputFocusNode.dispose();  XXX Does this need to be put back?  Errors with it
     super.dispose();
   }
 
@@ -111,30 +113,28 @@ class _ActiveChatState extends State<ActiveChat> {
 
     if (ui.showProfile.val) {
       if (chat.isGC) {
-        return const ManageGCScreen();
+        return ManageGCScreen(client, chat);
       } else {
         return UserProfile(client);
       }
     }
 
-    var theme = Theme.of(context);
-    var backgroundColor = theme.backgroundColor;
-
     bool isScreenSmall = checkIsScreenSmall(context);
 
-    return ScreenWithChatSideMenu(Column(
-      children: [
-        Expanded(
-          child: Messages(
-              chat, client, _itemScrollController, _itemPositionsListener),
-        ),
-        Container(
-            padding: isScreenSmall
-                ? const EdgeInsets.all(10)
-                : const EdgeInsets.all(5),
-            color: backgroundColor,
-            child: Input(sendMsg, chat, inputFocusNode))
-      ],
-    ));
+    return ScreenWithChatSideMenu(
+        client,
+        Column(
+          children: [
+            Expanded(
+              child: Messages(
+                  chat, client, _itemScrollController, _itemPositionsListener),
+            ),
+            Container(
+                padding: isScreenSmall
+                    ? const EdgeInsets.all(10)
+                    : const EdgeInsets.all(5),
+                child: ChatInput(sendMsg, chat, inputFocusNode))
+          ],
+        ));
   }
 }

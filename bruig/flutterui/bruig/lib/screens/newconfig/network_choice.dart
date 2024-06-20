@@ -1,10 +1,8 @@
-import 'package:bruig/components/empty_widget.dart';
+import 'package:bruig/components/text.dart';
 import 'package:bruig/models/newconfig.dart';
 import 'package:bruig/screens/startupscreen.dart';
 import 'package:flutter/material.dart';
 import 'package:bruig/components/buttons.dart';
-import 'package:provider/provider.dart';
-import 'package:bruig/theme_manager.dart';
 
 class NetworkChoicePage extends StatelessWidget {
   final NewConfigModel newconf;
@@ -22,55 +20,31 @@ class NetworkChoicePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
-
-    return Consumer<ThemeNotifier>(
-        builder: (context, theme, _) => StartupScreen([
-              Text("Setting up Bison Relay",
-                  style: TextStyle(
-                      color: theme.getTheme().dividerColor,
-                      fontSize: theme.getHugeFont(context),
-                      fontWeight: FontWeight.w200)),
-              const SizedBox(height: 20),
-              Text("Choose Network",
-                  style: TextStyle(
-                      color: theme.getTheme().focusColor,
-                      fontSize: theme.getMediumFont(context),
-                      fontWeight: FontWeight.w300)),
-              const SizedBox(height: 34),
-              Flex(
-                  direction: isScreenSmall ? Axis.vertical : Axis.horizontal,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    LoadingScreenButton(
-                        onPressed: () =>
-                            setChoice(context, NetworkType.mainnet),
-                        text: "Mainnet",
-                        empty: true),
-                    isScreenSmall
-                        ? const SizedBox(height: 13)
-                        : const SizedBox(width: 13),
-                    LoadingScreenButton(
-                        onPressed: () =>
-                            setChoice(context, NetworkType.testnet),
-                        text: "Testnet",
-                        empty: true),
-                    isScreenSmall
-                        ? const SizedBox(height: 13)
-                        : const SizedBox(width: 13),
-                    LoadingScreenButton(
-                        onPressed: () => setChoice(context, NetworkType.simnet),
-                        text: "Simnet",
-                        empty: true),
-                  ]),
-              Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                TextButton(
-                  onPressed: () => goBack(context),
-                  child: Text("Go Back",
-                      style: TextStyle(color: theme.getTheme().dividerColor)),
-                )
-              ])
-            ]));
+    return StartupScreen([
+      const Txt.H("Setting up Bison Relay"),
+      const SizedBox(height: 20),
+      const Text("Choose Network"),
+      const SizedBox(height: 34),
+      Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          alignment: WrapAlignment.center,
+          children: [
+            LoadingScreenButton(
+                onPressed: () => setChoice(context, NetworkType.mainnet),
+                text: "Mainnet",
+                empty: true),
+            LoadingScreenButton(
+                onPressed: () => setChoice(context, NetworkType.testnet),
+                text: "Testnet",
+                empty: true),
+            LoadingScreenButton(
+                onPressed: () => setChoice(context, NetworkType.simnet),
+                text: "Simnet",
+                empty: true),
+          ]),
+      const SizedBox(height: 30),
+      TextButton(onPressed: () => goBack(context), child: const Text("Go Back"))
+    ]);
   }
 }

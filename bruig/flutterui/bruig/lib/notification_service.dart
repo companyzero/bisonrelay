@@ -26,7 +26,7 @@ class NotificationService {
   factory NotificationService() {
     return _notificationService;
   }
-  bool _notificationsGranted = true;
+  final bool _notificationsGranted = true;
 
   final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
       FlutterLocalNotificationsPlugin();
@@ -248,7 +248,7 @@ class NotificationService {
 
     notificationChecker = Timer(const Duration(seconds: 10), () async {
       if (_notificationsToBeSent.isNotEmpty) {
-        var set = Set<String>();
+        var set = <String>{};
         List<Notification> uniquePayloads =
             _notificationsToBeSent.where((e) => set.add(e.payload!)).toList();
         List<Notification> consolidatedNtfns = [];

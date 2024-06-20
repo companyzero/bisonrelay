@@ -2,10 +2,10 @@ import 'dart:io';
 
 import 'package:bruig/components/buttons.dart';
 import 'package:bruig/components/confirmation_dialog.dart';
+import 'package:bruig/components/text.dart';
 import 'package:bruig/config.dart';
 import 'package:bruig/models/newconfig.dart';
 import 'package:bruig/screens/startupscreen.dart';
-import 'package:bruig/theme_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -78,6 +78,7 @@ class _ConfigNetworkScreenState extends State<ConfigNetworkScreen> {
     confirmationDialog(
         context,
         changeConfig,
+        onCancel: () => Navigator.of(context).pop(),
         "Change Config?",
         "Change network config? To apply the changes, the app will require a restart.",
         "Accept",
@@ -114,86 +115,34 @@ class _ConfigNetworkScreenState extends State<ConfigNetworkScreen> {
 
   @override
   Widget build(BuildContext context) {
-    var theme = Provider.of<ThemeNotifier>(context);
-
-    var secondaryTextColor = theme.getTheme().dividerColor;
-    var textColor = theme.getTheme().focusColor;
-
-    var labelTs = TextStyle(color: secondaryTextColor);
-
-    return StartupScreen([
-      Text("Configure Network Options",
-          style: TextStyle(
-              color: theme.getTheme().dividerColor,
-              fontSize: theme.getHugeFont(context),
-              fontWeight: FontWeight.w200)),
+    return StartupScreen(childrenWidth: 400, [
+      const Txt.H("Configure Network Options"),
       const SizedBox(height: 20),
-      Wrap(crossAxisAlignment: WrapCrossAlignment.center, children: [
-        SizedBox(
-            width: 200,
-            child: Text("Proxy Address:",
-                style: labelTs, textAlign: TextAlign.end)),
-        const SizedBox(width: 10),
-        SizedBox(
-            width: 377,
-            child: TextField(
-                controller: proxyAddrCtrl,
-                style: TextStyle(
-                    fontSize: theme.getSmallFont(context),
-                    color: secondaryTextColor))),
-      ]),
+      TextField(
+          controller: proxyAddrCtrl,
+          decoration: const InputDecoration(
+              labelText: "Proxy Address", hintText: "127.0.0.1:9050")),
       const SizedBox(height: 10),
-      Wrap(crossAxisAlignment: WrapCrossAlignment.center, children: [
-        SizedBox(
-            width: 200,
-            child: Text("Proxy Username:",
-                style: labelTs, textAlign: TextAlign.end)),
-        const SizedBox(width: 10),
-        SizedBox(
-            width: 377,
-            child: TextField(
-                controller: proxyUserCtrl,
-                style: TextStyle(
-                    fontSize: theme.getSmallFont(context),
-                    color: secondaryTextColor))),
-      ]),
+      TextField(
+          controller: proxyUserCtrl,
+          decoration: const InputDecoration(
+              labelText: "Proxy Username", hintText: "proxyuser")),
       const SizedBox(height: 10),
-      Wrap(crossAxisAlignment: WrapCrossAlignment.center, children: [
-        SizedBox(
-            width: 200,
-            child: Text("Proxy Password:",
-                style: labelTs, textAlign: TextAlign.end)),
-        const SizedBox(width: 10),
-        SizedBox(
-            width: 377,
-            child: TextField(
-                controller: proxyPwdCtrl,
-                style: TextStyle(
-                    fontSize: theme.getSmallFont(context),
-                    color: secondaryTextColor))),
-      ]),
+      TextField(
+          controller: proxyPwdCtrl,
+          decoration: const InputDecoration(
+              labelText: "Proxy Password", hintText: "proxypass")),
       const SizedBox(height: 10),
-      Wrap(crossAxisAlignment: WrapCrossAlignment.center, children: [
-        SizedBox(
-            width: 200,
-            child: Text("Tor Circuit Limit:",
-                style: labelTs, textAlign: TextAlign.end)),
-        const SizedBox(width: 10),
-        SizedBox(
-            width: 377,
-            child: TextField(
-                keyboardType: TextInputType.number,
-                controller: torCirtuitLimitCtrl,
-                onChanged: (value) {
-                  if (value.contains(_nonDigitsRegexp)) {
-                    torCirtuitLimitCtrl.text =
-                        value.replaceAll(_nonDigitsRegexp, "");
-                  }
-                },
-                style: TextStyle(
-                    fontSize: theme.getSmallFont(context),
-                    color: secondaryTextColor))),
-      ]),
+      TextField(
+          keyboardType: TextInputType.number,
+          controller: torCirtuitLimitCtrl,
+          decoration: const InputDecoration(
+              labelText: "Tor Circuit Limit", hintText: "32"),
+          onChanged: (value) {
+            if (value.contains(_nonDigitsRegexp)) {
+              torCirtuitLimitCtrl.text = value.replaceAll(_nonDigitsRegexp, "");
+            }
+          }),
       const SizedBox(height: 20),
       SizedBox(
           width: 230,
@@ -206,17 +155,15 @@ class _ConfigNetworkScreenState extends State<ConfigNetworkScreen> {
                 onChanged: (bool? value) =>
                     setState(() => torCircuitIsolation = value ?? false),
               ),
-              Text("Tor Circuit Isolation", style: TextStyle(color: textColor)),
+              const Text("Tor Circuit Isolation"),
             ]),
           )),
-      const SizedBox(height: 20),
+      const SizedBox(height: 30),
       Wrap(runSpacing: 10, children: [
-        ElevatedButton(
+        OutlinedButton(
             onPressed: confirmAcceptChanges, child: const Text("Accept")),
         const SizedBox(width: 50),
-        CancelButton(onPressed: () {
-          Navigator.pop(context);
-        }),
+        CancelButton(onPressed: () => Navigator.pop(context)),
       ]),
     ]);
   }

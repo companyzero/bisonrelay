@@ -1,3 +1,5 @@
+import 'package:bruig/components/copyable.dart';
+import 'package:bruig/components/text.dart';
 import 'package:bruig/screens/startupscreen.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
@@ -29,27 +31,16 @@ class _VerifyServerScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<ThemeNotifier>(
         builder: (context, theme, child) => StartupScreen([
-              Text("Accept Server Fingerprint",
-                  style: TextStyle(
-                      color: theme.getTheme().dividerColor,
-                      fontSize: theme.getHugeFont(context),
-                      fontWeight: FontWeight.w200)),
+              const Txt.H("Accept Server Fingerprint"),
               const SizedBox(height: 34),
-              Text("Inner Fingerprint: ${cert.innerFingerprint}",
-                  style: TextStyle(
-                      color: theme.getTheme().dividerColor,
-                      fontSize: theme.getMediumFont(context),
-                      fontWeight: FontWeight.w300)),
-              Text("Outer Fingerprint: ${cert.outerFingerprint}",
-                  style: TextStyle(
-                      color: theme.getTheme().dividerColor,
-                      fontSize: theme.getMediumFont(context),
-                      fontWeight: FontWeight.w300)),
+              Copyable(cert.innerFingerprint,
+                  child: Text("Inner Fingerprint: ${cert.innerFingerprint}")),
+              Copyable(cert.outerFingerprint,
+                  child: Text("Outer Fingerprint: ${cert.outerFingerprint}")),
               const SizedBox(height: 34),
-              ElevatedButton(
+              OutlinedButton(
                   onPressed: () => onAcceptServerCreds(context),
                   child: const Text("Accept")),
-              Container(height: 10)
             ]));
   }
 }

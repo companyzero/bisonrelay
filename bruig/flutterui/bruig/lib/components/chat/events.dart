@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:bruig/components/containers.dart';
+import 'package:bruig/components/text.dart';
 import 'package:bruig/screens/feed.dart';
 import 'package:flutter/material.dart';
 import 'package:bruig/models/client.dart';
@@ -20,69 +22,51 @@ import 'package:open_filex/open_filex.dart';
 import 'package:file_icon/file_icon.dart';
 import 'package:bruig/components/interactive_avatar.dart';
 import 'package:bruig/components/user_context_menu.dart';
-import 'package:bruig/components/empty_widget.dart';
-import 'package:bruig/util.dart';
 import 'package:bruig/theme_manager.dart';
 
 class ServerEvent extends StatelessWidget {
-  final Widget child;
-  const ServerEvent({required this.child, Key? key}) : super(key: key);
+  final Widget? child;
+  final String? msg;
+  const ServerEvent({this.child, this.msg, Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    var theme = Theme.of(context);
-    var bgColor = theme.highlightColor;
-    return Container(
+    assert(child != null || msg != null);
+
+    return Box(
         padding: const EdgeInsets.only(left: 41, top: 5, bottom: 5),
         margin: const EdgeInsets.all(5),
-        decoration: BoxDecoration(
-            color: bgColor,
-            borderRadius: const BorderRadius.all(Radius.circular(5))),
-        child: child);
+        color: SurfaceColor.surfaceContainer,
+        child: child ?? Txt.S(msg!));
   }
 }
 
 class DateChange extends StatelessWidget {
-  final Widget child;
-  const DateChange({required this.child, Key? key}) : super(key: key);
+  final DateChangeEvent event;
+  const DateChange({required this.event, Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return Container(
         padding: const EdgeInsets.only(top: 5, bottom: 5),
         margin: const EdgeInsets.all(5),
-        child: child);
+        alignment: Alignment.center,
+        child: Text(textAlign: TextAlign.center, event.msg));
   }
 }
 
 class _FirstUnreadIndicator extends StatelessWidget {
-  const _FirstUnreadIndicator({super.key});
+  const _FirstUnreadIndicator();
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<ThemeNotifier>(
-        builder: (context, theme, _) => Row(children: [
-              Expanded(
-                  child: Divider(
-                color: theme.getTheme().dividerColor, //color of divider
-                height: 8, //height spacing of divider
-                thickness: 1, //thickness of divier line
-                indent: 5, //spacing at the start of divider
-                endIndent: 5, //spacing at the end of divider
-              )),
-              Text("Last read posts",
-                  style: TextStyle(
-                      fontSize: theme.getSmallFont(context),
-                      color: theme.getTheme().dividerColor)),
-              Expanded(
-                  child: Divider(
-                color: theme.getTheme().dividerColor, //color of divider
-                height: 8, //height spacing of divider
-                thickness: 1, //thickness of divier line
-                indent: 5, //spacing at the start of divider
-                endIndent: 5, //spacing at the end of divider
-              )),
-            ]));
+    return const Row(children: [
+      Expanded(child: Divider()),
+      SizedBox(width: 8),
+      Txt.S("Last read posts", color: TextColor.onSurfaceVariant),
+      SizedBox(width: 8),
+      Expanded(child: Divider()),
+    ]);
   }
 }
 
@@ -134,8 +118,7 @@ class _ReceivedSentPMState extends State<ReceivedSentPM> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
+  Widget buildMessage(BuildContext context) {
     var suffix = "";
     switch (widget.evnt.sentState) {
       case CMS_sending:
@@ -158,295 +141,271 @@ class _ReceivedSentPMState extends State<ReceivedSentPM> {
     var msg = "${widget.evnt.event.msg}$suffix";
     msg = msg.replaceAll("\n",
         "  \n"); // Replace newlines with <space space newline> for proper md render
-    var theme = Theme.of(context);
-    var darkTextColor = theme.indicatorColor;
-    var avatarColor = colorFromNick(widget.nick, theme.brightness);
-
-    var selectedBackgroundColor = theme.highlightColor;
-    var sentBackgroundColor = theme.dialogBackgroundColor;
 
     var isOwnMessage = widget.userNick == widget.nick;
 
-    List<Widget> getMessage(BuildContext context) {
-      return <Widget>[
-        Provider<DownloadSource>(
-            create: (context) => DownloadSource(sourceID),
-            child: MarkdownArea(
-                msg,
-                widget.userNick != widget.nick &&
-                    msg.contains(widget.userNick)))
-      ];
-    }
+    // List<Widget> getMessage(BuildContext context) {
+    //   return <Widget>[
+    //     Provider<DownloadSource>(
+    //         create: (context) => DownloadSource(sourceID),
+    //         child: MarkdownArea(
+    //             msg,
+    //             widget.userNick != widget.nick &&
+    //                 msg.contains(widget.userNick)))
+    //   ];
+    // }
+
+    var showAvatar = widget.evnt.showAvatar && !isOwnMessage;
+    var showNick = !(widget.evnt.sameUser || isOwnMessage);
 
     bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
     return Consumer<ThemeNotifier>(
-        builder: (context, theme, _) => Column(children: [
-              widget.evnt.firstUnread
-                  ? const _FirstUnreadIndicator()
-                  : const Empty(),
-              Container(
-                  margin: EdgeInsets.only(
-                      top: widget.evnt.sameUser ? 2 : 10,
-                      right: isOwnMessage ? 10 : 0),
-                  child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      mainAxisAlignment: isOwnMessage
-                          ? MainAxisAlignment.end
-                          : MainAxisAlignment.start,
-                      children: <Widget>[
-                        widget.evnt.showAvatar && !isOwnMessage
-                            ? SelectionContainer.disabled(
-                                child: Container(
-                                height: 28,
-                                width: 28,
-                                margin: const EdgeInsets.only(
-                                    top: 0, bottom: 10, left: 10, right: 10),
-                                child: UserContextMenu(
-                                  client: widget.client,
-                                  targetUserChat: widget.evnt.source,
-                                  child: UserMenuAvatar(
-                                    widget.client,
-                                    widget.evnt.source ?? widget.chat,
-                                    showChatSideMenuOnTap: true,
-                                  ),
-                                ),
-                              ))
-                            : const SizedBox(width: 48),
-                        ConstrainedBox(
-                            constraints: BoxConstraints(
-                              maxWidth: isScreenSmall
-                                  ? MediaQuery.of(context).size.width * 0.7
-                                  : MediaQuery.of(context).size.width * 0.4,
-                            ),
-                            child: Column(
-                                crossAxisAlignment: isOwnMessage
-                                    ? CrossAxisAlignment.end
-                                    : CrossAxisAlignment.start,
-                                mainAxisAlignment: MainAxisAlignment.end,
-                                children: <Widget>[
-                                  Container(
-                                    padding: const EdgeInsets.all(5),
-                                    decoration: BoxDecoration(
-                                      color: isOwnMessage
-                                          ? sentBackgroundColor
-                                          : selectedBackgroundColor,
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: Column(
-                                      crossAxisAlignment: isOwnMessage
-                                          ? CrossAxisAlignment.end
-                                          : CrossAxisAlignment.start,
-                                      children: <Widget>[
-                                        widget.evnt.sameUser || isOwnMessage
-                                            ? const Empty()
-                                            : Text(widget.nick,
-                                                style: TextStyle(
-                                                  fontSize: theme
-                                                      .getMediumFont(context),
-                                                  color: avatarColor,
-                                                  fontWeight: FontWeight.w500,
-                                                  letterSpacing: 0.5,
-                                                )),
-                                        Wrap(
-                                          children: getMessage(context),
-                                        ),
-                                        SelectionContainer.disabled(
-                                          child: Padding(
-                                            padding:
-                                                const EdgeInsets.only(top: 5),
-                                            child: Tooltip(
-                                              message: fullDate,
-                                              child: Text(
-                                                hour,
-                                                style: TextStyle(
-                                                    fontSize: theme
-                                                        .getSmallFont(context),
-                                                    color: darkTextColor),
-                                              ),
-                                            ),
-                                          ),
-                                        )
-                                      ],
-                                    ),
-                                  ),
-                                ])),
-                      ]))
-            ]));
-  }
-}
-
-class ReceivedSentMobilePM extends StatefulWidget {
-  final ChatEventModel evnt;
-  final String nick;
-  final int timestamp;
-  final ShowSubMenuCB showSubMenu;
-  final String id;
-  final String userNick;
-  final bool isGC;
-  final ClientModel client;
-
-  const ReceivedSentMobilePM(this.evnt, this.nick, this.timestamp,
-      this.showSubMenu, this.id, this.userNick, this.isGC, this.client,
-      {Key? key})
-      : super(key: key);
-
-  @override
-  State<ReceivedSentMobilePM> createState() => _ReceivedSentPMMobileState();
-}
-
-class _ReceivedSentPMMobileState extends State<ReceivedSentMobilePM> {
-  void eventChanged() => setState(() {});
-
-  @override
-  initState() {
-    super.initState();
-    widget.evnt.addListener(eventChanged);
-  }
-
-  @override
-  didUpdateWidget(ReceivedSentMobilePM oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    oldWidget.evnt.removeListener(eventChanged);
-    widget.evnt.addListener(eventChanged);
-  }
-
-  @override
-  dispose() {
-    widget.evnt.removeListener(eventChanged);
-    super.dispose();
-  }
-
-  Future<void> launchUrlAwait(url) async {
-    if (!await launchUrl(Uri.parse(url))) {
-      throw 'Could not launch $url';
-    }
+        builder: (context, theme, _) => Container(
+            padding: showAvatar ? null : const EdgeInsets.only(left: 48),
+            margin: EdgeInsets.only(
+                top: widget.evnt.sameUser ? 2 : 10,
+                right: isOwnMessage ? 10 : 0),
+            child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                mainAxisAlignment: isOwnMessage
+                    ? MainAxisAlignment.end
+                    : MainAxisAlignment.start,
+                children: <Widget>[
+                  if (showAvatar)
+                    SelectionContainer.disabled(
+                        child: Container(
+                      height: 28,
+                      width: 28,
+                      margin: const EdgeInsets.only(
+                          top: 0, bottom: 10, left: 10, right: 10),
+                      child: UserContextMenu(
+                        client: widget.client,
+                        targetUserChat: widget.evnt.source,
+                        child: UserMenuAvatar(
+                          widget.client,
+                          widget.evnt.source ?? widget.chat,
+                          showChatSideMenuOnTap: true,
+                        ),
+                      ),
+                    )),
+                  Container(
+                      constraints: BoxConstraints(
+                        maxWidth: isScreenSmall
+                            ? MediaQuery.sizeOf(context).width * 0.7
+                            : MediaQuery.sizeOf(context).width * 0.4,
+                      ),
+                      padding: const EdgeInsets.all(5),
+                      decoration: BoxDecoration(
+                        color: isOwnMessage
+                            ? theme.colors.surfaceContainer
+                            : theme.colors.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Column(
+                          crossAxisAlignment: isOwnMessage
+                              ? CrossAxisAlignment.end
+                              : CrossAxisAlignment.start,
+                          children: <Widget>[
+                            if (showNick)
+                              Text(widget.nick,
+                                  style: theme.textStyleForNick(widget.nick)),
+                            Provider<DownloadSource>(
+                                create: (context) => DownloadSource(sourceID),
+                                child: MarkdownArea(
+                                    msg,
+                                    widget.userNick != widget.nick &&
+                                        msg.contains(widget.userNick))),
+                            SelectionContainer.disabled(
+                                child: Padding(
+                                    padding: const EdgeInsets.only(top: 5),
+                                    child: Tooltip(
+                                        message: fullDate,
+                                        child: Txt.S(hour,
+                                            color:
+                                                TextColor.onSurfaceVariant))))
+                          ]))
+                ])));
   }
 
   @override
   Widget build(BuildContext context) {
-    var suffix = "";
-    switch (widget.evnt.sentState) {
-      case CMS_sending:
-        break;
-      case CMS_sent:
-        break;
-      case CMS_errored:
-        suffix = "\n\n${widget.evnt.sendError}";
-        break;
-      default:
+    if (widget.evnt.firstUnread) {
+      return Column(children: [
+        const _FirstUnreadIndicator(),
+        buildMessage(context),
+      ]);
     }
 
-    var sent = widget.evnt.source == null;
-
-    var sourceID = widget.evnt.event.sid;
-    if (!sent) {
-      sourceID = widget.evnt.source!.id;
-    }
-    var now = DateTime.fromMillisecondsSinceEpoch(widget.timestamp);
-    var hour = DateFormat('HH:mm').format(now);
-    var fullDate = DateFormat("yyyy-MM-dd HH:mm:ss").format(now);
-
-    var msg = "${widget.evnt.event.msg}$suffix";
-    msg = msg.replaceAll("\n",
-        "  \n"); // Replace newlines with <space space newline> for proper md render
-    var theme = Theme.of(context);
-    var darkTextColor = theme.indicatorColor;
-    var receivedBackgroundColor = theme.highlightColor;
-    var sentBackgroundColor = theme.dialogBackgroundColor;
-
-    return Consumer<ThemeNotifier>(
-        builder: (context, theme, _) => Column(children: [
-              widget.evnt.firstUnread
-                  ? const _FirstUnreadIndicator()
-                  : const Empty(),
-              Column(children: [
-                widget.evnt.sameUser
-                    ? const Empty()
-                    : const SizedBox(height: 20),
-                sent
-                    ? Row(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                            Flexible(
-                              flex: 3,
-                              child: SelectionContainer.disabled(
-                                  child: Padding(
-                                padding: const EdgeInsets.all(4.0),
-                                child: Tooltip(
-                                    message: fullDate,
-                                    child: Text(
-                                      hour,
-                                      style: TextStyle(
-                                          fontSize: theme.getSmallFont(context),
-                                          color: darkTextColor), // DATE COLOR
-                                    )),
-                              )),
-                            ),
-                            Flexible(
-                              flex: 7,
-                              child: Container(
-                                  margin:
-                                      const EdgeInsets.only(left: 5, right: 20),
-                                  padding: const EdgeInsets.only(
-                                      left: 10, right: 10, top: 5, bottom: 5),
-                                  decoration: BoxDecoration(
-                                    color: sentBackgroundColor,
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: Provider<DownloadSource>(
-                                      create: (context) =>
-                                          DownloadSource(sourceID),
-                                      child: MarkdownArea(
-                                          msg,
-                                          widget.userNick != widget.nick &&
-                                              msg.contains(widget.userNick)))),
-                            )
-                          ])
-                    : Row(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        mainAxisAlignment: MainAxisAlignment.start,
-                        children: [
-                            Flexible(
-                                flex: 7,
-                                child: Container(
-                                    margin: const EdgeInsets.only(
-                                        left: 5, right: 20),
-                                    padding: const EdgeInsets.only(
-                                        left: 10, right: 10, top: 5, bottom: 5),
-                                    decoration: BoxDecoration(
-                                      color: receivedBackgroundColor,
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: Provider<DownloadSource>(
-                                        create: (context) =>
-                                            DownloadSource(sourceID),
-                                        child: MarkdownArea(
-                                            msg,
-                                            widget.userNick != widget.nick &&
-                                                msg.contains(
-                                                    widget.userNick))))),
-                            Flexible(
-                              flex: 3,
-                              child: SelectionContainer.disabled(
-                                  child: Padding(
-                                padding: const EdgeInsets.all(4.0),
-                                child: Tooltip(
-                                    message: fullDate,
-                                    child: Text(
-                                      hour,
-                                      style: TextStyle(
-                                          fontSize: theme.getSmallFont(context),
-                                          color: darkTextColor), // DATE COLOR
-                                    )),
-                              )),
-                            ),
-                          ]),
-                const SizedBox(height: 5),
-              ])
-            ]));
+    return buildMessage(context);
   }
 }
+
+// class ReceivedSentMobilePM extends StatefulWidget {
+//   final ChatEventModel evnt;
+//   final String nick;
+//   final int timestamp;
+//   final ShowSubMenuCB showSubMenu;
+//   final String id;
+//   final String userNick;
+//   final bool isGC;
+//   final ClientModel client;
+
+//   const ReceivedSentMobilePM(this.evnt, this.nick, this.timestamp,
+//       this.showSubMenu, this.id, this.userNick, this.isGC, this.client,
+//       {Key? key})
+//       : super(key: key);
+
+//   @override
+//   State<ReceivedSentMobilePM> createState() => _ReceivedSentPMMobileState();
+// }
+
+// class _ReceivedSentPMMobileState extends State<ReceivedSentMobilePM> {
+//   void eventChanged() => setState(() {});
+
+//   @override
+//   initState() {
+//     super.initState();
+//     widget.evnt.addListener(eventChanged);
+//   }
+
+//   @override
+//   didUpdateWidget(ReceivedSentMobilePM oldWidget) {
+//     super.didUpdateWidget(oldWidget);
+//     oldWidget.evnt.removeListener(eventChanged);
+//     widget.evnt.addListener(eventChanged);
+//   }
+
+//   @override
+//   dispose() {
+//     widget.evnt.removeListener(eventChanged);
+//     super.dispose();
+//   }
+
+//   Future<void> launchUrlAwait(url) async {
+//     if (!await launchUrl(Uri.parse(url))) {
+//       throw 'Could not launch $url';
+//     }
+//   }
+
+//   @override
+//   Widget build(BuildContext context) {
+//     var suffix = "";
+//     switch (widget.evnt.sentState) {
+//       case CMS_sending:
+//         break;
+//       case CMS_sent:
+//         break;
+//       case CMS_errored:
+//         suffix = "\n\n${widget.evnt.sendError}";
+//         break;
+//       default:
+//     }
+
+//     var sent = widget.evnt.source == null;
+
+//     var sourceID = widget.evnt.event.sid;
+//     if (!sent) {
+//       sourceID = widget.evnt.source!.id;
+//     }
+//     var now = DateTime.fromMillisecondsSinceEpoch(widget.timestamp);
+//     var hour = DateFormat('HH:mm').format(now);
+//     var fullDate = DateFormat("yyyy-MM-dd HH:mm:ss").format(now);
+
+//     var msg = "${widget.evnt.event.msg}$suffix";
+//     msg = msg.replaceAll("\n",
+//         "  \n"); // Replace newlines with <space space newline> for proper md render
+//     var theme = Theme.of(context);
+//     var darkTextColor = theme.indicatorColor;
+//     var receivedBackgroundColor = theme.highlightColor;
+//     var sentBackgroundColor = theme.dialogBackgroundColor;
+
+//     return Consumer<ThemeNotifier>(
+//         builder: (context, theme, _) => Column(children: [
+//               widget.evnt.firstUnread
+//                   ? const _FirstUnreadIndicator()
+//                   : const Empty(),
+//               Column(children: [
+//                 widget.evnt.sameUser
+//                     ? const Empty()
+//                     : const SizedBox(height: 20),
+//                 sent
+//                     ? Row(
+//                         crossAxisAlignment: CrossAxisAlignment.end,
+//                         mainAxisAlignment: MainAxisAlignment.end,
+//                         children: [
+//                             Flexible(
+//                               flex: 3,
+//                               child: SelectionContainer.disabled(
+//                                   child: Padding(
+//                                 padding: const EdgeInsets.all(4.0),
+//                                 child: Tooltip(
+//                                     message: fullDate,
+//                                     child: Txt.S(
+//                                       hour,
+//                                     )),
+//                               )),
+//                             ),
+//                             Flexible(
+//                               flex: 7,
+//                               child: Container(
+//                                   margin:
+//                                       const EdgeInsets.only(left: 5, right: 20),
+//                                   padding: const EdgeInsets.only(
+//                                       left: 10, right: 10, top: 5, bottom: 5),
+//                                   decoration: BoxDecoration(
+//                                     color: sentBackgroundColor,
+//                                     borderRadius: BorderRadius.circular(10),
+//                                   ),
+//                                   child: Provider<DownloadSource>(
+//                                       create: (context) =>
+//                                           DownloadSource(sourceID),
+//                                       child: MarkdownArea(
+//                                           msg,
+//                                           widget.userNick != widget.nick &&
+//                                               msg.contains(widget.userNick)))),
+//                             )
+//                           ])
+//                     : Row(
+//                         crossAxisAlignment: CrossAxisAlignment.end,
+//                         mainAxisAlignment: MainAxisAlignment.start,
+//                         children: [
+//                             Flexible(
+//                                 flex: 7,
+//                                 child: Container(
+//                                     margin: const EdgeInsets.only(
+//                                         left: 5, right: 20),
+//                                     padding: const EdgeInsets.only(
+//                                         left: 10, right: 10, top: 5, bottom: 5),
+//                                     decoration: BoxDecoration(
+//                                       color: receivedBackgroundColor,
+//                                       borderRadius: BorderRadius.circular(10),
+//                                     ),
+//                                     child: Provider<DownloadSource>(
+//                                         create: (context) =>
+//                                             DownloadSource(sourceID),
+//                                         child: MarkdownArea(
+//                                             msg,
+//                                             widget.userNick != widget.nick &&
+//                                                 msg.contains(
+//                                                     widget.userNick))))),
+//                             Flexible(
+//                               flex: 3,
+//                               child: SelectionContainer.disabled(
+//                                   child: Padding(
+//                                 padding: const EdgeInsets.all(4.0),
+//                                 child: Tooltip(
+//                                     message: fullDate,
+//                                     child: Txt.S(
+//                                       hour,
+//                                     )),
+//                               )),
+//                             ),
+//                           ]),
+//                 const SizedBox(height: 5),
+//               ])
+//             ]));
+//   }
+// }
 
 class PMW extends StatelessWidget {
   final ChatEventModel evnt;
@@ -466,21 +425,30 @@ class PMW extends StatelessWidget {
     }
 
     openReplyDM(bool isGC, String id) => null;
-    bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
+    // bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
+    // if (isScreenSmall) {
+    //   return ReceivedSentMobilePM(
+    //       evnt,
+    //       evnt.source?.nick ?? client.nick,
+    //       timestamp,
+    //       showSubMenu,
+    //       evnt.source?.id ?? "",
+    //       client.nick,
+    //       false,
+    //       client);
+    // }
 
-    if (isScreenSmall) {
-      return ReceivedSentMobilePM(
-          evnt,
-          evnt.source?.nick ?? client.nick,
-          timestamp,
-          showSubMenu,
-          evnt.source?.id ?? "",
-          client.nick,
-          false,
-          client);
-    }
-    return ReceivedSentPM(evnt, evnt.source?.nick ?? client.nick, timestamp,
-        evnt.source?.id ?? "", client.nick, false, openReplyDM, client, chat);
+    return ReceivedSentPM(
+      evnt,
+      evnt.source?.nick ?? client.nick,
+      timestamp,
+      evnt.source?.id ?? "",
+      client.nick,
+      false,
+      openReplyDM,
+      client,
+      chat,
+    );
   }
 }
 
@@ -515,21 +483,11 @@ class GCUserEventW extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    var theme = Theme.of(context);
-    var textColor = theme.dividerColor;
-    return Consumer<ThemeNotifier>(builder: (context, theme, _) {
-      if (evnt.source != null) {
-        return ServerEvent(
-            child: Text("${evnt.source!.nick}:  ${evnt.event.msg}",
-                style: TextStyle(
-                    fontSize: theme.getSmallFont(context), color: textColor)));
-      } else {
-        return ServerEvent(
-            child: Text(evnt.event.msg,
-                style: TextStyle(
-                    fontSize: theme.getSmallFont(context), color: textColor)));
-      }
-    });
+    if (evnt.source != null) {
+      return ServerEvent(msg: "${evnt.source!.nick}:  ${evnt.event.msg}");
+    } else {
+      return ServerEvent(msg: evnt.event.msg);
+    }
   }
 }
 
@@ -566,50 +524,30 @@ class _JoinGCEventWState extends State<JoinGCEventW> {
 
   @override
   Widget build(BuildContext context) {
-    var theme = Theme.of(context);
-    var textColor = theme.dividerColor;
-    return Consumer<ThemeNotifier>(builder: (context, theme, _) {
-      switch (event.sentState) {
-        case CMS_canceled:
-          return ServerEvent(
-              child: Text("Declined GC invitation to '${invite.name}",
-                  style: TextStyle(
-                      fontSize: theme.getSmallFont(context),
-                      color: textColor)));
-        case CMS_errored:
-          return ServerEvent(
-              child: Text(
-                  "Unable to join GC ${invite.name}: ${event.sendError}",
-                  style: TextStyle(
-                      fontSize: theme.getSmallFont(context),
-                      color: textColor)));
-        case CMS_sent:
-          return ServerEvent(
-              child: Text("Accepted invitation to join GC '${invite.name}'",
-                  style: TextStyle(
-                      fontSize: theme.getSmallFont(context),
-                      color: textColor)));
-        case CMS_sending:
-          return ServerEvent(
-              child: Text("Accepting invitation to join GC '${invite.name}'",
-                  style: TextStyle(
-                      fontSize: theme.getSmallFont(context),
-                      color: textColor)));
-      }
+    switch (event.sentState) {
+      case CMS_canceled:
+        return ServerEvent(msg: "Declined GC invitation to '${invite.name}");
+      case CMS_errored:
+        return ServerEvent(
+            msg: "Unable to join GC ${invite.name}: ${event.sendError}");
+      case CMS_sent:
+        return ServerEvent(
+            msg: "Accepted invitation to join GC '${invite.name}'");
+      case CMS_sending:
+        return ServerEvent(
+            msg: "Accepting invitation to join GC '${invite.name}'");
+    }
 
-      return ServerEvent(
-          child: Column(children: [
-        Text("Received invitation to join GC '${invite.name}'",
-            style: TextStyle(
-                fontSize: theme.getSmallFont(context), color: textColor)),
-        const SizedBox(height: 20),
-        Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-          ElevatedButton(onPressed: acceptInvite, child: const Text("Accept")),
-          const SizedBox(width: 10),
-          CancelButton(onPressed: cancelInvite),
-        ]),
-      ]));
-    });
+    return ServerEvent(
+        child: Column(children: [
+      Txt.S("Received invitation to join GC '${invite.name}'"),
+      const SizedBox(height: 20),
+      Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+        ElevatedButton(onPressed: acceptInvite, child: const Text("Accept")),
+        const SizedBox(width: 10),
+        CancelButton(onPressed: cancelInvite),
+      ]),
+    ]));
   }
 }
 
@@ -650,32 +588,20 @@ class _InflightTipState extends State<InflightTipW> {
   Widget build(BuildContext context) {
     var tip = widget.tip;
     var source = widget.source;
-    late Widget child;
-    var theme = Theme.of(context);
-    var textColor = theme.dividerColor;
+    late String msg;
 
-    return Consumer<ThemeNotifier>(builder: (context, theme, _) {
-      if (tip.state == ITS_completed) {
-        child = Text(
-            "✓ Requesting invoice for ${formatDCR(tip.amount)} to tip ${source.nick}!",
-            style: TextStyle(
-                fontSize: theme.getSmallFont(context), color: textColor));
-      } else if (tip.state == ITS_errored) {
-        child = Text("✗ Failed to send tip: ${tip.error}",
-            style: TextStyle(
-                fontSize: theme.getSmallFont(context), color: textColor));
-      } else if (tip.state == ITS_received) {
-        child = Text("\$ Received ${tip.amount} DCR from ${source.nick}!",
-            style: TextStyle(
-                fontSize: theme.getSmallFont(context), color: textColor));
-      } else {
-        child = Text(
-            "… Requesting invoice for ${formatDCR(tip.amount)} DCR to tip ${source.nick}...",
-            style: TextStyle(
-                fontSize: theme.getSmallFont(context), color: textColor));
-      }
-      return ServerEvent(child: child);
-    });
+    if (tip.state == ITS_completed) {
+      msg =
+          "✓ Requesting invoice for ${formatDCR(tip.amount)} to tip ${source.nick}!";
+    } else if (tip.state == ITS_errored) {
+      msg = "✗ Failed to send tip: ${tip.error}";
+    } else if (tip.state == ITS_received) {
+      msg = "\$ Received ${tip.amount} DCR from ${source.nick}!";
+    } else {
+      msg =
+          "… Requesting invoice for ${formatDCR(tip.amount)} DCR to tip ${source.nick}...";
+    }
+    return ServerEvent(msg: msg);
   }
 }
 
@@ -714,33 +640,20 @@ class _SynthEventWState extends State<SynthEventW> {
   @override
   Widget build(BuildContext context) {
     var event = widget.event;
-    late Widget child;
-    var theme = Theme.of(context);
-    var textColor = theme.dividerColor;
-    return Consumer<ThemeNotifier>(builder: (context, theme, _) {
-      if (event.state == SCE_sent) {
-        child = Text("✓ ${widget.event.msg}",
-            style: TextStyle(
-                fontSize: theme.getSmallFont(context), color: textColor));
-      } else if (event.state == SCE_errored) {
-        child = Text("✗ Failed to ${widget.event.msg} - ${event.error}",
-            style: TextStyle(
-                fontSize: theme.getSmallFont(context), color: textColor));
-      } else if (event.state == SCE_sending) {
-        child = Text("… ${widget.event.msg}",
-            style: TextStyle(
-                fontSize: theme.getSmallFont(context), color: textColor));
-      } else if (event.state == SCE_received) {
-        child = Text(widget.event.msg,
-            style: TextStyle(
-                fontSize: theme.getSmallFont(context), color: textColor));
-      } else {
-        child = Text("? unknown state ${event.state}",
-            style: TextStyle(
-                fontSize: theme.getSmallFont(context), color: textColor));
-      }
-      return ServerEvent(child: child);
-    });
+    late String msg;
+
+    if (event.state == SCE_sent) {
+      msg = "✓ ${widget.event.msg}";
+    } else if (event.state == SCE_errored) {
+      msg = "✗ Failed to ${widget.event.msg} - ${event.error}";
+    } else if (event.state == SCE_sending) {
+      msg = "… ${widget.event.msg}";
+    } else if (event.state == SCE_received) {
+      msg = widget.event.msg;
+    } else {
+      msg = "? unknown state ${event.state}";
+    }
+    return ServerEvent(msg: msg);
   }
 }
 
@@ -757,13 +670,10 @@ class UserContentEventW extends StatefulWidget {
 class _UserContentEventWState extends State<UserContentEventW> {
   @override
   Widget build(BuildContext context) {
-    return Consumer2<DownloadsModel, ThemeNotifier>(
-        builder: (context, downloads, theme, child) => ServerEvent(
+    return Consumer<DownloadsModel>(
+        builder: (context, downloads, child) => ServerEvent(
                 child: Column(children: [
-              Text("User Content",
-                  style: TextStyle(
-                      color: Theme.of(context).focusColor,
-                      fontSize: theme.getMediumFont(context))),
+              const Txt.L("User Content"),
               const SizedBox(height: 20),
               UserContentListW(widget.chat, downloads, widget.content),
             ])));
@@ -776,13 +686,7 @@ class PostEventW extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    var theme = Theme.of(context);
-    var textColor = theme.dividerColor;
-    return Consumer<ThemeNotifier>(
-        builder: (context, theme, _) => ServerEvent(
-            child: Text("Received post '${event.title}'",
-                style: TextStyle(
-                    fontSize: theme.getSmallFont(context), color: textColor))));
+    return ServerEvent(msg: "Received post '${event.title}'");
   }
 }
 
@@ -817,14 +721,7 @@ class _PostSubscriptionEventWState extends State<PostSubscriptionEventW> {
 
   @override
   Widget build(BuildContext context) {
-    var theme = Theme.of(context);
-    var textColor = theme.dividerColor;
-
-    return Consumer<ThemeNotifier>(
-        builder: (context, theme, _) => ServerEvent(
-            child: Text(msg,
-                style: TextStyle(
-                    fontSize: theme.getSmallFont(context), color: textColor))));
+    return ServerEvent(msg: msg);
   }
 }
 
@@ -834,14 +731,8 @@ class PostsSubscriberUpdatedW extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    var theme = Theme.of(context);
-    var textColor = theme.dividerColor;
     var subTxt = event.subscribed ? "subscribed to" : "unsubscribed from";
-    return Consumer<ThemeNotifier>(
-        builder: (context, theme, _) => ServerEvent(
-            child: Text("${event.nick} $subTxt the local client's posts.",
-                style: TextStyle(
-                    fontSize: theme.getSmallFont(context), color: textColor))));
+    return ServerEvent(msg: "${event.nick} $subTxt the local client's posts.");
   }
 }
 
@@ -905,23 +796,13 @@ class _ListPostsWState extends State<ListPostsEventW> {
 
   @override
   Widget build(BuildContext context) {
-    var theme = Theme.of(context);
-    var textColor = theme.dividerColor;
-
-    return Consumer<ThemeNotifier>(
-        builder: (context, theme, _) => ServerEvent(
-              child: hasUserPosts
-                  ? TextButton(
-                      onPressed: () => FeedScreen.showUsersPosts(context, chat),
-                      child: Text("Show user's posts",
-                          style: TextStyle(
-                              fontSize: theme.getSmallFont(context),
-                              color: textColor)))
-                  : Text(msg,
-                      style: TextStyle(
-                          fontSize: theme.getSmallFont(context),
-                          color: textColor)),
-            ));
+    return ServerEvent(
+      child: hasUserPosts
+          ? TextButton(
+              onPressed: () => FeedScreen.showUsersPosts(context, chat),
+              child: const Text("Show user's posts"))
+          : Txt.S(msg),
+    );
   }
 }
 
@@ -931,40 +812,17 @@ class FileDownloadedEventW extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    var theme = Theme.of(context);
-    var textColor = theme.dividerColor;
-    var backgroundColor = theme.highlightColor;
-    return Consumer<ThemeNotifier>(
-        builder: (context, theme, _) => ServerEvent(
-              child: Container(
-                padding: const EdgeInsets.all(0),
-                decoration: BoxDecoration(
-                  color: backgroundColor,
-                  borderRadius: const BorderRadius.all(Radius.circular(5)),
-                ),
-                child: Row(
-                  children: [
-                    Material(
-                      color: backgroundColor,
-                      child: IconButton(
-                        onPressed: () {
-                          OpenFilex.open(event.diskPath);
-                        },
-                        splashRadius: 20,
-                        icon: FileIcon(event.diskPath, size: 24),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Text(
-                      "Downloaded file ${event.diskPath}",
-                      style: TextStyle(
-                          fontSize: theme.getSmallFont(context),
-                          color: textColor),
-                    ),
-                  ],
-                ),
-              ),
-            ));
+    return ServerEvent(
+        child: Row(children: [
+      IconButton(
+          onPressed: () {
+            OpenFilex.open(event.diskPath);
+          },
+          splashRadius: 20,
+          icon: FileIcon(event.diskPath, size: 24)),
+      const SizedBox(width: 10),
+      Txt.S("Downloaded file ${event.diskPath}"),
+    ]));
   }
 }
 
@@ -974,19 +832,13 @@ class GCVersionWarnW extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    var bgColor = Colors.red[600];
-    var textColor = Colors.white;
-    return Consumer<ThemeNotifier>(
-        builder: (context, theme, _) => Container(
-            padding: const EdgeInsets.only(left: 41, top: 5, bottom: 5),
-            margin: const EdgeInsets.all(5),
-            decoration: BoxDecoration(
-                color: bgColor,
-                borderRadius: const BorderRadius.all(Radius.circular(5))),
-            child: Text(
-                "Received GC definitions with unsupported version ${event.version}. Please update the software to interact in this GC.",
-                style: TextStyle(
-                    fontSize: theme.getSmallFont(context), color: textColor))));
+    return Box(
+        padding: const EdgeInsets.only(left: 41, top: 5, bottom: 5),
+        margin: const EdgeInsets.all(5),
+        color: SurfaceColor.errorContainer,
+        child: Txt(
+          "Received GC definitions with unsupported version ${event.version}. Please update the software to interact in this GC.",
+        ));
   }
 }
 
@@ -997,8 +849,6 @@ class GCAddedMembersW extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    var theme = Theme.of(context);
-    var textColor = theme.dividerColor;
     String msg = "Added to GC:\n";
     event.uids.forEach((uid) {
       var nick = client.getNick(uid);
@@ -1009,11 +859,7 @@ class GCAddedMembersW extends StatelessWidget {
       }
     });
 
-    return Consumer<ThemeNotifier>(
-        builder: (context, theme, _) => ServerEvent(
-            child: Text(msg,
-                style: TextStyle(
-                    fontSize: theme.getSmallFont(context), color: textColor))));
+    return ServerEvent(msg: msg);
   }
 }
 
@@ -1024,8 +870,6 @@ class GCPartedMemberW extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    var theme = Theme.of(context);
-    var textColor = theme.dividerColor;
     var nick = client.getNick(event.uid);
     if (nick == "") {
       nick = event.uid;
@@ -1037,11 +881,7 @@ class GCPartedMemberW extends StatelessWidget {
       msg = "User '$nick' parted from GC. Reason: '${event.reason}'";
     }
 
-    return Consumer<ThemeNotifier>(
-        builder: (context, theme, _) => ServerEvent(
-            child: Text(msg,
-                style: TextStyle(
-                    fontSize: theme.getSmallFont(context), color: textColor))));
+    return ServerEvent(msg: msg);
   }
 }
 
@@ -1051,15 +891,9 @@ class GCUpgradedVersionW extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    var theme = Theme.of(context);
-    var textColor = theme.dividerColor;
     String msg =
         "GC Upgraded from version ${event.oldVersion} to ${event.newVersion}";
-    return Consumer<ThemeNotifier>(
-        builder: (context, theme, _) => ServerEvent(
-            child: Text(msg,
-                style: TextStyle(
-                    fontSize: theme.getSmallFont(context), color: textColor))));
+    return ServerEvent(msg: msg);
   }
 }
 
@@ -1070,8 +904,6 @@ class GCAdminsChangedW extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    var theme = Theme.of(context);
-    var textColor = theme.dividerColor;
     var srcNick = client.getNick(event.source);
     String msg = "$srcNick modified the GC admins:\n";
     var myID = client.publicID;
@@ -1080,22 +912,18 @@ class GCAdminsChangedW extends StatelessWidget {
       msg += event.added!.fold("", (prev, e) {
         var nick = e == myID ? "Local client" : client.getNick(e);
         nick = nick == "" ? e : nick;
-        return prev + "\n$nick added as $role";
+        return "$prev\n$nick added as $role";
       });
     }
     if (event.removed != null) {
       msg += event.removed!.fold("", (prev, e) {
         var nick = e == myID ? "Local client" : client.getNick(e);
         nick = nick == "" ? e : nick;
-        return prev + "\n$nick removed as $role";
+        return "$prev\n$nick removed as $role";
       });
     }
 
-    return Consumer<ThemeNotifier>(
-        builder: (context, theme, _) => ServerEvent(
-            child: Text(msg,
-                style: TextStyle(
-                    fontSize: theme.getSmallFont(context), color: textColor))));
+    return ServerEvent(msg: msg);
   }
 }
 
@@ -1136,61 +964,41 @@ class _KXSuggestedWState extends State<KXSuggestedW> {
 
   @override
   Widget build(BuildContext context) {
-    var theme = Theme.of(context);
-    var textColor = theme.dividerColor;
-    return Consumer<ThemeNotifier>(builder: (context, theme, _) {
-      switch (event.sentState) {
-        case Suggestion_accepted:
-          return ServerEvent(
-              child: Text(
-                  "Accepting suggestion to KX from '${suggest.inviteenick}' to '${suggest.targetnick}'",
-                  style: TextStyle(
-                      fontSize: theme.getSmallFont(context),
-                      color: textColor)));
-        case Suggestion_errored:
-          return ServerEvent(
-              child: Text(
-                  "Unable to accept suggestion from  '${suggest.inviteenick}' to '${suggest.targetnick}'",
-                  style: TextStyle(
-                      fontSize: theme.getSmallFont(context),
-                      color: textColor)));
-        case Suggestion_canceled:
-          return ServerEvent(
-              child: Text(
-                  "Canceled suggestion to KX from '${suggest.inviteenick}' to '${suggest.targetnick}'",
-                  style: TextStyle(
-                      fontSize: theme.getSmallFont(context),
-                      color: textColor)));
-        case Suggestion_confirmed:
-          return ServerEvent(
-              child: Text(
-                  "Confirmed suggestion to KX from '${suggest.inviteenick}' to '${suggest.targetnick}'",
-                  style: TextStyle(
-                      fontSize: theme.getSmallFont(context),
-                      color: textColor)));
-      }
+    switch (event.sentState) {
+      case Suggestion_accepted:
+        return ServerEvent(
+            msg:
+                "Accepting suggestion to KX from '${suggest.inviteenick}' to '${suggest.targetnick}'");
+      case Suggestion_errored:
+        return ServerEvent(
+            msg:
+                "Unable to accept suggestion from  '${suggest.inviteenick}' to '${suggest.targetnick}'");
+      case Suggestion_canceled:
+        return ServerEvent(
+            msg:
+                "Canceled suggestion to KX from '${suggest.inviteenick}' to '${suggest.targetnick}'");
+      case Suggestion_confirmed:
+        return ServerEvent(
+            msg:
+                "Confirmed suggestion to KX from '${suggest.inviteenick}' to '${suggest.targetnick}'");
+    }
 
-      return suggest.alreadyknown
-          ? ServerEvent(
-              child: Text(
-                  "Received already known suggestion to KX from '${suggest.inviteenick}' to '${suggest.targetnick}'",
-                  style: TextStyle(
-                      fontSize: theme.getSmallFont(context), color: textColor)))
-          : ServerEvent(
-              child: Column(children: [
-              Text(
-                  "Received suggestion to KX from '${suggest.inviteenick}' to '${suggest.targetnick}'",
-                  style: TextStyle(
-                      fontSize: theme.getSmallFont(context), color: textColor)),
-              const SizedBox(height: 20),
-              Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                ElevatedButton(
-                    onPressed: acceptSuggestion, child: const Text("Accept")),
-                const SizedBox(width: 10),
-                CancelButton(onPressed: cancelSuggestion),
-              ]),
-            ]));
-    });
+    return suggest.alreadyknown
+        ? ServerEvent(
+            msg:
+                "Received already known suggestion to KX from '${suggest.inviteenick}' to '${suggest.targetnick}'")
+        : ServerEvent(
+            child: Column(children: [
+            Txt.S(
+                "Received suggestion to KX from '${suggest.inviteenick}' to '${suggest.targetnick}'"),
+            const SizedBox(height: 20),
+            Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+              ElevatedButton(
+                  onPressed: acceptSuggestion, child: const Text("Accept")),
+              const SizedBox(width: 10),
+              CancelButton(onPressed: cancelSuggestion),
+            ]),
+          ]));
   }
 }
 
@@ -1200,9 +1008,6 @@ class TipUserProgressW extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    var theme = Theme.of(context);
-    var textColor = theme.dividerColor;
-
     var dcrAmount = formatDCR(milliatomsToDCR(event.amountMAtoms));
     String msg;
     if (event.completed) {
@@ -1215,11 +1020,7 @@ class TipUserProgressW extends StatelessWidget {
           "Tip attempt of $dcrAmount failed due to ${event.attemptErr}. Given up on attempting to tip.";
     }
 
-    return Consumer<ThemeNotifier>(
-        builder: (context, theme, _) => ServerEvent(
-            child: Text(msg,
-                style: TextStyle(
-                    fontSize: theme.getSmallFont(context), color: textColor))));
+    return ServerEvent(msg: msg);
   }
 }
 
@@ -1264,32 +1065,13 @@ class _FetchedResourceWState extends State<FetchedResourceW> {
 
   @override
   Widget build(BuildContext context) {
-    var theme = Theme.of(context);
-    var textColor = theme.dividerColor;
-    var backgroundColor = theme.highlightColor;
-    return Consumer<ThemeNotifier>(builder: (context, theme, _) {
-      if (sess.loading) {
-        return ServerEvent(
-            child: Container(
-                decoration: BoxDecoration(
-                    color: backgroundColor,
-                    borderRadius: const BorderRadius.all(Radius.circular(5))),
-                child: Text("Requested page",
-                    style: TextStyle(
-                        fontSize: theme.getSmallFont(context),
-                        color: textColor))));
-      } else {
-        return ServerEvent(
-            child: Container(
-                decoration: BoxDecoration(
-                    color: backgroundColor,
-                    borderRadius: const BorderRadius.all(Radius.circular(5))),
-                child: ElevatedButton(
-                  onPressed: viewPage,
-                  child: const Text("View Page"),
-                )));
-      }
-    });
+    if (sess.loading) {
+      return const ServerEvent(msg: "Requested page");
+    } else {
+      return ServerEvent(
+          child: ElevatedButton(
+              onPressed: viewPage, child: const Text("View Page")));
+    }
   }
 }
 
@@ -1299,23 +1081,8 @@ class HandshakeStageW extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    var theme = Theme.of(context);
-    var textColor = theme.dividerColor;
-    var backgroundColor = theme.highlightColor;
-
-    return Consumer<ThemeNotifier>(
-        builder: (context, theme, _) => ServerEvent(
-              child: Container(
-                decoration: BoxDecoration(
-                    color: backgroundColor,
-                    borderRadius: const BorderRadius.all(Radius.circular(5))),
-                child: Text(
-                    "Completed 3-way handshake (due to receiving msg ${event.stage})",
-                    style: TextStyle(
-                        color: textColor,
-                        fontSize: theme.getSmallFont(context))),
-              ),
-            ));
+    return ServerEvent(
+        msg: "Completed 3-way handshake (due to receiving msg ${event.stage})");
   }
 }
 
@@ -1325,24 +1092,9 @@ class ProfileUpdatedW extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    var theme = Theme.of(context);
-    var textColor = theme.dividerColor;
-    var backgroundColor = theme.highlightColor;
-
     var fields = event.updatedFields.join(", ");
 
-    return Consumer<ThemeNotifier>(
-        builder: (context, theme, _) => ServerEvent(
-              child: Container(
-                decoration: BoxDecoration(
-                    color: backgroundColor,
-                    borderRadius: const BorderRadius.all(Radius.circular(5))),
-                child: Text("Profile updated ($fields)",
-                    style: TextStyle(
-                        color: textColor,
-                        fontSize: theme.getSmallFont(context))),
-              ),
-            ));
+    return ServerEvent(msg: "Profile updated ($fields)");
   }
 }
 
@@ -1357,19 +1109,15 @@ class Event extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (event.event is DateChangeEvent) {
-      var theme = Theme.of(context);
-      var textColor = theme.dividerColor;
-      return Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            DateChange(
-                child: Center(
-                    child: Text(
-                        textAlign: TextAlign.center,
-                        event.event.msg,
-                        style: TextStyle(color: textColor))))
-          ]);
+      // return Row(
+      //     crossAxisAlignment: CrossAxisAlignment.center,
+      //     mainAxisAlignment: MainAxisAlignment.center,
+      //     children: [
+      //       DateChange(
+      //           child: Center(
+      //               child: Text(textAlign: TextAlign.center, event.event.msg)))
+      //     ]);
+      return DateChange(event: event.event as DateChangeEvent);
     }
 
     if (event.event is PM) {
@@ -1461,11 +1209,8 @@ class Event extends StatelessWidget {
       return ProfileUpdatedW(event.event as ProfileUpdated);
     }
 
-    var theme = Theme.of(context);
-    var textColor = theme.focusColor;
-    return Container(
-        color: Theme.of(context).errorColor, // ERROR COLOR
-        child: Text("Unknonwn chat event type",
-            style: TextStyle(color: textColor)));
+    return const Box(
+        color: SurfaceColor.errorContainer,
+        child: Text("Unknonwn chat event type"));
   }
 }

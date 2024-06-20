@@ -1,26 +1,22 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:bruig/components/containers.dart';
 import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/components/md_elements.dart';
 import 'package:bruig/components/snackbars.dart';
+import 'package:bruig/components/text.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/models/resources.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:bruig/theme_manager.dart';
 
 class ViewPagesScreenTitle extends StatelessWidget {
   const ViewPagesScreenTitle({super.key});
 
   @override
   Widget build(BuildContext context) {
-    const baseTitle = "Pages";
-    return Consumer<ThemeNotifier>(
-        builder: (context, theme, child) => Text(baseTitle,
-            style: TextStyle(
-                fontSize: theme.getLargeFont(context),
-                color: Theme.of(context).focusColor)));
+    return const Txt.L("Pages");
   }
 }
 
@@ -77,18 +73,10 @@ class _ActivePageScreenState extends State<_ActivePageScreen> {
 
   @override
   Widget build(BuildContext context) {
-    var theme = Theme.of(context);
-    var textColor = theme.focusColor;
-    var backgroundColor = theme.backgroundColor;
-    var ts = TextStyle(color: textColor);
-
     if (session.currentPage == null) {
       return Container(
-        margin: const EdgeInsets.all(1),
-        decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(3), color: backgroundColor),
         padding: const EdgeInsets.all(16),
-        child: Text("Loading page", style: TextStyle(color: textColor)),
+        child: const Text("Loading page..."),
       );
     }
 
@@ -103,14 +91,14 @@ class _ActivePageScreenState extends State<_ActivePageScreen> {
 
     return Container(
       alignment: Alignment.topLeft,
-      margin: const EdgeInsets.all(1),
-      decoration: BoxDecoration(borderRadius: BorderRadius.circular(3)),
       padding: const EdgeInsets.all(16),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text("Page Source: $nick (${page.uid})", style: ts),
+        Text("Page Source: $nick (${page.uid})"),
         const SizedBox(height: 10),
-        Text("Page Path: $loading $path", style: ts),
-        const SizedBox(height: 20),
+        Text("Page Path: $loading $path"),
+        const SizedBox(height: 10),
+        const Divider(),
+        const SizedBox(height: 10),
         Expanded(
             child: ListView(children: [
           Provider<PagesSource>(
@@ -178,69 +166,32 @@ class _ViewPageScreenState extends State<ViewPageScreen> {
 
   @override
   Widget build(BuildContext context) {
-    var theme = Theme.of(context);
-    var unselectedTextColor = theme.dividerColor;
-    var selectedTextColor = theme.focusColor; // MESSAGE TEXT COLOR
-    var sidebarBackground = theme.backgroundColor;
-    var hoverColor = theme.hoverColor;
-    return Consumer<ThemeNotifier>(builder: (context, theme, child) {
-      var tsUnselected = TextStyle(
-          color: unselectedTextColor,
-          fontSize: theme.getSmallFont(context),
-          fontWeight: FontWeight.w400);
-      var tsSelected = TextStyle(
-          color: selectedTextColor,
-          fontSize: theme.getSmallFont(context),
-          fontWeight: FontWeight.w400);
-
-      var activeSess = resources.mostRecent;
-
-      return Row(children: [
-        Container(
-            width: 118,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(5),
-              gradient: LinearGradient(
-                  begin: Alignment.centerRight,
-                  end: Alignment.centerLeft,
-                  colors: [
-                    hoverColor,
-                    sidebarBackground,
-                    sidebarBackground,
-                  ],
-                  stops: const [
-                    0,
-                    0.51,
-                    1
-                  ]),
-            ),
-            child: Column(children: [
-              Expanded(
-                  child: ListView.builder(
-                      itemCount: sessions.length,
-                      itemBuilder: (BuildContext context, int index) {
-                        var selected = activeSess == sessions[index];
-                        return ListTile(
-                          title: Text("Session ${sessions[index].id}",
-                              style: selected ? tsSelected : tsUnselected),
-                          selected: selected,
-                          onTap: () {
-                            resources.mostRecent = sessions[index];
-                          },
-                        );
-                      })),
-              Row(children: [
-                IconButton(
-                  onPressed: viewLocal,
-                  icon: const Icon(Icons.browser_updated_sharp),
-                  tooltip: "Open local pages",
-                )
-              ]),
-            ])),
-        activeSess != null
-            ? Expanded(child: _ActivePageScreen(activeSess, widget.client))
-            : const Empty(),
-      ]);
-    });
+    var activeSess = resources.mostRecent;
+    return Row(children: [
+      SecondarySideMenuList(
+          width: 125,
+          list: ListView.builder(
+              itemCount: sessions.length,
+              itemBuilder: (BuildContext context, int index) {
+                var selected = activeSess == sessions[index];
+                return SecondarySideMenuItem(ListTile(
+                  title: Txt.S("Session ${sessions[index].id}"),
+                  selected: selected,
+                  onTap: () {
+                    resources.mostRecent = sessions[index];
+                  },
+                ));
+              }),
+          footer: Row(children: [
+            IconButton(
+              onPressed: viewLocal,
+              icon: const Icon(Icons.browser_updated_sharp),
+              tooltip: "Open local pages",
+            )
+          ])),
+      activeSess != null
+          ? Expanded(child: _ActivePageScreen(activeSess, widget.client))
+          : const Empty(),
+    ]);
   }
 }

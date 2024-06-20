@@ -3,17 +3,16 @@ import 'dart:convert';
 
 import 'package:ffi/ffi.dart';
 import 'package:golib_plugin/definitions.dart';
-import 'package:golib_plugin/mock.dart';
 import 'dart:ffi';
 import 'dart:isolate';
 import 'desktop_dynlib.dart';
 
-class _readStrData {
+class _ReadStrData {
   SendPort sp;
-  _readStrData(this.sp);
+  _ReadStrData(this.sp);
 }
 
-void _readStrIsolate(_readStrData data) async {
+void _readStrIsolate(_ReadStrData data) async {
   final DynamicLibrary lib = DynamicLibrary.open(desktopLibPath());
   late final ReadStrNative readStr =
       lib.lookupFunction<ReadStrNative, ReadStrNative>('ReadStr');
@@ -36,7 +35,7 @@ void _readAsyncResultsIsolate(SendPort sp) async {
   var buffSize = 1024 * 1024;
   var buff = calloc.allocate<Utf8>(buffSize);
 
-  await Future.delayed(Duration(seconds: 1));
+  await Future.delayed(const Duration(seconds: 1));
   for (;;) {
     var nr = nextCallResult();
 
@@ -64,7 +63,7 @@ mixin BaseDesktopPlatform on NtfStreams {
   String get majorPlatform => "desktop";
   int id = 1;
 
-  final Map<int, Completer<dynamic>> calls = Map<int, Completer<dynamic>>();
+  final Map<int, Completer<dynamic>> calls = {};
 
   // Reference to the dynamic library.
   final DynamicLibrary _lib = DynamicLibrary.open(desktopLibPath());
@@ -72,9 +71,9 @@ mixin BaseDesktopPlatform on NtfStreams {
   // The following fields are references to the dynamic library functions. They
   // are lazily initialized when first used.
   late final SetTagFunc _setTag =
-      this._lib.lookupFunction<SetTagNative, SetTagFunc>('SetTag');
+      _lib.lookupFunction<SetTagNative, SetTagFunc>('SetTag');
   late final HelloFunc _hello =
-      this._lib.lookupFunction<HelloNative, HelloFunc>('Hello');
+      _lib.lookupFunction<HelloNative, HelloFunc>('Hello');
   late final GetURLNative _getURL =
       _lib.lookupFunction<GetURLNative, GetURLNative>('GetURL');
   late final NextTimeNative _nextTime =
@@ -93,8 +92,8 @@ mixin BaseDesktopPlatform on NtfStreams {
   Future<void> writeStr(String s) async => _writeStr(s.toNativeUtf8());
 
   Stream<String> readStream() async* {
-    var rp = new ReceivePort();
-    Isolate.spawn(_readStrIsolate, _readStrData(rp.sendPort));
+    var rp = ReceivePort();
+    Isolate.spawn(_readStrIsolate, _ReadStrData(rp.sendPort));
     while (true) {
       await for (String msg in rp) {
         yield msg;
@@ -120,7 +119,7 @@ mixin BaseDesktopPlatform on NtfStreams {
 
     var p = jsonEncode(payload).toNativeUtf8();
     var cid = id == -1 ? 1 : id++; // skips 0 as id.
-    var c = new Completer<dynamic>();
+    var c = Completer<dynamic>();
     calls[cid] = c;
     _asyncCall(cmd, cid, clientHandle, p, p.length);
     calloc.free(p);
@@ -128,7 +127,7 @@ mixin BaseDesktopPlatform on NtfStreams {
   }
 
   void readAsyncResults() async {
-    var rp = new ReceivePort();
+    var rp = ReceivePort();
     Isolate.spawn(_readAsyncResultsIsolate, rp.sendPort);
     while (true) {
       await for (List cmdReply in rp) {

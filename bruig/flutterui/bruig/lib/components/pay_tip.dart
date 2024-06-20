@@ -1,6 +1,9 @@
+import 'dart:math';
+
+import 'package:bruig/components/buttons.dart';
+import 'package:bruig/components/dcr_input.dart';
 import 'package:bruig/models/client.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 void showPayTipModalBottom(BuildContext context, ChatModel chat) {
   showModalBottomSheet(
@@ -19,7 +22,10 @@ class PayTip extends StatefulWidget {
 }
 
 class _PayTipState extends State<PayTip> {
-  void payTip(ChatModel chat, double amount) {
+  double amount = 0;
+  ChatModel get chat => widget.chat;
+
+  void payTip() {
     if (amount <= 0) return;
     Navigator.pop(context);
     chat.payTip(amount);
@@ -28,45 +34,21 @@ class _PayTipState extends State<PayTip> {
   @override
   Widget build(BuildContext context) {
     var chat = widget.chat;
-    double amount = 0;
 
     return Container(
       padding: const EdgeInsets.all(30),
-      child: Row(children: [
-        Text("Pay tip to '${chat.nick}'",
-            style: TextStyle(color: Theme.of(context).focusColor)),
-        const SizedBox(width: 10),
-        Container(
-            width: 150,
-            margin: const EdgeInsets.only(right: 10),
-            child: TextField(
-              autofocus: true,
-              onSubmitted: (_) {
-                payTip(chat, amount);
-              },
-              onChanged: (String v) => amount = v != "" ? double.parse(v) : 0,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'[0-9]+\.?[0-9]*'))
-              ],
-              decoration: const InputDecoration(
-                hintText: "0.00",
-                suffixText: "DCR",
-              ),
-            )),
-        ElevatedButton(
-          onPressed: () => Navigator.pop(context),
-          style: ElevatedButton.styleFrom(backgroundColor: Colors.grey),
-          child: const Text("Cancel"),
-        ),
-        const SizedBox(width: 10),
-        ElevatedButton(
-            onPressed: () {
-              payTip(chat, amount);
-            },
-            child: const Text("Pay")),
-      ]),
+      child: Wrap(
+          runSpacing: 10,
+          spacing: 10,
+          alignment: WrapAlignment.center,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            Text(
+                "Pay tip to '${chat.nick.substring(0, min(chat.nick.length, 100))}'"),
+            SizedBox(width: 150, child: dcrInput(onChanged: (v) => amount = v)),
+            CancelButton(onPressed: () => Navigator.pop(context)),
+            OutlinedButton(onPressed: payTip, child: const Text("Pay")),
+          ]),
     );
   }
 }

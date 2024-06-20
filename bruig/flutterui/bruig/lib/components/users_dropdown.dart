@@ -1,3 +1,4 @@
+import 'package:bruig/components/text.dart';
 import 'package:bruig/models/client.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -48,11 +49,6 @@ class _UsersDropdownState extends State<UsersDropdown> {
   ];
   @override
   Widget build(BuildContext context) {
-    var theme = Theme.of(context);
-    var textColor = theme.focusColor;
-    var backgroundColor = theme.backgroundColor;
-    var highlightColor = theme.highlightColor;
-    var dividerColor = theme.dividerColor;
     return Consumer2<ClientModel, ThemeNotifier>(
         builder: (context, client, theme, child) {
       List<ChatModel?> list =
@@ -77,13 +73,7 @@ class _UsersDropdownState extends State<UsersDropdown> {
           autofocus: true,
           isExpanded: true,
           isDense: false,
-          hint: Text(
-            widget.hintText,
-            style: TextStyle(
-              fontSize: theme.getMediumFont(context),
-              color: textColor,
-            ),
-          ),
+          hint: Txt(widget.hintText),
           items: items
               .map((c) => DropdownMenuItem(
                   value: c,
@@ -91,22 +81,13 @@ class _UsersDropdownState extends State<UsersDropdown> {
                       margin: const EdgeInsets.all(0),
                       width: double.infinity,
                       alignment: Alignment.centerLeft,
-                      child: Text(c,
-                          style: TextStyle(
-                            color: textColor,
-                            fontSize: theme.getMediumFont(context),
-                          )))))
+                      child: Text(c))))
               .toList(),
           selectedItemBuilder: (BuildContext context) => list
               .map(
                 (ChatModel? c) => Center(
-                    child: Text(
+                    child: Txt.S(
                   c != null ? c.nick : "Share globally",
-                  style: TextStyle(
-                      fontSize: theme.getSmallFont(context),
-                      color: textColor,
-                      fontStyle: FontStyle.italic,
-                      fontWeight: FontWeight.bold),
                 )),
               )
               .toList(),
@@ -119,104 +100,22 @@ class _UsersDropdownState extends State<UsersDropdown> {
             });
           },
           buttonStyleData: ButtonStyleData(
-            //height: 50,
-            //width: 250,
             padding: const EdgeInsets.only(left: 14, right: 14),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(14),
               border: Border.all(
-                color: dividerColor,
+                color: theme.colors.outline,
               ),
-              color: highlightColor,
             ),
             elevation: 2,
           ),
-          iconStyleData: IconStyleData(
-            icon: const Icon(Icons.keyboard_arrow_down_outlined),
+          iconStyleData: const IconStyleData(
+            icon: Icon(Icons.keyboard_arrow_down_outlined),
             iconSize: 20,
-            iconEnabledColor: textColor,
-            iconDisabledColor: Colors.grey,
           ),
           dropdownStyleData: const DropdownStyleData(maxHeight: 200),
-          menuItemStyleData: MenuItemStyleData(
-            overlayColor: MaterialStateProperty.resolveWith((states) {
-              if (states.contains(MaterialState.hovered)) {
-                return backgroundColor;
-              }
-              return highlightColor;
-            }),
-            height: 40,
-          ),
         ),
       );
     });
   }
-/*
-  @override
-  Widget build(BuildContext context) {
-    var theme = Theme.of(context);
-    var textColor = theme.focusColor;
-    var backgroundColor = theme.backgroundColor;
-    return Consumer2<ClientModel, ThemeNotifier>(
-        builder: (context, client, theme, child) {
-      List<ChatModel?> list = client.sortedChats.cast<ChatModel?>().toList();
-      list.addAll(client.hiddenChats.cast<ChatModel?>().toList());
-      list.removeWhere((c) => c != null ? c.isGC : false);
-      if (widget.limitUIDs != null) {
-        list.removeWhere((c) => !(widget.limitUIDs!.contains(c?.id)));
-      }
-      list.sort(
-          (a, b) => a!.nick.toLowerCase().compareTo(b!.nick.toLowerCase()));
-      if (widget.allowEmpty) {
-        list.insert(0, null);
-      }
-      // Only use chats that aren't in the exclude UID list
-      if (widget.excludeUIDs.isNotEmpty && list.isNotEmpty) {
-        list = list.where((e) => !widget.excludeUIDs.contains(e!.id)).toList();
-      }
-      return DropdownButton<ChatModel?>(
-        focusColor: backgroundColor,
-        isDense: true,
-        //isExpanded: true,
-        icon: Icon(
-          Icons.arrow_downward,
-          color: textColor,
-        ),
-        //dropdownColor: backgroundColor,
-        underline: Container(),
-        value: selected,
-        items: (list.map<DropdownMenuItem<ChatModel?>>(
-            (ChatModel? c) => DropdownMenuItem(
-                value: c,
-                child: Container(
-                    margin: const EdgeInsets.all(0),
-                    width: double.infinity,
-                    alignment: Alignment.centerLeft,
-                    child: Text(c != null ? c.nick : "Share globally",
-                        style: TextStyle(
-                          color: textColor,
-                          fontSize: theme.getSmallFont(context),
-                        )))))).toList(),
-        selectedItemBuilder: (BuildContext context) => list
-            .map(
-              (ChatModel? c) => Center(
-                  child: Text(
-                c != null ? c.nick : "Share globally",
-                style: TextStyle(
-                    fontSize: theme.getSmallFont(context),
-                    color: textColor,
-                    fontStyle: FontStyle.italic,
-                    fontWeight: FontWeight.bold),
-              )),
-            )
-            .toList(),
-        onChanged: (ChatModel? newValue) => setState(() {
-          selected = newValue;
-          widget.cb != null ? widget.cb!(newValue) : null;
-        }),
-      );
-    });
-  }
-}
-*/
 }

@@ -1,13 +1,16 @@
 import 'dart:async';
 
+import 'package:bruig/components/copyable.dart';
 import 'package:bruig/components/dcr_input.dart';
 import 'package:bruig/components/empty_widget.dart';
+import 'package:bruig/components/inputs.dart';
 import 'package:bruig/components/snackbars.dart';
+import 'package:bruig/components/text.dart';
+import 'package:bruig/screens/ln/components.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:flutter/services.dart' as services;
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
-import 'package:provider/provider.dart';
 import 'package:bruig/theme_manager.dart';
 
 class LNPaymentsPage extends StatefulWidget {
@@ -15,93 +18,6 @@ class LNPaymentsPage extends StatefulWidget {
 
   @override
   State<LNPaymentsPage> createState() => _LNPaymentsPageState();
-}
-
-class _DecodedInvoice extends StatelessWidget {
-  final LNDecodedInvoice inv;
-  final AmountEditingController payAmountCtrl;
-  const _DecodedInvoice(this.inv, this.payAmountCtrl, {Key? key})
-      : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    var theme = Theme.of(context);
-    var darkTextColor = theme.indicatorColor;
-    var dividerColor = theme.highlightColor;
-    var secondaryTextColor = theme.dividerColor;
-    return Consumer<ThemeNotifier>(
-        builder: (context, theme, _) => Column(
-              children: [
-                Row(children: [
-                  Text("Decoded Invoice to Pay",
-                      textAlign: TextAlign.left,
-                      style: TextStyle(
-                          color: darkTextColor,
-                          fontSize: theme.getMediumFont(context))),
-                  Expanded(
-                      child: Divider(
-                    color: dividerColor, //color of divider
-                    height: 10, //height spacing of divider
-                    thickness: 1, //thickness of divier line
-                    indent: 8, //spacing at the start of divider
-                    endIndent: 5, //spacing at the end of divider
-                  )),
-                ]),
-                const SizedBox(height: 21),
-                Row(children: [
-                  SizedBox(
-                      width: 80,
-                      child: Text("Description:",
-                          style: TextStyle(
-                              fontSize: theme.getSmallFont(context),
-                              color: secondaryTextColor))),
-                  SizedBox(
-                      width: 500,
-                      child: Text(
-                        inv.description,
-                        style: TextStyle(
-                            fontSize: theme.getSmallFont(context),
-                            color: secondaryTextColor),
-                      ))
-                ]),
-                const SizedBox(height: 8),
-                Row(children: [
-                  SizedBox(
-                      width: 80,
-                      child: Text("Destination:",
-                          style: TextStyle(
-                              fontSize: theme.getSmallFont(context),
-                              color: secondaryTextColor))),
-                  SizedBox(
-                      width: 500,
-                      child: Text(
-                        inv.destination,
-                        style: TextStyle(
-                            fontSize: theme.getSmallFont(context),
-                            color: secondaryTextColor),
-                      ))
-                ]),
-                const SizedBox(height: 8),
-                Row(children: [
-                  SizedBox(
-                      width: 80,
-                      child: Text("Amount:",
-                          style: TextStyle(
-                              fontSize: theme.getSmallFont(context),
-                              color: secondaryTextColor))),
-                  SizedBox(
-                      width: 100,
-                      child: inv.amount == 0
-                          ? dcrInput(controller: payAmountCtrl)
-                          : Text("${inv.amount.toStringAsFixed(8)} DCR",
-                              style: TextStyle(
-                                  fontSize: theme.getSmallFont(context),
-                                  color: secondaryTextColor)))
-                ]),
-                const SizedBox(height: 21),
-              ],
-            ));
-  }
 }
 
 class _LNPaymentsPageState extends State<LNPaymentsPage> {
@@ -130,7 +46,7 @@ class _LNPaymentsPageState extends State<LNPaymentsPage> {
   }
 
   void copyInvoiceToClipboard() async {
-    Clipboard.setData(ClipboardData(text: generatedInvoice));
+    services.Clipboard.setData(services.ClipboardData(text: generatedInvoice));
     showSuccessSnackbar(context, "Copied generated invoice to clipboard");
   }
 
@@ -192,177 +108,94 @@ class _LNPaymentsPageState extends State<LNPaymentsPage> {
     payCtrl.addListener(onPayInvoiceChanged);
   }
 
+  List<Widget> _buildDecodedInvoice(BuildContext context) {
+    if (decoded == null) {
+      return [];
+    }
+
+    var inv = decoded!;
+    return [
+      const LNInfoSectionHeader("Decoded Invoice to Pay"),
+      const SizedBox(height: 8),
+      Row(children: [
+        const SizedBox(width: 80, child: Txt.S("Description:")),
+        Expanded(child: Txt.S(inv.description))
+      ]),
+      const SizedBox(height: 8),
+      Row(children: [
+        const SizedBox(width: 80, child: Txt.S("Destination:")),
+        Expanded(
+            child: Copyable.txt(Txt.S(
+          inv.destination,
+        )))
+      ]),
+      const SizedBox(height: 8),
+      Row(children: [
+        const SizedBox(width: 80, child: Txt.S("Amount:")),
+        Expanded(
+            child: inv.amount == 0
+                ? dcrInput(controller: payAmountCtrl, textSize: TextSize.small)
+                : Txt.S("${inv.amount.toStringAsFixed(8)} DCR"))
+      ]),
+      const SizedBox(height: 10),
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
-    var theme = Theme.of(context);
-    var textColor = theme.focusColor;
-    var darkTextColor = theme.indicatorColor;
-    var dividerColor = theme.highlightColor;
-    var backgroundColor = theme.backgroundColor;
-    var secondaryTextColor = theme.dividerColor;
-    var inputFill = theme.hoverColor;
-    return Consumer<ThemeNotifier>(
-        builder: (context, theme, _) => Container(
-              margin: const EdgeInsets.all(1),
-              decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(3),
-                  color: backgroundColor),
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(children: [
-                    Text("Generate Invoice",
-                        textAlign: TextAlign.left,
-                        style: TextStyle(
-                            color: darkTextColor,
-                            fontSize: theme.getMediumFont(context))),
-                    Expanded(
-                        child: Divider(
-                      color: dividerColor, //color of divider
-                      height: 10, //height spacing of divider
-                      thickness: 1, //thickness of divier line
-                      indent: 8, //spacing at the start of divider
-                      endIndent: 5, //spacing at the end of divider
-                    )),
+    return Container(
+        padding: const EdgeInsets.all(16),
+        alignment: Alignment.topLeft,
+        child: SingleChildScrollView(
+            child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const LNInfoSectionHeader("Generate Invoice"),
+            Row(children: [
+              const SizedBox(width: 80, child: Text("Memo:")),
+              Expanded(
+                  child: TextInput(
+                      controller: memoCtrl,
+                      hintText: "Type an invoice description")),
+            ]),
+            Row(children: [
+              const SizedBox(width: 80, child: Text("Amount:")),
+              SizedBox(width: 150, child: dcrInput(controller: genAmountCtrl))
+            ]),
+            const SizedBox(height: 17),
+            OutlinedButton(
+              onPressed: generateInvoice,
+              child: const Text("Generate Invoice"),
+            ),
+            const SizedBox(height: 21),
+            ...(generatedInvoice == ""
+                ? []
+                : [
+                    const LNInfoSectionHeader("Generated Invoice"),
+                    const SizedBox(height: 8),
+                    Copyable.txt(Txt.S(generatedInvoice)),
+                    const SizedBox(height: 21),
                   ]),
-                  const SizedBox(height: 21),
-                  Row(children: [
-                    SizedBox(
-                        width: 80,
-                        child: Text("Memo:",
-                            style: TextStyle(
-                                fontSize: theme.getSmallFont(context),
-                                color: secondaryTextColor))),
-                    SizedBox(
-                        width: 500,
-                        child: TextField(
-                            style: TextStyle(
-                                fontSize: theme.getSmallFont(context),
-                                color: secondaryTextColor),
-                            controller: memoCtrl,
-                            decoration: InputDecoration(
-                                hintText: "Type an invoice description",
-                                hintStyle: TextStyle(
-                                    fontSize: theme.getSmallFont(context),
-                                    color: secondaryTextColor),
-                                filled: true,
-                                fillColor: inputFill)))
-                  ]),
-                  const SizedBox(height: 8),
-                  Row(children: [
-                    SizedBox(
-                        width: 80,
-                        child: Text("Amount:",
-                            style: TextStyle(
-                                fontSize: theme.getSmallFont(context),
-                                color: secondaryTextColor))),
-                    SizedBox(
-                        width: 100, child: dcrInput(controller: genAmountCtrl))
-                  ]),
-                  const SizedBox(height: 17),
-                  ElevatedButton(
-                    onPressed: generateInvoice,
-                    style: ElevatedButton.styleFrom(
-                        textStyle: TextStyle(
-                            color: textColor,
-                            fontSize: theme.getSmallFont(context))),
-                    child: const Text("Generate Invoice"),
-                  ),
-                  const SizedBox(height: 21),
-                  generatedInvoice != ""
-                      ? Column(children: [
-                          Row(children: [
-                            Text("Generated Invoice",
-                                textAlign: TextAlign.left,
-                                style: TextStyle(
-                                    color: darkTextColor,
-                                    fontSize: theme.getMediumFont(context))),
-                            Expanded(
-                                child: Divider(
-                              color: dividerColor, //color of divider
-                              height: 10, //height spacing of divider
-                              thickness: 1, //thickness of divier line
-                              indent: 8, //spacing at the start of divider
-                              endIndent: 5, //spacing at the end of divider
-                            )),
-                          ]),
-                          const SizedBox(height: 21),
-                          Text(generatedInvoice,
-                              style: TextStyle(
-                                  color: secondaryTextColor,
-                                  fontSize: theme.getSmallFont(context))),
-                          const SizedBox(height: 10),
-                          ElevatedButton(
-                            onPressed: copyInvoiceToClipboard,
-                            style: ElevatedButton.styleFrom(
-                              textStyle: TextStyle(
-                                  color: textColor,
-                                  fontSize: theme.getSmallFont(context)),
-                            ),
-                            child: const Text("Copy Invoice"),
-                          ),
-                          const SizedBox(height: 21),
-                        ])
-                      : const Empty(),
-                  Row(children: [
-                    Text("Pay Invoice",
-                        textAlign: TextAlign.left,
-                        style: TextStyle(
-                            color: darkTextColor,
-                            fontSize: theme.getMediumFont(context))),
-                    Expanded(
-                        child: Divider(
-                      color: dividerColor, //color of divider
-                      height: 10, //height spacing of divider
-                      thickness: 1, //thickness of divier line
-                      indent: 8, //spacing at the start of divider
-                      endIndent: 5, //spacing at the end of divider
-                    )),
-                  ]),
-                  const SizedBox(height: 21),
-                  Row(children: [
-                    SizedBox(
-                        width: 80,
-                        child: Text("Invoice ID:",
-                            style: TextStyle(
-                                fontSize: theme.getSmallFont(context),
-                                color: secondaryTextColor))),
-                    SizedBox(
-                        width: 500,
-                        child: TextField(
-                            style: TextStyle(
-                                fontSize: theme.getSmallFont(context),
-                                color: secondaryTextColor),
-                            controller: payCtrl,
-                            decoration: InputDecoration(
-                                hintText: "Type an invoice hash",
-                                hintStyle: TextStyle(
-                                    fontSize: theme.getSmallFont(context),
-                                    color: secondaryTextColor),
-                                filled: true,
-                                fillColor: inputFill)))
-                  ]),
-                  const SizedBox(height: 20),
-                  //TextField(controller: payCtrl),
-                  decoded != null
-                      ? _DecodedInvoice(decoded!, payAmountCtrl)
-                      : const Empty(),
-                  decoded != null && decodeTimer == null
-                      ? ElevatedButton.icon(
-                          icon: Icon(!paying
-                              ? Icons.credit_score
-                              : Icons.hourglass_bottom),
-                          label: Text("Pay Invoice",
-                              style: TextStyle(
-                                  fontSize: theme.getSmallFont(context),
-                                  color: textColor)),
-                          onPressed: !paying ? payInvoice : null,
-                        )
-                      : const Empty(),
-                  paying ? const Icon(Icons.hourglass_bottom) : const Empty(),
-                ],
-              ),
-            ));
+            const LNInfoSectionHeader("Pay Invoice"),
+            const SizedBox(height: 8),
+            Row(children: [
+              const SizedBox(width: 80, child: Text("Invoice:")),
+              Expanded(
+                  child: TextInput(
+                      controller: payCtrl, hintText: "Type an LN invoice"))
+            ]),
+            const SizedBox(height: 20),
+            ..._buildDecodedInvoice(context),
+            decoded != null && decodeTimer == null
+                ? OutlinedButton.icon(
+                    icon: Icon(
+                        !paying ? Icons.credit_score : Icons.hourglass_bottom),
+                    label: const Text("Pay Invoice"),
+                    onPressed: !paying ? payInvoice : null,
+                  )
+                : const Empty(),
+            paying ? const Icon(Icons.hourglass_bottom) : const Empty(),
+          ],
+        )));
   }
 }

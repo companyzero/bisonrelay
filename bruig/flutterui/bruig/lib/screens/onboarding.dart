@@ -1,12 +1,13 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:bruig/components/buttons.dart';
 import 'package:bruig/components/collapsable.dart';
 import 'package:bruig/components/copyable.dart';
 import 'package:bruig/components/empty_widget.dart';
+import 'package:bruig/components/info_grid.dart';
 import 'package:bruig/components/recent_log.dart';
 import 'package:bruig/components/snackbars.dart';
+import 'package:bruig/components/text.dart';
 import 'package:bruig/models/log.dart';
 import 'package:bruig/models/notifications.dart';
 import 'package:bruig/screens/startupscreen.dart';
@@ -231,28 +232,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     List<Widget> children;
-    var themeNtf = Provider.of<ThemeNotifier>(context);
-    var theme = themeNtf.getTheme();
     if (readingState) {
-      children = [
-        Consumer<ThemeNotifier>(
-            builder: (context, theme, child) => Text(
-                "Reading onboarding state...",
-                style: TextStyle(color: theme.getTheme().dividerColor)))
-      ];
+      children = [const Text("Reading onboarding state...")];
     } else if (ostate == null && showInitialText) {
       const inviteURL = "https://bisonrelay.org/invites";
       children = [
-        SizedBox(
-            width: 600,
-            child: Text(
-                // ignore: prefer_interpolation_to_compose_strings, prefer_adjacent_string_concatenation
-                "Bison Relay requires funded Lightning Network (LN) channels to send and receive messages.\n\n" +
-                    "Also, users can only chat with each other after performing a Key Exchange (KX) process.\n\n" +
-                    "Both of these can be done manually (by advanced users) or automatically using an Invite Key provided by an existing user.\n\n" +
-                    "Read further instructions on how to obtain an invite key in the following website:",
-                style: TextStyle(
-                    color: theme.dividerColor, fontStyle: FontStyle.italic))),
+        const Text(
+            // ignore: prefer_interpolation_to_compose_strings, prefer_adjacent_string_concatenation
+            "Bison Relay requires funded Lightning Network (LN) channels to send and receive messages.\n\n" +
+                "Also, users can only chat with each other after performing a Key Exchange (KX) process.\n\n" +
+                "Both of these can be done manually (by advanced users) or automatically using an Invite Key provided by an existing user.\n\n" +
+                "Read further instructions on how to obtain an invite key in the following website:"),
         const SizedBox(height: 20),
         TextButton(
             onPressed: () async {
@@ -270,7 +260,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         Wrap(
           runSpacing: 10,
           children: [
-            ElevatedButton(
+            OutlinedButton(
                 onPressed: () {
                   setState(() {
                     showInitialText = false;
@@ -284,27 +274,23 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       ];
     } else if (confirmingCancel) {
       children = [
-        SizedBox(
-            width: 600,
-            child: Text(
-                // ignore: prefer_adjacent_string_concatenation, prefer_interpolation_to_compose_strings
-                "You may completely abort the onboarding procedure or just " +
-                    "skip the current attempt and go to the application's main UI " +
-                    "(restart the software to restart the onboard process again).\n\n" +
-                    "Note: completely aborting the onboarding procedure may or may not " +
-                    "allow you to restart it, depending on how much of the setup the client has already performed.",
-                style: TextStyle(
-                    color: theme.dividerColor, fontStyle: FontStyle.italic))),
-        const SizedBox(height: 20),
+        const Text(
+            // ignore: prefer_adjacent_string_concatenation, prefer_interpolation_to_compose_strings
+            "You may completely abort the onboarding procedure or just " +
+                "skip the current attempt and go to the application's main UI " +
+                "(restart the software to restart the onboard process again).\n\n" +
+                "Note: completely aborting the onboarding procedure may or may not " +
+                "allow you to restart it, depending on how much of the setup the client has already performed."),
+        const SizedBox(height: 30),
         Wrap(spacing: 20, runSpacing: 10, children: [
-          ElevatedButton(
+          FilledButton(
               onPressed: () {
                 setState(() {
                   confirmingCancel = false;
                 });
               },
               child: const Text("Continue onboarding")),
-          ElevatedButton(
+          OutlinedButton(
               onPressed: skipOnboarding, child: const Text("Skip to main app")),
           CancelButton(onPressed: cancelOnboarding, label: "Abort Onboarding"),
         ]),
@@ -330,34 +316,18 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         ),
       ];
     } else if (starting) {
-      children = [
-        Consumer<ThemeNotifier>(
-            builder: (context, theme, child) => Text(
-                "Starting onboarding procedure...",
-                style: TextStyle(color: theme.getTheme().dividerColor)))
-      ];
+      children = [const Text("Starting onboarding procedure...")];
     } else if (ostate != null &&
         ostate!.stage == OnboardStage.stageInviteNoFunds) {
       var stageInfo = _stageInfos[ostate!.stage]!;
       children = [
         Text(
           stageInfo.title,
-          style: TextStyle(
-              color: theme.dividerColor,
-              fontSize: themeNtf.getMediumFont(context)),
         ),
         const SizedBox(height: 3),
-        SizedBox(
-            width: 500,
-            child: Text(
-              stageInfo.tip,
-              style: TextStyle(
-                  color: theme.dividerColor,
-                  fontStyle: FontStyle.italic,
-                  fontSize: themeNtf.getSmallFont(context)),
-            )),
+        Text(stageInfo.tip),
         Wrap(runSpacing: 10, spacing: 10, children: [
-          ElevatedButton(
+          OutlinedButton(
             onPressed: cancelAndInputInviteKey,
             child: const Text("Use different invite key"),
           ),
@@ -368,26 +338,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         ]),
       ];
     } else {
-      var line = ((String s, String tt) => [
-            Consumer<ThemeNotifier>(
-                builder: (context, theme, child) => Tooltip(
-                    message: tt,
-                    child: Text(s,
-                        style:
-                            TextStyle(color: theme.getTheme().dividerColor)))),
-            const SizedBox(height: 10),
-          ]);
-      var copyable = ((String lbl, String txt, String tt) => [
-            Tooltip(
-                message: tt,
-                child: Consumer<ThemeNotifier>(
-                    builder: (context, theme, child) => Copyable("$lbl: $txt",
-                        textStyle:
-                            TextStyle(color: theme.getTheme().dividerColor),
-                        textToCopy: txt))),
-            const SizedBox(height: 10),
-          ]);
-
       var ost = ostate!;
       var balWallet = formatDCR(atomsToDCR(balances.wallet.totalBalance));
       var balSend = formatDCR(atomsToDCR(balances.channel.maxOutboundAmount));
@@ -395,92 +345,91 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       var stageInfo = _stageInfos[ost.stage]!;
       var nbSteps = _stageInfos[OnboardStage.stageOnboardDone]!.step;
       children = [
-        Text(
-          "Step ${stageInfo.step} / $nbSteps",
-          style: TextStyle(
-              color: theme.dividerColor,
-              fontSize: themeNtf.getLargeFont(context)),
-        ),
+        Txt.L("Step ${stageInfo.step} / $nbSteps"),
         const SizedBox(height: 5),
-        Text(
-          stageInfo.title,
-          style: TextStyle(
-              color: theme.dividerColor,
-              fontSize: themeNtf.getMediumFont(context)),
-        ),
+        Text(stageInfo.title),
         const SizedBox(height: 3),
-        SizedBox(
-            width: 500,
-            child: Text(
-              ost.stage == OnboardStage.stageWaitingOutConfirm
-                  ? "${stageInfo.tip} ${ost.outChannelConfsLeft} ${ost.outChannelConfsLeft == 1 ? 'block' : 'blocks'} left to confirm."
-                  : stageInfo.tip,
-              style: TextStyle(
-                  color: theme.dividerColor,
-                  fontStyle: FontStyle.italic,
-                  fontSize: themeNtf.getSmallFont(context)),
-            )),
+        Txt.S(
+          ost.stage == OnboardStage.stageWaitingOutConfirm
+              ? "${stageInfo.tip} ${ost.outChannelConfsLeft} ${ost.outChannelConfsLeft == 1 ? 'block' : 'blocks'} left to confirm."
+              : stageInfo.tip,
+          style: const TextStyle(fontStyle: FontStyle.italic),
+        ),
         const SizedBox(height: 20),
         Collapsable("Additional Information",
-            child: Column(children: [
-              const SizedBox(height: 10),
-              ...line(
-                  "Balances - Wallet: $balWallet, Send: $balSend, Recv: $balRecv",
-                  """The wallet balance is the total confirmed and unconfirmed on-chain balance.
-The send balance is how much the local client may send through LN payments.
-The receive balance is how much the local client may receive through LN payments."""),
-              ...line("Original Key: ${ost.key}",
-                  "The key used to fetch the invite and funds"),
-              ...(ost.invite != null
-                  ? [
-                      ...copyable(
-                          "Initial RV Point",
-                          ost.invite?.initialRendezvous ?? "",
+            child:
+                SimpleInfoGridAdv(colLabelSize: 130, separatorWidth: 5, items: [
+              [
+                "Wallet Balance",
+                Copyable(balWallet,
+                    tooltip: "Total confirmed and unconfirmed on-chain balance")
+              ],
+              [
+                "Send Capacity",
+                Copyable(balSend,
+                    tooltip:
+                        "How much the local client may send through LN payments")
+              ],
+              [
+                "Receive Capacity",
+                Copyable(balRecv,
+                    tooltip:
+                        "How much the local client may receive through LN payments")
+              ],
+              [
+                "Original Key",
+                Copyable(ost.key ?? "",
+                    tooltip: "The key used to fetch the invite and funds")
+              ],
+              if (ost.invite != null)
+                [
+                  "Initial RV",
+                  Copyable(ost.invite?.initialRendezvous ?? "",
+                      tooltip:
                           "The shared server ID where the remote client expects the local client to respond to the invite.")
-                    ]
-                  : []),
-              ...(ost.invite?.funds != null
-                  ? [
-                      ...copyable(
-                          "Invite funds UTXO",
-                          "${ost.invite?.funds?.txid}:${ost.invite?.funds?.index}",
+                ],
+              if (ost.invite?.funds != null)
+                [
+                  "Funds UTXO",
+                  Copyable(
+                      "${ost.invite?.funds?.txid}:${ost.invite?.funds?.index}",
+                      tooltip:
                           "The on-chain transaction where the invite's funds are stored")
-                    ]
-                  : []),
-              ...(ost.redeemTx != null
-                  ? [
-                      ...copyable("On-Chain redemption tx", ost.redeemTx ?? "",
+                ],
+              if (ost.redeemTx != "")
+                [
+                  "Redemption TX",
+                  Copyable(ost.redeemTx,
+                      tooltip:
                           "The on-chain transaction where the invite's funds were redeemed to the local wallet")
-                    ]
-                  : []),
-              ...(ost.redeemTx != null
-                  ? [
-                      ...copyable(
-                          "On-Chain redemption amount",
-                          "${ost.redeemAmount}",
-                          "The amount redeemed from the invite on-chain")
-                    ]
-                  : []),
-              ...(ost.outChannelID != ""
-                  ? [
-                      ...copyable("Outbound channel ID", ost.outChannelID,
+                ],
+              if (ost.redeemAmount > 0)
+                [
+                  "Redemption Amount",
+                  Copyable(formatDCR(atomsToDCR(ost.redeemAmount)),
+                      tooltip: "The amount redeemed from the invite on-chain")
+                ],
+              if (ost.outChannelID != "")
+                [
+                  "Outbound Channel ID",
+                  Copyable(ost.outChannelID,
+                      tooltip:
                           "The channelpoint (or ID) of the LN channel opened to a hub with outbound funds")
-                    ]
-                  : []),
-              ...(ost.inChannelID != ""
-                  ? [
-                      ...copyable("Inbound channel ID", ost.inChannelID,
+                ],
+              if (ost.inChannelID != "")
+                [
+                  "Inbound Channel ID",
+                  Copyable(ost.inChannelID,
+                      tooltip:
                           "The channelpoint (or ID) of the LN channel opened to a hub with inbound funds")
-                    ]
-                  : []),
-              ...(ost.stage == OnboardStage.stageWaitingOutConfirm
-                  ? [
-                      ...copyable(
-                          "Confirmations left",
-                          "${ost.outChannelConfsLeft}",
+                ],
+              if (ost.stage == OnboardStage.stageWaitingOutConfirm)
+                [
+                  "Confirmations Left",
+                  Copyable("${ost.outChannelConfsLeft}",
+                      tooltip:
                           "How many confirmations left to enable the channel for use")
-                    ]
-                  : []),
+                ],
             ])),
         const SizedBox(height: 10),
         Collapsable("Recent Log",
@@ -490,35 +439,22 @@ The receive balance is how much the local client may receive through LN payments
                     builder: (context, logModel, child) =>
                         LogLines(logModel)))),
         const SizedBox(height: 20),
-        ...(oerror != ""
-            ? [
-                Consumer<ThemeNotifier>(
-                    builder: (context, theme, child) => Copyable(
-                        "Error: ${oerror}",
-                        textStyle: TextStyle(
-                            color: theme.getTheme().errorColor,
-                            fontWeight: FontWeight.bold))),
-                const SizedBox(height: 20)
-              ]
-            : []),
+        if (oerror != "") ...[
+          Copyable.txt(Txt("Error: $oerror", color: TextColor.error)),
+          const SizedBox(height: 20)
+        ],
 
-        ...(oerror != "" && ost.stage == OnboardStage.stageOpeningInbound
-            ? [
-                SizedBox(
-                    width: 600,
-                    child: Text(
-                        "Note: inbound channels are optional for sending messages. They can be opened later, when the local client needs inbound capacity to receive LN payments.",
-                        style: TextStyle(
-                            color: theme.dividerColor,
-                            fontSize: themeNtf.getSmallFont(context)))),
-                const SizedBox(height: 20),
-              ]
-            : []),
+        if (oerror != "" && ost.stage == OnboardStage.stageOpeningInbound) ...[
+          const Txt.S(
+            "Note: inbound channels are optional for sending messages. They can be opened later, when the local client needs inbound capacity to receive LN payments.",
+          ),
+          const SizedBox(height: 20),
+        ],
 
         // Action buttons.
         Wrap(runSpacing: 10, children: [
           oerror != ""
-              ? ElevatedButton(
+              ? OutlinedButton(
                   onPressed: retryOnboarding,
                   child: const Text("Retry"),
                 )
@@ -528,7 +464,7 @@ The receive balance is how much the local client may receive through LN payments
               ? Tooltip(
                   message:
                       "Opening inbound channels is optional and can be done later",
-                  child: ElevatedButton(
+                  child: OutlinedButton(
                     onPressed: skipOnboardingStage,
                     child: const Text("Skip Inbound Channel"),
                   ))
@@ -543,7 +479,7 @@ Cancelling onboarding means the wallet setup, including obtaining on-chain funds
                     onPressed: showConfirmCancel,
                     label: "Cancel Onboarding",
                   ))
-              : ElevatedButton(
+              : FilledButton(
                   onPressed: skipOnboarding,
                   child: const Text("Start using Bison Relay")),
           const SizedBox(width: 20),
@@ -552,13 +488,8 @@ Cancelling onboarding means the wallet setup, including obtaining on-chain funds
       ];
     }
 
-    return StartupScreen([
-      Consumer<ThemeNotifier>(
-          builder: (context, theme, child) => Text("Setting up Bison Relay",
-              style: TextStyle(
-                  color: theme.getTheme().dividerColor,
-                  fontSize: theme.getHugeFont(context),
-                  fontWeight: FontWeight.w200))),
+    return StartupScreen(childrenWidth: 620, [
+      const Txt.H("Setting up Bison Relay"),
       const SizedBox(height: 20),
       ...children,
     ]);

@@ -1,9 +1,10 @@
 import 'dart:async';
+import 'package:bruig/components/dcr_input.dart';
 import 'package:bruig/components/snackbars.dart';
+import 'package:bruig/components/text.dart';
 import 'package:bruig/components/users_dropdown.dart';
 import 'package:bruig/models/client.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:file_picker/file_picker.dart';
@@ -40,42 +41,28 @@ class _SharedContentFileState extends State<SharedContentFile> {
 
   @override
   Widget build(BuildContext context) {
-    var theme = Theme.of(context);
-    var textColor = theme.focusColor;
     var file = widget.file;
-    return Consumer<ThemeNotifier>(
-        builder: (context, theme, _) => Column(
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(file.sf.filename,
-                        style: TextStyle(
-                            color: textColor,
-                            fontSize: theme.getSmallFont(context),
-                            fontWeight: FontWeight.w500,
-                            letterSpacing: 0.5)),
-                    /*
-            Text((file.cost / 1e8).toString(),
-                style: TextStyle(color: textColor, fontSize: theme.getSmallFont(context))),
-            Text(file.sf.fid,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(color: textColor, fontSize: theme.getSmallFont(context))),
+    return Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Txt.S(file.sf.filename),
+            /*
+            Txt.S((file.cost / 1e8).toString()),
+            Txt.S(file.sf.fid, overflow: TextOverflow.ellipsis),
             */
-                    !widget.file.global
-                        ? const Text("")
-                        : IconButton(
-                            iconSize: 18,
-                            icon: Icon(loading
-                                ? Icons.hourglass_bottom
-                                : Icons.delete),
-                            onPressed: loading
-                                ? null
-                                : () => removeContent(context, null),
-                          )
-                  ],
-                ),
-                /*
+            !widget.file.global
+                ? const Text("")
+                : IconButton(
+                    iconSize: 18,
+                    icon: Icon(loading ? Icons.hourglass_bottom : Icons.delete),
+                    onPressed:
+                        loading ? null : () => removeContent(context, null),
+                  )
+          ],
+        ),
+        /*
         ListView.builder(
           scrollDirection: Axis.vertical,
           shrinkWrap: true,
@@ -83,15 +70,13 @@ class _SharedContentFileState extends State<SharedContentFile> {
           itemBuilder: (BuildContext context, int index) {
             return Row(children: [
               const SizedBox(width: 40),
-              Text(widget.file.shares[index],
-                  style: TextStyle(color: textColor, fontSize: theme.getSmallFont(context))),
+              Txt.S(widget.file.shares[index]),
               const SizedBox(width: 20),
-              Text(
+              Txt.S(
                   widget.client
                           .getExistingChat(widget.file.shares[index])
                           ?.nick ??
-                      "",
-                  style: TextStyle(color: textColor, fontSize: theme.getSmallFont(context))),
+                      ""),
               IconButton(
                 iconSize: 18,
                 icon: Icon(loading ? Icons.hourglass_bottom : Icons.delete),
@@ -103,8 +88,8 @@ class _SharedContentFileState extends State<SharedContentFile> {
             
           },
         ),*/
-              ],
-            ));
+      ],
+    );
   }
 }
 
@@ -121,8 +106,7 @@ class SharedContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    var theme = Theme.of(context);
-    var bgColor = theme.highlightColor;
+    var theme = ThemeNotifier.of(context);
     return ListView.builder(
       itemCount: files.length,
       itemBuilder: (BuildContext context, int index) {
@@ -133,7 +117,8 @@ class SharedContent extends StatelessWidget {
                 padding:
                     const EdgeInsets.only(bottom: 5, left: 5, right: 5, top: 5),
                 decoration: BoxDecoration(
-                    color: bgColor, borderRadius: BorderRadius.circular(10)),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: theme.colors.outline)),
                 child: SharedContentFile(files[index], removeContent, client)),
             onTap: fileSelectedCB != null
                 ? () => fileSelectedCB!(files[index].sf)
@@ -158,7 +143,7 @@ class _AddContentPanelState extends State<AddContentPanel> {
   bool loading = false;
   TextEditingController fnameCtrl = TextEditingController();
   TextEditingController toCtrl = TextEditingController();
-  TextEditingController costCtrl = TextEditingController();
+  AmountEditingController costCtrl = AmountEditingController();
   Timer? _debounce;
 
   @override
@@ -210,139 +195,66 @@ class _AddContentPanelState extends State<AddContentPanel> {
 
   @override
   Widget build(BuildContext context) {
-    var theme = Theme.of(context);
-    var textColor = theme.dividerColor;
-    var inputBackground = theme.hoverColor;
-    var secondaryTextColor = theme.focusColor;
-    return Consumer<ThemeNotifier>(
-        builder: (context, theme, _) => Column(children: [
-              Row(children: [
-                SizedBox(
-                    width: 100,
-                    child: OutlinedButton(
-                      onPressed: loading ? null : pickFile,
-                      style: OutlinedButton.styleFrom(
-                        textStyle: TextStyle(
-                            color: textColor,
-                            fontSize: theme.getSmallFont(context)),
-                      ),
-                      child: Text("Select File",
-                          style: TextStyle(
-                              color: textColor,
-                              fontSize: theme.getSmallFont(context))),
-                    )),
-                const SizedBox(width: 15),
-                Container(
-                    padding: const EdgeInsets.only(
-                        left: 8, top: 4, bottom: 4, right: 8),
-                    decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(3),
-                        color: inputBackground),
-                    width: 250,
-                    height: 34,
-                    child: Center(
-                        child: Text(
-                      fnameCtrl.text,
-                      softWrap: true,
-                      style: TextStyle(
-                          color: textColor,
-                          fontSize: theme.getSmallFont(context)),
-                      //overflow: TextOverflow.ellipsis,
-                    ))),
-              ]),
-              const SizedBox(height: 20),
-              Row(children: [
-                SizedBox(
-                  width: 115,
-                  child: Text("Sharing Preference:",
-                      style: TextStyle(
-                          color: textColor,
-                          fontSize: theme.getSmallFont(context))),
-                ),
-                Container(
-                    alignment: Alignment.centerRight,
-                    padding: const EdgeInsets.only(
-                        left: 8, top: 4, bottom: 4, right: 8),
-                    decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(3),
-                        color: inputBackground),
-                    width: 200,
-                    height: 34,
-                    child: UsersDropdown(
-                      allowEmpty: true,
-                      cb: (c) => setState(() {
-                        toCtrl.text = c?.id ?? "";
-                      }),
-                    ))
-              ]),
-              const SizedBox(height: 20),
-              Row(children: [
-                SizedBox(
-                  width: 115,
-                  child: Text("Cost for user:",
-                      style: TextStyle(
-                          color: textColor,
-                          fontSize: theme.getSmallFont(context))),
-                ),
-                SizedBox(
-                  width: 100,
-                  child: TextField(
-                    enabled: !loading,
-                    cursorColor: secondaryTextColor,
-                    decoration: InputDecoration(
-                        border: InputBorder.none,
-                        hintText: "Cost DCR/kb",
-                        hintStyle: TextStyle(
-                            fontSize: theme.getSmallFont(context),
-                            color: textColor),
-                        filled: true,
-                        fillColor: inputBackground),
-                    style: TextStyle(
-                        color: secondaryTextColor,
-                        fontSize: theme.getSmallFont(context)),
-                    controller: costCtrl,
-                    keyboardType:
-                        const TextInputType.numberWithOptions(decimal: true),
-                    inputFormatters: [
-                      FilteringTextInputFormatter.allow(
-                          RegExp(r'[0-9]+\.?[0-9]*'))
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Tooltip(
-                  message: "How much others will pay for this content",
-                  child: Icon(
-                    Icons.help,
-                    size: 16,
-                    color: textColor,
-                  ),
-                ),
-              ]),
-              const SizedBox(height: 20),
-              Row(children: [
-                SizedBox(
-                    width: 100,
-                    child: OutlinedButton(
-                      //style: ElevatedButton.styleFrom(primary: Colors.transparent),
-                      onPressed: loading ? null : addContent,
-                      child: Text("Share",
-                          style: TextStyle(
-                              color: textColor,
-                              fontSize: theme.getSmallFont(context))),
-                    ))
-              ]),
-            ]));
-  }
-}
-
-class ManageContentScreenTitle extends StatelessWidget {
-  const ManageContentScreenTitle({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Text("Manage Content",
-        style: TextStyle(color: Theme.of(context).focusColor));
+    return Column(children: [
+      Row(children: [
+        SizedBox(
+            width: 130,
+            child: OutlinedButton(
+              onPressed: loading ? null : pickFile,
+              child: const Txt.S("Select File"),
+            )),
+        const SizedBox(width: 15),
+        Expanded(child: Txt.S(fnameCtrl.text, overflow: TextOverflow.ellipsis)),
+      ]),
+      const SizedBox(height: 20),
+      Row(children: [
+        const SizedBox(
+          width: 130,
+          child: Txt.S("Sharing Preference:"),
+        ),
+        Container(
+            alignment: Alignment.centerRight,
+            padding:
+                const EdgeInsets.only(left: 8, top: 4, bottom: 4, right: 8),
+            decoration: BoxDecoration(borderRadius: BorderRadius.circular(3)),
+            width: 200,
+            height: 34,
+            child: UsersDropdown(
+              allowEmpty: true,
+              cb: (c) => setState(() {
+                toCtrl.text = c?.id ?? "";
+              }),
+            ))
+      ]),
+      const SizedBox(height: 20),
+      Row(children: [
+        const SizedBox(
+          width: 130,
+          child: Txt.S("Cost for user:"),
+        ),
+        SizedBox(
+          width: 100,
+          child: dcrInput(controller: costCtrl),
+        ),
+        const SizedBox(width: 10),
+        const Tooltip(
+          message: "How much others will pay for this content",
+          child: Icon(
+            Icons.help_outline,
+            size: 16,
+          ),
+        ),
+      ]),
+      const SizedBox(height: 20),
+      Row(children: [
+        SizedBox(
+            width: 100,
+            child: OutlinedButton(
+              onPressed: loading ? null : addContent,
+              child: const Txt.S("Share"),
+            ))
+      ]),
+    ]);
   }
 }
 
@@ -405,14 +317,9 @@ class _ManageContentState extends State<ManageContent> {
         fileSelCB = fileSelected;
       }
     }
-    var theme = Theme.of(context);
-    var backgroundColor = theme.backgroundColor;
     return Consumer<ClientModel>(
         builder: (context, client, child) => Container(
               margin: const EdgeInsets.all(1),
-              decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(3),
-                  color: backgroundColor),
               padding: const EdgeInsets.all(10),
               child: widget.view == 1
                   ? SharedContent(

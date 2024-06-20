@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'dart:collection';
+import 'package:bruig/components/containers.dart';
+import 'package:bruig/components/text.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/screens/chats.dart';
 import 'package:bruig/screens/contacts_msg_times.dart';
@@ -7,7 +9,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:bruig/components/interactive_avatar.dart';
 import 'package:bruig/components/user_context_menu.dart';
-import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/components/gc_context_menu.dart';
 import 'package:bruig/components/chat/types.dart';
 import 'package:bruig/theme_manager.dart';
@@ -55,14 +56,6 @@ class _ChatHeadingWState extends State<_ChatHeadingW> {
 
   @override
   Widget build(BuildContext context) {
-    var themeNtf = Provider.of<ThemeNotifier>(context);
-    var theme = Theme.of(context);
-    var textColor = theme.dividerColor;
-    var hightLightTextColor = theme.focusColor;
-    var selectedBackgroundColor = theme.highlightColor;
-    var unreadMessageIconColor = theme.indicatorColor.withOpacity(0.5);
-    var darkTextColor = theme.indicatorColor;
-
     // Show 1k+ if unread cound goes about 1000
     var unreadCount = chat.unreadMsgCount > 1000 ? "1k+" : chat.unreadMsgCount;
 
@@ -71,37 +64,16 @@ class _ChatHeadingWState extends State<_ChatHeadingW> {
       // Show unread message count.
       unreadIndicator = Container(
           margin: const EdgeInsets.all(1),
-          child: CircleAvatar(
-              backgroundColor: unreadMessageIconColor,
-              radius: 10,
-              child: Text("$unreadCount",
-                  style: TextStyle(
-                      color: hightLightTextColor,
-                      fontSize: themeNtf.getSmallFont(context)))));
+          child: CircleAvatar(radius: 10, child: Txt.S("$unreadCount")));
     } else if (chat.unreadEventCount > 0) {
       // Show only a dot indicator.
       unreadIndicator = Container(
           margin: const EdgeInsets.all(1),
-          child: CircleAvatar(
-            backgroundColor: unreadMessageIconColor,
-            radius: 3,
-          ));
+          child: const CircleAvatar(radius: 3));
     } else {
       // Show nothing.
       unreadIndicator = const SizedBox(width: 21);
     }
-
-    var trailing = Row(mainAxisSize: MainAxisSize.min, children: [
-      chat.isGC
-          ? Text("gc",
-              style: TextStyle(
-                  fontStyle: FontStyle.italic,
-                  color: darkTextColor,
-                  fontSize: themeNtf.getMediumFont(context)))
-          : const Empty(),
-      const SizedBox(width: 5),
-      unreadIndicator,
-    ]);
 
     var popMenuButton = InteractiveAvatar(
         chatNick: chat.nick,
@@ -114,10 +86,6 @@ class _ChatHeadingWState extends State<_ChatHeadingW> {
     bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
     return Consumer<ThemeNotifier>(
         builder: (context, theme, _) => Container(
-              decoration: BoxDecoration(
-                color: chat.active ? selectedBackgroundColor : null,
-                borderRadius: BorderRadius.circular(3),
-              ),
               child: chat.isGC
                   ? GcContexMenu(
                       mobile: isScreenSmall
@@ -129,45 +97,40 @@ class _ChatHeadingWState extends State<_ChatHeadingW> {
                       client: client,
                       targetGcChat: chat,
                       child: ListTile(
-                        horizontalTitleGap: 10,
+                        horizontalTitleGap: 12,
                         contentPadding:
                             const EdgeInsets.only(left: 10, right: 8),
                         enabled: true,
-                        title: Container(
-                          padding: const EdgeInsets.only(left: 5),
-                          child: Text(chat.nick,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                  color: textColor,
-                                  fontSize: theme.getMediumFont(context))),
-                        ),
+                        title: Txt(chat.nick,
+                            overflow: TextOverflow.ellipsis,
+                            color: TextColor.onSurfaceVariant),
                         leading: popMenuButton,
-                        trailing: trailing,
+                        trailing:
+                            Row(mainAxisSize: MainAxisSize.min, children: [
+                          Text("gc",
+                              style: theme.extraTextStyles.chatListGcIndicator),
+                          const SizedBox(width: 5),
+                          unreadIndicator
+                        ]),
                         selected: chat.active,
                         onTap: () => widget.makeActive(chat),
-                        selectedColor: selectedBackgroundColor,
                       ),
                     )
                   : UserContextMenu(
                       client: client,
                       targetUserChat: chat,
                       child: ListTile(
-                        horizontalTitleGap: 10,
+                        horizontalTitleGap: 12,
                         contentPadding:
                             const EdgeInsets.only(left: 10, right: 8),
                         enabled: true,
-                        title: Container(
-                            padding: const EdgeInsets.only(left: 5),
-                            child: Text(chat.nick,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                    fontSize: theme.getMediumFont(context),
-                                    color: textColor))),
+                        title: Txt(chat.nick,
+                            overflow: TextOverflow.ellipsis,
+                            color: TextColor.onSurfaceVariant),
                         leading: popMenuButton,
-                        trailing: trailing,
+                        trailing: unreadIndicator,
                         selected: chat.active,
                         onTap: () => widget.makeActive(chat),
-                        selectedColor: selectedBackgroundColor,
                       ),
                     ),
             ));
@@ -210,11 +173,66 @@ Future<void> loadInvite(BuildContext context) async {
       .pushNamed('/verifyInvite', arguments: invite);
 }
 
+class _FooterIconButton extends StatelessWidget {
+  final bool onlyWhenOnline;
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onPressed;
+  const _FooterIconButton(
+      {required this.icon,
+      required this.tooltip,
+      required this.onPressed,
+      this.onlyWhenOnline = false,
+      super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer2<ThemeNotifier, ConnStateModel>(
+        builder: (context, theme, connState, child) => IconButton(
+            splashRadius: 15,
+            iconSize: 15,
+            tooltip: !onlyWhenOnline || connState.isOnline
+                ? tooltip
+                : "Cannot perform this action when offline",
+            disabledColor: theme.theme.disabledColor,
+            onPressed: !onlyWhenOnline || connState.isOnline ? onPressed : null,
+            icon: Icon(icon, size: 20)));
+  }
+}
+
+class _SmallScreenFabIconButton extends StatelessWidget {
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onPressed;
+  const _SmallScreenFabIconButton(
+      {required this.icon,
+      required this.tooltip,
+      required this.onPressed,
+      super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer2<ThemeNotifier, ConnStateModel>(
+        builder: (context, theme, connState, child) => Material(
+            borderRadius: BorderRadius.circular(30),
+            color: theme.colors.surfaceContainerHigh.withOpacity(0.7),
+            child: IconButton(
+                splashRadius: 28,
+                hoverColor: theme.colors.surfaceContainerHigh,
+                iconSize: 40,
+                tooltip: tooltip,
+                disabledColor: theme.theme.disabledColor,
+                onPressed: onPressed,
+                icon: Icon(icon, size: 49))));
+  }
+}
+
 class _ActiveChatsListMenuState extends State<ActiveChatsListMenu> {
   ClientModel get client => widget.client;
   FocusNode get inputFocusNode => widget.inputFocusNode.inputFocusNode;
   UnmodifiableListView<ChatModel> chats = UnmodifiableListView([]);
   Timer? debounce;
+  ScrollController sortedListScroll = ScrollController();
 
   void doUpdateState() {
     setState(() => chats = client.activeChats.sorted);
@@ -225,6 +243,16 @@ class _ActiveChatsListMenuState extends State<ActiveChatsListMenu> {
     // Limit changes when updating chat list very fast.
     debounce ??= Timer(const Duration(milliseconds: 250), doUpdateState);
   }
+
+  void genInvite() async {
+    await generateInvite(context);
+    inputFocusNode.requestFocus();
+  }
+
+  // Returns a callback to make chat c active.
+  void makeActive(ChatModel? c) => {client.active = c};
+
+  void showSubMenu() => client.ui.chatSideMenuActive.chat = client.active;
 
   @override
   void initState() {
@@ -251,198 +279,75 @@ class _ActiveChatsListMenuState extends State<ActiveChatsListMenu> {
 
   @override
   Widget build(BuildContext context) {
-    void genInvite() async {
-      await generateInvite(context);
-      inputFocusNode.requestFocus();
-    }
-
-    var theme = Theme.of(context);
-    var hoverColor = theme.hoverColor;
-    var darkTextColor = theme.dividerColor;
-    var selectedBackgroundColor = theme.highlightColor;
-    var backgroundColor = theme.backgroundColor;
-    var newMessageHoverColor = theme.indicatorColor;
-
-    var sortedListScroll = ScrollController();
-
-    makeActive(ChatModel? c) => {client.active = c};
-
-    showSubMenu() => client.ui.chatSideMenuActive.chat = client.active;
-
     bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
+
+    // Mobile version, display list of chats in entire screen.
     if (isScreenSmall) {
-      return Consumer<ThemeNotifier>(
-          builder: (context, theme, _) => Container(
-              margin: const EdgeInsets.all(1),
-              decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(3),
-                  color: backgroundColor),
-              padding: const EdgeInsets.all(0),
-              child: Stack(children: [
-                Container(
-                    padding: const EdgeInsets.only(
-                        left: 0, right: 5, top: 5, bottom: 5),
-                    child: ListView.builder(
-                        physics: const ScrollPhysics(),
-                        controller: sortedListScroll,
-                        scrollDirection: Axis.vertical,
-                        shrinkWrap: true,
-                        itemCount: chats.length,
-                        itemBuilder: (context, index) => _ChatHeadingW(
-                            chats[index], client, makeActive, showSubMenu))),
-                Positioned(
-                    bottom: 20,
-                    right: 10,
-                    child: Material(
-                        borderRadius: BorderRadius.circular(30),
-                        color: selectedBackgroundColor,
-                        child: IconButton(
-                            hoverColor: newMessageHoverColor.withOpacity(0.25),
-                            splashRadius: 28,
-                            iconSize: 40,
-                            tooltip: "New Message",
-                            onPressed: client.ui.showAddressBookScreen,
-                            icon: Icon(
-                                size: 40,
-                                color: darkTextColor,
-                                Icons.edit_outlined)))),
-                Positioned(
-                    bottom: 90,
-                    right: 10,
-                    child: Material(
-                        borderRadius: BorderRadius.circular(30),
-                        color: selectedBackgroundColor,
-                        child: IconButton(
-                            hoverColor: newMessageHoverColor.withOpacity(0.25),
-                            splashRadius: 28,
-                            iconSize: 40,
-                            tooltip: "Create new group chat",
-                            onPressed: client.ui.showCreateGroupChatScreen,
-                            icon: Icon(
-                                size: 40,
-                                color: darkTextColor,
-                                Icons.people_outline)))),
-              ])));
+      return Container(
+          padding: const EdgeInsets.all(0),
+          child: Stack(children: [
+            Container(
+                padding:
+                    const EdgeInsets.only(left: 0, right: 5, top: 5, bottom: 5),
+                child: ListView.builder(
+                    physics: const ScrollPhysics(),
+                    controller: sortedListScroll,
+                    scrollDirection: Axis.vertical,
+                    shrinkWrap: true,
+                    itemCount: chats.length,
+                    itemBuilder: (context, index) => _ChatHeadingW(
+                        chats[index], client, makeActive, showSubMenu))),
+            Positioned(
+                bottom: 20,
+                right: 10,
+                child: _SmallScreenFabIconButton(
+                    tooltip: "New Message",
+                    icon: Icons.edit_outlined,
+                    onPressed: client.ui.showAddressBookScreen)),
+            Positioned(
+                bottom: 100,
+                right: 10,
+                child: _SmallScreenFabIconButton(
+                    tooltip: "Create new group chat",
+                    icon: Icons.people_outlined,
+                    onPressed: client.ui.showCreateGroupChatScreen)),
+          ]));
     }
-    return Consumer<ThemeNotifier>(
-        builder: (context, theme, _) => Container(
-              margin: const EdgeInsets.all(1),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(3),
-                gradient: LinearGradient(
-                    begin: Alignment.centerRight,
-                    end: Alignment.centerLeft,
-                    colors: [
-                      hoverColor,
-                      backgroundColor,
-                      backgroundColor,
-                    ],
-                    stops: const [
-                      0,
-                      0.51,
-                      1
-                    ]),
-              ),
-              child: Stack(children: [
-                Container(
-                    margin: const EdgeInsets.only(bottom: 50),
-                    child: ListView.builder(
-                        controller: sortedListScroll,
-                        scrollDirection: Axis.vertical,
-                        shrinkWrap: true,
-                        itemCount: chats.length,
-                        itemBuilder: (context, index) => _ChatHeadingW(
-                            chats[index], client, makeActive, showSubMenu))),
-                Positioned(
-                    bottom: 5,
-                    right: 0,
-                    child: Material(
-                        color: selectedBackgroundColor.withOpacity(0),
-                        child: IconButton(
-                            hoverColor: selectedBackgroundColor,
-                            splashRadius: 15,
-                            iconSize: 15,
-                            tooltip: "New Message",
-                            onPressed: client.ui.showAddressBookScreen,
-                            icon: Icon(
-                                size: 20,
-                                color: darkTextColor,
-                                Icons.edit_outlined)))),
-                Positioned(
-                    bottom: 5,
-                    right: 40,
-                    child: Material(
-                        color: selectedBackgroundColor.withOpacity(0),
-                        child: IconButton(
-                            hoverColor: selectedBackgroundColor,
-                            splashRadius: 15,
-                            iconSize: 15,
-                            tooltip: "Create new group chat",
-                            onPressed: client.ui.showCreateGroupChatScreen,
-                            icon: Icon(
-                                size: 20,
-                                color: darkTextColor,
-                                Icons.people_outline)))),
-                Positioned(
-                    bottom: 5,
-                    right: 80,
-                    child: Material(
-                        color: selectedBackgroundColor.withOpacity(0),
-                        child: IconButton(
-                            hoverColor: selectedBackgroundColor,
-                            splashRadius: 15,
-                            iconSize: 15,
-                            tooltip: client.connState.isOnline
-                                ? "Fetch invite using key"
-                                : "Cannot fetch invite while client is offline",
-                            onPressed: client.connState.isOnline
-                                ? () => fetchInvite(context)
-                                : null,
-                            disabledColor: backgroundColor,
-                            icon: Icon(
-                                size: 20,
-                                color: client.connState.isOnline
-                                    ? darkTextColor
-                                    : hoverColor,
-                                Icons.get_app_outlined)))),
-                Positioned(
-                    bottom: 5,
-                    right: 120,
-                    child: Material(
-                        color: selectedBackgroundColor.withOpacity(0),
-                        child: IconButton(
-                            hoverColor: selectedBackgroundColor,
-                            splashRadius: 15,
-                            iconSize: 15,
-                            tooltip: "List last received message time",
-                            onPressed: () =>
-                                gotoContactsLastMsgTimeScreen(context),
-                            icon: Icon(
-                                size: 20,
-                                color: darkTextColor,
-                                Icons.list_outlined)))),
-                Positioned(
-                    bottom: 5,
-                    right: 160,
-                    child: Material(
-                        color: selectedBackgroundColor.withOpacity(0),
-                        child: IconButton(
-                            hoverColor: selectedBackgroundColor,
-                            splashRadius: 15,
-                            iconSize: 15,
-                            tooltip: client.connState.isOnline
-                                ? "Generate Invite"
-                                : "Cannot generate invite while offline",
-                            onPressed:
-                                client.connState.isOnline ? genInvite : null,
-                            disabledColor: backgroundColor,
-                            icon: Icon(
-                                size: 20,
-                                color: client.connState.isOnline
-                                    ? darkTextColor
-                                    : hoverColor,
-                                Icons.add_outlined))))
-              ]),
-            ));
+
+    // Desktop version, display side menu.
+    return SecondarySideMenuList(
+        width: 205,
+        list: ListView.builder(
+            controller: sortedListScroll,
+            scrollDirection: Axis.vertical,
+            itemCount: chats.length,
+            itemBuilder: (context, index) => SecondarySideMenuItem(
+                _ChatHeadingW(chats[index], client, makeActive, showSubMenu))),
+        footer: SizedBox(
+            width: double.infinity,
+            child: Wrap(alignment: WrapAlignment.start, children: [
+              _FooterIconButton(
+                  onlyWhenOnline: true,
+                  tooltip: "Generate Invite",
+                  onPressed: genInvite,
+                  icon: Icons.add_outlined),
+              _FooterIconButton(
+                  tooltip: "List last received message time",
+                  onPressed: () => gotoContactsLastMsgTimeScreen(context),
+                  icon: Icons.list_outlined),
+              _FooterIconButton(
+                  onlyWhenOnline: true,
+                  tooltip: "Fetch invite using key",
+                  onPressed: () => fetchInvite(context),
+                  icon: Icons.get_app_outlined),
+              _FooterIconButton(
+                  tooltip: "Create new group chat",
+                  onPressed: client.ui.showCreateGroupChatScreen,
+                  icon: Icons.people_outline),
+              _FooterIconButton(
+                  tooltip: "New Message",
+                  onPressed: client.ui.showAddressBookScreen,
+                  icon: Icons.edit_outlined),
+            ])));
   }
 }

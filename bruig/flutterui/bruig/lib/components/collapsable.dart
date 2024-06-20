@@ -19,16 +19,13 @@ class _CollapsableState extends State<Collapsable> {
   @override
   Widget build(BuildContext context) {
     var themeNtf = Provider.of<ThemeNotifier>(context);
-    var theme = themeNtf.getTheme();
     Widget child = const Empty();
     if (showChild && widget.child != null) {
       child = widget.child!;
     }
 
     TextStyle titleStyle = widget.titleStyle ??
-        TextStyle(
-            color: theme.dividerColor,
-            fontSize: themeNtf.getMediumFont(context));
+        themeNtf.textStyleFor(context, TextSize.medium, null)!;
 
     return Column(children: [
       InkWell(

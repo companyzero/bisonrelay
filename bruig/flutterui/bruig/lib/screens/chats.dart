@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:bruig/components/buttons.dart';
 import 'package:bruig/components/chats_list.dart';
 import 'package:bruig/components/addressbook/addressbook.dart';
+import 'package:bruig/components/text.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/models/notifications.dart';
 import 'package:bruig/models/uistate.dart';
@@ -31,13 +32,7 @@ class ChatsScreenTitle extends StatelessWidget {
 
       // No active chat or address book page is active.
       if (activeHeading == null || showAddressBook) {
-        return Row(mainAxisAlignment: MainAxisAlignment.start, children: [
-          Text("Bison Relay",
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                  fontSize: theme.getLargeFont(context),
-                  color: Theme.of(context).focusColor))
-        ]);
+        return const Txt.L("Bison Relay");
       }
 
       // Has active chat.
@@ -49,11 +44,7 @@ class ChatsScreenTitle extends StatelessWidget {
         return Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(chat.nick,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                      fontSize: theme.getLargeFont(context),
-                      color: Theme.of(context).focusColor)),
+              Txt.L(chat.nick),
               Container(
                   width: 40,
                   margin: const EdgeInsets.only(
@@ -72,10 +63,7 @@ class ChatsScreenTitle extends StatelessWidget {
               : " / Profile"
           : "";
 
-      return Text("Chat$suffix$profileSuffix",
-          style: TextStyle(
-              fontSize: theme.getLargeFont(context),
-              color: Theme.of(context).focusColor));
+      return Txt.L("Chat$suffix$profileSuffix");
     });
   }
 }
@@ -91,88 +79,53 @@ class ChatsScreen extends StatefulWidget {
 }
 
 class _FundsNeededPage extends StatelessWidget {
-  const _FundsNeededPage({super.key});
+  const _FundsNeededPage();
 
   @override
   Widget build(BuildContext context) {
-    var theme = Theme.of(context);
-    var backgroundColor = theme.backgroundColor;
-    var textColor = theme.dividerColor;
-    var secondaryTextColor = theme.focusColor;
-    bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
-
-    return Consumer<ThemeNotifier>(
-        builder: (context, theme, child) => Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(color: backgroundColor),
-            child: Center(
-                child: Column(
-              children: [
-                const SizedBox(height: 34),
-                Text("Fund Wallet and Channels",
-                    style: TextStyle(
-                        color: textColor,
-                        fontSize: theme.getHugeFont(context),
-                        fontWeight: FontWeight.w200)),
-                const SizedBox(height: 34),
-                Text('''
+    return Container(
+        padding: const EdgeInsets.all(20),
+        child: Center(
+            child: Column(children: [
+          const SizedBox(height: 34),
+          const Txt.H("Fund Wallet and Channels"),
+          const SizedBox(height: 34),
+          const Text('''
 Bison relay requires active LN channels with outbound capacity to pay to send messages to the server.
-''',
-                    style: TextStyle(
-                        color: secondaryTextColor,
-                        fontSize: theme.getMediumFont(context),
-                        fontWeight: FontWeight.w300)),
-                const SizedBox(height: 34),
-                Center(
-                  child: Flex(
-                      direction:
-                          isScreenSmall ? Axis.vertical : Axis.horizontal,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        LoadingScreenButton(
-                          onPressed: () =>
-                              Navigator.of(context, rootNavigator: true)
-                                  .pushNamed("/needsFunds"),
-                          text: "Add wallet funds",
-                        ),
-                        const SizedBox(height: 20, width: 34),
-                        LoadingScreenButton(
-                          onPressed: () =>
-                              Navigator.of(context, rootNavigator: true)
-                                  .pushNamed(NeedsOutChannelScreen.routeName),
-                          text: "Create outbound channels",
-                        )
-                      ]),
-                ),
-              ],
-            ))));
+'''),
+          const SizedBox(height: 34),
+          Wrap(runSpacing: 10, children: [
+            LoadingScreenButton(
+              onPressed: () => Navigator.of(context, rootNavigator: true)
+                  .pushNamed("/needsFunds"),
+              text: "Add wallet funds",
+            ),
+            const SizedBox(height: 20, width: 34),
+            LoadingScreenButton(
+              onPressed: () => Navigator.of(context, rootNavigator: true)
+                  .pushNamed(NeedsOutChannelScreen.routeName),
+              text: "Create outbound channels",
+            )
+          ])
+        ])));
   }
 }
 
 class _LoadingAddressBookPage extends StatelessWidget {
-  const _LoadingAddressBookPage({super.key});
+  const _LoadingAddressBookPage();
 
   @override
   Widget build(BuildContext context) {
-    var theme = Theme.of(context);
-    var backgroundColor = theme.backgroundColor;
-    var textColor = theme.dividerColor;
-
     return Consumer<ThemeNotifier>(
         builder: (context, theme, child) => Container(
             padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(color: backgroundColor),
             child: Center(
                 child: Column(children: [
               const SizedBox(height: 34),
-              Text("Loading Address Book",
-                  style: TextStyle(
-                      color: textColor,
-                      fontSize: theme.getHugeFont(context),
-                      fontWeight: FontWeight.w200)),
+              const Txt.H("Loading Address Book"),
               const SizedBox(height: 20),
               LoadingAnimationWidget.waveDots(
-                color: textColor,
+                color: theme.colors.onSurface,
                 size: 50,
               ),
             ]))));
@@ -180,7 +133,7 @@ class _LoadingAddressBookPage extends StatelessWidget {
 }
 
 class _InviteNeededPage extends StatefulWidget {
-  _InviteNeededPage({super.key});
+  const _InviteNeededPage({super.key});
 
   @override
   State<_InviteNeededPage> createState() => _InviteNeededPageState();
@@ -204,54 +157,30 @@ class _InviteNeededPageState extends State<_InviteNeededPage> {
 
   @override
   Widget build(BuildContext context) {
-    var theme = Theme.of(context);
-    var backgroundColor = theme.backgroundColor;
-    var textColor = theme.dividerColor;
-    var secondaryTextColor = theme.focusColor;
-    bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
-    return Consumer<ThemeNotifier>(
-        builder: (context, theme, child) => Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(color: backgroundColor),
-            child: Center(
-                child: Column(
-              children: [
-                const SizedBox(height: 34),
-                Text("Initial Invitation",
-                    style: TextStyle(
-                        color: textColor,
-                        fontSize: theme.getHugeFont(context),
-                        fontWeight: FontWeight.w200)),
-                const SizedBox(height: 34),
-                Text('''
+    return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 5),
+        child: Center(
+            child: Column(children: [
+          const Txt.H("Initial Invitation"),
+          const SizedBox(height: 34),
+          const Text('''
 Bison Relay does not rely on a central server for user accounts, so to chat with someone else you need to exchange an invitation with them. This is just a file that should be sent via some other secure transfer method.
 
 After the invitation is accepted, you'll be able to chat with them, and if they know other people, they'll be able to connect you with them.
-''',
-                    style: TextStyle(
-                        color: secondaryTextColor,
-                        fontSize: theme.getMediumFont(context),
-                        fontWeight: FontWeight.w300)),
-                const SizedBox(height: 34),
-                Center(
-                  child: Flex(
-                      direction:
-                          isScreenSmall ? Axis.vertical : Axis.horizontal,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        LoadingScreenButton(
-                          onPressed: () => debouncedLoadInvite(context),
-                          text: "Load Invitation",
-                        ),
-                        const SizedBox(height: 20, width: 34),
-                        LoadingScreenButton(
-                          onPressed: () => generateInvite(context),
-                          text: "Create Invitation",
-                        )
-                      ]),
-                ),
-              ],
-            ))));
+'''),
+          const SizedBox(height: 34),
+          Wrap(runSpacing: 10, children: [
+            LoadingScreenButton(
+              onPressed: () => debouncedLoadInvite(context),
+              text: "Load Invitation",
+            ),
+            const SizedBox(height: 20, width: 34),
+            LoadingScreenButton(
+              onPressed: () => generateInvite(context),
+              text: "Create Invitation",
+            )
+          ]),
+        ])));
   }
 }
 
@@ -373,7 +302,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
         // Only show f user never had any contacts.
         return const _FundsNeededPage();
       }
-      return _InviteNeededPage();
+      return const _InviteNeededPage();
     }
     if (client.loadingAddressBook) {
       return const _LoadingAddressBookPage();
@@ -382,10 +311,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
     bool isScreenSmall = checkIsScreenSmall(context);
     return !isScreenSmall
         ? Row(children: [
-            SizedBox(
-                width: 200,
-                height: double.infinity,
-                child: ActiveChatsListMenu(client, inputFocusNode)),
+            ActiveChatsListMenu(client, inputFocusNode),
             Expanded(
                 child: Container(
               margin: const EdgeInsets.all(1),

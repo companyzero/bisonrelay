@@ -17,6 +17,7 @@ enum LNNodeType { internal, external }
 
 enum NetworkType { mainnet, testnet, simnet }
 
+// ignore: non_constant_identifier_names
 String NetworkTypeStr(NetworkType net) {
   switch (net) {
     case NetworkType.mainnet:
@@ -67,7 +68,8 @@ class NewConfigModel extends ChangeNotifier {
   Future<LNInfo> tryExternalDcrlnd(
       String host, String tlsPath, String macaroonPath) async {
     var res = await Golib.lnTryExternalDcrlnd(host, tlsPath, macaroonPath);
-    this.rpcHost = host;
+    rpcHost = host;
+    // ignore: unnecessary_this
     this.tlsCertPath = tlsPath;
     this.macaroonPath = macaroonPath;
     return res;
@@ -203,8 +205,8 @@ class NewConfigModel extends ChangeNotifier {
           "com.flutter.bruig_ywj3797wkq8tj",
           "LocalCache",
           "Local",
-          "${APPNAME}",
-          "${APPNAME}.conf");
+          APPNAME,
+          "$APPNAME.conf");
       if (File(oldVersionConfigFile).existsSync()) {
         return true;
       }

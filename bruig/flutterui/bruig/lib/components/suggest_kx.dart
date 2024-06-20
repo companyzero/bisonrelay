@@ -44,51 +44,26 @@ class _SuggestKXModalState extends State<SuggestKXModal> {
 
   @override
   Widget build(BuildContext context) {
-    bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
-    if (isScreenSmall) {
-      return Container(
-        padding: const EdgeInsets.all(20),
-        height: 160,
-        child: Column(mainAxisAlignment: MainAxisAlignment.end, children: [
-          const SizedBox(width: 10, height: 10),
-          Row(children: [
-            Text("Suggest KX '${chat.nick}' with: ",
-                style: TextStyle(color: Theme.of(context).focusColor))
-          ]),
-          const SizedBox(height: 10),
-          UsersDropdown(
-              cb: (ChatModel? chat) {
-                userToSuggest = chat;
-              },
-              excludeUIDs: [chat.id]),
-          const SizedBox(height: 10),
-          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-            ElevatedButton(
-                onPressed: !loading ? () => suggestKX(context) : null,
-                child: const Text('Suggest Introduction')),
-            CancelButton(onPressed: () => Navigator.pop(context)),
-          ]),
-        ]),
-      );
-    }
     return Container(
-      padding: const EdgeInsets.all(30),
-      child: Row(children: [
-        Text("Suggest KX '${chat.nick}' with: ",
-            style: TextStyle(color: Theme.of(context).focusColor)),
-        const SizedBox(width: 10, height: 10),
-        Expanded(
-            child: UsersDropdown(
-                cb: (ChatModel? chat) {
-                  userToSuggest = chat;
-                },
-                excludeUIDs: [chat.id])),
-        const SizedBox(width: 20),
-        ElevatedButton(
-            onPressed: !loading ? () => suggestKX(context) : null,
-            child: const Text('Suggest KX')),
-        CancelButton(onPressed: () => Navigator.pop(context)),
-      ]),
+      padding: const EdgeInsets.all(20),
+      child: Wrap(
+          runSpacing: 10,
+          spacing: 10,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            Text("Suggest '${chat.nick}' KX with: "),
+            SizedBox(
+                width: 200,
+                child: UsersDropdown(
+                    cb: (ChatModel? chat) {
+                      userToSuggest = chat;
+                    },
+                    excludeUIDs: [chat.id])),
+            CancelButton(onPressed: () => Navigator.pop(context)),
+            OutlinedButton(
+                onPressed: !loading ? () => suggestKX(context) : null,
+                child: const Text('Suggest')),
+          ]),
     );
   }
 }

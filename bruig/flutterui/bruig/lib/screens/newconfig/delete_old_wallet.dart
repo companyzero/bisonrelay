@@ -1,5 +1,5 @@
-import 'package:bruig/components/buttons.dart';
 import 'package:bruig/components/snackbars.dart';
+import 'package:bruig/components/text.dart';
 import 'package:bruig/models/newconfig.dart';
 import 'package:bruig/screens/startupscreen.dart';
 import 'package:flutter/material.dart';
@@ -41,30 +41,16 @@ class _DeleteOldWalletPageState extends State<DeleteOldWalletPage> {
   Widget build(BuildContext context) {
     return Consumer<ThemeNotifier>(
         builder: (context, theme, _) => StartupScreen([
-              Text("Remove old wallet",
-                  style: TextStyle(
-                      color: theme.getTheme().dividerColor,
-                      fontSize: theme.getHugeFont(context),
-                      fontWeight: FontWeight.w200)),
+              const Txt.H("Remove old wallet"),
               const SizedBox(height: 20),
-              SizedBox(
-                  width: 377,
-                  child: Text(_warnMsg,
-                      textAlign: TextAlign.left,
-                      style: TextStyle(
-                          color: theme.getTheme().dividerColor,
-                          fontSize: theme.getMediumFont(context),
-                          fontWeight: FontWeight.w300))),
+              const SizedBox(
+                  width: 377, child: Text(_warnMsg, textAlign: TextAlign.left)),
               Center(
                 child: SizedBox(
                     width: 377,
                     child: CheckboxListTile(
-                      title: Text("Wallet does not have any funds",
-                          style:
-                              TextStyle(color: theme.getTheme().dividerColor)),
-                      activeColor: theme.getTheme().dividerColor,
+                      title: const Text("Wallet does not have any funds"),
                       value: deleteAccepted,
-                      side: BorderSide(color: theme.getTheme().dividerColor),
                       onChanged: (val) {
                         setState(() {
                           deleteAccepted = val ?? false;
@@ -78,11 +64,11 @@ class _DeleteOldWalletPageState extends State<DeleteOldWalletPage> {
                       width: 278,
                       child: Row(children: [
                         const SizedBox(width: 35),
-                        LoadingScreenButton(
+                        OutlinedButton(
                           onPressed: deleteAccepted && !deleting
                               ? () => deleteWalletDir(context)
                               : null,
-                          text: "Delete Wallet",
+                          child: const Text("Delete Wallet"),
                         ),
                         const SizedBox(width: 10),
                       ])))

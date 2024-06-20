@@ -136,7 +136,6 @@ class _SidebarState extends State<Sidebar> with WindowListener {
     var theme = Theme.of(context);
     var selectedColor = theme.highlightColor;
 
-    const divider = Divider(height: 2);
     return Consumer2<ClientModel, ThemeNotifier>(
         builder: (context, client, theme, child) {
       return SidebarX(

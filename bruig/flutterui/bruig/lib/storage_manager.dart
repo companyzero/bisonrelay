@@ -4,6 +4,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart';
 
 class StorageManager {
+  static const String themeModeKey = "themeMode";
+  static const String fontScaleKey = "fontScale";
   static const String goProfilerEnabledKey = "goProfilerEnabled";
   static const String goTimedProfilingKey = "goTimedProfiling";
   static const String ntfnFgSvcKey = "foregroundService";
@@ -25,6 +27,12 @@ class StorageManager {
   static Future<dynamic> readData(String key) async {
     final prefs = await SharedPreferences.getInstance();
     dynamic obj = prefs.get(key);
+    return obj;
+  }
+
+  static Future<bool> exists(String key) async {
+    final prefs = await SharedPreferences.getInstance();
+    dynamic obj = prefs.containsKey(key);
     return obj;
   }
 

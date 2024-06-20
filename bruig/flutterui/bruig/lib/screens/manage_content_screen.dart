@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:bruig/components/text.dart';
 import 'package:bruig/screens/manage_content/manage_content.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -20,10 +21,7 @@ class ManageContentScreenTitle extends StatelessWidget {
         builder: (context, menu, theme, child) {
       var idx = LnScreenSub.indexWhere((e) => e.pageTab == menu.activePageTab);
 
-      return Text("Manage Content / ${ManageContentScreenSub[idx].label}",
-          style: TextStyle(
-              fontSize: theme.getLargeFont(context),
-              color: Theme.of(context).focusColor));
+      return Txt.L("Manage Content / ${ManageContentScreenSub[idx].label}");
     });
   }
 }
@@ -57,21 +55,6 @@ class _ManageContentScreenState extends State<ManageContentScreen> {
     setState(() => tabIndex = index);
     Timer(const Duration(milliseconds: 1),
         () async => widget.menu.activePageTab = index);
-  }
-
-  @override
-  void initState() {
-    super.initState();
-  }
-
-  @override
-  void didUpdateWidget(ManageContentScreen oldWidget) {
-    super.didUpdateWidget(oldWidget);
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
   }
 
   @override

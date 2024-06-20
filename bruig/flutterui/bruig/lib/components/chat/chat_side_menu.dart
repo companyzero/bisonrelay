@@ -1,5 +1,7 @@
+import 'package:bruig/components/containers.dart';
 import 'package:bruig/components/copyable.dart';
 import 'package:bruig/components/empty_widget.dart';
+import 'package:bruig/components/icons.dart';
 import 'package:bruig/components/interactive_avatar.dart';
 import 'package:bruig/components/text.dart';
 import 'package:bruig/models/client.dart';
@@ -71,12 +73,7 @@ class _ChatSideMenuState extends State<ChatSideMenu> {
 
     ChatModel chat = this.chat!;
 
-    var themeNtf = Provider.of<ThemeNotifier>(context);
-    var theme = themeNtf.getTheme();
-    var darkTextColor = theme.indicatorColor;
-    var selectedBackgroundColor = theme.highlightColor;
-
-    bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
+    bool isScreenSmall = checkIsScreenSmall(context);
 
     return Stack(alignment: Alignment.topRight, children: [
       Column(children: [
@@ -93,8 +90,8 @@ class _ChatSideMenuState extends State<ChatSideMenu> {
             margin: const EdgeInsets.all(10),
             child: Copyable.txt(Txt.S(
               chat.id,
-              // color: TextColor.onSurfaceVariant,
               overflow: TextOverflow.ellipsis,
+              color: TextColor.onSurfaceVariant,
             ))),
         Expanded(
             child: ListView.builder(
@@ -107,23 +104,18 @@ class _ChatSideMenuState extends State<ChatSideMenu> {
                       client.ui.chatSideMenuActive.clear();
                     }))),
       ]),
-      isScreenSmall
-          ? const Empty()
-          : Positioned(
-              top: 5,
-              right: 5,
-              child: Material(
-                color: selectedBackgroundColor.withOpacity(0),
-                child: IconButton(
-                  tooltip: "Close",
-                  hoverColor: selectedBackgroundColor,
-                  splashRadius: 15,
-                  iconSize: 15,
-                  onPressed: client.ui.chatSideMenuActive.clear,
-                  icon: Icon(color: darkTextColor, Icons.close_outlined),
-                ),
-              ),
-            ),
+      if (!isScreenSmall)
+        Positioned(
+            top: 5,
+            right: 5,
+            child: IconButton(
+              tooltip: "Close",
+              splashRadius: 15,
+              iconSize: 15,
+              onPressed: client.ui.chatSideMenuActive.clear,
+              icon: const ColoredIcon(Icons.close_outlined,
+                  color: TextColor.onSurface),
+            ))
     ]);
   }
 }
@@ -131,7 +123,8 @@ class _ChatSideMenuState extends State<ChatSideMenu> {
 // ScreenWithChatSideMenu is a screen that can show the chat side menu.
 class ScreenWithChatSideMenu extends StatelessWidget {
   final Widget child;
-  const ScreenWithChatSideMenu(this.child, {super.key});
+  final ClientModel client;
+  const ScreenWithChatSideMenu(this.client, this.child, {super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -146,12 +139,31 @@ class ScreenWithChatSideMenu extends StatelessWidget {
                   : ChatSideMenu(client));
     }
 
-    return Row(children: [
-      Expanded(child: child),
+    // Alternate chat menu layout: stack on top of main view (avoids reflows
+    // and overflow errors).
+    return Stack(children: [
+      child,
       Consumer2<ChatSideMenuActiveModel, ClientModel>(
           builder: (context, chatSideMenuActive, client, child) => Visibility(
-              visible: !chatSideMenuActive.empty,
-              child: SizedBox(width: 250, child: ChatSideMenu(client)))),
+                visible: !chatSideMenuActive.empty,
+                child: Positioned(
+                    right: 0,
+                    width: 250,
+                    top: 0,
+                    height: MediaQuery.sizeOf(context).height - 60,
+                    child: Box(
+                        color: SurfaceColor.surface,
+                        child: ChatSideMenu(client))),
+              )),
     ]);
+
+    // Original layout: reflow main window.
+    // return Row(children: [
+    //   Expanded(child: child),
+    //   Consumer2<ChatSideMenuActiveModel, ClientModel>(
+    //       builder: (context, chatSideMenuActive, client, child) => Visibility(
+    //           visible: !chatSideMenuActive.empty,
+    //           child: SizedBox(width: 250, child: ChatSideMenu(client)))),
+    // ]);
   }
 }

@@ -1,4 +1,7 @@
+import 'package:bruig/components/inputs.dart';
 import 'package:bruig/components/snackbars.dart';
+import 'package:bruig/components/text.dart';
+import 'package:bruig/screens/ln/components.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
@@ -52,38 +55,13 @@ class _LNAccountsPageState extends State<LNAccountsPage> {
 
   @override
   Widget build(BuildContext context) {
-    var theme = Theme.of(context);
-    var secondaryTextColor = theme.dividerColor;
-    var darkTextColor = theme.indicatorColor;
-    var dividerColor = theme.highlightColor;
-    var backgroundColor = theme.backgroundColor;
-    var inputFill = theme.hoverColor;
-
     return Consumer<ThemeNotifier>(
         builder: (context, theme, _) => Container(
-              margin: const EdgeInsets.all(1),
-              decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(3),
-                  color: backgroundColor),
               padding: const EdgeInsets.all(16),
               child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(children: [
-                      Text("Wallet Accounts",
-                          textAlign: TextAlign.left,
-                          style: TextStyle(
-                              color: darkTextColor,
-                              fontSize: theme.getMediumFont(context))),
-                      Expanded(
-                          child: Divider(
-                        color: dividerColor, //color of divider
-                        height: 10, //height spacing of divider
-                        thickness: 1, //thickness of divier line
-                        indent: 8, //spacing at the start of divider
-                        endIndent: 5, //spacing at the end of divider
-                      )),
-                    ]),
+                    const LNInfoSectionHeader("Wallet Accounts"),
                     Expanded(
                       child: ListView.builder(
                           itemCount: accounts.length,
@@ -94,48 +72,25 @@ class _LNAccountsPageState extends State<LNAccountsPage> {
                             var unconf =
                                 formatDCR(atomsToDCR(acc.unconfirmedBalance));
                             return ListTile(
-                              title: Text(acc.name),
-                              subtitle: Text(
+                              contentPadding: EdgeInsets.zero,
+                              minVerticalPadding: 2,
+                              title: Txt.S(acc.name),
+                              subtitle: Txt.S(
                                   "$confirmed confirmed\n$unconf unconfirmed\nKeys: ${acc.internalKeyCount} internal, ${acc.externalKeyCount} external\n"),
                             );
                           }),
                     ),
-                    Row(children: [
-                      Text("Create New Account",
-                          textAlign: TextAlign.left,
-                          style: TextStyle(
-                              color: darkTextColor,
-                              fontSize: theme.getMediumFont(context))),
-                      Expanded(
-                          child: Divider(
-                        color: dividerColor, //color of divider
-                        height: 10, //height spacing of divider
-                        thickness: 1, //thickness of divier line
-                        indent: 8, //spacing at the start of divider
-                        endIndent: 5, //spacing at the end of divider
-                      )),
-                    ]),
+                    const LNInfoSectionHeader("Create New Account"),
                     const SizedBox(height: 21),
                     Row(children: [
-                      Text("Account Name:",
-                          style: TextStyle(
-                              fontSize: theme.getSmallFont(context),
-                              color: secondaryTextColor)),
+                      const Txt.S("Account Name:"),
                       const SizedBox(width: 10),
                       Expanded(
-                          child: TextField(
-                              style: TextStyle(
-                                  fontSize: theme.getSmallFont(context),
-                                  color: secondaryTextColor),
-                              controller: nameCtrl,
-                              decoration: InputDecoration(
-                                  hintText: "Name of the new account",
-                                  hintStyle: TextStyle(
-                                      fontSize: theme.getSmallFont(context),
-                                      color: secondaryTextColor),
-                                  filled: true,
-                                  fillColor: inputFill))),
-                      const SizedBox(width: 10),
+                          child: TextInput(
+                        textSize: TextSize.small,
+                        controller: nameCtrl,
+                        hintText: "Name of the new account",
+                      )),
                       ElevatedButton(
                           onPressed: createAccount, child: const Text("Create"))
                     ]),

@@ -1,11 +1,10 @@
 import 'dart:io';
 
 import 'package:bruig/components/snackbars.dart';
+import 'package:bruig/screens/ln/components.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/golib_plugin.dart';
-import 'package:provider/provider.dart';
-import 'package:bruig/theme_manager.dart';
 
 class LNBackupsPage extends StatefulWidget {
   const LNBackupsPage({Key? key}) : super(key: key);
@@ -53,79 +52,37 @@ class _LNBackupsPageState extends State<LNBackupsPage> {
 
   @override
   Widget build(BuildContext context) {
-    var theme = Theme.of(context);
-    var textColor = theme.focusColor;
-    var darkTextColor = theme.indicatorColor;
-    var dividerColor = theme.highlightColor;
-    var backgroundColor = theme.backgroundColor;
-    bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
-
-    return Consumer<ThemeNotifier>(
-        builder: (context, theme, _) => Container(
-            margin: const EdgeInsets.all(1),
-            decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(3), color: backgroundColor),
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(children: [
-                  Text("Backups",
-                      textAlign: TextAlign.left,
-                      style: TextStyle(
-                          color: darkTextColor,
-                          fontSize: theme.getMediumFont(context))),
-                  Expanded(
-                      child: Divider(
-                    color: dividerColor, //color of divider
-                    height: 10, //height spacing of divider
-                    thickness: 1, //thickness of divier line
-                    indent: 8, //spacing at the start of divider
-                    endIndent: 5, //spacing at the end of divider
-                  )),
-                ]),
-                const SizedBox(height: 30),
-                Center(
-                    child: SizedBox(
-                        width: 650,
-                        child: Text('''
+    return Container(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const LNInfoSectionHeader("Backups"),
+            const SizedBox(height: 8),
+            const SizedBox(
+                width: 650,
+                child: Text(
+                  '''
 LN funds are locked in channels which cannot be recovered from the seed alone. 
 
 Static Channel Backup (SCB) files are needed to request that remote hosts close channels with the local wallet after the wallet is restored from seed. 
 
 This backup file needs to be updated every time a channel is opened or closed, or users are at risk of losing access to their funds.
 ''',
-                            style: TextStyle(
-                                color: theme.getTheme().focusColor,
-                                fontSize: theme.getMediumFont(context),
-                                fontWeight: FontWeight.w300)))),
-                const SizedBox(height: 30),
-                Center(
-                    child: ConstrainedBox(
-                        constraints:
-                            const BoxConstraints(maxWidth: 400, maxHeight: 100),
-                        child: Flex(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            direction:
-                                isScreenSmall ? Axis.vertical : Axis.horizontal,
-                            children: [
-                              ElevatedButton(
-                                  onPressed: saveSCB,
-                                  child: Text("Save SCB file",
-                                      style: TextStyle(
-                                          fontSize:
-                                              theme.getMediumFont(context),
-                                          color: textColor))),
-                              ElevatedButton(
-                                  onPressed: restoreSCB,
-                                  child: Text("Restore SCB file",
-                                      style: TextStyle(
-                                          fontSize:
-                                              theme.getMediumFont(context),
-                                          color: textColor))),
-                            ])))
-              ],
-            )));
+                )),
+            const SizedBox(height: 8),
+            Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                spacing: 10,
+                runSpacing: 20,
+                children: [
+                  OutlinedButton(
+                      onPressed: saveSCB, child: const Text("Save SCB file")),
+                  OutlinedButton(
+                      onPressed: restoreSCB,
+                      child: const Text("Restore SCB file")),
+                ])
+          ],
+        ));
   }
 }

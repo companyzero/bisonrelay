@@ -4,7 +4,6 @@ import 'dart:convert';
 import 'package:flutter/services.dart';
 import 'all_platforms.dart';
 import 'package:golib_plugin/definitions.dart';
-import 'package:golib_plugin/mock.dart';
 
 T _cast<T>(x) => x is T ? x : throw "Not a $T";
 
@@ -27,7 +26,7 @@ mixin BaseMobilePlatform on ChanneledPlatform, NtfStreams {
       await channel.invokeMethod('writeStr', <String, dynamic>{'s': s});
 
   Stream<String> readStream() {
-    var channel = EventChannel('readStream');
+    var channel = const EventChannel('readStream');
     var stream = channel.receiveBroadcastStream();
     return stream.map<String>((e) => _cast<String>(e));
   }

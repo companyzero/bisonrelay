@@ -1,10 +1,11 @@
+import 'package:bruig/components/copyable.dart';
 import 'package:bruig/components/snackbars.dart';
+import 'package:bruig/components/text.dart';
 import 'package:bruig/models/client.dart';
+import 'package:bruig/screens/startupscreen.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
-import 'package:bruig/theme_manager.dart';
-import 'package:provider/provider.dart';
 
 class ContactsLastMsgTimesScreen extends StatefulWidget {
   static const routeName = "contactsLastMsgTimes";
@@ -28,39 +29,27 @@ class _UserLastMsgTime extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    var theme = Theme.of(context);
-    var textColor = theme.dividerColor;
     return Container(
       margin: const EdgeInsets.only(top: 5),
       child: Row(children: [
-        Flexible(
-            flex: 1,
-            child: Text(
-              DateTime.fromMillisecondsSinceEpoch(info.lastDecrypted * 1000)
-                  .toIso8601String(),
-              style: TextStyle(color: textColor),
-              overflow: TextOverflow.ellipsis,
-            )),
-        const SizedBox(width: 10),
         Text(
-          chat.nick,
-          style: TextStyle(color: textColor),
+          DateTime.fromMillisecondsSinceEpoch(info.lastDecrypted * 1000)
+              .toIso8601String(),
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontFeatures: [FontFeature.tabularFigures()]),
         ),
         const SizedBox(width: 10),
+        Text(chat.nick),
+        const SizedBox(width: 10),
         Expanded(
-            flex: 3,
-            child: Text(
-              info.uid,
-              style: TextStyle(color: textColor),
-              overflow: TextOverflow.ellipsis,
-            )),
-        IconButton(
-            onPressed: () => requestRatchetReset(context),
-            tooltip: "Request a Ratchet Reset",
-            icon: Icon(
-              Icons.restore,
-              color: textColor,
-            ))
+            child:
+                Copyable.txt(Txt(info.uid, overflow: TextOverflow.ellipsis))),
+        Align(
+            alignment: Alignment.bottomRight,
+            child: IconButton(
+                onPressed: () => requestRatchetReset(context),
+                tooltip: "Request a Ratchet Reset",
+                icon: const Icon(Icons.restore)))
       ]),
     );
   }
@@ -95,33 +84,19 @@ class _ContactsLastMsgTimesScreenState
 
   @override
   Widget build(BuildContext context) {
-    var theme = Theme.of(context);
-    var textColor = theme.dividerColor;
-    return Consumer<ThemeNotifier>(
-        builder: (context, theme, child) => Scaffold(
-              body: Center(
-                  child: Container(
-                      padding: const EdgeInsets.all(40),
-                      child: Column(
-                        children: [
-                          Text(
-                            "Last Message Time",
-                            style: TextStyle(
-                                color: textColor,
-                                fontSize: theme.getLargeFont(context)),
-                          ),
-                          Expanded(
-                              child: ListView.builder(
-                                  itemCount: users.length,
-                                  itemBuilder: (context, index) =>
-                                      _UserLastMsgTime(
-                                          users[index],
-                                          client.getExistingChat(
-                                              users[index].uid)!))),
-                          ElevatedButton(
-                              onPressed: onDone, child: const Text("Done"))
-                        ],
-                      ))),
-            ));
+    return StartupScreen(
+      [
+        const Txt.H("Last Message Time"),
+        Container(
+            padding: const EdgeInsets.only(right: 12),
+            child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: users.length,
+                itemBuilder: (context, index) => _UserLastMsgTime(
+                    users[index], client.getExistingChat(users[index].uid)!))),
+      ],
+      fab: FloatingActionButton.small(
+          onPressed: onDone, child: const Icon(Icons.done)),
+    );
   }
 }

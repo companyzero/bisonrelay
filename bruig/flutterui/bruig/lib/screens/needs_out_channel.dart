@@ -1,8 +1,11 @@
 import 'dart:async';
 
-import 'package:bruig/components/buttons.dart';
+import 'package:bruig/components/collapsable.dart';
 import 'package:bruig/components/dcr_input.dart';
+import 'package:bruig/components/info_grid.dart';
+import 'package:bruig/components/inputs.dart';
 import 'package:bruig/components/snackbars.dart';
+import 'package:bruig/components/text.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/models/notifications.dart';
 import 'package:bruig/screens/startupscreen.dart';
@@ -10,7 +13,7 @@ import 'package:flutter/material.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:golib_plugin/util.dart';
 import 'package:bruig/theme_manager.dart';
-import 'package:provider/provider.dart';
+import 'package:tuple/tuple.dart';
 
 class NeedsOutChannelScreen extends StatefulWidget {
   static const routeName = "/needsOutChannel";
@@ -37,7 +40,6 @@ class _NeedsOutChannelScreenState extends State<NeedsOutChannelScreen> {
   TextEditingController peerCtrl = TextEditingController();
   AmountEditingController amountCtrl = AmountEditingController();
   String preventMsg = "foo";
-  bool showAdvanced = false;
 
   void getNewAddress() async {
     try {
@@ -142,22 +144,15 @@ open channels to other LN nodes.''';
           peerCtrl.text =
               "03bd03386d7b2efe80ae46d6c8cfcfdfcf9c9297a465ac0d48c110d11ae58ed509@hub0.bisonrelay.org:9735";
         });
+      } else if (res.chains[0].network == "simnet") {
+        setState(() {
+          peerCtrl.text =
+              "03bb9246b8eaacde90c3b9e7a0539b0b70cde514ec0d2571c68063ac15edac5534@127.0.0.1:20102";
+        });
       }
     } catch (exception) {
       showErrorSnackbar(context, "Unable to verify network: $exception");
     }
-  }
-
-  void showAdvancedArea() {
-    setState(() {
-      showAdvanced = true;
-    });
-  }
-
-  void hideAdvancedArea() {
-    setState(() {
-      showAdvanced = false;
-    });
   }
 
   @override
@@ -176,184 +171,84 @@ open channels to other LN nodes.''';
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<ThemeNotifier>(
-      builder: (context, theme, child) => StartupScreen(
-        [
-          Center(
-            child: Text("Setting up Bison Relay",
-                style: TextStyle(
-                    color: theme.getTheme().dividerColor,
-                    fontSize: theme.getHugeFont(context),
-                    fontWeight: FontWeight.w200)),
-          ),
-          const SizedBox(height: 20),
-          Center(
-            child: Text("Add Outbound Capacity",
-                style: TextStyle(
-                    color: theme.getTheme().focusColor,
-                    fontSize: theme.getLargeFont(context),
-                    fontWeight: FontWeight.w300)),
-          ),
-          const SizedBox(height: 20),
-          Center(
-            child: SizedBox(
-                width: 650,
-                child: Text(
-                  '''
+    return StartupScreen([
+      const Center(child: Txt.H("Setting up Bison Relay")),
+      const SizedBox(height: 20),
+      const Txt.L("Add Outbound Capacity"),
+      const SizedBox(height: 20),
+      const SizedBox(
+          width: 650,
+          child: Text(
+            '''
 The wallet requires LN channels with outbound capacity to send funds ("bandwidth") in order to pay for messages to and from the server and to pay other users for their content.
                       ''',
-                  style: TextStyle(
-                      color: theme.getTheme().focusColor,
-                      fontSize: theme.getMediumFont(context),
-                      fontWeight: FontWeight.w300),
-                )),
-          ),
-          const SizedBox(height: 10),
-          ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 400),
-              child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                        textAlign: TextAlign.left,
-                        "Wallet Balance:",
-                        style: TextStyle(
-                            color: theme.getTheme().indicatorColor,
-                            fontSize: theme.getSmallFont(context),
-                            fontWeight: FontWeight.w300)),
-                    Text(
-                        textAlign: TextAlign.right,
-                        formatDCR(atomsToDCR(walletBalance)),
-                        style: TextStyle(
-                            color: theme.getTheme().indicatorColor,
-                            fontSize: theme.getSmallFont(context),
-                            fontWeight: FontWeight.w300)),
-                  ])),
-          const SizedBox(height: 3),
-          ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 400),
-              child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                        textAlign: TextAlign.left,
-                        "Outbound Channel Capacity:",
-                        style: TextStyle(
-                            color: theme.getTheme().indicatorColor,
-                            fontSize: theme.getSmallFont(context),
-                            fontWeight: FontWeight.w300)),
-                    Text(
-                        textAlign: TextAlign.right,
-                        formatDCR(atomsToDCR(maxOutAmount)),
-                        style: TextStyle(
-                            color: theme.getTheme().indicatorColor,
-                            fontSize: theme.getSmallFont(context),
-                            fontWeight: FontWeight.w300))
-                  ])),
-          ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 400),
-              child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                        textAlign: TextAlign.left,
-                        "Pending Channels:",
-                        style: TextStyle(
-                            color: theme.getTheme().indicatorColor,
-                            fontSize: theme.getSmallFont(context),
-                            fontWeight: FontWeight.w300)),
-                    Text(
-                        textAlign: TextAlign.right,
-                        "$numPendingChannels",
-                        style: TextStyle(
-                            color: theme.getTheme().indicatorColor,
-                            fontSize: theme.getSmallFont(context),
-                            fontWeight: FontWeight.w300))
-                  ])),
-          ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 400),
-              child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                        textAlign: TextAlign.left,
-                        "Active Channels:",
-                        style: TextStyle(
-                            color: theme.getTheme().indicatorColor,
-                            fontSize: theme.getSmallFont(context),
-                            fontWeight: FontWeight.w300)),
-                    Text(
-                        textAlign: TextAlign.right,
-                        "$numChannels",
-                        style: TextStyle(
-                            color: theme.getTheme().indicatorColor,
-                            fontSize: theme.getSmallFont(context),
-                            fontWeight: FontWeight.w300))
-                  ])),
-          const SizedBox(height: 10),
-          preventMsg == ""
-              ? Column(children: [
-                  Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                    Text("Amount",
-                        style: TextStyle(
-                            color: theme.getTheme().indicatorColor,
-                            fontSize: theme.getMediumFont(context),
-                            fontWeight: FontWeight.w300)),
-                    const SizedBox(
-                      width: 10,
-                    ),
-                    SizedBox(
-                      width: 150,
-                      child: dcrInput(controller: amountCtrl),
-                    )
-                  ]),
-                  const SizedBox(height: 10),
-                  LoadingScreenButton(
-                    empty: true,
-                    onPressed:
-                        showAdvanced ? hideAdvancedArea : showAdvancedArea,
-                    text: showAdvanced ? "Hide Advanced" : "Show Advanced",
-                  ),
-                  const SizedBox(height: 10),
-                  LoadingScreenButton(
-                    onPressed: !loading ? openChannel : null,
-                    text: "Request Outbound Channel",
-                  ),
-                  showAdvanced
-                      ? Column(children: [
-                          const SizedBox(height: 10),
-                          Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text("Peer ID and Address",
-                                    style: TextStyle(
-                                        color: theme.getTheme().indicatorColor,
-                                        fontSize: theme.getSmallFont(context),
-                                        fontWeight: FontWeight.w300)),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                    child: TextField(
-                                  style: TextStyle(
-                                      color: theme.getTheme().focusColor,
-                                      fontSize: theme.getSmallFont(context),
-                                      fontWeight: FontWeight.w300),
-                                  controller: peerCtrl,
-                                  decoration: const InputDecoration(
-                                      hintText: "node-pub-key@addr:port"),
-                                ))
-                              ]),
-                          const SizedBox(height: 10),
-                        ])
-                      : const SizedBox(height: 10),
-                ])
-              : Text(preventMsg,
-                  style: TextStyle(color: theme.getTheme().dividerColor)),
-          LoadingScreenButton(
-            onPressed: () => Navigator.of(context).pop(),
-            text: "Skip",
-          ),
-        ],
+          )),
+      SizedBox(
+          width: 350,
+          child: SimpleInfoGrid(
+              colLabelSize: 200,
+              separatorWidth: 0,
+              useListBuilder: false,
+              rowAlignment: MainAxisAlignment.spaceBetween,
+              [
+                Tuple2(
+                    const Txt.S("Wallet Balance:",
+                        color: TextColor.onSurfaceVariant),
+                    Txt.S(formatDCR(atomsToDCR(walletBalance)),
+                        color: TextColor.onSurfaceVariant)),
+                Tuple2(
+                    const Txt.S("Outbound Channel Capacity:",
+                        color: TextColor.onSurfaceVariant),
+                    Txt.S(formatDCR(atomsToDCR(maxOutAmount)),
+                        color: TextColor.onSurfaceVariant)),
+                Tuple2(
+                    const Txt.S("Pending Channels:",
+                        color: TextColor.onSurfaceVariant),
+                    Txt.S(numPendingChannels.toString(),
+                        color: TextColor.onSurfaceVariant)),
+                Tuple2(
+                    const Txt.S("Active Channels:",
+                        color: TextColor.onSurfaceVariant),
+                    Txt.S(numChannels.toString(),
+                        color: TextColor.onSurfaceVariant)),
+              ])),
+      const SizedBox(height: 10),
+      ...(preventMsg != ""
+          ? [Text(preventMsg)]
+          : [
+              Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                const Text("Amount:"),
+                const SizedBox(width: 10),
+                SizedBox(width: 200, child: dcrInput(controller: amountCtrl))
+              ]),
+              const SizedBox(height: 10),
+              SizedBox(
+                  width: 600,
+                  child: Collapsable("Advanced Channel Config",
+                      child: Column(children: [
+                        Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Txt.S("Peer ID and Address"),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                  child: TextInput(
+                                      controller: peerCtrl,
+                                      hintText: "node-pub-key@addr:port"))
+                            ]),
+                        const SizedBox(height: 10),
+                      ]))),
+              const SizedBox(height: 20),
+              FilledButton.tonal(
+                onPressed: !loading ? openChannel : null,
+                child: const Txt.S("Request Outbound Channel"),
+              ),
+            ]),
+      const SizedBox(height: 20),
+      OutlinedButton(
+        onPressed: () => Navigator.of(context).pop(),
+        child: const Text("Skip"),
       ),
-    );
+    ]);
   }
 }

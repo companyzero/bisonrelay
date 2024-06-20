@@ -2,7 +2,9 @@ import 'dart:async';
 
 import 'package:bruig/components/copyable.dart';
 import 'package:bruig/components/buttons.dart';
+import 'package:bruig/components/info_grid.dart';
 import 'package:bruig/components/snackbars.dart';
+import 'package:bruig/components/text.dart';
 import 'package:bruig/models/notifications.dart';
 import 'package:bruig/screens/startupscreen.dart';
 import 'package:file_picker/file_picker.dart';
@@ -114,67 +116,46 @@ class _NeedsFundsScreenState extends State<NeedsFundsScreen> {
     super.dispose();
   }
 
-  Widget buildFundsWidget(BuildContext context) {
-    return Consumer<ThemeNotifier>(builder: (context, theme, child) {
-      var ts = TextStyle(
-          color: theme.getTheme().focusColor,
-          fontSize: theme.getMediumFont(context),
-          fontWeight: FontWeight.w300);
+  List<Widget> buildFundsWidgets(BuildContext context) {
+    if (redeemed != null) {
+      var total = formatDCR(atomsToDCR(redeemed!.total));
+      return [
+        Text("Redeemed $total on the following tx:"),
+        Copyable(redeemed!.txid),
+        const Text("The funds will be available after the tx is mined."),
+      ];
+    }
 
-      if (redeemed != null) {
-        var total = formatDCR(atomsToDCR(redeemed!.total));
-        return Column(children: [
-          Text("Redeemed $total on the following tx:", style: ts),
-          Copyable(redeemed!.txid, textStyle: ts),
-          Text("The funds will be available after the tx is mined.", style: ts),
-        ]);
-      }
+    if (redeeming) {
+      return [
+        const Text("Attempting to redeem funds from invite file.\n"),
+      ];
+    }
 
-      if (redeeming) {
-        return Column(children: [
-          Text("Attempting to redeem funds from invite file.\n", style: ts),
-        ]);
-      }
-
-      return Column(mainAxisAlignment: MainAxisAlignment.start, children: [
-        SizedBox(width: 650, child: Text('''
+    return [
+      const Text('''
 If someone sent you an invite file with funds, you may also attempt to redeem it by clicking the button.
-''', style: ts)),
-        ElevatedButton(
-            onPressed: redeemFunds, child: const Text("Redeem Funds")),
-      ]);
-    });
+'''),
+      OutlinedButton(onPressed: redeemFunds, child: const Text("Redeem Funds")),
+    ];
   }
 
   @override
   Widget build(BuildContext context) {
     return Consumer<ThemeNotifier>(
       builder: (context, theme, child) => StartupScreen(
+        childrenWidth: 650,
         [
-          Text("Setting up Bison Relay",
-              style: TextStyle(
-                  color: theme.getTheme().dividerColor,
-                  fontSize: theme.getHugeFont(context),
-                  fontWeight: FontWeight.w200)),
+          const Txt.H("Setting up Bison Relay"),
           const SizedBox(height: 20),
-          Text("Receive Wallet Funds",
-              style: TextStyle(
-                  color: theme.getTheme().focusColor,
-                  fontSize: theme.getLargeFont(context),
-                  fontWeight: FontWeight.w300)),
+          const Txt.L("Receive Wallet Funds"),
           const SizedBox(height: 20),
-          SizedBox(
-              width: 650,
-              child: Text('''
+          const Text('''
 The wallet requires on-chain DCR funds to be able to open Lightning Network (LN) channels and perform payments to the server and other users of the Bison Relay network.
 
 Send DCR funds to the following address to receive funds in your wallet. Note that the wallet seed will be needed to recover these funds if the wallet data in this computer is corrupted or lost.
-''',
-                  style: TextStyle(
-                      color: theme.getTheme().focusColor,
-                      fontSize: theme.getMediumFont(context),
-                      fontWeight: FontWeight.w300))),
-          buildFundsWidget(context),
+'''),
+          ...buildFundsWidgets(context),
           const SizedBox(height: 13),
           Container(
               margin: const EdgeInsets.all(10),
@@ -185,53 +166,22 @@ Send DCR funds to the following address to receive funds in your wallet. Note th
                 size: 200.0,
               )),
           const SizedBox(height: 13),
-          Container(
-              color: theme.getTheme().cardColor,
-              padding: const EdgeInsets.only(
-                  left: 22, top: 18, right: 22, bottom: 18),
-              child: Copyable(addr,
-                  textStyle: TextStyle(
-                      color: theme.getTheme().dividerColor,
-                      fontSize: theme.getMediumFont(context)))),
-          const SizedBox(height: 9),
-          SizedBox(
-              width: 400,
-              child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text("Unconfirmed wallet balance:",
-                        style: TextStyle(
-                            color: theme.getTheme().indicatorColor,
-                            fontSize: theme.getSmallFont(context),
-                            fontWeight: FontWeight.w300)),
-                    Text(formatDCR(atomsToDCR(unconfirmedBalance)),
-                        style: TextStyle(
-                            color: theme.getTheme().indicatorColor,
-                            fontSize: theme.getSmallFont(context),
-                            fontWeight: FontWeight.w300)),
-                  ])),
-          const SizedBox(height: 3),
-          SizedBox(
-              width: 400,
-              child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                        textAlign: TextAlign.left,
-                        "Confirmed wallet balance:",
-                        style: TextStyle(
-                            color: theme.getTheme().indicatorColor,
-                            fontSize: theme.getSmallFont(context),
-                            fontWeight: FontWeight.w300)),
-                    Text(
-                        textAlign: TextAlign.right,
-                        formatDCR(atomsToDCR(confirmedBalance)),
-                        style: TextStyle(
-                            color: theme.getTheme().indicatorColor,
-                            fontSize: theme.getSmallFont(context),
-                            fontWeight: FontWeight.w300))
-                  ])),
-          const SizedBox(height: 10),
+          Copyable(addr),
+          const SizedBox(height: 15),
+          SimpleInfoGridAdv(
+              rowAlignment: MainAxisAlignment.center,
+              colLabelSize: 180,
+              items: [
+                [
+                  "Unconfirmed wallet balance",
+                  formatDCR(atomsToDCR(unconfirmedBalance))
+                ],
+                [
+                  "Confirmed wallet balance",
+                  formatDCR(atomsToDCR(confirmedBalance))
+                ],
+              ]),
+          const SizedBox(height: 20),
           LoadingScreenButton(
             onPressed: () => Navigator.of(context).pop(),
             text: "Finish",

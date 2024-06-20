@@ -1174,8 +1174,16 @@ class LNPeer {
 }
 
 String hexToBase64(String? s) => s != null ? base64Encode(hex.decode(s)) : "";
-String base64ToHex(String s) => s != null ? hex.encode(base64Decode(s)) : "";
+String base64ToHex(String s) => s != "" ? hex.encode(base64Decode(s)) : "";
+String base64ToHexReversed(String s) =>
+    s != "" ? hex.encode(base64Decode(s).reversed.toList()) : "";
 String uint8listToBase64(Uint8List? b) => b != null ? base64Encode(b) : "";
+String uint8listToHexReversed(Uint8List? b) =>
+    b != null ? hex.encode(b.reversed.toList()) : "";
+String dynListToHexReversed(List<dynamic>? b) => b != null
+    ? uint8listToHexReversed(
+        Uint8List.fromList(b.map((e) => e as int).toList()))
+    : "";
 Uint8List? base64ToUint8list(String? s) =>
     s != null && s != "" ? base64Decode(s) : null;
 int hexToUint64(String s) =>
@@ -1319,7 +1327,7 @@ class LNNewWalletSeed {
 class LNInitialChainSyncUpdate {
   @JsonKey(name: "block_height", defaultValue: 0)
   final int blockHeight;
-  @JsonKey(name: "block_hash", fromJson: base64ToHex)
+  @JsonKey(name: "block_hash", fromJson: base64ToHexReversed)
   final String blockHash;
   @JsonKey(name: "block_timestamp", defaultValue: 0)
   final int blockTimestamp;
@@ -1857,8 +1865,9 @@ class OnboardState {
   final OnboardStage stage;
   final String? key;
   final OOBPublicIdentityInvite? invite;
-  final String? redeemTx;
-  @JsonKey(defaultValue: 0)
+  @JsonKey(name: "redeem_tx", fromJson: dynListToHexReversed)
+  final String redeemTx;
+  @JsonKey(name: "redeem_amount", defaultValue: 0)
   final int redeemAmount;
   @JsonKey(name: "out_channel_id")
   final String outChannelID;
@@ -2410,7 +2419,7 @@ mixin NtfStreams {
 }
 
 abstract class PluginPlatform {
-  Future<String?> get platformVersion async {}
+  Future<String?> get platformVersion => throw "unimplemented";
   String get majorPlatform => "unknown-major-plat";
   String get minorPlatform => "unknown-minor-plat";
   Future<void> setTag(String tag) async => throw "unimplemented";

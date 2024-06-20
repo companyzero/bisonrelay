@@ -1,5 +1,3 @@
-import 'dart:io';
-import 'package:path/path.dart' as path;
 import 'definitions.dart';
 import 'all_platforms.dart';
 import 'desktop.dart';
@@ -10,6 +8,7 @@ class LinuxPlugin extends PluginPlatform
         BaseChanneledCalls,
         NtfStreams,
         BaseDesktopPlatform {
+  @override
   String get minorPlatform => "linux";
 
   LinuxPlugin() {

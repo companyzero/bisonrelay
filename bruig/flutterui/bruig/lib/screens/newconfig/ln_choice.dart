@@ -1,10 +1,8 @@
-import 'package:bruig/components/empty_widget.dart';
+import 'package:bruig/components/text.dart';
 import 'package:bruig/models/newconfig.dart';
 import 'package:bruig/screens/startupscreen.dart';
 import 'package:flutter/material.dart';
 import 'package:bruig/components/buttons.dart';
-import 'package:provider/provider.dart';
-import 'package:bruig/theme_manager.dart';
 
 class LNChoicePage extends StatelessWidget {
   final NewConfigModel newconf;
@@ -28,38 +26,24 @@ class LNChoicePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<ThemeNotifier>(
-        builder: (context, theme, _) => StartupScreen([
-              Text("Setting up Bison Relay",
-                  style: TextStyle(
-                      color: theme.getTheme().dividerColor,
-                      fontSize: theme.getHugeFont(context),
-                      fontWeight: FontWeight.w200)),
-              const SizedBox(height: 20),
-              Text("Choose Network Mode",
-                  style: TextStyle(
-                      color: theme.getTheme().focusColor,
-                      fontSize: theme.getLargeFont(context),
-                      fontWeight: FontWeight.w300)),
-              const SizedBox(height: 34),
-              Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                LoadingScreenButton(
-                    onPressed: () => setChoice(context, LNNodeType.internal),
-                    text: "Internal",
-                    empty: true),
-                const SizedBox(width: 13),
-                LoadingScreenButton(
-                    onPressed: () => setChoice(context, LNNodeType.external),
-                    text: "External",
-                    empty: true),
-              ]),
-              Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                TextButton(
-                  onPressed: () => goBack(context),
-                  child: Text("Go Back",
-                      style: TextStyle(color: theme.getTheme().dividerColor)),
-                )
-              ])
-            ]));
+    return StartupScreen([
+      const Txt.H("Setting up Bison Relay"),
+      const SizedBox(height: 20),
+      const Txt.L("Choose Network Mode"),
+      const SizedBox(height: 34),
+      Wrap(spacing: 10, runSpacing: 10, children: [
+        LoadingScreenButton(
+            onPressed: () => setChoice(context, LNNodeType.internal),
+            text: "Internal",
+            empty: true),
+        LoadingScreenButton(
+            onPressed: () => setChoice(context, LNNodeType.external),
+            text: "External",
+            empty: true),
+      ]),
+      const SizedBox(height: 30),
+      TextButton(
+          onPressed: () => goBack(context), child: const Text("Go Back")),
+    ]);
   }
 }

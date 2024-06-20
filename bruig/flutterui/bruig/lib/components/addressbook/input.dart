@@ -1,22 +1,21 @@
 import 'package:bruig/screens/chats.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:bruig/theme_manager.dart';
-import 'package:provider/provider.dart';
 
-class Input extends StatefulWidget {
+class ChatSearchInput extends StatefulWidget {
   final CustomInputFocusNode inputFocusNode;
   final bool createGroupChat;
   final ValueChanged<String> onChanged;
-  const Input(this.inputFocusNode, this.createGroupChat, this.onChanged,
+  const ChatSearchInput(
+      this.inputFocusNode, this.createGroupChat, this.onChanged,
       {Key? key})
       : super(key: key);
 
   @override
-  State<Input> createState() => _InputState();
+  State<ChatSearchInput> createState() => _ChatSearchInputState();
 }
 
-class _InputState extends State<Input> {
+class _ChatSearchInputState extends State<ChatSearchInput> {
   final controller = TextEditingController();
 
   final FocusNode node = FocusNode();
@@ -32,7 +31,7 @@ class _InputState extends State<Input> {
   }
 
   @override
-  void didUpdateWidget(Input oldWidget) {
+  void didUpdateWidget(ChatSearchInput oldWidget) {
     super.didUpdateWidget(oldWidget);
     widget.inputFocusNode.inputFocusNode.requestFocus();
   }
@@ -50,60 +49,32 @@ class _InputState extends State<Input> {
 
   @override
   Widget build(BuildContext context) {
-    var theme = Theme.of(context);
-    var textColor = theme.focusColor; // MESSAGE TEXT COLOR
-    var hoverColor = theme.hoverColor;
-    var hintTextColor = theme.dividerColor;
     bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
-    return Consumer<ThemeNotifier>(
-        builder: (context, theme, _) => RawKeyboardListener(
-              focusNode: node,
-              onKey: handleKeyPress,
-              child: Container(
-                margin: const EdgeInsets.only(bottom: 5),
-                child: Row(
-                  children: [
-                    Expanded(
-                        child: TextField(
-                      autofocus: isScreenSmall ? false : true,
-                      focusNode: widget.inputFocusNode.inputFocusNode,
-                      style: TextStyle(
-                        fontSize: theme.getMediumFont(context),
-                        color: textColor,
-                      ),
-                      controller: controller,
-                      minLines: 1,
-                      maxLines: null,
-                      //textInputAction: TextInputAction.done,
-                      //style: normalTextStyle,
-                      keyboardType: TextInputType.multiline,
-                      decoration: InputDecoration(
-                        hoverColor: hoverColor,
-                        isDense: true,
-                        hintText:
-                            'Search name of user ${widget.createGroupChat ? "" : "or group chat"}',
-                        hintStyle: TextStyle(
-                          fontSize: theme.getMediumFont(context),
-                          color: hintTextColor,
-                        ),
-                        errorBorder: const OutlineInputBorder(
-                            borderRadius: BorderRadius.all(Radius.circular(30)),
-                            borderSide:
-                                BorderSide(color: Colors.red, width: 2)),
-                        focusedBorder: OutlineInputBorder(
-                            borderRadius:
-                                const BorderRadius.all(Radius.circular(30)),
-                            borderSide: BorderSide(color: textColor, width: 2)),
-                        border: OutlineInputBorder(
-                            borderRadius:
-                                const BorderRadius.all(Radius.circular(30)),
-                            borderSide: BorderSide(color: textColor, width: 1)),
-                      ),
-                    )),
-                  ],
+    return RawKeyboardListener(
+        focusNode: node,
+        onKey: handleKeyPress,
+        child: Container(
+            margin: const EdgeInsets.only(bottom: 5),
+            child: Row(children: [
+              Expanded(
+                child: TextField(
+                  autofocus: isScreenSmall ? false : true,
+                  focusNode: widget.inputFocusNode.inputFocusNode,
+                  controller: controller,
+                  minLines: 1,
+                  maxLines: null,
+                  keyboardType: TextInputType.multiline,
+                  decoration: InputDecoration(
+                    isDense: true,
+                    hintText:
+                        'Search name of user ${widget.createGroupChat ? "" : "or group chat"}',
+                    border: const OutlineInputBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(30)),
+                        borderSide: BorderSide(width: 1)),
+                  ),
                 ),
-              ),
-            ));
+              )
+            ])));
   }
 }
 
@@ -158,58 +129,27 @@ class _GroupChatNameInputState extends State<GroupChatNameInput> {
 
   @override
   Widget build(BuildContext context) {
-    var theme = Theme.of(context);
-    var textColor = theme.focusColor; // MESSAGE TEXT COLOR
-    var hoverColor = theme.hoverColor;
-    var hintTextColor = theme.dividerColor;
-    return Consumer<ThemeNotifier>(
-        builder: (context, theme, _) => RawKeyboardListener(
-              focusNode: node,
-              onKey: handleKeyPress,
-              child: Container(
-                margin: const EdgeInsets.only(bottom: 5),
-                child: Row(
-                  children: [
-                    Expanded(
-                        child: TextField(
-                      autofocus: true,
-                      focusNode: widget.inputFocusNode.inputFocusNode,
-                      style: TextStyle(
-                        fontSize: theme.getMediumFont(context),
-                        color: textColor,
-                      ),
-                      onChanged: widget.updateGcName,
-                      controller: controller,
-                      minLines: 1,
-                      maxLines: null,
-                      //textInputAction: TextInputAction.done,
-                      //style: normalTextStyle,
-                      keyboardType: TextInputType.multiline,
-                      decoration: InputDecoration(
-                        hoverColor: hoverColor,
-                        isDense: true,
-                        hintText: 'Group name (required)',
-                        hintStyle: TextStyle(
-                          fontSize: theme.getMediumFont(context),
-                          color: hintTextColor,
-                        ),
-                        errorBorder: const OutlineInputBorder(
-                            borderRadius: BorderRadius.all(Radius.circular(30)),
-                            borderSide:
-                                BorderSide(color: Colors.red, width: 2)),
-                        focusedBorder: OutlineInputBorder(
-                            borderRadius:
-                                const BorderRadius.all(Radius.circular(30)),
-                            borderSide: BorderSide(color: textColor, width: 2)),
-                        border: OutlineInputBorder(
-                            borderRadius:
-                                const BorderRadius.all(Radius.circular(30)),
-                            borderSide: BorderSide(color: textColor, width: 1)),
-                      ),
-                    )),
-                  ],
-                ),
-              ),
-            ));
+    return RawKeyboardListener(
+        focusNode: node,
+        onKey: handleKeyPress,
+        child: Row(children: [
+          Expanded(
+              child: TextField(
+            autofocus: true,
+            focusNode: widget.inputFocusNode.inputFocusNode,
+            onChanged: widget.updateGcName,
+            controller: controller,
+            minLines: 1,
+            maxLines: null,
+            keyboardType: TextInputType.multiline,
+            decoration: const InputDecoration(
+              isDense: true,
+              hintText: "Group name (required)",
+              border: OutlineInputBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(30)),
+                  borderSide: BorderSide(width: 1)),
+            ),
+          )),
+        ]));
   }
 }

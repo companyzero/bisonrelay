@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:bruig/components/text.dart';
 import 'package:bruig/models/newconfig.dart';
 import 'package:bruig/screens/startupscreen.dart';
 import 'package:flutter/material.dart';
@@ -54,44 +55,25 @@ class _ConfirmLNWalletSeedPageState extends State<ConfirmLNWalletSeedPage> {
 
     var confirmSeedWords = widget.newconf.confirmSeedWords;
 
-    return Consumer<ThemeNotifier>(
-      builder: (context, theme, _) => StartupScreen([
-        Text("Setting up Bison Relay",
-            style: TextStyle(
-                color: theme.getTheme().dividerColor,
-                fontSize: theme.getHugeFont(context),
-                fontWeight: FontWeight.w200)),
-        const SizedBox(height: 20),
-        Text("Confirm New Wallet Seed",
-            style: TextStyle(
-                color: theme.getTheme().focusColor,
-                fontSize: theme.getLargeFont(context),
-                fontWeight: FontWeight.w300)),
-        const SizedBox(height: 34),
-        AnimatedOpacity(
-          opacity: _visible ? 1.0 : 0.0,
-          duration: const Duration(milliseconds: 500),
-          child: currentQuestion < confirmSeedWords.length
-              ? !answerWrong
-                  ? QuestionArea(confirmSeedWords[currentQuestion], checkAnswer)
-                  : IncorrectArea(goBack)
-              : Column(children: [
-                  Text("Seed Confirmed",
-                      style: TextStyle(
-                          color: theme.getTheme().dividerColor,
-                          fontSize: theme.getLargeFont(context),
-                          fontWeight: FontWeight.w200)),
-                  const SizedBox(height: 20),
-                  Center(
-                      child: LoadingScreenButton(
-                    onPressed: done,
-                    text: "Continue",
-                  ))
-                ]),
-        ),
-        const SizedBox(height: 34),
-      ]),
-    );
+    return StartupScreen(childrenWidth: 600, [
+      const Txt.H("Setting up Bison Relay"),
+      const SizedBox(height: 20),
+      const Txt.L("Confirm New Wallet Seed"),
+      const SizedBox(height: 34),
+      AnimatedOpacity(
+        opacity: _visible ? 1.0 : 0.0,
+        duration: const Duration(milliseconds: 500),
+        child: currentQuestion < confirmSeedWords.length
+            ? !answerWrong
+                ? QuestionArea(confirmSeedWords[currentQuestion], checkAnswer)
+                : IncorrectArea(goBack)
+            : Column(children: [
+                const Txt.L("Seed Confirmed"),
+                const SizedBox(height: 20),
+                LoadingScreenButton(onPressed: done, text: "Continue")
+              ]),
+      )
+    ]);
   }
 }
 
@@ -103,33 +85,24 @@ class QuestionArea extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    bool isScreenSmall = MediaQuery.of(context).size.width <= 500;
-    return Consumer<ThemeNotifier>(
-        builder: (context, theme, _) => Column(children: [
-              Center(
-                  child: Text("Word #${currentWords.position + 1}",
-                      style: TextStyle(
-                          color: theme.getTheme().dividerColor,
-                          fontSize: theme.getHugeFont(context),
-                          fontWeight: FontWeight.w200))),
-              const SizedBox(height: 20),
-              SizedBox(
-                  width: 600,
-                  child: Flex(
-                      direction:
-                          isScreenSmall ? Axis.vertical : Axis.horizontal,
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        for (var i in currentWords.seedWordChoices)
-                          Container(
-                              margin: const EdgeInsets.all(5),
-                              child: LoadingScreenButton(
-                                onPressed: () => checkAnswersCB(
-                                    currentWords.correctSeedWord == i),
-                                text: i,
-                              )),
-                      ]))
-            ]));
+    return Column(children: [
+      Txt.H("Word #${currentWords.position + 1}"),
+      const SizedBox(height: 20),
+      SizedBox(
+          width: double.infinity,
+          child: Wrap(
+              alignment: WrapAlignment.spaceEvenly,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                for (var i in currentWords.seedWordChoices)
+                  Container(
+                      margin: const EdgeInsets.all(5),
+                      child: LoadingScreenButton(
+                          onPressed: () =>
+                              checkAnswersCB(currentWords.correctSeedWord == i),
+                          text: i)),
+              ]))
+    ]);
   }
 }
 
@@ -140,20 +113,9 @@ class IncorrectArea extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<ThemeNotifier>(
         builder: (context, theme, _) => Column(children: [
-              Center(
-                  child: Text(
-                      "Incorrect, please go back and copy the seed again.",
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                          color: theme.getTheme().dividerColor,
-                          fontSize: theme.getLargeFont(context),
-                          fontWeight: FontWeight.w200))),
-              const SizedBox(height: 20),
-              Center(
-                  child: LoadingScreenButton(
-                onPressed: goBackCB,
-                text: "Go back",
-              )),
+              const Text("Incorrect. Please go back and copy the seed again."),
+              const SizedBox(height: 30),
+              LoadingScreenButton(onPressed: goBackCB, text: "Go back"),
             ]));
   }
 }

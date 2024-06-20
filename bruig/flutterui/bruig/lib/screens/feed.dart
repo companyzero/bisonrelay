@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:bruig/components/chat/chat_side_menu.dart';
+import 'package:bruig/components/text.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/models/uistate.dart';
 import 'package:bruig/screens/feed/user_posts.dart';
@@ -25,17 +26,11 @@ class FeedScreenTitle extends StatelessWidget {
     return Consumer2<MainMenuModel, ThemeNotifier>(
         builder: (context, menu, theme, child) {
       if (menu.activePageTab <= 0) {
-        return Text("Feed",
-            style: TextStyle(
-                fontSize: theme.getLargeFont(context),
-                color: Theme.of(context).focusColor));
+        return const Txt.L("Feed");
       }
       var idx = LnScreenSub.indexWhere((e) => e.pageTab == menu.activePageTab);
 
-      return Text("Feed / ${FeedScreenSub[idx].label}",
-          style: TextStyle(
-              fontSize: theme.getLargeFont(context),
-              color: Theme.of(context).focusColor));
+      return Txt.L("Feed / ${FeedScreenSub[idx].label}");
     });
   }
 }
@@ -157,11 +152,15 @@ class _FeedScreenState extends State<FeedScreen> {
       hasArgs = args.postScreenArgs != null || args.userPostList != null;
     }
 
-    return ScreenWithChatSideMenu(Row(children: [
-      !isScreenSmall && !hasArgs
-          ? FeedBar(onItemChanged, tabIndex)
-          : const Empty(),
-      Expanded(child: activeTab())
-    ]));
+    var client = Provider.of<ClientModel>(context);
+
+    return ScreenWithChatSideMenu(
+        client,
+        Row(children: [
+          !isScreenSmall && !hasArgs
+              ? FeedBar(onItemChanged, tabIndex)
+              : const Empty(),
+          Expanded(child: activeTab())
+        ]));
   }
 }
