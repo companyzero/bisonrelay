@@ -704,7 +704,7 @@ class ClientModel extends ChangeNotifier {
 
   final ActiveChatModel activeChat = ActiveChatModel();
   ChatModel? get active => activeChat.chat;
-  void _makeActive(ChatModel? c, {bool moveToMostRecent: false}) {
+  void _makeActive(ChatModel? c, {bool moveToMostRecent = false}) {
     // Nothing to do if this is already the active chat.
     if (c == active) {
       return;
