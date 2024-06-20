@@ -1,7 +1,7 @@
 import 'package:bruig/components/empty_widget.dart';
-import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/components/text.dart';
 import 'package:bruig/models/client.dart';
+import 'package:bruig/models/snackbar.dart';
 import 'package:bruig/models/uistate.dart';
 import 'package:bruig/screens/ln/components.dart';
 import 'package:flutter/material.dart';
@@ -75,6 +75,7 @@ class _PostListsScreenState extends State<PostListsScreen> {
   ClientModel get client => widget.client;
 
   void loadLists() async {
+    var snackbar = SnackBarModel.of(context);
     try {
       var newSubscribers = await Golib.listSubscribers();
       var newSubscriptions = await Golib.listSubscriptions();
@@ -84,7 +85,7 @@ class _PostListsScreenState extends State<PostListsScreen> {
         subscriptions = newSubscriptions;
       });
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to load post lists: $exception");
+      snackbar.error("Unable to load post lists: $exception");
     } finally {
       setState(() {
         firstLoading = false;

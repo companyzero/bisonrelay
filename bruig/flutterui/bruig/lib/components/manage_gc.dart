@@ -2,10 +2,10 @@ import 'package:bruig/components/buttons.dart';
 import 'package:bruig/components/copyable.dart';
 import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/components/info_grid.dart';
-import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/components/text.dart';
 import 'package:bruig/components/users_dropdown.dart';
 import 'package:bruig/models/client.dart';
+import 'package:bruig/models/snackbar.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
@@ -36,13 +36,13 @@ class _InviteUserPanelState extends State<_InviteUserPanel> {
     if (loading) return;
     if (userToInvite == null) return;
     setState(() => loading = true);
+    var snackbar = SnackBarModel.of(context);
 
     try {
       await Golib.inviteToGC(InviteToGC(widget.gcID, userToInvite!.id));
-      showSuccessSnackbar(
-          context, 'Sent invitation to "${userToInvite!.nick}"');
+      snackbar.success('Sent invitation to "${userToInvite!.nick}"');
     } catch (exception) {
-      showErrorSnackbar(context, 'Unable to invite: $exception');
+      snackbar.error('Unable to invite: $exception');
     } finally {
       setState(() => loading = false);
     }
@@ -181,29 +181,31 @@ class _ManageGCScreenState extends State<ManageGCScreen> {
   bool isGCOwner(String uid) => uid == gcOwner;
 
   void blockUser(String uid) async {
+    var snackbar = SnackBarModel.of(context);
     try {
       await Golib.addToGCBlockList(gcID, uid);
       reloadUsers();
     } catch (exception) {
-      showErrorSnackbar(context, 'Unable to add to GC block list: $exception');
+      snackbar.error('Unable to add to GC block list: $exception');
     } finally {
       setState(() => loading = false);
     }
   }
 
   void unblockUser(String uid) async {
+    var snackbar = SnackBarModel.of(context);
     try {
       await Golib.removeFromGCBlockList(gcID, uid);
       reloadUsers();
     } catch (exception) {
-      showErrorSnackbar(
-          context, 'Unable to remove from GC block list: $exception');
+      snackbar.error('Unable to remove from GC block list: $exception');
     } finally {
       setState(() => loading = false);
     }
   }
 
   void reloadUsers() async {
+    var snackbar = SnackBarModel.of(context);
     try {
       var gc = await Golib.getGC(gcID);
       var cli = widget.client;
@@ -230,19 +232,20 @@ class _ManageGCScreenState extends State<ManageGCScreen> {
         blockedUsers = newBlocked;
       });
     } catch (exception) {
-      showErrorSnackbar(context, 'Unable to reload gc: $exception');
+      snackbar.error('Unable to reload gc: $exception');
     } finally {
       firstLoading = false;
     }
   }
 
   void removeUser(ChatModel user) async {
+    var snackbar = SnackBarModel.of(context);
     setState(() => loading = true);
     try {
       await Golib.removeGcUser(gcID, user.id);
       reloadUsers();
     } catch (exception) {
-      showErrorSnackbar(context, 'Unable to remove user: $exception');
+      snackbar.error('Unable to remove user: $exception');
     } finally {
       setState(() => loading = false);
     }
@@ -273,15 +276,15 @@ class _ManageGCScreenState extends State<ManageGCScreen> {
   }
 
   void addAsAdmin(ChatModel user) async {
+    var snackbar = SnackBarModel.of(context);
     List<String> newAdmins = admins.keys.toList();
     newAdmins.add(user.id);
     setState(() => loading = true);
     try {
       await Golib.modifyGCAdmins(gcID, newAdmins);
-      showSuccessSnackbar(context, "Added ${user.nick} as admin");
+      snackbar.success("Added ${user.nick} as admin");
     } catch (exception) {
-      showErrorSnackbar(
-          context, "Unable add ${user.nick} as admin: $exception");
+      snackbar.error("Unable add ${user.nick} as admin: $exception");
     } finally {
       setState(() => loading = false);
       reloadUsers();
@@ -289,15 +292,15 @@ class _ManageGCScreenState extends State<ManageGCScreen> {
   }
 
   void removeAsAdmin(ChatModel user) async {
+    var snackbar = SnackBarModel.of(context);
     List<String> newAdmins = admins.keys.toList();
     newAdmins.remove(user.id);
     setState(() => loading = true);
     try {
       await Golib.modifyGCAdmins(gcID, newAdmins);
-      showSuccessSnackbar(context, "Removed ${user.nick} as admin");
+      snackbar.success("Removed ${user.nick} as admin");
     } catch (exception) {
-      showErrorSnackbar(
-          context, "Unable remove ${user.nick} as admin: $exception");
+      snackbar.error("Unable remove ${user.nick} as admin: $exception");
     } finally {
       setState(() => loading = false);
       reloadUsers();
@@ -305,48 +308,52 @@ class _ManageGCScreenState extends State<ManageGCScreen> {
   }
 
   Future<void> killGC() async {
+    var snackbar = SnackBarModel.of(context);
     setState(() => loading = true);
     try {
       await Golib.killGC(gcID);
       widget.client.removeChat(widget.chat);
     } catch (exception) {
-      showErrorSnackbar(context, 'Unable to kill GC: $exception');
+      snackbar.error('Unable to kill GC: $exception');
     } finally {
       setState(() => loading = false);
     }
   }
 
   Future<void> partFromGC() async {
+    var snackbar = SnackBarModel.of(context);
     setState(() => loading = true);
     try {
       await Golib.partFromGC(gcID);
       widget.client.removeChat(widget.chat);
     } catch (exception) {
-      showErrorSnackbar(context, 'Unable to part from GC: $exception');
+      snackbar.error('Unable to part from GC: $exception');
     } finally {
       setState(() => loading = false);
     }
   }
 
   Future<void> hideGC() async {
+    var snackbar = SnackBarModel.of(context);
     setState(() => loading = true);
     try {
       widget.client.hideChat(widget.chat);
       widget.client.active = null;
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to hide GC: $exception");
+      snackbar.error("Unable to hide GC: $exception");
     } finally {
       setState(() => loading = false);
     }
   }
 
   Future<void> upgradeGC() async {
+    var snackbar = SnackBarModel.of(context);
     setState(() => loading = true);
     try {
       await Golib.upgradeGC(gcID);
-      showSuccessSnackbar(context, "Upgraded GC!");
+      snackbar.success("Upgraded GC!");
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to upgrade GC: $exception");
+      snackbar.error("Unable to upgrade GC: $exception");
     } finally {
       setState(() => loading = false);
       reloadUsers();
@@ -356,10 +363,11 @@ class _ManageGCScreenState extends State<ManageGCScreen> {
   Future<void> changeOwner(ChatModel newOwner) async {
     if (loading) return;
     setState(() => loading = true);
+    var snackbar = SnackBarModel.of(context);
     try {
       await Golib.modifyGCOwner(gcID, newOwner.id);
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to modify GC Owner: $exception");
+      snackbar.error("Unable to modify GC Owner: $exception");
     } finally {
       setState(() => loading = false);
       reloadUsers();

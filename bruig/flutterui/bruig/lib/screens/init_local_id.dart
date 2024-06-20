@@ -1,6 +1,6 @@
-import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/components/buttons.dart';
 import 'package:bruig/components/text.dart';
+import 'package:bruig/models/snackbar.dart';
 import 'package:bruig/screens/startupscreen.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
@@ -24,6 +24,7 @@ class InitLocalIDScreenState extends State<InitLocalIDScreen> {
   String name = "";
 
   void connectPressed() async {
+    var snackbar = SnackBarModel.of(context);
     if (connecting) return;
     if (!_formKey.currentState!.validate()) return;
     _formKey.currentState!.save();
@@ -33,7 +34,7 @@ class InitLocalIDScreenState extends State<InitLocalIDScreen> {
     try {
       await Golib.initID(IDInit(name, name));
     } catch (exception) {
-      showErrorSnackbar(context, 'Unable to connect to server: $exception');
+      snackbar.error('Unable to connect to server: $exception');
     } finally {
       setState(() => connecting = false);
     }

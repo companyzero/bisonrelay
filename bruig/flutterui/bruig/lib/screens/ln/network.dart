@@ -1,8 +1,8 @@
+import 'package:bruig/models/snackbar.dart';
 import 'package:collection/collection.dart';
 import 'package:bruig/components/dcr_input.dart';
 import 'package:bruig/components/info_grid.dart';
 import 'package:bruig/components/inputs.dart';
-import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/components/text.dart';
 import 'package:bruig/screens/ln/components.dart';
 import 'package:flutter/material.dart';
@@ -69,6 +69,7 @@ class _LNNetworkPageState extends State<LNNetworkPage> {
   }
 
   void loadInfo() async {
+    var snackbar = SnackBarModel.of(context);
     setState(() {
       loading = true;
     });
@@ -80,7 +81,7 @@ class _LNNetworkPageState extends State<LNNetworkPage> {
         serverNode = newServerNode;
       });
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to load network info: $exception");
+      snackbar.error("Unable to load network info: $exception");
     } finally {
       setState(() {
         loading = false;
@@ -89,6 +90,7 @@ class _LNNetworkPageState extends State<LNNetworkPage> {
   }
 
   void connectToPeer() async {
+    var snackbar = SnackBarModel.of(context);
     setState(() {
       connecting = true;
     });
@@ -100,7 +102,7 @@ class _LNNetworkPageState extends State<LNNetworkPage> {
         peers = newPeers;
       });
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to connect to peer: $exception");
+      snackbar.error("Unable to connect to peer: $exception");
     } finally {
       setState(() {
         connecting = false;
@@ -109,6 +111,7 @@ class _LNNetworkPageState extends State<LNNetworkPage> {
   }
 
   Future<void> queryRouteToNode(String node, double amount) async {
+    var snackbar = SnackBarModel.of(context);
     setState(() {
       querying = true;
     });
@@ -125,7 +128,7 @@ class _LNNetworkPageState extends State<LNNetworkPage> {
         queryRouteRes = newQueryRouteRes;
       });
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to query route: $exception");
+      snackbar.error("Unable to query route: $exception");
     } finally {
       setState(() {
         querying = false;

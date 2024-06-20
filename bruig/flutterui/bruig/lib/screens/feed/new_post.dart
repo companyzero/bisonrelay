@@ -4,6 +4,7 @@ import 'dart:async';
 import 'package:bruig/components/buttons.dart';
 import 'package:bruig/components/text.dart';
 import 'package:bruig/models/feed.dart';
+import 'package:bruig/models/snackbar.dart';
 import 'package:bruig/screens/feed.dart';
 import 'package:bruig/util.dart';
 import 'package:flutter/material.dart';
@@ -120,6 +121,7 @@ class _NewPostScreenState extends State<NewPostScreen> {
   }
 
   void createPost() async {
+    var snackbar = SnackBarModel.of(context);
     setState(() {
       loading = true;
     });
@@ -130,10 +132,10 @@ class _NewPostScreenState extends State<NewPostScreen> {
         contentCtrl.clear();
         estimatedSize = 0;
       });
-      showSuccessSnackbar(context, "Created new post");
+      snackbar.success("Created new post");
       Navigator.of(context).pushNamed(FeedScreen.routeName);
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to create post: $exception");
+      snackbar.error("Unable to create post: $exception");
     } finally {
       setState(() {
         loading = false;
@@ -142,6 +144,7 @@ class _NewPostScreenState extends State<NewPostScreen> {
   }
 
   void recalcEstimatedSize() async {
+    var snackbar = SnackBarModel.of(context);
     if (_debounceSizeCalc?.isActive ?? false) _debounceSizeCalc!.cancel();
     _debounceSizeCalc = Timer(const Duration(milliseconds: 500), () async {
       try {
@@ -150,7 +153,7 @@ class _NewPostScreenState extends State<NewPostScreen> {
           estimatedSize = estSize;
         });
       } catch (exception) {
-        showErrorSnackbar(context, "Unable to estimate post size: $exception");
+        snackbar.error("Unable to estimate post size: $exception");
       }
     });
   }
@@ -161,6 +164,7 @@ class _NewPostScreenState extends State<NewPostScreen> {
   }
 
   void pickFile(BuildContext context) async {
+    var snackbar = SnackBarModel.of(context);
     if (_debounce?.isActive ?? false) _debounce!.cancel();
     _debounce = Timer(const Duration(milliseconds: 500), () async {
       var filePickRes = await FilePicker.platform.pickFiles(
@@ -186,7 +190,7 @@ class _NewPostScreenState extends State<NewPostScreen> {
 
       if (f.size > 1024 * 1024) {
         showErrorSnackbar(
-            context, "File size is too large ${f.size} > ${1024 * 1024}");
+            this, "File size is too large ${f.size} > ${1024 * 1024}");
         return;
       }
 
@@ -218,7 +222,7 @@ class _NewPostScreenState extends State<NewPostScreen> {
           mime = "image/webp";
           break;
         default:
-          showErrorSnackbar(context, "Unable to recognize type of embed");
+          snackbar.error("Unable to recognize type of embed");
           return;
       }
 

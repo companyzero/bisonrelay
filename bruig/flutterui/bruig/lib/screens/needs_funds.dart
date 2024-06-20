@@ -6,6 +6,7 @@ import 'package:bruig/components/info_grid.dart';
 import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/components/text.dart';
 import 'package:bruig/models/notifications.dart';
+import 'package:bruig/models/snackbar.dart';
 import 'package:bruig/screens/startupscreen.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -35,13 +36,14 @@ class _NeedsFundsScreenState extends State<NeedsFundsScreen> {
   bool? forwardIfBalance;
 
   void getNewAddress() async {
+    var snackbar = SnackBarModel.of(context);
     try {
       var res = await Golib.lnGetDepositAddr("");
       setState(() {
         addr = res;
       });
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to load deposit address: $exception");
+      snackbar.error("Unable to load deposit address: $exception");
     }
   }
 
@@ -73,7 +75,7 @@ class _NeedsFundsScreenState extends State<NeedsFundsScreen> {
         forwardIfBalance = true;
       }
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to update wallet balance: $exception");
+      showErrorSnackbar(this, "Unable to update wallet balance: $exception");
     } finally {
       if (!done) {
         updateTimer = Timer(const Duration(seconds: 5), updateBalance);
@@ -82,6 +84,8 @@ class _NeedsFundsScreenState extends State<NeedsFundsScreen> {
   }
 
   void redeemFunds() async {
+    var snackbar = SnackBarModel.of(context);
+
     try {
       // Decode the invite and send to the user verification screen.
       var filePickRes = await FilePicker.platform.pickFiles();
@@ -99,7 +103,7 @@ class _NeedsFundsScreenState extends State<NeedsFundsScreen> {
       setState(() => redeemed = res);
     } catch (exception) {
       setState(() => redeeming = false);
-      showErrorSnackbar(context, "Unable to redeem invite funds: $exception");
+      snackbar.error("Unable to redeem invite funds: $exception");
     }
   }
 

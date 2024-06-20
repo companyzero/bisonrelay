@@ -1,9 +1,9 @@
 import 'package:bruig/components/buttons.dart';
 import 'package:bruig/components/copyable.dart';
 import 'package:bruig/components/info_grid.dart';
-import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/components/text.dart';
 import 'package:bruig/models/client.dart';
+import 'package:bruig/models/snackbar.dart';
 import 'package:bruig/models/uistate.dart';
 import 'package:bruig/screens/chats.dart';
 import 'package:flutter/material.dart';
@@ -33,6 +33,8 @@ class _UserProfileState extends State<UserProfile> {
   ScrollController gridScrollCtrl = ScrollController();
 
   void readProfile() async {
+    var snackbar = SnackBarModel.of(context);
+
     if (chat == emptyChatModel) {
       setState(() {
         ratchetInfo = RatchetDebugInfo.empty();
@@ -54,7 +56,7 @@ class _UserProfileState extends State<UserProfile> {
         abEntry = newAbEntry;
       });
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to load profile: $exception");
+      snackbar.error("Unable to load profile: $exception");
     } finally {
       setState(() {
         firstLoading = false;
@@ -63,6 +65,7 @@ class _UserProfileState extends State<UserProfile> {
   }
 
   void ignore() async {
+    var snackbar = SnackBarModel.of(context);
     try {
       setState(() {
         loading = true;
@@ -72,7 +75,7 @@ class _UserProfileState extends State<UserProfile> {
         isIgnored = true;
       });
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to ignore user: $exception");
+      snackbar.error("Unable to ignore user: $exception");
     } finally {
       setState(() {
         loading = false;
@@ -81,6 +84,7 @@ class _UserProfileState extends State<UserProfile> {
   }
 
   void unignore() async {
+    var snackbar = SnackBarModel.of(context);
     try {
       setState(() {
         loading = true;
@@ -90,7 +94,7 @@ class _UserProfileState extends State<UserProfile> {
         isIgnored = false;
       });
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to un-ignore user: $exception");
+      snackbar.error("Unable to un-ignore user: $exception");
     } finally {
       setState(() {
         loading = false;
@@ -118,6 +122,7 @@ class _UserProfileState extends State<UserProfile> {
   }
 
   void block() async {
+    var snackbar = SnackBarModel.of(context);
     try {
       setState(() {
         loading = true;
@@ -125,12 +130,13 @@ class _UserProfileState extends State<UserProfile> {
       await Golib.blockUser(chat.id);
       widget.client.removeChat(chat);
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to block user: $exception");
+      snackbar.error("Unable to block user: $exception");
       setState(() => loading = false);
     }
   }
 
   void hide() async {
+    var snackbar = SnackBarModel.of(context);
     try {
       setState(() {
         loading = true;
@@ -138,7 +144,7 @@ class _UserProfileState extends State<UserProfile> {
       widget.client.hideChat(chat);
       widget.client.active = null;
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to hide user: $exception");
+      snackbar.error("Unable to hide user: $exception");
     } finally {
       setState(() {
         loading = false;

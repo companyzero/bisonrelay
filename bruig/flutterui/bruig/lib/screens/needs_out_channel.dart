@@ -8,6 +8,7 @@ import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/components/text.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/models/notifications.dart';
+import 'package:bruig/models/snackbar.dart';
 import 'package:bruig/screens/startupscreen.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/golib_plugin.dart';
@@ -48,7 +49,7 @@ class _NeedsOutChannelScreenState extends State<NeedsOutChannelScreen> {
         addr = res;
       });
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to load deposit address: $exception");
+      showErrorSnackbar(this, "Unable to load deposit address: $exception");
     }
   }
 
@@ -98,13 +99,15 @@ open channels to other LN nodes.''';
         }
       }
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to update wallet balance: $exception");
+      showErrorSnackbar(this, "Unable to update wallet balance: $exception");
     } finally {
       updateTimer = Timer(const Duration(seconds: 5), updateBalance);
     }
   }
 
   Future<void> openChannel() async {
+    var snackbar = SnackBarModel.of(context);
+
     var peer = peerCtrl.text.trim();
     var amount = amountCtrl.amount;
 
@@ -127,9 +130,9 @@ open channels to other LN nodes.''';
         peerCtrl.clear();
         amountCtrl.clear();
       });
-      showSuccessSnackbar(context, "Opening channel...");
+      snackbar.success("Opening channel...");
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to open channel: $exception");
+      snackbar.error("Unable to open channel: $exception");
       return;
     } finally {
       setState(() => loading = false);
@@ -151,7 +154,7 @@ open channels to other LN nodes.''';
         });
       }
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to verify network: $exception");
+      showErrorSnackbar(this, "Unable to verify network: $exception");
     }
   }
 

@@ -2,6 +2,7 @@ import 'package:bruig/components/copyable.dart';
 import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/components/text.dart';
 import 'package:bruig/models/client.dart';
+import 'package:bruig/models/snackbar.dart';
 import 'package:bruig/screens/startupscreen.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
@@ -23,8 +24,9 @@ class _UserLastMsgTime extends StatelessWidget {
   const _UserLastMsgTime(this.info, this.chat);
 
   void requestRatchetReset(BuildContext context) async {
+    var snackbar = SnackBarModel.of(context);
     chat.requestKXReset();
-    showSuccessSnackbar(context, "Attempting to reset ratchet with user");
+    snackbar.success("Attempting to reset ratchet with user");
   }
 
   @override
@@ -67,8 +69,8 @@ class _ContactsLastMsgTimesScreenState
         users = newList;
       });
     } catch (exception) {
-      showErrorSnackbar(context,
-          "Unable to fetch list of contact's last msg time: $exception");
+      showErrorSnackbar(
+          this, "Unable to fetch list of contact's last msg time: $exception");
     }
   }
 

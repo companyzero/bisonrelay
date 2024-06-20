@@ -1,8 +1,8 @@
 import 'package:bruig/components/empty_widget.dart';
-import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/components/buttons.dart';
 import 'package:bruig/components/text.dart';
 import 'package:bruig/models/newconfig.dart';
+import 'package:bruig/models/snackbar.dart';
 import 'package:bruig/models/uistate.dart';
 import 'package:bruig/screens/config_network.dart';
 import 'package:bruig/screens/startupscreen.dart';
@@ -25,16 +25,17 @@ class _LNInternalWalletPageState extends State<LNInternalWalletPage> {
   bool loading = false;
 
   Future<void> createWallet() async {
+    var snackbar = SnackBarModel.of(context);
     if (passCtrl.text == "") {
-      showErrorSnackbar(context, "Password cannot be empty");
+      snackbar.error("Password cannot be empty");
       return;
     }
     if (passCtrl.text != passRepeatCtrl.text) {
-      showErrorSnackbar(context, "Passwords are different");
+      snackbar.error("Passwords are different");
       return;
     }
     if (passCtrl.text.length < 8) {
-      showErrorSnackbar(context, "Password cannot have less then 8 chars");
+      snackbar.error("Password cannot have less then 8 chars");
       return;
     }
     setState(() {
@@ -45,7 +46,7 @@ class _LNInternalWalletPageState extends State<LNInternalWalletPage> {
           .createNewWallet(passCtrl.text, newconf.seedToRestore);
       Navigator.of(context).pushNamed("/newconf/seed");
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to create new LN wallet: $exception");
+      snackbar.error("Unable to create new LN wallet: $exception");
       if (newconf.seedToRestore.isNotEmpty) {
         // This assumes if there was a previously existing wallet, the user was
         // already given the choice to delete it.

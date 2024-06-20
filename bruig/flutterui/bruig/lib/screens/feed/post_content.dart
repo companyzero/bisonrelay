@@ -8,6 +8,7 @@ import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/components/text.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/models/feed.dart';
+import 'package:bruig/models/snackbar.dart';
 import 'package:bruig/models/uistate.dart';
 import 'package:bruig/screens/overview.dart';
 import 'package:flutter/material.dart';
@@ -417,6 +418,7 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
   List<ReceiveReceipt> postRRs = [];
 
   void loadContent() async {
+    var snackbar = SnackBarModel.of(context);
     setState(() {
       loading = true;
       markdownData = "";
@@ -442,7 +444,7 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
         isKXSearchingAuthor = newIsKxSearching;
       });
     } catch (exception) {
-      showErrorSnackbar(context, 'Unable to load content: $exception');
+      snackbar.error('Unable to load content: $exception');
     } finally {
       setState(() => loading = false);
     }
@@ -456,7 +458,7 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
         });
       }
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to load receive receipts: $exception");
+      snackbar.error("Unable to load receive receipts: $exception");
     }
   }
 
@@ -517,6 +519,7 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
   }
 
   void kxSearchAuthor() async {
+    var snackbar = SnackBarModel.of(context);
     try {
       await Golib.kxSearchPostAuthor(
           widget.args.post.summ.from, widget.args.post.summ.id);
@@ -528,7 +531,7 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
         return;
       }
 
-      showErrorSnackbar(context, "Unable to KX search post author: $exception");
+      snackbar.error("Unable to KX search post author: $exception");
     }
   }
 
@@ -580,12 +583,13 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
   }
 
   Future<void> subscribeAndFetchPost() async {
+    var snackbar = SnackBarModel.of(context);
     try {
       var summ = widget.args.post.summ;
       await Golib.subscribeToPostsAndFetch(summ.authorID, summ.id);
       setState(() => sentSubscribeAttempt = true);
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to subscribe to posts: $exception");
+      snackbar.error("Unable to subscribe to posts: $exception");
     }
   }
 

@@ -7,6 +7,7 @@ import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/components/text.dart';
 import 'package:bruig/config.dart';
 import 'package:bruig/models/log.dart';
+import 'package:bruig/models/snackbar.dart';
 import 'package:bruig/storage_manager.dart';
 import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:file_picker/file_picker.dart';
@@ -140,6 +141,7 @@ class _ExportLogScreenState extends State<ExportLogScreen> {
   }
 
   void doExport() async {
+    var snackbar = SnackBarModel.of(context);
     setState(() {
       exporting = true;
     });
@@ -148,7 +150,7 @@ class _ExportLogScreenState extends State<ExportLogScreen> {
       await Golib.zipLogs(args);
       if (!isMobile) {
         if (mounted) {
-          showSuccessSnackbar(context, "Exported logs!");
+          snackbar.success("Exported logs!");
         }
       } else {
         Share.shareXFiles([XFile(destPath)], text: "bruig logs");
@@ -160,7 +162,7 @@ class _ExportLogScreenState extends State<ExportLogScreen> {
       });
     } catch (exception) {
       if (mounted) {
-        showErrorSnackbar(context, "Unable to export logs: $exception");
+        snackbar.error("Unable to export logs: $exception");
       } else {
         print("Unable to export logs: $exception");
       }
@@ -172,6 +174,7 @@ class _ExportLogScreenState extends State<ExportLogScreen> {
   }
 
   void doExportProfilings() async {
+    var snackbar = SnackBarModel.of(context);
     setState(() {
       exporting = true;
     });
@@ -179,8 +182,7 @@ class _ExportLogScreenState extends State<ExportLogScreen> {
       await Golib.zipProfilingLogs(destProfilingPath);
       if (!isMobile) {
         if (mounted) {
-          showSuccessSnackbar(
-              context, "Exported profiles to $destProfilingPath");
+          snackbar.success("Exported profiles to $destProfilingPath");
         }
       } else {
         Share.shareXFiles([XFile(destProfilingPath)], text: "bruig profile");
@@ -192,7 +194,7 @@ class _ExportLogScreenState extends State<ExportLogScreen> {
       });
     } catch (exception) {
       if (mounted) {
-        showErrorSnackbar(context, "Unable to export profiles: $exception");
+        snackbar.error("Unable to export profiles: $exception");
       } else {
         print("Unable to export profiles: $exception");
       }
@@ -221,7 +223,7 @@ class _ExportLogScreenState extends State<ExportLogScreen> {
                       onTap: () {
                         debugModeGotoCfgCounter += 1;
                         if (debugModeGotoCfgCounter == 3) {
-                          showSuccessSnackbar(context,
+                          showSuccessSnackbar(this,
                               "Going to manual config file with 3 more taps");
                         }
                         if (debugModeGotoCfgCounter == 6) {
@@ -355,6 +357,7 @@ class _LogSettingsScreenState extends State<LogSettingsScreen> {
   }
 
   void doChangeConfig() async {
+    var snackbar = SnackBarModel.of(context);
     try {
       await replaceConfig(mainConfigFilename,
           debugLevel: appLogLevel,
@@ -375,7 +378,7 @@ class _LogSettingsScreenState extends State<LogSettingsScreen> {
             "Cancel");
       }
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to update config: $exception");
+      snackbar.error("Unable to update config: $exception");
     }
   }
 
@@ -517,6 +520,7 @@ class _ManualCfgModifyScreenState extends State<ManualCfgModifyScreen> {
   }
 
   void doOverwriteConfig() async {
+    var snackbar = SnackBarModel.of(context);
     try {
       await File(mainConfigFilename).writeAsString(txtCtrl.text);
       if (mounted) {
@@ -533,7 +537,7 @@ class _ManualCfgModifyScreenState extends State<ManualCfgModifyScreen> {
             "Cancel");
       }
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to modify config file: $exception");
+      snackbar.error("Unable to modify config file: $exception");
     }
   }
 

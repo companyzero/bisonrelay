@@ -1,6 +1,6 @@
 import 'package:bruig/components/buttons.dart';
-import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/models/client.dart';
+import 'package:bruig/models/snackbar.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:bruig/components/users_dropdown.dart';
@@ -29,12 +29,13 @@ class _TransResetModalState extends State<TransResetModal> {
     if (loading) return;
     if (userToTarget == null) return;
     setState(() => loading = true);
+    var snackbar = SnackBarModel.of(context);
     try {
       await Golib.transReset(chat.id, userToTarget!.id);
-      showSuccessSnackbar(context, 'Sent transitive reset to ${chat.nick}');
+      snackbar.success('Sent transitive reset to ${chat.nick}');
       Navigator.of(context).pop();
     } catch (exception) {
-      showErrorSnackbar(context, 'Unable to transitive reset: $exception');
+      snackbar.error('Unable to transitive reset: $exception');
       Navigator.of(context).pop();
     } finally {
       setState(() => loading = false);

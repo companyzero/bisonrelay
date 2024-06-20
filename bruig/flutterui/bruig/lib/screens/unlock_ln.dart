@@ -101,6 +101,7 @@ class __LNUnlockPageState extends State<_LNUnlockPage> {
   }
 
   Future<void> unlock() async {
+    var snackbar = SnackBarModel.of(context);
     setState(() {
       loading = true;
       _validate = passCtrl.text.isEmpty ? "Password cannot be empty" : "";
@@ -133,7 +134,7 @@ class __LNUnlockPageState extends State<_LNUnlockPage> {
       if (exception.toString().contains("invalid passphrase")) {
         _validate = "Incorrect password, please try again.";
       } else {
-        showErrorSnackbar(context, "Unable to unlock wallet: $exception");
+        snackbar.error("Unable to unlock wallet: $exception");
       }
       // Catch error and show error in errorText?
     } finally {
@@ -296,8 +297,7 @@ class _LNChainSyncPageState extends State<_LNChainSyncPage> {
         }
       }
     } catch (exception) {
-      showErrorSnackbar(
-          context, "Unable to read chain sync updates: $exception");
+      showErrorSnackbar(this, "Unable to read chain sync updates: $exception");
     }
   }
 

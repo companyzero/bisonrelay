@@ -6,8 +6,8 @@ import 'dart:async';
 import 'package:bruig/components/md_elements.dart';
 import 'package:bruig/components/chat/types.dart';
 import 'package:bruig/components/empty_widget.dart';
+import 'package:bruig/models/snackbar.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:bruig/components/snackbars.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -147,6 +147,7 @@ class _AttachFileScreenState extends State<AttachFileScreen> {
   }
 
   void loadFile() async {
+    var snackbar = SnackBarModel.of(context);
     if (_debounce?.isActive ?? false) _debounce!.cancel();
     _debounce = Timer(const Duration(milliseconds: 500), () async {
       try {
@@ -179,9 +180,9 @@ class _AttachFileScreenState extends State<AttachFileScreen> {
           mime = mimeType;
         });
       } on Exception catch (exception) {
-        showErrorSnackbar(context, "Unable to attach file: $exception");
+        snackbar.error("Unable to attach file: $exception");
       } catch (exception) {
-        showErrorSnackbar(context, "Unable to attach file: $exception");
+        snackbar.error("Unable to attach file: $exception");
       }
     });
   }
@@ -196,6 +197,7 @@ class _AttachFileScreenState extends State<AttachFileScreen> {
     ImageSource source, {
     required BuildContext context,
   }) async {
+    var snackbar = SnackBarModel.of(context);
     try {
       final XFile? pickedFile = await _picker.pickImage(
         source: source,
@@ -217,7 +219,7 @@ class _AttachFileScreenState extends State<AttachFileScreen> {
         }
       });
     } catch (e) {
-      showErrorSnackbar(context, "Unable to attach file: $e");
+      snackbar.error("Unable to attach file: $e");
     }
   }
 
@@ -225,6 +227,7 @@ class _AttachFileScreenState extends State<AttachFileScreen> {
     File image, {
     required BuildContext context,
   }) async {
+    var snackbar = SnackBarModel.of(context);
     try {
       var data = await image.readAsBytes();
       if (data.length > 1024 * 1024) {
@@ -239,7 +242,7 @@ class _AttachFileScreenState extends State<AttachFileScreen> {
         }
       });
     } catch (e) {
-      showErrorSnackbar(context, "Unable to select image: $e");
+      snackbar.error("Unable to select image: $e");
     }
   }
 

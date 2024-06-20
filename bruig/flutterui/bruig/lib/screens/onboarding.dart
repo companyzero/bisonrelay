@@ -151,7 +151,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     try {
       await Golib.startOnboard(keyCtrl.text.trim().toLowerCase());
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to start onboarding: $exception");
+      showErrorSnackbar(this, "Unable to start onboarding: $exception");
     } finally {
       setState(() => starting = false);
     }
@@ -184,7 +184,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       await Golib.cancelOnboard();
       skipOnboarding();
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to cancel onboarding: $exception");
+      showErrorSnackbar(this, "Unable to cancel onboarding: $exception");
     }
   }
 
@@ -196,7 +196,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         ostate = null;
       });
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to cancel onboarding: $exception");
+      showErrorSnackbar(this, "Unable to cancel onboarding: $exception");
     }
   }
 
@@ -204,7 +204,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     try {
       await Golib.retryOnboard();
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to retry onboarding: $exception");
+      showErrorSnackbar(this, "Unable to retry onboarding: $exception");
     }
   }
 
@@ -212,7 +212,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     try {
       await Golib.skipOnboardStage();
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to skip onboarding stage: $exception");
+      showErrorSnackbar(this, "Unable to skip onboarding stage: $exception");
     }
   }
 
@@ -249,7 +249,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               try {
                 if (!await launchUrl(Uri.parse(inviteURL))) {
                   showErrorSnackbar(
-                      context, "Unable to launch browser to $inviteURL");
+                      this, "Unable to launch browser to $inviteURL");
                 }
               } catch (exception) {
                 print("Unable to launch url: $exception");

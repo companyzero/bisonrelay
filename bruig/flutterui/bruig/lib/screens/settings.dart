@@ -5,6 +5,7 @@ import 'package:bruig/components/containers.dart';
 import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/components/interactive_avatar.dart';
 import 'package:bruig/components/text.dart';
+import 'package:bruig/models/snackbar.dart';
 import 'package:bruig/models/uistate.dart';
 import 'package:bruig/screens/config_network.dart';
 import 'package:bruig/screens/ln_management.dart';
@@ -20,7 +21,6 @@ import 'package:golib_plugin/definitions.dart';
 import 'package:provider/provider.dart';
 import 'package:bruig/models/client.dart';
 import 'package:golib_plugin/golib_plugin.dart';
-import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/storage_manager.dart';
 import 'package:bruig/models/menus.dart';
 import 'package:bruig/components/copyable.dart';
@@ -82,14 +82,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void resetAllOldKX(BuildContext context) async {
+    var snackbar = SnackBarModel.of(context);
+
     if (loading) return;
     setState(() => loading = true);
     try {
       await Golib.resetAllOldKX(0);
-      showSuccessSnackbar(
-          context, 'Requesting KX to all old KX no communicated in 30 days...');
+      snackbar
+          .success('Requesting KX to all old KX no communicated in 30 days...');
     } catch (exception) {
-      showErrorSnackbar(context, 'Unable to reset all old KX: $exception');
+      snackbar.error('Unable to reset all old KX: $exception');
     } finally {
       setState(() => loading = false);
     }
@@ -98,17 +100,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void resetAllOldKX1s(BuildContext context) async {
     if (loading) return;
     setState(() => loading = true);
+    var snackbar = SnackBarModel.of(context);
+
     try {
       await Golib.resetAllOldKX(1);
-      showSuccessSnackbar(context, 'Requesting KX to all old KX...');
+      snackbar.success('Requesting KX to all old KX...');
     } catch (exception) {
-      showErrorSnackbar(context, 'Unable to reset all old KX: $exception');
+      snackbar.error('Unable to reset all old KX: $exception');
     } finally {
       setState(() => loading = false);
     }
   }
 
   void pickAvatarFile() async {
+    var snackbar = SnackBarModel.of(context);
+
     var filePickRes = await FilePicker.platform.pickFiles(
       allowMultiple: false,
       dialogTitle: "Pick avatar image file",
@@ -123,7 +129,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       await Golib.setMyAvatar(fileData);
       client.myAvatar.loadAvatar(fileData);
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to set avatar: $exception");
+      snackbar.error("Unable to set avatar: $exception");
     }
   }
 

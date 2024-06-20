@@ -1,7 +1,7 @@
 import 'package:bruig/components/copyable.dart';
 import 'package:bruig/components/info_grid.dart';
-import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/components/text.dart';
+import 'package:bruig/models/snackbar.dart';
 import 'package:bruig/screens/ln/components.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
@@ -23,6 +23,7 @@ class _LNInfoPageState extends State<LNInfoPage> {
   String depositAddr = "";
 
   void loadInfo() async {
+    var snackbar = SnackBarModel.of(context);
     setState(() => loading = true);
     try {
       var newInfo = await Golib.lnGetInfo();
@@ -32,7 +33,7 @@ class _LNInfoPageState extends State<LNInfoPage> {
         balances = newBalances;
       });
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to load LN info: $exception");
+      snackbar.error("Unable to load LN info: $exception");
     } finally {
       setState(() => loading = false);
     }

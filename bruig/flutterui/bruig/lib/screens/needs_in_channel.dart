@@ -8,6 +8,7 @@ import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/components/text.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/models/notifications.dart';
+import 'package:bruig/models/snackbar.dart';
 import 'package:bruig/screens/startupscreen.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/golib_plugin.dart';
@@ -49,7 +50,7 @@ class _NeedsInChannelScreenState extends State<NeedsInChannelScreen> {
         addr = res;
       });
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to load deposit address: $exception");
+      showErrorSnackbar(this, "Unable to load deposit address: $exception");
     }
   }
 
@@ -91,7 +92,7 @@ channel is confirmed to request a new inbound channel''';
         }
       }
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to update wallet balance: $exception");
+      showErrorSnackbar(this, "Unable to update wallet balance: $exception");
     } finally {
       if (resetTimer) {
         updateTimer =
@@ -101,14 +102,15 @@ channel is confirmed to request a new inbound channel''';
   }
 
   void requestRecvCapacity() async {
+    var snackbar = SnackBarModel.of(context);
+
     if (serverCtrl.text == "") {
-      showErrorSnackbar(context, "Liquidity provider server cannot be empty");
+      snackbar.error("Liquidity provider server cannot be empty");
       return;
     }
 
     if (amountCtrl.amount < 0.00001) {
-      showErrorSnackbar(
-          context, "Channel size to request liquidity is too low");
+      snackbar.error("Channel size to request liquidity is too low");
       return;
     }
 
@@ -121,8 +123,7 @@ channel is confirmed to request a new inbound channel''';
         amountCtrl.clear();
       });
     } catch (exception) {
-      showErrorSnackbar(
-          context, "Unable to request receive capacity: $exception");
+      snackbar.error("Unable to request receive capacity: $exception");
     } finally {
       setState(() => loading = false);
       updateBalance(false);
@@ -154,7 +155,7 @@ cNPr8Y+sSs2MHf6xMNBQzV4KuIlPIg==
         });
       }
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to verify network: $exception");
+      showErrorSnackbar(this, "Unable to verify network: $exception");
     }
   }
 

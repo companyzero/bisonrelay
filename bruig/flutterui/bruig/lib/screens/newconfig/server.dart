@@ -1,9 +1,9 @@
 import 'dart:io';
-import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/components/buttons.dart';
 import 'package:bruig/components/text.dart';
 import 'package:bruig/main.dart';
 import 'package:bruig/models/newconfig.dart';
+import 'package:bruig/models/snackbar.dart';
 import 'package:bruig/screens/startupscreen.dart';
 import 'package:bruig/screens/unlock_ln.dart';
 import 'package:flutter/material.dart';
@@ -40,6 +40,7 @@ class _ServerPageState extends State<ServerPage> {
   }
 
   void done() async {
+    var snackbar = SnackBarModel.of(context);
     try {
       widget.newconf.serverAddr = serverCtrl.text;
       var cfg = await widget.newconf.generateConfig();
@@ -49,7 +50,7 @@ class _ServerPageState extends State<ServerPage> {
         runMainApp(cfg);
       }
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to generate config: $exception");
+      snackbar.error("Unable to generate config: $exception");
     }
   }
 

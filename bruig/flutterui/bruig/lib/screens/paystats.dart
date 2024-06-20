@@ -57,7 +57,7 @@ class _PayStatsScreenState extends State<PayStatsScreen> {
         }
       });
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to list payment stats: $exception");
+      showErrorSnackbar(this, "Unable to list payment stats: $exception");
     }
   }
 
@@ -80,7 +80,7 @@ class _PayStatsScreenState extends State<PayStatsScreen> {
         }
       });
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to fetch user pay stats: $exception");
+      showErrorSnackbar(this, "Unable to fetch user pay stats: $exception");
     }
   }
 
@@ -94,7 +94,7 @@ class _PayStatsScreenState extends State<PayStatsScreen> {
         await Golib.clearPayStats(stats[index].item1);
         listPayStats();
       } catch (exception) {
-        showErrorSnackbar(context, "Unable to clear stats: $exception");
+        showErrorSnackbar(this, "Unable to clear stats: $exception");
       }
     }, "Clear data?", "Really clear data for user $nick?", "Clear", "Cancel");
   }

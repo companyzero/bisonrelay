@@ -5,6 +5,7 @@ import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/components/text.dart';
 import 'package:bruig/models/newconfig.dart';
+import 'package:bruig/models/snackbar.dart';
 import 'package:bruig/screens/startupscreen.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -46,6 +47,7 @@ class _RestoreWalletPageState extends State<RestoreWalletPage> {
   }
 
   void selectSCB() async {
+    var snackbar = SnackBarModel.of(context);
     try {
       var filePickRes = await FilePicker.platform.pickFiles();
       if (filePickRes == null) return;
@@ -59,7 +61,7 @@ class _RestoreWalletPageState extends State<RestoreWalletPage> {
       });
       newconf.multichanBackupRestore = scb;
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to load SCB file: $exception");
+      snackbar.error("Unable to load SCB file: $exception");
     }
   }
 

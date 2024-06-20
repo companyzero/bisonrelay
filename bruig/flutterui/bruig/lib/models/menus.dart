@@ -3,11 +3,11 @@ import 'package:bruig/components/pay_tip.dart';
 import 'package:bruig/components/rename_chat.dart';
 import 'package:bruig/components/suggest_kx.dart';
 import 'package:bruig/components/trans_reset.dart';
-import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/models/log.dart';
 import 'package:bruig/models/notifications.dart';
 import 'package:bruig/models/resources.dart';
+import 'package:bruig/models/snackbar.dart';
 import 'package:bruig/screens/chats.dart';
 import 'package:bruig/screens/feed.dart';
 import 'package:bruig/screens/ln_management.dart';
@@ -228,6 +228,7 @@ List<ChatMenuItem> buildUserChatMenu(ChatModel chat) {
   }
 
   void sendFile(BuildContext context) async {
+    var snackbar = SnackBarModel.of(context);
     var filePickRes = await FilePicker.platform.pickFiles();
     if (filePickRes == null) return;
     var filePath = filePickRes.files.first.path;
@@ -244,7 +245,7 @@ List<ChatMenuItem> buildUserChatMenu(ChatModel chat) {
               null),
           false);
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to send file: $exception");
+      snackbar.error("Unable to send file: $exception");
     }
   }
 

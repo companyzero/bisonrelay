@@ -1,8 +1,8 @@
 import 'package:bruig/components/copyable.dart';
-import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/components/text.dart';
 import 'package:bruig/config.dart';
 import 'package:bruig/models/newconfig.dart';
+import 'package:bruig/models/snackbar.dart';
 import 'package:bruig/screens/startupscreen.dart';
 import 'package:flutter/material.dart';
 
@@ -35,6 +35,7 @@ class _MoveOldVersionWalletPageState extends State<MoveOldVersionWalletPage> {
   bool unableToMove = false;
 
   void moveOldVersion(BuildContext context) async {
+    var snackbar = SnackBarModel.of(context);
     setState(() {
       moving = true;
     });
@@ -42,12 +43,12 @@ class _MoveOldVersionWalletPageState extends State<MoveOldVersionWalletPage> {
       await newconf.moveOldWalletVersion();
     } catch (exception) {
       if (exception == unableToMoveOldWallet) {
-        showErrorSnackbar(context,
+        snackbar.error(
             "Unable to move wallet dir because of existing wallet in new location: $exception");
         unableToMove = true;
         return;
       } else {
-        showErrorSnackbar(context, "Unable to move wallet dir: $exception");
+        snackbar.error("Unable to move wallet dir: $exception");
       }
       return;
     }

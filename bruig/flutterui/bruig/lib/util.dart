@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 import 'dart:convert';
 
@@ -129,3 +130,16 @@ int parseDuration(String s) {
 }
 
 int parseDurationSeconds(String s) => (parseDuration(s) / 1e12).truncate();
+
+// Call Navigator.of(context).pop() ensuring the state is still mounted to avoid
+// exception.
+void popNavigatorFromState(State s, {bool rootNavigator = false}) => s.mounted
+    ? Navigator.of(s.context, rootNavigator: rootNavigator).pop()
+    : null;
+
+// Convenience function to sleep in async functions.
+Future<void> sleep(Duration d) {
+  var p = Completer<void>();
+  Timer(d, p.complete);
+  return p.future;
+}

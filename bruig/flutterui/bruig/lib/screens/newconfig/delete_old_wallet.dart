@@ -1,6 +1,6 @@
-import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/components/text.dart';
 import 'package:bruig/models/newconfig.dart';
+import 'package:bruig/models/snackbar.dart';
 import 'package:bruig/screens/startupscreen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -25,13 +25,14 @@ class _DeleteOldWalletPageState extends State<DeleteOldWalletPage> {
   bool deleting = false;
 
   void deleteWalletDir(BuildContext context) async {
+    var snackbar = SnackBarModel.of(context);
     setState(() {
       deleting = true;
     });
     try {
       await newconf.deleteLNWalletDir();
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to delete wallet dir: $exception");
+      snackbar.error("Unable to delete wallet dir: $exception");
       return;
     }
     Navigator.of(context).pushReplacementNamed("/newconf/lnChoice/internal");

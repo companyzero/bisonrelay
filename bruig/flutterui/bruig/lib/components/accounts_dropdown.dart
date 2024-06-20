@@ -1,4 +1,4 @@
-import 'package:bruig/components/snackbars.dart';
+import 'package:bruig/models/snackbar.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
@@ -21,6 +21,7 @@ class _AccountsDropDownState extends State<AccountsDropDown> {
   List<Account> accounts = [];
 
   void reloadAccounts() async {
+    var snackbar = SnackBarModel.of(context);
     try {
       var newAccounts = await Golib.listAccounts();
       if (widget.excludeDefault) {
@@ -36,7 +37,7 @@ class _AccountsDropDownState extends State<AccountsDropDown> {
         }
       });
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to load accounts: $exception");
+      snackbar.error("Unable to load accounts: $exception");
     }
   }
 

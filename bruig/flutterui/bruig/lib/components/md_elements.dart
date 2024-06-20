@@ -3,10 +3,10 @@ import 'dart:convert';
 import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/components/info_grid.dart';
 import 'package:bruig/components/inputs.dart';
-import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/models/downloads.dart';
 import 'package:bruig/models/payments.dart';
 import 'package:bruig/models/resources.dart';
+import 'package:bruig/models/snackbar.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
@@ -406,10 +406,11 @@ class MarkdownArea extends StatelessWidget {
     var downSource = Provider.of<DownloadSource?>(context, listen: false);
     var pageSource = Provider.of<PagesSource?>(context, listen: false);
     var uid = downSource?.uid ?? pageSource?.uid ?? "";
+    var snackbar = SnackBarModel.of(context);
 
     if (parsed.scheme != "" && parsed.scheme != "br") {
       if (!await launchUrl(Uri.parse(url))) {
-        showErrorSnackbar(context, "Could not launch $url");
+        snackbar.error("Could not launch $url");
       }
       return;
     }
@@ -430,7 +431,7 @@ class MarkdownArea extends StatelessWidget {
       await resources.fetchPage(
           uid, parsed.pathSegments, sessionID, parentPageID, null);
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to fetch page: $exception");
+      snackbar.error("Unable to fetch page: $exception");
     }
   }
 
@@ -460,6 +461,7 @@ class Downloadable extends StatelessWidget {
       : super(key: key);
 
   void download(BuildContext context) async {
+    var snackbar = SnackBarModel.of(context);
     try {
       var downloads = Provider.of<DownloadsModel>(context, listen: false);
       var source = Provider.of<DownloadSource?>(context, listen: false);
@@ -469,9 +471,9 @@ class Downloadable extends StatelessWidget {
         throw "UID in parent DownloadsSource/PagesSource not found";
       }
       await downloads.getUnknownUserFile(uid, fid);
-      showSuccessSnackbar(context, "Added $fid to download queue");
+      snackbar.success("Added $fid to download queue");
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to start download: $exception");
+      snackbar.error("Unable to start download: $exception");
     }
   }
 
@@ -631,6 +633,7 @@ class _FormSubmitButton extends StatelessWidget {
   const _FormSubmitButton(this.form, this.submit);
 
   void doSubmit(BuildContext context, _FormElement form) async {
+    var snackbar = SnackBarModel.of(context);
     Map<String, dynamic> formData = {};
     String action = "";
     for (var field in form.fields) {
@@ -661,7 +664,7 @@ class _FormSubmitButton extends StatelessWidget {
       await resources.fetchPage(
           uid, parsed.pathSegments, sessionID, parentPageID, formData);
     } catch (exception) {
-      showErrorSnackbar(context, "Unable to fetch page: $exception");
+      snackbar.error("Unable to fetch page: $exception");
     }
   }
 
