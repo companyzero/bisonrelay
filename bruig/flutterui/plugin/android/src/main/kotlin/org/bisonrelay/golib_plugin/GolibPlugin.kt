@@ -12,7 +12,9 @@ import android.content.Intent
 import android.content.ComponentName
 import android.app.PendingIntent
 import android.app.Service
+import android.content.pm.ServiceInfo
 import android.os.IBinder
+import android.os.Build
 import android.graphics.drawable.Icon
 import androidx.core.graphics.drawable.IconCompat
 
@@ -418,7 +420,13 @@ class GolibPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, ServiceAware
         .build()
 
       var foreground_id = 123482823
-      startForeground(foreground_id, notification)
+      startForeground(foreground_id, notification,
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+          ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+        } else {
+            0
+        },
+      )
     }
   }
 }
