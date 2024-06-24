@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:bruig/components/collapsable.dart';
 import 'package:bruig/components/dcr_input.dart';
@@ -6,12 +7,14 @@ import 'package:bruig/components/info_grid.dart';
 import 'package:bruig/components/inputs.dart';
 import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/components/text.dart';
+import 'package:bruig/config.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/models/notifications.dart';
 import 'package:bruig/models/snackbar.dart';
 import 'package:bruig/screens/startupscreen.dart';
 import 'package:bruig/util.dart';
 import 'package:flutter/material.dart';
+import 'package:path/path.dart' as path;
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:golib_plugin/util.dart';
 import 'package:bruig/theme_manager.dart';
@@ -151,8 +154,19 @@ cNPr8Y+sSs2MHf6xMNBQzV4KuIlPIg==
 -----END CERTIFICATE-----""";
         });
       } else if (res.chains[0].network == "simnet") {
+        // Read default cert for testing when it exists.
+        final certFile = File(path.join(homeDir(), ".dcrlnlpd", "tls.cert"));
+        String cert = "";
+        if (certFile.existsSync()) {
+          try {
+            cert = certFile.readAsStringSync();
+          } catch (exception) {
+            // Ignore.
+          }
+        }
         setState(() {
           serverCtrl.text = "https://127.0.0.1:29130";
+          certCtrl.text = cert;
         });
       }
     } catch (exception) {

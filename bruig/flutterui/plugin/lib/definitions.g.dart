@@ -1307,16 +1307,43 @@ Map<String, dynamic> _$LNReqChannelArgsToJson(LNReqChannelArgs instance) =>
       'certificates': instance.certificates,
     };
 
+LNLPPolicyResponse _$LNLPPolicyResponseFromJson(Map<String, dynamic> json) =>
+    LNLPPolicyResponse(
+      json['node'] as String,
+      (json['addresses'] as List<dynamic>).map((e) => e as String).toList(),
+      json['min_chan_size'] as int,
+      json['max_chan_size'] as int,
+      json['max_nb_channels'] as int,
+      json['min_chan_lifetime'] as int,
+      (json['chan_invoice_fee_rate'] as num).toDouble(),
+    );
+
+Map<String, dynamic> _$LNLPPolicyResponseToJson(LNLPPolicyResponse instance) =>
+    <String, dynamic>{
+      'node': instance.node,
+      'addresses': instance.addresses,
+      'min_chan_size': instance.minChanSize,
+      'max_chan_size': instance.maxChanSize,
+      'max_nb_channels': instance.maxNbChannels,
+      'min_chan_lifetime': instance.minChanLifetime,
+      'chan_invoice_fee_rate': instance.chanInvoiceFeeRate,
+    };
+
 LNReqChannelEstValue _$LNReqChannelEstValueFromJson(
         Map<String, dynamic> json) =>
     LNReqChannelEstValue(
       json['amount'] as int? ?? 0,
+      LNLPPolicyResponse.fromJson(
+          json['server_policy'] as Map<String, dynamic>),
+      LNReqChannelArgs.fromJson(json['request'] as Map<String, dynamic>),
     );
 
 Map<String, dynamic> _$LNReqChannelEstValueToJson(
         LNReqChannelEstValue instance) =>
     <String, dynamic>{
       'amount': instance.amount,
+      'server_policy': instance.serverPolicy,
+      'request': instance.request,
     };
 
 ConfirmFileDownload _$ConfirmFileDownloadFromJson(Map<String, dynamic> json) =>

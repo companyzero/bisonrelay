@@ -286,6 +286,7 @@ type lnReqChannelArgs struct {
 type lnReqChannelEstValue struct {
 	Amount       uint64                `json:"amount"`
 	ServerPolicy lpclient.ServerPolicy `json:"server_policy"`
+	Request      lnReqChannelArgs      `json:"request"`
 }
 
 type confirmFileDownload struct {
