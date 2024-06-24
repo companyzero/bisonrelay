@@ -1354,14 +1354,48 @@ class LNReqChannelArgs {
 
   LNReqChannelArgs(this.server, this.key, this.chanSize, this.certificates);
   Map<String, dynamic> toJson() => _$LNReqChannelArgsToJson(this);
+  factory LNReqChannelArgs.fromJson(Map<String, dynamic> json) =>
+      _$LNReqChannelArgsFromJson(json);
+}
+
+@JsonSerializable()
+class LNLPPolicyResponse {
+  final String node;
+  final List<String> addresses;
+
+  @JsonKey(name: "min_chan_size")
+  final int minChanSize;
+  @JsonKey(name: "max_chan_size")
+  final int maxChanSize;
+  @JsonKey(name: "max_nb_channels")
+  final int maxNbChannels;
+  @JsonKey(name: "min_chan_lifetime")
+  final int minChanLifetime;
+  @JsonKey(name: "chan_invoice_fee_rate")
+  final double chanInvoiceFeeRate;
+
+  LNLPPolicyResponse(
+      this.node,
+      this.addresses,
+      this.minChanSize,
+      this.maxChanSize,
+      this.maxNbChannels,
+      this.minChanLifetime,
+      this.chanInvoiceFeeRate);
+
+  factory LNLPPolicyResponse.fromJson(Map<String, dynamic> json) =>
+      _$LNLPPolicyResponseFromJson(json);
 }
 
 @JsonSerializable()
 class LNReqChannelEstValue {
   @JsonKey(defaultValue: 0)
   final int amount;
+  @JsonKey(name: "server_policy")
+  final LNLPPolicyResponse serverPolicy;
+  final LNReqChannelArgs request;
 
-  LNReqChannelEstValue(this.amount);
+  LNReqChannelEstValue(this.amount, this.serverPolicy, this.request);
   factory LNReqChannelEstValue.fromJson(Map<String, dynamic> json) =>
       _$LNReqChannelEstValueFromJson(json);
 }

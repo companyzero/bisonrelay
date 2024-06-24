@@ -1417,6 +1417,7 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 				estValue := lnReqChannelEstValue{
 					Amount:       estInvoice,
 					ServerPolicy: policy,
+					Request:      args,
 				}
 				notify(NTLNConfPayReqRecvChan, estValue, nil)
 

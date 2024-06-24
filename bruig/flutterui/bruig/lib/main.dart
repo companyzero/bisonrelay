@@ -343,8 +343,9 @@ class _AppState extends State<App> with WindowListener {
 
         case NTLNConfPayReqRecvChan:
           var est = ntf.payload as LNReqChannelEstValue;
-          navkey.currentState!
-              .pushNamed("/ln/confirmRecvChannelPay", arguments: est);
+          navkey.currentState!.pushNamed(
+              LNConfirmRecvChanPaymentScreen.routeName,
+              arguments: est);
           break;
 
         case NTConfFileDownload:
@@ -414,7 +415,7 @@ class _AppState extends State<App> with WindowListener {
                 '/generateInvite': (context) => const GenerateInviteScreen(),
                 '/verifyInvite': (context) => const VerifyInviteScreen(),
                 '/fetchInvite': (context) => const FetchInviteScreen(),
-                '/ln/confirmRecvChannelPay': (context) =>
+                LNConfirmRecvChanPaymentScreen.routeName: (context) =>
                     const LNConfirmRecvChanPaymentScreen(),
                 '/confirmFileDownload': (context) =>
                     Consumer2<ClientModel, DownloadsModel>(

@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:bruig/components/buttons.dart';
 import 'package:bruig/components/text.dart';
+import 'package:bruig/components/collapsable.dart';
+import 'package:bruig/components/copyable.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/models/uistate.dart';
 import 'package:bruig/screens/ln/accounts.dart';
@@ -113,6 +115,8 @@ class _LNScreenState extends State<LNScreen> {
 }
 
 class LNConfirmRecvChanPaymentScreen extends StatelessWidget {
+  static String routeName = "/ln/confirmRecvChannelPay";
+
   const LNConfirmRecvChanPaymentScreen({Key? key}) : super(key: key);
 
   void cancel(BuildContext context) {
@@ -130,22 +134,58 @@ class LNConfirmRecvChanPaymentScreen extends StatelessWidget {
     final LNReqChannelEstValue est =
         ModalRoute.of(context)!.settings.arguments as LNReqChannelEstValue;
 
+    var chanSize = formatDCR(atomsToDCR(est.request.chanSize));
     var amount = formatDCR(atomsToDCR(est.amount));
+    var second = 1000000000;
+    var hour = second * 60 * 60;
+    var day = hour * 24;
+    String minLifetime;
+    if (est.serverPolicy.minChanLifetime < hour) {
+      minLifetime =
+          "${(est.serverPolicy.minChanLifetime / second).truncate()} seconds";
+    } else if (est.serverPolicy.minChanLifetime < day) {
+      minLifetime =
+          "${(est.serverPolicy.minChanLifetime / hour).truncate()} hours";
+    } else {
+      minLifetime =
+          "${(est.serverPolicy.minChanLifetime / day).truncate()} days";
+    }
 
     return Scaffold(
         body: Container(
             padding: const EdgeInsets.all(10),
-            child: Column(children: [
-              const Txt.L("Confirm LN Payment to Open Receive Channel"),
-              const SizedBox(height: 20),
-              Text("Amount: $amount"),
-              const SizedBox(height: 20),
-              Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                ElevatedButton(
-                    onPressed: () => pay(context), child: const Text("Pay")),
-                const SizedBox(width: 20),
-                CancelButton(onPressed: () => cancel(context)),
-              ])
-            ])));
+            child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  const Txt.L("Confirm LN Payment to Open Receive Channel"),
+                  const SizedBox(height: 20),
+                  Text("Requested channel size: $chanSize"),
+                  Text("Minimum channel lifetime: $minLifetime"),
+                  Text("Payment amount: $amount"),
+                  const SizedBox(height: 20),
+                  Collapsable("Additional Information",
+                      child: Column(children: [
+                        Text("Server Address: ${est.request.server}"),
+                        Wrap(alignment: WrapAlignment.center, children: [
+                          const Text("Server Node ID: "),
+                          Copyable(
+                            est.serverPolicy.node,
+                            textOverflow: TextOverflow.ellipsis,
+                          )
+                        ]),
+                        Text(
+                            "Server node addresses: ${est.serverPolicy.addresses.join(", ")}"),
+                        Text(
+                            "Max number of channels: ${est.serverPolicy.maxNbChannels}"),
+                      ])),
+                  const SizedBox(height: 20),
+                  Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                    OutlinedButton(
+                        onPressed: () => pay(context),
+                        child: const Text("Pay")),
+                    const SizedBox(width: 20),
+                    CancelButton(onPressed: () => cancel(context)),
+                  ])
+                ])));
   }
 }
