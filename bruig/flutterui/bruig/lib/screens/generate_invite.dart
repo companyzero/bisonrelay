@@ -7,13 +7,19 @@ import 'package:bruig/components/copyable.dart';
 import 'package:bruig/components/dcr_input.dart';
 import 'package:bruig/components/text.dart';
 import 'package:bruig/models/snackbar.dart';
+import 'package:bruig/components/qr.dart';
+import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/screens/startupscreen.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:path/path.dart' as path;
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:golib_plugin/util.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:qr_flutter/qr_flutter.dart';
+import 'package:share_plus/share_plus.dart';
 
 class GenerateInviteScreen extends StatefulWidget {
   const GenerateInviteScreen({super.key});
@@ -23,7 +29,7 @@ class GenerateInviteScreen extends StatefulWidget {
 }
 
 class _GenerateInviteScreenState extends State<GenerateInviteScreen> {
-  String path = "";
+  String invitePath = "";
   List<bool> selFunding = [true, false];
   bool get sendFunds => selFunding[1];
   AmountEditingController fundAmountCtrl = AmountEditingController();
@@ -44,6 +50,24 @@ class _GenerateInviteScreenState extends State<GenerateInviteScreen> {
   void initState() {
     super.initState();
     checkExtraAccounts();
+
+    // Set the default export destination on mobile.
+    Platform.isAndroid || Platform.isIOS
+        ? (() async {
+            var nowStr = DateTime.now().toIso8601String().replaceAll(":", "_");
+            var fname = path.join(
+                (await getApplicationDocumentsDirectory()).path,
+                "invites",
+                "br-invite-$nowStr.bin");
+            var dir = File(fname).parent;
+            if (!await dir.exists()) {
+              await dir.create();
+            }
+            setState(() {
+              invitePath = fname;
+            });
+          })()
+        : null;
   }
 
   @override
@@ -62,7 +86,7 @@ class _GenerateInviteScreenState extends State<GenerateInviteScreen> {
           );
           if (filePath == null) return;
           setState(() {
-            path = "$filePath/invite.bin";
+            invitePath = "$filePath/invite.bin";
           });
         }
       } else {
@@ -72,7 +96,7 @@ class _GenerateInviteScreenState extends State<GenerateInviteScreen> {
         );
         if (filePath == null) return;
         setState(() {
-          path = filePath;
+          invitePath = filePath;
         });
       }
     });
@@ -129,7 +153,7 @@ class _GenerateInviteScreenState extends State<GenerateInviteScreen> {
       loading = true;
     });
     try {
-      var res = await Golib.generateInvite(path, amount, account, null);
+      var res = await Golib.generateInvite(invitePath, amount, account, null);
       setState(() {
         generated = res;
       });
@@ -141,12 +165,66 @@ class _GenerateInviteScreenState extends State<GenerateInviteScreen> {
     });
   }
 
+  void exportInviteQRCode() async {
+    // Disabled on linux due to commit 8e418d1818 (flutter version 3.21.0-0.0.pre)
+    // and later not correctly rendering the QR code.
+    if (Platform.isLinux) {
+      SnackBarModel.of(context).error("Disabled on linux due to flutter bug");
+      return;
+    }
+
+    var qr = QrCode.fromData(
+        data: generated!.key, errorCorrectLevel: QrErrorCorrectLevel.L);
+    var painter = QrPainter.withQr(
+      qr: qr,
+      gapless: true,
+      embeddedImageStyle: null,
+    );
+
+    var picData = await QrCodePainter(
+      margin: 30,
+      qrImage: await painter.toImage(512),
+    ).toImageData(512);
+
+    try {
+      if (Platform.isAndroid || Platform.isIOS) {
+        // Share with contacts.
+        var fname = path.join(
+            (await getApplicationCacheDirectory()).path, "br-invite.png");
+        await File(fname).writeAsBytes(picData!.buffer.asUint8List());
+        await Share.shareXFiles(
+            [XFile(fname, name: "br-invite.png", mimeType: "image/png")],
+            text: "bruig logs");
+      } else {
+        // Save to file.
+        var fname = await FilePicker.platform.saveFile(
+          dialogTitle: "Save Invite QR Code",
+          fileName: "br-invite.png",
+          type: FileType.image,
+        );
+        if (fname == null) {
+          return;
+        }
+        await File(fname)
+            .writeAsBytes(picData!.buffer.asUint8List(), flush: true);
+      }
+    } catch (exception) {
+      showErrorSnackbar(this, "Unable to export QR code: $exception");
+    }
+  }
+
   List<Widget> buildGeneratedInvite(BuildContext context) {
     var gen = generated!;
     return [
-      const Txt.L("Generated invite with key"),
+      InkWell(
+          onTap: !Platform.isLinux ? exportInviteQRCode : null,
+          child: Container(
+              color: Colors.white,
+              child: QrImageView(
+                  data: gen.key, version: QrVersions.auto, size: 200.0))),
       const SizedBox(height: 20),
       Copyable(gen.key),
+      const SizedBox(height: 20),
       ...(gen.funds != null
           ? [
               const SizedBox(height: 20),
@@ -173,8 +251,8 @@ class _GenerateInviteScreenState extends State<GenerateInviteScreen> {
       Container(
           alignment: Alignment.center,
           width: 400,
-          child: path != ""
-              ? Text("Path: $path")
+          child: invitePath != ""
+              ? Text("Path: $invitePath")
               : ElevatedButton(
                   onPressed: selectPath, child: const Text("Select Path"))),
       const SizedBox(height: 20),
@@ -199,21 +277,26 @@ class _GenerateInviteScreenState extends State<GenerateInviteScreen> {
           : const SizedBox(width: 400, height: 76),
       const SizedBox(height: 20),
       SizedBox(
-          width: 400,
-          child:
-              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-            OutlinedButton(
-                onPressed: !loading && path != "" ? generateInvite : null,
-                child: const Text("Generate invite")),
-            CancelButton(onPressed: () => Navigator.pop(context))
-          ])),
+          width: 300,
+          child: Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              runSpacing: 10,
+              children: [
+                OutlinedButton(
+                    onPressed:
+                        !loading && invitePath != "" ? generateInvite : null,
+                    child: const Text("Generate invite")),
+                CancelButton(onPressed: () => Navigator.pop(context))
+              ])),
     ];
   }
 
   @override
   Widget build(BuildContext context) {
-    return StartupScreen([
-      const Txt.H("Generate Invite"),
+    return StartupScreen(childrenWidth: 600, [
+      generated == null
+          ? const Txt.H("Generate Invite")
+          : const Txt.H("Generated Invite"),
       const SizedBox(height: 20),
       ...(generated == null
           ? buildGeneratePanel(context)
