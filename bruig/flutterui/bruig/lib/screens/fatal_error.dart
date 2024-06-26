@@ -1,5 +1,8 @@
+import 'package:bruig/screens/shutdown.dart';
 import 'package:flutter/material.dart';
 
+// Fatal error screen is for errors that are very fatal: no access to anything
+// (not even logs). Just option to quit app.
 class FatalErrorScreen extends StatelessWidget {
   final Object? exception;
   const FatalErrorScreen({this.exception, Key? key}) : super(key: key);
@@ -11,22 +14,26 @@ class FatalErrorScreen extends StatelessWidget {
         Exception("unknown exception");
 
     return Scaffold(
-      body: Container(
-        color: Colors.red,
-        child: Center(
-          child: Text("Fatal error: $exc"),
-        ),
-      ),
-    );
+        body: Container(
+            color: Colors.red,
+            width: double.infinity,
+            child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SelectionArea(
+                      child: Text("Fatal error: $exc",
+                          style: TextStyle(color: Colors.grey[300]))),
+                  const SizedBox(height: 20),
+                  const FilledButton(
+                      onPressed: quitApp, child: Text("Force Quit App")),
+                ])));
   }
 }
 
 void runFatalErrorApp(Object exception) {
   runApp(MaterialApp(
     title: "Fatal Error",
-    theme: ThemeData(
-      primarySwatch: Colors.green,
-    ),
     initialRoute: "/",
     routes: {
       "/": (context) => FatalErrorScreen(exception: exception),

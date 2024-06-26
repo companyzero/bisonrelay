@@ -560,7 +560,13 @@ class ThemeNotifier with ChangeNotifier {
   // loading the theme data.
   static Future<ThemeNotifier> newNotifierWhenLoaded() async {
     var theme = ThemeNotifier(doLoad: false);
-    await theme._loadThemeFromConfig();
+    try {
+      await theme._loadThemeFromConfig();
+    } catch (exception) {
+      debugPrint("Error while loading theme: $exception");
+
+      // Continue to return default theme.
+    }
     return theme;
   }
 
