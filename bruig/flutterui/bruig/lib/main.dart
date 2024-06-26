@@ -53,53 +53,56 @@ import 'package:optimize_battery/optimize_battery.dart';
 final Random random = Random();
 
 void main(List<String> args) async {
-  // Ensure the platform bindings are initialized.
-  WidgetsFlutterBinding.ensureInitialized();
-
-  // This debugs both the dart platform adapter and the native bindings.
-  developer.log("Platform: ${Golib.majorPlatform}/${Golib.minorPlatform}");
-  Golib.platformVersion
-      .then((value) => developer.log("Platform Version: $value"));
-  Golib.captureDcrlndLog();
-  bool goProfilerEnabled =
-      await StorageManager.readBool(StorageManager.goProfilerEnabledKey);
-  if (goProfilerEnabled) Golib.asyncCall(CTEnableProfiler, "");
-  bool goTimedProfilingEnabled =
-      await StorageManager.readBool(StorageManager.goTimedProfilingKey);
-  if (goTimedProfilingEnabled) {
-    Golib.asyncCall(CTEnableTimedProfiling, await timedProfilingDir());
-  } else {
-    // Remove any old profile files when profiling is disabled.
-    var profileDir = Directory(await timedProfilingDir());
-    if (await profileDir.exists()) {
-      profileDir.delete(recursive: true);
-    }
-  }
-
-  // DartVLC.initialize();
-
-  // Get user to stop optimizing battery usage on Android.
-  if (Platform.isAndroid) OptimizeBattery.stopOptimizingBatteryUsage();
-
-  // Set the internal plugin flags around notification.
-  await StorageManager.setupDefaults();
-  bool fgService = Platform.isAndroid &&
-      (await StorageManager.readData(StorageManager.ntfnFgSvcKey) as bool? ??
-          false);
-  if (fgService) Golib.startForegroundSvc();
-  bool ntfnsEnabled = Platform.isAndroid &&
-      (await StorageManager.readData(StorageManager.notificationsKey)
-              as bool? ??
-          false);
-  if (ntfnsEnabled) Golib.setNtfnsEnabled(true);
-
-  // The MockGolib was mostly useful during early stages of development.
-  //UseMockGolib();
-
-  var defAppDir = await defaultAppDataDir();
-  developer.log("Default app dir: $defAppDir");
-
   try {
+    // Ensure the platform bindings are initialized.
+    WidgetsFlutterBinding.ensureInitialized();
+
+    // Create global logger.
+    initGlobalLogModel();
+
+    // This debugs both the dart platform adapter and the native bindings.
+    developer.log("Platform: ${Golib.majorPlatform}/${Golib.minorPlatform}");
+    Golib.platformVersion
+        .then((value) => developer.log("Platform Version: $value"));
+    Golib.captureDcrlndLog();
+    bool goProfilerEnabled =
+        await StorageManager.readBool(StorageManager.goProfilerEnabledKey);
+    if (goProfilerEnabled) Golib.asyncCall(CTEnableProfiler, "");
+    bool goTimedProfilingEnabled =
+        await StorageManager.readBool(StorageManager.goTimedProfilingKey);
+    if (goTimedProfilingEnabled) {
+      Golib.asyncCall(CTEnableTimedProfiling, await timedProfilingDir());
+    } else {
+      // Remove any old profile files when profiling is disabled.
+      var profileDir = Directory(await timedProfilingDir());
+      if (await profileDir.exists()) {
+        profileDir.delete(recursive: true);
+      }
+    }
+
+    // DartVLC.initialize();
+
+    // Get user to stop optimizing battery usage on Android.
+    if (Platform.isAndroid) OptimizeBattery.stopOptimizingBatteryUsage();
+
+    // Set the internal plugin flags around notification.
+    await StorageManager.setupDefaults();
+    bool fgService = Platform.isAndroid &&
+        (await StorageManager.readData(StorageManager.ntfnFgSvcKey) as bool? ??
+            false);
+    if (fgService) Golib.startForegroundSvc();
+    bool ntfnsEnabled = Platform.isAndroid &&
+        (await StorageManager.readData(StorageManager.notificationsKey)
+                as bool? ??
+            false);
+    if (ntfnsEnabled) Golib.setNtfnsEnabled(true);
+
+    // The MockGolib was mostly useful during early stages of development.
+    //UseMockGolib();
+
+    var defAppDir = await defaultAppDataDir();
+    developer.log("Default app dir: $defAppDir");
+
     mainConfigFilename = await configFileName(args);
     Config cfg = await configFromArgs(args);
     await Golib.createLockFile(cfg.dbRoot);

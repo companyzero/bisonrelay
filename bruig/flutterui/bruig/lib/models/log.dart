@@ -3,13 +3,18 @@ import 'dart:collection';
 import 'package:flutter/cupertino.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 
-final globalLogModel = LogModel();
+late final LogModel globalLogModel;
+
+void initGlobalLogModel() {
+  globalLogModel = LogModel();
+  try {
+    globalLogModel._handleDcrlndLogLines();
+  } catch (exception) {
+    throw "Unable to listen to log lines: $exception";
+  }
+}
 
 class LogModel extends ChangeNotifier {
-  LogModel() {
-    _handleDcrlndLogLines();
-  }
-
   bool _compactingDb = false;
   get compactingDb => _compactingDb;
 
