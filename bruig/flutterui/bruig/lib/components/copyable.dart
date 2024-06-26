@@ -38,7 +38,7 @@ class Copyable extends StatelessWidget {
     if (textMsg.length < toCopy.length) {
       textMsg += "...";
     }
-    showSuccessSnackbar(this, "Copied \"$textMsg\" to clipboard");
+    showSuccessSnackbar(context, "Copied \"$textMsg\" to clipboard");
   }
 
   @override
