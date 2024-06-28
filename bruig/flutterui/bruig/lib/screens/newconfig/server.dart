@@ -27,14 +27,14 @@ class _ServerPageState extends State<ServerPage> {
 
     switch (widget.newconf.netType) {
       case NetworkType.mainnet:
-        serverCtrl.text = "br00.bisonrelay.org:12345";
+        serverCtrl.text = "br00.bisonrelay.org:443";
         break;
       case NetworkType.testnet:
         serverCtrl.text = "216.128.136.239:65432";
         break;
       case NetworkType.simnet:
         serverCtrl.text =
-            Platform.isAndroid ? "10.0.2.2:12345" : "127.0.0.1:12345";
+            Platform.isAndroid ? "10.0.2.2:443" : "127.0.0.1:443";
         break;
     }
   }

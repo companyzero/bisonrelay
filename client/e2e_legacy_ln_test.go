@@ -53,7 +53,7 @@ func newTestClient(t testing.TB, rnd io.Reader, name string) *Client {
 		t.Fatal(err)
 	}
 	cfg := Config{
-		Dialer:         clientintf.NetDialer("localhost:12345", slog.Disabled),
+		Dialer:         clientintf.NetDialer("localhost:443", slog.Disabled),
 		CertConfirmer:  certConfirmerUnsafeAlwaysAccept,
 		PayClient:      pc,
 		Logger:         logger,

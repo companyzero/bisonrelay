@@ -86,7 +86,7 @@ func New() *Settings {
 		Root:            "~/.brserver",
 		RoutedMessages:  "~/.brserver/" + ZKSRoutedMessages,
 		PaidRVs:         "~/.brserver/" + ZKSPaidRVs,
-		Listen:          []string{"127.0.0.1:12345"},
+		Listen:          []string{"127.0.0.1:443"},
 		InitSessTimeout: time.Second * 20,
 
 		// Policy
