@@ -18,7 +18,7 @@ import (
 func TestPerfSendPMs(t *testing.T) {
 	tcfg := testScaffoldCfg{skipNewServer: true}
 	ts := newTestScaffold(t, tcfg)
-	ts.svrAddr = "localhost:12345"
+	ts.svrAddr = "localhost:443"
 
 	nbAlts := runtime.NumCPU()
 

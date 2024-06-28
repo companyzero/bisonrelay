@@ -182,11 +182,11 @@ func (sws *setupWizardScreen) initInputsServer() tea.Cmd {
 	// Set default server address based on the newtork.
 	switch sws.net {
 	case "mainnet":
-		txtServer.SetValue("br00.bisonrelay.org:12345")
+		txtServer.SetValue("br00.bisonrelay.org:443")
 	case "testnet":
 		txtServer.SetValue("216.128.136.239:65432")
 	case "simnet":
-		txtServer.SetValue("127.0.0.1:12345")
+		txtServer.SetValue("127.0.0.1:443")
 	}
 
 	sws.inputs = []textinput.Model{txtServer}

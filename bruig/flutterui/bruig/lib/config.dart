@@ -328,7 +328,7 @@ Future<Config> loadConfig(String filepath) async {
   c.dbRoot = path.join(appDataDir, "db");
   c.downloadsDir = path.join(appDataDir, "downloads");
   c.embedsDir = path.join(appDataDir, "embeds");
-  c.serverAddr = f.get("default", "server") ?? "localhost:12345";
+  c.serverAddr = f.get("default", "server") ?? "localhost:443";
   c.logFile = logfile;
   c.msgRoot = msgRoot;
   c.debugLevel = f.get("log", "debuglevel") ?? "info";
