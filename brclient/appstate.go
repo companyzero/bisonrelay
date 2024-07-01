@@ -50,7 +50,7 @@ import (
 	"github.com/decred/dcrlnd/zpay32"
 	lpclient "github.com/decred/dcrlnlpd/client"
 	"github.com/decred/slog"
-	"github.com/puzpuzpuz/xsync/v2"
+	"github.com/puzpuzpuz/xsync/v3"
 	"golang.org/x/exp/maps"
 	"golang.org/x/exp/slices"
 	"golang.org/x/text/collate"
@@ -3921,7 +3921,7 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		inboundMsgsChan: make(chan struct{}, 8),
 		logsMsgs:        args.MsgRoot != "",
 
-		payReqStatuses: xsync.NewTypedMapOf[chainhash.Hash, lnrpc.Payment_PaymentStatus](chainHashMapHashHasher),
+		payReqStatuses: xsync.NewMapOf[chainhash.Hash, lnrpc.Payment_PaymentStatus](),
 
 		sstore:       sstore,
 		ssPayType:    args.SimpleStorePayType,

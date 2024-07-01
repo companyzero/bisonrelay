@@ -6,7 +6,6 @@ import (
 	"crypto/x509"
 	"encoding/hex"
 	"fmt"
-	"hash/maphash"
 	"net"
 	"os"
 	"runtime"
@@ -15,7 +14,6 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/decred/dcrd/chaincfg/chainhash"
 	"github.com/decred/dcrd/dcrutil/v4"
 	"github.com/decred/dcrlnd/lnrpc"
 	"github.com/decred/dcrlnd/zpay32"
@@ -374,14 +372,6 @@ func channelBalanceDisplay(local, remote int64) string {
 	}
 	return fmt.Sprintf("[%s%s%s]", strings.Repeat(c, plocal), sep,
 		strings.Repeat(c, max-plocal-1))
-}
-
-// chainHashMapHashHasher is a hasher function to use with xsync typed maps.
-func chainHashMapHashHasher(seed maphash.Seed, k chainhash.Hash) uint64 {
-	var h maphash.Hash
-	h.SetSeed(seed)
-	h.Write(k[:])
-	return h.Sum64()
 }
 
 // isPayReqExpired returns true if the payreq has been expired.
