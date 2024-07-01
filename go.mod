@@ -6,9 +6,9 @@ require (
 	github.com/atotto/clipboard v0.1.4
 	github.com/bahlo/generic-list-go v0.2.0
 	github.com/charmbracelet/bubbles v0.18.0
-	github.com/charmbracelet/bubbletea v0.25.0
-	github.com/charmbracelet/lipgloss v0.10.0
-	github.com/charmbracelet/x/exp/term v0.0.0-20240425164147-ba2a9512b05f
+	github.com/charmbracelet/bubbletea v0.26.6
+	github.com/charmbracelet/lipgloss v0.11.0
+	github.com/charmbracelet/x/exp/term v0.0.0-20240625164403-2627ec16405d
 	github.com/companyzero/sntrup4591761 v0.0.0-20220309191932-9e0f3af2f07a
 	github.com/davecgh/go-spew v1.1.1
 	github.com/decred/dcrd/bech32 v1.1.3
@@ -19,17 +19,17 @@ require (
 	github.com/decred/dcrd/dcrutil/v4 v4.0.2
 	github.com/decred/dcrd/txscript/v4 v4.1.1
 	github.com/decred/dcrd/wire v1.7.0
-	github.com/decred/dcrlnd v0.7.2
-	github.com/decred/dcrlnlpd v0.0.0-20240517140916-2bfee4e5bb86
+	github.com/decred/dcrlnd v0.7.4-0.20240624212129-c8b8ba4e5169
+	github.com/decred/dcrlnlpd v0.0.0-20240701190503-66ec85de0752
 	github.com/decred/go-socks v1.1.0
 	github.com/decred/slog v1.2.0
 	github.com/erikgeiser/promptkit v0.9.0
-	github.com/fsnotify/fsnotify v1.5.4
+	github.com/fsnotify/fsnotify v1.7.0
 	github.com/gorilla/websocket v1.5.1
-	github.com/jessevdk/go-flags v1.5.0
+	github.com/jessevdk/go-flags v1.6.1
 	github.com/jrick/flagfile v1.0.0
 	github.com/jrick/logrotate v1.0.0
-	github.com/lib/pq v1.10.7
+	github.com/lib/pq v1.10.9
 	github.com/mattn/go-runewidth v0.0.15
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/pbnjay/memory v0.0.0-20210728143218-7b4eea64cf58
@@ -40,13 +40,13 @@ require (
 	github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
 	github.com/vaughan0/go-ini v0.0.0-20130923145212-a98ad7ee00ec
 	github.com/xhit/go-str2duration/v2 v2.1.0
-	golang.org/x/crypto v0.23.0
+	golang.org/x/crypto v0.24.0
 	golang.org/x/exp v0.0.0-20231110203233-9a3e6036ecaa
-	golang.org/x/mobile v0.0.0-20230427221453-e8d11dd0ba41
-	golang.org/x/net v0.25.0
+	golang.org/x/mobile v0.0.0-20240604190613-2782386b8afd
+	golang.org/x/net v0.26.0
 	golang.org/x/sync v0.7.0
-	golang.org/x/term v0.20.0
-	golang.org/x/text v0.15.0
+	golang.org/x/term v0.21.0
+	golang.org/x/text v0.16.0
 	google.golang.org/grpc v1.59.0
 	google.golang.org/protobuf v1.31.0
 	gopkg.in/macaroon.v2 v2.1.0
@@ -54,7 +54,7 @@ require (
 
 require (
 	decred.org/cspp/v2 v2.2.0 // indirect
-	decred.org/dcrwallet/v4 v4.1.1 // indirect
+	decred.org/dcrwallet/v4 v4.1.3-0.20240624134826-39fd48b821f4 // indirect
 	github.com/NebulousLabs/go-upnp v0.0.0-20181203152547-b32978b8ccbf // indirect
 	github.com/Yawning/aez v0.0.0-20211027044916-e49e68abd344 // indirect
 	github.com/agl/ed25519 v0.0.0-20170116200512-5312a6153412 // indirect
@@ -63,7 +63,10 @@ require (
 	github.com/btcsuite/btcwallet/walletdb v1.4.0 // indirect
 	github.com/cenkalti/backoff/v4 v4.1.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
-	github.com/containerd/console v1.0.4-0.20230313162750-1ae8d489ac81 // indirect
+	github.com/charmbracelet/x/ansi v0.1.2 // indirect
+	github.com/charmbracelet/x/input v0.1.0 // indirect
+	github.com/charmbracelet/x/term v0.1.1 // indirect
+	github.com/charmbracelet/x/windows v0.1.0 // indirect
 	github.com/coreos/go-semver v0.3.1 // indirect
 	github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf // indirect
 	github.com/coreos/go-systemd/v22 v22.3.2 // indirect
@@ -77,6 +80,8 @@ require (
 	github.com/decred/dcrd/connmgr v1.1.1 // indirect
 	github.com/decred/dcrd/connmgr/v3 v3.1.2 // indirect
 	github.com/decred/dcrd/container/apbf v1.0.1 // indirect
+	github.com/decred/dcrd/container/lru v1.0.0 // indirect
+	github.com/decred/dcrd/crypto/rand v1.0.0 // indirect
 	github.com/decred/dcrd/crypto/ripemd160 v1.0.2 // indirect
 	github.com/decred/dcrd/database/v3 v3.0.2 // indirect
 	github.com/decred/dcrd/dcrec v1.0.1 // indirect
@@ -87,13 +92,14 @@ require (
 	github.com/decred/dcrd/hdkeychain/v3 v3.1.2 // indirect
 	github.com/decred/dcrd/lru v1.1.2 // indirect
 	github.com/decred/dcrd/math/uint256 v1.0.1 // indirect
-	github.com/decred/dcrd/mixing v0.3.0 // indirect
+	github.com/decred/dcrd/mixing v0.4.0 // indirect
 	github.com/decred/dcrd/peer/v3 v3.0.2 // indirect
 	github.com/decred/dcrd/rpc/jsonrpc/types/v4 v4.3.0 // indirect
 	github.com/decred/dcrd/rpcclient/v8 v8.0.1 // indirect
 	github.com/decred/dcrtest/dcrdtest v1.0.1-0.20240514160637-ade8c37ad1db // indirect
-	github.com/decred/lightning-onion/v4 v4.0.0 // indirect
+	github.com/decred/lightning-onion/v4 v4.0.1 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
+	github.com/erikgeiser/coninput v0.0.0-20211004153227-1c3628e74d0f // indirect
 	github.com/fergusstrange/embedded-postgres v1.25.0 // indirect
 	github.com/go-errors/errors v1.4.2 // indirect
 	github.com/go-macaroon-bakery/macaroonpb v1.0.0 // indirect
@@ -123,7 +129,7 @@ require (
 	github.com/kkdai/bstream v1.0.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.5 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
-	github.com/mattn/go-isatty v0.0.19 // indirect
+	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-localereader v0.0.1 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
 	github.com/miekg/dns v1.1.53 // indirect
@@ -147,6 +153,7 @@ require (
 	github.com/tv42/zbase32 v0.0.0-20220222190657-f76a9fc892fa // indirect
 	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8 // indirect
 	github.com/xiang90/probing v0.0.0-20221125231312-a49e3df8f510 // indirect
+	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	gitlab.com/NebulousLabs/fastrand v0.0.0-20181126182046-603482d69e40 // indirect
 	gitlab.com/NebulousLabs/go-upnp v0.0.0-20211002182029-11da932010b6 // indirect
 	gitlab.com/yawning/bsaes.git v0.0.0-20190805113838-0a714cd429ec // indirect
@@ -168,10 +175,10 @@ require (
 	go.uber.org/atomic v1.10.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.24.0 // indirect
-	golang.org/x/mod v0.14.0 // indirect
-	golang.org/x/sys v0.20.0 // indirect
+	golang.org/x/mod v0.18.0 // indirect
+	golang.org/x/sys v0.21.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
-	golang.org/x/tools v0.15.0 // indirect
+	golang.org/x/tools v0.22.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 	google.golang.org/genproto v0.0.0-20231030173426-d783a09b4405 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20231106174013-bbf56f31fb17 // indirect
