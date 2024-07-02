@@ -10,6 +10,7 @@ import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/components/text.dart';
 import 'package:bruig/models/log.dart';
 import 'package:bruig/models/notifications.dart';
+import 'package:bruig/screens/fetch_invite.dart';
 import 'package:bruig/screens/startupscreen.dart';
 import 'package:bruig/util.dart';
 import 'package:flutter/material.dart';
@@ -99,7 +100,7 @@ class OnboardingScreen extends StatefulWidget {
 class _OnboardingScreenState extends State<OnboardingScreen> {
   OnboardState? ostate;
   String oerror = "";
-  TextEditingController keyCtrl = TextEditingController();
+  String inviteKey = "";
   LNBalances balances = LNBalances.empty();
   bool readingState = true;
   bool starting = false;
@@ -150,7 +151,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   void startOnboard() async {
     setState(() => starting = true);
     try {
-      await Golib.startOnboard(keyCtrl.text.trim().toLowerCase());
+      await Golib.startOnboard(inviteKey);
     } catch (exception) {
       showErrorSnackbar(this, "Unable to start onboarding: $exception");
     } finally {
@@ -193,7 +194,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     try {
       await Golib.cancelOnboard();
       setState(() {
-        keyCtrl.clear();
+        inviteKey = "";
         ostate = null;
       });
     } catch (exception) {
@@ -299,19 +300,20 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       ];
     } else if (ostate == null) {
       children = [
-        SizedBox(
-            width: 600,
-            child: TextField(
-              controller: keyCtrl,
-              decoration:
-                  const InputDecoration(hintText: "Invite key (brpik1...)"),
-            )),
+        InvitePanel(
+          (newInvitePath, newInviteKey) {
+            setState(() {
+              inviteKey = newInviteKey ?? "";
+            });
+          },
+        ),
         const SizedBox(height: 20),
         Wrap(
           runSpacing: 10,
           children: [
             ElevatedButton(
-                onPressed: startOnboard, child: const Text("Start Onboard")),
+                onPressed: inviteKey != "" ? startOnboard : null,
+                child: const Text("Start Onboard")),
             const SizedBox(width: 20),
             CancelButton(onPressed: skipOnboarding, label: "Manual Setup"),
           ],

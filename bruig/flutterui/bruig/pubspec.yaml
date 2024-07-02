@@ -71,6 +71,7 @@ dependencies:
   pdfrx: ^1.0.54
   path_drawing: ^1.0.0
   collection: ^1.18.0
+  mobile_scanner: ^5.1.1
 
 msix_config:
   display_name: Bison Relay GUI

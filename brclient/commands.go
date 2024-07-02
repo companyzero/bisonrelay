@@ -25,6 +25,7 @@ import (
 	"github.com/decred/dcrlnd/lnrpc/walletrpc"
 	"github.com/decred/dcrlnd/lnwire"
 	"github.com/mitchellh/go-homedir"
+	"github.com/skip2/go-qrcode"
 	"golang.org/x/exp/slices"
 )
 
@@ -821,6 +822,58 @@ var inviteCommands = []tuicmd{
 		},
 		completer: func(args []string, arg string, as *appState) []string {
 			return fileCompleter(arg)
+		},
+	}, {
+		cmd:           "qr",
+		usableOffline: true,
+		usage:         "<invite key> [<path>]",
+		descr:         "View or save the QR code of an invite",
+		handler: func(args []string, as *appState) error {
+			if len(args) < 1 {
+				return usageError{msg: "invite key cannot be empty"}
+			}
+
+			key := args[0]
+			_, err := clientintf.DecodePaidInviteKey(key)
+			if err != nil {
+				return fmt.Errorf("invalid invite key: %v", err)
+			}
+
+			png, err := qrcode.Encode(key, qrcode.Medium, 256)
+			if err != nil {
+				return fmt.Errorf("unable to encode QR code: %v", err)
+			}
+
+			isView := len(args) == 1
+			if isView {
+				cmd, err := as.viewRaw(png)
+				if err != nil {
+					return err
+				}
+
+				as.sendMsg(msgRunCmd(cmd))
+				return nil
+			}
+
+			dir := filepath.Dir(args[1])
+			if dir != "" {
+				err := os.MkdirAll(dir, 0o0700)
+				if err != nil {
+					return err
+				}
+			}
+			f, err := os.Create(args[1])
+			if err != nil {
+				return err
+			}
+			if _, err := f.Write(png); err != nil {
+				return err
+			}
+			if err = f.Close(); err != nil {
+				return err
+			}
+			as.cwHelpMsg("Saved QR code to %s", args[1])
+			return nil
 		},
 	},
 }
