@@ -695,12 +695,42 @@ func (c *Client) handshakeIdleUsers() error {
 			continue
 		}
 
-		// Skip if we already attempted a handshake with this user that
-		// has not completed.
 		ab, err := c.getAddressBookEntry(uid)
 		if err != nil {
 			continue
 		}
+
+		// If the last handshake attempt time is before the last
+		// decryption time, zero the handshake attempt time.
+		//
+		// This fixes a bug introduced in commit 15690ddfa, after which
+		// clients that had performed a handshake prior to this commit
+		// would still keep the attempt time recorded (even after
+		// successful handshakes). This would mean that an automatic
+		// unsub would take place because a new handshake would not be
+		// attempted.
+		//
+		// This fix works by detecting a decryption time that is more
+		// recent than the handshake attempt, which implies the clients
+		// still have an intact ratchet and the handshake worked (or
+		// the ratchet was reset).
+		if ab.LastHandshakeAttempt.Before(lastDecTime) {
+			ru.log.Infof("Clearing last handshake time (%s) that "+
+				"is earlier than last decryption time (%s)",
+				ab.LastHandshakeAttempt.Format(time.RFC3339Nano),
+				lastDecTime.Format(time.RFC3339Nano))
+
+			err := c.clearLastHandshakeAttemptTime(ru)
+			if err != nil {
+				ru.log.Warnf("Unable to clear last handshake "+
+					"time during init: %v", err)
+				continue
+			}
+			ab.LastHandshakeAttempt = time.Time{}
+		}
+
+		// Skip if we already attempted a handshake with this user that
+		// has not completed.
 		if !ab.LastHandshakeAttempt.IsZero() {
 			continue
 		}

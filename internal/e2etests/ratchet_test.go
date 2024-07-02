@@ -758,6 +758,79 @@ func TestUnsubsIdleClientsAfterResetBug(t *testing.T) {
 	assert.ChanWritten(t, aliceKicked)
 }
 
+// TestUnsubsIdleClientsWithHandshakeAttempt tests an old bug where an user was
+// autounsubbed due to their recorded handshake attempt being older than
+// the introduction of commit 15690ddfac057bd2ece38b110ba559d7277c2663.
+func TestUnsubsIdleClientsWithHandshakeAttempt(t *testing.T) {
+	t.Parallel()
+
+	tcfg := testScaffoldCfg{}
+	ts := newTestScaffold(t, tcfg)
+	alice := ts.newClient("alice")
+	bob := ts.newClient("bob", withDisableAutoUnsubIdle(),
+		withDisableAutoHandshake())
+	ts.kxUsers(alice, bob)
+
+	aliceUnsubbing := make(chan struct{}, 3)
+	alice.handle(client.OnUnsubscribingIdleRemoteClient(func(ru *client.RemoteUser, lastDecTime time.Time) {
+		if ru.ID() != bob.PublicID() {
+			return
+		}
+		aliceUnsubbing <- struct{}{}
+	}))
+	aliceSYNSent := make(chan struct{}, 3)
+	alice.handle(client.OnRMSent(func(ru *client.RemoteUser, p interface{}) {
+		if _, ok := p.(rpc.RMHandshakeSYN); ok {
+			aliceSYNSent <- struct{}{}
+		}
+	}))
+
+	// Bob subscribes to Alice's post.
+	assertSubscribeToPosts(t, alice, bob)
+
+	// Bob goes idle.
+	assertGoesOffline(t, bob)
+
+	// Manually change Alice's last recorded handshake attempt to Bob to
+	// a date in the past.
+	//
+	// After this, the state within Alice will be that the last handshake
+	// attempt is older than the last decryption time (which should not
+	// happen anymore but can still happen for clients that were online
+	// before 15690ddfa).
+	err := alice.db.Update(context.Background(), func(tx clientdb.ReadWriteTx) error {
+		entry, err := alice.db.GetAddressBookEntry(tx, bob.PublicID())
+		if err != nil {
+			return err
+		}
+
+		entry.LastHandshakeAttempt = time.Date(2024, 4, 18, 12, 00, 00, 00, time.UTC)
+		return alice.db.UpdateAddressBookEntry(tx, entry)
+	})
+	assert.NilErr(t, err)
+
+	// Wait until Alice should both send a handshake attempt and auto
+	// unsub for already idle users.
+	time.Sleep(alice.cfg.AutoRemoveIdleUsersInterval)
+
+	// Flick alice. Before the bug was fixed, this would cause the
+	// handshake to NOT be sent and the auto-unsub to happen. After the bug
+	// is fixed, she sends the handshake but does not yet perform the
+	// unsub.
+	assertGoesOffline(t, alice)
+	assertGoesOnline(t, alice)
+	assert.ChanNotWritten(t, aliceUnsubbing, time.Second)
+	assert.ChanWritten(t, aliceSYNSent)
+
+	// Wait the additional handshake time. This should NOT cause an
+	// additional handshake and SHOULD cause the autounsub.
+	time.Sleep(alice.cfg.AutoHandshakeInterval)
+	assertGoesOffline(t, alice)
+	assertGoesOnline(t, alice)
+	assert.ChanNotWritten(t, aliceSYNSent, time.Second)
+	assert.ChanWritten(t, aliceUnsubbing)
+}
+
 // TestUserNickAlias performs tests around duplicate and aliased users.
 func TestUserNickAlias(t *testing.T) {
 	t.Parallel()
