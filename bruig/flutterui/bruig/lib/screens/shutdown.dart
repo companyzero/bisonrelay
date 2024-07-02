@@ -12,6 +12,14 @@ import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:window_manager/window_manager.dart';
 
+void quitApp() {
+  if (Platform.isAndroid || Platform.isIOS) {
+    SystemChannels.platform.invokeMethod('SystemNavigator.pop');
+  } else {
+    windowManager.destroy();
+  }
+}
+
 class ShutdownScreen extends StatefulWidget {
   final bool internalDcrlnd;
   final Stream<ConfNotification> ntfs;
@@ -25,14 +33,6 @@ class ShutdownScreen extends StatefulWidget {
 
 class _ShutdownScreenState extends State<ShutdownScreen> {
   String? clientStopErr;
-
-  void quitApp() {
-    if (Platform.isAndroid || Platform.isIOS) {
-      SystemChannels.platform.invokeMethod('SystemNavigator.pop');
-    } else {
-      windowManager.destroy();
-    }
-  }
 
   void handleNotifications() async {
     await for (var ntf in widget.ntfs) {

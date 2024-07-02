@@ -246,6 +246,7 @@ class _ExportLogScreenState extends State<ExportLogScreen> {
                     Text("Latest file"),
                     Text("All files"),
                   ]),
+              const SizedBox(height: 10),
               ToggleButtons(
                   borderRadius: const BorderRadius.all(Radius.circular(8)),
                   constraints:
@@ -260,6 +261,7 @@ class _ExportLogScreenState extends State<ExportLogScreen> {
                     Text("No app logs"),
                     Text("App logs"),
                   ]),
+              const SizedBox(height: 10),
               ToggleButtons(
                   borderRadius: const BorderRadius.all(Radius.circular(8)),
                   constraints:
