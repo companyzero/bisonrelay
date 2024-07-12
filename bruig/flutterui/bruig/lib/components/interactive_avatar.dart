@@ -8,20 +8,21 @@ import 'package:bruig/theme_manager.dart';
 import 'package:provider/provider.dart';
 
 class InteractiveAvatar extends StatelessWidget {
-  const InteractiveAvatar({
-    super.key,
-    required this.chatNick,
-    this.onTap,
-    this.onSecondaryTap,
-    this.avatar,
-    this.radius,
-  });
+  const InteractiveAvatar(
+      {super.key,
+      required this.chatNick,
+      this.onTap,
+      this.onSecondaryTap,
+      this.avatar,
+      this.radius,
+      this.toolTip});
 
   final String chatNick;
   final VoidCallback? onTap;
   final VoidCallback? onSecondaryTap;
   final ImageProvider? avatar;
   final double? radius;
+  final bool? toolTip;
 
   @override
   Widget build(BuildContext context) {
@@ -32,21 +33,31 @@ class InteractiveAvatar extends StatelessWidget {
           ThemeData.estimateBrightnessForColor(avatarColor) == Brightness.dark
               ? theme.extraTextStyles.darkAvatarInitial
               : theme.extraTextStyles.lightAvatarInitial;
-
       return MouseRegion(
-          cursor: SystemMouseCursors.click,
-          child: GestureDetector(
+        cursor: SystemMouseCursors.click,
+        child: GestureDetector(
             onTap: onTap,
             onSecondaryTap: onSecondaryTap,
-            child: CircleAvatar(
-                radius: radius,
-                backgroundColor: avatarColor,
-                backgroundImage: avatar,
-                child: avatar != null
-                    ? const Empty()
-                    : SelectionContainer.disabled(
-                        child: Text(nickInitial, style: avatarTextTs))),
-          ));
+            child: toolTip != null && toolTip!
+                ? Tooltip(
+                    message: chatNick,
+                    child: CircleAvatar(
+                        radius: radius,
+                        backgroundColor: avatarColor,
+                        backgroundImage: avatar,
+                        child: avatar != null
+                            ? const Empty()
+                            : SelectionContainer.disabled(
+                                child: Text(nickInitial, style: avatarTextTs))))
+                : CircleAvatar(
+                    radius: radius,
+                    backgroundColor: avatarColor,
+                    backgroundImage: avatar,
+                    child: avatar != null
+                        ? const Empty()
+                        : SelectionContainer.disabled(
+                            child: Text(nickInitial, style: avatarTextTs)))),
+      );
     });
   }
 }
@@ -109,6 +120,7 @@ class _AvatarModelAvatarState extends State<AvatarModelAvatar> {
       onTap: widget.onTap,
       onSecondaryTap: widget.onSecondaryTap,
       avatar: avatarImg,
+      toolTip: true,
     );
   }
 }
