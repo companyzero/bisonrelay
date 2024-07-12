@@ -77,12 +77,14 @@ class _ChatHeadingWState extends State<_ChatHeadingW> {
     }
 
     var popMenuButton = InteractiveAvatar(
-        chatNick: chat.nick,
-        onTap: () {
-          widget.makeActive(chat);
-          widget.showSubMenu();
-        },
-        avatar: chat.avatar.image);
+      chatNick: chat.nick,
+      onTap: () {
+        widget.makeActive(chat);
+        widget.showSubMenu();
+      },
+      avatar: chat.avatar.image,
+      toolTip: true,
+    );
 
     bool isScreenSmall = checkIsScreenSmall(context);
     return Consumer<ThemeNotifier>(
