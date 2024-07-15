@@ -186,7 +186,7 @@ func (sws *setupWizardScreen) initInputsServer() tea.Cmd {
 	case "testnet":
 		txtServer.SetValue("216.128.136.239:65432")
 	case "simnet":
-		txtServer.SetValue("127.0.0.1:443")
+		txtServer.SetValue("127.0.0.1:12345")
 	}
 
 	sws.inputs = []textinput.Model{txtServer}
