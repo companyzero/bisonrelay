@@ -57,7 +57,7 @@ func (c *Client) RetryOnboarding() error {
 		}
 
 		switch ostate.Stage {
-		case clientintf.StageInviteUnpaid:
+		case clientintf.StageInviteUnpaid, clientintf.StageInviteFetchTimeout:
 			// Switch back to the fetching invite stage.
 			ostate.Stage = clientintf.StageFetchingInvite
 		}
@@ -663,7 +663,15 @@ func (c *Client) runOnboarding(ctx context.Context, ostate clientintf.OnboardSta
 			// When the invite was unpaid, try to fetch it again.
 			fallthrough
 
+		case ostate.Stage == clientintf.StageInviteFetchTimeout:
+			// When the invite was not sent, try to fetch it again.
+			fallthrough
+
 		case ostate.Stage == clientintf.StageFetchingInvite:
+			// Use a 1 minute timeout to account for cases when
+			// the invite was already fetched (this is not
+			// communicated by the server).
+			ctx, cancel := context.WithTimeoutCause(ctx, time.Minute, errTimeoutWaitingPrepaidInvite)
 			c.log.Infof("Fetching paid invite from server at RV point %s",
 				ostate.Key.RVPoint())
 			var invite rpc.OOBPublicIdentityInvite
@@ -676,8 +684,14 @@ func (c *Client) runOnboarding(ctx context.Context, ostate clientintf.OnboardSta
 
 				// Save this state for restart.
 				forceUpdateDB = true
-			}
+			} else if errors.Is(context.Cause(ctx), errTimeoutWaitingPrepaidInvite) {
+				ostate.Stage = clientintf.StageInviteFetchTimeout
+				runErr = errTimeoutWaitingPrepaidInvite
 
+				// Save this state for restart.
+				forceUpdateDB = true
+			}
+			cancel()
 		case ostate.Stage == clientintf.StageRedeemingFunds && ostate.Invite.Funds == nil:
 			ostate.Stage = clientintf.StageInviteNoFunds
 

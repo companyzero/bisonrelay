@@ -16,6 +16,8 @@ var (
 	errRMTooLarge        = errors.New("RM is too large")
 
 	errTimeoutWaitingHandlers = errors.New("timeout waiting for handlers to complete")
+
+	errTimeoutWaitingPrepaidInvite = errors.New("timeout waiting for prepaid invite")
 )
 
 type userNotFoundError struct {

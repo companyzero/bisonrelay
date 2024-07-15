@@ -155,6 +155,8 @@ func (os onboardScreen) View() string {
 			niceStage = "Fetching invite from server"
 		case clientintf.StageInviteUnpaid:
 			niceStage = "Invite was not paid on server"
+		case clientintf.StageInviteFetchTimeout:
+			niceStage = "Timeout waiting for server to send invite"
 		case clientintf.StageInviteNoFunds:
 			niceStage = "Invite has no funds (onboarding cannot proceed)"
 		case clientintf.StageRedeemingFunds:
