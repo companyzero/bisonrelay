@@ -36,6 +36,7 @@ type UserID = ID
 type PostID = ID
 type RawRVID = ID
 type FileID = ID
+type PluginID = ID
 
 // Conn represents the required functions for a remote connection to a server.
 type Conn interface {
