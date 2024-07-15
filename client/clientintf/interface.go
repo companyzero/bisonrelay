@@ -165,6 +165,7 @@ type OnboardStage string
 
 const (
 	StageFetchingInvite      OnboardStage = "fetching_invite"
+	StageInviteUnpaid        OnboardStage = "invite_unpaid"
 	StageInviteNoFunds       OnboardStage = "invite_no_funds"
 	StageRedeemingFunds      OnboardStage = "redeeming_funds"
 	StageWaitingFundsConfirm OnboardStage = "waiting_funds_confirm"

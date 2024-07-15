@@ -1884,6 +1884,7 @@ Map<String, dynamic> _$OnboardStateToJson(OnboardState instance) =>
 
 const _$OnboardStageEnumMap = {
   OnboardStage.stageFetchingInvite: 'fetching_invite',
+  OnboardStage.stageInviteUnpaid: 'invite_unpaid',
   OnboardStage.stageInviteNoFunds: 'invite_no_funds',
   OnboardStage.stageRedeemingFunds: 'redeeming_funds',
   OnboardStage.stageWaitingOutMined: 'waiting_out_mined',

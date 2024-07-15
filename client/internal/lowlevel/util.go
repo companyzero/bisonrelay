@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"slices"
 	"strings"
 
 	"github.com/companyzero/bisonrelay/ratchet"
@@ -117,6 +118,15 @@ func selectSubsNeedPay(needsPay []ratchet.RVPoint, subs map[RVID]rdzvSub) map[RV
 		res[rv] = subs[rv]
 	}
 	return res
+}
+
+// sliceRemoveFirst removes the first instance of e in s.
+func sliceRemoveFirst[T comparable](s []T, e T) []T {
+	i := slices.Index(s, e)
+	if i < 0 {
+		return s
+	}
+	return slices.Delete(s, i, i+1)
 }
 
 // multiCtx returns a context that is canceled once any one of the passed

@@ -622,6 +622,54 @@ func TestRendezvousManagerFetchPrepaidWorks(t *testing.T) {
 	assert.NilErrFromChan(t, errChan)
 }
 
+// TestRendezvousManagerFetchPrepaidNotPaid tests the behaviour of the manager
+// when attempting to fetch a supposedly prepaid RV that was not in fact paid.
+func TestRendezvousManagerFetchPrepaidNotPaid(t *testing.T) {
+	t.Parallel()
+
+	rmgr := NewRVManager(nil, &mockRvMgrDB{}, nil, nil)
+	//rmgr.log = testutils.TestLoggerSys(t, "XXXX")
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	runErr := make(chan error, 1)
+	go func() { runErr <- rmgr.Run(ctx) }()
+	sess := newMockServerSession()
+	rmgr.BindToSession(sess)
+
+	// Hook into the mock pay client to catch any attempts at paying.
+	gotPayInvoice := make(chan error, 1)
+	sess.mpc.HookPayInvoice(func(_ string) (int64, error) {
+		gotPayInvoice <- fmt.Errorf("got attempt at paying invoice")
+		return 0, fmt.Errorf("not allowed")
+	})
+
+	id := rvidFromStr("test-id")
+	errChan := make(chan error, 1)
+	wantPayload := []byte("payload")
+	go func() {
+		gotBlob, gotErr := rmgr.FetchPrepaidRV(ctx, id)
+		if gotErr != nil {
+			errChan <- gotErr
+		} else if !bytes.Equal(gotBlob.Decoded, wantPayload) {
+			errChan <- fmt.Errorf("got incorrect blob payload")
+		} else {
+			errChan <- nil
+		}
+	}()
+
+	// Error the subscription with an unpaid error.
+	wantErr := rpc.ErrUnpaidSubscriptionRV(id)
+	replyToSend := &rpc.SubscribeRoutedMessagesReply{
+		Error: wantErr.Error(),
+	}
+	gotMsg := sess.replyNextPRPC(t, replyToSend)
+	assertSubAdded(t, gotMsg, id)
+
+	// Assert the error.
+	gotErr := assert.ChanWritten(t, errChan)
+	assert.ErrorIs(t, gotErr, wantErr)
+}
+
 // TestRendezvousManagerInvoicesCorrectly asserts that the RV manager handles
 // invoicing for subscriptions correctly.
 func TestRendezvousManagerInvoicesCorrectly(t *testing.T) {

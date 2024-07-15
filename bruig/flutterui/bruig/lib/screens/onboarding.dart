@@ -34,48 +34,58 @@ Map<OnboardStage, _StageInfo> _stageInfos = {
       step: 1,
       title: "Fetching invite from server",
       tip:
-          "The local client is attempting to connect to the server to fetch the invite file specified in the invite key."),
+          "The local client is attempting to connect to the server to fetch the "
+          "invite file specified in the invite key."),
+  OnboardStage.stageInviteUnpaid: _StageInfo(
+      step: 1,
+      title: "Invite not paid on server",
+      tip: "The server replied that the key was not paid for by the inviter. "
+          "This can happen if the key is old, was not yet paid for by the sender, "
+          "was paid on a different server or was somehow corrupted"),
   OnboardStage.stageRedeemingFunds: _StageInfo(
     step: 2,
     title: "Redeeming invite funds on-chain",
-    tip:
-        "The local client is attempting to find the funds included in the invite file in the blockchain. If they are not mined yet, it will check again on every new block.",
+    tip: "The local client is attempting to find the funds included in the "
+        "invite file in the blockchain. If they are not mined yet, it will "
+        "check again on every new block.",
   ),
   OnboardStage.stageWaitingFundsConfirm: _StageInfo(
     step: 3,
     title: "Waiting for on-chain funds to confirm",
-    tip:
-        "An on-chain transaction to redeem the invite funds was created and broadcast and now needs to be included in the blockchain.",
+    tip: "An on-chain transaction to redeem the invite funds was created and "
+        "broadcast and now needs to be included in the blockchain.",
   ),
   OnboardStage.stageOpeningOutbound: _StageInfo(
     step: 4,
     title: "Opening outbound channel",
-    tip:
-        "The local client is attempting to create an LN channel with its on-chain funds to have outbound capacity to make payments through the Lightning Network.",
+    tip: "The local client is attempting to create an LN channel with its "
+        "on-chain funds to have outbound capacity to make payments through the "
+        "Lightning Network.",
   ),
   OnboardStage.stageWaitingOutMined: _StageInfo(
     step: 5,
     title: "Waiting for outbound LN channel tx to be mined",
-    tip:
-        "An LN channel with outbound capacity has been created and now needs to be included in the blockchain (mined).",
+    tip: "An LN channel with outbound capacity has been created and now needs "
+        "to be included in the blockchain (mined).",
   ),
   OnboardStage.stageWaitingOutConfirm: _StageInfo(
     step: 6,
     title: "Waiting for outbound LN channel to confirm",
-    tip:
-        "An LN channel with outbound capacity has been mined and now additional blocks need to be mined to make it usable.",
+    tip: "An LN channel with outbound capacity has been mined and now "
+        "additional blocks need to be mined to make it usable.",
   ),
   OnboardStage.stageOpeningInbound: _StageInfo(
     step: 7,
     title: "Opening inbound LN channel",
-    tip:
-        "The local client is attempting to request that an LN node open a channel back to the client so that is can receive payments through the Lightning Network.",
+    tip: "The local client is attempting to request that an LN node open a "
+        "channel back to the client so that is can receive payments through the "
+        "Lightning Network.",
   ),
   OnboardStage.stageInitialKX: _StageInfo(
     step: 8,
     title: "Performing initial KX with inviter",
-    tip:
-        "The local client is attempting to perform the Key Exchange (KX) procedure so that it can chat with the original inviter.",
+    tip: "The local client is attempting to perform the Key Exchange (KX) "
+        "procedure so that it can chat with the original inviter.",
   ),
   OnboardStage.stageOnboardDone: _StageInfo(
     step: 9,
@@ -85,8 +95,9 @@ Map<OnboardStage, _StageInfo> _stageInfos = {
   OnboardStage.stageInviteNoFunds: _StageInfo(
     step: 9, // Needs to be the same as stageOnboardDone
     title: "Invite does not have funds",
-    tip:
-        "The invite does not include on-chain funds that can be redeemed to setup the local wallet.",
+    tip: "The invite does not include on-chain funds that can be redeemed to "
+        "setup the local wallet. This usually happens when the inviter fails to "
+        "include funds in the invite. Request a new invite key.",
   ),
 };
 
@@ -321,26 +332,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       ];
     } else if (starting) {
       children = [const Text("Starting onboarding procedure...")];
-    } else if (ostate != null &&
-        ostate!.stage == OnboardStage.stageInviteNoFunds) {
-      var stageInfo = _stageInfos[ostate!.stage]!;
-      children = [
-        Text(
-          stageInfo.title,
-        ),
-        const SizedBox(height: 3),
-        Text(stageInfo.tip),
-        Wrap(runSpacing: 10, spacing: 10, children: [
-          OutlinedButton(
-            onPressed: cancelAndInputInviteKey,
-            child: const Text("Use different invite key"),
-          ),
-          CancelButton(
-            onPressed: showConfirmCancel,
-            label: "Cancel Onboarding",
-          )
-        ]),
-      ];
     } else {
       var ost = ostate!;
       var balWallet = formatDCR(atomsToDCR(balances.wallet.totalBalance));
@@ -348,6 +339,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       var balRecv = formatDCR(atomsToDCR(balances.channel.maxInboundAmount));
       var stageInfo = _stageInfos[ost.stage]!;
       var nbSteps = _stageInfos[OnboardStage.stageOnboardDone]!.step;
+
+      // Stages for which the "Try new invite" action button is displayed.
+      var newInviteStages = [
+        OnboardStage.stageInviteNoFunds,
+        OnboardStage.stageInviteUnpaid
+      ];
+
       children = [
         Txt.L("Step ${stageInfo.step} / $nbSteps"),
         const SizedBox(height: 5),
@@ -456,24 +454,25 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         ],
 
         // Action buttons.
-        Wrap(runSpacing: 10, children: [
-          oerror != ""
-              ? OutlinedButton(
-                  onPressed: retryOnboarding,
-                  child: const Text("Retry"),
-                )
-              : const Empty(),
-          const SizedBox(width: 20),
-          oerror != "" && ost.stage == OnboardStage.stageOpeningInbound
-              ? Tooltip(
-                  message:
-                      "Opening inbound channels is optional and can be done later",
-                  child: OutlinedButton(
-                    onPressed: skipOnboardingStage,
-                    child: const Text("Skip Inbound Channel"),
-                  ))
-              : const Empty(),
-          const SizedBox(width: 20),
+        Wrap(runSpacing: 10, spacing: 20, children: [
+          if (oerror != "")
+            OutlinedButton(
+              onPressed: retryOnboarding,
+              child: const Text("Retry"),
+            ),
+          if (newInviteStages.contains(ost.stage))
+            OutlinedButton(
+              onPressed: cancelAndInputInviteKey,
+              child: const Text("Use different invite key"),
+            ),
+          if (oerror != "" && ost.stage == OnboardStage.stageOpeningInbound)
+            Tooltip(
+                message:
+                    "Opening inbound channels is optional and can be done later",
+                child: OutlinedButton(
+                  onPressed: skipOnboardingStage,
+                  child: const Text("Skip Inbound Channel"),
+                )),
           ost.stage != OnboardStage.stageOnboardDone
               ? Tooltip(
                   message:
@@ -486,7 +485,6 @@ Cancelling onboarding means the wallet setup, including obtaining on-chain funds
               : FilledButton(
                   onPressed: skipOnboarding,
                   child: const Text("Start using Bison Relay")),
-          const SizedBox(width: 20),
         ]),
         const SizedBox(height: 20),
       ];

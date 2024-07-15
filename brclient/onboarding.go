@@ -153,6 +153,8 @@ func (os onboardScreen) View() string {
 		switch ostate.Stage {
 		case clientintf.StageFetchingInvite:
 			niceStage = "Fetching invite from server"
+		case clientintf.StageInviteUnpaid:
+			niceStage = "Invite was not paid on server"
 		case clientintf.StageInviteNoFunds:
 			niceStage = "Invite has no funds (onboarding cannot proceed)"
 		case clientintf.StageRedeemingFunds:
