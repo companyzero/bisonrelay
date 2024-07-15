@@ -1882,6 +1882,8 @@ enum OnboardStage {
   stageInviteUnpaid,
   @JsonValue("invite_no_funds")
   stageInviteNoFunds,
+  @JsonValue("invite_fetch_timeout")
+  stageInviteFetchTimeout,
   @JsonValue("redeeming_funds")
   stageRedeemingFunds,
   @JsonValue("waiting_out_mined")

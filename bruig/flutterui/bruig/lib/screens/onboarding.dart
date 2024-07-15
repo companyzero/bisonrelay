@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:bruig/components/buttons.dart';
 import 'package:bruig/components/collapsable.dart';
 import 'package:bruig/components/copyable.dart';
-import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/components/info_grid.dart';
 import 'package:bruig/components/recent_log.dart';
 import 'package:bruig/components/snackbars.dart';
@@ -41,7 +40,13 @@ Map<OnboardStage, _StageInfo> _stageInfos = {
       title: "Invite not paid on server",
       tip: "The server replied that the key was not paid for by the inviter. "
           "This can happen if the key is old, was not yet paid for by the sender, "
-          "was paid on a different server or was somehow corrupted"),
+          "was paid on a different server or was somehow corrupted."),
+  OnboardStage.stageInviteFetchTimeout: _StageInfo(
+      step: 1,
+      title: "Timeout waiting for invite",
+      tip: "The server did not send the invite in a timely manner. This can "
+          "happen if the inviter did not send the invite key to the server yet, "
+          "or if the invite was already fetched."),
   OnboardStage.stageRedeemingFunds: _StageInfo(
     step: 2,
     title: "Redeeming invite funds on-chain",
@@ -343,7 +348,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       // Stages for which the "Try new invite" action button is displayed.
       var newInviteStages = [
         OnboardStage.stageInviteNoFunds,
-        OnboardStage.stageInviteUnpaid
+        OnboardStage.stageInviteUnpaid,
+        OnboardStage.stageInviteFetchTimeout,
       ];
 
       children = [

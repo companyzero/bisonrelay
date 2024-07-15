@@ -1886,6 +1886,7 @@ const _$OnboardStageEnumMap = {
   OnboardStage.stageFetchingInvite: 'fetching_invite',
   OnboardStage.stageInviteUnpaid: 'invite_unpaid',
   OnboardStage.stageInviteNoFunds: 'invite_no_funds',
+  OnboardStage.stageInviteFetchTimeout: 'invite_fetch_timeout',
   OnboardStage.stageRedeemingFunds: 'redeeming_funds',
   OnboardStage.stageWaitingOutMined: 'waiting_out_mined',
   OnboardStage.stageWaitingFundsConfirm: 'waiting_funds_confirm',
