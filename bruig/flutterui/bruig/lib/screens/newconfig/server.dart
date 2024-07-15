@@ -34,7 +34,7 @@ class _ServerPageState extends State<ServerPage> {
         break;
       case NetworkType.simnet:
         serverCtrl.text =
-            Platform.isAndroid ? "10.0.2.2:443" : "127.0.0.1:443";
+            Platform.isAndroid ? "10.0.2.2:12345" : "127.0.0.1:12345";
         break;
     }
   }
