@@ -1878,6 +1878,8 @@ class RedeemedInviteFunds {
 enum OnboardStage {
   @JsonValue("fetching_invite")
   stageFetchingInvite,
+  @JsonValue("invite_unpaid")
+  stageInviteUnpaid,
   @JsonValue("invite_no_funds")
   stageInviteNoFunds,
   @JsonValue("redeeming_funds")

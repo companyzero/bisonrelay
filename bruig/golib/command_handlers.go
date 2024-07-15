@@ -375,6 +375,12 @@ func handleInitClient(handle uint32, args initClient) error {
 	}))
 
 	ntfns.Register(client.OnOnboardStateChangedNtfn(func(ostate clientintf.OnboardState, oerr error) {
+		// If oerr != null, first notify the change in state, then
+		// the error. This is needed because only one of notify/error
+		// is triggered.
+		if oerr != nil {
+			notify(NTOnboardStateChanged, ostate, nil)
+		}
 		notify(NTOnboardStateChanged, ostate, oerr)
 	}))
 

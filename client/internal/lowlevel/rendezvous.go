@@ -698,6 +698,27 @@ loop:
 				var errUnpaid rpc.ErrUnpaidSubscriptionRV
 				if errors.As(updateErr, &errUnpaid) {
 					rv := RVID(errUnpaid)
+
+					sub, ok := subs[rv]
+					if !ok {
+						rmgr.log.Warnf("Received unpaid RV error "+
+							"for unknown RV %v", rv)
+						continue loop
+					}
+
+					if sub.prepaid {
+						// Special case unpaid error
+						// for prepaid RVs: remove
+						// subscription and error it
+						// out.
+						rmgr.log.Warnf("Received unpaid RV error "+
+							"for supposedly prepaid RV %s", rv)
+						delete(subs, rv)
+						toAdd = sliceRemoveFirst(toAdd, rv)
+						go sub.replySubDone(errUnpaid, rmgr.runDone)
+						continue loop
+					}
+
 					rmgr.log.Warnf("Received unpaid RV error "+
 						"for RV %s. Marking as unpaid.", rv)
 					errDB := rmgr.db.MarkRVUnpaid(rv)

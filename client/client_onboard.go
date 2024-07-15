@@ -52,12 +52,23 @@ func (c *Client) RetryOnboarding() error {
 	err := c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
 		var err error
 		ostate, err = c.db.ReadOnboardState(tx)
-		return err
+		if err != nil {
+			return err
+		}
+
+		switch ostate.Stage {
+		case clientintf.StageInviteUnpaid:
+			// Switch back to the fetching invite stage.
+			ostate.Stage = clientintf.StageFetchingInvite
+		}
+
+		return c.db.UpdateOnboardState(tx, &ostate)
 	})
 	if err != nil {
 		return err
 	}
-	c.log.Infof("Retrying onboarding attempt")
+	c.log.Infof("Retrying onboarding attempt from stage %s", ostate.Stage)
+	c.ntfns.notifyOnOnboardStateChanged(ostate, nil) // Initial state
 	go c.runOnboarding(c.ctx, ostate)
 	return nil
 }
@@ -639,12 +650,18 @@ func (c *Client) runOnboarding(ctx context.Context, ostate clientintf.OnboardSta
 
 	var runErr error
 	for runErr == nil && ostate.Stage != clientintf.StageOnboardDone {
+		forceUpdateDB := false
+
 		switch {
 		case canceled(ctx):
 			runErr = ctx.Err()
 
 		case ostate.Stage == clientintf.StageFetchingInvite && ostate.Key == nil:
 			runErr = fmt.Errorf("empty paid invite key")
+
+		case ostate.Stage == clientintf.StageInviteUnpaid:
+			// When the invite was unpaid, try to fetch it again.
+			fallthrough
 
 		case ostate.Stage == clientintf.StageFetchingInvite:
 			c.log.Infof("Fetching paid invite from server at RV point %s",
@@ -654,6 +671,11 @@ func (c *Client) runOnboarding(ctx context.Context, ostate clientintf.OnboardSta
 			if runErr == nil {
 				ostate.Invite = &invite
 				ostate.Stage = clientintf.StageRedeemingFunds
+			} else if errors.Is(runErr, rpc.ErrUnpaidSubscriptionRV{}) {
+				ostate.Stage = clientintf.StageInviteUnpaid
+
+				// Save this state for restart.
+				forceUpdateDB = true
 			}
 
 		case ostate.Stage == clientintf.StageRedeemingFunds && ostate.Invite.Funds == nil:
@@ -751,24 +773,26 @@ func (c *Client) runOnboarding(ctx context.Context, ostate clientintf.OnboardSta
 		c.log.Debugf("Onboarding at stage %s with err %v", ostate.Stage, runErr)
 
 		// If this stage was completed without errors, update the db.
-		if runErr == nil {
-			runErr = c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
+		if runErr == nil || forceUpdateDB {
+			dbErr := c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
 				if ostate.Stage == clientintf.StageOnboardDone {
 					return c.db.RemoveOnboardState(tx)
 				}
 				return c.db.UpdateOnboardState(tx, &ostate)
 			})
+			if runErr == nil && dbErr != nil {
+				runErr = dbErr
+			}
 		}
 
 		// Notify the user of any state changes, except context.Canceled
 		// which is triggered by the user.
 		if !errors.Is(runErr, context.Canceled) {
+			if runErr != nil {
+				c.log.Errorf("Onboarding errored: %v", runErr)
+			}
 			c.ntfns.notifyOnOnboardStateChanged(ostate, runErr)
 		}
-	}
-
-	if runErr != nil && !errors.Is(runErr, context.Canceled) {
-		c.log.Errorf("Onboarding errored: %v", runErr)
 	}
 
 	c.onboardMtx.Lock()
