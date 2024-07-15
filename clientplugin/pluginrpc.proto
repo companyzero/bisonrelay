@@ -1,0 +1,57 @@
+syntax = "proto3";
+
+/******************************************************************************
+  *                            Services
+  *****************************************************************************/
+
+option go_package = "github.com/companyzero/bisconrelay/clientplugin/grpctypes";
+
+service PluginService {
+  rpc Init(PluginStartStreamRequest) returns (stream PluginStartStreamResponse);
+  rpc CallAction (PluginCallActionStreamRequest) returns (stream PluginCallActionStreamResponse);
+  rpc GetVersion (PluginVersionRequest) returns (PluginVersionResponse);
+}
+
+/******************************************************************************
+  *                           Messages
+  *****************************************************************************/
+
+message PluginStartStreamRequest {
+  bytes client_id = 1;
+}
+
+message PluginStartStreamResponse {
+  bool started = 1;
+  int32 player_number = 2;  // Player 1 or Player 2
+  string message = 3; // Confirmation message or additional details
+  string client_id = 4;
+}
+
+message PluginVersionRequest {
+}
+
+/* VersionResponse is the information about the running RPC server. */
+message PluginVersionResponse {
+  /* app_version is the version of the application. */
+  string app_version = 1;
+
+  /* go_runtime is the Go version the server was compiled with. */
+  string go_runtime = 2;
+
+  /* app_name is the name of the underlying app running the server. */
+  string app_name = 3;
+}
+
+message PluginCallActionStreamRequest {
+  string user = 1;
+  string action = 2;
+  bytes data = 3;
+}
+
+message PluginCallActionStreamResponse {
+  bytes response = 1;
+}
+
+message PluginCallActionUpdate {
+  string update_message = 1;
+}
