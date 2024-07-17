@@ -118,7 +118,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     var filePickRes = await FilePicker.platform.pickFiles(
       allowMultiple: false,
       dialogTitle: "Pick avatar image file",
-      type: FileType.image,
+      type: FileType.custom,
+      allowedExtensions: ["bmp", "gif", "jpeg", "jpg", "png", "webp"],
     );
     if (filePickRes == null) return;
     var fPath = filePickRes.files.first.path;
