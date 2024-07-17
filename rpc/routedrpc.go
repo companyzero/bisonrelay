@@ -1061,8 +1061,9 @@ type RMListPosts struct{}
 const RMCListPosts = "listposts"
 
 type PostListItem struct {
-	ID    zkidentity.ShortID `json:"id"`
-	Title string             `json:"title"`
+	ID        zkidentity.ShortID `json:"id"`
+	Title     string             `json:"title"`
+	Timestamp int64              `json:"timestamp"`
 }
 
 type RMListPostsReply struct {
