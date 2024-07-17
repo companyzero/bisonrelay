@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -264,11 +265,23 @@ func (c *Client) handleListPosts(ru *RemoteUser, lp rpc.RMListPosts) error {
 		if err := id.FromString(p.Attributes[rpc.RMPIdentifier]); err != nil {
 			continue
 		}
+		timestamp, _ := strconv.ParseInt(p.Attributes[rpc.RMPTimestamp], 16, 64)
 		rm.Posts = append(rm.Posts, rpc.PostListItem{
-			ID:    id,
-			Title: clientintf.PostTitle(&p),
+			ID:        id,
+			Title:     clientintf.PostTitle(&p),
+			Timestamp: timestamp,
 		})
 	}
+	sort.Slice(rm.Posts, func(i, j int) bool {
+		ti, tj := rm.Posts[i].Timestamp, rm.Posts[j].Timestamp
+		if ti > 0 && tj == 0 {
+			return true
+		}
+		if ti == 0 && tj > 0 {
+			return false
+		}
+		return rm.Posts[i].Timestamp < rm.Posts[j].Timestamp
+	})
 
 	return ru.sendRM(rm, "posts.listreply")
 }
