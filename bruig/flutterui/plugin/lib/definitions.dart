@@ -1457,8 +1457,10 @@ class PayStatsSummary {
 class PostListItem {
   final String id;
   final String title;
+  @JsonKey(defaultValue: 0)
+  final int timestamp;
 
-  PostListItem(this.id, this.title);
+  PostListItem(this.id, this.title, this.timestamp);
   factory PostListItem.fromJson(Map<String, dynamic> json) =>
       _$PostListItemFromJson(json);
 }

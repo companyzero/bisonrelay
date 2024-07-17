@@ -3,6 +3,7 @@ import 'package:bruig/models/client.dart';
 import 'package:bruig/models/feed.dart';
 import 'package:bruig/models/uistate.dart';
 import 'package:bruig/screens/feed/feed_posts.dart';
+import 'package:duration/duration.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:bruig/components/md_elements.dart';
@@ -58,6 +59,11 @@ class _UserPostWState extends State<UserPostW> {
   Widget build(BuildContext context) {
     var authorNick = widget.author?.nick ?? "";
     var authorId = widget.author?.id ?? "";
+    var postDate =
+        DateTime.fromMillisecondsSinceEpoch(widget.post.timestamp * 1000);
+    var postDifference = DateTime.now().difference(postDate);
+    var sincePost = prettyDuration(postDifference,
+        tersity: DurationTersity.hour, abbreviated: true);
 
     return Card.filled(
         margin: const EdgeInsets.only(right: 12, bottom: 15),
@@ -79,6 +85,7 @@ class _UserPostWState extends State<UserPostW> {
                   ),
                   const SizedBox(width: 6),
                   Expanded(child: Text(authorNick)),
+                  if (widget.post.timestamp > 0) Text(sincePost),
                 ],
               ),
 
