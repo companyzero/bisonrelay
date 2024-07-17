@@ -214,9 +214,10 @@ class _CommentWState extends State<_CommentW> {
                   Container(
                     width: 28,
                     margin: const EdgeInsets.only(top: 0, bottom: 0, left: 5),
-                    child: UserOrSelfAvatar(widget.client, chat,
+                    child: UserAvatarFromID(widget.client, widget.comment.uid,
                         postFrom: widget.post.summ.from,
-                        showChatSideMenuOnTap: true),
+                        showChatSideMenuOnTap: true,
+                        nick: nick),
                   ),
                   const SizedBox(width: 6),
                   Row(children: [
@@ -787,9 +788,10 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
                             Container(
                               width: 28,
                               margin: const EdgeInsets.only(left: 5),
-                              child: UserOrSelfAvatar(widget.client, authorChat,
+                              child: UserAvatarFromID(widget.client, authorID,
                                   postFrom: widget.args.post.summ.from,
-                                  showChatSideMenuOnTap: true),
+                                  showChatSideMenuOnTap: true,
+                                  nick: authorNick),
                             ),
                             const SizedBox(width: 6),
                             Txt.S(authorNick),

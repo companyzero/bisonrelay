@@ -72,10 +72,10 @@ class _UserPostWState extends State<UserPostW> {
                     margin: const EdgeInsets.only(
                         top: 0, bottom: 0, left: 5, right: 0),
                     child: UserContextMenu(
-                      client: widget.client,
-                      targetUserChat: widget.author,
-                      child: UserOrSelfAvatar(widget.client, widget.author),
-                    ),
+                        client: widget.client,
+                        targetUserChat: widget.author,
+                        child: UserAvatarFromID(widget.client, authorId,
+                            nick: authorNick)),
                   ),
                   const SizedBox(width: 6),
                   Expanded(child: Text(authorNick)),
