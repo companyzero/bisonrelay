@@ -12,15 +12,16 @@ import 'package:duration/duration.dart';
 
 class _AvatarOrUnread extends StatelessWidget {
   final ClientModel client;
-  final ChatModel? chat;
   final bool hasUnread;
-  const _AvatarOrUnread(this.client, this.chat, this.hasUnread);
+  final String uid;
+  final String nick;
+  const _AvatarOrUnread(this.client, this.uid, this.hasUnread, this.nick);
 
   @override
   Widget build(BuildContext context) {
     return hasUnread
         ? const Icon(Icons.new_releases_outlined, color: Colors.amber)
-        : UserOrSelfAvatar(client, chat, showChatSideMenuOnTap: true);
+        : UserAvatarFromID(client, uid, nick: nick);
   }
 }
 
@@ -126,7 +127,7 @@ class _FeedPostWState extends State<FeedPostW> {
                 SizedBox(
                     width: 28,
                     child: _AvatarOrUnread(
-                        widget.client, widget.author, hasUnreadPost)),
+                        widget.client, authorID, hasUnreadPost, authorNick)),
                 const SizedBox(width: 6),
                 Expanded(child: Text(authorNick)),
                 Text(sincePost),

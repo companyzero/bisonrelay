@@ -196,25 +196,6 @@ class SelfAvatar extends StatelessWidget {
   }
 }
 
-// UserOrSelfAvatar displays the user avatar when chat != null or the local
-// client avatar ("self") when chat == null.
-class UserOrSelfAvatar extends StatelessWidget {
-  final ClientModel client;
-  final ChatModel? chat;
-  final String? postFrom;
-  final bool showChatSideMenuOnTap;
-  const UserOrSelfAvatar(this.client, this.chat,
-      {this.postFrom, this.showChatSideMenuOnTap = false, super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return chat != null
-        ? UserMenuAvatar(client, chat!,
-            postFrom: postFrom, showChatSideMenuOnTap: showChatSideMenuOnTap)
-        : SelfAvatar(client);
-  }
-}
-
 // UserAvatarFromID displays the avatar for the user ID. When that id is the local
 // client id, it displays the local client avatar. If the id is unknown, displays
 // a generic avatar.
@@ -223,9 +204,13 @@ class UserAvatarFromID extends StatelessWidget {
   final String uid;
   final bool disableTooltip;
   final bool showChatSideMenuOnTap;
+  final String? postFrom;
+  final String? nick;
   const UserAvatarFromID(this.client, this.uid,
       {this.disableTooltip = false,
       this.showChatSideMenuOnTap = false,
+      this.postFrom,
+      this.nick,
       super.key});
 
   @override
@@ -237,16 +222,16 @@ class UserAvatarFromID extends StatelessWidget {
     var chat = client.getExistingChat(uid);
     if (chat != null) {
       return UserMenuAvatar(client, chat,
-          showChatSideMenuOnTap: showChatSideMenuOnTap);
+          showChatSideMenuOnTap: showChatSideMenuOnTap, postFrom: postFrom);
     }
 
     if (disableTooltip) {
-      return InteractiveAvatar(chatNick: uid);
+      return InteractiveAvatar(chatNick: nick ?? uid);
     }
 
     return Tooltip(
       message: "Unknown user $uid",
-      child: InteractiveAvatar(chatNick: uid),
+      child: InteractiveAvatar(chatNick: nick ?? uid),
     );
   }
 }
