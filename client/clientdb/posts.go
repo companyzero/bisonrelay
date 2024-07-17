@@ -271,6 +271,8 @@ func (db *DB) CreatePost(tx ReadWriteTx, post, descr string, fname string,
 	if fblob != "" {
 		attrs[rpc.RMPAttachment] = fblob
 	}
+	timestamp := time.Now().Unix()
+	attrs[rpc.RMPTimestamp] = strconv.FormatInt(timestamp, 16)
 
 	// Sign it.
 	p = rpc.PostMetadata{
@@ -296,13 +298,8 @@ func (db *DB) CreatePost(tx ReadWriteTx, post, descr string, fname string,
 		return summ, p, err
 	}
 
-	finfo, err := f.Stat()
-	if err != nil {
-		return summ, p, err
-	}
-
 	summ = PostSummFromMetadata(&p, me.Identity)
-	summ.Date = finfo.ModTime()
+	summ.Date = time.Unix(timestamp, 0)
 	return summ, p, nil
 }
 
