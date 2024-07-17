@@ -1,0 +1,58 @@
+# Plugins for Bison Relay
+
+This README provides a comprehensive guide on creating and integrating a plugin server with the Bison Relay client (brclient). The plugin enables interaction with a plugin server over gRPC, facilitating communication and execution of plugin-specific actions.
+
+## Overview
+
+The Plugin Client is designed to interact with a Plugin Server over gRPC using the PluginService Interface.
+More information can be found at [pluginrpc.proto](pluginrpc.proto).
+
+It can:
+- Initialize a plugin
+- Call plugin-specific actions
+- Retrieve plugin version information
+
+## Setting Up the Plugin Server
+
+### Step 1: Enable JSON-RPC on brclient
+
+Ensure that JSON-RPC is enabled in your `brclient.conf` file. This allows the plugin client to communicate with the plugin server. Add or update the following lines in the configuration file:
+
+```ini
+[clientrpc]
+# Enable the JSON-RPC clientrpc protocol on the comma-separated list of addresses.
+jsonrpclisten = 127.0.0.1:7676
+
+# Path to the keypair used for running TLS on the clientrpc interfaces.
+rpccertpath = ~/.brclient/rpc.cert
+rpckeypath = ~/.brclient/rpc.key
+
+# Path to the certificate used as CA for client-side TLS authentication.
+rpcclientcapath = ~/.brclient/rpc-ca.cert
+```
+
+Implement the gRPC server using the service definition. Here is an example of a basic implementation in Go, found in [plugin server example](examples/pluginserver_example/main.go):
+
+With that, a brclient can connect to other plugin servers. If a brclient is running as a plugin server, other clients can connect to a it, for example:
+
+### Connecting brclient to a Plugin Server
+
+To connect a brclient to the plugin server, use the following commands:
+
+1. **Initialize a Plugin**:
+
+`/plugin init <nick or id> <plugin-cfg>`
+
+This command initializes a new plugin for the specified plugin server allowing it to listen to updates at the brclient appstate.
+
+2. **Get Plugin's Version**:
+
+`/plugin version <nick or id>`
+
+This command retrieves the version information of the plugin associated with the specified server.
+
+3. **Call Plugin Action**:
+
+`/plugin action <nick or id> <action> [<data>]`
+
+This command calls a specific action on the plugin associated with the specified server. The `data` parameter is optional and can be used to pass additional information to the plugin.

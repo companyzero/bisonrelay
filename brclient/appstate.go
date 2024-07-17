@@ -2662,7 +2662,7 @@ func (as *appState) handleCmd(rawText string, args []string) {
 	}
 }
 
-// initializePlugins initialize plugins on startup
+// initializePlugins sets up plugins in the database during startup.
 func (as *appState) initializePlugins() error {
 	// Retrieve all enabled plugins from the database.
 	enabledPlugins, err := as.c.GetEnabledPlugins()
@@ -2693,6 +2693,7 @@ func (as *appState) initializePlugins() error {
 	return nil
 }
 
+// initPlugin initialize plugins so they can listen for updates at the appstate.
 func (as *appState) initPlugin(cw *chatWindow, pid clientintf.PluginID, address string) {
 	req := &grpctypes.PluginStartStreamRequest{
 		ClientId: as.c.PublicID().Bytes(),
