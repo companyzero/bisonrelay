@@ -20,6 +20,7 @@ type RawRVID = clientintf.RawRVID
 type SendQID = clientintf.ID
 type FileID = clientintf.ID
 type ChunkID = clientintf.ID
+type PluginID = clientintf.PluginID
 
 type ReadTx interface {
 	Context() context.Context
@@ -468,6 +469,16 @@ type ReceiveReceipt struct {
 type EarlyPostStatus struct {
 	PID    PostID          `json:"pid"`
 	Status rpc.RMPostShare `json:"status"`
+}
+
+type Plugin struct {
+	ID        string
+	Name      string
+	Version   string
+	Enabled   bool
+	Config    map[string]interface{}
+	Installed time.Time
+	Updated   time.Time
 }
 
 var (

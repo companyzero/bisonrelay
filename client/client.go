@@ -362,8 +362,6 @@ type Client struct {
 	gcmq  *gcmcacher.Cacher
 	ntfns *NotificationManager
 
-	plugins map[string]*PluginClient
-
 	// abLoaded is closed when the address book has finished loading.
 	abLoaded chan struct{}
 
@@ -486,7 +484,6 @@ func New(cfg Config) (*Client, error) {
 		newUsersChan:     make(chan *RemoteUser),
 		gcWarnedVersions: &singlesetmap.Map[zkidentity.ShortID]{},
 		unkxdWarnings:    make(map[clientintf.UserID]time.Time),
-		plugins:          make(map[string]*PluginClient),
 
 		onboardCancelChan: make(chan struct{}, 1),
 
@@ -1196,12 +1193,6 @@ func (c *Client) Run(ctx context.Context) error {
 	}
 
 	c.log.Infof("Starting client %s", c.localID.id)
-
-	if err := c.initializePlugins(); err != nil {
-		cancel()
-		return err
-	}
-	c.log.Info("Initialized plugin")
 
 	// From now on, all initialization data has been loaded. Init
 	// subsystems.

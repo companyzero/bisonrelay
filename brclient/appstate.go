@@ -2662,6 +2662,37 @@ func (as *appState) handleCmd(rawText string, args []string) {
 	}
 }
 
+// initializePlugins initialize plugins on startup
+func (as *appState) initializePlugins() error {
+	// Retrieve all enabled plugins from the database.
+	enabledPlugins, err := as.c.GetEnabledPlugins()
+	if err != nil {
+		return fmt.Errorf("failed to retrieve enabled plugins: %w", err)
+	}
+
+	// Initialize each enabled plugin.
+	for _, plugin := range enabledPlugins {
+		pluginClient, err := client.NewPluginClient(as.ctx, plugin.ID, plugin.Config)
+		if err != nil {
+			as.diagMsg("Unable to start plugin: %s", plugin.Name)
+		}
+
+		as.pluginsClient[plugin.ID] = pluginClient
+		req := &grpctypes.PluginStartStreamRequest{
+			ClientId: as.c.PublicID().Bytes(),
+		}
+		err = as.pluginsClient[plugin.ID].InitPlugin(as.ctx, req, func(stream grpctypes.PluginService_InitClient) {
+			as.listenForAppUpdates(stream)
+		})
+		if err != nil {
+			as.diagMsg("Unable to init plugin: %s", plugin.Name)
+		}
+		as.diagMsg("Plugin %s Initialized", plugin.Name)
+	}
+
+	return nil
+}
+
 func (as *appState) initPlugin(cw *chatWindow, pid clientintf.PluginID, address string) {
 	req := &grpctypes.PluginStartStreamRequest{
 		ClientId: as.c.PublicID().Bytes(),
@@ -2672,7 +2703,7 @@ func (as *appState) initPlugin(cw *chatWindow, pid clientintf.PluginID, address 
 			Log:     as.logBknd.logger("Plugins"),
 			Address: address,
 		}
-		pluginClient, err := client.NewPluginClient(as.ctx, pluginClientCfg)
+		pluginClient, err := client.NewPluginClient(as.ctx, pid, pluginClientCfg)
 		if err != nil {
 			as.cwHelpMsg("Unable to start new plugin")
 			return
@@ -2680,23 +2711,29 @@ func (as *appState) initPlugin(cw *chatWindow, pid clientintf.PluginID, address 
 		as.pluginsClient[pid] = pluginClient
 	}
 
-	err := as.pluginsClient[pid].InitPlugin(as.ctx, req, func(stream grpctypes.PluginService_InitClient) {
+	err := as.c.SavePluginInfo(as.pluginsClient[pid])
+	if err != nil {
+		// ignore if plugin already exists
+		if err != clientdb.ErrAlreadyExists {
+			as.cwHelpMsg("Unable to Save Plugin %q: %v",
+				cw.alias, err)
+		}
+	}
+
+	err = as.pluginsClient[pid].InitPlugin(as.ctx, req, func(stream grpctypes.PluginService_InitClient) {
 		as.listenForAppUpdates(stream)
 	})
 
 	if err != nil {
 		as.cwHelpMsg("Unable to init plugin %q: %v",
 			cw.alias, err)
-
-		// remove plugin in case try to start again
-		as.pluginsClient[pid] = nil
 	}
 
 	as.sendMsg(repaintActiveChat{})
 }
 
 func (as *appState) pluginVersion(cw *chatWindow, pid clientintf.PluginID) {
-	version, err := as.pluginsClient[pid].Version(as.ctx)
+	version, err := as.pluginsClient[pid].GetVersion(as.ctx)
 	if err != nil {
 		as.cwHelpMsg("Unable to get version: %v", err)
 		return
@@ -2708,7 +2745,7 @@ func (as *appState) pluginAction(cw *chatWindow, pid clientintf.PluginID, action
 	req := &grpctypes.PluginCallActionStreamRequest{
 		Action: action,
 		Data:   data,
-		User:   as.c.Public().Identity.String(),
+		User:   as.c.Public().String(),
 	}
 
 	err := as.pluginsClient[pid].CallPluginAction(as.ctx, req, func(stream grpctypes.PluginService_CallActionClient) error {
@@ -3243,6 +3280,10 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 			}
 			if showExpDays {
 				as.diagMsg("Days to Expire Data: %d", expDays)
+			}
+			err := as.initializePlugins()
+			if err != nil {
+				as.diagMsg("Initializing plugin errored: %v", err)
 			}
 			as.diagMsg("Client ready!")
 		} else {

@@ -61,7 +61,7 @@ const (
 	unkxdUsersDir       = "unkxd"
 	filtersDir          = "contentfilters"
 	earlyPostStatusFile = "earlypoststatus.json"
-	pluginsDir          = "plugin"
+	pluginsDir          = "plugins"
 
 	pageSessionsDir         = "pagesessions"
 	pageSessionOverviewFile = "overview.json"
