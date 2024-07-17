@@ -44,6 +44,11 @@ class FeedScreen extends StatefulWidget {
       Navigator.of(context).pushReplacementNamed(FeedScreen.routeName,
           arguments: PageTabs(4, chat, null));
 
+  // Goest to the screen that shows a specific post.
+  static void showPost(BuildContext context, FeedPostModel post) =>
+      Navigator.of(context).pushReplacementNamed(FeedScreen.routeName,
+          arguments: PageTabs(0, null, PostContentScreenArgs(post)));
+
   final int tabIndex;
   final MainMenuModel mainMenu;
   const FeedScreen(this.mainMenu, {Key? key, this.tabIndex = 0})

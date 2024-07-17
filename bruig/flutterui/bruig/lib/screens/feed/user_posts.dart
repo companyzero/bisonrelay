@@ -1,8 +1,11 @@
 import 'package:bruig/components/interactive_avatar.dart';
+import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/models/feed.dart';
 import 'package:bruig/models/uistate.dart';
+import 'package:bruig/screens/feed.dart';
 import 'package:bruig/screens/feed/feed_posts.dart';
+import 'package:collection/collection.dart';
 import 'package:duration/duration.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -10,14 +13,16 @@ import 'package:bruig/components/md_elements.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:bruig/components/user_context_menu.dart';
 
+typedef _FetchPostCB = Future<void> Function(String pid);
+
 class UserPostW extends StatefulWidget {
   final PostListItem post;
   final ChatModel? author;
   final ClientModel client;
   final FeedModel feed;
-  final Function onTabChange;
+  final _FetchPostCB fetchPost;
   const UserPostW(
-      this.post, this.feed, this.author, this.client, this.onTabChange,
+      this.post, this.feed, this.author, this.client, this.fetchPost,
       {Key? key})
       : super(key: key);
 
@@ -28,13 +33,15 @@ class UserPostW extends StatefulWidget {
 class _UserPostWState extends State<UserPostW> {
   PostListItem get post => widget.post;
   ChatModel? get author => widget.author;
-  showContent(BuildContext context) async {
-    widget.feed.gettingUserPost = post.id;
-    await widget.feed
-        .getUserPost(author?.id ?? "", post.id, widget.onTabChange);
-  }
+  final List<String> waitingPosts = [];
 
-  void authorUpdated() => setState(() {});
+  void authorUpdated() {
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {});
+  }
 
   @override
   initState() {
@@ -100,12 +107,12 @@ class _UserPostWState extends State<UserPostW> {
               Align(
                   alignment: Alignment.centerRight,
                   child: FilledButton.tonal(
-                    onPressed: () => widget.feed.gettingUserPost == ""
-                        ? showContent(context)
+                    onPressed: () => !widget.feed.dowloadingUserPost(post.id)
+                        ? widget.fetchPost(post.id)
                         : null,
-                    child: Text(widget.feed.gettingUserPost != post.id
+                    child: Text(!widget.feed.dowloadingUserPost(post.id)
                         ? "Get Post"
-                        : "Downloading"),
+                        : "Post Requested"),
                   )),
             ])));
   }
@@ -132,6 +139,17 @@ class _UserPostsState extends State<UserPosts> {
   List<PostListItem> notReceived = [];
   List<FeedPostModel> alreadyReceived = [];
 
+  final List<String> waitingPosts = [];
+
+  Future<void> fetchPost(String pid) async {
+    try {
+      waitingPosts.add(pid);
+      await widget.feed.getUserPost(chat.id, pid);
+    } catch (exception) {
+      showErrorSnackbar(this, "Unable to fetch user post: $exception");
+    }
+  }
+
   void updateLists() {
     var authorID = widget.chat.id;
     var newAlreadyReceived =
@@ -148,6 +166,23 @@ class _UserPostsState extends State<UserPosts> {
       if (!found) {
         newNotReceived.add(post);
       }
+    }
+
+    // If we received a post we were waiting for, make it the active post. This
+    // will only happen if we receive the post while the list of user posts
+    // screen was still active (the remote user was online and the post was
+    // received fast enough).
+    List<FeedPostModel> receivedWaiting = newAlreadyReceived.fold([], (l, e) {
+      if (waitingPosts.contains(e.summ.id)) {
+        waitingPosts.remove(e.summ.id);
+        l.add(e);
+      }
+      return l;
+    });
+    if (receivedWaiting.isNotEmpty) {
+      // Go to the first one that was fetched.
+      widget.feed.active = receivedWaiting[0];
+      FeedScreen.showPost(context, receivedWaiting[0]);
     }
 
     setState(() {
@@ -200,7 +235,7 @@ class _UserPostsState extends State<UserPosts> {
                     widget.feed,
                     widget.chat,
                     widget.client,
-                    widget.tabChange,
+                    fetchPost,
                   ))
               .toList(),
           ...alreadyReceived

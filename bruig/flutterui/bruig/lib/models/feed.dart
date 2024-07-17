@@ -1,6 +1,7 @@
 import 'dart:collection';
 
 import 'package:bruig/util.dart';
+import 'package:collection/collection.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:bruig/notification_service.dart';
 import 'package:bruig/screens/feed/post_content.dart';
@@ -280,31 +281,15 @@ class FeedModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  String _gettingUserPost = "";
-  String get gettingUserPost => _gettingUserPost;
-  set gettingUserPost(String b) {
-    _gettingUserPost = b;
-    notifyListeners();
-  }
+  final List<String> _downloadingUserPosts = [];
+  bool dowloadingUserPost(String pid) => _downloadingUserPosts.contains(pid);
 
-  Function? _tabChange;
-  Function? get tabChange => _tabChange;
-  set tabChange(Function? b) {
-    _tabChange = b;
-    notifyListeners();
-  }
-
-  Future<void> getUserPost(
-      String authorId, String postId, Function onTabChange) async {
+  Future<void> getUserPost(String authorId, String postId) async {
+    if (!_downloadingUserPosts.contains(postId)) {
+      _downloadingUserPosts.add(postId);
+      notifyListeners();
+    }
     await Golib.getUserPost(authorId, postId);
-    tabChange = onTabChange;
-  }
-
-  FeedPostModel? _newUserPost;
-  FeedPostModel? get newUserPost => _newUserPost;
-  set newUserPost(FeedPostModel? f) {
-    _newUserPost = f;
-    notifyListeners();
   }
 
   FeedPostModel? _active;
@@ -349,11 +334,8 @@ class FeedModel extends ChangeNotifier {
       newPost.lastStatusTS = newPost.summ.lastStatusTS;
       await newPost.readPost();
       _posts.insert(0, newPost);
-      if (gettingUserPost == newPost.summ.id) {
-        newUserPost = newPost;
-        _gettingUserPost = "";
-        active = newPost;
-        tabChange!(0, PostContentScreenArgs(newUserPost!));
+      if (_downloadingUserPosts.contains(newPost.summ.id)) {
+        _downloadingUserPosts.remove(newPost.summ.id);
       }
 
       NotificationService().showPostNotification(newPost.summ);
