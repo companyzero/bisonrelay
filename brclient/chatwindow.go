@@ -35,10 +35,13 @@ var (
 )
 
 type formField struct {
-	typ   string
-	name  string
-	label string
-	value interface{}
+	typ       string
+	name      string
+	label     string
+	regexp    string
+	regExpStr string
+	err       error
+	value     interface{}
 }
 
 func (ff *formField) inputable() bool {
@@ -60,6 +63,13 @@ func (ff *formField) viewable() bool {
 	}
 }
 
+func checkRegex(s string, regExp string) error {
+	if !regexp.MustCompile(regExp).MatchString(s) {
+		return fmt.Errorf("invalid field characters: not valid: %s %s",
+			s, regExp)
+	}
+	return nil
+}
 func (ff *formField) resetInputModel(m *textinput.Model) {
 	switch ff.typ {
 	case "txtinput":
@@ -76,6 +86,9 @@ func (ff *formField) updateInputModel(m *textinput.Model, msg tea.Msg) bool {
 		*m, _ = m.Update(msg)
 		newVal := m.Value()
 		ff.value = newVal
+		if ff.regexp != "" {
+			ff.err = checkRegex(newVal, ff.regexp)
+		}
 		return newVal != oldVal
 	case "intinput":
 		*m, _ = m.Update(msg)
@@ -106,6 +119,9 @@ func (ff *formField) view() string {
 	switch ff.typ {
 	case "txtinput":
 		b.WriteString(fmt.Sprintf("%s", ff.value))
+		if ff.err != nil {
+			b.WriteString(fmt.Sprintf("\n Invalid %s: %s", ff.label, ff.regExpStr))
+		}
 	case "intinput":
 		b.WriteString(fmt.Sprintf("%d", ff.value))
 	default:
@@ -139,6 +155,10 @@ func parseFormField(line string) *formField {
 			hasValue = true
 		case "label":
 			ff.label = m[2]
+		case "regexp":
+			ff.regexp = m[2]
+		case "regexpstr":
+			ff.regExpStr = m[2]
 		}
 	}
 
@@ -441,9 +461,10 @@ type chatWindow struct {
 	pageRequested *[]string
 	pageSpinner   spinner.Model
 
-	selEl         *chatMsgEl
-	selElIndex    int
-	maxSelectable int
+	selEl               *chatMsgEl
+	selElIndex          int
+	maxSelectable       int
+	formValidationError bool
 
 	unreadIdx int
 }
@@ -700,6 +721,7 @@ func (cw *chatWindow) renderMsgElements(winW int, as *appState, elements []*chat
 
 	styles := as.styles.Load()
 
+	formFieldErrs := false
 	// Loop through hard newlines.
 	for _, line := range elements {
 		// Style each element.
@@ -752,6 +774,13 @@ func (cw *chatWindow) renderMsgElements(winW int, as *appState, elements []*chat
 					style = styles.focused
 					cw.selEl = &el
 				}
+				// Don't allow submitting if any errors
+				if el.formField.err != nil {
+					formFieldErrs = true
+				}
+				if el.formField.typ == "submit" && formFieldErrs {
+					style = styles.blurred
+				}
 				cw.maxSelectable += 1
 				s := el.formField.view()
 				offset = writeWrappedWithStyle(b, offset, winW, style, s)
@@ -767,6 +796,7 @@ func (cw *chatWindow) renderMsgElements(winW int, as *appState, elements []*chat
 		b.WriteRune('\n')
 		offset = 0
 	}
+	cw.formValidationError = formFieldErrs
 
 }
 
