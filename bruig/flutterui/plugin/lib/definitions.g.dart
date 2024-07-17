@@ -1412,6 +1412,7 @@ Map<String, dynamic> _$PayStatsSummaryToJson(PayStatsSummary instance) =>
 PostListItem _$PostListItemFromJson(Map<String, dynamic> json) => PostListItem(
       json['id'] as String,
       json['title'] as String,
+      json['timestamp'] as int? ?? 0,
     );
 
 Map<String, dynamic> _$PostListItemToJson(PostListItem instance) =>
