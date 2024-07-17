@@ -2,8 +2,11 @@ package client
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"time"
 
+	"github.com/companyzero/bisonrelay/client/clientdb"
 	grpctypes "github.com/companyzero/bisonrelay/clientplugin/grpctypes"
 	"github.com/decred/slog"
 	"google.golang.org/grpc"
@@ -12,11 +15,13 @@ import (
 type PluginClient struct {
 	pluginrpc grpctypes.PluginServiceClient
 
-	ID     string
-	Name   string
-	Config map[string]interface{}
-	stream grpctypes.PluginService_InitClient
-	log    slog.Logger
+	ID      clientdb.PluginID
+	Name    string
+	Version string
+	Config  PluginClientCfg
+	Enabled bool
+	stream  grpctypes.PluginService_InitClient
+	log     slog.Logger
 }
 
 type PluginClientCfg struct {
@@ -25,7 +30,7 @@ type PluginClientCfg struct {
 	Log         slog.Logger
 }
 
-func NewPluginClient(ctx context.Context, cfg PluginClientCfg) (*PluginClient, error) {
+func NewPluginClient(ctx context.Context, id clientdb.PluginID, cfg PluginClientCfg) (*PluginClient, error) {
 	// First attempt to establish a connection to lnd's RPC sever.
 	// _, err := credentials.NewClientTLSFromFile(cfg.TLSCertPath, "")
 	// if err != nil {
@@ -47,13 +52,28 @@ func NewPluginClient(ctx context.Context, cfg PluginClientCfg) (*PluginClient, e
 		log = cfg.Log
 	}
 
-	return &PluginClient{
+	p := &PluginClient{
+		ID:        id,
 		pluginrpc: pc,
 		log:       log,
-	}, nil
+		Config: PluginClientCfg{
+			Address:     cfg.Address,
+			TLSCertPath: cfg.TLSCertPath,
+		},
+		Enabled: true,
+	}
+
+	version, err := p.GetVersion(ctx)
+	if err != nil {
+		return nil, err
+	}
+	p.Name = version.AppName
+	p.Version = version.AppVersion
+
+	return p, nil
 }
 
-func (p *PluginClient) Version(ctx context.Context) (*grpctypes.PluginVersionResponse, error) {
+func (p *PluginClient) GetVersion(ctx context.Context) (*grpctypes.PluginVersionResponse, error) {
 	req := &grpctypes.PluginVersionRequest{}
 	return p.pluginrpc.GetVersion(ctx, req)
 }
@@ -87,16 +107,78 @@ func (p *PluginClient) InitPlugin(ctx context.Context, req *grpctypes.PluginStar
 	return nil
 }
 
-// XXX From now on methods need to be implemented
+// SavePluginInfo saves the plugin information to the database.
+func (c *Client) SavePluginInfo(plugin *PluginClient) error {
+	// Ensure plugin does not already exist.
+	return c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
+		_, err := c.db.GetPlugin(tx, plugin.ID)
+		if err == nil {
+			return fmt.Errorf("plugin %s already exists: %w", plugin.Name, clientdb.ErrAlreadyExists)
+		} else if !errors.Is(err, clientdb.ErrNotFound) {
+			return err
+		}
 
-// initializePlugins initializes all registered plugins.
-func (c *Client) initializePlugins() error {
-	// for _, plugin := range c.plugins {
-	// 	if err := plugin.InitPlugin(c.ctx); err != nil {
-	// 		c.log.Errorf("Failed to initialize plugin %s: %v", plugin.ID(), err)
-	// 		return err
-	// 	}
-	// 	c.log.Infof("Initialized plugin %s", plugin.ID())
-	// }
-	return nil
+		// Convert PluginClientCfg to map[string]interface{}
+		config := map[string]interface{}{
+			"address":     plugin.Config.Address,
+			"tlsCertPath": plugin.Config.TLSCertPath,
+		}
+
+		pdb := clientdb.Plugin{
+			ID:        plugin.ID.String(),
+			Name:      plugin.Name,
+			Version:   plugin.Version,
+			Config:    config,
+			Enabled:   plugin.Enabled,
+			Installed: time.Now(),
+		}
+		// Save the plugin data to the database.
+		return c.db.SavePlugin(tx, pdb)
+	})
+}
+
+// ListPlugins returns plugins saved on db.
+func (c *Client) ListPlugins() ([]clientdb.Plugin, error) {
+	var res []clientdb.Plugin
+	err := c.dbView(func(tx clientdb.ReadTx) error {
+		var err error
+		res, err = c.db.ListPlugins(tx)
+		return err
+	})
+	return res, err
+}
+
+// GetEnabledPlugins returns the list of enabled plugins.
+func (c *Client) GetEnabledPlugins() ([]PluginClient, error) {
+	var res []PluginClient
+	err := c.dbView(func(tx clientdb.ReadTx) error {
+		plugins, err := c.db.ListPlugins(tx)
+		if err != nil {
+			return err
+		}
+
+		// Filter enabled plugins and convert to PluginClient.
+		for _, plugin := range plugins {
+			if plugin.Enabled {
+				address, ok := plugin.Config["address"].(string)
+				if !ok {
+					return fmt.Errorf("address not found in plugin config for %s", plugin.ID)
+				}
+
+				pc := PluginClient{
+					ID:      UserIDFromStr(plugin.ID),
+					Name:    plugin.Name,
+					Version: plugin.Version,
+					Config: PluginClientCfg{
+						Address: address,
+					},
+					Enabled: plugin.Enabled,
+				}
+				res = append(res, pc)
+			}
+		}
+		return nil
+	})
+
+	return res, err
 }

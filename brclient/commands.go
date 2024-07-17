@@ -469,6 +469,29 @@ var listCommands = []tuicmd{
 			return nil
 		},
 	}, {
+		cmd:           "plugins",
+		usableOffline: true,
+		descr:         "List plugins inited",
+		handler: func(args []string, as *appState) error {
+			plugins, err := as.c.ListPlugins()
+			if err != nil {
+				return err
+			}
+
+			as.cwHelpMsgs(func(pf printf) {
+				pf("")
+				pf("Active KX attempts")
+				for _, plugin := range plugins {
+					pf("Plugin Name: %s   Version: %v   Enabled: %s",
+						plugin.Name, plugin.Version, plugin.Enabled)
+					pf("Plugin installed: %v Last updated: %v",
+						plugin.Installed.Format(ISO8601DateTime), plugin.Updated.Format(ISO8601DateTime))
+					pf("")
+				}
+			})
+			return nil
+		},
+	}, {
 		cmd:     "svrrates",
 		aliases: []string{"serverrates"},
 		descr:   "Show server fee rates",
