@@ -13,6 +13,7 @@ import 'package:share_plus/share_plus.dart';
 var _suggestedExts = {
   "image/png": "png",
   "image/jpg": "jpg",
+  "image/jpeg": "jpg",
   "image/bmp": "bmp",
   "image/gif": "gif",
   "image/webp": "webp",
