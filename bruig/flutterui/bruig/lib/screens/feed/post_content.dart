@@ -845,6 +845,7 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
                         const SizedBox(height: 10),
                         SelectionArea(
                             child: Container(
+                                alignment: Alignment.topLeft,
                                 padding: const EdgeInsets.all(15),
                                 child: Provider<DownloadSource>(
                                     create: (context) => DownloadSource(
