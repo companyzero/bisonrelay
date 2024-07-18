@@ -230,7 +230,7 @@ func (c *Client) InviteToGroupChat(gcID zkidentity.ShortID, user UserID) error {
 
 	invite := rpc.RMGroupInvite{
 		ID:      gcID,
-		Expires: time.Now().Add(time.Hour * 24).Unix(),
+		Expires: time.Now().Add(c.cfg.GCInviteExpiration).Unix(),
 	}
 
 	err = c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
@@ -298,6 +298,15 @@ func (c *Client) handleGCInvite(ru *RemoteUser, invite rpc.RMGroupInvite) error 
 		return fmt.Errorf("GC id is empty")
 	}
 
+	expires := time.Unix(invite.Expires, 0)
+	if expires.Before(time.Now()) {
+		// This is not an error, just a sign that the local client was
+		// offline for too long before receiving the invite.
+		ru.log.Warnf("Received expired invitation to GC %q (%s)",
+			invite.Name, invite.ID)
+		return nil
+	}
+
 	// Add this invite to the DB.
 	var iid uint64
 	err := c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
@@ -352,6 +361,11 @@ func (c *Client) AcceptGroupChatInvite(iid uint64) error {
 	ru, err := c.rul.byID(uid)
 	if err != nil {
 		return err
+	}
+
+	expires := time.Unix(invite.Expires, 0)
+	if expires.Before(time.Now()) {
+		return ErrGCInvitationExpired
 	}
 
 	join := rpc.RMGroupJoin{
@@ -732,10 +746,17 @@ func (c *Client) handleGCJoin(ru *RemoteUser, invite rpc.RMGroupJoin) error {
 	updated := false
 	err := c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
 		var err error
-		_, uid, iid, err := c.db.FindGCInvite(tx,
+		sentInvite, uid, iid, err := c.db.FindGCInvite(tx,
 			invite.ID, invite.Token)
 		if err != nil {
 			return err
+		}
+
+		// Ensure the invitation is still valid.
+		expires := time.Unix(sentInvite.Expires, 0)
+		if expires.Before(time.Now()) {
+			return fmt.Errorf("%w %s", ErrGCInvitationExpired,
+				expires.Format(time.RFC3339))
 		}
 
 		// Ensure we received this join from the same user we sent it
@@ -1664,4 +1685,28 @@ func (c *Client) loadCachedRGCMs(ctx context.Context) error {
 
 	c.gcmq.ReloadCachedMessages(rgcms)
 	return nil
+}
+
+// removeExpiredGCInvites removes any GC invites that have expired for too long.
+func (c *Client) removeExpiredGCInvites(ctx context.Context) error {
+	return c.db.Update(ctx, func(tx clientdb.ReadWriteTx) error {
+		invites, err := c.db.ListGCInvites(tx, nil)
+		if err != nil {
+			return err
+		}
+
+		now := time.Now()
+		for _, invite := range invites {
+			expires := time.Unix(invite.Invite.Expires, 0)
+			if expires.After(now) {
+				continue
+			}
+
+			c.log.Debugf("Removing expired GC invite %d", invite.ID)
+			if err := c.db.DelGCInvite(tx, invite.ID); err != nil {
+				return err
+			}
+		}
+		return err
+	})
 }

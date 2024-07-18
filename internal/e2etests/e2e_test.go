@@ -98,6 +98,7 @@ type clientCfg struct {
 	autoSubToPosts       bool
 	disableAutoUnsubIdle bool
 	disableAutoHandshake bool
+	gcInviteExpiration   time.Duration
 }
 
 const defaultAutoUnsubIdleUserInterval = 14 * time.Second
@@ -180,6 +181,12 @@ func withID(id *zkidentity.FullIdentity) newClientOpt {
 			*c = *id
 			return c, nil
 		}
+	}
+}
+
+func withGCInviteExpiration(d time.Duration) newClientOpt {
+	return func(cfg *clientCfg) {
+		cfg.gcInviteExpiration = d
 	}
 }
 
@@ -446,6 +453,8 @@ func (ts *testScaffold) newClientWithCfg(nccfg *clientCfg, opts ...newClientOpt)
 		GCMQUpdtDelay:    100 * time.Millisecond,
 		GCMQMaxLifetime:  time.Second,
 		GCMQInitialDelay: time.Second,
+
+		GCInviteExpiration: nccfg.gcInviteExpiration,
 
 		RecentMediateIDThreshold:   chooseTimeout(time.Second, 3*time.Second),
 		UnkxdWarningTimeout:        chooseTimeout(250*time.Millisecond, time.Second),

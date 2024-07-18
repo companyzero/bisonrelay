@@ -203,6 +203,10 @@ type Config struct {
 	// Collator is used to compare nick and other strings to determine
 	// equality and sorting order.
 	Collator *collate.Collator
+
+	// GCInviteExpiration is how long a GC invitation is valid for. Defaults
+	// to 7 days.
+	GCInviteExpiration time.Duration
 }
 
 // logger creates a logger for the given subsystem in the configured backend.
@@ -248,6 +252,10 @@ func (cfg *Config) setDefaults() {
 
 	if cfg.Collator == nil {
 		cfg.Collator = collate.New(language.Und)
+	}
+
+	if cfg.GCInviteExpiration == 0 {
+		cfg.GCInviteExpiration = time.Hour * 24 * 7
 	}
 
 	// These following GCMQ times were obtained by profiling a client
@@ -689,6 +697,9 @@ func (c *Client) loadInitialDBData(ctx context.Context) error {
 		return err
 	}
 	if err := c.loadContentFilters(ctx); err != nil {
+		return err
+	}
+	if err := c.removeExpiredGCInvites(ctx); err != nil {
 		return err
 	}
 

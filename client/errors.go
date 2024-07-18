@@ -18,6 +18,10 @@ var (
 	errTimeoutWaitingHandlers = errors.New("timeout waiting for handlers to complete")
 
 	errTimeoutWaitingPrepaidInvite = errors.New("timeout waiting for prepaid invite")
+
+	// ErrGCInvitationExpired is generated in situations where the
+	// invitation to a GC expired.
+	ErrGCInvitationExpired = errors.New("invitation to GC expired")
 )
 
 type userNotFoundError struct {
