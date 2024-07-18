@@ -164,10 +164,6 @@ type appState struct {
 	qlenMtx sync.Mutex
 	qlen    int
 
-	// gcInvites tracks received gc invitations (gc name => invite id).
-	gcInvitesMtx sync.Mutex
-	gcInvites    map[string]uint64
-
 	// Reply chans for notifications that require confirmation.
 	clientIDChan      chan getClientIDReply
 	lnOpenChannelChan chan msgLNOpenChannelReply
@@ -2971,11 +2967,12 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 
 	ntfns.Register(client.OnInvitedToGCNtfn(func(user *client.RemoteUser, iid uint64, invite rpc.RMGroupInvite) {
 		gcName := strescape.Nick(invite.Name)
-		as.gcInvitesMtx.Lock()
-		as.gcInvites[gcName] = iid
-		as.gcInvitesMtx.Unlock()
-		as.diagMsg("Invited to GC %q (%v) by %q. Type /gc join %s to join.",
-			gcName, invite.ID.String(), user.Nick(), gcName)
+		as.manyDiagMsgsCb(func(pf printf) {
+			pf("Invited to GC %s (%s) by %s (invite ID %d). Type one of the following to join:",
+				gcName, strescape.Nick(user.Nick()), invite.ID, iid)
+			pf("  /gc join %s", gcName)
+			pf("  /gc join %d", iid)
+		})
 		cw := as.findOrNewChatWindow(user.ID(), user.Nick())
 		cw.newInternalMsg(fmt.Sprintf("%q has invited you to GC %q (%v).  Type /gc join %s to join",
 			user.Nick(), gcName, invite.ID.String(), gcName))
@@ -2989,12 +2986,6 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 	}))
 
 	ntfns.Register(client.OnJoinedGCNtfn(func(gc rpc.RMGroupList) {
-		// Remove GC invite if it exists.
-		gcName, _ := as.c.GetGCAlias(gc.ID)
-		as.gcInvitesMtx.Lock()
-		delete(as.gcInvites, gcName)
-		as.gcInvitesMtx.Unlock()
-
 		cw := as.findOrNewGCWindow(gc.ID)
 		cw.newInternalMsg("Joined GC")
 		as.repaintIfActive(cw)
@@ -3882,7 +3873,6 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		httpClient:  &httpClient,
 		rates:       r,
 
-		gcInvites: make(map[string]uint64),
 		network:   args.Network,
 		isRestore: isRestore,
 		rpcServer: rpcServer,

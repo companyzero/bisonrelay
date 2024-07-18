@@ -440,3 +440,12 @@ func preferredCollator() *collate.Collator {
 	opts := []collate.Option{collate.Loose}
 	return collate.New(tag, opts...)
 }
+
+// truncEllipsis truncates s (and adds ellipsis) when it is larger than maxlen.
+// Panics if maxlen < 3.
+func truncEllipsis(s string, maxlen int) string {
+	if len(s) <= maxlen {
+		return s
+	}
+	return s[:maxlen-3] + "..."
+}

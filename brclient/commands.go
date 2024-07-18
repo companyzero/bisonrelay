@@ -978,36 +978,37 @@ var gcCommands = []tuicmd{
 			}
 
 			gcName := args[0]
-			as.gcInvitesMtx.Lock()
-			iid, ok := as.gcInvites[gcName]
-			as.gcInvitesMtx.Unlock()
-			if !ok {
-				// Try to find it in the db.
-				invites, err := as.c.ListGCInvitesFor(nil)
-				if err != nil {
-					return err
-				}
 
-				for i := len(invites) - 1; i >= 0; i-- {
-					if invites[i].Invite.Name == gcName && !invites[i].Accepted {
-						iid = invites[i].ID
-						ok = true
-						break
-					}
-				}
+			// Try to find it in the db.
+			var invite *clientdb.GCInvite
+			invites, err := as.c.ListGCInvitesFor(nil)
+			if err != nil {
+				return err
+			}
 
-				if !ok {
-					return fmt.Errorf("unrecognized gc invite %q", gcName)
+			for i := len(invites) - 1; i >= 0; i-- {
+				if invites[i].Accepted {
+					continue
+				}
+				strId := strconv.Itoa(int(invites[i].ID))
+				if invites[i].Invite.Name == gcName || strId == gcName {
+					invite = invites[i]
+					break
 				}
 			}
 
+			if invite == nil {
+				return fmt.Errorf("unrecognized gc invite %q", gcName)
+			}
+
 			go func() {
-				err := as.c.AcceptGroupChatInvite(iid)
+				err := as.c.AcceptGroupChatInvite(invite.ID)
 				if err != nil {
 					as.diagMsg("Unable to join gc %q: %v",
-						gcName, err)
+						invite.Invite.Name, err)
 				} else {
-					as.diagMsg("Accepting invitation to join gc %q", gcName)
+					as.diagMsg("Accepting invitation to "+
+						"join gc %q", invite.Invite.Name)
 				}
 			}()
 			return nil
@@ -1039,7 +1040,7 @@ var gcCommands = []tuicmd{
 						maxNameLen = nameLen
 					}
 				}
-				maxNameLen = clamp(maxNameLen, 5, as.winW-64-10)
+				maxNameLen = clamp(maxNameLen, 5, as.winW-64-30)
 
 				sort.Slice(gcs, func(i, j int) bool {
 					ni := gcNames[gcs[i].ID]
@@ -1054,7 +1055,7 @@ var gcCommands = []tuicmd{
 						gcAlias := gcNames[gc.ID]
 						pf("%*s - %s - %d members",
 							maxNameLen,
-							gcAlias,
+							truncEllipsis(gcAlias, maxNameLen),
 							gc.ID,
 							len(gc.Members))
 					}
@@ -1599,6 +1600,78 @@ var gcCommands = []tuicmd{
 			}
 			if len(args) == 1 {
 				return nickCompleter(arg, as)
+			}
+			return nil
+		},
+	}, {
+		cmd:           "listinvites",
+		aliases:       []string{"lsinvites"},
+		usableOffline: true,
+		descr:         "Show outstanding invites to GCs received by the client",
+		long:          []string{"When an invite id is specified, show details of that invite."},
+		usage:         "[<invite id>]",
+		handler: func(args []string, as *appState) error {
+			invites, err := as.c.ListGCInvitesFor(nil)
+			if err != nil {
+				return err
+			}
+
+			var showId uint64
+			if len(args) > 0 {
+				showId, err = strconv.ParseUint(args[0], 10, 64)
+				if err != nil {
+					return fmt.Errorf("invalid invite id: %v", err)
+				}
+			}
+
+			acceptedStr := map[bool]string{
+				true:  "✓",
+				false: " ",
+			}
+
+			var shown bool
+			as.cwHelpMsgs(func(pf printf) {
+				pf("")
+				if len(invites) == 0 {
+					pf("No GC invites that can be accepted")
+					return
+				}
+
+				if showId == 0 {
+					pf("Outstanding GC Invites")
+					pf("%6s %26.26s %20.20s %s %s", "ID", "GC",
+						"Inviter", "Acc", "Expiration")
+				}
+				for _, inv := range invites {
+					if showId != 0 && showId != inv.ID {
+						continue
+					}
+
+					nick, _ := as.c.UserNick(inv.User)
+					expiration := time.Unix(inv.Invite.Expires, 0).Format(ISO8601DateTime)
+					if showId != 0 {
+						pf("Invitation to GC %s", inv.Invite.ID)
+						pf("  Invitation ID: %d", inv.ID)
+						pf("        GC Name: %s", strescape.Nick(inv.Invite.Name))
+						pf("     Inviter ID: %s", inv.User)
+						pf("   Inviter Nick: %s", nick)
+						pf("     Expiration: %s", expiration)
+						pf("       Accepted: %v", inv.Accepted)
+						shown = true
+						return
+					}
+
+					accepted := acceptedStr[inv.Accepted]
+					pf("%d %26.26s %20.20s  %s  %s",
+						inv.ID, truncEllipsis(strescape.Nick(inv.Invite.Name), 26),
+						truncEllipsis(strescape.Nick(nick), 20),
+						accepted,
+						expiration)
+				}
+			})
+
+			if showId != 0 && !shown {
+				return fmt.Errorf("Invite with id %d not found", showId)
 			}
 			return nil
 		},
