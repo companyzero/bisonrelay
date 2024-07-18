@@ -557,7 +557,8 @@ func (cw *chatWindow) replacePage(nick string, fr clientdb.FetchedResource) {
 	cw.Unlock()
 }
 
-func (cw *chatWindow) newHistoryMsg(from, msg string, fromUID *zkidentity.ShortID, ts time.Time, mine bool) *chatMsg {
+func (cw *chatWindow) newHistoryMsg(from, msg string, fromUID *zkidentity.ShortID,
+	ts time.Time, mine, internal bool) *chatMsg {
 	m := &chatMsg{
 		mine: mine,
 		//msg: msg,
@@ -566,6 +567,7 @@ func (cw *chatWindow) newHistoryMsg(from, msg string, fromUID *zkidentity.ShortI
 		from:     from,
 		fromUID:  fromUID,
 		sent:     true,
+		internal: internal,
 	}
 	cw.appendHistoryMsg(m)
 	return m

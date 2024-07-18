@@ -440,13 +440,14 @@ func (db *DB) readLogMsg(logFname string, pageSize, pageNum int) ([]PMLogEntry, 
 	prevLine := ""
 	prevLineTimestamp := int64(0)
 	prevName := ""
+	internal := false
 	for {
 		line, err := reader.ReadString('\n')
 		if err != nil {
 			// Log any left over message if we're at the end
-			if prevLine != "" && prevName != "" && prevLineTimestamp != 0 {
+			if prevLine != "" && prevLineTimestamp != 0 {
 				loggedMessages = append(loggedMessages, PMLogEntry{Message: prevLine,
-					From: prevName, Timestamp: prevLineTimestamp})
+					From: prevName, Timestamp: prevLineTimestamp, Internal: internal})
 			}
 			break
 		}
@@ -477,10 +478,11 @@ func (db *DB) readLogMsg(logFname string, pageSize, pageNum int) ([]PMLogEntry, 
 			continue
 		}
 
-		// This means there was a new timestamp in the current line so
-		if prevLine != "" && prevName != "" && prevLineTimestamp != 0 {
+		// This means there was a new timestamp in the current line, which
+		// finishes the prior message.
+		if prevLine != "" && prevLineTimestamp != 0 {
 			loggedMessages = append(loggedMessages, PMLogEntry{Message: prevLine,
-				From: prevName, Timestamp: prevLineTimestamp})
+				From: prevName, Timestamp: prevLineTimestamp, Internal: internal})
 		}
 
 		// This surely means there is a new log line if there is a parsable timestamp at the front.
@@ -491,12 +493,22 @@ func (db *DB) readLogMsg(logFname string, pageSize, pageNum int) ([]PMLogEntry, 
 			if len(line) > matches[5]+1 {
 				message = line[matches[5]+1:]
 			}
+			internal = false
 		} else if name == "*" {
-			// Not a message to pass through, so reset prev info and move on.
-			prevLine = ""
-			prevName = ""
-			prevLineTimestamp = 0
-			continue
+			message = line[matches[5]+1:]
+			hasIgnorePrefix := strings.HasPrefix(message, "Conversation started") ||
+				strings.HasPrefix(message, "Day Changed")
+			if hasIgnorePrefix {
+				// Not a message to pass through, so reset prev info and move on.
+				prevLine = ""
+				prevName = ""
+				prevLineTimestamp = 0
+				continue
+			} else {
+				// Start internal message.
+				internal = true
+				name = ""
+			}
 		}
 
 		prevLine = message

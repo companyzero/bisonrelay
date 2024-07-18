@@ -16,6 +16,7 @@ import (
 	"github.com/companyzero/bisonrelay/client/internal/singlesetmap"
 	"github.com/companyzero/bisonrelay/client/resources"
 	"github.com/companyzero/bisonrelay/client/timestats"
+	"github.com/companyzero/bisonrelay/internal/strescape"
 	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/companyzero/bisonrelay/zkidentity"
 	"github.com/decred/slog"
@@ -925,6 +926,21 @@ func (c *Client) UserNick(uid UserID) (string, error) {
 		return "", err
 	}
 	return ru.Nick(), nil
+}
+
+// UserLogNick returns the nick to use when logging a remote user. If the user
+// does not exist, returns the UID itself as string. If this uid is for the
+// client itself, returns the string "local client".
+func (c *Client) UserLogNick(uid UserID) string {
+	<-c.abLoaded
+	if uid == c.PublicID() {
+		return "local client"
+	}
+	ru, err := c.rul.byID(uid)
+	if err != nil {
+		return uid.String()
+	}
+	return strescape.Nick(ru.Nick())
 }
 
 // NicksWithPrefix returns a list of nicks for users that have the specified
