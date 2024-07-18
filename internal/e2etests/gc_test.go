@@ -1250,3 +1250,71 @@ func TestGCChangesOwner(t *testing.T) {
 	assertGCDoesNotExist(t, gcID, bob)
 	assertGCDoesNotExist(t, gcID, charlie)
 }
+
+// TestGCInviteExpiration tests the behavior of expired invites.
+func TestGCInviteExpiration(t *testing.T) {
+	t.Parallel()
+
+	const inviteTimeout = 2 * time.Second
+
+	// Setup
+	tcfg := testScaffoldCfg{}
+	ts := newTestScaffold(t, tcfg)
+	alice := ts.newClient("alice", withGCInviteExpiration(inviteTimeout))
+	bob := ts.newClient("bob", withGCInviteExpiration(inviteTimeout))
+	ts.kxUsers(alice, bob)
+
+	gcID, err := alice.NewGroupChat("gc01")
+	assert.NilErr(t, err)
+
+	bobInvitedChan := make(chan uint64, 3)
+	bob.handle(client.OnInvitedToGCNtfn(func(user *client.RemoteUser, iid uint64, invite rpc.RMGroupInvite) {
+		bobInvitedChan <- iid
+	}))
+	bobRMGCInviteChan := make(chan struct{}, 3)
+	bob.handle(client.OnRMReceived(func(ru *client.RemoteUser, h *rpc.RMHeader, p interface{}, ts time.Time) {
+		if h.Command == rpc.RMCGroupInvite {
+			bobRMGCInviteChan <- struct{}{}
+		}
+	}))
+	bobJoinedGCChan := make(chan struct{}, 3)
+	bob.handle(client.OnJoinedGCNtfn(func(gc rpc.RMGroupList) {
+		bobJoinedGCChan <- struct{}{}
+	}))
+
+	// Bob takes too long to decide to accept the invitation.
+	alice.InviteToGroupChat(gcID, bob.PublicID())
+	assert.ChanWritten(t, bobRMGCInviteChan)
+	iid1 := assert.ChanWritten(t, bobInvitedChan)
+	time.Sleep(inviteTimeout)
+	assert.ErrorIs(t, bob.AcceptGroupChatInvite(iid1), client.ErrGCInvitationExpired)
+
+	// Bob is offline when Alice sends the invite, and it's already expired
+	// by the time he receives it.
+	assertGoesOffline(t, bob)
+	alice.InviteToGroupChat(gcID, bob.PublicID())
+	time.Sleep(inviteTimeout)
+	assertGoesOnline(t, bob)
+	assert.ChanWritten(t, bobRMGCInviteChan)
+	assert.ChanNotWritten(t, bobInvitedChan, inviteTimeout)
+
+	// Bob responds to the invite promptly, but Alice is offline for too
+	// long and the invite expires.
+	assertGoesOffline(t, bob)
+	alice.InviteToGroupChat(gcID, bob.PublicID())
+	assertGoesOffline(t, alice)
+	assertGoesOnline(t, bob)
+	assert.ChanWritten(t, bobRMGCInviteChan)
+	iid2 := assert.ChanWritten(t, bobInvitedChan)
+	assert.NilErr(t, bob.AcceptGroupChatInvite(iid2))
+	time.Sleep(inviteTimeout)
+	assertGoesOnline(t, alice)
+	assert.ChanNotWritten(t, bobJoinedGCChan, inviteTimeout)
+
+	// Finally, test the correct behavior of joining the GC.
+	alice.InviteToGroupChat(gcID, bob.PublicID())
+	assert.ChanWritten(t, bobRMGCInviteChan)
+	iid3 := assert.ChanWritten(t, bobInvitedChan)
+	assert.NilErr(t, bob.AcceptGroupChatInvite(iid3))
+	assert.ChanWritten(t, bobJoinedGCChan)
+}
