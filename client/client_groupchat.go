@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -371,6 +372,25 @@ func (c *Client) ListGCInvitesFor(gcid *zkidentity.ShortID) ([]*clientdb.GCInvit
 		invites, err = c.db.ListGCInvites(tx, gcid)
 		return err
 	})
+
+	// Sort in a consistent way. By group ID, then inviter ID then
+	// expiration.
+	sort.Slice(invites, func(i, j int) bool {
+		ii, ij := invites[i], invites[j]
+		cgid := ii.Invite.ID.Compare(&ij.Invite.ID)
+		if cgid < 0 {
+			return true
+		}
+		cuid := ii.User.Compare(&ij.User)
+		if cgid == 0 && cuid < 0 {
+			return true
+		}
+		if cgid == 0 && cuid == 0 && ii.Invite.Expires < ij.Invite.Expires {
+			return true
+		}
+		return false
+	})
+
 	return invites, err
 }
 

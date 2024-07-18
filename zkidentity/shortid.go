@@ -1,6 +1,7 @@
 package zkidentity
 
 import (
+	"bytes"
 	"crypto/subtle"
 	"encoding/hex"
 	"encoding/json"
@@ -99,4 +100,9 @@ func (u ShortID) ConstantTimeEq(other *ShortID) bool {
 func (u ShortID) IsEmpty() bool {
 	var empty ShortID
 	return u.ConstantTimeEq(&empty)
+}
+
+// Compare returns -1 if u < other, 0 if u == other and +1 if u > other.
+func (u ShortID) Compare(other *ShortID) int {
+	return bytes.Compare(u[:], other[:])
 }
