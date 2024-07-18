@@ -146,6 +146,7 @@ const (
 	CTNotifyServerSessionState            = 0x88
 	CTEnableTimedProfiling                = 0x89
 	CTZipTimedProfilingLogs               = 0x8a
+	CTListGCInvites                       = 0x8b
 
 	NTInviteReceived         = 0x1001
 	NTInviteAccepted         = 0x1002

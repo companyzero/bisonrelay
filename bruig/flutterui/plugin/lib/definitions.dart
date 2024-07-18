@@ -278,13 +278,14 @@ class InviteToGC {
 
 @JsonSerializable()
 class RMGroupInvite {
+  final String id;
   final String name;
-  final List<String> Members;
   final int token;
   final String description;
   final int expires;
-  RMGroupInvite(
-      this.name, this.Members, this.token, this.description, this.expires);
+  final int version;
+  RMGroupInvite(this.id, this.name, this.token, this.description, this.expires,
+      this.version);
 
   factory RMGroupInvite.fromJson(Map<String, dynamic> json) =>
       _$RMGroupInviteFromJson(json);
@@ -324,7 +325,10 @@ class GCInvitation extends ChatEvent {
   final RemoteUser inviter;
   final int iid;
   final String name;
-  GCInvitation(this.inviter, this.iid, this.name) : super(inviter.uid, "");
+  final RMGroupInvite invite;
+  final bool accepted;
+  GCInvitation(this.inviter, this.iid, this.name, this.invite, this.accepted)
+      : super(inviter.uid, "");
 
   factory GCInvitation.fromJson(Map<String, dynamic> json) =>
       _$GCInvitationFromJson(json);
@@ -3160,6 +3164,16 @@ abstract class PluginPlatform {
 
   Future<void> zipProfilingLogs(String destPath) async =>
       await asyncCall(CTZipTimedProfilingLogs, destPath);
+
+  Future<List<GCInvitation>> listGCInvitations() async {
+    var res = await asyncCall(CTListGCInvites, null);
+    if (res == null) {
+      return List.empty();
+    }
+    return (res as List)
+        .map<GCInvitation>((v) => GCInvitation.fromJson(v))
+        .toList();
+  }
 }
 
 const int CTUnknown = 0x00;
@@ -3289,6 +3303,7 @@ const int CTEnableProfiler = 0x87;
 const int CTNotifyServerSessionState = 0x88;
 const int CTEnableTimedProfiling = 0x89;
 const int CTZipTimedProfilingLogs = 0x8a;
+const int CTListGCInvites = 0x8b;
 
 const int notificationsStartID = 0x1000;
 

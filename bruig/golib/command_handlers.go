@@ -285,6 +285,7 @@ func handleInitClient(handle uint32, args initClient) error {
 			Inviter: remoteUserFromRU(user),
 			IID:     iid,
 			Name:    invite.Name,
+			Invite:  invite,
 		}
 		notify(NTInvitedToGC, inv, nil)
 	}))
@@ -2053,6 +2054,25 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 	case CTNotifyServerSessionState:
 		state := cc.serverState.Load().(serverSessState)
 		go notify(NTServerSessChanged, state, nil)
+
+	case CTListGCInvites:
+		invites, err := cc.c.ListGCInvitesFor(nil)
+		if err != nil {
+			return nil, err
+		}
+
+		res := make([]gcInvitation, len(invites))
+		for i := range invites {
+			ru, _ := cc.c.UserByID(invites[i].User)
+			res[i] = gcInvitation{
+				Inviter:  remoteUserFromRU(ru),
+				IID:      invites[i].ID,
+				Name:     invites[i].Invite.Name,
+				Invite:   invites[i].Invite,
+				Accepted: invites[i].Accepted,
+			}
+		}
+		return res, nil
 
 	}
 	return nil, nil

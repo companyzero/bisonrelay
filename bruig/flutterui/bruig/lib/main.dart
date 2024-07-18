@@ -13,6 +13,7 @@ import 'package:bruig/models/snackbar.dart';
 import 'package:bruig/screens/config_network.dart';
 import 'package:bruig/screens/contacts_msg_times.dart';
 import 'package:bruig/screens/fetch_invite.dart';
+import 'package:bruig/screens/gc_invitations.dart';
 import 'package:bruig/screens/generate_invite.dart';
 import 'package:bruig/screens/log.dart';
 import 'package:bruig/screens/onboarding.dart';
@@ -443,6 +444,8 @@ class _AppState extends State<App> with WindowListener {
                     const ConfigNetworkScreen(),
                 ThemeTestScreen.routeName: (context) => Consumer<ThemeNotifier>(
                     builder: (context, theme, child) => ThemeTestScreen(theme)),
+                GCInvitationsScreen.routeName: (context) =>
+                    const GCInvitationsScreen(),
                 '/shutdown': (context) => Consumer<LogModel>(
                     builder: (context, log, child) => ShutdownScreen(
                         widget.cfg.walletType == "internal",

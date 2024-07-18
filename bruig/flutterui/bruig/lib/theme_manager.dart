@@ -58,6 +58,7 @@ enum TextColor {
   onTertiaryFixedVariant,
 
   error, // Used when only the text is displayed as error.
+  successOnSurface, // Used for displaying a successful message on top of a surface
 }
 
 // SurfaceColor are colors used on surfaces/containers/background.
@@ -101,9 +102,11 @@ enum SurfaceColor {
 
 class CustomColors {
   final Color sidebarDivider;
+  final Color successOnSurface;
 
   const CustomColors({
     this.sidebarDivider = Colors.black,
+    this.successOnSurface = const Color(0xFF2D882D),
   });
 }
 
@@ -727,6 +730,8 @@ class ThemeNotifier with ChangeNotifier {
         return colors.inversePrimary;
       case TextColor.error:
         return colors.error;
+      case TextColor.successOnSurface:
+        return extraColors.successOnSurface;
     }
   }
 

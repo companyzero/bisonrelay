@@ -10,6 +10,7 @@ import 'package:bruig/models/resources.dart';
 import 'package:bruig/models/snackbar.dart';
 import 'package:bruig/screens/chats.dart';
 import 'package:bruig/screens/feed.dart';
+import 'package:bruig/screens/gc_invitations.dart';
 import 'package:bruig/screens/ln_management.dart';
 import 'package:bruig/screens/log.dart';
 import 'package:bruig/screens/manage_content_screen.dart';
@@ -194,6 +195,11 @@ List<ChatMenuItem?> buildChatContextMenu() {
         .pushNamed(ContactsLastMsgTimesScreen.routeName);
   }
 
+  void gotoInvitesListScreen(BuildContext context) {
+    Navigator.of(context, rootNavigator: true)
+        .pushNamed(GCInvitationsScreen.routeName);
+  }
+
   return <ChatMenuItem?>[
     ChatMenuItem(
         "New Message", (context, client) => client.ui.showAddressBookScreen),
@@ -211,6 +217,8 @@ List<ChatMenuItem?> buildChatContextMenu() {
             client.connState.isOnline ? fetchInvite(context) : null),
     ChatMenuItem("Received Message Log",
         (context, client) => gotoContactsLastMsgTimeScreen(context)),
+    ChatMenuItem("Show GC Invitations",
+        (context, client) => gotoInvitesListScreen(context)),
   ];
 }
 
