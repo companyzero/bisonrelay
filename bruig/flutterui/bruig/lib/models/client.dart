@@ -808,7 +808,7 @@ class ClientModel extends ChangeNotifier {
     // mechanism in the future
     List<LogEntry> chatHistory = [];
     try {
-      chatHistory = await Golib.readChatHistory(id, isGC ? alias : "", 500, 0);
+      chatHistory = await Golib.readChatHistory(id, isGC, 500, 0);
     } catch (exception) {
       // Ignore, as we might be opening a chat for a user that hasn't been fully
       // setup yet.
