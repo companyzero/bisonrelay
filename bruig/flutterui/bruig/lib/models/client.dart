@@ -17,6 +17,7 @@ const SCE_unknown = 0;
 const SCE_sending = 1;
 const SCE_sent = 2;
 const SCE_received = 3;
+const SCE_history = 98;
 const SCE_errored = 99;
 
 class DateChangeEvent extends ChatEvent {
@@ -814,21 +815,31 @@ class ClientModel extends ChangeNotifier {
       var mine = chatHistory[i].from == _nick;
       if (isGC) {
         ChatModel? source;
-        if (!mine) {
-          source = getExistingChatByNick(chatHistory[i].from, false);
-        }
+        ChatEvent m;
+        if (chatHistory[i].internal) {
+          m = SynthChatEvent(chatHistory[i].message, SCE_history);
+        } else {
+          if (!mine) {
+            source = getExistingChatByNick(chatHistory[i].from, false);
+          }
 
-        var m = GCMsg(id, chatHistory[i].from, chatHistory[i].message,
-            chatHistory[i].timestamp * (mine ? 1000 : 1));
+          m = GCMsg(id, chatHistory[i].from, chatHistory[i].message,
+              chatHistory[i].timestamp * (mine ? 1000 : 1));
+        }
         evnt = ChatEventModel(m, source);
       } else {
+        ChatEvent m;
         var source = !mine ? c : null;
-        var m = PM(
-            id,
-            chatHistory[i].message,
-            mine,
-            chatHistory[i].timestamp *
-                (chatHistory[i].from == _nick ? 1000 : 1));
+        if (chatHistory[i].internal) {
+          m = SynthChatEvent(chatHistory[i].message, SCE_history);
+        } else {
+          m = PM(
+              id,
+              chatHistory[i].message,
+              mine,
+              chatHistory[i].timestamp *
+                  (chatHistory[i].from == _nick ? 1000 : 1));
+        }
         evnt = ChatEventModel(m, source);
       }
       c.append(evnt, true);

@@ -649,10 +649,10 @@ class _SynthEventWState extends State<SynthEventW> {
       msg = "✗ Failed to ${widget.event.msg} - ${event.error}";
     } else if (event.state == SCE_sending) {
       msg = "… ${widget.event.msg}";
-    } else if (event.state == SCE_received) {
+    } else if (event.state == SCE_received || event.state == SCE_history) {
       msg = widget.event.msg;
     } else {
-      msg = "? unknown state ${event.state}";
+      msg = "? unknown state ${event.state} : ${widget.event.msg}";
     }
     return ServerEvent(msg: msg);
   }
