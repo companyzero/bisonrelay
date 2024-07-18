@@ -305,7 +305,12 @@ func (mws mainWindowState) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					}
 				} else if cw.selEl != nil && cw.selEl.form != nil &&
 					cw.selEl.formField != nil && cw.selEl.formField.typ == "submit" {
-
+					// Don't allow submit if any form fields has an err
+					for _, field := range cw.selEl.form.fields {
+						if field.err != nil {
+							break
+						}
+					}
 					// Submit form.
 					uid := cw.page.UID
 					action := cw.selEl.form.action()
