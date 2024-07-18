@@ -562,12 +562,13 @@ func (db *DB) logMsg(logFname string, internal bool, from, msg string, ts time.T
 		b.WriteString(ts.Format("2006-01-02T15:04:05 "))
 		b.WriteString(fmt.Sprintf("* Conversation started %s", ts.Format("2006-01-02")))
 		b.WriteRune('\n')
-	} else if lastMsgTs.Day() != ts.Day() {
+		db.lastMsgTS[logFname] = ts
+	} else if ts.Sub(lastMsgTs) > time.Hour*24 {
 		b.WriteString(ts.Format("2006-01-02T15:04:05 "))
 		b.WriteString(fmt.Sprintf("* Day Changed to %s", ts.Format("2006-01-02")))
 		b.WriteRune('\n')
+		db.lastMsgTS[logFname] = ts
 	}
-	db.lastMsgTS[logFname] = ts
 
 	b.WriteString(ts.Format("2006-01-02T15:04:05 "))
 
