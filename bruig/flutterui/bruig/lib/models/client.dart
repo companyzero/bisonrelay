@@ -603,11 +603,7 @@ class ClientModel extends ChangeNotifier {
   ClientModel() {
     ui = UIStateModel();
 
-    _handleAcceptedInvites();
-    _handleChatMsgs();
     _handleServerSessChanged();
-    _handleGCListUpdates();
-    _handleSSOrders();
     _handleRescanWalletProgress();
   }
 
@@ -1007,6 +1003,12 @@ class ClientModel extends ChangeNotifier {
     }
 
     loadingAddressBook = false;
+
+    // Start processing events.
+    _handleAcceptedInvites();
+    _handleChatMsgs();
+    _handleGCListUpdates();
+    _handleSSOrders();
   }
 
   AvatarModel myAvatar = AvatarModel();
