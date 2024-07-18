@@ -64,7 +64,12 @@ func (ff *formField) viewable() bool {
 }
 
 func checkRegex(s string, regExp string) error {
-	if !regexp.MustCompile(regExp).MatchString(s) {
+	re, err := regexp.Compile(regExp)
+	if err != nil {
+		return fmt.Errorf("provided regexp (%s) not not valid: %v",
+			regExp, err)
+	}
+	if !re.MatchString(s) {
 		return fmt.Errorf("invalid field characters: not valid: %s %s",
 			s, regExp)
 	}
@@ -461,10 +466,9 @@ type chatWindow struct {
 	pageRequested *[]string
 	pageSpinner   spinner.Model
 
-	selEl               *chatMsgEl
-	selElIndex          int
-	maxSelectable       int
-	formValidationError bool
+	selEl         *chatMsgEl
+	selElIndex    int
+	maxSelectable int
 
 	unreadIdx int
 }
@@ -796,7 +800,6 @@ func (cw *chatWindow) renderMsgElements(winW int, as *appState, elements []*chat
 		b.WriteRune('\n')
 		offset = 0
 	}
-	cw.formValidationError = formFieldErrs
 
 }
 
