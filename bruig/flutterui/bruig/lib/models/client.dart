@@ -781,7 +781,8 @@ class ClientModel extends ChangeNotifier {
 
   bool get hasChats => _activeChats.isNotEmpty;
 
-  Future<ChatModel> _newChat(String id, String alias, bool isGC) async {
+  Future<ChatModel> _newChat(String id, String alias, bool isGC,
+      {loadHistory = true}) async {
     alias = alias.trim();
 
     var c = _activeChats[id];
@@ -804,11 +805,13 @@ class ClientModel extends ChangeNotifier {
     // Start with 500 messages and first page (0). We can load more with a scrolling
     // mechanism in the future
     List<LogEntry> chatHistory = [];
-    try {
-      chatHistory = await Golib.readChatHistory(id, isGC, 500, 0);
-    } catch (exception) {
-      // Ignore, as we might be opening a chat for a user that hasn't been fully
-      // setup yet.
+    if (loadHistory) {
+      try {
+        chatHistory = await Golib.readChatHistory(id, isGC, 500, 0);
+      } catch (exception) {
+        // Ignore, as we might be opening a chat for a user that hasn't been fully
+        // setup yet.
+      }
     }
     for (int i = 0; i < chatHistory.length; i++) {
       ChatEventModel evnt;
@@ -1059,9 +1062,13 @@ class ClientModel extends ChangeNotifier {
       if (requestedMediateID(remoteUser.uid)) {
         _mediating.remove(remoteUser.uid);
       }
-      var chat = await _newChat(remoteUser.uid, remoteUser.nick, false);
+
+      // Do not load history to avoid a duplicated "KX completed" message (if
+      // that message is in the history).
+      var chat = await _newChat(remoteUser.uid, remoteUser.nick, false,
+          loadHistory: false);
       chat.append(
-          ChatEventModel(SynthChatEvent("KX Completed", SCE_received), null),
+          ChatEventModel(SynthChatEvent("Completed KX", SCE_received), null),
           false);
 
       // Load user's avatar (async).
