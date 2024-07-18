@@ -176,13 +176,13 @@ func (c *Client) innerHandleUserRM(ru *RemoteUser, h *rpc.RMHeader,
 		return c.handleGCJoin(ru, p)
 
 	case rpc.RMGroupList:
-		return c.handleGCList(ru, p)
+		return c.handleGCList(ru, p, ts)
 
 	case rpc.RMGroupUpgradeVersion:
-		return c.handleGCUpgradeVersion(ru, p)
+		return c.handleGCUpgradeVersion(ru, p, ts)
 
 	case rpc.RMGroupUpdateAdmins:
-		return c.handleGCUpdateAdmins(ru, p)
+		return c.handleGCUpdateAdmins(ru, p, ts)
 
 	case rpc.RMGroupMessage:
 		if ru.IsIgnored() {
@@ -270,13 +270,13 @@ func (c *Client) innerHandleUserRM(ru *RemoteUser, h *rpc.RMHeader,
 		return c.handleReceiveReceipt(ru, p, ts)
 
 	case rpc.RMGroupKick:
-		return c.handleGCKick(ru, p)
+		return c.handleGCKick(ru, p, ts)
 
 	case rpc.RMGroupPart:
-		return c.handleGCPart(ru, p)
+		return c.handleGCPart(ru, p, ts)
 
 	case rpc.RMGroupKill:
-		return c.handleGCKill(ru, p)
+		return c.handleGCKill(ru, p, ts)
 
 	case rpc.RMKXSearch:
 		return c.handleKXSearch(ru, p)

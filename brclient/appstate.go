@@ -1169,7 +1169,9 @@ func (as *appState) findOrNewGCWindow(gcID zkidentity.ShortID) *chatWindow {
 					time.Unix(chatHistory[i-1].Timestamp, 0).Format("2006-01-02")) {
 			cw.newInternalMsg(fmt.Sprintf("Day changed to %s", time.Unix(chatLog.Timestamp, 0).Format("2006-01-02")))
 		}
-		cw.newHistoryMsg(chatLog.From, chatLog.Message, empty, time.Unix(chatLog.Timestamp, 0), chatLog.From == cw.me)
+		cw.newHistoryMsg(chatLog.From, chatLog.Message, empty,
+			time.Unix(chatLog.Timestamp, 0), chatLog.From == cw.me,
+			chatLog.Internal)
 	}
 
 	as.footerInvalidate()
@@ -1217,7 +1219,9 @@ func (as *appState) findOrNewChatWindow(id clientintf.UserID, alias string) *cha
 			cw.newInternalMsg(fmt.Sprintf("Day changed to %s", time.Unix(chatLog.Timestamp, 0).Format("2006-01-02")))
 		}
 		var empty *zkidentity.ShortID
-		cw.newHistoryMsg(chatLog.From, chatLog.Message, empty, time.Unix(chatLog.Timestamp, 0), chatLog.From == cw.me)
+		cw.newHistoryMsg(chatLog.From, chatLog.Message, empty,
+			time.Unix(chatLog.Timestamp, 0), chatLog.From == cw.me,
+			chatLog.Internal)
 	}
 	as.footerInvalidate()
 	as.diagMsg("Started chat with %s", alias)
