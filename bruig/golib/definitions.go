@@ -459,7 +459,7 @@ type handshakeStage struct {
 
 type loadUserHistory struct {
 	UID     clientintf.UserID `json:"uid"`
-	GcName  string            `json:"gc_name"`
+	IsGC    bool              `json:"is_gc"`
 	Page    int               `json:"page"`
 	PageNum int               `json:"page_num"`
 }

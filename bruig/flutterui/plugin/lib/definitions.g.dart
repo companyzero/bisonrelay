@@ -1820,7 +1820,7 @@ Map<String, dynamic> _$SendOnChainToJson(SendOnChain instance) =>
 LoadUserHistory _$LoadUserHistoryFromJson(Map<String, dynamic> json) =>
     LoadUserHistory(
       json['uid'] as String,
-      json['gc_name'] as String,
+      json['is_gc'] as bool,
       json['page'] as int,
       json['page_num'] as int,
     );
@@ -1828,7 +1828,7 @@ LoadUserHistory _$LoadUserHistoryFromJson(Map<String, dynamic> json) =>
 Map<String, dynamic> _$LoadUserHistoryToJson(LoadUserHistory instance) =>
     <String, dynamic>{
       'uid': instance.uid,
-      'gc_name': instance.gcName,
+      'is_gc': instance.isGC,
       'page': instance.page,
       'page_num': instance.pageNum,
     };

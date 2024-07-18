@@ -1006,17 +1006,22 @@ type ChatHistoryEntry struct {
 // a group chat name was provided in the arguments.  This function will return
 // an array of ChatHistoryEntry's that contain information from each line of
 // saved logs.
-func (c *Client) ReadHistoryMessages(uid UserID, gcName string, page, pageNum int) ([]ChatHistoryEntry, time.Time, error) {
+func (c *Client) ReadHistoryMessages(uid UserID, isGC bool, page, pageNum int) ([]ChatHistoryEntry, time.Time, error) {
 	var now time.Time
 	if c.cfg.NoLoadChatHistory {
 		return nil, now, nil
 	}
+
+	// Double check the user/GC exists.
 	var err error
-	if gcName == "" {
-		_, err := c.rul.byID(uid)
-		if err != nil {
-			return nil, now, err
-		}
+	var gcName string
+	if !isGC {
+		_, err = c.rul.byID(uid)
+	} else {
+		gcName, err = c.GetGCAlias(uid)
+	}
+	if err != nil {
+		return nil, now, err
 	}
 
 	var chatHistory []ChatHistoryEntry

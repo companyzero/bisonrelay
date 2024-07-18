@@ -1848,13 +1848,13 @@ class SendOnChain {
 @JsonSerializable()
 class LoadUserHistory {
   final String uid;
-  @JsonKey(name: "gc_name")
-  final String gcName;
+  @JsonKey(name: "is_gc")
+  final bool isGC;
   final int page;
   @JsonKey(name: "page_num")
   final int pageNum;
 
-  LoadUserHistory(this.uid, this.gcName, this.page, this.pageNum);
+  LoadUserHistory(this.uid, this.isGC, this.page, this.pageNum);
   Map<String, dynamic> toJson() => _$LoadUserHistoryToJson(this);
 }
 
@@ -3053,9 +3053,9 @@ abstract class PluginPlatform {
   }
 
   Future<List<LogEntry>> readChatHistory(
-      String uid, String gcName, int page, int pageNum) async {
+      String uid, bool isGC, int page, int pageNum) async {
     var res = await asyncCall(
-        CTLoadUserHistory, LoadUserHistory(uid, gcName, page, pageNum));
+        CTLoadUserHistory, LoadUserHistory(uid, isGC, page, pageNum));
     if (res == null) {
       return List.empty();
     }

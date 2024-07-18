@@ -1156,9 +1156,9 @@ func (as *appState) findOrNewGCWindow(gcID zkidentity.ShortID) *chatWindow {
 	as.updatedCW[len(as.chatWindows)-1] = false
 	as.chatWindowsMtx.Unlock()
 
-	chatHistory, initTime, err := as.c.ReadHistoryMessages(gcID, gcName, 500, 0)
+	chatHistory, initTime, err := as.c.ReadHistoryMessages(gcID, true, 500, 0)
 	if err != nil {
-		cw.newInternalMsg("Unable to read history messages")
+		cw.newInternalMsg("Unable to read GC history messages: %v", err)
 	}
 	cw.initTime = initTime
 	for i, chatLog := range chatHistory {
@@ -1206,9 +1206,9 @@ func (as *appState) findOrNewChatWindow(id clientintf.UserID, alias string) *cha
 	as.updatedCW[len(as.chatWindows)-1] = false
 	as.chatWindowsMtx.Unlock()
 
-	chatHistory, initTime, err := as.c.ReadHistoryMessages(id, "", 500, 0)
+	chatHistory, initTime, err := as.c.ReadHistoryMessages(id, false, 500, 0)
 	if err != nil {
-		cw.newInternalMsg("Unable to read history messages")
+		cw.newInternalMsg("Unable to read user history messages: %v", err)
 	}
 	cw.initTime = initTime
 	for i, chatLog := range chatHistory {
