@@ -6,6 +6,7 @@ import 'package:bruig/models/client.dart';
 import 'package:bruig/models/uistate.dart';
 import 'package:bruig/screens/chats.dart';
 import 'package:bruig/screens/contacts_msg_times.dart';
+import 'package:bruig/screens/gc_invitations.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:bruig/components/interactive_avatar.dart';
@@ -250,6 +251,11 @@ class _ActiveChatsListMenuState extends State<ActiveChatsListMenu> {
     inputFocusNode.requestFocus();
   }
 
+  void showGCInvitationsScreen() {
+    Navigator.of(context, rootNavigator: true)
+        .pushNamed(GCInvitationsScreen.routeName);
+  }
+
   // Returns a callback to make chat c active.
   void makeActive(ChatModel? c) => {client.active = c};
 
@@ -349,6 +355,10 @@ class _ActiveChatsListMenuState extends State<ActiveChatsListMenu> {
                   tooltip: "New Message",
                   onPressed: client.ui.showAddressBookScreen,
                   icon: Icons.edit_outlined),
+              _FooterIconButton(
+                  tooltip: "Show GC Invitations",
+                  onPressed: showGCInvitationsScreen,
+                  icon: Icons.groups),
             ])));
   }
 }

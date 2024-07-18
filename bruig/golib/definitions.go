@@ -120,6 +120,9 @@ func remoteUserFromPII(pii *zkidentity.PublicIdentity) remoteUser {
 }
 
 func remoteUserFromRU(ru *client.RemoteUser) remoteUser {
+	if ru == nil {
+		return remoteUser{}
+	}
 	return remoteUser{
 		UID:  ru.ID().String(),
 		Nick: ru.Nick(),
@@ -138,9 +141,11 @@ type gcAddressBookEntry struct {
 }
 
 type gcInvitation struct {
-	Inviter remoteUser `json:"inviter"`
-	IID     uint64     `json:"iid"`
-	Name    string     `json:"name"`
+	Inviter  remoteUser        `json:"inviter"`
+	IID      uint64            `json:"iid"`
+	Name     string            `json:"name"`
+	Invite   rpc.RMGroupInvite `json:"invite"`
+	Accepted bool              `json:"accepted"`
 }
 
 type gcMessage struct {

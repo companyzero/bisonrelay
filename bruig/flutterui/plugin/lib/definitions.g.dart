@@ -245,20 +245,22 @@ Map<String, dynamic> _$InviteToGCToJson(InviteToGC instance) =>
 
 RMGroupInvite _$RMGroupInviteFromJson(Map<String, dynamic> json) =>
     RMGroupInvite(
+      json['id'] as String,
       json['name'] as String,
-      (json['Members'] as List<dynamic>).map((e) => e as String).toList(),
       json['token'] as int,
       json['description'] as String,
       json['expires'] as int,
+      json['version'] as int,
     );
 
 Map<String, dynamic> _$RMGroupInviteToJson(RMGroupInvite instance) =>
     <String, dynamic>{
+      'id': instance.id,
       'name': instance.name,
-      'Members': instance.Members,
       'token': instance.token,
       'description': instance.description,
       'expires': instance.expires,
+      'version': instance.version,
     };
 
 GCAddressBookEntry _$GCAddressBookEntryFromJson(Map<String, dynamic> json) =>
@@ -302,6 +304,8 @@ GCInvitation _$GCInvitationFromJson(Map<String, dynamic> json) => GCInvitation(
       RemoteUser.fromJson(json['inviter'] as Map<String, dynamic>),
       json['iid'] as int,
       json['name'] as String,
+      RMGroupInvite.fromJson(json['invite'] as Map<String, dynamic>),
+      json['accepted'] as bool,
     );
 
 Map<String, dynamic> _$GCInvitationToJson(GCInvitation instance) =>
@@ -309,6 +313,8 @@ Map<String, dynamic> _$GCInvitationToJson(GCInvitation instance) =>
       'inviter': instance.inviter,
       'iid': instance.iid,
       'name': instance.name,
+      'invite': instance.invite,
+      'accepted': instance.accepted,
     };
 
 GCMsg _$GCMsgFromJson(Map<String, dynamic> json) => GCMsg(
