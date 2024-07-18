@@ -651,7 +651,7 @@ class ClientModel extends ChangeNotifier {
     // Create the GC, create the chat model and make it the active and most
     // recent chat.
     var gcid = await Golib.createGC(gcName);
-    var newChat = await _newChat(gcid, gcName, true, false);
+    var newChat = await _newChat(gcid, gcName, true);
     _makeActive(newChat, moveToMostRecent: true);
 
     // Invite users to chat.
@@ -784,8 +784,7 @@ class ClientModel extends ChangeNotifier {
 
   bool get hasChats => _activeChats.isNotEmpty;
 
-  Future<ChatModel> _newChat(
-      String id, String alias, bool isGC, bool startup) async {
+  Future<ChatModel> _newChat(String id, String alias, bool isGC) async {
     alias = alias.trim();
 
     var c = _activeChats[id];
@@ -918,21 +917,37 @@ class ClientModel extends ChangeNotifier {
         }
       }
 
-      var isGC =
-          (evnt is GCMsg) || (evnt is GCUserEvent) || (evnt is GCAdminsChanged);
+      var isGC = (evnt is GCMsg) ||
+          (evnt is GCUserEvent) ||
+          (evnt is GCAdminsChanged) ||
+          (evnt is GCAddedMembers) ||
+          (evnt is GCMemberParted) ||
+          (evnt is GCUpgradedVersion);
 
-      var chat = await _newChat(evnt.sid, "", isGC, false);
+      var chat = await _newChat(evnt.sid, "", isGC);
       ChatModel? source;
+      String? sourceId;
       if (evnt is PM) {
         if (!evnt.mine) {
           source = chat;
         }
       } else if (evnt is GCMsg) {
-        source = await _newChat(evnt.senderUID, "", false, false);
+        sourceId = evnt.senderUID;
       } else if (evnt is GCUserEvent) {
-        source = await _newChat(evnt.uid, "", false, false);
+        sourceId = evnt.uid;
+      } else if (evnt is GCAdminsChanged) {
+        sourceId = evnt.source;
+      } else if (evnt is GCAddedMembers) {
+        sourceId = evnt.sid;
+      } else if (evnt is GCMemberParted) {
+        sourceId = evnt.sid;
+      } else if (evnt is GCUpgradedVersion) {
+        sourceId = evnt.sid;
       } else {
         source = chat;
+      }
+      if (sourceId != null) {
+        source = getExistingChat(sourceId);
       }
       chat.append(ChatEventModel(evnt, source), false);
 
@@ -970,14 +985,14 @@ class ClientModel extends ChangeNotifier {
     _nick = info.nick;
     var ab = await Golib.addressBook();
     for (var v in ab) {
-      var c = await _newChat(v.id, v.nick, false, true);
+      var c = await _newChat(v.id, v.nick, false);
       if (v.avatar != null) {
         c.avatar.loadAvatar(v.avatar);
       }
     }
     var gcs = await Golib.listGCs();
     for (var v in gcs) {
-      await _newChat(v.id, v.name, true, true);
+      await _newChat(v.id, v.name, true);
     }
 
     // Re-sort list of chats.
@@ -1007,7 +1022,7 @@ class ClientModel extends ChangeNotifier {
 
   void acceptInvite(Invitation invite) async {
     var user = await Golib.acceptInvite(invite);
-    active = await _newChat(user.uid, user.nick, false, false);
+    active = await _newChat(user.uid, user.nick, false);
   }
 
   final List<String> _mediating = [];
@@ -1031,7 +1046,7 @@ class ClientModel extends ChangeNotifier {
       if (requestedMediateID(remoteUser.uid)) {
         _mediating.remove(remoteUser.uid);
       }
-      var chat = await _newChat(remoteUser.uid, remoteUser.nick, false, false);
+      var chat = await _newChat(remoteUser.uid, remoteUser.nick, false);
       chat.append(
           ChatEventModel(SynthChatEvent("KX Completed", SCE_received), null),
           false);
@@ -1056,7 +1071,7 @@ class ClientModel extends ChangeNotifier {
     var stream = Golib.gcListUpdates();
     await for (var update in stream) {
       // Force creating the chat if it doesn't exist.
-      _newChat(update.id, update.name, true, false);
+      _newChat(update.id, update.name, true);
     }
   }
 
