@@ -393,7 +393,7 @@ var listCommands = []tuicmd{
 					}
 					pf("%s - %s", fd.FID, strescape.Nick(nick))
 					if fd.Metadata == nil {
-						pf("(no data)")
+						pf("(waiting remote metadata)")
 						pf("")
 						continue
 					}
@@ -1946,6 +1946,42 @@ var ftCommands = []tuicmd{
 				cw.newHelpMsg(msg)
 			}
 
+			return nil
+		},
+	}, {
+		cmd:           "canceldownload",
+		aliases:       []string{"canceldown"},
+		descr:         "Cancel an in-progress download",
+		usage:         "<file id prefix>",
+		usableOffline: true,
+		handler: func(args []string, as *appState) error {
+			if len(args) < 1 {
+				return usageError{msg: "file id must be specified"}
+			}
+			fds, err := as.c.ListDownloads()
+			if err != nil {
+				return err
+			}
+
+			var matches []clientintf.FileID
+			for _, fd := range fds {
+				if strings.HasPrefix(fd.FID.String(), args[0]) {
+					matches = append(matches, fd.FID)
+				}
+			}
+
+			if len(matches) == 0 {
+				return fmt.Errorf("file with id %q not found", args[0])
+			}
+			if len(matches) > 1 {
+				return fmt.Errorf("more than one file with id %q exists", args[0])
+			}
+
+			err = as.c.CancelDownload(matches[0])
+			if err != nil {
+				return err
+			}
+			as.cwHelpMsg("Canceled download of file %s", matches[0])
 			return nil
 		},
 	},
