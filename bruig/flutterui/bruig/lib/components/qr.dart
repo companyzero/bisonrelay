@@ -35,7 +35,7 @@ class QrCodePainter extends CustomPainter {
     final canvas = Canvas(recorder);
     paint(canvas, Size(size, size));
     canvas.drawRect(
-        Rect.fromCenter(center: Offset(100, 100), width: 30, height: 30),
+        Rect.fromCenter(center: const Offset(100, 100), width: 30, height: 30),
         _paintFg);
     return recorder.endRecording();
   }

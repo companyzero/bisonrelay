@@ -12,6 +12,7 @@ import 'package:golib_plugin/golib_plugin.dart';
 import 'package:intl/intl.dart';
 import 'package:bruig/storage_manager.dart';
 import 'package:bruig/notification_service.dart';
+import 'package:provider/provider.dart';
 
 const SCE_unknown = 0;
 const SCE_sending = 1;
@@ -607,6 +608,9 @@ class ClientModel extends ChangeNotifier {
     _handleServerSessChanged();
     _handleRescanWalletProgress();
   }
+
+  static ClientModel of(BuildContext context, {bool listen = true}) =>
+      Provider.of<ClientModel>(context, listen: listen);
 
   // activeChats are chats that have messages in them, hiddenChats are the ones
   // that have no message or have been explicitly hidden from the chats list.

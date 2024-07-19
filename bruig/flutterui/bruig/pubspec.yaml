@@ -50,7 +50,7 @@ dependencies:
   qr_flutter: ^4.1.0
   file_icon: ^1.0.0
   package_info_plus: ^4.1.0
-  open_filex: ^4.3.2
+  open_filex: ^4.4.0
   loading_animation_widget: ^1.2.0
   scrollable_positioned_list: ^0.3.8
   duration: ^3.0.3

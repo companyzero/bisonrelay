@@ -9,8 +9,14 @@ import 'package:golib_plugin/golib_plugin.dart';
 class FileDownloadModel extends ChangeNotifier {
   final String uid;
   final String fid;
-  final ReceivedFile rf;
-  FileDownloadModel(this.uid, this.fid, this.rf);
+  ReceivedFile _rf;
+  FileDownloadModel(this.uid, this.fid, this._rf, this._diskPath);
+
+  ReceivedFile get rf => _rf;
+  set rf(ReceivedFile v) {
+    _rf = v;
+    notifyListeners();
+  }
 
   String _diskPath = "";
   String get diskPath => _diskPath;
@@ -62,7 +68,7 @@ class DownloadsModel extends ChangeNotifier {
       return;
     }
 
-    var fdm = FileDownloadModel(uid, fid, ReceivedFile(fid, uid, "", fm));
+    var fdm = FileDownloadModel(uid, fid, ReceivedFile(fid, uid, "", fm), "");
     _downloads.add(fdm);
     notifyListeners();
   }
@@ -75,7 +81,7 @@ class DownloadsModel extends ChangeNotifier {
     int idx = _findDownload(f.uid, f.fid);
     final FileDownloadModel res;
     if (idx == -1) {
-      res = FileDownloadModel(f.uid, f.fid, f);
+      res = FileDownloadModel(f.uid, f.fid, f, f.diskPath);
     } else {
       res = _downloads[idx];
     }
@@ -114,12 +120,8 @@ class DownloadsModel extends ChangeNotifier {
   void _loadDownloads() async {
     var res = await Golib.listDownloads();
     for (var e in res) {
-      if (e.metadata == null) {
-        // Change ReceivedFile.metadata to FileMetadata? ?
-        continue;
-      }
-      var rf = ReceivedFile(e.fid, e.uid, "", e.metadata!);
-      var f = FileDownloadModel(e.uid, e.fid, rf);
+      var rf = ReceivedFile(e.fid, e.uid, e.diskPath, e.metadata);
+      var f = FileDownloadModel(e.uid, e.fid, rf, e.diskPath);
       _downloads.add(f);
     }
     notifyListeners();
@@ -144,7 +146,20 @@ class DownloadsModel extends ChangeNotifier {
       }
       var f = _downloads[idx];
       var nbChunks = update.metadata.manifest.length;
+      if (f.rf.metadata == null) {
+        // Received metadata. Update in the model.
+        f.rf = f.rf.cloneWithMeta(f.rf.metadata);
+      }
       f.progress = (nbChunks - update.nbMissingChunks) / nbChunks;
+    }
+  }
+
+  Future<void> cancelDownload(String uid, String fid) async {
+    await Golib.cancelDownload(fid);
+    final idx = _findDownload(uid, fid);
+    if (idx > -1) {
+      _downloads.removeAt(idx);
+      notifyListeners();
     }
   }
 }

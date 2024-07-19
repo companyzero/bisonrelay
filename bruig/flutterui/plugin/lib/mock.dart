@@ -167,8 +167,7 @@ class MockPlugin with NtfStreams /*implements PluginPlatform*/ {
   Future<bool> isIgnored(String uid) async => throw "unimplemented";
   Future<List<String>> listSubscribers() async => throw "unimplemented";
   Future<List<String>> listSubscriptions() async => throw "unimplemented";
-  Future<List<OutstandingFileDownload>> listDownloads() async =>
-      throw "unimplemented";
+  Future<List<FileDownload>> listDownloads() async => throw "unimplemented";
   Future<LNInfo> lnGetInfo() async => throw "unimplemented";
   Future<List<LNChannel>> lnListChannels() async => throw "unimplemented";
   Future<LNPendingChannelsList> lnListPendingChannels() async =>

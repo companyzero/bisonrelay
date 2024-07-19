@@ -41,3 +41,44 @@ void confirmationDialog(
         );
       });
 }
+
+void showConfirmDialog(
+  BuildContext context, {
+  String title = "Confirmation",
+  String? content,
+  Widget? child,
+  String confirmButtonText = "Confirm",
+  String cancelButtonText = "Cancel",
+  VoidCallback? onConfirm,
+  VoidCallback? onCancel,
+}) {
+  pop() {
+    if (scaffoldKey.currentContext != null) {
+      Navigator.of(scaffoldKey.currentContext!).pop();
+    }
+  }
+
+  showDialog(
+      context: context,
+      builder: (BuildContext ctx) {
+        return AlertDialog(
+          title: Text(title),
+          content: child ?? Text(content ?? ""),
+          actions: [
+            // The "Yes" button
+            TextButton(
+                onPressed: () {
+                  pop();
+                  onConfirm != null ? onConfirm() : null;
+                },
+                child: Text(confirmButtonText)),
+            TextButton(
+                onPressed: () {
+                  pop();
+                  onCancel != null ? onCancel() : null;
+                },
+                child: Text(cancelButtonText))
+          ],
+        );
+      });
+}
