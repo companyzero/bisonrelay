@@ -548,10 +548,13 @@ class ReceivedFile {
   final String uid;
   @JsonKey(name: "disk_path")
   final String diskPath;
-  final FileMetadata metadata;
+  final FileMetadata? metadata;
   ReceivedFile(this.fid, this.uid, this.diskPath, this.metadata);
   factory ReceivedFile.fromJson(Map<String, dynamic> json) =>
       _$ReceivedFileFromJson(json);
+
+  ReceivedFile cloneWithMeta(FileMetadata? meta) =>
+      ReceivedFile(fid, uid, diskPath, meta);
 }
 
 @JsonSerializable()
@@ -736,7 +739,7 @@ class ConfNotification {
 }
 
 @JsonSerializable()
-class OutstandingFileDownload {
+class FileDownload {
   final String uid;
   final String fid;
   @JsonKey(name: "completed_name")
@@ -746,10 +749,13 @@ class OutstandingFileDownload {
   final Map<int, String> invoices;
   @JsonKey(name: "chunkstates", defaultValue: {})
   final Map<int, String> chunkStates;
-  OutstandingFileDownload(this.uid, this.fid, this.completedName, this.metadata,
-      this.invoices, this.chunkStates);
-  factory OutstandingFileDownload.fromJson(Map<String, dynamic> json) =>
-      _$OutstandingFileDownloadFromJson(json);
+  @JsonKey(name: "disk_path")
+  final String diskPath;
+  FileDownload(this.uid, this.fid, this.completedName, this.metadata,
+      this.invoices, this.chunkStates, this.diskPath);
+  factory FileDownload.fromJson(Map<String, dynamic> json) =>
+      _$FileDownloadFromJson(json);
+  Map<String, dynamic> toJson() => _$FileDownloadToJson(this);
 }
 
 @JsonSerializable()
@@ -2766,14 +2772,13 @@ abstract class PluginPlatform {
     return List.castFrom(res);
   }
 
-  Future<List<OutstandingFileDownload>> listDownloads() async {
+  Future<List<FileDownload>> listDownloads() async {
     var res = await asyncCall(CTListDownloads, null);
     if (res == null) {
       return [];
     }
     return (res as List)
-        .map<OutstandingFileDownload>(
-            (v) => OutstandingFileDownload.fromJson(v))
+        .map<FileDownload>((v) => FileDownload.fromJson(v))
         .toList();
   }
 
@@ -3174,6 +3179,9 @@ abstract class PluginPlatform {
         .map<GCInvitation>((v) => GCInvitation.fromJson(v))
         .toList();
   }
+
+  Future<void> cancelDownload(String fid) async =>
+      await asyncCall(CTCancelDownload, fid);
 }
 
 const int CTUnknown = 0x00;
@@ -3304,6 +3312,7 @@ const int CTNotifyServerSessionState = 0x88;
 const int CTEnableTimedProfiling = 0x89;
 const int CTZipTimedProfilingLogs = 0x8a;
 const int CTListGCInvites = 0x8b;
+const int CTCancelDownload = 0x8c;
 
 const int notificationsStartID = 0x1000;
 

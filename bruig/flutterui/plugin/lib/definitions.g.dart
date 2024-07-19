@@ -505,7 +505,9 @@ ReceivedFile _$ReceivedFileFromJson(Map<String, dynamic> json) => ReceivedFile(
       json['file_id'] as String,
       json['uid'] as String,
       json['disk_path'] as String,
-      FileMetadata.fromJson(json['metadata'] as Map<String, dynamic>),
+      json['metadata'] == null
+          ? null
+          : FileMetadata.fromJson(json['metadata'] as Map<String, dynamic>),
     );
 
 Map<String, dynamic> _$ReceivedFileToJson(ReceivedFile instance) =>
@@ -669,9 +671,7 @@ Map<String, dynamic> _$PostActionArgsToJson(PostActionArgs instance) =>
       'pid': instance.pid,
     };
 
-OutstandingFileDownload _$OutstandingFileDownloadFromJson(
-        Map<String, dynamic> json) =>
-    OutstandingFileDownload(
+FileDownload _$FileDownloadFromJson(Map<String, dynamic> json) => FileDownload(
       json['uid'] as String,
       json['fid'] as String,
       json['completed_name'] as String,
@@ -686,10 +686,10 @@ OutstandingFileDownload _$OutstandingFileDownloadFromJson(
             (k, e) => MapEntry(int.parse(k), e as String),
           ) ??
           {},
+      json['disk_path'] as String,
     );
 
-Map<String, dynamic> _$OutstandingFileDownloadToJson(
-        OutstandingFileDownload instance) =>
+Map<String, dynamic> _$FileDownloadToJson(FileDownload instance) =>
     <String, dynamic>{
       'uid': instance.uid,
       'fid': instance.fid,
@@ -698,6 +698,7 @@ Map<String, dynamic> _$OutstandingFileDownloadToJson(
       'invoices': instance.invoices.map((k, e) => MapEntry(k.toString(), e)),
       'chunkstates':
           instance.chunkStates.map((k, e) => MapEntry(k.toString(), e)),
+      'disk_path': instance.diskPath,
     };
 
 FileDownloadProgress _$FileDownloadProgressFromJson(

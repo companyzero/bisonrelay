@@ -4,6 +4,8 @@ import 'package:bruig/models/downloads.dart';
 import 'package:bruig/models/snackbar.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
+import 'package:golib_plugin/util.dart';
+import 'package:open_filex/open_filex.dart';
 
 typedef DownloadContentCB = Future<FileDownloadModel> Function(
     ReceivedFile file);
@@ -39,7 +41,11 @@ class _SharedContentFileState extends State<SharedContentFile> {
   }
 
   showContent(BuildContext context) {
-    if (widget.file.metadata.filename.endsWith(".md")) {
+    if (widget.file.metadata == null) {
+      return;
+    }
+
+    if (widget.file.metadata!.filename.endsWith(".md")) {
       // FIXME: display content?
       /*
       Navigator.pushNamed(context, "/downloadedMdContent",
@@ -47,9 +53,7 @@ class _SharedContentFileState extends State<SharedContentFile> {
               PostContentScreenArgs(widget.chat.nick, widget.file.diskPath));
       */
     } else {
-      // FIXME: externally open file.
-      showErrorSnackbar(this,
-          "Don't know how to open file '${widget.file.metadata.filename}'");
+      OpenFilex.open(widget.fd?.diskPath);
     }
   }
 
@@ -103,30 +107,28 @@ class _SharedContentFileState extends State<SharedContentFile> {
     }
     return Row(
       children: [
-        Expanded(flex: 30, child: Text(file.metadata.directory)),
-        Expanded(flex: 100, child: Text(file.metadata.filename)),
-        Expanded(flex: 50, child: Text((file.metadata.cost / 1e8).toString())),
+        Expanded(flex: 30, child: Text("${file.metadata?.directory}")),
+        Expanded(flex: 100, child: Text("${file.metadata?.filename}")),
+        Expanded(
+            flex: 50,
+            child: Text((formatDCR(atomsToDCR(file.metadata?.cost ?? 0))))),
         Expanded(
             flex: 40, child: Text(file.fid, overflow: TextOverflow.ellipsis)),
-        Expanded(
-            flex: 5,
-            child: isDownloading
-                ? CircularProgressIndicator(
-                    value: progress,
-                  )
-                : IconButton(
-                    iconSize: 18,
-                    icon: Icon(loading || isDownloading
-                        ? Icons.hourglass_bottom
-                        : diskPath != ""
-                            ? Icons.open_in_new
-                            : Icons.download),
-                    onPressed: loading
-                        ? null
-                        : diskPath != ""
-                            ? () => showContent(context)
-                            : () => downloadContent(context),
-                  ))
+        isDownloading
+            ? CircularProgressIndicator(value: progress)
+            : IconButton(
+                iconSize: 18,
+                icon: Icon(loading || isDownloading
+                    ? Icons.hourglass_bottom
+                    : diskPath != ""
+                        ? Icons.open_in_new
+                        : Icons.download),
+                onPressed: loading
+                    ? null
+                    : diskPath != ""
+                        ? () => showContent(context)
+                        : () => downloadContent(context),
+              )
       ],
     );
   }
@@ -145,22 +147,12 @@ class UserContentListW extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListView.builder(
-      shrinkWrap: true,
-      // physics: const NeverScrollableScrollPhysics(),
-      controller: ScrollController(keepScrollOffset: false),
-      itemCount: content.files.length,
-      itemBuilder: (BuildContext context, int index) {
-        return Container(
-            margin: const EdgeInsets.only(bottom: 5),
-            padding: const EdgeInsets.only(right: 20),
-            child: SharedContentFile(
-                content.files[index],
-                chat,
-                downloads.getDownload(
-                    content.files[index].uid, content.files[index].fid),
-                downloadContent));
-      },
-    );
+    return Column(
+        children: content.files
+            .map((e) => Container(
+                margin: const EdgeInsets.only(bottom: 5),
+                child: SharedContentFile(e, chat,
+                    downloads.getDownload(e.uid, e.fid), downloadContent)))
+            .toList());
   }
 }

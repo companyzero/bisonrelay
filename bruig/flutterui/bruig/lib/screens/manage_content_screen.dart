@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:bruig/components/text.dart';
+import 'package:bruig/models/client.dart';
 import 'package:bruig/models/uistate.dart';
 import 'package:bruig/screens/manage_content/manage_content.dart';
 import 'package:flutter/material.dart';
@@ -47,8 +48,9 @@ class _ManageContentScreenState extends State<ManageContentScreen> {
       case 1:
         return const ManageContent(1);
       case 2:
-        return Consumer<DownloadsModel>(
-            builder: (context, downloads, child) => DownloadsScreen(downloads));
+        return Consumer2<DownloadsModel, ClientModel>(
+            builder: (context, downloads, client, child) =>
+                DownloadsScreen(downloads, client));
     }
     return Text("Active is $tabIndex");
   }

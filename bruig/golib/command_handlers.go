@@ -2074,6 +2074,13 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		}
 		return res, nil
 
+	case CTCancelDownload:
+		var fid zkidentity.ShortID
+		if err := cmd.decode(&fid); err != nil {
+			return nil, err
+		}
+
+		return nil, c.CancelDownload(fid)
 	}
 	return nil, nil
 
