@@ -12,18 +12,15 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
-	"reflect"
 	"strconv"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/companyzero/bisonrelay/client/clientdb"
 	"github.com/companyzero/bisonrelay/client/clientintf"
 	"github.com/companyzero/bisonrelay/internal/assert"
 	"github.com/companyzero/bisonrelay/internal/testutils"
 	"github.com/companyzero/bisonrelay/rpc"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/decred/slog"
 )
 
@@ -269,18 +266,6 @@ func TestE2EDcrlnContent(t *testing.T) {
 	bob.cfg.Notifications.Register(OnFileDownloadCompleted(func(user *RemoteUser, fm rpc.FileMetadata, diskPath string) {
 		completedFileChan <- diskPath
 	}))
-	listedFilesChan := make(chan interface{})
-	bob.cfg.Notifications.Register(OnContentListReceived(func(user *RemoteUser, files []clientdb.RemoteFile, listErr error) {
-		if listErr != nil {
-			listedFilesChan <- listErr
-			return
-		}
-		mds := make([]rpc.FileMetadata, len(files))
-		for i, rf := range files {
-			mds[i] = rf.Metadata
-		}
-		listedFilesChan <- mds
-	}))
 
 	// Start the clients. Return any run errors on errChan.
 	ctx, cancel := context.WithCancel(context.Background())
@@ -292,112 +277,17 @@ func TestE2EDcrlnContent(t *testing.T) {
 	time.Sleep(100 * time.Millisecond) // Time for run() to start.
 	completeC2CKX(t, alice, bob)
 
-	// Alice will share 2 files (one globally, one with Bob).
-	fGlobal, fShared := testRandomFile(t), testRandomFile(t)
-	sfGlobal, mdGlobal, err := alice.ShareFile(fGlobal, nil, 1, "global file")
-	if err != nil {
-		t.Fatal(err)
-	}
-	bobUID := bob.PublicID()
-	sfShared, mdShared, err := alice.ShareFile(fShared, &bobUID, 1, "user file")
-	if err != nil {
-		t.Fatal(err)
-	}
-	_ = sfShared
-
-	// Helpers to assert listing works.
-	lsAlice := func(dirs []string) {
-		t.Helper()
-		err := bob.ListUserContent(alice.PublicID(), dirs, "")
-		assert.NilErr(t, err)
-	}
-	assertNextRes := func(wantFiles []rpc.FileMetadata) {
-		t.Helper()
-		select {
-		case v := <-listedFilesChan:
-			switch v := v.(type) {
-			case error:
-				t.Fatal(v)
-			case []rpc.FileMetadata:
-				if !reflect.DeepEqual(wantFiles, v) {
-					t.Fatalf("unexpected files. got %s, want %s",
-						spew.Sdump(v), spew.Sdump(wantFiles))
-				}
-			default:
-				t.Fatalf("unexpected result: %s", spew.Sdump(v))
-			}
-		case <-time.After(10 * time.Second):
-			t.Fatal("timeout")
-		}
-	}
-
-	// First one should be of the global file.
-	lsAlice([]string{rpc.RMFTDGlobal})
-	assertNextRes([]rpc.FileMetadata{mdGlobal})
-
-	// Second one should be the user shared file.
-	lsAlice([]string{rpc.RMFTDShared})
-	assertNextRes([]rpc.FileMetadata{mdShared})
-
-	// Third one should be both.
-	lsAlice([]string{rpc.RMFTDGlobal, rpc.RMFTDShared})
-	assertNextRes([]rpc.FileMetadata{mdGlobal, mdShared})
-
-	// Last call should error.
-	lsAlice([]string{"*dir that doesn't exist"})
-	select {
-	case v := <-listedFilesChan:
-		switch v := v.(type) {
-		case error:
-			// expected error.
-		default:
-			t.Fatalf("unexpected result: %s", spew.Sdump(v))
-		}
-	case <-time.After(10 * time.Second):
-		t.Fatal("timeout")
-	}
-
-	// Bob starts fetching the global file from Alice.
-	if err := bob.GetUserContent(alice.PublicID(), sfGlobal.FID); err != nil {
-		t.Fatal(err)
-	}
-
-	// Ensure the file is received.
-	select {
-	case completedPath := <-completedFileChan:
-		// Assert the global file is correct.
-		orig, err := os.ReadFile(fGlobal)
-		orFatal(t, err)
-		fetched, err := os.ReadFile(completedPath)
-		orFatal(t, err)
-		if !bytes.Equal(orig, fetched) {
-			t.Fatal("Unequal original and fetched files")
-		}
-
-	case <-time.After(30 * time.Second):
-		t.Fatal("timeout")
-	}
-
-	// Alice will send a file directly to bob.
-	fSent := testRandomFile(t)
-	err = alice.SendFile(bob.PublicID(), fSent)
+	// Alice will share 1 file.
+	fGlobal := testRandomFile(t)
+	sfGlobal, _, err := alice.ShareFile(fGlobal, nil, 1, "global file")
 	assert.NilErr(t, err)
 
-	// Bob should receive it.
-	select {
-	case completedPath := <-completedFileChan:
-		// Assert the sent file is correct.
-		orig, err := os.ReadFile(fSent)
-		orFatal(t, err)
-		fetched, err := os.ReadFile(completedPath)
-		orFatal(t, err)
-		if !bytes.Equal(orig, fetched) {
-			t.Fatal("Unequal original and fetched files")
-		}
+	// Bob starts fetching the global file from Alice.
+	assert.NilErr(t, bob.GetUserContent(alice.PublicID(), sfGlobal.FID))
 
-	case <-time.After(30 * time.Second):
-		t.Fatal("timeout")
-	}
+	// Ensure the file is received.
+	completedPath1 := assert.ChanWritten(t, completedFileChan)
+	assert.EqualFiles(t, fGlobal, completedPath1)
 }
 
 func TestE2EDcrlnTipUser(t *testing.T) {

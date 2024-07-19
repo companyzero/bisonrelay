@@ -193,6 +193,7 @@ type FileDownload struct {
 	ChunkStates      map[int]ChunkState `json:"chunkstates"`
 	ChunkUpdatedTime map[int]time.Time  `json:"chunkupdttimes"`
 	IsSentFile       bool               `json:"is_sent_file"`
+	DiskPath         string             `json:"disk_path"` // Set when completed
 }
 
 func (fd *FileDownload) GetChunkState(chunkIdx int) ChunkState {

@@ -1,8 +1,11 @@
 package assert
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"io"
+	"os"
 	"reflect"
 	"testing"
 	"time"
@@ -162,5 +165,57 @@ func Contains[S ~[]E, E comparable](t testing.TB, s S, e E) {
 	t.Helper()
 	if !slices.Contains(s, e) {
 		t.Fatalf("slice %v does not contain element %v", s, e)
+	}
+}
+
+// EqualFiles asserts that the files in path1 and path2 have the same content.
+func EqualFiles(t testing.TB, path1, path2 string) {
+	f1, err := os.Open(path1)
+	if err != nil {
+		t.Fatalf("file1 failed to open: %v", err)
+	}
+
+	f2, err := os.Open(path2)
+	if err != nil {
+		t.Fatalf("file2 failed to open: %v", err)
+	}
+
+	var b1 [4096]byte
+	var b2 [4096]byte
+	var p int
+	for {
+		n1, err1 := io.ReadFull(f1, b1[:])
+		n2, err2 := io.ReadFull(f2, b2[:])
+		if n1 != n2 {
+			t.Fatalf("read different nb of bytes: n1 %d n2 %d", n1, n2)
+		}
+
+		if !bytes.Equal(b1[:n1], b2[:n2]) {
+			t.Fatalf("bytes are different starting around position %d", p)
+		}
+
+		if errors.Is(err1, io.ErrUnexpectedEOF) && errors.Is(err2, io.ErrUnexpectedEOF) {
+			// Done reading.
+			break
+		}
+		if errors.Is(err1, io.EOF) && errors.Is(err2, io.EOF) {
+			// Done reading.
+			break
+		}
+		if err1 != nil {
+			t.Fatalf("error reading from file1: %v", err1)
+		}
+		if err2 != nil {
+			t.Fatalf("error reading from file2: %v", err2)
+		}
+
+		p += n1
+	}
+
+	if err := f1.Close(); err != nil {
+		t.Fatalf("error closing file1: %v", err)
+	}
+	if err := f2.Close(); err != nil {
+		t.Fatalf("error closing file2: %v", err)
 	}
 }

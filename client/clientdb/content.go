@@ -893,6 +893,7 @@ func (db *DB) SaveFileDownloadChunk(tx ReadWriteTx, user string, fd *FileDownloa
 			hashStr, fd.Metadata.Hash)
 	}
 	fd.CompletedName = filepath.Base(destFileName)
+	fd.DiskPath = destFileName
 	metaPath := filepath.Join(diskDir, fd.FID.String()+contentMetaExt)
 	if err := db.saveJsonFile(metaPath, fd); err != nil {
 		return "", err
@@ -995,6 +996,45 @@ func (db *DB) HasDownloadedFiles(tx ReadTx, user string, uid UserID, files []rpc
 	return res, nil
 }
 
+// ListDownloads lists all downloads (completed or not).
+func (db *DB) ListDownloads(tx ReadTx) ([]FileDownload, error) {
+	diskDir := filepath.Join(db.root, downloadingDir)
+
+	pattern := diskDir + "/*" + contentMetaExt
+	files, err := filepath.Glob(pattern)
+	if err != nil {
+		return nil, err
+	}
+
+	res := make([]FileDownload, 0, len(files))
+	for _, fname := range files {
+		var fd FileDownload
+		err := db.readJsonFile(fname, &fd)
+		if err != nil {
+			db.log.Warnf("Unable to decode %s as a file download: %v",
+				fname, err)
+			continue
+		}
+
+		if fd.CompletedName != "" && fd.DiskPath == "" {
+			ab, err := db.getBaseABEntry(fd.UID)
+			if err != nil {
+				db.log.Warnf("Did not find user %s for "+
+					"completed download %s", fd.UID, fd.FID)
+				continue
+			}
+
+			fd.DiskPath = filepath.Join(db.downloadsDir,
+				escapeNickForFname(ab.Nick()), fd.CompletedName)
+		}
+
+		res = append(res, fd)
+	}
+
+	return res, nil
+}
+
+// ListOutstandingDownloads lists downloads that have not been completed yet.
 func (db *DB) ListOutstandingDownloads(tx ReadTx) ([]FileDownload, error) {
 	diskDir := filepath.Join(db.root, downloadingDir)
 

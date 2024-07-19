@@ -245,6 +245,7 @@ func (c *Client) handleFTListReply(ru *RemoteUser, ftrp rpc.RMFTListReply) error
 // GetUserContent starts the process to fetch the given file from the remote
 // user.
 func (c *Client) GetUserContent(uid UserID, fid clientdb.FileID) error {
+	// Ensure user exists.
 	ru, err := c.rul.byID(uid)
 	if err != nil {
 		return err
@@ -252,17 +253,8 @@ func (c *Client) GetUserContent(uid UserID, fid clientdb.FileID) error {
 
 	ru.log.Infof("Starting download of file %s", fid)
 
-	// Send request for file metadata.
-	rmftg := rpc.RMFTGet{
-		FileID: fid.String(),
-	}
-	payEvent := fmt.Sprintf("ftget.%s", fid.ShortLogID())
-	err = ru.sendRM(rmftg, payEvent)
-	if err != nil {
-		return err
-	}
-
-	// Store that we want to download this file.
+	// Store that we want to download this file. This replaces any earlier
+	// attempts at downloading this file.
 	err = c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
 		var err error
 		_, err = c.db.StartFileDownload(tx, uid, fid, false)
@@ -272,7 +264,19 @@ func (c *Client) GetUserContent(uid UserID, fid clientdb.FileID) error {
 		return err
 	}
 
-	return nil
+	// Send request for file metadata.
+	rmftg := rpc.RMFTGet{
+		FileID: fid.String(),
+	}
+	payEvent := fmt.Sprintf("ftget.%s", fid.ShortLogID())
+	return c.sendWithSendQ(payEvent, rmftg, uid)
+}
+
+// CancelDownload cancels downloading this file.
+func (c *Client) CancelDownload(fid clientdb.FileID) error {
+	return c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
+		return c.db.CancelFileDownload(tx, fid)
+	})
 }
 
 // handleFTGet handles starting the download process for a file.
@@ -936,7 +940,7 @@ func (c *Client) ListDownloads() ([]clientdb.FileDownload, error) {
 	var fds []clientdb.FileDownload
 	err := c.dbView(func(tx clientdb.ReadTx) error {
 		var err error
-		fds, err = c.db.ListOutstandingDownloads(tx)
+		fds, err = c.db.ListDownloads(tx)
 		return err
 	})
 	return fds, err
