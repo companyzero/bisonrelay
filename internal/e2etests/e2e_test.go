@@ -29,6 +29,10 @@ import (
 	"golang.org/x/text/collate"
 )
 
+const (
+	defaultChunkSize = 8
+)
+
 type testScaffoldCfg struct {
 	skipNewServer bool
 	logScanner    io.Writer
@@ -413,7 +417,7 @@ func (ts *testScaffold) newClientWithCfg(nccfg *clientCfg, opts ...newClientOpt)
 		Root:          rootDir,
 		DownloadsRoot: filepath.Join(rootDir, "downloads"),
 		Logger:        dbLog,
-		ChunkSize:     8,
+		ChunkSize:     defaultChunkSize,
 	}
 	db, err := clientdb.New(dbCfg)
 	assert.NilErr(ts.t, err)
