@@ -17,7 +17,7 @@ service PluginService {
   *****************************************************************************/
 
 message PluginStartStreamRequest {
-  bytes client_id = 1;
+  string client_id = 1;
 }
 
 message PluginStartStreamResponse {

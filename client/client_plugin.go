@@ -97,11 +97,11 @@ func (p *PluginClient) Logger() slog.Logger {
 }
 
 func (p *PluginClient) InitPlugin(ctx context.Context, req *grpctypes.PluginStartStreamRequest, cb func(grpctypes.PluginService_InitClient)) error {
-	gameStartedStream, err := p.pluginrpc.Init(context.Background(), req)
+	startedStream, err := p.pluginrpc.Init(context.Background(), req)
 	if err != nil {
 		return fmt.Errorf("error initing stream: %w", err)
 	}
-	p.stream = gameStartedStream
+	p.stream = startedStream
 	cb(p.stream)
 
 	return nil
