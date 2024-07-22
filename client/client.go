@@ -857,7 +857,7 @@ func (c *Client) getAddressBookEntry(uid UserID) (*clientdb.AddressBookEntry, er
 // AddressBook returns the full address book of remote users.
 func (c *Client) AddressBook() []*clientdb.AddressBookEntry {
 	<-c.abLoaded
-	ids := c.rul.userList()
+	ids := c.rul.userList(false)
 
 	// Ignore errors, because it just means some operation may be in
 	// progress.

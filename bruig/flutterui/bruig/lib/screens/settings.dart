@@ -4,6 +4,7 @@ import 'package:bruig/components/buttons.dart';
 import 'package:bruig/components/containers.dart';
 import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/components/interactive_avatar.dart';
+import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/components/text.dart';
 import 'package:bruig/models/snackbar.dart';
 import 'package:bruig/models/uistate.dart';
@@ -134,6 +135,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  void subAllPosts() async {
+    try {
+      await Golib.subscribeToAllRemotePosts();
+      showSuccessSnackbar(
+          this, "Attempting to subscribe to all remote user's posts");
+    } catch (exception) {
+      showErrorSnackbar(
+          this, "Unable to subscribe to all remote posts: $exception");
+    }
+  }
+
   void changePage(String newPage) {
     setState(() {
       client.ui.settingsTitle.title = newPage;
@@ -191,8 +203,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
         : const Empty();
     switch (settingsPage) {
       case "Account":
-        settingsView = AccountSettingsScreen(
-            client, resetAllOldKX1s, resetAllOldKX, pickAvatarFile);
+        settingsView = AccountSettingsScreen(client, resetAllOldKX1s,
+            resetAllOldKX, pickAvatarFile, subAllPosts);
         break;
       case "Appearance":
         settingsView = Consumer<ThemeNotifier>(
@@ -348,9 +360,10 @@ class AccountSettingsScreen extends StatelessWidget {
   final ClientModel client;
   final ResetKXCB resetAllKXCB;
   final ResetKXCB resetKXCB;
+  final VoidCallback subAllPostsCB;
   final VoidCallback pickAvatarCB;
-  const AccountSettingsScreen(
-      this.client, this.resetAllKXCB, this.resetKXCB, this.pickAvatarCB,
+  const AccountSettingsScreen(this.client, this.resetAllKXCB, this.resetKXCB,
+      this.pickAvatarCB, this.subAllPostsCB,
       {Key? key})
       : super(key: key);
 
@@ -376,7 +389,11 @@ class AccountSettingsScreen extends StatelessWidget {
         ListTile(
           title: const Text("Reset KX from users 30d stale"),
           onTap: () => resetKXCB(context),
-        )
+        ),
+        ListTile(
+          title: const Text("Subscribe to all posts"),
+          onTap: () => subAllPostsCB(),
+        ),
       ]))
     ]);
   }

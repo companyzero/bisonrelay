@@ -2056,6 +2056,14 @@ var postCommands = []tuicmd{
 			return nil
 		},
 	}, {
+		cmd:     "allsubscribe",
+		aliases: []string{"allsub"},
+		descr:   "Subscribe to every remote user's posts",
+		handler: func(args []string, as *appState) error {
+			as.diagMsg("Attempting to re-subscribe to every remote user's post feed")
+			return as.c.SubscribeToAllRemotePosts(nil)
+		},
+	}, {
 		cmd:     "unsubscribe",
 		aliases: []string{"unsub"},
 		usage:   "<nick>",

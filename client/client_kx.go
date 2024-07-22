@@ -441,7 +441,7 @@ func (c *Client) ResetAllOldRatchets(limitInterval time.Duration, progrChan chan
 	var res []clientintf.UserID
 	g := errgroup.Group{}
 
-	ids := c.rul.userList()
+	ids := c.rul.userList(false)
 	for _, uid := range ids {
 		ru, err := c.UserByID(uid)
 		if err != nil {
@@ -681,7 +681,7 @@ func (c *Client) handshakeIdleUsers() error {
 	}
 	limitDate := time.Now().Add(-limitInterval)
 
-	users := c.rul.userList()
+	users := c.rul.userList(false)
 	for _, uid := range users {
 		ru, err := c.rul.byID(uid)
 		if err != nil {
@@ -820,7 +820,7 @@ func (c *Client) unsubIdleUsers() error {
 		}
 	}
 
-	users := c.rul.userList()
+	users := c.rul.userList(false)
 	for _, uid := range users {
 		// Do not perform autounsub if this user is in the list to
 		// ignore unsubbing.
@@ -970,7 +970,7 @@ func (c *Client) UpdateLocalAvatar(avatar []byte) error {
 	rmpu := rpc.RMProfileUpdate{
 		Avatar: avatar,
 	}
-	allUsers := c.rul.userList()
+	allUsers := c.rul.userList(false)
 	payType := "profile.avatar"
 	return c.sendWithSendQ(payType, rmpu, allUsers...)
 }
