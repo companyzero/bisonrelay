@@ -2674,12 +2674,13 @@ func (as *appState) initializePlugins() error {
 	for _, plugin := range enabledPlugins {
 		pluginClient, err := client.NewPluginClient(as.ctx, plugin.ID, plugin.Config)
 		if err != nil {
-			as.diagMsg("Unable to start plugin: %s", plugin.Name)
+			as.diagMsg("Unable to start plugin: %s err: %w", plugin.Name, err)
+			continue
 		}
 
 		as.pluginsClient[plugin.ID] = pluginClient
 		req := &grpctypes.PluginStartStreamRequest{
-			ClientId: as.c.PublicID().Bytes(),
+			ClientId: as.c.PublicID().String(),
 		}
 		err = as.pluginsClient[plugin.ID].InitPlugin(as.ctx, req, func(stream grpctypes.PluginService_InitClient) {
 			as.listenForAppUpdates(stream)
@@ -2696,7 +2697,7 @@ func (as *appState) initializePlugins() error {
 // initPlugin initialize plugins so they can listen for updates at the appstate.
 func (as *appState) initPlugin(cw *chatWindow, pid clientintf.PluginID, address string) {
 	req := &grpctypes.PluginStartStreamRequest{
-		ClientId: as.c.PublicID().Bytes(),
+		ClientId: as.c.PublicID().String(),
 	}
 
 	if as.pluginsClient[pid] == nil {
@@ -2743,6 +2744,11 @@ func (as *appState) pluginVersion(cw *chatWindow, pid clientintf.PluginID) {
 }
 
 func (as *appState) pluginAction(cw *chatWindow, pid clientintf.PluginID, action string, data []byte) {
+	if as.pluginsClient[pid] == nil {
+		as.cwHelpMsg("plugin not found")
+		return
+	}
+
 	req := &grpctypes.PluginCallActionStreamRequest{
 		Action: action,
 		Data:   data,

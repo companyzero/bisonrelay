@@ -39,15 +39,6 @@ type ChatPlugin struct {
 	logger  slog.Logger
 }
 
-func NewChatPlugin(id string) *ChatPlugin {
-	return &ChatPlugin{
-		id:      id, // Replace with actual ID generation
-		name:    "ChatPlugin",
-		version: "0.0.0",
-		config:  make(map[string]interface{}),
-	}
-}
-
 type server struct {
 	grpctypes.UnimplementedPluginServiceServer
 
@@ -57,6 +48,19 @@ type server struct {
 	plugin      *ChatPlugin
 	chatService types.ChatServiceClient
 	debug       bool
+}
+
+func NewChatPlugin(id string) *ChatPlugin {
+	return &ChatPlugin{
+		id:      id, // Replace with actual ID generation
+		name:    "ChatPlugin",
+		version: "0.0.0",
+		config:  make(map[string]interface{}),
+	}
+}
+
+func (s *server) Init(req *grpctypes.PluginStartStreamRequest, stream grpctypes.PluginService_InitServer) error {
+	return nil
 }
 
 func (s *server) GetVersion(ctx context.Context, req *grpctypes.PluginVersionRequest) (*grpctypes.PluginVersionResponse, error) {
