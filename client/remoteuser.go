@@ -871,13 +871,14 @@ func (rul *remoteUserList) byNick(nick string) (*RemoteUser, error) {
 }
 
 // userList returns the list of all user IDs.
-func (rul *remoteUserList) userList() []UserID {
+func (rul *remoteUserList) userList(onlyNotIgnored bool) []UserID {
 	rul.Lock()
-	res := make([]UserID, len(rul.m))
-	var i int
-	for id := range rul.m {
-		res[i] = id
-		i += 1
+	res := make([]UserID, 0, len(rul.m))
+	for id, ru := range rul.m {
+		if onlyNotIgnored && ru.IsIgnored() {
+			continue
+		}
+		res = append(res, id)
 	}
 	rul.Unlock()
 	return res

@@ -38,6 +38,15 @@ func (c *Client) SubscribeToPosts(uid UserID) error {
 	return c.subscribeToPosts(uid, nil, false)
 }
 
+// SubscribeToAllRemotePosts attempts to subscribe to every remote user's
+// posts.
+func (c *Client) SubscribeToAllRemotePosts(progressChan chan SendProgress) error {
+	all := c.rul.userList(true)
+	payEvent := "posts.subscribe"
+	rm := rpc.RMPostsSubscribe{}
+	return c.sendWithSendQPriority(payEvent, rm, priorityDefault, progressChan, all...)
+}
+
 // SubscribeToPostsAndFetch attempts to subscribe to the posts of the given user
 // and also (if successful) asks the user to send the specified post.
 func (c *Client) SubscribeToPostsAndFetch(uid UserID, pid clientintf.PostID) error {

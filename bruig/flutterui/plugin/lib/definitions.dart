@@ -3182,6 +3182,9 @@ abstract class PluginPlatform {
 
   Future<void> cancelDownload(String fid) async =>
       await asyncCall(CTCancelDownload, fid);
+
+  Future<void> subscribeToAllRemotePosts() async =>
+      await asyncCall(CTSubAllPosts, null);
 }
 
 const int CTUnknown = 0x00;
@@ -3313,6 +3316,7 @@ const int CTEnableTimedProfiling = 0x89;
 const int CTZipTimedProfilingLogs = 0x8a;
 const int CTListGCInvites = 0x8b;
 const int CTCancelDownload = 0x8c;
+const int CTSubAllPosts = 0x8d;
 
 const int notificationsStartID = 0x1000;
 

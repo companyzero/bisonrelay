@@ -2081,6 +2081,11 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		}
 
 		return nil, c.CancelDownload(fid)
+
+	case CTSubAllPosts:
+		err := c.SubscribeToAllRemotePosts(nil)
+		return nil, err
+
 	}
 	return nil, nil
 
