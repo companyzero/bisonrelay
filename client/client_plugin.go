@@ -20,8 +20,12 @@ type PluginClient struct {
 	Version string
 	Config  PluginClientCfg
 	Enabled bool
-	stream  grpctypes.PluginService_InitClient
-	log     slog.Logger
+
+	UpdateCh chan *grpctypes.PluginCallActionStreamResponse
+	NtfnCh   chan *grpctypes.PluginStartStreamResponse
+
+	stream grpctypes.PluginService_InitClient
+	log    slog.Logger
 }
 
 type PluginClientCfg struct {
@@ -60,7 +64,9 @@ func NewPluginClient(ctx context.Context, id clientdb.PluginID, cfg PluginClient
 			Address:     cfg.Address,
 			TLSCertPath: cfg.TLSCertPath,
 		},
-		Enabled: true,
+		Enabled:  true,
+		UpdateCh: make(chan *grpctypes.PluginCallActionStreamResponse),
+		NtfnCh:   make(chan *grpctypes.PluginStartStreamResponse),
 	}
 
 	version, err := p.GetVersion(ctx)
