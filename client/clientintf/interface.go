@@ -14,6 +14,7 @@ import (
 	"github.com/companyzero/bisonrelay/zkidentity"
 	"github.com/decred/dcrd/chaincfg/chainhash"
 	"github.com/decred/dcrd/dcrutil/v4"
+	"github.com/vctt94/pong-bisonrelay/pongrpc/grpc/pong"
 )
 
 // ID is a 32-byte global ID. This is used as an alias for all 32-byte arrays
@@ -220,3 +221,5 @@ var (
 	ErrOnboardNoFunds            = errors.New("onboarding invite does not have any funds")
 	ErrRetriablePayment          = errors.New("retriable payment error")
 )
+
+type PongGameState pong.GameUpdate
