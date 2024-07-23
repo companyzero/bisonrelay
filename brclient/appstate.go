@@ -2683,8 +2683,9 @@ func (as *appState) initializePlugins() error {
 			ClientId: as.c.PublicID().String(),
 		}
 		err = as.pluginsClient[plugin.ID].InitPlugin(as.ctx, req, func(stream grpctypes.PluginService_InitClient) {
-			as.listenForAppUpdates(stream)
+			as.listenForAppNtfn(plugin.ID, stream)
 		})
+		as.startReadingUpdatesAndNtfn(plugin.ID)
 		if err != nil {
 			as.diagMsg("Unable to init plugin: %s", plugin.Name)
 		}
@@ -2723,8 +2724,9 @@ func (as *appState) initPlugin(cw *chatWindow, pid clientintf.PluginID, address 
 	}
 
 	err = as.pluginsClient[pid].InitPlugin(as.ctx, req, func(stream grpctypes.PluginService_InitClient) {
-		as.listenForAppUpdates(stream)
+		as.listenForAppNtfn(pid, stream)
 	})
+	as.startReadingUpdatesAndNtfn(pid)
 
 	if err != nil {
 		as.cwHelpMsg("Unable to init plugin %q: %v",
@@ -2756,7 +2758,7 @@ func (as *appState) pluginAction(cw *chatWindow, pid clientintf.PluginID, action
 	}
 
 	err := as.pluginsClient[pid].CallPluginAction(as.ctx, req, func(stream grpctypes.PluginService_CallActionClient) error {
-		as.listenForAppActions(stream)
+		as.listenForAppUpdates(pid, stream)
 		as.cwHelpMsg("Client called action")
 		return nil
 	})
@@ -2767,7 +2769,7 @@ func (as *appState) pluginAction(cw *chatWindow, pid clientintf.PluginID, action
 	}
 }
 
-func (as *appState) listenForAppActions(stream grpctypes.PluginService_CallActionClient) {
+func (as *appState) listenForAppUpdates(id zkidentity.ShortID, stream grpctypes.PluginService_CallActionClient) {
 	go func() {
 		for {
 			update, err := stream.Recv()
@@ -2775,17 +2777,16 @@ func (as *appState) listenForAppActions(stream grpctypes.PluginService_CallActio
 				break
 			}
 			if err != nil {
-				log.Printf("Error receiving update: %v", err)
+				as.log.Error("error receiving app update %s: %v", as.pluginsClient[id].Name, err)
 				return
 			}
-			fmt.Printf("update: %+v\n", update)
-			// Process the update
+			as.pluginsClient[id].UpdateCh <- update
 		}
-		log.Println("Stream closed")
+		as.cwHelpMsg("Stream closed")
 	}()
 }
 
-func (as *appState) listenForAppUpdates(stream grpctypes.PluginService_InitClient) {
+func (as *appState) listenForAppNtfn(id zkidentity.ShortID, stream grpctypes.PluginService_InitClient) {
 	go func() {
 		for {
 			update, err := stream.Recv()
@@ -2793,13 +2794,28 @@ func (as *appState) listenForAppUpdates(stream grpctypes.PluginService_InitClien
 				break
 			}
 			if err != nil {
-				log.Printf("Error receiving update: %v", err)
+				as.log.Error("error listening app ntfn %s: %v", as.pluginsClient[id].Name, err)
 				return
 			}
-			fmt.Printf("update: %+v\n", update)
-			// pc.updatesCh <- GameUpdateMsg(update)
+			as.pluginsClient[id].NtfnCh <- update
 		}
 		log.Println("Stream closed")
+	}()
+}
+
+func (as *appState) startReadingUpdatesAndNtfn(id zkidentity.ShortID) {
+	go func() {
+		for update := range as.pluginsClient[id].UpdateCh {
+			// Handle the update
+			as.cwHelpMsg("Processing update: %v", update)
+		}
+	}()
+	go func() {
+		for update := range as.pluginsClient[id].NtfnCh {
+			// Handle the update
+
+			as.cwHelpMsg("Notification received from plugin %s: %v", as.pluginsClient[id].Name, update.Message)
+		}
 	}()
 }
 
