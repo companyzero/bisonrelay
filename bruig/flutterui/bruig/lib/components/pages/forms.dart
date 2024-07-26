@@ -95,7 +95,6 @@ class CustomFormState extends State<CustomForm> {
   FormElement get form => widget.form;
   @override
   Widget build(BuildContext context) {
-    print("Sadfsdf");
     _FormField? submit;
 
     List<Widget> fieldWidgets = [];
@@ -106,8 +105,6 @@ class CustomFormState extends State<CustomForm> {
           if (field.value is String) {
             ctrl.text = field.value;
           }
-          print(field.hint);
-          print(field.regexp);
           fieldWidgets.add(TextFormField(
               controller: ctrl,
               decoration: InputDecoration(
