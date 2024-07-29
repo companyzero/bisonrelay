@@ -1,8 +1,6 @@
 import 'dart:convert';
 // import 'package:dart_vlc/dart_vlc.dart' as vlc;
-import 'package:bruig/components/empty_widget.dart';
-import 'package:bruig/components/info_grid.dart';
-import 'package:bruig/components/inputs.dart';
+import 'package:bruig/components/pages/forms.dart';
 import 'package:bruig/models/downloads.dart';
 import 'package:bruig/models/payments.dart';
 import 'package:bruig/models/resources.dart';
@@ -13,7 +11,6 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:golib_plugin/util.dart';
 import 'package:markdown/markdown.dart' as md;
 import 'package:provider/provider.dart';
-import 'package:tuple/tuple.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:bruig/theme_manager.dart';
 import 'package:bruig/components/image_dialog.dart';
@@ -176,76 +173,6 @@ class EmbedInlineSyntax extends md.InlineSyntax {
   }
 }
 
-class _FormField {
-  final String type;
-  final String name;
-  final String label;
-  dynamic value;
-
-  _FormField(this.type, {this.name = "", this.label = "", this.value});
-}
-
-class _FormElement extends md.Element {
-  final List<_FormField> fields;
-
-  _FormElement(this.fields) : super("form", [md.Text("")]);
-}
-
-class _FormBlockSyntax extends md.BlockSyntax {
-  static String closeTag = r'--/form--';
-  static RegExp tagPattern = RegExp(r'^--form--$');
-  static RegExp fieldPattern = RegExp(r'([\w]+)="([^"]*)"');
-
-  @override
-  RegExp get pattern => tagPattern;
-
-  @override
-  bool canEndBlock(md.BlockParser parser) =>
-      parser.current.content == "--/form--";
-
-  @override
-  md.Node? parse(md.BlockParser parser) {
-    parser.advance();
-
-    List<_FormField> children = [];
-
-    while (!parser.isDone && !md.BlockSyntax.isAtBlockEnd(parser)) {
-      if (parser.current.content == closeTag) {
-        parser.advance();
-        continue;
-      }
-
-      var matches = fieldPattern.allMatches(parser.current.content);
-      String type = "";
-      Map<Symbol, dynamic> args = {};
-      for (var m in matches) {
-        if (m.groupCount < 2) {
-          continue;
-        }
-        String name = m.group(1)!;
-        String value = m.group(2)!;
-        switch (name) {
-          case "type":
-            type = value;
-            break;
-          case "value":
-          case "label":
-          case "name":
-            args[Symbol(name)] = value;
-            break;
-        }
-      }
-
-      _FormField field = Function.apply(_FormField.new, [type], args);
-      children.add(field);
-      parser.advance();
-    }
-
-    var res = md.Element("p", [_FormElement(children)]);
-    return res;
-  }
-}
-
 /*
 class _VideoMarkdownDesktopElement extends StatefulWidget {
   final String filename;
@@ -383,7 +310,7 @@ class MarkdownArea extends StatelessWidget {
     "codeblock": CodeblockMarkdownElementBuilder(),
     "image": ImageMarkdownElementBuilder(),
     "download": DownloadLinkElementBuilder(),
-    "form": _FormElementBuilder(),
+    "form": FormElementBuilder(),
     "lnpay": _LNPayURLElementBuilder(),
   };
 
@@ -395,7 +322,7 @@ class MarkdownArea extends StatelessWidget {
   ];
 
   static final blockSyntaxes = [
-    _FormBlockSyntax(),
+    FormBlockSyntax(),
   ];
 
   final String text;
@@ -625,117 +552,6 @@ class ImageMarkdownElementBuilder extends MarkdownElementBuilder {
         fit: BoxFit.cover,
       );
     }
-  }
-}
-
-class _FormSubmitButton extends StatelessWidget {
-  final _FormElement form;
-  final _FormField submit;
-  const _FormSubmitButton(this.form, this.submit);
-
-  void doSubmit(BuildContext context, _FormElement form) async {
-    var snackbar = SnackBarModel.of(context);
-    Map<String, dynamic> formData = {};
-    String action = "";
-    for (var field in form.fields) {
-      if (field.type == "action") {
-        action = field.value ?? "";
-      }
-      if (field.name == "" || field.value == null) {
-        continue;
-      }
-      formData[field.name] = field.value;
-    }
-
-    if (action == "") {
-      return;
-    }
-
-    var parsed = Uri.parse(action);
-
-    var downSource = Provider.of<DownloadSource?>(context, listen: false);
-    var pageSource = Provider.of<PagesSource?>(context, listen: false);
-    var uid = downSource?.uid ?? pageSource?.uid ?? "";
-
-    var resources = Provider.of<ResourcesModel>(context, listen: false);
-    var sessionID = pageSource?.sessionID ?? 0;
-    var parentPageID = pageSource?.pageID ?? 0;
-
-    try {
-      await resources.fetchPage(
-          uid, parsed.pathSegments, sessionID, parentPageID, formData);
-    } catch (exception) {
-      snackbar.error("Unable to fetch page: $exception");
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return ElevatedButton(
-        onPressed: () => doSubmit(context, form), child: Text(submit.label));
-  }
-}
-
-class _FormElementBuilder extends MarkdownElementBuilder {
-  _FormElementBuilder();
-
-  @override
-  Widget visitElementAfter(md.Element element, TextStyle? preferredStyle) {
-    if (element is! _FormElement) {
-      return const Text("not-a-form-element",
-          style: TextStyle(color: Colors.amber));
-    }
-
-    _FormElement form = element;
-    _FormField? submit;
-
-    List<Tuple2<Widget, Widget>> fieldWidgets = [];
-    for (var field in form.fields) {
-      switch (field.type) {
-        case "txtinput":
-          TextEditingController ctrl = TextEditingController();
-          if (field.value is String) {
-            ctrl.value = field.value;
-          }
-          fieldWidgets
-              .add(Tuple2(Text(field.label), TextField(onChanged: (String val) {
-            field.value = val;
-          })));
-          break;
-        case "intinput":
-          IntEditingController ctrl = IntEditingController();
-          if (field.value is int) {
-            ctrl.intvalue = field.value;
-          } else if (field.value is double) {
-            ctrl.intvalue = (field.value as double).truncate();
-          } else if (field.value is String) {
-            ctrl.intvalue = int.tryParse(field.value as String) ?? 0;
-          }
-          field.value = ctrl.intvalue;
-          fieldWidgets.add(Tuple2(
-              Text(field.label),
-              intInput(
-                  controller: ctrl,
-                  onChanged: (int val) {
-                    field.value = val;
-                  })));
-          break;
-        case "submit":
-          submit = field;
-          break;
-        case "hidden":
-        case "action":
-          break;
-        default:
-          debugPrint("Unknown field type ${field.type}");
-      }
-    }
-
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      SimpleInfoGrid(fieldWidgets),
-      const SizedBox(height: 10),
-      submit != null ? _FormSubmitButton(form, submit) : const Empty(),
-    ]);
   }
 }
 
