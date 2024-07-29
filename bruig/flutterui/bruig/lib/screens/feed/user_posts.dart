@@ -5,7 +5,6 @@ import 'package:bruig/models/feed.dart';
 import 'package:bruig/models/uistate.dart';
 import 'package:bruig/screens/feed.dart';
 import 'package:bruig/screens/feed/feed_posts.dart';
-import 'package:collection/collection.dart';
 import 'package:duration/duration.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -13,14 +12,14 @@ import 'package:bruig/components/md_elements.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:bruig/components/user_context_menu.dart';
 
-typedef _FetchPostCB = Future<void> Function(String pid);
+typedef FetchPostCB = Future<void> Function(String pid);
 
 class UserPostW extends StatefulWidget {
   final PostListItem post;
   final ChatModel? author;
   final ClientModel client;
   final FeedModel feed;
-  final _FetchPostCB fetchPost;
+  final FetchPostCB fetchPost;
   const UserPostW(
       this.post, this.feed, this.author, this.client, this.fetchPost,
       {Key? key})

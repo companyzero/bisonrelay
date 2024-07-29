@@ -357,7 +357,7 @@ class MarkdownArea extends StatelessWidget {
     var parentPageID = pageSource?.pageID ?? 0;
     try {
       await resources.fetchPage(
-          uid, parsed.pathSegments, sessionID, parentPageID, null);
+          uid, parsed.pathSegments, sessionID, parentPageID, null, "");
     } catch (exception) {
       snackbar.error("Unable to fetch page: $exception");
     }

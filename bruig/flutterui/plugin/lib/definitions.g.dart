@@ -1426,6 +1426,7 @@ Map<String, dynamic> _$PostListItemToJson(PostListItem instance) =>
     <String, dynamic>{
       'id': instance.id,
       'title': instance.title,
+      'timestamp': instance.timestamp,
     };
 
 UserPostList _$UserPostListFromJson(Map<String, dynamic> json) => UserPostList(
@@ -1915,6 +1916,7 @@ FetchResourceArgs _$FetchResourceArgsFromJson(Map<String, dynamic> json) =>
       json['session_id'] as int? ?? 0,
       json['parent_page'] as int? ?? 0,
       json['data'],
+      json['async_target_id'] as String,
     );
 
 Map<String, dynamic> _$FetchResourceArgsToJson(FetchResourceArgs instance) =>
@@ -1925,6 +1927,7 @@ Map<String, dynamic> _$FetchResourceArgsToJson(FetchResourceArgs instance) =>
       'session_id': instance.sessionID,
       'parent_page': instance.parentPage,
       'data': instance.data,
+      'async_target_id': instance.asyncTargetID,
     };
 
 RMFetchResource _$RMFetchResourceFromJson(Map<String, dynamic> json) =>
@@ -2048,6 +2051,7 @@ FetchedResource _$FetchedResourceFromJson(Map<String, dynamic> json) =>
       DateTime.parse(json['response_ts'] as String),
       RMFetchResource.fromJson(json['request'] as Map<String, dynamic>),
       RMFetchResourceReply.fromJson(json['response'] as Map<String, dynamic>),
+      json['async_target_id'] as String,
     );
 
 Map<String, dynamic> _$FetchedResourceToJson(FetchedResource instance) =>
@@ -2060,6 +2064,23 @@ Map<String, dynamic> _$FetchedResourceToJson(FetchedResource instance) =>
       'response_ts': instance.responseTS.toIso8601String(),
       'request': instance.request,
       'response': instance.response,
+      'async_target_id': instance.asyncTargetID,
+    };
+
+LoadFetchedResourceArgs _$LoadFetchedResourceArgsFromJson(
+        Map<String, dynamic> json) =>
+    LoadFetchedResourceArgs(
+      json['uid'] as String,
+      json['session_id'] as int,
+      json['page_id'] as int,
+    );
+
+Map<String, dynamic> _$LoadFetchedResourceArgsToJson(
+        LoadFetchedResourceArgs instance) =>
+    <String, dynamic>{
+      'uid': instance.uid,
+      'session_id': instance.sessionID,
+      'page_id': instance.pageID,
     };
 
 HandshakeStage _$HandshakeStageFromJson(Map<String, dynamic> json) =>

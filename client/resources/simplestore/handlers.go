@@ -581,3 +581,20 @@ func (s *Store) handleOrderAddComment(ctx context.Context, uid clientintf.UserID
 	}, nil
 
 }
+
+func (s *Store) handleStaticRequest(ctx context.Context, uid clientintf.UserID,
+	request *rpc.RMFetchResource) (*rpc.RMFetchResourceReply, error) {
+
+	page := request.Path[1] + ".tmpl"
+
+	w := &bytes.Buffer{}
+	err := s.tmpl.ExecuteTemplate(w, page, nil)
+	if err != nil {
+		return nil, fmt.Errorf("unable to execute static template: %v", err)
+	}
+
+	return &rpc.RMFetchResourceReply{
+		Data:   w.Bytes(),
+		Status: rpc.ResourceStatusOk,
+	}, nil
+}

@@ -299,7 +299,7 @@ func (mws mainWindowState) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					// Navigate to other page.
 					uid := cw.page.UID
 					err := mws.as.fetchPage(uid, *cw.selEl.link,
-						cw.page.SessionID, cw.page.PageID, nil)
+						cw.page.SessionID, cw.page.PageID, nil, "")
 					if err != nil {
 						mws.as.diagMsg("Unable to fetch page: %v", err)
 					}
@@ -316,7 +316,8 @@ func (mws mainWindowState) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					action := cw.selEl.form.action()
 
 					err := mws.as.fetchPage(uid, action,
-						cw.page.SessionID, cw.page.PageID, cw.selEl.form)
+						cw.page.SessionID, cw.page.PageID,
+						cw.selEl.form, cw.selEl.form.asyncTarget())
 					if err != nil {
 						mws.as.diagMsg("Unable to fetch page: %v", err)
 					}
@@ -509,7 +510,7 @@ func (mws mainWindowState) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// Navigate to other page.
 			uid := cw.page.UID
 			err := mws.as.fetchPage(uid, *cw.selEl.link,
-				cw.page.SessionID, cw.page.PageID, nil)
+				cw.page.SessionID, cw.page.PageID, nil, "")
 			if err != nil {
 				mws.as.diagMsg("Unable to fetch page: %v", err)
 			}
@@ -525,7 +526,8 @@ func (mws mainWindowState) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// }
 
 			err := mws.as.fetchPage(uid, action,
-				cw.page.SessionID, cw.page.PageID, cw.selEl.form)
+				cw.page.SessionID, cw.page.PageID, cw.selEl.form,
+				cw.selEl.form.asyncTarget())
 			if err != nil {
 				mws.as.diagMsg("Unable to fetch page: %v", err)
 			}

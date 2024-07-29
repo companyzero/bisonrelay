@@ -349,36 +349,40 @@ type TipUserAttempt struct {
 
 // ResourceRequest is a serialized request for a resource.
 type ResourceRequest struct {
-	UID        UserID                    `json:"uid"`
-	Timestamp  time.Time                 `json:"timestamp"`
-	Request    rpc.RMFetchResource       `json:"request"`
-	SesssionID clientintf.PagesSessionID `json:"session_id"`
-	ParentPage clientintf.PagesSessionID `json:"parent_page"`
+	UID           UserID                    `json:"uid"`
+	Timestamp     time.Time                 `json:"timestamp"`
+	Request       rpc.RMFetchResource       `json:"request"`
+	SesssionID    clientintf.PagesSessionID `json:"session_id"`
+	ParentPage    clientintf.PagesSessionID `json:"parent_page"`
+	AsyncTargetID string                    `json:"async_target_id"`
 }
 
 // FetchedResource is the full information about a fetched resource from a
 // remote client.
 type FetchedResource struct {
-	UID        UserID                    `json:"uid"`
-	SessionID  clientintf.PagesSessionID `json:"session_id"`
-	ParentPage clientintf.PagesSessionID `json:"parent_page"`
-	PageID     clientintf.PagesSessionID `json:"page_id"`
-	RequestTS  time.Time                 `json:"request_ts"`
-	ResponseTS time.Time                 `json:"response_ts"`
-	Request    rpc.RMFetchResource       `json:"request"`
-	Response   rpc.RMFetchResourceReply  `json:"response"`
+	UID           UserID                    `json:"uid"`
+	SessionID     clientintf.PagesSessionID `json:"session_id"`
+	ParentPage    clientintf.PagesSessionID `json:"parent_page"`
+	PageID        clientintf.PagesSessionID `json:"page_id"`
+	RequestTS     time.Time                 `json:"request_ts"`
+	ResponseTS    time.Time                 `json:"response_ts"`
+	Request       rpc.RMFetchResource       `json:"request"`
+	Response      rpc.RMFetchResourceReply  `json:"response"`
+	AsyncTargetID string                    `json:"async_target_id"`
 }
 
 // PageSessionOverviewRequest is the overview of a fetch resource request.
 type PageSessionOverviewRequest struct {
-	UID clientintf.UserID `json:"uid"`
-	Tag rpc.ResourceTag   `json:"tag"`
+	UID           clientintf.UserID `json:"uid"`
+	Tag           rpc.ResourceTag   `json:"tag"`
+	AsyncTargetID string            `json:"async_target_id"`
 }
 
 // PageSessionOverviewResponse is the overview of a fetch resurce response.
 type PageSessionOverviewResponse struct {
-	ID     clientintf.PagesSessionID `json:"id"`
-	Parent clientintf.PagesSessionID `json:"parent"`
+	ID            clientintf.PagesSessionID `json:"id"`
+	Parent        clientintf.PagesSessionID `json:"parent"`
+	AsyncTargetID string                    `json:"async_target_id"`
 }
 
 // PageSessionOverview stores the overview of a pages session navigation.
@@ -389,8 +393,12 @@ type PageSessionOverview struct {
 	LastRequestTS  time.Time                     `json:"last_request_ts"`
 }
 
-func (o *PageSessionOverview) append(parent, id clientintf.PagesSessionID) {
-	o.Responses = append(o.Responses, PageSessionOverviewResponse{Parent: parent, ID: id})
+func (o *PageSessionOverview) appendResponse(parent, id clientintf.PagesSessionID, asyncId string) {
+	o.Responses = append(o.Responses, PageSessionOverviewResponse{
+		Parent:        parent,
+		ID:            id,
+		AsyncTargetID: asyncId,
+	})
 	o.LastResponseTS = time.Now()
 }
 
@@ -403,9 +411,52 @@ func (o *PageSessionOverview) removeRequest(uid clientintf.UserID, tag rpc.Resou
 	}
 }
 
-func (o *PageSessionOverview) appendRequest(uid clientintf.UserID, tag rpc.ResourceTag) {
-	o.Requests = append(o.Requests, PageSessionOverviewRequest{UID: uid, Tag: tag})
+func (o *PageSessionOverview) appendRequest(uid clientintf.UserID, tag rpc.ResourceTag, asyncId string) {
+	o.Requests = append(o.Requests, PageSessionOverviewRequest{
+		UID:           uid,
+		Tag:           tag,
+		AsyncTargetID: asyncId,
+	})
 	o.LastRequestTS = time.Now()
+}
+
+// pageAndAsyncChildren returns the page response (if it exists) and any async
+// children derived from it.
+//
+// This returns at most one child for each async id (the latest one).
+func (o *PageSessionOverview) pageAndAsyncChildren(id clientintf.PagesSessionID) []*PageSessionOverviewResponse {
+	var res []*PageSessionOverviewResponse
+	asyncIds := make(map[string]int) // Tracks index inside res
+
+	for i := range o.Responses {
+		r := &o.Responses[i]
+		if r.ID != id && r.Parent != id {
+			continue
+		}
+
+		// Handle the page itself.
+		if r.ID == id {
+			if len(res) == 0 {
+				res = append(res, r)
+			} else {
+				res[0] = r
+			}
+			continue
+		}
+
+		// Handle async requests in the page.
+		if r.AsyncTargetID == "" {
+			continue
+		}
+		if idxToReplace, ok := asyncIds[r.AsyncTargetID]; ok {
+			res[idxToReplace] = r
+		} else {
+			res = append(res, r)
+			asyncIds[r.AsyncTargetID] = len(res) - 1
+		}
+	}
+
+	return res
 }
 
 type PMLogEntry struct {

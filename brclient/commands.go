@@ -3113,7 +3113,7 @@ var pagesCommands = []tuicmd{
 			if len(args) > 1 {
 				pagePath = strings.TrimSpace(args[1])
 			}
-			return as.fetchPage(uid, pagePath, nextSess, 0, nil)
+			return as.fetchPage(uid, pagePath, nextSess, 0, nil, "")
 		},
 		completer: func(args []string, arg string, as *appState) []string {
 			if len(args) == 0 {
@@ -3135,7 +3135,7 @@ var pagesCommands = []tuicmd{
 			// Always use the same session ID for convenience when
 			// fetching a local page.
 			nextSess := clientintf.PagesSessionID(0)
-			return as.fetchPage(as.c.PublicID(), pagePath, nextSess, 0, nil)
+			return as.fetchPage(as.c.PublicID(), pagePath, nextSess, 0, nil, "")
 		},
 	},
 }

@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:bruig/components/containers.dart';
 import 'package:bruig/components/empty_widget.dart';
@@ -35,9 +34,7 @@ class _ActivePageScreenState extends State<_ActivePageScreen> {
   Key pageKey = UniqueKey();
 
   void updateSession() {
-    var data = session.currentPage?.response.data ?? Uint8List(0);
-    var newMdData = utf8.decode(data);
-    newMdData += "\n";
+    var newMdData = session.pageData();
     setState(() {
       if (newMdData != markdownData) {
         markdownData = newMdData;
@@ -139,7 +136,7 @@ class _ViewPageScreenState extends State<ViewPageScreen> {
     var snackbar = SnackBarModel.of(context);
 
     try {
-      var sess = await resources.fetchPage(uid, path, 0, 0, null);
+      var sess = await resources.fetchPage(uid, path, 0, 0, null, "");
       resources.mostRecent = sess;
     } catch (exception) {
       snackbar.error("Unable to fetch local page: $exception");

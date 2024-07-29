@@ -439,12 +439,19 @@ type invitation struct {
 }
 
 type fetchResourceArgs struct {
-	UID        clientintf.UserID         `json:"uid"`
-	Path       []string                  `json:"path"`
-	Metadata   map[string]string         `json:"metadata,omitempty"`
-	SessionID  clientintf.PagesSessionID `json:"session_id"`
-	ParentPage clientintf.PagesSessionID `json:"parent_page"`
-	Data       json.RawMessage           `json:"data"`
+	UID           clientintf.UserID         `json:"uid"`
+	Path          []string                  `json:"path"`
+	Metadata      map[string]string         `json:"metadata,omitempty"`
+	SessionID     clientintf.PagesSessionID `json:"session_id"`
+	ParentPage    clientintf.PagesSessionID `json:"parent_page"`
+	Data          json.RawMessage           `json:"data"`
+	AsyncTargetID string                    `json:"async_target_id"`
+}
+
+type loadFetchedResourceArgs struct {
+	UID       clientintf.UserID         `json:"uid"`
+	SessionID clientintf.PagesSessionID `json:"session_id"`
+	PageID    clientintf.PagesSessionID `json:"page_id"`
 }
 
 type simpleStoreOrder struct {

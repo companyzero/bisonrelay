@@ -85,6 +85,14 @@ func DeepEqual[T any](t testing.TB, got, want T) {
 	}
 }
 
+// NotDeepEqual asserts got is not reflect.DeepEqual to want.
+func NotDeepEqual[T any](t testing.TB, got, want T) {
+	t.Helper()
+	if reflect.DeepEqual(got, want) {
+		t.Fatalf("Unexpected equal values: got %v, want %v", got, want)
+	}
+}
+
 // ErrorIs asserts that errors.Is(got, want).
 func ErrorIs(t testing.TB, got, want error) {
 	t.Helper()
