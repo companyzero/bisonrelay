@@ -469,6 +469,29 @@ var listCommands = []tuicmd{
 			return nil
 		},
 	}, {
+		cmd:           "plugins",
+		usableOffline: true,
+		descr:         "List plugins inited",
+		handler: func(args []string, as *appState) error {
+			plugins, err := as.c.ListPlugins()
+			if err != nil {
+				return err
+			}
+
+			as.cwHelpMsgs(func(pf printf) {
+				pf("")
+				pf("Active KX attempts")
+				for _, plugin := range plugins {
+					pf("Plugin Name: %s   Version: %v   Enabled: %s",
+						plugin.Name, plugin.Version, plugin.Enabled)
+					pf("Plugin installed: %v Last updated: %v",
+						plugin.Installed.Format(ISO8601DateTime), plugin.Updated.Format(ISO8601DateTime))
+					pf("")
+				}
+			})
+			return nil
+		},
+	}, {
 		cmd:     "svrrates",
 		aliases: []string{"serverrates"},
 		descr:   "Show server fee rates",
@@ -3535,6 +3558,71 @@ var myAvatarCmds = []tuicmd{
 	},
 }
 
+var pluginCmds = []tuicmd{
+	{
+		cmd:   "init",
+		usage: "<nick or id> plugin-address",
+		descr: "Initialize a new plugin",
+		handler: func(args []string, as *appState) error {
+			if len(args) < 1 {
+				return usageError{msg: "Nick or ID cannot be empty"}
+			}
+			if len(args) < 2 {
+				return usageError{msg: "Plugin Address cannot be empty"}
+			}
+
+			ru, err := as.c.UserByNick(args[0])
+			if err != nil {
+				return err
+			}
+
+			cw := as.findOrNewChatWindow(ru.ID(), ru.Nick())
+			go as.initPlugin(cw, ru.ID(), args[1])
+			return nil
+		},
+	}, {
+		cmd:   "version",
+		descr: "Get plugin's version",
+		handler: func(args []string, as *appState) error {
+			if len(args) < 1 {
+				return usageError{msg: "Nick or ID cannot be empty"}
+			}
+
+			ru, err := as.c.UserByNick(args[0])
+			if err != nil {
+				return err
+			}
+			cw := as.findOrNewChatWindow(ru.ID(), ru.Nick())
+			as.pluginVersion(cw, ru.ID())
+			// as.initPlugin(cw)
+			return nil
+		},
+	}, {
+		cmd:   "action",
+		descr: "Calls a plugin action",
+		handler: func(args []string, as *appState) error {
+			if len(args) < 2 {
+				return usageError{msg: "Usage: action <Nick or ID> <action> [<data>]"}
+			}
+
+			ru, err := as.c.UserByNick(args[0])
+			if err != nil {
+				return err
+			}
+
+			action := args[1]
+			var data []byte
+			if len(args) == 3 {
+				data = []byte(args[2])
+			}
+
+			cw := as.findOrNewChatWindow(ru.ID(), ru.Nick())
+			as.pluginAction(cw, ru.ID(), action, data)
+			return nil
+		},
+	},
+}
+
 var commands = []tuicmd{
 	{
 		cmd:           "backup",
@@ -4413,6 +4501,19 @@ var commands = []tuicmd{
 			as.sendMsg(requestShutdown{})
 			return nil
 		},
+	},
+	{
+		cmd:           "plugin",
+		usableOffline: true,
+		descr:         "Plugin Commands",
+		sub:           pluginCmds,
+		completer: func(args []string, arg string, as *appState) []string {
+			if len(args) == 0 {
+				return cmdCompleter(pluginCmds, arg, false)
+			}
+			return nil
+		},
+		handler: subcmdNeededHandler,
 	},
 }
 

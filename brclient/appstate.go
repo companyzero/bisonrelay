@@ -9,6 +9,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -35,6 +37,7 @@ import (
 	"github.com/companyzero/bisonrelay/client/resources"
 	"github.com/companyzero/bisonrelay/client/resources/simplestore"
 	"github.com/companyzero/bisonrelay/client/rpcserver"
+	grpctypes "github.com/companyzero/bisonrelay/clientplugin/grpctypes"
 	"github.com/companyzero/bisonrelay/clientrpc/types"
 	"github.com/companyzero/bisonrelay/internal/mdembeds"
 	"github.com/companyzero/bisonrelay/internal/strescape"
@@ -134,6 +137,8 @@ type appState struct {
 	pushRate       uint64 // milliatoms / byte
 	subRate        uint64 // milliatoms / byte
 	expirationDays uint64
+
+	pluginsClient map[clientintf.PluginID]*client.PluginClient
 
 	// When written, this makes the next wallet check be skipped.
 	skipWalletCheckChan chan struct{}
@@ -2657,6 +2662,168 @@ func (as *appState) handleCmd(rawText string, args []string) {
 	}
 }
 
+// initializePlugins sets up plugins in the database during startup.
+func (as *appState) initializePlugins() error {
+	// Retrieve all enabled plugins from the database.
+	enabledPlugins, err := as.c.GetEnabledPlugins()
+	if err != nil {
+		return fmt.Errorf("failed to retrieve enabled plugins: %w", err)
+	}
+
+	// Initialize each enabled plugin.
+	for _, plugin := range enabledPlugins {
+		pluginClient, err := client.NewPluginClient(as.ctx, plugin.ID, plugin.Config)
+		if err != nil {
+			as.diagMsg("Unable to start plugin: %s err: %w", plugin.Name, err)
+			continue
+		}
+
+		as.pluginsClient[plugin.ID] = pluginClient
+		req := &grpctypes.PluginStartStreamRequest{
+			ClientId: as.c.PublicID().String(),
+		}
+		err = as.pluginsClient[plugin.ID].InitPlugin(as.ctx, req, func(stream grpctypes.PluginService_InitClient) {
+			as.listenForAppNtfn(plugin.ID, stream)
+		})
+		as.startReadingUpdatesAndNtfn(plugin.ID)
+		if err != nil {
+			as.diagMsg("Unable to init plugin: %s", plugin.Name)
+		}
+		as.diagMsg("Plugin %s Initialized", plugin.Name)
+	}
+
+	return nil
+}
+
+// initPlugin initialize plugins so they can listen for updates at the appstate.
+func (as *appState) initPlugin(cw *chatWindow, pid clientintf.PluginID, address string) {
+	req := &grpctypes.PluginStartStreamRequest{
+		ClientId: as.c.PublicID().String(),
+	}
+
+	if as.pluginsClient[pid] == nil {
+		pluginClientCfg := client.PluginClientCfg{
+			Log:     as.logBknd.logger("Plugins"),
+			Address: address,
+		}
+		pluginClient, err := client.NewPluginClient(as.ctx, pid, pluginClientCfg)
+		if err != nil {
+			as.cwHelpMsg("Unable to start new plugin")
+			return
+		}
+		as.pluginsClient[pid] = pluginClient
+	}
+
+	err := as.c.SavePluginInfo(as.pluginsClient[pid])
+	if err != nil {
+		// ignore if plugin already exists
+		if err != clientdb.ErrAlreadyExists {
+			as.cwHelpMsg("Unable to Save Plugin %q: %v",
+				cw.alias, err)
+		}
+	}
+
+	err = as.pluginsClient[pid].InitPlugin(as.ctx, req, func(stream grpctypes.PluginService_InitClient) {
+		as.listenForAppNtfn(pid, stream)
+	})
+	as.startReadingUpdatesAndNtfn(pid)
+
+	if err != nil {
+		as.cwHelpMsg("Unable to init plugin %q: %v",
+			cw.alias, err)
+	}
+
+	as.sendMsg(repaintActiveChat{})
+}
+
+func (as *appState) pluginVersion(cw *chatWindow, pid clientintf.PluginID) {
+	version, err := as.pluginsClient[pid].GetVersion(as.ctx)
+	if err != nil {
+		as.cwHelpMsg("Unable to get version: %v", err)
+		return
+	}
+	as.cwHelpMsg("plugin version: %+v\n", version)
+}
+
+func (as *appState) pluginAction(cw *chatWindow, pid clientintf.PluginID, action string, data []byte) {
+	if as.pluginsClient[pid] == nil {
+		as.cwHelpMsg("plugin not found")
+		return
+	}
+
+	req := &grpctypes.PluginCallActionStreamRequest{
+		Action: action,
+		Data:   data,
+		User:   as.c.Public().String(),
+	}
+
+	err := as.pluginsClient[pid].CallPluginAction(as.ctx, req, func(stream grpctypes.PluginService_CallActionClient) error {
+		as.listenForAppUpdates(pid, stream)
+		as.cwHelpMsg("Client called action")
+		return nil
+	})
+
+	if err != nil {
+		as.cwHelpMsg("Unable to call action: %v", err)
+		return
+	}
+}
+
+func (as *appState) listenForAppUpdates(id zkidentity.ShortID, stream grpctypes.PluginService_CallActionClient) {
+	go func() {
+		for {
+			update, err := stream.Recv()
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				as.log.Error("error receiving app update %s: %v", as.pluginsClient[id].Name, err)
+				return
+			}
+			as.pluginsClient[id].UpdateCh <- update
+		}
+		as.cwHelpMsg("Stream closed")
+	}()
+}
+
+func (as *appState) listenForAppNtfn(id zkidentity.ShortID, stream grpctypes.PluginService_InitClient) {
+	go func() {
+		for {
+			update, err := stream.Recv()
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			if err != nil {
+				as.log.Error("error listening app ntfn %s: %v", as.pluginsClient[id].Name, err)
+				return
+			}
+			as.pluginsClient[id].NtfnCh <- update
+		}
+		log.Println("Stream closed")
+	}()
+}
+
+func (as *appState) startReadingUpdatesAndNtfn(id zkidentity.ShortID) {
+	go func() {
+		for update := range as.pluginsClient[id].UpdateCh {
+			// Handle the update
+			res, err := as.pluginsClient[id].Render(as.ctx, update)
+			if err != nil {
+				as.log.Error("error rendering app update %s: %v", as.pluginsClient[id].Name, err)
+				return
+			}
+			as.cwHelpMsg(res.Data)
+		}
+	}()
+	go func() {
+		for update := range as.pluginsClient[id].NtfnCh {
+			// Handle the update
+
+			as.cwHelpMsg("Notification received from plugin %s: %v", as.pluginsClient[id].Name, update.Message)
+		}
+	}()
+}
+
 // newAppState initializes the main app state.
 func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 	isRestore bool, args *config) (*appState, error) {
@@ -3141,6 +3308,10 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 			}
 			if showExpDays {
 				as.diagMsg("Days to Expire Data: %d", expDays)
+			}
+			err := as.initializePlugins()
+			if err != nil {
+				as.diagMsg("Initializing plugin errored: %v", err)
 			}
 			as.diagMsg("Client ready!")
 		} else {
@@ -3876,6 +4047,8 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		lnWallet:    lnWallet,
 		httpClient:  &httpClient,
 		rates:       r,
+
+		pluginsClient: make(map[clientintf.PluginID]*client.PluginClient),
 
 		network:   args.Network,
 		isRestore: isRestore,
