@@ -2807,12 +2807,12 @@ func (as *appState) startReadingUpdatesAndNtfn(id zkidentity.ShortID) {
 	go func() {
 		for update := range as.pluginsClient[id].UpdateCh {
 			// Handle the update
-			s, err := as.pluginsClient[id].Render(as.ctx, update)
+			res, err := as.pluginsClient[id].Render(as.ctx, update)
 			if err != nil {
 				as.log.Error("error rendering app update %s: %v", as.pluginsClient[id].Name, err)
 				return
 			}
-			as.cwHelpMsg(s)
+			as.cwHelpMsg(res.Data)
 		}
 	}()
 	go func() {

@@ -10,11 +10,21 @@ service PluginService {
   rpc Init(PluginStartStreamRequest) returns (stream PluginStartStreamResponse);
   rpc CallAction (PluginCallActionStreamRequest) returns (stream PluginCallActionStreamResponse);
   rpc GetVersion (PluginVersionRequest) returns (PluginVersionResponse);
+  rpc Render(RenderRequest) returns (RenderResponse);
 }
 
 /******************************************************************************
   *                           Messages
   *****************************************************************************/
+
+
+message RenderRequest {
+  bytes data = 1;
+}
+
+message RenderResponse {
+  string data = 1;
+}
 
 message PluginStartStreamRequest {
   string client_id = 1;
