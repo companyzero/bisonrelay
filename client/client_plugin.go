@@ -2,60 +2,24 @@ package client
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/companyzero/bisonrelay/client/clientdb"
-	"github.com/companyzero/bisonrelay/client/clientintf"
 	grpctypes "github.com/companyzero/bisonrelay/clientplugin/grpctypes"
 	"github.com/decred/slog"
 	"google.golang.org/grpc"
 )
 
-type PongRenderer struct{}
-
-func (r *PongRenderer) Render(ctx context.Context, data *grpctypes.PluginCallActionStreamResponse) (string, error) {
-	gameState := clientintf.PongGameState{}
-	if err := json.Unmarshal(data.Response, &gameState); err != nil {
-		return "", fmt.Errorf("failed to decode game state: %v", err)
-	}
-
-	var gameView strings.Builder
-	for y := 0; y < int(gameState.GameHeight); y++ {
-		for x := 0; x < int(gameState.GameWidth); x++ {
-			ballX := int(gameState.BallX)
-			ballY := int(gameState.BallY)
-			switch {
-			case x == ballX && y == ballY:
-				gameView.WriteString("O")
-			case x == 0 && y >= int(gameState.P1Y) && y < int(gameState.P1Y)+int(gameState.P1Height):
-				gameView.WriteString("|")
-			case x == int(gameState.GameWidth)-1 && y >= int(gameState.P2Y) && y < int(gameState.P2Y)+int(gameState.P2Height):
-				gameView.WriteString("|")
-			default:
-				gameView.WriteString(" ")
-			}
-		}
-		gameView.WriteString("\n")
-	}
-	gameView.WriteString(fmt.Sprintf("Score: %d - %d\n", gameState.P1Score, gameState.P2Score))
-	gameView.WriteString("Controls: W/S and Arrow Keys - Q to quit")
-
-	return gameView.String(), nil
-}
-
 type PluginClient struct {
 	pluginrpc grpctypes.PluginServiceClient
 
-	ID       clientdb.PluginID
-	Name     string
-	Version  string
-	Config   PluginClientCfg
-	Enabled  bool
-	renderer *PongRenderer
+	ID      clientdb.PluginID
+	Name    string
+	Version string
+	Config  PluginClientCfg
+	Enabled bool
 
 	UpdateCh chan *grpctypes.PluginCallActionStreamResponse
 	NtfnCh   chan *grpctypes.PluginStartStreamResponse
@@ -92,7 +56,6 @@ func NewPluginClient(ctx context.Context, id clientdb.PluginID, cfg PluginClient
 		log = cfg.Log
 	}
 
-	renderer := &PongRenderer{}
 	p := &PluginClient{
 		ID:        id,
 		pluginrpc: pc,
@@ -104,7 +67,6 @@ func NewPluginClient(ctx context.Context, id clientdb.PluginID, cfg PluginClient
 		Enabled:  true,
 		UpdateCh: make(chan *grpctypes.PluginCallActionStreamResponse),
 		NtfnCh:   make(chan *grpctypes.PluginStartStreamResponse),
-		renderer: renderer,
 	}
 
 	version, err := p.GetVersion(ctx)
@@ -136,11 +98,11 @@ func (p *PluginClient) CallPluginAction(ctx context.Context, req *grpctypes.Plug
 	return nil
 }
 
-func (p *PluginClient) Render(ctx context.Context, data *grpctypes.PluginCallActionStreamResponse) (string, error) {
-	if p.renderer == nil {
-		return "", fmt.Errorf("no renderer set")
+func (p *PluginClient) Render(ctx context.Context, data *grpctypes.PluginCallActionStreamResponse) (*grpctypes.RenderResponse, error) {
+	req := &grpctypes.RenderRequest{
+		Data: data.Response,
 	}
-	return p.renderer.Render(ctx, data)
+	return p.pluginrpc.Render(ctx, req)
 }
 
 func (p *PluginClient) Logger() slog.Logger {
