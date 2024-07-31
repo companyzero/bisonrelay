@@ -77,6 +77,16 @@ func Chan2NotWritten[T any, U any](t testing.TB, c chan T, d chan U, timeout tim
 	}
 }
 
+// WriteChan attempts to send v to c.
+func WriteChan[T any](t testing.TB, c chan T, v T) {
+	t.Helper()
+	select {
+	case c <- v:
+	case <-time.After(timeout):
+		t.Fatalf("Timeout waiting to send to chan")
+	}
+}
+
 // DeepEqual asserts got is reflect.DeepEqual to want.
 func DeepEqual[T any](t testing.TB, got, want T) {
 	t.Helper()
