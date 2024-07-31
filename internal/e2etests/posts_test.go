@@ -1,6 +1,7 @@
 package e2etests
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -183,6 +184,10 @@ func TestKXSearchFromPosts(t *testing.T) {
 	assert.ChanWrittenWithVal(t, eveKXdChan, bob.PublicID())
 	assert.ChanWrittenWithVal(t, eveKXdChan, alice.PublicID())
 	assert.ChanWrittenWithVal(t, eveKXSearched, alice.PublicID())
+
+	// FIXME: A failure here means the post share was processed before
+	// the post subscription reply. This needs to be fixed by processing
+	// post subs synchronously.
 	assert.ChanWrittenWithVal(t, eveRcvdStatus, aliceComment)
 
 	// Bob comments on Alice's post. Eve should receive it.
@@ -235,7 +240,7 @@ func TestPostReceiveReceipts(t *testing.T) {
 
 	// Alice will create a post. Bob and Charlie will ack it, Eve will NOT
 	// ack it.
-	post1 := assertReceivesNewPost(t, alice, bob, charlie, eve)
+	post1 := assertReceivesNewPost(t, alice, nil, bob, charlie, eve)
 	assertRR(rpc.ReceiptDomainPosts, &post1, nil, rrFromBob)
 	assertRR(rpc.ReceiptDomainPosts, &post1, nil, rrFromCharlie)
 	assert.ChanNotWritten(t, rrFromEve, 500*time.Millisecond)
@@ -368,6 +373,7 @@ func TestEarlyPostStatus(t *testing.T) {
 	assert.NilErr(t, err)
 	_, err = alice.CommentPost(alice.PublicID(), secondPost.ID, wantComment, nil)
 	assert.NilErr(t, err)
+	assertEmptyRMQ(t, alice)
 	assert.ChanNotWritten(t, bobRecvComments, 250*time.Millisecond)
 
 	// Bob explicitly fetches the first post without asking for updates, to
@@ -387,4 +393,117 @@ func TestEarlyPostStatus(t *testing.T) {
 	gotComments = append(gotComments, assert.ChanWritten(t, bobRecvComments))
 	assert.Contains(t, gotComments, firstComment)
 	assert.Contains(t, gotComments, wantComment)
+}
+
+// TestResubscribeToPosts tests attempting to re-subscribe to posts after the
+// subscription status getting out-of-sync.
+func TestResubscribeToPosts(t *testing.T) {
+	t.Parallel()
+
+	// Setup Alice and Bob and have them KX.
+	tcfg := testScaffoldCfg{}
+	ts := newTestScaffold(t, tcfg)
+	alice := ts.newClient("alice")
+	bob := ts.newClient("bob")
+	ts.kxUsers(alice, bob)
+
+	bobSubChanged := make(chan bool, 10)
+	bob.handle(client.OnRemoteSubscriptionChangedNtfn(func(user *client.RemoteUser, subscribed bool) {
+		bobSubChanged <- subscribed
+	}))
+
+	bobSubErrored := make(chan string, 10)
+	bob.handle(client.OnRemoteSubscriptionErrorNtfn(func(user *client.RemoteUser, wasSubscribing bool, errMsg string) {
+		bobSubErrored <- errMsg
+	}))
+
+	// Assert the default state.
+	assertPostSubscriber(t, alice, bob, false)
+	assertPostSubscription(t, bob, alice, false)
+
+	// Bob attempts to subscribe twice. It should succeed.
+	assert.NilErr(t, bob.SubscribeToPosts(alice.PublicID()))
+	assert.ChanWrittenWithVal(t, bobSubChanged, true)
+	assert.ChanNotWritten(t, bobSubErrored, time.Second)
+	assertPostSubscriber(t, alice, bob, true)
+	assertPostSubscription(t, bob, alice, true)
+	assertReceivesNewPost(t, alice, nil, bob)
+	assert.NilErr(t, bob.SubscribeToPosts(alice.PublicID()))
+	assert.ChanWrittenWithVal(t, bobSubChanged, true)
+	assert.ChanNotWritten(t, bobSubErrored, time.Second)
+	assertPostSubscriber(t, alice, bob, true)
+	assertPostSubscription(t, bob, alice, true)
+	assertReceivesNewPost(t, alice, nil, bob)
+
+	// Bob attempts to unsubscribe twice. It should succeed.
+	assert.NilErr(t, bob.UnsubscribeToPosts(alice.PublicID()))
+	assert.ChanWrittenWithVal(t, bobSubChanged, false)
+	assert.ChanNotWritten(t, bobSubErrored, time.Second)
+	assertPostSubscriber(t, alice, bob, false)
+	assertPostSubscription(t, bob, alice, false)
+	assertReceivesNewPost(t, alice, []*testClient{bob})
+	assert.NilErr(t, bob.UnsubscribeToPosts(alice.PublicID()))
+	assert.ChanWrittenWithVal(t, bobSubChanged, false)
+	assert.ChanNotWritten(t, bobSubErrored, time.Second)
+	assertPostSubscriber(t, alice, bob, false)
+	assertPostSubscription(t, bob, alice, false)
+	assertReceivesNewPost(t, alice, []*testClient{bob})
+
+	// Bob subscribes again.
+	assert.NilErr(t, bob.SubscribeToPosts(alice.PublicID()))
+	assert.ChanWrittenWithVal(t, bobSubChanged, true)
+	assert.ChanNotWritten(t, bobSubErrored, time.Second)
+	assertPostSubscriber(t, alice, bob, true)
+	assertPostSubscription(t, bob, alice, true)
+	assertReceivesNewPost(t, alice, nil, bob)
+
+	// Manually modify Bob's DB to exclude Alice from it. This simulates the
+	// subscription status getting out of sync on Bob's side.
+	err := bob.db.Update(context.Background(), func(tx clientdb.ReadWriteTx) error {
+		return bob.db.StorePostUnsubscription(tx, alice.PublicID())
+	})
+	assert.NilErr(t, err)
+
+	// Alice still thinks Bob is subscribed, but Bob thinks he isn't. Alice
+	// may send a post, but Bob does not process it.
+	assertPostSubscriber(t, alice, bob, true)
+	assertPostSubscription(t, bob, alice, false)
+	assertReceivesNewPost(t, alice, []*testClient{bob})
+
+	// Bob subscribes again. This should work.
+	assert.NilErr(t, bob.SubscribeToPosts(alice.PublicID()))
+	assert.ChanWrittenWithVal(t, bobSubChanged, true)
+	assert.ChanNotWritten(t, bobSubErrored, time.Second)
+	assertPostSubscriber(t, alice, bob, true)
+	assertPostSubscription(t, bob, alice, true)
+	assertReceivesNewPost(t, alice, nil, bob)
+
+	// Manually modify Alice's DB to exclude Bob from it. This simulates the
+	// subscription status getting out of sync on Alice's side.
+	err = alice.db.Update(context.Background(), func(tx clientdb.ReadWriteTx) error {
+		return alice.db.UnsubscribeToPosts(tx, bob.PublicID())
+	})
+	assert.NilErr(t, err)
+
+	// Bob still thinks he is subscribed, but Alice thinks he isn't. Alice
+	// does not send posts to Bob.
+	assertPostSubscriber(t, alice, bob, false)
+	assertPostSubscription(t, bob, alice, true)
+	assertReceivesNewPost(t, alice, []*testClient{bob})
+
+	// Bob subscribes again. This should work.
+	assert.NilErr(t, bob.SubscribeToPosts(alice.PublicID()))
+	assert.ChanWrittenWithVal(t, bobSubChanged, true)
+	assert.ChanNotWritten(t, bobSubErrored, time.Second)
+	assertPostSubscriber(t, alice, bob, true)
+	assertPostSubscription(t, bob, alice, true)
+	assertReceivesNewPost(t, alice, nil, bob)
+
+	// Final Bob unsubscription.
+	assert.NilErr(t, bob.UnsubscribeToPosts(alice.PublicID()))
+	assert.ChanWrittenWithVal(t, bobSubChanged, false)
+	assert.ChanNotWritten(t, bobSubErrored, time.Second)
+	assertPostSubscriber(t, alice, bob, false)
+	assertPostSubscription(t, bob, alice, false)
+	assertReceivesNewPost(t, alice, []*testClient{bob})
 }

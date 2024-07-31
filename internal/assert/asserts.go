@@ -77,6 +77,39 @@ func Chan2NotWritten[T any, U any](t testing.TB, c chan T, d chan U, timeout tim
 	}
 }
 
+// NoChansWritten asserts that none of the chans in the slice are written to
+// at least until the passed timeout value.
+func NoChansWritten[T any](t testing.TB, chans []chan T, timeout time.Duration) {
+	t.Helper()
+
+	if len(chans) == 0 {
+		// No need to wait when no chans are tested.
+		return
+	}
+
+	done := make(chan struct{})
+	got := make(chan T, len(chans))
+	for i := range chans {
+		c := chans[i]
+		go func() {
+			select {
+			case v := <-c:
+				got <- v
+			case <-done:
+			}
+		}()
+	}
+
+	select {
+	case v := <-got:
+		close(done)
+		t.Fatalf("Received unexpected value %v", v)
+	case <-time.After(timeout):
+		// All ok.
+		close(done)
+	}
+}
+
 // WriteChan attempts to send v to c.
 func WriteChan[T any](t testing.TB, c chan T, v T) {
 	t.Helper()
