@@ -801,6 +801,8 @@ class ClientModel extends ChangeNotifier {
     alias = alias == "" ? "[blank]" : alias;
     c = ChatModel(id, alias, isGC);
     if (!isGC) {
+      // TODO: replace with a specific isSubscribed? call instead of always
+      // fetching the list.
       var subscriptions = await Golib.listSubscriptions();
       c.isSubscribed = subscriptions.contains(id);
     }
