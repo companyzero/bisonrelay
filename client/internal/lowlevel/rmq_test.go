@@ -641,20 +641,42 @@ func TestRequestsInvoiceForOldInvoice(t *testing.T) {
 func TestConcurrentRMQSends(t *testing.T) {
 	t.Parallel()
 
+	// Number of concurrent RMs to use in test (one more than this will be
+	// sent).
+	const nbRMs = 3
+
 	q := NewRMQ(nil, newMockRMQDB())
+
+	// Hook into the beforeFetchInvoiceHook event to reduce chance of test
+	// failure.
+	beforeFetchInvoiceChan := make(chan struct{}, nbRMs+1)
+	q.beforeFetchInvoiceHook = func() {
+		select {
+		case <-beforeFetchInvoiceChan:
+		case <-time.After(time.Second * 10):
+		}
+	}
+
 	runErr := make(chan error)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	go func() { runErr <- q.Run(ctx) }()
 
-	// Number of concurrent RMs to use in test (one more than this will be
-	// sent).
-	nbRMs := 3
-
 	// Bind to the server.
 	sess := newMockServerSession()
 	sess.policy.MaxPushInvoices = nbRMs
 	q.BindToSession(sess)
+
+	// Hook into invoice payment to reduce chances of test flakiness.
+	payInvoiceChan := make(chan struct{}, nbRMs+1)
+	sess.mpc.HookPayInvoice(func(string) (int64, error) {
+		select {
+		case <-payInvoiceChan:
+			return 0, nil
+		case <-ctx.Done():
+			return 0, ctx.Err()
+		}
+	})
 
 	// Send the RM. Send one more than the max number of concurrent RMs to
 	// test the additional RM is enqueued, but not sent.
@@ -674,11 +696,18 @@ func TestConcurrentRMQSends(t *testing.T) {
 	}
 
 	// Reply to asking for a payload.
-	//
-	// Note: if the attempt to send the RM (after rpc.GetInvoiceReply is
-	// received) happens too fast, this section of the test may flake.
+	for i := 0; i < nbRMs; i++ {
+		assert.WriteChan(t, beforeFetchInvoiceChan, struct{}{})
+	}
+	time.Sleep(50 * time.Millisecond)
 	for i := 0; i < nbRMs; i++ {
 		sess.replyNextPRPC(t, &rpc.GetInvoiceReply{})
+	}
+	time.Sleep(50 * time.Millisecond)
+
+	// Complete the payments.
+	for i := 0; i < nbRMs; i++ {
+		assert.WriteChan(t, payInvoiceChan, struct{}{})
 	}
 
 	// Expect the RMs to be sent.
@@ -704,7 +733,9 @@ func TestConcurrentRMQSends(t *testing.T) {
 	assert.ChanNotWritten(t, rmErrChan, 100*time.Millisecond)
 
 	// Send the invoice and accept the last RM.
+	assert.WriteChan(t, beforeFetchInvoiceChan, struct{}{})
 	sess.replyNextPRPC(t, &rpc.GetInvoiceReply{})
+	assert.WriteChan(t, payInvoiceChan, struct{}{})
 	sess.replyNextPRPC(t, &rpc.RouteMessageReply{})
 
 	// Ensure no errors occurred on the final RM.
