@@ -47,13 +47,14 @@ func TestWSPeerMultiStreams(t *testing.T) {
 	services := &types.ServersMap{}
 	services.Bind("VersionService", types.VersionServiceDefn(), server)
 	cli, svr := newPeerPair(t, services)
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 	go cli.p.run(ctx)
 	go svr.p.run(ctx)
 
-	req1 := &types.KeepaliveStreamRequest{Interval: 10}
-	req2 := &types.KeepaliveStreamRequest{Interval: 50}
+	req1 := &types.KeepaliveStreamRequest{Interval: 100}
+	req2 := &types.KeepaliveStreamRequest{Interval: 300}
 	stream1, err := cli.p.requestStream(ctx, "VersionService.KeepaliveStream", req1)
 	if err != nil {
 		t.Fatal(err)
@@ -85,16 +86,20 @@ func TestWSPeerMultiStreams(t *testing.T) {
 		}
 	}()
 
-	// Run for 0.5 second.
-	time.Sleep(time.Millisecond * 500)
+	// Run until the context is canceled and the requests are down.
+	select {
+	case <-ctx.Done():
+	case <-time.After(time.Second * 10):
+		t.Fatal("timeout")
+	}
 	countReq1, countReq2 := nbReq1.Load(), nbReq2.Load()
 
-	// Number of req1 requests should be approximately 5 times nb of req2
+	// Number of req1 requests should be approximately 3 times nb of req2
 	// requests (to within a margin of error due to timing effects).
-	diff := countReq1 - (5 * countReq2)
+	diff := countReq1 - (3 * countReq2)
 	if diff < -5 || diff > 5 {
-		t.Fatalf("Unexpected difference of request counts: %d vs %d",
-			countReq1, countReq2*5)
+		t.Fatalf("Unexpected difference (%d) of request counts: %d vs %d",
+			diff, countReq1, countReq2*5)
 	}
 }
 

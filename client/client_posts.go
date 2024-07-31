@@ -108,6 +108,16 @@ func (c *Client) handlePostsSubscribe(ru *RemoteUser, ps rpc.RMPostsSubscribe) e
 }
 
 func (c *Client) handlePostsSubscribeReply(ru *RemoteUser, psr rpc.RMPostsSubscribeReply) error {
+
+	// Special case ErrAlreadySubscribed: treat it as a successful
+	// subscription to handle cases where the local and remote clients have
+	// an unsynced subscription status.
+	if psr.Error != nil && strings.Contains(*psr.Error, clientdb.ErrAlreadySubscribed.Error()) {
+		ru.log.Infof("Received ErrAlreadySubscribed from subscription " +
+			"attempt. Considering as subscribed.")
+		psr.Error = nil
+	}
+
 	if psr.Error != nil {
 		subErr := strings.TrimSpace(*psr.Error)
 		ru.log.Warnf("Received error reply when subscribing to posts: %q", subErr)

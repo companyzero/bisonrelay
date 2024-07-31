@@ -373,9 +373,9 @@ func TestContentFilters(t *testing.T) {
 			assertSubscribeToPosts(t, charlie, bob)
 
 			// Create test posts and assert everyone sees them.
-			alicePost := assertReceivesNewPost(t, alice, bob, charlie)
-			bobPost := assertReceivesNewPost(t, bob, alice, charlie)
-			charliePost := assertReceivesNewPost(t, charlie, alice, bob)
+			alicePost := assertReceivesNewPost(t, alice, nil, bob, charlie)
+			bobPost := assertReceivesNewPost(t, bob, nil, alice, charlie)
+			charliePost := assertReceivesNewPost(t, charlie, nil, alice, bob)
 
 			_, _, _ = alicePost, bobPost, charliePost
 

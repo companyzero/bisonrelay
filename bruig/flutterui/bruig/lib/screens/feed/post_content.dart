@@ -84,8 +84,9 @@ class _CommentW extends StatefulWidget {
   final SendReplyCB sendReply;
   final ClientModel client;
   final ShowingReplyCB showReply;
-  const _CommentW(
-      this.post, this.comment, this.sendReply, this.client, this.showReply,
+  final bool canComment;
+  const _CommentW(this.post, this.comment, this.sendReply, this.client,
+      this.showReply, this.canComment,
       {Key? key})
       : super(key: key);
 
@@ -255,17 +256,18 @@ class _CommentWState extends State<_CommentW> {
                                         : const Icon(
                                             Icons.follow_the_signs_rounded)))
                             : const Empty(),
-                    SizedBox(
-                        width: 20,
-                        child: IconButton(
-                            padding: const EdgeInsets.all(0),
-                            iconSize: 15,
-                            tooltip: "Reply to this comment",
-                            onPressed:
-                                !sendingReply ? () => replying = true : null,
-                            icon: Icon(!sendingReply
-                                ? Icons.reply
-                                : Icons.hourglass_bottom))),
+                    if (widget.canComment)
+                      SizedBox(
+                          width: 20,
+                          child: IconButton(
+                              padding: const EdgeInsets.all(0),
+                              iconSize: 15,
+                              tooltip: "Reply to this comment",
+                              onPressed:
+                                  !sendingReply ? () => replying = true : null,
+                              icon: Icon(!sendingReply
+                                  ? Icons.reply
+                                  : Icons.hourglass_bottom))),
                     relayedByMe
                         ? SizedBox(
                             width: 20,
@@ -399,7 +401,8 @@ class _CommentWState extends State<_CommentW> {
                             e,
                             widget.sendReply,
                             widget.client,
-                            widget.showReply))
+                            widget.showReply,
+                            widget.canComment))
                       ]),
                     )
                   : const Empty(),
@@ -594,6 +597,19 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
     }
   }
 
+  Future<void> subscribe() async {
+    var snackbar = SnackBarModel.of(context);
+    try {
+      var authorChat =
+          widget.client.getExistingChat(widget.args.post.summ.authorID);
+      if (authorChat != null) {
+        authorChat.subscribeToPosts();
+      }
+    } catch (exception) {
+      snackbar.error("Unable to subscribe to posts: $exception");
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (loading) {
@@ -608,11 +624,14 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
     var myPost = authorID == widget.client.publicID;
     var authorChat = widget.client.getExistingChat(authorID);
     var hasChat = authorChat != null;
+    var canComment = false;
     if (myPost) {
       authorNick = "me";
+      canComment = true;
     }
     if (authorChat != null) {
       authorNick = authorChat.nick;
+      canComment = authorChat.isSubscribed;
     }
     if (authorNick == "") {
       authorNick = "[$authorID]";
@@ -646,10 +665,32 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
         ]),
         const SizedBox(height: 20),
         !replying
-            ? SizedBox(
-                width: 150,
-                child: OutlinedButton(
-                    onPressed: showReply, child: const Txt.S("Add Comment")))
+            ? canComment
+                ? SizedBox(
+                    width: 150,
+                    child: OutlinedButton(
+                        onPressed: showReply,
+                        child: const Txt.S("Add Comment")))
+                : Container(
+                    padding: const EdgeInsets.only(
+                        left: 13, right: 13, top: 11, bottom: 11),
+                    margin: const EdgeInsets.symmetric(horizontal: 30),
+                    child: Column(children: [
+                      const Txt.S(
+                          "Cannot comment while unsubscribed to the user's posts."),
+                      const SizedBox(height: 10),
+                      (authorChat?.isSubscribing ?? false)
+                          ? const Txt.S(
+                              "Waiting for author to accept our post subscription request.")
+                          : const Empty(),
+                      (authorChat != null &&
+                              !authorChat.isSubscribed &&
+                              !authorChat.isSubscribing)
+                          ? OutlinedButton(
+                              onPressed: subscribe,
+                              child: const Txt.S("Subscribe to User's Posts"))
+                          : const Empty(),
+                    ]))
             : Container(
                 padding: const EdgeInsets.only(
                     left: 13, right: 13, top: 11, bottom: 11),
@@ -675,8 +716,8 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
                     ],
                   )
                 ])),
-        ...comments.map((e) => _CommentW(
-            widget.args.post, e, sendReply, widget.client, showingReplyCB)),
+        ...comments.map((e) => _CommentW(widget.args.post, e, sendReply,
+            widget.client, showingReplyCB, canComment)),
         const SizedBox(height: 20),
         newComments.isNotEmpty
             ? Column(children: [
@@ -692,7 +733,10 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
                     padding: const EdgeInsets.symmetric(
                         vertical: 10, horizontal: 40),
                     child: const Txt.S(
-                      """Unreplicated comments are those that have been sent to the post's relayer for replication but which the relayer has not yet sent back to the local client. Comment replication requires the remote user to be online so it may take some time until the comment is received back.""",
+                      "Unreplicated comments are those that have been sent to the post's "
+                      "relayer for replication but which the relayer has not yet sent back "
+                      "to the local client. Comment replication requires the remote user to "
+                      "be online so it may take some time until the comment is received back.",
                       color: TextColor.onSurfaceVariant,
                     )),
                 ...newComments.map((e) => Container(
@@ -717,11 +761,18 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
               const SizedBox(height: 10),
               isKXSearchingAuthor
                   ? const Txt.S(
-                      """Currently attempting to KX search for post author. This may take a long time to complete, as it involves contacting and performing KX with multiple peers.""")
+                      "Currently attempting to KX search for post author. This may "
+                      "take a long time to complete, as it involves contacting and "
+                      "performing KX with multiple peers.")
                   : !knowsAuthor
                       ? Column(children: [
                           const Txt.S(
-                              """In order to comment on the post, the local client needs to KX with the post author and subscribe to their posts. This may be done automatically by using the "KX Search" action. KX search may take a long time to complete, because it depends on remote peers completing KX and referring us to the original author."""),
+                              "In order to comment on the post, the local client "
+                              "needs to KX with the post author and subscribe to their "
+                              "posts. This may be done automatically by using the \"KX "
+                              "Search\" action. KX search may take a long time to "
+                              "complete, because it depends on remote peers completing "
+                              "KX and referring us to the original author."),
                           const SizedBox(height: 20),
                           OutlinedButton(
                               onPressed: kxSearchAuthor,
@@ -730,14 +781,18 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
                       : !sentSubscribeAttempt
                           ? Column(children: [
                               const Txt.S(
-                                  """In order to comment on the post, the local client needs subscribe to the author's posts and then fetch this post. The process to do this can be started automatically, but it may take some time until the author responds."""),
+                                  "In order to comment on the post, the local client "
+                                  "needs subscribe to the author's posts and then fetch "
+                                  "this post. The process to do this can be started "
+                                  "automatically, but it may take some time until the "
+                                  "author responds."),
                               const SizedBox(height: 10),
                               OutlinedButton(
                                   onPressed: subscribeAndFetchPost,
                                   child: const Text("Subscribe and Fetch Post"))
                             ])
                           : const Txt.S(
-                              """Sent subscription attempt. It may take some time until the author responds."""),
+                              "Sent subscription attempt. It may take some time until the author responds."),
             ])),
       ]);
     }

@@ -12,6 +12,8 @@ import (
 
 // TestDirectReset tests that resetting via reset RVs works.
 func TestDirectReset(t *testing.T) {
+	t.Parallel()
+
 	// Setup Alice and Bob and have them kx.
 	tcfg := testScaffoldCfg{}
 	ts := newTestScaffold(t, tcfg)
@@ -24,14 +26,6 @@ func TestDirectReset(t *testing.T) {
 	}))
 	bob.handle(client.OnKXCompleted(func(_ *clientintf.RawRVID, _ *client.RemoteUser, isNew bool) {
 		bobKXdChan <- isNew
-	}))
-
-	alicePMChan, bobPMChan := make(chan string, 1), make(chan string, 1)
-	alice.handle(client.OnPMNtfn(func(ru *client.RemoteUser, pm rpc.RMPrivateMessage, ts time.Time) {
-		alicePMChan <- pm.Message
-	}))
-	bob.handle(client.OnPMNtfn(func(ru *client.RemoteUser, pm rpc.RMPrivateMessage, ts time.Time) {
-		bobPMChan <- pm.Message
 	}))
 
 	// Helper to consume the KXCompleted events.
@@ -58,16 +52,17 @@ func TestDirectReset(t *testing.T) {
 	// Ensure we got the new reset events.
 	assertKXCompleted(false)
 
+	// Wait for the ratchets to be updated internally before sending a PM.
+	time.Sleep(250 * time.Millisecond)
+
 	// Ensure Alice and Bob can message each other.
-	aliceMsg, bobMsg := "i am alice", "i am bob"
-	assert.NilErr(t, alice.PM(bob.PublicID(), aliceMsg))
-	assert.NilErr(t, bob.PM(alice.PublicID(), bobMsg))
-	assert.ChanWrittenWithVal(t, alicePMChan, bobMsg)
-	assert.ChanWrittenWithVal(t, bobPMChan, aliceMsg)
+	assertClientsCanPM(t, alice, bob)
 }
 
 // TestTransitiveReset tests that doing a transitive reset works.
 func TestTransitiveReset(t *testing.T) {
+	t.Parallel()
+
 	// Setup Alice, Bob and Charlie and have them kx.
 	tcfg := testScaffoldCfg{}
 	ts := newTestScaffold(t, tcfg)

@@ -1015,7 +1015,7 @@ func (db *DB) PopEarlyPostStatusUpdate(tx ReadWriteTx, from UserID, pid PostID) 
 	}
 
 	var res []rpc.RMPostShare
-	for i := 0; i < len(earlyStatus); i++ {
+	for i := 0; i < len(earlyStatus); {
 		eps := earlyStatus[i]
 		if eps.PID != pid {
 			i += 1

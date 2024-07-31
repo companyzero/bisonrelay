@@ -156,6 +156,10 @@ func TestFtSendFile(t *testing.T) {
 	assert.NilErr(t, alice.SendFile(bob.PublicID(), fSent))
 
 	// Bob should receive it without having to do any payments.
+	//
+	// FIXME: If an error happens here, it's because Bob processed the
+	// RMFTSend after the chunk instead of before. This needs to be fixed
+	// by processing the RMFTSend call synchronously.
 	completedPath1 := assert.ChanWritten(t, completedFileChan)
 	assert.EqualFiles(t, fSent, completedPath1)
 }

@@ -286,11 +286,15 @@ func assertSubscribeToPosts(t testing.TB, target, subscriber *testClient) {
 
 // assertReceivesNewPost creates a new post in poster and asserts all passed
 // subs receive a notification that the post was done. Returns the new post id.
-func assertReceivesNewPost(t testing.TB, poster *testClient, targets ...*testClient) clientintf.PostID {
+//
+// Any clients specified in excluded shoult NOT get the new post.
+func assertReceivesNewPost(t testing.TB, poster *testClient, excluded []*testClient, targets ...*testClient) clientintf.PostID {
 	t.Helper()
 
 	regs := make([]client.NotificationRegistration, len(targets))
 	chans := make([]chan struct{}, len(targets))
+	regsExcluded := make([]client.NotificationRegistration, len(excluded))
+	chansExcluded := make([]chan struct{}, len(excluded))
 
 	postData := "test post **** " + strconv.FormatInt(rand.Int63(), 10)
 
@@ -304,10 +308,21 @@ func assertReceivesNewPost(t testing.TB, poster *testClient, targets ...*testCli
 			}
 		}))
 	}
+	for i := range excluded {
+		i := i
+		chansExcluded[i] = make(chan struct{})
+		regsExcluded[i] = excluded[i].handle(client.OnPostRcvdNtfn(func(ru *client.RemoteUser, sum clientdb.PostSummary, _ rpc.PostMetadata) {
+			if sum.Title == postData {
+				close(chansExcluded[i])
+			}
+		}))
+	}
 
 	// Create the post.
 	post, err := poster.CreatePost(postData, "")
 	assert.NilErr(t, err)
+
+	// Check targets that should receive the post.
 	for i := range targets {
 		select {
 		case <-chans[i]:
@@ -316,9 +331,15 @@ func assertReceivesNewPost(t testing.TB, poster *testClient, targets ...*testCli
 		}
 	}
 
+	// Check targets that should NOT receive the post.
+	assert.NoChansWritten(t, chansExcluded, time.Second)
+
 	// Teardown the handlers.
 	for i := range targets {
 		regs[i].Unregister()
+	}
+	for i := range excluded {
+		regsExcluded[i].Unregister()
 	}
 
 	return post.ID
@@ -466,6 +487,51 @@ func assertUserAvatar(t testing.TB, c, target *testClient, want []byte) {
 	ab, err := c.AddressBookEntry(target.PublicID())
 	assert.NilErr(t, err)
 	assert.DeepEqual(t, ab.ID.Avatar, want)
+}
+
+// assertPostSubscriber asserts whether client c contains the target user in
+// its list of subscribers (target is/isn't subscribed to c's posts).
+func assertPostSubscriber(t testing.TB, c, target *testClient, assertIsSubscribed bool) {
+	t.Helper()
+	subs, err := c.ListPostSubscribers()
+	assert.NilErr(t, err)
+	for _, sub := range subs {
+		if sub != target.PublicID() {
+			continue
+		}
+		if assertIsSubscribed {
+			// Is subscribed and asserting it is subscribed.
+			return
+		}
+		// Is subscribed and asserting is not subscribed.
+		t.Fatalf("Target client %s is subscribed to %s posts", target, c)
+	}
+	if assertIsSubscribed {
+		t.Fatalf("Target client %s is not subscribed to %s posts", target, c)
+	}
+}
+
+// assertPostSubscription asserts whether client c is/isn't subscribed to the
+// target user's posts. This is the reverse of assertContainsPostSubscriber.
+func assertPostSubscription(t testing.TB, c, target *testClient, assertIsSubscribed bool) {
+	t.Helper()
+	subs, err := c.ListPostSubscriptions()
+	assert.NilErr(t, err)
+	for _, sub := range subs {
+		if sub.To != target.PublicID() {
+			continue
+		}
+		if assertIsSubscribed {
+			// Is subscribed and asserting it is subscribed.
+			return
+		}
+
+		// Is subscribed and asserting is not subscribed.
+		t.Fatalf("Client %s is subscribed to %s posts", c, target)
+	}
+	if assertIsSubscribed {
+		t.Fatalf("Client %s is not subscribed to %s posts", c, target)
+	}
 }
 
 func testRand(t testing.TB) *rand.Rand {

@@ -302,6 +302,10 @@ func (tc *testClient) testInterface() *testutils.UnsafeTestInterface {
 	return i
 }
 
+func (tc *testClient) String() string {
+	return fmt.Sprintf("%q (%s)", tc.name, tc.PublicID())
+}
+
 // testLogLineScanner looks for the regexp on every write to the log and
 // collects the matches.
 type testLogLineScanner struct {

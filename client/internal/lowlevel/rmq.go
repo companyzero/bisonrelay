@@ -81,6 +81,10 @@ type RMQ struct {
 
 	nextSendChan chan *rmmsg
 	sendDoneChan chan struct{}
+
+	// beforeFetchInvoiceHook is called before attempting to fetch an
+	// invoice. This is only used in some tests.
+	beforeFetchInvoiceHook func()
 }
 
 func NewRMQ(log slog.Logger, db RMQDB) *RMQ {
@@ -98,6 +102,8 @@ func NewRMQ(log slog.Logger, db RMQDB) *RMQ {
 		nextSendChan:   make(chan *rmmsg),
 		sendDoneChan:   make(chan struct{}),
 		timingStat:     *timestats.NewTracker(250),
+
+		beforeFetchInvoiceHook: func() {},
 	}
 	q.maxMsgSize.Store(uint32(rpc.MaxMsgSizeForVersion(rpc.MaxMsgSizeV0)))
 	return q
@@ -211,6 +217,7 @@ func (q *RMQ) fetchInvoice(ctx context.Context, sess clientintf.ServerSessionInt
 		Action:        rpc.InvoiceActionPush,
 	}
 
+	q.beforeFetchInvoiceHook()
 	q.log.Debugf("Requesting %s invoice for next RM", payload.PaymentScheme)
 
 	replyChan := make(chan interface{})
@@ -247,7 +254,8 @@ func (q *RMQ) fetchInvoice(ctx context.Context, sess clientintf.ServerSessionInt
 	case error:
 		return "", reply
 	default:
-		return "", fmt.Errorf("unknown reply from server: %v", err)
+		return "", fmt.Errorf("unknown reply from server (%T): %v ",
+			reply, reply)
 	}
 }
 
