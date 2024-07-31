@@ -39,7 +39,8 @@ func newTestServer(t testing.TB) *ZKS {
 	cfg.LogFile = filepath.Join(dir, "brserver.log")
 	cfg.Listen = []string{"127.0.0.1:0"}
 	cfg.InitSessTimeout = time.Second
-	cfg.DebugLevel = "off"
+	cfg.DebugLevel = "trace"
+	cfg.LogStdOut = nil
 
 	s, err := NewServer(cfg)
 	if err != nil {
