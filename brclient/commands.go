@@ -3616,8 +3616,8 @@ var pluginCmds = []tuicmd{
 				data = []byte(args[2])
 			}
 
-			cw := as.findOrNewChatWindow(ru.ID(), ru.Nick())
-			as.pluginAction(cw, ru.ID(), action, data)
+			pw := as.findOrNewPluginWindow(ru.ID(), ru.Nick())
+			go as.pluginAction(pw, ru.ID(), action, data)
 			return nil
 		},
 	},

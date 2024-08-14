@@ -138,7 +138,9 @@ type appState struct {
 	subRate        uint64 // milliatoms / byte
 	expirationDays uint64
 
-	pluginsClient map[clientintf.PluginID]*client.PluginClient
+	pluginsClient    map[clientintf.PluginID]*client.PluginClient
+	pluginWindowsMtx sync.Mutex
+	pluginWindows    []*pluginWindow
 
 	// When written, this makes the next wallet check be skipped.
 	skipWalletCheckChan chan struct{}
@@ -1182,6 +1184,48 @@ func (as *appState) findOrNewGCWindow(gcID zkidentity.ShortID) *chatWindow {
 	as.footerInvalidate()
 	as.diagMsg("Started Group Chat %s", gcName)
 	return cw
+}
+
+func (as *appState) findOrNewPluginWindow(id clientintf.UserID, alias string) *pluginWindow {
+	as.pluginWindowsMtx.Lock()
+	for _, pw := range as.pluginWindows {
+		if pw.uid == id {
+			as.pluginWindowsMtx.Unlock()
+			return pw
+		}
+	}
+
+	if alias == "" {
+		alias, _ = as.c.UserNick(id)
+		if alias == "" {
+			alias = id.ShortLogID()
+		}
+	}
+
+	styles := as.styles.Load()
+	t := newTextAreaModel(styles)
+	t.Placeholder = "Plugin"
+	t.CharLimit = 0
+	t.FocusedStyle.Prompt = styles.focused
+	t.FocusedStyle.Text = styles.focused
+	t.BlurredStyle.Prompt = styles.noStyle
+	t.BlurredStyle.Text = styles.noStyle
+	t.Focus()
+
+	pw := &pluginWindow{
+		uid:          id,
+		alias:        strescape.Nick(alias),
+		me:           as.c.LocalNick(),
+		textArea:     t,
+		embedContent: make(map[string]string),
+	}
+	as.pluginWindows = append(as.pluginWindows, pw)
+	as.updatedCW[len(as.chatWindows)-1] = false
+	as.pluginWindowsMtx.Unlock()
+
+	as.footerInvalidate()
+	as.sendMsg(showPluginWindow{})
+	return pw
 }
 
 // findOrNewChatWindow finds the existing chat window for the given user or
@@ -2745,7 +2789,7 @@ func (as *appState) pluginVersion(cw *chatWindow, pid clientintf.PluginID) {
 	as.cwHelpMsg("plugin version: %+v\n", version)
 }
 
-func (as *appState) pluginAction(cw *chatWindow, pid clientintf.PluginID, action string, data []byte) {
+func (as *appState) pluginAction(pw *pluginWindow, pid clientintf.PluginID, action string, data []byte) {
 	if as.pluginsClient[pid] == nil {
 		as.cwHelpMsg("plugin not found")
 		return
@@ -2812,7 +2856,13 @@ func (as *appState) startReadingUpdatesAndNtfn(id zkidentity.ShortID) {
 				as.log.Error("error rendering app update %s: %v", as.pluginsClient[id].Name, err)
 				return
 			}
-			as.cwHelpMsg(res.Data)
+			as.pluginWindowsMtx.Lock()
+			for _, pw := range as.pluginWindows {
+				if pw.uid == id {
+					pw.renderPluginString(id.String(), res.Data)
+				}
+			}
+			as.pluginWindowsMtx.Unlock()
 		}
 	}()
 	go func() {

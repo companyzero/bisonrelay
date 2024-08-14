@@ -451,14 +451,12 @@ type chatMsg struct {
 
 type chatWindow struct {
 	sync.Mutex
-	uid  clientintf.UserID
-	isGC bool
-	// XXX create plugin window able to receive inputs and render data on screen.
-	isPlugin bool
-	msgs     []*chatMsg
-	alias    string
-	me       string // nick of the local user
-	gc       zkidentity.ShortID
+	uid   clientintf.UserID
+	isGC  bool
+	msgs  []*chatMsg
+	alias string
+	me    string // nick of the local user
+	gc    zkidentity.ShortID
 
 	initTime time.Time // When the cw was created and history read.
 
