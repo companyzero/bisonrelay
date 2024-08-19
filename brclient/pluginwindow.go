@@ -59,9 +59,10 @@ func (pw *pluginWindow) renderPluginString(id string, embedStr string) error {
 		pw.embedContent[id] = embedStr
 	}
 
-	// pw.textArea.InsertString(embedStr)
-	pw.embedContent[id] = embedStr
-	pw.textArea.Update(embedStr)
+	pw.ew.as.diagMsg(embedStr) // works but locks view
+
+	// pw.ew.Update(embedStr)
+
 	return nil
 }
 
@@ -192,26 +193,4 @@ func (pw pluginWindow) View() string {
 	b.WriteString(pw.footerView(styles))
 
 	return b.String()
-}
-
-func newPluginWindow(as *appState) (pluginWindow, tea.Cmd) {
-	styles := as.styles.Load()
-	t := newTextAreaModel(styles)
-	t.Placeholder = "Plugin"
-	t.CharLimit = 0
-	t.FocusedStyle.Prompt = styles.focused
-	t.FocusedStyle.Text = styles.focused
-	t.BlurredStyle.Prompt = styles.noStyle
-	t.BlurredStyle.Text = styles.noStyle
-	t.Focus()
-
-	pw := pluginWindow{
-		as:           as,
-		textArea:     t,
-		embedContent: make(map[string]string),
-	}
-
-	pw.ew = newPluginWidget(as, pw.addEmbedCB)
-	pw.updateTextAreaSize()
-	return pw, batchCmds(nil)
 }

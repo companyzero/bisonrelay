@@ -1220,8 +1220,10 @@ func (as *appState) findOrNewPluginWindow(id clientintf.UserID, alias string) *p
 		embedContent: make(map[string]string),
 	}
 	as.pluginWindows = append(as.pluginWindows, pw)
-	as.updatedCW[len(as.chatWindows)-1] = false
+	as.updatedCW[len(as.pluginWindows)-1] = false
 	as.pluginWindowsMtx.Unlock()
+
+	pw.ew = newPluginWidget(as, pw.addEmbedCB)
 
 	as.footerInvalidate()
 	as.sendMsg(showPluginWindow{})
