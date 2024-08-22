@@ -358,11 +358,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         Text(stageInfo.title),
         const SizedBox(height: 3),
         Txt.S(
-          ost.stage == OnboardStage.stageWaitingOutConfirm
-              ? "${stageInfo.tip} ${ost.outChannelConfsLeft} ${ost.outChannelConfsLeft == 1 ? 'block' : 'blocks'} left to confirm."
-              : stageInfo.tip,
+          stageInfo.tip,
           style: const TextStyle(fontStyle: FontStyle.italic),
         ),
+        if (ost.stage == OnboardStage.stageWaitingOutConfirm)
+          Txt.H(
+              " ${ost.outChannelConfsLeft} ${ost.outChannelConfsLeft == 1 ? 'block' : 'blocks'} left to confirm."),
         const SizedBox(height: 20),
         Collapsable("Additional Information",
             child:
