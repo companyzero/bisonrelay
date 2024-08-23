@@ -142,7 +142,6 @@ type appState struct {
 	pluginsClient    map[clientintf.PluginID]*client.PluginClient
 	pluginWindowsMtx sync.Mutex
 	pluginWindows    []*pluginWindow
-	activePW         int
 	activePWUID      *clientintf.PluginID
 
 	// When written, this makes the next wallet check be skipped.
@@ -850,18 +849,6 @@ func (as *appState) activeChatWindow() *chatWindow {
 		res = as.chatWindows[as.activeCW]
 	}
 	as.chatWindowsMtx.Unlock()
-	return res
-}
-
-// activeChatWindow returns the currently active chat window or nil if the
-// active window is _not_ a chat window.
-func (as *appState) activePluginWindow() *pluginWindow {
-	var res *pluginWindow
-	as.pluginWindowsMtx.Lock()
-	if as.activePW >= 0 {
-		res = as.pluginWindows[as.activePW]
-	}
-	as.pluginWindowsMtx.Unlock()
 	return res
 }
 
