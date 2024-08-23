@@ -114,7 +114,9 @@ type currentTimeChanged struct{}
 type showNewPostWindow struct{}
 
 // showPluginWindow shows the specific plugin window.
-type showPluginWindow struct{}
+type showPluginWindow struct {
+	uid *clientintf.PluginID
+}
 
 // showFeedWindow shows the feed window.
 type showFeedWindow struct {

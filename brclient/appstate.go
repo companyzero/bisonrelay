@@ -67,6 +67,7 @@ const (
 	activeCWFeed   = -2             // feed window
 	activeCWLog    = -3             // log window
 	activeCWLndLog = -4             // lnd log window
+	activeCWPlugin = -5             // plugin window
 	lastCWWindow   = activeCWLndLog // Must *ALWAYS* match the last item.
 
 	wordBreakpoints = ""
@@ -141,6 +142,8 @@ type appState struct {
 	pluginsClient    map[clientintf.PluginID]*client.PluginClient
 	pluginWindowsMtx sync.Mutex
 	pluginWindows    []*pluginWindow
+	activePW         int
+	activePWUID      *clientintf.PluginID
 
 	// When written, this makes the next wallet check be skipped.
 	skipWalletCheckChan chan struct{}
@@ -821,6 +824,10 @@ func (as *appState) activeWindowMsgs() string {
 		as.chatWindowsMtx.Unlock()
 		return ""
 
+	case as.activeCW == activeCWPlugin:
+		as.chatWindowsMtx.Unlock()
+		return ""
+
 	case as.activeCW < 0 || as.activeCW > len(as.chatWindows):
 		// Unknown window.
 		w := as.activeCW
@@ -843,6 +850,18 @@ func (as *appState) activeChatWindow() *chatWindow {
 		res = as.chatWindows[as.activeCW]
 	}
 	as.chatWindowsMtx.Unlock()
+	return res
+}
+
+// activeChatWindow returns the currently active chat window or nil if the
+// active window is _not_ a chat window.
+func (as *appState) activePluginWindow() *pluginWindow {
+	var res *pluginWindow
+	as.pluginWindowsMtx.Lock()
+	if as.activePW >= 0 {
+		res = as.pluginWindows[as.activePW]
+	}
+	as.pluginWindowsMtx.Unlock()
 	return res
 }
 
@@ -922,6 +941,13 @@ func (as *appState) changeActiveWindowToPrevActive() {
 func (as *appState) changeActiveWindow(win int) {
 	as.chatWindowsMtx.Lock()
 	defer as.chatWindowsMtx.Unlock()
+
+	if win == activeCWPlugin {
+		as.sendMsg(showPluginWindow{
+			uid: as.activePWUID,
+		})
+		return
+	}
 
 	switch {
 	case win >= lastCWWindow && win < len(as.chatWindows):
@@ -1014,6 +1040,9 @@ func (as *appState) activeWinLabel() (string, []string, map[string]struct{}) {
 
 	case as.activeCW == activeCWFeed:
 		label = "feed"
+
+	case as.activeCW == activeCWPlugin:
+		label = "plugin"
 
 	case as.activeCW >= 0 && as.activeCW < len(as.chatWindows):
 		alias := as.chatWindows[as.activeCW].alias
@@ -1186,7 +1215,7 @@ func (as *appState) findOrNewGCWindow(gcID zkidentity.ShortID) *chatWindow {
 	return cw
 }
 
-func (as *appState) findOrNewPluginWindow(id clientintf.UserID, alias string) *pluginWindow {
+func (as *appState) findOrNewPluginWindow(id clientintf.PluginID, alias string) *pluginWindow {
 	as.pluginWindowsMtx.Lock()
 	for _, pw := range as.pluginWindows {
 		if pw.uid == id {
@@ -1202,31 +1231,17 @@ func (as *appState) findOrNewPluginWindow(id clientintf.UserID, alias string) *p
 		}
 	}
 
-	styles := as.styles.Load()
-	t := newTextAreaModel(styles)
-	t.Placeholder = "Plugin"
-	t.CharLimit = 0
-	t.FocusedStyle.Prompt = styles.focused
-	t.FocusedStyle.Text = styles.focused
-	t.BlurredStyle.Prompt = styles.noStyle
-	t.BlurredStyle.Text = styles.noStyle
-	t.Focus()
-
 	pw := &pluginWindow{
-		uid:          id,
-		alias:        strescape.Nick(alias),
-		me:           as.c.LocalNick(),
-		textArea:     t,
-		embedContent: make(map[string]string),
+		uid:   id,
+		alias: strescape.Nick(alias),
+		me:    as.c.LocalNick(),
+		as:    as,
 	}
 	as.pluginWindows = append(as.pluginWindows, pw)
 	as.updatedCW[len(as.pluginWindows)-1] = false
 	as.pluginWindowsMtx.Unlock()
 
-	pw.ew = newPluginWidget(as, pw.addEmbedCB)
-
 	as.footerInvalidate()
-	as.sendMsg(showPluginWindow{})
 	return pw
 }
 
@@ -2858,13 +2873,11 @@ func (as *appState) startReadingUpdatesAndNtfn(id zkidentity.ShortID) {
 				as.log.Error("error rendering app update %s: %v", as.pluginsClient[id].Name, err)
 				return
 			}
-			as.pluginWindowsMtx.Lock()
 			for _, pw := range as.pluginWindows {
 				if pw.uid == id {
 					pw.renderPluginString(id.String(), res.Data)
 				}
 			}
-			as.pluginWindowsMtx.Unlock()
 		}
 	}()
 	go func() {

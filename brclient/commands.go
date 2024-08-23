@@ -3951,7 +3951,7 @@ var commands = []tuicmd{
 	}, {
 		cmd:           "win",
 		usableOffline: true,
-		usage:         "<number | 'log' | 'console' | 'feed [user]'>",
+		usage:         "<number | 'log' | 'console' | 'feed [user]' | 'plugin [uid]'>",
 		aliases:       []string{"w"},
 		descr:         "Change the current window",
 		handler: func(args []string, as *appState) error {
@@ -3976,6 +3976,16 @@ var commands = []tuicmd{
 					as.feedAuthor = nil
 				}
 				as.changeActiveWindow(activeCWFeed)
+			} else if args[0] == "plugin" {
+
+				ru, err := as.c.UserByNick(args[1])
+				if err != nil {
+					return err
+				}
+				pluginUID := ru.ID()
+				as.activePWUID = &pluginUID
+
+				as.changeActiveWindow(activeCWPlugin)
 			} else {
 				win, err := strconv.ParseInt(args[0], 10, 32)
 				if err != nil {

@@ -657,6 +657,7 @@ func (mws mainWindowState) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case showPluginWindow:
 		mws.as.workingCmd = ""
+		return newPluginWindow(mws.as, msg.uid)
 
 	case showFeedWindow:
 		mws.as.workingCmd = ""

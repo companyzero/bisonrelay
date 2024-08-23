@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/companyzero/bisonrelay/client/clientintf"
@@ -21,52 +22,22 @@ type pluginWindow struct {
 	errMsg string
 	debug  string
 
-	focusIdx int
-	textArea *textAreaModel
-
-	embedContent map[string]string
-	ew           *pluginWidget
-
 	estSize uint64
-}
 
-func (pw *pluginWindow) updateTextAreaSize() {
-	// marginHeight is header+footer+estimated length comment
-	marginHeight := 2 + 2 + 3
-	pw.textArea.SetWidth(pw.as.winW)
-	pw.textArea.SetHeight(pw.as.winH - marginHeight)
-}
-
-func (pw *pluginWindow) addEmbedCB(id string, data string) error {
-	if pw.estSize+uint64(len(data)) >= rpc.MaxChunkSize {
-		return fmt.Errorf("file too big to embed")
-	}
-
-	if id != "" && data != "" {
-		pw.embedContent[id] = data
-	}
-
-	pw.textArea.InsertString(data)
-	return nil
+	viewport viewport.Model
 }
 
 func (pw *pluginWindow) renderPluginString(id string, embedStr string) error {
 	// if pw.estSize+uint64(len(data)) >= rpc.MaxChunkSize {
 	// 	return fmt.Errorf("file too big to embed")
 	// }
-
-	if id != "" && embedStr != "" {
-		pw.embedContent[id] = embedStr
-	}
-
-	pw.ew.as.diagMsg(embedStr) // works but locks view
-
-	// pw.ew.Update(embedStr)
+	pw.viewport.SetContent(embedStr)
+	pw.as.sendMsg(repaintActiveChat{})
 
 	return nil
 }
 
-func (pw pluginWindow) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (pw *pluginWindow) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var (
 		cmd  tea.Cmd
 		cmds []tea.Cmd
@@ -84,7 +55,6 @@ func (pw pluginWindow) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg: // resize window
 		pw.as.winW = msg.Width
 		pw.as.winH = msg.Height
-		pw.updateTextAreaSize()
 
 	case currentTimeChanged:
 		pw.as.footerInvalidate()
@@ -93,53 +63,22 @@ func (pw pluginWindow) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		pw.as.diagMsg("Unable to paste: %v", msg)
 	}
 
-	if pw.ew.active() {
-		_, cmd = pw.ew.Update(msg)
-		return pw, cmd
-	}
-
 	// Handlers when the main post typing form is active.
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch {
 		case msg.Type == tea.KeyF2:
-			cmds = pw.ew.activate()
+			// cmds = pw.ew.activate()
 
 		case msg.Type == tea.KeyEsc:
 			// Cancel post.
 			return newMainWindowState(pw.as)
 
-		case pw.focusIdx == 1 && msg.Type == tea.KeyEnter:
-			// post := pw.textArea.Value()
-			// if post != "" {
-			// 	go pw.createPost(post)
-			// }
-
-			return newMainWindowState(pw.as)
-
-		case msg.Type == tea.KeyTab:
-			pw.focusIdx = (pw.focusIdx + 1) % 2
-			if pw.focusIdx == 0 {
-				pw.textArea.Focus()
-			} else {
-				pw.textArea.Blur()
-			}
-
-		default:
-			pw.textArea, cmd = pw.textArea.Update(msg)
-			cmds = appendCmd(cmds, cmd)
-
-			var err error
-			post := pw.textArea.Value()
-			pw.estSize, err = clientintf.EstimatePostSize(post, "")
-			if err != nil {
-				pw.errMsg = err.Error()
-			}
 		}
 
 	default:
 		// Handle other messages.
-		pw.textArea, cmd = pw.textArea.Update(msg)
+		pw.viewport, cmd = pw.viewport.Update(msg)
 		cmds = appendCmd(cmds, cmd)
 	}
 
@@ -154,8 +93,8 @@ func (pw *pluginWindow) headerView(styles *theme) string {
 	return headerMsg + spaces
 }
 
-func (pw *pluginWindow) footerView(styles *theme) string {
-	return pw.as.footerView(styles, pw.debug)
+func (pw *pluginWindow) footerView() string {
+	return pw.as.footerView(pw.as.styles.Load(), pw.debug)
 }
 
 func (pw pluginWindow) View() string {
@@ -165,32 +104,55 @@ func (pw pluginWindow) View() string {
 	b.WriteString(pw.headerView(styles))
 	b.WriteString("\n\n")
 
-	if pw.ew.active() {
-		b.WriteString(pw.ew.View())
-		b.WriteString(pw.footerView(styles))
-		return b.String()
-	}
+	b.WriteString(pw.viewport.View())
 
-	b.WriteString(pw.textArea.View())
 	b.WriteString("\n\n")
 
 	if pw.errMsg != "" {
-		b.WriteString(styles.err.Render(pw.errMsg))
+		b.WriteString(pw.errMsg)
 	} else {
 		estSizeMsg := fmt.Sprintf(" Estimated post size: %s.", hbytes(int64(pw.estSize)))
 		if pw.estSize > rpc.MaxChunkSize {
-			estSizeMsg = styles.err.Render(estSizeMsg)
+			// estSizeMsg = styles.err.Render(estSizeMsg)
+			b.WriteString(estSizeMsg)
 		}
 		b.WriteString(estSizeMsg)
 	}
-	if pw.focusIdx == 1 {
-		b.WriteString(styles.focused.Render(" [ Submit ]"))
-	} else {
-		b.WriteString(" [ Submit ]")
-	}
+
 	b.WriteString("\n\n")
 
-	b.WriteString(pw.footerView(styles))
+	b.WriteString(pw.footerView())
 
 	return b.String()
+}
+
+func (fw *pluginWindow) renderPlugin() {
+	if fw.as.winW > 0 && fw.as.winH > 0 {
+		fw.viewport.YPosition = 4
+		fw.viewport.Width = fw.as.winW
+		fw.viewport.Height = fw.as.winH - 4
+	}
+
+	var minOffset, maxOffset int
+	b := new(strings.Builder)
+
+	fw.viewport.SetContent(b.String())
+
+	// Ensure the currently selected index is visible.
+	if fw.viewport.YOffset > minOffset {
+		// Move viewport up until top of selected item is visible.
+		fw.viewport.SetYOffset(minOffset)
+	} else if bottom := fw.viewport.YOffset + fw.viewport.Height; bottom < maxOffset {
+		// Move viewport down until bottom of selected item is visible.
+		fw.viewport.SetYOffset(fw.viewport.YOffset + (maxOffset - bottom))
+	}
+}
+
+func newPluginWindow(as *appState, uid *clientintf.PluginID) (*pluginWindow, tea.Cmd) {
+	as.markWindowSeen(activeCWPlugin)
+	// pw := pluginWindow{as: as, uid: *uid}
+
+	pw := as.findOrNewPluginWindow(*uid, "")
+	pw.renderPlugin()
+	return pw, nil
 }
