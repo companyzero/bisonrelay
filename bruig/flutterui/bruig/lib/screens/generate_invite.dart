@@ -32,6 +32,8 @@ class _GenerateInviteScreenState extends State<GenerateInviteScreen> {
   String invitePath = "";
   List<bool> selFunding = [true, false];
   bool get sendFunds => selFunding[1];
+  List<bool> selKeyOrBin = [true, false];
+  bool get genInviteFile => selKeyOrBin[1];
   AmountEditingController fundAmountCtrl = AmountEditingController();
   String account = "";
   bool hasExtraAccounts = false;
@@ -104,34 +106,65 @@ class _GenerateInviteScreenState extends State<GenerateInviteScreen> {
 
   Widget buildSendFundsWidget(BuildContext context) {
     if (!hasExtraAccounts) {
-      return Container(
-        alignment: Alignment.center,
-        width: 400,
-        height: 70,
-        child: const Text(
-            "Cannot send funds from default account. Create a new account to fund invites."),
-      );
+      return const Text(
+          "Cannot send funds from default account. Create a new account to fund invites.");
     }
 
-    return Card.outlined(
-        child: Container(
-            padding: const EdgeInsets.all(10),
-            child: Row(mainAxisSize: MainAxisSize.min, children: [
-              const Text("Amount:"),
-              const SizedBox(width: 10),
-              SizedBox(width: 110, child: dcrInput(controller: fundAmountCtrl)),
-              const SizedBox(width: 20),
-              const Text("Account:"),
-              const SizedBox(width: 10),
-              SizedBox(
-                  width: 110,
-                  child: AccountsDropDown(
-                    excludeDefault: true,
-                    onChanged: (v) => setState(() {
-                      account = v;
-                    }),
-                  )),
-            ])));
+    return Column(children: [
+      const Txt.S(
+          "Include on-chain funds that the invitee can redeem into their "
+          "own wallet (useful for onboarding new users)."),
+      const SizedBox(height: 10),
+      Card.outlined(
+          child: Container(
+              padding: const EdgeInsets.all(10),
+              child: Wrap(
+                  alignment: WrapAlignment.center,
+                  runAlignment: WrapAlignment.center,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 20,
+                  runSpacing: 10,
+                  children: [
+                    SizedBox(
+                        width: 170,
+                        child: Row(children: [
+                          const Text("Amount:"),
+                          const SizedBox(width: 10),
+                          Expanded(child: dcrInput(controller: fundAmountCtrl)),
+                        ])),
+                    SizedBox(
+                        width: 170,
+                        child: Row(children: [
+                          const Text("Account:"),
+                          const SizedBox(width: 10),
+                          Expanded(
+                              child: AccountsDropDown(
+                            excludeDefault: true,
+                            onChanged: (v) => setState(() {
+                              account = v;
+                            }),
+                          )),
+                        ])),
+                  ])))
+    ]);
+  }
+
+  Widget buildGenFilePanel(BuildContext context) {
+    return Column(children: [
+      const Txt.S("The invite file must be sent to the invitee."),
+      const SizedBox(height: 10),
+      invitePath != ""
+          ? Text("Path: $invitePath")
+          : ElevatedButton(
+              onPressed: selectPath, child: const Text("Select Path"))
+    ]);
+  }
+
+  Widget buildGenKeyPanel(BuildContext context) {
+    return const Txt.S(
+        "The invite is encrypted and saved on the server. The key "
+        "must be shared with the invitee, which they use to fetch the invite from the "
+        "server.");
   }
 
   void generateInvite() async {
@@ -153,7 +186,9 @@ class _GenerateInviteScreenState extends State<GenerateInviteScreen> {
       loading = true;
     });
     try {
-      var res = await Golib.generateInvite(invitePath, amount, account, null);
+      var destPath = genInviteFile ? invitePath : "";
+      var res = await Golib.generateInvite(
+          destPath, amount, account, null, !genInviteFile);
       setState(() {
         generated = res;
       });
@@ -194,7 +229,7 @@ class _GenerateInviteScreenState extends State<GenerateInviteScreen> {
         await File(fname).writeAsBytes(picData!.buffer.asUint8List());
         await Share.shareXFiles(
             [XFile(fname, name: "br-invite.png", mimeType: "image/png")],
-            text: "bruig logs");
+            text: "bruig invite QR code");
       } else {
         // Save to file.
         var fname = await FilePicker.platform.saveFile(
@@ -213,31 +248,45 @@ class _GenerateInviteScreenState extends State<GenerateInviteScreen> {
     }
   }
 
+  void shareInviteFile() async {
+    await Share.shareXFiles([
+      XFile(invitePath,
+          name: "invite.bin", mimeType: "application/octet-stream")
+    ], text: "bruig invite file");
+  }
+
   List<Widget> buildGeneratedInvite(BuildContext context) {
     var gen = generated!;
     return [
-      InkWell(
-          onTap: !Platform.isLinux ? exportInviteQRCode : null,
-          child: Container(
-              color: Colors.white,
-              child: QrImageView(
-                  data: gen.key, version: QrVersions.auto, size: 200.0))),
+      if (gen.key != "") ...[
+        InkWell(
+            onTap: !Platform.isLinux ? exportInviteQRCode : null,
+            child: Container(
+                color: Colors.white,
+                child: QrImageView(
+                    data: gen.key, version: QrVersions.auto, size: 200.0))),
+        const SizedBox(height: 20),
+        Copyable(gen.key),
+      ],
+      if (genInviteFile) ...[
+        Platform.isAndroid || Platform.isIOS
+            ? OutlinedButton(
+                onPressed: shareInviteFile,
+                child: const Text("Share invite file"))
+            : Text("Send the file $invitePath to the invitee"),
+      ],
       const SizedBox(height: 20),
-      Copyable(gen.key),
-      const SizedBox(height: 20),
-      ...(gen.funds != null
-          ? [
-              const SizedBox(height: 20),
-              const Text(
-                  "Invite funds available after the following TX is confirmed"),
-              Copyable(gen.funds!.txid),
-            ]
-          : []),
+      if (gen.funds != null) ...[
+        const SizedBox(height: 20),
+        const Text(
+            "Invite funds available after the following TX is confirmed"),
+        Copyable(gen.funds!.txid),
+      ],
       const SizedBox(height: 20),
       const SizedBox(
           width: 600,
           child: Text(
-              "Note: invite keys are NOT public. They should ONLY be sent to the intended "
+              "Note: invites are NOT public. They should ONLY be sent to the intended "
               "recipient using a secure communication channel, such as an encrypted chat system.",
               style: TextStyle(fontStyle: FontStyle.italic))),
       const SizedBox(height: 20),
@@ -248,13 +297,29 @@ class _GenerateInviteScreenState extends State<GenerateInviteScreen> {
 
   List<Widget> buildGeneratePanel(BuildContext context) {
     return [
+      ToggleButtons(
+          borderRadius: const BorderRadius.all(Radius.circular(8)),
+          constraints: const BoxConstraints(minHeight: 40, minWidth: 100),
+          onPressed: (int index) {
+            setState(() {
+              for (int i = 0; i < selKeyOrBin.length; i++) {
+                selKeyOrBin[i] = i == index;
+              }
+            });
+          },
+          isSelected: selKeyOrBin,
+          children: const [
+            Text("Key"),
+            Text("File"),
+          ]),
       Container(
-          alignment: Alignment.center,
-          width: 400,
-          child: invitePath != ""
-              ? Text("Path: $invitePath")
-              : ElevatedButton(
-                  onPressed: selectPath, child: const Text("Select Path"))),
+          alignment: Alignment.topCenter,
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          width: 500,
+          constraints: const BoxConstraints(minHeight: 130),
+          child: genInviteFile
+              ? buildGenFilePanel(context)
+              : buildGenKeyPanel(context)),
       const SizedBox(height: 20),
       ToggleButtons(
           borderRadius: const BorderRadius.all(Radius.circular(8)),
@@ -272,9 +337,15 @@ class _GenerateInviteScreenState extends State<GenerateInviteScreen> {
             Text("Send Funds"),
           ]),
       const SizedBox(height: 20),
-      sendFunds
-          ? buildSendFundsWidget(context)
-          : const SizedBox(width: 400, height: 76),
+      Container(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          alignment: Alignment.topCenter,
+          width: 500,
+          constraints: const BoxConstraints(minHeight: 200),
+          child: sendFunds
+              ? buildSendFundsWidget(context)
+              : const Txt.S(
+                  "Invitee must have funds and open LN channels to accept invite.")),
       const SizedBox(height: 20),
       SizedBox(
           width: 300,
@@ -283,8 +354,9 @@ class _GenerateInviteScreenState extends State<GenerateInviteScreen> {
               runSpacing: 10,
               children: [
                 OutlinedButton(
-                    onPressed:
-                        !loading && invitePath != "" ? generateInvite : null,
+                    onPressed: !loading && (!genInviteFile || invitePath != "")
+                        ? generateInvite
+                        : null,
                     child: const Text("Generate invite")),
                 CancelButton(onPressed: () => Navigator.pop(context))
               ])),

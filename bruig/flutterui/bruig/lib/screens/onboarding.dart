@@ -317,9 +317,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     } else if (ostate == null) {
       children = [
         InvitePanel(
-          (newInvitePath, newInviteKey) {
+          (newInvitePath, newInviteKey, newByKey) {
             setState(() {
-              inviteKey = newInviteKey ?? "";
+              inviteKey = newByKey ? newInviteKey ?? "" : "";
             });
           },
         ),

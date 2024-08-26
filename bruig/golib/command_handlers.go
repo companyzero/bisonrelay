@@ -793,7 +793,16 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		}
 
 		b := &bytes.Buffer{}
-		pii, pik, err := c.CreatePrepaidInvite(b, funds)
+		var pii rpc.OOBPublicIdentityInvite
+		var pik *clientintf.PaidInviteKey
+		var err error
+		if args.Prepaid {
+			var key clientintf.PaidInviteKey
+			pii, key, err = c.CreatePrepaidInvite(b, funds)
+			pik = &key
+		} else {
+			pii, err = c.WriteNewInvite(b, funds)
+		}
 		if err != nil {
 			return nil, err
 		}

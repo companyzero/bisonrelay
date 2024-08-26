@@ -208,7 +208,7 @@ GeneratedKXInvite _$GeneratedKXInviteFromJson(Map<String, dynamic> json) =>
       json['funds'] == null
           ? null
           : InviteFunds.fromJson(json['funds'] as Map<String, dynamic>),
-      json['key'] as String,
+      json['key'] as String? ?? '',
     );
 
 Map<String, dynamic> _$GeneratedKXInviteToJson(GeneratedKXInvite instance) =>
@@ -1426,6 +1426,7 @@ Map<String, dynamic> _$PostListItemToJson(PostListItem instance) =>
     <String, dynamic>{
       'id': instance.id,
       'title': instance.title,
+      'timestamp': instance.timestamp,
     };
 
 UserPostList _$UserPostListFromJson(Map<String, dynamic> json) => UserPostList(
@@ -1838,6 +1839,7 @@ WriteInvite _$WriteInviteFromJson(Map<String, dynamic> json) => WriteInvite(
       json['fund_amount'] as int,
       json['fund_account'] as String,
       json['gc_id'] as String?,
+      json['prepaid'] as bool,
     );
 
 Map<String, dynamic> _$WriteInviteToJson(WriteInvite instance) =>
@@ -1845,6 +1847,7 @@ Map<String, dynamic> _$WriteInviteToJson(WriteInvite instance) =>
       'fund_amount': instance.fundAmount,
       'fund_account': instance.fundAccount,
       'gc_id': instance.gcid,
+      'prepaid': instance.prepaid,
     };
 
 RedeemedInviteFunds _$RedeemedInviteFundsFromJson(Map<String, dynamic> json) =>
