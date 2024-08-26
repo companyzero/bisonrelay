@@ -241,6 +241,7 @@ class GeneratedKXInvite {
   @JsonKey(fromJson: base64Decode)
   final Uint8List blob;
   final InviteFunds? funds;
+  @JsonKey(defaultValue: '')
   final String key;
 
   GeneratedKXInvite(this.blob, this.funds, this.key);
@@ -1872,8 +1873,9 @@ class WriteInvite {
   final String fundAccount;
   @JsonKey(name: "gc_id")
   final String? gcid;
+  final bool prepaid;
 
-  WriteInvite(this.fundAmount, this.fundAccount, this.gcid);
+  WriteInvite(this.fundAmount, this.fundAccount, this.gcid, this.prepaid);
   Map<String, dynamic> toJson() => _$WriteInviteToJson(this);
 }
 
@@ -2541,12 +2543,14 @@ abstract class PluginPlatform {
     return await asyncCall(CTGetUserNick, uid);
   }
 
-  Future<GeneratedKXInvite> generateInvite(
-      String filepath, int fundAmount, String fundAccount, String? gcid) async {
-    var req = WriteInvite(fundAmount, fundAccount, gcid);
+  Future<GeneratedKXInvite> generateInvite(String filepath, int fundAmount,
+      String fundAccount, String? gcid, bool prepaid) async {
+    var req = WriteInvite(fundAmount, fundAccount, gcid, prepaid);
     var res = GeneratedKXInvite.fromJson(await asyncCall(CTInvite, req));
-    var f = File(filepath);
-    await f.writeAsBytes(res.blob);
+    if (filepath != "") {
+      var f = File(filepath);
+      await f.writeAsBytes(res.blob);
+    }
     return res;
   }
 
@@ -3082,8 +3086,10 @@ abstract class PluginPlatform {
 
   Future<Invitation> fetchInvite(String key, String filepath) async {
     var res = Invitation.fromJson(await asyncCall(CTFetchInvite, key));
-    var f = File(filepath);
-    await f.writeAsBytes(res.blob!);
+    if (filepath != "") {
+      var f = File(filepath);
+      await f.writeAsBytes(res.blob!);
+    }
     return res;
   }
 

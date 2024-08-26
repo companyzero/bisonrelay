@@ -420,12 +420,13 @@ type writeInvite struct {
 	FundAmount  dcrutil.Amount      `json:"fund_amount"`
 	FundAccount string              `json:"fund_account"`
 	GCID        *zkidentity.ShortID `json:"gc_id"`
+	Prepaid     bool                `json:"prepaid"`
 }
 
 type generatedKXInvite struct {
-	Blob  []byte                   `json:"blob"`
-	Funds *rpc.InviteFunds         `json:"funds"`
-	Key   clientintf.PaidInviteKey `json:"key"`
+	Blob  []byte                    `json:"blob"`
+	Funds *rpc.InviteFunds          `json:"funds"`
+	Key   *clientintf.PaidInviteKey `json:"key"`
 }
 
 type redeemedInviteFunds struct {

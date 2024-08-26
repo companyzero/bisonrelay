@@ -344,7 +344,7 @@ class _ActiveChatsListMenuState extends State<ActiveChatsListMenu> {
                   icon: Icons.list_outlined),
               _FooterIconButton(
                   onlyWhenOnline: true,
-                  tooltip: "Fetch invite using key",
+                  tooltip: "Fetch, import or accept invite",
                   onPressed: () => fetchInvite(context),
                   icon: Icons.get_app_outlined),
               _FooterIconButton(

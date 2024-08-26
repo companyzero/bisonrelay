@@ -24,7 +24,7 @@ class _InviteMode {
   _InviteMode(this.label, this.mode, this.builder, {this.selected = false});
 }
 
-typedef OnInviteChanged = Function(String? invitePath, String? key);
+typedef OnInviteChanged = Function(String? invitePath, String? key, bool byKey);
 
 class InvitePanel extends StatefulWidget {
   final OnInviteChanged onInviteChanged;
@@ -65,7 +65,7 @@ class _InvitePanelState extends State<InvitePanel> {
       }
       inviteModes[selInviteMode].selected = true;
     });
-    widget.onInviteChanged(null, key);
+    widget.onInviteChanged(null, key, true);
   }
 
   @override
@@ -104,27 +104,36 @@ class _InvitePanelState extends State<InvitePanel> {
     setState(() {
       path = res.files[0].path!;
     });
-    widget.onInviteChanged(path, null);
+    widget.onInviteChanged(path, null, false);
   }
 
   Widget buildPanelKey(BuildContext context) {
-    return TextField(
-      onChanged: (v) => widget.onInviteChanged(null, v),
-      controller: keyCtrl,
-      decoration: const InputDecoration(
-        hintText: "Input key (bpik1...)",
-      ),
-    );
+    return Container(
+        constraints: const BoxConstraints(maxWidth: 500),
+        child: Column(children: [
+          TextField(
+              onChanged: (v) => widget.onInviteChanged(null, v, true),
+              controller: keyCtrl,
+              decoration: const InputDecoration(
+                hintText: "Input key (bpik1...)",
+              )),
+          const SizedBox(height: 20),
+          const Txt.S(
+              "Note: invite keys can only be fetched once from the server.",
+              style: TextStyle(fontStyle: FontStyle.italic))
+        ]));
   }
 
   Widget buildPanelCamera(BuildContext context) {
-    return MobileScanner(
-      // fit: BoxFit.contain,
-      controller: scannerCtrl!,
-      errorBuilder: (context, error, child) {
-        return Text("Scanning error: $error");
-      },
-    );
+    return SizedBox(
+        width: 300,
+        height: 300,
+        child: MobileScanner(
+          controller: scannerCtrl!,
+          errorBuilder: (context, error, child) {
+            return Text("Scanning error: $error");
+          },
+        ));
   }
 
   Widget buildPanelFile(BuildContext context) {
@@ -138,7 +147,7 @@ class _InvitePanelState extends State<InvitePanel> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(children: [
+    return Column(mainAxisSize: MainAxisSize.min, children: [
       ToggleButtons(
           onPressed: (index) {
             setState(() {
@@ -151,15 +160,14 @@ class _InvitePanelState extends State<InvitePanel> {
           },
           borderRadius: const BorderRadius.all(Radius.circular(8)),
           constraints: const BoxConstraints(minHeight: 40, minWidth: 80),
-          // color: Colors.blue,
           isSelected: inviteModes.map((e) => e.selected).toList(),
           children: inviteModes.map((e) => Text(e.label)).toList()),
       const SizedBox(height: 20),
-      SizedBox(
-        width: 300,
-        height: 300,
+      Flexible(
+          child: Container(
+        constraints: const BoxConstraints(minHeight: 300),
         child: inviteModes[selInviteMode].builder(context),
-      ),
+      )),
     ]);
   }
 }
@@ -186,11 +194,14 @@ class _FetchInviteScreenState extends State<FetchInviteScreen> {
   bool loading = false;
   String? invitePath;
   String? inviteKey;
+  bool byKey = false;
 
-  void onInviteChanged(String? newInvitePath, String? newInviteKey) {
+  void onInviteChanged(
+      String? newInvitePath, String? newInviteKey, bool newByKey) {
     setState(() {
       invitePath = newInvitePath;
       inviteKey = newInviteKey;
+      byKey = newByKey;
     });
   }
 
@@ -200,10 +211,16 @@ class _FetchInviteScreenState extends State<FetchInviteScreen> {
     try {
       var key = inviteKey ?? "";
       var path = invitePath ?? await _tempInviteDownloadPath();
-      var invite = await Future.any([
-        Golib.fetchInvite(key, path),
-        Future.delayed(const Duration(seconds: 30), () => null)
-      ]);
+
+      dynamic invite;
+      if (byKey && key != "") {
+        invite = await Future.any([
+          Golib.fetchInvite(key, path),
+          Future.delayed(const Duration(seconds: 30), () => null)
+        ]);
+      } else {
+        invite = await Golib.decodeInvite(path);
+      }
       if (invite == null) {
         throw "No reply after 30 seconds - invite not sent or already fetched";
       }
