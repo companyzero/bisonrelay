@@ -298,6 +298,7 @@ class VideoMarkdownElementBuilder extends MarkdownElementBuilder {
   }
 }
 */
+
 class MarkdownArea extends StatelessWidget {
   static final extensionSet = md.ExtensionSet(
       md.ExtensionSet.gitHubFlavored.blockSyntaxes,
@@ -325,9 +326,19 @@ class MarkdownArea extends StatelessWidget {
     FormBlockSyntax(),
   ];
 
+  static final _startTagBugRe = RegExp(r'^\s*(<[^>\s]+\s*>)$');
+
+  static String _cleanupSrcText(String text) {
+    // This renderer has a bug where a raw text "<foo>" needs escaping, otherwise
+    // its not rendered.
+    return text.replaceFirstMapped(_startTagBugRe, (m) => "\\${m[1]}");
+  }
+
   final String text;
   final bool hasNick;
-  const MarkdownArea(this.text, this.hasNick, {Key? key}) : super(key: key);
+  MarkdownArea(srcText, this.hasNick, {Key? key})
+      : text = MarkdownArea._cleanupSrcText(srcText),
+        super(key: key);
 
   Future<void> launchUrlAwait(context, url) async {
     var parsed = Uri.parse(url);
