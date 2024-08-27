@@ -132,9 +132,6 @@ func (z *ZKS) handleSubscribeRoutedMessages(ctx context.Context, msg rpc.Message
 		return fmt.Errorf("areSubsPaid: %v", err)
 	}
 
-	// Create a subscription for messages in sessionSubscribe()
-	sc.msgSetC <- r
-
 	// Generate the next invoice that needs to be paid, if needed.
 	switch z.settings.PayScheme {
 	case rpc.PaySchemeFree:
@@ -174,6 +171,9 @@ func (z *ZKS) handleSubscribeRoutedMessages(ctx context.Context, msg rpc.Message
 		},
 		Payload: payload,
 	}
+
+	// Create a subscription for messages in sessionSubscribe()
+	sc.msgSetC <- r
 
 	return nil
 }

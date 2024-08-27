@@ -361,10 +361,6 @@ func TestReceivesStoredRM(t *testing.T) {
 	// The RM should be pushed in the second session.
 	_, gotPayload := readNextServerMsg(t, kx2)
 	pushedRM, ok := gotPayload.(*rpc.PushRoutedMessage)
-
-	// FIXME: Failures here mean the subscription reply came before the
-	// pushed message. This needs to be correctly enforeced by the server
-	// (sub replies should always come before pushed messages).
 	assert.DeepEqual(t, ok, true)
 	assert.DeepEqual(t, pushedRM.RV, rv)
 	assert.DeepEqual(t, pushedRM.Payload, rm.Message)
