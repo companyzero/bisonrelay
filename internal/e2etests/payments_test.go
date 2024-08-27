@@ -317,6 +317,7 @@ func TestTipUserMultipleAttempts(t *testing.T) {
 // attempts are needed and the clients are restarted.
 func TestTipUserWithRestarts(t *testing.T) {
 	t.Parallel()
+
 	tcfg := testScaffoldCfg{}
 	ts := newTestScaffold(t, tcfg)
 	alice := ts.newClient("alice")
@@ -971,11 +972,12 @@ func TestRecvTipPersistsSuccess(t *testing.T) {
 	})
 
 	// The first execution will not return until bob is done.
+	firstBobCtx := bob.ctx
 	bob.mpc.HookTrackInvoice(func(inv string, _ int64) (int64, error) {
 		if inv == customInvoice {
-			<-bob.ctx.Done()
+			<-firstBobCtx.Done()
 		}
-		return 0, bob.ctx.Err()
+		return 0, firstBobCtx.Err()
 	})
 
 	// The first hook to Bob's OnTipReceivedNtfn should not be triggered.

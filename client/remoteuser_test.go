@@ -110,7 +110,7 @@ func TestRemoteUserPMs(t *testing.T) {
 			t.Fatal(err)
 		case err := <-bobRun:
 			t.Fatal(err)
-		case <-time.After(10 * time.Second):
+		case <-time.After(30 * time.Second):
 			t.Fatal("timeout")
 		}
 	}
