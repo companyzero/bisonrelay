@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:bruig/components/copyable.dart';
 import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/components/recent_log.dart';
@@ -282,8 +284,19 @@ class _LNChainSyncPageState extends State<_LNChainSyncPage> {
           if (initialHeight == -1) {
             initialHeight = update.blockHeight;
           }
-          progress = (update.blockHeight - initialHeight) /
-              ((currentTimeStamp - startBlockTimestamp) / fiveMinBlock);
+
+          var expectedHeight =
+              (currentTimeStamp - startBlockTimestamp) / fiveMinBlock;
+          var expectedBlocks = max(expectedHeight - initialHeight, 0);
+          var fetchedBlocks = update.blockHeight - initialHeight;
+          if (fetchedBlocks > expectedBlocks) {
+            progress = 1;
+          } else if (expectedBlocks == 0) {
+            progress = 0;
+          } else {
+            progress = fetchedBlocks / expectedBlocks;
+          }
+
           var now = DateTime.now();
           elapsed = now.difference(startTime);
           if (progress > 0) {
@@ -306,8 +319,6 @@ class _LNChainSyncPageState extends State<_LNChainSyncPage> {
   void initState() {
     super.initState();
     readSyncProgress();
-
-    // TODO: check if already synced.
   }
 
   void syncCompleted() async {
