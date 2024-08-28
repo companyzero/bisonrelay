@@ -38,7 +38,7 @@ dependencies:
   ini: ^2.1.0
   args: ^2.3.0
   tuple: ^2.0.0
-  window_manager: ^0.3.1
+  window_manager: ^0.4.2
   shared_preferences: ^2.0.15
   intl: ^0.18.1
   sidebarx: ^0.17.1

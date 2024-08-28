@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'dart:io';
 
 import 'package:bruig/components/copyable.dart';
 import 'package:bruig/components/empty_widget.dart';
@@ -7,12 +8,14 @@ import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/components/buttons.dart';
 import 'package:bruig/components/collapsable.dart';
 import 'package:bruig/components/text.dart';
+import 'package:bruig/models/shutdown.dart';
 import 'package:bruig/models/snackbar.dart';
 import 'package:bruig/screens/about.dart';
 import 'package:bruig/config.dart';
 import 'package:bruig/main.dart';
 import 'package:bruig/models/log.dart';
 import 'package:bruig/screens/config_network.dart';
+import 'package:bruig/screens/shutdown.dart';
 import 'package:bruig/screens/startupscreen.dart';
 import 'package:bruig/util.dart';
 import 'package:flutter/material.dart';
@@ -20,6 +23,7 @@ import 'package:golib_plugin/golib_plugin.dart';
 import 'package:path/path.dart' as path;
 import 'package:provider/provider.dart';
 import 'package:bruig/theme_manager.dart';
+import 'package:window_manager/window_manager.dart';
 
 class UnlockLNApp extends StatefulWidget {
   Config cfg;
@@ -36,13 +40,45 @@ class UnlockLNApp extends StatefulWidget {
   State<UnlockLNApp> createState() => _UnlockLNAppState();
 }
 
-class _UnlockLNAppState extends State<UnlockLNApp> {
+class _UnlockLNAppState extends State<UnlockLNApp> with WindowListener {
+  final navkey = GlobalKey<NavigatorState>(debugLabel: "unlock-navigator");
+  final isMobile = Platform.isIOS || Platform.isAndroid;
+
+  bool pushedToShutdown = false;
+  @override
+  void onWindowClose() async {
+    var isPreventClose = await windowManager.isPreventClose();
+    if (!isPreventClose) return;
+    if (!pushedToShutdown) {
+      ShutdownScreen.startShutdownFromNavKey(navkey);
+      pushedToShutdown = true;
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    if (!isMobile) {
+      windowManager.addListener(this);
+      windowManager.setPreventClose(true);
+    }
+  }
+
+  @override
+  void dispose() {
+    if (!isMobile) {
+      windowManager.removeListener(this);
+    }
+    super.dispose();
+  }
+
   Config get cfg => widget.cfg;
   @override
   Widget build(BuildContext context) {
     return Consumer<ThemeNotifier>(
         builder: (context, theme, child) => MaterialApp(
               title: "Connect to Bison Relay",
+              navigatorKey: navkey,
               initialRoute: widget.initialRoute,
               theme: theme.theme,
               routes: {
@@ -51,6 +87,8 @@ class _UnlockLNAppState extends State<UnlockLNApp> {
                     const ConfigNetworkScreen(),
                 "/sync": (context) => _LNChainSyncPage(widget.cfg),
                 '/about': (context) => const AboutScreen(),
+                ShutdownScreen.routeName: (context) =>
+                    ShutdownScreen(globalLogModel, globalShutdownModel),
               },
               builder: (BuildContext context, Widget? child) => Scaffold(
                 body:

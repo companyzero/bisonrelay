@@ -1,7 +1,9 @@
 import 'dart:async';
 
 import 'package:bruig/components/snackbars.dart';
+import 'package:bruig/models/log.dart';
 import 'package:bruig/models/newconfig.dart';
+import 'package:bruig/models/shutdown.dart';
 import 'package:bruig/models/snackbar.dart';
 import 'package:bruig/screens/config_network.dart';
 import 'package:bruig/screens/newconfig/delete_old_wallet.dart';
@@ -16,6 +18,7 @@ import 'package:bruig/screens/newconfig/network_choice.dart';
 import 'package:bruig/screens/newconfig/restore_wallet.dart';
 import 'package:bruig/screens/newconfig/server.dart';
 import 'package:bruig/screens/about.dart';
+import 'package:bruig/screens/shutdown.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:bruig/theme_manager.dart';
@@ -73,6 +76,8 @@ class _NewConfigScreenState extends State<NewConfigScreen> {
           ConfigNetworkScreen.routeName: (context) => ConfigNetworkScreen(
                 newConf: newconf,
               ),
+          ShutdownScreen.routeName: (context) =>
+              ShutdownScreen(globalLogModel, globalShutdownModel)
         },
         builder: (BuildContext context, Widget? child) => Scaffold(
           body: SnackbarDisplayer(snackBar, Center(child: child)),

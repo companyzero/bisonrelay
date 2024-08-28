@@ -8,6 +8,7 @@ import 'package:bruig/models/menus.dart';
 import 'package:bruig/models/payments.dart';
 import 'package:bruig/models/resources.dart';
 import 'package:bruig/models/wallet.dart';
+import 'package:bruig/models/shutdown.dart';
 import 'package:bruig/notification_service.dart';
 import 'package:bruig/screens/about.dart';
 import 'package:bruig/models/snackbar.dart';
@@ -59,8 +60,9 @@ void main(List<String> args) async {
     // Ensure the platform bindings are initialized.
     WidgetsFlutterBinding.ensureInitialized();
 
-    // Create global logger.
+    // Create global models.
     initGlobalLogModel();
+    initGlobalShutdownModel();
 
     // This debugs both the dart platform adapter and the native bindings.
     developer.log("Platform: ${Golib.majorPlatform}/${Golib.minorPlatform}");
@@ -154,13 +156,15 @@ Future<void> runMainApp(Config cfg) async {
       ChangeNotifierProvider(create: (c) => PaymentsModel()),
       ChangeNotifierProvider(create: (c) => WalletModel()),
     ],
-    child: App(cfg),
+    child: App(cfg, globalLogModel, globalShutdownModel),
   ));
 }
 
 class App extends StatefulWidget {
   final Config cfg;
-  const App(this.cfg, {Key? key}) : super(key: key);
+  final LogModel log;
+  final ShutdownModel shutdown;
+  const App(this.cfg, this.log, this.shutdown, {Key? key}) : super(key: key);
 
   @override
   State<App> createState() => _AppState();
@@ -168,10 +172,7 @@ class App extends StatefulWidget {
 
 class _AppState extends State<App> with WindowListener {
   final navkey = GlobalKey<NavigatorState>(debugLabel: "main-navigator");
-  final StreamController<ConfNotification> shutdownNtfs =
-      StreamController<ConfNotification>();
   final isMobile = Platform.isIOS || Platform.isAndroid;
-  bool pushedToShutdown = false;
   late final AppLifecycleListener lifecycleListener;
   Timer? forceDetachTimer;
 
@@ -187,11 +188,14 @@ class _AppState extends State<App> with WindowListener {
     initClient();
     !isMobile ? windowManager.setPreventClose(true) : null;
     NotificationService().init();
+
+    widget.shutdown.addListener(shutdownChanged);
   }
 
   @override
   void dispose() {
     !isMobile ? windowManager.removeListener(this) : null;
+    widget.shutdown.removeListener(shutdownChanged);
     super.dispose();
   }
 
@@ -211,15 +215,37 @@ class _AppState extends State<App> with WindowListener {
     }
   }
 
+  bool pushedToShutdown = false;
+
   @override
   void onWindowClose() async {
     var isPreventClose = await windowManager.isPreventClose();
     if (!isPreventClose) return;
     if (!pushedToShutdown) {
-      navkey.currentState!
-          .pushNamedAndRemoveUntil('/shutdown', (Route r) => false);
+      ShutdownScreen.startShutdownFromNavKey(navkey);
       pushedToShutdown = true;
     }
+  }
+
+  bool clientStopped = false;
+  void shutdownChanged() {
+    if (!clientStopped && widget.shutdown.clientStopped) {
+      // Check if we were in shutdown screen.
+      String? currentPath;
+      navkey.currentState?.popUntil((route) {
+        currentPath = route.settings.name;
+        return true;
+      });
+      if (currentPath != ShutdownScreen.routeName) {
+        // Not a clean shutdown.
+        navkey.currentState!.pushNamedAndRemoveUntil(
+            "/fatalError", (route) => false,
+            arguments:
+                "Client stopped outside shutdown flow: ${widget.shutdown.clientStopErr}");
+      }
+    }
+
+    clientStopped = widget.shutdown.clientStopped;
   }
 
   void initClient() async {
@@ -360,25 +386,6 @@ class _AppState extends State<App> with WindowListener {
               .pushNamed("/confirmFileDownload", arguments: data);
           break;
 
-        case NTLNDcrlndStopped:
-          shutdownNtfs.add(ntf);
-          break;
-
-        case NTClientStopped:
-          String? currentPath;
-          navkey.currentState?.popUntil((route) {
-            currentPath = route.settings.name;
-            return true;
-          });
-          if (currentPath != "/shutdown") {
-            // Not a clean shutdown.
-            navkey.currentState!.pushNamedAndRemoveUntil(
-                "/fatalError", (route) => false,
-                arguments: ntf.payload);
-          }
-          shutdownNtfs.add(ntf);
-          break;
-
         case NTInvoiceGenFailed:
           var fail = ntf.payload as InvoiceGenFailed;
           var ntfns = Provider.of<AppNotifications>(context, listen: false);
@@ -448,11 +455,8 @@ class _AppState extends State<App> with WindowListener {
                     builder: (context, theme, child) => ThemeTestScreen(theme)),
                 GCInvitationsScreen.routeName: (context) =>
                     const GCInvitationsScreen(),
-                '/shutdown': (context) => Consumer<LogModel>(
-                    builder: (context, log, child) => ShutdownScreen(
-                        widget.cfg.walletType == "internal",
-                        shutdownNtfs.stream,
-                        log)),
+                ShutdownScreen.routeName: (context) =>
+                    ShutdownScreen(widget.log, widget.shutdown),
               },
               onGenerateRoute: (settings) {
                 late Widget page;

@@ -8,6 +8,7 @@ import 'package:bruig/components/text.dart';
 import 'package:bruig/config.dart';
 import 'package:bruig/models/log.dart';
 import 'package:bruig/models/snackbar.dart';
+import 'package:bruig/screens/shutdown.dart';
 import 'package:bruig/storage_manager.dart';
 import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:file_picker/file_picker.dart';
@@ -344,11 +345,7 @@ class _LogSettingsScreenState extends State<LogSettingsScreen> {
   }
 
   void doRestart() {
-    if (Platform.isAndroid || Platform.isIOS) {
-      Restart.restartApp();
-    } else {
-      SystemNavigator.pop();
-    }
+    ShutdownScreen.startShutdown(context, restart: true);
   }
 
   void doChangeConfig() async {

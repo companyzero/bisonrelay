@@ -1,4 +1,4 @@
-import 'package:bruig/screens/shutdown.dart';
+import 'package:bruig/models/shutdown.dart';
 import 'package:flutter/material.dart';
 
 // Fatal error screen is for errors that are very fatal: no access to anything
@@ -26,7 +26,7 @@ class FatalErrorScreen extends StatelessWidget {
                           style: TextStyle(color: Colors.grey[300]))),
                   const SizedBox(height: 20),
                   const FilledButton(
-                      onPressed: quitApp, child: Text("Force Quit App")),
+                      onPressed: forceQuitApp, child: Text("Force Quit App")),
                 ])));
   }
 }
