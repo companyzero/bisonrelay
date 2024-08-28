@@ -1,31 +1,36 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/components/recent_log.dart';
 import 'package:bruig/components/text.dart';
 import 'package:bruig/models/log.dart';
+import 'package:bruig/models/shutdown.dart';
 import 'package:bruig/screens/startupscreen.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:golib_plugin/definitions.dart';
-import 'package:golib_plugin/golib_plugin.dart';
-import 'package:window_manager/window_manager.dart';
-
-void quitApp() {
-  if (Platform.isAndroid || Platform.isIOS) {
-    SystemChannels.platform.invokeMethod('SystemNavigator.pop');
-  } else {
-    windowManager.destroy();
-  }
-}
 
 class ShutdownScreen extends StatefulWidget {
-  final bool internalDcrlnd;
-  final Stream<ConfNotification> ntfs;
+  static const routeName = "/shutdown";
+
+  static void startShutdown(BuildContext context, {bool restart = false}) {
+    Timer(const Duration(milliseconds: 100), () {
+      // Remove everything from nav history because user shouldn't navigate back after
+      // shutdown starts.
+      Navigator.of(context, rootNavigator: true).pushNamedAndRemoveUntil(
+        routeName,
+        (_) => false,
+        arguments: restart,
+      );
+    });
+  }
+
+  static void startShutdownFromNavKey(GlobalKey<NavigatorState> navkey) {
+    navkey.currentState!
+        .pushNamedAndRemoveUntil(ShutdownScreen.routeName, (_) => false);
+  }
+
   final LogModel log;
-  const ShutdownScreen(this.internalDcrlnd, this.ntfs, this.log, {Key? key})
-      : super(key: key);
+  final ShutdownModel shutdown;
+  const ShutdownScreen(this.log, this.shutdown, {Key? key}) : super(key: key);
 
   @override
   State<ShutdownScreen> createState() => _ShutdownScreenState();
@@ -33,50 +38,36 @@ class ShutdownScreen extends StatefulWidget {
 
 class _ShutdownScreenState extends State<ShutdownScreen> {
   String? clientStopErr;
+  bool clientStopped = false;
+  bool dcrlndStopped = false;
 
-  void handleNotifications() async {
-    await for (var ntf in widget.ntfs) {
-      switch (ntf.type) {
-        case NTClientStopped:
-          if (ntf.payload != null) {
-            setState(() {
-              clientStopErr = "${ntf.payload}";
-            });
-          }
-
-          if (widget.internalDcrlnd) {
-            Golib.lnStopDcrlnd();
-          } else {
-            quitApp();
-          }
-          break;
-
-        case NTLNDcrlndStopped:
-          Timer(const Duration(seconds: 1), quitApp);
-          break;
-
-        default:
-          debugPrint("XXXX got ntf ${ntf.type}");
-      }
-    }
-  }
-
-  void initShutdown() async {
-    handleNotifications();
-
-    // Ensure we ask for the shutdown only after hooking into the
-    // confirmations() stream.
-    if (Platform.isAndroid) {
-      Golib.setNtfnsEnabled(false);
-      Golib.stopForegroundSvc();
-    }
-    Timer(const Duration(milliseconds: 100), Golib.stopClient);
+  void updated() {
+    setState(() {
+      clientStopped = widget.shutdown.clientStopped;
+      dcrlndStopped = widget.shutdown.dcrlndStopped;
+      clientStopErr = widget.shutdown.clientStopErr;
+    });
   }
 
   @override
   void initState() {
     super.initState();
-    initShutdown();
+    widget.shutdown.addListener(updated);
+
+    // Start shutdown.
+    Timer(const Duration(milliseconds: 100), () {
+      bool restart = false;
+      if (ModalRoute.of(context)!.settings.arguments != null) {
+        restart = ModalRoute.of(context)!.settings.arguments as bool;
+      }
+      widget.shutdown.startShutdown(restart: restart);
+    });
+  }
+
+  @override
+  void dispose() {
+    widget.shutdown.removeListener(updated);
+    super.dispose();
   }
 
   @override

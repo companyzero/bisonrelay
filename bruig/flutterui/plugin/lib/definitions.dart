@@ -2197,6 +2197,10 @@ mixin NtfStreams {
       StreamController<ConfNotification>();
   Stream<ConfNotification> confirmations() => ntfConfs.stream;
 
+  StreamController<ConfNotification> ntfShutdown =
+      StreamController<ConfNotification>();
+  Stream<ConfNotification> shutdownEvents() => ntfShutdown.stream;
+
   StreamController<ServerSessionState> ntfServerSess =
       StreamController<ServerSessionState>();
   Stream<ServerSessionState> serverSessionChanged() => ntfServerSess.stream;
@@ -2357,11 +2361,11 @@ mixin NtfStreams {
         break;
 
       case NTLNDcrlndStopped:
-        ntfConfs.add(ConfNotification(NTLNDcrlndStopped, payload));
+        ntfShutdown.add(ConfNotification(NTLNDcrlndStopped, payload));
         break;
 
       case NTClientStopped:
-        ntfConfs.add(ConfNotification(NTClientStopped, payload));
+        ntfShutdown.add(ConfNotification(NTClientStopped, payload));
         break;
 
       case NTUserPostsList:
@@ -2490,6 +2494,7 @@ abstract class PluginPlatform {
   Stream<RemoteUser> acceptedInvites() => throw "unimplemented";
   Stream<ChatEvent> chatEvents() => throw "unimplemented";
   Stream<ConfNotification> confirmations() => throw "unimplemented";
+  Stream<ConfNotification> shutdownEvents() => throw "unimplemented";
   Stream<ServerSessionState> serverSessionChanged() => throw "unimplemented";
   Stream<GCInvitation> gcInvitations() => throw "unimplemented";
   Stream<GCAddressBookEntry> gcListUpdates() => throw "unimplemented";

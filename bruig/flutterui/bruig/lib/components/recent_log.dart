@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/models/log.dart';
 import 'package:flutter/material.dart';
 import 'package:bruig/theme_manager.dart';
@@ -66,6 +67,10 @@ class _LogLinesState extends State<LogLines> {
 
   @override
   Widget build(BuildContext context) {
+    if (logLines.isEmpty) {
+      return const Empty();
+    }
+
     return Consumer<ThemeNotifier>(
         builder: (context, theme, child) => TextField(
               scrollController: ctrl,

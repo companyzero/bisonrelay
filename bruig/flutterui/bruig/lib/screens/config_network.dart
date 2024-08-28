@@ -1,15 +1,12 @@
-import 'dart:io';
-
 import 'package:bruig/components/buttons.dart';
 import 'package:bruig/components/confirmation_dialog.dart';
 import 'package:bruig/components/text.dart';
 import 'package:bruig/config.dart';
 import 'package:bruig/models/newconfig.dart';
+import 'package:bruig/screens/shutdown.dart';
 import 'package:bruig/screens/startupscreen.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:restart_app/restart_app.dart';
 
 final _nonDigitsRegexp = RegExp(r'[^0-9]');
 
@@ -31,11 +28,8 @@ class _ConfigNetworkScreenState extends State<ConfigNetworkScreen> {
   bool torCircuitIsolation = false;
 
   void doRestart() {
-    if (Platform.isAndroid || Platform.isIOS) {
-      Restart.restartApp();
-    } else {
-      SystemNavigator.pop();
-    }
+    ShutdownScreen.startShutdown(context, restart: true);
+    Navigator.pop(context);
   }
 
   void changeConfig() async {

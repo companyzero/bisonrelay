@@ -14,6 +14,7 @@ import 'package:bruig/screens/log.dart';
 import 'package:bruig/screens/manage_content/manage_content.dart';
 import 'package:bruig/screens/paystats.dart';
 import 'package:bruig/screens/about.dart';
+import 'package:bruig/screens/shutdown.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -154,8 +155,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void shutdown() {
-    Navigator.of(context, rootNavigator: true)
-        .pushReplacementNamed("/shutdown");
+    ShutdownScreen.startShutdown(context);
   }
 
   @override
