@@ -2793,10 +2793,10 @@ func (as *appState) pluginVersion(cw *chatWindow, pid clientintf.PluginID) {
 	as.cwHelpMsg("plugin version: %+v\n", version)
 }
 
-func (as *appState) pluginAction(pw *pluginWindow, pid clientintf.PluginID, action string, data []byte) {
+func (as *appState) pluginAction(pw *pluginWindow, pid clientintf.PluginID, action string, data []byte) error {
 	if as.pluginsClient[pid] == nil {
 		as.cwHelpMsg("plugin not found")
-		return
+		return fmt.Errorf("plugin not found")
 	}
 
 	req := &grpctypes.PluginCallActionStreamRequest{
@@ -2813,8 +2813,10 @@ func (as *appState) pluginAction(pw *pluginWindow, pid clientintf.PluginID, acti
 
 	if err != nil {
 		as.cwHelpMsg("Unable to call action: %v", err)
-		return
+		return err
 	}
+
+	return nil
 }
 
 func (as *appState) listenForAppUpdates(id zkidentity.ShortID, stream grpctypes.PluginService_CallActionClient) {

@@ -11,6 +11,8 @@ import (
 	"github.com/companyzero/bisonrelay/rpc"
 )
 
+const PluginInput = "input"
+
 type pluginWindow struct {
 	initless
 
@@ -35,6 +37,19 @@ func (pw *pluginWindow) renderPluginString(id string, embedStr string) error {
 	pw.as.sendMsg(repaintActiveChat{})
 
 	return nil
+}
+
+// Convert tea.Msg to []byte.
+func msgToBytes(msg tea.Msg) ([]byte, error) {
+	switch m := msg.(type) {
+	case tea.KeyMsg:
+		return []byte(fmt.Sprintf("%s", m.String())), nil
+	case tea.WindowSizeMsg:
+		return []byte(fmt.Sprintf("WindowSizeMsg: %dx%d", m.Width, m.Height)), nil
+	// Add more case statements as needed for other tea.Msg types.
+	default:
+		return nil, fmt.Errorf("unsupported message type: %T", msg)
+	}
 }
 
 func (pw *pluginWindow) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -73,7 +88,16 @@ func (pw *pluginWindow) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case msg.Type == tea.KeyEsc:
 			// Cancel post.
 			return newMainWindowState(pw.as)
-
+		default:
+			// Convert `msg` to `[]byte` if possible.
+			msgBytes, err := msgToBytes(msg)
+			if err != nil {
+				pw.errMsg = fmt.Sprintf("Failed to convert msg to bytes: %v", err)
+			} else {
+				if err := pw.as.pluginAction(pw, pw.uid, PluginInput, msgBytes); err != nil {
+					pw.errMsg = fmt.Sprintf("Plugin action error: %v", err)
+				}
+			}
 		}
 
 	default:
@@ -126,25 +150,26 @@ func (pw pluginWindow) View() string {
 	return b.String()
 }
 
-func (fw *pluginWindow) renderPlugin() {
-	if fw.as.winW > 0 && fw.as.winH > 0 {
-		fw.viewport.YPosition = 4
-		fw.viewport.Width = fw.as.winW
-		fw.viewport.Height = fw.as.winH - 4
+func (pw *pluginWindow) renderPlugin() {
+
+	if pw.as.winW > 0 && pw.as.winH > 0 {
+		pw.viewport.YPosition = 4
+		pw.viewport.Width = pw.as.winW
+		pw.viewport.Height = pw.as.winH - 4
 	}
 
 	var minOffset, maxOffset int
 	b := new(strings.Builder)
 
-	fw.viewport.SetContent(b.String())
+	pw.viewport.SetContent(b.String())
 
 	// Ensure the currently selected index is visible.
-	if fw.viewport.YOffset > minOffset {
+	if pw.viewport.YOffset > minOffset {
 		// Move viewport up until top of selected item is visible.
-		fw.viewport.SetYOffset(minOffset)
-	} else if bottom := fw.viewport.YOffset + fw.viewport.Height; bottom < maxOffset {
+		pw.viewport.SetYOffset(minOffset)
+	} else if bottom := pw.viewport.YOffset + pw.viewport.Height; bottom < maxOffset {
 		// Move viewport down until bottom of selected item is visible.
-		fw.viewport.SetYOffset(fw.viewport.YOffset + (maxOffset - bottom))
+		pw.viewport.SetYOffset(pw.viewport.YOffset + (maxOffset - bottom))
 	}
 }
 
