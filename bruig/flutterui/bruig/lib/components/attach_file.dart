@@ -15,6 +15,7 @@ import 'package:golib_plugin/definitions.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:mime/mime.dart';
+import 'package:path/path.dart' as path;
 
 List<String> allowedMimeTypes = [
   "text/plain",
@@ -34,7 +35,9 @@ class AttachmentEmbed {
   SharedFileAndShares? linkedFile;
   String? alt;
   String id;
-  AttachmentEmbed(this.id, {this.data, this.linkedFile, this.alt, this.mime});
+  String? filename;
+  AttachmentEmbed(this.id,
+      {this.data, this.linkedFile, this.alt, this.mime, this.filename});
 
   String displayString() {
     return "--embed[id=$id]--";
@@ -50,6 +53,10 @@ class AttachmentEmbed {
       parts.add("filename=${linkedFile!.sf.filename}");
       parts.add("cost=${linkedFile!.cost}");
       parts.add("size=${linkedFile!.size}");
+    } else {
+      if (filename != null && filename?.trim() != "") {
+        parts.add("filename=${filename!.trim()}");
+      }
     }
     if ((mime ?? "") != "") {
       parts.add("type=$mime");
@@ -81,6 +88,7 @@ class AttachFileScreen extends StatefulWidget {
 class _AttachFileScreenState extends State<AttachFileScreen> {
   String filePath = "";
   Uint8List? fileData;
+  String? fileName;
   String mime = "";
   TextEditingController altTxtCtrl = TextEditingController();
   SharedFileAndShares? linkedFile;
@@ -176,6 +184,7 @@ class _AttachFileScreenState extends State<AttachFileScreen> {
         setState(() {
           selectedAttachmentPath = filePath;
           this.filePath = filePath!;
+          fileName = path.basename(filePath);
           fileData = data;
           mime = mimeType;
         });
@@ -237,6 +246,7 @@ class _AttachFileScreenState extends State<AttachFileScreen> {
       setState(() {
         selectedAttachmentPath = image.path;
         fileData = data;
+        fileName = path.basename(image.path);
         if (mimeType != null) {
           mime = mimeType;
         }
@@ -252,13 +262,20 @@ class _AttachFileScreenState extends State<AttachFileScreen> {
     if (altTxtCtrl.text != "") {
       alt = altTxtCtrl.text;
     }
-    var embed = AttachmentEmbed(id,
-        data: fileData, linkedFile: linkedFile, alt: alt, mime: mime);
+    var embed = AttachmentEmbed(
+      id,
+      data: fileData,
+      linkedFile: linkedFile,
+      alt: alt,
+      mime: mime,
+      filename: fileName,
+    );
     widget._send(embed.embedString());
 
     setState(() {
       mime = "";
       fileData = null;
+      fileName = null;
       selectedAttachmentPath = "";
     });
   }
