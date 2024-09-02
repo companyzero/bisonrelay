@@ -175,6 +175,7 @@ class __LNUnlockPageState extends State<_LNUnlockPage> {
                 autofocus: true,
                 decoration: InputDecoration(
                     labelText: "Password",
+                    errorText: _validate,
                     filled: true,
                     fillColor: theme.colors.surface),
                 controller: passCtrl,
