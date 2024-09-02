@@ -1,20 +1,27 @@
 import 'dart:convert';
+import 'dart:io';
 // import 'package:dart_vlc/dart_vlc.dart' as vlc;
+import 'package:bruig/components/context_menu.dart';
 import 'package:bruig/components/pages/forms.dart';
+import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/models/downloads.dart';
 import 'package:bruig/models/payments.dart';
 import 'package:bruig/models/resources.dart';
 import 'package:bruig/models/snackbar.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:golib_plugin/util.dart';
 import 'package:markdown/markdown.dart' as md;
+import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:bruig/theme_manager.dart';
 import 'package:bruig/components/image_dialog.dart';
 import 'package:pdfrx/pdfrx.dart';
+import 'package:path/path.dart' as path;
 
 class DownloadSource {
   final String uid;
@@ -166,6 +173,10 @@ class EmbedInlineSyntax extends md.InlineSyntax {
 
     if (parms["type"] != "") {
       el.attributes["type"] = parms["type"]!;
+    }
+
+    if (parms.containsKey("filename") && parms["filename"] != "") {
+      el.attributes["filename"] = parms["filename"]!;
     }
 
     parser.addNode(el);
@@ -490,21 +501,77 @@ class CodeblockMarkdownElementBuilder extends MarkdownElementBuilder {
 }
 
 class PDFMarkdownElementBuilder extends MarkdownElementBuilder {
+  Future<String> _tempPDFDir() async {
+    bool isMobile = Platform.isIOS || Platform.isAndroid;
+    String base = isMobile
+        ? (await getApplicationCacheDirectory()).path
+        : (await getDownloadsDirectory())?.path ?? "";
+    return path.join(base, "feedimages");
+  }
+
+  void _handleItemTap(BuildContext context, String value, Uint8List pdfBytes,
+      String filename) async {
+    switch (value) {
+      case "save":
+        var fname = await FilePicker.platform.saveFile(
+              dialogTitle: "Select filename",
+              fileName: filename != "" ? filename : "document.pdf",
+            ) ??
+            "";
+
+        if (fname == "") {
+          return;
+        }
+
+        File(fname).writeAsBytesSync(pdfBytes);
+        context.mounted
+            ? showSuccessSnackbar(context, "Written PDF file $fname")
+            : null;
+        break;
+
+      case "share":
+        var fname = filename != "" ? filename : "document.pdf";
+        var dir = await _tempPDFDir();
+        if (!Directory(dir).existsSync()) {
+          Directory(dir).createSync(recursive: true);
+        }
+        fname = path.join(dir, fname);
+        File(fname).writeAsBytesSync(pdfBytes);
+        Share.shareXFiles([XFile(fname)], text: "Pdf");
+        break;
+    }
+  }
+
   @override
   Widget visitElementAfter(md.Element element, TextStyle? preferredStyle) {
     Uint8List pdfBytes;
+    String filename = element.attributes["filename"] ?? "";
     try {
       pdfBytes = const Base64Decoder().convert(element.textContent);
+      if (pdfBytes.isEmpty) throw "Empty PDF";
     } catch (exception) {
       return Text("Unable to decode pdf: $exception");
     }
 
     try {
-      return ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 400, maxHeight: 400),
-          child: PdfViewer(
-            PdfDocumentRefData(pdfBytes, sourceName: "data"),
-          ));
+      return Builder(
+          builder: (context) => ContextMenu(
+              handleItemTap: (value) {
+                _handleItemTap(context, value, pdfBytes, filename);
+              },
+              items: [
+                if (!Platform.isAndroid)
+                  const PopupMenuItem(
+                      value: "save", child: Text("Save to file")),
+                if (Platform.isAndroid || Platform.isIOS)
+                  const PopupMenuItem(value: "share", child: Text("Share")),
+              ],
+              child: ConstrainedBox(
+                  constraints:
+                      const BoxConstraints(maxWidth: 400, maxHeight: 400),
+                  child: PdfViewer(
+                    PdfDocumentRefData(pdfBytes, sourceName: "data"),
+                  ))));
     } catch (exception) {
       debugPrint("Unable to decode pdf: $exception");
       return Image.asset(
