@@ -44,7 +44,7 @@ func (pw *pluginWindow) renderPluginString(id string, embedStr string) error {
 func msgToBytes(msg tea.Msg) ([]byte, error) {
 	switch m := msg.(type) {
 	case tea.KeyMsg:
-		return []byte(fmt.Sprintf("%s", m.String())), nil
+		return []byte(m.String()), nil
 	case tea.WindowSizeMsg:
 		return []byte(fmt.Sprintf("WindowSizeMsg: %dx%d", m.Width, m.Height)), nil
 	// Add more case statements as needed for other tea.Msg types.
