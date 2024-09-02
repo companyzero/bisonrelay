@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
@@ -11,7 +12,9 @@ import (
 	"github.com/companyzero/bisonrelay/rpc"
 )
 
-const PluginInput = "input"
+const (
+	PluginInput = "input"
+)
 
 type pluginWindow struct {
 	initless
@@ -27,15 +30,13 @@ type pluginWindow struct {
 	estSize uint64
 
 	viewport viewport.Model
+
+	lastUpdate time.Time // Track the last update time
 }
 
 func (pw *pluginWindow) renderPluginString(id string, embedStr string) error {
-	// if pw.estSize+uint64(len(data)) >= rpc.MaxChunkSize {
-	// 	return fmt.Errorf("file too big to embed")
-	// }
 	pw.viewport.SetContent(embedStr)
 	pw.as.sendMsg(repaintActiveChat{})
-
 	return nil
 }
 
@@ -64,10 +65,8 @@ func (pw *pluginWindow) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return ss, cmd
 	}
 
-	// Common handlers for both main post area and embed form.
-
 	switch msg := msg.(type) {
-	case tea.WindowSizeMsg: // resize window
+	case tea.WindowSizeMsg:
 		pw.as.winW = msg.Width
 		pw.as.winH = msg.Height
 
@@ -78,18 +77,18 @@ func (pw *pluginWindow) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		pw.as.diagMsg("Unable to paste: %v", msg)
 	}
 
-	// Handlers when the main post typing form is active.
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch {
 		case msg.Type == tea.KeyF2:
-			// cmds = pw.ew.activate()
+			pw.disableHighPerformanceRendering()
 
 		case msg.Type == tea.KeyEsc:
-			// Cancel post.
+			pw.disableHighPerformanceRendering()
+			pw.as.changeActiveWindowToPrevActive()
+
 			return newMainWindowState(pw.as)
 		default:
-			// Convert `msg` to `[]byte` if possible.
 			msgBytes, err := msgToBytes(msg)
 			if err != nil {
 				pw.errMsg = fmt.Sprintf("Failed to convert msg to bytes: %v", err)
@@ -99,14 +98,47 @@ func (pw *pluginWindow) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 		}
-
 	default:
-		// Handle other messages.
-		pw.viewport, cmd = pw.viewport.Update(msg)
-		cmds = appendCmd(cmds, cmd)
+		// Throttle Sync calls to avoid flickering
+		if pw.viewport.HighPerformanceRendering {
+			now := time.Now()
+			if now.Sub(pw.lastUpdate) > time.Millisecond*50 {
+				cmds = appendCmd(cmds, viewport.Sync(pw.viewport))
+				pw.lastUpdate = now
+			}
+		} else {
+			// In low-performance mode, ensure the viewport updates normally
+			pw.viewport, cmd = pw.viewport.Update(msg)
+			cmds = appendCmd(cmds, cmd)
+		}
 	}
 
 	return pw, batchCmds(cmds)
+}
+
+func (pw *pluginWindow) clearViewportArea() {
+	// Clear the area occupied by the viewport
+	b := new(strings.Builder)
+
+	pw.viewport.SetContent(b.String())
+	pw.viewport.Height = 0
+	pw.viewport.Width = 0
+
+	pw.as.sendMsg(viewport.Sync(pw.viewport))
+}
+
+func (pw *pluginWindow) disableHighPerformanceRendering() {
+	if pw.viewport.HighPerformanceRendering {
+		// Clear the viewport area and reset dimensions
+		pw.clearViewportArea()
+
+		// Disable high-performance rendering
+		pw.viewport.HighPerformanceRendering = false
+
+		// Set content to ensure the viewport has valid data
+		pw.viewport.SetContent(pw.viewport.View())
+
+	}
 }
 
 func (pw *pluginWindow) headerView(styles *theme) string {
@@ -137,7 +169,6 @@ func (pw pluginWindow) View() string {
 	} else {
 		estSizeMsg := fmt.Sprintf(" Estimated post size: %s.", hbytes(int64(pw.estSize)))
 		if pw.estSize > rpc.MaxChunkSize {
-			// estSizeMsg = styles.err.Render(estSizeMsg)
 			b.WriteString(estSizeMsg)
 		}
 		b.WriteString(estSizeMsg)
@@ -150,34 +181,17 @@ func (pw pluginWindow) View() string {
 	return b.String()
 }
 
-func (pw *pluginWindow) renderPlugin() {
+func newPluginWindow(as *appState, uid *clientintf.PluginID) (*pluginWindow, tea.Cmd) {
+	as.markWindowSeen(activeCWPlugin)
 
+	pw := as.findOrNewPluginWindow(*uid, "")
 	if pw.as.winW > 0 && pw.as.winH > 0 {
 		pw.viewport.YPosition = 4
 		pw.viewport.Width = pw.as.winW
 		pw.viewport.Height = pw.as.winH - 4
 	}
 
-	var minOffset, maxOffset int
-	b := new(strings.Builder)
-
-	pw.viewport.SetContent(b.String())
-
-	// Ensure the currently selected index is visible.
-	if pw.viewport.YOffset > minOffset {
-		// Move viewport up until top of selected item is visible.
-		pw.viewport.SetYOffset(minOffset)
-	} else if bottom := pw.viewport.YOffset + pw.viewport.Height; bottom < maxOffset {
-		// Move viewport down until bottom of selected item is visible.
-		pw.viewport.SetYOffset(pw.viewport.YOffset + (maxOffset - bottom))
-	}
-}
-
-func newPluginWindow(as *appState, uid *clientintf.PluginID) (*pluginWindow, tea.Cmd) {
-	as.markWindowSeen(activeCWPlugin)
-	// pw := pluginWindow{as: as, uid: *uid}
-
-	pw := as.findOrNewPluginWindow(*uid, "")
-	pw.renderPlugin()
+	// if commenting this line out, problems with rendering starts to happen.
+	pw.viewport.HighPerformanceRendering = true
 	return pw, nil
 }
