@@ -59,8 +59,7 @@ func (pw *pluginWindow) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds []tea.Cmd
 	)
 
-	// Early check for a quit msg to put us into the shutdown state (to
-	// shutdown DB, etc).
+	// Early check for a quit msg to put us into the shutdown state (to shutdown DB, etc).
 	if ss, cmd := maybeShutdown(pw.as, msg); ss != nil {
 		return ss, cmd
 	}
@@ -99,15 +98,15 @@ func (pw *pluginWindow) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 	default:
-		// Throttle Sync calls to avoid flickering
 		if pw.viewport.HighPerformanceRendering {
+			// Throttle Sync calls to avoid flickering
 			now := time.Now()
 			if now.Sub(pw.lastUpdate) > time.Millisecond*50 {
 				cmds = appendCmd(cmds, viewport.Sync(pw.viewport))
 				pw.lastUpdate = now
 			}
 		} else {
-			// In low-performance mode, ensure the viewport updates normally
+			// In low-performance mode, ensure the viewport updates normally without throttling
 			pw.viewport, cmd = pw.viewport.Update(msg)
 			cmds = appendCmd(cmds, cmd)
 		}
@@ -116,28 +115,14 @@ func (pw *pluginWindow) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return pw, batchCmds(cmds)
 }
 
-func (pw *pluginWindow) clearViewportArea() {
-	// Clear the area occupied by the viewport
-	b := new(strings.Builder)
-
-	pw.viewport.SetContent(b.String())
-	pw.viewport.Height = 0
-	pw.viewport.Width = 0
-
-	pw.as.sendMsg(viewport.Sync(pw.viewport))
-}
-
 func (pw *pluginWindow) disableHighPerformanceRendering() {
 	if pw.viewport.HighPerformanceRendering {
-		// Clear the viewport area and reset dimensions
-		pw.clearViewportArea()
-
 		// Disable high-performance rendering
 		pw.viewport.HighPerformanceRendering = false
 
-		// Set content to ensure the viewport has valid data
-		pw.viewport.SetContent(pw.viewport.View())
-
+		// clear screen and scroll area
+		pw.as.sendMsg(tea.ClearScreen())
+		pw.as.sendMsg(tea.ClearScrollArea())
 	}
 }
 
@@ -160,7 +145,9 @@ func (pw pluginWindow) View() string {
 	b.WriteString(pw.headerView(styles))
 	b.WriteString("\n\n")
 
-	b.WriteString(pw.viewport.View())
+	if pw.viewport.HighPerformanceRendering {
+		b.WriteString(pw.viewport.View())
+	}
 
 	b.WriteString("\n\n")
 
