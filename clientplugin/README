@@ -1,11 +1,10 @@
 # Plugins for Bison Relay
 
-This README provides a comprehensive guide on creating and integrating a plugin server with the Bison Relay client (brclient). The plugin enables interaction with a plugin server over gRPC, facilitating communication and execution of plugin-specific actions.
+This README provides a comprehensive guide on creating and integrating a plugin server with the Bison Relay client (`brclient`). The plugin enables interaction with a plugin server over gRPC, facilitating communication and execution of plugin-specific actions.
 
 ## Overview
 
-The Plugin Client is designed to interact with a Plugin Server over gRPC using the PluginService Interface.
-More information can be found at [pluginrpc.proto](pluginrpc.proto).
+The Plugin Client is designed to interact with a Plugin Server over gRPC using the `PluginService` Interface. More information can be found at [pluginrpc.proto](pluginrpc.proto).
 
 It can:
 - Initialize a plugin
@@ -14,11 +13,13 @@ It can:
 
 ## Setting Up the Plugin Server
 
-### Step 1: Enable JSON-RPC on brclient
+### Step 1: Enable JSON-RPC on `brclient`
 
-Ensure that JSON-RPC is enabled in your `brclient.conf` file. This allows the plugin client to communicate with the plugin server. Add or update the following lines in the configuration file:
+**Important:** Only plugin servers that will accept connections need to enable JSON-RPC. Clients that will connect to these plugin servers **must not** enable their JSON-RPC interface, as doing so could put their funds at risk.
 
-```ini
+If you are setting up a plugin server, ensure that JSON-RPC is enabled in your `brclient.conf` file. This allows the plugin server to communicate with clients. Add or update the following lines in the configuration file:
+
+```
 [clientrpc]
 # Enable the JSON-RPC clientrpc protocol on the comma-separated list of addresses.
 jsonrpclisten = 127.0.0.1:7676
@@ -31,28 +32,84 @@ rpckeypath = ~/.brclient/rpc.key
 rpcclientcapath = ~/.brclient/rpc-ca.cert
 ```
 
-Implement the gRPC server using the service definition. Here is an example of a basic implementation in Go, found in [plugin server example](examples/pluginserver_example/main.go):
+Implement the gRPC server using the service definition. Here is an example of a basic implementation in Go, found in [plugin server example](examples/pluginserver_example/main.go).
 
-With that, a brclient can connect to other plugin servers. If a brclient is running as a plugin server, other clients can connect to a it, for example:
+With that, a `brclient` can connect to other plugin servers. If a `brclient` is running as a plugin server, other clients can connect to it.
 
-### Connecting brclient to a Plugin Server
+### Connecting `brclient` to a Plugin Server
 
-To connect a brclient to the plugin server, use the following commands:
+To connect a `brclient` to the plugin server, use the following commands:
 
-1. **Initialize a Plugin**:
+#### 1. Initialize a Plugin
 
-`/plugin init <nick or id> <plugin-cfg>`
+Use the `/plugin init` command to initialize a new plugin for the specified plugin server, allowing it to listen to updates at the `brclient` appstate.
 
-This command initializes a new plugin for the specified plugin server allowing it to listen to updates at the brclient appstate.
+```
+/plugin init <nick or id> <plugin-address> <plugin-server-tls-cert-path>
+```
 
-2. **Get Plugin's Version**:
+- `<nick or id>`: Nickname or ID for the plugin.
+- `<plugin-address>`: Address of the plugin server (e.g., `127.0.0.1:9090`).
+- `<plugin-server-tls-cert-path>`: Path to the TLS certificate file used by the plugin server (e.g., `/path/to/plugin-server-tls.cert`).
 
-`/plugin version <nick or id>`
+**Example:**
 
-This command retrieves the version information of the plugin associated with the specified server.
+```
+/plugin init myplugin 127.0.0.1:9090 /path/to/plugin-server-tls.cert
+```
 
-3. **Call Plugin Action**:
+#### 2. Get Plugin's Version
 
-`/plugin action <nick or id> <action> [<data>]`
+Use the `/plugin version` command to retrieve the version information of the plugin associated with the specified server.
 
-This command calls a specific action on the plugin associated with the specified server. The `data` parameter is optional and can be used to pass additional information to the plugin.
+```
+/plugin version <nick or id>
+```
+
+- `<nick or id>`: Nickname or ID for the plugin set during initialization.
+
+**Example:**
+
+```
+/plugin version myplugin
+```
+
+#### 3. Call Plugin Action
+
+Use the `/plugin action` command to call a specific action on the plugin associated with the specified server. The `data` parameter is optional and can be used to pass additional information to the plugin.
+
+```
+/plugin action <nick or id> <action> [<data>]
+```
+
+- `<nick or id>`: Nickname or ID for the plugin.
+- `<action>`: Specific action to be called on the plugin.
+- `[<data>]`: Optional JSON string with additional data for the action.
+
+**Example:**
+
+```
+/plugin action myplugin performAction '{"key":"value"}'
+```
+
+Make sure that the paths and addresses match those set up in your environment and that the TLS certificates are correctly configured to allow secure communication between the `brclient` and the plugin server.
+
+## Interacting with a Plugin Using the Plugin Window
+
+To interact with a plugin and send inputs, you can use the plugin window command. This opens a window specifically for interacting with the plugin using its nickname.
+
+Use the `/win plugin` command followed by the plugin's nickname:
+
+```
+/win plugin <plugin-nick>
+```
+
+- `<plugin-nick>`: Nickname of the plugin you want to interact with.
+
+**Example:**
+
+```
+/win plugin myplugin
+```
+
+This command opens a window for `myplugin`, allowing you to send inputs and receive outputs directly from the plugin.

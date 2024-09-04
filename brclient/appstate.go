@@ -2709,7 +2709,7 @@ func (as *appState) handleCmd(rawText string, args []string) {
 	}
 }
 
-// initializePlugins sets up plugins in the database during startup.
+// initializePlugins initializes plugins that are already enabled in the database during startup.
 func (as *appState) initializePlugins() error {
 	// Retrieve all enabled plugins from the database.
 	enabledPlugins, err := as.c.GetEnabledPlugins()
@@ -2719,83 +2719,101 @@ func (as *appState) initializePlugins() error {
 
 	// Initialize each enabled plugin.
 	for _, plugin := range enabledPlugins {
+		// Create a new plugin client with the plugin's ID and configuration.
 		pluginClient, err := client.NewPluginClient(as.ctx, plugin.ID, plugin.Config)
 		if err != nil {
-			as.diagMsg("Unable to start plugin: %s err: %w", plugin.Name, err.Error())
+			as.diagMsg("Unable to start plugin %s: %v", plugin.Name, err)
 			continue
 		}
 
+		// Store the plugin client in the app state.
 		as.pluginsClient[plugin.ID] = pluginClient
+
+		// Prepare the request to start the plugin stream.
 		req := &grpctypes.PluginStartStreamRequest{
 			ClientId: as.c.PublicID().String(),
 		}
+
+		// Initialize the plugin and set up a notification listener.
 		err = as.pluginsClient[plugin.ID].InitPlugin(as.ctx, req, func(stream grpctypes.PluginService_InitClient) {
-			as.listenForAppNtfn(plugin.ID, stream)
+			as.listenForPluginNtfn(plugin.ID, stream)
 		})
+
+		// Start reading updates and notifications for the plugin.
 		as.startReadingUpdatesAndNtfn(plugin.ID)
+
 		if err != nil {
-			as.diagMsg("Unable to init plugin: %s", plugin.Name)
+			as.diagMsg("Unable to initialize plugin %s: %v", plugin.Name, err)
+			continue
 		}
-		as.diagMsg("Plugin %s Initialized", plugin.Name)
+
+		as.diagMsg("Plugin %s initialized successfully", plugin.Name)
 	}
 
 	return nil
 }
 
-// initPlugin initialize plugins so they can listen for updates at the appstate.
+// initPlugin initializes a plugin so it can listen for updates in the app state.
 func (as *appState) initPlugin(cw *chatWindow, pid clientintf.PluginID, address, tlsCertPath string) {
 	req := &grpctypes.PluginStartStreamRequest{
 		ClientId: as.c.PublicID().String(),
 	}
 
+	// Check if the plugin client already exists; if not, create a new one.
 	if as.pluginsClient[pid] == nil {
 		pluginClientCfg := client.PluginClientCfg{
 			TLSCertPath: tlsCertPath,
 			Log:         as.logBknd.logger("Plugins"),
 			Address:     address,
 		}
+
 		pluginClient, err := client.NewPluginClient(as.ctx, pid, pluginClientCfg)
 		if err != nil {
-			as.cwHelpMsg("Unable to start new plugin")
+			as.cwHelpMsg("Unable to start new plugin: %v", err)
 			return
 		}
 		as.pluginsClient[pid] = pluginClient
 	}
 
+	// Save the plugin information in the database.
 	err := as.c.SavePluginInfo(as.pluginsClient[pid])
 	if err != nil {
-		// ignore if plugin already exists
+		// Ignore error if the plugin already exists in the database.
 		if err != clientdb.ErrAlreadyExists {
-			as.cwHelpMsg("Unable to Save Plugin %q: %v",
-				cw.alias, err)
+			as.cwHelpMsg("Unable to save plugin %q: %v", cw.alias, err)
 		}
 	}
 
+	// Initialize the plugin and set up a notification listener.
 	err = as.pluginsClient[pid].InitPlugin(as.ctx, req, func(stream grpctypes.PluginService_InitClient) {
-		as.listenForAppNtfn(pid, stream)
+		as.listenForPluginNtfn(pid, stream)
 	})
+
+	// Start reading updates and notifications for the plugin.
 	as.startReadingUpdatesAndNtfn(pid)
 
 	if err != nil {
-		as.cwHelpMsg("Unable to init plugin %q: %v",
-			cw.alias, err)
+		as.cwHelpMsg("Unable to initialize plugin %q: %v", cw.alias, err)
 	}
 
+	// Send a message to repaint the active chat window.
 	as.sendMsg(repaintActiveChat{})
 }
 
+// pluginVersion retrieves and displays the version of a specific plugin.
 func (as *appState) pluginVersion(cw *chatWindow, pid clientintf.PluginID) {
 	version, err := as.pluginsClient[pid].GetVersion(as.ctx)
 	if err != nil {
-		as.cwHelpMsg("Unable to get version: %v", err)
+		as.cwHelpMsg("Unable to get plugin version: %v", err)
 		return
 	}
-	as.cwHelpMsg("plugin version: %+v\n", version)
+	as.cwHelpMsg("Plugin version: %+v", version)
 }
 
+// pluginAction calls a specific action on a plugin and listens for updates.
 func (as *appState) pluginAction(pw *pluginWindow, pid clientintf.PluginID, action string, data []byte) error {
 	if as.pluginsClient[pid] == nil {
-		as.cwHelpMsg("plugin not found")
+		as.cwHelpMsg("Plugin not found")
 		return fmt.Errorf("plugin not found")
 	}
 
@@ -2805,8 +2823,9 @@ func (as *appState) pluginAction(pw *pluginWindow, pid clientintf.PluginID, acti
 		User:   as.c.Public().String(),
 	}
 
+	// Call the plugin action and set up a listener for updates.
 	err := as.pluginsClient[pid].CallPluginAction(as.ctx, req, func(stream grpctypes.PluginService_CallActionClient) error {
-		as.listenForAppUpdates(pid, stream)
+		as.listenForPluginUpdates(pid, stream)
 		as.cwHelpMsg("Client called action")
 		return nil
 	})
@@ -2819,7 +2838,8 @@ func (as *appState) pluginAction(pw *pluginWindow, pid clientintf.PluginID, acti
 	return nil
 }
 
-func (as *appState) listenForAppUpdates(id zkidentity.ShortID, stream grpctypes.PluginService_CallActionClient) {
+// listenForPluginUpdates listens for updates from the plugin's action stream.
+func (as *appState) listenForPluginUpdates(id zkidentity.ShortID, stream grpctypes.PluginService_CallActionClient) {
 	go func() {
 		for {
 			update, err := stream.Recv()
@@ -2827,7 +2847,7 @@ func (as *appState) listenForAppUpdates(id zkidentity.ShortID, stream grpctypes.
 				break
 			}
 			if err != nil {
-				as.log.Error("error receiving app update %s: %v", as.pluginsClient[id].Name, err)
+				as.log.Error("Error receiving plugin update for %s: %v", as.pluginsClient[id].Name, err)
 				return
 			}
 			as.pluginsClient[id].UpdateCh <- update
@@ -2836,7 +2856,8 @@ func (as *appState) listenForAppUpdates(id zkidentity.ShortID, stream grpctypes.
 	}()
 }
 
-func (as *appState) listenForAppNtfn(id zkidentity.ShortID, stream grpctypes.PluginService_InitClient) {
+// listenForPluginNtfn listens for notifications from the plugin's initialization stream.
+func (as *appState) listenForPluginNtfn(id zkidentity.ShortID, stream grpctypes.PluginService_InitClient) {
 	go func() {
 		for {
 			update, err := stream.Recv()
@@ -2844,7 +2865,7 @@ func (as *appState) listenForAppNtfn(id zkidentity.ShortID, stream grpctypes.Plu
 				break
 			}
 			if err != nil {
-				as.log.Error("error listening app ntfn %s: %v", as.pluginsClient[id].Name, err)
+				as.log.Error("Error listening for plugin notification for %s: %v", as.pluginsClient[id].Name, err)
 				return
 			}
 			as.pluginsClient[id].NtfnCh <- update
@@ -2853,15 +2874,19 @@ func (as *appState) listenForAppNtfn(id zkidentity.ShortID, stream grpctypes.Plu
 	}()
 }
 
+// startReadingUpdatesAndNtfn starts goroutines to handle updates and notifications from a plugin.
 func (as *appState) startReadingUpdatesAndNtfn(id zkidentity.ShortID) {
+	// Start a goroutine to handle updates from the plugin.
 	go func() {
 		for update := range as.pluginsClient[id].UpdateCh {
-			// Handle the update
+			// Render the update and handle any errors.
 			res, err := as.pluginsClient[id].Render(as.ctx, update)
 			if err != nil {
-				as.log.Error("error rendering app update %s: %v", as.pluginsClient[id].Name, err)
+				as.log.Error("Error rendering plugin update for %s: %v", as.pluginsClient[id].Name, err)
 				return
 			}
+
+			// Send the rendered update to the plugin window.
 			for _, pw := range as.pluginWindows {
 				if pw.uid == id {
 					pw.renderPluginString(id.String(), res.Data)
@@ -2869,10 +2894,11 @@ func (as *appState) startReadingUpdatesAndNtfn(id zkidentity.ShortID) {
 			}
 		}
 	}()
+
+	// Start a goroutine to handle notifications from the plugin.
 	go func() {
 		for update := range as.pluginsClient[id].NtfnCh {
-			// Handle the update
-
+			// Display the notification message.
 			as.cwHelpMsg("Notification received from plugin %s: %v", as.pluginsClient[id].Name, update.Message)
 		}
 	}()
