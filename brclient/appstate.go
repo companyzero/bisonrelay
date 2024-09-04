@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -2722,7 +2721,7 @@ func (as *appState) initializePlugins() error {
 	for _, plugin := range enabledPlugins {
 		pluginClient, err := client.NewPluginClient(as.ctx, plugin.ID, plugin.Config)
 		if err != nil {
-			as.diagMsg("Unable to start plugin: %s err: %w", plugin.Name, err)
+			as.diagMsg("Unable to start plugin: %s err: %w", plugin.Name, err.Error())
 			continue
 		}
 
@@ -2744,15 +2743,16 @@ func (as *appState) initializePlugins() error {
 }
 
 // initPlugin initialize plugins so they can listen for updates at the appstate.
-func (as *appState) initPlugin(cw *chatWindow, pid clientintf.PluginID, address string) {
+func (as *appState) initPlugin(cw *chatWindow, pid clientintf.PluginID, address, tlsCertPath string) {
 	req := &grpctypes.PluginStartStreamRequest{
 		ClientId: as.c.PublicID().String(),
 	}
 
 	if as.pluginsClient[pid] == nil {
 		pluginClientCfg := client.PluginClientCfg{
-			Log:     as.logBknd.logger("Plugins"),
-			Address: address,
+			TLSCertPath: tlsCertPath,
+			Log:         as.logBknd.logger("Plugins"),
+			Address:     address,
 		}
 		pluginClient, err := client.NewPluginClient(as.ctx, pid, pluginClientCfg)
 		if err != nil {
@@ -2849,7 +2849,7 @@ func (as *appState) listenForAppNtfn(id zkidentity.ShortID, stream grpctypes.Plu
 			}
 			as.pluginsClient[id].NtfnCh <- update
 		}
-		log.Println("Stream closed")
+		as.log.Debug("Stream closed")
 	}()
 }
 

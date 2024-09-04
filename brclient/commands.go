@@ -3561,23 +3561,30 @@ var myAvatarCmds = []tuicmd{
 var pluginCmds = []tuicmd{
 	{
 		cmd:   "init",
-		usage: "<nick or id> plugin-address",
-		descr: "Initialize a new plugin",
+		usage: "<nick or id> <plugin-address> <tls-cert-path>",
+		descr: "Initialize a new plugin with the specified address and TLS certificate path",
 		handler: func(args []string, as *appState) error {
-			if len(args) < 1 {
-				return usageError{msg: "Nick or ID cannot be empty"}
-			}
-			if len(args) < 2 {
-				return usageError{msg: "Plugin Address cannot be empty"}
+			// Ensure there are exactly three arguments: nick/id, plugin address, and TLS cert path
+			if len(args) < 3 {
+				return usageError{msg: "Nick or ID, Plugin Address, and TLS Certificate Path are required"}
 			}
 
-			ru, err := as.c.UserByNick(args[0])
+			// Extract arguments
+			nickOrID := args[0]
+			pluginAddress := args[1]
+			tlsCertPath := args[2]
+
+			// Find user by nick or ID
+			ru, err := as.c.UserByNick(nickOrID)
 			if err != nil {
 				return err
 			}
 
+			// Find or create a new chat window for the user
 			cw := as.findOrNewChatWindow(ru.ID(), ru.Nick())
-			go as.initPlugin(cw, ru.ID(), args[1])
+
+			// Initialize the plugin with the address and TLS cert path
+			go as.initPlugin(cw, ru.ID(), pluginAddress, tlsCertPath)
 			return nil
 		},
 	}, {
