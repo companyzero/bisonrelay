@@ -45,6 +45,7 @@ import (
 	"github.com/decred/dcrd/chaincfg/chainhash"
 	"github.com/decred/dcrd/dcrutil/v4"
 	"github.com/decred/dcrlnd/lnrpc"
+	"github.com/decred/dcrlnd/lnrpc/routerrpc"
 	"github.com/decred/dcrlnd/lnrpc/walletrpc"
 	"github.com/decred/dcrlnd/lnwire"
 	"github.com/decred/dcrlnd/zpay32"
@@ -106,6 +107,7 @@ type appState struct {
 
 	lnPC       *client.DcrlnPaymentClient
 	lnRPC      lnrpc.LightningClient
+	lnRouter   routerrpc.RouterClient
 	lnWallet   walletrpc.WalletKitClient
 	httpClient *http.Client
 	rates      *rates.Rates
@@ -1872,6 +1874,46 @@ func (as *appState) closeChannel(chanPoint *lnrpc.ChannelPoint, force bool) {
 	}
 }
 
+// lnChanPointForChanArg finds the LN channel identified by the user provided
+// arg (which may be the prefix of a channel or the full channel point).
+func (as *appState) lnChanPointForChanArg(arg string) (*lnrpc.ChannelPoint, error) {
+	var res *lnrpc.ChannelPoint
+	// 66 == min len of "hash:index"
+	if len(arg) < 66 {
+		// Try to find by the prefix of the channel point.
+		chans, err := as.lnRPC.ListChannels(as.ctx,
+			&lnrpc.ListChannelsRequest{})
+		if err != nil {
+			return nil, err
+		}
+		for _, c := range chans.Channels {
+			if strings.HasPrefix(c.ChannelPoint, arg) {
+				cp, err := strToChanPoint(c.ChannelPoint)
+				if err != nil {
+					return nil, err
+				} else if res != nil {
+					return nil, fmt.Errorf("channel prefix %q "+
+						"matches multiple channels", arg)
+				}
+				res = cp
+			}
+		}
+		if res == nil {
+			return nil, fmt.Errorf("channel with "+
+				"ChannelPoint prefix %s not found",
+				arg)
+		}
+	} else {
+		var err error
+		res, err = strToChanPoint(arg)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return res, nil
+}
+
 // requestRecv returns when an error happens up until the stage where the
 // channel is pending.
 func (as *appState) requestRecv(amount, server, key string, caCert []byte) error {
@@ -2710,6 +2752,7 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 	var lnRPC lnrpc.LightningClient
 	var lnPC *client.DcrlnPaymentClient
 	var lnWallet walletrpc.WalletKitClient
+	var lnRouter routerrpc.RouterClient
 	if args.WalletType != "disabled" {
 		pcCfg := client.DcrlnPaymentClientCfg{
 			TLSCertPath:  args.LNTLSCertPath,
@@ -2724,6 +2767,7 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		pc = lnPC
 		lnRPC = lnPC.LNRPC()
 		lnWallet = lnPC.LNWallet()
+		lnRouter = lnPC.LNRouter()
 
 		// Create the invite funds account if it is set, non-default and
 		// does not yet exist.
@@ -3874,6 +3918,7 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		lnPC:        lnPC,
 		lnRPC:       lnRPC,
 		lnWallet:    lnWallet,
+		lnRouter:    lnRouter,
 		httpClient:  &httpClient,
 		rates:       r,
 

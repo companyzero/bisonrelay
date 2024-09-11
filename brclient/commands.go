@@ -22,6 +22,7 @@ import (
 	"github.com/companyzero/bisonrelay/zkidentity"
 	"github.com/decred/dcrd/dcrutil/v4"
 	"github.com/decred/dcrlnd/lnrpc"
+	"github.com/decred/dcrlnd/lnrpc/routerrpc"
 	"github.com/decred/dcrlnd/lnrpc/walletrpc"
 	"github.com/decred/dcrlnd/lnwire"
 	"github.com/mitchellh/go-homedir"
@@ -2399,37 +2400,9 @@ var lnCommands = []tuicmd{
 				force = true
 			}
 
-			var chanPoint *lnrpc.ChannelPoint
-			if len(args) < 64 {
-				// Try to find by the prefix of the channel point.
-				chans, err := as.lnRPC.ListChannels(as.ctx,
-					&lnrpc.ListChannelsRequest{})
-				if err != nil {
-					return err
-				}
-				for _, c := range chans.Channels {
-					if strings.HasPrefix(c.ChannelPoint, args[0]) {
-						cp, err := strToChanPoint(c.ChannelPoint)
-						if err != nil {
-							return err
-						} else if chanPoint != nil {
-							return fmt.Errorf("channel prefix %q "+
-								"matches multiple channels", args[0])
-						}
-						chanPoint = cp
-					}
-				}
-				if chanPoint == nil {
-					return fmt.Errorf("channel with "+
-						"ChannelPoint prefix %s not found",
-						args[0])
-				}
-			} else {
-				var err error
-				chanPoint, err = strToChanPoint(args[0])
-				if err != nil {
-					return err
-				}
+			chanPoint, err := as.lnChanPointForChanArg(args[0])
+			if err != nil {
+				return err
 			}
 
 			as.cwHelpMsg("Requesting channel %s to be closed",
@@ -3085,6 +3058,47 @@ var lnCommands = []tuicmd{
 					}
 				})
 			}()
+			return nil
+		},
+	}, {
+		cmd:           "updatechanstatus",
+		aliases:       []string{"updtchanst", "updtchanstatus"},
+		usage:         "<channel> [enable | disable | auto]",
+		descr:         "Update a channel's status",
+		usableOffline: true,
+		handler: func(args []string, as *appState) error {
+			if len(args) < 1 {
+				return usageError{msg: "channel identifier cannot be empty"}
+			}
+			if len(args) < 2 {
+				return usageError{msg: "new status cannot be empty"}
+			}
+
+			cp, err := as.lnChanPointForChanArg(args[0])
+			if err != nil {
+				return err
+			}
+
+			req := &routerrpc.UpdateChanStatusRequest{ChanPoint: cp}
+			newStatusArg := strings.ToLower(strings.TrimSpace(args[1]))
+			switch newStatusArg {
+			case "enable":
+				req.Action = routerrpc.ChanStatusAction_ENABLE
+			case "disable":
+				req.Action = routerrpc.ChanStatusAction_DISABLE
+			case "auto":
+				req.Action = routerrpc.ChanStatusAction_AUTO
+			default:
+				return usageError{msg: fmt.Sprintf("unknown status %q", args[0])}
+			}
+
+			_, err = as.lnRouter.UpdateChanStatus(as.ctx, req)
+			if err != nil {
+				return err
+			}
+			as.diagMsg("Updated channel %s to status %s",
+				chanPointToStr(cp), newStatusArg)
+
 			return nil
 		},
 	},
