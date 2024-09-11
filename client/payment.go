@@ -125,6 +125,10 @@ func (pc *DcrlnPaymentClient) LNChain() chainrpc.ChainNotifierClient {
 	return pc.lnChain
 }
 
+func (pc *DcrlnPaymentClient) LNRouter() routerrpc.RouterClient {
+	return pc.lnRouter
+}
+
 func (pc *DcrlnPaymentClient) PayScheme() string {
 	return rpc.PaySchemeDCRLN
 }
