@@ -139,18 +139,18 @@ channel is confirmed to request a new inbound channel''';
       var res = await Golib.lnGetInfo();
       if (res.chains[0].network == "mainnet") {
         setState(() {
-          serverCtrl.text = "https://lp0.bisonrelay.org:9130";
+          serverCtrl.text = "https://hub0.bisonrelay.org:9130";
           certCtrl.text = """-----BEGIN CERTIFICATE-----
-MIIBwjCCAWmgAwIBAgIQA78YKmDt+ffFJmAN5EZmejAKBggqhkjOPQQDAjAyMRMw
-EQYDVQQKEwpiaXNvbnJlbGF5MRswGQYDVQQDExJscDAuYmlzb25yZWxheS5vcmcw
-HhcNMjIwOTE4MTMzNjA4WhcNMzIwOTE2MTMzNjA4WjAyMRMwEQYDVQQKEwpiaXNv
-bnJlbGF5MRswGQYDVQQDExJscDAuYmlzb25yZWxheS5vcmcwWTATBgcqhkjOPQIB
-BggqhkjOPQMBBwNCAASF1StlsfdDUaCXMiZvDBhhMZMdvAUoD6wBdS0tMBN+9y91
-UwCBu4klh+VmpN1kCzcR6HJHSx5Cctxn7Smw/w+6o2EwXzAOBgNVHQ8BAf8EBAMC
-AoQwDwYDVR0TAQH/BAUwAwEB/zAdBgNVHQ4EFgQUqqlcDx8e+XgXXU9cXAGQEhS8
-59kwHQYDVR0RBBYwFIISbHAwLmJpc29ucmVsYXkub3JnMAoGCCqGSM49BAMCA0cA
-MEQCIGtLFLIVMnU2EloN+gI+uuGqqqeBIDSNhP9+bznnZL/JAiABsLKKtaTllCSM
-cNPr8Y+sSs2MHf6xMNBQzV4KuIlPIg==
+MIIBwzCCAWigAwIBAgIQJNKWfgRSQnnMdBwKsVshhTAKBggqhkjOPQQDAjAxMREw
+DwYDVQQKEwhkY3JsbmxwZDEcMBoGA1UEAxMTaHViMC5iaXNvbnJlbGF5Lm9yZzAe
+Fw0yNDA5MTIxNTMyNTVaFw0zNDA5MTExNTMyNTVaMDExETAPBgNVBAoTCGRjcmxu
+bHBkMRwwGgYDVQQDExNodWIwLmJpc29ucmVsYXkub3JnMFkwEwYHKoZIzj0CAQYI
+KoZIzj0DAQcDQgAE8BvBcDlzJs+DLRHa08bLVx1ya9S+PX+b7obfhq45VdkenSNt
+xk9OJZUGnpTkDbt1CBLjQg6RRqYkADYviCuDfaNiMGAwDgYDVR0PAQH/BAQDAgKE
+MA8GA1UdEwEB/wQFMAMBAf8wHQYDVR0OBBYEFBkc97rEXLNm3S/166Q7OqOoBuwd
+MB4GA1UdEQQXMBWCE2h1YjAuYmlzb25yZWxheS5vcmcwCgYIKoZIzj0EAwIDSQAw
+RgIhAKW0WpOpb0HyXofI1ML0Yu29NqU+WNwyOVzD9IlOluerAiEA84ltFlil8D1i
+L6izsBzTqk6GKYSfl095BKOGyIrT+1c=
 -----END CERTIFICATE-----""";
         });
       } else if (res.chains[0].network == "simnet") {
