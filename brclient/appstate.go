@@ -3456,13 +3456,24 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 			updatedAvatar = updatedAvatar || fields[i] == client.ProfileUpdateAvatar
 		}
 
-		cw := as.findOrNewChatWindow(ru.ID(), strescape.Nick(ru.Nick()))
-		cw.newHelpMsg("Updated its profile (%s)", fieldsStr)
-		if updatedAvatar && len(ab.ID.Avatar) > 0 {
-			cw.newHelpMsg("Type '/ab %s viewavatar' to view the new avatar",
-				strescape.Nick(ru.Nick()))
-		} else if updatedAvatar {
-			cw.newHelpMsg("User cleared its avatar")
+		cw := as.findChatWindow(ru.ID())
+		if cw != nil {
+			cw := as.findOrNewChatWindow(ru.ID(), strescape.Nick(ru.Nick()))
+			cw.newHelpMsg("Updated its profile (%s)", fieldsStr)
+			if updatedAvatar && len(ab.ID.Avatar) > 0 {
+				cw.newHelpMsg("Type '/ab %s viewavatar' to view the new avatar",
+					strescape.Nick(ru.Nick()))
+			} else if updatedAvatar {
+				cw.newHelpMsg("User cleared its avatar")
+			}
+		} else {
+			nick := strescape.Nick(ru.Nick())
+			avatarMsg := ""
+			if updatedAvatar && len(ab.ID.Avatar) > 0 {
+				avatarMsg = fmt.Sprintf(" Type '/ab %s viewavatar' to view the new avatar.",
+					nick)
+			}
+			as.diagMsg("%s updated their profile.%s", nick, avatarMsg)
 		}
 		as.repaintIfActive(cw)
 	}))
