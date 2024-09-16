@@ -9,6 +9,7 @@ option go_package = "github.com/companyzero/bisconrelay/clientplugin/grpctypes";
 service PluginService {
   rpc Init(PluginStartStreamRequest) returns (stream PluginStartStreamResponse);
   rpc CallAction (PluginCallActionStreamRequest) returns (stream PluginCallActionStreamResponse);
+  rpc SendInput(PluginInputRequest) returns (PluginInputResponse);
   rpc GetVersion (PluginVersionRequest) returns (PluginVersionResponse);
   rpc Render(RenderRequest) returns (RenderResponse);
 }
@@ -31,10 +32,9 @@ message PluginStartStreamRequest {
 }
 
 message PluginStartStreamResponse {
-  bool started = 1;
-  int32 player_number = 2;  // Player 1 or Player 2
-  string message = 3; // Confirmation message or additional details
-  string client_id = 4;
+  string client_id = 1;
+  bool started = 2;
+  string message = 3;
 }
 
 message PluginVersionRequest {
@@ -64,4 +64,15 @@ message PluginCallActionStreamResponse {
 
 message PluginCallActionUpdate {
   string update_message = 1;
+}
+
+// Define the request and response messages for SendInput
+message PluginInputRequest {
+  string user = 1;
+  bytes data = 3;
+}
+
+message PluginInputResponse {
+  bool success = 1;
+  string message = 2;
 }

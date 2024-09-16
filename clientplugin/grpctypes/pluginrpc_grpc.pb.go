@@ -24,6 +24,7 @@ const _ = grpc.SupportPackageIsVersion7
 type PluginServiceClient interface {
 	Init(ctx context.Context, in *PluginStartStreamRequest, opts ...grpc.CallOption) (PluginService_InitClient, error)
 	CallAction(ctx context.Context, in *PluginCallActionStreamRequest, opts ...grpc.CallOption) (PluginService_CallActionClient, error)
+	SendInput(ctx context.Context, in *PluginInputRequest, opts ...grpc.CallOption) (*PluginInputResponse, error)
 	GetVersion(ctx context.Context, in *PluginVersionRequest, opts ...grpc.CallOption) (*PluginVersionResponse, error)
 	Render(ctx context.Context, in *RenderRequest, opts ...grpc.CallOption) (*RenderResponse, error)
 }
@@ -100,6 +101,15 @@ func (x *pluginServiceCallActionClient) Recv() (*PluginCallActionStreamResponse,
 	return m, nil
 }
 
+func (c *pluginServiceClient) SendInput(ctx context.Context, in *PluginInputRequest, opts ...grpc.CallOption) (*PluginInputResponse, error) {
+	out := new(PluginInputResponse)
+	err := c.cc.Invoke(ctx, "/PluginService/SendInput", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *pluginServiceClient) GetVersion(ctx context.Context, in *PluginVersionRequest, opts ...grpc.CallOption) (*PluginVersionResponse, error) {
 	out := new(PluginVersionResponse)
 	err := c.cc.Invoke(ctx, "/PluginService/GetVersion", in, out, opts...)
@@ -124,6 +134,7 @@ func (c *pluginServiceClient) Render(ctx context.Context, in *RenderRequest, opt
 type PluginServiceServer interface {
 	Init(*PluginStartStreamRequest, PluginService_InitServer) error
 	CallAction(*PluginCallActionStreamRequest, PluginService_CallActionServer) error
+	SendInput(context.Context, *PluginInputRequest) (*PluginInputResponse, error)
 	GetVersion(context.Context, *PluginVersionRequest) (*PluginVersionResponse, error)
 	Render(context.Context, *RenderRequest) (*RenderResponse, error)
 	mustEmbedUnimplementedPluginServiceServer()
@@ -138,6 +149,9 @@ func (UnimplementedPluginServiceServer) Init(*PluginStartStreamRequest, PluginSe
 }
 func (UnimplementedPluginServiceServer) CallAction(*PluginCallActionStreamRequest, PluginService_CallActionServer) error {
 	return status.Errorf(codes.Unimplemented, "method CallAction not implemented")
+}
+func (UnimplementedPluginServiceServer) SendInput(context.Context, *PluginInputRequest) (*PluginInputResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SendInput not implemented")
 }
 func (UnimplementedPluginServiceServer) GetVersion(context.Context, *PluginVersionRequest) (*PluginVersionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetVersion not implemented")
@@ -200,6 +214,24 @@ func (x *pluginServiceCallActionServer) Send(m *PluginCallActionStreamResponse) 
 	return x.ServerStream.SendMsg(m)
 }
 
+func _PluginService_SendInput_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PluginInputRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PluginServiceServer).SendInput(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/PluginService/SendInput",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PluginServiceServer).SendInput(ctx, req.(*PluginInputRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _PluginService_GetVersion_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(PluginVersionRequest)
 	if err := dec(in); err != nil {
@@ -243,6 +275,10 @@ var PluginService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "PluginService",
 	HandlerType: (*PluginServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "SendInput",
+			Handler:    _PluginService_SendInput_Handler,
+		},
 		{
 			MethodName: "GetVersion",
 			Handler:    _PluginService_GetVersion_Handler,

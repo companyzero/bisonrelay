@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/companyzero/bisonrelay/client/clientdb"
+	"github.com/companyzero/bisonrelay/client/clientintf"
 	grpctypes "github.com/companyzero/bisonrelay/clientplugin/grpctypes"
 	"github.com/decred/slog"
 	"google.golang.org/grpc"
@@ -17,11 +18,13 @@ import (
 type PluginClient struct {
 	pluginrpc grpctypes.PluginServiceClient
 
-	ID      clientdb.PluginID
-	Name    string
-	Version string
-	Config  PluginClientCfg
-	Enabled bool
+	ID        clientdb.PluginID `json:"id"`
+	Name      string            `json:"name"`
+	Version   string            `json:"version"`
+	Config    PluginClientCfg   `json:"config"`
+	Enabled   bool              `json:"enabled"`
+	Installed time.Time
+	Updated   time.Time
 
 	UpdateCh chan *grpctypes.PluginCallActionStreamResponse
 	NtfnCh   chan *grpctypes.PluginStartStreamResponse
@@ -106,6 +109,10 @@ func (p *PluginClient) CallPluginAction(ctx context.Context, req *grpctypes.Plug
 	return nil
 }
 
+func (p *PluginClient) CallPluginInput(ctx context.Context, req *grpctypes.PluginInputRequest) (*grpctypes.PluginInputResponse, error) {
+	return p.pluginrpc.SendInput(ctx, req)
+}
+
 // Render processes data received from the plugin server for display or further use.
 func (p *PluginClient) Render(ctx context.Context, data *grpctypes.PluginCallActionStreamResponse) (*grpctypes.RenderResponse, error) {
 	req := &grpctypes.RenderRequest{
@@ -166,14 +173,43 @@ func (c *Client) SavePluginInfo(plugin *PluginClient) error {
 	})
 }
 
-// ListPlugins retrieves all plugins saved in the database.
-func (c *Client) ListPlugins() ([]clientdb.Plugin, error) {
-	var res []clientdb.Plugin
+// ListPlugins retrieves all plugins saved in the database and returns them as PluginClient.
+func (c *Client) ListPlugins() ([]PluginClient, error) {
+	var res []PluginClient
 	err := c.dbView(func(tx clientdb.ReadTx) error {
-		var err error
-		res, err = c.db.ListPlugins(tx)
-		return err
+		plugins, err := c.db.ListPlugins(tx)
+		if err != nil {
+			return err
+		}
+
+		// Convert all plugins to PluginClient.
+		for _, plugin := range plugins {
+			// Retrieve plugin configuration details.
+			address, ok := plugin.Config["address"].(string)
+			if !ok {
+				return fmt.Errorf("address not found in plugin config for %s", plugin.ID)
+			}
+			tlsCertPath, ok := plugin.Config["tlsCertPath"].(string)
+			if !ok {
+				return fmt.Errorf("TLS certificate path not found in plugin config for %s", plugin.ID)
+			}
+
+			// Create a PluginClient from the plugin configuration.
+			pc := PluginClient{
+				ID:      UserIDFromStr(plugin.ID),
+				Name:    plugin.Name,
+				Version: plugin.Version,
+				Config: PluginClientCfg{
+					Address:     address,
+					TLSCertPath: tlsCertPath,
+				},
+				Enabled: plugin.Enabled,
+			}
+			res = append(res, pc)
+		}
+		return nil
 	})
+
 	return res, err
 }
 
@@ -217,4 +253,28 @@ func (c *Client) GetEnabledPlugins() ([]PluginClient, error) {
 	})
 
 	return res, err
+}
+
+// AddNewPlugin initializes and adds a new plugin to the client.
+func (c *Client) AddNewPlugin(ctx context.Context, pid clientintf.PluginID, address, tlsCertPath string) (*PluginClient, error) {
+	// Create a new PluginClient configuration.
+	cfg := PluginClientCfg{
+		Address:     address,
+		TLSCertPath: tlsCertPath,
+		Log:         c.log,
+	}
+
+	// Initialize a new PluginClient.
+	pluginClient, err := NewPluginClient(ctx, pid, cfg)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize plugin: %w", err)
+	}
+
+	// Save the plugin information in the database.
+	err = c.SavePluginInfo(pluginClient)
+	if err != nil {
+		return nil, fmt.Errorf("failed to save plugin info: %w", err)
+	}
+
+	return pluginClient, nil
 }

@@ -12,10 +12,6 @@ import (
 	"github.com/companyzero/bisonrelay/rpc"
 )
 
-const (
-	PluginInput = "input"
-)
-
 type pluginWindow struct {
 	initless
 
@@ -92,7 +88,7 @@ func (pw *pluginWindow) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if err != nil {
 				pw.errMsg = fmt.Sprintf("Failed to convert msg to bytes: %v", err)
 			} else {
-				if err := pw.as.pluginAction(pw, pw.uid, PluginInput, msgBytes); err != nil {
+				if err := pw.as.pluginInput(pw, pw.uid, msgBytes); err != nil {
 					pw.errMsg = fmt.Sprintf("Plugin action error: %v", err)
 				}
 			}

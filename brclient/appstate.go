@@ -2838,6 +2838,28 @@ func (as *appState) pluginAction(pw *pluginWindow, pid clientintf.PluginID, acti
 	return nil
 }
 
+// pluginAction calls a specific action on a plugin and listens for updates.
+func (as *appState) pluginInput(pw *pluginWindow, pid clientintf.PluginID, data []byte) error {
+	if as.pluginsClient[pid] == nil {
+		as.cwHelpMsg("Plugin not found")
+		return fmt.Errorf("plugin not found")
+	}
+
+	req := &grpctypes.PluginInputRequest{
+		Data: data,
+		User: as.c.Public().String(),
+	}
+
+	// Call the plugin action and set up a listener for updates.
+	_, err := as.pluginsClient[pid].CallPluginInput(as.ctx, req)
+	if err != nil {
+		as.cwHelpMsg("Unable to call action: %v", err)
+		return err
+	}
+
+	return nil
+}
+
 // listenForPluginUpdates listens for updates from the plugin's action stream.
 func (as *appState) listenForPluginUpdates(id zkidentity.ShortID, stream grpctypes.PluginService_CallActionClient) {
 	go func() {
