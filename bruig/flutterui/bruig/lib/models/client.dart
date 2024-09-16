@@ -467,15 +467,6 @@ class ChatModel extends ChangeNotifier {
   }
 }
 
-class RescanNotifier extends ChangeNotifier {
-  int _height = 0;
-  int get progressHeight => _height;
-  set _progressHeight(int h) {
-    _height = h;
-    notifyListeners();
-  }
-}
-
 class ConnStateModel extends ChangeNotifier {
   ServerSessionState _state = ServerSessionState.empty();
   ServerSessionState get state => _state;
@@ -606,7 +597,6 @@ class ClientModel extends ChangeNotifier {
     ui = UIStateModel();
 
     _handleServerSessChanged();
-    _handleRescanWalletProgress();
   }
 
   static ClientModel of(BuildContext context, {bool listen = true}) =>
@@ -1123,15 +1113,6 @@ class ClientModel extends ChangeNotifier {
     var stream = Golib.simpleStoreOrders();
     await for (var order in stream) {
       _handleSSOrderPlaced(order);
-    }
-  }
-
-  final RescanNotifier _rescanNtf = RescanNotifier();
-  RescanNotifier get rescanNotifier => _rescanNtf;
-  void _handleRescanWalletProgress() async {
-    var stream = Golib.rescanWalletProgress();
-    await for (var h in stream) {
-      _rescanNtf._progressHeight = h;
     }
   }
 }

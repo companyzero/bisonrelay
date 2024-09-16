@@ -6,6 +6,7 @@ import 'package:bruig/components/collapsable.dart';
 import 'package:bruig/components/copyable.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/models/uistate.dart';
+import 'package:bruig/models/wallet.dart';
 import 'package:bruig/screens/ln/accounts.dart';
 import 'package:bruig/screens/ln/backups.dart';
 import 'package:bruig/screens/ln/channels.dart';
@@ -60,8 +61,9 @@ class _LNScreenState extends State<LNScreen> {
       case 1:
         return const LNAccountsPage();
       case 2:
-        return Consumer<ClientModel>(
-            builder: (context, client, child) => LNOnChainPage(client));
+        return Consumer2<ClientModel, WalletModel>(
+            builder: (context, client, wallet, child) =>
+                LNOnChainPage(client, wallet));
       case 3:
         return const LNChannelsPage();
       case 4:
