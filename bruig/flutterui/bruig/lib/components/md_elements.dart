@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:bruig/components/context_menu.dart';
 import 'package:bruig/components/pages/forms.dart';
 import 'package:bruig/components/snackbars.dart';
+import 'package:bruig/components/text_dialog.dart';
 import 'package:bruig/models/downloads.dart';
 import 'package:bruig/models/payments.dart';
 import 'package:bruig/models/resources.dart';
@@ -149,9 +150,9 @@ class EmbedInlineSyntax extends md.InlineSyntax {
         break;
       case "text/plain":
         // Decode plain text directly.
-        tag = "p";
+        tag = "pre";
         try {
-          data = const Base64Decoder().convert(data).toString();
+          data = utf8.fuse(base64).decode(data);
         } catch (exception) {
           data = "Unable to decode plain text contents: $exception";
         }
@@ -474,19 +475,28 @@ class ImageMd extends StatelessWidget {
 class PreformattedElementBuilder extends MarkdownElementBuilder {
   @override
   Widget visitText(md.Text text, TextStyle? preferredStyle) {
-    return ConstrainedBox(
-      constraints: const BoxConstraints(maxHeight: 200),
-      child: SingleChildScrollView(
-          controller: ScrollController(keepScrollOffset: false),
-          child: Consumer<ThemeNotifier>(
-              builder: (context, theme, child) => Text.rich(
-                    TextSpan(text: text.text),
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      ConstrainedBox(
+        constraints: const BoxConstraints(maxHeight: 200),
+        child: SingleChildScrollView(
+            controller: ScrollController(keepScrollOffset: false),
+            child: Consumer<ThemeNotifier>(
+                builder: (context, theme, child) => Text.rich(
+                      TextSpan(text: text.text),
 
-                    // Overwrite <pre> style to use the same as code
-                    // (Markdown component uses same as <p> by default).
-                    style: theme.mdStyleSheet.code,
-                  ))),
-    );
+                      // Overwrite <pre> style to use the same as code
+                      // (Markdown component uses same as <p> by default).
+                      style: theme.mdStyleSheet.code,
+                    ))),
+      ),
+      const SizedBox(height: 10),
+      Builder(
+          builder: (context) => TextButton(
+              onPressed: () => showDialog(
+                  context: context,
+                  builder: (context) => TextDialog(text.text)),
+              child: const Text("View"))),
+    ]);
   }
 }
 
