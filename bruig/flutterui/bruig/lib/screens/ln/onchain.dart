@@ -8,6 +8,7 @@ import 'package:bruig/components/inputs.dart';
 import 'package:bruig/components/text.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/models/snackbar.dart';
+import 'package:bruig/models/wallet.dart';
 import 'package:bruig/screens/ln/components.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
@@ -16,22 +17,21 @@ import 'package:golib_plugin/util.dart';
 
 class LNOnChainPage extends StatefulWidget {
   final ClientModel client;
-  const LNOnChainPage(this.client, {super.key});
+  final WalletModel wallet;
+  const LNOnChainPage(this.client, this.wallet, {super.key});
 
   @override
   State<LNOnChainPage> createState() => _LNOnChainPageState();
 }
 
 class _LNOnChainPageState extends State<LNOnChainPage> {
+  RescanState get rescanState => widget.wallet.rescanState;
   String? recvAddr;
   String? recvAccount;
   String? sendAccount;
   TextEditingController sendAddrCtrl = TextEditingController();
   AmountEditingController amountCtrl = AmountEditingController();
-  int rescanProgress = -1;
-  int rescanTarget = 0;
   List<Transaction> transactions = [];
-  bool loadingTxs = false;
 
   void generateRecvAddr() async {
     var snackbar = SnackBarModel.of(context);
@@ -87,62 +87,52 @@ class _LNOnChainPageState extends State<LNOnChainPage> {
   }
 
   void rescanProgressed() {
-    setState(() {
-      rescanProgress = widget.client.rescanNotifier.progressHeight;
-    });
+    setState(() {});
   }
 
   void rescan() async {
     var snackbar = SnackBarModel.of(context);
-    var tipHeight = (await Golib.lnGetInfo()).blockHeight;
-
-    var rescanNtfn = widget.client.rescanNotifier;
-    rescanNtfn.addListener(rescanProgressed);
-
-    setState(() {
-      rescanProgress = 0;
-      rescanTarget = tipHeight;
-    });
 
     try {
-      await Golib.rescanWallet(0);
+      await widget.wallet.rescan();
     } catch (exception) {
       snackbar.error("Unable to rescan wallet: $exception");
     }
+  }
 
-    rescanNtfn.removeListener(rescanProgressed);
+  void txListingUpdated() {
     setState(() {
-      rescanProgress = -1;
+      transactions = widget.wallet.transactions.transactions.toList();
     });
   }
 
   void listTransactions() async {
     var snackbar = SnackBarModel.of(context);
-    setState(() {
-      loadingTxs = true;
-    });
     try {
-      var txs = await Golib.listTransactions(0, 0);
-      setState(() {
-        transactions = txs;
-      });
+      await widget.wallet.transactions.list();
     } catch (exception) {
       snackbar.error("Unable to list transactions: $exception");
-    } finally {
-      setState(() {
-        loadingTxs = false;
-      });
     }
   }
 
   @override
   void initState() {
     super.initState();
-    listTransactions();
+    widget.wallet.rescanState.addListener(rescanProgressed);
+    widget.wallet.transactions.addListener(txListingUpdated);
+    if (!widget.wallet.transactions.listing &&
+        widget.wallet.transactions.isEmpty) {
+      listTransactions();
+    }
+    if (!widget.wallet.transactions.isEmpty) {
+      transactions = widget.wallet.transactions.transactions.toList();
+    }
   }
 
   @override
   void dispose() {
+    widget.wallet.rescanState.removeListener(rescanProgressed);
+    widget.wallet.transactions.removeListener(txListingUpdated);
     super.dispose();
   }
 
@@ -213,16 +203,17 @@ class _LNOnChainPageState extends State<LNOnChainPage> {
           const LNInfoSectionHeader("Rescan"),
           const SizedBox(height: 10),
           OutlinedButton(
-              onPressed: rescanProgress == -1 ? rescan : null,
+              onPressed: !rescanState.rescanning ? rescan : null,
               child: const Text("Rescan Wallet")),
           const SizedBox(height: 10),
-          rescanProgress < 0
+          !rescanState.rescanning
               ? const Empty()
               : Txt.S(
-                  "Rescanned through $rescanProgress / $rescanTarget blocks (${(rescanProgress / rescanTarget * 100).toStringAsFixed(2)}%)"),
+                  "Rescanned through ${rescanState.progressHeight} / ${rescanState.targetHeight} blocks"
+                  " (${(rescanState.progress * 100).toStringAsFixed(2)}%)"),
           Row(children: [
             const Txt.S("On-Chain Transactions"),
-            if (loadingTxs) ...[
+            if (widget.wallet.transactions.listing) ...[
               const SizedBox(width: 8),
               const SizedBox(
                   width: 15,
