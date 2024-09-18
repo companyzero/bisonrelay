@@ -1825,7 +1825,7 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		}
 
 		_, err := c.FetchResource(args.UID, args.Path, args.Metadata,
-			args.SessionID, args.ParentPage, args.Data)
+			args.SessionID, args.ParentPage, args.Data, args.AsyncTargetID)
 		return args.SessionID, err
 
 	case CTHandshake:
@@ -2095,6 +2095,13 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		err := c.SubscribeToAllRemotePosts(nil)
 		return nil, err
 
+	case CTLoadFetchedResource:
+		var args loadFetchedResourceArgs
+		if err := cmd.decode(&args); err != nil {
+			return nil, err
+		}
+
+		return c.LoadFetchedResource(args.UID, args.SessionID, args.PageID)
 	}
 	return nil, nil
 

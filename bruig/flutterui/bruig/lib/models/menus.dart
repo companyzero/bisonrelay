@@ -296,7 +296,7 @@ List<ChatMenuItem> buildUserChatMenu(ChatModel chat) {
     var path = ["index.md"];
     try {
       var resources = Provider.of<ResourcesModel>(context, listen: false);
-      var sess = await resources.fetchPage(chat.id, path, 0, 0, null);
+      var sess = await resources.fetchPage(chat.id, path, 0, 0, null, "");
       var event = RequestedResourceEvent(chat.id, sess);
       chat.append(ChatEventModel(event, null), false);
     } catch (exception) {
