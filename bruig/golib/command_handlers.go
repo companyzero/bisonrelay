@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strings"
 	"sync"
@@ -451,6 +452,10 @@ func handleInitClient(handle uint32, args initClient) error {
 		notify(NTProfileUpdated, event, nil)
 	}))
 
+	ntfns.Register(client.OnUINotification(func(n client.UINotification) {
+		notify(NTUINotification, n, nil)
+	}))
+
 	// Initialize resources router.
 	var sstore *simplestore.Store
 	resRouter := resources.NewRouter()
@@ -695,6 +700,11 @@ func handleInitClient(handle uint32, args initClient) error {
 
 	var cancel func()
 	ctx, cancel = context.WithCancel(ctx)
+
+	// Default UI notifications config (show nothing).
+	ntfns.UpdateUIConfig(client.UINotificationsConfig{
+		CancelEmissionChannel: ctx.Done(),
+	})
 
 	httpClient := http.Client{
 		Transport: &http.Transport{
@@ -2094,6 +2104,29 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 	case CTSubAllPosts:
 		err := c.SubscribeToAllRemotePosts(nil)
 		return nil, err
+
+	case CTUpdateUINotificationsCfg:
+		var args uiNotificationsConfig
+		if err := cmd.decode(&args); err != nil {
+			return nil, err
+		}
+
+		nick := c.LocalNick()
+		mentionRegexp, err := regexp.Compile("@" + nick)
+		if err != nil {
+			cc.log.Errorf("Unable to compile mention regexp: %v", err)
+		}
+
+		cfg := client.UINotificationsConfig{
+			PMs:                   args.PMs,
+			GCMs:                  args.GCMs,
+			GCMMentions:           args.GCMentions,
+			MaxLength:             255,
+			EmitInterval:          30 * time.Second,
+			MentionRegexp:         mentionRegexp,
+			CancelEmissionChannel: cc.ctx.Done(),
+		}
+		c.NotificationManager().UpdateUIConfig(cfg)
 
 	}
 	return nil, nil

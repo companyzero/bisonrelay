@@ -503,3 +503,9 @@ type zipLogsArgs struct {
 	OnlyLastFile bool   `json:"only_last_file"`
 	DestPath     string `json:"dest_path"`
 }
+
+type uiNotificationsConfig struct {
+	PMs        bool `json:"pms"`
+	GCMs       bool `json:"gcms"`
+	GCMentions bool `json:"gcmentions"`
+}

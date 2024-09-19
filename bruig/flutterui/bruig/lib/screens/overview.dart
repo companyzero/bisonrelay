@@ -254,13 +254,6 @@ class _OverviewScreenState extends State<OverviewScreen> {
     Navigator.pop(context);
   }
 
-  void _configureDidReceiveLocalNotificationSubject() {
-    NotificationService()
-        .didReceiveLocalNotificationStream
-        .stream
-        .listen((ReceivedNotification receivedNotification) async {});
-  }
-
   // This sets up the listener for notification tapping actions.  When
   // a user taps a chat notification they should be brought to the corresponding
   // chat.  When a user taps a post/comment notification they are brought to the
@@ -271,11 +264,12 @@ class _OverviewScreenState extends State<OverviewScreen> {
         .stream
         .listen((String? payload) async {
       if (payload != null) {
-        if (payload.contains("chat")) {
+        if (payload.startsWith("chat:") || payload.startsWith("gc:")) {
           switchScreen(ChatsScreen.routeName);
-          var nick = payload.split(":");
-          if (nick.length > 1) {
-            client.setActiveByNick(nick[1], payload.contains("gc"));
+          var uid = payload.split(":")[1];
+          bool isGC = payload.startsWith("gc:");
+          if (uid.length > 1) {
+            client.setActiveByUID(uid, isGC: isGC);
           }
         } else if (payload.contains("post")) {
           var authorPostIDs = payload.split(":");
@@ -299,7 +293,6 @@ class _OverviewScreenState extends State<OverviewScreen> {
     super.initState();
     connState = widget.client.connState.state;
     widget.client.connState.addListener(connStateChanged);
-    _configureDidReceiveLocalNotificationSubject();
     _configureSelectNotificationSubject();
   }
 
@@ -315,7 +308,6 @@ class _OverviewScreenState extends State<OverviewScreen> {
   @override
   void dispose() {
     widget.client.connState.removeListener(connStateChanged);
-    NotificationService().didReceiveLocalNotificationStream.close();
     NotificationService().selectNotificationStream.close();
     super.dispose();
   }

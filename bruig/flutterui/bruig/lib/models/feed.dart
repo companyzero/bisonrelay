@@ -194,7 +194,6 @@ class FeedPostModel extends ChangeNotifier {
         _comments.add(c);
       }
     }
-    NotificationService().showPostCommentNotification(post, c.nick, c.comment);
     /*
     var idx = _comments.indexWhere((e) => e.id == c.parentID);
 
@@ -338,7 +337,6 @@ class FeedModel extends ChangeNotifier {
         _downloadingUserPosts.remove(newPost.summ.id);
       }
 
-      NotificationService().showPostNotification(newPost.summ);
       // Handle posts that replace a previously relayed post: the client removes
       // the relayed post in favor of the one by the author, so remove such posts
       // from the list.

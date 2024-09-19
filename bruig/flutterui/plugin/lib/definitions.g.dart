@@ -2171,3 +2171,35 @@ Map<String, dynamic> _$ZipLogsArgsToJson(ZipLogsArgs instance) =>
       'only_last_file': instance.onlyLastFile,
       'dest_path': instance.destPath,
     };
+
+UINotification _$UINotificationFromJson(Map<String, dynamic> json) =>
+    UINotification(
+      json['type'] as String,
+      json['text'] as String,
+      json['count'] as int,
+      json['from'] as String,
+    );
+
+Map<String, dynamic> _$UINotificationToJson(UINotification instance) =>
+    <String, dynamic>{
+      'type': instance.type,
+      'text': instance.text,
+      'count': instance.count,
+      'from': instance.from,
+    };
+
+UINotificationsConfig _$UINotificationsConfigFromJson(
+        Map<String, dynamic> json) =>
+    UINotificationsConfig(
+      json['pms'] as bool,
+      json['gcms'] as bool,
+      json['gcmentions'] as bool,
+    );
+
+Map<String, dynamic> _$UINotificationsConfigToJson(
+        UINotificationsConfig instance) =>
+    <String, dynamic>{
+      'pms': instance.pms,
+      'gcms': instance.gcms,
+      'gcmentions': instance.gcMentions,
+    };

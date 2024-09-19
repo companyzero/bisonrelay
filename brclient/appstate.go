@@ -203,10 +203,6 @@ type appState struct {
 
 	mimeMap atomic.Pointer[map[string]string]
 
-	// cmd to run when receiving messages. First element is bin, other are
-	// args.
-	bellCmd []string
-
 	unwelcomeError atomic.Pointer[error]
 
 	inboundMsgsMtx  sync.Mutex
@@ -332,6 +328,31 @@ func (as *appState) run() error {
 			as.wg.Done()
 		}()
 	}
+
+	// Setup UI notifications (requires having the nick after client runs).
+	go func() {
+		select {
+		case <-as.ctx.Done():
+			return
+		case <-as.c.AddressBookLoaded():
+		}
+
+		nick := as.c.LocalNick()
+		mentionRegexp, err := regexp.Compile("@" + nick)
+		if err != nil {
+			as.diagMsg("Unable to create mention regexp: %v", err)
+			return
+		}
+
+		as.c.NotificationManager().UpdateUIConfig(client.UINotificationsConfig{
+			PMs:                   true,
+			GCMMentions:           true,
+			MaxLength:             255,
+			EmitInterval:          30 * time.Second,
+			MentionRegexp:         mentionRegexp,
+			CancelEmissionChannel: as.ctx.Done(),
+		})
+	}()
 
 	as.wg.Wait()
 	if as.cmdHistoryFile != nil {
@@ -1354,29 +1375,6 @@ func (as *appState) handleRcvdText(s string, nick string) string {
 
 	// Cannonicalize line endings.
 	s = strescape.CannonicalizeNL(s)
-
-	if len(as.bellCmd) > 0 && as.bellCmd[0] == "*BEEP*" {
-		os.Stdout.Write([]byte("\a"))
-	} else if len(as.bellCmd) > 0 {
-		go func() {
-			cmd := append([]string{}, as.bellCmd...)
-			msg := s[:min(len(s), 100)] // truncate msg passed to cmd.
-
-			// Replace $src and $msg in command line args.
-			for i := 1; i < len(cmd); i++ {
-				cmd[i] = strings.Replace(cmd[i], "$src", nick, -1)
-				cmd[i] = strings.Replace(cmd[i], "$msg", msg, -1)
-			}
-
-			c := exec.Command(cmd[0], cmd[1:]...)
-			c.Stdout = nil
-			c.Stderr = nil
-			err := c.Start()
-			if err != nil {
-				as.diagMsg("Unable to run bellcmd: %v", err)
-			}
-		}()
-	}
 
 	return s
 }
@@ -3720,7 +3718,7 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		return nil, err
 	}
 
-	// Parse bell command.
+	// Parse bell command and add UI notification handler when it exists.
 	var bellCmd []string
 	if args.BellCmd != "" {
 		r := regexp.MustCompile(`[^\s"]+|"([^"]*)"`)
@@ -3734,6 +3732,26 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 				bellCmd[i] = s[1 : len(s)-1]
 			}
 		}
+	}
+	if len(bellCmd) > 0 {
+		ntfns.Register(client.OnUINotification(func(n client.UINotification) {
+			cmd := append([]string{}, bellCmd...)
+
+			// Replace $src and $msg in command line args.
+			for i := 1; i < len(cmd); i++ {
+				cmd[i] = strings.Replace(cmd[i], "$src", n.FromNick, -1)
+				cmd[i] = strings.Replace(cmd[i], "$msg", n.Text, -1)
+			}
+
+			c := exec.Command(cmd[0], cmd[1:]...)
+			c.Stdout = nil
+			c.Stderr = nil
+			err := c.Start()
+			if err != nil {
+				as.diagMsg("Unable to run bellcmd: %v", err)
+			}
+		}))
+
 	}
 
 	// Initialize client.
@@ -3960,7 +3978,6 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		lnFundWalletChan:  make(chan msgLNFundWalletReply),
 
 		winpin:             args.WinPin,
-		bellCmd:            bellCmd,
 		inviteFundsAccount: args.InviteFundsAccount,
 
 		collator: cfg.Collator,

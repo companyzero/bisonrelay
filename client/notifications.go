@@ -2,11 +2,15 @@ package client
 
 import (
 	"fmt"
+	"regexp"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/companyzero/bisonrelay/client/clientdb"
 	"github.com/companyzero/bisonrelay/client/clientintf"
+	"github.com/companyzero/bisonrelay/internal/mdembeds"
+	"github.com/companyzero/bisonrelay/internal/strescape"
 	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/companyzero/bisonrelay/zkidentity"
 )
@@ -380,6 +384,91 @@ type OnRequestingMediateID func(mediator, target UserID)
 
 func (_ OnRequestingMediateID) typ() string { return onRequestingMediateIDType }
 
+// UINotificationsConfig is the configuration for how UI notifications are
+// emitted.
+type UINotificationsConfig struct {
+	// PMs flags whether to emit notification for PMs.
+	PMs bool
+
+	// GCMs flags whether to emit notifications for GCMs.
+	GCMs bool
+
+	// GCMMentions flags whether to emit notification for mentions.
+	GCMMentions bool
+
+	// MaxLength is the max length of messages emitted.
+	MaxLength int
+
+	// MentionRegexp is the regexp to detect mentions.
+	MentionRegexp *regexp.Regexp
+
+	// EmitInterval is the interval to wait for additional messages before
+	// emitting a notification. Multiple messages received within this
+	// interval will only generate a single UI notification.
+	EmitInterval time.Duration
+
+	// CancelEmissionChannel may be set to a Context.Done() channel to
+	// cancel emission of notifications.
+	CancelEmissionChannel <-chan struct{}
+}
+
+func (cfg *UINotificationsConfig) clip(msg string) string {
+	if len(msg) < cfg.MaxLength {
+		return msg
+	}
+	return msg[:cfg.MaxLength]
+}
+
+// UINotificationType is the type of notification.
+type UINotificationType string
+
+const (
+	UINtfnPM         UINotificationType = "pm"
+	UINtfnGCM        UINotificationType = "gcm"
+	UINtfnGCMMention UINotificationType = "gcmmention"
+	UINtfnMultiple   UINotificationType = "multiple"
+)
+
+// UINotification is a notification that should be shown as an UI alert.
+type UINotification struct {
+	// Type of notification.
+	Type UINotificationType `json:"type"`
+
+	// Text of the notification.
+	Text string `json:"text"`
+
+	// Count will be greater than one when multiple notifications were
+	// batched.
+	Count int `json:"count"`
+
+	// From is the original sender or GC of the notification.
+	From zkidentity.ShortID `json:"from"`
+
+	// FromNick is the nick of the sender.
+	FromNick string `json:"from_nick"`
+
+	// Timestamp is the unix timestamp in seconds of the first message.
+	Timestamp int64 `json:"timestamp"`
+}
+
+// fromSame returns true if the notification is from the same ID.
+func (n *UINotification) fromSame(id *zkidentity.ShortID) bool {
+	if id == nil || n.From.IsEmpty() {
+		return false
+	}
+
+	return *id == n.From
+}
+
+const onUINtfnType = "uintfn"
+
+// OnUINotification is called when a notification should be shown by the UI to
+// the user. This should usually take the form of an alert dialog about a
+// received message.
+type OnUINotification func(ntfn UINotification)
+
+func (_ OnUINotification) typ() string { return onUINtfnType }
+
 // The following is used only in tests.
 
 const onTestNtfnType = "testNtfnType"
@@ -473,6 +562,19 @@ type handlersRegistry interface {
 
 type NotificationManager struct {
 	handlers map[string]handlersRegistry
+
+	uiMtx      sync.Mutex
+	uiConfig   UINotificationsConfig
+	uiNextNtfn UINotification
+	uiTimer    *time.Timer
+}
+
+// UpdateUIConfig updates the config used to generate UI notifications about
+// PMs, GCMs, etc.
+func (nmgr *NotificationManager) UpdateUIConfig(cfg UINotificationsConfig) {
+	nmgr.uiMtx.Lock()
+	nmgr.uiConfig = cfg
+	nmgr.uiMtx.Unlock()
 }
 
 func (nmgr *NotificationManager) register(handler NotificationHandler, async bool) NotificationRegistration {
@@ -509,6 +611,126 @@ func (ngmr *NotificationManager) AnyRegistered(handler NotificationHandler) bool
 	return ngmr.handlers[handler.typ()].AnyRegistered()
 }
 
+func (nmgr *NotificationManager) waitAndEmitUINtfn(c <-chan time.Time, cancel <-chan struct{}) {
+	select {
+	case <-c:
+	case <-cancel:
+		return
+	}
+
+	nmgr.uiMtx.Lock()
+	n := nmgr.uiNextNtfn
+	nmgr.uiNextNtfn = UINotification{}
+	nmgr.uiMtx.Unlock()
+
+	nmgr.handlers[onUINtfnType].(*handlersFor[OnUINotification]).
+		visit(func(h OnUINotification) { h(n) })
+}
+
+func (nmgr *NotificationManager) addUINtfn(from zkidentity.ShortID, fromNick string, typ UINotificationType, msg string, ts time.Time) {
+	nmgr.uiMtx.Lock()
+
+	n := &nmgr.uiNextNtfn
+	cfg := &nmgr.uiConfig
+
+	// Remove embeds.
+	msg = mdembeds.ReplaceEmbeds(msg, func(args mdembeds.EmbeddedArgs) string {
+		if strings.HasPrefix(args.Typ, "image/") {
+			return "[image]"
+		}
+		return ""
+	})
+
+	// Check if it has mention.
+	if typ == UINtfnGCM && cfg.MentionRegexp != nil && cfg.MentionRegexp.MatchString(msg) {
+		typ = UINtfnGCMMention
+	}
+
+	switch {
+	case typ == UINtfnPM && !cfg.PMs,
+		typ == UINtfnGCM && !cfg.GCMs,
+		typ == UINtfnGCMMention && !cfg.GCMMentions:
+
+		// Ignore
+		nmgr.uiMtx.Unlock()
+		return
+
+	case typ == UINtfnPM && n.Type == "":
+		// First PM.
+		n.Type = typ
+		n.Count = 1
+		n.From = from
+		n.FromNick = fromNick
+		n.Timestamp = ts.Unix()
+		n.Text = fmt.Sprintf("PM from %s: %s", strescape.Nick(fromNick),
+			cfg.clip(msg))
+
+	case typ == UINtfnPM && n.Type == UINtfnPM && n.fromSame(&from):
+		// Additional PM from same user.
+		n.Count += 1
+		n.Text = fmt.Sprintf("%d PMs from %s", n.Count, strescape.Nick(fromNick))
+
+	case typ == UINtfnPM && n.Type == UINtfnPM:
+		// PMs from multiple users.
+		n.Count += 1
+		n.FromNick = "multiple"
+		n.Text = fmt.Sprintf("%d PMs from multiple users", n.Count)
+
+	case typ == UINtfnGCM && n.Type == "":
+		// First GCM.
+		n.Type = typ
+		n.Count = 1
+		n.From = from
+		n.FromNick = fromNick
+		n.Timestamp = ts.Unix()
+		n.Text = fmt.Sprintf("GCM on %s: %s", strescape.Nick(fromNick),
+			cfg.clip(msg))
+
+	case typ == UINtfnGCMMention && n.Type == "":
+		// First mention.
+		n.Type = typ
+		n.Count = 1
+		n.From = from
+		n.FromNick = fromNick
+		n.Timestamp = ts.Unix()
+		n.Text = fmt.Sprintf("Mention on GC %s: %s", strescape.Nick(fromNick),
+			cfg.clip(msg))
+
+	case (typ == UINtfnGCM || typ == UINtfnGCMMention) &&
+		(n.Type == UINtfnGCM || n.Type == UINtfnGCMMention) &&
+		n.fromSame(&from):
+
+		// Additional GCM on same GC.
+		n.Count += 1
+		n.Text = fmt.Sprintf("%d GCMs on %s", n.Count, strescape.Nick(fromNick))
+
+	case (typ == UINtfnGCM || typ == UINtfnGCMMention) &&
+		(n.Type == UINtfnGCM || n.Type == UINtfnGCMMention):
+
+		// GCMs on multiple GCs.
+		n.FromNick = "multiple"
+		n.Count += 1
+		n.Text = fmt.Sprintf("%d GCMs on multiple GCs", n.Count)
+
+	default:
+		// Multiple types.
+		n.Type = UINtfnMultiple
+		n.FromNick = "multiple"
+		n.Count += 1
+		n.Text = fmt.Sprintf("%d messages received", n.Count)
+	}
+
+	// The first notification starts the timer to emit the actual UI
+	// notification. Other notifications will get batched.
+	if n.Count == 1 {
+		nmgr.uiTimer.Reset(cfg.EmitInterval)
+		c, cancel := nmgr.uiTimer.C, cfg.CancelEmissionChannel
+		go nmgr.waitAndEmitUINtfn(c, cancel)
+	}
+
+	nmgr.uiMtx.Unlock()
+}
+
 // Following are the notifyX() calls (one for each type of notification).
 
 func (nmgr *NotificationManager) notifyTest() {
@@ -519,11 +741,15 @@ func (nmgr *NotificationManager) notifyTest() {
 func (nmgr *NotificationManager) notifyOnPM(user *RemoteUser, pm rpc.RMPrivateMessage, ts time.Time) {
 	nmgr.handlers[onPMNtfnType].(*handlersFor[OnPMNtfn]).
 		visit(func(h OnPMNtfn) { h(user, pm, ts) })
+
+	nmgr.addUINtfn(user.ID(), user.Nick(), UINtfnPM, pm.Message, ts)
 }
 
-func (nmgr *NotificationManager) notifyOnGCM(user *RemoteUser, gcm rpc.RMGroupMessage, ts time.Time) {
+func (nmgr *NotificationManager) notifyOnGCM(user *RemoteUser, gcm rpc.RMGroupMessage, gcAlias string, ts time.Time) {
 	nmgr.handlers[onGCMNtfnType].(*handlersFor[OnGCMNtfn]).
 		visit(func(h OnGCMNtfn) { h(user, gcm, ts) })
+
+	nmgr.addUINtfn(gcm.ID, gcAlias, UINtfnGCM, gcm.Message, ts)
 }
 
 func (nmgr *NotificationManager) notifyOnPostRcvd(user *RemoteUser, summary clientdb.PostSummary, post rpc.PostMetadata) {
@@ -748,7 +974,12 @@ func (nmgr *NotificationManager) notifyRequestingMediateID(mediator, target clie
 }
 
 func NewNotificationManager() *NotificationManager {
-	return &NotificationManager{
+	nmgr := &NotificationManager{
+		uiConfig: UINotificationsConfig{
+			MaxLength:    255,
+			EmitInterval: 30 * time.Second,
+		},
+		uiTimer: time.NewTimer(time.Hour * 24),
 		handlers: map[string]handlersRegistry{
 			onTestNtfnType:           &handlersFor[onTestNtfn]{},
 			onPMNtfnType:             &handlersFor[OnPMNtfn]{},
@@ -765,6 +996,7 @@ func NewNotificationManager() *NotificationManager {
 			onRMSent:                 &handlersFor[OnRMSent]{},
 			onProfileUpdatedType:     &handlersFor[OnProfileUpdated]{},
 			onTransitiveEventType:    &handlersFor[OnTransitiveEvent]{},
+			onUINtfnType:             &handlersFor[OnUINotification]{},
 
 			onPostSubscriberUpdated:    &handlersFor[OnPostSubscriberUpdated]{},
 			onPostsListReceived:        &handlersFor[OnPostsListReceived]{},
@@ -799,4 +1031,9 @@ func NewNotificationManager() *NotificationManager {
 			onUnsubscribingIdleRemoteClient:   &handlersFor[OnUnsubscribingIdleRemoteClient]{},
 		},
 	}
+	if !nmgr.uiTimer.Stop() {
+		<-nmgr.uiTimer.C
+	}
+
+	return nmgr
 }

@@ -11,7 +11,6 @@ import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:intl/intl.dart';
 import 'package:bruig/storage_manager.dart';
-import 'package:bruig/notification_service.dart';
 import 'package:provider/provider.dart';
 
 const SCE_unknown = 0;
@@ -512,6 +511,13 @@ class ChatsListModel extends ChangeNotifier {
     return idx == -1 ? null : _sorted[idx];
   }
 
+  // firstByNick returns the first chatModel with the given uid (if one exists).
+  ChatModel? firstByUID(String id, {bool? isGC}) {
+    var idx = _sorted
+        .indexWhere((c) => c.id == id && (isGC == null || c.isGC == isGC));
+    return idx == -1 ? null : _sorted[idx];
+  }
+
   // Sorting algo to attempt to retain order
   static int _compareFunc(ChatModel a, ChatModel b) {
     // If both are empty, sort by nick.
@@ -747,6 +753,13 @@ class ClientModel extends ChangeNotifier {
     }
   }
 
+  void setActiveByUID(String uid, {bool? isGC}) {
+    var c = activeChats.firstByUID(uid, isGC: isGC);
+    if (c != null) {
+      active = c;
+    }
+  }
+
   Future<void> handleSubscriptions() async {
     var newSubscriptions = await Golib.listSubscriptions();
     for (var subscription in newSubscriptions) {
@@ -956,16 +969,6 @@ class ClientModel extends ChangeNotifier {
         source = getExistingChat(sourceId);
       }
       chat.append(ChatEventModel(evnt, source), false);
-
-      // Only do notifcications for GC messages or PMs
-      if (evnt is GCMsg || evnt is PM) {
-        if (source != null) {
-          if (!chat.active) {
-            NotificationService().showChatNotification(
-                evnt.msg, source.nick, chat.isGC, chat.nick);
-          }
-        }
-      }
 
       // Make this the most recent chat.
       activeChats._addActive(chat);
