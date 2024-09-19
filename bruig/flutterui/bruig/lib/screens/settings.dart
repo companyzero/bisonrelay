@@ -8,6 +8,7 @@ import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/components/text.dart';
 import 'package:bruig/models/snackbar.dart';
 import 'package:bruig/models/uistate.dart';
+import 'package:bruig/notification_service.dart';
 import 'package:bruig/screens/config_network.dart';
 import 'package:bruig/screens/ln_management.dart';
 import 'package:bruig/screens/log.dart';
@@ -54,33 +55,10 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   ClientModel get client => widget.client;
   bool loading = false;
-  bool notificationsEnabled = false;
-  bool foregroundService = false;
   String settingsPage = "main";
 
   void connStateChanged() async {
     setState(() {});
-  }
-
-  void updateNotificationSettings(bool? value, bool? foregroundSvc) {
-    if (value != null) {
-      StorageManager.saveData(StorageManager.notificationsKey, value);
-      if (Platform.isAndroid) {
-        Golib.setNtfnsEnabled(value);
-      }
-    }
-    if (foregroundSvc != null && Platform.isAndroid) {
-      StorageManager.saveData(StorageManager.ntfnFgSvcKey, foregroundSvc);
-      if (foregroundSvc) {
-        Golib.startForegroundSvc();
-      } else {
-        Golib.stopForegroundSvc();
-      }
-    }
-    setState(() {
-      notificationsEnabled = value ?? notificationsEnabled;
-      foregroundService = foregroundSvc ?? foregroundService;
-    });
   }
 
   void resetAllOldKX(BuildContext context) async {
@@ -162,20 +140,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void initState() {
     super.initState();
     client.connState.addListener(connStateChanged);
-    StorageManager.readData(StorageManager.notificationsKey).then((value) {
-      if (value != null) {
-        setState(() {
-          notificationsEnabled = value;
-        });
-      }
-    });
-    StorageManager.readData(StorageManager.ntfnFgSvcKey).then((value) {
-      if (value != null) {
-        setState(() {
-          foregroundService = value;
-        });
-      }
-    });
   }
 
   @override
@@ -212,11 +176,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 AppearanceSettingsScreen(client, theme));
         break;
       case "Notifications":
-        settingsView = NotificationsSettingsScreen(
-            client,
-            updateNotificationSettings,
-            notificationsEnabled,
-            foregroundService);
+        settingsView = const NotificationsSettingsScreen();
         break;
       case "Network":
         settingsView = NetworkSettingsScreen(client);
@@ -488,37 +448,141 @@ class _AppearanceSettingsScreenState extends State<AppearanceSettingsScreen> {
   }
 }
 
-class NotificationsSettingsScreen extends StatelessWidget {
-  final ClientModel client;
-  final NotficationsCB notficationsCB;
-  final bool notificationsEnabled;
-  final bool foregroundService;
-  const NotificationsSettingsScreen(this.client, this.notficationsCB,
-      this.notificationsEnabled, this.foregroundService,
-      {Key? key})
-      : super(key: key);
+class NotificationsSettingsScreen extends StatefulWidget {
+  const NotificationsSettingsScreen({Key? key}) : super(key: key);
+
+  @override
+  State<NotificationsSettingsScreen> createState() =>
+      _NotificationsSettingsScreenState();
+}
+
+class _NotificationsSettingsScreenState
+    extends State<NotificationsSettingsScreen> {
+  bool notificationsEnabled = false;
+  bool foregroundService = false;
+  bool pms = false;
+  bool gcms = false;
+  bool gcMentions = false;
+
+  void loadSettings() async {
+    var enabled = await StorageManager.readBool(StorageManager.notificationsKey,
+        defaultVal: true);
+    var fgSvc = await StorageManager.readBool(StorageManager.ntfnFgSvcKey);
+    var newPms =
+        await StorageManager.readBool(StorageManager.ntfnPMs, defaultVal: true);
+    var newGcms = await StorageManager.readBool(StorageManager.ntfnGCMs);
+    var mentions = await StorageManager.readBool(StorageManager.ntfnGCMentions,
+        defaultVal: true);
+    setState(() {
+      notificationsEnabled = enabled;
+      foregroundService = fgSvc;
+      pms = newPms;
+      gcms = newGcms;
+      gcMentions = mentions;
+    });
+  }
+
+  void updateEnabled(bool value) {
+    StorageManager.saveData(StorageManager.notificationsKey, value);
+    if (Platform.isAndroid) {
+      Golib.setNtfnsEnabled(value);
+    }
+    setState(() => notificationsEnabled = value);
+
+    // When disabling notifications, also disable foreground service.
+    if (!value) updateForegroundSvc(false);
+    NotificationService().updateUIConfig();
+  }
+
+  void updateForegroundSvc(bool value) {
+    if (!Platform.isAndroid) {
+      return;
+    }
+
+    StorageManager.saveData(StorageManager.ntfnFgSvcKey, value);
+    if (value) {
+      Golib.startForegroundSvc();
+    } else {
+      Golib.stopForegroundSvc();
+    }
+
+    setState(() => foregroundService = value);
+  }
+
+  void updatePMs(bool value) {
+    StorageManager.saveData(StorageManager.ntfnPMs, value);
+    setState(() => pms = value);
+    NotificationService().updateUIConfig();
+  }
+
+  void updateGCMs(bool value) {
+    StorageManager.saveData(StorageManager.ntfnGCMs, value);
+    setState(() => gcms = value);
+    NotificationService().updateUIConfig();
+  }
+
+  void updateGCMentions(bool value) {
+    StorageManager.saveData(StorageManager.ntfnGCMentions, value);
+    setState(() => gcMentions = value);
+    NotificationService().updateUIConfig();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    loadSettings();
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (Platform.isWindows) {
+      // See https://github.com/MaikuB/flutter_local_notifications/issues/746
+      return Container(
+          padding: const EdgeInsets.all(10),
+          alignment: Alignment.topLeft,
+          child: const Text("Notifications are not supported on Windows"));
+    }
+
     return ListView(children: [
       ListTile(
           title: const Text("Notifications"),
           trailing: Switch(
             value: notificationsEnabled,
-            onChanged: (value) =>
-                // When disabling notifications, also disable foreground service.
-                notficationsCB(value, !value ? false : null),
+            onChanged: updateEnabled,
           )),
       Platform.isAndroid
           ? ListTile(
               title: const Text("Use Foreground Service"),
               trailing: Switch(
-                // boolean variable value
                 value: foregroundService,
-                // changes the state of the switch
-                onChanged: (value) => notficationsCB(null, value),
+                onChanged: updateForegroundSvc,
               ))
           : const Empty(),
+      ListTile(
+          title: const Text("Notify on PMs"),
+          trailing: Switch(
+            value: pms,
+            onChanged: updatePMs,
+          )),
+      ListTile(
+          title: const Text("Notify on GC Messages"),
+          trailing: Switch(
+            value: gcms,
+            onChanged: updateGCMs,
+          )),
+      ListTile(
+          title: const Text("Notify on GC Mentions"),
+          trailing: Switch(
+            value: gcMentions,
+            onChanged: updateGCMentions,
+          )),
+      if (kDebugMode)
+        ListTile(
+          title: const Text("Test Notification"),
+          onTap: () {
+            NotificationService().testNotification();
+          },
+        )
     ]);
   }
 }

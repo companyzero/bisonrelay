@@ -7,12 +7,11 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 	"os"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
-	"github.com/companyzero/bisonrelay/internal/mdembeds"
+	"github.com/companyzero/bisonrelay/client"
 	"github.com/davecgh/go-spew/spew"
 )
 
@@ -149,6 +148,7 @@ const (
 	CTListGCInvites                       = 0x8b
 	CTCancelDownload                      = 0x8c
 	CTSubAllPosts                         = 0x8d
+	CTUpdateUINotificationsCfg            = 0x8e
 
 	NTInviteReceived         = 0x1001
 	NTInviteAccepted         = 0x1002
@@ -195,6 +195,7 @@ const (
 	NTProfileUpdated         = 0x102b
 	NTAddressBookLoaded      = 0x102c
 	NTPostsSubscriberUpdated = 0x102d
+	NTUINotification         = 0x102e
 )
 
 type cmd struct {
@@ -217,7 +218,7 @@ type CmdResult struct {
 
 type CmdResultLoopCB interface {
 	F(id int32, typ int32, payload string, err string)
-	PM(uid string, nick string, msg string, ts int64)
+	UINtfn(text string, nick string, ts int64)
 }
 
 var cmdResultChan = make(chan *CmdResult)
@@ -387,22 +388,14 @@ var (
 // emitBackgroundNtfns emits background notifications to the callback object.
 func emitBackgroundNtfns(r *CmdResult, cb CmdResultLoopCB) {
 	switch r.Type {
-	case NTPM:
-		var pm pm
-		err := json.Unmarshal(r.Payload, &pm)
+	case NTUINotification:
+		var n client.UINotification
+		err := json.Unmarshal(r.Payload, &n)
 		if err != nil {
 			return
 		}
 
-		// Remove embeds.
-		msg := mdembeds.ReplaceEmbeds(pm.Msg, func(args mdembeds.EmbeddedArgs) string {
-			if strings.HasPrefix(args.Typ, "image/") {
-				return "[image]"
-			}
-			return ""
-		})
-
-		cb.PM(pm.UID.String(), pm.Nick, msg, pm.TimeStamp)
+		cb.UINtfn(n.Text, n.FromNick, n.Timestamp)
 
 	default:
 		// Ignore every other notification.

@@ -60,6 +60,10 @@ void main(List<String> args) async {
     // Ensure the platform bindings are initialized.
     WidgetsFlutterBinding.ensureInitialized();
 
+    if (Platform.isLinux || Platform.isWindows || Platform.isMacOS) {
+      windowManager.ensureInitialized();
+    }
+
     // Create global models.
     initGlobalLogModel();
     initGlobalShutdownModel();
@@ -179,14 +183,16 @@ class _AppState extends State<App> with WindowListener {
   @override
   void initState() {
     super.initState();
-    !isMobile ? windowManager.addListener(this) : null;
     isMobile
         ? lifecycleListener =
             AppLifecycleListener(onStateChange: onAppStateChanged)
         : null;
     handleNotifications();
     initClient();
-    !isMobile ? windowManager.setPreventClose(true) : null;
+    if (!isMobile) {
+      windowManager.setPreventClose(true);
+      windowManager.addListener(this);
+    }
     NotificationService().init();
 
     widget.shutdown.addListener(shutdownChanged);
@@ -196,6 +202,7 @@ class _AppState extends State<App> with WindowListener {
   void dispose() {
     !isMobile ? windowManager.removeListener(this) : null;
     widget.shutdown.removeListener(shutdownChanged);
+    !isMobile ? windowManager.addListener(this) : null;
     super.dispose();
   }
 
@@ -246,6 +253,16 @@ class _AppState extends State<App> with WindowListener {
     }
 
     clientStopped = widget.shutdown.clientStopped;
+  }
+
+  @override
+  void onWindowBlur() {
+    NotificationService().appInBackground = true;
+  }
+
+  @override
+  void onWindowFocus() {
+    NotificationService().appInBackground = false;
   }
 
   void initClient() async {
@@ -357,6 +374,7 @@ class _AppState extends State<App> with WindowListener {
     await doWalletChecks(wasAlreadyRunning);
     await client.fetchNetworkInfo();
     await client.fetchMyAvatar();
+    NotificationService().updateUIConfig();
   }
 
   void handleNotifications() async {

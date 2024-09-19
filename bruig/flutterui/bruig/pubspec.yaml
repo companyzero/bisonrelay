@@ -25,7 +25,7 @@ dependencies:
   io: ^1.0.4
   flutter:
     sdk: flutter
-  flutter_local_notifications: ^16.2.0
+  flutter_local_notifications: ^17.2.2
   cupertino_icons: ^1.0.2
   #dart_vlc: 0.1.8
   #dart_vlc_ffi: 0.1.5

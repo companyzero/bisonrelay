@@ -55,8 +55,6 @@ class GolibPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, ServiceAware
   private var fgSvcEnabled: Boolean = false;
   private var ntfnsEnabled : Boolean = false;
 
-  private var lastNtfnTS : Long = 0;
-
   companion object {
     private const val CHANNEL_NEW_MESSAGES = "new_messages"
     private const val CHANNEL_FGSVC = "fg_svc"
@@ -134,15 +132,6 @@ class GolibPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, ServiceAware
       .setSmallIcon(iconID)
       .setWhen(ts*1000)
       .setContentIntent(pendingIntent)
-
-    // Silence notifications when they are less than 30 seconds from the latest
-    // non-silenced one.
-    val now = System.currentTimeMillis()
-    val silent = now - lastNtfnTS < 30000
-    builder.setSilent(silent)
-    if (!silent) {
-      lastNtfnTS = now
-    }
 
 
     // Send notification.
@@ -273,11 +262,11 @@ class GolibPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, ServiceAware
         handler.post{ sink?.success(res) }
       }
 
-      // PM notification called when app was in background but still attached to
+      // UI notification called when app was in background but still attached to
       // flutter engine.
-      override fun pm(uid: String, nick: String, msg: String, ts: Long) {
-        Golib.logInfo(0x12131400, "NativePlugin: background PM from $nick") // 0x88 == CTLogInfo
-        showNotification(ntfManager, nick, msg, ts)
+      override fun uiNtfn(text: String, nick: String, ts: Long) {
+        Golib.logInfo(0x12131400, "NativePlugin: background UI ntfn from $nick") // 0x88 == CTLogInfo
+        showNotification(ntfManager, nick, text, ts)
       }
     }, false)
     loopsIds.add(id);
@@ -303,11 +292,11 @@ class GolibPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, ServiceAware
         // Ignored because the flutter engine is detached.
       }
 
-      // PM notification called when app was in background _and_ flutter engine
+      // UI notification called when app was in background _and_ flutter engine
       // was detached.
-      override fun pm(uid: String, nick: String, msg: String, ts: Long) {
-        Golib.logInfo(0x12131400, "NativePlugin: background detached PM from $nick")
-        showNotification(ntfManager, nick, msg, ts)
+      override fun uiNtfn(text: String, nick: String, ts: Long) {
+        Golib.logInfo(0x12131400, "NativePlugin: background UI ntfn from $nick") // 0x88 == CTLogInfo
+        showNotification(ntfManager, nick, text, ts)
       }
     }, true)
     loopsIds.add(id);

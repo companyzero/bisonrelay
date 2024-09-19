@@ -10,6 +10,9 @@ class StorageManager {
   static const String goTimedProfilingKey = "goTimedProfiling";
   static const String ntfnFgSvcKey = "foregroundService";
   static const String notificationsKey = "notifications";
+  static const String ntfnPMs = "ntfnPMs";
+  static const String ntfnGCMs = "ntfnGCMs";
+  static const String ntfnGCMentions = "ntfnGCMentions";
 
   static Future<void> saveData(String key, dynamic value) async {
     final prefs = await SharedPreferences.getInstance();

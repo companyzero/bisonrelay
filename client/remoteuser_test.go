@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/companyzero/bisonrelay/client/clientintf"
 	"github.com/companyzero/bisonrelay/internal/assert"
 	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/companyzero/bisonrelay/zkidentity"
@@ -30,6 +31,14 @@ func newRemoteUserTestPair(t testing.TB, rnd *rand.Rand, svr *mockRMServer, name
 	//ru1.log = testutils.TestLoggerSys(t, name1)
 	//ru2.log = testutils.TestLoggerSys(t, name2)
 	return ru1, ru2
+}
+
+// newTestRemoteUser is a minimal test user.
+func newTestRemoteUser(t testing.TB, id clientintf.UserID, nick string) *RemoteUser {
+	user := &RemoteUser{}
+	user.setNick(nick)
+	user.id = id
+	return user
 }
 
 // TestRemoteUserPMs tests that users can send concurrent PMs to each other.

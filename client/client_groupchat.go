@@ -1025,12 +1025,13 @@ func (c *Client) handleDelayedGCMessages(msg clientintf.ReceivedGCMsg) {
 	}
 
 	// Log the message and remove the cached GCM from the db.
+	var gcAlias string
 	err = c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
 		if err := c.db.RemoveCachedRGCM(tx, msg); err != nil {
 			c.log.Warnf("Unable to remove cached RGCM: %v", err)
 		}
 
-		gcAlias, _ := c.GetGCAlias(msg.GCM.ID)
+		gcAlias, _ = c.GetGCAlias(msg.GCM.ID)
 		err := c.db.LogGCMsg(tx, gcAlias, msg.GCM.ID, false, user.Nick(),
 			msg.GCM.Message, msg.TS)
 		if err != nil {
@@ -1044,7 +1045,7 @@ func (c *Client) handleDelayedGCMessages(msg clientintf.ReceivedGCMsg) {
 		c.log.Warnf("Unable to handle cached RGCM: %v", err)
 	}
 
-	c.ntfns.notifyOnGCM(user, msg.GCM, msg.TS)
+	c.ntfns.notifyOnGCM(user, msg.GCM, gcAlias, msg.TS)
 }
 
 // SendProgress is sent to track progress of messages that are sent to multiple

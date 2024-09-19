@@ -2185,6 +2185,38 @@ class ZipLogsArgs {
   Map<String, dynamic> toJson() => _$ZipLogsArgsToJson(this);
 }
 
+const UINtfnPM = "pm";
+const UINtfnGCM = "gcm";
+const UINtfnGCMMention = "gcmmention";
+const UINtfnMultiple = "multiple";
+
+@JsonSerializable()
+class UINotification {
+  final String type;
+  final String text;
+  final int count;
+  final String from;
+
+  UINotification(this.type, this.text, this.count, this.from);
+  factory UINotification.fromJson(Map<String, dynamic> json) =>
+      _$UINotificationFromJson(json);
+}
+
+@JsonSerializable()
+class UINotificationsConfig {
+  final bool pms;
+  final bool gcms;
+  @JsonKey(name: "gcmentions")
+  final bool gcMentions;
+
+  UINotificationsConfig(this.pms, this.gcms, this.gcMentions);
+  factory UINotificationsConfig.disabled() =>
+      UINotificationsConfig(false, false, false);
+  factory UINotificationsConfig.fromJson(Map<String, dynamic> json) =>
+      _$UINotificationsConfigFromJson(json);
+  Map<String, dynamic> toJson() => _$UINotificationsConfigToJson(this);
+}
+
 mixin NtfStreams {
   StreamController<RemoteUser> ntfAcceptedInvites =
       StreamController<RemoteUser>();
@@ -2246,6 +2278,10 @@ mixin NtfStreams {
 
   StreamController<int> ntfRescanProgress = StreamController<int>();
   Stream<int> rescanWalletProgress() => ntfRescanProgress.stream;
+
+  StreamController<UINotification> ntfUINotifications =
+      StreamController<UINotification>();
+  Stream<UINotification> uiNotifications() => ntfUINotifications.stream;
 
   handleNotifications(int cmd, bool isError, String jsonPayload) {
     dynamic payload;
@@ -2472,6 +2508,11 @@ mixin NtfStreams {
         ntfChatEvents.add(event);
         break;
 
+      case NTUINotification:
+        var event = UINotification.fromJson(payload);
+        ntfUINotifications.add(event);
+        break;
+
       default:
         debugPrint("Received unknown notification ${cmd.toRadixString(16)}");
     }
@@ -2509,6 +2550,7 @@ abstract class PluginPlatform {
   Stream<FetchedResource> fetchedResources() => throw "unimplemented";
   Stream<SSPlacedOrder> simpleStoreOrders() => throw "unimplemented";
   Stream<int> rescanWalletProgress() => throw "unimplemented";
+  Stream<UINotification> uiNotifications() => throw "unimplemented";
 
   Future<bool> hasServer() async => throw "unimplemented";
 
@@ -3196,6 +3238,9 @@ abstract class PluginPlatform {
 
   Future<void> subscribeToAllRemotePosts() async =>
       await asyncCall(CTSubAllPosts, null);
+
+  Future<void> updateUINotificationsCfg(UINotificationsConfig cfg) async =>
+      await asyncCall(CTUpdateUINotificationsCfg, cfg);
 }
 
 const int CTUnknown = 0x00;
@@ -3328,6 +3373,7 @@ const int CTZipTimedProfilingLogs = 0x8a;
 const int CTListGCInvites = 0x8b;
 const int CTCancelDownload = 0x8c;
 const int CTSubAllPosts = 0x8d;
+const int CTUpdateUINotificationsCfg = 0x8e;
 
 const int notificationsStartID = 0x1000;
 
@@ -3376,3 +3422,4 @@ const int NTServerUnwelcomeError = 0x102a;
 const int NTProfileUpdated = 0x102b;
 const int NTAddressBookLoaded = 0x102c;
 const int NTPostsSubscriberUpdated = 0x102d;
+const int NTUINotification = 0x102e;
