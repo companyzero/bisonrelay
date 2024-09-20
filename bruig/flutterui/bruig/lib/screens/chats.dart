@@ -215,6 +215,9 @@ class CustomInputFocusNode {
 
   Function? noModEnterKeyHandler;
 
+  // If set, this is called when a paste event ("ctrl+v") is detected.
+  Function? pasteEventHandler;
+
   CustomInputFocusNode() {
     inputFocusNode = FocusNode(onKeyEvent: (node, event) {
       if (event.logicalKey.keyId == LogicalKeyboardKey.controlLeft.keyId) {
@@ -240,6 +243,12 @@ class CustomInputFocusNode {
         // of the key and return the 'handled' result.
         if (noModEnterKeyHandler != null && !anyMod) {
           noModEnterKeyHandler!();
+          return KeyEventResult.handled;
+        }
+      } else if (event.logicalKey.keyId == LogicalKeyboardKey.keyV.keyId &&
+          event is KeyDownEvent) {
+        if (pasteEventHandler != null) {
+          pasteEventHandler!();
           return KeyEventResult.handled;
         }
       }

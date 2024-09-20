@@ -79,7 +79,10 @@ class AttachmentEmbed {
 
 class AttachFileScreen extends StatefulWidget {
   final SendMsg _send;
-  const AttachFileScreen(this._send, {super.key});
+  final Uint8List? initialFileData;
+  final String? initialMime;
+  const AttachFileScreen(this._send, this.initialFileData, this.initialMime,
+      {super.key});
 
   @override
   State<AttachFileScreen> createState() => _AttachFileScreenState();
@@ -106,6 +109,8 @@ class _AttachFileScreenState extends State<AttachFileScreen> {
     super.initState();
     _listenForPermissionStatus();
     _futureGetPath = _getPath();
+    fileData = widget.initialFileData;
+    mime = widget.initialMime ?? "";
   }
 
   @override
@@ -282,14 +287,14 @@ class _AttachFileScreenState extends State<AttachFileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return selectedAttachmentPath != null
+    return fileData != null || selectedAttachmentPath != null
         ? Column(children: [
             mime.startsWith('image/')
                 ? Container(
                     margin: const EdgeInsets.symmetric(vertical: 8.0),
                     height: 200.0,
-                    child: Image.file(File(selectedAttachmentPath!),
-                        errorBuilder: (BuildContext context, Object error,
+                    child: Image.memory(fileData!, errorBuilder:
+                        (BuildContext context, Object error,
                             StackTrace? stackTrace) {
                       return const Center(
                           child: Text('This image type is not supported'));

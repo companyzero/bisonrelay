@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:bruig/components/attach_file.dart';
 import 'package:bruig/models/uistate.dart';
 import 'package:bruig/screens/chats.dart';
@@ -5,7 +7,9 @@ import 'package:flutter/material.dart';
 import 'package:bruig/components/chat/types.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/theme_manager.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:super_clipboard/super_clipboard.dart';
 
 class ChatInput extends StatefulWidget {
   final SendMsg _send;
@@ -21,15 +25,74 @@ class ChatInput extends StatefulWidget {
 class _ChatInputState extends State<ChatInput> {
   final controller = TextEditingController();
 
-  final FocusNode node = FocusNode();
   List<AttachmentEmbed> embeds = [];
   bool isAttaching = false;
+  Uint8List? initialAttachData;
+  String? initialAttachMime;
+
+  void replaceTextSelection(String s) {
+    var sel = controller.selection.copyWith();
+    if (controller.selection.start == -1 && controller.selection.end == -1) {
+      controller.text = controller.text + s;
+    } else if (sel.isCollapsed) {
+      controller.text = controller.text.substring(0, sel.start) +
+          s +
+          controller.text.substring(min(controller.text.length, sel.start));
+      var newPos = sel.baseOffset + s.length;
+      controller.selection =
+          sel.copyWith(baseOffset: newPos, extentOffset: newPos);
+    } else {
+      controller.text =
+          controller.text.substring(0, controller.selection.start) +
+              s +
+              controller.text.substring(controller.selection.end);
+      var newPos = sel.baseOffset + s.length;
+      controller.selection =
+          sel.copyWith(baseOffset: newPos, extentOffset: newPos);
+    }
+  }
+
+  Future<void> pasteEvent() async {
+    final clip = SystemClipboard.instance;
+    if (clip == null) {
+      // Clipboard API is not supported on this platform. Use the standard.
+      replaceTextSelection(Clipboard.kTextPlain);
+      return;
+    }
+    final reader = await clip.read();
+
+    /// Binary formats need to be read as streams
+    if (reader.canProvide(Formats.png)) {
+      reader.getFile(Formats.png, (file) async {
+        final stream = await file.readAll();
+        setState(() {
+          initialAttachData = stream;
+          initialAttachMime = "image/png";
+          isAttaching = true;
+        });
+      });
+      return;
+    }
+
+    // Automatically convert to markdown?
+    // if (reader.canProvide(Formats.htmlText)) {
+    //   final html = await reader.readValue(Formats.htmlText);
+    //   print("XXXX clip is html $html");
+    // }
+
+    if (reader.canProvide(Formats.plainText)) {
+      final text = await reader.readValue(Formats.plainText);
+      replaceTextSelection(text ?? "");
+      return;
+    }
+  }
 
   @override
   void initState() {
     super.initState();
     controller.text = widget.chat.workingMsg;
     widget.inputFocusNode.noModEnterKeyHandler = sendMsg;
+    widget.inputFocusNode.pasteEventHandler = pasteEvent;
   }
 
   @override
@@ -43,12 +106,24 @@ class _ChatInputState extends State<ChatInput> {
           baseOffset: workingMsg.length, extentOffset: workingMsg.length);
       widget.inputFocusNode.inputFocusNode.requestFocus();
     }
+    oldWidget.inputFocusNode.pasteEventHandler = null;
+    widget.inputFocusNode.pasteEventHandler = pasteEvent;
   }
 
   @override
   void dispose() {
     widget.inputFocusNode.noModEnterKeyHandler = null;
+    widget.inputFocusNode.pasteEventHandler = null;
     super.dispose();
+  }
+
+  void sendAttachment(String msg) {
+    setState(() {
+      isAttaching = false;
+      initialAttachData = null;
+      initialAttachMime = null;
+    });
+    widget._send(msg);
   }
 
   void sendMsg() {
@@ -82,6 +157,9 @@ class _ChatInputState extends State<ChatInput> {
   void cancelAttach() {
     setState(() {
       isAttaching = false;
+      initialAttachData = null;
+      initialAttachMime = null;
+      widget.inputFocusNode.inputFocusNode.requestFocus();
     });
   }
 
@@ -98,7 +176,8 @@ class _ChatInputState extends State<ChatInput> {
                       onPressed: cancelAttach,
                       icon: const Icon(Icons.keyboard_arrow_left_outlined))
                 ]),
-                AttachFileScreen(widget._send)
+                AttachFileScreen(
+                    sendAttachment, initialAttachData, initialAttachMime)
               ])
             : Row(children: [
                 IconButton(
@@ -117,6 +196,20 @@ class _ChatInputState extends State<ChatInput> {
                   controller: controller,
                   minLines: 1,
                   maxLines: null,
+                  contextMenuBuilder: (BuildContext context,
+                          EditableTextState editableTextState) =>
+                      AdaptiveTextSelectionToolbar.editable(
+                    anchors: editableTextState.contextMenuAnchors,
+                    clipboardStatus: ClipboardStatus.pasteable,
+                    onCopy: null,
+                    onCut: null,
+                    onLiveTextInput: null,
+                    onLookUp: null,
+                    onSearchWeb: null,
+                    onSelectAll: null,
+                    onShare: null,
+                    onPaste: pasteEvent,
+                  ),
                   style: theme.textStyleFor(context, TextSize.medium, null),
                   keyboardType: TextInputType.multiline,
                   decoration: InputDecoration(
