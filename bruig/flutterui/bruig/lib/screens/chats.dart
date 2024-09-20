@@ -199,8 +199,17 @@ class CustomInputFocusNode {
   bool shiftRight = false;
   bool altLeft = false;
   bool altRight = false;
+  bool metaLeft = false;
+  bool metaRight = false;
   bool get anyMod =>
-      ctrlLeft || altLeft || shiftLeft || ctrlRight || altRight || shiftRight;
+      ctrlLeft ||
+      altLeft ||
+      shiftLeft ||
+      ctrlRight ||
+      altRight ||
+      shiftRight ||
+      metaLeft ||
+      metaRight;
 
   late final FocusNode inputFocusNode;
 
@@ -209,19 +218,23 @@ class CustomInputFocusNode {
   CustomInputFocusNode() {
     inputFocusNode = FocusNode(onKeyEvent: (node, event) {
       if (event.logicalKey.keyId == LogicalKeyboardKey.controlLeft.keyId) {
-        ctrlLeft = !ctrlLeft;
+        ctrlLeft = event is KeyDownEvent;
       } else if (event.logicalKey.keyId ==
           LogicalKeyboardKey.controlRight.keyId) {
-        ctrlRight = !ctrlRight;
+        ctrlRight = event is KeyDownEvent;
       } else if (event.logicalKey.keyId == LogicalKeyboardKey.altLeft.keyId) {
-        altLeft = !altLeft;
+        altLeft = event is KeyDownEvent;
       } else if (event.logicalKey.keyId == LogicalKeyboardKey.altRight.keyId) {
-        altRight = !altRight;
+        altRight = event is KeyDownEvent;
       } else if (event.logicalKey.keyId == LogicalKeyboardKey.shiftLeft.keyId) {
-        shiftLeft = !shiftLeft;
+        shiftLeft = event is KeyDownEvent;
+      } else if (event.logicalKey.keyId == LogicalKeyboardKey.metaLeft.keyId) {
+        metaLeft = event is KeyDownEvent;
+      } else if (event.logicalKey.keyId == LogicalKeyboardKey.metaRight.keyId) {
+        metaRight = event is KeyDownEvent;
       } else if (event.logicalKey.keyId ==
           LogicalKeyboardKey.shiftRight.keyId) {
-        shiftRight = !shiftRight;
+        shiftRight = event is KeyDownEvent;
       } else if (event.logicalKey.keyId == LogicalKeyboardKey.enter.keyId) {
         // When a special handler is set, call it to bypass standard processing
         // of the key and return the 'handled' result.
@@ -239,7 +252,7 @@ class CustomInputFocusNode {
 class _ChatsScreenState extends State<ChatsScreen> {
   ClientModel get client => widget.client;
   AppNotifications get ntfns => widget.ntfns;
-  CustomInputFocusNode inputFocusNode = CustomInputFocusNode();
+  final CustomInputFocusNode inputFocusNode = CustomInputFocusNode();
   bool hasLNBalance = false;
   List<PostListItem> userPostList = [];
   Timer? checkLNTimer;
