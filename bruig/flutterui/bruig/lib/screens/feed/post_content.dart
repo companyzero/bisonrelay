@@ -11,6 +11,7 @@ import 'package:bruig/models/feed.dart';
 import 'package:bruig/models/snackbar.dart';
 import 'package:bruig/models/uistate.dart';
 import 'package:bruig/screens/overview.dart';
+import 'package:bruig/util.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:golib_plugin/definitions.dart';
@@ -194,10 +195,12 @@ class _CommentWState extends State<_CommentW> {
 
     var intTimestamp = 0;
     var strTimestamp = "";
+    var fullStrTimestamp = "";
     if (timestamp != "") {
       intTimestamp = int.parse(timestamp, radix: 16);
-      strTimestamp = DateTime.fromMillisecondsSinceEpoch(intTimestamp * 1000)
-          .toIso8601String();
+      var ts = DateTime.fromMillisecondsSinceEpoch(intTimestamp * 1000);
+      strTimestamp = formatTerseTime(ts);
+      fullStrTimestamp = ts.toIso8601String();
     }
 
     var mine = widget.comment.uid == widget.client.publicID;
@@ -206,207 +209,189 @@ class _CommentWState extends State<_CommentW> {
 
     var relayedByMe = widget.post.summ.from == widget.client.publicID;
 
-    return Consumer<ThemeNotifier>(
-        builder: (context, theme, child) => Column(children: [
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  SizedBox(width: widget.comment.level == 0 ? 30 : 0),
-                  Container(
-                    width: 28,
-                    margin: const EdgeInsets.only(top: 0, bottom: 0, left: 5),
-                    child: UserAvatarFromID(widget.client, widget.comment.uid,
-                        postFrom: widget.post.summ.from,
-                        showChatSideMenuOnTap: true,
-                        nick: nick),
-                  ),
-                  const SizedBox(width: 6),
-                  Row(children: [
-                    Txt.S(nick),
-                    const SizedBox(width: 8),
-                    !mine && !hasChat && !kxing
-                        ? SizedBox(
-                            width: 20,
-                            child: IconButton(
-                                padding: const EdgeInsets.all(0),
-                                iconSize: 15,
-                                tooltip:
-                                    "Attempt to KX with the author of this comment",
-                                onPressed: requestMediateID,
-                                icon:
-                                    const Icon(Icons.connect_without_contact)))
-                        : !mine && !isSubscribed
-                            ? SizedBox(
-                                width: 20,
-                                child: IconButton(
-                                    padding: const EdgeInsets.all(0),
-                                    iconSize: 15,
-                                    tooltip: isSubscribing
-                                        ? "Requesting Subscription from user..."
-                                        : "Subscribe to user's posts",
-                                    onPressed: () => !isSubscribing
-                                        ? subscibeToPosts(chat)
-                                        : null,
-                                    icon: isSubscribing
-                                        ? const SizedBox(
-                                            height: 15,
-                                            width: 15,
-                                            child: CircularProgressIndicator(
-                                                strokeWidth: 1))
-                                        : const Icon(
-                                            Icons.follow_the_signs_rounded)))
-                            : const Empty(),
-                    if (widget.canComment)
-                      SizedBox(
-                          width: 20,
-                          child: IconButton(
-                              padding: const EdgeInsets.all(0),
-                              iconSize: 15,
-                              tooltip: "Reply to this comment",
-                              onPressed:
-                                  !sendingReply ? () => replying = true : null,
-                              icon: Icon(!sendingReply
-                                  ? Icons.reply
-                                  : Icons.hourglass_bottom))),
-                    relayedByMe
-                        ? SizedBox(
-                            width: 20,
-                            child: IconButton(
-                                padding: const EdgeInsets.all(0),
-                                iconSize: 15,
-                                tooltip:
-                                    "View Receive Receipts for this comment",
-                                onPressed: listReceiveReceipts,
-                                icon: const Icon(Icons.receipt_long)))
-                        : const Empty(),
-                    unreadComment
-                        ? const Row(children: [
-                            SizedBox(width: 10),
-                            Icon(Icons.new_releases_outlined,
-                                color: Colors.amber),
-                            SizedBox(width: 10),
-                            Txt.S("New Comment",
-                                style: TextStyle(
-                                  fontStyle: FontStyle.italic,
-                                  color: Colors.amber,
-                                ))
-                          ])
-                        : const Empty()
-                  ]),
-                  strTimestamp != ""
-                      ? Expanded(
-                          child: Align(
-                              alignment: Alignment.centerRight,
-                              child: Txt.S(strTimestamp)))
-                      : const Empty(),
-                  const SizedBox(width: 10)
-                ],
-              ),
-              Stack(children: [
-                Container(
-                    margin: EdgeInsets.only(
-                        top: 0,
-                        left: widget.comment.level == 0 ? 48 : 18,
-                        bottom: 20),
-                    padding:
-                        const EdgeInsets.only(top: 10, bottom: 10, left: 10),
-                    child: Column(children: [
-                      SelectionArea(
-                          child: Row(children: [
-                        Expanded(
-                            child: MarkdownArea(widget.comment.comment, false))
-                      ])),
-                      replying && !sendingReply
-                          ? Column(
-                              children: [
-                                const SizedBox(height: 20),
-                                Box(
-                                    padding: const EdgeInsets.all(10),
-                                    color: SurfaceColor.surfaceContainer,
-                                    child: TextField(
-                                      minLines: 3,
-                                      keyboardType: TextInputType.multiline,
-                                      maxLines: null,
-                                      onChanged: (v) => reply = v,
-                                    )),
-                                const SizedBox(height: 20),
-                                Align(
-                                    alignment: Alignment.centerLeft,
-                                    child: Wrap(
-                                      alignment: WrapAlignment.start,
-                                      runSpacing: 10,
-                                      spacing: 10,
-                                      children: [
-                                        TextButton(
-                                            onPressed: sendReply,
-                                            child: const Text("Reply")),
-                                        CancelButton(
-                                            onPressed: () => replying = false)
-                                      ],
-                                    ))
-                              ],
-                            )
-                          : const Text(""),
-                      commentRRs != null
-                          ? const SizedBox(height: 10)
-                          : const Empty(),
-                      commentRRs != null
-                          ? Row(children: [
-                              const Expanded(child: Divider()),
-                              const SizedBox(width: 8),
-                              Txt.S(
-                                  commentRRs!.isEmpty
-                                      ? "No receive receipts"
-                                      : "Comment receive receipts",
-                                  color: TextColor.onSurfaceVariant),
-                              const SizedBox(width: 8),
-                              const Expanded(child: Divider()),
-                            ])
-                          : const Empty(),
-                      if (commentRRs != null && commentRRs!.isNotEmpty)
-                        Container(
+    var theme = Provider.of<ThemeNotifier>(context, listen: false);
+    var isScreenSmall = checkIsScreenSmall(context);
+
+    return Column(children: [
+      const SizedBox(height: 10),
+      Row(children: [
+        Container(
+          width: 28,
+          margin:
+              EdgeInsets.only(top: 0, bottom: 0, left: isScreenSmall ? 0 : 2),
+          child: UserAvatarFromID(widget.client, widget.comment.uid,
+              postFrom: widget.post.summ.from,
+              showChatSideMenuOnTap: true,
+              nick: nick),
+        ),
+        const SizedBox(width: 6),
+        Row(children: [
+          Txt.S(nick),
+          const SizedBox(width: 8),
+          !mine && !hasChat && !kxing
+              ? SizedBox(
+                  width: 20,
+                  child: IconButton(
+                      padding: const EdgeInsets.all(0),
+                      iconSize: 15,
+                      tooltip: "Attempt to KX with the author of this comment",
+                      onPressed: requestMediateID,
+                      icon: const Icon(Icons.connect_without_contact)))
+              : !mine && !isSubscribed
+                  ? SizedBox(
+                      width: 20,
+                      child: IconButton(
+                          padding: const EdgeInsets.all(0),
+                          iconSize: 15,
+                          tooltip: isSubscribing
+                              ? "Requesting Subscription from user..."
+                              : "Subscribe to user's posts",
+                          onPressed: () =>
+                              !isSubscribing ? subscibeToPosts(chat) : null,
+                          icon: isSubscribing
+                              ? const SizedBox(
+                                  height: 15,
+                                  width: 15,
+                                  child:
+                                      CircularProgressIndicator(strokeWidth: 1))
+                              : const Icon(Icons.follow_the_signs_rounded)))
+                  : const Empty(),
+          if (widget.canComment)
+            SizedBox(
+                width: 20,
+                child: IconButton(
+                    padding: const EdgeInsets.all(0),
+                    iconSize: 15,
+                    tooltip: "Reply to this comment",
+                    onPressed: !sendingReply ? () => replying = true : null,
+                    icon: Icon(
+                        !sendingReply ? Icons.reply : Icons.hourglass_bottom))),
+          relayedByMe
+              ? SizedBox(
+                  width: 20,
+                  child: IconButton(
+                      padding: const EdgeInsets.all(0),
+                      iconSize: 15,
+                      tooltip: "View Receive Receipts for this comment",
+                      onPressed: listReceiveReceipts,
+                      icon: const Icon(Icons.receipt_long)))
+              : const Empty(),
+          unreadComment
+              ? const Row(children: [
+                  SizedBox(width: 10),
+                  Icon(Icons.new_releases_outlined, color: Colors.amber),
+                  SizedBox(width: 10),
+                  Txt.S("New Comment",
+                      style: TextStyle(
+                        fontStyle: FontStyle.italic,
+                        color: Colors.amber,
+                      ))
+                ])
+              : const Empty()
+        ]),
+        strTimestamp != ""
+            ? Expanded(
+                child: Align(
+                    alignment: Alignment.centerRight,
+                    child: Tooltip(
+                        message: fullStrTimestamp, child: Txt.S(strTimestamp))))
+            : const Empty(),
+        const SizedBox(width: 10)
+      ]), // End of comment header Row.
+      Stack(children: [
+        Container(
+            margin: EdgeInsets.only(
+                top: 0, left: isScreenSmall ? 0 : 2, bottom: 20),
+            padding: const EdgeInsets.only(top: 10, bottom: 10, left: 0),
+            child: Column(children: [
+              SelectionArea(
+                  child: Row(children: [
+                Expanded(child: MarkdownArea(widget.comment.comment, false))
+              ])),
+              replying && !sendingReply
+                  ? Column(
+                      children: [
+                        const SizedBox(height: 20),
+                        Box(
+                            padding: const EdgeInsets.all(10),
+                            color: SurfaceColor.surfaceContainer,
+                            child: TextField(
+                              minLines: 3,
+                              keyboardType: TextInputType.multiline,
+                              maxLines: null,
+                              onChanged: (v) => reply = v,
+                            )),
+                        const SizedBox(height: 20),
+                        Align(
                             alignment: Alignment.centerLeft,
                             child: Wrap(
-                                children: commentRRs!
-                                    .map((rr) =>
-                                        _ReceiveReceipt(widget.client, rr))
-                                    .toList()))
-                    ])),
-                widget.comment.children.isNotEmpty
-                    ? Positioned(
-                        left: widget.comment.level == 0 ? 29 : -1,
-                        bottom: 0,
-                        child: IconButton(
-                            iconSize: 22,
-                            onPressed: () => toggleChildren(),
-                            icon: Icon(showChildren
-                                ? Icons.do_disturb_on_outlined
-                                : Icons.add_circle_outline)))
-                    : const Empty(),
-              ]),
-              showChildren && widget.comment.children.isNotEmpty
-                  ? Container(
-                      decoration: BoxDecoration(
-                          border: Border(
-                              left: BorderSide(
-                                  width: 2.0,
-                                  color: theme.colors.outlineVariant))),
-                      margin: EdgeInsets.only(
-                          top: 0, left: widget.comment.level == 0 ? 48 : 18),
-                      padding:
-                          const EdgeInsets.only(top: 10, bottom: 10, left: 10),
-                      child: Column(children: [
-                        ...widget.comment.children.map((e) => _CommentW(
-                            widget.post,
-                            e,
-                            widget.sendReply,
-                            widget.client,
-                            widget.showReply,
-                            widget.canComment))
-                      ]),
+                              alignment: WrapAlignment.start,
+                              runSpacing: 10,
+                              spacing: 10,
+                              children: [
+                                TextButton(
+                                    onPressed: sendReply,
+                                    child: const Text("Reply")),
+                                CancelButton(onPressed: () => replying = false)
+                              ],
+                            ))
+                      ],
                     )
+                  : const Text(""),
+              commentRRs != null ? const SizedBox(height: 10) : const Empty(),
+              commentRRs != null
+                  ? Row(children: [
+                      const Expanded(child: Divider()),
+                      const SizedBox(width: 8),
+                      Txt.S(
+                          commentRRs!.isEmpty
+                              ? "No receive receipts"
+                              : "Comment receive receipts",
+                          color: TextColor.onSurfaceVariant),
+                      const SizedBox(width: 8),
+                      const Expanded(child: Divider()),
+                    ])
                   : const Empty(),
-            ]));
+              if (commentRRs != null && commentRRs!.isNotEmpty)
+                Container(
+                    alignment: Alignment.centerLeft,
+                    child: Wrap(
+                        children: commentRRs!
+                            .map((rr) => _ReceiveReceipt(widget.client, rr))
+                            .toList()))
+            ])),
+        widget.comment.children.isNotEmpty
+            ? Positioned(
+                left: isScreenSmall ? -13 : -1,
+                bottom: 0,
+                child: IconButton(
+                    iconSize: isScreenSmall ? 18 : 22,
+                    onPressed: () => toggleChildren(),
+                    icon: Icon(showChildren
+                        ? Icons.do_disturb_on_outlined
+                        : Icons.add_circle_outline)))
+            : const Empty(),
+      ]),
+      showChildren && widget.comment.children.isNotEmpty
+          ? Container(
+              decoration: BoxDecoration(
+                  border: Border(
+                      left: BorderSide(
+                          width: 2.0, color: theme.colors.outlineVariant))),
+              margin: EdgeInsets.only(top: 0, left: isScreenSmall ? 5 : 18),
+              padding: const EdgeInsets.only(top: 10, bottom: 10, left: 10),
+              child: Column(children: [
+                ...widget.comment.children.map((e) => _CommentW(
+                    widget.post,
+                    e,
+                    widget.sendReply,
+                    widget.client,
+                    widget.showReply,
+                    widget.canComment))
+              ]),
+            )
+          : const Empty(),
+    ]);
   }
 }
 

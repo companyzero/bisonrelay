@@ -3,6 +3,7 @@ import 'dart:math';
 import 'dart:convert';
 
 import 'package:crypto/crypto.dart';
+import 'package:duration/duration.dart';
 import 'package:flutter/material.dart';
 
 // return a consistent color for each nick. Pretty dumb so far.
@@ -130,6 +131,11 @@ int parseDuration(String s) {
 }
 
 int parseDurationSeconds(String s) => (parseDuration(s) / 1e12).truncate();
+
+String formatTerseTime(DateTime d) {
+  var diff = DateTime.now().difference(d);
+  return prettyDuration(diff, tersity: DurationTersity.hour, abbreviated: true);
+}
 
 // Call Navigator.of(context).pop() ensuring the state is still mounted to avoid
 // exception.

@@ -5,7 +5,6 @@ import 'package:bruig/models/feed.dart';
 import 'package:bruig/models/uistate.dart';
 import 'package:bruig/screens/feed.dart';
 import 'package:bruig/screens/feed/feed_posts.dart';
-import 'package:collection/collection.dart';
 import 'package:duration/duration.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';

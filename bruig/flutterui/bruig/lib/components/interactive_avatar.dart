@@ -68,6 +68,7 @@ class AvatarModelAvatar extends StatefulWidget {
   final VoidCallback? onTap;
   final VoidCallback? onSecondaryTap;
   final double? radius;
+  final bool disableToolTip;
 
   const AvatarModelAvatar(
     this.avatar,
@@ -75,6 +76,7 @@ class AvatarModelAvatar extends StatefulWidget {
     this.onTap,
     this.onSecondaryTap,
     this.radius,
+    this.disableToolTip = false,
     super.key,
   });
 
@@ -120,7 +122,7 @@ class _AvatarModelAvatarState extends State<AvatarModelAvatar> {
       onTap: widget.onTap,
       onSecondaryTap: widget.onSecondaryTap,
       avatar: avatarImg,
-      toolTip: true,
+      toolTip: !widget.disableToolTip,
     );
   }
 }
@@ -134,6 +136,7 @@ class UserMenuAvatar extends StatelessWidget {
   final double? radius;
   final String? postFrom;
   final bool showChatSideMenuOnTap;
+  final bool disableTooltip;
 
   const UserMenuAvatar(
     this.client,
@@ -143,6 +146,7 @@ class UserMenuAvatar extends StatelessWidget {
     this.radius,
     this.postFrom,
     this.showChatSideMenuOnTap = false,
+    this.disableTooltip = false,
     super.key,
   });
 
@@ -166,6 +170,7 @@ class UserMenuAvatar extends StatelessWidget {
               radius: radius,
               onTap: onTap != null || showChatSideMenuOnTap ? _onTap : null,
               onSecondaryTap: onSecondaryTap,
+              disableToolTip: disableTooltip,
             ),
           )
         : UserContextMenu(
@@ -179,6 +184,7 @@ class UserMenuAvatar extends StatelessWidget {
               radius: radius,
               onTap: onTap != null || showChatSideMenuOnTap ? _onTap : null,
               onSecondaryTap: onSecondaryTap,
+              disableToolTip: disableTooltip,
             ),
           );
   }
@@ -222,7 +228,9 @@ class UserAvatarFromID extends StatelessWidget {
     var chat = client.getExistingChat(uid);
     if (chat != null) {
       return UserMenuAvatar(client, chat,
-          showChatSideMenuOnTap: showChatSideMenuOnTap, postFrom: postFrom);
+          showChatSideMenuOnTap: showChatSideMenuOnTap,
+          postFrom: postFrom,
+          disableTooltip: disableTooltip);
     }
 
     if (disableTooltip) {
