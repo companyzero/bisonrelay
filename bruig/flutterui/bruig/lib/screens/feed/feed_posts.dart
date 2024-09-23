@@ -3,12 +3,11 @@ import 'package:bruig/components/interactive_avatar.dart';
 import 'package:bruig/components/text.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/models/feed.dart';
-import 'package:bruig/models/uistate.dart';
 import 'package:bruig/screens/feed/post_content.dart';
+import 'package:bruig/util.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:bruig/components/md_elements.dart';
-import 'package:duration/duration.dart';
 
 class _AvatarOrUnread extends StatelessWidget {
   final ClientModel client;
@@ -112,13 +111,11 @@ class _FeedPostWState extends State<FeedPostW> {
       var nextIndex = widget.post.content.indexOf("--", firstIndex + 1);
       markdownData = widget.post.content.substring(firstIndex, nextIndex + 2);
     }
-    var postDate = widget.post.summ.date;
-    var postDifference = DateTime.now().difference(postDate);
-    var sincePost = prettyDuration(postDifference,
-        tersity: DurationTersity.hour, abbreviated: true);
+
+    var sincePost = formatTerseTime(widget.post.summ.date);
 
     return Card.filled(
-        margin: const EdgeInsets.only(right: 12, bottom: 15),
+        margin: const EdgeInsets.only(right: 15, bottom: 15),
         child: Container(
             padding: const EdgeInsets.all(10),
             child: Column(children: [
@@ -192,16 +189,13 @@ class _FeedPostsState extends State<FeedPosts> {
 
   @override
   Widget build(BuildContext context) {
-    bool isScreenSmall = checkIsScreenSmall(context);
     var posts = widget.onlyShowOwnPosts
         ? widget.feed.posts
             .where((post) => (post.summ.authorID == widget.client.publicID))
         : widget.feed.posts;
     return SelectionArea(
         child: Container(
-      padding: isScreenSmall
-          ? const EdgeInsets.only(left: 10, right: 10, top: 10, bottom: 10)
-          : const EdgeInsets.only(left: 50, right: 50, top: 10, bottom: 10),
+      padding: const EdgeInsets.only(left: 10, right: 0, top: 0, bottom: 10),
       child: ListView.builder(
           itemCount: posts.length,
           itemBuilder: (context, index) {

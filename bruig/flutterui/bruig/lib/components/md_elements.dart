@@ -465,6 +465,9 @@ class ImageMd extends StatelessWidget {
               borderRadius: const BorderRadius.all(Radius.circular(8.0)),
               image: DecorationImage(
                 image: MemoryImage(imgContent),
+                onError: (exception, stackTrace) {
+                  debugPrint("ImageMd unable to decode image: $exception");
+                },
               ),
             ),
           ),

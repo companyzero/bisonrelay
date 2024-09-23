@@ -1,5 +1,4 @@
 import 'package:bruig/components/empty_widget.dart';
-import 'package:bruig/components/info_grid.dart';
 import 'package:bruig/components/md_elements.dart';
 import 'package:bruig/components/inputs.dart';
 import 'package:bruig/models/resources.dart';
@@ -8,7 +7,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:markdown/markdown.dart' as md;
 import 'package:provider/provider.dart';
-import 'package:tuple/tuple.dart';
 import 'package:flutter/services.dart';
 
 class _FormSubmitButton extends StatelessWidget {
