@@ -33,9 +33,9 @@ const (
 	priorityDefault = 2
 	priorityUpload  = 4
 
-	// remoteUserStopHandlerTimeout is the timeout that a remote user's
-	// run() method uses to wait for all handlers to finish before
-	// returning.
+	// remoteUserStopHandlerTimeout is the timeout that remote users use
+	// to determine if a handler has timed out after the client was
+	// commanded to stop.
 	remoteUserStopHandlerTimeout = 10 * time.Second
 )
 
@@ -84,9 +84,12 @@ type RemoteUser struct {
 	mtx     sync.Mutex
 	ignored bool
 
-	// rmHandler is called whenever we receive a RM from this user. This is
-	// called as a goroutine.
-	rmHandler func(ru *RemoteUser, h *rpc.RMHeader, c interface{}, ts time.Time)
+	// rmHandler is called whenever we receive a RM from this user. This
+	// runs in the same goroutine as the RV manager. If this returns a
+	// non-nil channel, this means the handler has spawned a processing
+	// goroutine to process the message and this channel will be closed
+	// once the goroutine finishes executing.
+	rmHandler func(ru *RemoteUser, h *rpc.RMHeader, c interface{}, ts time.Time) <-chan struct{}
 
 	ntfns *NotificationManager
 

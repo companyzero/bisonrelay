@@ -133,6 +133,10 @@ func NewRVManager(log slog.Logger, db RVManagerDB, subsDelayer func() <-chan tim
 // Note that handler might never be called if the manager is stopped and it
 // might be called multiple times if the rendezvous is registered and pushed
 // multiple times.
+//
+// The handler is called in the main goroutine for the RVManager, so it blocks
+// further RV processing until it returns. Callers should arrange to spawn new
+// goroutines if the handler will perform significant work.
 func (rmgr *RVManager) Sub(rdzv RVID, handler RVHandler, subPaid SubPaidHandler) error {
 	sub := rdzvSub{
 		id:          rdzv,
@@ -276,6 +280,8 @@ func (rmgr *RVManager) BindToSession(sess clientintf.ServerSessionIntf) {
 
 // HandlePushedRMs is called via a bound session's `pushedRoutedMsgsHandler`
 // whenever routed messages are pushed from server to client.
+//
+// The received message is only ack'd after this function returns.
 func (rmgr *RVManager) HandlePushedRMs(prm *rpc.PushRoutedMessage) error {
 	if prm == nil {
 		return fmt.Errorf("prm cannot be nil in HandlePushedRMs")
@@ -684,7 +690,7 @@ loop:
 			// Handle received pushed RM. The handleInSub call will
 			// ack the result of processing the RV.
 			sub, ok := subs[rprm.prm.RV]
-			go rmgr.handleInSub(rprm, sub, ok)
+			rmgr.handleInSub(rprm, sub, ok)
 
 			continue loop
 
