@@ -137,6 +137,10 @@ func (c *Client) handleTransitiveMsgFwd(ru *RemoteUser, fwd rpc.RMTransitiveMess
 	}
 }
 
+// handlePrivateMsg handles PMs.
+//
+// NOTE: this is called on the RV manager goroutine, so it should not block
+// for long periods of time.
 func (c *Client) handlePrivateMsg(ru *RemoteUser, p rpc.RMPrivateMessage, ts time.Time) error {
 	if ru.IsIgnored() {
 		ru.log.Tracef("Ignoring received PM")
@@ -165,9 +169,6 @@ func (c *Client) innerHandleUserRM(ru *RemoteUser, h *rpc.RMHeader,
 	// DecomposeRM should have created the correct payload type based on
 	// the command, so switch on the payload type directly.
 	switch p := p.(type) {
-	case rpc.RMPrivateMessage:
-		return c.handlePrivateMsg(ru, p, ts)
-
 	case rpc.RMHandshakeSYN, rpc.RMHandshakeACK, rpc.RMHandshakeSYNACK:
 		return c.handleRMHandshake(ru, p)
 
@@ -188,9 +189,6 @@ func (c *Client) innerHandleUserRM(ru *RemoteUser, h *rpc.RMHeader,
 
 	case rpc.RMGroupUpdateAdmins:
 		return c.handleGCUpdateAdmins(ru, p, ts)
-
-	case rpc.RMGroupMessage:
-		return c.handleGCMessage(ru, p, ts)
 
 	case rpc.RMMediateIdentity:
 		return c.handleMediateID(ru, p)
@@ -300,21 +298,59 @@ func (c *Client) innerHandleUserRM(ru *RemoteUser, h *rpc.RMHeader,
 	}
 }
 
+// logHandlerError logs the error when handling the passed msg.
+func (c *Client) logHandlerError(ru *RemoteUser, cmd string, p interface{}, err error) {
+	if err == nil {
+		ru.log.Tracef("Finished handling %s (%T)", cmd, p)
+		return
+	}
+
+	if ru.log.Level() <= slog.LevelDebug {
+		ru.log.Errorf("Error handling %q (payload %T) from user: %v; %s",
+			cmd, p, err, spew.Sdump(p))
+	} else {
+		ru.log.Errorf("Error handling %q (payload %T) from user: %v",
+			cmd, p, err)
+	}
+
+}
+
 // handleUserRM is the main handler for remote user RoutedMessages. It decides
 // what to do with the given RM from the given user.
-func (c *Client) handleUserRM(ru *RemoteUser, h *rpc.RMHeader, p interface{}, ts time.Time) {
+func (c *Client) handleUserRM(ru *RemoteUser, h *rpc.RMHeader, p interface{}, ts time.Time) <-chan struct{} {
 	ru.log.Tracef("Starting to handle %T", p)
 	c.ntfns.notifyRMReceived(ru, h, p, ts)
 	c.gcmq.RMReceived(ru.ID(), ts)
-	err := c.innerHandleUserRM(ru, h, p, ts)
-	if err != nil {
-		ru.log.Errorf("Error handling %q (payload %T) from user: %v",
-			h.Command, p, err)
-		if ru.log.Level() <= slog.LevelDebug {
-			ru.logPayloads.Debugf("Payload for error %v: %s",
-				err, spew.Sdump(p))
-		}
-	} else {
-		ru.log.Tracef("Finished handling %T", p)
+
+	// At this point in the execution stack, this is still in the main RV
+	// manager goroutine. Some messages are deemed safe to be handled on
+	// this goroutine because they do not generate replies, their
+	// notification handlers are async, they otherwise do not consume
+	// significant CPU resources and they benefit from sequential
+	// processing (due to their reordering potentially affecting end-user
+	// interactions).
+	//
+	// These messages are handled directly below, while others spawn a
+	// separate goroutine.
+	switch p := p.(type) {
+	case rpc.RMPrivateMessage:
+		err := c.handlePrivateMsg(ru, p, ts)
+		c.logHandlerError(ru, h.Command, p, err)
+		return nil
+
+	case rpc.RMGroupMessage:
+		err := c.handleGCMessage(ru, p, ts)
+		c.logHandlerError(ru, h.Command, p, err)
+		return nil
+
+	default:
+		handlerDone := make(chan struct{})
+		go func() {
+			err := c.innerHandleUserRM(ru, h, p, ts)
+			c.logHandlerError(ru, h.Command, p, err)
+			close(handlerDone)
+		}()
+		return handlerDone
 	}
+
 }

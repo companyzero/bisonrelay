@@ -37,6 +37,8 @@ func TestDirectReset(t *testing.T) {
 
 	ts.kxUsers(alice, bob)
 	assertKXCompleted(true)
+	time.Sleep(3 * time.Second) // XXX
+	assertClientsCanPM(t, alice, bob)
 
 	// Perform a reset from Alice to Bob.
 	err := alice.ResetRatchet(bob.PublicID())

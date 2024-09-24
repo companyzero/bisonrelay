@@ -65,19 +65,21 @@ func TestRemoteUserPMs(t *testing.T) {
 	maxMsgSize := 10
 	var gotAliceMtx, gotBobMtx sync.Mutex
 	gotAliceMsgs, gotBobMsgs := make([]string, 0, nbMsgs), make([]string, 0, nbMsgs)
-	bobRemote.rmHandler = func(_ *RemoteUser, h *rpc.RMHeader, p interface{}, ts time.Time) {
+	bobRemote.rmHandler = func(_ *RemoteUser, h *rpc.RMHeader, p interface{}, ts time.Time) <-chan struct{} {
 		// Bob receives Alice's msgs.
 		pm := p.(rpc.RMPrivateMessage)
 		gotAliceMtx.Lock()
 		gotAliceMsgs = append(gotAliceMsgs, pm.Message)
 		gotAliceMtx.Unlock()
+		return nil
 	}
-	aliceRemote.rmHandler = func(_ *RemoteUser, h *rpc.RMHeader, p interface{}, ts time.Time) {
+	aliceRemote.rmHandler = func(_ *RemoteUser, h *rpc.RMHeader, p interface{}, ts time.Time) <-chan struct{} {
 		// Alice receives Bob's msgs.
 		pm := p.(rpc.RMPrivateMessage)
 		gotBobMtx.Lock()
 		gotBobMsgs = append(gotBobMsgs, pm.Message)
 		gotBobMtx.Unlock()
+		return nil
 	}
 
 	wantAliceMsgs, wantBobMsgs := make([]string, nbMsgs), make([]string, nbMsgs)
@@ -191,8 +193,9 @@ func TestAttemptMaxRMSize(t *testing.T) {
 	aliceRemote, bobRemote := newRemoteUserTestPair(t, rnd, svr, "alice", "bob")
 
 	gotBobRM := make(chan struct{}, 1)
-	bobRemote.rmHandler = func(_ *RemoteUser, h *rpc.RMHeader, p interface{}, ts time.Time) {
+	bobRemote.rmHandler = func(_ *RemoteUser, h *rpc.RMHeader, p interface{}, ts time.Time) <-chan struct{} {
 		gotBobRM <- struct{}{}
+		return nil
 	}
 
 	rm := rpc.RMFTGetChunkReply{
@@ -242,9 +245,14 @@ func TestWaitsHandlerDone(t *testing.T) {
 	}()
 
 	gotBobRM, returnFromBobHandler := make(chan struct{}, 1), make(chan struct{}, 1)
-	bobRemote.rmHandler = func(_ *RemoteUser, h *rpc.RMHeader, p interface{}, ts time.Time) {
-		gotBobRM <- struct{}{}
-		<-returnFromBobHandler
+	bobRemote.rmHandler = func(_ *RemoteUser, h *rpc.RMHeader, p interface{}, ts time.Time) <-chan struct{} {
+		doneChan := make(chan struct{})
+		go func() {
+			gotBobRM <- struct{}{}
+			<-returnFromBobHandler
+			close(doneChan)
+		}()
+		return doneChan
 	}
 
 	// Alice sends the PM.
@@ -293,9 +301,14 @@ func TestTimesoutSlowHandler(t *testing.T) {
 	}()
 
 	gotBobRM, returnFromBobHandler := make(chan struct{}, 1), make(chan struct{}, 1)
-	bobRemote.rmHandler = func(_ *RemoteUser, h *rpc.RMHeader, p interface{}, ts time.Time) {
-		gotBobRM <- struct{}{}
-		<-returnFromBobHandler
+	bobRemote.rmHandler = func(_ *RemoteUser, h *rpc.RMHeader, p interface{}, ts time.Time) <-chan struct{} {
+		doneChan := make(chan struct{})
+		go func() {
+			gotBobRM <- struct{}{}
+			<-returnFromBobHandler
+			close(doneChan)
+		}()
+		return doneChan
 	}
 
 	// Alice sends the PM.

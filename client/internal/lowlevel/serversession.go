@@ -191,36 +191,37 @@ func (sess *serverSession) RequestClose(err error) {
 	}
 }
 
+func nopPRMHandler(msg *rpc.PushRoutedMessage) error { return nil }
+
 // handlePushedMsg calls the handler for the given pushed message and sends the
 // ack result to sendAckChan. Fatal errors during processing are sent to
 // handlerErrChan.
 func (sess *serverSession) handlePushedMsg(ctx context.Context, pm pushedMsg,
 	sendAckChan chan wireMsg, handlerErrChan chan error) {
 
-	// Determine which handler to use to process the pushed message.
-	handler := func() error { return nil }
-
 	sess.log.Tracef("Handling pushed msg of type %T", pm.payload)
 
-	switch payload := pm.payload.(type) {
-	case *rpc.PushRoutedMessage:
-		if sess.pushedRoutedMsgsHandler != nil {
-			handler = func() error {
-				return sess.pushedRoutedMsgsHandler(payload)
-			}
-		} else {
-			sess.log.Warnf("Empty pushedRouterMsgsHandler")
-		}
+	handler := nopPRMHandler
+	if sess.pushedRoutedMsgsHandler != nil {
+		handler = sess.pushedRoutedMsgsHandler
+	} else {
+		sess.log.Warnf("Empty pushedRouterMsgsHandler")
+	}
 
-	default:
+	payload, ok := pm.payload.(*rpc.PushRoutedMessage)
+	if !ok {
+		// Should not happen.
 		handlerErrChan <- fmt.Errorf("unknown pushed msg type %t", pm.payload)
 		return
 	}
 
 	// Call the handler and figure out the result of the error.
-	err := handler()
+	err := handler(payload)
 
 	// Assemble the ack to send as response to the server.
+	//
+	// At this point, a successful Ack read by the server should delete the
+	// pushed RM so that it can't be read again.
 	var ack rpc.Acknowledge
 	var errAck AckError
 	var nonFatal bool // Whether to cancel recvLoop.

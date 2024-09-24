@@ -1099,6 +1099,10 @@ func (c *Client) GCMessage(gcID zkidentity.ShortID, msg string, mode rpc.Message
 	return c.sendToGCMembers(gcID, members, "msg", p, progressChan)
 }
 
+// handleGCMessage handles received GC messages.
+//
+// NOTE: this is called on the RV manager goroutine, so it should not block
+// for long periods of time.
 func (c *Client) handleGCMessage(ru *RemoteUser, gcm rpc.RMGroupMessage, ts time.Time) error {
 	if ru.IsIgnored() {
 		ru.log.Tracef("Ignoring received GC message")
@@ -1150,12 +1154,17 @@ func (c *Client) handleGCMessage(ru *RemoteUser, gcm rpc.RMGroupMessage, ts time
 		// member of. Alert them not to resend messages in this GC to
 		// us.
 		ru.log.Warnf("Received message on unknown groupchat %q", gcm.ID)
-		rmgp := rpc.RMGroupPart{
-			ID:     gcm.ID,
-			Reason: "I am not in that groupchat",
-		}
-		payEvent := fmt.Sprintf("gc.%s.preventiveGroupPart", gcm.ID.ShortLogID())
-		return ru.sendRMPriority(rmgp, payEvent, priorityGC)
+		go func() {
+			rmgp := rpc.RMGroupPart{
+				ID:     gcm.ID,
+				Reason: "I am not in that groupchat",
+			}
+			payEvent := fmt.Sprintf("gc.%s.preventiveGroupPart", gcm.ID.ShortLogID())
+			err := ru.sendRMPriority(rmgp, payEvent, priorityGC)
+			if err != nil && !errors.Is(err, clientintf.ErrSubsysExiting) {
+				ru.log.Errorf("Unable to send preventive group part: %v", err)
+			}
+		}()
 	}
 	if err != nil {
 		return err
