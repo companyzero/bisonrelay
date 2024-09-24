@@ -1102,7 +1102,6 @@ func (c *Client) GCMessage(gcID zkidentity.ShortID, msg string, mode rpc.Message
 func (c *Client) handleGCMessage(ru *RemoteUser, gcm rpc.RMGroupMessage, ts time.Time) error {
 	var gc rpc.RMGroupList
 	var found, isBlocked bool
-	var gcAlias string
 
 	// Create the local cached structure for a received GCM. The MsgID is
 	// just a random id used for caching purposes.
@@ -1155,6 +1154,12 @@ func (c *Client) handleGCMessage(ru *RemoteUser, gcm rpc.RMGroupMessage, ts time
 	}
 	if err != nil {
 		return err
+	}
+
+	// Ignore error because gcAlias will be blank.
+	gcAlias, _ := c.GetGCAlias(gcm.ID)
+	if gcAlias == "" {
+		gcAlias = gc.Name
 	}
 
 	if isBlocked {
