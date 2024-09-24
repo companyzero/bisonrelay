@@ -245,7 +245,8 @@ class CustomInputFocusNode {
           noModEnterKeyHandler!();
           return KeyEventResult.handled;
         }
-      } else if (event.logicalKey.keyId == LogicalKeyboardKey.keyV.keyId &&
+      } else if ((ctrlLeft || ctrlRight || metaLeft || metaRight) &&
+          event.logicalKey.keyId == LogicalKeyboardKey.keyV.keyId &&
           event is KeyDownEvent) {
         if (pasteEventHandler != null) {
           pasteEventHandler!();
