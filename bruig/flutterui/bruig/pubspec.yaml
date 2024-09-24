@@ -72,7 +72,7 @@ dependencies:
   path_drawing: ^1.0.0
   collection: ^1.18.0
   mobile_scanner: ^5.1.1
-  super_clipboard: ^0.8.17
+  super_clipboard: ^0.8.22
 
 msix_config:
   display_name: Bison Relay GUI
