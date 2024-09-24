@@ -90,6 +90,7 @@ type loggerSubsysIniter func(subsys string) slog.Logger
 // clientCfg holds config for an E2E test client.
 type clientCfg struct {
 	name      string
+	logName   string
 	rootDir   string
 	id        *zkidentity.FullIdentity
 	idIniter  func(context.Context) (*zkidentity.FullIdentity, error)
@@ -194,6 +195,12 @@ func withGCInviteExpiration(d time.Duration) newClientOpt {
 	}
 }
 
+func withLogName(s string) newClientOpt {
+	return func(cfg *clientCfg) {
+		cfg.logName = s
+	}
+}
+
 type testClient struct {
 	*client.Client
 	db      *clientdb.DB
@@ -251,7 +258,7 @@ func (tc *testClient) nextGCUserPartedIs(gcID client.GCID, uid client.UserID, ki
 	c := make(chan error, 1)
 	tc.handle(client.OnGCUserPartedNtfn(func(gotGCID client.GCID, gotUID clientintf.UserID, reason string, gotKick bool) {
 		var err error
-		if err == nil && gotGCID != gcID {
+		if gotGCID != gcID {
 			err = fmt.Errorf("unexpected GCID: got %s, want %s",
 				gotGCID, gcID)
 		}
@@ -334,14 +341,16 @@ func (scanner *testLogLineScanner) hasMatches() bool {
 // testScaffold holds all scaffolding needed to run an E2E test that involves
 // an instance of a BR server and client.
 type testScaffold struct {
-	t       testing.TB
-	cfg     testScaffoldCfg
-	showLog bool
-	tlb     *testutils.TestLogBackend
-	log     slog.Logger
+	t        testing.TB
+	cfg      testScaffoldCfg
+	showLog  bool
+	tlb      *testutils.TestLogBackend
+	log      slog.Logger
+	logFiles []*os.File
 
 	ctx    context.Context
 	cancel func()
+	wg     sync.WaitGroup
 
 	svr     *server.ZKS
 	svrAddr string
@@ -390,12 +399,17 @@ func (ts *testScaffold) newClientWithCfg(nccfg *clientCfg, opts ...newClientOpt)
 		ts.t.Fatal("name cannot be empty")
 	}
 
+	logName := nccfg.logName
+	if logName == "" {
+		logName = name
+	}
+
 	logf, err := os.Create(filepath.Join(rootDir, "applog.log"))
 	if err != nil {
 		ts.t.Fatalf("unable to create log file: %v", err)
 	}
-	ts.t.Cleanup(func() { logf.Close() })
-	logBknd := ts.tlb.NamedSubLogger(name, logf)
+	ts.logFiles = append(ts.logFiles, logf)
+	logBknd := ts.tlb.NamedSubLogger(logName, logf)
 	dbLog := logBknd("FSDB")
 
 	var tc *testClient
@@ -505,7 +519,11 @@ func (ts *testScaffold) newClientWithCfg(nccfg *clientCfg, opts ...newClientOpt)
 		nccfg:   nccfg,
 		log:     logBknd("TEST"),
 	}
-	go func() { tc.runC <- c.Run(ctx) }()
+	ts.wg.Add(1)
+	go func() {
+		tc.runC <- c.Run(ctx)
+		ts.wg.Done()
+	}()
 
 	// Wait until address book is loaded.
 	select {
@@ -616,13 +634,14 @@ func (ts *testScaffold) newTestServer() {
 	ts.svr = s
 
 	// Run the server.
-	go ts.svr.Run(ts.ctx)
+	ts.wg.Add(1)
+	go func() {
+		ts.svr.Run(ts.ctx)
+		ts.wg.Done()
+	}()
 }
 
 func newTestScaffold(t *testing.T, cfg testScaffoldCfg) *testScaffold {
-	ctx, cancel := context.WithCancel(context.Background())
-	t.Cleanup(cancel)
-
 	logEnv := os.Getenv("BR_E2E_LOG")
 	showLog := logEnv == "1" || logEnv == t.Name()
 
@@ -643,6 +662,8 @@ func newTestScaffold(t *testing.T, cfg testScaffoldCfg) *testScaffold {
 		testutils.WithMiddlewareWriter(cfg.logScanner))
 	log := tlb.NamedSubLogger("XXXXXXX", nil)("XXXX")
 
+	ctx, cancel := context.WithCancel(context.Background())
+
 	ts := &testScaffold{
 		t:       t,
 		tlb:     tlb,
@@ -652,6 +673,31 @@ func newTestScaffold(t *testing.T, cfg testScaffoldCfg) *testScaffold {
 		showLog: showLog,
 		log:     log,
 	}
+
+	t.Cleanup(func() {
+		// Cancel all services running in test.
+		cancel()
+
+		// Wait for all services to be done.
+		wgDone := make(chan struct{})
+		go func() {
+			ts.wg.Wait()
+			close(wgDone)
+		}()
+		select {
+		case <-wgDone:
+		case <-time.After(30 * time.Second):
+			t.Error("Test scaffold wg failed to be done in time")
+			if !t.Failed() {
+				t.Fail()
+			}
+		}
+
+		// Close all log files.
+		for _, f := range ts.logFiles {
+			f.Close()
+		}
+	})
 
 	if !cfg.skipNewServer {
 		ts.newTestServer()

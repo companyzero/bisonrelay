@@ -11,6 +11,7 @@ import (
 
 	"github.com/companyzero/bisonrelay/client/clientdb"
 	"github.com/companyzero/bisonrelay/client/clientintf"
+	"github.com/companyzero/bisonrelay/internal/strescape"
 	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/companyzero/bisonrelay/zkidentity"
 )
@@ -920,6 +921,10 @@ func (c *Client) handlePostStatus(ru *RemoteUser, rmps rpc.RMPostStatus) error {
 	if err == nil {
 		err = c.addStatusToPost(ru.ID(), &pms)
 	}
+	if errors.Is(err, clientintf.ErrSubsysExiting) {
+		// Special case for early return.
+		return err
+	}
 
 	// Send reply to status sender.
 	var reply rpc.RMPostStatusReply
@@ -933,7 +938,8 @@ func (c *Client) handlePostStatus(ru *RemoteUser, rmps rpc.RMPostStatus) error {
 
 func (c *Client) handlePostStatusReply(ru *RemoteUser, reply rpc.RMPostStatusReply) error {
 	if reply.Error != nil && *reply.Error != "" {
-		return errors.New(*reply.Error)
+		ru.log.Warnf("Remote user returned error in post status reply: %s",
+			strescape.Content(*reply.Error))
 	}
 	return nil
 }

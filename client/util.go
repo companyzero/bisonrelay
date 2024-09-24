@@ -35,6 +35,14 @@ func (c *Client) mustRandomUint64() uint64 {
 	return binary.LittleEndian.Uint64(b[:])
 }
 
+func filledSema(n int) chan struct{} {
+	c := make(chan struct{}, n)
+	for i := 0; i < n; i++ {
+		c <- struct{}{}
+	}
+	return c
+}
+
 // rvManagerDBAdapter adapts the client to the interface required by the
 // RVManagerDB.
 type rvManagerDBAdapter struct {

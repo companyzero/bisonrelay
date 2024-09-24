@@ -336,17 +336,18 @@ func TestContentFilters(t *testing.T) {
 		),
 	}}
 
-	for _, tc := range tests {
+	for i, tc := range tests {
 		tc := tc
-		t.Run(tc.name, func(t *testing.T) {
+		i := i
+		ok := t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
 			// Setup Alice, Bob and Charlie
 			tcfg := testScaffoldCfg{}
 			ts := newTestScaffold(t, tcfg)
-			alice := ts.newClient("alice")
-			bob := ts.newClient("bob")
-			charlie := ts.newClient("charlie")
+			alice := ts.newClient("alice", withLogName(fmt.Sprintf("alice%02d", i)))
+			bob := ts.newClient("bob", withLogName(fmt.Sprintf("bob%02d", i)))
+			charlie := ts.newClient("charlie", withLogName(fmt.Sprintf("chrle%02d", i)))
 
 			// KX users.
 			ts.kxUsers(alice, bob)
@@ -393,11 +394,11 @@ func TestContentFilters(t *testing.T) {
 				aliceMsgChan <- "post_" + ru.Nick() + "_" + sum.Title
 			}))
 			alice.handle(client.OnPostStatusRcvdNtfn(func(ru *client.RemoteUser, _ clientintf.PostID, statusFrom client.UserID, status rpc.PostMetadataStatus) {
-				postFromNick := "alice"
+				postFromNick := alice.LocalNick()
 				if ru != nil {
 					postFromNick = ru.Nick()
 				}
-				nick := "alice"
+				nick := alice.LocalNick()
 				if s, _ := alice.UserNick(statusFrom); s != "" {
 					nick = s
 				}
@@ -413,7 +414,7 @@ func TestContentFilters(t *testing.T) {
 				isGCM := e.GC != nil
 				isPost := e.PID != nil && !e.IsPostComment
 				isPM := !isPost && !e.IsPostComment && !isGCM
-				nick := "alice"
+				nick := alice.LocalNick()
 				if s, _ := alice.UserNick(e.UID); s != "" {
 					nick = s
 				}
@@ -427,7 +428,7 @@ func TestContentFilters(t *testing.T) {
 				case isPost:
 					typ = "post"
 				case e.IsPostComment:
-					fromNick := "alice"
+					fromNick := alice.LocalNick()
 					if s, _ := alice.UserNick(*e.PostFrom); s != "" {
 						fromNick = s
 					}
@@ -562,5 +563,8 @@ func TestContentFilters(t *testing.T) {
 				}
 			}
 		})
+		if !ok {
+			return
+		}
 	}
 }

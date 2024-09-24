@@ -619,6 +619,7 @@ loop:
 		go rmm.sendReply(errRMQExiting)
 	}
 
+	q.log.Tracef("RMQ enqueueLoop is done")
 	return ctx.Err()
 }
 

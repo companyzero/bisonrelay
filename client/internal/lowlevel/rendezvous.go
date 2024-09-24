@@ -610,7 +610,7 @@ func (rmgr *RVManager) Run(ctx context.Context) error {
 	var delayChan <-chan time.Time
 
 loop:
-	for err == nil {
+	for {
 		select {
 		case <-delayChan:
 			delayChan = nil
@@ -629,7 +629,8 @@ loop:
 			// Re-send all unsubscriptions and all additions.
 			unsubs = append(unsubs, requestedUnsubs...)
 			requestedUnsubs = nil
-			for _, unsub := range requestedUnsubs {
+			toDel = nil
+			for _, unsub := range unsubs {
 				toDel = append(toDel, unsub.id)
 			}
 			toAdd, toMark = rvMapKeys(subs)

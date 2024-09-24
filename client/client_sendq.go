@@ -98,6 +98,9 @@ func (c *Client) sendWithSendQPriority(typ string, msg interface{}, priority uin
 				ru.log.Errorf("unable to queue  %T: %v",
 					msg, err)
 				c.removeFromSendQ(sqid, uid)
+			} else {
+				ru.log.Tracef("Unable to queue %T due to %v",
+					msg, err)
 			}
 		}
 

@@ -252,6 +252,13 @@ func (c *Client) initRemoteUser(id *zkidentity.PublicIdentity, r *ratchet.Ratche
 	// Change the reset listening state on a goroutine so we don't block on
 	// it.
 	go func() {
+		// When oldUser == true, the ratchet is replaced and that
+		// triggers an automatic re-subscription, therefore there's no
+		// need to do it again.
+		if !oldUser {
+			ru.updateRVs()
+		}
+
 		// Unsubscribe from the old reset RV point.
 		if oldEntry != nil {
 			c.kxl.unlistenReset(oldEntry.MyResetRV)
@@ -265,12 +272,6 @@ func (c *Client) initRemoteUser(id *zkidentity.PublicIdentity, r *ratchet.Ratche
 
 	// Run the new user.
 	if !oldUser {
-		select {
-		case c.newUsersChan <- ru:
-		case <-c.ctx.Done():
-			return nil, false, errClientExiting
-		}
-
 		// Check if we should subscribe to posts. Ignore if there's a
 		// post-kx action to subscribe, which will be prioritized.
 		subToPosts := c.cfg.AutoSubscribeToPosts && updateAB

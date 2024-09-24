@@ -65,24 +65,18 @@ type RemoteUser struct {
 	// The following fields should only be set during setup of this struct
 	// and are not safe for concurrent modification.
 
-	db              *clientdb.DB
-	q               rmqIntf
-	rmgr            rdzvManagerIntf
-	log             slog.Logger
-	logPayloads     slog.Logger
-	id              zkidentity.ShortID
-	sigKey          zkidentity.FixedSizeEd25519PublicKey
-	localIDSigner   rpc.MessageSigner
-	runDone         chan struct{}
-	stopChan        chan struct{}
-	nextRMChan      chan *remoteUserRM
-	ratchetChan     chan *ratchet.Ratchet
-	decryptedRMChan chan error
-	sentRMChan      chan error
-	handlingChan    chan int // +1 means handling, -1 means handling done
-	compressLevel   int
-	myResetRV       clientdb.RawRVID
-	theirResetRV    clientdb.RawRVID
+	db            *clientdb.DB
+	q             rmqIntf
+	rmgr          rdzvManagerIntf
+	log           slog.Logger
+	logPayloads   slog.Logger
+	id            zkidentity.ShortID
+	sigKey        zkidentity.FixedSizeEd25519PublicKey
+	localIDSigner rpc.MessageSigner
+	stopped       chan struct{}
+	compressLevel int
+	myResetRV     clientdb.RawRVID
+	theirResetRV  clientdb.RawRVID
 
 	nick atomic.Pointer[string]
 
@@ -96,9 +90,19 @@ type RemoteUser struct {
 
 	ntfns *NotificationManager
 
-	rLock  sync.Mutex
-	r      *ratchet.Ratchet
-	rError error
+	// handlerSema tracks how many handlers may be active for this user.
+	handlerSema chan struct{}
+
+	// The following fields are protected by rLock.
+	rLock       sync.Mutex
+	r           *ratchet.Ratchet
+	rError      error
+	lastRecvRV  ratchet.RVPoint
+	lastDrainRV ratchet.RVPoint
+
+	// updateSubsChan is also protected by rLock and is non-nil when the
+	// runUpdateSubs loop is running.
+	updateSubsChan chan struct{}
 }
 
 func newRemoteUser(q rmqIntf, rmgr rdzvManagerIntf, db *clientdb.DB,
@@ -106,22 +110,17 @@ func newRemoteUser(q rmqIntf, rmgr rdzvManagerIntf, db *clientdb.DB,
 	r *ratchet.Ratchet) *RemoteUser {
 
 	ru := &RemoteUser{
-		q:               q,
-		rmgr:            rmgr,
-		r:               r,
-		db:              db,
-		log:             slog.Disabled,
-		logPayloads:     slog.Disabled,
-		id:              remoteID.Identity,
-		sigKey:          remoteID.SigKey,
-		localIDSigner:   localIDSigner,
-		runDone:         make(chan struct{}),
-		stopChan:        make(chan struct{}),
-		nextRMChan:      make(chan *remoteUserRM),
-		ratchetChan:     make(chan *ratchet.Ratchet),
-		decryptedRMChan: make(chan error),
-		sentRMChan:      make(chan error),
-		handlingChan:    make(chan int),
+		q:             q,
+		rmgr:          rmgr,
+		r:             r,
+		db:            db,
+		log:           slog.Disabled,
+		logPayloads:   slog.Disabled,
+		id:            remoteID.Identity,
+		sigKey:        remoteID.SigKey,
+		localIDSigner: localIDSigner,
+		stopped:       make(chan struct{}),
+		handlerSema:   filledSema(50),
 	}
 	ru.setNick(remoteID.Nick)
 	return ru
@@ -208,7 +207,10 @@ func (ru *RemoteUser) String() string {
 }
 
 func (ru *RemoteUser) replaceRatchet(newR *ratchet.Ratchet) {
-	ru.ratchetChan <- newR
+	ru.rLock.Lock()
+	ru.r = newR
+	ru.triggerRVUpdate()
+	ru.rLock.Unlock()
 }
 
 // removeUnacked removes this user's unacked RM if it matches the specified rv.
@@ -219,7 +221,7 @@ func (ru *RemoteUser) removeUnacked(rv clientintf.RawRVID) {
 	go func() {
 		select {
 		case <-ctx.Done():
-		case <-ru.runDone:
+		case <-ru.stopped:
 			cancel()
 		}
 	}()
@@ -259,6 +261,10 @@ func (ru *RemoteUser) queueRMPriority(payload interface{}, priority uint,
 		return fmt.Errorf("priority must be max 4")
 	}
 
+	if ru.isStopped() {
+		return errRemoteUserExiting
+	}
+
 	me, err := rpc.ComposeCompressedRM(ru.localIDSigner, payload, ru.compressLevel)
 	if err != nil {
 		return err
@@ -287,8 +293,8 @@ func (ru *RemoteUser) queueRMPriority(payload interface{}, priority uint,
 		payEvent: payEvent,
 	}
 
-	// This inner channel is needed in order to alert run() of completed
-	// sends.
+	// Inner channel that is written when the message was sent and ack'd by
+	// the server.
 	innerReplyChan := make(chan error)
 
 	ru.log.Tracef("Queuing to RMQ %T", payload)
@@ -308,16 +314,10 @@ func (ru *RemoteUser) queueRMPriority(payload interface{}, priority uint,
 				ru.removeUnacked(orm.sendRV)
 			}
 
-			// Alert run() of result of send.
-			select {
-			case ru.sentRMChan <- err:
-				if err == nil && ru.ntfns != nil {
-					ru.ntfns.notifyRMSent(ru, payload)
-				}
-
-			case <-ru.runDone:
+			if err == nil && ru.ntfns != nil {
+				ru.ntfns.notifyRMSent(ru, payload)
 			}
-		case <-ru.runDone:
+		case <-ru.stopped:
 			err = errRemoteUserExiting
 		}
 
@@ -386,13 +386,13 @@ func (ru *RemoteUser) sendPM(msg string) error {
 }
 
 // cancelableCtx returns a context that is cancelable and that is automatically
-// canceled if the run() method terminates.
+// canceled if the remote user is stopped.
 func (ru *RemoteUser) cancelableCtx() (context.Context, func()) {
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
 		select {
 		case <-ctx.Done():
-		case <-ru.runDone:
+		case <-ru.stopped:
 			cancel()
 		}
 	}()
@@ -426,9 +426,9 @@ func (ru *RemoteUser) saveRatchet(encrypted []byte, rv *clientintf.RawRVID,
 
 	// To ensure this save can't be canceled by almost any signal, we use a
 	// special context here. We cancel this context prematurely only if
-	// this RemoteUser.run() method returns and then _only_ if a further 5
-	// second timeout elapses, to ensure we've made all tries to save the
-	// updated ratchet.
+	// this RemoteUser.stopped() method is called and then _only_ if a
+	// further 5 second timeout elapses, to ensure we've made all tries to
+	// save the updated ratchet.
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	go func() {
@@ -436,10 +436,10 @@ func (ru *RemoteUser) saveRatchet(encrypted []byte, rv *clientintf.RawRVID,
 		case <-ctx.Done():
 			// saveRatchet() returned already.
 			return
-		case <-ru.runDone:
+		case <-ru.stopped:
 		}
 
-		// Wait for another 5 seconds after run() ends.
+		// Wait for another 5 seconds after the client is stopped.
 		select {
 		case <-time.After(5 * time.Second):
 			cancel()
@@ -467,7 +467,7 @@ func (ru *RemoteUser) saveRatchet(encrypted []byte, rv *clientintf.RawRVID,
 
 	if errors.Is(err, context.Canceled) {
 		// Only way to reach this is after the 5 second timeout after
-		// run() ends.
+		// the client is stopped.
 		err = fmt.Errorf("premature cancellation of ratchet update in the DB")
 	}
 
@@ -518,8 +518,14 @@ func (ru *RemoteUser) encryptRM(rm *remoteUserRM) (lowlevel.RVID, []byte, error)
 }
 
 // handleReceivedEncrypted handles a received blob on one of this user's RV
-// points. This is called asynchronously by the RV Manager once we've registered
-// this user's receive RV points.
+// points. This is called by the RV Manager once we've registered this user's
+// receive RV points.
+//
+// Note: This is called in the main RV manager goroutine, so it should not
+// block for a significant amount of time.
+//
+// The received RV is only ack'd (and therefore removed from the server) once
+// this function returns.
 func (ru *RemoteUser) handleReceivedEncrypted(recvBlob lowlevel.RVBlob) error {
 	// Handle received RM.
 	ru.rLock.Lock()
@@ -533,6 +539,10 @@ func (ru *RemoteUser) handleReceivedEncrypted(recvBlob lowlevel.RVBlob) error {
 				"This might cause a busted ratchet")
 			return err
 		}
+
+		// Decrypting worked, therefore the set of RVs we need to be
+		// subscribed to has changed.
+		ru.triggerRVUpdate()
 	}
 	ru.rLock.Unlock()
 
@@ -551,13 +561,6 @@ func (ru *RemoteUser) handleReceivedEncrypted(recvBlob lowlevel.RVBlob) error {
 		return nil
 	}
 
-	// Successfully decrypted using the ratchet. Let Run() know.
-	select {
-	case ru.decryptedRMChan <- nil:
-	case <-ru.runDone:
-		return errRemoteUserExiting
-	}
-
 	h, c, err := rpc.DecomposeRM(ru.verifyMessage, cleartext, uint(ru.q.MaxMsgSize()))
 	if err != nil {
 		// Encryption is authenticated, so an error here means the
@@ -572,40 +575,62 @@ func (ru *RemoteUser) handleReceivedEncrypted(recvBlob lowlevel.RVBlob) error {
 		ru.logPayloads.Debugf("Received RM %q via RV %s", h.Command, recvBlob.ID)
 	}
 
-	// Handle every received msg in a different goroutine.
-	if ru.rmHandler != nil {
-		select {
-		case ru.handlingChan <- +1:
-		case <-ru.runDone:
-			return errRemoteUserExiting
-		}
-		go func() {
-			ru.rmHandler(ru, h, c, recvBlob.ServerTS)
-			select {
-			case ru.handlingChan <- -1:
-			case <-ru.runDone:
-			}
-		}()
+	if ru.rmHandler == nil {
+		ru.log.Warnf("remoteUser rmHandler is nil")
+		return nil
 	}
 
+	// Obtain a semaphore to run this handler.
+	if err := ru.acquireHandlerSema(); err != nil {
+		return err
+	}
+
+	handlerDoneChan := ru.rmHandler(ru, h, c, recvBlob.ServerTS)
+	if handlerDoneChan == nil {
+		// Msg handled, return semaphore directly.
+		ru.returnHandlerSema()
+		return nil
+	}
+
+	// Otherwise, return only after the processing goroutine is
+	// done.
+	go func() {
+		select {
+		case <-handlerDoneChan:
+		case <-ru.stopped:
+			// After commanded to stop, wait an additional
+			// time to see if the handler will actually
+			// terminate.
+			select {
+			case <-handlerDoneChan:
+			case <-time.After(remoteUserStopHandlerTimeout):
+				ru.log.Warnf("Handler for message %T "+
+					"timed out after shutdown "+
+					"requested", c)
+			}
+		}
+		ru.returnHandlerSema()
+	}()
 	return nil
 }
 
-// maybeUpdateRVs updates the RVs we listen on related to this user in the
-// server.
-func (ru *RemoteUser) maybeUpdateRVs(lastRecvRV, lastDrainRV ratchet.RVPoint, handler lowlevel.RVHandler) (ratchet.RVPoint, ratchet.RVPoint, error) {
+// updateRVs updates the RVs we listen on related to this user in the server.
+func (ru *RemoteUser) updateRVs() {
 	ru.rLock.Lock()
 	rv, drainRV := ru.r.RecvRendezvous()
 	rvDebug, drainDebug := ru.r.RecvRendezvousPlainText()
+	lastRecvRV, lastDrainRV := ru.lastRecvRV, ru.lastDrainRV
 	ru.rLock.Unlock()
 
-	ru.log.Tracef("maybeUpdateRVs: lastRcvRV %s lastDrainRV %s rv %s (%s) "+
+	ru.log.Tracef("updateRVs: lastRcvRV %s lastDrainRV %s rv %s (%s) "+
 		"drainRV %s (%s)", lastRecvRV, lastDrainRV, rv, rvDebug,
 		drainRV, drainDebug)
 
 	if (rv == lastRecvRV) && (drainRV == lastDrainRV) {
-		return lastRecvRV, lastDrainRV, nil
+		return
 	}
+
+	handler := ru.handleReceivedEncrypted
 
 	// Need to rotate receive RVs.
 	//
@@ -657,125 +682,174 @@ func (ru *RemoteUser) maybeUpdateRVs(lastRecvRV, lastDrainRV ratchet.RVPoint, ha
 		// This ordinarily shouldn't happen if our assumptions
 		// are correct, but isn't a fatal error, so log it as a
 		// debug msg and keep going.
-		ru.log.Errorf("Unexpected non-fatal error: %v", err)
+		ru.log.Debugf("Unexpected non-fatal error: %v", err)
+	case errors.Is(err, clientintf.ErrSubsysExiting):
+		// Ignore this error because it means the client is shutting
+		// down.
 	default:
-		// Other errors are fatal.
-		return emptyRV, emptyRV, err
+		ru.log.Errorf("Unexpected error during RV subscription: %v", err)
+		return
 	}
 
-	return rv, drainRV, nil
+	// Track the last RVs subscribed to.
+	ru.rLock.Lock()
+	ru.lastRecvRV = rv
+	ru.lastDrainRV = drainRV
+	ru.rLock.Unlock()
 }
 
-// stop requests this user to be stopped unilaterally.
+// stop requests this user to be stopped unilaterally. It must only be called
+// once for an user.
 func (ru *RemoteUser) stop() {
+	ru.log.Tracef("Stopping remote user processing")
+	close(ru.stopped)
+}
+
+// isStopped returns true if the user was commanded to stop processing.
+func (ru *RemoteUser) isStopped() bool {
 	select {
-	case ru.stopChan <- struct{}{}:
-	case <-ru.runDone:
+	case <-ru.stopped:
+		return true
+	default:
+		return false
 	}
 }
 
-func (ru *RemoteUser) run(ctx context.Context) error {
-
-	// How many handlers are processing messages.
-	var nbHandlers int
-
-	// Perform initial subscription to the ratchet receive RVs.
-	var emptyRV ratchet.RVPoint
-	handler := ru.handleReceivedEncrypted
-	lastRecvRV, lastDrainRV, err := ru.maybeUpdateRVs(emptyRV, emptyRV, handler)
-	if err != nil {
-		return err
+// acquireHandlerSema acquires a semaphore value to process a handler for this
+// user.
+func (ru *RemoteUser) acquireHandlerSema() error {
+	// Fast track.
+	select {
+	case <-ru.handlerSema:
+		return nil
+	case <-ru.stopped:
+		return errRemoteUserExiting
+	default:
 	}
 
-nextAction:
-	for err == nil {
+	// Slow track.
+	for {
 		select {
-		case <-ru.stopChan:
-			// nil marks this run as exiting gracefully.
-			err = nil
-			break nextAction
-
-		case err = <-ru.sentRMChan:
-			// Completed a send. We only get errors if encryption
-			// failed on the RM or if the rmq is exiting.
-			if err != nil && !errors.Is(err, clientintf.ErrSubsysExiting) {
-				ru.log.Errorf("Stopping remote user due to "+
-					"send error: %v", err)
-			} else {
-				ru.log.Tracef("Got send err: %v", err)
-			}
-
-		case decodeErr := <-ru.decryptedRMChan:
-			err = decodeErr
-
-		case newR := <-ru.ratchetChan:
-			// Ratchet updated. Save in DB and update listen RVs.
-			ru.log.Debugf("Received new ratchet to replace existing")
-			ru.rLock.Lock()
-			ru.r = newR
-			ru.rError = nil
-			err = ru.saveRatchet(nil, nil, "")
-			ru.rLock.Unlock()
-
-		case delta := <-ru.handlingChan:
-			nbHandlers += delta
-			ru.log.Tracef("Got handling chan delta %d new %d",
-				delta, nbHandlers)
-
-		case <-ctx.Done():
-			err = ctx.Err()
+		case <-ru.handlerSema:
+			return nil
+		case <-ru.stopped:
+			return errRemoteUserExiting
+		case <-time.After(time.Second):
+			ru.log.Warnf("User RM handling has drained semaphore")
 		}
-
-		if err != nil {
-			break nextAction
-		}
-
-		// Rotate receive RVs in the rv manager if needed.
-		lastRecvRV, lastDrainRV, err = ru.maybeUpdateRVs(lastRecvRV,
-			lastDrainRV, handler)
 	}
+}
 
-	// Unsub from the last subscribed RVs. Safe to ignore errors here, as
-	// we're quitting anyway.
-	if lastDrainRV != emptyRV {
-		go ru.rmgr.Unsub(lastDrainRV)
-	}
-	if lastRecvRV != emptyRV {
-		go ru.rmgr.Unsub(lastRecvRV)
-	}
+// returnHandlerSema returns a semaphore value after processing a handler.
+func (ru *RemoteUser) returnHandlerSema() {
+	ru.handlerSema <- struct{}{}
+}
 
-	// Wait until all handlers complete or at most 10 seconds. In general,
-	// handlers aren't slow, so this protects against deadlocks preventing
-	// shutdown.
-	timeoutChan := time.After(remoteUserStopHandlerTimeout)
-	for nbHandlers > 0 {
+// waitHandlers waits until all handlers have finished processing or the
+// doneChan is closed. The wait only starts once the remote user has been
+// asked to stop running. Returns true if the wait was successful.
+func (ru *RemoteUser) waitHandlers(doneChan <-chan struct{}) bool {
+	select {
+	case <-ru.stopped:
+	case <-doneChan:
+		return false
+	}
+	for i := 0; i < cap(ru.handlerSema); i++ {
 		select {
-		case delta := <-ru.handlingChan:
-			nbHandlers += delta
-			ru.log.Tracef("Got shutdown handling chan delta %d new %d",
-				delta, nbHandlers)
+		case <-ru.handlerSema:
+		case <-doneChan:
+			return false
+		}
+	}
+	return true
+}
 
-		case <-timeoutChan:
-			ru.log.Warnf(fmt.Sprintf("Timeout waiting for %d handlers to finish",
-				nbHandlers))
-			if errors.Is(err, context.Canceled) {
-				err = fmt.Errorf("%w: %d handlers still processing",
-					errTimeoutWaitingHandlers, nbHandlers)
+// runUpdateSubs runs a loop that updates the set of RVs this user is
+// subscribed to whenever a new signal is sent on updateSubsChan.
+func (ru *RemoteUser) runUpdateSubs(updateSubsChan chan struct{}) {
+
+	// idleTimeout is when the loop should quit because there are no more
+	// messages coming in (the RV manager keeps the last RVs subscribed
+	// to).
+	const idleTimeout = time.Minute
+	timer := time.NewTimer(idleTimeout)
+
+	ru.log.Tracef("Starting to update user's RV subscriptions")
+
+	// needsFinalUpdate is setup to true after the loop if we should do a
+	// final update on the RVs.
+	needsFinalUpdate := true
+
+loop:
+	for {
+		ru.updateRVs()
+		if !timer.Stop() {
+			<-timer.C
+		}
+		timer.Reset(idleTimeout)
+
+		select {
+		case <-updateSubsChan:
+			// Loop and update the RVs.
+
+		case <-ru.stopped:
+			// No need for final update because client is shutting
+			// down.
+			needsFinalUpdate = false
+			if !timer.Stop() {
+				<-timer.C
 			}
-			nbHandlers = 0
+			break loop
+
+		case <-timer.C:
+			break loop
 		}
 	}
 
-	// All done.
-	close(ru.runDone)
-	ru.log.Tracef("Finished running user. err=%v", err)
-	return err
+	// Drain the channel under the lock to ensure no more requests to
+	// update the RVs came in.
+	ru.rLock.Lock()
+	for done := false; !done && needsFinalUpdate; {
+		select {
+		case <-updateSubsChan:
+			needsFinalUpdate = true
+		default:
+			done = true
+		}
+	}
+	ru.updateSubsChan = nil
+	ru.rLock.Unlock()
+
+	if needsFinalUpdate {
+		ru.updateRVs()
+	}
+
+	ru.log.Tracef("Finished updating user's RV subscription")
+}
+
+// triggerRVUpdate triggers a new RV update to be started. This MUST be called
+// with rLock locked.
+func (ru *RemoteUser) triggerRVUpdate() {
+	// An update loop is running.
+	if ru.updateSubsChan != nil {
+		select {
+		case ru.updateSubsChan <- struct{}{}:
+		case <-ru.stopped:
+		}
+		return
+	}
+
+	// An update loop is NOT running. start it. The chan is buffered to
+	// avoid preempting on handleReceivedEncrypted when possible.
+	ru.updateSubsChan = make(chan struct{}, 5)
+	go ru.runUpdateSubs(ru.updateSubsChan)
 }
 
 // remoteUserList is a concurrent-safe list of active remote users.
 type remoteUserList struct {
 	sync.Mutex
-	m map[UserID]*RemoteUser
+	m       map[UserID]*RemoteUser
+	stopped bool
 
 	collator *collate.Collator
 }
@@ -822,6 +896,9 @@ func (rul *remoteUserList) uniqueNick(nick string, uid UserID, myNick string) st
 
 func (rul *remoteUserList) add(ru *RemoteUser, myNick string) (*RemoteUser, error) {
 	rul.Lock()
+	if rul.stopped {
+		return nil, errRemoteUserExiting
+	}
 	if oldRU, ok := rul.m[ru.id]; ok {
 		rul.Unlock()
 		return oldRU, alreadyHaveUserError{ru.id}
@@ -918,4 +995,23 @@ func (rul *remoteUserList) allUsers() []*RemoteUser {
 	}
 	rul.Unlock()
 	return res
+}
+
+// stopAndWait stops and waits all remote users to be done or the context to
+// be closed.
+func (rul *remoteUserList) stopAndWait(ctx context.Context) bool {
+	ok := true
+	rul.Lock()
+	rul.stopped = true
+	toStop := rul.m
+	rul.m = map[UserID]*RemoteUser{}
+	rul.Unlock()
+
+	for _, ru := range toStop {
+		ru.stop()
+	}
+	for _, ru := range toStop {
+		ok = ok && ru.waitHandlers(ctx.Done())
+	}
+	return ok
 }
