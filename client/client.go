@@ -1140,7 +1140,10 @@ func (c *Client) Backup(_ context.Context, rootDir, destPath string) (string, er
 // Must only be called once.
 func (c *Client) Run(ctx context.Context) error {
 	// The last thing done is clearing the local client's private data.
-	defer c.localID.zero()
+	defer func() {
+		c.localID.zero()
+		c.log.Debugf("Zeroed local identity private data from memory")
+	}()
 
 	// runctx enables canceling in case of run initialization errors.
 	runctx, cancel := context.WithCancel(ctx)
@@ -1331,19 +1334,18 @@ func (c *Client) Run(ctx context.Context) error {
 		return nil
 	}
 
-	// Run the remote user ratchets.
+	// Once the client has been commanded to stop, stop all remote users.
 	g.Go(func() error {
-		gu, guCtx := errgroup.WithContext(gctx)
-	nextUser:
-		for {
-			select {
-			case ru := <-c.newUsersChan:
-				gu.Go(func() error { return ru.run(guCtx) })
-			case <-guCtx.Done():
-				break nextUser
-			}
+		<-gctx.Done()
+		c.log.Tracef("Beginning to stop remote user handlers")
+		timeout := remoteUserStopHandlerTimeout + time.Second
+		doneCtx, cancel := context.WithTimeout(context.Background(), timeout)
+		defer cancel()
+		if !c.rul.stopAndWait(doneCtx) {
+			c.log.Warnf("Not all users finished their handlers in time")
 		}
-		return gu.Wait()
+		c.log.Tracef("Finished stopping remote user handlers")
+		return nil
 	})
 
 	// Queue encrypted but unsent user RMs. This must be done before any

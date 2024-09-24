@@ -113,8 +113,11 @@ func assertClientsCanPM(t testing.TB, alice, bob *testClient) {
 	defer bobReg.Unregister()
 
 	aliceMsg, bobMsg := alice.name+"->"+bob.name, bob.name+"->"+alice.name
-	assert.NilErr(t, alice.PM(bob.PublicID(), aliceMsg))
-	assert.NilErr(t, bob.PM(alice.PublicID(), bobMsg))
+	alicePMSentChan, bobPMSentChan := make(chan error, 1), make(chan error, 1)
+	go func() { alicePMSentChan <- alice.PM(bob.PublicID(), aliceMsg) }()
+	go func() { bobPMSentChan <- bob.PM(alice.PublicID(), bobMsg) }()
+	assert.NilErrFromChan(t, alicePMSentChan)
+	assert.NilErrFromChan(t, bobPMSentChan)
 	assert.ChanWrittenWithVal(t, aliceChan, bobMsg)
 	assert.ChanWrittenWithVal(t, bobChan, aliceMsg)
 }

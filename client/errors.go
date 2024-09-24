@@ -10,12 +10,9 @@ import (
 
 var (
 	errRemoteUserExiting = fmt.Errorf("remote user: %w", clientintf.ErrSubsysExiting)
-	errClientExiting     = fmt.Errorf("client: %w", clientintf.ErrSubsysExiting)
 	errAlreadyExists     = fmt.Errorf("already exists")
 	errUserBlocked       = fmt.Errorf("user is blocked")
 	errRMTooLarge        = errors.New("RM is too large")
-
-	errTimeoutWaitingHandlers = errors.New("timeout waiting for handlers to complete")
 
 	errTimeoutWaitingPrepaidInvite = errors.New("timeout waiting for prepaid invite")
 
