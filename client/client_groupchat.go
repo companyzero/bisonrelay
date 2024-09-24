@@ -1100,6 +1100,11 @@ func (c *Client) GCMessage(gcID zkidentity.ShortID, msg string, mode rpc.Message
 }
 
 func (c *Client) handleGCMessage(ru *RemoteUser, gcm rpc.RMGroupMessage, ts time.Time) error {
+	if ru.IsIgnored() {
+		ru.log.Tracef("Ignoring received GC message")
+		return nil
+	}
+
 	var gc rpc.RMGroupList
 	var found, isBlocked bool
 

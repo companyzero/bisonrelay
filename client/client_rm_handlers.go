@@ -137,6 +137,28 @@ func (c *Client) handleTransitiveMsgFwd(ru *RemoteUser, fwd rpc.RMTransitiveMess
 	}
 }
 
+func (c *Client) handlePrivateMsg(ru *RemoteUser, p rpc.RMPrivateMessage, ts time.Time) error {
+	if ru.IsIgnored() {
+		ru.log.Tracef("Ignoring received PM")
+		return nil
+	}
+
+	if filter, _ := c.FilterPM(ru.ID(), p.Message); filter {
+		return nil
+	}
+
+	err := c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
+		return c.db.LogPM(tx, ru.ID(), false, ru.Nick(), p.Message, ts)
+	})
+	if err != nil {
+		return err
+	}
+	ru.log.Debugf("Received private message of length %d", len(p.Message))
+
+	c.ntfns.notifyOnPM(ru, p, ts)
+	return nil
+}
+
 func (c *Client) innerHandleUserRM(ru *RemoteUser, h *rpc.RMHeader,
 	p interface{}, ts time.Time) error {
 
@@ -144,24 +166,7 @@ func (c *Client) innerHandleUserRM(ru *RemoteUser, h *rpc.RMHeader,
 	// the command, so switch on the payload type directly.
 	switch p := p.(type) {
 	case rpc.RMPrivateMessage:
-		if ru.IsIgnored() {
-			ru.log.Tracef("Ignoring received PM")
-			return nil
-		}
-
-		if filter, _ := c.FilterPM(ru.ID(), p.Message); filter {
-			return nil
-		}
-
-		err := c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
-			return c.db.LogPM(tx, ru.ID(), false, ru.Nick(), p.Message, ts)
-		})
-		if err != nil {
-			return err
-		}
-		ru.log.Debugf("Received private message of length %d", len(p.Message))
-
-		c.ntfns.notifyOnPM(ru, p, ts)
+		return c.handlePrivateMsg(ru, p, ts)
 
 	case rpc.RMHandshakeSYN, rpc.RMHandshakeACK, rpc.RMHandshakeSYNACK:
 		return c.handleRMHandshake(ru, p)
@@ -185,10 +190,6 @@ func (c *Client) innerHandleUserRM(ru *RemoteUser, h *rpc.RMHeader,
 		return c.handleGCUpdateAdmins(ru, p, ts)
 
 	case rpc.RMGroupMessage:
-		if ru.IsIgnored() {
-			ru.log.Tracef("Ignoring received GC message")
-			return nil
-		}
 		return c.handleGCMessage(ru, p, ts)
 
 	case rpc.RMMediateIdentity:
@@ -297,8 +298,6 @@ func (c *Client) innerHandleUserRM(ru *RemoteUser, h *rpc.RMHeader,
 		return fmt.Errorf("Received unknown command %q payload %T",
 			h.Command, p)
 	}
-
-	return nil
 }
 
 // handleUserRM is the main handler for remote user RoutedMessages. It decides
