@@ -11,6 +11,7 @@ import (
 
 	"github.com/companyzero/bisonrelay/client/clientintf"
 	"github.com/companyzero/bisonrelay/internal/assert"
+	"github.com/companyzero/bisonrelay/ratchet"
 	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/companyzero/bisonrelay/zkidentity"
 )
@@ -332,4 +333,83 @@ func TestTimesoutSlowHandler(t *testing.T) {
 
 	// Clean up handler goroutine.
 	returnFromBobHandler <- struct{}{}
+}
+
+// TestIgnoresInvalidRMs tests that invalid and unknown RM types are ignored and
+// do not cause the clients to stop communicating.
+func TestIgnoresInvalidRMs(t *testing.T) {
+	t.Parallel()
+
+	rnd := testRand(t)
+	svr := newMockRMServer(t)
+
+	// Signer that generates invalid signature.
+	invalidSigner := func(message []byte) zkidentity.FixedSizeSignature {
+		var res zkidentity.FixedSizeSignature
+		rnd.Read(res[:])
+		return res
+	}
+
+	aliceRemote, bobRemote := newRemoteUserTestPair(t, rnd, svr, "alice", "bob")
+
+	bobRMChan := make(chan string, 5)
+	bobRemote.rmHandler = func(_ *RemoteUser, h *rpc.RMHeader, p interface{}, ts time.Time) <-chan struct{} {
+		pm := p.(rpc.RMPrivateMessage)
+		bobRMChan <- pm.Message
+		return nil
+	}
+	bobRvDecryptErrChan, bobRmDecodeErrChan := make(chan struct{}, 2), make(chan struct{}, 2)
+	bobRemote.rvDecryptError = func(ratchet.RVPoint, []byte) {
+		bobRvDecryptErrChan <- struct{}{}
+	}
+	bobRemote.rmDecodeError = func(ratchet.RVPoint, []byte) {
+		bobRmDecodeErrChan <- struct{}{}
+	}
+
+	// Send a message to ensure ratchet works.
+	pm1 := "pm1 from alice"
+	err := aliceRemote.sendPM(pm1)
+	assert.NilErr(t, err)
+	assert.ChanWrittenWithVal(t, bobRMChan, pm1)
+
+	// Ensure RVs were updated.
+	time.Sleep(50 * time.Millisecond)
+
+	// Send a message with bogus signature which can't be decrypted. This
+	// is done directly to the outbound queue, bypassing the standard
+	// procedure for sending an RM. This gets ignored by Bob and does not
+	// advance any ratchets.
+	toRV1, _ := bobRemote.lastListenRVs()
+	bogusPM1 := rpc.RMPrivateMessage{Message: "bogus pm1 from alice"}
+	bogusHeader1 := rpc.RMHeader{Command: rpc.RMCPrivateMessage}
+	rawBogusPM1, err := rpc.ComposeCompressedRMWithHeader(invalidSigner,
+		bogusHeader1, bogusPM1, 0)
+	assert.NilErr(t, err)
+	bogusORM1 := rawRM{msg: rawBogusPM1, rv: toRV1}
+	err = aliceRemote.q.SendRM(bogusORM1)
+	assert.NilErr(t, err)
+	assert.ChanWritten(t, bobRvDecryptErrChan)
+
+	// Send a message with a new, unknown command type. This has a valid
+	// signature and advances the ratchets, but is ignored by Bob due to
+	// unknown command.
+	bogusPM2 := rpc.RMPrivateMessage{Message: "bogus pm2 from alice"}
+	bogusHeader2 := rpc.RMHeader{Command: "xxxunknown"}
+	rawBogusPM2, err := rpc.ComposeCompressedRMWithHeader(aliceRemote.localIDSigner,
+		bogusHeader2, bogusPM2, 0)
+	assert.NilErr(t, err)
+	bogusORM2 := &remoteUserRM{msg: rawBogusPM2, sendRV: toRV1, ru: aliceRemote}
+	err = aliceRemote.q.SendRM(bogusORM2)
+	assert.NilErr(t, err)
+	assert.ChanWritten(t, bobRmDecodeErrChan)
+
+	// Double check Bob did not receive anything and allow it to subscribe
+	// to the new RV.
+	assert.ChanNotWritten(t, bobRMChan, time.Second)
+
+	// Finally, double check the remotes can still talk to each other.
+	pm2 := "pm2 from alice"
+	err = aliceRemote.sendPM(pm2)
+	assert.NilErr(t, err)
+	assert.ChanWrittenWithVal(t, bobRMChan, pm2)
 }

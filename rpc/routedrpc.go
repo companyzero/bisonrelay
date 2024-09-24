@@ -390,6 +390,15 @@ func ComposeCompressedRM(fromSigner MessageSigner, rm interface{}, zlibLevel int
 		return nil, fmt.Errorf("unknown routed message type: %T", rm)
 	}
 
+	return ComposeCompressedRMWithHeader(fromSigner, h, rm, zlibLevel)
+}
+
+// ComposeCompressedRMWithHeader composes an RM with the specified payload
+// and header.
+//
+// Note: the caller must ensure that the header and rm payload have the correct
+// command, otherwise decoding may fail.
+func ComposeCompressedRMWithHeader(fromSigner MessageSigner, h RMHeader, rm interface{}, zlibLevel int) ([]byte, error) {
 	// Encode payload
 	payload, err := json.Marshal(rm)
 	if err != nil {

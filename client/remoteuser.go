@@ -106,6 +106,10 @@ type RemoteUser struct {
 	// updateSubsChan is also protected by rLock and is non-nil when the
 	// runUpdateSubs loop is running.
 	updateSubsChan chan struct{}
+
+	// These are only set in tests.
+	rvDecryptError func(rv ratchet.RVPoint, raw []byte)
+	rmDecodeError  func(rv ratchet.RVPoint, raw []byte)
 }
 
 func newRemoteUser(q rmqIntf, rmgr rdzvManagerIntf, db *clientdb.DB,
@@ -561,6 +565,9 @@ func (ru *RemoteUser) handleReceivedEncrypted(recvBlob lowlevel.RVBlob) error {
 		// ratchet state was _not_ updated and _not_ saved do the DB.
 		ru.log.Warnf("Error decrypting ratchet msg at RV %s: %v",
 			recvBlob.ID, decodeErr)
+		if ru.rvDecryptError != nil {
+			ru.rvDecryptError(recvBlob.ID, recvBlob.Decoded)
+		}
 		return nil
 	}
 
@@ -568,7 +575,13 @@ func (ru *RemoteUser) handleReceivedEncrypted(recvBlob lowlevel.RVBlob) error {
 	if err != nil {
 		// Encryption is authenticated, so an error here means the
 		// client encoded an unknown or otherwise invalid RM.
-		return fmt.Errorf("could not decode remote command: %v", err)
+		//
+		// We still ack and remove the message from the server.
+		ru.log.Warnf("Could not decode remote command: %v", err)
+		if ru.rmDecodeError != nil {
+			ru.rmDecodeError(recvBlob.ID, recvBlob.Decoded)
+		}
+		return nil
 	}
 
 	if ru.logPayloads.Level() <= slog.LevelTrace {
@@ -846,6 +859,15 @@ func (ru *RemoteUser) triggerRVUpdate() {
 	// avoid preempting on handleReceivedEncrypted when possible.
 	ru.updateSubsChan = make(chan struct{}, 5)
 	go ru.runUpdateSubs(ru.updateSubsChan)
+}
+
+// lastListenRVs returns the last RVs this remote user has subscribed to.
+func (ru *RemoteUser) lastListenRVs() (recvRV ratchet.RVPoint, drainRV ratchet.RVPoint) {
+	ru.rLock.Lock()
+	recvRV = ru.lastRecvRV
+	drainRV = ru.lastDrainRV
+	ru.rLock.Unlock()
+	return
 }
 
 // remoteUserList is a concurrent-safe list of active remote users.
