@@ -1,26 +1,26 @@
 module github.com/companyzero/bisonrelay
 
-go 1.18
+go 1.22
 
 require (
 	github.com/atotto/clipboard v0.1.4
 	github.com/bahlo/generic-list-go v0.2.0
-	github.com/charmbracelet/bubbles v0.18.0
-	github.com/charmbracelet/bubbletea v0.26.6
-	github.com/charmbracelet/lipgloss v0.11.0
-	github.com/charmbracelet/x/exp/term v0.0.0-20240625164403-2627ec16405d
+	github.com/charmbracelet/bubbles v0.20.0
+	github.com/charmbracelet/bubbletea v1.1.1
+	github.com/charmbracelet/lipgloss v0.13.0
+	github.com/charmbracelet/x/exp/term v0.0.0-20240814160751-e2dc8b53b604
 	github.com/companyzero/sntrup4591761 v0.0.0-20220309191932-9e0f3af2f07a
 	github.com/davecgh/go-spew v1.1.1
 	github.com/decred/dcrd/bech32 v1.1.3
-	github.com/decred/dcrd/certgen v1.1.3
+	github.com/decred/dcrd/certgen v1.2.0
 	github.com/decred/dcrd/chaincfg/chainhash v1.0.4
 	github.com/decred/dcrd/chaincfg/v3 v3.2.1
 	github.com/decred/dcrd/crypto/blake256 v1.0.1
 	github.com/decred/dcrd/dcrutil/v4 v4.0.2
 	github.com/decred/dcrd/txscript/v4 v4.1.1
 	github.com/decred/dcrd/wire v1.7.0
-	github.com/decred/dcrlnd v0.7.4-0.20240624212129-c8b8ba4e5169
-	github.com/decred/dcrlnlpd v0.0.0-20240701190503-66ec85de0752
+	github.com/decred/dcrlnd v0.7.4
+	github.com/decred/dcrlnlpd v0.0.0-20240916120255-786dc5d52075
 	github.com/decred/go-socks v1.1.0
 	github.com/decred/slog v1.2.0
 	github.com/erikgeiser/promptkit v0.9.0
@@ -30,23 +30,24 @@ require (
 	github.com/jrick/flagfile v1.0.0
 	github.com/jrick/logrotate v1.0.0
 	github.com/lib/pq v1.10.9
-	github.com/mattn/go-runewidth v0.0.15
+	github.com/mattn/go-runewidth v0.0.16
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/pbnjay/memory v0.0.0-20210728143218-7b4eea64cf58
 	github.com/pelletier/go-toml v1.9.5
 	github.com/prometheus/procfs v0.12.0
 	github.com/puzpuzpuz/xsync/v3 v3.2.0
 	github.com/rogpeppe/go-internal v1.12.0
+	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
 	github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
 	github.com/vaughan0/go-ini v0.0.0-20130923145212-a98ad7ee00ec
 	github.com/xhit/go-str2duration/v2 v2.1.0
-	golang.org/x/crypto v0.24.0
+	golang.org/x/crypto v0.26.0
 	golang.org/x/exp v0.0.0-20231110203233-9a3e6036ecaa
 	golang.org/x/mobile v0.0.0-20240604190613-2782386b8afd
-	golang.org/x/net v0.26.0
-	golang.org/x/sync v0.7.0
-	golang.org/x/term v0.21.0
-	golang.org/x/text v0.16.0
+	golang.org/x/net v0.28.0
+	golang.org/x/sync v0.8.0
+	golang.org/x/term v0.23.0
+	golang.org/x/text v0.17.0
 	google.golang.org/grpc v1.59.0
 	google.golang.org/protobuf v1.31.0
 	gopkg.in/macaroon.v2 v2.1.0
@@ -54,7 +55,7 @@ require (
 
 require (
 	decred.org/cspp/v2 v2.2.0 // indirect
-	decred.org/dcrwallet/v4 v4.1.3-0.20240624134826-39fd48b821f4 // indirect
+	decred.org/dcrwallet/v4 v4.1.3 // indirect
 	github.com/NebulousLabs/go-upnp v0.0.0-20181203152547-b32978b8ccbf // indirect
 	github.com/Yawning/aez v0.0.0-20211027044916-e49e68abd344 // indirect
 	github.com/agl/ed25519 v0.0.0-20170116200512-5312a6153412 // indirect
@@ -63,10 +64,8 @@ require (
 	github.com/btcsuite/btcwallet/walletdb v1.4.0 // indirect
 	github.com/cenkalti/backoff/v4 v4.1.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
-	github.com/charmbracelet/x/ansi v0.1.2 // indirect
-	github.com/charmbracelet/x/input v0.1.0 // indirect
-	github.com/charmbracelet/x/term v0.1.1 // indirect
-	github.com/charmbracelet/x/windows v0.1.0 // indirect
+	github.com/charmbracelet/x/ansi v0.2.3 // indirect
+	github.com/charmbracelet/x/term v0.2.0 // indirect
 	github.com/coreos/go-semver v0.3.1 // indirect
 	github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf // indirect
 	github.com/coreos/go-systemd/v22 v22.3.2 // indirect
@@ -92,7 +91,7 @@ require (
 	github.com/decred/dcrd/hdkeychain/v3 v3.1.2 // indirect
 	github.com/decred/dcrd/lru v1.1.2 // indirect
 	github.com/decred/dcrd/math/uint256 v1.0.1 // indirect
-	github.com/decred/dcrd/mixing v0.4.0 // indirect
+	github.com/decred/dcrd/mixing v0.4.1 // indirect
 	github.com/decred/dcrd/peer/v3 v3.0.2 // indirect
 	github.com/decred/dcrd/rpc/jsonrpc/types/v4 v4.3.0 // indirect
 	github.com/decred/dcrd/rpcclient/v8 v8.0.1 // indirect
@@ -127,7 +126,7 @@ require (
 	github.com/jrick/wsrpc/v2 v2.3.5 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/kkdai/bstream v1.0.0 // indirect
-	github.com/klauspost/cpuid/v2 v2.2.5 // indirect
+	github.com/klauspost/cpuid/v2 v2.2.8 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-localereader v0.0.1 // indirect
@@ -146,7 +145,6 @@ require (
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/rogpeppe/fastuuid v1.2.0 // indirect
 	github.com/sirupsen/logrus v1.9.0 // indirect
-	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e // indirect
 	github.com/soheilhy/cmux v0.1.5 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/stretchr/testify v1.8.4 // indirect
@@ -154,7 +152,6 @@ require (
 	github.com/tv42/zbase32 v0.0.0-20220222190657-f76a9fc892fa // indirect
 	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8 // indirect
 	github.com/xiang90/probing v0.0.0-20221125231312-a49e3df8f510 // indirect
-	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	gitlab.com/NebulousLabs/fastrand v0.0.0-20181126182046-603482d69e40 // indirect
 	gitlab.com/NebulousLabs/go-upnp v0.0.0-20211002182029-11da932010b6 // indirect
 	gitlab.com/yawning/bsaes.git v0.0.0-20190805113838-0a714cd429ec // indirect
@@ -177,7 +174,7 @@ require (
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.24.0 // indirect
 	golang.org/x/mod v0.18.0 // indirect
-	golang.org/x/sys v0.21.0 // indirect
+	golang.org/x/sys v0.24.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
 	golang.org/x/tools v0.22.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
