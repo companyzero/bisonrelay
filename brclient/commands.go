@@ -1315,7 +1315,7 @@ var gcCommands = []tuicmd{
 			if err := as.c.AddToGCBlockList(gcID, uid); err != nil {
 				return err
 			}
-			gcWin.newInternalMsg(fmt.Sprintf("Ignored user %s in GC", args[1]))
+			gcWin.newInternalMsg("Ignored user %s in GC", args[1])
 			as.repaintIfActive(gcWin)
 			return nil
 		},
@@ -1354,7 +1354,7 @@ var gcCommands = []tuicmd{
 			if err := as.c.RemoveFromGCBlockList(gcID, uid); err != nil {
 				return err
 			}
-			gcWin.newInternalMsg(fmt.Sprintf("Un-ignored user %s in GC", args[1]))
+			gcWin.newInternalMsg("Un-ignored user %s in GC", args[1])
 			as.repaintIfActive(gcWin)
 			return nil
 		},
@@ -1390,7 +1390,7 @@ var gcCommands = []tuicmd{
 			}
 
 			gcWin := as.findOrNewGCWindow(gcID)
-			gcWin.newInternalMsg(fmt.Sprintf("Renamed GC to %s", newAlias))
+			gcWin.newInternalMsg("Renamed GC to %s", newAlias)
 			gcWin.alias = newAlias // FIXME: this is racing.
 			as.repaintIfActive(gcWin)
 			return nil
@@ -1431,7 +1431,7 @@ var gcCommands = []tuicmd{
 					msg = gcWin.newInternalMsg("Resending GC list to all GC members")
 				} else {
 					nick, _ := as.c.UserNick(*uid)
-					msg = gcWin.newInternalMsg(fmt.Sprintf("Resending GC list to %q", nick))
+					msg = gcWin.newInternalMsg("Resending GC list to %q", nick)
 				}
 				as.repaintIfActive(gcWin)
 				err := as.c.ResendGCList(gcID, uid)
@@ -2103,7 +2103,7 @@ var postCommands = []tuicmd{
 			go func() {
 				err := as.c.ListUserPosts(uid)
 				if err != nil {
-					cw.newInternalMsg(fmt.Sprintf("Unable to list user posts: %v", err))
+					cw.newInternalMsg("Unable to list user posts: %v", err)
 					as.repaintIfActive(cw)
 				}
 			}()
