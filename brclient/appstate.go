@@ -294,11 +294,10 @@ func (as *appState) run() error {
 			}
 			if time.Now().Day() != now.Day() {
 				// Day changed.
-				msg := fmt.Sprintf("Day changed to %s",
-					time.Now().Format(ISO8601Date))
+				nowStr := time.Now().Format(ISO8601Date)
 				as.chatWindowsMtx.Lock()
 				for _, cw := range as.chatWindows {
-					cw.newInternalMsg(msg)
+					cw.newInternalMsg("Day changed to %s", nowStr)
 				}
 				as.chatWindowsMtx.Unlock()
 				as.sendMsg(repaintActiveChat{})
@@ -1190,7 +1189,8 @@ func (as *appState) findOrNewGCWindow(gcID zkidentity.ShortID) *chatWindow {
 			(i > 0 &&
 				time.Unix(chatLog.Timestamp, 0).Format("2006-01-02") !=
 					time.Unix(chatHistory[i-1].Timestamp, 0).Format("2006-01-02")) {
-			cw.newInternalMsg(fmt.Sprintf("Day changed to %s", time.Unix(chatLog.Timestamp, 0).Format("2006-01-02")))
+			cw.newInternalMsg("Day changed to %s",
+				time.Unix(chatLog.Timestamp, 0).Format("2006-01-02"))
 		}
 		cw.newHistoryMsg(chatLog.From, chatLog.Message, empty,
 			time.Unix(chatLog.Timestamp, 0), chatLog.From == cw.me,
@@ -1239,7 +1239,8 @@ func (as *appState) findOrNewChatWindow(id clientintf.UserID, alias string) *cha
 			(i > 0 &&
 				time.Unix(chatLog.Timestamp, 0).Format("2006-01-02") !=
 					time.Unix(chatHistory[i-1].Timestamp, 0).Format("2006-01-02")) {
-			cw.newInternalMsg(fmt.Sprintf("Day changed to %s", time.Unix(chatLog.Timestamp, 0).Format("2006-01-02")))
+			cw.newInternalMsg("Day changed to %s",
+				time.Unix(chatLog.Timestamp, 0).Format("2006-01-02"))
 		}
 		var empty *zkidentity.ShortID
 		cw.newHistoryMsg(chatLog.From, chatLog.Message, empty,
@@ -1286,8 +1287,8 @@ func (as *appState) openChatWindow(nick string) error {
 		return fmt.Errorf("nick or gc %q not found", nick)
 	}
 	if cw.empty() {
-		cw.newInternalMsg(fmt.Sprintf("Conversation Started %s",
-			time.Now().Format(ISO8601Date)))
+		cw.newInternalMsg("Conversation Started %s",
+			time.Now().Format(ISO8601Date))
 	}
 	as.changeActiveWindowCW(cw)
 	return nil
@@ -1467,7 +1468,7 @@ func (as *appState) pm(cw *chatWindow, msg string) {
 // tip has been paid.
 func (as *appState) payTip(cw *chatWindow, dcrAmount float64) {
 	const maxAttempts = 1
-	m := cw.newInternalMsg(fmt.Sprintf("Attempting to send %.8f DCR as tip", dcrAmount))
+	m := cw.newInternalMsg("Attempting to send %.8f DCR as tip", dcrAmount)
 	as.repaintIfActive(cw)
 	err := as.c.TipUser(cw.uid, dcrAmount, maxAttempts)
 	if err != nil {
@@ -1518,7 +1519,7 @@ func (as *appState) block(cw *chatWindow) {
 // inviteToGC invites the given user to the GC in the specified window. Blocks
 // until the invite message is sent to the server.
 func (as *appState) inviteToGC(cw *chatWindow, nick string, uid clientintf.UserID) {
-	m := cw.newInternalMsg(fmt.Sprintf("Invited user %q to gc %s", nick, cw.alias))
+	m := cw.newInternalMsg("Invited user %q to gc %s", nick, cw.alias)
 	as.repaintIfActive(cw)
 	err := as.c.InviteToGroupChat(cw.gc, uid)
 	if err == nil {
@@ -1537,8 +1538,8 @@ func (as *appState) kickFromGC(gcWin *chatWindow, uid clientintf.UserID,
 	gcName := gcWin.alias
 	err := as.c.GCKick(gcWin.gc, uid, reason)
 	if err == nil {
-		gcWin.newInternalMsg(fmt.Sprintf("Kicking user %s from gc %s",
-			userNick, gcName))
+		gcWin.newInternalMsg("Kicking user %s from gc %s",
+			userNick, gcName)
 		as.repaintIfActive(gcWin)
 	} else {
 		as.cwHelpMsg("Unable to kick %s from gc %q: %v", userNick,
@@ -1578,7 +1579,7 @@ func (as *appState) listUserContent(cw *chatWindow, dir, filter string) {
 	if filter != "" {
 		withFilter = "with filter " + filter
 	}
-	m := cw.newInternalMsg(fmt.Sprintf("Listing user files in dir %q%s", dir, withFilter))
+	m := cw.newInternalMsg("Listing user files in dir %q%s", dir, withFilter)
 	as.repaintIfActive(cw)
 	err := as.c.ListUserContent(cw.uid, []string{dir}, filter)
 	if err != nil {
@@ -1715,7 +1716,7 @@ func (as *appState) resetAllOldRatchets(interval time.Duration) error {
 }
 
 func (as *appState) requestMediateID(cw *chatWindow, target clientintf.UserID) {
-	m := cw.newInternalMsg(fmt.Sprintf("Requesting mediate identity with %s", target))
+	m := cw.newInternalMsg("Requesting mediate identity with %s", target)
 	as.repaintIfActive(cw)
 	err := as.c.RequestMediateIdentity(cw.uid, target)
 	if err != nil {
@@ -1727,10 +1728,10 @@ func (as *appState) requestMediateID(cw *chatWindow, target clientintf.UserID) {
 }
 
 func (as *appState) requestTransReset(mediator, target *chatWindow) {
-	mMediator := mediator.newInternalMsg(fmt.Sprintf("Requesting trans reset with %s",
-		target.alias))
-	mTarget := target.newInternalMsg(fmt.Sprintf("Requesting %s to trans reset with this user",
-		mediator.alias))
+	mMediator := mediator.newInternalMsg("Requesting trans reset with %s",
+		target.alias)
+	mTarget := target.newInternalMsg("Requesting %s to trans reset with this user",
+		mediator.alias)
 	as.repaintIfActive(mediator)
 	as.repaintIfActive(target)
 	err := as.c.RequestTransitiveReset(mediator.uid, target.uid)
@@ -2133,28 +2134,28 @@ func (as *appState) sortPosts() {
 }
 
 func (as *appState) getUserPost(cw *chatWindow, pid clientintf.PostID) {
-	cw.newInternalMsg(fmt.Sprintf("Fetching post %s", pid))
+	cw.newInternalMsg("Fetching post %s", pid)
 	as.repaintIfActive(cw)
 	err := as.c.GetUserPost(cw.uid, pid, true)
 	if err != nil {
-		cw.newInternalMsg(fmt.Sprintf("Unable to fetch user post: %v", err))
+		cw.newInternalMsg("Unable to fetch user post: %v", err)
 		as.repaintIfActive(cw)
 	}
 }
 
 func (as *appState) relayPost(fromUID clientintf.UserID, pid clientintf.PostID,
 	cw *chatWindow) {
-	cw.newInternalMsg(fmt.Sprintf("Relaying post %s from %s", pid, fromUID))
+	cw.newInternalMsg("Relaying post %s from %s", pid, fromUID)
 	as.repaintIfActive(cw)
 	err := as.c.RelayPost(fromUID, pid, cw.uid)
 	if err != nil {
-		cw.newInternalMsg(fmt.Sprintf("Unable to relay post: %v", err))
+		cw.newInternalMsg("Unable to relay post: %v", err)
 		as.repaintIfActive(cw)
 	}
 }
 
 func (as *appState) relayPostToAll(fromUID clientintf.UserID, pid clientintf.PostID) {
-	as.diagMsg(fmt.Sprintf("Relaying post %s from %s", pid, fromUID))
+	as.diagMsg("Relaying post %s from %s", pid, fromUID)
 	err := as.c.RelayPostToSubscribers(fromUID, pid)
 	if err != nil {
 		as.diagMsg("Unable to relay post: %v", err)
@@ -3020,14 +3021,14 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 			pf("  /gc join %d", iid)
 		})
 		cw := as.findOrNewChatWindow(user.ID(), user.Nick())
-		cw.newInternalMsg(fmt.Sprintf("%q has invited you to GC %q (%v).  Type /gc join %s to join",
-			user.Nick(), gcName, invite.ID.String(), gcName))
+		cw.newInternalMsg("%q has invited you to GC %q (%v).  Type /gc join %s to join",
+			user.Nick(), gcName, invite.ID.String(), gcName)
 		as.repaintIfActive(cw)
 	}))
 
 	ntfns.Register(client.OnGCInviteAcceptedNtfn(func(user *client.RemoteUser, gc rpc.RMGroupList) {
 		cw := as.findOrNewGCWindow(gc.ID)
-		cw.newInternalMsg(fmt.Sprintf("User %q joined GC", user.Nick()))
+		cw.newInternalMsg("User %q joined GC", user.Nick())
 		as.repaintIfActive(cw)
 	}))
 
@@ -3041,13 +3042,11 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		cw := as.findOrNewGCWindow(gc.ID)
 		for _, uid := range uids {
 			ru, err := as.c.UserByID(uid)
-			var msg string
 			if err == nil {
-				msg = fmt.Sprintf("%s was added to this GC", strescape.Nick(ru.Nick()))
+				cw.newInternalMsg("%s was added to this GC", strescape.Nick(ru.Nick()))
 			} else {
-				msg = fmt.Sprintf("Unknown user %s added to this GC. Waiting for user to send transitive KX request", uid)
+				cw.newInternalMsg("Unknown user %s added to this GC. Waiting for user to send transitive KX request", uid)
 			}
-			cw.newInternalMsg(msg)
 		}
 		as.repaintIfActive(cw)
 	}))
@@ -3056,11 +3055,11 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		cw := as.findOrNewGCWindow(gcid)
 		if uid == as.c.PublicID() {
 			if kicked {
-				cw.newInternalMsg(fmt.Sprintf("Admin kicked us! Reason: %q",
-					reason))
+				cw.newInternalMsg("Admin kicked us! Reason: %q",
+					reason)
 			} else {
-				cw.newInternalMsg(fmt.Sprintf("Parted from GC! Reason: %q",
-					reason))
+				cw.newInternalMsg("Parted from GC! Reason: %q",
+					reason)
 			}
 		} else {
 			user := uid.String()
@@ -3068,11 +3067,11 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 				user = ru.Nick()
 			}
 			if kicked {
-				cw.newInternalMsg(fmt.Sprintf("Admin kicked %q! Reason: %q",
-					user, reason))
+				cw.newInternalMsg("Admin kicked %q! Reason: %q",
+					user, reason)
 			} else {
-				cw.newInternalMsg(fmt.Sprintf("User %q parted from GC. Reason: %q",
-					user, reason))
+				cw.newInternalMsg("User %q parted from GC. Reason: %q",
+					user, reason)
 			}
 		}
 
@@ -3081,14 +3080,14 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 
 	ntfns.Register(client.OnGCUpgradedNtfn(func(gc rpc.RMGroupList, oldVersion uint8) {
 		cw := as.findOrNewGCWindow(gc.ID)
-		cw.newInternalMsg(fmt.Sprintf("GC Upgraded from version %d to version %d", oldVersion,
-			gc.Version))
+		cw.newInternalMsg("GC Upgraded from version %d to version %d", oldVersion,
+			gc.Version)
 		as.repaintIfActive(cw)
 	}))
 
 	ntfns.Register(client.OnGCKilledNtfn(func(gcid client.GCID, reason string) {
 		cw := as.findOrNewGCWindow(gcid)
-		cw.newInternalMsg(fmt.Sprintf("GC killed by admin. Reason: %q", reason))
+		cw.newInternalMsg("GC killed by admin. Reason: %q", reason)
 		as.repaintIfActive(cw)
 	}))
 
@@ -3296,8 +3295,7 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 	ntfns.Register(client.OnTipReceivedNtfn(func(user *client.RemoteUser, amountMAtoms int64) {
 		dcrAmount := float64(amountMAtoms) / 1e11
 		cw := as.findOrNewChatWindow(user.ID(), strescape.Nick(user.Nick()))
-		msg := fmt.Sprintf("Received tip of %.8f DCR", dcrAmount)
-		cw.newInternalMsg(msg)
+		cw.newInternalMsg("Received tip of %.8f DCR", dcrAmount)
 		as.repaintIfActive(cw)
 		as.recheckLNBalance()
 	}))
@@ -3334,7 +3332,7 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 	ntfns.Register(client.OnContentListReceived(func(user *client.RemoteUser, files []clientdb.RemoteFile, listErr error) {
 		cw := as.findOrNewChatWindow(user.ID(), strescape.Nick(user.Nick()))
 		if listErr != nil {
-			cw.newInternalMsg(fmt.Sprintf("Unable to list user contents: %v", listErr))
+			cw.newInternalMsg("Unable to list user contents: %v", listErr)
 			as.repaintIfActive(cw)
 			return
 		}
@@ -3383,8 +3381,8 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 
 	ntfns.Register(client.OnFileDownloadCompleted(func(user *client.RemoteUser, fm rpc.FileMetadata, diskPath string) {
 		cw := as.findOrNewChatWindow(user.ID(), strescape.Nick(user.Nick()))
-		cw.newInternalMsg(fmt.Sprintf("Download completed: %s",
-			diskPath))
+		cw.newInternalMsg("Download completed: %s",
+			diskPath)
 
 		fid := clientdb.FileID(fm.MetadataHash())
 		as.contentMtx.Lock()
@@ -3796,13 +3794,13 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 
 			OnPM: func(ctx context.Context, uid client.UserID, pm *types.PMRequest) error {
 				cw := as.findOrNewChatWindow(uid, "")
-				cw.newInternalMsg("API: " + pm.Msg.Message)
+				cw.newInternalMsg("API: %ss", pm.Msg.Message)
 				as.repaintIfActive(cw)
 				return nil
 			},
 			OnGCM: func(ctx context.Context, gcid client.GCID, gcm *types.GCMRequest) error {
 				cw := as.findOrNewGCWindow(gcid)
-				cw.newInternalMsg("API: " + gcm.Msg)
+				cw.newInternalMsg("API: %s", gcm.Msg)
 				as.repaintIfActive(cw)
 				return nil
 			},
