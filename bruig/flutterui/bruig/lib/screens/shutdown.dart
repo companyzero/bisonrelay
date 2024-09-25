@@ -30,7 +30,7 @@ class ShutdownScreen extends StatefulWidget {
 
   final LogModel log;
   final ShutdownModel shutdown;
-  const ShutdownScreen(this.log, this.shutdown, {Key? key}) : super(key: key);
+  const ShutdownScreen(this.log, this.shutdown, {super.key});
 
   @override
   State<ShutdownScreen> createState() => _ShutdownScreenState();

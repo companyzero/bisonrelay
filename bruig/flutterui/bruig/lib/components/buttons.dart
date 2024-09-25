@@ -11,8 +11,7 @@ class CancelButton extends StatelessWidget {
       {required this.onPressed,
       this.loading = false,
       this.label = "Cancel",
-      Key? key})
-      : super(key: key);
+      super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -73,8 +72,7 @@ class LoadingScreenButton extends StatelessWidget {
       this.loading = false,
       this.empty = false,
       this.minSize = 0,
-      Key? key})
-      : super(key: key);
+      super.key});
 
   @override
   Widget build(BuildContext context) {

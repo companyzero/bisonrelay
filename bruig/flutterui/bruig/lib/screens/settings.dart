@@ -45,7 +45,7 @@ class SettingsScreenTitle extends StatelessWidget {
 
 class SettingsScreen extends StatefulWidget {
   final ClientModel client;
-  const SettingsScreen(this.client, {Key? key}) : super(key: key);
+  const SettingsScreen(this.client, {super.key});
   static String routeName = "/settings";
 
   @override
@@ -230,8 +230,7 @@ class MainSettingsScreen extends StatelessWidget {
   final ShutdownCB shutdown;
   const MainSettingsScreen(
       this.client, this.pickAvatarFile, this.changePage, this.shutdown,
-      {Key? key})
-      : super(key: key);
+      {super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -324,8 +323,7 @@ class AccountSettingsScreen extends StatelessWidget {
   final VoidCallback pickAvatarCB;
   const AccountSettingsScreen(this.client, this.resetAllKXCB, this.resetKXCB,
       this.pickAvatarCB, this.subAllPostsCB,
-      {Key? key})
-      : super(key: key);
+      {super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -362,8 +360,7 @@ class AccountSettingsScreen extends StatelessWidget {
 class AppearanceSettingsScreen extends StatefulWidget {
   final ClientModel client;
   final ThemeNotifier theme;
-  const AppearanceSettingsScreen(this.client, this.theme, {Key? key})
-      : super(key: key);
+  const AppearanceSettingsScreen(this.client, this.theme, {super.key});
   @override
   State<AppearanceSettingsScreen> createState() =>
       _AppearanceSettingsScreenState();
@@ -449,7 +446,7 @@ class _AppearanceSettingsScreenState extends State<AppearanceSettingsScreen> {
 }
 
 class NotificationsSettingsScreen extends StatefulWidget {
-  const NotificationsSettingsScreen({Key? key}) : super(key: key);
+  const NotificationsSettingsScreen({super.key});
 
   @override
   State<NotificationsSettingsScreen> createState() =>
@@ -589,7 +586,7 @@ class _NotificationsSettingsScreenState
 
 class NetworkSettingsScreen extends StatefulWidget {
   final ClientModel client;
-  const NetworkSettingsScreen(this.client, {Key? key}) : super(key: key);
+  const NetworkSettingsScreen(this.client, {super.key});
   @override
   State<NetworkSettingsScreen> createState() => _NetworkSettingsScreenState();
 }

@@ -43,7 +43,7 @@ class LogScreenTitle extends StatelessWidget {
 class LogScreen extends StatelessWidget {
   static const routeName = '/log';
   final LogModel log;
-  const LogScreen(this.log, {Key? key}) : super(key: key);
+  const LogScreen(this.log, {super.key});
 
   @override
   Widget build(BuildContext context) {

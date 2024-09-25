@@ -26,17 +26,17 @@ InitClient _$InitClientFromJson(Map<String, dynamic> json) => InitClient(
       json['torisolation'] as bool,
       json['proxy_username'] as String,
       json['proxy_password'] as String,
-      json['circuit_limit'] as int,
+      (json['circuit_limit'] as num).toInt(),
       json['no_load_chat_history'] as bool,
-      json['auto_handshake_interval'] as int,
-      json['auto_remove_idle_users_interval'] as int,
+      (json['auto_handshake_interval'] as num).toInt(),
+      (json['auto_remove_idle_users_interval'] as num).toInt(),
       (json['auto_remove_idle_users_ignore'] as List<dynamic>)
           .map((e) => e as String)
           .toList(),
       json['send_recv_receipts'] as bool,
       json['auto_sub_posts'] as bool,
       json['log_pings'] as bool,
-      json['ping_interval_ms'] as int,
+      (json['ping_interval_ms'] as num).toInt(),
     );
 
 Map<String, dynamic> _$InitClientToJson(InitClient instance) =>
@@ -104,7 +104,7 @@ Map<String, dynamic> _$ServerCertToJson(ServerCert instance) =>
 
 ServerSessionState _$ServerSessionStateFromJson(Map<String, dynamic> json) =>
     ServerSessionState(
-      json['state'] as int,
+      (json['state'] as num).toInt(),
       json['check_wallet_err'] as String?,
     );
 
@@ -140,10 +140,10 @@ Map<String, dynamic> _$RemoteUserToJson(RemoteUser instance) =>
 
 InviteFunds _$InviteFundsFromJson(Map<String, dynamic> json) => InviteFunds(
       json['txid'] as String,
-      json['index'] as int,
-      json['tree'] as int,
+      (json['index'] as num).toInt(),
+      (json['tree'] as num).toInt(),
       json['private_key'] as String,
-      json['height_hint'] as int,
+      (json['height_hint'] as num).toInt(),
       json['address'] as String,
     );
 
@@ -222,7 +222,7 @@ PM _$PMFromJson(Map<String, dynamic> json) => PM(
       json['sid'],
       json['msg'],
       json['mine'] as bool,
-      json['timestamp'] as int,
+      (json['timestamp'] as num).toInt(),
     );
 
 Map<String, dynamic> _$PMToJson(PM instance) => <String, dynamic>{
@@ -247,10 +247,10 @@ RMGroupInvite _$RMGroupInviteFromJson(Map<String, dynamic> json) =>
     RMGroupInvite(
       json['id'] as String,
       json['name'] as String,
-      json['token'] as int,
+      (json['token'] as num).toInt(),
       json['description'] as String,
-      json['expires'] as int,
-      json['version'] as int,
+      (json['expires'] as num).toInt(),
+      (json['version'] as num).toInt(),
     );
 
 Map<String, dynamic> _$RMGroupInviteToJson(RMGroupInvite instance) =>
@@ -280,9 +280,9 @@ Map<String, dynamic> _$GCAddressBookEntryToJson(GCAddressBookEntry instance) =>
 RMGroupList _$RMGroupListFromJson(Map<String, dynamic> json) => RMGroupList(
       json['id'] as String,
       json['name'] as String,
-      json['generation'] as int,
-      json['timestamp'] as int,
-      json['version'] as int,
+      (json['generation'] as num).toInt(),
+      (json['timestamp'] as num).toInt(),
+      (json['version'] as num).toInt(),
       (json['members'] as List<dynamic>).map((e) => e as String).toList(),
       (json['extra_admins'] as List<dynamic>?)
           ?.map((e) => e as String)
@@ -302,7 +302,7 @@ Map<String, dynamic> _$RMGroupListToJson(RMGroupList instance) =>
 
 GCInvitation _$GCInvitationFromJson(Map<String, dynamic> json) => GCInvitation(
       RemoteUser.fromJson(json['inviter'] as Map<String, dynamic>),
-      json['iid'] as int,
+      (json['iid'] as num).toInt(),
       json['name'] as String,
       RMGroupInvite.fromJson(json['invite'] as Map<String, dynamic>),
       json['accepted'] as bool,
@@ -321,7 +321,7 @@ GCMsg _$GCMsgFromJson(Map<String, dynamic> json) => GCMsg(
       json['sender_uid'] as String,
       json['sid'],
       json['msg'],
-      json['timestamp'] as int,
+      (json['timestamp'] as num).toInt(),
     );
 
 Map<String, dynamic> _$GCMsgToJson(GCMsg instance) => <String, dynamic>{
@@ -382,7 +382,7 @@ ShareFileArgs _$ShareFileArgsFromJson(Map<String, dynamic> json) =>
     ShareFileArgs(
       json['filename'] as String,
       json['uid'] as String,
-      json['cost'] as int,
+      (json['cost'] as num).toInt(),
       json['description'] as String,
     );
 
@@ -428,8 +428,8 @@ Map<String, dynamic> _$GetRemoteFileArgsToJson(GetRemoteFileArgs instance) =>
     };
 
 FileManifest _$FileManifestFromJson(Map<String, dynamic> json) => FileManifest(
-      json['index'] as int,
-      json['size'] as int,
+      (json['index'] as num).toInt(),
+      (json['size'] as num).toInt(),
       json['hash'] as String,
     );
 
@@ -441,9 +441,9 @@ Map<String, dynamic> _$FileManifestToJson(FileManifest instance) =>
     };
 
 FileMetadata _$FileMetadataFromJson(Map<String, dynamic> json) => FileMetadata(
-      json['version'] as int,
-      json['cost'] as int,
-      json['size'] as int,
+      (json['version'] as num).toInt(),
+      (json['cost'] as num).toInt(),
+      (json['size'] as num).toInt(),
       json['directory'] as String,
       json['filename'] as String,
       json['description'] as String,
@@ -485,8 +485,8 @@ Map<String, dynamic> _$SharedFileToJson(SharedFile instance) =>
 SharedFileAndShares _$SharedFileAndSharesFromJson(Map<String, dynamic> json) =>
     SharedFileAndShares(
       SharedFile.fromJson(json['shared_file'] as Map<String, dynamic>),
-      json['cost'] as int,
-      json['size'] as int,
+      (json['cost'] as num).toInt(),
+      (json['size'] as num).toInt(),
       json['global'] as bool,
       (json['shares'] as List<dynamic>).map((e) => e as String).toList(),
     );
@@ -544,7 +544,7 @@ Map<String, dynamic> _$PayTipArgsToJson(PayTipArgs instance) =>
     };
 
 PostMetadata _$PostMetadataFromJson(Map<String, dynamic> json) => PostMetadata(
-      json['version'] as int,
+      (json['version'] as num).toInt(),
       Map<String, String>.from(json['attributes'] as Map),
     );
 
@@ -556,7 +556,7 @@ Map<String, dynamic> _$PostMetadataToJson(PostMetadata instance) =>
 
 PostMetadataStatus _$PostMetadataStatusFromJson(Map<String, dynamic> json) =>
     PostMetadataStatus(
-      json['version'] as int,
+      (json['version'] as num).toInt(),
       json['from'] as String,
       json['link'] as String,
       Map<String, String>.from(json['attributes'] as Map),
@@ -707,7 +707,7 @@ FileDownloadProgress _$FileDownloadProgressFromJson(
       json['uid'] as String,
       json['fid'] as String,
       FileMetadata.fromJson(json['metadata'] as Map<String, dynamic>),
-      json['nb_missing_chunks'] as int,
+      (json['nb_missing_chunks'] as num).toInt(),
     );
 
 Map<String, dynamic> _$FileDownloadProgressToJson(
@@ -732,12 +732,12 @@ Map<String, dynamic> _$LNChainToJson(LNChain instance) => <String, dynamic>{
 LNInfo _$LNInfoFromJson(Map<String, dynamic> json) => LNInfo(
       json['identity_pubkey'] as String,
       json['version'] as String,
-      json['num_active_channels'] as int? ?? 0,
-      json['num_inactive_channels'] as int? ?? 0,
-      json['num_pending_channels'] as int? ?? 0,
+      (json['num_active_channels'] as num?)?.toInt() ?? 0,
+      (json['num_inactive_channels'] as num?)?.toInt() ?? 0,
+      (json['num_pending_channels'] as num?)?.toInt() ?? 0,
       json['synced_to_chain'] as bool? ?? false,
       json['synced_to_graph'] as bool? ?? false,
-      json['block_height'] as int,
+      (json['block_height'] as num).toInt(),
       json['block_hash'] as String,
       (json['chains'] as List<dynamic>)
           .map((e) => LNChain.fromJson(e as Map<String, dynamic>))
@@ -761,10 +761,10 @@ LNChannel _$LNChannelFromJson(Map<String, dynamic> json) => LNChannel(
       json['active'] as bool? ?? false,
       json['remote_pubkey'] as String,
       json['channel_point'] as String,
-      json['chan_id'] as int,
-      json['capacity'] as int,
-      json['local_balance'] as int? ?? 0,
-      json['remote_balance'] as int? ?? 0,
+      (json['chan_id'] as num).toInt(),
+      (json['capacity'] as num).toInt(),
+      (json['local_balance'] as num?)?.toInt() ?? 0,
+      (json['remote_balance'] as num?)?.toInt() ?? 0,
       json['short_chan_id'] as String,
     );
 
@@ -783,10 +783,10 @@ LNPendingChannel _$LNPendingChannelFromJson(Map<String, dynamic> json) =>
     LNPendingChannel(
       json['remote_node_pub'] as String,
       json['channel_point'] as String,
-      json['capacity'] as int,
-      json['local_balance'] as int? ?? 0,
-      json['remote_balance'] as int? ?? 0,
-      json['initiator'] as int? ?? 0,
+      (json['capacity'] as num).toInt(),
+      (json['local_balance'] as num?)?.toInt() ?? 0,
+      (json['remote_balance'] as num?)?.toInt() ?? 0,
+      (json['initiator'] as num?)?.toInt() ?? 0,
       json['short_chan_id'] as String,
     );
 
@@ -804,10 +804,10 @@ Map<String, dynamic> _$LNPendingChannelToJson(LNPendingChannel instance) =>
 LNPendingOpenChannel _$LNPendingOpenChannelFromJson(
         Map<String, dynamic> json) =>
     LNPendingOpenChannel(
-      json['confirmation_height'] as int? ?? 0,
-      json['commit_fee'] as int? ?? 0,
-      json['confirmation_size'] as int? ?? 0,
-      json['fee_per_kb'] as int? ?? 0,
+      (json['confirmation_height'] as num?)?.toInt() ?? 0,
+      (json['commit_fee'] as num?)?.toInt() ?? 0,
+      (json['confirmation_size'] as num?)?.toInt() ?? 0,
+      (json['fee_per_kb'] as num?)?.toInt() ?? 0,
       LNPendingChannel.fromJson(json['channel'] as Map<String, dynamic>),
     );
 
@@ -838,9 +838,9 @@ LNPendingForceClosingChannel _$LNPendingForceClosingChannelFromJson(
     LNPendingForceClosingChannel(
       LNPendingChannel.fromJson(json['channel'] as Map<String, dynamic>),
       json['closing_txid'] as String? ?? '',
-      json['maturityHeight'] as int? ?? 0,
-      json['blocksTilMaturity'] as int? ?? 0,
-      json['recoveredBalance'] as int? ?? 0,
+      (json['maturityHeight'] as num?)?.toInt() ?? 0,
+      (json['blocksTilMaturity'] as num?)?.toInt() ?? 0,
+      (json['recoveredBalance'] as num?)?.toInt() ?? 0,
     );
 
 Map<String, dynamic> _$LNPendingForceClosingChannelToJson(
@@ -884,7 +884,7 @@ Map<String, dynamic> _$LNPendingChannelsListToJson(
 LNGenInvoiceRequest _$LNGenInvoiceRequestFromJson(Map<String, dynamic> json) =>
     LNGenInvoiceRequest(
       json['memo'] as String,
-      json['value'] as int,
+      (json['value'] as num).toInt(),
     );
 
 Map<String, dynamic> _$LNGenInvoiceRequestToJson(
@@ -927,7 +927,7 @@ Map<String, dynamic> _$LNPayInvoiceResponseToJson(
 LNQueryRouteRequest _$LNQueryRouteRequestFromJson(Map<String, dynamic> json) =>
     LNQueryRouteRequest(
       json['pub_key'] as String,
-      json['amt'] as int,
+      (json['amt'] as num).toInt(),
     );
 
 Map<String, dynamic> _$LNQueryRouteRequestToJson(
@@ -938,8 +938,8 @@ Map<String, dynamic> _$LNQueryRouteRequestToJson(
     };
 
 LNHop _$LNHopFromJson(Map<String, dynamic> json) => LNHop(
-      json['chan_id'] as int? ?? 0,
-      json['chan_capacity'] as int? ?? 0,
+      (json['chan_id'] as num?)?.toInt() ?? 0,
+      (json['chan_capacity'] as num?)?.toInt() ?? 0,
       json['pub_key'] as String,
     );
 
@@ -950,8 +950,8 @@ Map<String, dynamic> _$LNHopToJson(LNHop instance) => <String, dynamic>{
     };
 
 LNRoute _$LNRouteFromJson(Map<String, dynamic> json) => LNRoute(
-      json['total_time_lock'] as int,
-      json['total_fees'] as int? ?? 0,
+      (json['total_time_lock'] as num).toInt(),
+      (json['total_fees'] as num?)?.toInt() ?? 0,
       (json['hops'] as List<dynamic>?)
               ?.map((e) => LNHop.fromJson(e as Map<String, dynamic>))
               .toList() ??
@@ -998,7 +998,7 @@ Map<String, dynamic> _$LNGetNodeInfoRequestToJson(
 LNNode _$LNNodeFromJson(Map<String, dynamic> json) => LNNode(
       json['pub_key'] as String,
       json['alias'] as String? ?? '',
-      json['last_update'] as int? ?? 0,
+      (json['last_update'] as num?)?.toInt() ?? 0,
     );
 
 Map<String, dynamic> _$LNNodeToJson(LNNode instance) => <String, dynamic>{
@@ -1010,7 +1010,7 @@ Map<String, dynamic> _$LNNodeToJson(LNNode instance) => <String, dynamic>{
 LNRoutingPolicy _$LNRoutingPolicyFromJson(Map<String, dynamic> json) =>
     LNRoutingPolicy(
       json['disabled'] as bool? ?? false,
-      json['last_update'] as int? ?? 0,
+      (json['last_update'] as num?)?.toInt() ?? 0,
     );
 
 Map<String, dynamic> _$LNRoutingPolicyToJson(LNRoutingPolicy instance) =>
@@ -1021,12 +1021,12 @@ Map<String, dynamic> _$LNRoutingPolicyToJson(LNRoutingPolicy instance) =>
 
 LNChannelEdge _$LNChannelEdgeFromJson(Map<String, dynamic> json) =>
     LNChannelEdge(
-      json['channel_id'] as int? ?? 0,
+      (json['channel_id'] as num?)?.toInt() ?? 0,
       json['chan_point'] as String,
-      json['last_update'] as int? ?? 0,
+      (json['last_update'] as num?)?.toInt() ?? 0,
       json['node1_pub'] as String,
       json['node2_pub'] as String,
-      json['capacity'] as int? ?? 0,
+      (json['capacity'] as num?)?.toInt() ?? 0,
       LNRoutingPolicy.fromJson(json['node1_policy'] as Map<String, dynamic>),
       LNRoutingPolicy.fromJson(json['node2_policy'] as Map<String, dynamic>),
     );
@@ -1047,8 +1047,8 @@ LNGetNodeInfoResponse _$LNGetNodeInfoResponseFromJson(
         Map<String, dynamic> json) =>
     LNGetNodeInfoResponse(
       LNNode.fromJson(json['node'] as Map<String, dynamic>),
-      json['num_channels'] as int,
-      json['total_capacity'] as int? ?? 0,
+      (json['num_channels'] as num).toInt(),
+      (json['total_capacity'] as num?)?.toInt() ?? 0,
       (json['channels'] as List<dynamic>?)
               ?.map((e) => LNChannelEdge.fromJson(e as Map<String, dynamic>))
               .toList() ??
@@ -1066,10 +1066,10 @@ Map<String, dynamic> _$LNGetNodeInfoResponseToJson(
 
 LNChannelBalance _$LNChannelBalanceFromJson(Map<String, dynamic> json) =>
     LNChannelBalance(
-      json['balance'] as int? ?? 0,
-      json['pending_open_balance'] as int? ?? 0,
-      json['max_inbound_amount'] as int? ?? 0,
-      json['max_outbound_amount'] as int? ?? 0,
+      (json['balance'] as num?)?.toInt() ?? 0,
+      (json['pending_open_balance'] as num?)?.toInt() ?? 0,
+      (json['max_inbound_amount'] as num?)?.toInt() ?? 0,
+      (json['max_outbound_amount'] as num?)?.toInt() ?? 0,
     );
 
 Map<String, dynamic> _$LNChannelBalanceToJson(LNChannelBalance instance) =>
@@ -1082,9 +1082,9 @@ Map<String, dynamic> _$LNChannelBalanceToJson(LNChannelBalance instance) =>
 
 LNWalletBalance _$LNWalletBalanceFromJson(Map<String, dynamic> json) =>
     LNWalletBalance(
-      json['total_balance'] as int? ?? 0,
-      json['confirmed_balance'] as int? ?? 0,
-      json['unconfirmed_balance'] as int? ?? 0,
+      (json['total_balance'] as num?)?.toInt() ?? 0,
+      (json['confirmed_balance'] as num?)?.toInt() ?? 0,
+      (json['unconfirmed_balance'] as num?)?.toInt() ?? 0,
     );
 
 Map<String, dynamic> _$LNWalletBalanceToJson(LNWalletBalance instance) =>
@@ -1109,11 +1109,11 @@ LNDecodedInvoice _$LNDecodedInvoiceFromJson(Map<String, dynamic> json) =>
     LNDecodedInvoice(
       json['destination'] as String,
       json['payment_hash'] as String,
-      json['numAtoms'] as int? ?? 0,
-      json['expiry'] as int? ?? 3600,
+      (json['numAtoms'] as num?)?.toInt() ?? 0,
+      (json['expiry'] as num?)?.toInt() ?? 3600,
       json['description'] as String? ?? '',
-      json['timestamp'] as int? ?? 0,
-      json['num_m_atoms'] as int? ?? 0,
+      (json['timestamp'] as num?)?.toInt() ?? 0,
+      (json['num_m_atoms'] as num?)?.toInt() ?? 0,
     );
 
 Map<String, dynamic> _$LNDecodedInvoiceToJson(LNDecodedInvoice instance) =>
@@ -1130,7 +1130,7 @@ Map<String, dynamic> _$LNDecodedInvoiceToJson(LNDecodedInvoice instance) =>
 LNPayInvoiceRequest _$LNPayInvoiceRequestFromJson(Map<String, dynamic> json) =>
     LNPayInvoiceRequest(
       json['payment_request'] as String,
-      json['amount'] as int,
+      (json['amount'] as num).toInt(),
     );
 
 Map<String, dynamic> _$LNPayInvoiceRequestToJson(
@@ -1156,8 +1156,8 @@ LNOpenChannelRequest _$LNOpenChannelRequestFromJson(
         Map<String, dynamic> json) =>
     LNOpenChannelRequest(
       json['node_pubkey'] as String,
-      json['local_funding_amount'] as int,
-      json['push_atoms'] as int,
+      (json['local_funding_amount'] as num).toInt(),
+      (json['push_atoms'] as num).toInt(),
     );
 
 Map<String, dynamic> _$LNOpenChannelRequestToJson(
@@ -1195,7 +1195,7 @@ Map<String, dynamic> _$LNChannelPoint_FundingTxidBytesToJson(
 LNChannelPoint _$LNChannelPointFromJson(Map<String, dynamic> json) =>
     LNChannelPoint(
       json['txid'],
-      json['output_index'] as int? ?? 0,
+      (json['output_index'] as num?)?.toInt() ?? 0,
     );
 
 Map<String, dynamic> _$LNChannelPointToJson(LNChannelPoint instance) =>
@@ -1243,10 +1243,10 @@ LNInitDcrlnd _$LNInitDcrlndFromJson(Map<String, dynamic> json) => LNInitDcrlnd(
       json['torisolation'] as bool,
       json['proxy_username'] as String,
       json['proxy_password'] as String,
-      json['circuit_limit'] as int,
+      (json['circuit_limit'] as num).toInt(),
       json['sync_free_list'] as bool,
       json['autocompact'] as bool,
-      json['autocompact_min_age'] as int,
+      (json['autocompact_min_age'] as num).toInt(),
       json['debug_level'] as String,
     );
 
@@ -1283,9 +1283,9 @@ Map<String, dynamic> _$LNNewWalletSeedToJson(LNNewWalletSeed instance) =>
 LNInitialChainSyncUpdate _$LNInitialChainSyncUpdateFromJson(
         Map<String, dynamic> json) =>
     LNInitialChainSyncUpdate(
-      json['block_height'] as int? ?? 0,
+      (json['block_height'] as num?)?.toInt() ?? 0,
       base64ToHexReversed(json['block_hash'] as String),
-      json['block_timestamp'] as int? ?? 0,
+      (json['block_timestamp'] as num?)?.toInt() ?? 0,
       json['synced'] as bool? ?? false,
     );
 
@@ -1302,7 +1302,7 @@ LNReqChannelArgs _$LNReqChannelArgsFromJson(Map<String, dynamic> json) =>
     LNReqChannelArgs(
       json['server'] as String,
       json['key'] as String,
-      json['chan_size'] as int,
+      (json['chan_size'] as num).toInt(),
       json['certificates'] as String,
     );
 
@@ -1318,10 +1318,10 @@ LNLPPolicyResponse _$LNLPPolicyResponseFromJson(Map<String, dynamic> json) =>
     LNLPPolicyResponse(
       json['node'] as String,
       (json['addresses'] as List<dynamic>).map((e) => e as String).toList(),
-      json['min_chan_size'] as int,
-      json['max_chan_size'] as int,
-      json['max_nb_channels'] as int,
-      json['min_chan_lifetime'] as int,
+      (json['min_chan_size'] as num).toInt(),
+      (json['max_chan_size'] as num).toInt(),
+      (json['max_nb_channels'] as num).toInt(),
+      (json['min_chan_lifetime'] as num).toInt(),
       (json['chan_invoice_fee_rate'] as num).toDouble(),
     );
 
@@ -1339,7 +1339,7 @@ Map<String, dynamic> _$LNLPPolicyResponseToJson(LNLPPolicyResponse instance) =>
 LNReqChannelEstValue _$LNReqChannelEstValueFromJson(
         Map<String, dynamic> json) =>
     LNReqChannelEstValue(
-      json['amount'] as int? ?? 0,
+      (json['amount'] as num?)?.toInt() ?? 0,
       LNLPPolicyResponse.fromJson(
           json['server_policy'] as Map<String, dynamic>),
       LNReqChannelArgs.fromJson(json['request'] as Map<String, dynamic>),
@@ -1394,8 +1394,8 @@ Map<String, dynamic> _$SendFileArgsToJson(SendFileArgs instance) =>
     };
 
 UserPayStats _$UserPayStatsFromJson(Map<String, dynamic> json) => UserPayStats(
-      json['total_sent'] as int,
-      json['total_received'] as int,
+      (json['total_sent'] as num).toInt(),
+      (json['total_received'] as num).toInt(),
     );
 
 Map<String, dynamic> _$UserPayStatsToJson(UserPayStats instance) =>
@@ -1407,7 +1407,7 @@ Map<String, dynamic> _$UserPayStatsToJson(UserPayStats instance) =>
 PayStatsSummary _$PayStatsSummaryFromJson(Map<String, dynamic> json) =>
     PayStatsSummary(
       json['prefix'] as String,
-      json['total'] as int,
+      (json['total'] as num).toInt(),
     );
 
 Map<String, dynamic> _$PayStatsSummaryToJson(PayStatsSummary instance) =>
@@ -1419,7 +1419,7 @@ Map<String, dynamic> _$PayStatsSummaryToJson(PayStatsSummary instance) =>
 PostListItem _$PostListItemFromJson(Map<String, dynamic> json) => PostListItem(
       json['id'] as String,
       json['title'] as String,
-      json['timestamp'] as int? ?? 0,
+      (json['timestamp'] as num?)?.toInt() ?? 0,
     );
 
 Map<String, dynamic> _$PostListItemToJson(PostListItem instance) =>
@@ -1492,7 +1492,7 @@ LastUserReceivedTime _$LastUserReceivedTimeFromJson(
         Map<String, dynamic> json) =>
     LastUserReceivedTime(
       json['uid'] as String,
-      json['last_decrypted'] as int,
+      (json['last_decrypted'] as num).toInt(),
     );
 
 Map<String, dynamic> _$LastUserReceivedTimeToJson(
@@ -1512,7 +1512,7 @@ RatchetDebugInfo _$RatchetDebugInfoFromJson(Map<String, dynamic> json) =>
       json['drain_rv_plain'] as String,
       json['my_reset_rv'] as String,
       json['their_reset_rv'] as String,
-      json['nb_saved_keys'] as int,
+      (json['nb_saved_keys'] as num).toInt(),
       json['will_ratchet'] as bool,
       DateTime.parse(json['last_enc_time'] as String),
       DateTime.parse(json['last_dec_time'] as String),
@@ -1554,9 +1554,9 @@ GCVersionWarn _$GCVersionWarnFromJson(Map<String, dynamic> json) =>
     GCVersionWarn(
       json['id'] as String,
       json['alias'] as String? ?? '',
-      json['version'] as int,
-      json['min_version'] as int,
-      json['max_version'] as int,
+      (json['version'] as num).toInt(),
+      (json['min_version'] as num).toInt(),
+      (json['max_version'] as num).toInt(),
     );
 
 Map<String, dynamic> _$GCVersionWarnToJson(GCVersionWarn instance) =>
@@ -1583,8 +1583,8 @@ Map<String, dynamic> _$GCAddedMembersToJson(GCAddedMembers instance) =>
 GCUpgradedVersion _$GCUpgradedVersionFromJson(Map<String, dynamic> json) =>
     GCUpgradedVersion(
       json['id'] as String,
-      json['old_version'] as int? ?? 0,
-      json['new_version'] as int? ?? 0,
+      (json['old_version'] as num?)?.toInt() ?? 0,
+      (json['new_version'] as num?)?.toInt() ?? 0,
     );
 
 Map<String, dynamic> _$GCUpgradedVersionToJson(GCUpgradedVersion instance) =>
@@ -1758,9 +1758,9 @@ TipProgressEvent _$TipProgressEventFromJson(Map<String, dynamic> json) =>
     TipProgressEvent(
       base64ToHex(json['uid'] as String),
       json['nick'] as String,
-      json['attempt'] as int? ?? 0,
+      (json['attempt'] as num?)?.toInt() ?? 0,
       json['completed'] as bool? ?? false,
-      json['amount_matoms'] as int? ?? 0,
+      (json['amount_matoms'] as num?)?.toInt() ?? 0,
       json['attempt_err'] as String? ?? '',
       json['will_retry'] as bool? ?? false,
     );
@@ -1778,10 +1778,10 @@ Map<String, dynamic> _$TipProgressEventToJson(TipProgressEvent instance) =>
 
 Account _$AccountFromJson(Map<String, dynamic> json) => Account(
       json['name'] as String,
-      json['unconfirmed_balance'] as int,
-      json['confirmed_balance'] as int,
-      json['internal_key_count'] as int,
-      json['external_key_count'] as int,
+      (json['unconfirmed_balance'] as num).toInt(),
+      (json['confirmed_balance'] as num).toInt(),
+      (json['internal_key_count'] as num).toInt(),
+      (json['external_key_count'] as num).toInt(),
     );
 
 Map<String, dynamic> _$AccountToJson(Account instance) => <String, dynamic>{
@@ -1796,7 +1796,7 @@ LogEntry _$LogEntryFromJson(Map<String, dynamic> json) => LogEntry(
       json['from'] as String,
       json['message'] as String,
       json['internal'] as bool,
-      json['timestamp'] as int,
+      (json['timestamp'] as num).toInt(),
     );
 
 Map<String, dynamic> _$LogEntryToJson(LogEntry instance) => <String, dynamic>{
@@ -1808,7 +1808,7 @@ Map<String, dynamic> _$LogEntryToJson(LogEntry instance) => <String, dynamic>{
 
 SendOnChain _$SendOnChainFromJson(Map<String, dynamic> json) => SendOnChain(
       json['addr'] as String,
-      json['amount'] as int,
+      (json['amount'] as num).toInt(),
       json['from_account'] as String,
     );
 
@@ -1823,8 +1823,8 @@ LoadUserHistory _$LoadUserHistoryFromJson(Map<String, dynamic> json) =>
     LoadUserHistory(
       json['uid'] as String,
       json['is_gc'] as bool,
-      json['page'] as int,
-      json['page_num'] as int,
+      (json['page'] as num).toInt(),
+      (json['page_num'] as num).toInt(),
     );
 
 Map<String, dynamic> _$LoadUserHistoryToJson(LoadUserHistory instance) =>
@@ -1836,7 +1836,7 @@ Map<String, dynamic> _$LoadUserHistoryToJson(LoadUserHistory instance) =>
     };
 
 WriteInvite _$WriteInviteFromJson(Map<String, dynamic> json) => WriteInvite(
-      json['fund_amount'] as int,
+      (json['fund_amount'] as num).toInt(),
       json['fund_account'] as String,
       json['gc_id'] as String?,
       json['prepaid'] as bool,
@@ -1853,7 +1853,7 @@ Map<String, dynamic> _$WriteInviteToJson(WriteInvite instance) =>
 RedeemedInviteFunds _$RedeemedInviteFundsFromJson(Map<String, dynamic> json) =>
     RedeemedInviteFunds(
       json['txid'] as String,
-      json['total'] as int,
+      (json['total'] as num).toInt(),
     );
 
 Map<String, dynamic> _$RedeemedInviteFundsToJson(
@@ -1871,12 +1871,12 @@ OnboardState _$OnboardStateFromJson(Map<String, dynamic> json) => OnboardState(
           : OOBPublicIdentityInvite.fromJson(
               json['invite'] as Map<String, dynamic>),
       dynListToHexReversed(json['redeem_tx'] as List?),
-      json['redeem_amount'] as int? ?? 0,
+      (json['redeem_amount'] as num?)?.toInt() ?? 0,
       json['out_channel_id'] as String,
       json['in_channel_id'] as String,
-      json['out_channel_height_hint'] as int? ?? 0,
-      json['out_channel_mined_height'] as int? ?? 0,
-      json['out_channel_confs_left'] as int? ?? 0,
+      (json['out_channel_height_hint'] as num?)?.toInt() ?? 0,
+      (json['out_channel_mined_height'] as num?)?.toInt() ?? 0,
+      (json['out_channel_confs_left'] as num?)?.toInt() ?? 0,
     );
 
 Map<String, dynamic> _$OnboardStateToJson(OnboardState instance) =>
@@ -1915,8 +1915,8 @@ FetchResourceArgs _$FetchResourceArgsFromJson(Map<String, dynamic> json) =>
       (json['metadata'] as Map<String, dynamic>?)?.map(
         (k, e) => MapEntry(k, e as String),
       ),
-      json['session_id'] as int? ?? 0,
-      json['parent_page'] as int? ?? 0,
+      (json['session_id'] as num?)?.toInt() ?? 0,
+      (json['parent_page'] as num?)?.toInt() ?? 0,
       json['data'],
     );
 
@@ -1938,8 +1938,8 @@ RMFetchResource _$RMFetchResourceFromJson(Map<String, dynamic> json) =>
       ),
       hexToUint64(json['tag'] as String),
       json['data'],
-      json['index'] as int,
-      json['count'] as int,
+      (json['index'] as num).toInt(),
+      (json['count'] as num).toInt(),
     );
 
 Map<String, dynamic> _$RMFetchResourceToJson(RMFetchResource instance) =>
@@ -1956,13 +1956,13 @@ RMFetchResourceReply _$RMFetchResourceReplyFromJson(
         Map<String, dynamic> json) =>
     RMFetchResourceReply(
       hexToUint64(json['tag'] as String),
-      json['status'] as int,
+      (json['status'] as num).toInt(),
       (json['meta'] as Map<String, dynamic>?)?.map(
         (k, e) => MapEntry(k, e as String),
       ),
       base64ToUint8list(json['data'] as String?),
-      json['index'] as int,
-      json['count'] as int,
+      (json['index'] as num).toInt(),
+      (json['count'] as num).toInt(),
     );
 
 Map<String, dynamic> _$RMFetchResourceReplyToJson(
@@ -1996,7 +1996,7 @@ Map<String, dynamic> _$SSProductToJson(SSProduct instance) => <String, dynamic>{
 
 SSCartItem _$SSCartItemFromJson(Map<String, dynamic> json) => SSCartItem(
       SSProduct.fromJson(json['product'] as Map<String, dynamic>),
-      json['quantity'] as int,
+      (json['quantity'] as num).toInt(),
     );
 
 Map<String, dynamic> _$SSCartItemToJson(SSCartItem instance) =>
@@ -2018,7 +2018,7 @@ Map<String, dynamic> _$SSCartToJson(SSCart instance) => <String, dynamic>{
     };
 
 SSOrder _$SSOrderFromJson(Map<String, dynamic> json) => SSOrder(
-      json['id'] as int,
+      (json['id'] as num).toInt(),
       json['user'] as String,
       SSCart.fromJson(json['cart'] as Map<String, dynamic>),
     );
@@ -2044,9 +2044,9 @@ Map<String, dynamic> _$SSPlacedOrderToJson(SSPlacedOrder instance) =>
 FetchedResource _$FetchedResourceFromJson(Map<String, dynamic> json) =>
     FetchedResource(
       json['uid'] as String,
-      json['session_id'] as int,
-      json['parent_page'] as int,
-      json['page_id'] as int,
+      (json['session_id'] as num).toInt(),
+      (json['parent_page'] as num).toInt(),
+      (json['page_id'] as num).toInt(),
       DateTime.parse(json['request_ts'] as String),
       DateTime.parse(json['response_ts'] as String),
       RMFetchResource.fromJson(json['request'] as Map<String, dynamic>),
@@ -2080,8 +2080,8 @@ Map<String, dynamic> _$HandshakeStageToJson(HandshakeStage instance) =>
 ListTransactionsArgs _$ListTransactionsArgsFromJson(
         Map<String, dynamic> json) =>
     ListTransactionsArgs(
-      json['start_height'] as int,
-      json['end_height'] as int,
+      (json['start_height'] as num).toInt(),
+      (json['end_height'] as num).toInt(),
     );
 
 Map<String, dynamic> _$ListTransactionsArgsToJson(
@@ -2093,8 +2093,8 @@ Map<String, dynamic> _$ListTransactionsArgsToJson(
 
 Transaction _$TransactionFromJson(Map<String, dynamic> json) => Transaction(
       json['tx_hash'] as String,
-      json['amount'] as int,
-      json['block_height'] as int,
+      (json['amount'] as num).toInt(),
+      (json['block_height'] as num).toInt(),
     );
 
 Map<String, dynamic> _$TransactionToJson(Transaction instance) =>
@@ -2119,8 +2119,8 @@ Map<String, dynamic> _$PostAndCommandIDToJson(PostAndCommandID instance) =>
 ReceiveReceipt _$ReceiveReceiptFromJson(Map<String, dynamic> json) =>
     ReceiveReceipt(
       json['user'] as String,
-      json['server_time'] as int,
-      json['client_time'] as int,
+      (json['server_time'] as num).toInt(),
+      (json['client_time'] as num).toInt(),
     );
 
 Map<String, dynamic> _$ReceiveReceiptToJson(ReceiveReceipt instance) =>
@@ -2176,7 +2176,7 @@ UINotification _$UINotificationFromJson(Map<String, dynamic> json) =>
     UINotification(
       json['type'] as String,
       json['text'] as String,
-      json['count'] as int,
+      (json['count'] as num).toInt(),
       json['from'] as String,
     );
 

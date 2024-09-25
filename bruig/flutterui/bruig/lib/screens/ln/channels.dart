@@ -18,7 +18,7 @@ import 'package:tuple/tuple.dart';
 typedef CloseChanCB = Future<void> Function(LNChannel chan);
 
 class LNChannelsPage extends StatefulWidget {
-  const LNChannelsPage({Key? key}) : super(key: key);
+  const LNChannelsPage({super.key});
 
   @override
   State<LNChannelsPage> createState() => _LNChannelsPageState();
@@ -27,7 +27,7 @@ class LNChannelsPage extends StatefulWidget {
 class _ChanW extends StatelessWidget {
   final LNChannel chan;
   final CloseChanCB closeChan;
-  const _ChanW(this.chan, this.closeChan, {Key? key}) : super(key: key);
+  const _ChanW(this.chan, this.closeChan);
 
   @override
   Widget build(BuildContext context) {
@@ -143,7 +143,7 @@ Widget pendingChanSummary(
 class _PendingOpenChanW extends StatelessWidget {
   final LNPendingOpenChannel pending;
   LNPendingChannel get chan => pending.channel;
-  const _PendingOpenChanW(this.pending, {Key? key}) : super(key: key);
+  const _PendingOpenChanW(this.pending);
 
   @override
   Widget build(BuildContext context) {
@@ -155,7 +155,7 @@ class _PendingOpenChanW extends StatelessWidget {
 class _WaitingCloseChanW extends StatelessWidget {
   final LNWaitingCloseChannel pending;
   LNPendingChannel get chan => pending.channel;
-  const _WaitingCloseChanW(this.pending, {Key? key}) : super(key: key);
+  const _WaitingCloseChanW(this.pending);
 
   @override
   Widget build(BuildContext context) {
@@ -167,7 +167,7 @@ class _WaitingCloseChanW extends StatelessWidget {
 class _PendingForceCloseChanW extends StatelessWidget {
   final LNPendingForceClosingChannel pending;
   LNPendingChannel get chan => pending.channel;
-  const _PendingForceCloseChanW(this.pending, {Key? key}) : super(key: key);
+  const _PendingForceCloseChanW(this.pending);
 
   @override
   Widget build(BuildContext context) {

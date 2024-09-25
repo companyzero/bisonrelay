@@ -28,7 +28,7 @@ import 'package:bruig/theme_manager.dart';
 class ServerEvent extends StatelessWidget {
   final Widget? child;
   final String? msg;
-  const ServerEvent({this.child, this.msg, Key? key}) : super(key: key);
+  const ServerEvent({this.child, this.msg, super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -44,7 +44,7 @@ class ServerEvent extends StatelessWidget {
 
 class DateChange extends StatelessWidget {
   final DateChangeEvent event;
-  const DateChange({required this.event, Key? key}) : super(key: key);
+  const DateChange({required this.event, super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -84,8 +84,7 @@ class ReceivedSentPM extends StatefulWidget {
 
   const ReceivedSentPM(this.evnt, this.nick, this.timestamp, this.id,
       this.userNick, this.isGC, this.openReplyDM, this.client, this.chat,
-      {Key? key})
-      : super(key: key);
+      {super.key});
 
   @override
   State<ReceivedSentPM> createState() => _ReceivedSentPMState();
@@ -413,8 +412,7 @@ class PMW extends StatelessWidget {
   final ShowSubMenuCB showSubMenu;
   final ClientModel client;
   final ChatModel chat;
-  const PMW(this.evnt, this.showSubMenu, this.client, this.chat, {Key? key})
-      : super(key: key);
+  const PMW(this.evnt, this.showSubMenu, this.client, this.chat, {super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -461,8 +459,7 @@ class GCMW extends StatelessWidget {
   final ChatModel chat;
   const GCMW(
       this.evnt, this.showSubMenu, this.openReplyDM, this.client, this.chat,
-      {Key? key})
-      : super(key: key);
+      {super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -480,7 +477,7 @@ class GCMW extends StatelessWidget {
 
 class GCUserEventW extends StatelessWidget {
   final ChatEventModel evnt;
-  const GCUserEventW(this.evnt, {Key? key}) : super(key: key);
+  const GCUserEventW(this.evnt, {super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -495,7 +492,7 @@ class GCUserEventW extends StatelessWidget {
 class JoinGCEventW extends StatefulWidget {
   final ChatEventModel event;
   final GCInvitation invite;
-  const JoinGCEventW(this.event, this.invite, {Key? key}) : super(key: key);
+  const JoinGCEventW(this.event, this.invite, {super.key});
 
   @override
   State<JoinGCEventW> createState() => _JoinGCEventWState();
@@ -555,7 +552,7 @@ class _JoinGCEventWState extends State<JoinGCEventW> {
 class InflightTipW extends StatefulWidget {
   final InflightTip tip;
   final ChatModel source;
-  const InflightTipW(this.tip, this.source, {Key? key}) : super(key: key);
+  const InflightTipW(this.tip, this.source, {super.key});
 
   @override
   State<InflightTipW> createState() => _InflightTipState();
@@ -608,7 +605,7 @@ class _InflightTipState extends State<InflightTipW> {
 
 class SynthEventW extends StatefulWidget {
   final SynthChatEvent event;
-  const SynthEventW(this.event, {Key? key}) : super(key: key);
+  const SynthEventW(this.event, {super.key});
 
   @override
   State<SynthEventW> createState() => _SynthEventWState();
@@ -661,8 +658,7 @@ class _SynthEventWState extends State<SynthEventW> {
 class UserContentEventW extends StatefulWidget {
   final UserContentList content;
   final ChatModel chat;
-  const UserContentEventW(this.content, this.chat, {Key? key})
-      : super(key: key);
+  const UserContentEventW(this.content, this.chat, {super.key});
 
   @override
   State<UserContentEventW> createState() => _UserContentEventWState();
@@ -683,7 +679,7 @@ class _UserContentEventWState extends State<UserContentEventW> {
 
 class PostEventW extends StatelessWidget {
   final FeedPostEvent event;
-  const PostEventW(this.event, {Key? key}) : super(key: key);
+  const PostEventW(this.event, {super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -694,8 +690,7 @@ class PostEventW extends StatelessWidget {
 class PostSubscriptionEventW extends StatefulWidget {
   final PostSubscriptionResult event;
   final ClientModel client;
-  const PostSubscriptionEventW(this.event, this.client, {Key? key})
-      : super(key: key);
+  const PostSubscriptionEventW(this.event, this.client, {super.key});
 
   @override
   State<PostSubscriptionEventW> createState() => _PostSubscriptionEventWState();
@@ -728,7 +723,7 @@ class _PostSubscriptionEventWState extends State<PostSubscriptionEventW> {
 
 class PostsSubscriberUpdatedW extends StatelessWidget {
   final PostSubscriberUpdated event;
-  const PostsSubscriberUpdatedW(this.event, {Key? key}) : super(key: key);
+  const PostsSubscriberUpdatedW(this.event, {super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -740,7 +735,7 @@ class PostsSubscriberUpdatedW extends StatelessWidget {
 class ListPostsEventW extends StatefulWidget {
   final ChatEventModel event;
   final ChatModel chat;
-  const ListPostsEventW(this.event, this.chat, {Key? key}) : super(key: key);
+  const ListPostsEventW(this.event, this.chat, {super.key});
 
   @override
   State<ListPostsEventW> createState() => _ListPostsWState();
@@ -809,7 +804,7 @@ class _ListPostsWState extends State<ListPostsEventW> {
 
 class FileDownloadedEventW extends StatelessWidget {
   final FileDownloadedEvent event;
-  const FileDownloadedEventW(this.event, {Key? key}) : super(key: key);
+  const FileDownloadedEventW(this.event, {super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -829,7 +824,7 @@ class FileDownloadedEventW extends StatelessWidget {
 
 class GCVersionWarnW extends StatelessWidget {
   final GCVersionWarn event;
-  const GCVersionWarnW(this.event, {Key? key}) : super(key: key);
+  const GCVersionWarnW(this.event, {super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -846,7 +841,7 @@ class GCVersionWarnW extends StatelessWidget {
 class GCAddedMembersW extends StatelessWidget {
   final GCAddedMembers event;
   final ClientModel client;
-  const GCAddedMembersW(this.event, this.client, {Key? key}) : super(key: key);
+  const GCAddedMembersW(this.event, this.client, {super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -867,7 +862,7 @@ class GCAddedMembersW extends StatelessWidget {
 class GCPartedMemberW extends StatelessWidget {
   final GCMemberParted event;
   final ClientModel client;
-  const GCPartedMemberW(this.event, this.client, {Key? key}) : super(key: key);
+  const GCPartedMemberW(this.event, this.client, {super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -888,7 +883,7 @@ class GCPartedMemberW extends StatelessWidget {
 
 class GCUpgradedVersionW extends StatelessWidget {
   final GCUpgradedVersion event;
-  const GCUpgradedVersionW(this.event, {Key? key}) : super(key: key);
+  const GCUpgradedVersionW(this.event, {super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -901,7 +896,7 @@ class GCUpgradedVersionW extends StatelessWidget {
 class GCAdminsChangedW extends StatelessWidget {
   final GCAdminsChanged event;
   final ClientModel client;
-  const GCAdminsChangedW(this.event, this.client, {Key? key}) : super(key: key);
+  const GCAdminsChangedW(this.event, this.client, {super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -932,8 +927,7 @@ class KXSuggestedW extends StatefulWidget {
   final ChatEventModel event;
   final KXSuggested suggest;
   final ClientModel client;
-  const KXSuggestedW(this.event, this.suggest, this.client, {Key? key})
-      : super(key: key);
+  const KXSuggestedW(this.event, this.suggest, this.client, {super.key});
 
   @override
   State<KXSuggestedW> createState() => _KXSuggestedWState();
@@ -1005,7 +999,7 @@ class _KXSuggestedWState extends State<KXSuggestedW> {
 
 class TipUserProgressW extends StatelessWidget {
   final TipProgressEvent event;
-  const TipUserProgressW(this.event, {Key? key}) : super(key: key);
+  const TipUserProgressW(this.event, {super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -1103,7 +1097,7 @@ class Event extends StatelessWidget {
   final ChatEventModel event;
   final ChatModel chat;
   final ClientModel client;
-  const Event(this.chat, this.event, this.client, {Key? key}) : super(key: key);
+  const Event(this.chat, this.event, this.client, {super.key});
 
   showSubMenu() => client.ui.chatSideMenuActive.chat = chat;
   openReplyDM(bool isGC, String id) => client.setActiveByNick(id, isGC);

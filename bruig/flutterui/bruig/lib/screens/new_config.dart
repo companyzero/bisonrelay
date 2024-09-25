@@ -36,7 +36,7 @@ Future<void> runNewConfigApp(List<String> args) async {
 
 class NewConfigScreen extends StatefulWidget {
   final List<String> args;
-  const NewConfigScreen(this.args, {Key? key}) : super(key: key);
+  const NewConfigScreen(this.args, {super.key});
 
   @override
   State<NewConfigScreen> createState() => _NewConfigScreenState();

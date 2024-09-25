@@ -7,9 +7,9 @@ import 'package:flutter/services.dart';
 
 import 'definitions.dart';
 import 'package:path/path.dart' as path;
-import 'package:shelf_web_socket/shelf_web_socket.dart';
+// import 'package:shelf_web_socket/shelf_web_socket.dart';
 import 'package:json_rpc_2/json_rpc_2.dart';
-import 'package:web_socket_channel/web_socket_channel.dart';
+// import 'package:web_socket_channel/web_socket_channel.dart';
 
 // Throws the given exception or returns null. Use it as:
 // _threw(e) ?? otherval
@@ -45,6 +45,7 @@ class MockPlugin with NtfStreams /*implements PluginPlatform*/ {
   /// Constructor
   ///******************************************
   MockPlugin() {
+    /*
     webSocketHandler((WebSocketChannel socket) {
       final server = Server(socket.cast<String>());
 
@@ -56,6 +57,7 @@ class MockPlugin with NtfStreams /*implements PluginPlatform*/ {
 
       server.listen();
     });
+    */
 
     /*
     () async {

@@ -14,7 +14,7 @@ void showRenameModalBottom(BuildContext context, ChatModel chat) {
 
 class RenameChatModal extends StatefulWidget {
   final ChatModel chat;
-  const RenameChatModal(this.chat, {Key? key}) : super(key: key);
+  const RenameChatModal(this.chat, {super.key});
 
   @override
   State<RenameChatModal> createState() => _RenameChatModalState();

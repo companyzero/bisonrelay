@@ -20,7 +20,7 @@ import 'package:provider/provider.dart';
 
 class NeedsFundsScreen extends StatefulWidget {
   final AppNotifications ntfns;
-  const NeedsFundsScreen(this.ntfns, {Key? key}) : super(key: key);
+  const NeedsFundsScreen(this.ntfns, {super.key});
 
   @override
   State<NeedsFundsScreen> createState() => _NeedsFundsScreenState();

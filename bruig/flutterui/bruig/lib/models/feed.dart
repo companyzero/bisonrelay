@@ -3,7 +3,6 @@ import 'dart:collection';
 import 'package:bruig/util.dart';
 import 'package:collection/collection.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:bruig/notification_service.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 

@@ -8,7 +8,7 @@ import 'package:provider/provider.dart';
 import 'package:bruig/theme_manager.dart';
 
 class VerifyServerScreen extends StatelessWidget {
-  const VerifyServerScreen({Key? key}) : super(key: key);
+  const VerifyServerScreen({super.key});
 
   @override
   Widget build(BuildContext context) {

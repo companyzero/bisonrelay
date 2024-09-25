@@ -33,8 +33,7 @@ class FeedPostW extends StatefulWidget {
   final Function onTabChange;
   const FeedPostW(this.feed, this.post, this.author, this.from, this.client,
       this.onTabChange,
-      {Key? key})
-      : super(key: key);
+      {super.key});
 
   @override
   State<FeedPostW> createState() => _FeedPostWState();
@@ -162,8 +161,7 @@ class FeedPosts extends StatefulWidget {
   final Function tabChange;
   final bool onlyShowOwnPosts;
   const FeedPosts(this.feed, this.client, this.tabChange, this.onlyShowOwnPosts,
-      {Key? key})
-      : super(key: key);
+      {super.key});
 
   @override
   State<FeedPosts> createState() => _FeedPostsState();

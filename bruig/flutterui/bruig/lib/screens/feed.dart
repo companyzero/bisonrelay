@@ -51,8 +51,7 @@ class FeedScreen extends StatefulWidget {
 
   final int tabIndex;
   final MainMenuModel mainMenu;
-  const FeedScreen(this.mainMenu, {Key? key, this.tabIndex = 0})
-      : super(key: key);
+  const FeedScreen(this.mainMenu, {super.key, this.tabIndex = 0});
 
   @override
   State<FeedScreen> createState() => _FeedScreenState();

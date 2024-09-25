@@ -5,8 +5,7 @@ import 'package:flutter/material.dart';
 class LNManagementBar extends StatelessWidget {
   final int selectedIndex;
   final Function tabChange;
-  const LNManagementBar(this.tabChange, this.selectedIndex, {Key? key})
-      : super(key: key);
+  const LNManagementBar(this.tabChange, this.selectedIndex, {super.key});
 
   @override
   Widget build(BuildContext context) {

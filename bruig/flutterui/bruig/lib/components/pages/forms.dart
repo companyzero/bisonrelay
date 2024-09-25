@@ -11,7 +11,7 @@ import 'package:flutter/services.dart';
 
 class _FormSubmitButton extends StatelessWidget {
   final FormElement form;
-  final _FormField submit;
+  final FormField submit;
   final GlobalKey<FormState> formKey;
   const _FormSubmitButton(this.form, this.submit, this.formKey);
 
@@ -93,7 +93,7 @@ class CustomFormState extends State<CustomForm> {
   FormElement get form => widget.form;
   @override
   Widget build(BuildContext context) {
-    _FormField? submit;
+    FormField? submit;
 
     List<Widget> fieldWidgets = [];
     for (var field in form.fields) {
@@ -188,7 +188,7 @@ class CustomFormState extends State<CustomForm> {
   }
 }
 
-class _FormField {
+class FormField {
   final String type;
   final String name;
   final String label;
@@ -197,7 +197,7 @@ class _FormField {
   final String regexpstr;
   final String hint;
 
-  _FormField(this.type,
+  FormField(this.type,
       {this.name = "",
       this.label = "",
       this.regexp = "",
@@ -207,7 +207,7 @@ class _FormField {
 }
 
 class FormElement extends md.Element {
-  final List<_FormField> fields;
+  final List<FormField> fields;
 
   FormElement(this.fields) : super("form", [md.Text("")]);
 }
@@ -227,7 +227,7 @@ class FormBlockSyntax extends md.BlockSyntax {
   @override
   md.Node? parse(md.BlockParser parser) {
     parser.advance();
-    List<_FormField> children = [];
+    List<FormField> children = [];
 
     while (!parser.isDone && !md.BlockSyntax.isAtBlockEnd(parser)) {
       if (parser.current.content == closeTag) {
@@ -258,7 +258,7 @@ class FormBlockSyntax extends md.BlockSyntax {
         }
       }
 
-      _FormField field = Function.apply(_FormField.new, [type], args);
+      FormField field = Function.apply(FormField.new, [type], args);
       children.add(field);
       parser.advance();
     }

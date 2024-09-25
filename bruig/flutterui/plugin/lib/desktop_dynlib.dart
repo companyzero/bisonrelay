@@ -15,7 +15,7 @@ typedef SetTagNative = Void Function(Pointer<Utf8>);
 typedef HelloFunc = void Function();
 typedef HelloNative = Void Function();
 
-class GetURLResultNative extends Struct {
+final class GetURLResultNative extends Struct {
   external Pointer<Utf8> res;
   external Pointer<Utf8> err;
 }
@@ -34,7 +34,7 @@ typedef AsyncCallFunc = void Function(
 typedef AsyncCallNative = Void Function(Uint32 typ, Uint32 id,
     Uint32 clientHandle, Pointer<Utf8> payload, Uint32 payloadLen);
 
-class NextCallResultReturnType extends Struct {
+final class NextCallResultReturnType extends Struct {
   @Uint64()
   external int handle;
   @Uint64()

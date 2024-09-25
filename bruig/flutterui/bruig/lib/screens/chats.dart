@@ -72,7 +72,7 @@ class ChatsScreen extends StatefulWidget {
   static const routeName = '/chat';
   final ClientModel client;
   final AppNotifications ntfns;
-  const ChatsScreen(this.client, this.ntfns, {Key? key}) : super(key: key);
+  const ChatsScreen(this.client, this.ntfns, {super.key});
 
   static gotoChatScreenFor(BuildContext context, ChatModel chat) {
     ClientModel.of(context, listen: false).active = chat;

@@ -32,7 +32,7 @@ class ManageContentScreenTitle extends StatelessWidget {
 class ManageContentScreen extends StatefulWidget {
   static const routeName = '/manageContent';
   final MainMenuModel menu;
-  const ManageContentScreen(this.menu, {Key? key}) : super(key: key);
+  const ManageContentScreen(this.menu, {super.key});
 
   @override
   State<ManageContentScreen> createState() => _ManageContentScreenState();

@@ -11,8 +11,7 @@ class StartupScreen extends StatelessWidget {
   final Widget? fab;
   final double? childrenWidth;
   const StartupScreen(this.widgetList,
-      {this.hideAboutButton = false, this.fab, this.childrenWidth, Key? key})
-      : super(key: key);
+      {this.hideAboutButton = false, this.fab, this.childrenWidth, super.key});
 
   Widget _buildChildren() {
     return Column(

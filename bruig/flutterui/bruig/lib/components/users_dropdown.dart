@@ -15,12 +15,11 @@ class UsersDropdown extends StatefulWidget {
   final String hintText;
   const UsersDropdown(
       {this.cb,
-      Key? key,
+      super.key,
       this.allowEmpty = false,
       this.excludeUIDs = const [],
       this.limitUIDs,
-      this.hintText = "Select user..."})
-      : super(key: key);
+      this.hintText = "Select user..."});
 
   @override
   State<UsersDropdown> createState() => _UsersDropdownState();

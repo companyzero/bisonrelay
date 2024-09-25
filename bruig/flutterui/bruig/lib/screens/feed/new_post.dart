@@ -99,7 +99,7 @@ class _AddAltTextState extends State<AddAltText> {
 
 class NewPostScreen extends StatefulWidget {
   final FeedModel feed;
-  const NewPostScreen(this.feed, {Key? key}) : super(key: key);
+  const NewPostScreen(this.feed, {super.key});
 
   @override
   State<NewPostScreen> createState() => _NewPostScreenState();

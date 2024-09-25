@@ -446,7 +446,7 @@ List<ChatMenuItem> buildGCMenu(ChatModel chat) {
 class SidebarIcon extends StatelessWidget {
   final IconData icon;
   final bool alert;
-  const SidebarIcon(this.icon, this.alert, {Key? key}) : super(key: key);
+  const SidebarIcon(this.icon, this.alert, {super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -462,7 +462,7 @@ class SidebarIcon extends StatelessWidget {
 
 class SidebarSvgIcon extends StatelessWidget {
   final String assetName;
-  const SidebarSvgIcon(this.assetName, {Key? key}) : super(key: key);
+  const SidebarSvgIcon(this.assetName, {super.key});
 
   @override
   Widget build(BuildContext context) {

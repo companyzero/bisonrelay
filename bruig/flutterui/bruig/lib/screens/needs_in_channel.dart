@@ -23,8 +23,7 @@ import 'package:tuple/tuple.dart';
 class NeedsInChannelScreen extends StatefulWidget {
   final AppNotifications ntfns;
   final ClientModel client;
-  const NeedsInChannelScreen(this.ntfns, this.client, {Key? key})
-      : super(key: key);
+  const NeedsInChannelScreen(this.ntfns, this.client, {super.key});
 
   @override
   State<NeedsInChannelScreen> createState() => _NeedsInChannelScreenState();

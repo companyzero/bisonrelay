@@ -20,8 +20,7 @@ class Copyable extends StatelessWidget {
       this.textToCopy,
       this.textOverflow,
       this.tooltip,
-      Key? key})
-      : super(key: key);
+      super.key});
 
   Copyable.txt(Txt txt, {tooltip, key})
       : this(txt.data, child: txt, tooltip: tooltip, key: key);

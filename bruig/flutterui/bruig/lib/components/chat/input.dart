@@ -15,8 +15,7 @@ class ChatInput extends StatefulWidget {
   final SendMsg _send;
   final ChatModel chat;
   final CustomInputFocusNode inputFocusNode;
-  const ChatInput(this._send, this.chat, this.inputFocusNode, {Key? key})
-      : super(key: key);
+  const ChatInput(this._send, this.chat, this.inputFocusNode, {super.key});
 
   @override
   State<ChatInput> createState() => _ChatInputState();

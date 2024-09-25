@@ -168,7 +168,7 @@ class App extends StatefulWidget {
   final Config cfg;
   final LogModel log;
   final ShutdownModel shutdown;
-  const App(this.cfg, this.log, this.shutdown, {Key? key}) : super(key: key);
+  const App(this.cfg, this.log, this.shutdown, {super.key});
 
   @override
   State<App> createState() => _AppState();

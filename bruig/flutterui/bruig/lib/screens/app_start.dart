@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class AppStartingLoadScreen extends StatelessWidget {
-  const AppStartingLoadScreen({Key? key}) : super(key: key);
+  const AppStartingLoadScreen({super.key});
 
   @override
   Widget build(BuildContext context) {

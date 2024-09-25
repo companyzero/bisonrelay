@@ -10,7 +10,7 @@ import 'package:bruig/theme_manager.dart';
 
 class ConfirmLNWalletSeedPage extends StatefulWidget {
   final NewConfigModel newconf;
-  const ConfirmLNWalletSeedPage(this.newconf, {Key? key}) : super(key: key);
+  const ConfirmLNWalletSeedPage(this.newconf, {super.key});
 
   @override
   State<ConfirmLNWalletSeedPage> createState() =>
@@ -80,8 +80,7 @@ class _ConfirmLNWalletSeedPageState extends State<ConfirmLNWalletSeedPage> {
 class QuestionArea extends StatelessWidget {
   final ConfirmSeedWords currentWords;
   final Function(bool) checkAnswersCB;
-  const QuestionArea(this.currentWords, this.checkAnswersCB, {Key? key})
-      : super(key: key);
+  const QuestionArea(this.currentWords, this.checkAnswersCB, {super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -108,7 +107,7 @@ class QuestionArea extends StatelessWidget {
 
 class IncorrectArea extends StatelessWidget {
   final Function() goBackCB;
-  const IncorrectArea(this.goBackCB, {Key? key}) : super(key: key);
+  const IncorrectArea(this.goBackCB, {super.key});
   @override
   Widget build(BuildContext context) {
     return Consumer<ThemeNotifier>(

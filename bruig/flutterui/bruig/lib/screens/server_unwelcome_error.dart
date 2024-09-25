@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 
 class ServerUnwelcomeErrorScreen extends StatelessWidget {
   static String routeName = "/serverUnwelcomeError";
-  const ServerUnwelcomeErrorScreen({Key? key}) : super(key: key);
+  const ServerUnwelcomeErrorScreen({super.key});
 
   @override
   Widget build(BuildContext context) {

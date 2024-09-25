@@ -10,7 +10,7 @@ import 'package:bruig/theme_manager.dart';
 import 'package:provider/provider.dart';
 
 class InitLocalIDScreen extends StatefulWidget {
-  const InitLocalIDScreen({Key? key}) : super(key: key);
+  const InitLocalIDScreen({super.key});
 
   @override
   InitLocalIDScreenState createState() {

@@ -348,9 +348,8 @@ class MarkdownArea extends StatelessWidget {
 
   final String text;
   final bool hasNick;
-  MarkdownArea(srcText, this.hasNick, {Key? key})
-      : text = MarkdownArea._cleanupSrcText(srcText),
-        super(key: key);
+  MarkdownArea(srcText, this.hasNick, {super.key})
+      : text = MarkdownArea._cleanupSrcText(srcText);
 
   Future<void> launchUrlAwait(context, url) async {
     var parsed = Uri.parse(url);
@@ -408,8 +407,7 @@ class Downloadable extends StatelessWidget {
   final String tip;
   final String fid;
   final Widget child;
-  const Downloadable(this.tip, this.fid, this.child, {Key? key})
-      : super(key: key);
+  const Downloadable(this.tip, this.fid, this.child, {super.key});
 
   void download(BuildContext context) async {
     var snackbar = SnackBarModel.of(context);
@@ -445,8 +443,7 @@ class ImageMd extends StatelessWidget {
   final String tip;
   final Uint8List imgContent;
   final String type;
-  const ImageMd(this.tip, this.imgContent, this.type, {Key? key})
-      : super(key: key);
+  const ImageMd(this.tip, this.imgContent, this.type, {super.key});
 
   @override
   Widget build(BuildContext context) => Tooltip(

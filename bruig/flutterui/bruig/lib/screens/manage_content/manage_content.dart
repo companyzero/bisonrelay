@@ -18,8 +18,7 @@ class SharedContentFile extends StatefulWidget {
   final RemoveContentCB removeContentCB;
   final ClientModel client;
   const SharedContentFile(this.file, this.removeContentCB, this.client,
-      {Key? key})
-      : super(key: key);
+      {super.key});
 
   @override
   State<SharedContentFile> createState() => _SharedContentFileState();
@@ -134,7 +133,7 @@ typedef AddContentCB = Future<void> Function(
 
 class AddContentPanel extends StatefulWidget {
   final AddContentCB addContentCB;
-  const AddContentPanel(this.addContentCB, {Key? key}) : super(key: key);
+  const AddContentPanel(this.addContentCB, {super.key});
 
   @override
   State<AddContentPanel> createState() => _AddContentPanelState();
@@ -269,7 +268,7 @@ class ManageContentScreenArgs {
 class ManageContent extends StatefulWidget {
   static String routeName = "/manageContent";
   final int view;
-  const ManageContent(this.view, {Key? key}) : super(key: key);
+  const ManageContent(this.view, {super.key});
 
   @override
   State<ManageContent> createState() => _ManageContentState();

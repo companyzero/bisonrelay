@@ -61,8 +61,7 @@ class OverviewScreen extends StatefulWidget {
   final SnackBarModel snackBar;
   const OverviewScreen(this.down, this.client, this.ntfns, this.initialRoute,
       this.mainMenu, this.feed, this.snackBar,
-      {Key? key})
-      : super(key: key);
+      {super.key});
 
   @override
   State<OverviewScreen> createState() => _OverviewScreenState();

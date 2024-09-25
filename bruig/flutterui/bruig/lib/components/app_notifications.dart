@@ -9,7 +9,7 @@ import 'package:flutter/material.dart';
 class _NotificationW extends StatelessWidget {
   final AppNotifications ntfns;
   final AppNtfn ntf;
-  const _NotificationW(this.ntf, this.ntfns, {Key? key}) : super(key: key);
+  const _NotificationW(this.ntf, this.ntfns);
 
   @override
   Widget build(BuildContext context) {
@@ -104,7 +104,7 @@ class _NotificationW extends StatelessWidget {
 
 class NotificationsDrawerHeader extends StatefulWidget {
   final AppNotifications ntfns;
-  const NotificationsDrawerHeader(this.ntfns, {Key? key}) : super(key: key);
+  const NotificationsDrawerHeader(this.ntfns, {super.key});
 
   @override
   State<NotificationsDrawerHeader> createState() =>

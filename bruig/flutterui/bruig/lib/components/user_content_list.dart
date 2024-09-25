@@ -16,8 +16,7 @@ class SharedContentFile extends StatefulWidget {
   final DownloadContentCB downloadContentCB;
   final FileDownloadModel? fd;
   const SharedContentFile(this.file, this.chat, this.fd, this.downloadContentCB,
-      {Key? key})
-      : super(key: key);
+      {super.key});
 
   @override
   State<SharedContentFile> createState() => _SharedContentFileState();
@@ -53,7 +52,10 @@ class _SharedContentFileState extends State<SharedContentFile> {
               PostContentScreenArgs(widget.chat.nick, widget.file.diskPath));
       */
     } else {
-      OpenFilex.open(widget.fd?.diskPath);
+      var diskPath = widget.fd?.diskPath ?? "";
+      if (diskPath != "") {
+        OpenFilex.open(diskPath);
+      }
     }
   }
 
@@ -138,8 +140,7 @@ class UserContentListW extends StatelessWidget {
   final UserContentList content;
   final ChatModel chat;
   final DownloadsModel downloads;
-  const UserContentListW(this.chat, this.downloads, this.content, {Key? key})
-      : super(key: key);
+  const UserContentListW(this.chat, this.downloads, this.content, {super.key});
 
   Future<FileDownloadModel> downloadContent(ReceivedFile file) async {
     return await downloads.getUserFile(file);
