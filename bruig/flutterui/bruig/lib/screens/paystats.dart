@@ -12,7 +12,7 @@ import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/theme_manager.dart';
 
 class PayStatsScreenTitle extends StatelessWidget {
-  const PayStatsScreenTitle({Key? key}) : super(key: key);
+  const PayStatsScreenTitle({super.key});
   @override
   Widget build(BuildContext context) {
     return const Txt.L("Payment Stats");
@@ -22,7 +22,7 @@ class PayStatsScreenTitle extends StatelessWidget {
 class PayStatsScreen extends StatefulWidget {
   static String routeName = "/payStats";
   final ClientModel client;
-  const PayStatsScreen(this.client, {Key? key}) : super(key: key);
+  const PayStatsScreen(this.client, {super.key});
 
   @override
   State<PayStatsScreen> createState() => _PayStatsScreenState();

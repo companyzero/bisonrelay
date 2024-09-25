@@ -11,7 +11,7 @@ import 'package:provider/provider.dart';
 import 'package:bruig/screens/startupscreen.dart';
 
 class VerifyInviteScreen extends StatefulWidget {
-  const VerifyInviteScreen({Key? key}) : super(key: key);
+  const VerifyInviteScreen({super.key});
 
   @override
   State<VerifyInviteScreen> createState() => _VerifyInviteScreenState();

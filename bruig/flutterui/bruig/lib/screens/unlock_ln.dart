@@ -29,8 +29,7 @@ class UnlockLNApp extends StatefulWidget {
   Config cfg;
   final String initialRoute;
   SnackBarModel snackBar;
-  UnlockLNApp(this.cfg, this.initialRoute, this.snackBar, {Key? key})
-      : super(key: key);
+  UnlockLNApp(this.cfg, this.initialRoute, this.snackBar, {super.key});
 
   void setCfg(Config c) {
     cfg = c;
@@ -101,7 +100,7 @@ class _UnlockLNAppState extends State<UnlockLNApp> with WindowListener {
 class _LNUnlockPage extends StatefulWidget {
   final Config cfg;
   final Function(Config) setCfg;
-  const _LNUnlockPage(this.cfg, this.setCfg, {Key? key}) : super(key: key);
+  const _LNUnlockPage(this.cfg, this.setCfg);
 
   @override
   State<_LNUnlockPage> createState() => __LNUnlockPageState();
@@ -264,7 +263,7 @@ class __LNUnlockPageState extends State<_LNUnlockPage> {
 
 class _LNChainSyncPage extends StatefulWidget {
   final Config cfg;
-  const _LNChainSyncPage(this.cfg, {Key? key}) : super(key: key);
+  const _LNChainSyncPage(this.cfg);
 
   @override
   State<_LNChainSyncPage> createState() => _LNChainSyncPageState();

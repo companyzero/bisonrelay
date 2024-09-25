@@ -12,7 +12,7 @@ import 'package:bruig/screens/startupscreen.dart';
 
 class LNExternalWalletPage extends StatefulWidget {
   final NewConfigModel newconf;
-  const LNExternalWalletPage(this.newconf, {Key? key}) : super(key: key);
+  const LNExternalWalletPage(this.newconf, {super.key});
 
   @override
   State<LNExternalWalletPage> createState() => _LNExternalWalletPageState();

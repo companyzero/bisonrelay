@@ -21,9 +21,7 @@ class _AddressBookListingW extends StatefulWidget {
   final bool confirmGCInvite;
 
   const _AddressBookListingW(this.chat, this.client, this.alreadySelected,
-      this.addToCreateGCCB, this.confirmGCInvite,
-      {Key? key})
-      : super(key: key);
+      this.addToCreateGCCB, this.confirmGCInvite);
 
   @override
   State<_AddressBookListingW> createState() => _AddressBookListingWState();
@@ -105,8 +103,7 @@ class _AddressBookListingWState extends State<_AddressBookListingW> {
 class AddressBook extends StatefulWidget {
   final ClientModel client;
   final CustomInputFocusNode inputFocusNode;
-  const AddressBook(this.client, this.inputFocusNode, {Key? key})
-      : super(key: key);
+  const AddressBook(this.client, this.inputFocusNode, {super.key});
 
   @override
   State<AddressBook> createState() => _AddressBookState();

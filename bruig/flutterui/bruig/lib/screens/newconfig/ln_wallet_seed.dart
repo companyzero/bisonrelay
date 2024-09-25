@@ -10,7 +10,7 @@ import 'package:bruig/theme_manager.dart';
 
 class NewLNWalletSeedPage extends StatelessWidget {
   final NewConfigModel newconf;
-  const NewLNWalletSeedPage(this.newconf, {Key? key}) : super(key: key);
+  const NewLNWalletSeedPage(this.newconf, {super.key});
 
   void copySeedToClipboard(BuildContext context) async {
     Clipboard.setData(ClipboardData(text: newconf.newWalletSeed));

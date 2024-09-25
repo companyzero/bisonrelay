@@ -12,18 +12,17 @@ import 'package:bruig/components/md_elements.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:bruig/components/user_context_menu.dart';
 
-typedef _FetchPostCB = Future<void> Function(String pid);
+typedef FetchPostCB = Future<void> Function(String pid);
 
 class UserPostW extends StatefulWidget {
   final PostListItem post;
   final ChatModel? author;
   final ClientModel client;
   final FeedModel feed;
-  final _FetchPostCB fetchPost;
+  final FetchPostCB fetchPost;
   const UserPostW(
       this.post, this.feed, this.author, this.client, this.fetchPost,
-      {Key? key})
-      : super(key: key);
+      {super.key});
 
   @override
   State<UserPostW> createState() => _UserPostWState();
@@ -122,8 +121,8 @@ class UserPosts extends StatefulWidget {
   final FeedModel feed;
   final ClientModel client;
   final Function tabChange;
-  const UserPosts(this.chat, this.feed, this.client, this.tabChange, {Key? key})
-      : super(key: key);
+  const UserPosts(this.chat, this.feed, this.client, this.tabChange,
+      {super.key});
 
   @override
   State<UserPosts> createState() => _UserPostsState();
@@ -228,25 +227,21 @@ class _UserPostsState extends State<UserPosts> {
             : const EdgeInsets.only(left: 50, right: 50, top: 10, bottom: 10),
         child: SingleChildScrollView(
             child: Column(children: [
-          ...notReceived
-              .map((e) => UserPostW(
-                    e,
-                    widget.feed,
-                    widget.chat,
-                    widget.client,
-                    fetchPost,
-                  ))
-              .toList(),
-          ...alreadyReceived
-              .map((e) => FeedPostW(
-                    widget.feed,
-                    e,
-                    widget.client.getExistingChat(e.summ.authorID),
-                    widget.client.getExistingChat(e.summ.from),
-                    widget.client,
-                    widget.tabChange,
-                  ))
-              .toList()
+          ...notReceived.map((e) => UserPostW(
+                e,
+                widget.feed,
+                widget.chat,
+                widget.client,
+                fetchPost,
+              )),
+          ...alreadyReceived.map((e) => FeedPostW(
+                widget.feed,
+                e,
+                widget.client.getExistingChat(e.summ.authorID),
+                widget.client.getExistingChat(e.summ.from),
+                widget.client,
+                widget.tabChange,
+              ))
         ])));
   }
 }

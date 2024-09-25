@@ -14,7 +14,7 @@ import 'package:bruig/theme_manager.dart';
 class UserProfile extends StatefulWidget {
   static String routeName = "${ChatsScreen.routeName}/profile";
   final ClientModel client;
-  const UserProfile(this.client, {Key? key}) : super(key: key);
+  const UserProfile(this.client, {super.key});
 
   @override
   State<UserProfile> createState() => _UserProfileState();

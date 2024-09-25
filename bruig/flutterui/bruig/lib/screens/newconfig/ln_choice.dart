@@ -6,7 +6,7 @@ import 'package:bruig/components/buttons.dart';
 
 class LNChoicePage extends StatelessWidget {
   final NewConfigModel newconf;
-  const LNChoicePage(this.newconf, {Key? key}) : super(key: key);
+  const LNChoicePage(this.newconf, {super.key});
 
   void setChoice(BuildContext context, LNNodeType type) {
     newconf.nodeType = type;

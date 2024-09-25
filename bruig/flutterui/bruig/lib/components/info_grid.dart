@@ -16,14 +16,14 @@ class SimpleInfoGrid extends StatelessWidget {
 
   const SimpleInfoGrid(
     this.items, {
-    Key? key,
+    super.key,
     this.colLabelSize = 100,
     this.colValueFlex = 4,
     this.separatorWidth = 20,
     this.controller,
     this.useListBuilder = true,
     this.rowAlignment = MainAxisAlignment.start,
-  }) : super(key: key);
+  });
 
   Widget buildChild(Tuple2<Widget, Widget> child) => Container(
       margin: const EdgeInsets.only(bottom: 3),
@@ -74,7 +74,7 @@ class SimpleInfoGridAdv extends StatelessWidget {
   final TextSize textSize;
 
   const SimpleInfoGridAdv({
-    Key? key,
+    super.key,
     required this.items,
     this.colLabelSize = 100,
     this.colValueFlex = 4,
@@ -83,7 +83,7 @@ class SimpleInfoGridAdv extends StatelessWidget {
     this.useListBuilder = true,
     this.rowAlignment = MainAxisAlignment.start,
     this.textSize = TextSize.small,
-  }) : super(key: key);
+  });
 
   Widget buildChild(dynamic child) {
     late Widget label;

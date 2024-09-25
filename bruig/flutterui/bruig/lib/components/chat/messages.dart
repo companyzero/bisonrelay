@@ -16,8 +16,7 @@ class Messages extends StatefulWidget {
   final ItemPositionsListener itemPositionsListener;
   const Messages(this.chat, this.client, this.itemScrollController,
       this.itemPositionsListener,
-      {Key? key})
-      : super(key: key);
+      {super.key});
 
   @override
   State<Messages> createState() => _MessagesState();

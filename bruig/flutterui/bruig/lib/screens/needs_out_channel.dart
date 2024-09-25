@@ -21,8 +21,7 @@ class NeedsOutChannelScreen extends StatefulWidget {
   static const routeName = "/needsOutChannel";
   final AppNotifications ntfns;
   final ClientModel client;
-  const NeedsOutChannelScreen(this.ntfns, this.client, {Key? key})
-      : super(key: key);
+  const NeedsOutChannelScreen(this.ntfns, this.client, {super.key});
 
   @override
   State<NeedsOutChannelScreen> createState() => _NeedsOutChannelScreenState();

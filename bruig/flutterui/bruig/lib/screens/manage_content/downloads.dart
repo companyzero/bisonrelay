@@ -54,8 +54,7 @@ class _FileDownloadW extends StatefulWidget {
   final FileDownloadModel fd;
   final DownloadsModel downloads;
   final ClientModel client;
-  const _FileDownloadW(this.fd, this.downloads, this.client, {Key? key})
-      : super(key: key);
+  const _FileDownloadW(this.fd, this.downloads, this.client);
 
   @override
   State<_FileDownloadW> createState() => _FileDownloadWState();
@@ -199,8 +198,7 @@ class DownloadsScreen extends StatefulWidget {
   static String routeName = "/downloads";
   final DownloadsModel downloads;
   final ClientModel client;
-  const DownloadsScreen(this.downloads, this.client, {Key? key})
-      : super(key: key);
+  const DownloadsScreen(this.downloads, this.client, {super.key});
 
   @override
   State<DownloadsScreen> createState() => _DownloadsScreenState();

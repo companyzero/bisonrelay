@@ -6,7 +6,7 @@ import 'package:bruig/components/buttons.dart';
 
 class NetworkChoicePage extends StatelessWidget {
   final NewConfigModel newconf;
-  const NetworkChoicePage(this.newconf, {Key? key}) : super(key: key);
+  const NetworkChoicePage(this.newconf, {super.key});
 
   void setChoice(BuildContext context, NetworkType type) {
     newconf.netType = type;

@@ -15,7 +15,7 @@ import 'package:golib_plugin/golib_plugin.dart';
 import 'package:bruig/theme_manager.dart';
 
 class LNPaymentsPage extends StatefulWidget {
-  const LNPaymentsPage({Key? key}) : super(key: key);
+  const LNPaymentsPage({super.key});
 
   @override
   State<LNPaymentsPage> createState() => _LNPaymentsPageState();

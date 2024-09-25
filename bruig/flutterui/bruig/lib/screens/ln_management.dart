@@ -45,7 +45,7 @@ class LNScreenTitle extends StatelessWidget {
 class LNScreen extends StatefulWidget {
   static String routeName = "/ln";
   final MainMenuModel mainMenu;
-  const LNScreen(this.mainMenu, {Key? key}) : super(key: key);
+  const LNScreen(this.mainMenu, {super.key});
 
   @override
   State<LNScreen> createState() => _LNScreenState();
@@ -119,7 +119,7 @@ class _LNScreenState extends State<LNScreen> {
 class LNConfirmRecvChanPaymentScreen extends StatelessWidget {
   static String routeName = "/ln/confirmRecvChannelPay";
 
-  const LNConfirmRecvChanPaymentScreen({Key? key}) : super(key: key);
+  const LNConfirmRecvChanPaymentScreen({super.key});
 
   void cancel(BuildContext context) {
     Golib.lnConfirmPayReqRecvChan(false);

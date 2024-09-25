@@ -12,8 +12,7 @@ import 'package:golib_plugin/util.dart';
 class ConfirmFileDownloadScreen extends StatelessWidget {
   final ClientModel client;
   final DownloadsModel downloads;
-  const ConfirmFileDownloadScreen(this.client, this.downloads, {Key? key})
-      : super(key: key);
+  const ConfirmFileDownloadScreen(this.client, this.downloads, {super.key});
 
   @override
   Widget build(BuildContext context) {

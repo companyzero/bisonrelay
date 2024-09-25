@@ -20,8 +20,7 @@ class Sidebar extends StatefulWidget {
   final FeedModel feed;
 
   const Sidebar(this.client, this.mainMenu, this.ntfns, this.navKey, this.feed,
-      {Key? key})
-      : super(key: key);
+      {super.key});
 
   @override
   State<Sidebar> createState() => _SidebarState();

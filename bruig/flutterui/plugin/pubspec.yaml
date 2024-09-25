@@ -4,32 +4,32 @@ version: 0.0.1
 homepage: https://bisonrelay.org
 
 environment:
-  sdk: ">=2.17.0 <3.0.0"
-  flutter: ">=1.20.0"
+  sdk: "^3.4.0"
+  flutter: "^3.22.0"
 
 dependencies:
   flutter:
     sdk: flutter
   ffi: ^2.0.1
   json_rpc_2: ^3.0.1
-  web_socket_channel: ^2.1.0
-  shelf: ^1.2.0
-  shelf_web_socket: ^1.0.1
-  json_annotation: ^4.0.0
-  file_picker: ^6.1.1
+  json_annotation: ^4.9.0
   path_provider: ^2.0.6
   blake_hash: ^1.0.2
   convert: ^3.0.2
   path: ^1.8.0
 
+  # These are only needed for the mocking golib impl.
+  # web_socket_channel: ^2.1.0
+  # shelf: ^1.2.0
+  # shelf_web_socket: ^1.0.1
 
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  build_runner: ^2.0.0
-  json_serializable: ^6.2.0
-  flutter_lints: ^2.0.1
+  build_runner: ^2.4.0
+  json_serializable: ^6.8.0
+  flutter_lints: ^4.0.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

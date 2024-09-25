@@ -5,8 +5,7 @@ import 'package:flutter/material.dart';
 class ManageContentBar extends StatefulWidget {
   final int selectedIndex;
   final Function tabChange;
-  const ManageContentBar(this.tabChange, this.selectedIndex, {Key? key})
-      : super(key: key);
+  const ManageContentBar(this.tabChange, this.selectedIndex, {super.key});
 
   @override
   State<ManageContentBar> createState() => _ManageContentBarState();

@@ -10,7 +10,7 @@ import 'package:golib_plugin/util.dart';
 import 'package:tuple/tuple.dart';
 
 class LNInfoPage extends StatefulWidget {
-  const LNInfoPage({Key? key}) : super(key: key);
+  const LNInfoPage({super.key});
 
   @override
   State<LNInfoPage> createState() => _LNInfoPageState();

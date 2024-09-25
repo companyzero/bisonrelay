@@ -15,7 +15,7 @@ void showTransResetModalBottom(BuildContext context, ChatModel chat) {
 
 class TransResetModal extends StatefulWidget {
   final ChatModel chat;
-  const TransResetModal(this.chat, {Key? key}) : super(key: key);
+  const TransResetModal(this.chat, {super.key});
 
   @override
   State<TransResetModal> createState() => _TransResetModalState();

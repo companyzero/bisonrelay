@@ -225,23 +225,21 @@ class _LNOnChainPageState extends State<LNOnChainPage> {
           ]),
           const SizedBox(height: 10),
           if (transactions.isNotEmpty)
-            ...transactions
-                .map((tx) => Row(children: [
-                      Flexible(
-                          flex: 4,
-                          child: Align(
-                              alignment: Alignment.topRight,
-                              child: Txt.S(formatDCR(atomsToDCR(tx.amount))))),
-                      const SizedBox(width: 10),
-                      Flexible(
-                          flex: 2,
-                          child: Align(
-                              alignment: Alignment.topRight,
-                              child: Txt.S("${tx.blockHeight}"))),
-                      const SizedBox(width: 10),
-                      Flexible(flex: 15, child: Copyable.txt(Txt.S(tx.txHash))),
-                    ]))
-                .toList(),
+            ...transactions.map((tx) => Row(children: [
+                  Flexible(
+                      flex: 4,
+                      child: Align(
+                          alignment: Alignment.topRight,
+                          child: Txt.S(formatDCR(atomsToDCR(tx.amount))))),
+                  const SizedBox(width: 10),
+                  Flexible(
+                      flex: 2,
+                      child: Align(
+                          alignment: Alignment.topRight,
+                          child: Txt.S("${tx.blockHeight}"))),
+                  const SizedBox(width: 10),
+                  Flexible(flex: 15, child: Copyable.txt(Txt.S(tx.txHash))),
+                ])),
         ])));
   }
 }

@@ -27,8 +27,7 @@ class PostContentScreenArgs {
 class PostContentScreen extends StatelessWidget {
   final PostContentScreenArgs args;
   final Function tabChange;
-  const PostContentScreen(this.args, this.tabChange, {Key? key})
-      : super(key: key);
+  const PostContentScreen(this.args, this.tabChange, {super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -44,9 +43,7 @@ class _PostContentScreenForArgs extends StatefulWidget {
   final Function tabChange;
   final FeedModel feed;
   const _PostContentScreenForArgs(
-      this.args, this.client, this.tabChange, this.feed,
-      {Key? key})
-      : super(key: key);
+      this.args, this.client, this.tabChange, this.feed);
 
   @override
   State<_PostContentScreenForArgs> createState() =>
@@ -87,9 +84,7 @@ class _CommentW extends StatefulWidget {
   final ShowingReplyCB showReply;
   final bool canComment;
   const _CommentW(this.post, this.comment, this.sendReply, this.client,
-      this.showReply, this.canComment,
-      {Key? key})
-      : super(key: key);
+      this.showReply, this.canComment);
 
   @override
   State<_CommentW> createState() => _CommentWState();

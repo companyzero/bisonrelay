@@ -15,7 +15,7 @@ void showSuggestKXModalBottom(BuildContext context, ChatModel chat) {
 
 class SuggestKXModal extends StatefulWidget {
   final ChatModel chat;
-  const SuggestKXModal(this.chat, {Key? key}) : super(key: key);
+  const SuggestKXModal(this.chat, {super.key});
 
   @override
   State<SuggestKXModal> createState() => _SuggestKXModalState();

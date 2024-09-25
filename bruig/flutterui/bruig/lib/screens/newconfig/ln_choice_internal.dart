@@ -13,7 +13,7 @@ import 'package:bruig/theme_manager.dart';
 
 class LNInternalWalletPage extends StatefulWidget {
   final NewConfigModel newconf;
-  const LNInternalWalletPage(this.newconf, {Key? key}) : super(key: key);
+  const LNInternalWalletPage(this.newconf, {super.key});
 
   @override
   State<LNInternalWalletPage> createState() => _LNInternalWalletPageState();

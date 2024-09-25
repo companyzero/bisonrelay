@@ -15,7 +15,7 @@ void showPayTipModalBottom(BuildContext context, ChatModel chat) {
 class PayTip extends StatefulWidget {
   final ChatModel chat;
 
-  const PayTip(this.chat, {Key? key}) : super(key: key);
+  const PayTip(this.chat, {super.key});
 
   @override
   State<PayTip> createState() => _PayTipState();

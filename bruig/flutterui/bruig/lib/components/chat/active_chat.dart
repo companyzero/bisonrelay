@@ -15,8 +15,7 @@ import 'package:bruig/components/chat/input.dart';
 class ActiveChat extends StatefulWidget {
   final ClientModel client;
   final CustomInputFocusNode inputFocusNode;
-  const ActiveChat(this.client, this.inputFocusNode, {Key? key})
-      : super(key: key);
+  const ActiveChat(this.client, this.inputFocusNode, {super.key});
 
   @override
   State<ActiveChat> createState() => _ActiveChatState();

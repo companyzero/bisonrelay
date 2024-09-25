@@ -23,9 +23,8 @@ class _ChatHeadingW extends StatefulWidget {
   final MakeActiveCB makeActive;
   final ShowSubMenuCB showSubMenu;
 
-  const _ChatHeadingW(this.chat, this.client, this.makeActive, this.showSubMenu,
-      {Key? key})
-      : super(key: key);
+  const _ChatHeadingW(
+      this.chat, this.client, this.makeActive, this.showSubMenu);
 
   @override
   State<_ChatHeadingW> createState() => _ChatHeadingWState();
@@ -157,8 +156,7 @@ void gotoContactsLastMsgTimeScreen(BuildContext context) {
 class ActiveChatsListMenu extends StatefulWidget {
   final ClientModel client;
   final CustomInputFocusNode inputFocusNode;
-  const ActiveChatsListMenu(this.client, this.inputFocusNode, {Key? key})
-      : super(key: key);
+  const ActiveChatsListMenu(this.client, this.inputFocusNode, {super.key});
 
   @override
   State<ActiveChatsListMenu> createState() => _ActiveChatsListMenuState();

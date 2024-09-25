@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 // (not even logs). Just option to quit app.
 class FatalErrorScreen extends StatelessWidget {
   final Object? exception;
-  const FatalErrorScreen({this.exception, Key? key}) : super(key: key);
+  const FatalErrorScreen({this.exception, super.key});
 
   @override
   Widget build(BuildContext context) {

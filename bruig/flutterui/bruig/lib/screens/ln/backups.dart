@@ -7,7 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 
 class LNBackupsPage extends StatefulWidget {
-  const LNBackupsPage({Key? key}) : super(key: key);
+  const LNBackupsPage({super.key});
 
   @override
   State<LNBackupsPage> createState() => _LNBackupsPageState();

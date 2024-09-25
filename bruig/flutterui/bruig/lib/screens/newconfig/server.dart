@@ -12,7 +12,7 @@ import 'package:bruig/theme_manager.dart';
 
 class ServerPage extends StatefulWidget {
   final NewConfigModel newconf;
-  const ServerPage(this.newconf, {Key? key}) : super(key: key);
+  const ServerPage(this.newconf, {super.key});
 
   @override
   State<ServerPage> createState() => _ServerPageState();

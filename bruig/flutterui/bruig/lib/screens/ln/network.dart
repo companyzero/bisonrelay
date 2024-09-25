@@ -14,7 +14,7 @@ import 'package:bruig/theme_manager.dart';
 import 'package:tuple/tuple.dart';
 
 class LNNetworkPage extends StatefulWidget {
-  const LNNetworkPage({Key? key}) : super(key: key);
+  const LNNetworkPage({super.key});
 
   @override
   State<LNNetworkPage> createState() => _LNNetworkPageState();
@@ -22,7 +22,7 @@ class LNNetworkPage extends StatefulWidget {
 
 class _PeerW extends StatelessWidget {
   final LNPeer peer;
-  const _PeerW(this.peer, {Key? key}) : super(key: key);
+  const _PeerW(this.peer);
 
   @override
   Widget build(BuildContext context) {
@@ -279,7 +279,7 @@ class _LNNetworkPageState extends State<LNNetworkPage> {
                 child: const Txt.S("Query Route")),
             const SizedBox(height: 21),
             const LNInfoSectionHeader("Peers"),
-            ...peers.map((peer) => _PeerW(peer)).toList(),
+            ...peers.map((peer) => _PeerW(peer)),
             const SizedBox(height: 8),
             Row(children: [
               const SizedBox(width: 110, child: Txt.S("Connect to Peer:")),

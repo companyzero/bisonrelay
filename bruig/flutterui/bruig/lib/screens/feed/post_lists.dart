@@ -12,7 +12,7 @@ import 'package:bruig/theme_manager.dart';
 class PostListsScreen extends StatefulWidget {
   static String routeName = "/postsLists";
   final ClientModel client;
-  const PostListsScreen(this.client, {Key? key}) : super(key: key);
+  const PostListsScreen(this.client, {super.key});
 
   @override
   State<PostListsScreen> createState() => _PostListsScreenState();
@@ -26,9 +26,7 @@ class _SubItem extends StatelessWidget {
   final ChatModel? chat;
   final bool remoteSub;
   final _UnsubFunc unsub;
-  const _SubItem(this.index, this.id, this.chat, this.remoteSub, this.unsub,
-      {Key? key})
-      : super(key: key);
+  const _SubItem(this.index, this.id, this.chat, this.remoteSub, this.unsub);
 
   @override
   Widget build(BuildContext context) {

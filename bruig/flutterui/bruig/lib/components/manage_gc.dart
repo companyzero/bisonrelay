@@ -14,7 +14,7 @@ import 'package:tuple/tuple.dart';
 class ManageGCScreen extends StatefulWidget {
   final ClientModel client;
   final ChatModel chat;
-  const ManageGCScreen(this.client, this.chat, {Key? key}) : super(key: key);
+  const ManageGCScreen(this.client, this.chat, {super.key});
 
   @override
   State<ManageGCScreen> createState() => _ManageGCScreenState();

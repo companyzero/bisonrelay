@@ -9,8 +9,7 @@ class ChatSearchInput extends StatefulWidget {
   final ValueChanged<String> onChanged;
   const ChatSearchInput(
       this.inputFocusNode, this.createGroupChat, this.onChanged,
-      {Key? key})
-      : super(key: key);
+      {super.key});
 
   @override
   State<ChatSearchInput> createState() => _ChatSearchInputState();
@@ -85,8 +84,7 @@ class GroupChatNameInput extends StatefulWidget {
   final CustomInputFocusNode inputFocusNode;
   final String gcName;
   const GroupChatNameInput(this.updateGcName, this.inputFocusNode, this.gcName,
-      {Key? key})
-      : super(key: key);
+      {super.key});
 
   @override
   State<GroupChatNameInput> createState() => _GroupChatNameInputState();

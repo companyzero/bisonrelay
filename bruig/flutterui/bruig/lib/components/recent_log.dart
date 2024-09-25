@@ -11,8 +11,7 @@ class LogLines extends StatefulWidget {
   final int maxLines;
   final Color? optionalTextColor;
   const LogLines(this.log,
-      {Key? key, this.maxLines = -1, this.optionalTextColor})
-      : super(key: key);
+      {super.key, this.maxLines = -1, this.optionalTextColor});
 
   @override
   State<LogLines> createState() => _LogLinesState();
