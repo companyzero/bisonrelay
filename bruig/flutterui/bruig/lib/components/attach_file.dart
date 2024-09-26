@@ -6,7 +6,11 @@ import 'dart:async';
 import 'package:bruig/components/md_elements.dart';
 import 'package:bruig/components/chat/types.dart';
 import 'package:bruig/components/empty_widget.dart';
+import 'package:bruig/components/text.dart';
 import 'package:bruig/models/snackbar.dart';
+import 'package:bruig/screens/compress.dart';
+import 'package:bruig/theme_manager.dart';
+import 'package:bruig/util.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -287,6 +291,7 @@ class _AttachFileScreenState extends State<AttachFileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    bool canCompress = (mime.startsWith('image/'));
     return fileData != null || selectedAttachmentPath != null
         ? Column(children: [
             mime.startsWith('image/')
@@ -315,16 +320,40 @@ class _AttachFileScreenState extends State<AttachFileScreen> {
                             false)
                         : const Empty(),
             fileData != null && fileData!.isNotEmpty
-                ? Row(mainAxisAlignment: MainAxisAlignment.end, children: [
-                    IconButton(
-                        tooltip: "Send Attachment",
-                        padding: const EdgeInsets.all(0),
-                        iconSize: 25,
-                        onPressed: fileData != null && fileData!.isNotEmpty
-                            ? attach
-                            : null,
-                        icon: const Icon(Icons.send_outlined))
-                  ])
+                ? Row(
+                    // mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                        const SizedBox(width: 10),
+                        Txt.S(
+                          "Size: ${humanReadableSize(fileData?.length ?? 0)}",
+                          color: TextColor.onSurfaceVariant,
+                        ),
+                        if (canCompress)
+                          TextButton.icon(
+                            icon: const Icon(Icons.compress),
+                            label: const Txt.S("Compress"),
+                            onPressed: () async {
+                              var res = await showCompressScreen(context,
+                                  original: fileData!, mime: mime);
+                              if (res == null) {
+                                return;
+                              }
+                              setState(() {
+                                fileData = res.data;
+                                mime = res.mime;
+                              });
+                            },
+                          ),
+                        const Expanded(child: Empty()),
+                        IconButton(
+                            tooltip: "Send Attachment",
+                            padding: const EdgeInsets.all(0),
+                            iconSize: 25,
+                            onPressed: fileData != null && fileData!.isNotEmpty
+                                ? attach
+                                : null,
+                            icon: const Icon(Icons.send_outlined))
+                      ])
                 : const Empty(),
           ])
         : Column(mainAxisAlignment: MainAxisAlignment.start, children: [

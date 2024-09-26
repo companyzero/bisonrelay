@@ -8,6 +8,7 @@
 
 #include <file_selector_windows/file_selector_windows.h>
 #include <golib_plugin/golib_plugin_c_api.h>
+#include <image_compression_flutter/image_compression_flutter_plugin.h>
 #include <irondash_engine_context/irondash_engine_context_plugin_c_api.h>
 #include <permission_handler_windows/permission_handler_windows_plugin.h>
 #include <screen_retriever/screen_retriever_plugin.h>
@@ -21,6 +22,8 @@ void RegisterPlugins(flutter::PluginRegistry* registry) {
       registry->GetRegistrarForPlugin("FileSelectorWindows"));
   GolibPluginCApiRegisterWithRegistrar(
       registry->GetRegistrarForPlugin("GolibPluginCApi"));
+  ImageCompressionFlutterPluginRegisterWithRegistrar(
+      registry->GetRegistrarForPlugin("ImageCompressionFlutterPlugin"));
   IrondashEngineContextPluginCApiRegisterWithRegistrar(
       registry->GetRegistrarForPlugin("IrondashEngineContextPluginCApi"));
   PermissionHandlerWindowsPluginRegisterWithRegistrar(

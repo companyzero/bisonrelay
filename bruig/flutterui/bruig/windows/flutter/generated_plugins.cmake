@@ -5,6 +5,7 @@
 list(APPEND FLUTTER_PLUGIN_LIST
   file_selector_windows
   golib_plugin
+  image_compression_flutter
   irondash_engine_context
   permission_handler_windows
   screen_retriever
