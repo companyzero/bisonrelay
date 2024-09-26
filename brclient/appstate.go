@@ -2375,8 +2375,8 @@ func (as *appState) kxSearchPostAuthor(from clientintf.UserID, pid clientintf.Po
 //
 // If fname is specified, $EDITOR is opened there and baseContent is written.
 func (as *appState) editExternalTextFile(baseContent string, fname string) (string, error) {
+	delFile := false
 	if fname == "" {
-
 		f, err := os.CreateTemp("", "br-text-")
 		if err != nil {
 			return "", fmt.Errorf("failed to create temp file: %v", err)
@@ -2388,6 +2388,8 @@ func (as *appState) editExternalTextFile(baseContent string, fname string) (stri
 		if err := f.Close(); err != nil {
 			return "", err
 		}
+
+		delFile = true
 	}
 
 	editor := os.Getenv("EDITOR")
@@ -2415,6 +2417,14 @@ func (as *appState) editExternalTextFile(baseContent string, fname string) (stri
 	data, err := os.ReadFile(fname)
 	if err != nil {
 		return "", err
+	}
+
+	if delFile {
+		err := os.Remove(fname)
+		if err != nil {
+			theme := as.styles.Load()
+			as.diagMsg(theme.err.Render(fmt.Sprintf("Unable to remove %s: %v", fname, err)))
+		}
 	}
 	return string(data), nil
 }
