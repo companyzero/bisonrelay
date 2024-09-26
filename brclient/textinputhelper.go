@@ -59,9 +59,13 @@ func (input *textInputHelper) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch {
 		default:
-			hasLN := strings.ContainsAny(msg.String(), "\n\r")
+			msgStr := msg.String()
+			if msg.Paste {
+				msgStr = sanitizePastedMsgString(msgStr)
+			}
+			hasLN := strings.ContainsAny(msgStr, "\n\r")
 			if hasLN {
-				lines := strescape.CannonicalizeNL(msg.String())
+				lines := strescape.CannonicalizeNL(msgStr)
 				msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(lines)}
 				input.Model, cmd = input.Model.Update(msg)
 				cmds = appendCmd(cmds, cmd)
