@@ -83,6 +83,8 @@ type msgUnwelcomeError struct {
 	err error
 }
 
+type msgReplaceCmd string
+
 func paste() tea.Msg {
 	str, err := clipboard.ReadAll()
 	if err != nil {

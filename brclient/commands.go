@@ -2024,7 +2024,7 @@ var postCommands = []tuicmd{
 		descr:   "Launch $EDITOR to edit a new post",
 		handler: func(args []string, as *appState) error {
 			go func() {
-				post, err := as.editExternalTextFile(baseExternalNewPostContent)
+				post, err := as.editExternalTextFile(baseExternalNewPostContent, "")
 				if err != nil {
 					as.cwHelpMsg("Unable to open external editor: %v", err)
 					return
@@ -4419,6 +4419,39 @@ var commands = []tuicmd{
 			return nil
 		},
 		handler: subcmdNeededHandler,
+	}, {
+		cmd:           "editor",
+		aliases:       []string{"edit", "ed", "e"},
+		usableOffline: true,
+		usage:         "[<filename>]",
+		descr:         "Launch $EDITOR and fill command line",
+		long:          []string{"If a filename is not specified, creates a temp file for editing."},
+		completer: func(args []string, arg string, as *appState) []string {
+			if len(args) == 0 {
+				return fileCompleter(arg)
+			}
+			return nil
+		},
+		handler: func(args []string, as *appState) error {
+			var fname string
+			if len(args) > 0 {
+				fname = args[0]
+				if _, err := os.Stat(fname); err != nil {
+					return err
+				}
+			}
+
+			go func() {
+				newCmd, err := as.editExternalTextFile("", fname)
+				if err != nil {
+					as.cwHelpMsg("Unable to open external editor: %v", err)
+					return
+				}
+
+				as.sendMsg(msgReplaceCmd(newCmd))
+			}()
+			return nil
+		},
 	}, {
 		cmd:           "quit",
 		usableOffline: true,

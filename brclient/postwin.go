@@ -893,7 +893,7 @@ func (pw postWindow) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					parent = &selComment.id
 				}
 				go func() {
-					res, err := pw.as.editExternalTextFile("")
+					res, err := pw.as.editExternalTextFile("", "")
 					msg := msgExternalCommentResult{
 						err:    err,
 						data:   res,

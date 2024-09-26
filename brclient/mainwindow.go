@@ -707,6 +707,24 @@ func (mws mainWindowState) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case msgRunCmd:
 		return mws, tea.Cmd(msg)
 
+	case msgReplaceCmd:
+		// Replace text.
+		prevVal := mws.textArea.Value()
+		newVal := string(msg)
+		mws.textArea.setValue(newVal)
+
+		// Store working cmd if the text input changed in
+		// response to this msg.
+		if prevVal != newVal {
+			mws.recalcViewportSize()
+			mws.as.workingCmd = newVal
+			mws.as.cmdHistoryIdx = len(mws.as.cmdHistory)
+
+			// Reset completion.
+			mws.completeOpts = nil
+			mws.completeIdx = 0
+		}
+
 	default:
 		// Handle other messages.
 		mws.textArea, cmd = mws.textArea.Update(msg)
