@@ -143,6 +143,10 @@ func (t *textAreaModel) recalcDynHeight(winW, winH int) int {
 	return lineCount
 }
 
+func (t *textAreaModel) setValue(s string) {
+	t.Model.SetValue(s)
+}
+
 func (t *textAreaModel) Update(msg tea.Msg) (*textAreaModel, tea.Cmd) {
 	var (
 		cmd  tea.Cmd

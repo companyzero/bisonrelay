@@ -2372,17 +2372,22 @@ func (as *appState) kxSearchPostAuthor(from clientintf.UserID, pid clientintf.Po
 
 // editExternalTextFile launches $EDITOR and returns the edited text. Blocks
 // until the $EDITOR process exits.
-func (as *appState) editExternalTextFile(baseContent string) (string, error) {
-	f, err := os.CreateTemp("", "br-text-")
-	if err != nil {
-		return "", fmt.Errorf("failed to create temp file: %v", err)
-	}
-	fname := f.Name()
-	if _, err := f.Write([]byte(baseContent)); err != nil {
-		return "", err
-	}
-	if err := f.Close(); err != nil {
-		return "", err
+//
+// If fname is specified, $EDITOR is opened there and baseContent is written.
+func (as *appState) editExternalTextFile(baseContent string, fname string) (string, error) {
+	if fname == "" {
+
+		f, err := os.CreateTemp("", "br-text-")
+		if err != nil {
+			return "", fmt.Errorf("failed to create temp file: %v", err)
+		}
+		fname = f.Name()
+		if _, err := f.Write([]byte(baseContent)); err != nil {
+			return "", err
+		}
+		if err := f.Close(); err != nil {
+			return "", err
+		}
 	}
 
 	editor := os.Getenv("EDITOR")
@@ -2390,7 +2395,7 @@ func (as *appState) editExternalTextFile(baseContent string) (string, error) {
 		return "", fmt.Errorf("$EDITOR env var is empty")
 	}
 
-	c := exec.Command(editor, f.Name())
+	c := exec.Command(editor, fname)
 	ch := make(chan error, 1)
 	cmd := tea.ExecProcess(c, func(err error) tea.Msg {
 		ch <- err
