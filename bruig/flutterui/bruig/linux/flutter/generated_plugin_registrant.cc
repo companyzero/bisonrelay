@@ -8,6 +8,7 @@
 
 #include <file_selector_linux/file_selector_plugin.h>
 #include <golib_plugin/golib_plugin.h>
+#include <image_compression_flutter/image_compression_flutter_plugin.h>
 #include <irondash_engine_context/irondash_engine_context_plugin.h>
 #include <screen_retriever/screen_retriever_plugin.h>
 #include <super_native_extensions/super_native_extensions_plugin.h>
@@ -21,6 +22,9 @@ void fl_register_plugins(FlPluginRegistry* registry) {
   g_autoptr(FlPluginRegistrar) golib_plugin_registrar =
       fl_plugin_registry_get_registrar_for_plugin(registry, "GolibPlugin");
   golib_plugin_register_with_registrar(golib_plugin_registrar);
+  g_autoptr(FlPluginRegistrar) image_compression_flutter_registrar =
+      fl_plugin_registry_get_registrar_for_plugin(registry, "ImageCompressionFlutterPlugin");
+  image_compression_flutter_plugin_register_with_registrar(image_compression_flutter_registrar);
   g_autoptr(FlPluginRegistrar) irondash_engine_context_registrar =
       fl_plugin_registry_get_registrar_for_plugin(registry, "IrondashEngineContextPlugin");
   irondash_engine_context_plugin_register_with_registrar(irondash_engine_context_registrar);

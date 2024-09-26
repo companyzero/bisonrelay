@@ -73,6 +73,8 @@ dependencies:
   collection: ^1.18.0
   mobile_scanner: ^5.1.1
   super_clipboard: ^0.8.22
+  image_compression_flutter: ^1.0.4
+  archive: ^3.6.1
 
 msix_config:
   display_name: Bison Relay GUI
