@@ -449,3 +449,17 @@ func truncEllipsis(s string, maxlen int) string {
 	}
 	return s[:maxlen-3] + "..."
 }
+
+// sanitizePastedMsgString removes bracketed paste identifier when the string
+// comes from a tea.KeyMsg with paste == true.
+func sanitizePastedMsgString(s string) string {
+	if len(s) < 2 {
+		return s
+	}
+
+	if s[0] == '[' && s[len(s)-1] == ']' {
+		s = s[1 : len(s)-1]
+	}
+
+	return s
+}

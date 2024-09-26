@@ -159,9 +159,13 @@ func (t *textAreaModel) Update(msg tea.Msg) (*textAreaModel, tea.Cmd) {
 			cmds = appendCmd(cmds, paste)
 
 		default:
-			hasLN := strings.ContainsAny(msg.String(), "\n\r")
-			if (msg.Type == tea.KeyRunes) && len(msg.String()) > 1 && hasLN {
-				lines := strings.Split(strescape.CannonicalizeNL(msg.String()), "\n")
+			msgStr := msg.String()
+			if msg.Paste {
+				msgStr = sanitizePastedMsgString(msgStr)
+			}
+			hasLN := strings.ContainsAny(msgStr, "\n\r")
+			if (msg.Type == tea.KeyRunes) && len(msgStr) > 1 && hasLN {
+				lines := strings.Split(strescape.CannonicalizeNL(msgStr), "\n")
 				for _, line := range lines {
 					msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(line)}
 					t.Model, cmd = t.Model.Update(msg)
