@@ -4,6 +4,7 @@ import 'dart:math';
 import 'dart:developer' as developer;
 
 import 'package:bruig/components/route_error.dart';
+import 'package:bruig/models/emoji.dart';
 import 'package:bruig/models/menus.dart';
 import 'package:bruig/models/payments.dart';
 import 'package:bruig/models/resources.dart';
@@ -159,6 +160,7 @@ Future<void> runMainApp(Config cfg) async {
       ChangeNotifierProvider(create: (c) => SnackBarModel()),
       ChangeNotifierProvider(create: (c) => PaymentsModel()),
       ChangeNotifierProvider(create: (c) => WalletModel()),
+      ChangeNotifierProvider(create: (c) => TypingEmojiSelModel()),
     ],
     child: App(cfg, globalLogModel, globalShutdownModel),
   ));

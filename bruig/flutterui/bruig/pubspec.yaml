@@ -75,6 +75,8 @@ dependencies:
   super_clipboard: ^0.8.22
   image_compression_flutter: ^1.0.4
   archive: ^3.6.1
+  emoji_picker_flutter: ^3.0.0
+  retrieval: ^1.0.1
 
 msix_config:
   display_name: Bison Relay GUI
