@@ -4,6 +4,7 @@ import 'package:bruig/components/rename_chat.dart';
 import 'package:bruig/components/suggest_kx.dart';
 import 'package:bruig/components/trans_reset.dart';
 import 'package:bruig/models/client.dart';
+import 'package:bruig/models/emoji.dart';
 import 'package:bruig/models/log.dart';
 import 'package:bruig/models/notifications.dart';
 import 'package:bruig/models/resources.dart';
@@ -73,9 +74,10 @@ final List<MainMenuItem> mainMenu = [
   MainMenuItem(
       "Chat",
       ChatsScreen.routeName,
-      (context) => Consumer2<ClientModel, AppNotifications>(
-          builder: (context, client, ntfns, child) =>
-              ChatsScreen(client, ntfns)),
+      (context) =>
+          Consumer3<ClientModel, AppNotifications, TypingEmojiSelModel>(
+              builder: (context, client, ntfns, typingEmoji, child) =>
+                  ChatsScreen(client, ntfns, typingEmoji)),
       (context) => const ChatsScreenTitle(),
       const SidebarSvgIcon("assets/icons/icons-menu-chat.svg"),
       <SubMenuInfo>[]),

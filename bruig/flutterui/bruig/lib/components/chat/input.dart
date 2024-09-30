@@ -1,8 +1,10 @@
 import 'dart:math';
 
 import 'package:bruig/components/attach_file.dart';
+import 'package:bruig/models/emoji.dart';
 import 'package:bruig/models/uistate.dart';
 import 'package:bruig/screens/chats.dart';
+import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:bruig/components/chat/types.dart';
 import 'package:bruig/models/client.dart';
@@ -92,6 +94,7 @@ class _ChatInputState extends State<ChatInput> {
     controller.text = widget.chat.workingMsg;
     widget.inputFocusNode.noModEnterKeyHandler = sendMsg;
     widget.inputFocusNode.pasteEventHandler = pasteEvent;
+    widget.inputFocusNode.addEmojiHandler = addEmoji;
   }
 
   @override
@@ -107,12 +110,15 @@ class _ChatInputState extends State<ChatInput> {
     }
     oldWidget.inputFocusNode.pasteEventHandler = null;
     widget.inputFocusNode.pasteEventHandler = pasteEvent;
+    oldWidget.inputFocusNode.addEmojiHandler = null;
+    widget.inputFocusNode.addEmojiHandler = addEmoji;
   }
 
   @override
   void dispose() {
     widget.inputFocusNode.noModEnterKeyHandler = null;
     widget.inputFocusNode.pasteEventHandler = null;
+    widget.inputFocusNode.addEmojiHandler = null;
     super.dispose();
   }
 
@@ -145,6 +151,18 @@ class _ChatInputState extends State<ChatInput> {
         embeds = [];
       });
     }
+  }
+
+  void addEmoji(Emoji e) {
+    var typingEmoji = Provider.of<TypingEmojiSelModel>(context, listen: false);
+    var newText = typingEmoji.replaceTypedEmojiCode(controller);
+    if (newText == "") return;
+
+    var oldPos =
+        controller.selection.start - typingEmoji.lastEmojiCode.length + 1;
+    widget.chat.workingMsg = newText;
+    controller.value = TextEditingValue(
+        text: newText, selection: TextSelection.collapsed(offset: oldPos));
   }
 
   void attachFile() {
@@ -189,6 +207,10 @@ class _ChatInputState extends State<ChatInput> {
                     child: TextField(
                   onChanged: (value) {
                     widget.chat.workingMsg = value;
+
+                    // Check if user is typing an emoji code (:foo:).
+                    TypingEmojiSelModel.of(context, listen: false)
+                        .maybeSelectEmojis(controller);
                   },
                   autofocus: isScreenSmall ? false : true,
                   focusNode: widget.inputFocusNode.inputFocusNode,

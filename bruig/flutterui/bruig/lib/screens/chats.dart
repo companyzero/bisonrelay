@@ -5,10 +5,12 @@ import 'package:bruig/components/chats_list.dart';
 import 'package:bruig/components/addressbook/addressbook.dart';
 import 'package:bruig/components/text.dart';
 import 'package:bruig/models/client.dart';
+import 'package:bruig/models/emoji.dart';
 import 'package:bruig/models/notifications.dart';
 import 'package:bruig/models/uistate.dart';
 import 'package:bruig/screens/needs_out_channel.dart';
 import 'package:bruig/theme_manager.dart';
+import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:golib_plugin/definitions.dart';
@@ -72,7 +74,8 @@ class ChatsScreen extends StatefulWidget {
   static const routeName = '/chat';
   final ClientModel client;
   final AppNotifications ntfns;
-  const ChatsScreen(this.client, this.ntfns, {super.key});
+  final TypingEmojiSelModel typingEmoji;
+  const ChatsScreen(this.client, this.ntfns, this.typingEmoji, {super.key});
 
   static gotoChatScreenFor(BuildContext context, ChatModel chat) {
     ClientModel.of(context, listen: false).active = chat;
@@ -189,6 +192,8 @@ After the invitation is accepted, you'll be able to chat with them, and if they 
   }
 }
 
+typedef AddEmojiCallback = Function(Emoji);
+
 // This class is a hack to pass a FocusNode down the component stack along with
 // callbacks for the Input() class to know when to send vs when to add new lines
 // to the input component. There should to be a better way to do this.
@@ -215,10 +220,12 @@ class CustomInputFocusNode {
 
   Function? noModEnterKeyHandler;
 
+  AddEmojiCallback? addEmojiHandler;
+
   // If set, this is called when a paste event ("ctrl+v") is detected.
   Function? pasteEventHandler;
 
-  CustomInputFocusNode() {
+  CustomInputFocusNode(TypingEmojiSelModel typingEmoji) {
     inputFocusNode = FocusNode(onKeyEvent: (node, event) {
       if (event.logicalKey.keyId == LogicalKeyboardKey.controlLeft.keyId) {
         ctrlLeft = event is KeyDownEvent;
@@ -239,6 +246,18 @@ class CustomInputFocusNode {
           LogicalKeyboardKey.shiftRight.keyId) {
         shiftRight = event is KeyDownEvent;
       } else if (event.logicalKey.keyId == LogicalKeyboardKey.enter.keyId) {
+        // When typing an emoji code and there's a handler, use it.
+        if (addEmojiHandler != null && typingEmoji.selectedEmoji != null) {
+          if (event is KeyDownEvent) {
+            // Ignore KeyDown and only act on KeyUp to ensure no double insertion
+            // or insertion + sendMsg.
+            return KeyEventResult.handled;
+          }
+          addEmojiHandler!(typingEmoji.selectedEmoji!);
+          typingEmoji.clearSelection();
+          return KeyEventResult.handled;
+        }
+
         // When a special handler is set, call it to bypass standard processing
         // of the key and return the 'handled' result.
         if (noModEnterKeyHandler != null && !anyMod) {
@@ -252,6 +271,18 @@ class CustomInputFocusNode {
           pasteEventHandler!();
           return KeyEventResult.handled;
         }
+      } else if (event.logicalKey.keyId == LogicalKeyboardKey.arrowUp.keyId &&
+          typingEmoji.isTypingEmoji) {
+        if (event is KeyDownEvent) {
+          typingEmoji.changeSelection(-1); // Move up list of emojis.
+        }
+        return KeyEventResult.handled;
+      } else if (event.logicalKey.keyId == LogicalKeyboardKey.arrowDown.keyId &&
+          typingEmoji.isTypingEmoji) {
+        if (event is KeyDownEvent) {
+          typingEmoji.changeSelection(1);
+        } // Move down list of emojis.
+        return KeyEventResult.handled;
       }
 
       return KeyEventResult.ignored;
@@ -262,7 +293,7 @@ class CustomInputFocusNode {
 class _ChatsScreenState extends State<ChatsScreen> {
   ClientModel get client => widget.client;
   AppNotifications get ntfns => widget.ntfns;
-  final CustomInputFocusNode inputFocusNode = CustomInputFocusNode();
+  late CustomInputFocusNode inputFocusNode;
   bool hasLNBalance = false;
   List<PostListItem> userPostList = [];
   Timer? checkLNTimer;
@@ -298,6 +329,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
   @override
   void initState() {
     super.initState();
+    inputFocusNode = CustomInputFocusNode(widget.typingEmoji);
     keepCheckingLNHasBalance();
     client.ui.showAddressBook.addListener(showAddressBookChanged);
   }

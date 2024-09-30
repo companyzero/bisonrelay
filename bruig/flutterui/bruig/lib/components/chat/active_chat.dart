@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:bruig/components/chat/chat_side_menu.dart';
 import 'package:bruig/components/manage_gc.dart';
+import 'package:bruig/components/typing_emoji_panel.dart';
+import 'package:bruig/models/emoji.dart';
 import 'package:bruig/models/snackbar.dart';
 import 'package:bruig/models/uistate.dart';
 import 'package:bruig/screens/chats.dart';
@@ -9,6 +11,7 @@ import 'package:bruig/models/client.dart';
 import 'package:flutter/material.dart';
 import 'package:bruig/components/profile.dart';
 import 'package:bruig/components/chat/messages.dart';
+import 'package:provider/provider.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import 'package:bruig/components/chat/input.dart';
 
@@ -126,8 +129,17 @@ class _ActiveChatState extends State<ActiveChat> {
         Column(
           children: [
             Expanded(
-              child: Messages(
-                  chat, client, _itemScrollController, _itemPositionsListener),
+              child: Stack(children: [
+                Messages(chat, client, _itemScrollController,
+                    _itemPositionsListener),
+                Positioned(
+                    bottom: 10,
+                    left: 10,
+                    right: 10,
+                    child: Consumer<TypingEmojiSelModel>(
+                        builder: (context, typingEmoji, child) =>
+                            TypingEmojiPanel(model: typingEmoji)))
+              ]),
             ),
             Container(
                 padding: isScreenSmall

@@ -103,10 +103,12 @@ enum SurfaceColor {
 class CustomColors {
   final Color sidebarDivider;
   final Color successOnSurface;
+  final Color selectedItemOnSurfaceListView;
 
   const CustomColors({
     this.sidebarDivider = Colors.black,
     this.successOnSurface = const Color(0xFF2D882D),
+    this.selectedItemOnSurfaceListView = Colors.amber,
   });
 }
 
@@ -498,6 +500,7 @@ final appThemes = {
       ),
       extraColors: const CustomColors(
         sidebarDivider: Colors.white,
+        selectedItemOnSurfaceListView: Color(0xFFFF6F00),
       ),
       extraTextStyles: const CustomTextStyles(
         chatListGcIndicator: TextStyle(
