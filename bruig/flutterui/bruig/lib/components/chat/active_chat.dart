@@ -138,7 +138,10 @@ class _ActiveChatState extends State<ActiveChat> {
                     right: 10,
                     child: Consumer<TypingEmojiSelModel>(
                         builder: (context, typingEmoji, child) =>
-                            TypingEmojiPanel(model: typingEmoji)))
+                            TypingEmojiPanel(
+                              model: typingEmoji,
+                              focusNode: inputFocusNode,
+                            )))
               ]),
             ),
             Container(

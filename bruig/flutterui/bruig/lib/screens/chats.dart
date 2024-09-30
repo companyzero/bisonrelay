@@ -192,7 +192,7 @@ After the invitation is accepted, you'll be able to chat with them, and if they 
   }
 }
 
-typedef AddEmojiCallback = Function(Emoji);
+typedef AddEmojiCallback = Function(Emoji?);
 
 // This class is a hack to pass a FocusNode down the component stack along with
 // callbacks for the Input() class to know when to send vs when to add new lines
@@ -253,7 +253,7 @@ class CustomInputFocusNode {
             // or insertion + sendMsg.
             return KeyEventResult.handled;
           }
-          addEmojiHandler!(typingEmoji.selectedEmoji!);
+          addEmojiHandler!(null);
           typingEmoji.clearSelection();
           return KeyEventResult.handled;
         }

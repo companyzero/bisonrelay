@@ -151,9 +151,25 @@ class _ChatInputState extends State<ChatInput> {
         embeds = [];
       });
     }
+
+    Provider.of<TypingEmojiSelModel>(context, listen: false).clearSelection();
   }
 
-  void addEmoji(Emoji e) {
+  void addEmoji(Emoji? e) {
+    if (e != null) {
+      // Selected emoji from panel eidget.
+      var oldPos = controller.selection.start;
+      var newText = controller.selection.textBefore(controller.text) +
+          e.emoji +
+          controller.selection.textAfter(controller.text);
+      widget.chat.workingMsg = newText;
+      controller.value = TextEditingValue(
+          text: newText,
+          selection: TextSelection.collapsed(offset: oldPos + e.emoji.length));
+      return;
+    }
+
+    // Selected emoji from typing panel.
     var typingEmoji = Provider.of<TypingEmojiSelModel>(context, listen: false);
     var newText = typingEmoji.replaceTypedEmojiCode(controller);
     if (newText == "") return;
@@ -202,6 +218,17 @@ class _ChatInputState extends State<ChatInput> {
                     iconSize: 25,
                     onPressed: attachFile,
                     icon: const Icon(Icons.add_outlined)),
+                const SizedBox(width: 5),
+                IconButton(
+                    padding: const EdgeInsets.all(0),
+                    iconSize: 25,
+                    onPressed: () {
+                      var emojiModel =
+                          TypingEmojiSelModel.of(context, listen: false);
+                      emojiModel.showAddEmojiPanel.value =
+                          !emojiModel.showAddEmojiPanel.value;
+                    },
+                    icon: const Icon(Icons.emoji_emotions_outlined)),
                 const SizedBox(width: 5),
                 Expanded(
                     child: TextField(
