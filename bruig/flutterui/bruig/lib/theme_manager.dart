@@ -4,6 +4,7 @@ import 'package:bruig/util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:provider/provider.dart';
+import 'package:emoji_picker_flutter/emoji_picker_flutter.dart' as emoji_picker;
 import './storage_manager.dart';
 
 enum TextSize {
@@ -190,7 +191,7 @@ String appFontSizeKeyForScale(double scale) {
   return key;
 }
 
-String _emojifont = Platform.isWindows ? "notoemoji_win" : "notoemoji_unix";
+String emojifont = Platform.isWindows ? "notoemoji_win" : "notoemoji_unix";
 
 final TextTheme _interTextTheme = TextTheme(
   displayLarge: TextStyle(
@@ -198,91 +199,91 @@ final TextTheme _interTextTheme = TextTheme(
       fontFamily: 'Inter',
       decoration: TextDecoration.none,
       color: Colors.white70,
-      fontFamilyFallback: [_emojifont]),
+      fontFamilyFallback: [emojifont]),
   displayMedium: TextStyle(
       debugLabel: 'interdisplayMedium',
       fontFamily: 'Inter',
       decoration: TextDecoration.none,
       color: Colors.white70,
-      fontFamilyFallback: [_emojifont]),
+      fontFamilyFallback: [emojifont]),
   displaySmall: TextStyle(
       debugLabel: 'interdisplaySmall',
       fontFamily: 'Inter',
       decoration: TextDecoration.none,
       color: Colors.white70,
-      fontFamilyFallback: [_emojifont]),
+      fontFamilyFallback: [emojifont]),
   headlineLarge: TextStyle(
       debugLabel: 'interheadlineLarge',
       fontFamily: 'Inter',
       decoration: TextDecoration.none,
       color: Colors.white70,
-      fontFamilyFallback: [_emojifont]),
+      fontFamilyFallback: [emojifont]),
   headlineMedium: TextStyle(
       debugLabel: 'interheadlineMedium',
       fontFamily: 'Inter',
       decoration: TextDecoration.none,
       color: Colors.white70,
-      fontFamilyFallback: [_emojifont]),
+      fontFamilyFallback: [emojifont]),
   headlineSmall: TextStyle(
       debugLabel: 'interheadlineSmall',
       fontFamily: 'Inter',
       decoration: TextDecoration.none,
       color: Colors.white70,
-      fontFamilyFallback: [_emojifont]),
+      fontFamilyFallback: [emojifont]),
   titleLarge: TextStyle(
       debugLabel: 'intertitleLarge',
       fontFamily: 'Inter',
       decoration: TextDecoration.none,
       color: Colors.white70,
-      fontFamilyFallback: [_emojifont]),
+      fontFamilyFallback: [emojifont]),
   titleMedium: TextStyle(
       debugLabel: 'intertitleMedium',
       fontFamily: 'Inter',
       decoration: TextDecoration.none,
       color: Colors.white70,
-      fontFamilyFallback: [_emojifont]),
+      fontFamilyFallback: [emojifont]),
   titleSmall: TextStyle(
       debugLabel: 'intertitleSmall',
       fontFamily: 'Inter',
       decoration: TextDecoration.none,
       color: Colors.white70,
-      fontFamilyFallback: [_emojifont]),
+      fontFamilyFallback: [emojifont]),
   bodyLarge: TextStyle(
       debugLabel: 'interbodyLarge',
       fontFamily: 'Inter',
       decoration: TextDecoration.none,
       color: Colors.white70,
-      fontFamilyFallback: [_emojifont]),
+      fontFamilyFallback: [emojifont]),
   bodyMedium: TextStyle(
       debugLabel: 'interbodyMedium',
       fontFamily: 'Inter',
       decoration: TextDecoration.none,
       color: Colors.white70,
-      fontFamilyFallback: [_emojifont]),
+      fontFamilyFallback: [emojifont]),
   bodySmall: TextStyle(
       debugLabel: 'interbodySmall',
       fontFamily: 'Inter',
       decoration: TextDecoration.none,
       color: Colors.white70,
-      fontFamilyFallback: [_emojifont]),
+      fontFamilyFallback: [emojifont]),
   labelLarge: TextStyle(
       debugLabel: 'interlabelLarge',
       fontFamily: 'Inter',
       decoration: TextDecoration.none,
       color: Colors.white70,
-      fontFamilyFallback: [_emojifont]),
+      fontFamilyFallback: [emojifont]),
   labelMedium: TextStyle(
       debugLabel: 'interlabelMedium',
       fontFamily: 'Inter',
       decoration: TextDecoration.none,
       color: Colors.white70,
-      fontFamilyFallback: [_emojifont]),
+      fontFamilyFallback: [emojifont]),
   labelSmall: TextStyle(
       debugLabel: 'interlabelSmall',
       fontFamily: 'Inter',
       decoration: TextDecoration.none,
       color: Colors.white70,
-      fontFamilyFallback: [_emojifont]),
+      fontFamilyFallback: [emojifont]),
 );
 
 final TextTheme _interBlackTextTheme = TextTheme(
@@ -291,91 +292,91 @@ final TextTheme _interBlackTextTheme = TextTheme(
       fontFamily: 'Inter',
       decoration: TextDecoration.none,
       color: Colors.black54,
-      fontFamilyFallback: [_emojifont]),
+      fontFamilyFallback: [emojifont]),
   displayMedium: TextStyle(
       debugLabel: 'interdisplayMedium',
       fontFamily: 'Inter',
       decoration: TextDecoration.none,
       color: Colors.black54,
-      fontFamilyFallback: [_emojifont]),
+      fontFamilyFallback: [emojifont]),
   displaySmall: TextStyle(
       debugLabel: 'interdisplaySmall',
       fontFamily: 'Inter',
       decoration: TextDecoration.none,
       color: Colors.black54,
-      fontFamilyFallback: [_emojifont]),
+      fontFamilyFallback: [emojifont]),
   headlineLarge: TextStyle(
       debugLabel: 'interheadlineLarge',
       fontFamily: 'Inter',
       decoration: TextDecoration.none,
       color: Colors.black54,
-      fontFamilyFallback: [_emojifont]),
+      fontFamilyFallback: [emojifont]),
   headlineMedium: TextStyle(
       debugLabel: 'interheadlineMedium',
       fontFamily: 'Inter',
       decoration: TextDecoration.none,
       color: Colors.black54,
-      fontFamilyFallback: [_emojifont]),
+      fontFamilyFallback: [emojifont]),
   headlineSmall: TextStyle(
       debugLabel: 'interheadlineSmall',
       fontFamily: 'Inter',
       decoration: TextDecoration.none,
       color: Colors.black87,
-      fontFamilyFallback: [_emojifont]),
+      fontFamilyFallback: [emojifont]),
   titleLarge: TextStyle(
       debugLabel: 'intertitleLarge',
       fontFamily: 'Inter',
       decoration: TextDecoration.none,
       color: Colors.black87,
-      fontFamilyFallback: [_emojifont]),
+      fontFamilyFallback: [emojifont]),
   titleMedium: TextStyle(
       debugLabel: 'intertitleMedium',
       fontFamily: 'Inter',
       decoration: TextDecoration.none,
       color: Colors.black87,
-      fontFamilyFallback: [_emojifont]),
+      fontFamilyFallback: [emojifont]),
   titleSmall: TextStyle(
       debugLabel: 'intertitleSmall',
       fontFamily: 'Inter',
       decoration: TextDecoration.none,
       color: Colors.black87,
-      fontFamilyFallback: [_emojifont]),
+      fontFamilyFallback: [emojifont]),
   bodyLarge: TextStyle(
       debugLabel: 'interbodyLarge',
       fontFamily: 'Inter',
       decoration: TextDecoration.none,
       color: Colors.black87,
-      fontFamilyFallback: [_emojifont]),
+      fontFamilyFallback: [emojifont]),
   bodyMedium: TextStyle(
       debugLabel: 'interbodyMedium',
       fontFamily: 'Inter',
       decoration: TextDecoration.none,
       color: Colors.black87,
-      fontFamilyFallback: [_emojifont]),
+      fontFamilyFallback: [emojifont]),
   bodySmall: TextStyle(
       debugLabel: 'interbodySmall',
       fontFamily: 'Inter',
       decoration: TextDecoration.none,
       color: Colors.black87,
-      fontFamilyFallback: [_emojifont]),
+      fontFamilyFallback: [emojifont]),
   labelLarge: TextStyle(
       debugLabel: 'interlabelLarge',
       fontFamily: 'Inter',
       decoration: TextDecoration.none,
       color: Colors.black87,
-      fontFamilyFallback: [_emojifont]),
+      fontFamilyFallback: [emojifont]),
   labelMedium: TextStyle(
       debugLabel: 'interlabelMedium',
       fontFamily: 'Inter',
       decoration: TextDecoration.none,
       color: Colors.black87,
-      fontFamilyFallback: [_emojifont]),
+      fontFamilyFallback: [emojifont]),
   labelSmall: TextStyle(
       debugLabel: 'interlabelSmall',
       fontFamily: 'Inter',
       decoration: TextDecoration.none,
       color: Colors.black87,
-      fontFamilyFallback: [_emojifont]),
+      fontFamilyFallback: [emojifont]),
 );
 
 class AppTheme {
@@ -612,6 +613,31 @@ class ThemeNotifier with ChangeNotifier {
     await StorageManager.saveData(StorageManager.themeModeKey, value);
     _clearTxtStyleCache();
     _rebuildMarkdownStyleSheet();
+
+    _emojiPickerConfig = emoji_picker.Config(
+      emojiTextStyle: TextStyle(fontFamily: emojifont),
+      categoryViewConfig: emoji_picker.CategoryViewConfig(
+        backgroundColor: colors.secondaryContainer,
+        iconColor: colors.outline,
+        iconColorSelected: colors.secondary,
+        indicatorColor: colors.secondary,
+      ),
+      emojiViewConfig: emoji_picker.EmojiViewConfig(
+        backgroundColor: colors.primaryContainer,
+      ),
+      searchViewConfig: emoji_picker.SearchViewConfig(
+        backgroundColor: colors.secondaryContainer,
+      ),
+      bottomActionBarConfig: emoji_picker.BottomActionBarConfig(
+        backgroundColor: colors.tertiaryContainer,
+        buttonColor: colors.onSurfaceVariant,
+        showBackspaceButton: false,
+      ),
+      skinToneConfig: emoji_picker.SkinToneConfig(
+        dialogBackgroundColor: colors.secondaryContainer,
+      ),
+    );
+
     _themeLoaded = true;
     notifyListeners();
   }
@@ -793,4 +819,7 @@ class ThemeNotifier with ChangeNotifier {
     );
     _mdStyleSheet.styles["pre"] = _mdStyleSheet.code;
   }
+
+  late emoji_picker.Config _emojiPickerConfig;
+  emoji_picker.Config get emojiPickerConfig => _emojiPickerConfig;
 }

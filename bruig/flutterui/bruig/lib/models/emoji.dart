@@ -84,7 +84,12 @@ class TypingEmojiSelModel extends ChangeNotifier {
           ? _selectionList[selected.value]
           : null;
 
+  ValueNotifier<bool> showAddEmojiPanel = ValueNotifier(false);
+
   void clearSelection() {
+    if (showAddEmojiPanel.value) {
+      showAddEmojiPanel.value = false;
+    }
     if (_selectionList.isEmpty) {
       return;
     }
