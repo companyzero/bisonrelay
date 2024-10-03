@@ -18,3 +18,19 @@ class ColoredIcon extends StatelessWidget {
             ));
   }
 }
+
+class InfoTooltipIcon extends StatelessWidget {
+  final String tooltip;
+  final IconData icon;
+  final double? size;
+  const InfoTooltipIcon(
+      {required this.tooltip,
+      this.icon = Icons.info_outline,
+      this.size,
+      super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(message: tooltip, child: Icon(icon, size: size));
+  }
+}

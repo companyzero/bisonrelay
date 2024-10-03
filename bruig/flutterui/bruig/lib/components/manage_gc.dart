@@ -1,11 +1,13 @@
 import 'package:bruig/components/buttons.dart';
 import 'package:bruig/components/copyable.dart';
 import 'package:bruig/components/empty_widget.dart';
+import 'package:bruig/components/icons.dart';
 import 'package:bruig/components/info_grid.dart';
 import 'package:bruig/components/text.dart';
 import 'package:bruig/components/users_dropdown.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/models/snackbar.dart';
+import 'package:bruig/theme_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
@@ -154,6 +156,7 @@ class _ManageGCScreenState extends State<ManageGCScreen> {
   bool localIsOwner = false;
   bool firstLoading = true;
   Map<String, bool> admins = {};
+  List<String> unkxdMembers = [];
 
   @override
   void initState() {
@@ -211,11 +214,18 @@ class _ManageGCScreenState extends State<ManageGCScreen> {
       var cli = widget.client;
       List<ChatModel> newUsers = [];
       var newBlocked = await Golib.getGCBlockList(gcID);
-      gc.members.map((v) => cli.getExistingChat(v)).forEach((v) {
-        if (v != null) {
-          newUsers.add(v);
+      List<String> newUnkxd = [];
+      for (var memberID in gc.members) {
+        if (memberID == widget.client.publicID) {
+          continue;
         }
-      });
+        var chat = cli.getExistingChat(memberID);
+        if (chat != null) {
+          newUsers.add(chat);
+        } else {
+          newUnkxd.add(memberID);
+        }
+      }
       Map<String, bool> newAdmins = {};
       gc.extraAdmins?.forEach((e) => newAdmins[e] = true);
       var myID = widget.client.publicID;
@@ -230,6 +240,7 @@ class _ManageGCScreenState extends State<ManageGCScreen> {
         localIsAdmin = localIsOwner ||
             (gc.extraAdmins != null && gc.extraAdmins!.contains(myID));
         blockedUsers = newBlocked;
+        unkxdMembers = newUnkxd;
       });
     } catch (exception) {
       snackbar.error('Unable to reload gc: $exception');
@@ -467,7 +478,7 @@ class _ManageGCScreenState extends State<ManageGCScreen> {
                     child: _ChangeGCOwnerPanel(gcID, users, changeOwner)),
                 const Divider(),
               ],
-              const Text("GC Members"),
+              const Txt.L("GC Members"),
               ListView.builder(
                   shrinkWrap: true,
                   itemCount: users.length,
@@ -498,7 +509,31 @@ class _ManageGCScreenState extends State<ManageGCScreen> {
                           buildAdminAction(users[index], index),
                         ]),
                       )),
-              const SizedBox(height: 10),
+              const SizedBox(height: 20),
+              ...(unkxdMembers.isEmpty
+                  ? []
+                  : [
+                      const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Txt.L("Unkx'd Members"),
+                            SizedBox(width: 10),
+                            InfoTooltipIcon(
+                                size: 14,
+                                tooltip:
+                                    "These are members of the GC that your client hasn't "
+                                    "exchanged keys yet.\nThe client will automatically "
+                                    "attempt to KX with them and will complete "
+                                    "this process when both the mediator from this GC "
+                                    "and the other party are online.")
+                          ]),
+                      const SizedBox(height: 10),
+                      ...unkxdMembers.map((id) => Copyable.txt(Txt.S(id,
+                          style: ThemeNotifier.of(context, listen: false)
+                              .extraTextStyles
+                              .monospaced))),
+                      const SizedBox(height: 20),
+                    ]),
               ElevatedButton(
                   onPressed: !loading
                       ? () => widget.client.ui.showProfile.val = false
