@@ -2217,6 +2217,50 @@ class UINotificationsConfig {
   Map<String, dynamic> toJson() => _$UINotificationsConfigToJson(this);
 }
 
+enum KXStage {
+  @JsonValue(0)
+  unknown,
+  @JsonValue(1)
+  step2IdKX,
+  @JsonValue(2)
+  step3IDKX,
+}
+
+@JsonSerializable()
+class KXData {
+  final PublicIdentity? public;
+  @JsonKey(name: "initial_rv")
+  final String initialRV;
+  @JsonKey(name: "step3_rv")
+  final String step3RV;
+  @JsonKey(name: "my_resetrv")
+  final String myResetRV;
+  @JsonKey(name: "their_resetrv")
+  final String theirResetRV;
+  @JsonKey(name: "stage")
+  final KXStage stage;
+  final DateTime timestamp;
+  final PublicIdentity? invitee;
+  @JsonKey(name: "is_for_reset")
+  final bool isForReset;
+  @JsonKey(name: "mediator_id")
+  final String? mediatorID;
+
+  KXData(
+      this.public,
+      this.initialRV,
+      this.step3RV,
+      this.myResetRV,
+      this.theirResetRV,
+      this.stage,
+      this.timestamp,
+      this.invitee,
+      this.isForReset,
+      this.mediatorID);
+
+  factory KXData.fromJson(Map<String, dynamic> json) => _$KXDataFromJson(json);
+}
+
 mixin NtfStreams {
   StreamController<RemoteUser> ntfAcceptedInvites =
       StreamController<RemoteUser>();
@@ -3250,6 +3294,18 @@ abstract class PluginPlatform {
 
     return (res as List).map<String>((v) => v as String).toList();
   }
+
+  Future<List<KXData>> listKXs() async {
+      // jsonToList(await asyncCall(CTListKXs, null), KXData.fromJson);
+      var res = await asyncCall(
+        CTListKXs, null);
+    if (res == null) {
+      return List.empty();
+    }
+    return (res as List)
+        .map<KXData>((v) => KXData.fromJson(v))
+        .toList();
+  }
 }
 
 const int CTUnknown = 0x00;
@@ -3384,6 +3440,7 @@ const int CTCancelDownload = 0x8c;
 const int CTSubAllPosts = 0x8d;
 const int CTUpdateUINotificationsCfg = 0x8e;
 const int CTGCListUnkxdMembers = 0x8f;
+const int CTListKXs = 0x90;
 
 const int notificationsStartID = 0x1000;
 

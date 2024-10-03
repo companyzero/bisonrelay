@@ -10,6 +10,7 @@ import 'package:bruig/models/snackbar.dart';
 import 'package:bruig/models/uistate.dart';
 import 'package:bruig/notification_service.dart';
 import 'package:bruig/screens/config_network.dart';
+import 'package:bruig/screens/list_kxs.dart';
 import 'package:bruig/screens/ln_management.dart';
 import 'package:bruig/screens/log.dart';
 import 'package:bruig/screens/manage_content/manage_content.dart';
@@ -125,6 +126,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  void listKXs() {
+    Navigator.of(context, rootNavigator: true)
+        .pushNamed(ListKXsScreen.routeName);
+  }
+
   void changePage(String newPage) {
     setState(() {
       client.ui.settingsTitle.title = newPage;
@@ -168,7 +174,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     switch (settingsPage) {
       case "Account":
         settingsView = AccountSettingsScreen(client, resetAllOldKX1s,
-            resetAllOldKX, pickAvatarFile, subAllPosts);
+            resetAllOldKX, pickAvatarFile, subAllPosts, listKXs);
         break;
       case "Appearance":
         settingsView = Consumer<ThemeNotifier>(
@@ -321,8 +327,9 @@ class AccountSettingsScreen extends StatelessWidget {
   final ResetKXCB resetKXCB;
   final VoidCallback subAllPostsCB;
   final VoidCallback pickAvatarCB;
+  final VoidCallback listKXs;
   const AccountSettingsScreen(this.client, this.resetAllKXCB, this.resetKXCB,
-      this.pickAvatarCB, this.subAllPostsCB,
+      this.pickAvatarCB, this.subAllPostsCB, this.listKXs,
       {super.key});
 
   @override
@@ -351,6 +358,10 @@ class AccountSettingsScreen extends StatelessWidget {
         ListTile(
           title: const Text("Subscribe to all posts"),
           onTap: () => subAllPostsCB(),
+        ),
+        ListTile(
+          title: const Text("List ongoing KX attempts"),
+          onTap: () => listKXs(),
         ),
       ]))
     ]);

@@ -2203,3 +2203,39 @@ Map<String, dynamic> _$UINotificationsConfigToJson(
       'gcms': instance.gcms,
       'gcmentions': instance.gcMentions,
     };
+
+KXData _$KXDataFromJson(Map<String, dynamic> json) => KXData(
+      json['public'] == null
+          ? null
+          : PublicIdentity.fromJson(json['public'] as Map<String, dynamic>),
+      json['initial_rv'] as String,
+      json['step3_rv'] as String,
+      json['my_resetrv'] as String,
+      json['their_resetrv'] as String,
+      $enumDecode(_$KXStageEnumMap, json['stage']),
+      DateTime.parse(json['timestamp'] as String),
+      json['invitee'] == null
+          ? null
+          : PublicIdentity.fromJson(json['invitee'] as Map<String, dynamic>),
+      json['is_for_reset'] as bool,
+      json['mediator_id'] as String?,
+    );
+
+Map<String, dynamic> _$KXDataToJson(KXData instance) => <String, dynamic>{
+      'public': instance.public,
+      'initial_rv': instance.initialRV,
+      'step3_rv': instance.step3RV,
+      'my_resetrv': instance.myResetRV,
+      'their_resetrv': instance.theirResetRV,
+      'stage': _$KXStageEnumMap[instance.stage]!,
+      'timestamp': instance.timestamp.toIso8601String(),
+      'invitee': instance.invitee,
+      'is_for_reset': instance.isForReset,
+      'mediator_id': instance.mediatorID,
+    };
+
+const _$KXStageEnumMap = {
+  KXStage.unknown: 0,
+  KXStage.step2IdKX: 1,
+  KXStage.step3IDKX: 2,
+};

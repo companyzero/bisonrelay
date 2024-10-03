@@ -13,3 +13,13 @@ String shortChanIDToStr(int sid) {
 
 int dcrToAtoms(double dcr) =>
     dcr < 0 ? (dcr * 1e8 - 0.5).truncate() : (dcr * 1e8 + 0.5).truncate();
+
+typedef FromJSON<T> = T Function(Map<String, dynamic> m);
+
+List<T> jsonToList<T>(dynamic res, FromJSON fromJson) {
+  if (res == null) {
+    return List.empty();
+  }
+
+  return (res as List).map<T>((v) => fromJson(v)).toList();
+}

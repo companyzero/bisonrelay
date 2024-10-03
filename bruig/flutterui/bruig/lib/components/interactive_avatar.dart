@@ -1,5 +1,6 @@
 import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/components/gc_context_menu.dart';
+import 'package:bruig/components/text.dart';
 import 'package:bruig/components/user_context_menu.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/util.dart';
@@ -194,11 +195,13 @@ class UserMenuAvatar extends StatelessWidget {
 class SelfAvatar extends StatelessWidget {
   final ClientModel client;
   final VoidCallback? onTap;
-  const SelfAvatar(this.client, {this.onTap, super.key});
+  final double? radius;
+  const SelfAvatar(this.client, {this.onTap, this.radius, super.key});
 
   @override
   Widget build(BuildContext context) {
-    return AvatarModelAvatar(client.myAvatar, client.nick, onTap: onTap);
+    return AvatarModelAvatar(client.myAvatar, client.nick,
+        radius: radius, onTap: onTap);
   }
 }
 
@@ -212,17 +215,19 @@ class UserAvatarFromID extends StatelessWidget {
   final bool showChatSideMenuOnTap;
   final String? postFrom;
   final String? nick;
+  final double? radius;
   const UserAvatarFromID(this.client, this.uid,
       {this.disableTooltip = false,
       this.showChatSideMenuOnTap = false,
       this.postFrom,
+      this.radius,
       this.nick,
       super.key});
 
   @override
   Widget build(BuildContext context) {
     if (uid == client.publicID) {
-      return SelfAvatar(client);
+      return SelfAvatar(client, radius: radius);
     }
 
     var chat = client.getExistingChat(uid);
@@ -230,16 +235,36 @@ class UserAvatarFromID extends StatelessWidget {
       return UserMenuAvatar(client, chat,
           showChatSideMenuOnTap: showChatSideMenuOnTap,
           postFrom: postFrom,
-          disableTooltip: disableTooltip);
+          disableTooltip: disableTooltip,
+	  radius: radius);
     }
 
     if (disableTooltip) {
-      return InteractiveAvatar(chatNick: nick ?? uid);
+      return InteractiveAvatar(chatNick: nick ?? uid, radius: radius);
     }
 
     return Tooltip(
       message: "Unknown user $uid",
-      child: InteractiveAvatar(chatNick: nick ?? uid),
+      child: InteractiveAvatar(chatNick: nick ?? uid, radius: radius),
     );
+  }
+}
+
+class UserNickFromID extends StatelessWidget {
+  final String uid;
+  final TextSize? textSize;
+  const UserNickFromID(this.uid, {this.textSize, super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    String nick = "";
+    var client = Provider.of<ClientModel>(context, listen: false);
+    var chat = client.getExistingChat(uid);
+    if (chat != null) {
+      nick = chat.nick;
+    } else if (uid == client.publicID) {
+      nick = "me (${client.nick})";
+    }
+    return Txt(nick, size: textSize);
   }
 }

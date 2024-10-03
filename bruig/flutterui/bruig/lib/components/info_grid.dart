@@ -85,25 +85,32 @@ class SimpleInfoGridAdv extends StatelessWidget {
     this.textSize = TextSize.small,
   });
 
+  Widget _widgetFor(dynamic v) {
+    if (v is String) {
+      return Txt(v, size: textSize);
+    } else if (v is Copyable) {
+      return Copyable.txt(Txt(v.text, size: textSize), tooltip: v.tooltip);
+    } else if (v is Widget) {
+      return v;
+    } else {
+      return Txt("$v", size: textSize);
+    }
+  }
+
   Widget buildChild(dynamic child) {
     late Widget label;
     late Widget value;
     if (child is Tuple2<String, String>) {
-      label = Txt(child.item1, size: textSize);
-      value = Txt(child.item2, size: textSize);
+      label = _widgetFor(child.item1);
+      value = _widgetFor(child.item2);
     } else if (child is List<String>) {
-      label = Txt(child[0], size: textSize);
-      value = Txt(child[1], size: textSize);
+      label = _widgetFor(child[0]);
+      value = _widgetFor(child[1]);
     } else if (child is List<dynamic>) {
-      label = Txt(child[0], size: textSize);
-      if (child[1] is Copyable) {
-        var c = child[1] as Copyable;
-        value = Copyable.txt(Txt(c.text, size: textSize), tooltip: c.tooltip);
-      } else {
-        value = Txt(child[1], size: textSize);
-      }
+      label = _widgetFor(child[0]);
+      value = _widgetFor(child[1]);
     } else if (child is SimpleInfoGridCopyableVal) {
-      label = Txt(child.label);
+      label = _widgetFor(child.label);
       value = Copyable.txt(Txt(child.value, size: textSize));
     } else {
       label = const Text("error");
