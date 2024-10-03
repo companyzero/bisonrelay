@@ -2128,6 +2128,30 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		}
 		c.NotificationManager().UpdateUIConfig(cfg)
 
+	case CTGCListUnkxdMembers:
+		var args clientintf.ID
+		if err := cmd.decode(&args); err != nil {
+			return nil, err
+		}
+
+		gc, err := c.GetGC(args)
+		if err != nil {
+			return nil, err
+		}
+
+		myID := c.PublicID()
+		var res []clientintf.UserID
+		for _, uid := range gc.Members {
+			if uid == myID {
+				continue
+			}
+			_, err := c.UserByID(uid)
+			if err != nil {
+				res = append(res, uid)
+			}
+		}
+
+		return res, nil
 	}
 	return nil, nil
 

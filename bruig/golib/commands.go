@@ -149,6 +149,7 @@ const (
 	CTCancelDownload                      = 0x8c
 	CTSubAllPosts                         = 0x8d
 	CTUpdateUINotificationsCfg            = 0x8e
+	CTGCListUnkxdMembers                  = 0x8f
 
 	NTInviteReceived         = 0x1001
 	NTInviteAccepted         = 0x1002

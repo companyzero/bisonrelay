@@ -464,6 +464,32 @@ class ChatModel extends ChangeNotifier {
     }
     return res;
   }
+
+  final ValueNotifier<List<String>?> _unkxdMembers = ValueNotifier(null);
+  ValueNotifier<List<String>?> get unkxdMembers {
+    if (isGC && _unkxdMembers.value == null) {
+      (() async {
+        _unkxdMembers.value = await Golib.gcListUnkxdMembers(id);
+      })();
+    }
+
+    return _unkxdMembers;
+  }
+
+  void _removeUnkxdMember(String id) {
+    if (_unkxdMembers.value == null) {
+      // Handles case where chat is not a GC as well.
+      return;
+    }
+
+    if (!_unkxdMembers.value!.contains(id)) {
+      return;
+    }
+
+    var newList = _unkxdMembers.value!.toList();
+    newList.remove(id);
+    _unkxdMembers.value = newList;
+  }
 }
 
 class ConnStateModel extends ChangeNotifier {
@@ -1074,6 +1100,13 @@ class ClientModel extends ChangeNotifier {
       (() async {
         var abEntry = await Golib.addressBookEntry(remoteUser.uid);
         chat.avatar.loadAvatar(abEntry.avatar);
+      })();
+
+      // Go through list of GCs, if any were missing this user, mark them as KXd.
+      (() async {
+        for (var c in _activeChats.values) {
+          c._removeUnkxdMember(remoteUser.uid);
+        }
       })();
     }
   }
