@@ -2155,6 +2155,9 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 
 	case CTListKXs:
 		return c.ListKXs()
+
+	case CTListMIRequests:
+		return c.ListMediateIDs()
 	}
 	return nil, nil
 

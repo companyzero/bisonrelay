@@ -253,7 +253,9 @@ class UserAvatarFromID extends StatelessWidget {
 class UserNickFromID extends StatelessWidget {
   final String uid;
   final TextSize? textSize;
-  const UserNickFromID(this.uid, {this.textSize, super.key});
+  final String nickAlternative;
+  const UserNickFromID(this.uid,
+      {this.textSize, this.nickAlternative = "", super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -264,6 +266,8 @@ class UserNickFromID extends StatelessWidget {
       nick = chat.nick;
     } else if (uid == client.publicID) {
       nick = "me (${client.nick})";
+    } else {
+      nick = nickAlternative;
     }
     return Txt(nick, size: textSize);
   }
