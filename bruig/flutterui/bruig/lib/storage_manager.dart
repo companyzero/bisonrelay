@@ -13,6 +13,7 @@ class StorageManager {
   static const String ntfnPMs = "ntfnPMs";
   static const String ntfnGCMs = "ntfnGCMs";
   static const String ntfnGCMentions = "ntfnGCMentions";
+  static const String notifiedGCUnkxdMembers = "notifiedGCUnkdMembers";
 
   static Future<void> saveData(String key, dynamic value) async {
     final prefs = await SharedPreferences.getInstance();
