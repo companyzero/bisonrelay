@@ -151,6 +151,7 @@ const (
 	CTUpdateUINotificationsCfg            = 0x8e
 	CTGCListUnkxdMembers                  = 0x8f
 	CTListKXs                             = 0x90
+	CTListMIRequests                      = 0x91
 
 	NTInviteReceived         = 0x1001
 	NTInviteAccepted         = 0x1002

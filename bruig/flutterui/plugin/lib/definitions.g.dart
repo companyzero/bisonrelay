@@ -2239,3 +2239,17 @@ const _$KXStageEnumMap = {
   KXStage.step2IdKX: 1,
   KXStage.step3IDKX: 2,
 };
+
+MediateIDRequest _$MediateIDRequestFromJson(Map<String, dynamic> json) =>
+    MediateIDRequest(
+      json['mediator'] as String,
+      json['target'] as String,
+      DateTime.parse(json['date'] as String),
+    );
+
+Map<String, dynamic> _$MediateIDRequestToJson(MediateIDRequest instance) =>
+    <String, dynamic>{
+      'mediator': instance.mediator,
+      'target': instance.target,
+      'date': instance.date.toIso8601String(),
+    };

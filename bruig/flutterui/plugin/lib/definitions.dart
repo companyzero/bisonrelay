@@ -2224,6 +2224,7 @@ enum KXStage {
   step2IdKX,
   @JsonValue(2)
   step3IDKX,
+  mediateID,
 }
 
 @JsonSerializable()
@@ -2259,6 +2260,17 @@ class KXData {
       this.mediatorID);
 
   factory KXData.fromJson(Map<String, dynamic> json) => _$KXDataFromJson(json);
+}
+
+@JsonSerializable()
+class MediateIDRequest {
+  final String mediator;
+  final String target;
+  final DateTime date;
+
+  MediateIDRequest(this.mediator, this.target, this.date);
+  factory MediateIDRequest.fromJson(Map<String, dynamic> json) =>
+      _$MediateIDRequestFromJson(json);
 }
 
 mixin NtfStreams {
@@ -3295,17 +3307,11 @@ abstract class PluginPlatform {
     return (res as List).map<String>((v) => v as String).toList();
   }
 
-  Future<List<KXData>> listKXs() async {
-      // jsonToList(await asyncCall(CTListKXs, null), KXData.fromJson);
-      var res = await asyncCall(
-        CTListKXs, null);
-    if (res == null) {
-      return List.empty();
-    }
-    return (res as List)
-        .map<KXData>((v) => KXData.fromJson(v))
-        .toList();
-  }
+  Future<List<KXData>> listKXs() async =>
+      jsonToList(await asyncCall(CTListKXs, null), KXData.fromJson);
+
+  Future<List<MediateIDRequest>> listMediateIDRequests() async => jsonToList(
+      await asyncCall(CTListMIRequests, null), MediateIDRequest.fromJson);
 }
 
 const int CTUnknown = 0x00;
@@ -3441,6 +3447,7 @@ const int CTSubAllPosts = 0x8d;
 const int CTUpdateUINotificationsCfg = 0x8e;
 const int CTGCListUnkxdMembers = 0x8f;
 const int CTListKXs = 0x90;
+const int CTListMIRequests = 0x91;
 
 const int notificationsStartID = 0x1000;
 

@@ -26,6 +26,22 @@ class _ListKXsScreenState extends State<ListKXsScreen> {
   void listKXs() async {
     try {
       var newKXs = await Golib.listKXs();
+      var newMIs = await Golib.listMediateIDRequests();
+
+      // Add the mediate ID requests as if they were KX attempts to simplify
+      // the report.
+      newKXs.addAll(newMIs.map((mi) => KXData(
+          PublicIdentity("", "", mi.target),
+          "",
+          "",
+          "",
+          "",
+          KXStage.mediateID,
+          mi.date,
+          null,
+          false,
+          mi.mediator)));
+
       newKXs.sortBy((v) => v.timestamp);
       newKXs.reverseRange(0, newKXs.length);
       setState(() => kxs = newKXs);
@@ -33,6 +49,10 @@ class _ListKXsScreenState extends State<ListKXsScreen> {
       showErrorSnackbar(this, "Unable to list KXs: $exception");
     }
   }
+
+  String kxTargetID(KXData kx) =>
+      kx.invitee?.identity ?? kx.public?.identity ?? "";
+  String kxTargetNick(KXData kx) => kx.invitee?.nick ?? kx.public?.nick ?? "";
 
   @override
   void initState() {
@@ -56,8 +76,8 @@ class _ListKXsScreenState extends State<ListKXsScreen> {
             ["Stage", "${kx.stage}"],
             ["Updated", "${kx.timestamp}"],
             ["Initial RV", Copyable(kx.initialRV)],
-            ["Target Nick", kx.invitee?.nick ?? ""],
-            ["Target ID", Copyable(kx.invitee?.identity ?? "")],
+            ["Target ID", Copyable(kxTargetID(kx))],
+            ["Target Nick", kxTargetNick(kx)],
             ["Mediator ID", Copyable(kx.mediatorID ?? "")],
             [
               "Mediator",
