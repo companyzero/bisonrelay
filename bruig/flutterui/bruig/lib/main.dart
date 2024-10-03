@@ -18,6 +18,7 @@ import 'package:bruig/screens/contacts_msg_times.dart';
 import 'package:bruig/screens/fetch_invite.dart';
 import 'package:bruig/screens/gc_invitations.dart';
 import 'package:bruig/screens/generate_invite.dart';
+import 'package:bruig/screens/list_kxs.dart';
 import 'package:bruig/screens/log.dart';
 import 'package:bruig/screens/onboarding.dart';
 import 'package:bruig/screens/server_unwelcome_error.dart';
@@ -475,6 +476,7 @@ class _AppState extends State<App> with WindowListener {
                     builder: (context, theme, child) => ThemeTestScreen(theme)),
                 GCInvitationsScreen.routeName: (context) =>
                     const GCInvitationsScreen(),
+                ListKXsScreen.routeName: (context) => const ListKXsScreen(),
                 ShutdownScreen.routeName: (context) =>
                     ShutdownScreen(widget.log, widget.shutdown),
               },
