@@ -8,6 +8,7 @@ import 'package:bruig/models/snackbar.dart';
 import 'package:bruig/models/uistate.dart';
 import 'package:bruig/screens/chats.dart';
 import 'package:bruig/models/client.dart';
+import 'package:bruig/storage_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:bruig/components/profile.dart';
 import 'package:bruig/components/chat/messages.dart';
@@ -42,24 +43,66 @@ class _ActiveChatState extends State<ActiveChat> {
     }
   }
 
+  void _doSendMsg(String msg) async {
+    var snackbar = SnackBarModel.of(context);
+    try {
+      await chat!.sendMsg(msg);
+      client.newSentMsg(chat!);
+    } catch (exception) {
+      snackbar.error("Unable to send message: $exception");
+    }
+  }
+
   void sendMsg(String msg) {
     if (this.chat == null) {
       return;
     }
     ChatModel chat = this.chat!;
-    var snackbar = SnackBarModel.of(context);
 
     if (_debounce?.isActive ?? false) _debounce!.cancel();
     _debounce = Timer(const Duration(milliseconds: 100), () async {
       if (!mounted) return;
-      try {
-        await chat.sendMsg(msg);
-        client.newSentMsg(chat);
-      } catch (exception) {
-        if (mounted) {
-          snackbar.error("Unable to send message: $exception");
-        }
+
+      // The first time this client sends a message on a GC with unkxd members,
+      // warn the user about it.
+      var notifyGCUnkxdMembers = chat.isGC &&
+          !(await StorageManager.readBool(
+              StorageManager.notifiedGCUnkxdMembers)) &&
+          (chat.unkxdMembers.value?.isNotEmpty ?? false);
+      if (!mounted) return;
+      if (notifyGCUnkxdMembers) {
+        showModalBottomSheet(
+            context: context,
+            builder: (context) => Container(
+                padding: const EdgeInsets.all(20),
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  const Text(
+                      "Note: This GC contains un-kx'd members - other people whom this "
+                      "client has not exchanged keys with. These people won't receive any "
+                      "messages until the KX process has completed, which usually happens "
+                      "automatically, once they come back online.\n\n"
+                      "It is also common on large, public GCs to have people that never "
+                      "come online because they have stopped using the software and have "
+                      "not yet been removed from the GC.\n\n"
+                      "You may wait until the warning indicator disappears or you "
+                      "may keep sending messages (keeping in mind that not every "
+                      "member of this GC will receive them).\n\n"
+                      "This warning will be displayed only once."),
+                  const SizedBox(height: 10),
+                  TextButton(
+                    onPressed: () {
+                      StorageManager.saveBool(
+                          StorageManager.notifiedGCUnkxdMembers, true);
+                      Navigator.of(context).pop();
+                      _doSendMsg(msg);
+                    },
+                    child: const Text("Ok"),
+                  )
+                ])));
+        return;
       }
+
+      _doSendMsg(msg);
     });
   }
 
