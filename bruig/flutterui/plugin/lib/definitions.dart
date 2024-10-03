@@ -3241,6 +3241,15 @@ abstract class PluginPlatform {
 
   Future<void> updateUINotificationsCfg(UINotificationsConfig cfg) async =>
       await asyncCall(CTUpdateUINotificationsCfg, cfg);
+
+  Future<List<String>> gcListUnkxdMembers(String gcid) async {
+    var res = await asyncCall(CTGCListUnkxdMembers, gcid);
+    if (res == null) {
+      return List.empty();
+    }
+
+    return (res as List).map<String>((v) => v as String).toList();
+  }
 }
 
 const int CTUnknown = 0x00;
@@ -3374,6 +3383,7 @@ const int CTListGCInvites = 0x8b;
 const int CTCancelDownload = 0x8c;
 const int CTSubAllPosts = 0x8d;
 const int CTUpdateUINotificationsCfg = 0x8e;
+const int CTGCListUnkxdMembers = 0x8f;
 
 const int notificationsStartID = 0x1000;
 

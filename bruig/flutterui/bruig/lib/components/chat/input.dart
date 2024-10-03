@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:bruig/components/attach_file.dart';
 import 'package:bruig/models/emoji.dart';
+import 'package:bruig/components/icons.dart';
 import 'package:bruig/models/uistate.dart';
 import 'package:bruig/screens/chats.dart';
 import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
@@ -88,6 +89,15 @@ class _ChatInputState extends State<ChatInput> {
     }
   }
 
+  bool containsUnkxdMembers = false;
+
+  void containsUnxkdChanged() async {
+    setState(() {
+      containsUnkxdMembers =
+          widget.chat.unkxdMembers.value?.isNotEmpty ?? false;
+    });
+  }
+
   @override
   void initState() {
     super.initState();
@@ -95,6 +105,8 @@ class _ChatInputState extends State<ChatInput> {
     widget.inputFocusNode.noModEnterKeyHandler = sendMsg;
     widget.inputFocusNode.pasteEventHandler = pasteEvent;
     widget.inputFocusNode.addEmojiHandler = addEmoji;
+    widget.chat.unkxdMembers.addListener(containsUnxkdChanged);
+    containsUnkxdMembers = widget.chat.unkxdMembers.value?.isNotEmpty ?? false;
   }
 
   @override
@@ -112,6 +124,12 @@ class _ChatInputState extends State<ChatInput> {
     widget.inputFocusNode.pasteEventHandler = pasteEvent;
     oldWidget.inputFocusNode.addEmojiHandler = null;
     widget.inputFocusNode.addEmojiHandler = addEmoji;
+    if (oldWidget.chat != widget.chat) {
+      oldWidget.chat.unkxdMembers.removeListener(containsUnxkdChanged);
+      widget.chat.unkxdMembers.addListener(containsUnxkdChanged);
+      containsUnkxdMembers =
+          widget.chat.unkxdMembers.value?.isNotEmpty ?? false;
+    }
   }
 
   @override
@@ -119,6 +137,7 @@ class _ChatInputState extends State<ChatInput> {
     widget.inputFocusNode.noModEnterKeyHandler = null;
     widget.inputFocusNode.pasteEventHandler = null;
     widget.inputFocusNode.addEmojiHandler = null;
+    widget.chat.unkxdMembers.removeListener(containsUnxkdChanged);
     super.dispose();
   }
 
@@ -267,11 +286,25 @@ class _ChatInputState extends State<ChatInput> {
                       borderSide: BorderSide(width: 2.0),
                     ),
                     hintText: "Start a message",
-                    suffixIcon: IconButton(
-                        padding: const EdgeInsets.all(0),
-                        iconSize: 20,
-                        onPressed: sendMsg,
-                        icon: const Icon(Icons.send)),
+                    suffixIcon: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          if (containsUnkxdMembers)
+                            const Tooltip(
+                                message:
+                                    "There are un-kx'd members in this GC.\n"
+                                    "These members won't receive messages from you until the KX "
+                                    "process completes.\nThis usually happens automatically, after "
+                                    "they come back online.",
+                                child: ColoredIcon(Icons.warning_amber_outlined,
+                                    color: TextColor.error)),
+                          IconButton(
+                              padding: const EdgeInsets.all(0),
+                              iconSize: 20,
+                              onPressed: sendMsg,
+                              icon: const Icon(Icons.send))
+                        ]),
                   ),
                 )),
               ]));
