@@ -1454,7 +1454,8 @@ func Open(ctx context.Context, opts ...Option) (*DB, error) {
 		f(&o)
 	}
 
-	connStr := fmt.Sprintf("host=%s user=%s password=%s dbname=%s sslmode=%s",
+	connStr := fmt.Sprintf("host=%s user=%s password=%s dbname=%s sslmode=%s "+
+		"application_name=brserver target_session_attrs=primary",
 		o.host, o.roleName, o.passphrase, o.dbName, o.sslMode)
 	if !strings.HasPrefix(o.host, "/") {
 		connStr += fmt.Sprintf(" port=%s", o.port)
