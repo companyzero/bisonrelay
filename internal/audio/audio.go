@@ -1,3 +1,5 @@
+//go:build cgo && !noaudio
+
 package audio
 
 import (
@@ -5,24 +7,6 @@ import (
 
 	"github.com/gen2brain/malgo"
 )
-
-type DeviceType string
-
-const (
-	DeviceTypeCapture  DeviceType = "capture"
-	DeviceTypePlayback DeviceType = "playback"
-)
-
-type Device struct {
-	ID        string `json:"id"`
-	Name      string `json:"name"`
-	IsDefault bool   `json:"is_default"`
-}
-
-type Devices struct {
-	Playback []Device `json:"playback"`
-	Capture  []Device `json:"capture"`
-}
 
 func listMalgoDevices(typ malgo.DeviceType, malgoCtx *malgo.AllocatedContext, log slog.Logger) ([]Device, error) {
 	devices, err := malgoCtx.Devices(typ)
@@ -104,11 +88,4 @@ func FindDevice(typ DeviceType, id string) *Device {
 	}
 
 	return nil
-}
-
-type RecordInfo struct {
-	SampleCount int `json:"sample_count"`
-	DurationMs  int `json:"duration_ms"`
-	EncodedSize int `json:"encoded_size"`
-	PacketCount int `json:"packet_count"`
 }
