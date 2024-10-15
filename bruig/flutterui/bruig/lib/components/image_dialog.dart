@@ -4,6 +4,7 @@ import 'package:bruig/components/context_menu.dart';
 import 'package:bruig/components/snackbars.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_avif/flutter_avif.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:typed_data';
 import 'package:path/path.dart' as path;
@@ -59,7 +60,7 @@ class ImageDialog extends StatelessWidget {
         }
 
         File(fname).writeAsBytesSync(imgContent);
-        showSuccessSnackbar(this, "Written image file $fname");
+        showSuccessSnackbar(context, "Written image file $fname");
         break;
       case "share":
         if (fname == "") {
@@ -87,6 +88,61 @@ class ImageDialog extends StatelessWidget {
         decoration: BoxDecoration(
           image: DecorationImage(
             image: MemoryImage(imgContent),
+          ),
+        ),
+      ),
+    ));
+  }
+}
+
+class AvifDialog extends StatelessWidget {
+  final Uint8List imgContent;
+  const AvifDialog(this.imgContent, {super.key});
+
+  void contextMenuItemClicked(context, value) async {
+    var fname = "image.avif";
+
+    switch (value) {
+      case "save":
+        fname = await FilePicker.platform.saveFile(
+              dialogTitle: "Select filename",
+              fileName: fname,
+            ) ??
+            "";
+
+        if (fname == "") {
+          return;
+        }
+
+        File(fname).writeAsBytesSync(imgContent);
+        showSuccessSnackbar(context, "Written avif file $fname");
+        break;
+      case "share":
+        if (fname == "") {
+          fname = "image.avif";
+        }
+        var dir = await _tempImgDir();
+        if (!Directory(dir).existsSync()) {
+          Directory(dir).createSync(recursive: true);
+        }
+        fname = path.join(dir, fname);
+        File(fname).writeAsBytesSync(imgContent);
+        Share.shareXFiles([XFile(fname)], text: "Image");
+        break;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+        child: ContextMenu(
+      handleItemTap: (v) => contextMenuItemClicked(context, v),
+      items: _contextMenuItems,
+      child: Container(
+        constraints: const BoxConstraints(maxHeight: 1000, maxWidth: 1000),
+        decoration: BoxDecoration(
+          image: DecorationImage(
+            image: AvifImage.memory(imgContent).image,
           ),
         ),
       ),

@@ -481,6 +481,37 @@ class ImageMd extends StatelessWidget {
       );
 }
 
+class AvifMd extends StatelessWidget {
+  final String tip;
+  final Uint8List imgContent;
+  const AvifMd(this.tip, this.imgContent, {super.key});
+
+  @override
+  Widget build(BuildContext context) => Tooltip(
+        message: tip,
+        child: InkWell(
+          borderRadius: const BorderRadius.all(Radius.circular(30)),
+          onTap: () {
+            showDialog(
+                context: context, builder: (_) => AvifDialog(imgContent));
+          },
+          child: Container(
+            constraints: const BoxConstraints(maxHeight: 250, maxWidth: 250),
+            margin: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
+            decoration: BoxDecoration(
+              borderRadius: const BorderRadius.all(Radius.circular(8.0)),
+              image: DecorationImage(
+                image: AvifImage.memory(imgContent).image,
+                onError: (exception, stackTrace) {
+                  debugPrint("AvifMd unable to decode image: $exception");
+                },
+              ),
+            ),
+          ),
+        ),
+      );
+}
+
 class PreformattedElementBuilder extends MarkdownElementBuilder {
   @override
   Widget visitText(md.Text text, TextStyle? preferredStyle) {
@@ -678,7 +709,7 @@ class AVIFElementBuilder extends MarkdownElementBuilder {
     try {
       imgBytes = const Base64Decoder().convert(element.textContent);
     } catch (exception) {
-      return Text("Unable to decode image: $exception");
+      return Text("Unable to decode avif: $exception");
     }
 
     var alt = element.attributes["alt"] ?? "";
@@ -696,9 +727,9 @@ class AVIFElementBuilder extends MarkdownElementBuilder {
     var type = element.attributes["type"] ?? "";
 
     try {
-      return AvifImage.memory(imgBytes);
+      return AvifMd(tip, imgBytes);
     } catch (exception) {
-      debugPrint("Unable to decode image: $exception");
+      debugPrint("Unable to decode avif: $exception");
       return Image.asset(
         "assets/images/invalidimg.png",
         width: 300,
