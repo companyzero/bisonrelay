@@ -509,3 +509,14 @@ type uiNotificationsConfig struct {
 	GCMs       bool `json:"gcms"`
 	GCMentions bool `json:"gcmentions"`
 }
+
+type audioRecordNoteArgs struct {
+	CaptureDeviceID string `json:"capture_device_id"`
+}
+
+type recordedAudioNote struct {
+	Embed      string `json:"embed"`
+	Size       uint32 `json:"size"`
+	Cost       uint64 `json:"cost"`
+	DurationMs uint64 `json:"duration_ms"`
+}

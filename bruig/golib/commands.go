@@ -152,6 +152,11 @@ const (
 	CTGCListUnkxdMembers                  = 0x8f
 	CTListKXs                             = 0x90
 	CTListMIRequests                      = 0x91
+	CTListAudioDevices                    = 0x92
+	CTAudioStartRecordNode                = 0x93
+	CTAudioStartPlaybackNote              = 0x94
+	CTAudioStopNote                       = 0x95
+	CTAudioNoteEmbed                      = 0x96
 
 	NTInviteReceived         = 0x1001
 	NTInviteAccepted         = 0x1002

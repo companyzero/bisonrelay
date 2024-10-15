@@ -8,6 +8,7 @@ list(APPEND FLUTTER_PLUGIN_LIST
   golib_plugin
   image_compression_flutter
   irondash_engine_context
+  media_kit_libs_linux
   screen_retriever
   super_native_extensions
   url_launcher_linux

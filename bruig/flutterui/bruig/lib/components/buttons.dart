@@ -1,3 +1,7 @@
+import 'dart:async';
+import 'dart:math';
+
+import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/components/text.dart';
 import 'package:flutter/material.dart';
 import 'package:bruig/theme_manager.dart';
@@ -110,5 +114,134 @@ class AboutButton extends StatelessWidget {
           fit: BoxFit.contain,
           "assets/images/icon.png",
         ));
+  }
+}
+
+class CircularProgressButton extends StatefulWidget {
+  final bool active;
+  final IconData? activeIcon;
+  final IconData inactiveIcon;
+  final VoidCallback? onTapDown;
+  final VoidCallback? onTapUp;
+  final VoidCallback? onHold;
+  final Duration? holdDuration;
+  final double sizeMultiplier;
+  const CircularProgressButton(
+      {this.active = false,
+      required this.inactiveIcon,
+      this.activeIcon,
+      this.onTapDown,
+      this.onTapUp,
+      this.onHold,
+      this.holdDuration,
+      this.sizeMultiplier = 1.0,
+      super.key});
+
+  @override
+  State<CircularProgressButton> createState() => _CircularProgressButtonState();
+}
+
+class _CircularProgressButtonState extends State<CircularProgressButton> {
+  double? progress;
+  Timer? progressTimer;
+  DateTime? progressStart;
+
+  void updateProgress(_) {
+    var now = DateTime.now();
+    var elapsedMs = DateTime.now()
+        .difference(progressStart ?? now)
+        .inMilliseconds
+        .toDouble();
+    var totalMs = (widget.holdDuration?.inMilliseconds ?? 0).toDouble();
+    if (totalMs == 0) {
+      return;
+    }
+    var newProgress = min(elapsedMs / totalMs, 1.0);
+    setState(() {
+      progress = newProgress;
+    });
+
+    if (progress == 1) {
+      progressTimer?.cancel();
+      progressTimer = null;
+      if (widget.onHold != null) {
+        widget.onHold!();
+      }
+    }
+  }
+
+  void tapDown(_) {
+    if (widget.onTapDown != null) {
+      widget.onTapDown!();
+    }
+    if (widget.holdDuration != null && progressTimer == null) {
+      progressStart = DateTime.now();
+      progressTimer =
+          Timer.periodic(const Duration(milliseconds: 80), updateProgress);
+    }
+  }
+
+  void tapUp(_) {
+    if (widget.onTapUp != null) {
+      widget.onTapUp!();
+    }
+
+    if (progressTimer != null) {
+      progressTimer?.cancel();
+      progressTimer = null;
+      setState(() {
+        progress = null;
+      });
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+  }
+
+  @override
+  void didUpdateWidget(covariant CircularProgressButton oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.active != widget.active ||
+        oldWidget.activeIcon != widget.activeIcon ||
+        oldWidget.inactiveIcon != widget.inactiveIcon ||
+        oldWidget.holdDuration != widget.holdDuration) {
+      setState(() {
+        if (widget.holdDuration == null) {
+          progress = null;
+        }
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    progressTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    IconData icon = widget.active
+        ? widget.activeIcon ?? widget.inactiveIcon
+        : widget.inactiveIcon;
+    return Stack(alignment: Alignment.center, children: [
+      SizedBox(
+          width: 40 * widget.sizeMultiplier,
+          height: 40 * widget.sizeMultiplier,
+          child: widget.active || progress != null
+              ? CircularProgressIndicator(value: progress, strokeWidth: 2)
+              : const Empty()),
+      InkResponse(
+          radius: 17 * widget.sizeMultiplier,
+          containedInkWell: false,
+          onTapDown: tapDown,
+          onTapUp: tapUp,
+          child: Consumer<ThemeNotifier>(
+              builder: (context, theme, child) => Icon(icon,
+                  size: 25 * widget.sizeMultiplier,
+                  color: theme.textColor(TextColor.onSurfaceVariant))))
+    ]);
   }
 }

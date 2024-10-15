@@ -5,6 +5,7 @@ import 'dart:developer' as developer;
 
 import 'package:bruig/components/route_error.dart';
 import 'package:bruig/models/emoji.dart';
+import 'package:bruig/models/audio.dart';
 import 'package:bruig/models/menus.dart';
 import 'package:bruig/models/payments.dart';
 import 'package:bruig/models/resources.dart';
@@ -50,6 +51,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
+import 'package:just_audio_media_kit/just_audio_media_kit.dart';
 import 'package:provider/provider.dart';
 import 'package:window_manager/window_manager.dart';
 import './screens/app_start.dart';
@@ -67,6 +69,17 @@ void main(List<String> args) async {
     }
 
     // Create global models.
+    // Setup audio library.
+    if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+      try {
+        JustAudioMediaKit.ensureInitialized(macOS: true);
+      } catch (exception) {
+        globalAudioPlayerInitError = exception;
+        debugPrint("Unable to init audio player: $exception");
+      }
+    }
+
+    // Create global logger.
     initGlobalLogModel();
     initGlobalShutdownModel();
 
@@ -162,6 +175,7 @@ Future<void> runMainApp(Config cfg) async {
       ChangeNotifierProvider(create: (c) => PaymentsModel()),
       ChangeNotifierProvider(create: (c) => WalletModel()),
       ChangeNotifierProvider(create: (c) => TypingEmojiSelModel()),
+      ChangeNotifierProvider(create: (c) => AudioModel(), lazy: false),
     ],
     child: App(cfg, globalLogModel, globalShutdownModel),
   ));

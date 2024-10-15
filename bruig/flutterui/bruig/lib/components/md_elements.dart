@@ -5,6 +5,8 @@ import 'package:bruig/components/context_menu.dart';
 import 'package:bruig/components/pages/forms.dart';
 import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/components/text_dialog.dart';
+import 'package:bruig/components/audio_element.dart';
+import 'package:bruig/models/audio.dart';
 import 'package:bruig/models/downloads.dart';
 import 'package:bruig/models/payments.dart';
 import 'package:bruig/models/resources.dart';
@@ -159,6 +161,9 @@ class EmbedInlineSyntax extends md.InlineSyntax {
         break;
       case "application/pdf":
         tag = "pdf";
+        break;
+      case "audio/ogg":
+        tag = "audio";
         break;
       default:
         return true;
@@ -319,6 +324,7 @@ class MarkdownArea extends StatelessWidget {
   static final builders = {
     "pre": PreformattedElementBuilder(),
     "pdf": PDFMarkdownElementBuilder(),
+    "audio": AudioElementBuilder(),
     //"video": VideoMarkdownElementBuilder(basedir),
     "codeblock": CodeblockMarkdownElementBuilder(),
     "image": ImageMarkdownElementBuilder(),
@@ -591,6 +597,25 @@ class PDFMarkdownElementBuilder extends MarkdownElementBuilder {
         fit: BoxFit.cover,
       );
     }
+  }
+}
+
+class AudioElementBuilder extends MarkdownElementBuilder {
+  @override
+  Widget visitElementAfter(md.Element element, TextStyle? preferredStyle) {
+    Uint8List audioBytes;
+    try {
+      audioBytes = const Base64Decoder().convert(element.textContent);
+    } catch (exception) {
+      return Text("Unable to decode pdf: $exception");
+    }
+
+    // return Text("Audio bytes ${audioBytes.length}");
+    return Consumer<AudioModel>(
+        builder: (context, audio, child) => AudioElement(
+            mimeType: element.attributes["type"] ?? "audio/ogg",
+            audioBytes: audioBytes,
+            audio: audio));
   }
 }
 

@@ -14,6 +14,8 @@ class StorageManager {
   static const String ntfnGCMs = "ntfnGCMs";
   static const String ntfnGCMentions = "ntfnGCMentions";
   static const String notifiedGCUnkxdMembers = "notifiedGCUnkdMembers";
+  static const String audioCaptureDeviceIdKey = "audioCaptureDeviceId";
+  static const String audioPlaybackDeviceIdKey = "audioPlaybackDeviceId";
 
   static Future<void> saveData(String key, dynamic value) async {
     final prefs = await SharedPreferences.getInstance();
@@ -43,6 +45,11 @@ class StorageManager {
   static Future<bool> readBool(String key, {defaultVal = false}) async =>
       await readData(key) as bool? ?? defaultVal;
   static Future<void> saveBool(String key, bool value) async =>
+      await saveData(key, value);
+
+  static Future<String> readString(String key, {defaultVal = ""}) async =>
+      await readData(key) as String? ?? defaultVal;
+  static Future<void> saveString(String key, String value) async =>
       await saveData(key, value);
 
   static Future<bool> deleteData(String key) async {

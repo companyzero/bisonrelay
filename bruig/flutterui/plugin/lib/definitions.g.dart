@@ -2238,6 +2238,7 @@ const _$KXStageEnumMap = {
   KXStage.unknown: 0,
   KXStage.step2IdKX: 1,
   KXStage.step3IDKX: 2,
+  KXStage.mediateID: 'mediateID',
 };
 
 MediateIDRequest _$MediateIDRequestFromJson(Map<String, dynamic> json) =>
@@ -2252,4 +2253,59 @@ Map<String, dynamic> _$MediateIDRequestToJson(MediateIDRequest instance) =>
       'mediator': instance.mediator,
       'target': instance.target,
       'date': instance.date.toIso8601String(),
+    };
+
+AudioDevice _$AudioDeviceFromJson(Map<String, dynamic> json) => AudioDevice(
+      json['id'] as String,
+      json['name'] as String,
+      json['is_default'] as bool,
+    );
+
+Map<String, dynamic> _$AudioDeviceToJson(AudioDevice instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'name': instance.name,
+      'is_default': instance.isDefault,
+    };
+
+AudioDevices _$AudioDevicesFromJson(Map<String, dynamic> json) => AudioDevices(
+      (json['playback'] as List<dynamic>)
+          .map((e) => AudioDevice.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      (json['capture'] as List<dynamic>)
+          .map((e) => AudioDevice.fromJson(e as Map<String, dynamic>))
+          .toList(),
+    );
+
+Map<String, dynamic> _$AudioDevicesToJson(AudioDevices instance) =>
+    <String, dynamic>{
+      'playback': instance.playback,
+      'capture': instance.capture,
+    };
+
+AudioRecordNoteArgs _$AudioRecordNoteArgsFromJson(Map<String, dynamic> json) =>
+    AudioRecordNoteArgs(
+      json['capture_device_id'] as String,
+    );
+
+Map<String, dynamic> _$AudioRecordNoteArgsToJson(
+        AudioRecordNoteArgs instance) =>
+    <String, dynamic>{
+      'capture_device_id': instance.captureDeviceID,
+    };
+
+RecordedAudioNote _$RecordedAudioNoteFromJson(Map<String, dynamic> json) =>
+    RecordedAudioNote(
+      json['embed'] as String,
+      (json['size'] as num).toInt(),
+      (json['cost'] as num).toInt(),
+      (json['duration_ms'] as num).toInt(),
+    );
+
+Map<String, dynamic> _$RecordedAudioNoteToJson(RecordedAudioNote instance) =>
+    <String, dynamic>{
+      'embed': instance.embed,
+      'size': instance.size,
+      'cost': instance.cost,
+      'duration_ms': instance.durationMs,
     };

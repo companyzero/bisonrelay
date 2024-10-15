@@ -3,6 +3,8 @@ import 'dart:math';
 import 'package:bruig/components/attach_file.dart';
 import 'package:bruig/models/emoji.dart';
 import 'package:bruig/components/icons.dart';
+import 'package:bruig/components/chat/record_audio.dart';
+import 'package:bruig/models/audio.dart';
 import 'package:bruig/models/uistate.dart';
 import 'package:bruig/screens/chats.dart';
 import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
@@ -27,10 +29,13 @@ class ChatInput extends StatefulWidget {
 class _ChatInputState extends State<ChatInput> {
   final controller = TextEditingController();
 
+  late AudioModel audio;
   List<AttachmentEmbed> embeds = [];
   bool isAttaching = false;
+  bool isRecordingAudio = false;
   Uint8List? initialAttachData;
   String? initialAttachMime;
+  bool wasEmptyText = true;
 
   void replaceTextSelection(String s) {
     var sel = controller.selection.copyWith();
@@ -89,6 +94,16 @@ class _ChatInputState extends State<ChatInput> {
     }
   }
 
+  void controllerUpdated() {
+    bool changedEmpty = (wasEmptyText && controller.text != "") ||
+        (!wasEmptyText && controller.text == "");
+    if (changedEmpty) {
+      setState(() {
+        wasEmptyText = controller.text == "";
+      });
+    }
+  }
+
   bool containsUnkxdMembers = false;
 
   void containsUnxkdChanged() async {
@@ -107,6 +122,13 @@ class _ChatInputState extends State<ChatInput> {
     widget.inputFocusNode.addEmojiHandler = addEmoji;
     widget.chat.unkxdMembers.addListener(containsUnxkdChanged);
     containsUnkxdMembers = widget.chat.unkxdMembers.value?.isNotEmpty ?? false;
+    controller.addListener(controllerUpdated);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    audio = Provider.of<AudioModel>(context);
   }
 
   @override
@@ -215,98 +237,118 @@ class _ChatInputState extends State<ChatInput> {
     });
   }
 
+  void recordAudioNote() {
+    setState(() => isRecordingAudio = true);
+  }
+
+  void cancelAudioNote() {
+    setState(() => isRecordingAudio = false);
+  }
+
   @override
   Widget build(BuildContext context) {
     bool isScreenSmall = checkIsScreenSmall(context);
-    return Consumer<ThemeNotifier>(
-        builder: (context, theme, _) => isAttaching
-            ? Column(children: [
-                Row(mainAxisAlignment: MainAxisAlignment.start, children: [
+
+    if (isAttaching) {
+      return Column(children: [
+        Row(mainAxisAlignment: MainAxisAlignment.start, children: [
+          IconButton(
+              padding: const EdgeInsets.all(0),
+              iconSize: 25,
+              onPressed: cancelAttach,
+              icon: const Icon(Icons.keyboard_arrow_left_outlined))
+        ]),
+        AttachFileScreen(sendAttachment, initialAttachData, initialAttachMime)
+      ]);
+    }
+
+    var theme = Provider.of<ThemeNotifier>(context, listen: false);
+
+    if (audio.recording || audio.hasRecord) {
+      return Row(children: [
+        Expanded(
+            child:
+                RecordAudioInputPanel(audio: audio, sendMsg: sendAttachment)),
+        const RecordAudioInputButton(),
+      ]);
+    }
+
+    return Row(children: [
+      Expanded(
+        child: TextField(
+          onChanged: (value) {
+            widget.chat.workingMsg = value;
+
+            // Check if user is typing an emoji code (:foo:).
+            TypingEmojiSelModel.of(context, listen: false)
+                .maybeSelectEmojis(controller);
+          },
+          autofocus: isScreenSmall ? false : true,
+          focusNode: widget.inputFocusNode.inputFocusNode,
+          controller: controller,
+          minLines: 1,
+          maxLines: null,
+          contextMenuBuilder:
+              (BuildContext context, EditableTextState editableTextState) =>
+                  AdaptiveTextSelectionToolbar.editable(
+            anchors: editableTextState.contextMenuAnchors,
+            clipboardStatus: ClipboardStatus.pasteable,
+            onCopy: null,
+            onCut: null,
+            onLiveTextInput: null,
+            onLookUp: null,
+            onSearchWeb: null,
+            onSelectAll: null,
+            onShare: null,
+            onPaste: pasteEvent,
+          ),
+          style: theme.textStyleFor(context, TextSize.medium, null),
+          keyboardType: TextInputType.multiline,
+          decoration: InputDecoration(
+            isDense: true,
+            border: const OutlineInputBorder(
+              borderRadius: BorderRadius.all(Radius.circular(30.0)),
+              borderSide: BorderSide(width: 2.0),
+            ),
+            hintText: "Start a message",
+            prefixIcon: IconButton(
+                onPressed: () {
+                  var emojiModel =
+                      TypingEmojiSelModel.of(context, listen: false);
+                  emojiModel.showAddEmojiPanel.value =
+                      !emojiModel.showAddEmojiPanel.value;
+                },
+                icon: const Icon(Icons.emoji_emotions_outlined)),
+            suffixIcon: Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  if (!isScreenSmall || controller.text == "")
+                    IconButton(
+                        onPressed: attachFile,
+                        icon: const Icon(Icons.attach_file)),
+                  if (containsUnkxdMembers &&
+                      (!isScreenSmall || controller.text == ""))
+                    const Tooltip(
+                        message: "There are un-kx'd members in this GC.\n"
+                            "These members won't receive messages from you until the KX "
+                            "process completes.\nThis usually happens automatically, after "
+                            "they come back online.",
+                        child: ColoredIcon(Icons.warning_amber_outlined,
+                            color: TextColor.error)),
                   IconButton(
                       padding: const EdgeInsets.all(0),
-                      iconSize: 25,
-                      onPressed: cancelAttach,
-                      icon: const Icon(Icons.keyboard_arrow_left_outlined))
+                      iconSize: 20,
+                      onPressed: sendMsg,
+                      icon: const Icon(Icons.send))
                 ]),
-                AttachFileScreen(
-                    sendAttachment, initialAttachData, initialAttachMime)
-              ])
-            : Row(children: [
-                IconButton(
-                    padding: const EdgeInsets.all(0),
-                    iconSize: 25,
-                    onPressed: attachFile,
-                    icon: const Icon(Icons.add_outlined)),
-                const SizedBox(width: 5),
-                IconButton(
-                    padding: const EdgeInsets.all(0),
-                    iconSize: 25,
-                    onPressed: () {
-                      var emojiModel =
-                          TypingEmojiSelModel.of(context, listen: false);
-                      emojiModel.showAddEmojiPanel.value =
-                          !emojiModel.showAddEmojiPanel.value;
-                    },
-                    icon: const Icon(Icons.emoji_emotions_outlined)),
-                const SizedBox(width: 5),
-                Expanded(
-                    child: TextField(
-                  onChanged: (value) {
-                    widget.chat.workingMsg = value;
-
-                    // Check if user is typing an emoji code (:foo:).
-                    TypingEmojiSelModel.of(context, listen: false)
-                        .maybeSelectEmojis(controller);
-                  },
-                  autofocus: isScreenSmall ? false : true,
-                  focusNode: widget.inputFocusNode.inputFocusNode,
-                  controller: controller,
-                  minLines: 1,
-                  maxLines: null,
-                  contextMenuBuilder: (BuildContext context,
-                          EditableTextState editableTextState) =>
-                      AdaptiveTextSelectionToolbar.editable(
-                    anchors: editableTextState.contextMenuAnchors,
-                    clipboardStatus: ClipboardStatus.pasteable,
-                    onCopy: null,
-                    onCut: null,
-                    onLiveTextInput: null,
-                    onLookUp: null,
-                    onSearchWeb: null,
-                    onSelectAll: null,
-                    onShare: null,
-                    onPaste: pasteEvent,
-                  ),
-                  style: theme.textStyleFor(context, TextSize.medium, null),
-                  keyboardType: TextInputType.multiline,
-                  decoration: InputDecoration(
-                    isDense: true,
-                    border: const OutlineInputBorder(
-                      borderRadius: BorderRadius.all(Radius.circular(30.0)),
-                      borderSide: BorderSide(width: 2.0),
-                    ),
-                    hintText: "Start a message",
-                    suffixIcon: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          if (containsUnkxdMembers)
-                            const Tooltip(
-                                message:
-                                    "There are un-kx'd members in this GC.\n"
-                                    "These members won't receive messages from you until the KX "
-                                    "process completes.\nThis usually happens automatically, after "
-                                    "they come back online.",
-                                child: ColoredIcon(Icons.warning_amber_outlined,
-                                    color: TextColor.error)),
-                          IconButton(
-                              padding: const EdgeInsets.all(0),
-                              iconSize: 20,
-                              onPressed: sendMsg,
-                              icon: const Icon(Icons.send))
-                        ]),
-                  ),
-                )),
-              ]));
+          ),
+        ),
+      ),
+      if (!isScreenSmall || controller.text == "") ...[
+        const SizedBox(width: 5),
+        const RecordAudioInputButton(),
+      ],
+    ]);
   }
 }

@@ -30,6 +30,7 @@ List<String> allowedMimeTypes = [
   "image/jxl",
   "image/png",
   "image/webp",
+  "audio/ogg",
   "application/pdf"
 ];
 

@@ -1,9 +1,11 @@
 import 'dart:async';
 
 import 'package:bruig/components/chat/chat_side_menu.dart';
+import 'package:bruig/components/chat/record_audio.dart';
 import 'package:bruig/components/manage_gc.dart';
 import 'package:bruig/components/typing_emoji_panel.dart';
 import 'package:bruig/models/emoji.dart';
+import 'package:bruig/models/audio.dart';
 import 'package:bruig/models/snackbar.dart';
 import 'package:bruig/models/uistate.dart';
 import 'package:bruig/screens/chats.dart';
@@ -184,7 +186,15 @@ class _ActiveChatState extends State<ActiveChat> {
                             TypingEmojiPanel(
                               model: typingEmoji,
                               focusNode: inputFocusNode,
-                            )))
+                            ))),
+                if (isScreenSmall)
+                  Positioned(
+                      left: 10,
+                      bottom: 10,
+                      right: 10,
+                      child: Consumer<AudioModel>(
+                          builder: (context, audio, child) =>
+                              SmallScreenRecordInfoPanel(audio: audio))),
               ]),
             ),
             Container(

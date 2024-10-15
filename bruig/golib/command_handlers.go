@@ -27,6 +27,8 @@ import (
 	"github.com/companyzero/bisonrelay/client/resources/simplestore"
 	"github.com/companyzero/bisonrelay/clientrpc/types"
 	"github.com/companyzero/bisonrelay/embeddeddcrlnd"
+	"github.com/companyzero/bisonrelay/internal/audio"
+	"github.com/companyzero/bisonrelay/internal/mdembeds"
 	"github.com/companyzero/bisonrelay/lockfile"
 	"github.com/companyzero/bisonrelay/rates"
 	"github.com/companyzero/bisonrelay/rpc"
@@ -77,6 +79,8 @@ type clientCtx struct {
 	// expirationDays are the expirtation days provided by the server when
 	// connected
 	expirationDays uint64
+
+	noterec *audio.NoteRecorder
 
 	serverState atomic.Value
 }
@@ -478,6 +482,11 @@ func handleInitClient(handle uint32, args initClient) error {
 	}
 	brDialer := clientintf.WithDialer(args.ServerAddr, logBknd.logger("CONN"), dialFunc)
 
+	noterec, err := audio.NewRecorder(logBknd.logger("AREC"))
+	if err != nil {
+		return err
+	}
+
 	cfg := client.Config{
 		DB:                db,
 		Dialer:            brDialer,
@@ -734,6 +743,7 @@ func handleInitClient(handle uint32, args initClient) error {
 		skipWalletCheckChan: make(chan struct{}, 1),
 		initIDChan:          initIDChan,
 		certConfChan:        certConfChan,
+		noterec:             noterec,
 
 		confirmPayReqRecvChan: make(chan bool),
 		downloadConfChans:     make(map[zkidentity.ShortID]chan bool),
@@ -2138,8 +2148,8 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		if err != nil {
 			return nil, err
 		}
-
 		myID := c.PublicID()
+
 		var res []clientintf.UserID
 		for _, uid := range gc.Members {
 			if uid == myID {
@@ -2158,6 +2168,79 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 
 	case CTListMIRequests:
 		return c.ListMediateIDs()
+
+	case CTListAudioDevices:
+		return audio.ListAudioDevices(cc.log)
+
+	case CTAudioStartRecordNode:
+		var args audioRecordNoteArgs
+
+		err := cc.noterec.SetCaptureDevice(audio.FindDevice(audio.DeviceTypeCapture,
+			args.CaptureDeviceID))
+		if err != nil {
+			return nil, err
+		}
+
+		err = cc.noterec.Capture(cc.ctx)
+		if errors.Is(err, context.Canceled) {
+			err = nil
+		}
+		return nil, err
+
+	case CTAudioStartPlaybackNote:
+		var deviceId string
+		if err := cmd.decode(&deviceId); err != nil {
+			return nil, err
+		}
+
+		err := cc.noterec.SetPlaybackDevice(audio.FindDevice(audio.DeviceTypePlayback,
+			deviceId))
+		if err != nil {
+			return nil, err
+		}
+
+		err = cc.noterec.Playback(cc.ctx)
+		if errors.Is(err, context.Canceled) {
+			err = nil
+		}
+		return nil, err
+
+	case CTAudioStopNote:
+		cc.noterec.Stop()
+		return nil, nil
+
+	case CTAudioNoteEmbed:
+		if !cc.noterec.HasRecorded() {
+			return nil, fmt.Errorf("no recorded audio note")
+		}
+
+		data, err := cc.noterec.OpusFile()
+		if err != nil {
+			return nil, err
+		}
+
+		info := cc.noterec.RecordInfo()
+
+		var args mdembeds.EmbeddedArgs
+		args.Alt = "Audio note"
+		args.Typ = "audio/ogg"
+		args.Filename = time.Now().Format("2006-01-02-15_04_05") + "-audionote.opus"
+		args.Data = data
+		msg := args.String()
+
+		feeRate := cc.c.ServerSession().Policy().PushPayRate
+		estCost, err := clientintf.EstimatePMCost(msg, feeRate)
+		if err != nil {
+			return nil, err
+		}
+
+		res := recordedAudioNote{
+			Embed:      msg,
+			Size:       uint32(len(data)),
+			Cost:       estCost,
+			DurationMs: uint64(info.DurationMs),
+		}
+		return res, nil
 	}
 	return nil, nil
 

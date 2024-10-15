@@ -77,6 +77,14 @@ dependencies:
   archive: ^3.6.1
   emoji_picker_flutter: ^3.0.0
   retrieval: ^1.0.1
+  just_audio: ^0.9.39
+  just_audio_media_kit:
+    git:
+      url: https://github.com/lvyueyang/just_audio_media_kit/
+      ref: 784d93b249e3db1c98f22827be357942f855eae0
+  media_kit_libs_linux: any
+  media_kit_libs_windows_audio: any
+  media_kit_libs_macos_audio: any
 
 msix_config:
   display_name: Bison Relay GUI

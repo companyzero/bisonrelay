@@ -2273,6 +2273,53 @@ class MediateIDRequest {
       _$MediateIDRequestFromJson(json);
 }
 
+@JsonSerializable()
+class AudioDevice {
+  final String id;
+  final String name;
+  @JsonKey(name: "is_default")
+  final bool isDefault;
+
+  AudioDevice(this.id, this.name, this.isDefault);
+  factory AudioDevice.fromJson(Map<String, dynamic> json) =>
+      _$AudioDeviceFromJson(json);
+  Map<String, dynamic> toJson() => _$AudioDeviceToJson(this);
+}
+
+@JsonSerializable()
+class AudioDevices {
+  final List<AudioDevice> playback;
+  final List<AudioDevice> capture;
+
+  AudioDevices(this.playback, this.capture);
+  factory AudioDevices.fromJson(Map<String, dynamic> json) =>
+      _$AudioDevicesFromJson(json);
+  Map<String, dynamic> toJson() => _$AudioDevicesToJson(this);
+}
+
+@JsonSerializable()
+class AudioRecordNoteArgs {
+  @JsonKey(name: "capture_device_id")
+  final String captureDeviceID;
+
+  AudioRecordNoteArgs(this.captureDeviceID);
+  Map<String, dynamic> toJson() => _$AudioRecordNoteArgsToJson(this);
+}
+
+@JsonSerializable()
+class RecordedAudioNote {
+  final String embed;
+  final int size;
+  final int cost;
+  @JsonKey(name: "duration_ms")
+  final int durationMs;
+
+  RecordedAudioNote(this.embed, this.size, this.cost, this.durationMs);
+
+  factory RecordedAudioNote.fromJson(Map<String, dynamic> json) =>
+      _$RecordedAudioNoteFromJson(json);
+}
+
 mixin NtfStreams {
   StreamController<RemoteUser> ntfAcceptedInvites =
       StreamController<RemoteUser>();
@@ -3312,6 +3359,21 @@ abstract class PluginPlatform {
 
   Future<List<MediateIDRequest>> listMediateIDRequests() async => jsonToList(
       await asyncCall(CTListMIRequests, null), MediateIDRequest.fromJson);
+
+  Future<AudioDevices> listAudioDevices() async =>
+      AudioDevices.fromJson(await asyncCall(CTListAudioDevices, null));
+
+  Future<void> startAudioNoteRecord(AudioRecordNoteArgs args) async =>
+      await (asyncCall(CTAudioStartRecordNode, args));
+
+  Future<void> startAudioNotePlayback(String deviceID) async =>
+      await (asyncCall(CTAudioStartPlaybackNote, deviceID));
+
+  Future<void> stopAudioNote() async =>
+      await (asyncCall(CTAudioStopNote, null));
+
+  Future<RecordedAudioNote> audioNoteEmbed() async =>
+      RecordedAudioNote.fromJson(await (asyncCall(CTAudioNoteEmbed, null)));
 }
 
 const int CTUnknown = 0x00;
@@ -3448,6 +3510,11 @@ const int CTUpdateUINotificationsCfg = 0x8e;
 const int CTGCListUnkxdMembers = 0x8f;
 const int CTListKXs = 0x90;
 const int CTListMIRequests = 0x91;
+const int CTListAudioDevices = 0x92;
+const int CTAudioStartRecordNode = 0x93;
+const int CTAudioStartPlaybackNote = 0x94;
+const int CTAudioStopNote = 0x95;
+const int CTAudioNoteEmbed = 0x96;
 
 const int notificationsStartID = 0x1000;
 
