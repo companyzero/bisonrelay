@@ -251,6 +251,13 @@ func hbytes(i int64) string {
 	}
 }
 
+func plural(i int, s, p string) string {
+	if i == 1 {
+		return s
+	}
+	return p
+}
+
 func programByMimeType(mimeMap map[string]string, t string) string {
 	f, exists := mimeMap[t]
 	if exists {
