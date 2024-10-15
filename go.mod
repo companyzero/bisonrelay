@@ -9,6 +9,7 @@ require (
 	github.com/charmbracelet/bubbletea v1.1.1
 	github.com/charmbracelet/lipgloss v0.13.0
 	github.com/charmbracelet/x/exp/term v0.0.0-20240814160751-e2dc8b53b604
+	github.com/companyzero/gopus v0.0.1
 	github.com/companyzero/sntrup4591761 v0.0.0-20220309191932-9e0f3af2f07a
 	github.com/davecgh/go-spew v1.1.1
 	github.com/decred/dcrd/bech32 v1.1.3
@@ -25,6 +26,7 @@ require (
 	github.com/decred/slog v1.2.0
 	github.com/erikgeiser/promptkit v0.9.0
 	github.com/fsnotify/fsnotify v1.7.0
+	github.com/gen2brain/malgo v0.11.23-0.20241022172812-d802981a69a1
 	github.com/gorilla/websocket v1.5.1
 	github.com/jessevdk/go-flags v1.6.1
 	github.com/jrick/flagfile v1.0.0
