@@ -16,7 +16,7 @@ class FatalErrorScreen extends StatelessWidget {
     return Scaffold(
         body: Container(
             color: Colors.red,
-            width: double.infinity,
+            padding: const EdgeInsets.all(20),
             child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 mainAxisAlignment: MainAxisAlignment.center,

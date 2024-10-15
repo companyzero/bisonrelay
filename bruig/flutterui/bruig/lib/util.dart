@@ -166,3 +166,13 @@ Future<void> sleep(Duration d) {
   Timer(d, p.complete);
   return p.future;
 }
+
+String formatSmallDuration(Duration d) {
+  String res = "";
+  if (d.inHours > 0) {
+    res = "${d.inHours.toString().padLeft(2, '0')}:";
+  }
+  var mins = (d.inMinutes - (d.inHours * 60)).toString().padLeft(2, '0');
+  var secs = (d.inSeconds - (d.inMinutes * 60)).toString().padLeft(2, '0');
+  return "$res$mins:$secs";
+}

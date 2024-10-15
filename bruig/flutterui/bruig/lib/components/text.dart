@@ -1,5 +1,7 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'dart:io';
+
 import 'package:bruig/theme_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/material.dart' as material;
@@ -81,5 +83,23 @@ class Txt extends StatelessWidget {
       return material.Text(data,
           textAlign: textAlign, overflow: overflow, style: mergedStyle);
     });
+  }
+}
+
+// Show tooltip except on mobile platforms.
+class TooltipExcludingMobile extends StatelessWidget {
+  final Widget child;
+  final String? message;
+  final InlineSpan? richMessage;
+  const TooltipExcludingMobile(
+      {super.key, required this.child, this.message, this.richMessage});
+
+  @override
+  Widget build(BuildContext context) {
+    if (Platform.isAndroid || Platform.isIOS) {
+      return child;
+    }
+
+    return Tooltip(message: message, richMessage: richMessage, child: child);
   }
 }

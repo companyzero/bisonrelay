@@ -6,6 +6,7 @@ import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/components/interactive_avatar.dart';
 import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/components/text.dart';
+import 'package:bruig/models/audio.dart';
 import 'package:bruig/models/snackbar.dart';
 import 'package:bruig/models/uistate.dart';
 import 'package:bruig/notification_service.dart';
@@ -17,11 +18,13 @@ import 'package:bruig/screens/manage_content/manage_content.dart';
 import 'package:bruig/screens/paystats.dart';
 import 'package:bruig/screens/about.dart';
 import 'package:bruig/screens/shutdown.dart';
+import 'package:bruig/util.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:bruig/theme_manager.dart';
 import 'package:golib_plugin/definitions.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 import 'package:bruig/models/client.dart';
 import 'package:golib_plugin/golib_plugin.dart';
@@ -190,6 +193,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
       case "About":
         settingsView = const AboutScreen(settings: true);
         break;
+      case "Audio":
+        settingsView = Consumer<AudioModel>(
+            builder: (context, audio, child) =>
+                AudioSettingsScreen(audio: audio));
+        break;
       default:
         break;
     }
@@ -222,6 +230,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
           selected: settingsPage == "Network",
           title: const Txt.S("Network"),
           onTap: () => changePage("Network"),
+        ),
+        ListTile(
+          selected: settingsPage == "Audio",
+          title: const Txt.S("Audio"),
+          onTap: () => changePage("Audio"),
         ),
       ]),
       Expanded(child: settingsView),
@@ -277,6 +290,10 @@ class MainSettingsScreen extends StatelessWidget {
                     onTap: () => changePage("Network"),
                     leading: const Icon(Icons.shield),
                     title: const Text("Network")),
+                ListTile(
+                    onTap: () => changePage("Audio"),
+                    leading: const Icon(Icons.perm_camera_mic_outlined),
+                    title: const Text("Audio")),
                 ListTile(
                     onTap: () {
                       Navigator.of(context)
@@ -680,6 +697,159 @@ class _NetworkSettingsScreenState extends State<NetworkSettingsScreen> {
         ],
       ))
     ]);
+  }
+}
+
+class AudioSettingsScreen extends StatefulWidget {
+  final AudioModel audio;
+  const AudioSettingsScreen({required this.audio, super.key});
+
+  @override
+  State<AudioSettingsScreen> createState() => _AudioSettingsScreenState();
+}
+
+class _AudioSettingsScreenState extends State<AudioSettingsScreen> {
+  AudioModel get audio => widget.audio;
+  AudioDevices devices = AudioDevices([], []);
+
+  void listAudioDevices() async {
+    if (Platform.isAndroid || Platform.isIOS) {
+      var micStatus = await Permission.microphone.request();
+      if (!micStatus.isGranted) {
+        showErrorSnackbar(this, "Microphone permission not given");
+        return;
+      }
+    }
+
+    try {
+      var devs = await Golib.listAudioDevices();
+
+      setState(() {
+        devices = devs;
+      });
+    } catch (exception) {
+      showErrorSnackbar(this, "Unable to list audio devices: $exception");
+    }
+  }
+
+  void stopAudio() async {
+    try {
+      await audio.stop();
+    } catch (exception) {
+      showErrorSnackbar(this, "Unable to stop audio: $exception");
+    }
+  }
+
+  void recordAudio() async {
+    try {
+      await audio.recordNote();
+    } catch (exception) {
+      showErrorSnackbar(this, "Unable to start audio recording: $exception");
+    }
+  }
+
+  void playbackAudio() async {
+    try {
+      await audio.playbackNote();
+    } catch (exception) {
+      showErrorSnackbar(this, "Unable to start audio playback: $exception");
+    }
+  }
+
+  void updated() {
+    setState(() {});
+  }
+
+  void clearRecord() async {
+    // Sleep is needed on slower computers to avoid recursive/locked setState
+    // exceptions (because clearRecord is called from init/dispose).
+    await sleep(const Duration(milliseconds: 1));
+    audio.clearRecorded();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    clearRecord();
+    audio.addListener(updated);
+    listAudioDevices();
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+    audio.removeListener(updated);
+    clearRecord();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Text("Capture Device"),
+          SizedBox(
+              width: double.infinity,
+              child: DropdownButton(
+                  value: audio.captureDeviceId == ""
+                      ? null
+                      : audio.captureDeviceId,
+                  items: devices.capture
+                      .map<DropdownMenuItem<String?>>((e) =>
+                          DropdownMenuItem<String?>(
+                              value: e.id, child: Txt.S(e.name)))
+                      .toList(),
+                  onChanged: (newVal) {
+                    if (newVal == null) {
+                      return;
+                    }
+                    if (newVal == audio.captureDeviceId) {
+                      return;
+                    }
+                    audio.captureDeviceId = newVal;
+                  })),
+          const SizedBox(height: 30),
+          const Text("Playback Device"),
+          SizedBox(
+              width: double.infinity,
+              child: DropdownButton(
+                  value: audio.playbackDeviceId == ""
+                      ? null
+                      : audio.playbackDeviceId,
+                  items: devices.playback
+                      .map<DropdownMenuItem<String?>>((e) =>
+                          DropdownMenuItem<String?>(
+                              value: e.id, child: Txt.S(e.name)))
+                      .toList(),
+                  onChanged: (newVal) {
+                    if (newVal == null) {
+                      return;
+                    }
+                    if (newVal == audio.playbackDeviceId) {
+                      return;
+                    }
+                    audio.playbackDeviceId = newVal;
+                  })),
+          const SizedBox(height: 30),
+          Wrap(spacing: 10, runSpacing: 10, children: [
+            TextButton.icon(
+                onPressed:
+                    !audio.recording && !audio.playing ? recordAudio : null,
+                label: const Text("Record Audio Test"),
+                icon: const Icon(Icons.record_voice_over_outlined)),
+            if (audio.hasRecord)
+              TextButton.icon(
+                  onPressed:
+                      !audio.recording && !audio.playing ? playbackAudio : null,
+                  label: const Text("Play Audio Test"),
+                  icon: const Icon(Icons.play_arrow_outlined)),
+            if (audio.recording || audio.playing)
+              TextButton.icon(
+                  onPressed: stopAudio,
+                  label: const Text("Stop"),
+                  icon: const Icon(Icons.stop)),
+          ]),
+        ]));
   }
 }
 
