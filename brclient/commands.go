@@ -18,6 +18,7 @@ import (
 	"github.com/companyzero/bisonrelay/client"
 	"github.com/companyzero/bisonrelay/client/clientdb"
 	"github.com/companyzero/bisonrelay/client/clientintf"
+	"github.com/companyzero/bisonrelay/internal/audio"
 	"github.com/companyzero/bisonrelay/internal/strescape"
 	"github.com/companyzero/bisonrelay/zkidentity"
 	"github.com/decred/dcrd/dcrutil/v4"
@@ -3549,6 +3550,183 @@ var myAvatarCmds = []tuicmd{
 	},
 }
 
+var audioCmds = []tuicmd{
+	{
+		cmd:           "devices",
+		aliases:       []string{"listdevices"},
+		descr:         "List capture and playback devices",
+		usableOffline: true,
+		handler: func(args []string, as *appState) error {
+			devices, err := audio.ListAudioDevices(as.log)
+			if err != nil {
+				return err
+			}
+
+			as.manyDiagMsgsCb(func(pf printf) {
+				printDevice := func(i int, dev *audio.Device) {
+					defaultStr := ""
+					if dev.IsDefault {
+						defaultStr = "(default) "
+					}
+					pf("Device %d %s%s", i, defaultStr, dev.Name)
+					pf("ID: %s", strescape.Nick(dev.ID))
+					pf("")
+				}
+
+				pf("")
+				if len(devices.Capture) == 0 {
+					pf("No audio capture devices found")
+				} else {
+					pf("Audio capture devices")
+					pf("")
+					for i := range devices.Capture {
+						printDevice(i, &devices.Capture[i])
+					}
+				}
+
+				if len(devices.Playback) == 0 {
+					pf("No audio playback devices found")
+				} else {
+					pf("Audio playback devices")
+					pf("")
+					for i := range devices.Playback {
+						printDevice(i, &devices.Playback[i])
+					}
+				}
+			})
+
+			return nil
+		},
+	}, {
+		cmd:           "capturedevice",
+		usableOffline: true,
+		aliases:       []string{"capdevice", "cdevice", "capdev"},
+		usage:         "Select the capture device",
+		descr:         "[<device index>]",
+		handler: func(args []string, as *appState) error {
+			if len(args) == 0 {
+				as.noterec.SetCaptureDevice(nil)
+				as.diagMsg("Using default device for audio capture")
+				return nil
+			}
+
+			devIndex, err := strconv.ParseInt(args[0], 10, 32)
+			if err != nil {
+				return usageError{msg: "Argument not a number"}
+			}
+			if devIndex < 0 {
+				return usageError{msg: "Device index cannot be negative"}
+			}
+
+			devices, err := audio.ListAudioDevices(as.log)
+			if err != nil {
+				return err
+			}
+			if devIndex >= int64(len(devices.Capture)) {
+				return fmt.Errorf("device %d does not exist", devIndex)
+			}
+
+			err = as.noterec.SetCaptureDevice(&devices.Capture[devIndex])
+			return err
+		},
+	}, {
+		cmd:           "playbackdevice",
+		usableOffline: true,
+		aliases:       []string{"playdevice", "pdevice", "playdev"},
+		usage:         "Select the playback device",
+		descr:         "[<device index>]",
+		handler: func(args []string, as *appState) error {
+			if len(args) == 0 {
+				as.noterec.SetPlaybackDevice(nil)
+				as.diagMsg("Using default device for audio capture")
+				return nil
+			}
+
+			devIndex, err := strconv.ParseInt(args[0], 10, 32)
+			if err != nil {
+				return usageError{msg: "Argument not a number"}
+			}
+			if devIndex < 0 {
+				return usageError{msg: "Device index cannot be negative"}
+			}
+
+			devices, err := audio.ListAudioDevices(as.log)
+			if err != nil {
+				return err
+			}
+			if devIndex >= int64(len(devices.Playback)) {
+				return fmt.Errorf("device %d does not exist", devIndex)
+			}
+
+			err = as.noterec.SetPlaybackDevice(&devices.Playback[devIndex])
+			return err
+		},
+	}, {
+		cmd:   "send",
+		descr: "Send an audio note",
+		usage: "[<target>]",
+		handler: func(args []string, as *appState) error {
+			var targetId clientintf.UserID
+			var targetIsGC bool
+
+			if len(args) > 0 {
+				uid, err := as.c.UIDByNick(args[0])
+				if err == nil {
+					targetId = uid
+				} else if gcid, err := as.c.GCIDByName(args[0]); err == nil {
+					targetId = gcid
+					targetIsGC = true
+				} else {
+					return usageError{"Target user or GC not found"}
+				}
+			} else {
+				cw := as.activeChatWindow()
+				if cw == nil || cw.isPage {
+					return usageError{"No target specified"}
+				}
+				if cw.isGC {
+					targetId = cw.gc
+					targetIsGC = true
+				} else {
+					targetId = cw.uid
+				}
+			}
+
+			as.sendMsg(msgSendAudioNote{targetID: targetId, targetIsGC: targetIsGC})
+			return nil
+		},
+		completer: func(args []string, arg string, as *appState) []string {
+			if len(args) == 0 {
+				return nickCompleter(arg, as)
+			}
+			return nil
+		},
+	}, {
+		cmd:           "test",
+		usableOffline: true,
+		descr:         "Record and playback a 3-second test note",
+		handler: func(args []string, as *appState) error {
+			go func() {
+				as.diagMsg("Starting 3 second capture")
+				ctx, cancel := context.WithTimeout(as.ctx, 3*time.Second)
+				defer cancel()
+				err := as.noterec.Capture(ctx)
+				if err != nil {
+					as.diagMsg("Error capturing audio: %v", err)
+					return
+				}
+
+				as.diagMsg("Starting playback")
+				err = as.noterec.Playback(as.ctx)
+				if err != nil {
+					as.diagMsg("Error playing back audio: %v", err)
+				}
+			}()
+			return nil
+		},
+	},
+}
+
 var commands = []tuicmd{
 	{
 		cmd:           "backup",
@@ -4279,6 +4457,12 @@ var commands = []tuicmd{
 			as.cwHelpMsg("Cleared payment stats%s", forUser)
 			return nil
 		},
+		completer: func(args []string, arg string, as *appState) []string {
+			if len(args) == 0 {
+				return nickCompleter(arg, as)
+			}
+			return nil
+		},
 	}, {
 		cmd:           "info",
 		usableOffline: true,
@@ -4452,6 +4636,18 @@ var commands = []tuicmd{
 			}()
 			return nil
 		},
+	}, {
+		cmd:           "audio",
+		usableOffline: true,
+		descr:         "Audio-related commands",
+		sub:           audioCmds,
+		completer: func(args []string, arg string, as *appState) []string {
+			if len(args) == 0 {
+				return cmdCompleter(audioCmds, arg, false)
+			}
+			return nil
+		},
+		handler: subcmdNeededHandler,
 	}, {
 		cmd:           "quit",
 		usableOffline: true,

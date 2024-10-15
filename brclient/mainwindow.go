@@ -725,6 +725,9 @@ func (mws mainWindowState) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			mws.completeIdx = 0
 		}
 
+	case msgSendAudioNote:
+		return newSendAudioNoteWindow(mws.as, msg)
+
 	default:
 		// Handle other messages.
 		mws.textArea, cmd = mws.textArea.Update(msg)

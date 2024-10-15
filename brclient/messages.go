@@ -85,6 +85,13 @@ type msgUnwelcomeError struct {
 
 type msgReplaceCmd string
 
+type msgRecordNote struct{}
+type msgPlaybackNote struct{}
+type msgRefreshAudioNoteUI struct{}
+type msgRecordComplete struct{}
+type msgPlaybackComplete struct{}
+type msgAudioError error
+
 func paste() tea.Msg {
 	str, err := clipboard.ReadAll()
 	if err != nil {
@@ -194,12 +201,24 @@ func emitMsg(msg tea.Msg) tea.Cmd {
 	}
 }
 
+func emitAfter(msg tea.Msg, delay time.Duration) tea.Cmd {
+	return func() tea.Msg {
+		time.Sleep(delay)
+		return msg
+	}
+}
+
 type msgRunCmd func() tea.Msg
 
 type msgExternalCommentResult struct {
 	err    error
 	data   string
 	parent *zkidentity.ShortID
+}
+
+type msgSendAudioNote struct {
+	targetID   clientintf.UserID
+	targetIsGC bool
 }
 
 // isQuitMsg returns true if the app should quit as a response to the given

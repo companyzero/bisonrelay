@@ -36,6 +36,7 @@ import (
 	"github.com/companyzero/bisonrelay/client/resources/simplestore"
 	"github.com/companyzero/bisonrelay/client/rpcserver"
 	"github.com/companyzero/bisonrelay/clientrpc/types"
+	"github.com/companyzero/bisonrelay/internal/audio"
 	"github.com/companyzero/bisonrelay/internal/mdembeds"
 	"github.com/companyzero/bisonrelay/internal/strescape"
 	"github.com/companyzero/bisonrelay/internal/tlsconn"
@@ -220,6 +221,8 @@ type appState struct {
 	ssPayType    simpleStorePayType
 	ssAcct       string
 	ssShipCharge float64
+
+	noterec *audio.NoteRecorder
 }
 
 type appStateErr struct {
@@ -3946,6 +3949,11 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 	})
 	go r.Run(ctx)
 
+	noterec, err := audio.NewRecorder(logBknd.logger("AREC"))
+	if err != nil {
+		return nil, fmt.Errorf("unable to init audio subsystem: %v", err)
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	as = &appState{
 		ctx:         ctx,
@@ -3963,6 +3971,7 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		lnRouter:    lnRouter,
 		httpClient:  &httpClient,
 		rates:       r,
+		noterec:     noterec,
 
 		network:   args.Network,
 		isRestore: isRestore,
