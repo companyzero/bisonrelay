@@ -8,6 +8,7 @@
 
 #include <emoji_picker_flutter/emoji_picker_flutter_plugin.h>
 #include <file_selector_linux/file_selector_plugin.h>
+#include <flutter_avif_linux/flutter_avif_linux_plugin.h>
 #include <golib_plugin/golib_plugin.h>
 #include <image_compression_flutter/image_compression_flutter_plugin.h>
 #include <irondash_engine_context/irondash_engine_context_plugin.h>
@@ -24,6 +25,9 @@ void fl_register_plugins(FlPluginRegistry* registry) {
   g_autoptr(FlPluginRegistrar) file_selector_linux_registrar =
       fl_plugin_registry_get_registrar_for_plugin(registry, "FileSelectorPlugin");
   file_selector_plugin_register_with_registrar(file_selector_linux_registrar);
+  g_autoptr(FlPluginRegistrar) flutter_avif_linux_registrar =
+      fl_plugin_registry_get_registrar_for_plugin(registry, "FlutterAvifLinuxPlugin");
+  flutter_avif_linux_plugin_register_with_registrar(flutter_avif_linux_registrar);
   g_autoptr(FlPluginRegistrar) golib_plugin_registrar =
       fl_plugin_registry_get_registrar_for_plugin(registry, "GolibPlugin");
   golib_plugin_register_with_registrar(golib_plugin_registrar);

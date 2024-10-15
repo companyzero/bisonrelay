@@ -25,6 +25,7 @@ import 'package:bruig/theme_manager.dart';
 import 'package:bruig/components/image_dialog.dart';
 import 'package:pdfrx/pdfrx.dart';
 import 'package:path/path.dart' as path;
+import 'package:flutter_avif/flutter_avif.dart';
 
 class DownloadSource {
   final String uid;
@@ -141,7 +142,6 @@ class EmbedInlineSyntax extends md.InlineSyntax {
 
     var tag = "";
     switch (parms["type"]) {
-      case "image/avif":
       case "image/bmp":
       case "image/gif":
       case "image/jpeg":
@@ -150,6 +150,8 @@ class EmbedInlineSyntax extends md.InlineSyntax {
       case "image/webp":
         tag = "image";
         break;
+      case "image/avif":
+        tag = "avif";
       case "text/plain":
         // Decode plain text directly.
         tag = "pre";
@@ -331,6 +333,7 @@ class MarkdownArea extends StatelessWidget {
     "download": DownloadLinkElementBuilder(),
     "form": FormElementBuilder(),
     "lnpay": _LNPayURLElementBuilder(),
+    "avif": AVIFElementBuilder(),
   };
 
   static final inlineSyntaxes = [
@@ -656,6 +659,44 @@ class ImageMarkdownElementBuilder extends MarkdownElementBuilder {
 
     try {
       return ImageMd(tip, imgBytes, type);
+    } catch (exception) {
+      debugPrint("Unable to decode image: $exception");
+      return Image.asset(
+        "assets/images/invalidimg.png",
+        width: 300,
+        height: 300,
+        fit: BoxFit.cover,
+      );
+    }
+  }
+}
+
+class AVIFElementBuilder extends MarkdownElementBuilder {
+  @override
+  Widget visitElementAfter(md.Element element, TextStyle? preferredStyle) {
+    Uint8List imgBytes;
+    try {
+      imgBytes = const Base64Decoder().convert(element.textContent);
+    } catch (exception) {
+      return Text("Unable to decode image: $exception");
+    }
+
+    var alt = element.attributes["alt"] ?? "";
+    var download = element.attributes["fid"] ?? "";
+    var tip = "";
+    if (alt != "") {
+      tip = alt;
+      if (download != "") {
+        tip += "\n\n";
+      }
+    }
+    if (download != "") {
+      tip += "Click to download file $download";
+    }
+    var type = element.attributes["type"] ?? "";
+
+    try {
+      return AvifImage.memory(imgBytes);
     } catch (exception) {
       debugPrint("Unable to decode image: $exception");
       return Image.asset(

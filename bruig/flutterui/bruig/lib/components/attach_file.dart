@@ -11,6 +11,7 @@ import 'package:bruig/models/snackbar.dart';
 import 'package:bruig/screens/compress.dart';
 import 'package:bruig/theme_manager.dart';
 import 'package:bruig/util.dart';
+import 'package:flutter_avif/flutter_avif.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -299,12 +300,20 @@ class _AttachFileScreenState extends State<AttachFileScreen> {
                 ? Container(
                     margin: const EdgeInsets.symmetric(vertical: 8.0),
                     height: 200.0,
-                    child: Image.memory(fileData!, errorBuilder:
-                        (BuildContext context, Object error,
-                            StackTrace? stackTrace) {
-                      return const Center(
-                          child: Text('This image type is not supported'));
-                    }))
+                    child: mime.contains("avif")
+                        ? AvifImage.memory(fileData!, errorBuilder:
+                            (BuildContext context, Object error,
+                                StackTrace? stackTrace) {
+                            return const Center(
+                                child: Text('Avif unable to be decoded'));
+                          })
+                        : Image.memory(fileData!, errorBuilder:
+                            (BuildContext context, Object error,
+                                StackTrace? stackTrace) {
+                            return const Center(
+                                child:
+                                    Text('This image type is not supported'));
+                          }))
                 : mime.startsWith('text/')
                     ? Container(
                         margin: const EdgeInsets.symmetric(vertical: 8.0),
