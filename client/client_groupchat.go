@@ -1223,6 +1223,43 @@ func (c *Client) GetGCBlockList(gcID zkidentity.ShortID) (clientdb.GCBlockList, 
 	return gcbl, err
 }
 
+// GetGCTargetCount returns the number of members of the GC that would receive
+// a message if the local client sent a message in this GC. This takes into
+// account ignored/gc-blocked members and the local client itself.
+//
+// Returns zero if the passed id is not for a GC the client is a member of.
+func (c *Client) GetGCDestCount(gcID zkidentity.ShortID) int {
+	var gc rpc.RMGroupList
+	var gcBlockList clientdb.GCBlockList
+	err := c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
+		var err error
+		if gc, err = c.db.GetGC(tx, gcID); err != nil {
+			return err
+		}
+		if gcBlockList, err = c.db.GetGCBlockList(tx, gcID); err != nil {
+			return err
+		}
+
+		return nil
+	})
+	if err != nil {
+		return 0
+	}
+
+	myID := c.PublicID()
+	members := gcBlockList.FilterMembers(gc.Members)
+	for i := 0; i < len(members); {
+		if members[i] != myID {
+			i += 1
+		}
+		if i < len(members)-1 {
+			members[i] = members[len(members)-1]
+		}
+		members = members[:len(members)-1]
+	}
+	return len(members)
+}
+
 // ListGCs lists all local GCs the user is participating in.
 func (c *Client) ListGCs() ([]rpc.RMGroupList, error) {
 	var gcs []rpc.RMGroupList

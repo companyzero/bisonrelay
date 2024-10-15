@@ -251,3 +251,21 @@ func EstimatePostSize(content, descr string) (uint64, error) {
 	}
 	return uint64(ratchet.EncryptedSize(len(rm))), nil
 }
+
+// Returns the estimate cost (in milliatoms) to send the given PM message to a
+// remote user. The feeRate must be specified in milliatoms/byte.
+func EstimatePMCost(msg string, feeRate uint64) (uint64, error) {
+	// Use a medium level compression level for the estimate.
+	const compressLevel = 4
+
+	// Encode it and return the size of an encrypted version of it.
+	rmpm := rpc.RMPrivateMessage{Message: msg}
+	rm, err := rpc.ComposeCompressedRM(dummySigner, rmpm, compressLevel)
+	if err != nil {
+		return 0, err
+	}
+
+	rmSize := uint64(ratchet.EncryptedSize(len(rm)))
+	cost := rmSize * feeRate
+	return cost, nil
+}
