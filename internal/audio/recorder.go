@@ -1,3 +1,5 @@
+//go:build cgo && !noaudio
+
 package audio
 
 import (
