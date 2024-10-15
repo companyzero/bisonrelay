@@ -1,4 +1,5 @@
-import 'package:bruig/components/buttons.dart';
+import 'package:bruig/components/feed/comment_input.dart';
+import 'package:bruig/components/typing_emoji_panel.dart';
 import 'package:bruig/components/containers.dart';
 import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/components/icons.dart';
@@ -11,6 +12,7 @@ import 'package:bruig/models/feed.dart';
 import 'package:bruig/models/snackbar.dart';
 import 'package:bruig/models/uistate.dart';
 import 'package:bruig/screens/overview.dart';
+import 'package:bruig/screens/chats.dart';
 import 'package:bruig/util.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/golib_plugin.dart';
@@ -18,6 +20,7 @@ import 'package:golib_plugin/definitions.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:bruig/theme_manager.dart';
+import 'package:bruig/models/emoji.dart';
 
 class PostContentScreenArgs {
   final FeedPostModel post;
@@ -27,13 +30,15 @@ class PostContentScreenArgs {
 class PostContentScreen extends StatelessWidget {
   final PostContentScreenArgs args;
   final Function tabChange;
-  const PostContentScreen(this.args, this.tabChange, {super.key});
+  final TypingEmojiSelModel typingEmoji;
+  const PostContentScreen(this.args, this.tabChange, this.typingEmoji,
+      {super.key});
 
   @override
   Widget build(BuildContext context) {
     return Consumer2<ClientModel, FeedModel>(
-        builder: (context, client, feed, child) =>
-            _PostContentScreenForArgs(args, client, tabChange, feed));
+        builder: (context, client, feed, child) => _PostContentScreenForArgs(
+            args, client, tabChange, feed, typingEmoji));
   }
 }
 
@@ -42,8 +47,9 @@ class _PostContentScreenForArgs extends StatefulWidget {
   final ClientModel client;
   final Function tabChange;
   final FeedModel feed;
+  final TypingEmojiSelModel typingEmoji;
   const _PostContentScreenForArgs(
-      this.args, this.client, this.tabChange, this.feed);
+      this.args, this.client, this.tabChange, this.feed, this.typingEmoji);
 
   @override
   State<_PostContentScreenForArgs> createState() =>
@@ -83,8 +89,9 @@ class _CommentW extends StatefulWidget {
   final ClientModel client;
   final ShowingReplyCB showReply;
   final bool canComment;
+  final CustomInputFocusNode inputFocusNode;
   const _CommentW(this.post, this.comment, this.sendReply, this.client,
-      this.showReply, this.canComment);
+      this.showReply, this.canComment, this.inputFocusNode);
 
   @override
   State<_CommentW> createState() => _CommentWState();
@@ -105,13 +112,13 @@ class _CommentWState extends State<_CommentW> {
   bool sendingReply = false;
   bool showChildren = true;
 
-  void sendReply() async {
+  void sendReply(String msg) async {
     replying = false;
     setState(() {
       sendingReply = true;
     });
     try {
-      await widget.sendReply(widget.comment, reply);
+      await widget.sendReply(widget.comment, msg);
     } finally {
       setState(() {
         sendingReply = false;
@@ -304,34 +311,21 @@ class _CommentWState extends State<_CommentW> {
                 Expanded(child: MarkdownArea(widget.comment.comment, false))
               ])),
               replying && !sendingReply
-                  ? Column(
-                      children: [
-                        const SizedBox(height: 20),
-                        Box(
-                            padding: const EdgeInsets.all(10),
-                            color: SurfaceColor.surfaceContainer,
-                            child: TextField(
-                              minLines: 3,
-                              keyboardType: TextInputType.multiline,
-                              maxLines: null,
-                              onChanged: (v) => reply = v,
-                            )),
-                        const SizedBox(height: 20),
-                        Align(
-                            alignment: Alignment.centerLeft,
-                            child: Wrap(
-                              alignment: WrapAlignment.start,
-                              runSpacing: 10,
-                              spacing: 10,
-                              children: [
-                                TextButton(
-                                    onPressed: sendReply,
-                                    child: const Text("Reply")),
-                                CancelButton(onPressed: () => replying = false)
-                              ],
-                            ))
-                      ],
-                    )
+                  ? Column(children: [
+                      Consumer<TypingEmojiSelModel>(
+                          builder: (context, typingEmoji, child) =>
+                              TypingEmojiPanel(
+                                model: typingEmoji,
+                                focusNode: widget.inputFocusNode,
+                              )),
+                      const SizedBox(height: 5),
+                      Container(
+                          padding: const EdgeInsets.only(
+                              left: 13, right: 13, top: 11, bottom: 11),
+                          margin: const EdgeInsets.symmetric(horizontal: 10),
+                          child: CommentInput(sendReply, "Reply",
+                              "Reply to this comment", widget.inputFocusNode))
+                    ])
                   : const Text(""),
               commentRRs != null ? const SizedBox(height: 10) : const Empty(),
               commentRRs != null
@@ -382,7 +376,8 @@ class _CommentWState extends State<_CommentW> {
                     widget.sendReply,
                     widget.client,
                     widget.showReply,
-                    widget.canComment))
+                    widget.canComment,
+                    widget.inputFocusNode))
               ]),
             )
           : const Empty(),
@@ -394,12 +389,12 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
   bool loading = false;
   String markdownData = "";
   Iterable<FeedCommentModel> comments = [];
-  TextEditingController newCommentCtrl = TextEditingController();
   bool knowsAuthor = false;
   bool isKXSearchingAuthor = false;
   bool sentSubscribeAttempt = false;
   bool showingReply = false;
   List<ReceiveReceipt> postRRs = [];
+  late CustomInputFocusNode inputFocusNode;
 
   void loadContent() async {
     var snackbar = SnackBarModel.of(context);
@@ -491,15 +486,11 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
         widget.args.post.summ.id, reply, comment.id);
   }
 
-  Future<void> addComment() async {
+  void addComment(String msg) async {
     replying = false;
-    var newComment = newCommentCtrl.text;
-    setState(() {
-      newCommentCtrl.clear();
-    });
-    widget.args.post.addNewComment(newComment);
+    widget.args.post.addNewComment(msg);
     await Golib.commentPost(
-        widget.args.post.summ.from, widget.args.post.summ.id, newComment, null);
+        widget.args.post.summ.from, widget.args.post.summ.id, msg, null);
   }
 
   void kxSearchAuthor() async {
@@ -529,6 +520,7 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
   void initState() {
     super.initState();
     widget.args.post.addListener(postUpdated);
+    inputFocusNode = CustomInputFocusNode(widget.typingEmoji);
     var authorID = widget.args.post.summ.authorID;
     widget.client.getExistingChat(authorID)?.addListener(authorUpdated);
     loadContent();
@@ -671,33 +663,22 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
                               child: const Txt.S("Subscribe to User's Posts"))
                           : const Empty(),
                     ]))
-            : Container(
-                padding: const EdgeInsets.only(
-                    left: 13, right: 13, top: 11, bottom: 11),
-                margin: const EdgeInsets.symmetric(horizontal: 30),
-                child: Column(children: [
-                  Box(
-                      padding: const EdgeInsets.all(10),
-                      color: SurfaceColor.surfaceContainer,
-                      child: TextField(
-                        minLines: 3,
-                        controller: newCommentCtrl,
-                        keyboardType: TextInputType.multiline,
-                        maxLines: null,
-                      )),
-                  const SizedBox(height: 20),
-                  Row(
-                    children: [
-                      OutlinedButton(
-                          onPressed: addComment,
-                          child: const Text("Add Comment")),
-                      const SizedBox(width: 20),
-                      CancelButton(onPressed: () => replying = false)
-                    ],
-                  )
-                ])),
+            : Column(children: [
+                Consumer<TypingEmojiSelModel>(
+                    builder: (context, typingEmoji, child) => TypingEmojiPanel(
+                          model: typingEmoji,
+                          focusNode: inputFocusNode,
+                        )),
+                const SizedBox(height: 5),
+                Container(
+                    padding: const EdgeInsets.only(
+                        left: 13, right: 13, top: 11, bottom: 11),
+                    margin: const EdgeInsets.symmetric(horizontal: 30),
+                    child: CommentInput(addComment, "Add Comment",
+                        "Add a comment to this post", inputFocusNode)),
+              ]),
         ...comments.map((e) => _CommentW(widget.args.post, e, sendReply,
-            widget.client, showingReplyCB, canComment)),
+            widget.client, showingReplyCB, canComment, inputFocusNode)),
         const SizedBox(height: 20),
         newComments.isNotEmpty
             ? Column(children: [

@@ -17,6 +17,7 @@ import 'package:bruig/screens/feed/post_lists.dart';
 import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/models/menus.dart';
 import 'package:bruig/theme_manager.dart';
+import 'package:bruig/models/emoji.dart';
 
 class FeedScreenTitle extends StatelessWidget {
   const FeedScreenTitle({super.key});
@@ -51,7 +52,9 @@ class FeedScreen extends StatefulWidget {
 
   final int tabIndex;
   final MainMenuModel mainMenu;
-  const FeedScreen(this.mainMenu, {super.key, this.tabIndex = 0});
+  final TypingEmojiSelModel typingEmoji;
+  const FeedScreen(this.mainMenu, this.typingEmoji,
+      {super.key, this.tabIndex = 0});
 
   @override
   State<FeedScreen> createState() => _FeedScreenState();
@@ -61,6 +64,7 @@ class _FeedScreenState extends State<FeedScreen> {
   ChatModel? userPostList;
   int tabIndex = 0;
   PostContentScreenArgs? showPost;
+
   GlobalKey<NavigatorState> navKey = GlobalKey(debugLabel: "overview nav key");
 
   Widget activeTab() {
@@ -71,8 +75,8 @@ class _FeedScreenState extends State<FeedScreen> {
               builder: (context, feed, client, child) =>
                   FeedPosts(feed, client, onItemChanged, false));
         } else {
-          return PostContentScreen(
-              showPost as PostContentScreenArgs, onItemChanged);
+          return PostContentScreen(showPost as PostContentScreenArgs,
+              onItemChanged, widget.typingEmoji);
         }
       case 1:
         if (showPost == null) {
@@ -81,8 +85,8 @@ class _FeedScreenState extends State<FeedScreen> {
                 FeedPosts(feed, client, onItemChanged, true),
           );
         } else {
-          return PostContentScreen(
-              showPost as PostContentScreenArgs, onItemChanged);
+          return PostContentScreen(showPost as PostContentScreenArgs,
+              onItemChanged, widget.typingEmoji);
         }
       case 2:
         return Consumer<ClientModel>(
@@ -96,8 +100,8 @@ class _FeedScreenState extends State<FeedScreen> {
               builder: (context, feed, client, child) =>
                   UserPosts(userPostList!, feed, client, onItemChanged));
         } else if (showPost != null) {
-          return PostContentScreen(
-              showPost as PostContentScreenArgs, onItemChanged);
+          return PostContentScreen(showPost as PostContentScreenArgs,
+              onItemChanged, widget.typingEmoji);
         } else {
           return Text("Active tab $tabIndex without post or userPostList");
         }
