@@ -323,7 +323,9 @@ class _AppState extends State<App> with WindowListener {
         cfg.rpcClientCApath,
         cfg.rpcUser,
         cfg.rpcPass,
-        cfg.rpcAuthMode);
+        cfg.rpcAuthMode,
+        cfg.rpcAllowRemoteSendTip,
+        cfg.rpcMaxRemoteSendTipAmt);
       await Golib.initClient(initArgs);
     } catch (exception) {
       if ("$exception".contains("client already initialized")) {

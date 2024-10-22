@@ -47,6 +47,8 @@ InitClient _$InitClientFromJson(Map<String, dynamic> json) => InitClient(
       json['rpc_user'] as String,
       json['rpc_pass'] as String,
       json['rpc_auth_mode'] as String,
+      json['rpc_allow_remote_send_tip'] as bool,
+      (json['rpc_max_remote_send_tip_amt'] as num).toDouble(),
     );
 
 Map<String, dynamic> _$InitClientToJson(InitClient instance) =>
@@ -87,6 +89,8 @@ Map<String, dynamic> _$InitClientToJson(InitClient instance) =>
       'rpc_user': instance.rpcUser,
       'rpc_pass': instance.rpcPass,
       'rpc_auth_mode': instance.rpcAuthMode,
+      'rpc_allow_remote_send_tip': instance.rpcAllowRemoteSendTip,
+      'rpc_max_remote_send_tip_amt': instance.rpcMaxRemoteSendTipAmt,
     };
 
 IDInit _$IDInitFromJson(Map<String, dynamic> json) => IDInit(

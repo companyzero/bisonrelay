@@ -141,6 +141,10 @@ type config struct {
 	RPCAuthMode        string
 	RPCIssueClientCert bool
 
+	// rpc configurable params
+	RPCAllowRemoteSendTip  bool
+	RPCMaxRemoteSendTipAmt float64
+
 	ExternalEditorForComments bool
 
 	ResourcesUpstream     string
@@ -336,6 +340,8 @@ func loadConfig() (*config, error) {
 	flagRPCUser := fs.String("clientrpc.rpcuser", "", "")
 	flagRPCPass := fs.String("clientrpc.rpcpass", "", "")
 	flagRPCAuthMode := fs.String("clientrpc.rpcauthmode", "", "")
+	flagRPCAllowRemoteSendTip := fs.Bool("clientrpc.rpcallowremotesendtip", true, "allow remote send tip")
+	flagRPCMaxRemoteSendTipAmt := fs.Float64("clientrpc.rpcmaxremotesendtipamt", -1, "max remote send tip amount")
 
 	// resources
 	flagResourcesUpstream := fs.String("resources.upstream", "", "Upstream processor of resource requests")
@@ -494,55 +500,57 @@ func loadConfig() (*config, error) {
 
 	// Return the final cfg object.
 	return &config{
-		ServerAddr:         *flagServerAddr,
-		Root:               *flagRootDir,
-		DBRoot:             filepath.Join(*flagRootDir, "db"),
-		DownloadsRoot:      filepath.Join(*flagRootDir, "downloads"),
-		EmbedsRoot:         filepath.Join(*flagRootDir, "embeds"),
-		WalletType:         *flagWalletType,
-		MsgRoot:            *flagMsgRoot,
-		LNRPCHost:          *flagLNHost,
-		LNTLSCertPath:      *flagLNTLSCert,
-		LNMacaroonPath:     *flagLNMacaroonPath,
-		LNDebugLevel:       *flagLNDebugLevel,
-		LNMaxLogFiles:      *flagLNMaxLogFiles,
-		LNRPCListen:        lnRPCListen,
-		LogFile:            *flagLogFile,
-		MaxLogFiles:        *flagMaxLogFiles,
-		DebugLevel:         *flagDebugLevel,
-		CompressLevel:      *flagCompressLevel,
-		CmdHistoryPath:     cmdHistoryPath,
-		NickColor:          *flagNickColor,
-		GCOtherColor:       *flagGCOtherColor,
-		PMOtherColor:       *flagPMOtherColor,
-		BlinkCursor:        *flagBlinkCursor,
-		BellCmd:            strings.TrimSpace(*flagBellCmd),
-		Network:            *flagNetwork,
-		CPUProfile:         *flagCPUProfile,
-		CPUProfileHz:       *flagCPUProfileHz,
-		MemProfile:         *flagMemProfile,
-		LogPings:           *flagLogPings,
-		SendRecvReceipts:   *flagSendRecvReceipts,
-		NoLoadChatHistory:  *flagNoLoadChatHistory,
-		ProxyAddr:          *flagProxyAddr,
-		ProxyUser:          *flagProxyUser,
-		ProxyPass:          *flagProxyPass,
-		TorIsolation:       *flagTorIsolation,
-		MinWalletBal:       minWalletBal,
-		MinRecvBal:         minRecvBal,
-		MinSendBal:         minSendBal,
-		WinPin:             winpin,
-		MimeMap:            mimeMap,
-		JSONRPCListen:      jrpcListen,
-		RPCCertPath:        *flagRPCCertPath,
-		RPCKeyPath:         *flagRPCKeyPath,
-		RPCClientCAPath:    *flagRPCClientCAPath,
-		RPCIssueClientCert: *flagRPCIssueClientCert,
-		RPCUser:            *flagRPCUser,
-		RPCPass:            *flagRPCPass,
-		RPCAuthMode:        *flagRPCAuthMode,
-		InviteFundsAccount: *flagInviteFundsAccount,
-		ResourcesUpstream:  *flagResourcesUpstream,
+		ServerAddr:             *flagServerAddr,
+		Root:                   *flagRootDir,
+		DBRoot:                 filepath.Join(*flagRootDir, "db"),
+		DownloadsRoot:          filepath.Join(*flagRootDir, "downloads"),
+		EmbedsRoot:             filepath.Join(*flagRootDir, "embeds"),
+		WalletType:             *flagWalletType,
+		MsgRoot:                *flagMsgRoot,
+		LNRPCHost:              *flagLNHost,
+		LNTLSCertPath:          *flagLNTLSCert,
+		LNMacaroonPath:         *flagLNMacaroonPath,
+		LNDebugLevel:           *flagLNDebugLevel,
+		LNMaxLogFiles:          *flagLNMaxLogFiles,
+		LNRPCListen:            lnRPCListen,
+		LogFile:                *flagLogFile,
+		MaxLogFiles:            *flagMaxLogFiles,
+		DebugLevel:             *flagDebugLevel,
+		CompressLevel:          *flagCompressLevel,
+		CmdHistoryPath:         cmdHistoryPath,
+		NickColor:              *flagNickColor,
+		GCOtherColor:           *flagGCOtherColor,
+		PMOtherColor:           *flagPMOtherColor,
+		BlinkCursor:            *flagBlinkCursor,
+		BellCmd:                strings.TrimSpace(*flagBellCmd),
+		Network:                *flagNetwork,
+		CPUProfile:             *flagCPUProfile,
+		CPUProfileHz:           *flagCPUProfileHz,
+		MemProfile:             *flagMemProfile,
+		LogPings:               *flagLogPings,
+		SendRecvReceipts:       *flagSendRecvReceipts,
+		NoLoadChatHistory:      *flagNoLoadChatHistory,
+		ProxyAddr:              *flagProxyAddr,
+		ProxyUser:              *flagProxyUser,
+		ProxyPass:              *flagProxyPass,
+		TorIsolation:           *flagTorIsolation,
+		MinWalletBal:           minWalletBal,
+		MinRecvBal:             minRecvBal,
+		MinSendBal:             minSendBal,
+		WinPin:                 winpin,
+		MimeMap:                mimeMap,
+		JSONRPCListen:          jrpcListen,
+		RPCCertPath:            *flagRPCCertPath,
+		RPCKeyPath:             *flagRPCKeyPath,
+		RPCClientCAPath:        *flagRPCClientCAPath,
+		RPCIssueClientCert:     *flagRPCIssueClientCert,
+		RPCUser:                *flagRPCUser,
+		RPCPass:                *flagRPCPass,
+		RPCAuthMode:            *flagRPCAuthMode,
+		InviteFundsAccount:     *flagInviteFundsAccount,
+		ResourcesUpstream:      *flagResourcesUpstream,
+		RPCAllowRemoteSendTip:  *flagRPCAllowRemoteSendTip,
+		RPCMaxRemoteSendTipAmt: *flagRPCMaxRemoteSendTipAmt,
 
 		AutoHandshakeInterval:       autoHandshakeInterval,
 		AutoRemoveIdleUsersInterval: autoRemoveInterval,

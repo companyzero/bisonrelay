@@ -81,7 +81,7 @@ class InitClient {
   final String rpcKeyPath;
   @JsonKey(name: 'rpc_issue_client_cert')
   final bool rpcIssueClientCert;
-    @JsonKey(name: 'rpc_client_ca_path')
+  @JsonKey(name: 'rpc_client_ca_path')
   final String rpcClientCAPath;
   @JsonKey(name: 'rpc_user')
   final String rpcUser;
@@ -89,46 +89,50 @@ class InitClient {
   final String rpcPass;
   @JsonKey(name: 'rpc_auth_mode')
   final String rpcAuthMode;
-  
+  @JsonKey(name: 'rpc_allow_remote_send_tip')
+  final bool rpcAllowRemoteSendTip;
+  @JsonKey(name: 'rpc_max_remote_send_tip_amt')
+  final double rpcMaxRemoteSendTipAmt;
 
   InitClient(
-    this.dbRoot,
-    this.downloadsDir,
-    this.embedsDir,
-    this.serverAddr,
-    this.lnRPCHost,
-    this.lnTLSCertPath,
-    this.lnMacaroonPath,
-    this.logFile,
-    this.msgsRoot,
-    this.debugLevel,
-    this.wantsLogNtfns,
-    this.resourcesUpstream,
-    this.simpleStorePayType,
-    this.simpleStoreAccount,
-    this.simpleStoreShipCharge,
-    this.proxyaddr,
-    this.torisolation,
-    this.proxyUsername,
-    this.proxyPassword,
-    this.circuitLimit,
-    this.noLoadChatHistory,
-    this.autoHandshakeInterval,
-    this.autoRemoveIdleUsersInterval,
-    this.autoRemoveIdleUsersIgnore,
-    this.sendRecvReceipts,
-    this.autoSubPosts,
-    this.logPings,
-    this.pingIntervalMs,
-    this.jsonRPCListen,
-    this.rpcCertPath,
-    this.rpcKeyPath,
-    this.rpcIssueClientCert,
-    this.rpcClientCAPath,
-    this.rpcUser,
-    this.rpcPass,
-    this.rpcAuthMode
-  );
+      this.dbRoot,
+      this.downloadsDir,
+      this.embedsDir,
+      this.serverAddr,
+      this.lnRPCHost,
+      this.lnTLSCertPath,
+      this.lnMacaroonPath,
+      this.logFile,
+      this.msgsRoot,
+      this.debugLevel,
+      this.wantsLogNtfns,
+      this.resourcesUpstream,
+      this.simpleStorePayType,
+      this.simpleStoreAccount,
+      this.simpleStoreShipCharge,
+      this.proxyaddr,
+      this.torisolation,
+      this.proxyUsername,
+      this.proxyPassword,
+      this.circuitLimit,
+      this.noLoadChatHistory,
+      this.autoHandshakeInterval,
+      this.autoRemoveIdleUsersInterval,
+      this.autoRemoveIdleUsersIgnore,
+      this.sendRecvReceipts,
+      this.autoSubPosts,
+      this.logPings,
+      this.pingIntervalMs,
+      this.jsonRPCListen,
+      this.rpcCertPath,
+      this.rpcKeyPath,
+      this.rpcIssueClientCert,
+      this.rpcClientCAPath,
+      this.rpcUser,
+      this.rpcPass,
+      this.rpcAuthMode,
+      this.rpcAllowRemoteSendTip,
+      this.rpcMaxRemoteSendTipAmt);
 
   Map<String, dynamic> toJson() => _$InitClientToJson(this);
 }
