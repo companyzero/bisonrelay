@@ -136,6 +136,9 @@ type config struct {
 	RPCCertPath        string
 	RPCKeyPath         string
 	RPCClientCAPath    string
+	RPCUser            string
+	RPCPass            string
+	RPCAuthMode        string
 	RPCIssueClientCert bool
 
 	ExternalEditorForComments bool
@@ -330,6 +333,9 @@ func loadConfig() (*config, error) {
 	flagRPCKeyPath := fs.String("clientrpc.rpckeypath", defaultRPCKeyPath, "")
 	flagRPCClientCAPath := fs.String("clientrpc.rpcclientcapath", defaultRPCClientCA, "")
 	flagRPCIssueClientCert := fs.Bool("clientrpc.rpcissueclientcert", true, "")
+	flagRPCUser := fs.String("clientrpc.rpcuser", "", "")
+	flagRPCPass := fs.String("clientrpc.rpcpass", "", "")
+	flagRPCAuthMode := fs.String("clientrpc.rpcauthmode", "", "")
 
 	// resources
 	flagResourcesUpstream := fs.String("resources.upstream", "", "Upstream processor of resource requests")
@@ -532,6 +538,9 @@ func loadConfig() (*config, error) {
 		RPCKeyPath:         *flagRPCKeyPath,
 		RPCClientCAPath:    *flagRPCClientCAPath,
 		RPCIssueClientCert: *flagRPCIssueClientCert,
+		RPCUser:            *flagRPCUser,
+		RPCPass:            *flagRPCPass,
+		RPCAuthMode:        *flagRPCAuthMode,
 		InviteFundsAccount: *flagInviteFundsAccount,
 		ResourcesUpstream:  *flagResourcesUpstream,
 
