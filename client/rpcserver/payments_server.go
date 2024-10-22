@@ -13,6 +13,10 @@ type PaymentsServerCfg struct {
 	// Client should be set to the [client.Client] instance.
 	Client *client.Client
 
+	// RPC Server Configurable Params
+	RPCAllowRemoteSendTip  bool
+	RPCMaxRemoteSendTipAmt float64
+
 	// Log should be set to the app's logger.
 	Log slog.Logger
 

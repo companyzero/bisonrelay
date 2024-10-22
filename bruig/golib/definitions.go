@@ -58,6 +58,9 @@ type initClient struct {
 	RPCPass            string   `json:"rpc_pass"`
 	RPCAuthMode        string   `json:"rpc_auth_mode"`
 	InviteFundsAccount string   `json:"invite_funds_account"`
+
+	RPCAllowRemoteSendTip  bool    `json:"rpc_allow_remote_send_tip"`
+	RPCMaxRemoteSendTipAmt float64 `json:"rpc_max_remote_send_tip_amt"`
 }
 
 type iDInit struct {
