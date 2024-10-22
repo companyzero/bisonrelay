@@ -24,10 +24,12 @@ import (
 	"github.com/companyzero/bisonrelay/client/clientintf"
 	"github.com/companyzero/bisonrelay/client/resources"
 	"github.com/companyzero/bisonrelay/client/resources/simplestore"
+	"github.com/companyzero/bisonrelay/client/rpcserver"
 	"github.com/companyzero/bisonrelay/clientrpc/types"
 	"github.com/companyzero/bisonrelay/embeddeddcrlnd"
 	"github.com/companyzero/bisonrelay/internal/audio"
 	"github.com/companyzero/bisonrelay/internal/mdembeds"
+	"github.com/companyzero/bisonrelay/internal/tlsconn"
 	"github.com/companyzero/bisonrelay/lockfile"
 	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/companyzero/bisonrelay/zkidentity"
@@ -40,17 +42,23 @@ import (
 	lpclient "github.com/decred/dcrlnlpd/client"
 	"github.com/decred/go-socks/socks"
 	"github.com/decred/slog"
+	"github.com/prometheus/common/version"
 	"golang.org/x/text/collate"
 	"golang.org/x/text/language"
 )
 
+const (
+	appName = "bruig"
+)
+
 type clientCtx struct {
-	c      *client.Client
-	lnpc   *client.DcrlnPaymentClient
-	ctx    context.Context
-	cancel func()
-	runMtx sync.Mutex
-	runErr error
+	c         *client.Client
+	lnpc      *client.DcrlnPaymentClient
+	rpcserver *rpcserver.Server
+	ctx       context.Context
+	cancel    func()
+	runMtx    sync.Mutex
+	runErr    error
 
 	log     slog.Logger
 	logBknd *logBackend
@@ -168,7 +176,16 @@ func handleInitClient(handle uint32, args initClient) error {
 
 	ntfns := client.NewNotificationManager()
 	ntfns.Register(client.OnPMNtfn(func(user *client.RemoteUser, msg rpc.RMPrivateMessage, ts time.Time) {
-		// TODO: replace PM{} for types.ReceivedPM{}.
+		// pm := &types.ReceivedPM{
+		// 	Uid: user.ID().Bytes(),
+		// 	Msg: &types.RMPrivateMessage{
+		// 		Message: msg.Message,
+		// 		Mode:    types.MessageMode(msg.Mode),
+		// 	},
+		// 	TimestampMs: ts.Unix(),
+		// 	Nick:        user.Nick(),
+		// }
+
 		pm := pm{
 			UID:       user.ID(),
 			Msg:       msg.Message,
@@ -704,6 +721,109 @@ func handleInitClient(handle uint32, args initClient) error {
 		resRouter.BindPrefixPath([]string{}, p)
 	}
 
+	var rpcServer *rpcserver.Server
+	if len(args.JSONRPCListen) > 0 {
+		rpcsLog := logBknd.logger("RPCS")
+		tlsConnCfg := tlsconn.TLSListenersConfig{
+			Addresses:                   args.JSONRPCListen,
+			CertPath:                    args.RPCCertPath,
+			KeyPath:                     args.RPCKeyPath,
+			CreateCertPairIfNotExists:   true,
+			ClientCAPath:                args.RPCClientCAPath,
+			ClientCertPath:              filepath.Join(filepath.Dir(args.RPCClientCAPath), "rpc-client.cert"),
+			ClientKeyPath:               filepath.Join(filepath.Dir(args.RPCClientCAPath), "rpc-client.key"),
+			CreateClientCertIfNotExists: args.RPCIssueClientCert,
+			Log:                         rpcsLog,
+		}
+		jsonListeners, err := tlsconn.TLSListeners(tlsConnCfg)
+		if err != nil {
+			return err
+		}
+		rpcServer = rpcserver.New(rpcserver.Config{
+			JSONRPCListeners: jsonListeners,
+			Log:              rpcsLog,
+			RPCUser:          args.RPCUser,
+			RPCPass:          args.RPCPass,
+			AuthMode:         args.RPCAuthMode,
+		})
+		rpcServer.InitVersionService(appName, version.Version)
+		chatRPCServerCfg := rpcserver.ChatServerCfg{
+			Log:               logBknd.logger("RPCS"),
+			Client:            c,
+			PayClient:         lnpc,
+			RootReplayMsgLogs: filepath.Join(args.DBRoot, "replaymsglog"),
+
+			// Following are handlers called when the rpc server receives
+			// a request to perform an action.
+
+			OnPM: func(ctx context.Context, uid client.UserID, pm *types.PMRequest) error {
+
+				// notify(NTPM, pm.Msg, nil)
+				return nil
+			},
+			OnGCM: func(ctx context.Context, gcid client.GCID, gcm *types.GCMRequest) error {
+				notify(NTGCMessage, gcm, nil)
+				return nil
+			},
+		}
+		err = rpcServer.InitChatService(chatRPCServerCfg)
+		if err != nil {
+			return err
+		}
+
+		postsRPCServerCfg := rpcserver.PostsServerCfg{
+			Log:               logBknd.logger("RPCS"),
+			Client:            c,
+			RootReplayMsgLogs: filepath.Join(args.DBRoot, "replaymsglog"),
+		}
+		err = rpcServer.InitPostsService(postsRPCServerCfg)
+		if err != nil {
+			return err
+		}
+
+		payRPCServerCfg := rpcserver.PaymentsServerCfg{
+			Log:               logBknd.logger("RPCS"),
+			Client:            c,
+			RootReplayMsgLogs: filepath.Join(args.DBRoot, "replaymsglog"),
+		}
+		err = rpcServer.InitPaymentsService(payRPCServerCfg)
+		if err != nil {
+			return err
+		}
+
+		gcRPCServerCfg := rpcserver.GCServerCfg{
+			Log:               logBknd.logger("RPCS"),
+			Client:            c,
+			RootReplayMsgLogs: filepath.Join(args.DBRoot, "replaymsglog"),
+		}
+		err = rpcServer.InitGCService(gcRPCServerCfg)
+		if err != nil {
+			return err
+		}
+
+		resServerCfg := rpcserver.ResourcesServerCfg{
+			Log:    logBknd.logger("RPCS"),
+			Client: c,
+		}
+		if args.ResourcesUpstream == "clientrpc" {
+			resServerCfg.Router = resRouter
+		}
+		err = rpcServer.InitResourcesService(resServerCfg)
+		if err != nil {
+			return err
+		}
+
+		contentServerCfg := rpcserver.ContentServerCfg{
+			Log:               logBknd.logger("RPCS"),
+			Client:            c,
+			RootReplayMsgLogs: filepath.Join(args.DBRoot, "replaymsglog"),
+		}
+		err = rpcServer.InitContentService(contentServerCfg)
+		if err != nil {
+			return err
+		}
+	}
+
 	var cancel func()
 	ctx, cancel = context.WithCancel(ctx)
 
@@ -713,12 +833,13 @@ func handleInitClient(handle uint32, args initClient) error {
 	})
 
 	cctx = &clientCtx{
-		c:       c,
-		lnpc:    lnpc,
-		ctx:     ctx,
-		cancel:  cancel,
-		log:     logBknd.logger("GOLB"),
-		logBknd: logBknd,
+		c:         c,
+		lnpc:      lnpc,
+		rpcserver: rpcServer,
+		ctx:       ctx,
+		cancel:    cancel,
+		log:       logBknd.logger("GOLB"),
+		logBknd:   logBknd,
 
 		skipWalletCheckChan: make(chan struct{}, 1),
 		initIDChan:          initIDChan,
@@ -728,11 +849,19 @@ func handleInitClient(handle uint32, args initClient) error {
 		confirmPayReqRecvChan: make(chan bool),
 		downloadConfChans:     make(map[zkidentity.ShortID]chan bool),
 	}
-
 	cs[handle] = cctx
 
 	if sstore != nil {
 		go sstore.Run(ctx)
+	}
+
+	if rpcServer != nil {
+		go func() {
+			err := rpcServer.Run(ctx)
+			if err != nil && !errors.Is(err, context.Canceled) {
+				cctx.log.Errorf("RPCServer Run() error: %v", err)
+			}
+		}()
 	}
 
 	go func() {

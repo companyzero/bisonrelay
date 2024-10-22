@@ -37,6 +37,16 @@ InitClient _$InitClientFromJson(Map<String, dynamic> json) => InitClient(
       json['auto_sub_posts'] as bool,
       json['log_pings'] as bool,
       (json['ping_interval_ms'] as num).toInt(),
+      (json['json_rpc_listen'] as List<dynamic>)
+          .map((e) => e as String)
+          .toList(),
+      json['rpc_cert_path'] as String,
+      json['rpc_key_path'] as String,
+      json['rpc_issue_client_cert'] as bool,
+      json['rpc_client_ca_path'] as String,
+      json['rpc_user'] as String,
+      json['rpc_pass'] as String,
+      json['rpc_auth_mode'] as String,
     );
 
 Map<String, dynamic> _$InitClientToJson(InitClient instance) =>
@@ -69,6 +79,14 @@ Map<String, dynamic> _$InitClientToJson(InitClient instance) =>
       'auto_sub_posts': instance.autoSubPosts,
       'log_pings': instance.logPings,
       'ping_interval_ms': instance.pingIntervalMs,
+      'json_rpc_listen': instance.jsonRPCListen,
+      'rpc_cert_path': instance.rpcCertPath,
+      'rpc_key_path': instance.rpcKeyPath,
+      'rpc_issue_client_cert': instance.rpcIssueClientCert,
+      'rpc_client_ca_path': instance.rpcClientCAPath,
+      'rpc_user': instance.rpcUser,
+      'rpc_pass': instance.rpcPass,
+      'rpc_auth_mode': instance.rpcAuthMode,
     };
 
 IDInit _$IDInitFromJson(Map<String, dynamic> json) => IDInit(
