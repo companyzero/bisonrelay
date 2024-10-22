@@ -136,6 +136,9 @@ type config struct {
 	RPCCertPath        string
 	RPCKeyPath         string
 	RPCClientCAPath    string
+	RPCUser            string
+	RPCPass            string
+	RPCAuthMode        string
 	RPCIssueClientCert bool
 
 	// tip attempt configurable params
@@ -336,6 +339,9 @@ func loadConfig() (*config, error) {
 	flagRPCKeyPath := fs.String("clientrpc.rpckeypath", defaultRPCKeyPath, "")
 	flagRPCClientCAPath := fs.String("clientrpc.rpcclientcapath", defaultRPCClientCA, "")
 	flagRPCIssueClientCert := fs.Bool("clientrpc.rpcissueclientcert", true, "")
+	flagRPCUser := fs.String("clientrpc.rpcuser", "", "")
+	flagRPCPass := fs.String("clientrpc.rpcpass", "", "")
+	flagRPCAuthMode := fs.String("clientrpc.rpcauthmode", "", "")
 
 	// tip user
 	flagTipUserRestartDelay := fs.String("tipuser.restartdelay", "1m", "Restart delay for tip user attempts")
@@ -563,6 +569,9 @@ func loadConfig() (*config, error) {
 		RPCKeyPath:         *flagRPCKeyPath,
 		RPCClientCAPath:    *flagRPCClientCAPath,
 		RPCIssueClientCert: *flagRPCIssueClientCert,
+		RPCUser:            *flagRPCUser,
+		RPCPass:            *flagRPCPass,
+		RPCAuthMode:        *flagRPCAuthMode,
 		InviteFundsAccount: *flagInviteFundsAccount,
 		ResourcesUpstream:  *flagResourcesUpstream,
 

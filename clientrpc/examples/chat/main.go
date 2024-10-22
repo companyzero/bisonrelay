@@ -123,6 +123,8 @@ var (
 	flagServerCertPath = flag.String("servercert", "~/.brclient/rpc.cert", "Path to rpc.cert file")
 	flagClientCertPath = flag.String("clientcert", "~/.brclient/rpc-client.cert", "Path to rpc-client.cert file")
 	flagClientKeyPath  = flag.String("clientkey", "~/.brclient/rpc-client.key", "Path to rpc-client.key file")
+	flagRPCUser        = flag.String("rpcuser", "rpcuser", "RPC user for basic auth")
+	flagRPCPass        = flag.String("rpcpass", "rpcpass", "RPC password for basic auth")
 )
 
 func realMain() error {
@@ -141,6 +143,7 @@ func realMain() error {
 		jsonrpc.WithServerTLSCertPath(*flagServerCertPath),
 		jsonrpc.WithClientTLSCert(*flagClientCertPath, *flagClientKeyPath),
 		jsonrpc.WithClientLog(log),
+		jsonrpc.WithClientBasicAuth(*flagRPCUser, *flagRPCPass),
 	)
 	if err != nil {
 		return err
