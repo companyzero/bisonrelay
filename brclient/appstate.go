@@ -3853,9 +3853,20 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		}
 
 		payRPCServerCfg := rpcserver.PaymentsServerCfg{
-			Log:               logBknd.logger("RPCS"),
-			Client:            c,
-			RootReplayMsgLogs: filepath.Join(args.DBRoot, "replaymsglog"),
+			Log:                    logBknd.logger("RPCS"),
+			Client:                 c,
+			RootReplayMsgLogs:      filepath.Join(args.DBRoot, "replaymsglog"),
+			RPCAllowRemoteSendTip:  args.RPCAllowRemoteSendTip,
+			RPCMaxRemoteSendTipAmt: args.RPCMaxRemoteSendTipAmt,
+			OnTipUser: func(uid clientintf.UserID, dcrAmount float64) error {
+				if !args.RPCAllowRemoteSendTip {
+					return fmt.Errorf("remote tip sending not allowed")
+				}
+				if args.RPCMaxRemoteSendTipAmt > 0 && dcrAmount > args.RPCMaxRemoteSendTipAmt {
+					return fmt.Errorf("tip exceeds max limit: %v", args.RPCMaxRemoteSendTipAmt)
+				}
+				return nil
+			},
 		}
 		err = rpcServer.InitPaymentsService(payRPCServerCfg)
 		if err != nil {
