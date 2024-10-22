@@ -99,6 +99,14 @@ class Config {
   late final bool sendRecvReceipts;
   late final bool autoSubPosts;
   late final bool logPings;
+  late final List<String> jsonRPCListen;
+  late final String rpcCertPath;
+  late final String rpcKeyPath;
+  late final bool rpcIssueClientCert;
+  late final String rpcClientCApath;
+  late final String rpcUser;
+  late final String rpcPass;
+  late final String rpcAuthMode;
 
   Config();
   Config.filled(
@@ -135,45 +143,60 @@ class Config {
       this.autoRemoveIgnoreList = defaultAutoRemoveIgnoreList,
       this.sendRecvReceipts = true,
       this.autoSubPosts = true,
-      this.logPings = false});
+      this.logPings = false,
+      this.jsonRPCListen = const [],
+      this.rpcCertPath = "",
+      this.rpcKeyPath = "",
+      this.rpcIssueClientCert = false,
+      this.rpcClientCApath = "",
+      this.rpcUser = "",
+      this.rpcPass = "",
+      this.rpcAuthMode = ""});
   factory Config.newWithRPCHost(
           Config cfg, String rpcHost, String tlsCert, String macaroonPath) =>
       Config.filled(
-        appDataDir: cfg.appDataDir,
-        dbRoot: cfg.dbRoot,
-        downloadsDir: cfg.downloadsDir,
-        embedsDir: cfg.embedsDir,
-        serverAddr: cfg.serverAddr,
-        lnRPCHost: rpcHost,
-        lnTLSCert: tlsCert,
-        lnMacaroonPath: macaroonPath,
-        logFile: cfg.logFile,
-        msgRoot: cfg.msgRoot,
-        debugLevel: cfg.debugLevel,
-        lnDebugLevel: cfg.lnDebugLevel,
-        walletType: cfg.walletType,
-        network: cfg.network,
-        internalWalletDir: cfg.internalWalletDir,
-        resourcesUpstream: cfg.resourcesUpstream,
-        simpleStorePayType: cfg.simpleStorePayType,
-        simpleStoreAccount: cfg.simpleStoreAccount,
-        simpleStoreShipCharge: cfg.simpleStoreShipCharge,
-        proxyaddr: cfg.proxyaddr,
-        torIsolation: cfg.torIsolation,
-        proxyUsername: cfg.proxyUsername,
-        proxyPassword: cfg.proxyPassword,
-        circuitLimit: cfg.circuitLimit,
-        noLoadChatHistory: cfg.noLoadChatHistory,
-        syncFreeList: cfg.syncFreeList,
-        autoCompact: cfg.autoCompact,
-        autoCompactMinAge: cfg.autoCompactMinAge,
-        autoHandshakeInterval: cfg.autoHandshakeInterval,
-        autoRemoveIdleUsersInterval: cfg.autoRemoveIdleUsersInterval,
-        autoRemoveIgnoreList: cfg.autoRemoveIgnoreList,
-        sendRecvReceipts: cfg.sendRecvReceipts,
-        autoSubPosts: cfg.autoSubPosts,
-        logPings: cfg.logPings,
-      );
+          appDataDir: cfg.appDataDir,
+          dbRoot: cfg.dbRoot,
+          downloadsDir: cfg.downloadsDir,
+          embedsDir: cfg.embedsDir,
+          serverAddr: cfg.serverAddr,
+          lnRPCHost: rpcHost,
+          lnTLSCert: tlsCert,
+          lnMacaroonPath: macaroonPath,
+          logFile: cfg.logFile,
+          msgRoot: cfg.msgRoot,
+          debugLevel: cfg.debugLevel,
+          lnDebugLevel: cfg.lnDebugLevel,
+          walletType: cfg.walletType,
+          network: cfg.network,
+          internalWalletDir: cfg.internalWalletDir,
+          resourcesUpstream: cfg.resourcesUpstream,
+          simpleStorePayType: cfg.simpleStorePayType,
+          simpleStoreAccount: cfg.simpleStoreAccount,
+          simpleStoreShipCharge: cfg.simpleStoreShipCharge,
+          proxyaddr: cfg.proxyaddr,
+          torIsolation: cfg.torIsolation,
+          proxyUsername: cfg.proxyUsername,
+          proxyPassword: cfg.proxyPassword,
+          circuitLimit: cfg.circuitLimit,
+          noLoadChatHistory: cfg.noLoadChatHistory,
+          syncFreeList: cfg.syncFreeList,
+          autoCompact: cfg.autoCompact,
+          autoCompactMinAge: cfg.autoCompactMinAge,
+          autoHandshakeInterval: cfg.autoHandshakeInterval,
+          autoRemoveIdleUsersInterval: cfg.autoRemoveIdleUsersInterval,
+          autoRemoveIgnoreList: cfg.autoRemoveIgnoreList,
+          sendRecvReceipts: cfg.sendRecvReceipts,
+          autoSubPosts: cfg.autoSubPosts,
+          logPings: cfg.logPings,
+          jsonRPCListen: cfg.jsonRPCListen,
+          rpcCertPath: cfg.rpcCertPath,
+          rpcKeyPath: cfg.rpcKeyPath,
+          rpcIssueClientCert: cfg.rpcIssueClientCert,
+          rpcClientCApath: cfg.rpcClientCApath,
+          rpcUser: cfg.rpcUser,
+          rpcPass: cfg.rpcPass,
+          rpcAuthMode: cfg.rpcAuthMode);
 
   // Save a new config from scratch.
   Future<void> saveNewConfig(String filepath) async {
@@ -393,6 +416,15 @@ Future<Config> loadConfig(String filepath) async {
   c.simpleStoreAccount = f.get("resources", "account") ?? "";
   c.simpleStoreShipCharge =
       double.tryParse(f.get("resources", "shipcharge") ?? "0") ?? 0;
+
+  c.jsonRPCListen = getCommaList("clientrpc", "jsonrpclisten") ?? [];
+  c.rpcCertPath = f.get("clientrpc", "rpccertpath") ?? "";
+  c.rpcKeyPath = f.get("clientrpc", "rpckeypath") ?? "";
+  c.rpcIssueClientCert = f.get("clientrpc", "rpcissueclientcert") == "true";
+  c.rpcClientCApath = f.get("clientrpc", "rpcclientcapath") ?? "";
+  c.rpcUser = f.get("clientrpc", "rpcuser") ?? "";
+  c.rpcPass = f.get("clientrpc", "rpcpass") ?? "";
+  c.rpcAuthMode = f.get("clientrpc", "rpcauthmode") ?? "";
 
   return c;
 }

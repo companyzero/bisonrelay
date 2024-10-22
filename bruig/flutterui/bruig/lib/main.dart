@@ -316,7 +316,14 @@ class _AppState extends State<App> with WindowListener {
         Platform.isAndroid || Platform.isIOS // Use longer interval on mobile
             ? 210 * 1000 // 210 = 3m30s
             : 0, // Use whatever is default
-      );
+        cfg.jsonRPCListen,
+        cfg.rpcCertPath,
+        cfg.rpcKeyPath,
+        cfg.rpcIssueClientCert,
+        cfg.rpcClientCApath,
+        cfg.rpcUser,
+        cfg.rpcPass,
+        cfg.rpcAuthMode);
       await Golib.initClient(initArgs);
     } catch (exception) {
       if ("$exception".contains("client already initialized")) {
