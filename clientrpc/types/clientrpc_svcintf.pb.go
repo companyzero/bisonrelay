@@ -1136,6 +1136,11 @@ type PaymentsServiceClient interface {
 	// AckTipProgress acknowledges events received up to a given
 	// sequence_id have been processed.
 	AckTipProgress(ctx context.Context, in *AckRequest, out *AckResponse) error
+	// TipStream returns a stream that gets tips received by the client.
+	TipStream(ctx context.Context, in *TipStreamRequest) (PaymentsService_TipStreamClient, error)
+	// AckTipReceived acknowledges events received up to a given
+	// sequence_id have been processed.
+	AckTipReceived(ctx context.Context, in *AckRequest, out *AckResponse) error
 }
 
 type client_PaymentsService struct {
@@ -1166,6 +1171,24 @@ func (c *client_PaymentsService) AckTipProgress(ctx context.Context, in *AckRequ
 	return c.defn.Methods[method].ClientHandler(c.c, ctx, in, out)
 }
 
+type PaymentsService_TipStreamClient interface {
+	Recv(*ReceivedTip) error
+}
+
+func (c *client_PaymentsService) TipStream(ctx context.Context, in *TipStreamRequest) (PaymentsService_TipStreamClient, error) {
+	const method = "TipStream"
+	inner, err := c.defn.Methods[method].ClientStreamHandler(c.c, ctx, in)
+	if err != nil {
+		return nil, err
+	}
+	return streamerImpl[*ReceivedTip]{c: inner}, nil
+}
+
+func (c *client_PaymentsService) AckTipReceived(ctx context.Context, in *AckRequest, out *AckResponse) error {
+	const method = "AckTipReceived"
+	return c.defn.Methods[method].ClientHandler(c.c, ctx, in, out)
+}
+
 func NewPaymentsServiceClient(c ClientConn) PaymentsServiceClient {
 	return &client_PaymentsService{c: c, defn: PaymentsServiceDefn()}
 }
@@ -1182,10 +1205,19 @@ type PaymentsServiceServer interface {
 	// AckTipProgress acknowledges events received up to a given
 	// sequence_id have been processed.
 	AckTipProgress(context.Context, *AckRequest, *AckResponse) error
+	// TipStream returns a stream that gets tips received by the client.
+	TipStream(context.Context, *TipStreamRequest, PaymentsService_TipStreamServer) error
+	// AckTipReceived acknowledges events received up to a given
+	// sequence_id have been processed.
+	AckTipReceived(context.Context, *AckRequest, *AckResponse) error
 }
 
 type PaymentsService_TipProgressServer interface {
 	Send(m *TipProgressEvent) error
+}
+
+type PaymentsService_TipStreamServer interface {
+	Send(m *ReceivedTip) error
 }
 
 func PaymentsServiceDefn() ServiceDefn {
@@ -1234,6 +1266,36 @@ func PaymentsServiceDefn() ServiceDefn {
 				},
 				ClientHandler: func(conn ClientConn, ctx context.Context, request, response proto.Message) error {
 					method := "PaymentsService.AckTipProgress"
+					return conn.Request(ctx, method, request, response)
+				},
+			},
+			"TipStream": {
+				IsStreaming:  true,
+				NewRequest:   func() proto.Message { return new(TipStreamRequest) },
+				NewResponse:  func() proto.Message { return new(ReceivedTip) },
+				RequestDefn:  func() protoreflect.MessageDescriptor { return new(TipStreamRequest).ProtoReflect().Descriptor() },
+				ResponseDefn: func() protoreflect.MessageDescriptor { return new(ReceivedTip).ProtoReflect().Descriptor() },
+				Help:         "TipStream returns a stream that gets tips received by the client.",
+				ServerStreamHandler: func(x interface{}, ctx context.Context, request proto.Message, stream ServerStream) error {
+					return x.(PaymentsServiceServer).TipStream(ctx, request.(*TipStreamRequest), streamerImpl[*ReceivedTip]{s: stream})
+				},
+				ClientStreamHandler: func(conn ClientConn, ctx context.Context, request proto.Message) (ClientStream, error) {
+					method := "PaymentsService.TipStream"
+					return conn.Stream(ctx, method, request)
+				},
+			},
+			"AckTipReceived": {
+				IsStreaming:  false,
+				NewRequest:   func() proto.Message { return new(AckRequest) },
+				NewResponse:  func() proto.Message { return new(AckResponse) },
+				RequestDefn:  func() protoreflect.MessageDescriptor { return new(AckRequest).ProtoReflect().Descriptor() },
+				ResponseDefn: func() protoreflect.MessageDescriptor { return new(AckResponse).ProtoReflect().Descriptor() },
+				Help:         "AckTipReceived acknowledges events received up to a given sequence_id have been processed.",
+				ServerHandler: func(x interface{}, ctx context.Context, request, response proto.Message) error {
+					return x.(PaymentsServiceServer).AckTipReceived(ctx, request.(*AckRequest), response.(*AckResponse))
+				},
+				ClientHandler: func(conn ClientConn, ctx context.Context, request, response proto.Message) error {
+					method := "PaymentsService.AckTipReceived"
 					return conn.Request(ctx, method, request, response)
 				},
 			},
@@ -1850,5 +1912,15 @@ var help_messages = map[string]map[string]string{
 		"manifest":    "manifest of the chunks that compose the file.",
 		"signature":   "signature of the file by the host.",
 		"attributes":  "attributes of the file.",
+	},
+	"TipStreamRequest": {
+		"@":            "TipStreamRequest is the request for a new tip reception stream.",
+		"unacked_from": "unacked_from specifies to the server the sequence_id of the last processed PM. PMs received by the server that have a higher sequence_id will be streamed back to the client.",
+	},
+	"ReceivedTip": {
+		"@":             "ReceivedPM is a private message received by the client.",
+		"uid":           "uid is the source user ID in raw format.",
+		"amount_matoms": "amount_matoms is the amount being tipped in milli-atoms.",
+		"sequence_id":   "sequence_id is an opaque sequential ID.",
 	},
 }
