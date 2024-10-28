@@ -13,6 +13,7 @@ import 'package:bruig/models/uistate.dart';
 import 'package:bruig/notification_service.dart';
 import 'package:bruig/screens/config_network.dart';
 import 'package:bruig/screens/list_kxs.dart';
+import 'package:bruig/screens/config_rpc.dart';
 import 'package:bruig/screens/ln_management.dart';
 import 'package:bruig/screens/log.dart';
 import 'package:bruig/screens/manage_content/manage_content.dart';
@@ -62,6 +63,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
   ClientModel get client => widget.client;
   bool loading = false;
   String settingsPage = "main";
+  bool showRPCWarning = true;
+
+  void loadSettings() async {
+    var showWarning = await StorageManager.readBool(
+        StorageManager.showRPCWarningKey,
+        defaultVal: true);
+    setState(() {
+      showRPCWarning = showWarning;
+    });
+  }
 
   void connStateChanged() async {
     setState(() {});
@@ -150,6 +161,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   void initState() {
     super.initState();
+    loadSettings();
     client.connState.addListener(connStateChanged);
   }
 
@@ -168,6 +180,65 @@ class _SettingsScreenState extends State<SettingsScreen> {
         (_) => client.ui.settingsTitle.title = "Settings");
     client.connState.removeListener(connStateChanged);
     super.dispose();
+  }
+
+  void showRpcWarningDialog() {
+    if (!showRPCWarning) {
+      changePage("RPC");
+      return;
+    }
+
+    bool turnOffAlert = false;
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text("Allow JSON RPC Access"),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    "Enabling JSON RPC allows connections from third-party applications. Are you sure you want to proceed?",
+                  ),
+                  Row(
+                    children: [
+                      Checkbox(
+                        value: turnOffAlert,
+                        onChanged: (bool? value) {
+                          setDialogState(() => turnOffAlert = value ?? false);
+                        },
+                      ),
+                      const Text("Don’t show this message again"),
+                    ],
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text("Cancel"),
+                ),
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    // Update the setting if the user chose to disable future alerts
+                    if (turnOffAlert) {
+                      StorageManager.saveBool(
+                          StorageManager.showRPCWarningKey, false);
+                      setState(() => showRPCWarning = false);
+                    }
+                    setState(() => settingsPage = "RPC");
+                  },
+                  child: const Text("Continue"),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 
   @override
@@ -191,6 +262,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
         break;
       case "Network":
         settingsView = NetworkSettingsScreen(client);
+        break;
+      case "RPC":
+        settingsView = const RpcConfigScreen();
         break;
       case "About":
         settingsView = const AboutScreen(settings: true);
@@ -237,6 +311,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
           selected: settingsPage == "Audio",
           title: const Txt.S("Audio"),
           onTap: () => changePage("Audio"),
+        ),
+        ListTile(
+          selected: settingsPage == "RPC",
+          title: const Txt.S("RPC"),
+          onTap: () => showRpcWarningDialog(),
         ),
       ]),
       Expanded(child: settingsView),
