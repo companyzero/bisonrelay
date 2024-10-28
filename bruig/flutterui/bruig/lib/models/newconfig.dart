@@ -49,21 +49,37 @@ class NewConfigModel extends ChangeNotifier {
   LNNodeType nodeType = LNNodeType.internal;
   NetworkType netType = NetworkType.mainnet;
 
-  String rpcHost = "";
-  String tlsCertPath = "";
-  String macaroonPath = "";
+  // default properties
   String serverAddr = "";
   String newWalletSeed = "";
   bool advancedSetup = false;
+
+  // LN configuration properties
+  String rpcHost = "";
+  String tlsCertPath = "";
+  String macaroonPath = "";
   List<String> seedToRestore = [];
   Uint8List? multichanBackupRestore;
   List<ConfirmSeedWords> confirmSeedWords = [];
 
+  // Network configuration properties
   String proxyAddr = "";
   String proxyUser = "";
   String proxyPassword = "";
   int torCircuitLimit = 32;
   bool torIsolation = false;
+
+  // RPC configuration properties
+  List<String> jsonRPCListen = [""];
+  String rpcCertPath = "";
+  String rpcKeyPath = "";
+  String rpcClientCApath = "";
+  String rpcUser = "";
+  String rpcPass = "";
+  String rpcAuthMode = "";
+  bool rpcIssueClientCert = false;
+  bool rpcAllowRemoteSendTip = false;
+  double rpcMaxRemoteSendTipAmt = 0.0;
 
   Future<LNInfo> tryExternalDcrlnd(
       String host, String tlsPath, String macaroonPath) async {
@@ -90,6 +106,18 @@ class NewConfigModel extends ChangeNotifier {
       proxyPassword: proxyPassword,
       circuitLimit: torCircuitLimit,
       torIsolation: torIsolation,
+
+      // RPC configuration settings
+      jsonRPCListen: jsonRPCListen,
+      rpcCertPath: rpcCertPath,
+      rpcKeyPath: rpcKeyPath,
+      rpcClientCApath: rpcClientCApath,
+      rpcUser: rpcUser,
+      rpcPass: rpcPass,
+      rpcAuthMode: rpcAuthMode,
+      rpcIssueClientCert: rpcIssueClientCert,
+      rpcAllowRemoteSendTip: rpcAllowRemoteSendTip,
+      rpcMaxRemoteSendTipAmt: rpcMaxRemoteSendTipAmt,
     );
     await cfg.saveNewConfig(await configFileName(appArgs));
     cfg = await configFromArgs(appArgs); // Reload to fill defaults.
@@ -107,7 +135,7 @@ class NewConfigModel extends ChangeNotifier {
     return cfg;
   }
 
-  List<ConfirmSeedWords> createConfirmSeedWords(String seed) {
+ List<ConfirmSeedWords> createConfirmSeedWords(String seed) {
     List<ConfirmSeedWords> confirmSeedWords = [];
     var seedWords = seed.trim().split(' ');
     var numWords = 5;

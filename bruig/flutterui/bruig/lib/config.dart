@@ -239,7 +239,7 @@ class Config {
 }
 
 // replaceConfig replaces the settings that can be modified by the GUI, while
-// preserving manual chages made to the config file.
+// preserving manual changes made to the config file.
 Future<void> replaceConfig(
   String filepath, {
   String? debugLevel,
@@ -250,6 +250,16 @@ Future<void> replaceConfig(
   String? proxyPassword,
   int? torCircuitLimit,
   bool? torIsolation,
+  String? jsonRPCListen,
+  String? rpcCertPath,
+  String? rpcKeyPath,
+  String? rpcClientCApath,
+  String? rpcUser,
+  String? rpcPass,
+  String? rpcAuthMode,
+  bool? rpcIssueClientCert,
+  bool? rpcAllowRemoteSendTip,
+  double? rpcMaxRemoteSendTipAmt,
 }) async {
   var f = ini.Config.fromStrings(File(filepath).readAsLinesSync());
 
@@ -271,6 +281,11 @@ Future<void> replaceConfig(
     set(section, opt, "$val");
   }
 
+  void setDouble(String section, String opt, double? val) {
+    if (val == null) return;
+    set(section, opt, "$val");
+  }
+
   set("log", "debuglevel", debugLevel);
   setBool("log", "pings", logPings);
   set("payment", "lndebuglevel", lnDebugLevel);
@@ -280,6 +295,18 @@ Future<void> replaceConfig(
   set("default", "proxypass", proxyPassword);
   setInt("default", "circuitlimit", torCircuitLimit);
   setBool("default", "torisolation", torIsolation);
+
+  // RPC settings
+  set("clientrpc", "jsonrpclisten", jsonRPCListen);
+  set("clientrpc", "rpccertpath", rpcCertPath);
+  set("clientrpc", "rpckeypath", rpcKeyPath);
+  set("clientrpc", "rpcclientcapath", rpcClientCApath);
+  set("clientrpc", "rpcuser", rpcUser);
+  set("clientrpc", "rpcpass", rpcPass);
+  set("clientrpc", "rpcauthmode", rpcAuthMode);
+  setBool("clientrpc", "rpcissueclientcert", rpcIssueClientCert);
+  setBool("clientrpc", "rpcallowremotesendtip", rpcAllowRemoteSendTip);
+  setDouble("clientrpc", "rpcmaxremotesendtipamt", rpcMaxRemoteSendTipAmt);
 
   await File(filepath).writeAsString(f.toString());
 }
@@ -427,7 +454,7 @@ Future<Config> loadConfig(String filepath) async {
   c.jsonRPCListen = getCommaList("clientrpc", "jsonrpclisten") ?? [];
   c.rpcCertPath = f.get("clientrpc", "rpccertpath") ?? "";
   c.rpcKeyPath = f.get("clientrpc", "rpckeypath") ?? "";
-  c.rpcIssueClientCert = f.get("clientrpc", "rpcissueclientcert") == "true";
+  c.rpcIssueClientCert = getBool("clientrpc", "rpcissueclientcert");
   c.rpcClientCApath = f.get("clientrpc", "rpcclientcapath") ?? "";
   c.rpcUser = f.get("clientrpc", "rpcuser") ?? "";
   c.rpcPass = f.get("clientrpc", "rpcpass") ?? "";
