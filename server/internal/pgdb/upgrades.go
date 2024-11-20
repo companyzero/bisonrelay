@@ -2,15 +2,15 @@ package pgdb
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/lib/pq"
 )
 
 // upgradeDBToV2 upgrades the database to V2. This involves renaming the old
 // insert_time field to insert_date and adding a new insert_ts field.
-func upgradeDBToV2(ctx context.Context, tx *sql.Tx, dbInfo *databaseInfo) error {
+func upgradeDBToV2(ctx context.Context, tx pgx.Tx, dbInfo *databaseInfo) error {
 	if dbInfo.version != 1 {
 		str := fmt.Sprintf("cannot upgrade db to version 2 from version %d",
 			dbInfo.version)
@@ -23,7 +23,7 @@ func upgradeDBToV2(ctx context.Context, tx *sql.Tx, dbInfo *databaseInfo) error 
 		queryAddTSField := fmt.Sprintf("ALTER TABLE %s"+
 			"ADD COLUMN insert_ts TIMESTAMP NOT NULL DEFAULT current_timestamp;",
 			pq.QuoteIdentifier(tableName))
-		_, err := tx.ExecContext(ctx, queryAddTSField)
+		_, err := tx.Exec(ctx, queryAddTSField)
 		if err != nil {
 			str := fmt.Sprintf("unable to add insert_ts field to %s table: %v",
 				tableName, err)
@@ -36,7 +36,7 @@ func upgradeDBToV2(ctx context.Context, tx *sql.Tx, dbInfo *databaseInfo) error 
 
 // upgradeDBToV3 upgrades the database to V3. This involves adding the new
 // virtual table to store payment redemption status for pushed messages.
-func upgradeDBToV3(ctx context.Context, tx *sql.Tx, dbInfo *databaseInfo, indexTablespace string) error {
+func upgradeDBToV3(ctx context.Context, tx pgx.Tx, dbInfo *databaseInfo, indexTablespace string) error {
 	if dbInfo.version != 2 {
 		str := fmt.Sprintf("cannot upgrade db to version 3 from version %d",
 			dbInfo.version)
@@ -51,7 +51,7 @@ func upgradeDBToV3(ctx context.Context, tx *sql.Tx, dbInfo *databaseInfo, indexT
 	tablespace := pq.QuoteIdentifier(indexTablespace)
 	query := fmt.Sprintf(queryTemplate, tablespace)
 
-	_, err := tx.Exec(query)
+	_, err := tx.Exec(ctx, query)
 	if err != nil {
 		str := fmt.Sprintf("unable to create redeemed push payments table: %v", err)
 		return contextError(ErrUpgradeV3, str, err)
