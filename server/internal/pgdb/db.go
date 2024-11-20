@@ -2,7 +2,6 @@ package pgdb
 
 import (
 	"context"
-	"database/sql"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -13,8 +12,12 @@ import (
 
 	"github.com/companyzero/bisonrelay/ratchet"
 	"github.com/companyzero/bisonrelay/server/serverdb"
+	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/lib/pq"
-	_ "github.com/lib/pq" // Start the PostgreSQL driver
 )
 
 const (
@@ -92,7 +95,7 @@ type DB struct {
 	dbInfo  *databaseInfo
 
 	// db houses the handle to the underlying Postgres database.
-	db *sql.DB
+	db *pgxpool.Pool
 
 	// partitionMtx protects the following fields:
 	//
@@ -115,22 +118,22 @@ type DB struct {
 // rollback the transaction and return the error when a non-nil error is
 // returned from the provided function or commit the transaction when a nil
 // error is returned the provided function.
-func (db *DB) sqlTx(ctx context.Context, f func(tx *sql.Tx) error) (err error) {
-	tx, err := db.db.BeginTx(ctx, nil)
+func (db *DB) sqlTx(ctx context.Context, f func(tx pgx.Tx) error) (err error) {
+	tx, err := db.db.Begin(ctx)
 	if err != nil {
 		str := fmt.Sprintf("unable to start transaction: %v", err)
 		return contextError(ErrBeginTx, str, err)
 	}
 	defer func() {
 		if p := recover(); p != nil {
-			_ = tx.Rollback()
+			_ = tx.Rollback(ctx)
 			panic(p)
 		}
 		if err != nil {
-			_ = tx.Rollback()
+			_ = tx.Rollback(ctx)
 			return
 		}
-		err = tx.Commit()
+		err = tx.Commit(ctx)
 		if err != nil {
 			str := fmt.Sprintf("unable to commit transaction: %v", err)
 			err = contextError(ErrCommitTx, str, err)
@@ -140,10 +143,10 @@ func (db *DB) sqlTx(ctx context.Context, f func(tx *sql.Tx) error) (err error) {
 }
 
 // checkRoleExists returns an error if the given role does not exist.
-func checkRoleExists(tx *sql.Tx, roleName string) error {
+func checkRoleExists(ctx context.Context, tx pgx.Tx, roleName string) error {
 	const query = "SELECT COUNT(*) FROM pg_roles WHERE rolname = $1;"
 	var count uint64
-	row := tx.QueryRow(query, roleName)
+	row := tx.QueryRow(ctx, query, roleName)
 	if err := row.Scan(&count); err != nil {
 		str := fmt.Sprintf("unable to query role: %v", err)
 		return contextError(ErrQueryFailed, str, err)
@@ -162,10 +165,10 @@ func checkRoleExists(tx *sql.Tx, roleName string) error {
 
 // checkTablespaceExists returns an error if the given tablespace does not
 // exist.
-func (db *DB) checkTablespaceExists(tx *sql.Tx, tablespace string) error {
+func (db *DB) checkTablespaceExists(ctx context.Context, tx pgx.Tx, tablespace string) error {
 	const query = "SELECT COUNT(*) FROM pg_tablespace WHERE spcname = $1;"
 	var count uint64
-	row := tx.QueryRow(query, tablespace)
+	row := tx.QueryRow(ctx, query, tablespace)
 	if err := row.Scan(&count); err != nil {
 		str := fmt.Sprintf("unable to query tablespace: %v", err)
 		return contextError(ErrQueryFailed, str, err)
@@ -184,10 +187,10 @@ func (db *DB) checkTablespaceExists(tx *sql.Tx, tablespace string) error {
 }
 
 // checkDatabaseExists returns an error if the given database does not exist.
-func (db *DB) checkDatabaseExists(tx *sql.Tx, dbName string) error {
+func (db *DB) checkDatabaseExists(ctx context.Context, tx pgx.Tx, dbName string) error {
 	const query = "SELECT COUNT(*) FROM pg_database WHERE datname = $1;"
 	var count uint64
-	row := tx.QueryRow(query, dbName)
+	row := tx.QueryRow(ctx, query, dbName)
 	if err := row.Scan(&count); err != nil {
 		str := fmt.Sprintf("unable to query db: %v", err)
 		return contextError(ErrQueryFailed, str, err)
@@ -207,20 +210,20 @@ func (db *DB) checkDatabaseExists(tx *sql.Tx, dbName string) error {
 
 // checkDatabaseInitialized returns an error if the current db connection is
 // not properly initialized with the necessary tablespaces and database.
-func (db *DB) checkDatabaseInitialized(tx *sql.Tx) error {
-	err := checkRoleExists(tx, db.roleName)
+func (db *DB) checkDatabaseInitialized(ctx context.Context, tx pgx.Tx) error {
+	err := checkRoleExists(ctx, tx, db.roleName)
 	if err != nil {
 		return err
 	}
-	err = db.checkTablespaceExists(tx, db.bulkDataTablespace)
+	err = db.checkTablespaceExists(ctx, tx, db.bulkDataTablespace)
 	if err != nil {
 		return err
 	}
-	err = db.checkTablespaceExists(tx, db.indexTablespace)
+	err = db.checkTablespaceExists(ctx, tx, db.indexTablespace)
 	if err != nil {
 		return err
 	}
-	return db.checkDatabaseExists(tx, db.dbName)
+	return db.checkDatabaseExists(ctx, tx, db.dbName)
 }
 
 // createDbInfoTableQuery returns a SQL query that creates the database info
@@ -239,12 +242,12 @@ func (db *DB) createDbInfoTableQuery() string {
 // maybeLoadDatabaseInfo attempts to information about the state of the database
 // such as its version and the time it was created.  It returns nil for both the
 // database info and the error when the information does not exist yet.
-func maybeLoadDatabaseInfo(tx *sql.Tx) (*databaseInfo, error) {
+func maybeLoadDatabaseInfo(ctx context.Context, tx pgx.Tx) (*databaseInfo, error) {
 	var dbInfo databaseInfo
 	const query = "SELECT version, created, updated FROM db_info WHERE id = 1;"
-	row := tx.QueryRow(query)
+	row := tx.QueryRow(ctx, query)
 	err := row.Scan(&dbInfo.version, &dbInfo.created, &dbInfo.updated)
-	if err == sql.ErrNoRows {
+	if err == pgx.ErrNoRows {
 		return nil, nil
 	} else if err != nil {
 		str := fmt.Sprintf("unable to query database info: %v", err)
@@ -257,14 +260,14 @@ func maybeLoadDatabaseInfo(tx *sql.Tx) (*databaseInfo, error) {
 // updateDatabaseInfo either inserts or updates the only row allowed to be in
 // the database info table with the provided values.  Note that updated field of
 // the passed database info will be updated to the current time (in UTC).
-func updateDatabaseInfo(tx *sql.Tx, dbInfo *databaseInfo) error {
+func updateDatabaseInfo(ctx context.Context, tx pgx.Tx, dbInfo *databaseInfo) error {
 	dbInfo.updated = time.Now().UTC()
 
 	const query = "INSERT INTO db_info (version, created, updated) VALUES " +
 		"($1, $2, $3) " +
 		"ON CONFLICT (id) " +
 		"DO UPDATE SET (version, updated) = ($1, $3);"
-	_, err := tx.Exec(query, dbInfo.version, dbInfo.created, dbInfo.updated)
+	_, err := tx.Exec(ctx, query, dbInfo.version, dbInfo.created, dbInfo.updated)
 	if err != nil {
 		str := fmt.Sprintf("unable to insert database info: %v", err)
 		return contextError(ErrQueryFailed, str, err)
@@ -314,12 +317,12 @@ func (db *DB) createRedeemedPushPaymentsQuery() string {
 }
 
 // procedureExists returns whether or not the provided stored procedure exists.
-func procedureExists(tx *sql.Tx, procName string) (bool, error) {
+func procedureExists(ctx context.Context, tx pgx.Tx, procName string) (bool, error) {
 	//	--SELECT * FROM information_schema.routines WHERE routine_name = 'global_data_rv_unique';
 	const query = "SELECT COUNT(*) FROM information_schema.routines WHERE " +
 		"routine_name = $1;"
 	var count uint64
-	row := tx.QueryRow(query, procName)
+	row := tx.QueryRow(ctx, query, procName)
 	if err := row.Scan(&count); err != nil {
 		str := fmt.Sprintf("unable to query db routines: %v", err)
 		return false, contextError(ErrQueryFailed, str, err)
@@ -350,11 +353,11 @@ func createUniqueRVTriggerProcQuery(procName string) string {
 }
 
 // triggerExists returns whether or not the provided trigger exists.
-func triggerExists(tx *sql.Tx, procName string) (bool, error) {
+func triggerExists(ctx context.Context, tx pgx.Tx, procName string) (bool, error) {
 	const query = "SELECT COUNT(*) FROM information_schema.triggers WHERE " +
 		"trigger_name = $1;"
 	var count uint64
-	row := tx.QueryRow(query, procName)
+	row := tx.QueryRow(ctx, query, procName)
 	if err := row.Scan(&count); err != nil {
 		str := fmt.Sprintf("unable to query db triggers: %v", err)
 		return false, contextError(ErrQueryFailed, str, err)
@@ -374,11 +377,11 @@ func createUniqueRVConstraintQuery(triggerName, procName string) string {
 // discoverExistingPartitions queries the database to find all existing
 // partitions in for the given virtual table and returns the found map of
 // partitions.
-func (db *DB) discoverExistingPartitions(tx *sql.Tx, baseTableName string) (map[string]struct{}, error) {
+func (db *DB) discoverExistingPartitions(ctx context.Context, tx pgx.Tx, baseTableName string) (map[string]struct{}, error) {
 	// Ensure exclusive access to the data table when modifying or reading
 	// partitions from the database.
 	queryLock := fmt.Sprintf("LOCK TABLE %s", pq.QuoteIdentifier(baseTableName))
-	_, err := tx.Exec(queryLock)
+	_, err := tx.Exec(ctx, queryLock)
 	if err != nil {
 		str := fmt.Sprintf("unable to lock %s table: %v", baseTableName, err)
 		return nil, contextError(ErrQueryFailed, str, err)
@@ -386,7 +389,7 @@ func (db *DB) discoverExistingPartitions(tx *sql.Tx, baseTableName string) (map[
 
 	query := fmt.Sprintf("SELECT tablename FROM pg_tables WHERE tablename LIKE '%s_%%';",
 		baseTableName)
-	rows, err := tx.Query(query)
+	rows, err := tx.Query(ctx, query)
 	if err != nil {
 		str := fmt.Sprintf("unable to query tables for %s partition: %v",
 			baseTableName, err)
@@ -414,11 +417,11 @@ func (db *DB) discoverExistingPartitions(tx *sql.Tx, baseTableName string) (map[
 
 // discoverExistingDataPartitions finds all existing partitions of the the main
 // data virtual table.
-func (db *DB) discoverExistingDataPartitions(tx *sql.Tx) error {
+func (db *DB) discoverExistingDataPartitions(ctx context.Context, tx pgx.Tx) error {
 	db.partitionMtx.Lock()
 	defer db.partitionMtx.Unlock()
 
-	parts, err := db.discoverExistingPartitions(tx, "data")
+	parts, err := db.discoverExistingPartitions(ctx, tx, "data")
 	if err != nil {
 		return err
 	}
@@ -428,11 +431,11 @@ func (db *DB) discoverExistingDataPartitions(tx *sql.Tx) error {
 
 // discoverExistingPaidSubsPartitions finds all existing partitions of the paid
 // subscriptions virtual table.
-func (db *DB) discoverExistingPaidSubsPartitions(tx *sql.Tx) error {
+func (db *DB) discoverExistingPaidSubsPartitions(ctx context.Context, tx pgx.Tx) error {
 	db.partitionMtx.Lock()
 	defer db.partitionMtx.Unlock()
 
-	parts, err := db.discoverExistingPartitions(tx, "paid_subs")
+	parts, err := db.discoverExistingPartitions(ctx, tx, "paid_subs")
 	if err != nil {
 		return err
 	}
@@ -442,11 +445,11 @@ func (db *DB) discoverExistingPaidSubsPartitions(tx *sql.Tx) error {
 
 // discoverExistingRedeemedPushPayments finds all existing partitions of the
 // the redeemed push payments table.
-func (db *DB) discoverExistingRedeemedPushPayments(tx *sql.Tx) error {
+func (db *DB) discoverExistingRedeemedPushPayments(ctx context.Context, tx pgx.Tx) error {
 	db.partitionMtx.Lock()
 	defer db.partitionMtx.Unlock()
 
-	parts, err := db.discoverExistingPartitions(tx, "redeemed_push_payments")
+	parts, err := db.discoverExistingPartitions(ctx, tx, "redeemed_push_payments")
 	if err != nil {
 		return err
 	}
@@ -458,13 +461,13 @@ func (db *DB) discoverExistingRedeemedPushPayments(tx *sql.Tx) error {
 // all possible upgrades iteratively.
 //
 // NOTE: The passed database info will be updated with the latest versions.
-func upgradeDB(ctx context.Context, tx *sql.Tx, dbInfo *databaseInfo, indexTablespace string) error {
+func upgradeDB(ctx context.Context, tx pgx.Tx, dbInfo *databaseInfo, indexTablespace string) error {
 	if dbInfo.version == 1 {
 		if err := upgradeDBToV2(ctx, tx, dbInfo); err != nil {
 			return err
 		}
 		dbInfo.version = 2
-		if err := updateDatabaseInfo(tx, dbInfo); err != nil {
+		if err := updateDatabaseInfo(ctx, tx, dbInfo); err != nil {
 			return err
 		}
 	}
@@ -474,7 +477,7 @@ func upgradeDB(ctx context.Context, tx *sql.Tx, dbInfo *databaseInfo, indexTable
 			return err
 		}
 		dbInfo.version = 3
-		if err := updateDatabaseInfo(tx, dbInfo); err != nil {
+		if err := updateDatabaseInfo(ctx, tx, dbInfo); err != nil {
 			return err
 		}
 	}
@@ -487,25 +490,25 @@ func upgradeDB(ctx context.Context, tx *sql.Tx, dbInfo *databaseInfo, indexTable
 // for proper operation.
 //
 // This function MUST be called with the init mutex held (for writes).
-func (db *DB) initDB(ctx context.Context, tx *sql.Tx) error {
+func (db *DB) initDB(ctx context.Context, tx pgx.Tx) error {
 	// Ensure exclusive access during initialization.
 	const dbInfoAdvisoryLockID = 1000
 	const query = "SELECT pg_advisory_xact_lock(%d);"
-	_, err := tx.Exec(fmt.Sprintf(query, dbInfoAdvisoryLockID))
+	_, err := tx.Exec(ctx, fmt.Sprintf(query, dbInfoAdvisoryLockID))
 	if err != nil {
 		str := fmt.Sprintf("unable to obtain init lock: %v", err)
 		return contextError(ErrQueryFailed, str, err)
 	}
 
 	// Create the database info table if it does not already exist.
-	_, err = tx.Exec(db.createDbInfoTableQuery())
+	_, err = tx.Exec(ctx, db.createDbInfoTableQuery())
 	if err != nil {
 		str := fmt.Sprintf("unable to create database info table: %v", err)
 		return contextError(ErrQueryFailed, str, err)
 	}
 
 	// Attempt to load database info to determine the state of the database.
-	db.dbInfo, err = maybeLoadDatabaseInfo(tx)
+	db.dbInfo, err = maybeLoadDatabaseInfo(ctx, tx)
 	if err != nil {
 		return err
 	}
@@ -519,12 +522,12 @@ func (db *DB) initDB(ctx context.Context, tx *sql.Tx) error {
 			version: currentDBVersion,
 			created: now,
 		}
-		if err := updateDatabaseInfo(tx, db.dbInfo); err != nil {
+		if err := updateDatabaseInfo(ctx, tx, db.dbInfo); err != nil {
 			return err
 		}
 
 		// Create the main virtual partitioned data table if needed.
-		_, err := tx.Exec(db.createDataTableQuery())
+		_, err := tx.Exec(ctx, db.createDataTableQuery())
 		if err != nil {
 			str := fmt.Sprintf("unable to create data table: %v", err)
 			return contextError(ErrQueryFailed, str, err)
@@ -534,13 +537,13 @@ func (db *DB) initDB(ctx context.Context, tx *sql.Tx) error {
 		// uniqueness constraint on the rendezvous point across all partitions
 		// if it does not already exist.
 		const procName = "global_data_rv_unique"
-		exists, err := procedureExists(tx, procName)
+		exists, err := procedureExists(ctx, tx, procName)
 		if err != nil {
 			return err
 		}
 		if !exists {
 			query := createUniqueRVTriggerProcQuery(procName)
-			if _, err := tx.Exec(query); err != nil {
+			if _, err := tx.Exec(ctx, query); err != nil {
 				str := fmt.Sprintf("unable to create stored procedure: %v", err)
 				return contextError(ErrQueryFailed, str, err)
 			}
@@ -550,27 +553,27 @@ func (db *DB) initDB(ctx context.Context, tx *sql.Tx) error {
 		// table that will be inherited by all partitions unless it already
 		// exists.
 		const triggerName = "partition_data_rv_unique"
-		exists, err = triggerExists(tx, triggerName)
+		exists, err = triggerExists(ctx, tx, triggerName)
 		if err != nil {
 			return err
 		}
 		if !exists {
 			query := createUniqueRVConstraintQuery(triggerName, procName)
-			if _, err := tx.Exec(query); err != nil {
+			if _, err := tx.Exec(ctx, query); err != nil {
 				str := fmt.Sprintf("unable to create constraint: %v", err)
 				return contextError(ErrQueryFailed, str, err)
 			}
 		}
 
 		// Create the main virtual partitioned paid subscriptions table if needed.
-		_, err = tx.Exec(db.createPaidSubsTableQuery())
+		_, err = tx.Exec(ctx, db.createPaidSubsTableQuery())
 		if err != nil {
 			str := fmt.Sprintf("unable to create paid subscriptions table: %v", err)
 			return contextError(ErrQueryFailed, str, err)
 		}
 
 		// Create the virtual partitioned redeemed push payments table if needed.
-		_, err = tx.Exec(db.createRedeemedPushPaymentsQuery())
+		_, err = tx.Exec(ctx, db.createRedeemedPushPaymentsQuery())
 		if err != nil {
 			str := fmt.Sprintf("unable to create redeemed push payments table: %v", err)
 			return contextError(ErrQueryFailed, str, err)
@@ -592,24 +595,24 @@ func (db *DB) initDB(ctx context.Context, tx *sql.Tx) error {
 
 	// Discover the existing data partitions and populate the internal map used
 	// for partition maintenance accordingly.
-	if err := db.discoverExistingDataPartitions(tx); err != nil {
+	if err := db.discoverExistingDataPartitions(ctx, tx); err != nil {
 		return err
 	}
-	if err := db.discoverExistingPaidSubsPartitions(tx); err != nil {
+	if err := db.discoverExistingPaidSubsPartitions(ctx, tx); err != nil {
 		return err
 	}
-	if err := db.discoverExistingRedeemedPushPayments(tx); err != nil {
+	if err := db.discoverExistingRedeemedPushPayments(ctx, tx); err != nil {
 		return err
 	}
 	return nil
 }
 
 // tableExists returns whether or not the provided table exists.
-func tableExists(tx *sql.Tx, tableName string) (bool, error) {
+func tableExists(ctx context.Context, tx pgx.Tx, tableName string) (bool, error) {
 	const query = "SELECT COUNT(*) FROM information_schema.tables WHERE " +
 		"table_name = $1;"
 	var count uint64
-	row := tx.QueryRow(query, tableName)
+	row := tx.QueryRow(ctx, query, tableName)
 	if err := row.Scan(&count); err != nil {
 		str := fmt.Sprintf("unable to query table names: %v", err)
 		return false, contextError(ErrQueryFailed, str, err)
@@ -619,10 +622,10 @@ func tableExists(tx *sql.Tx, tableName string) (bool, error) {
 
 // checkBulkTablespace returns an error if the given table is not configured
 // with the expected data tablespace.
-func (db *DB) checkBulkTablespace(tx *sql.Tx, tableName string) error {
+func (db *DB) checkBulkTablespace(ctx context.Context, tx pgx.Tx, tableName string) error {
 	const query = "SELECT tablespace FROM pg_tables WHERE tablename = $1;"
-	var tablespace sql.NullString
-	row := tx.QueryRow(query, tableName)
+	var tablespace pgtype.Text
+	row := tx.QueryRow(ctx, query, tableName)
 	if err := row.Scan(&tablespace); err != nil {
 		str := fmt.Sprintf("unable to query table %q tablespace: %v", tableName,
 			err)
@@ -634,7 +637,7 @@ func (db *DB) checkBulkTablespace(tx *sql.Tx, tableName string) error {
 	if !tablespace.Valid {
 		const query = "SELECT t.spcname FROM pg_database d JOIN " +
 			"pg_tablespace t ON d.dattablespace = t.oid WHERE d.datname = $1;"
-		row := tx.QueryRow(query, db.dbName)
+		row := tx.QueryRow(ctx, query, db.dbName)
 		if err := row.Scan(&tablespace); err != nil {
 			str := fmt.Sprintf("unable to query database %q tablespace: %v",
 				db.dbName, err)
@@ -654,11 +657,11 @@ func (db *DB) checkBulkTablespace(tx *sql.Tx, tableName string) error {
 
 // checkIndexTablespace returns an error if the given index for the given table
 // is not configured with the expected index tablespace.
-func (db *DB) checkIndexTablespace(tx *sql.Tx, tableName, indexName string) error {
+func (db *DB) checkIndexTablespace(ctx context.Context, tx pgx.Tx, tableName, indexName string) error {
 	const query = "SELECT tablespace FROM pg_indexes WHERE tablename = $1 " +
 		"AND indexname = $2;"
 	var tablespace string
-	row := tx.QueryRow(query, tableName, indexName)
+	row := tx.QueryRow(ctx, query, tableName, indexName)
 	if err := row.Scan(&tablespace); err != nil {
 		str := fmt.Sprintf("unable to query table %q index tablespace: %v",
 			tableName, err)
@@ -675,10 +678,10 @@ func (db *DB) checkIndexTablespace(tx *sql.Tx, tableName, indexName string) erro
 
 // checkDatabaseSetting returns an error if the given setting name is not set to
 // the provided expected value.
-func checkDatabaseSetting(tx *sql.Tx, name, expected string) error {
+func checkDatabaseSetting(ctx context.Context, tx pgx.Tx, name, expected string) error {
 	const query = "SELECT setting FROM pg_settings WHERE name = $1;"
 	var setting string
-	row := tx.QueryRow(query, name)
+	row := tx.QueryRow(ctx, query, name)
 	if err := row.Scan(&setting); err != nil {
 		str := fmt.Sprintf("unable to query db setting %q: %v", name, err)
 		return contextError(ErrQueryFailed, str, err)
@@ -694,17 +697,17 @@ func checkDatabaseSetting(tx *sql.Tx, name, expected string) error {
 
 // checkDatabaseSanity return an error if required database settings are not
 // configured as needed for necessary support.
-func (db *DB) checkDatabaseSanity(tx *sql.Tx) error {
+func (db *DB) checkDatabaseSanity(ctx context.Context, tx pgx.Tx) error {
 	// Ensure the partition pruning config parameter is enabled.
 	const pruningName = "enable_partition_pruning"
-	if err := checkDatabaseSetting(tx, pruningName, "on"); err != nil {
+	if err := checkDatabaseSetting(ctx, tx, pruningName, "on"); err != nil {
 		return err
 	}
 
 	// Ensure the database info table is configured with the expected data
 	// tablespace.
 	const dbInfoTableName = "db_info"
-	if err := db.checkBulkTablespace(tx, dbInfoTableName); err != nil {
+	if err := db.checkBulkTablespace(ctx, tx, dbInfoTableName); err != nil {
 		return err
 	}
 
@@ -712,7 +715,7 @@ func (db *DB) checkDatabaseSanity(tx *sql.Tx) error {
 	tables := []string{"data", "paid_subs", "redeemed_push_payments"}
 	for _, tableName := range tables {
 		// Ensure the main virtual partitioned data table exists.
-		exists, err := tableExists(tx, tableName)
+		exists, err := tableExists(ctx, tx, tableName)
 		if err != nil {
 			return err
 		}
@@ -724,7 +727,7 @@ func (db *DB) checkDatabaseSanity(tx *sql.Tx) error {
 
 		// Ensure the virtual partitioned data table is configured with the expected
 		// data tablespace.
-		if err := db.checkBulkTablespace(tx, tableName); err != nil {
+		if err := db.checkBulkTablespace(ctx, tx, tableName); err != nil {
 			return err
 		}
 	}
@@ -736,7 +739,7 @@ func (db *DB) checkDatabaseSanity(tx *sql.Tx) error {
 		db.redeemedPushesPartitions}
 	for ip, partitions := range checkPartitions {
 		for tableName := range partitions {
-			if err := db.checkBulkTablespace(tx, tableName); err != nil {
+			if err := db.checkBulkTablespace(ctx, tx, tableName); err != nil {
 				return err
 			}
 
@@ -749,7 +752,7 @@ func (db *DB) checkDatabaseSanity(tx *sql.Tx) error {
 				idxName = fmt.Sprintf("%s_rendezvous_point_insert_time_key", tableName)
 			}
 
-			if err := db.checkIndexTablespace(tx, tableName, idxName); err != nil {
+			if err := db.checkIndexTablespace(ctx, tx, tableName, idxName); err != nil {
 				return err
 			}
 		}
@@ -759,7 +762,7 @@ func (db *DB) checkDatabaseSanity(tx *sql.Tx) error {
 	// Ensure the trigger procedure that is used to enforce a global uniqueness
 	// constraint on the rendezvous point across all partitions exists.
 	const procName = "global_data_rv_unique"
-	exists, err := procedureExists(tx, procName)
+	exists, err := procedureExists(ctx, tx, procName)
 	if err != nil {
 		return err
 	}
@@ -772,7 +775,7 @@ func (db *DB) checkDatabaseSanity(tx *sql.Tx) error {
 	// Ensure the constraint trigger on the main virtual partitioned data table
 	// that is inherited by all partitions exists.
 	const triggerName = "partition_data_rv_unique"
-	exists, err = triggerExists(tx, triggerName)
+	exists, err = triggerExists(ctx, tx, triggerName)
 	if err != nil {
 		return err
 	}
@@ -801,11 +804,11 @@ func (db *DB) maybeCreatePartition(ctx context.Context, baseTableName string, da
 	partitionName := partitionTableName(baseTableName, date)
 	baseTableName = pq.QuoteIdentifier(baseTableName)
 
-	return db.sqlTx(ctx, func(tx *sql.Tx) error {
+	return db.sqlTx(ctx, func(tx pgx.Tx) error {
 		// Ensure exclusive access to the data table when modifying or reading
 		// partitions from the database.
 		queryLock := fmt.Sprintf("LOCK TABLE %s", baseTableName)
-		_, err := tx.Exec(queryLock)
+		_, err := tx.Exec(ctx, queryLock)
 		if err != nil {
 			str := fmt.Sprintf("unable to lock %s table: %v", baseTableName, err)
 			return contextError(ErrQueryFailed, str, err)
@@ -821,7 +824,7 @@ func (db *DB) maybeCreatePartition(ctx context.Context, baseTableName string, da
 		tablespace := pq.QuoteIdentifier(db.bulkDataTablespace)
 		query := fmt.Sprintf(createQuery, tableName, baseTableName, fromDate, toDate, tablespace)
 
-		_, err = tx.Exec(query)
+		_, err = tx.Exec(ctx, query)
 		if err != nil {
 			str := fmt.Sprintf("unable to create data partition: %v", err)
 			return contextError(ErrQueryFailed, str, err)
@@ -919,7 +922,7 @@ func (db *DB) StorePayload(ctx context.Context, rendezvous ratchet.RVPoint,
 		const query = "INSERT INTO data " +
 			"(rendezvous_point, payload, insert_time, insert_ts) " +
 			"VALUES ($1, $2, $3, $4);"
-		_, err := db.db.ExecContext(ctx, query, rendezvous.String(), payload,
+		_, err := db.db.Exec(ctx, query, rendezvous.String(), payload,
 			insertTime, insertTime)
 		if err != nil {
 
@@ -932,9 +935,9 @@ func (db *DB) StorePayload(ctx context.Context, rendezvous ratchet.RVPoint,
 			// another connection to the database which would cause the local
 			// map of known partitions to be out of sync.  This gracefully
 			// handles that scenario.
-			var e *pq.Error
+			var e *pgconn.PgError
 			isPQErr := errors.As(err, &e)
-			if isPQErr && e.Code.Name() == "check_violation" &&
+			if isPQErr && e.Code == pgerrcode.CheckViolation &&
 				attempts == 0 {
 
 				// Ensure the data partition is no longer marked as known to
@@ -953,9 +956,9 @@ func (db *DB) StorePayload(ctx context.Context, rendezvous ratchet.RVPoint,
 			// A unique violation constraint when attempting to store
 			// a duplicate payload is a logical error that is signalled
 			// by a specific error.
-			if isPQErr && e.Code.Name() == "unique_violation" &&
-				(strings.Contains(e.Constraint, "_rendezvous_point_insert_time_key") ||
-					e.Constraint == "global_unique_data_rendezvous") {
+			if isPQErr && e.Code == pgerrcode.UniqueViolation &&
+				(strings.Contains(e.ConstraintName, "_rendezvous_point_insert_time_key") ||
+					e.ConstraintName == "global_unique_data_rendezvous") {
 				return fmt.Errorf("RV %s: %w", rendezvous, serverdb.ErrAlreadyStoredRV)
 			}
 
@@ -981,11 +984,11 @@ func (db *DB) FetchPayload(ctx context.Context, rendezvous ratchet.RVPoint) (*se
 
 	const query = "SELECT payload, insert_ts FROM data WHERE " +
 		"rendezvous_point = $1 ORDER BY insert_time DESC LIMIT 1;"
-	row := db.db.QueryRowContext(ctx, query, rendezvous.String())
+	row := db.db.QueryRow(ctx, query, rendezvous.String())
 	var payload []byte
 	var timestamp time.Time
 	if err := row.Scan(&payload, &timestamp); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
 		}
 
@@ -1006,7 +1009,7 @@ func (db *DB) RemovePayload(ctx context.Context, rendezvous ratchet.RVPoint) err
 	defer task.End()
 
 	const query = "DELETE FROM data WHERE rendezvous_point = $1;"
-	_, err := db.db.ExecContext(ctx, query, rendezvous.String())
+	_, err := db.db.Exec(ctx, query, rendezvous.String())
 	if err != nil {
 		str := fmt.Sprintf("unable to remove payload: %v", err)
 		return contextError(ErrQueryFailed, str, err)
@@ -1021,10 +1024,10 @@ func (db *DB) IsSubscriptionPaid(ctx context.Context, rendezvous ratchet.RVPoint
 	defer task.End()
 
 	const query = "SELECT count(*) FROM paid_subs WHERE rendezvous_point = $1;"
-	row := db.db.QueryRowContext(ctx, query, rendezvous.String())
+	row := db.db.QueryRow(ctx, query, rendezvous.String())
 	var count int
 	if err := row.Scan(&count); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return false, nil
 		}
 
@@ -1056,7 +1059,7 @@ func (db *DB) StoreSubscriptionPaid(ctx context.Context, rendezvous ratchet.RVPo
 		const query = "INSERT INTO paid_subs" +
 			"(rendezvous_point, insert_time, insert_ts) " +
 			"VALUES ($1, $2, $3);"
-		_, err := db.db.ExecContext(ctx, query, rendezvous.String(), insertTime, insertTime)
+		_, err := db.db.Exec(ctx, query, rendezvous.String(), insertTime, insertTime)
 		if err != nil {
 			// Create the paid_subs partition and go back to the top of the loop to
 			// try the insert again if the error indicates the partition doesn't
@@ -1067,9 +1070,9 @@ func (db *DB) StoreSubscriptionPaid(ctx context.Context, rendezvous ratchet.RVPo
 			// another connection to the database which would cause the local
 			// map of known partitions to be out of sync.  This gracefully
 			// handles that scenario.
-			var e *pq.Error
+			var e *pgconn.PgError
 			isPQErr := errors.As(err, &e)
-			if isPQErr && e.Code.Name() == "check_violation" &&
+			if isPQErr && e.Code == pgerrcode.CheckViolation &&
 				attempts == 0 {
 
 				// Ensure the paid_subs partition is no longer marked as known to
@@ -1089,8 +1092,8 @@ func (db *DB) StoreSubscriptionPaid(ctx context.Context, rendezvous ratchet.RVPo
 			// a subscription as paid is not a logical error in this
 			// software, it's simply regarded as a NOP. So return
 			// without error in this case.
-			if isPQErr && e.Code.Name() == "unique_violation" &&
-				strings.Contains(e.Constraint, "_rendezvous_point_insert_time_key") {
+			if isPQErr && e.Code == pgerrcode.UniqueViolation &&
+				strings.Contains(e.ConstraintName, "_rendezvous_point_insert_time_key") {
 				return nil
 			}
 
@@ -1106,9 +1109,9 @@ func (db *DB) StoreSubscriptionPaid(ctx context.Context, rendezvous ratchet.RVPo
 // dropTable drops the provided table name from the database if it exists.  It
 // is up to the caller to ensure the provided table name is quoted properly via
 // pg.QuoteIdentifier.
-func dropTable(tx *sql.Tx, tableName string) error {
+func dropTable(ctx context.Context, tx pgx.Tx, tableName string) error {
 	const query = "DROP TABLE IF EXISTS %s;"
-	_, err := tx.Exec(fmt.Sprintf(query, tableName))
+	_, err := tx.Exec(ctx, fmt.Sprintf(query, tableName))
 	if err != nil {
 		str := fmt.Sprintf("unable to drop table: %v", err)
 		return contextError(ErrQueryFailed, str, err)
@@ -1122,11 +1125,11 @@ func (db *DB) expireTablePartition(ctx context.Context, baseTableName string, da
 
 	var count uint64
 	partitionName := partitionTableName(baseTableName, date)
-	err := db.sqlTx(ctx, func(tx *sql.Tx) error {
+	err := db.sqlTx(ctx, func(tx pgx.Tx) error {
 		// Ensure exclusive access to the data table when modifying or reading
 		// partitions from the database.
 		queryLock := fmt.Sprintf("LOCK TABLE %s", pq.QuoteIdentifier(baseTableName))
-		_, err := tx.Exec(queryLock)
+		_, err := tx.Exec(ctx, queryLock)
 		if err != nil {
 			str := fmt.Sprintf("unable to lock %s table: %v",
 				baseTableName, err)
@@ -1135,7 +1138,7 @@ func (db *DB) expireTablePartition(ctx context.Context, baseTableName string, da
 
 		// Ensure the table still exists since it's possible another backend
 		// removed it which would cause the internal map to be out of sync.
-		exists, err := tableExists(tx, partitionName)
+		exists, err := tableExists(ctx, tx, partitionName)
 		if err != nil {
 			return err
 		}
@@ -1146,14 +1149,14 @@ func (db *DB) expireTablePartition(ctx context.Context, baseTableName string, da
 		// Count how many entries are being expired.
 		const query = "SELECT COUNT(*) FROM %s;"
 		tableName := pq.QuoteIdentifier(partitionName)
-		row := tx.QueryRow(fmt.Sprintf(query, tableName))
+		row := tx.QueryRow(ctx, fmt.Sprintf(query, tableName))
 		if err := row.Scan(&count); err != nil {
 			str := fmt.Sprintf("unable to query partition count: %v", err)
 			return contextError(ErrQueryFailed, str, err)
 		}
 
 		// Drop the table that houses the partition.
-		return dropTable(tx, tableName)
+		return dropTable(ctx, tx, tableName)
 	})
 	if err != nil {
 		return 0, err
@@ -1169,10 +1172,10 @@ func (db *DB) IsPushPaymentRedeemed(ctx context.Context, payID []byte) (bool, er
 	defer task.End()
 
 	const query = "SELECT count(*) FROM redeemed_push_payments WHERE payment_id = $1;"
-	row := db.db.QueryRowContext(ctx, query, hex.EncodeToString(payID))
+	row := db.db.QueryRow(ctx, query, hex.EncodeToString(payID))
 	var count int
 	if err := row.Scan(&count); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return false, nil
 		}
 
@@ -1204,7 +1207,7 @@ func (db *DB) StorePushPaymentRedeemed(ctx context.Context, payID []byte, insert
 		const query = "INSERT INTO redeemed_push_payments" +
 			"(payment_id, insert_time) " +
 			"VALUES ($1, $2);"
-		_, err := db.db.ExecContext(ctx, query, hexID, insertTime)
+		_, err := db.db.Exec(ctx, query, hexID, insertTime)
 		if err != nil {
 			// Create the redeemed_push_payments partition and go
 			// back to the top of the loop to try the insert again
@@ -1215,9 +1218,9 @@ func (db *DB) StorePushPaymentRedeemed(ctx context.Context, payID []byte, insert
 			// another connection to the database which would cause the local
 			// map of known partitions to be out of sync.  This gracefully
 			// handles that scenario.
-			var e *pq.Error
+			var e *pgconn.PgError
 			isPQErr := errors.As(err, &e)
-			if isPQErr && e.Code.Name() == "check_violation" &&
+			if isPQErr && e.Code == pgerrcode.CheckViolation &&
 				attempts == 0 {
 
 				// Ensure the redeemed_push_payments partition
@@ -1238,8 +1241,8 @@ func (db *DB) StorePushPaymentRedeemed(ctx context.Context, payID []byte, insert
 			// mark a push payment as redeemed is not a logical
 			// error in this software, it's simply regarded as a
 			// NOP. So return without error in this case.
-			if isPQErr && e.Code.Name() == "unique_violation" &&
-				strings.Contains(e.Constraint, "_payment_id_insert_time_key") {
+			if isPQErr && e.Code == pgerrcode.UniqueViolation &&
+				strings.Contains(e.ConstraintName, "_payment_id_insert_time_key") {
 				return nil
 			}
 
@@ -1308,9 +1311,9 @@ func (db *DB) Expire(ctx context.Context, date time.Time) (uint64, error) {
 // index tablespaces (respectively) as reported by the underlying db.
 func (db *DB) TableSpacesSizes(ctx context.Context) (uint64, uint64, error) {
 	var bulkSize, indexSize uint64
-	err := db.sqlTx(ctx, func(tx *sql.Tx) error {
+	err := db.sqlTx(ctx, func(tx pgx.Tx) error {
 		const query = "select pg_tablespace_size($1), pg_tablespace_size($2)"
-		row := tx.QueryRow(query, db.bulkDataTablespace,
+		row := tx.QueryRow(ctx, query, db.bulkDataTablespace,
 			db.indexTablespace)
 		if err := row.Scan(&bulkSize, &indexSize); err != nil {
 			str := fmt.Sprintf("unable to query tablespaces size: %v",
@@ -1325,8 +1328,8 @@ func (db *DB) TableSpacesSizes(ctx context.Context) (uint64, uint64, error) {
 
 // Close closes the backend and prevents new queries from starting.  It then
 // waits for all queries that have started processing on the server to finish.
-func (db *DB) Close() error {
-	return db.db.Close()
+func (db *DB) Close() {
+	db.db.Close()
 }
 
 // options houses the configurable values when creating a backend.
@@ -1464,27 +1467,17 @@ func Open(ctx context.Context, opts ...Option) (*DB, error) {
 		connStr += fmt.Sprintf(" sslrootcert='%s'", o.serverCA)
 	}
 
-	sqlDB, err := sql.Open("postgres", connStr)
+	poolCfg, err := pgxpool.ParseConfig(connStr)
+	if err != nil {
+		str := fmt.Sprintf("failed to create connection config: %v", err)
+		return nil, contextError(ErrConnFailed, str, err)
+	}
+	sqlDB, err := pgxpool.NewWithConfig(ctx, poolCfg)
 	if err != nil {
 		str := fmt.Sprintf("unable to open connection to database: %v", err)
 		return nil, contextError(ErrConnFailed, str, err)
 	}
-	if err := sqlDB.Ping(); err != nil {
-		var e *pq.Error
-		if errors.As(err, &e) {
-			switch e.Code.Class() {
-			case "3D":
-				help := fmt.Sprintf("SQL to resolve: CREATE DATABASE %s OWNER "+
-					"%s TABLESPACE %s;\nNOTE: Creating a database typically "+
-					"requires admin permissions", pq.QuoteIdentifier(o.dbName),
-					pq.QuoteIdentifier(o.roleName),
-					pq.QuoteLiteral(o.bulkDataTablespace))
-				str := fmt.Sprintf("unable to communicate with db: %v\n\n%v",
-					err, help)
-				return nil, contextError(ErrMissingDatabase, str, err)
-			}
-		}
-
+	if err := sqlDB.Ping(ctx); err != nil {
 		str := fmt.Sprintf("unable to communicate with database: %v", err)
 		return nil, contextError(ErrConnFailed, str, err)
 	}
@@ -1509,17 +1502,17 @@ func Open(ctx context.Context, opts ...Option) (*DB, error) {
 	// the overall sanity.  Sanity checks include things such as having the
 	// required settings configured, existence of required tables along with
 	// being configured with their expected tablespaces.
-	err = db.sqlTx(ctx, func(tx *sql.Tx) error {
-		if err := db.checkDatabaseInitialized(tx); err != nil {
+	err = db.sqlTx(ctx, func(tx pgx.Tx) error {
+		if err := db.checkDatabaseInitialized(ctx, tx); err != nil {
 			return err
 		}
 		if err := db.initDB(ctx, tx); err != nil {
 			return err
 		}
-		return db.checkDatabaseSanity(tx)
+		return db.checkDatabaseSanity(ctx, tx)
 	})
 	if err != nil {
-		_ = sqlDB.Close()
+		sqlDB.Close()
 		return nil, err
 	}
 
