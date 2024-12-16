@@ -16,6 +16,7 @@ class StorageManager {
   static const String notifiedGCUnkxdMembers = "notifiedGCUnkdMembers";
   static const String audioCaptureDeviceIdKey = "audioCaptureDeviceId";
   static const String audioPlaybackDeviceIdKey = "audioPlaybackDeviceId";
+  static const String showRPCWarningKey = "showRPCWarning";
 
   static Future<void> saveData(String key, dynamic value) async {
     final prefs = await SharedPreferences.getInstance();
@@ -70,6 +71,11 @@ class StorageManager {
             as bool?) ==
         null) {
       await StorageManager.saveData(StorageManager.notificationsKey, true);
+    }
+    if ((await StorageManager.readData(StorageManager.showRPCWarningKey)
+            as bool?) ==
+        null) {
+      await StorageManager.saveData(StorageManager.showRPCWarningKey, true);
     }
   }
 }

@@ -158,8 +158,15 @@ service PaymentsService {
   rpc TipProgress(TipProgressRequest) returns (stream TipProgressEvent);
 
   /* AckTipProgress acknowledges events received up to a given
-     sequence_id have been processed. */
+    sequence_id have been processed. */
   rpc AckTipProgress(AckRequest) returns (AckResponse);
+
+  /* TipStream returns a stream that gets tips received by the client. */
+  rpc TipStream(TipStreamRequest) returns (stream ReceivedTip);
+
+  /* AckTipReceived acknowledges events received up to a given
+    sequence_id have been processed. */
+  rpc AckTipReceived(AckRequest) returns (AckResponse);
 }
 
 /* ResourcesService is the service to perform resource and page related actions. */
@@ -965,4 +972,22 @@ message FileMetadata {
   string signature = 9;
   /* attributes of the file. */
   map<string,string> attributes  = 10;
+}
+
+/* TipStreamRequest is the request for a new tip reception stream.*/
+message TipStreamRequest {
+  /* unacked_from specifies to the server the sequence_id of the last processed
+     PM. PMs received by the server that have a higher sequence_id will be
+     streamed back to the client. */
+  uint64 unacked_from = 1;
+}
+
+/* ReceivedPM is a private message received by the client. */
+message ReceivedTip {
+  /* uid is the source user ID in raw format. */
+  bytes uid = 1;
+  /* amount_matoms is the amount being tipped in milli-atoms. */
+  int64 amount_matoms = 2;
+  /* sequence_id is an opaque sequential ID. */
+  uint64 sequence_id = 3;
 }

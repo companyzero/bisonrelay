@@ -4,12 +4,14 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"math/rand"
 	"net"
+	"net/http"
 	"os"
 	"sync"
 	"time"
@@ -307,6 +309,8 @@ type clientConfig struct {
 	serverCertPath string
 	clientCertPath string
 	clientKeyPath  string
+	rpcUser        string
+	rpcPass        string
 }
 
 // makeDialer creates the per-conn dialer, based on the config.
@@ -348,11 +352,24 @@ func (cfg *clientConfig) makeDialer() (func(context.Context) (*websocket.Conn, e
 		TLSClientConfig: tlsConfig,
 	}
 	dialer := func(ctx context.Context) (*websocket.Conn, error) {
-		//nolint:bodyclose
-		conn, _, err := wsDialer.DialContext(ctx, cfg.url, nil)
+		// Add the Authorization header for Basic Auth
+		headers := http.Header{}
+		authHeader := makeBasicAuthHeader(cfg.rpcUser, cfg.rpcPass)
+		headers.Set("Authorization", authHeader)
+		conn, resp, err := wsDialer.DialContext(ctx, cfg.url, headers)
+		if resp != nil {
+			defer resp.Body.Close()
+		}
+
 		return conn, err
 	}
 	return dialer, nil
+}
+
+// makeBasicAuthHeader encodes username and password for Basic Authentication
+func makeBasicAuthHeader(username, password string) string {
+	auth := username + ":" + password
+	return "Basic " + base64.StdEncoding.EncodeToString([]byte(auth))
 }
 
 // ClientOption is a configuration option for JSON-RPC clients.
@@ -388,6 +405,13 @@ func WithClientTLSCert(certPath, keyPath string) ClientOption {
 	return func(cfg *clientConfig) {
 		cfg.clientCertPath = certPath
 		cfg.clientKeyPath = keyPath
+	}
+}
+
+func WithClientBasicAuth(rpcuser, rpcpass string) ClientOption {
+	return func(cfg *clientConfig) {
+		cfg.rpcUser = rpcuser
+		cfg.rpcPass = rpcpass
 	}
 }
 

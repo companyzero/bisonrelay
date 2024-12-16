@@ -99,6 +99,16 @@ class Config {
   late final bool sendRecvReceipts;
   late final bool autoSubPosts;
   late final bool logPings;
+  late final List<String> jsonRPCListen;
+  late final String rpcCertPath;
+  late final String rpcKeyPath;
+  late final bool rpcIssueClientCert;
+  late final String rpcClientCApath;
+  late final String rpcUser;
+  late final String rpcPass;
+  late final String rpcAuthMode;
+  late final bool rpcAllowRemoteSendTip;
+  late final double rpcMaxRemoteSendTipAmt;
 
   Config();
   Config.filled(
@@ -135,7 +145,17 @@ class Config {
       this.autoRemoveIgnoreList = defaultAutoRemoveIgnoreList,
       this.sendRecvReceipts = true,
       this.autoSubPosts = true,
-      this.logPings = false});
+      this.logPings = false,
+      this.jsonRPCListen = const [],
+      this.rpcCertPath = "",
+      this.rpcKeyPath = "",
+      this.rpcIssueClientCert = false,
+      this.rpcClientCApath = "",
+      this.rpcUser = "",
+      this.rpcPass = "",
+      this.rpcAuthMode = "",
+      this.rpcAllowRemoteSendTip = false,
+      this.rpcMaxRemoteSendTipAmt = 0});
   factory Config.newWithRPCHost(
           Config cfg, String rpcHost, String tlsCert, String macaroonPath) =>
       Config.filled(
@@ -173,6 +193,16 @@ class Config {
         sendRecvReceipts: cfg.sendRecvReceipts,
         autoSubPosts: cfg.autoSubPosts,
         logPings: cfg.logPings,
+        jsonRPCListen: cfg.jsonRPCListen,
+        rpcCertPath: cfg.rpcCertPath,
+        rpcKeyPath: cfg.rpcKeyPath,
+        rpcIssueClientCert: cfg.rpcIssueClientCert,
+        rpcClientCApath: cfg.rpcClientCApath,
+        rpcUser: cfg.rpcUser,
+        rpcPass: cfg.rpcPass,
+        rpcAuthMode: cfg.rpcAuthMode,
+        rpcAllowRemoteSendTip: cfg.rpcAllowRemoteSendTip,
+        rpcMaxRemoteSendTipAmt: cfg.rpcMaxRemoteSendTipAmt,
       );
 
   // Save a new config from scratch.
@@ -209,7 +239,7 @@ class Config {
 }
 
 // replaceConfig replaces the settings that can be modified by the GUI, while
-// preserving manual chages made to the config file.
+// preserving manual changes made to the config file.
 Future<void> replaceConfig(
   String filepath, {
   String? debugLevel,
@@ -220,6 +250,16 @@ Future<void> replaceConfig(
   String? proxyPassword,
   int? torCircuitLimit,
   bool? torIsolation,
+  String? jsonRPCListen,
+  String? rpcCertPath,
+  String? rpcKeyPath,
+  String? rpcClientCApath,
+  String? rpcUser,
+  String? rpcPass,
+  String? rpcAuthMode,
+  bool? rpcIssueClientCert,
+  bool? rpcAllowRemoteSendTip,
+  double? rpcMaxRemoteSendTipAmt,
 }) async {
   var f = ini.Config.fromStrings(File(filepath).readAsLinesSync());
 
@@ -241,6 +281,11 @@ Future<void> replaceConfig(
     set(section, opt, "$val");
   }
 
+  void setDouble(String section, String opt, double? val) {
+    if (val == null) return;
+    set(section, opt, "$val");
+  }
+
   set("log", "debuglevel", debugLevel);
   setBool("log", "pings", logPings);
   set("payment", "lndebuglevel", lnDebugLevel);
@@ -250,6 +295,18 @@ Future<void> replaceConfig(
   set("default", "proxypass", proxyPassword);
   setInt("default", "circuitlimit", torCircuitLimit);
   setBool("default", "torisolation", torIsolation);
+
+  // RPC settings
+  set("clientrpc", "jsonrpclisten", jsonRPCListen);
+  set("clientrpc", "rpccertpath", rpcCertPath);
+  set("clientrpc", "rpckeypath", rpcKeyPath);
+  set("clientrpc", "rpcclientcapath", rpcClientCApath);
+  set("clientrpc", "rpcuser", rpcUser);
+  set("clientrpc", "rpcpass", rpcPass);
+  set("clientrpc", "rpcauthmode", rpcAuthMode);
+  setBool("clientrpc", "rpcissueclientcert", rpcIssueClientCert);
+  setBool("clientrpc", "rpcallowremotesendtip", rpcAllowRemoteSendTip);
+  setDouble("clientrpc", "rpcmaxremotesendtipamt", rpcMaxRemoteSendTipAmt);
 
   await File(filepath).writeAsString(f.toString());
 }
@@ -393,6 +450,18 @@ Future<Config> loadConfig(String filepath) async {
   c.simpleStoreAccount = f.get("resources", "account") ?? "";
   c.simpleStoreShipCharge =
       double.tryParse(f.get("resources", "shipcharge") ?? "0") ?? 0;
+
+  c.jsonRPCListen = getCommaList("clientrpc", "jsonrpclisten") ?? [];
+  c.rpcCertPath = f.get("clientrpc", "rpccertpath") ?? "";
+  c.rpcKeyPath = f.get("clientrpc", "rpckeypath") ?? "";
+  c.rpcIssueClientCert = getBool("clientrpc", "rpcissueclientcert");
+  c.rpcClientCApath = f.get("clientrpc", "rpcclientcapath") ?? "";
+  c.rpcUser = f.get("clientrpc", "rpcuser") ?? "";
+  c.rpcPass = f.get("clientrpc", "rpcpass") ?? "";
+  c.rpcAuthMode = f.get("clientrpc", "rpcauthmode") ?? "";
+  c.rpcAllowRemoteSendTip = getBool("clientrpc", "rpcallowremotesendtip");
+  c.rpcMaxRemoteSendTipAmt =
+      double.tryParse(f.get("clientrpc", "rpcmaxremotesendtipamt") ?? "0") ?? 0;
 
   return c;
 }
