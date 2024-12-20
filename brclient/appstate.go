@@ -3547,6 +3547,11 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		NoLoadChatHistory: args.NoLoadChatHistory,
 		Collator:          preferredCollator(),
 
+		TipUserRestartDelay:          args.TipUserRestartDelay,
+		TipUserReRequestInvoiceDelay: args.TipUserReRequestInvoiceDelay,
+		TipUserMaxLifetime:           args.TipUserMaxLifetime,
+		TipUserPayRetryDelayFactor:   args.TipUserPayRetryDelayFactor,
+
 		SendReceiveReceipts: args.SendRecvReceipts,
 
 		AutoHandshakeInterval:         args.AutoHandshakeInterval,
