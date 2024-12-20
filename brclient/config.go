@@ -138,6 +138,12 @@ type config struct {
 	RPCClientCAPath    string
 	RPCIssueClientCert bool
 
+	// tip attempt configurable params
+	TipUserRestartDelay          time.Duration
+	TipUserReRequestInvoiceDelay time.Duration
+	TipUserMaxLifetime           time.Duration
+	TipUserPayRetryDelayFactor   time.Duration
+
 	ExternalEditorForComments bool
 
 	ResourcesUpstream     string
@@ -331,6 +337,12 @@ func loadConfig() (*config, error) {
 	flagRPCClientCAPath := fs.String("clientrpc.rpcclientcapath", defaultRPCClientCA, "")
 	flagRPCIssueClientCert := fs.Bool("clientrpc.rpcissueclientcert", true, "")
 
+	// tip user
+	flagTipUserRestartDelay := fs.String("tipuser.restartdelay", "1m", "Restart delay for tip user attempts")
+	flagTipUserReRequestInvoiceDelay := fs.String("tipuser.rerequestinvoicedelay", "24h", "Re-request invoice delay for tip user attempts")
+	flagTipUserMaxLifetime := fs.String("tipuser.maxlifetime", "72h", "Maximum lifetime for tip user")
+	flagTipUserPayRetryDelayFactor := fs.String("tipuser.payretrydelayfactor", "12s", "Retry delay factor for tip user payment")
+
 	// resources
 	flagResourcesUpstream := fs.String("resources.upstream", "", "Upstream processor of resource requests")
 
@@ -486,6 +498,25 @@ func loadConfig() (*config, error) {
 		dialFunc = proxyDialer
 	}
 
+	tipUserRestartDelay, err := strduration.ParseDuration(*flagTipUserRestartDelay)
+	if err != nil {
+		return nil, fmt.Errorf("invalid value for 'tipuser.restartdelay': %v", err)
+	}
+
+	tipUserReRequestInvoiceDelay, err := strduration.ParseDuration(*flagTipUserReRequestInvoiceDelay)
+	if err != nil {
+		return nil, fmt.Errorf("invalid value for 'tipuser.rerequestinvoicedelay': %v", err)
+	}
+
+	tipUserMaxLifetime, err := strduration.ParseDuration(*flagTipUserMaxLifetime)
+	if err != nil {
+		return nil, fmt.Errorf("invalid value for 'tipuser.maxlifetime': %v", err)
+	}
+
+	tipUserPayRetryDelayFactor, err := strduration.ParseDuration(*flagTipUserPayRetryDelayFactor)
+	if err != nil {
+		return nil, fmt.Errorf("invalid value for 'tipuser.payretrydelayfactor': %v", err)
+	}
 	// Return the final cfg object.
 	return &config{
 		ServerAddr:         *flagServerAddr,
@@ -534,6 +565,11 @@ func loadConfig() (*config, error) {
 		RPCIssueClientCert: *flagRPCIssueClientCert,
 		InviteFundsAccount: *flagInviteFundsAccount,
 		ResourcesUpstream:  *flagResourcesUpstream,
+
+		TipUserRestartDelay:          tipUserRestartDelay,
+		TipUserReRequestInvoiceDelay: tipUserReRequestInvoiceDelay,
+		TipUserMaxLifetime:           tipUserMaxLifetime,
+		TipUserPayRetryDelayFactor:   tipUserPayRetryDelayFactor,
 
 		AutoHandshakeInterval:       autoHandshakeInterval,
 		AutoRemoveIdleUsersInterval: autoRemoveInterval,
