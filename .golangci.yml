@@ -4,7 +4,6 @@ run:
     - e2elegacylntest
     - dcrlnde2e
 
-
 linters:
   disable-all: true
   enable:
