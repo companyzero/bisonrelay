@@ -453,7 +453,7 @@ func (s *Store) invoiceSettled(ctx context.Context, order *Order) {
 		wpm("\nSending you the file %s included in your order",
 			filepath.Base(fname))
 		go func() {
-			err := s.c.SendFile(order.User, fname)
+			err := s.c.SendFile(order.User, 0, fname, nil)
 			s.log.Errorf("Unable to send file %s to user %s due to order %s/%s: %v",
 				fname, strescape.Nick(ru.Nick()),
 				order.User.ShortLogID(), order.ID, err)

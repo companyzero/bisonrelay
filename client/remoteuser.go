@@ -262,7 +262,7 @@ func removeUnackedRMDueToErr(err error) bool {
 //
 // replyChan is written to once the server acks the payload.
 func (ru *RemoteUser) queueRMPriority(payload interface{}, priority uint,
-	replyChan chan error, payEvent string) error {
+	replyChan chan error, payEvent string, sendqId *clientdb.SendQID) error {
 
 	if priority > 4 {
 		return fmt.Errorf("priority must be max 4")
@@ -298,6 +298,7 @@ func (ru *RemoteUser) queueRMPriority(payload interface{}, priority uint,
 		ru:       ru,
 		payloadT: fmt.Sprintf("%T", payload),
 		payEvent: payEvent,
+		sendqID:  sendqId,
 	}
 
 	// Inner channel that is written when the message was sent and ack'd by
@@ -322,7 +323,7 @@ func (ru *RemoteUser) queueRMPriority(payload interface{}, priority uint,
 			}
 
 			if err == nil && ru.ntfns != nil {
-				ru.ntfns.notifyRMSent(ru, payload)
+				ru.ntfns.notifyRMSent(ru, orm.sendRV, payload)
 			}
 		case <-ru.stopped:
 			err = errRemoteUserExiting
@@ -338,9 +339,11 @@ func (ru *RemoteUser) queueRMPriority(payload interface{}, priority uint,
 
 // sendRMPriority schedules the given RM in the user's rmq with the given
 // priority number. It returns when the RM has been ack'd by the server .
-func (ru *RemoteUser) sendRMPriority(payload interface{}, payEvent string, priority uint) error {
+func (ru *RemoteUser) sendRMPriority(payload interface{}, payEvent string,
+	priority uint, sendqID *clientdb.SendQID) error {
+
 	replyChan := make(chan error)
-	if err := ru.queueRMPriority(payload, priority, replyChan, payEvent); err != nil {
+	if err := ru.queueRMPriority(payload, priority, replyChan, payEvent, sendqID); err != nil {
 		return err
 	}
 	return <-replyChan
@@ -349,7 +352,7 @@ func (ru *RemoteUser) sendRMPriority(payload interface{}, payEvent string, prior
 // sendRM schedules the given RM in the user's rmq. It returns when the RM has
 // been ack'd by the server.
 func (ru *RemoteUser) sendRM(payload interface{}, payEvent string) error {
-	return ru.sendRMPriority(payload, payEvent, priorityDefault)
+	return ru.sendRMPriority(payload, payEvent, priorityDefault, nil)
 }
 
 // sendTransitive sends the given payload as a transitive message encoded to
@@ -381,7 +384,7 @@ func (ru *RemoteUser) sendTransitive(payload interface{}, payType string,
 		CipherText: *cipherText,
 	}
 	payEvent := fmt.Sprintf("sendTransitive.%s.%s", to.Identity, payType)
-	return ru.sendRMPriority(tm, payEvent, priority)
+	return ru.sendRMPriority(tm, payEvent, priority, nil)
 }
 
 // sendPM sends a private message to this remote user.
@@ -389,7 +392,7 @@ func (ru *RemoteUser) sendPM(msg string) error {
 	return ru.sendRMPriority(rpc.RMPrivateMessage{
 		Mode:    rpc.RMPrivateMessageModeNormal,
 		Message: msg,
-	}, "pm", priorityPM)
+	}, "pm", priorityPM, nil)
 }
 
 // cancelableCtx returns a context that is cancelable and that is automatically
@@ -429,7 +432,7 @@ func (ru *RemoteUser) paidForRM(event string, amount, fees int64) {
 // If encrypted and rv are specified, they are saved as the current unsent user
 // RM.
 func (ru *RemoteUser) saveRatchet(encrypted []byte, rv *clientintf.RawRVID,
-	payEvent string) error {
+	payEvent string, sendqId *clientdb.SendQID) error {
 
 	// To ensure this save can't be canceled by almost any signal, we use a
 	// special context here. We cancel this context prematurely only if
@@ -456,6 +459,7 @@ func (ru *RemoteUser) saveRatchet(encrypted []byte, rv *clientintf.RawRVID,
 
 	// Persist the ratchet update and save the last unacked RM (if it was
 	// provided).
+	var storedUnacked, removedSendqId bool
 	err := ru.db.Update(ctx, func(tx clientdb.ReadWriteTx) error {
 		// Note that in the current DB implementation as of this
 		// writing, this is NOT an atomic operation, therefore a busted
@@ -467,6 +471,23 @@ func (ru *RemoteUser) saveRatchet(encrypted []byte, rv *clientintf.RawRVID,
 		if err == nil && encrypted != nil && rv != nil {
 			err = ru.db.StoreUserUnackedRM(tx, ru.id, encrypted,
 				*rv, payEvent)
+			storedUnacked = err == nil
+
+			if sendqId != nil && err == nil {
+				// We saved this RM as an encrypted, unacked RM.
+				// It no longer should be sent from the sendq,
+				// because it will be sent by the unacked RM
+				// facility. Remove if from the sendq to avoid
+				// duplicate messages.
+				err = ru.db.RemoveFromSendQueue(tx, *sendqId, ru.id)
+				removedSendqId = err == nil
+
+				if err != nil {
+					err = fmt.Errorf("unable to remove sendq item: %v", err)
+				}
+			} else if err != nil {
+				err = fmt.Errorf("unable to remove unacked RM: %v", err)
+			}
 		}
 
 		return err
@@ -481,7 +502,8 @@ func (ru *RemoteUser) saveRatchet(encrypted []byte, rv *clientintf.RawRVID,
 	if err != nil {
 		ru.log.Errorf("Error while saving updated ratchet: %v", err)
 	} else {
-		ru.log.Debugf("Updated ratchet state in DB")
+		ru.log.Debugf("Updated ratchet state in DB (stored unacked %v, "+
+			"removed sendqel %v)", storedUnacked, removedSendqId)
 	}
 
 	return err
@@ -503,7 +525,7 @@ func (ru *RemoteUser) encryptRM(rm *remoteUserRM) (lowlevel.RVID, []byte, error)
 
 	// Save the ratchet as updated.
 	if err == nil {
-		err = ru.saveRatchet(enc, &sendRV, rm.payEvent)
+		err = ru.saveRatchet(enc, &sendRV, rm.payEvent, rm.sendqID)
 	}
 
 	if err != nil {
@@ -539,7 +561,7 @@ func (ru *RemoteUser) handleReceivedEncrypted(recvBlob lowlevel.RVBlob) error {
 	cleartext, decodeErr := ru.r.Decrypt(recvBlob.Decoded)
 
 	if decodeErr == nil {
-		err := ru.saveRatchet(nil, nil, "")
+		err := ru.saveRatchet(nil, nil, "", nil)
 		if err != nil {
 			ru.rLock.Unlock()
 			ru.log.Errorf("Error saving ratchet after decryption: %v. " +

@@ -11,6 +11,7 @@ import (
 	"github.com/companyzero/bisonrelay/client/clientdb"
 	"github.com/companyzero/bisonrelay/internal/assert"
 	"github.com/companyzero/bisonrelay/internal/testutils"
+	"github.com/companyzero/bisonrelay/ratchet"
 	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/davecgh/go-spew/spew"
 )
@@ -153,13 +154,143 @@ func TestFtSendFile(t *testing.T) {
 
 	// Alice will send a file directly to bob.
 	fSent := testutils.RandomFile(t, defaultChunkSize*4)
-	assert.NilErr(t, alice.SendFile(bob.PublicID(), fSent))
+	assert.NilErr(t, alice.SendFile(bob.PublicID(), defaultChunkSize, fSent, nil))
 
 	// Bob should receive it without having to do any payments.
-	//
-	// FIXME: If an error happens here, it's because Bob processed the
-	// RMFTSend after the chunk instead of before. This needs to be fixed
-	// by processing the RMFTSend call synchronously.
+	completedPath1 := assert.ChanWritten(t, completedFileChan)
+	assert.EqualFiles(t, fSent, completedPath1)
+}
+
+// TestFtSendFileSenderRestarts tests restarting the sender of a file during
+// the file sending process.
+func TestFtSendFileSenderRestarts(t *testing.T) {
+	t.Parallel()
+
+	const nbTestChunks = 4
+
+	// Setup Alice and Bob.
+	tcfg := testScaffoldCfg{}
+	ts := newTestScaffold(t, tcfg)
+	alice := ts.newClient("alice")
+	bob := ts.newClient("bob")
+	ts.kxUsers(alice, bob)
+
+	// Handlers.
+	completedFileChan := make(chan string, 10)
+	bob.handle(client.OnFileDownloadCompleted(func(user *client.RemoteUser, fm rpc.FileMetadata, diskPath string) {
+		completedFileChan <- diskPath
+	}))
+
+	var testStage int
+	testStageHitChan := make(chan struct{}, 5)
+	alice.handleSync(client.OnRMSent(func(ru *client.RemoteUser, rv ratchet.RVPoint, p interface{}) {
+		startFailing := false
+		if _, ok := p.(rpc.RMPrivateMessage); testStage == 0 && ok {
+			// First fail before sending RMFTSendFile.
+			startFailing = true
+		} else if _, ok := p.(rpc.RMFTGetChunkReply); testStage == 1 && ok {
+			// Second fail after sending the first chunk.
+			startFailing = true
+		}
+
+		if startFailing {
+			alice.log.Infof("Starting to fail test stage %d", testStage)
+			err := fmt.Errorf("fail at stage %d", testStage)
+			alice.preventFutureConns(err).startFailing(nil, err)
+			testStage++
+			testStageHitChan <- struct{}{}
+		}
+	}))
+
+	// Start process by sending a PM to flag the start of test.
+	alice.PM(bob.PublicID(), "start test")
+
+	// Alice will send a file directly to bob. This call will fail because
+	// we'll stop it (by simulating a connection loss and client restart).
+	sendFileErrChan := make(chan error, 5)
+	fSent := testutils.RandomFile(t, defaultChunkSize*nbTestChunks)
+	go func() {
+		sendFileErrChan <- alice.SendFile(bob.PublicID(), defaultChunkSize, fSent, nil)
+	}()
+	assert.ChanWritten(t, testStageHitChan)
+	ts.stopClient(alice)
+	assert.ChanWritten(t, sendFileErrChan)
+
+	// Setup the client config so that notifications are immediately hooked.
+	alice.nccfg.ntfns = alice.NotificationManager()
+
+	// Restart Alice. It will send the first chunk, but fail to send the
+	// rest.
+	alice = ts.recreateStoppedClient(alice)
+	assert.ChanWritten(t, testStageHitChan)
+
+	// Finally, restart Alice again. She will send the remaining chunks.
+	alice = ts.recreateClient(alice)
+
+	// Bob should receive it without having to do any payments.
+	completedPath1 := assert.ChanWritten(t, completedFileChan)
+	assert.EqualFiles(t, fSent, completedPath1)
+}
+
+// TestFtSendFileReceiverRestarts tests receiving a file through SendFile()
+// while the receiver restarts its clients halfway through.
+func TestFtSendFileReceiverRestarts(t *testing.T) {
+	t.Parallel()
+
+	const nbTestChunks = 4
+
+	// Setup Alice and Bob.
+	tcfg := testScaffoldCfg{}
+	ts := newTestScaffold(t, tcfg)
+	alice := ts.newClient("alice")
+	bob := ts.newClient("bob")
+	ts.kxUsers(alice, bob)
+
+	// Handlers.
+	completedFileChan := make(chan string, 10)
+	bob.handle(client.OnFileDownloadCompleted(func(user *client.RemoteUser, fm rpc.FileMetadata, diskPath string) {
+		completedFileChan <- diskPath
+	}))
+
+	var testStage int
+	testStageHitChan := make(chan struct{}, 5)
+	bob.handleSync(client.OnRMReceived(func(ru *client.RemoteUser, h *rpc.RMHeader, p interface{}, ts time.Time) {
+		startFailing := false
+		if _, ok := p.(rpc.RMFTSendFile); testStage == 0 && ok {
+			// First fail after receiving RMFTSendFile.
+			startFailing = true
+		} else if _, ok := p.(rpc.RMFTGetChunkReply); testStage == 1 && ok {
+			// Second fail after receiving the first chunk.
+			startFailing = true
+		}
+
+		if startFailing {
+			bob.log.Infof("Starting to fail test stage %d", testStage)
+			err := fmt.Errorf("fail at stage %d", testStage)
+			bob.preventFutureConns(err).startFailing(nil, err)
+			testStage++
+			testStageHitChan <- struct{}{}
+		}
+	}))
+
+	// Alice sends the entire file successfully.
+	fSent := testutils.RandomFile(t, defaultChunkSize*nbTestChunks)
+	assert.NilErr(t, alice.SendFile(bob.PublicID(), defaultChunkSize, fSent, nil))
+
+	// Bob stops after receiving file metadata.
+	assert.ChanWritten(t, testStageHitChan)
+	ts.stopClient(bob)
+	assert.ChanNotWritten(t, completedFileChan, time.Second)
+
+	// Setup the client config so that notifications are immediately hooked.
+	bob.nccfg.ntfns = bob.NotificationManager()
+
+	// Restart Bob. It will receive the first chunk, but no more.
+	bob = ts.recreateStoppedClient(bob)
+	assert.ChanWritten(t, testStageHitChan)
+
+	// Finally, restart Bob again. He will receive all missing chunks.
+	bob = ts.recreateClient(bob)
 	completedPath1 := assert.ChanWritten(t, completedFileChan)
 	assert.EqualFiles(t, fSent, completedPath1)
 }
