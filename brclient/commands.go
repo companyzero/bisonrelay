@@ -8,6 +8,8 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
+	"runtime/pprof"
 	"sort"
 	"strconv"
 	"strings"
@@ -3727,6 +3729,98 @@ var audioCmds = []tuicmd{
 	},
 }
 
+var profileCmds = []tuicmd{
+	{
+		cmd:           "cpu",
+		usableOffline: true,
+		descr:         "Perform and save a CPU profile",
+		usage:         "<seconds> <filename>",
+		handler: func(args []string, as *appState) error {
+			if len(args) < 1 {
+				return usageError{msg: "Seconds argument must be specified"}
+			}
+			if len(args) < 2 {
+				return usageError{msg: "Output filename must be specified"}
+			}
+
+			secs, err := strconv.ParseInt(args[0], 10, 64)
+			if err != nil {
+				return err
+			}
+			filename := args[1]
+			if err := os.MkdirAll(filepath.Dir(filename), 0o744); err != nil {
+				return err
+			}
+			f, err := os.Create(filename)
+			if err != nil {
+				return err
+			}
+
+			go func() {
+				d := time.Duration(secs) * time.Second
+				as.diagMsg("Creating %s profile and saving to %s", d, filename)
+
+				pprof.StartCPUProfile(f)
+				select {
+				case <-as.ctx.Done():
+				case <-time.After(d):
+				}
+
+				pprof.StopCPUProfile()
+				err := f.Close()
+				if err != nil {
+					as.diagMsg("Failed to close profile file: %v", err)
+				} else {
+					as.diagMsg("Finished CPU profile")
+				}
+			}()
+
+			return nil
+		},
+		completer: func(args []string, arg string, as *appState) []string {
+			if len(args) == 1 {
+				return fileCompleter(arg)
+			}
+			return nil
+		},
+	},
+	{
+		cmd:           "mem",
+		usableOffline: true,
+		descr:         "Save a memory profile",
+		usage:         "<filename>",
+		handler: func(args []string, as *appState) error {
+			if len(args) < 1 {
+				return usageError{msg: "Output filename must be specified"}
+			}
+
+			filename := args[0]
+			if err := os.MkdirAll(filepath.Dir(filename), 0o744); err != nil {
+				return err
+			}
+			f, err := os.Create(filename)
+			if err != nil {
+				return err
+			}
+			defer f.Close()
+
+			runtime.GC()
+			err = pprof.WriteHeapProfile(f)
+			if err != nil {
+				return err
+			}
+			as.diagMsg("Saved memory profile to %s", filename)
+			return nil
+		},
+		completer: func(args []string, arg string, as *appState) []string {
+			if len(args) == 0 {
+				return fileCompleter(arg)
+			}
+			return nil
+		},
+	},
+}
+
 var commands = []tuicmd{
 	{
 		cmd:           "backup",
@@ -4644,6 +4738,17 @@ var commands = []tuicmd{
 		completer: func(args []string, arg string, as *appState) []string {
 			if len(args) == 0 {
 				return cmdCompleter(audioCmds, arg, false)
+			}
+			return nil
+		},
+		handler: subcmdNeededHandler,
+	}, {
+		cmd:   "profile",
+		descr: "Profiling related commands",
+		sub:   profileCmds,
+		completer: func(args []string, arg string, as *appState) []string {
+			if len(args) == 0 {
+				return cmdCompleter(profileCmds, arg, false)
 			}
 			return nil
 		},
