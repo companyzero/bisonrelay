@@ -60,7 +60,7 @@ func (c *chatServer) SendFile(_ context.Context, req *types.SendFileRequest, _ *
 		return err
 	}
 
-	return c.c.SendFile(user.ID(), req.Filename)
+	return c.c.SendFile(user.ID(), 0, req.Filename, nil)
 }
 
 func (c *chatServer) UserPublicIdentity(_ context.Context, req *types.PublicIdentityReq, res *types.PublicIdentity) error {

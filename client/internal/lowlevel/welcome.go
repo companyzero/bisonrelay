@@ -181,94 +181,116 @@ func (ck *ConnKeeper) attemptWelcome(conn clientintf.Conn, kx msgReaderWriter) (
 	}
 
 	// Deal with server properties
+	var policy clientintf.ServerPolicy = clientintf.ServerPolicy{
+		// These default values may be removed once the corresponding
+		// properties are made required.
+
+		ExpirationDays:      rpc.PropExpirationDaysDefault,
+		PushPaymentLifetime: rpc.PropPushPaymentLifetimeDefault,
+		MaxPushInvoices:     rpc.PropMaxPushInvoicesDefault,
+
+		// These two must be set at the same time.
+		MaxMsgSizeVersion: rpc.PropMaxMsgSizeVersionDefault,
+		MaxMsgSize:        rpc.MaxMsgSizeForVersion(rpc.PropMaxMsgSizeVersionDefault),
+
+		PushPayRateMinMAtoms: rpc.PropPushPaymentRateMinMAtomsDefault,
+		PushPayRateBytes:     rpc.PropPushPaymentRateBytesDefault,
+	}
 	var (
-		td     int64  = -1
-		pt     int64  = -1
-		ps     string = ""
-		ppr    uint64 = 0
-		spr    uint64 = 0
-		lnNode string = ""
-
-		pingLimit time.Duration
-
-		// TODO: modify to zero once clients are updated to force
-		// server to send an appropriate value.
-		expd int64 = rpc.PropExpirationDaysDefault
-
-		pushPaymentLifetime int64 = rpc.PropPushPaymentLifetimeDefault
-		maxPushInvoices     int64 = rpc.PropMaxPushInvoicesDefault
-
-		maxMsgSizeVersion rpc.MaxMsgSizeVersion = rpc.MaxMsgSizeV0
+		tagDepth   int64  = -1
+		serverTime int64  = -1
+		payScheme  string = ""
+		lnNode     string = ""
 	)
 
 	for _, v := range wmsg.Properties {
 		switch v.Key {
 		case rpc.PropTagDepth:
-			td, err = strconv.ParseInt(v.Value, 10, 64)
+			tagDepth, err = strconv.ParseInt(v.Value, 10, 64)
 			if err != nil {
 				return nil, fmt.Errorf("invalid tag depth: %v",
 					err)
 			}
 
 		case rpc.PropServerTime:
-			pt, err = strconv.ParseInt(v.Value, 10, 64)
+			serverTime, err = strconv.ParseInt(v.Value, 10, 64)
 			if err != nil {
 				return nil, fmt.Errorf("invalid server time: %v",
 					err)
 			}
 
 		case rpc.PropPaymentScheme:
-			ps = v.Value
+			payScheme = v.Value
 
 		case rpc.PropPushPaymentRate:
-			ppr, err = strconv.ParseUint(v.Value, 10, 64)
+			ppr, err := strconv.ParseUint(v.Value, 10, 64)
 			if err != nil {
 				return nil, fmt.Errorf("invalid payment rate: %v",
 					err)
 			}
+			policy.PushPayRateMAtoms = ppr
+
+		case rpc.PropPushPaymentRateBytes:
+			ppb, err := strconv.ParseUint(v.Value, 10, 64)
+			if err != nil {
+				return nil, fmt.Errorf("invalid payment rate bytes: %v", err)
+			}
+			policy.PushPayRateBytes = ppb
+
+		case rpc.PropPushPaymentRateMinMAtoms:
+			ppmma, err := strconv.ParseUint(v.Value, 10, 64)
+			if err != nil {
+				return nil, fmt.Errorf("invalid payment rate min matoms: %v", err)
+			}
+			policy.PushPayRateMinMAtoms = ppmma
 
 		case rpc.PropSubPaymentRate:
-			spr, err = strconv.ParseUint(v.Value, 10, 64)
+			spr, err := strconv.ParseUint(v.Value, 10, 64)
 			if err != nil {
 				return nil, fmt.Errorf("invalid payment rate: %v",
 					err)
 			}
+			policy.SubPayRate = spr
 
 		case rpc.PropServerLNNode:
 			lnNode = v.Value
 
 		case rpc.PropExpirationDays:
-			expd, err = strconv.ParseInt(v.Value, 10, 32)
+			expd, err := strconv.ParseInt(v.Value, 10, 32)
 			if err != nil {
 				return nil, fmt.Errorf("invalid expiration days: %v", err)
 			}
+			policy.ExpirationDays = int(expd)
 
 		case rpc.PropPushPaymentLifetime:
-			pushPaymentLifetime, err = strconv.ParseInt(v.Value, 10, 32)
+			ppl, err := strconv.ParseInt(v.Value, 10, 32)
 			if err != nil {
 				return nil, fmt.Errorf("invalid push payment lifetime: %v", err)
 			}
 
+			policy.PushPaymentLifetime = time.Duration(ppl) * time.Second
+
 		case rpc.PropMaxPushInvoices:
-			maxPushInvoices, err = strconv.ParseInt(v.Value, 10, 32)
+			maxPushInvoices, err := strconv.ParseInt(v.Value, 10, 32)
 			if err != nil {
 				return nil, fmt.Errorf("invalid max push invoices: %v", err)
 			}
+			policy.MaxPushInvoices = int(maxPushInvoices)
 
 		case rpc.PropMaxMsgSizeVersion:
-			var mmv uint64
-			mmv, err = strconv.ParseUint(v.Value, 10, 32)
+			mmv, err := strconv.ParseUint(v.Value, 10, 32)
 			if err != nil {
 				return nil, fmt.Errorf("invalid max msg size version: %v", err)
 			}
-			maxMsgSizeVersion = rpc.MaxMsgSizeVersion(mmv)
+			policy.MaxMsgSizeVersion = rpc.MaxMsgSizeVersion(mmv)
+			policy.MaxMsgSize = rpc.MaxMsgSizeForVersion(policy.MaxMsgSizeVersion)
 
 		case rpc.PropPingLimit:
 			pl, err := strconv.ParseInt(v.Value, 10, 64)
 			if err != nil {
 				return nil, fmt.Errorf("invalid ping limit: %v", err)
 			}
-			pingLimit = time.Duration(pl) * time.Second
+			policy.PingLimit = time.Duration(pl) * time.Second
 
 		default:
 			if v.Required {
@@ -284,50 +306,51 @@ func (ck *ConnKeeper) attemptWelcome(conn clientintf.Conn, kx msgReaderWriter) (
 		}
 	}
 
-	// maxClientTagDepth is the maximum depth of the tagstack that a client
-	// accepts (i.e. max number of inflight, un-acked messages).
+	// Validate tag depth (max number of inflight, un-acked messages).
 	const maxClientTagDepth = 32
-
-	// tag depth
-	if td < 2 {
+	if tagDepth < 2 {
 		return nil, fmt.Errorf("server did not provide tag depth")
 	}
-	if td > maxClientTagDepth {
-		return nil, fmt.Errorf("tag depth higher then maximum: got %d, want %d", td,
+	if tagDepth > maxClientTagDepth {
+		return nil, fmt.Errorf("tag depth higher then maximum: got %d, want %d", tagDepth,
 			maxClientTagDepth)
 	}
 
 	// Max payment rate enforcement.
 	const maxPushPaymentRate = uint64(rpc.PropPushPaymentRateDefault * 10)
-	if ppr > maxPushPaymentRate {
+	if policy.PushPayRateMAtoms > maxPushPaymentRate {
 		return nil, fmt.Errorf("push payment rate higher then maximum. got %d "+
-			"want %d", ppr, maxPushPaymentRate)
+			"want %d", policy.PushPayRateMAtoms, maxPushPaymentRate)
+	}
+	const maxMinPayRateMAtoms = rpc.PropPushPaymentRateMinMAtomsDefault * 100
+	if policy.PushPayRateMinMAtoms > maxMinPayRateMAtoms {
+		return nil, fmt.Errorf("push payment rate min MAtoms higher then maximum. got %d "+
+			"want %d", policy.PushPayRateMinMAtoms, maxMinPayRateMAtoms)
 	}
 	const maxSubPaymentRate = uint64(rpc.PropSubPaymentRateDefault * 10)
-	if spr > maxSubPaymentRate {
+	if policy.SubPayRate > maxSubPaymentRate {
 		return nil, fmt.Errorf("sub payment rate higher then maximum. got %d "+
-			"want %d", spr, maxSubPaymentRate)
+			"want %d", policy.SubPayRate, maxSubPaymentRate)
 	}
 
 	// Push policy enforcement.
-	minPushPaymentLifetime := int64(15 * 60) // 15 minutes.
-	if pushPaymentLifetime < minPushPaymentLifetime {
-		return nil, fmt.Errorf("push payment lifetime is lower than minimum. got %d "+
-			"want %d", pushPaymentLifetime, minPushPaymentLifetime)
+	const minPushPaymentLifetime = 15 * time.Minute
+	if policy.PushPaymentLifetime < minPushPaymentLifetime {
+		return nil, fmt.Errorf("push payment lifetime is lower than minimum. got %s "+
+			"want %s", policy.PushPaymentLifetime, minPushPaymentLifetime)
 	}
-	if maxPushInvoices < 1 {
-		return nil, fmt.Errorf("max push invoices %d < 1", maxPushInvoices)
+	if policy.MaxPushInvoices < 1 {
+		return nil, fmt.Errorf("max push invoices %d < 1", policy.MaxPushInvoices)
 	}
 
 	// server time
-	if pt == -1 {
+	if serverTime == -1 {
 		return nil, fmt.Errorf("server did not provide time")
 	}
-	ck.log.Debugf("Server provided time %v", time.Unix(pt, 0).Format(time.RFC3339))
+	ck.log.Debugf("Server provided time %v", time.Unix(serverTime, 0).Format(time.RFC3339))
 
 	// message size
-	maxMsgSize := rpc.MaxMsgSizeForVersion(maxMsgSizeVersion)
-	if maxMsgSize == 0 {
+	if policy.MaxMsgSize == 0 {
 		err := makeUnwelcomeError("server did not send a supported max msg size version")
 		if ck.cfg.OnUnwelcomeError != nil {
 			ck.cfg.OnUnwelcomeError(err)
@@ -336,26 +359,34 @@ func (ck *ConnKeeper) attemptWelcome(conn clientintf.Conn, kx msgReaderWriter) (
 
 	}
 	if kx, ok := kx.(*session.KX); ok {
-		kx.MaxMessageSize = maxMsgSize
+		kx.MaxMessageSize = policy.MaxMsgSize
+	}
+
+	// Double check a message of the max valid size is payable.
+	_, err = policy.CalcPushCostMAtoms(int(policy.MaxMsgSize))
+	if err != nil {
+		return nil, fmt.Errorf("invalid combination of push pay rates and max msg size: %v", err)
 	}
 
 	// Expiration days.
-	if expd < 1 {
-		return nil, fmt.Errorf("server provided expiration days %d < 1", expd)
+	if policy.ExpirationDays < 1 {
+		return nil, fmt.Errorf("server provided expiration days %d < 1",
+			policy.ExpirationDays)
 	}
 
 	// Determine pay scheme w/ server (LN, on-chain, etc).
 	var pc clientintf.PaymentClient
-	switch ps {
+	switch payScheme {
 	case rpc.PaySchemeFree:
 		// Fallthrough and accept free pay scheme.
 		pc = clientintf.FreePaymentClient{}
 	default:
 		// Only proceed if we're configured to use the same payment
 		// scheme as server.
-		if ps != ck.cfg.PC.PayScheme() {
+		if payScheme != ck.cfg.PC.PayScheme() {
 			return nil, fmt.Errorf("mismatched payment scheme -- "+
-				"client: %s, server: %s", ck.cfg.PC.PayScheme(), ps)
+				"client: %s, server: %s", ck.cfg.PC.PayScheme(),
+				payScheme)
 		}
 		pc = ck.cfg.PC
 	}
@@ -365,46 +396,37 @@ func (ck *ConnKeeper) attemptWelcome(conn clientintf.Conn, kx msgReaderWriter) (
 	// user's expected ping interval.
 	pingInterval := ck.cfg.PingInterval
 	userExpectedPingLimit := pingInterval + pingInterval/4
-	if pingLimit > time.Second && pingLimit < userExpectedPingLimit && pingInterval > 0 {
+	if policy.PingLimit > time.Second && policy.PingLimit < userExpectedPingLimit && pingInterval > 0 {
 		// When the server provided ping interval is less than 30
 		// seconds, error out unless our own ping interval is lower.
 		// This prevents the server from requesting pings too often.
-		if pingLimit < time.Second*30 && pingInterval > pingLimit {
+		if policy.PingLimit < time.Second*30 && pingInterval > policy.PingLimit {
 			return nil, fmt.Errorf("%w: server specified a ping limit of %s "+
 				"which is too short given our ping interval of %s",
-				errShortPingLimit, pingLimit, pingInterval)
+				errShortPingLimit, policy.PingLimit, pingInterval)
 		}
 
 		// Otherwise, use a ping interval that should ensure we don't
 		// get disconnected too often.
-		pingInterval = pingLimit * 3 / 4
+		pingInterval = policy.PingLimit * 3 / 4
 		ck.log.Warnf("Reducing ping interval to %s", pingInterval)
-	} else if pingLimit < time.Second {
-		pingLimit = rpc.PropPingLimitDefault
+	} else if policy.PingLimit < time.Second {
+		policy.PingLimit = rpc.PropPingLimitDefault
 	}
 
 	// Reduce the tagstack depth by 1 to ensure the last tag is left for
 	// sending pings.
-	td -= 1
+	tagDepth -= 1
 
 	// Return a new server session.
-	sess := newServerSession(conn, kx, td, ck.log)
+	sess := newServerSession(conn, kx, tagDepth, ck.log)
 	sess.pc = pc
-	sess.payScheme = ps
+	sess.payScheme = payScheme
 	sess.lnNode = lnNode
 	sess.pingInterval = pingInterval
 	sess.pushedRoutedMsgsHandler = ck.cfg.PushedRoutedMsgsHandler
 	sess.logPings = ck.cfg.LogPings
-	sess.policy = clientintf.ServerPolicy{
-		PushPaymentLifetime: time.Duration(pushPaymentLifetime) * time.Second,
-		MaxPushInvoices:     int(maxPushInvoices),
-		MaxMsgSizeVersion:   maxMsgSizeVersion,
-		MaxMsgSize:          maxMsgSize,
-		PushPayRate:         ppr,
-		SubPayRate:          spr,
-		ExpirationDays:      int(expd),
-		PingLimit:           pingLimit,
-	}
+	sess.policy = policy
 
 	ck.log.Infof("Connected to server %s", conn.RemoteAddr())
 

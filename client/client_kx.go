@@ -544,7 +544,7 @@ func (c *Client) Block(uid UserID) error {
 	c.log.Infof("Blocking user %s", ru)
 
 	payEvent := "blockUser"
-	err = ru.sendRMPriority(rpc.RMBlock{}, payEvent, priorityPM)
+	err = c.sendWithSendQPriority(payEvent, rpc.RMBlock{}, priorityPM, nil, uid)
 	if err != nil {
 		return err
 	}

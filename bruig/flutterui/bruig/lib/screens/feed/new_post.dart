@@ -188,9 +188,9 @@ class _NewPostScreenState extends State<NewPostScreen> {
       filePath = filePath.trim();
       if (filePath == "") return;
 
-      if (f.size > 1024 * 1024) {
+      if (f.size > Golib.maxPayloadSize) {
         showErrorSnackbar(
-            this, "File size is too large ${f.size} > ${1024 * 1024}");
+            this, "File is too large ${f.size} > ${Golib.maxPayloadSizeStr}");
         return;
       }
 
@@ -220,6 +220,12 @@ class _NewPostScreenState extends State<NewPostScreen> {
           break;
         case "webp":
           mime = "image/webp";
+          break;
+        case "mp4":
+          mime = "video/mp4";
+          break;
+        case "avi":
+          mime = "video/avi";
           break;
         default:
           snackbar.error("Unable to recognize type of embed");
@@ -268,7 +274,7 @@ class _NewPostScreenState extends State<NewPostScreen> {
 
   @override
   Widget build(BuildContext context) {
-    var validSize = estimatedSize <= 1024 * 1024;
+    var validSize = estimatedSize <= Golib.maxPayloadSize;
 
     return Container(
         padding: const EdgeInsets.all(16),

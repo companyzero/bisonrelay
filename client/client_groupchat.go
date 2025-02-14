@@ -1062,6 +1062,7 @@ type SendProgress struct {
 func (c *Client) GCMessage(gcID zkidentity.ShortID, msg string, mode rpc.MessageMode,
 	progressChan chan SendProgress) error {
 
+	<-c.abLoaded
 	var gc rpc.RMGroupList
 	var gcBlockList clientdb.GCBlockList
 	myNick := c.LocalNick()
@@ -1160,7 +1161,7 @@ func (c *Client) handleGCMessage(ru *RemoteUser, gcm rpc.RMGroupMessage, ts time
 				Reason: "I am not in that groupchat",
 			}
 			payEvent := fmt.Sprintf("gc.%s.preventiveGroupPart", gcm.ID.ShortLogID())
-			err := ru.sendRMPriority(rmgp, payEvent, priorityGC)
+			err := c.sendWithSendQPriority(payEvent, rmgp, priorityGC, nil, ru.id)
 			if err != nil && !errors.Is(err, clientintf.ErrSubsysExiting) {
 				ru.log.Errorf("Unable to send preventive group part: %v", err)
 			}

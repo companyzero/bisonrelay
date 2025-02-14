@@ -33,7 +33,7 @@ void _readAsyncResultsIsolate(SendPort sp) async {
       lib.lookupFunction<CopyCallResultNative, CopyCallResultFunc>(
           'CopyCallResult');
 
-  var buffSize = 1024 * 1024;
+  var buffSize = 10 * 1024 * 1024;
   var buff = calloc.allocate<Utf8>(buffSize);
 
   await Future.delayed(const Duration(seconds: 1));

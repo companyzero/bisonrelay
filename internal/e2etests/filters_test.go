@@ -525,7 +525,7 @@ func TestContentFilters(t *testing.T) {
 				case gotVal = <-aliceMsgChan:
 				case gotVal = <-aliceFilteredChan:
 					wasFiltered = true
-				case <-time.After(5 * time.Second):
+				case <-time.After(30 * time.Second):
 					t.Fatalf("Timeout waiting for a chan write")
 				}
 				var wantVal string

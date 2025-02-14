@@ -15,6 +15,8 @@ package rpc
 
 import (
 	"encoding/base64"
+	"errors"
+	"math"
 	"strconv"
 	"time"
 
@@ -231,9 +233,19 @@ const (
 	PropPaymentSchemeDefault = "free"
 
 	// Push Payment rate is the required payment rate to push RMs when the
-	// payment scheme is not free (in milli-atoms per byte).
+	// payment scheme is not free (in milli-atoms per pay rate units).
 	PropPushPaymentRate        = "pushpayrate"
-	PropPushPaymentRateDefault = 100 // MilliAtoms/byte
+	PropPushPaymentRateDefault = 100 // MilliAtoms/PropPushPaymentRateBytes
+
+	// PropPushPaymentRateBytes is the unit in which the push payment rate
+	// is specified (i.e. how many bytes per payment rate).
+	PropPushPaymentRateBytes        = "pushpayratebytes"
+	PropPushPaymentRateBytesDefault = 1 // In bytes
+
+	// PropPushPaymentRateMinMAtoms is the min number of milliatoms to pay
+	// for each push.
+	PropPushPaymentRateMinMAtoms        = "pushpayrateminmatoms"
+	PropPushPaymentRateMinMAtomsDefault = MinRMPushPayment
 
 	// Sub payment rate is the required payment rate to sub to RVs when the
 	// payment scheme is not free (in milli-atoms per byte).
@@ -359,6 +371,11 @@ func SupportedServerProperties() []ServerProperty {
 			Value:    strconv.Itoa(int(PropMaxMsgSizeVersionDefault)),
 			Required: false,
 		},
+		{
+			Key:      PropPushPaymentRateBytes,
+			Value:    strconv.Itoa(int(PropPushPaymentRateBytesDefault)),
+			Required: false,
+		},
 	}
 
 	return SupportedServerProperties
@@ -380,4 +397,32 @@ func EstimateRoutedRMWireSize(compressedRMSize int) int {
 	// message.
 	b64size := base64.StdEncoding.EncodedLen(compressedRMSize)
 	return b64size + overheadEstimate
+}
+
+var (
+	errPushCostZeroBytes      = errors.New("cost calculation cannot have zero bytes rate")
+	errPushCostOverflows      = errors.New("cost calculation overflows uint64")
+	errPushCostOverflowsInt64 = errors.New("cost calculation overflows int64")
+)
+
+// CalcPushCostMAtoms calculates the cost to push a message of the given size
+// using the given policy of min push payment, pay rate (in MAtoms) over the
+// given number of pay rate bytes.
+func CalcPushCostMAtoms(minPushPayment, payRateMAtoms, payRateBytes, sizeBytes uint64) (int64, error) {
+	if payRateBytes == 0 {
+		return 0, errPushCostZeroBytes
+	}
+
+	if payRateMAtoms != 0 && sizeBytes > math.MaxUint64/payRateMAtoms {
+		return 0, errPushCostOverflows
+	}
+
+	v := sizeBytes * payRateMAtoms / payRateBytes
+	if v < minPushPayment {
+		v = minPushPayment
+	} else if v > math.MaxInt64 {
+		return 0, errPushCostOverflowsInt64
+	}
+
+	return int64(v), nil
 }

@@ -5,12 +5,14 @@ import (
 	"path/filepath"
 	"sort"
 	"time"
+
+	"golang.org/x/exp/slices"
 )
 
 // AddToSendQueue creates a new send queue element to send the given msg to the
 // specified destinations.
 func (db *DB) AddToSendQueue(tx ReadWriteTx, typ string, dests []UserID,
-	msg []byte, priority uint) (SendQID, error) {
+	msg []byte, fileChunk *SendQueueFileChunk, priority uint) (SendQID, error) {
 
 	dir := filepath.Join(db.root, sendqDir)
 	if err := os.MkdirAll(dir, 0o700); err != nil {
@@ -24,11 +26,13 @@ func (db *DB) AddToSendQueue(tx ReadWriteTx, typ string, dests []UserID,
 	}
 
 	el := SendQueueElement{
-		ID:       id,
-		Type:     typ,
-		Dests:    dests,
-		Msg:      msg,
-		Priority: priority,
+		ID:        id,
+		Type:      typ,
+		Dests:     dests,
+		Msg:       msg,
+		Priority:  priority,
+		FileChunk: fileChunk,
+		AddTs:     time.Now().UnixNano(),
 	}
 
 	fname := filepath.Join(dir, id.String())
@@ -49,8 +53,7 @@ func (db *DB) RemoveFromSendQueue(tx ReadWriteTx, id SendQID, dest UserID) error
 			continue
 		}
 
-		copy(el.Dests[i:], el.Dests[i+1:])
-		el.Dests = el.Dests[:len(el.Dests)-1]
+		el.Dests = slices.Delete(el.Dests, i, i+1)
 		break
 	}
 
@@ -64,15 +67,13 @@ func (db *DB) RemoveFromSendQueue(tx ReadWriteTx, id SendQID, dest UserID) error
 }
 
 type sortableSendQ struct {
-	q     []SendQueueElement
-	times []time.Time
+	q []SendQueueElement
 }
 
 func (ssq *sortableSendQ) Len() int           { return len(ssq.q) }
-func (ssq *sortableSendQ) Less(i, j int) bool { return ssq.times[i].Sub(ssq.times[j]) < 0 }
+func (ssq *sortableSendQ) Less(i, j int) bool { return ssq.q[i].AddTs < ssq.q[j].AddTs }
 func (ssq *sortableSendQ) Swap(i, j int) {
 	ssq.q[i], ssq.q[j] = ssq.q[j], ssq.q[i]
-	ssq.times[i], ssq.times[j] = ssq.times[j], ssq.times[i]
 }
 
 // ListSendQueue lists all send queues registered.
@@ -87,7 +88,6 @@ func (db *DB) ListSendQueue(tx ReadTx) ([]SendQueueElement, error) {
 	}
 
 	var res []SendQueueElement
-	var times []time.Time
 	for _, entry := range entries {
 		if entry.IsDir() {
 			continue
@@ -116,19 +116,11 @@ func (db *DB) ListSendQueue(tx ReadTx) ([]SendQueueElement, error) {
 			continue
 		}
 
-		finfo, err := entry.Info()
-		if err != nil {
-			db.log.Warnf("Unable to read modtime from sendq file %s: %v",
-				fname, err)
-			continue
-		}
-
 		res = append(res, el)
-		times = append(times, finfo.ModTime())
 	}
 
 	// Sort by mod time.
-	ssq := &sortableSendQ{q: res, times: times}
+	ssq := &sortableSendQ{q: res}
 	sort.Sort(ssq)
 
 	return ssq.q, nil

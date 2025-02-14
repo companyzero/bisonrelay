@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"path/filepath"
@@ -658,7 +659,7 @@ func (c *Client) sendFileChunk(ru *RemoteUser, sf clientdb.SharedFile,
 		Tag:    tag,
 	}
 	payEvent := fmt.Sprintf("ftchunkupload.%s.%d", sf.FID.ShortLogID(), chunkIdx)
-	err = ru.sendRMPriority(rm, payEvent, priorityUpload)
+	err = ru.sendRMPriority(rm, payEvent, priorityUpload, nil)
 	if err != nil {
 		return err
 	}
@@ -947,52 +948,107 @@ func (c *Client) ListDownloads() ([]clientdb.FileDownload, error) {
 }
 
 // SendFile sends a file to the given user without requesting a payment for it.
-func (c *Client) SendFile(uid UserID, filepath string) error {
-	_, err := c.rul.byID(uid)
+//
+// This blocks until all chunks have been sent to brserver and acknowledged by
+// it. If specified, progressChan will get reports of every sent chunk.
+//
+// If chunkSize is zero, the client will use the chunk size specified by the
+// currently connected server.
+func (c *Client) SendFile(uid UserID, chunkSize uint64, filepath string,
+	progressChan chan SendProgress) error {
+
+	// Automatically determine chunk size.
+	if chunkSize == 0 {
+		serverSess := c.ServerSession()
+		if serverSess == nil {
+			return fmt.Errorf("cannot use chunksize 0 when not connected to a server")
+		}
+
+		maxSizeVersion := serverSess.Policy().MaxMsgSizeVersion
+		maxPayloadSize := rpc.MaxPayloadSizeForVersion(maxSizeVersion)
+		if maxPayloadSize == 0 {
+			return fmt.Errorf("server did not define max payload "+
+				"size for version %d", maxSizeVersion)
+		}
+		chunkSize = uint64(maxPayloadSize)
+	}
+
+	ru, err := c.rul.byID(uid)
 	if err != nil {
 		return err
 	}
 
-	// Share the file with the user.
-	sf, fm, err := c.ShareFile(filepath, &uid, 0, "")
+	sign := func(hash []byte) ([]byte, error) {
+		sig := c.localID.signMessage(hash)
+		return sig[:], nil
+	}
+
+	// Calculate file chunks.
+	var fm *rpc.FileMetadata
+	err = c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
+		var err error
+		fm, err = c.db.CalcFileChunks(tx, filepath, chunkSize, sign)
+		return err
+	})
 	if err != nil {
 		return err
 	}
 
-	// Send the file metadata.
+	ru.log.Infof("Sending file %s in %d chunks to user (total size %d)",
+		filepath, len(fm.Manifest), fm.Size)
+
+	fmdHash := fm.MetadataHash()
+	fileId := hex.EncodeToString(fmdHash[:])
+	fileShortId := fileId[:16]
+
+	// Prepare to send file metadata.
+	sendqItems := make([]*preparedSendqItem, 0, len(fm.Manifest)+1)
 	rmSF := rpc.RMFTSendFile{
-		Metadata: fm,
+		Metadata: *fm,
 	}
-	payEvent := fmt.Sprintf("sendfile.%s", sf.FID.ShortLogID())
-	if err = c.sendWithSendQ(payEvent, rmSF, uid); err != nil {
+	payEvent := fmt.Sprintf("ftsendfile.%s.fm", fileShortId)
+	sqi, err := c.prepareSendqItem(payEvent, rmSF, priorityUpload, nil, uid)
+	if err != nil {
 		return err
 	}
+	sendqItems = append(sendqItems, sqi)
 
-	// Send the chunks.
+	// Save chunks in sendq.
+	//
+	// TODO: rewind and remove items in case any of the following chunks
+	// error?
+	var offset int64
 	for i := range fm.Manifest {
-		var chunk []byte
-		err := c.dbView(func(tx clientdb.ReadTx) error {
-			var err error
-			chunk, err = c.db.GetSharedFileChunkData(tx, &sf, i)
-			return err
-		})
+		fc := &clientdb.SendQueueFileChunk{
+			Filename: filepath,
+			Offset:   offset,
+			Size:     int64(fm.Manifest[i].Size),
+			Index:    i,
+			RMType:   rpc.RMCFTGetChunkReply,
+			FileID:   fileId,
+		}
+
+		offset += fc.Size
+		payEvent := fmt.Sprintf("ftsendfile.%s.%d", fileShortId, i)
+
+		sqi, err := c.prepareSendqItem(payEvent, fc, priorityUpload, nil, uid)
 		if err != nil {
 			return err
 		}
-
-		rmSFC := rpc.RMFTGetChunkReply{
-			FileID: sf.FID.String(),
-			Index:  i,
-			Chunk:  chunk,
-		}
-		payEvent := fmt.Sprintf("ftsendfile.%s.%d", sf.FID.ShortLogID(), i)
-		if err = c.sendWithSendQPriority(payEvent, rmSFC, priorityUpload, nil, uid); err != nil {
-			return err
-		}
+		sendqItems = append(sendqItems, sqi)
 	}
 
-	// Unshare the file.
-	return c.UnshareFile(sf.FID, &uid)
+	ru.log.Debugf("Finished adding %d chunks to sendq", len(fm.Manifest))
+
+	// Now the items (file metadata and all chunks) are saved in the DB,
+	// start sending process.
+	err = c.sendPreparedSendqItemListSync(sendqItems, progressChan)
+	if err != nil {
+		return nil
+	}
+
+	ru.log.Infof("Finished sending file %s to user", filepath)
+	return nil
 }
 
 func (c *Client) handleFTSendFile(ru *RemoteUser, sf rpc.RMFTSendFile) error {
@@ -1055,6 +1111,14 @@ func (c *Client) restartDownloads(ctx context.Context) error {
 			// before the download completed.
 			c.log.Warnf("Outstanding download %s for unknown user %s",
 				fd.FID, fd.UID)
+			continue
+		}
+
+		if fd.IsSentFile {
+			// Skip if it's a remote-user-initiated file (they will
+			// send all chunks).
+			c.log.Debugf("Skiping restart of download %s from %s due to "+
+				"being remotely sent", fd.FID, ru)
 			continue
 		}
 

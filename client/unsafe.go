@@ -21,6 +21,6 @@ func (c *Client) FillTestInterface(i *testutils.UnsafeTestInterface) {
 		if err != nil {
 			return err
 		}
-		return ru.queueRMPriority(msg, priorityDefault, nil, "testinterface")
+		return ru.queueRMPriority(msg, priorityDefault, nil, "testinterface", nil)
 	}
 }

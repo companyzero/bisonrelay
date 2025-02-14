@@ -11,7 +11,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/companyzero/bisonrelay/client/clientdb"
 	"github.com/companyzero/bisonrelay/internal/mdembeds"
-	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/decred/dcrd/chaincfg/chainhash"
 	"github.com/decred/dcrd/dcrutil/v4"
 	"github.com/erikgeiser/promptkit/selection"
@@ -100,7 +99,7 @@ func (ew *embedWidget) tryEmbed() error {
 			return err
 		}
 
-		if uint64(len(data)) > rpc.MaxChunkSize {
+		if uint64(len(data)) > uint64(ew.as.c.MaxMsgPayloadSize()) {
 			return fmt.Errorf("file too big to embed")
 		}
 

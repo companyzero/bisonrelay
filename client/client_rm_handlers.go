@@ -64,6 +64,7 @@ func (c *Client) handleTransitiveMsg(ru *RemoteUser, tm rpc.RMTransitiveMessage)
 	if err != nil {
 		ru.log.Warnf("Received message to forward to unknown target %s",
 			tm.For)
+		return nil
 	}
 
 	ru.log.Infof("Forwarding msg to %s", target)
@@ -217,12 +218,6 @@ func (c *Client) innerHandleUserRM(ru *RemoteUser, h *rpc.RMHeader,
 	case rpc.RMFTPayForChunk:
 		return c.handleFTPayForChunk(ru, p)
 
-	case rpc.RMFTGetChunkReply:
-		return c.handleFTGetChunkReply(ru, p)
-
-	case rpc.RMFTSendFile:
-		return c.handleFTSendFile(ru, p)
-
 	case rpc.RMTransitiveMessage:
 		return c.handleTransitiveMsg(ru, p)
 
@@ -340,6 +335,16 @@ func (c *Client) handleUserRM(ru *RemoteUser, h *rpc.RMHeader, p interface{}, ts
 
 	case rpc.RMGroupMessage:
 		err := c.handleGCMessage(ru, p, ts)
+		c.logHandlerError(ru, h.Command, p, err)
+		return nil
+
+	case rpc.RMFTSendFile:
+		err := c.handleFTSendFile(ru, p)
+		c.logHandlerError(ru, h.Command, p, err)
+		return nil
+
+	case rpc.RMFTGetChunkReply:
+		err := c.handleFTGetChunkReply(ru, p)
 		c.logHandlerError(ru, h.Command, p, err)
 		return nil
 

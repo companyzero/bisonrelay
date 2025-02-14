@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/companyzero/bisonrelay/client/clientintf"
@@ -261,12 +262,78 @@ type PostSubscription struct {
 	Date time.Time `json:"date"`
 }
 
+// SendQueueFileChunk is used when a SendQueueElement is support to refer to
+// a file chunk instead of an RM.
+type SendQueueFileChunk struct {
+	Filename string `json:"filename"`
+	Offset   int64  `json:"offset"`
+	Size     int64  `json:"size"`
+	RMType   string `json:"rm_type"`
+	FileID   string `json:"file_id"`
+	Index    int    `json:"index"`
+}
+
+// ReadChunkData reads the chunk data into out.
+func (fc *SendQueueFileChunk) ReadChunkData(out []byte) ([]byte, error) {
+	// Read the file chunk.
+	f, err := os.Open(fc.Filename)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	offset, err := f.Seek(fc.Offset, 0)
+	if err != nil {
+		return nil, err
+	}
+	if offset != fc.Offset {
+		return nil, fmt.Errorf("seek error: read to offset %d instead of %d",
+			offset, fc.Offset)
+	}
+
+	// Size read buffer.
+	out = slices.Grow(out[:0], int(fc.Size))[:fc.Size]
+	n, err := f.Read(out)
+	if err != nil {
+		return nil, err
+	}
+	if int64(n) != fc.Size {
+		return nil, fmt.Errorf("not enough bytes read: read %d, want %d",
+			n, fc.Size)
+	}
+	return out, nil
+}
+
+// RM generates the RM that this file chunk should use (including its contents).
+func (fc *SendQueueFileChunk) RM() (interface{}, error) {
+	switch fc.RMType {
+	case rpc.RMCFTGetChunkReply:
+		buf, err := fc.ReadChunkData(nil)
+		if err != nil {
+			return nil, err
+		}
+
+		return rpc.RMFTGetChunkReply{
+			FileID: fc.FileID,
+			Index:  fc.Index,
+			Chunk:  buf,
+		}, nil
+	default:
+		return nil, fmt.Errorf("unknown SendQueueFileChunk type %q",
+			fc.RMType)
+	}
+}
+
+// SendQueueElement is one item in the outbound send queue.
 type SendQueueElement struct {
 	ID       clientintf.ID `json:"id"`
 	Type     string        `json:"type"`
 	Dests    []UserID      `json:"dests"`
 	Msg      []byte        `json:"msg"`
 	Priority uint          `json:"priority"`
+	AddTs    int64         `json:"add_ts"`
+
+	// FileChunk is set when this element is for an outbound file chunk.
+	FileChunk *SendQueueFileChunk `json:"file_chunk"`
 }
 
 // KXSeachQuery holds a specific target used while searching for a KX.

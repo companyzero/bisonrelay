@@ -102,16 +102,45 @@ Map<String, dynamic> _$ServerCertToJson(ServerCert instance) =>
       'outer_fingerprint': instance.outerFingerprint,
     };
 
+ServerPolicy _$ServerPolicyFromJson(Map<String, dynamic> json) => ServerPolicy(
+      (json['push_payment_lifetime'] as num).toInt(),
+      (json['max_push_invoices'] as num).toInt(),
+      (json['max_msg_size_version'] as num).toInt(),
+      (json['max_msg_size'] as num).toInt(),
+      (json['expiration_days'] as num).toInt(),
+      (json['push_pay_rate_matoms'] as num).toInt(),
+      (json['push_pay_rate_bytes'] as num).toInt(),
+      (json['push_pay_rate_min_matoms'] as num).toInt(),
+      (json['sub_pay_rate'] as num).toInt(),
+      (json['ping_limit'] as num).toInt(),
+    );
+
+Map<String, dynamic> _$ServerPolicyToJson(ServerPolicy instance) =>
+    <String, dynamic>{
+      'push_payment_lifetime': instance.pushPaymentLifetime,
+      'max_push_invoices': instance.maxPushInvoices,
+      'max_msg_size_version': instance.maxMsgSizeVersion,
+      'max_msg_size': instance.maxMsgSize,
+      'expiration_days': instance.expirationDays,
+      'push_pay_rate_matoms': instance.pushPayRateMAtoms,
+      'push_pay_rate_bytes': instance.pushPayRateBytes,
+      'push_pay_rate_min_matoms': instance.pushPayRateMinMAtoms,
+      'sub_pay_rate': instance.subPayRate,
+      'ping_limit': instance.pingLimit,
+    };
+
 ServerSessionState _$ServerSessionStateFromJson(Map<String, dynamic> json) =>
     ServerSessionState(
       (json['state'] as num).toInt(),
       json['check_wallet_err'] as String?,
+      ServerPolicy.fromJson(json['policy'] as Map<String, dynamic>),
     );
 
 Map<String, dynamic> _$ServerSessionStateToJson(ServerSessionState instance) =>
     <String, dynamic>{
       'state': instance.state,
       'check_wallet_err': instance.checkWalletErr,
+      'policy': instance.policy,
     };
 
 ServerInfo _$ServerInfoFromJson(Map<String, dynamic> json) => ServerInfo(

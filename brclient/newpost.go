@@ -8,7 +8,6 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/companyzero/bisonrelay/client/clientintf"
 	"github.com/companyzero/bisonrelay/internal/mdembeds"
-	"github.com/companyzero/bisonrelay/rpc"
 )
 
 type newPostWindow struct {
@@ -35,7 +34,8 @@ func (pw *newPostWindow) updateTextAreaSize() {
 }
 
 func (pw *newPostWindow) addEmbedCB(id string, data []byte, embedStr string) error {
-	if pw.estSize+uint64(len(data)) >= rpc.MaxChunkSize {
+	maxChunkSize := pw.as.c.MaxMsgPayloadSize()
+	if pw.estSize+uint64(len(data)) >= uint64(maxChunkSize) {
 		return fmt.Errorf("file too big to embed")
 	}
 
@@ -174,7 +174,7 @@ func (pw newPostWindow) View() string {
 		b.WriteString(styles.err.Render(pw.errMsg))
 	} else {
 		estSizeMsg := fmt.Sprintf(" Estimated post size: %s.", hbytes(int64(pw.estSize)))
-		if pw.estSize > rpc.MaxChunkSize {
+		if pw.estSize > uint64(pw.as.c.MaxMsgPayloadSize()) {
 			estSizeMsg = styles.err.Render(estSizeMsg)
 		}
 		b.WriteString(estSizeMsg)

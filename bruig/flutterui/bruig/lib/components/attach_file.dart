@@ -12,6 +12,7 @@ import 'package:bruig/screens/compress.dart';
 import 'package:bruig/theme_manager.dart';
 import 'package:bruig/util.dart';
 import 'package:flutter_avif/flutter_avif.dart';
+import 'package:golib_plugin/golib_plugin.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -181,8 +182,8 @@ class _AttachFileScreenState extends State<AttachFileScreen> {
         if (filePath == "") return;
         var data = await File(filePath).readAsBytes();
 
-        if (data.length > 1024 * 1024) {
-          throw "File is too large to attach (limit: 1MiB)";
+        if (data.length > Golib.maxPayloadSize) {
+          throw "File is too large to attach (limit: ${Golib.maxPayloadSizeStr})";
         }
 
         var mimeType = lookupMimeType(filePath);
@@ -227,8 +228,8 @@ class _AttachFileScreenState extends State<AttachFileScreen> {
       }
 
       var data = await pickedFile.readAsBytes();
-      if (data.length > 1024 * 1024) {
-        throw "File is too large to attach (limit: 1MiB)";
+      if (data.length > Golib.maxPayloadSize) {
+        throw "File is too large to attach (limit: ${Golib.maxPayloadSizeStr})";
       }
       var mimeType = lookupMimeType(pickedFile.path);
       setState(() {
@@ -250,8 +251,8 @@ class _AttachFileScreenState extends State<AttachFileScreen> {
     var snackbar = SnackBarModel.of(context);
     try {
       var data = await image.readAsBytes();
-      if (data.length > 1024 * 1024) {
-        throw "File is too large to attach (limit: 1MiB)";
+      if (data.length > Golib.maxPayloadSize) {
+        throw "File is too large to attach (limit: ${Golib.maxPayloadSizeStr})";
       }
       var mimeType = lookupMimeType(image.path);
       setState(() {

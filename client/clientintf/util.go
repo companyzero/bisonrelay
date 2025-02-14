@@ -90,18 +90,22 @@ func dummySigner(message []byte) zkidentity.FixedSizeSignature {
 
 // Returns the estimate cost (in milliatoms) to upload a file of the given size
 // to a remote user. The feeRate must be specified in milliatoms/byte.
-func EstimateUploadCost(size int64, feeRate uint64) (uint64, error) {
+func EstimateUploadCost(size int64, policy *ServerPolicy) (uint64, error) {
 	if size <= 0 {
 		return 0, fmt.Errorf("size cannot be <= 0")
 	}
 
-	if feeRate == 0 {
+	if policy.PushPayRateMAtoms == 0 {
 		return 0, fmt.Errorf("fee rate cannot be 0")
+	}
+	if policy.PushPayRateBytes == 0 {
+		return 0, fmt.Errorf("fee rate bytes cannot be 0")
 	}
 
 	// Estimate number of chunks.
-	nbChunks := int(size / rpc.MaxChunkSize)
-	lastChunkUneven := size%rpc.MaxChunkSize > 0
+	maxChunkSize := int64(policy.MaxPayloadSize())
+	nbChunks := int(size / maxChunkSize)
+	lastChunkUneven := size%maxChunkSize > 0
 	if lastChunkUneven {
 		nbChunks += 1
 	}
@@ -147,7 +151,7 @@ func EstimateUploadCost(size int64, feeRate uint64) (uint64, error) {
 	for i := 0; i < nbChunks; i++ {
 		ftGetReply.Metadata.Manifest[i] = rpc.FileManifest{
 			Index: uint64(i),
-			Size:  rpc.MaxChunkSize,
+			Size:  uint64(maxChunkSize),
 			Hash:  randBts(32),
 		}
 	}
@@ -174,7 +178,7 @@ func EstimateUploadCost(size int64, feeRate uint64) (uint64, error) {
 	totalSize += rmSize * uint64(nbChunks)
 
 	// Get some random data for our chunk estimate.
-	chunk := make([]byte, rpc.MaxChunkSize)
+	chunk := make([]byte, maxChunkSize)
 	if _, err := rand.Read(chunk[:]); err != nil {
 		return 0, err
 	}
@@ -184,7 +188,7 @@ func EstimateUploadCost(size int64, feeRate uint64) (uint64, error) {
 	ftGetChunkReply := rpc.RMFTGetChunkReply{
 		FileID: randStr(64),
 		Index:  nbChunks,
-		Chunk:  chunk[:size%rpc.MaxChunkSize],
+		Chunk:  chunk[:size%maxChunkSize],
 		Tag:    math.MaxUint32,
 	}
 	if !lastChunkUneven {
@@ -208,10 +212,9 @@ func EstimateUploadCost(size int64, feeRate uint64) (uint64, error) {
 		totalSize += rmSize * uint64(nbChunks-1)
 	}
 
-	// Cost to upload the file will be the total nb of bytes used to send
-	// the messages related to it times the fee rate.
-	cost := totalSize * feeRate
-	return cost, nil
+	// Calculate cost based on total size.
+	cost, err := policy.CalcPushCostMAtoms(int(totalSize))
+	return uint64(cost), err
 }
 
 // EstimatePostSize estimates the final size of a post share message, given the
@@ -254,7 +257,7 @@ func EstimatePostSize(content, descr string) (uint64, error) {
 
 // Returns the estimate cost (in milliatoms) to send the given PM message to a
 // remote user. The feeRate must be specified in milliatoms/byte.
-func EstimatePMCost(msg string, feeRate uint64) (uint64, error) {
+func EstimatePMCost(msg string, policy *ServerPolicy) (uint64, error) {
 	// Use a medium level compression level for the estimate.
 	const compressLevel = 4
 
@@ -265,7 +268,7 @@ func EstimatePMCost(msg string, feeRate uint64) (uint64, error) {
 		return 0, err
 	}
 
-	rmSize := uint64(ratchet.EncryptedSize(len(rm)))
-	cost := rmSize * feeRate
-	return cost, nil
+	rmSize := ratchet.EncryptedSize(len(rm))
+	cost, err := policy.CalcPushCostMAtoms(rmSize)
+	return uint64(cost), err
 }

@@ -24,6 +24,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:bruig/theme_manager.dart';
 import 'package:golib_plugin/definitions.dart';
+import 'package:golib_plugin/util.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 import 'package:bruig/models/client.dart';
@@ -678,6 +679,10 @@ class _NetworkSettingsScreenState extends State<NetworkSettingsScreen> {
         break;
     }
 
+    var policy = client.connState.state.policy;
+    var maxPayloadSize = maxMsgPayloadSize(policy.maxMsgSizeVersion);
+    var pushDcrGbRate = policy.calcPushCostMAtoms(1000000000).toDouble() / 1e11;
+
     return Column(children: [
       client.connState.isCheckingWallet && client.connState.checkWalletErr != ""
           ? Container(
@@ -694,8 +699,14 @@ class _NetworkSettingsScreenState extends State<NetworkSettingsScreen> {
               leading: const Icon(Icons.network_ping),
               title: const Text("Proxy Settings")),
           actionWidget,
+          const Divider(),
+          const Txt.L("Server Policy"),
+          Txt("Max Message Payload Size: ${ibSize(maxPayloadSize)} (version ${policy.maxMsgSizeVersion})"),
+          Txt("Push Rate: ${pushDcrGbRate.toStringAsFixed(8)} DCR/GB (min ${formatDCR(milliatomsToDCR(policy.pushPayRateMinMAtoms))})"),
+          Txt("Subscription Rate: ${formatDCR(milliatomsToDCR(policy.subPayRate))}/RV"),
+          Txt("Expiration days: ${policy.expirationDays}"),
         ],
-      ))
+      )),
     ]);
   }
 }

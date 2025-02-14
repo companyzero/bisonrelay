@@ -229,10 +229,15 @@ func (tc *testClient) modifyHandlers(f func()) {
 }
 
 // preventFutureConns stops all future conns of this client from succeeding.
-func (tc *testClient) preventFutureConns(err error) {
+//
+// Returns the current conn, which can be failed with startFailing().
+func (tc *testClient) preventFutureConns(err error) *testConn {
 	tc.mtx.Lock()
 	tc.preventConn = err
+	res := tc.conn
 	tc.mtx.Unlock()
+
+	return res
 }
 
 // acceptNextGCInvite adds a handler that will accept the next GC invite

@@ -11,6 +11,7 @@ import (
 	"github.com/companyzero/bisonrelay/client/clientintf"
 	"github.com/companyzero/bisonrelay/internal/mdembeds"
 	"github.com/companyzero/bisonrelay/internal/strescape"
+	"github.com/companyzero/bisonrelay/ratchet"
 	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/companyzero/bisonrelay/zkidentity"
 )
@@ -338,11 +339,19 @@ const onRMSent = "onRMSent"
 // OnRMSent is a notification sent whenever a message has been delivered to
 // the server directed to a remote user. Note: this is called _after_ the RM
 // has been acknowledged by the server.
-type OnRMSent func(ru *RemoteUser, p interface{})
+type OnRMSent func(ru *RemoteUser, rv ratchet.RVPoint, p interface{})
 
 func (_ OnRMSent) typ() string { return onRMSent }
 
 const onServerUnwelcomeError = "onServerUnwelcomeError"
+
+const onUnackedRMSentNtfnType = "onUnackedRMSent"
+
+// OnUnackedRMSent is a notification sent when a previously unacked RM was
+// resent to the server.
+type OnUnackedRMSent func(uid clientintf.UserID, rv ratchet.RVPoint)
+
+func (OnUnackedRMSent) typ() string { return onUnackedRMSentNtfnType }
 
 // OnServerUnwelcomeError is a notification sent, when attempting to connect
 // to a server, the client receives an error that hints that it should
@@ -946,9 +955,14 @@ func (nmgr *NotificationManager) notifyRMReceived(ru *RemoteUser, rmh *rpc.RMHea
 		visit(func(h OnRMReceived) { h(ru, rmh, p, ts) })
 }
 
-func (nmgr *NotificationManager) notifyRMSent(ru *RemoteUser, p interface{}) {
+func (nmgr *NotificationManager) notifyRMSent(ru *RemoteUser, rv ratchet.RVPoint, p interface{}) {
 	nmgr.handlers[onRMSent].(*handlersFor[OnRMSent]).
-		visit(func(h OnRMSent) { h(ru, p) })
+		visit(func(h OnRMSent) { h(ru, rv, p) })
+}
+
+func (nmgr *NotificationManager) notifyUnackedRMSent(uid clientintf.UserID, rv ratchet.RVPoint) {
+	nmgr.handlers[onUnackedRMSentNtfnType].(*handlersFor[OnUnackedRMSent]).
+		visit(func(h OnUnackedRMSent) { h(uid, rv) })
 }
 
 func (nmgr *NotificationManager) notifyServerUnwelcomeError(err error) {
@@ -994,6 +1008,7 @@ func NewNotificationManager() *NotificationManager {
 			onReceiveReceipt:         &handlersFor[OnReceiveReceipt]{},
 			onRMReceived:             &handlersFor[OnRMReceived]{},
 			onRMSent:                 &handlersFor[OnRMSent]{},
+			onUnackedRMSentNtfnType:  &handlersFor[OnUnackedRMSent]{},
 			onProfileUpdatedType:     &handlersFor[OnProfileUpdated]{},
 			onTransitiveEventType:    &handlersFor[OnTransitiveEvent]{},
 			onUINtfnType:             &handlersFor[OnUINotification]{},

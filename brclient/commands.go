@@ -8,6 +8,8 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
+	"runtime/pprof"
 	"sort"
 	"strconv"
 	"strings"
@@ -20,6 +22,7 @@ import (
 	"github.com/companyzero/bisonrelay/client/clientintf"
 	"github.com/companyzero/bisonrelay/internal/audio"
 	"github.com/companyzero/bisonrelay/internal/strescape"
+	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/companyzero/bisonrelay/zkidentity"
 	"github.com/decred/dcrd/dcrutil/v4"
 	"github.com/decred/dcrlnd/lnrpc"
@@ -471,16 +474,21 @@ var listCommands = []tuicmd{
 			return nil
 		},
 	}, {
-		cmd:     "svrrates",
-		aliases: []string{"serverrates"},
-		descr:   "Show server fee rates",
+		cmd:     "serverpolicy",
+		aliases: []string{"serverrates", "svrrates", "svrpolicy", "spolicy"},
+		descr:   "Show server policy",
 		handler: func(args []string, as *appState) error {
-			pushRate, subRate := as.serverPaymentRates()
+			policy := as.serverPolicy()
 			as.cwHelpMsgs(func(pf printf) {
 				pf("")
-				pf("Server Fee Rates")
-				pf("Push Rate: %.8f DCR/kB", float64(pushRate)/1e8)
-				pf("Subscribe Rate: %.8f DCR/RV", float64(subRate)/1e11)
+				pf("Server Policies")
+				pf("Push Rate: %.8f DCR/GB (min %.8f DCR)",
+					policy.PushDcrPerGB(),
+					float64(policy.PushPayRateMinMAtoms)/1e11)
+				pf("Subscribe Rate: %.8f DCR/RV", float64(policy.SubPayRate)/1e11)
+				pf("Max msg size: %s (version %d)",
+					hibytes(int64(rpc.MaxPayloadSizeForVersion(policy.MaxMsgSizeVersion))),
+					policy.MaxMsgSizeVersion)
 			})
 			return nil
 		},
@@ -1722,9 +1730,9 @@ var ftCommands = []tuicmd{
 
 			var dcrCost, dcrUploadCost float64
 			// Figure out upload cost.
-			feeRate, _ := as.serverPaymentRates()
+			policy := as.serverPolicy()
 			size := stat.Size()
-			uploadCost, err := clientintf.EstimateUploadCost(size, feeRate)
+			uploadCost, err := clientintf.EstimateUploadCost(size, &policy)
 			if err != nil {
 				return err
 			}
@@ -1847,9 +1855,9 @@ var ftCommands = []tuicmd{
 				return err
 			}
 
-			feeRate, _ := as.serverPaymentRates()
+			policy := as.serverPolicy()
 			size := stat.Size()
-			cost, err := clientintf.EstimateUploadCost(size, feeRate)
+			cost, err := clientintf.EstimateUploadCost(size, &policy)
 			if err != nil {
 				return err
 			}
@@ -1932,21 +1940,36 @@ var ftCommands = []tuicmd{
 			if err != nil {
 				nick = args[0]
 			}
-
 			filename := args[1]
-			err = as.c.SendFile(uid, filename)
-			if err != nil {
-				return err
+
+			sess := as.c.ServerSession()
+			if sess == nil {
+				return errors.New("not connected to server")
 			}
 
 			cw := as.findChatWindow(uid)
-			msg := fmt.Sprintf("Sending file %q to user %q",
-				filepath.Base(filename), strescape.Nick(nick))
+			var cm *chatMsg
 			if cw == nil {
-				as.cwHelpMsg(msg)
+				as.cwHelpMsg("Sending file %q to user %q",
+					filepath.Base(filename), strescape.Nick(nick))
 			} else {
-				cw.newHelpMsg(msg)
+				cm = cw.newInternalMsg("Sending file %q to user %q",
+					filepath.Base(filename), strescape.Nick(nick))
 			}
+
+			as.sendMsg(repaintActiveChat{})
+
+			go func() {
+				err = as.c.SendFile(uid, 0, filename, nil)
+				if err != nil {
+					as.diagMsg("Unable to send %s: %v", filename, err)
+					return
+				}
+				if cm != nil {
+					cw.setMsgSent(cm)
+					as.sendMsg(repaintActiveChat{})
+				}
+			}()
 
 			return nil
 		},
@@ -3727,6 +3750,98 @@ var audioCmds = []tuicmd{
 	},
 }
 
+var profileCmds = []tuicmd{
+	{
+		cmd:           "cpu",
+		usableOffline: true,
+		descr:         "Perform and save a CPU profile",
+		usage:         "<seconds> <filename>",
+		handler: func(args []string, as *appState) error {
+			if len(args) < 1 {
+				return usageError{msg: "Seconds argument must be specified"}
+			}
+			if len(args) < 2 {
+				return usageError{msg: "Output filename must be specified"}
+			}
+
+			secs, err := strconv.ParseInt(args[0], 10, 64)
+			if err != nil {
+				return err
+			}
+			filename := args[1]
+			if err := os.MkdirAll(filepath.Dir(filename), 0o744); err != nil {
+				return err
+			}
+			f, err := os.Create(filename)
+			if err != nil {
+				return err
+			}
+
+			go func() {
+				d := time.Duration(secs) * time.Second
+				as.diagMsg("Creating %s profile and saving to %s", d, filename)
+
+				pprof.StartCPUProfile(f)
+				select {
+				case <-as.ctx.Done():
+				case <-time.After(d):
+				}
+
+				pprof.StopCPUProfile()
+				err := f.Close()
+				if err != nil {
+					as.diagMsg("Failed to close profile file: %v", err)
+				} else {
+					as.diagMsg("Finished CPU profile")
+				}
+			}()
+
+			return nil
+		},
+		completer: func(args []string, arg string, as *appState) []string {
+			if len(args) == 1 {
+				return fileCompleter(arg)
+			}
+			return nil
+		},
+	},
+	{
+		cmd:           "mem",
+		usableOffline: true,
+		descr:         "Save a memory profile",
+		usage:         "<filename>",
+		handler: func(args []string, as *appState) error {
+			if len(args) < 1 {
+				return usageError{msg: "Output filename must be specified"}
+			}
+
+			filename := args[0]
+			if err := os.MkdirAll(filepath.Dir(filename), 0o744); err != nil {
+				return err
+			}
+			f, err := os.Create(filename)
+			if err != nil {
+				return err
+			}
+			defer f.Close()
+
+			runtime.GC()
+			err = pprof.WriteHeapProfile(f)
+			if err != nil {
+				return err
+			}
+			as.diagMsg("Saved memory profile to %s", filename)
+			return nil
+		},
+		completer: func(args []string, arg string, as *appState) []string {
+			if len(args) == 0 {
+				return fileCompleter(arg)
+			}
+			return nil
+		},
+	},
+}
+
 var commands = []tuicmd{
 	{
 		cmd:           "backup",
@@ -4276,10 +4391,8 @@ var commands = []tuicmd{
 					interval = time.Duration(d) * 24 * time.Hour
 				}
 			} else {
-				as.connectedMtx.Lock()
-				expiry := as.expirationDays
-				as.connectedMtx.Unlock()
-				interval = time.Duration(expiry) * 24 * time.Hour
+				policy := as.serverPolicy()
+				interval = time.Duration(policy.ExpirationDays) * 24 * time.Hour
 			}
 
 			return as.resetAllOldRatchets(interval)
@@ -4644,6 +4757,17 @@ var commands = []tuicmd{
 		completer: func(args []string, arg string, as *appState) []string {
 			if len(args) == 0 {
 				return cmdCompleter(audioCmds, arg, false)
+			}
+			return nil
+		},
+		handler: subcmdNeededHandler,
+	}, {
+		cmd:   "profile",
+		descr: "Profiling related commands",
+		sub:   profileCmds,
+		completer: func(args []string, arg string, as *appState) []string {
+			if len(args) == 0 {
+				return cmdCompleter(profileCmds, arg, false)
 			}
 			return nil
 		},

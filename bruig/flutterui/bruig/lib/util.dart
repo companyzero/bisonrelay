@@ -42,6 +42,25 @@ String humanReadableSize(int size) {
   return "$size B";
 }
 
+String ibSize(int size) {
+  size = size.abs();
+  var sizes = [
+    [(1 << 40).toDouble(), "TiB"],
+    [(1 << 30).toDouble(), "GiB"],
+    [(1 << 20).toDouble(), "MiB"],
+    [(1 << 10).toDouble(), "KiB"],
+  ];
+  for (int i = 0; i < sizes.length; i++) {
+    var div = sizes[i][0] as double;
+    var lbl = sizes[i][1] as String;
+    if (size < div) {
+      continue;
+    }
+    return "${(size.toDouble() / div).toStringAsFixed(2)} $lbl";
+  }
+  return "$size B";
+}
+
 // Parse a go-like string duration to nanoseconds. Supports day and week.
 int parseDuration(String s) {
   // [-+]?([0-9]*(\.[0-9]*)?[a-z]+)+
