@@ -99,6 +99,78 @@ func (db *DB) chunkFile(srcFile, chunkDir string) ([]rpc.FileManifest, []byte, u
 	return fm, fHasher.Sum(nil), size, nil
 }
 
+// CalcFileChunks calculates file chunks for sending. The FileMetadata returned
+// is only filled with the basic chunked data (cost, description, etc, are not
+// filled).
+func (cb *DB) CalcFileChunks(tx ReadWriteTx, fname string, chunkSize uint64,
+	sign func([]byte) ([]byte, error)) (*rpc.FileMetadata, error) {
+
+	f, err := os.Open(fname)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	fi, err := f.Stat()
+	if err != nil {
+		return nil, err
+	}
+
+	fsize := uint64(fi.Size())
+	if chunkSize == 0 || chunkSize > fsize {
+		chunkSize = fsize
+	}
+
+	var (
+		chunks uint64
+		fm     = make([]rpc.FileManifest, 0,
+			(uint64(fi.Size())/chunkSize)+1)
+		fHasher = sha256.New()
+		size    uint64
+	)
+
+	buffer := make([]byte, chunkSize)
+	for {
+		n, err := f.Read(buffer)
+		if err != nil && err != io.EOF {
+			return nil, err
+		}
+		if n == 0 {
+			// Done with exact sized chunk
+			break
+		}
+
+		// Chunk digest
+		chunk := buffer[:n]
+		hash := sha256.Sum256(chunk)
+
+		fm = append(fm, rpc.FileManifest{
+			Index: chunks,
+			Size:  uint64(n),
+			Hash:  hash[:],
+		})
+		chunks++
+		size += uint64(n)
+
+		// Accumulate into global file hasher.
+		fHasher.Write(chunk)
+	}
+
+	fHash := fHasher.Sum(nil)
+	sig, err := sign(fHash)
+	if err != nil {
+		return nil, fmt.Errorf("unable to sign hash of file: %w", err)
+	}
+
+	return &rpc.FileMetadata{
+		Filename:  filepath.Base(fname),
+		Hash:      hex.EncodeToString(fHash),
+		Size:      fsize,
+		Manifest:  fm,
+		Signature: hex.EncodeToString(sig),
+	}, nil
+}
+
 // ShareFile registers the given file as a shared file.
 //
 // If uid is nil, then the file is registered as shared among all users.

@@ -1,6 +1,7 @@
 package client
 
 import (
+	"github.com/companyzero/bisonrelay/client/clientdb"
 	"github.com/companyzero/bisonrelay/client/internal/lowlevel"
 	"github.com/companyzero/bisonrelay/ratchet"
 )
@@ -47,6 +48,7 @@ type remoteUserRM struct {
 	sendRV    lowlevel.RVID
 	ru        *RemoteUser
 	payEvent  string
+	sendqID   *clientdb.SendQID
 }
 
 // Assert remoteUserRM fulfills the outboundRM interface.

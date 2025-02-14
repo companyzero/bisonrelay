@@ -106,6 +106,11 @@ func (sp *ServerPolicy) PushDcrPerGB() float64 {
 	return float64(matoms) / 1e11           // 1e11 == milliatoms / dcr
 }
 
+// MaxPayloadSize returns the max payload size for the server policy.
+func (sp *ServerPolicy) MaxPayloadSize() int {
+	return int(rpc.MaxPayloadSizeForVersion(sp.MaxMsgSizeVersion))
+}
+
 // ServerSessionIntf is the interface available from serverSession to
 // consumers.
 type ServerSessionIntf interface {

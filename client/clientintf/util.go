@@ -103,8 +103,9 @@ func EstimateUploadCost(size int64, policy *ServerPolicy) (uint64, error) {
 	}
 
 	// Estimate number of chunks.
-	nbChunks := int(size / rpc.MaxChunkSize)
-	lastChunkUneven := size%rpc.MaxChunkSize > 0
+	maxChunkSize := int64(policy.MaxPayloadSize())
+	nbChunks := int(size / maxChunkSize)
+	lastChunkUneven := size%maxChunkSize > 0
 	if lastChunkUneven {
 		nbChunks += 1
 	}
@@ -150,7 +151,7 @@ func EstimateUploadCost(size int64, policy *ServerPolicy) (uint64, error) {
 	for i := 0; i < nbChunks; i++ {
 		ftGetReply.Metadata.Manifest[i] = rpc.FileManifest{
 			Index: uint64(i),
-			Size:  rpc.MaxChunkSize,
+			Size:  uint64(maxChunkSize),
 			Hash:  randBts(32),
 		}
 	}
@@ -177,7 +178,7 @@ func EstimateUploadCost(size int64, policy *ServerPolicy) (uint64, error) {
 	totalSize += rmSize * uint64(nbChunks)
 
 	// Get some random data for our chunk estimate.
-	chunk := make([]byte, rpc.MaxChunkSize)
+	chunk := make([]byte, maxChunkSize)
 	if _, err := rand.Read(chunk[:]); err != nil {
 		return 0, err
 	}
@@ -187,7 +188,7 @@ func EstimateUploadCost(size int64, policy *ServerPolicy) (uint64, error) {
 	ftGetChunkReply := rpc.RMFTGetChunkReply{
 		FileID: randStr(64),
 		Index:  nbChunks,
-		Chunk:  chunk[:size%rpc.MaxChunkSize],
+		Chunk:  chunk[:size%maxChunkSize],
 		Tag:    math.MaxUint32,
 	}
 	if !lastChunkUneven {

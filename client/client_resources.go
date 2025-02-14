@@ -136,10 +136,11 @@ func (c *Client) handleFetchResource(ru *RemoteUser, fr rpc.RMFetchResource) err
 	}
 	res.Tag = fr.Tag // Ensure response tag is same as request tag
 
-	if len(res.Data) > rpc.MaxChunkSize {
+	maxPayloadSize := c.MaxMsgPayloadSize()
+	if len(res.Data) > maxPayloadSize {
 		return fmt.Errorf("resource %s returned more data (%d) than "+
 			"max chunk size %d", strescape.ResourcesPath(fr.Path),
-			len(res.Data), rpc.MaxChunkSize)
+			len(res.Data), maxPayloadSize)
 	}
 
 	ru.log.Debugf("Fulfilled request tag %s with status %s chunk %d/%d len %d",

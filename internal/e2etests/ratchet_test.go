@@ -3,6 +3,7 @@ package e2etests
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"math/rand"
@@ -13,6 +14,7 @@ import (
 	"github.com/companyzero/bisonrelay/client/clientdb"
 	"github.com/companyzero/bisonrelay/client/clientintf"
 	"github.com/companyzero/bisonrelay/internal/assert"
+	"github.com/companyzero/bisonrelay/ratchet"
 	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/companyzero/bisonrelay/zkidentity"
 	"golang.org/x/text/collate"
@@ -62,8 +64,8 @@ func TestResendsUnackedRM(t *testing.T) {
 	// Setup Alice so that the next message she sends will cause the conn
 	// to fail after the message is written but before the server ack is
 	// processed.
-	alice.preventFutureConns(fmt.Errorf("forced conn failure"))
-	alice.conn.startFailing(fmt.Errorf("forced read failure"), nil)
+	alice.preventFutureConns(fmt.Errorf("forced conn failure")).
+		startFailing(fmt.Errorf("forced read failure"), nil)
 	wantMsg2 := "test PM 2"
 	aliceConnClosed := make(chan (struct{}))
 	regServerChanged := alice.handleSync(client.OnServerSessionChangedNtfn(func(connected bool, _ clientintf.ServerPolicy) {
@@ -153,6 +155,76 @@ func TestResendsUnackedRM(t *testing.T) {
 
 	assert.NilErr(t, bob.PM(alice.PublicID(), "bob msg"))
 	assert.DeepEqual(t, assert.ChanWritten(t, alicePMChan), "bob msg")
+}
+
+// TestNonDupedUnackedSendQRM tests for a prior bug where an RM could
+// be sent duplicated if it was sent through the send queue, it was sent but
+// unacked by the server and the client restarted during this process.
+func TestNonDupedUnackedSendQRM(t *testing.T) {
+	t.Parallel()
+
+	// Setup Alice and Bob.
+	tcfg := testScaffoldCfg{}
+	ts := newTestScaffold(t, tcfg)
+	alice := ts.newClient("alice")
+	bob := ts.newClient("bob")
+	ts.kxUsers(alice, bob)
+
+	// Handlers.
+	bobPMChan := make(chan string, 5)
+	bob.handle(client.OnPMNtfn(func(ru *client.RemoteUser, pm rpc.RMPrivateMessage, ts time.Time) {
+		bobPMChan <- pm.Message
+	}))
+	aliceConnOffline := make(chan struct{}, 5)
+	alice.handleSync(client.OnServerSessionChangedNtfn(func(connected bool, policy clientintf.ServerPolicy) {
+		if !connected {
+			aliceConnOffline <- struct{}{}
+		}
+	}))
+
+	// Ensure Alice is idle before proceeding.
+	assertClientUpToDate(t, alice)
+	assertEmptyRMQ(t, alice)
+
+	// Alice will fail the next read from the server (which should be the
+	// ack to the PM). This means Alice doesn't known whether the RM was
+	// received or not by the server (in this case, it was).
+	errTest := errors.New("commanded test failure")
+	alice.preventFutureConns(errTest).startFailing(errTest, nil)
+
+	// Start sending the PM.
+	pm1 := "test message from alice"
+	errChan := make(chan error, 5)
+	go func() {
+		errChan <- alice.PM(bob.PublicID(), pm1)
+	}()
+
+	// Alice will go offline, but errChan hasn't failed yet (because PM()
+	// is a sync call).
+	assert.ChanWritten(t, aliceConnOffline)
+	assert.ChanNotWritten(t, errChan, time.Second)
+
+	// Stop Alice, simulating a shutdown. This finally makes PM() error.
+	ts.stopClient(alice)
+	assert.ChanWritten(t, errChan)
+
+	// Recreate alice, with an immediate hook to OnUnackedRMSent() to ensure
+	// we catch the attempt to send the unacked rm.
+	ntfns := client.NewNotificationManager()
+	aliceResentUnackedPM := make(chan struct{}, 5)
+	ntfns.Register(client.OnUnackedRMSent(func(uid clientintf.UserID, rv ratchet.RVPoint) {
+		aliceResentUnackedPM <- struct{}{}
+	}))
+	alice = ts.recreateStoppedClient(alice, withNtfns(ntfns))
+
+	// Alice should resend the message in the same RV.
+	assert.ChanWritten(t, aliceResentUnackedPM)
+
+	// Bob should receive one (and only one) PM, which was stored in
+	// Alice's DB as an unacked RM (because it was sent to the server, and
+	// never received the ack), but removed from her sendq.
+	assert.ChanWrittenWithVal(t, bobPMChan, pm1)
+	assert.ChanNotWritten(t, bobPMChan, time.Second)
 }
 
 // TestLongOfflineClientResetsAllKX tests that if a client has been offline for
@@ -679,7 +751,7 @@ func TestUnsubsIdleClientsAfterResetBug(t *testing.T) {
 		aliceKxCompleted <- struct{}{}
 	}))
 	aliceSYNSent := make(chan struct{}, 3)
-	alice.handle(client.OnRMSent(func(ru *client.RemoteUser, p interface{}) {
+	alice.handle(client.OnRMSent(func(ru *client.RemoteUser, rv ratchet.RVPoint, p interface{}) {
 		if _, ok := p.(rpc.RMHandshakeSYN); ok {
 			aliceSYNSent <- struct{}{}
 		}
@@ -779,7 +851,7 @@ func TestUnsubsIdleClientsWithHandshakeAttempt(t *testing.T) {
 		aliceUnsubbing <- struct{}{}
 	}))
 	aliceSYNSent := make(chan struct{}, 3)
-	alice.handle(client.OnRMSent(func(ru *client.RemoteUser, p interface{}) {
+	alice.handle(client.OnRMSent(func(ru *client.RemoteUser, rv ratchet.RVPoint, p interface{}) {
 		if _, ok := p.(rpc.RMHandshakeSYN); ok {
 			aliceSYNSent <- struct{}{}
 		}

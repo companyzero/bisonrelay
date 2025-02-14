@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
+	"fmt"
 	"net"
 	"net/http"
 	"os"
@@ -386,6 +387,11 @@ type Client struct {
 
 	newUsersChan chan *RemoteUser
 
+	// Messages that were unsent/unacked from prior run. Loaded on startup
+	// before anything else is allowed to run.
+	startupUnackedRMs []clientdb.UnackedRM
+	startupSendq      []clientdb.SendQueueElement
+
 	// gcAliasMap maps a local gc name to a global gc id.
 	gcAliasMtx sync.Mutex
 	gcAliasMap map[string]zkidentity.ShortID
@@ -689,6 +695,8 @@ func (c *Client) queueUnackedUserRM(ctx context.Context, unacked clientdb.Unacke
 			c.log.Debugf("Removed unacked user %s RM with "+
 				"RV %s", unacked.UID, unacked.RV)
 		}
+
+		c.ntfns.notifyUnackedRMSent(unacked.UID, unacked.RV)
 	}()
 	return nil
 }
@@ -698,15 +706,8 @@ func (c *Client) queueUnackedUserRM(ctx context.Context, unacked clientdb.Unacke
 // usually be at most one RM (i.e. the one being sent just before the last time
 // the client was executed).
 func (c *Client) queueUnackedUserRMs(ctx context.Context) error {
-	var unsents []clientdb.UnackedRM
-	err := c.db.View(ctx, func(tx clientdb.ReadTx) error {
-		var err error
-		unsents, err = c.db.ListUnackedUserRMs(tx)
-		return err
-	})
-	if err != nil {
-		return err
-	}
+	unsents := c.startupUnackedRMs
+	c.startupUnackedRMs = nil
 	if len(unsents) == 0 {
 		c.log.Debugf("No previously unsent RMs to send")
 		return nil
@@ -720,6 +721,24 @@ func (c *Client) queueUnackedUserRMs(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+// loadPrevUnsentMsgs loads the previously unsent and/or unacked RMs.
+func (c *Client) loadPrevUnsentMsgs(ctx context.Context) error {
+	return c.db.View(ctx, func(tx clientdb.ReadTx) error {
+		var err error
+		c.startupSendq, err = c.db.ListSendQueue(tx)
+		if err != nil {
+			return fmt.Errorf("unable to load startup sendq: %v", err)
+		}
+
+		c.startupUnackedRMs, err = c.db.ListUnackedUserRMs(tx)
+		if err != nil {
+			return fmt.Errorf("unable to load startup unacked RMs: %v", err)
+		}
+
+		return nil
+	})
 }
 
 func (c *Client) loadInitialDBData(ctx context.Context) error {
@@ -736,6 +755,9 @@ func (c *Client) loadInitialDBData(ctx context.Context) error {
 		return err
 	}
 	if err := c.removeExpiredGCInvites(ctx); err != nil {
+		return err
+	}
+	if err := c.loadPrevUnsentMsgs(ctx); err != nil {
 		return err
 	}
 
@@ -844,6 +866,21 @@ func (c *Client) ServerLNNode() string {
 func (c *Client) ServerSession() clientintf.ServerSessionIntf {
 	c.svrMtx.Lock()
 	res := c.svrSession
+	c.svrMtx.Unlock()
+	return res
+}
+
+// MaxMsgPayloadSize returns the max msg payload size given the currently
+// connected server. This will return the default max chunk size if not
+// connected to any servers.
+func (c *Client) MaxMsgPayloadSize() int {
+	res := rpc.MaxChunkSize
+
+	c.svrMtx.Lock()
+	if c.svrSession != nil {
+		pol := c.svrSession.Policy()
+		res = pol.MaxPayloadSize()
+	}
 	c.svrMtx.Unlock()
 	return res
 }
@@ -988,7 +1025,8 @@ func (c *Client) NicksWithPrefix(prefix string) []string {
 // PM sends a private message to the given user, identified by its public id.
 // The user must have been already KX'd with for this to work.
 func (c *Client) PM(uid UserID, msg string) error {
-	ru, err := c.rul.byID(uid)
+	<-c.abLoaded
+	_, err := c.rul.byID(uid)
 	if err != nil {
 		return err
 	}
@@ -1000,13 +1038,21 @@ func (c *Client) PM(uid UserID, msg string) error {
 	if err != nil {
 		return err
 	}
-	return ru.sendPM(msg)
+
+	// For historical reasons, PM() is a sync call.
+	rm := rpc.RMPrivateMessage{
+		Mode:    rpc.RMPrivateMessageModeNormal,
+		Message: msg,
+	}
+	payEvent := fmt.Sprintf("pm.%s", uid.ShortLogID())
+	return c.sendWithSendQPrioritySync(payEvent, rm, priorityPM, nil, uid)
 }
 
 // Handshake starts a 3-way handshake with the specified user. When the local
 // client receives a SYNACK, it means the ratchet with the user is fully
 // operational.
 func (c *Client) Handshake(uid UserID) error {
+	<-c.abLoaded
 	ru, err := c.rul.byID(uid)
 	if err != nil {
 		return nil
