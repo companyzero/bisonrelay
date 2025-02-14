@@ -4,6 +4,8 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
+	"net"
+	"net/http"
 	"os"
 	"regexp"
 	"sync"
@@ -17,6 +19,7 @@ import (
 	"github.com/companyzero/bisonrelay/client/resources"
 	"github.com/companyzero/bisonrelay/client/timestats"
 	"github.com/companyzero/bisonrelay/internal/strescape"
+	"github.com/companyzero/bisonrelay/rates"
 	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/companyzero/bisonrelay/zkidentity"
 	"github.com/decred/slog"
@@ -208,6 +211,12 @@ type Config struct {
 	// GCInviteExpiration is how long a GC invitation is valid for. Defaults
 	// to 7 days.
 	GCInviteExpiration time.Duration
+
+	// DialFunc specifies a custom dialer
+	DialFunc func(context.Context, string, string) (net.Conn, error)
+
+	// UseOnion specifies if the rate collection uses Tor hidden services.
+	UseOnion bool
 }
 
 // logger creates a logger for the given subsystem in the configured backend.
@@ -373,6 +382,8 @@ type Client struct {
 	svrLnNode  string
 	svrSession clientintf.ServerSessionIntf
 
+	rates *rates.Rates
+
 	newUsersChan chan *RemoteUser
 
 	// gcAliasMap maps a local gc name to a global gc id.
@@ -463,6 +474,23 @@ func New(cfg Config) (*Client, error) {
 
 	dbCtx, dbCtxCancel := context.WithCancel(context.Background())
 
+	httpClient := http.Client{
+		Transport: &http.Transport{
+			DialContext:           cfg.DialFunc,
+			ForceAttemptHTTP2:     true,
+			MaxIdleConns:          2,
+			IdleConnTimeout:       90 * time.Second,
+			TLSHandshakeTimeout:   10 * time.Second,
+			ExpectContinueTimeout: 1 * time.Second,
+		},
+	}
+	r := rates.New(rates.Config{
+		HTTPClient:  &httpClient,
+		Log:         cfg.logger("RATE"),
+		OnionEnable: cfg.UseOnion,
+	})
+	go r.Run(ctx)
+
 	c = &Client{
 		cfg:         &cfg,
 		ctx:         ctx,
@@ -510,6 +538,11 @@ func New(cfg Config) (*Client, error) {
 	kxl.kxCompleted = c.kxCompleted
 
 	return c, nil
+}
+
+// Rates returns the rates.
+func (c *Client) Rates() *rates.Rates {
+	return c.rates
 }
 
 // Log returns the main client logger.
