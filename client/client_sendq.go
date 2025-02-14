@@ -17,6 +17,9 @@ import (
 // will continue to be sent to their destinations.
 
 // addToSendQ adds the given message to the DB send queue.
+//
+// This does NOT include the message in the outbound RMQ, it only adds the
+// message to the db.
 func (c *Client) addToSendQ(typ string, msg interface{}, priority uint,
 	dests ...clientintf.UserID) (clientdb.SendQID, error) {
 
@@ -66,29 +69,48 @@ func (c *Client) removeFromSendQ(id clientdb.SendQID, dest clientintf.UserID) {
 	}
 }
 
-// sendWithSendQPriority adds the given message to the sendq with the given
-// type and sends it to the specified destinations. Each sending is done
-// asynchronously, so this returns immediately after enqueing.
-//
-// If progressChan is specified, updates about the sending progress are sent
-// there.
-func (c *Client) sendWithSendQPriority(typ string, msg interface{}, priority uint,
-	progressChan chan SendProgress, dests ...clientintf.UserID) error {
+// preparedSendqItem is a sendq entry that has been saved to the DB and is ready
+// to be enqueued.
+type preparedSendqItem struct {
+	id           clientdb.SendQID
+	typ          string
+	msg          interface{}
+	priority     uint
+	progressChan chan SendProgress
+	dests        []clientintf.UserID
+}
 
-	sqid, err := c.addToSendQ(typ, msg, priority, dests...)
+// prepareSendqItem prepares a sendq item to be sent, by saving it in the DB.
+func (c *Client) prepareSendqItem(typ string, msg interface{}, priority uint,
+	progressChan chan SendProgress, dests ...clientintf.UserID) (*preparedSendqItem, error) {
+
+	id, err := c.addToSendQ(typ, msg, priority, dests...)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
+	return &preparedSendqItem{
+		id:           id,
+		typ:          typ,
+		msg:          msg,
+		priority:     priority,
+		progressChan: progressChan,
+		dests:        dests,
+	}, nil
+}
+
+// sendPreparedSendqItem sends a previously prepared sendq item.
+func (c *Client) sendPreparedSendqItem(prep *preparedSendqItem) error {
 	var sent, total atomic.Int64
-	total.Store(int64(len(dests)))
+	total.Store(int64(len(prep.dests)))
 
 	// Send the msg to each destination.
-	for _, dest := range dests {
+	for _, dest := range prep.dests {
 		uid := dest
 		ru, err := c.UserByID(uid)
 		if err != nil {
-			c.log.Warnf("Unable to find user for sendq entry %s: %v", typ, err)
+			c.log.Warnf("Unable to find user for sendq entry %s: %v",
+				prep.typ, err)
 			continue
 		}
 
@@ -96,17 +118,17 @@ func (c *Client) sendWithSendQPriority(typ string, msg interface{}, priority uin
 		failed := func(err error) {
 			if !errors.Is(err, clientintf.ErrSubsysExiting) {
 				ru.log.Errorf("unable to queue  %T: %v",
-					msg, err)
-				c.removeFromSendQ(sqid, uid)
+					prep.msg, err)
+				c.removeFromSendQ(prep.id, uid)
 			} else {
 				ru.log.Tracef("Unable to queue %T due to %v",
-					msg, err)
+					prep.msg, err)
 			}
 		}
 
 		// Queue synchronously to ensure outbound order.
 		replyChan := make(chan error)
-		err = ru.queueRMPriority(msg, priority, replyChan, typ)
+		err = ru.queueRMPriority(prep.msg, prep.priority, replyChan, prep.typ)
 		if err != nil {
 			failed(err)
 			total.Add(-1)
@@ -119,13 +141,13 @@ func (c *Client) sendWithSendQPriority(typ string, msg interface{}, priority uin
 			if err != nil {
 				failed(err)
 			} else {
-				c.removeFromSendQ(sqid, uid)
+				c.removeFromSendQ(prep.id, uid)
 			}
 
 			// Alert about progress.
-			if !errors.Is(err, clientintf.ErrSubsysExiting) && (progressChan != nil) {
+			if !errors.Is(err, clientintf.ErrSubsysExiting) && (prep.progressChan != nil) {
 				vSent := int(sent.Add(1))
-				progressChan <- SendProgress{
+				prep.progressChan <- SendProgress{
 					Sent:  vSent,
 					Total: int(total.Load()),
 					Err:   err,
@@ -135,6 +157,23 @@ func (c *Client) sendWithSendQPriority(typ string, msg interface{}, priority uin
 	}
 
 	return nil
+}
+
+// sendWithSendQPriority adds the given message to the sendq with the given
+// type and sends it to the specified destinations. Each sending is done
+// asynchronously, so this returns immediately after enqueing.
+//
+// If progressChan is specified, updates about the sending progress are sent
+// there.
+func (c *Client) sendWithSendQPriority(typ string, msg interface{}, priority uint,
+	progressChan chan SendProgress, dests ...clientintf.UserID) error {
+
+	prep, err := c.prepareSendqItem(typ, msg, priority, progressChan, dests...)
+	if err != nil {
+		return err
+	}
+
+	return c.sendPreparedSendqItem(prep)
 }
 
 // sendWithSendQ sends a msg using the send queue with default priority.
