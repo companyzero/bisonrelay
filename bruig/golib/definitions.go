@@ -71,8 +71,9 @@ const (
 )
 
 type serverSessState struct {
-	State          int     `json:"state"`
-	CheckWalletErr *string `json:"check_wallet_err"`
+	State          int                     `json:"state"`
+	CheckWalletErr *string                 `json:"check_wallet_err"`
+	Policy         clientintf.ServerPolicy `json:"policy"`
 }
 
 type pm struct {

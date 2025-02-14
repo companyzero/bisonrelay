@@ -54,39 +54,39 @@ type CertConfirmer func(context.Context, *tls.ConnectionState, *zkidentity.Publi
 
 // ServerPolicy is the policy for a given server session.
 type ServerPolicy struct {
-	PushPaymentLifetime time.Duration
-	MaxPushInvoices     int
+	PushPaymentLifetime time.Duration `json:"push_payment_lifetime"`
+	MaxPushInvoices     int           `json:"max_push_invoices"`
 
 	// MaxMsgSizeVersion is the version of the max message size accepted
 	// by the server.
-	MaxMsgSizeVersion rpc.MaxMsgSizeVersion
+	MaxMsgSizeVersion rpc.MaxMsgSizeVersion `json:"max_msg_size_version"`
 
 	// MaxMsgSize is the maximum message size accepted by the server.
-	MaxMsgSize uint
+	MaxMsgSize uint `json:"max_msg_size"`
 
 	// ExpirationDays is the number of days after which data pushed to the server
 	// is removed if not fetched.
-	ExpirationDays int
+	ExpirationDays int `json:"expiration_days"`
 
 	// PushPayRateMAtoms is the rate (in milli-atoms per PushPayRateBytes) to
 	// push data to the server.
-	PushPayRateMAtoms uint64
+	PushPayRateMAtoms uint64 `json:"push_pay_rate_matoms"`
 
 	// PushPayRateBytes is the number of bytes used in calculating the final
 	// push pay rate.
-	PushPayRateBytes uint64
+	PushPayRateBytes uint64 `json:"push_pay_rate_bytes"`
 
 	// PushPayRateMinMAtoms is the minimum payment amount (in MAtoms)
 	// independently of size.
-	PushPayRateMinMAtoms uint64
+	PushPayRateMinMAtoms uint64 `json:"push_pay_rate_min_matoms"`
 
 	// SubPayRate is the rate (in milli-atoms) to subscribe to an RV point
 	// on the server.
-	SubPayRate uint64
+	SubPayRate uint64 `json:"sub_pay_rate"`
 
 	// PingLimit is the deadline for writing messages (including ping) to
 	// the server.
-	PingLimit time.Duration
+	PingLimit time.Duration `json:"ping_limit"`
 }
 
 // CalcPushCostMAtoms calculates the cost to push a message with the given size.

@@ -133,7 +133,7 @@ func handleInitClient(handle uint32, args initClient) error {
 		DownloadsRoot: args.DownloadsDir,
 		EmbedsRoot:    args.EmbedsDir,
 		Logger:        logBknd.logger("FDDB"),
-		ChunkSize:     rpc.MaxChunkSize,
+		ChunkSize:     10 * 1024 * 1024, // Hope this never goes down.
 	})
 	if err != nil {
 		return fmt.Errorf("unable to initialize DB: %v", err)
@@ -352,7 +352,7 @@ func handleInitClient(handle uint32, args initClient) error {
 			state = ConnStateOnline
 		}
 		isServerConnected.Store(connected)
-		st := serverSessState{State: state}
+		st := serverSessState{State: state, Policy: policy}
 		cctx.serverState.Store(st)
 		notify(NTServerSessChanged, st, nil)
 		cctx.expirationDays = uint64(policy.ExpirationDays)
@@ -1520,7 +1520,7 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 			return nil, err
 		}
 
-		return nil, c.SendFile(args.UID, args.Filepath)
+		return nil, c.SendFile(args.UID, 0, args.Filepath, nil)
 
 	case CTEstimatePostSize:
 		var args string

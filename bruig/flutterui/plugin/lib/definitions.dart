@@ -138,6 +138,64 @@ class ServerCert {
       _$ServerCertFromJson(json);
 }
 
+int maxMsgPayloadSize(int msgVersion) {
+  switch (msgVersion) {
+    case 0:
+      return 1024 * 1024;
+    case 1:
+      return 10 * 1024 * 1024;
+    default:
+      return 0; // unknown.
+  }
+}
+
+@JsonSerializable()
+class ServerPolicy {
+  @JsonKey(name: "push_payment_lifetime")
+  final int pushPaymentLifetime;
+  @JsonKey(name: "max_push_invoices")
+  final int maxPushInvoices;
+  @JsonKey(name: "max_msg_size_version")
+  final int maxMsgSizeVersion;
+  @JsonKey(name: "max_msg_size")
+  final int maxMsgSize;
+  @JsonKey(name: "expiration_days")
+  final int expirationDays;
+  @JsonKey(name: "push_pay_rate_matoms")
+  final int pushPayRateMAtoms;
+  @JsonKey(name: "push_pay_rate_bytes")
+  final int pushPayRateBytes;
+  @JsonKey(name: "push_pay_rate_min_matoms")
+  final int pushPayRateMinMAtoms;
+  @JsonKey(name: "sub_pay_rate")
+  final int subPayRate;
+  @JsonKey(name: "ping_limit")
+  final int pingLimit;
+
+  const ServerPolicy(
+      this.pushPaymentLifetime,
+      this.maxPushInvoices,
+      this.maxMsgSizeVersion,
+      this.maxMsgSize,
+      this.expirationDays,
+      this.pushPayRateMAtoms,
+      this.pushPayRateBytes,
+      this.pushPayRateMinMAtoms,
+      this.subPayRate,
+      this.pingLimit);
+
+  factory ServerPolicy.fromJson(Map<String, dynamic> json) =>
+      _$ServerPolicyFromJson(json);
+
+  factory ServerPolicy.empty() =>
+      const ServerPolicy(0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+
+  int calcPushCostMAtoms(int sizeBytes) {
+    if (pushPayRateBytes == 0) return 0;
+    return (sizeBytes * pushPayRateMAtoms / pushPayRateBytes).floor();
+  }
+}
+
 const connStateOffline = 0;
 const connStateCheckingWallet = 1;
 const connStateOnline = 2;
@@ -147,12 +205,14 @@ class ServerSessionState {
   final int state;
   @JsonKey(name: "check_wallet_err")
   final String? checkWalletErr;
-  const ServerSessionState(this.state, this.checkWalletErr);
+  final ServerPolicy policy;
+
+  const ServerSessionState(this.state, this.checkWalletErr, this.policy);
 
   factory ServerSessionState.fromJson(Map<String, dynamic> json) =>
       _$ServerSessionStateFromJson(json);
-  factory ServerSessionState.empty() =>
-      const ServerSessionState(connStateOffline, null);
+  factory ServerSessionState.empty() => const ServerSessionState(
+      connStateOffline, null, ServerPolicy(0, 0, 0, 0, 0, 0, 0, 0, 0, 0));
 }
 
 @JsonSerializable()
@@ -3374,6 +3434,9 @@ abstract class PluginPlatform {
 
   Future<RecordedAudioNote> audioNoteEmbed() async =>
       RecordedAudioNote.fromJson(await (asyncCall(CTAudioNoteEmbed, null)));
+
+  final int maxPayloadSize = 10 * 1024 * 1024; // Hope this never goes down.
+  final String maxPayloadSizeStr = "10MiB";
 }
 
 const int CTUnknown = 0x00;

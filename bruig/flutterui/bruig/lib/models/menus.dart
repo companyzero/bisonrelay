@@ -246,15 +246,16 @@ List<ChatMenuItem> buildUserChatMenu(ChatModel chat) {
     filePath = filePath.trim();
     if (filePath == "") return;
 
+    var fname = path.basename(filePath);
+    var chatMsg =
+        SynthChatEvent("Sending file \"$fname\" to user", SCE_sending);
+    chat.append(ChatEventModel(chatMsg, null), false);
+
     try {
       await Golib.sendFile(chat.id, filePath);
-      var fname = path.basename(filePath);
-      chat.append(
-          ChatEventModel(
-              SynthChatEvent("Sending file \"$fname\" to user", SCE_sent),
-              null),
-          false);
+      chatMsg.state = SCE_sent;
     } catch (exception) {
+      chatMsg.error = Exception(exception);
       snackbar.error("Unable to send file: $exception");
     }
   }
