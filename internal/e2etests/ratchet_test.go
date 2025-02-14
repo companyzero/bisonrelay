@@ -1030,3 +1030,23 @@ func TestUpdateProfileAvatar(t *testing.T) {
 	bob = ts.recreateClient(bob)
 	assertUserAvatar(t, bob, alice, nil)
 }
+
+// TestSendTransitiveRMToUnknown tests sending a transitive message to an
+// unknown target.
+func TestSendTransitiveRMToUnknown(t *testing.T) {
+	t.Parallel()
+
+	tcfg := testScaffoldCfg{}
+	ts := newTestScaffold(t, tcfg)
+	alice := ts.newClient("alice")
+	bob := ts.newClient("bob")
+	ts.kxUsers(alice, bob)
+
+	rm := rpc.RMTransitiveMessage{
+		For: zkidentity.ShortID{0: 0xff},
+	}
+	assert.NilErr(t, bob.testInterface().SendUserRM(alice.PublicID(), rm))
+
+	// Everything still working.
+	assertClientsCanPM(t, alice, bob)
+}
