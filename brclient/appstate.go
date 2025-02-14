@@ -127,12 +127,10 @@ type appState struct {
 	prevActiveCW   int
 	updatedCW      map[int]bool
 
-	connectedMtx   sync.Mutex
-	connected      connState
-	serverAddr     string
-	pushRate       uint64 // milliatoms / byte
-	subRate        uint64 // milliatoms / byte
-	expirationDays uint64
+	connectedMtx sync.Mutex
+	connected    connState
+	serverAddr   string
+	policy       clientintf.ServerPolicy
 
 	// When written, this makes the next wallet check be skipped.
 	skipWalletCheckChan chan struct{}
@@ -703,12 +701,11 @@ func (as *appState) currentConnState() connState {
 	return st
 }
 
-func (as *appState) serverPaymentRates() (uint64, uint64) {
+func (as *appState) serverPolicy() clientintf.ServerPolicy {
 	as.connectedMtx.Lock()
-	push := as.pushRate
-	sub := as.subRate
+	res := as.policy
 	as.connectedMtx.Unlock()
-	return push, sub
+	return res
 }
 
 // skipNextWalletCheck makes the next wallet check be skipped after connecting
@@ -3176,26 +3173,29 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		if connected {
 			state = connStateOnline
 		}
-		pushRate, subRate, expDays := policy.PushPayRate, policy.SubPayRate, policy.ExpirationDays
 		as.connectedMtx.Lock()
+		oldpolicy := as.policy
 		as.connected = state
-		showRates := as.pushRate != pushRate || as.subRate != subRate
-		showExpDays := as.expirationDays != uint64(expDays)
+		showRates := oldpolicy.PushPayRateMAtoms != policy.PushPayRateMAtoms ||
+			oldpolicy.PushPayRateBytes != policy.PushPayRateBytes ||
+			oldpolicy.PushPayRateMinMAtoms != policy.PushPayRateMinMAtoms ||
+			oldpolicy.SubPayRate != policy.SubPayRate
+		showExpDays := oldpolicy.ExpirationDays != policy.ExpirationDays
 		if connected {
-			as.pushRate = pushRate
-			as.subRate = subRate
-			as.expirationDays = uint64(expDays)
+			as.policy = policy
 		}
 		as.connectedMtx.Unlock()
 		as.sendMsg(state)
 
 		if connected {
 			if showRates {
-				as.diagMsg("Push Rate: %.8f DCR/kB, Sub Rate: %.8f DCR/sub",
-					float64(pushRate)/1e8, float64(subRate)/1e11)
+				pushRateGBMAtoms, _ := policy.CalcPushCostMAtoms(1e9)
+				pushRateGBDcr := float64(pushRateGBMAtoms) / 1e11
+				as.diagMsg("Push Rate: %.8f DCR/GB, Sub Rate: %.8f DCR/sub",
+					pushRateGBDcr, float64(policy.SubPayRate)/1e11)
 			}
 			if showExpDays {
-				as.diagMsg("Days to Expire Data: %d", expDays)
+				as.diagMsg("Days to Expire Data: %d", policy.ExpirationDays)
 			}
 			as.diagMsg("Client ready!")
 		} else {

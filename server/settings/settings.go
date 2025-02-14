@@ -42,14 +42,16 @@ type Settings struct {
 	PingLimit         time.Duration
 
 	// payment section
-	PayScheme           string
-	LNRPCHost           string
-	LNTLSCert           string
-	LNMacaroonPath      string
-	MilliAtomsPerByte   uint64
-	MilliAtomsPerSub    uint64
-	PushPaymentLifetime int // how long a payment to a push is valid
-	MaxPushInvoices     int
+	PayScheme            string
+	LNRPCHost            string
+	LNTLSCert            string
+	LNMacaroonPath       string
+	PushPayRateMAtoms    uint64
+	PushPayRateBytes     uint64
+	PushPayRateMinMAtoms uint64
+	MilliAtomsPerSub     uint64
+	PushPaymentLifetime  int // how long a payment to a push is valid
+	MaxPushInvoices      int
 
 	// log section
 	LogFile    string // log filename
@@ -95,11 +97,13 @@ func New() *Settings {
 		PingLimit:         rpc.PropPingLimitDefault,
 
 		// payment
-		PayScheme:           "free",
-		MilliAtomsPerByte:   rpc.PropPushPaymentRateDefault,
-		MilliAtomsPerSub:    rpc.PropSubPaymentRateDefault,
-		PushPaymentLifetime: rpc.PropPushPaymentLifetimeDefault,
-		MaxPushInvoices:     rpc.PropMaxPushInvoicesDefault,
+		PayScheme:            "free",
+		PushPayRateMAtoms:    rpc.PropPushPaymentRateDefault,
+		PushPayRateBytes:     rpc.PropPushPaymentRateBytesDefault,
+		PushPayRateMinMAtoms: rpc.MinRMPushPayment, // Not currently exposed for config
+		MilliAtomsPerSub:     rpc.PropSubPaymentRateDefault,
+		PushPaymentLifetime:  rpc.PropPushPaymentLifetimeDefault,
+		MaxPushInvoices:      rpc.PropMaxPushInvoicesDefault,
 
 		// log
 		LogFile:    "~/.brserver/brserver.log",
@@ -216,12 +220,16 @@ func (s *Settings) Load(filename string) error {
 		s.LNMacaroonPath = strings.Replace(lnMacaroonPath, "~", usr.HomeDir, 1)
 	}
 
-	var atomsPerByte float64 = float64(rpc.PropPushPaymentRateDefault) / 1000
-	err = iniFloat(cfg, &atomsPerByte, "payment", "atomsperbyte")
+	var pushRateAtoms float64 = rpc.PropPushPaymentRateDefault
+	err = iniFloat(cfg, &pushRateAtoms, "payment", "pushrateatoms")
 	if err != nil && !errors.Is(err, errIniNotFound) {
 		return err
 	}
-	s.MilliAtomsPerByte = uint64(atomsPerByte * 1000)
+	s.PushPayRateMAtoms = uint64(pushRateAtoms * 1000)
+	iniUint64(cfg, &s.PushPayRateBytes, "payment", "pushratebytes")
+	if s.PushPayRateBytes < 1 {
+		return errors.New("pushratebytes cannot be < 1")
+	}
 
 	var atomsPerSub float64 = float64(rpc.PropSubPaymentRateDefault) / 1000
 	err = iniFloat(cfg, &atomsPerSub, "payment", "atomspersub")
@@ -279,6 +287,12 @@ func (s *Settings) Load(filename string) error {
 	}
 	if size := rpc.MaxMsgSizeForVersion(s.MaxMsgSizeVersion); size == 0 {
 		return fmt.Errorf("unsupported max msg size version")
+	} else {
+		// Double check a message of the max valid size is payable.
+		_, err := rpc.CalcPushCostMAtoms(s.PushPayRateMinMAtoms, s.PushPayRateMAtoms, s.PushPayRateBytes, uint64(size))
+		if err != nil {
+			return fmt.Errorf("invalid combination of push pay rates and max msg size: %v", err)
+		}
 	}
 
 	return nil
@@ -326,6 +340,18 @@ func iniInt(cfg ini.File, p *int, section, key string) error {
 	return err
 }
 
+func iniUint64(cfg ini.File, p *uint64, section, key string) error {
+	v, ok := cfg.Get(section, key)
+	if !ok {
+		return errIniNotFound
+	}
+
+	u64, err := strconv.ParseUint(v, 10, 64)
+	if err == nil {
+		*p = u64
+	}
+	return err
+}
 func iniDuration(cfg ini.File, p *time.Duration, section, key string) error {
 	v, ok := cfg.Get(section, key)
 	if !ok {

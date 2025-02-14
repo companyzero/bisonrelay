@@ -3,7 +3,9 @@ package server
 import (
 	"context"
 	"encoding/hex"
+	"errors"
 	"fmt"
+	"math"
 	"os"
 	"strings"
 	"time"
@@ -71,6 +73,10 @@ func (z *ZKS) initPayments() error {
 
 		z.lnNode = lnInfo.IdentityPubkey
 		z.log.Infof("Initialized dcrlnd payment subsystem using node %s", z.lnNode)
+
+		matomsPerGb, _ := z.calcPushCostMAtoms(1e9)
+		dcrPerGb := float64(matomsPerGb) / 1e11
+		z.log.Infof("Push data rate: %.8f DCR/GB", dcrPerGb)
 
 		return nil
 	default:
@@ -218,6 +224,16 @@ func (z *ZKS) handleGetInvoice(ctx context.Context, sc *sessionContext,
 	return nil
 }
 
+func (z *ZKS) calcPushCostMAtoms(msgLen int) (int64, error) {
+	v, err := rpc.CalcPushCostMAtoms(z.settings.PushPayRateMinMAtoms,
+		z.settings.PushPayRateMAtoms, z.settings.PushPayRateBytes,
+		uint64(msgLen))
+	if v > math.MaxInt64 {
+		return 0, errors.New("push cost overflows int64")
+	}
+	return v, err
+}
+
 // isRMPaid returns whether the received routed message was paid for. Returns
 // nil if it is paid, or an error if not.
 func (z *ZKS) isRMPaid(ctx context.Context, rm *rpc.RouteMessage, sc *sessionContext) error {
@@ -226,19 +242,8 @@ func (z *ZKS) isRMPaid(ctx context.Context, rm *rpc.RouteMessage, sc *sessionCon
 		return nil
 
 	case rpc.PaySchemeDCRLN:
-		msgLen := int64(len(rm.Message))
-		wantMAtoms := msgLen * int64(z.settings.MilliAtomsPerByte)
-
-		// Enforce the minimum payment policy.
-		if wantMAtoms < int64(rpc.MinRMPushPayment) {
-			wantMAtoms = int64(rpc.MinRMPushPayment)
-		}
-
-		var err error
-		if wantMAtoms < 0 {
-			// Sanity check. Should never happen.
-			err = fmt.Errorf("wantMAtoms (%d) < 0", wantMAtoms)
-		}
+		msgLen := len(rm.Message)
+		wantMAtoms, err := z.calcPushCostMAtoms(msgLen)
 
 		// Compat to old clients: if the PaidInvoiceID field is nil and
 		// there is a single outstanding invoice, use that one.

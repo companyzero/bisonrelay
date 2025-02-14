@@ -559,5 +559,4 @@ func TestAttemptsWelcomePingLimit(t *testing.T) {
 			}
 		})
 	}
-
 }

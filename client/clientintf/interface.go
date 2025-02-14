@@ -68,9 +68,17 @@ type ServerPolicy struct {
 	// is removed if not fetched.
 	ExpirationDays int
 
-	// PushPayRate is the rate (in milli-atoms per byte) to push data to
-	// the server.
-	PushPayRate uint64
+	// PushPayRateMAtoms is the rate (in milli-atoms per PushPayRateBytes) to
+	// push data to the server.
+	PushPayRateMAtoms uint64
+
+	// PushPayRateBytes is the number of bytes used in calculating the final
+	// push pay rate.
+	PushPayRateBytes uint64
+
+	// PushPayRateMinMAtoms is the minimum payment amount (in MAtoms)
+	// independently of size.
+	PushPayRateMinMAtoms uint64
 
 	// SubPayRate is the rate (in milli-atoms) to subscribe to an RV point
 	// on the server.
@@ -79,6 +87,23 @@ type ServerPolicy struct {
 	// PingLimit is the deadline for writing messages (including ping) to
 	// the server.
 	PingLimit time.Duration
+}
+
+// CalcPushCostMAtoms calculates the cost to push a message with the given size.
+func (sp *ServerPolicy) CalcPushCostMAtoms(msgSizeBytes int) (int64, error) {
+	if msgSizeBytes < 0 {
+		panic("msgSizeBytes cannot be negative")
+	}
+
+	return rpc.CalcPushCostMAtoms(sp.PushPayRateMinMAtoms, sp.PushPayRateMAtoms,
+		sp.PushPayRateBytes, uint64(msgSizeBytes))
+}
+
+// PushDcrPerGB returns the rate to push data to the server, in DCR/GB. Assumes
+// the push policy rates are valid.
+func (sp *ServerPolicy) PushDcrPerGB() float64 {
+	matoms, _ := sp.CalcPushCostMAtoms(1e9) // 1e9 bytes == 1GB
+	return float64(matoms) / 1e11           // 1e11 == milliatoms / dcr
 }
 
 // ServerSessionIntf is the interface available from serverSession to
