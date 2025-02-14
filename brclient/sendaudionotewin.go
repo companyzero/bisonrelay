@@ -89,8 +89,8 @@ func (w *sendAudioNoteWin) updateRecordData() error {
 	args.Data = data
 	msg := args.String()
 
-	feeRate, _ := w.as.serverPaymentRates()
-	estCost, err := clientintf.EstimatePMCost(msg, feeRate)
+	policy := w.as.serverPolicy()
+	estCost, err := clientintf.EstimatePMCost(msg, &policy)
 	if err != nil {
 		return err
 	}

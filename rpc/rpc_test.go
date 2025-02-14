@@ -4,6 +4,9 @@ import (
 	"bytes"
 	"compress/zlib"
 	"encoding/json"
+	"errors"
+	"fmt"
+	"math"
 	"math/rand"
 	"strings"
 	"testing"
@@ -93,6 +96,111 @@ func TestMaxSizeVersions(t *testing.T) {
 			decomposedRM := decomposed.(RMFTGetChunkReply)
 			if !bytes.Equal(decomposedRM.Chunk, rm.Chunk) {
 				t.Fatalf("Composed and decomposed chunks do not match")
+			}
+		})
+	}
+}
+
+// TestCalcPushCostMAtoms tests the correctness of CalcPushCostMAtosm for
+// various sample sizes.
+func TestCalcPushCostMAtoms(t *testing.T) {
+	kb := uint64(1000)
+	mb := kb * 1000
+	gb := mb * 1000
+	tb := gb * 1000
+
+	tests := []struct {
+		minRate uint64
+		rate    uint64 // MAtoms/<bytes>
+		bytes   uint64
+		size    uint64
+		want    uint64
+		wantErr error
+	}{{
+		minRate: PropPushPaymentRateMinMAtomsDefault,
+		rate:    1, // 1 MAtom/byte
+		bytes:   PropPushPaymentRateBytesDefault,
+		size:    1,
+		want:    PropPushPaymentRateMinMAtomsDefault,
+	}, {
+		minRate: PropPushPaymentRateMinMAtomsDefault,
+		rate:    5, // 5 MAtoms/byte
+		bytes:   PropPushPaymentRateBytesDefault,
+		size:    mb,
+		want:    mb * 5,
+	}, {
+		minRate: PropPushPaymentRateMinMAtomsDefault,
+		rate:    5, // 5 MAtoms/kb
+		bytes:   kb,
+		size:    kb / 2,
+		want:    PropPushPaymentRateMinMAtomsDefault,
+	}, {
+		minRate: PropPushPaymentRateMinMAtomsDefault,
+		rate:    5, // 5 MAtoms/kb
+		bytes:   kb,
+		size:    mb,
+		want:    mb * 5 / kb,
+	}, {
+		minRate: PropPushPaymentRateMinMAtomsDefault,
+		rate:    1e11, // 1e11 MAtoms/mb == 1 dcr/mb
+		bytes:   mb,
+		size:    gb,
+		wantErr: errPushCostOverflows,
+	}, {
+		minRate: PropPushPaymentRateMinMAtomsDefault,
+		rate:    1e5, // 100,000 MAtoms/byte == 1 dcr/mb
+		bytes:   1,
+		size:    gb,
+		want:    1000 * 1e8 * 1000, // 1000 MB * 1e8 atoms (1 dcr) * 1000 (matoms)
+	}, {
+		minRate: PropPushPaymentRateMinMAtomsDefault,
+		rate:    1, // 1 MAtom/10 bytes == 0.001 dcr/gb
+		bytes:   10,
+		size:    10 * gb,
+		want:    10 * 1e5 * 1000, // 10 GB * 1e5 atoms * 1000 (matoms)
+	}, {
+		minRate: PropPushPaymentRateMinMAtomsDefault,
+		rate:    1, // 1 MAtom/10 bytes == 0.001 dcr/gb
+		bytes:   10,
+		size:    tb,
+		want:    1000 * 1e5 * 1000, // 1000 GB (1 TB) * 1e5 atoms * 1000 (matoms)
+	}, {
+		minRate: PropPushPaymentRateMinMAtomsDefault,
+		rate:    1, // 1 MAtom/10 bytes == 0.001 dcr/gb
+		bytes:   10,
+		size:    1,
+		want:    PropPushPaymentRateMinMAtomsDefault,
+	}, {
+		minRate: PropPushPaymentRateMinMAtomsDefault,
+		rate:    1, // 1 MAtom/10 bytes == 0.001 dcr/gb
+		bytes:   10,
+		size:    10009,
+		want:    PropPushPaymentRateMinMAtomsDefault,
+	}, {
+		minRate: PropPushPaymentRateMinMAtomsDefault,
+		rate:    1, // 1 MAtom/10 bytes == 0.001 dcr/gb
+		bytes:   10,
+		size:    10010,
+		want:    1001,
+	}, {
+		minRate: PropPushPaymentRateMinMAtomsDefault,
+		rate:    1,
+		bytes:   1,
+		size:    math.MaxInt64 + 1,
+		wantErr: errPushCostOverflowsInt64,
+	}}
+
+	for _, tc := range tests {
+		name := fmt.Sprintf("%d/%d/%d/%d", tc.minRate, tc.rate, tc.bytes, tc.size)
+		t.Run(name, func(t *testing.T) {
+			got, gotErr := CalcPushCostMAtoms(tc.minRate, tc.rate, tc.bytes,
+				tc.size)
+			if !errors.Is(gotErr, tc.wantErr) {
+				t.Fatalf("Unexpected error: got %v, want %v", gotErr, tc.wantErr)
+			}
+			if got != int64(tc.want) {
+				t.Fatalf("Unexpected value: got %d, want %d",
+					got, tc.want)
 			}
 		})
 	}

@@ -331,12 +331,12 @@ func (q *RMQ) payForRM(ctx context.Context, rmm *rmmsg, invoice string,
 	// Determine payment amount.
 	pc := sess.PayClient()
 	payloadSize := rmm.orm.EncryptedLen()
-	pushPayRate := sess.Policy().PushPayRate
-	amt := int64(payloadSize) * int64(pushPayRate)
-
-	// Enforce the minimum payment policy.
-	if amt < int64(rpc.MinRMPushPayment) {
-		amt = int64(rpc.MinRMPushPayment)
+	serverPolicy := sess.Policy()
+	amt, err := serverPolicy.CalcPushCostMAtoms(int(payloadSize))
+	if err != nil {
+		// Should not happen because this is validated during server
+		// welcome.
+		return err
 	}
 
 	// Check for a successful previous payment attempt.
@@ -350,7 +350,6 @@ func (q *RMQ) payForRM(ctx context.Context, rmm *rmmsg, invoice string,
 	}
 
 	// Fetch invoice if needed.
-	var err error
 	var decoded clientintf.DecodedInvoice
 	needsInvoice := false
 	if invoice == "" {

@@ -473,16 +473,19 @@ var listCommands = []tuicmd{
 			return nil
 		},
 	}, {
-		cmd:     "svrrates",
-		aliases: []string{"serverrates"},
-		descr:   "Show server fee rates",
+		cmd:     "serverpolicy",
+		aliases: []string{"serverrates", "svrrates", "svrpolicy", "spolicy"},
+		descr:   "Show server policy",
 		handler: func(args []string, as *appState) error {
-			pushRate, subRate := as.serverPaymentRates()
+			policy := as.serverPolicy()
 			as.cwHelpMsgs(func(pf printf) {
 				pf("")
 				pf("Server Fee Rates")
-				pf("Push Rate: %.8f DCR/kB", float64(pushRate)/1e8)
-				pf("Subscribe Rate: %.8f DCR/RV", float64(subRate)/1e11)
+				pf("Push Rate: %.8f DCR/GB (min %.8f DCR)",
+					policy.PushDcrPerGB(),
+					float64(policy.PushPayRateMinMAtoms)/1e11)
+				pf("Subscribe Rate: %.8f DCR/RV", float64(policy.SubPayRate)/1e11)
+				pf("Max size version: %d", policy.MaxMsgSizeVersion)
 			})
 			return nil
 		},
@@ -1724,9 +1727,9 @@ var ftCommands = []tuicmd{
 
 			var dcrCost, dcrUploadCost float64
 			// Figure out upload cost.
-			feeRate, _ := as.serverPaymentRates()
+			policy := as.serverPolicy()
 			size := stat.Size()
-			uploadCost, err := clientintf.EstimateUploadCost(size, feeRate)
+			uploadCost, err := clientintf.EstimateUploadCost(size, &policy)
 			if err != nil {
 				return err
 			}
@@ -1849,9 +1852,9 @@ var ftCommands = []tuicmd{
 				return err
 			}
 
-			feeRate, _ := as.serverPaymentRates()
+			policy := as.serverPolicy()
 			size := stat.Size()
-			cost, err := clientintf.EstimateUploadCost(size, feeRate)
+			cost, err := clientintf.EstimateUploadCost(size, &policy)
 			if err != nil {
 				return err
 			}
@@ -4370,10 +4373,8 @@ var commands = []tuicmd{
 					interval = time.Duration(d) * 24 * time.Hour
 				}
 			} else {
-				as.connectedMtx.Lock()
-				expiry := as.expirationDays
-				as.connectedMtx.Unlock()
-				interval = time.Duration(expiry) * 24 * time.Hour
+				policy := as.serverPolicy()
+				interval = time.Duration(policy.ExpirationDays) * 24 * time.Hour
 			}
 
 			return as.resetAllOldRatchets(interval)

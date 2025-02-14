@@ -2205,8 +2205,8 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		args.Data = data
 		msg := args.String()
 
-		feeRate := cc.c.ServerSession().Policy().PushPayRate
-		estCost, err := clientintf.EstimatePMCost(msg, feeRate)
+		policy := cc.c.ServerSession().Policy()
+		estCost, err := clientintf.EstimatePMCost(msg, &policy)
 		if err != nil {
 			return nil, err
 		}

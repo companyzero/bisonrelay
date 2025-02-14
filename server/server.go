@@ -135,7 +135,9 @@ func (z *ZKS) welcome(kx *session.KX) error {
 		case rpc.PropServerLNNode:
 			properties[k].Value = z.lnNode
 		case rpc.PropPushPaymentRate:
-			properties[k].Value = strconv.FormatUint(z.settings.MilliAtomsPerByte, 10)
+			properties[k].Value = strconv.FormatUint(z.settings.PushPayRateMAtoms, 10)
+		case rpc.PropPushPaymentRateBytes:
+			properties[k].Value = strconv.FormatUint(z.settings.PushPayRateBytes, 10)
 		case rpc.PropSubPaymentRate:
 			properties[k].Value = strconv.FormatUint(z.settings.MilliAtomsPerSub, 10)
 		case rpc.PropExpirationDays:
