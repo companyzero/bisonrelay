@@ -251,6 +251,28 @@ func hbytes(i int64) string {
 	}
 }
 
+// hibytes == "human ib bytes"
+func hibytes(i int64) string {
+	switch {
+	case i < 1<<10:
+		return strconv.FormatInt(i, 10) + "B"
+	case i < 1<<20:
+		f := float64(i)
+		return strconv.FormatFloat(f/(1<<10), 'f', 2, 64) + "KiB"
+	case i < 1<<30:
+		f := float64(i)
+		return strconv.FormatFloat(f/(1<<20), 'f', 2, 64) + "MiB"
+	case i < 1<<40:
+		f := float64(i)
+		return strconv.FormatFloat(f/(1<<30), 'f', 2, 64) + "GiB"
+	case i < 1<<50:
+		f := float64(i)
+		return strconv.FormatFloat(f/(1<<40), 'f', 2, 64) + "TiB"
+	default:
+		return strconv.FormatInt(i, 10)
+	}
+}
+
 func plural(i int, s, p string) string {
 	if i == 1 {
 		return s

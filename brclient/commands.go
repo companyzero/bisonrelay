@@ -22,6 +22,7 @@ import (
 	"github.com/companyzero/bisonrelay/client/clientintf"
 	"github.com/companyzero/bisonrelay/internal/audio"
 	"github.com/companyzero/bisonrelay/internal/strescape"
+	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/companyzero/bisonrelay/zkidentity"
 	"github.com/decred/dcrd/dcrutil/v4"
 	"github.com/decred/dcrlnd/lnrpc"
@@ -480,12 +481,14 @@ var listCommands = []tuicmd{
 			policy := as.serverPolicy()
 			as.cwHelpMsgs(func(pf printf) {
 				pf("")
-				pf("Server Fee Rates")
+				pf("Server Policies")
 				pf("Push Rate: %.8f DCR/GB (min %.8f DCR)",
 					policy.PushDcrPerGB(),
 					float64(policy.PushPayRateMinMAtoms)/1e11)
 				pf("Subscribe Rate: %.8f DCR/RV", float64(policy.SubPayRate)/1e11)
-				pf("Max size version: %d", policy.MaxMsgSizeVersion)
+				pf("Max msg size: %s (version %d)",
+					hibytes(int64(rpc.MaxPayloadSizeForVersion(policy.MaxMsgSizeVersion))),
+					policy.MaxMsgSizeVersion)
 			})
 			return nil
 		},
@@ -1937,21 +1940,36 @@ var ftCommands = []tuicmd{
 			if err != nil {
 				nick = args[0]
 			}
-
 			filename := args[1]
-			err = as.c.SendFile(uid, filename)
-			if err != nil {
-				return err
+
+			sess := as.c.ServerSession()
+			if sess == nil {
+				return errors.New("not connected to server")
 			}
 
 			cw := as.findChatWindow(uid)
-			msg := fmt.Sprintf("Sending file %q to user %q",
-				filepath.Base(filename), strescape.Nick(nick))
+			var cm *chatMsg
 			if cw == nil {
-				as.cwHelpMsg(msg)
+				as.cwHelpMsg("Sending file %q to user %q",
+					filepath.Base(filename), strescape.Nick(nick))
 			} else {
-				cw.newHelpMsg(msg)
+				cm = cw.newInternalMsg("Sending file %q to user %q",
+					filepath.Base(filename), strescape.Nick(nick))
 			}
+
+			as.sendMsg(repaintActiveChat{})
+
+			go func() {
+				err = as.c.SendFile(uid, 0, filename, nil)
+				if err != nil {
+					as.diagMsg("Unable to send %s: %v", filename, err)
+					return
+				}
+				if cm != nil {
+					cw.setMsgSent(cm)
+					as.sendMsg(repaintActiveChat{})
+				}
+			}()
 
 			return nil
 		},

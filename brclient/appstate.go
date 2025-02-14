@@ -39,6 +39,7 @@ import (
 	"github.com/companyzero/bisonrelay/internal/mdembeds"
 	"github.com/companyzero/bisonrelay/internal/strescape"
 	"github.com/companyzero/bisonrelay/internal/tlsconn"
+	"github.com/companyzero/bisonrelay/ratchet"
 	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/companyzero/bisonrelay/zkidentity"
 	"github.com/decred/dcrd/chaincfg/chainhash"
@@ -2745,7 +2746,7 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		DownloadsRoot: args.DownloadsRoot,
 		EmbedsRoot:    args.EmbedsRoot,
 		Logger:        logBknd.logger("FDDB"),
-		ChunkSize:     rpc.MaxChunkSize,
+		ChunkSize:     10 * 1024 * 1024, // Hope this never goes down.
 	})
 	if err != nil {
 		return nil, fmt.Errorf("unable to initialize DB: %v", err)
@@ -3514,7 +3515,7 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		as.recheckLNBalance()
 	}))
 
-	ntfns.Register(client.OnRMSent(func(ru *client.RemoteUser, p interface{}) {
+	ntfns.Register(client.OnRMSent(func(ru *client.RemoteUser, rv ratchet.RVPoint, p interface{}) {
 		// Handler is already async. so it does not need another goroutine.
 		as.recheckLNBalance()
 	}))
