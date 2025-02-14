@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:bruig/components/attach_file.dart';
+import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/models/emoji.dart';
 import 'package:bruig/components/icons.dart';
 import 'package:bruig/components/chat/record_audio.dart';
@@ -13,6 +14,7 @@ import 'package:bruig/components/chat/types.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/theme_manager.dart';
 import 'package:flutter/services.dart';
+import 'package:golib_plugin/golib_plugin.dart';
 import 'package:provider/provider.dart';
 import 'package:super_clipboard/super_clipboard.dart';
 
@@ -178,13 +180,11 @@ class _ChatInputState extends State<ChatInput> {
         text: "", selection: TextSelection.collapsed(offset: 0));
     final String withEmbeds =
         embeds.fold(messageWithoutNewLine, (s, e) => e.replaceInString(s));
-    /*
-          if (withEmbeds.length > 1024 * 1024) {
-            showErrorSnackbar(context,
-                "Message is larger than maximum allowed (limit: 1MiB)");
-            return;
-          }
-          */
+    if (withEmbeds.length > Golib.maxPayloadSize) {
+      showErrorSnackbar(context,
+          "Message is larger than maximum allowed (limit: ${Golib.maxPayloadSizeStr})");
+      return;
+    }
     if (withEmbeds != "") {
       widget._send(withEmbeds);
       widget.chat.workingMsg = "";
