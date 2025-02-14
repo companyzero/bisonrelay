@@ -518,6 +518,8 @@ func New(cfg Config) (*Client, error) {
 		tipAttemptsChan:            make(chan *clientdb.TipUserAttempt),
 		listRunningTipAttemptsChan: make(chan chan []RunningTipUserAttempt),
 		tipAttemptsRunning:         make(chan struct{}),
+
+		rates: r,
 	}
 
 	kxl := newKXList(q, rmgr, &c.localID, c.Public, cfg.DB, ctx)
