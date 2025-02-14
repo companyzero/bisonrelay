@@ -29,6 +29,8 @@ func TestCreateNodir(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer os.RemoveAll(dir)
+
 	_, err = New(filepath.Join(dir, "doesntexist", "db.ini"), true, 10)
 	if err != nil && !errors.Is(err, ErrCreated) {
 		t.Fatal(err)
@@ -40,6 +42,7 @@ func TestCreate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer os.RemoveAll(dir)
 	_, err = New(filepath.Join(dir, "db.ini"), true, 10)
 	if err != nil && !errors.Is(err, ErrCreated) {
 		t.Fatal(err)
@@ -165,6 +168,9 @@ func TestGetFileMax(t *testing.T) {
 	if len(d) != 4 {
 		t.Fatalf("invalid directory count")
 	}
+
+	// Remove the global test dir.
+	os.RemoveAll(filepath.Dir(ii.filename))
 }
 
 func TestDel(t *testing.T) {
@@ -172,6 +178,7 @@ func TestDel(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer os.RemoveAll(dir)
 	idb, err := New(filepath.Join(dir, "db.ini"), true, 10)
 	if err != nil && !errors.Is(err, ErrCreated) {
 		t.Fatal(err)
@@ -214,6 +221,7 @@ func TestRecords(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer os.RemoveAll(dir)
 	idb, err := New(filepath.Join(dir, "db.ini"), true, 10)
 	if err != nil && !errors.Is(err, ErrCreated) {
 		t.Fatal(err)
