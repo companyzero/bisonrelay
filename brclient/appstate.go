@@ -2470,10 +2470,17 @@ func (as *appState) viewEmbed(embedded mdembeds.EmbeddedArgs) (tea.Cmd, error) {
 	}
 
 	c := exec.Command(prog, filePath)
-	cmd := tea.ExecProcess(c, func(error) tea.Msg {
-		return externalViewer{err: err}
-	})
-	return cmd, nil
+	c.Stdout = nil
+	c.Stderr = nil
+	c.Stdin = nil
+	go func() {
+		err := c.Run()
+		if err != nil {
+			as.diagMsg("Unable to run %s: %v", prog, err)
+		}
+	}()
+
+	return nil, nil
 }
 
 func (as *appState) downloadEmbed(source clientintf.UserID, embedded mdembeds.EmbeddedArgs) error {
