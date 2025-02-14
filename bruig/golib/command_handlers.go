@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -30,7 +29,6 @@ import (
 	"github.com/companyzero/bisonrelay/internal/audio"
 	"github.com/companyzero/bisonrelay/internal/mdembeds"
 	"github.com/companyzero/bisonrelay/lockfile"
-	"github.com/companyzero/bisonrelay/rates"
 	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/companyzero/bisonrelay/zkidentity"
 	"github.com/davecgh/go-spew/spew"
@@ -67,9 +65,6 @@ type clientCtx struct {
 	// confirmPayReqRecvChan is written to by the user to confirm or deny
 	// paying to open a chan.
 	confirmPayReqRecvChan chan bool
-
-	httpClient *http.Client
-	rates      *rates.Rates
 
 	// downloadConfChans tracks confirmation channels about downloads that
 	// are about to be initiated.
@@ -490,6 +485,8 @@ func handleInitClient(handle uint32, args initClient) error {
 	cfg := client.Config{
 		DB:                db,
 		Dialer:            brDialer,
+		DialFunc:          dialFunc,
+		UseOnion:          args.ProxyAddr != "",
 		PayClient:         pc,
 		Logger:            logBknd.logger,
 		LogPings:          args.LogPings,
@@ -676,7 +673,7 @@ func handleInitClient(handle uint32, args initClient) error {
 			LNPayClient: lnpc,
 
 			ExchangeRateProvider: func() float64 {
-				dcrPrice, _ := cctx.rates.Get()
+				dcrPrice, _ := cctx.c.Rates().Get()
 				return dcrPrice
 			},
 
@@ -715,23 +712,6 @@ func handleInitClient(handle uint32, args initClient) error {
 		CancelEmissionChannel: ctx.Done(),
 	})
 
-	httpClient := http.Client{
-		Transport: &http.Transport{
-			DialContext:           dialFunc,
-			ForceAttemptHTTP2:     true,
-			MaxIdleConns:          2,
-			IdleConnTimeout:       90 * time.Second,
-			TLSHandshakeTimeout:   10 * time.Second,
-			ExpectContinueTimeout: 1 * time.Second,
-		},
-	}
-	r := rates.New(rates.Config{
-		HTTPClient:  &httpClient,
-		Log:         logBknd.logger("RATE"),
-		OnionEnable: args.ProxyAddr != "",
-	})
-	go r.Run(ctx)
-
 	cctx = &clientCtx{
 		c:       c,
 		lnpc:    lnpc,
@@ -747,9 +727,6 @@ func handleInitClient(handle uint32, args initClient) error {
 
 		confirmPayReqRecvChan: make(chan bool),
 		downloadConfChans:     make(map[zkidentity.ShortID]chan bool),
-
-		httpClient: &httpClient,
-		rates:      r,
 	}
 
 	cs[handle] = cctx

@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/http"
 	"net/url"
 	"os"
 	"os/exec"
@@ -40,7 +39,6 @@ import (
 	"github.com/companyzero/bisonrelay/internal/mdembeds"
 	"github.com/companyzero/bisonrelay/internal/strescape"
 	"github.com/companyzero/bisonrelay/internal/tlsconn"
-	"github.com/companyzero/bisonrelay/rates"
 	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/companyzero/bisonrelay/zkidentity"
 	"github.com/decred/dcrd/chaincfg/chainhash"
@@ -110,8 +108,6 @@ type appState struct {
 	lnRPC      lnrpc.LightningClient
 	lnRouter   routerrpc.RouterClient
 	lnWallet   walletrpc.WalletKitClient
-	httpClient *http.Client
-	rates      *rates.Rates
 	winW, winH int
 
 	// History of commands.
@@ -566,7 +562,7 @@ func (as *appState) prettyArgs(args *mdembeds.EmbeddedArgs) string {
 	} else if downloadedFilePath != "" {
 		s += fmt.Sprintf("[File %s]", filename)
 	} else {
-		dcrPrice, _ := as.rates.Get()
+		dcrPrice, _ := as.c.Rates().Get()
 		dcrCost := dcrutil.Amount(int64(args.Cost))
 		usdCost := dcrPrice * dcrCost.ToCoin()
 
@@ -3374,7 +3370,7 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		cw.manyHelpMsgs(func(pf printf) {
 			pf("")
 			pf("Received file list")
-			dcrPrice, _ := as.rates.Get()
+			dcrPrice, _ := as.c.Rates().Get()
 			for _, f := range files {
 				meta := f.Metadata
 				dcrCost := float64(meta.Cost) / 1e8
@@ -3531,6 +3527,8 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 	cfg := client.Config{
 		DB:                db,
 		Dialer:            dialer,
+		DialFunc:          args.dialFunc,
+		UseOnion:          args.ProxyAddr != "",
 		PayClient:         pc,
 		Logger:            logBknd.logger,
 		LogPings:          args.LogPings,
@@ -3907,7 +3905,7 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 			LNPayClient: lnPC,
 
 			ExchangeRateProvider: func() float64 {
-				dcrPrice, _ := as.rates.Get()
+				dcrPrice, _ := as.c.Rates().Get()
 				return dcrPrice
 			},
 
@@ -3930,25 +3928,6 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		resRouter.BindPrefixPath([]string{}, p)
 	}
 
-	httpClient := http.Client{
-		Transport: &http.Transport{
-			DialContext:           args.dialFunc,
-			ForceAttemptHTTP2:     true,
-			MaxIdleConns:          2,
-			IdleConnTimeout:       90 * time.Second,
-			TLSHandshakeTimeout:   10 * time.Second,
-			ExpectContinueTimeout: 1 * time.Second,
-		},
-	}
-
-	r := rates.New(rates.Config{
-		HTTPClient: &httpClient,
-		Log:        logBknd.logger("RATE"),
-
-		OnionEnable: args.ProxyAddr != "",
-	})
-	go r.Run(ctx)
-
 	noterec, err := audio.NewRecorder(logBknd.logger("AREC"))
 	if err != nil {
 		return nil, fmt.Errorf("unable to init audio subsystem: %v", err)
@@ -3969,8 +3948,6 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		lnRPC:       lnRPC,
 		lnWallet:    lnWallet,
 		lnRouter:    lnRouter,
-		httpClient:  &httpClient,
-		rates:       r,
 		noterec:     noterec,
 
 		network:   args.Network,

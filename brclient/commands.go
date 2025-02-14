@@ -197,7 +197,7 @@ var listCommands = []tuicmd{
 		usableOffline: true,
 		descr:         "Display the current exchange rates",
 		handler: func(args []string, as *appState) error {
-			dcrPrice, btcPrice := as.rates.Get()
+			dcrPrice, btcPrice := as.c.Rates().Get()
 			as.cwHelpMsg(fmt.Sprintf("DCR: %.2f\tBTC: %.2f\t (USD/coin)", dcrPrice, btcPrice))
 			return nil
 		},
@@ -4588,7 +4588,7 @@ var commands = []tuicmd{
 			}
 			as.cwHelpMsg("Setting manual exchange rate: DCR:%0.2f BTC:%0.2f",
 				dcrPrice, btcPrice)
-			as.rates.Set(dcrPrice, btcPrice)
+			as.c.Rates().Set(dcrPrice, btcPrice)
 			return nil
 		},
 	}, {
