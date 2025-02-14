@@ -64,6 +64,7 @@ func (c *Client) handleTransitiveMsg(ru *RemoteUser, tm rpc.RMTransitiveMessage)
 	if err != nil {
 		ru.log.Warnf("Received message to forward to unknown target %s",
 			tm.For)
+		return nil
 	}
 
 	ru.log.Infof("Forwarding msg to %s", target)
