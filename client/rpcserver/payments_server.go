@@ -13,6 +13,10 @@ type PaymentsServerCfg struct {
 	// Client should be set to the [client.Client] instance.
 	Client *client.Client
 
+	// RPC Server Configurable Params
+	RPCAllowRemoteSendTip  bool
+	RPCMaxRemoteSendTipAmt float64
+
 	// Log should be set to the app's logger.
 	Log slog.Logger
 
@@ -34,6 +38,7 @@ type paymentsServer struct {
 	c   *client.Client
 
 	tipProgressStreams *serverStreams[*types.TipProgressEvent]
+	tipStreams         *serverStreams[*types.ReceivedTip]
 }
 
 func (p *paymentsServer) TipUser(ctx context.Context, req *types.TipUserRequest, _ *types.TipUserResponse) error {
@@ -52,6 +57,19 @@ func (p *paymentsServer) TipUser(ctx context.Context, req *types.TipUserRequest,
 
 func (p *paymentsServer) TipProgress(ctx context.Context, req *types.TipProgressRequest, stream types.PaymentsService_TipProgressServer) error {
 	return p.tipProgressStreams.runStream(ctx, req.UnackedFrom, stream)
+}
+
+func (p *paymentsServer) TipStream(ctx context.Context, req *types.TipStreamRequest, stream types.PaymentsService_TipStreamServer) error {
+	return p.tipStreams.runStream(ctx, req.UnackedFrom, stream)
+}
+
+// tipNtfnHandler is called by the client when a tip arrived from a remote user.
+func (p *paymentsServer) tipNtfnHandler(ru *client.RemoteUser, amtMAtoms int64) {
+	ntfn := &types.ReceivedTip{
+		Uid:          ru.ID().Bytes(),
+		AmountMatoms: amtMAtoms,
+	}
+	p.tipStreams.send(ntfn)
 }
 
 func (p *paymentsServer) tipProgressNtfnHandler(ru *client.RemoteUser, amtMAtoms int64, completed bool, attempt int, attemptErr error, willRetry bool) {
@@ -75,9 +93,14 @@ func (p *paymentsServer) AckTipProgress(_ context.Context, req *types.AckRequest
 	return p.tipProgressStreams.ack(req.SequenceId)
 }
 
+func (p *paymentsServer) AckTipReceived(_ context.Context, req *types.AckRequest, _ *types.AckResponse) error {
+	return p.tipStreams.ack(req.SequenceId)
+}
+
 func (p *paymentsServer) registerOfflineMessageStorageHandlers() {
 	nmgr := p.c.NotificationManager()
 	nmgr.RegisterSync(client.OnTipAttemptProgressNtfn(p.tipProgressNtfnHandler))
+	nmgr.RegisterSync(client.OnTipReceivedNtfn(p.tipNtfnHandler))
 }
 
 var _ types.PaymentsServiceServer = (*paymentsServer)(nil)
@@ -88,6 +111,10 @@ func (s *Server) InitPaymentsService(cfg PaymentsServerCfg) error {
 	if err != nil {
 		return err
 	}
+	tipStreams, err := newServerStreams[*types.ReceivedTip](cfg.RootReplayMsgLogs, "tipstream", cfg.Log)
+	if err != nil {
+		return err
+	}
 
 	ps := &paymentsServer{
 		cfg: cfg,
@@ -95,6 +122,7 @@ func (s *Server) InitPaymentsService(cfg PaymentsServerCfg) error {
 		c:   cfg.Client,
 
 		tipProgressStreams: tipProgressStreams,
+		tipStreams:         tipStreams,
 	}
 	ps.registerOfflineMessageStorageHandlers()
 	s.services.Bind("PaymentsService", types.PaymentsServiceDefn(), ps)
