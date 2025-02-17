@@ -4,6 +4,7 @@ import 'package:bruig/components/buttons.dart';
 import 'package:bruig/components/containers.dart';
 import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/components/interactive_avatar.dart';
+import 'package:bruig/components/md_elements.dart';
 import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/components/text.dart';
 import 'package:bruig/models/audio.dart';
@@ -867,6 +868,34 @@ class _AudioSettingsScreenState extends State<AudioSettingsScreen> {
 const _loremOneLine =
     "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua";
 
+const _testMarkdownText = """This is a sample markdown text.
+
+Following this is a code fence section.
+
+```go
+func TestOne(t *testing.T) {
+  t.Parallel()
+  var i uint32 = 1 << 10
+  if i == 42 {
+    t.Fatalf("You have made a mistake: %v", i)
+  }
+}
+```
+
+Following is a block quote section.
+
+> This is a quote from
+> somewhere that i found
+> over the internet. There
+> will be a second-level quote
+> below:
+>
+>> Second-level quote now
+>> full of some text
+>> that explains things.
+
+""";
+
 class ThemeTestScreen extends StatelessWidget {
   static String routeName = "/themeTest";
 
@@ -1263,7 +1292,7 @@ class ThemeTestScreen extends StatelessWidget {
 
             Container(
                 padding: const EdgeInsets.all(20),
-                constraints: const BoxConstraints.tightFor(width: 400),
+                constraints: const BoxConstraints.tightFor(width: 800),
                 child: Wrap(spacing: 20, runSpacing: 10, children: [
                   const SizedBox(width: double.infinity, child: Text("List")),
                   SizedBox(
@@ -1276,6 +1305,11 @@ class ThemeTestScreen extends StatelessWidget {
                                 onTap: () {},
                               )))
                 ])),
+
+            Container(
+                padding: const EdgeInsets.all(20),
+                constraints: const BoxConstraints.tightFor(width: 400),
+                child: MarkdownArea(_testMarkdownText, false)),
           ])),
     );
   }
