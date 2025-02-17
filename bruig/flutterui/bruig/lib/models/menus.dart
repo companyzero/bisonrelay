@@ -84,8 +84,9 @@ final List<MainMenuItem> mainMenu = [
   MainMenuItem(
       "Feed",
       FeedScreen.routeName,
-      (context) => Consumer<MainMenuModel>(
-          builder: (context, menu, child) => FeedScreen(menu)),
+      (context) => Consumer2<MainMenuModel, TypingEmojiSelModel>(
+          builder: (context, menu, typingEmoji, child) =>
+              FeedScreen(menu, typingEmoji)),
       (context) => const FeedScreenTitle(),
       const SidebarSvgIcon("assets/icons/icons-menu-news.svg"),
       feedScreenSub),
