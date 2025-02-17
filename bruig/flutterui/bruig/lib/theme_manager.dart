@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:bruig/components/containers.dart';
 import 'package:bruig/util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
@@ -816,6 +817,12 @@ class ThemeNotifier with ChangeNotifier {
   void _rebuildMarkdownStyleSheet() {
     _mdStyleSheet = MarkdownStyleSheet(
       code: extraTextStyles.monospaced,
+      blockquote: TextStyle(color: textColor(TextColor.onTertiaryContainer)),
+      blockquoteDecoration: BoxDecoration(
+          color: surfaceColor(SurfaceColor.tertiaryContainer),
+          border: Border(
+              left: BorderSide(
+                  color: surfaceColor(SurfaceColor.inverseSurface), width: 2))),
     );
     _mdStyleSheet.styles["pre"] = _mdStyleSheet.code;
   }
