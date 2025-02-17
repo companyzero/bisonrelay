@@ -18,6 +18,8 @@ import 'package:golib_plugin/golib_plugin.dart';
 import 'package:provider/provider.dart';
 import 'package:super_clipboard/super_clipboard.dart';
 
+final _crToLfRegexp = RegExp(r'\r\n|\r');
+
 class ChatInput extends StatefulWidget {
   final SendMsg _send;
   final ChatModel chat;
@@ -40,6 +42,7 @@ class _ChatInputState extends State<ChatInput> {
   bool wasEmptyText = true;
 
   void replaceTextSelection(String s) {
+    s = s.replaceAll(_crToLfRegexp, '\n'); // Switch CRLF to LF.
     var sel = controller.selection.copyWith();
     if (controller.selection.start == -1 && controller.selection.end == -1) {
       controller.text = controller.text + s;
