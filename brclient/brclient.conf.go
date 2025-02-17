@@ -227,5 +227,11 @@ minimumsendbalance = 0.01
 # simplestoreshipcharge is a surcharge (in USD) added to simplestore orders to
 # cover shipping and handling.
 # shipcharge = 0.0
+
+[tipuser]
+# restartdelay = 1m
+# rerequestinvoicedelay=24h
+# maxlifetime=72h
+# payretrydelayfactor=12s
 `
 )

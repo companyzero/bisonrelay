@@ -143,7 +143,7 @@ func (tal *tipAttemptsList) determineTipAttemptAction(ta *clientdb.TipUserAttemp
 	// that older attempts have a lower (i.e. earlier) action time for
 	// sorting purposes.
 	actNow := func() time.Time {
-		return ta.Created.Add(-time.Minute)
+		return ta.Created.Add(-time.Minute).In(time.Local)
 	}
 
 	if ta.Attempts > ta.MaxAttempts {
@@ -157,7 +157,7 @@ func (tal *tipAttemptsList) determineTipAttemptAction(ta *clientdb.TipUserAttemp
 	}
 
 	// expireDeadline is when the entire tip attempt expires.
-	expireDeadline := ta.Created.Add(tal.maxLifetimeDuration)
+	expireDeadline := ta.Created.Add(tal.maxLifetimeDuration).In(time.Local)
 	if expireDeadline.Before(time.Now()) {
 		// Expired.
 		return actionExpire, expireDeadline
@@ -176,10 +176,10 @@ func (tal *tipAttemptsList) determineTipAttemptAction(ta *clientdb.TipUserAttemp
 				return actionAttemptPayment, actNow()
 			}
 
-			// Exponential delay for repeated retriable payment attempts.
-			expDelay := time.Duration(1 << ta.PaymentAttemptCount)
-			delay := expDelay * tal.payRetryDelayFactor
-			return actionAttemptPayment, (*ta.PaymentAttemptFailed).Add(delay)
+			// constant delay increase for repeated retriable payment attempts.
+			delay := time.Duration(ta.PaymentAttemptCount) * tal.payRetryDelayFactor
+			nextAttemptTime := (*ta.PaymentAttemptFailed).Add(delay).In(time.Local)
+			return actionAttemptPayment, nextAttemptTime
 		}
 
 		// Check payment attempt.
@@ -195,7 +195,7 @@ func (tal *tipAttemptsList) determineTipAttemptAction(ta *clientdb.TipUserAttemp
 	if ta.LastInvoiceError != nil {
 		// Had an error paying or requesting an invoice. Wait until
 		// it's time to try and request a new invoice.
-		return actionRequestInvoice, ta.InvoiceRequested.Add(tal.requestInvoiceDeadline)
+		return actionRequestInvoice, ta.InvoiceRequested.Add(tal.requestInvoiceDeadline).In(time.Local)
 	}
 
 	if ta.InvoiceRequested == nil {
