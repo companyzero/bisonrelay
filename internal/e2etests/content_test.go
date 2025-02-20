@@ -175,6 +175,10 @@ func TestFtSendFileSenderRestarts(t *testing.T) {
 	bob := ts.newClient("bob")
 	ts.kxUsers(alice, bob)
 
+	assertClientsCanPM(t, alice, bob)
+	assertClientUpToDate(t, alice)
+	assertClientUpToDate(t, bob)
+
 	// Handlers.
 	completedFileChan := make(chan string, 10)
 	bob.handle(client.OnFileDownloadCompleted(func(user *client.RemoteUser, fm rpc.FileMetadata, diskPath string) {
@@ -183,36 +187,34 @@ func TestFtSendFileSenderRestarts(t *testing.T) {
 
 	var testStage int
 	testStageHitChan := make(chan struct{}, 5)
+	testStageContChan := make(chan struct{}, 5)
+	t.Cleanup(func() { close(testStageContChan) })
 	alice.handleSync(client.OnRMSent(func(ru *client.RemoteUser, rv ratchet.RVPoint, p interface{}) {
-		startFailing := false
-		if _, ok := p.(rpc.RMPrivateMessage); testStage == 0 && ok {
-			// First fail before sending RMFTSendFile.
-			startFailing = true
-		} else if _, ok := p.(rpc.RMFTGetChunkReply); testStage == 1 && ok {
-			// Second fail after sending the first chunk.
-			startFailing = true
-		}
-
-		if startFailing {
-			alice.log.Infof("Starting to fail test stage %d", testStage)
-			err := fmt.Errorf("fail at stage %d", testStage)
-			alice.preventFutureConns(err).startFailing(nil, err)
-			testStage++
+		if _, ok := p.(rpc.RMFTGetChunkReply); testStage == 0 && ok {
 			testStageHitChan <- struct{}{}
+			<-testStageContChan
+			testStage++
 		}
 	}))
 
-	// Start process by sending a PM to flag the start of test.
-	alice.PM(bob.PublicID(), "start test")
+	// Make the next message from Alice fail.
+	err := fmt.Errorf("first fail")
+	alice.preventFutureConns(err).startFailing(nil, err)
 
 	// Alice will send a file directly to bob. This call will fail because
-	// we'll stop it (by simulating a connection loss and client restart).
+	// we'll stop it (by simulating a connection loss and client restart),
+	// therefore run it in a goroutine.
 	sendFileErrChan := make(chan error, 5)
 	fSent := testutils.RandomFile(t, defaultChunkSize*nbTestChunks)
 	go func() {
 		sendFileErrChan <- alice.SendFile(bob.PublicID(), defaultChunkSize, fSent, nil)
 	}()
-	assert.ChanWritten(t, testStageHitChan)
+
+	// Wait for chunks to be in the sendq and for the metadata to be in the
+	// RMQ. We need this check to ensure we don't stop the client too soon,
+	// before SendFile in the goroutine had a chance to start running.
+	assertSendqDestsIs(t, alice, 4)
+	assertRMQLenIs(t, alice, 1)
 	ts.stopClient(alice)
 	assert.ChanWritten(t, sendFileErrChan)
 
@@ -223,6 +225,9 @@ func TestFtSendFileSenderRestarts(t *testing.T) {
 	// rest.
 	alice = ts.recreateStoppedClient(alice)
 	assert.ChanWritten(t, testStageHitChan)
+	err = fmt.Errorf("second fail")
+	alice.preventFutureConns(err).startFailing(nil, err)
+	testStageContChan <- struct{}{}
 
 	// Finally, restart Alice again. She will send the remaining chunks.
 	alice = ts.recreateClient(alice)
