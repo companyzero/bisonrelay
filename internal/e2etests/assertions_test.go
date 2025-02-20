@@ -399,19 +399,45 @@ func assertRelaysPost(t testing.TB, src, dst *testClient, postFrom clientintf.Us
 	reg.Unregister()
 }
 
-// assertEmptyRMQ asserts the RMQ of the passed client is or becomes empty.
-func assertEmptyRMQ(t testing.TB, c *testClient) {
+// assertRMQLenIs asserts the RMQ has the given length.
+func assertRMQLenIs(t testing.TB, c *testClient, wantLen int) {
 	// Wait until the queues are empty.
 	t.Helper()
 	maxCheck := 12000
 	for i := 0; i < maxCheck; i++ {
 		qlen, acklen := c.RMQLen()
-		if qlen+acklen == 0 {
+		if qlen+acklen == wantLen {
 			break
 		}
 		time.Sleep(10 * time.Millisecond)
 		if i == maxCheck-1 {
-			t.Fatal("timeout waiting for queue to drain")
+			t.Fatalf("timeout waiting for wanted queue len %d (got %d + %d)",
+				wantLen, qlen, acklen)
+		}
+	}
+}
+
+// assertEmptyRMQ asserts the RMQ of the passed client is or becomes empty.
+func assertEmptyRMQ(t testing.TB, c *testClient) {
+	t.Helper()
+	assertRMQLenIs(t, c, 0)
+}
+
+// assertSendqDestsIs asserts the total number of messages in the sendq has the
+// given length.
+func assertSendqDestsIs(t testing.TB, c *testClient, wantLen int) {
+	// Wait until the queues are empty.
+	t.Helper()
+	maxCheck := 12000
+	for i := 0; i < maxCheck; i++ {
+		_, dests := c.SendQueueLen()
+		if dests == wantLen {
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+		if i == maxCheck-1 {
+			t.Fatalf("timeout waiting for wanted sendqqueue dests %d (got %d)",
+				wantLen, dests)
 		}
 	}
 }

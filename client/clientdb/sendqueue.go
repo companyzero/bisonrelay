@@ -126,6 +126,44 @@ func (db *DB) ListSendQueue(tx ReadTx) ([]SendQueueElement, error) {
 	return ssq.q, nil
 }
 
+// SendQueueLen returns the number of unique items and the total number of
+// destination targets in the sendqueue.
+func (db *DB) SendQueueLen(tx ReadTx) (items, dests int) {
+	dir := filepath.Join(db.root, sendqDir)
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			db.log.Warnf("Unable to read sendq dir: %v", err)
+		}
+		return
+	}
+
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+
+		var id SendQID
+		if err := id.FromString(entry.Name()); err != nil {
+			// Skip: file name is not an id.
+			continue
+		}
+		var el SendQueueElement
+		fname := filepath.Join(dir, entry.Name())
+		if err := db.readJsonFile(fname, &el); err != nil {
+			// Skip damaged file.
+			db.log.Warnf("Unable to read sendq element file %s: %v",
+				fname, err)
+			continue
+		}
+
+		items++
+		dests += len(el.Dests)
+	}
+
+	return
+}
+
 // StoreUserUnackedRM stores the passed RM as unacked for the given user.
 func (db *DB) StoreUserUnackedRM(tx ReadWriteTx, uid UserID, encrypted []byte,
 	rv RawRVID, payEvent string) error {

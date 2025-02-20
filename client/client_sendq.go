@@ -308,6 +308,16 @@ func (c *Client) sendPreparedSendqItemListSync(items []*preparedSendqItem, progr
 	return nil
 }
 
+// SendQueueLen returns the number of items in the sendqueue (total items and
+// total number of targets).
+func (c *Client) SendQueueLen() (items, dests int) {
+	c.dbView(func(tx clientdb.ReadTx) error {
+		items, dests = c.db.SendQueueLen(tx)
+		return nil
+	})
+	return
+}
+
 // runSendQ sends outstanding msgs from the DB send queue.
 func (c *Client) runSendQ(ctx context.Context) error {
 	<-c.abLoaded
