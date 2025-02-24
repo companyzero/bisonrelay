@@ -176,10 +176,10 @@ func (tal *tipAttemptsList) determineTipAttemptAction(ta *clientdb.TipUserAttemp
 				return actionAttemptPayment, actNow()
 			}
 
-			// constant delay increase for repeated retriable payment attempts.
-			delay := time.Duration(ta.PaymentAttemptCount) * tal.payRetryDelayFactor
-			nextAttemptTime := (*ta.PaymentAttemptFailed).Add(delay).In(time.Local)
-			return actionAttemptPayment, nextAttemptTime
+			// Exponential delay for repeated retriable payment attempts.
+			expDelay := time.Duration(1 << ta.PaymentAttemptCount)
+			delay := expDelay * tal.payRetryDelayFactor
+			return actionAttemptPayment, (*ta.PaymentAttemptFailed).Add(delay)
 		}
 
 		// Check payment attempt.
