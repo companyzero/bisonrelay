@@ -1,6 +1,7 @@
 package e2etests
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"sync"
@@ -259,6 +260,7 @@ func TestFtSendFileReceiverRestarts(t *testing.T) {
 
 	var testStage int
 	testStageHitChan := make(chan struct{}, 5)
+	testStageContChan := make(chan struct{}, 5)
 	bob.handleSync(client.OnRMReceived(func(ru *client.RemoteUser, h *rpc.RMHeader, p interface{}, ts time.Time) {
 		startFailing := false
 		if _, ok := p.(rpc.RMFTSendFile); testStage == 0 && ok {
@@ -270,11 +272,9 @@ func TestFtSendFileReceiverRestarts(t *testing.T) {
 		}
 
 		if startFailing {
-			bob.log.Infof("Starting to fail test stage %d", testStage)
-			err := fmt.Errorf("fail at stage %d", testStage)
-			bob.preventFutureConns(err).startFailing(nil, err)
-			testStage++
 			testStageHitChan <- struct{}{}
+			<-testStageContChan
+			testStage++
 		}
 	}))
 
@@ -284,6 +284,9 @@ func TestFtSendFileReceiverRestarts(t *testing.T) {
 
 	// Bob stops after receiving file metadata.
 	assert.ChanWritten(t, testStageHitChan)
+	err := errors.New("first error")
+	bob.preventFutureConns(err).startFailing(nil, err)
+	assert.WriteChan(t, testStageContChan, struct{}{})
 	ts.stopClient(bob)
 	assert.ChanNotWritten(t, completedFileChan, time.Second)
 
@@ -293,9 +296,13 @@ func TestFtSendFileReceiverRestarts(t *testing.T) {
 	// Restart Bob. It will receive the first chunk, but no more.
 	bob = ts.recreateStoppedClient(bob)
 	assert.ChanWritten(t, testStageHitChan)
+	err = errors.New("second error")
+	bob.preventFutureConns(err).startFailing(nil, err)
+	assert.WriteChan(t, testStageContChan, struct{}{})
 
 	// Finally, restart Bob again. He will receive all missing chunks.
 	bob = ts.recreateClient(bob)
 	completedPath1 := assert.ChanWritten(t, completedFileChan)
 	assert.EqualFiles(t, fSent, completedPath1)
+	_ = bob
 }
