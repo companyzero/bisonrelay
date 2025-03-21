@@ -3,6 +3,7 @@ module github.com/companyzero/bisonrelay
 go 1.22
 
 require (
+	github.com/RoaringBitmap/roaring/v2 v2.4.3
 	github.com/atotto/clipboard v0.1.4
 	github.com/bahlo/generic-list-go v0.2.0
 	github.com/charmbracelet/bubbles v0.20.0
@@ -20,7 +21,7 @@ require (
 	github.com/decred/dcrd/dcrutil/v4 v4.0.2
 	github.com/decred/dcrd/txscript/v4 v4.1.1
 	github.com/decred/dcrd/wire v1.7.0
-	github.com/decred/dcrlnd v0.7.6
+	github.com/decred/dcrlnd v0.7.7-0.20250312142956-234fcae24beb
 	github.com/decred/dcrlnlpd v0.0.0-20240916120255-786dc5d52075
 	github.com/decred/go-socks v1.1.0
 	github.com/decred/slog v1.2.0
@@ -45,12 +46,14 @@ require (
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
 	github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
 	github.com/vaughan0/go-ini v0.0.0-20130923145212-a98ad7ee00ec
+	github.com/wk8/go-ordered-map/v2 v2.1.8
 	github.com/xhit/go-str2duration/v2 v2.1.0
 	golang.org/x/crypto v0.33.0
 	golang.org/x/exp v0.0.0-20231110203233-9a3e6036ecaa
 	golang.org/x/mobile v0.0.0-20240604190613-2782386b8afd
 	golang.org/x/net v0.28.0
 	golang.org/x/sync v0.11.0
+	golang.org/x/sys v0.30.0
 	golang.org/x/term v0.29.0
 	golang.org/x/text v0.22.0
 	google.golang.org/grpc v1.59.0
@@ -179,7 +182,6 @@ require (
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.24.0 // indirect
 	golang.org/x/mod v0.18.0 // indirect
-	golang.org/x/sys v0.30.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
 	golang.org/x/tools v0.22.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
