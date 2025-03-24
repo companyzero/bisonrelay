@@ -204,6 +204,7 @@ const (
 	NTAddressBookLoaded      = 0x102c
 	NTPostsSubscriberUpdated = 0x102d
 	NTUINotification         = 0x102e
+	NTGCKilled               = 0x102f
 )
 
 type cmd struct {

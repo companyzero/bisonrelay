@@ -1547,7 +1547,7 @@ func (c *Client) handleGCKill(ru *RemoteUser, rmgk rpc.RMGroupKill, ts time.Time
 
 	c.log.Infof("User %s killed GC %q. Reason: %q", ru, rmgk.ID.String(), rmgk.Reason)
 
-	c.ntfns.notifyOnGCKilled(rmgk.ID, rmgk.Reason)
+	c.ntfns.notifyOnGCKilled(ru, rmgk.ID, rmgk.Reason)
 	return nil
 }
 

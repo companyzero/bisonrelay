@@ -1796,6 +1796,17 @@ class GCAdminsChanged extends ChatEvent {
 }
 
 @JsonSerializable()
+class GCKilled extends ChatEvent {
+  final String gcid;
+  final String source;
+  final String reason;
+
+  GCKilled(this.gcid, this.source, this.reason) : super(gcid, "GC Killed");
+  factory GCKilled.fromJson(Map<String, dynamic> json) =>
+      _$GCKilledFromJson(json);
+}
+
+@JsonSerializable()
 class SubscribeToPosts {
   final String target;
   @JsonKey(name: "fetch_post", includeIfNull: false)
@@ -2649,6 +2660,11 @@ mixin NtfStreams {
 
       case NTGCAdminsChanged:
         var event = GCAdminsChanged.fromJson(payload);
+        ntfChatEvents.add(event);
+        break;
+
+      case NTGCKilled:
+        var event = GCKilled.fromJson(payload);
         ntfChatEvents.add(event);
         break;
 
@@ -3667,3 +3683,4 @@ const int NTProfileUpdated = 0x102b;
 const int NTAddressBookLoaded = 0x102c;
 const int NTPostsSubscriberUpdated = 0x102d;
 const int NTUINotification = 0x102e;
+const int NTGCKilled = 0x102f;

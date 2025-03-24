@@ -158,7 +158,7 @@ func (_ OnGCUserPartedNtfn) typ() string { return onGCUserPartedNtfnType }
 const onGCKilledNtfnType = "onGCKilled"
 
 // OnGCKilledNtfn is a handler for a GC dissolved by its admin.
-type OnGCKilledNtfn func(gcid GCID, reason string)
+type OnGCKilledNtfn func(ru *RemoteUser, gcid GCID, reason string)
 
 func (_ OnGCKilledNtfn) typ() string { return onGCKilledNtfnType }
 
@@ -847,9 +847,9 @@ func (nmgr *NotificationManager) notifyGCUserParted(gcid GCID, uid UserID, reaso
 		visit(func(h OnGCUserPartedNtfn) { h(gcid, uid, reason, kicked) })
 }
 
-func (nmgr *NotificationManager) notifyOnGCKilled(gcid GCID, reason string) {
+func (nmgr *NotificationManager) notifyOnGCKilled(ru *RemoteUser, gcid GCID, reason string) {
 	nmgr.handlers[onGCKilledNtfnType].(*handlersFor[OnGCKilledNtfn]).
-		visit(func(h OnGCKilledNtfn) { h(gcid, reason) })
+		visit(func(h OnGCKilledNtfn) { h(ru, gcid, reason) })
 }
 
 func (nmgr *NotificationManager) notifyGCAdminsChanged(ru *RemoteUser, gc rpc.RMGroupList,

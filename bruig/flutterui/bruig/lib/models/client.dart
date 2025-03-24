@@ -175,6 +175,13 @@ class ChatModel extends ChangeNotifier {
 
   bool isSubscribed = false;
 
+  bool _killed = false;
+  bool get killed => _killed;
+  set killed(bool v) {
+    _killed = v;
+    notifyListeners();
+  }
+
   int _unreadMsgCount = 0;
   int get unreadMsgCount => _unreadMsgCount;
   int _unreadEventCount = 0;
@@ -967,7 +974,8 @@ class ClientModel extends ChangeNotifier {
           (evnt is GCAdminsChanged) ||
           (evnt is GCAddedMembers) ||
           (evnt is GCMemberParted) ||
-          (evnt is GCUpgradedVersion);
+          (evnt is GCUpgradedVersion) ||
+          (evnt is GCKilled);
 
       var chat = await _newChat(evnt.sid, "", isGC);
       ChatModel? source;
@@ -988,6 +996,8 @@ class ClientModel extends ChangeNotifier {
         sourceId = evnt.sid;
       } else if (evnt is GCUpgradedVersion) {
         sourceId = evnt.sid;
+      } else if (evnt is GCKilled) {
+        sourceId = evnt.source;
       } else {
         source = chat;
       }
@@ -1006,6 +1016,12 @@ class ClientModel extends ChangeNotifier {
       }
 
       chat.notifyListeners();
+
+      if (evnt is GCKilled) {
+        // TODO: add snackbar?
+        chat.killed = true;
+        debugPrint("GC ${evnt.gcid} killed");
+      }
     }
   }
 
