@@ -1,4 +1,5 @@
 import 'package:bruig/components/buttons.dart';
+import 'package:bruig/components/confirmation_dialog.dart';
 import 'package:bruig/components/copyable.dart';
 import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/components/icons.dart';
@@ -319,7 +320,7 @@ class _ManageGCScreenState extends State<ManageGCScreen> {
     }
   }
 
-  Future<void> killGC() async {
+  Future<void> doKillGC() async {
     var snackbar = SnackBarModel.of(context);
     setState(() => loading = true);
     try {
@@ -332,7 +333,16 @@ class _ManageGCScreenState extends State<ManageGCScreen> {
     }
   }
 
-  Future<void> partFromGC() async {
+  void killGC() {
+    showConfirmDialog(context,
+        title: "Confirm Kill GC",
+        child: Text(
+            "Really dissolve GC ${widget.chat.nick}? This action cannot be undone."),
+        confirmButtonText: "Kill GC",
+        onConfirm: doKillGC);
+  }
+
+  Future<void> doPartFromGC() async {
     var snackbar = SnackBarModel.of(context);
     setState(() => loading = true);
     try {
@@ -343,6 +353,14 @@ class _ManageGCScreenState extends State<ManageGCScreen> {
     } finally {
       setState(() => loading = false);
     }
+  }
+
+  void partFromGC() {
+    showConfirmDialog(context,
+        title: "Confirm Part GC",
+        onConfirm: doPartFromGC,
+        child: Text(
+            "Really exit from GC ${widget.chat.nick}? Joining back will require a new invitation from a GC admin."));
   }
 
   Future<void> hideGC() async {
@@ -374,16 +392,23 @@ class _ManageGCScreenState extends State<ManageGCScreen> {
 
   Future<void> changeOwner(ChatModel newOwner) async {
     if (loading) return;
-    setState(() => loading = true);
-    var snackbar = SnackBarModel.of(context);
-    try {
-      await Golib.modifyGCOwner(gcID, newOwner.id);
-    } catch (exception) {
-      snackbar.error("Unable to modify GC Owner: $exception");
-    } finally {
-      setState(() => loading = false);
-      reloadUsers();
-    }
+
+    showConfirmDialog(context,
+        title: "Confirm Change Owner",
+        child: Text(
+            "Really change ownership of this GC to ${newOwner.nick}? This action cannot be undone."),
+        onConfirm: () async {
+      setState(() => loading = true);
+      var snackbar = SnackBarModel.of(context);
+      try {
+        await Golib.modifyGCOwner(gcID, newOwner.id);
+      } catch (exception) {
+        snackbar.error("Unable to modify GC Owner: $exception");
+      } finally {
+        setState(() => loading = false);
+        reloadUsers();
+      }
+    });
   }
 
   Widget buildAdminAction(ChatModel user, int index) {
