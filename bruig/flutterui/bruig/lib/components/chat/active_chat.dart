@@ -197,11 +197,12 @@ class _ActiveChatState extends State<ActiveChat> {
                               SmallScreenRecordInfoPanel(audio: audio))),
               ]),
             ),
-            Container(
-                padding: isScreenSmall
-                    ? const EdgeInsets.all(10)
-                    : const EdgeInsets.all(5),
-                child: ChatInput(sendMsg, chat, inputFocusNode))
+            if (!chat.killed)
+              Container(
+                  padding: isScreenSmall
+                      ? const EdgeInsets.all(10)
+                      : const EdgeInsets.all(5),
+                  child: ChatInput(sendMsg, chat, inputFocusNode))
           ],
         ));
   }

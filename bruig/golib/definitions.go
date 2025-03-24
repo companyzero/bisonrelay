@@ -404,6 +404,12 @@ type gcAdminsChanged struct {
 	ChangedOwner bool                 `json:"changed_owner"`
 }
 
+type gcKilled struct {
+	GCID   zkidentity.ShortID `json:"gcid"`
+	Source zkidentity.ShortID `json:"source"`
+	Reason string             `json:"reason"`
+}
+
 type subscribeToPosts struct {
 	Target    clientintf.UserID  `json:"target"`
 	FetchPost *clientintf.PostID `json:"fetch_post"`

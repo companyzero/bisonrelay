@@ -3104,9 +3104,9 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		as.repaintIfActive(cw)
 	}))
 
-	ntfns.Register(client.OnGCKilledNtfn(func(gcid client.GCID, reason string) {
+	ntfns.Register(client.OnGCKilledNtfn(func(ru *client.RemoteUser, gcid client.GCID, reason string) {
 		cw := as.findOrNewGCWindow(gcid)
-		cw.newInternalMsg("GC killed by admin. Reason: %q", reason)
+		cw.newInternalMsg("GC killed by %s. Reason: %q", strescape.Nick(ru.Nick()), reason)
 		as.repaintIfActive(cw)
 	}))
 

@@ -246,7 +246,7 @@ func TestGCKicks(t *testing.T) {
 		charliePartChan <- partEvent{uid: uid, reason: reason, kicked: kicked}
 	}))
 	charlieKilledChan := make(chan struct{})
-	charlie.handle(client.OnGCKilledNtfn(func(gcid client.GCID, reason string) {
+	charlie.handle(client.OnGCKilledNtfn(func(ru *client.RemoteUser, gcid client.GCID, reason string) {
 		charlieKilledChan <- struct{}{}
 	}))
 
@@ -1230,13 +1230,13 @@ func TestGCChangesOwner(t *testing.T) {
 
 	// Bob kills the GC (something only the owner can do).
 	aliceKilledChan := make(chan struct{}, 1)
-	alice.handle(client.OnGCKilledNtfn(func(killedGCID zkidentity.ShortID, _ string) {
+	alice.handle(client.OnGCKilledNtfn(func(ru *client.RemoteUser, killedGCID zkidentity.ShortID, _ string) {
 		if killedGCID == gcID {
 			aliceKilledChan <- struct{}{}
 		}
 	}))
 	charlieKilledChan := make(chan struct{}, 1)
-	charlie.handle(client.OnGCKilledNtfn(func(killedGCID zkidentity.ShortID, _ string) {
+	charlie.handle(client.OnGCKilledNtfn(func(ru *client.RemoteUser, killedGCID zkidentity.ShortID, _ string) {
 		if killedGCID == gcID {
 			charlieKilledChan <- struct{}{}
 		}

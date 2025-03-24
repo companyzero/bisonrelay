@@ -1701,6 +1701,18 @@ Map<String, dynamic> _$GCAdminsChangedToJson(GCAdminsChanged instance) =>
       'changed_owner': instance.changedOwner,
     };
 
+GCKilled _$GCKilledFromJson(Map<String, dynamic> json) => GCKilled(
+      json['gcid'] as String,
+      json['source'] as String,
+      json['reason'] as String,
+    );
+
+Map<String, dynamic> _$GCKilledToJson(GCKilled instance) => <String, dynamic>{
+      'gcid': instance.gcid,
+      'source': instance.source,
+      'reason': instance.reason,
+    };
+
 SubscribeToPosts _$SubscribeToPostsFromJson(Map<String, dynamic> json) =>
     SubscribeToPosts(
       json['target'] as String,

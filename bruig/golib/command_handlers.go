@@ -363,6 +363,15 @@ func handleInitClient(handle uint32, args initClient) error {
 		notify(NTGCAdminsChanged, ntfn, nil)
 	}))
 
+	ntfns.Register(client.OnGCKilledNtfn(func(ru *client.RemoteUser, gcid client.GCID, reason string) {
+		ntfn := gcKilled{
+			GCID:   gcid,
+			Source: ru.ID(),
+			Reason: reason,
+		}
+		notify(NTGCKilled, ntfn, nil)
+	}))
+
 	ntfns.Register(client.OnServerSessionChangedNtfn(func(connected bool, policy clientintf.ServerPolicy) {
 		state := ConnStateOffline
 		if connected {

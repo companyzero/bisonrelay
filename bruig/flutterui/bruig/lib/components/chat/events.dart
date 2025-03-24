@@ -1184,6 +1184,11 @@ class Event extends StatelessWidget {
       return GCAdminsChangedW(event.event as GCAdminsChanged, client);
     }
 
+    if (event.event is GCKilled) {
+      var reason = (event.event as GCKilled).reason;
+      return ServerEvent(msg: "GC Killed (reason: \"$reason\")");
+    }
+
     if (event.event is KXSuggested) {
       return KXSuggestedW(event, event.event as KXSuggested, client);
     }
