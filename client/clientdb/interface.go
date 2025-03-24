@@ -141,6 +141,27 @@ type AddressBookAndRatchet struct {
 	Ratchet     *ratchet.Ratchet
 }
 
+// GroupChat is a GC structure. It includes the GC metadata plus additional
+// fields needed to manage it.
+type GroupChat struct {
+	// Note: Metadata MUST be the first field (for the time being) because
+	// it is used to disambiguate the on-disk structure when loading a GC.
+
+	// Metadata is the latest metadata known about the GC.
+	Metadata rpc.RMGroupList `json:"metadata"` // DO NOT
+}
+
+// DeepCopy makes a deep copy of this GC so that the copy can be modified.
+func (gc *GroupChat) DeepCopy() GroupChat {
+	res := *gc
+
+	// Ok to do a "shallow" copy for these because the items are values (as
+	// opposed to pointers).
+	res.Metadata.Members = slices.Clone(gc.Metadata.Members)
+	res.Metadata.ExtraAdmins = slices.Clone(gc.Metadata.ExtraAdmins)
+	return res
+}
+
 type GCAddressBookEntry struct {
 	ID      zkidentity.ShortID `json:"id"`
 	Members []UserID           `json:"members"`
