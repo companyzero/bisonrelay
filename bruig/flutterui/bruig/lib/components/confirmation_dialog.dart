@@ -72,7 +72,7 @@ void showConfirmDialog(
                   onConfirm != null ? onConfirm() : null;
                 },
                 child: Text(confirmButtonText)),
-            TextButton(
+            OutlinedButton(
                 onPressed: () {
                   pop();
                   onCancel != null ? onCancel() : null;
