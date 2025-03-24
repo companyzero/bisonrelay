@@ -392,10 +392,6 @@ type Client struct {
 	startupUnackedRMs []clientdb.UnackedRM
 	startupSendq      []clientdb.SendQueueElement
 
-	// gcAliasMap maps a local gc name to a global gc id.
-	gcAliasMtx sync.Mutex
-	gcAliasMap map[string]zkidentity.ShortID
-
 	// gcWarnedVersions tracks GCs for which the warning about an
 	// incompatible version has been issued.
 	gcWarnedVersions *singlesetmap.Map[zkidentity.ShortID]
@@ -607,23 +603,6 @@ func (c *Client) loadServerCert(ctx context.Context) error {
 	})
 }
 
-func (c *Client) loadGCAliases(ctx context.Context) error {
-	var gcAliasMap map[string]zkidentity.ShortID
-	err := c.db.View(ctx, func(tx clientdb.ReadTx) error {
-		var err error
-		gcAliasMap, err = c.db.GetGCAliases(tx)
-		return err
-	})
-	if err != nil {
-		return err
-	}
-
-	c.gcAliasMtx.Lock()
-	c.gcAliasMap = gcAliasMap
-	c.gcAliasMtx.Unlock()
-	return nil
-}
-
 // queueUnackedUserRM queues the specified unacked user RM to be sent by the RMQ.
 func (c *Client) queueUnackedUserRM(ctx context.Context, unacked clientdb.UnackedRM) error {
 	// Prepare the outbound RM.
@@ -746,9 +725,6 @@ func (c *Client) loadInitialDBData(ctx context.Context) error {
 		return err
 	}
 	if err := c.loadServerCert(ctx); err != nil {
-		return err
-	}
-	if err := c.loadGCAliases(ctx); err != nil {
 		return err
 	}
 	if err := c.loadContentFilters(ctx); err != nil {
@@ -1099,7 +1075,11 @@ func (c *Client) ReadHistoryMessages(uid UserID, isGC bool, page, pageNum int) (
 	if !isGC {
 		_, err = c.rul.byID(uid)
 	} else {
-		gcName, err = c.GetGCAlias(uid)
+		var gc clientdb.GroupChat
+		gc, err = c.getGC(uid)
+		if err == nil {
+			gcName = gc.Name()
+		}
 	}
 	if err != nil {
 		return nil, now, err

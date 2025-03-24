@@ -250,8 +250,48 @@ func (db *DB) readGC(filename string, gc *GroupChat) error {
 	} else {
 		// This is a rpc.RMGroupList structure. Decode into the GC
 		// metadata.
-		return json.Unmarshal(gcJSON, &gc.Metadata)
+		//
+		// Next time this is saved, it will be saved under the new
+		// format.
+		if err := json.Unmarshal(gcJSON, &gc.Metadata); err != nil {
+			return err
+		}
+
+		// Check if this GC has a local alias to fill.
+		aliases, err := db.getGCAliases()
+		if err != nil {
+			return err
+		}
+		for name, id := range aliases {
+			if id == gc.Metadata.ID {
+				gc.Alias = name
+				break
+			}
+		}
+
+		return nil
 	}
+}
+
+// Minimal struct that needs to be loaded for a GC to determine its
+// name.
+type minGCStruct struct {
+	Metadata struct {
+		Name string `json:"name"`
+	} `json:"metadata"`
+	Alias string `json:"alias"`
+
+	Name string `json:"name"` // From RMGroupList.
+}
+
+func (gc *minGCStruct) name() string {
+	if gc.Alias != "" {
+		return gc.Alias
+	}
+	if gc.Name != "" {
+		return gc.Name
+	}
+	return gc.Metadata.Name
 }
 
 func (db *DB) GetGC(tx ReadTx, id zkidentity.ShortID) (GroupChat, error) {
@@ -264,7 +304,70 @@ func (db *DB) GetGC(tx ReadTx, id zkidentity.ShortID) (GroupChat, error) {
 	return gc, err
 }
 
-func (db *DB) GetGCAliases(tx ReadTx) (map[string]zkidentity.ShortID, error) {
+// GetGCName returns the name or local alias of the GC.
+func (db *DB) GetGCName(tx ReadTx, id zkidentity.ShortID) (string, error) {
+	var gc minGCStruct
+	filename := filepath.Join(db.root, groupchatDir, id.String())
+	err := db.readJsonFile(filename, &gc)
+	if err != nil {
+		return "", err
+	}
+
+	return gc.name(), nil
+}
+
+// FindGCsWithPrefix returns all GCs with the given prefix as alias.
+//
+// Returns a map from GCID to name or alias.
+func (db *DB) FindGCsWithPrefix(prefix string) map[zkidentity.ShortID]string {
+	gcDir := filepath.Join(db.root, groupchatDir)
+	entries, err := os.ReadDir(gcDir)
+	if err != nil {
+		return nil
+	}
+
+	res := make(map[zkidentity.ShortID]string)
+	for _, v := range entries {
+		if v.IsDir() {
+			continue
+		}
+
+		baseName := v.Name()
+		fname := filepath.Join(gcDir, baseName)
+		if strings.HasSuffix(fname, gcBlockListExt) {
+			continue
+		}
+
+		var id zkidentity.ShortID
+		if err := id.FromString(baseName); err != nil {
+			db.log.Warnf("Filename %q not a GCID: %v", baseName, err)
+			continue
+		}
+
+		var gc minGCStruct
+		if err := db.readJsonFile(fname, &gc); err != nil {
+			db.log.Warnf("Unable to read gc file %s for prefix finding: %v",
+				fname, err)
+			continue
+		}
+
+		hasPrefix := strings.HasPrefix(gc.Alias, prefix) ||
+			strings.HasPrefix(gc.Metadata.Name, prefix) ||
+			strings.HasPrefix(gc.Name, prefix) ||
+			(len(prefix) > 4 && strings.HasPrefix(baseName, prefix))
+
+		if hasPrefix {
+			res[id] = gc.name()
+		}
+	}
+
+	return res
+}
+
+// getGCAliases returns the gc aliases. Expects to be called from a transaction.
+//
+// This returns the old (pre GroupChat struct) aliases stored in the db.
+func (db *DB) getGCAliases() (map[string]zkidentity.ShortID, error) {
 	var aliasMap map[string]zkidentity.ShortID
 
 	filename := filepath.Join(db.root, gcAliasesFile)
@@ -274,40 +377,6 @@ func (db *DB) GetGCAliases(tx ReadTx) (map[string]zkidentity.ShortID, error) {
 		return map[string]zkidentity.ShortID{}, nil
 	}
 	return aliasMap, err
-}
-
-// SetGCAlias sets the alias for the specified GC ID as the name. If gcID is
-// empty, the name is removed from the alias map. If gcID is filled but name is
-// empty, the entry that points to the specified gcID is removed.
-func (db *DB) SetGCAlias(tx ReadWriteTx, gcID zkidentity.ShortID, name string) (
-	map[string]zkidentity.ShortID, error) {
-
-	aliasMap, err := db.GetGCAliases(tx)
-	if err != nil {
-		return nil, err
-	}
-
-	if gcID.IsEmpty() {
-		delete(aliasMap, name)
-	} else {
-		// Remove old aliases.
-		for name, id := range aliasMap {
-			if id == gcID {
-				delete(aliasMap, name)
-			}
-		}
-
-		if name != "" {
-			aliasMap[name] = gcID
-		}
-	}
-
-	filename := filepath.Join(db.root, gcAliasesFile)
-	if err := db.saveJsonFile(filename, &aliasMap); err != nil {
-		return nil, err
-	}
-
-	return aliasMap, nil
 }
 
 func (db *DB) SaveGC(tx ReadWriteTx, gc GroupChat) error {

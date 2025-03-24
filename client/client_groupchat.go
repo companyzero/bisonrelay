@@ -47,55 +47,68 @@ const (
 //                                             handleGroupList()
 //
 
-// setGCAlias sets the new group chat alias cache.
-func (c *Client) setGCAlias(aliasMap map[string]zkidentity.ShortID) {
-	c.gcAliasMtx.Lock()
-	c.gcAliasMap = aliasMap
-	c.gcAliasMtx.Unlock()
-}
-
 // AliasGC replaces the local alias of a GC for a new one.
 func (c *Client) AliasGC(gcID zkidentity.ShortID, newAlias string) error {
 	newAlias = strings.TrimSpace(newAlias)
 	if newAlias == "" {
-		return fmt.Errorf("new GC alias acnnot be empty")
+		return fmt.Errorf("new GC alias cannot be empty")
 	}
 
 	return c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
 		// Ensure gc exists.
-		if _, err := c.db.GetGC(tx, gcID); err != nil {
+		gc, err := c.db.GetGC(tx, gcID)
+		if err != nil {
 			return err
 		}
 
-		if aliasMap, err := c.db.SetGCAlias(tx, gcID, newAlias); err != nil {
-			return err
-		} else {
-			c.setGCAlias(aliasMap)
+		// Ensure no other GC has this alias.
+		gcIDs := c.db.FindGCsWithPrefix(newAlias)
+		for id, oldAlias := range gcIDs {
+			if id == gcID {
+				// Ignore target GC (allows setting the alias to
+				// the same GC).
+				continue
+			}
+
+			if oldAlias == newAlias {
+				return fmt.Errorf("GC %s already has alias %q",
+					id, newAlias)
+			}
 		}
 
-		return nil
+		// Modify local GC alias.
+		gc.Alias = newAlias
+		return c.db.SaveGC(tx, gc)
 	})
 }
 
-// GetGCAlias returns the local alias for the specified GC.
+// GetGCAlias returns the local alias or the name for the specified GC.
 func (c *Client) GetGCAlias(gcID zkidentity.ShortID) (string, error) {
-	var alias string
-	c.gcAliasMtx.Lock()
-	for v, id := range c.gcAliasMap {
-		if id == gcID {
-			alias = v
-			break
-		}
-	}
-	c.gcAliasMtx.Unlock()
-	if alias == "" {
-		return "", fmt.Errorf("gc %s not found", gcID)
-	}
-	return alias, nil
+	var res string
+	err := c.dbView(func(tx clientdb.ReadTx) error {
+		var err error
+		res, err = c.db.GetGCName(tx, gcID)
+		return err
+	})
+	return res, err
 }
 
-// GCIDByName returns the GC ID of the local GC with the given name. The name can
-// be either a local GC alias or a full hex GC ID.
+// gcIDByName returns the GC ID of the local GC with the given name. Expected
+// to be run inside a transaction.
+func (c *Client) gcIDByName(tx clientdb.ReadTx, name string) (zkidentity.ShortID, error) {
+	aliasMap := c.db.FindGCsWithPrefix(name)
+	for id, name := range aliasMap {
+		if name == name {
+			return id, nil
+		}
+	}
+
+	return zkidentity.ShortID{}, fmt.Errorf("gc %q not found", name)
+
+}
+
+// GCIDByName returns the GC ID of the local GC with the given name. The name
+// can be either a local GC alias or a full hex GC ID.
 func (c *Client) GCIDByName(name string) (zkidentity.ShortID, error) {
 	var id zkidentity.ShortID
 
@@ -104,28 +117,28 @@ func (c *Client) GCIDByName(name string) (zkidentity.ShortID, error) {
 		return id, nil
 	}
 
-	// Check alias cache.
-	c.gcAliasMtx.Lock()
-	id, ok := c.gcAliasMap[name]
-	c.gcAliasMtx.Unlock()
+	// Check if any has this exact name/alias.
+	var res zkidentity.ShortID
+	err := c.dbView(func(tx clientdb.ReadTx) error {
+		var err error
+		res, err = c.gcIDByName(tx, name)
+		return err
+	})
 
-	if !ok {
-		return id, fmt.Errorf("gc %q not found", name)
-	}
-
-	return id, nil
+	return res, err
 }
 
 // GCsWithPrefix returns a list of GC aliases that have the specified prefix.
 func (c *Client) GCsWithPrefix(prefix string) []string {
 	var res []string
-	c.gcAliasMtx.Lock()
-	for alias := range c.gcAliasMap {
-		if strings.HasPrefix(alias, prefix) {
-			res = append(res, alias)
+	_ = c.dbView(func(tx clientdb.ReadTx) error {
+		aliasMap := c.db.FindGCsWithPrefix(prefix)
+		res = make([]string, 0, len(aliasMap))
+		for _, name := range aliasMap {
+			res = append(res, name)
 		}
-	}
-	c.gcAliasMtx.Unlock()
+		return nil
+	})
 	return res
 }
 
@@ -175,11 +188,6 @@ func (c *Client) NewGroupChatVersion(name string, version uint8) (zkidentity.Sho
 		}}
 		if err = c.db.SaveGC(tx, gc); err != nil {
 			return fmt.Errorf("can't save gc %q (%s): %v", name, id.String(), err)
-		}
-		if aliasMap, err := c.db.SetGCAlias(tx, id, name); err != nil {
-			c.log.Errorf("can't set name %s for gc %s: %v", name, id.String(), err)
-		} else {
-			c.setGCAlias(aliasMap)
 		}
 		c.log.Infof("Created new gc %q (%s)", name, id.String())
 
@@ -623,7 +631,6 @@ func (c *Client) maybeUpdateGCFunc(ru *RemoteUser, gcid zkidentity.ShortID, f fu
 		updaterID = localID
 		senderNick = "local client"
 	}
-	gcAlias, _ := c.GetGCAlias(gcid)
 
 	err = c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
 		// Fetch GC.
@@ -659,6 +666,12 @@ func (c *Client) maybeUpdateGCFunc(ru *RemoteUser, gcid zkidentity.ShortID, f fu
 				newMeta.Generation)
 		}
 
+		// Ensure no changing name.
+		if newMeta.Name != oldMeta.Name {
+			return fmt.Errorf("cannot change name of GC %s from "+
+				"%q to %q", gcid, oldMeta.Name, newMeta.Name)
+		}
+
 		// Special case changing the owner: only the owner itself
 		// can do it.
 		if len(oldMeta.Members) == 0 || len(newMeta.Members) == 0 {
@@ -681,15 +694,10 @@ func (c *Client) maybeUpdateGCFunc(ru *RemoteUser, gcid zkidentity.ShortID, f fu
 		// Handle case where the local client was removed from GC.
 		stillMember := slices.Contains(newMeta.Members, c.PublicID())
 		if !stillMember {
-			c.db.LogGCMsg(tx, gcAlias, gcid, true, "",
+			c.db.LogGCMsg(tx, newGC.Name(), gcid, true, "",
 				fmt.Sprintf("Admin %s removed us from GC", senderNick), time.Now())
 			if err := c.db.DeleteGC(tx, oldMeta.ID); err != nil {
 				return err
-			}
-			if aliasMap, err := c.db.SetGCAlias(tx, oldMeta.ID, ""); err != nil {
-				return err
-			} else {
-				c.setGCAlias(aliasMap)
 			}
 			return nil
 		}
@@ -751,7 +759,6 @@ func (c *Client) maybeUpdateGC(ru *RemoteUser, newGCMeta rpc.RMGroupList) (oldGC
 func (c *Client) handleGCJoin(ru *RemoteUser, invite rpc.RMGroupJoin) error {
 	var gc clientdb.GroupChat
 	updated := false
-	gcAlias, _ := c.GetGCAlias(invite.ID)
 	err := c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
 		var err error
 		sentInvite, uid, iid, err := c.db.FindGCInvite(tx,
@@ -806,7 +813,7 @@ func (c *Client) handleGCJoin(ru *RemoteUser, invite rpc.RMGroupJoin) error {
 			}
 			updated = true
 
-			c.db.LogGCMsg(tx, gcAlias, gc.Metadata.ID, true, "",
+			c.db.LogGCMsg(tx, gc.Name(), gc.Metadata.ID, true, "",
 				fmt.Sprintf("Local client added %s as member of the GC",
 					strescape.Nick(ru.Nick())), time.Now())
 		} else {
@@ -929,22 +936,24 @@ func (c *Client) saveJoinedGC(ru *RemoteUser, gl rpc.RMGroupList) (string, error
 			return fmt.Errorf("unable to del gc invite: %v", err)
 		}
 
-		// Figure out the GC name.
-		gcName = invite.Name
-		_, err = c.GCIDByName(gcName)
+		// Start preparing GroupChat structure.
+		gc := clientdb.GroupChat{Metadata: gl}
+
+		// Figure out the GC name (deduplicate name into alias).
+		aliased := false
+		_, err = c.gcIDByName(tx, gc.Metadata.Name)
 		for i := 1; err == nil; i += 1 {
-			gcName = fmt.Sprintf("%s_%d", invite.Name, i)
-			_, err = c.GCIDByName(gcName)
+			gc.Alias = fmt.Sprintf("%s_%d", invite.Name, i)
+			_, err = c.gcIDByName(tx, gc.Alias)
+			aliased = true
 		}
 
-		if aliasMap, err := c.db.SetGCAlias(tx, gl.ID, gcName); err != nil {
-			c.log.Errorf("can't set name %s for gc %s: %v", gcName, gl.ID.String(), err)
-		} else {
-			c.setGCAlias(aliasMap)
+		if aliased {
+			ru.log.Debugf("Aliasing GC %s as %q due to prior "+
+				"GC names already existing", gl.ID, gc.Alias)
 		}
 
 		// All is well. Update the local gc data.
-		gc := clientdb.GroupChat{Metadata: gl}
 		if err := c.db.SaveGC(tx, gc); err != nil {
 			return fmt.Errorf("unable to save gc: %v", err)
 		}
@@ -975,8 +984,8 @@ func (c *Client) handleGCList(ru *RemoteUser, gl rpc.RMGroupList, ts time.Time) 
 			return err
 		}
 
-		gcName, _ = c.GetGCAlias(gl.ID)
-		c.log.Infof("Received updated GC list %s (%q) from %s", gl.ID, gcName, ru)
+		c.log.Infof("Received updated GC list %s (%q) from %s", gl.ID,
+			oldGC.Name(), ru)
 		c.notifyUpdatedGC(ru, oldGC.Metadata, gl, ts)
 		return nil
 	}
@@ -1026,14 +1035,12 @@ func (c *Client) handleDelayedGCMessages(msg clientintf.ReceivedGCMsg) {
 	}
 
 	// Log the message and remove the cached GCM from the db.
-	var gcAlias string
 	err = c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
 		if err := c.db.RemoveCachedRGCM(tx, msg); err != nil {
 			c.log.Warnf("Unable to remove cached RGCM: %v", err)
 		}
 
-		gcAlias, _ = c.GetGCAlias(msg.GCM.ID)
-		err := c.db.LogGCMsg(tx, gcAlias, msg.GCM.ID, false, user.Nick(),
+		err := c.db.LogGCMsg(tx, msg.GCAlias, msg.GCM.ID, false, user.Nick(),
 			msg.GCM.Message, msg.TS)
 		if err != nil {
 			c.log.Warnf("Unable to log RGCM: %v", err)
@@ -1046,7 +1053,7 @@ func (c *Client) handleDelayedGCMessages(msg clientintf.ReceivedGCMsg) {
 		c.log.Warnf("Unable to handle cached RGCM: %v", err)
 	}
 
-	c.ntfns.notifyOnGCM(user, msg.GCM, gcAlias, msg.TS)
+	c.ntfns.notifyOnGCM(user, msg.GCM, msg.GCAlias, msg.TS)
 }
 
 // SendProgress is sent to track progress of messages that are sent to multiple
@@ -1076,12 +1083,7 @@ func (c *Client) GCMessage(gcID zkidentity.ShortID, msg string, mode rpc.Message
 			return err
 		}
 
-		gcAlias, err := c.GetGCAlias(gcID)
-		if err != nil {
-			gcAlias = gc.Metadata.Name
-		}
-
-		return c.db.LogGCMsg(tx, gcAlias, gcID, false, myNick, msg, time.Now())
+		return c.db.LogGCMsg(tx, gc.Name(), gcID, false, myNick, msg, time.Now())
 	})
 	if err != nil {
 		return err
@@ -1148,6 +1150,7 @@ func (c *Client) handleGCMessage(ru *RemoteUser, gcm rpc.RMGroupMessage, ts time
 		if isBlocked {
 			return nil
 		}
+		rgcm.GCAlias = gc.Name()
 
 		return c.db.CacheReceivedGCM(tx, rgcm)
 	})
@@ -1172,22 +1175,16 @@ func (c *Client) handleGCMessage(ru *RemoteUser, gcm rpc.RMGroupMessage, ts time
 		return err
 	}
 
-	// Ignore error because gcAlias will be blank.
-	gcAlias, _ := c.GetGCAlias(gcm.ID)
-	if gcAlias == "" {
-		gcAlias = gc.Metadata.Name
-	}
-
 	if isBlocked {
 		c.log.Warnf("Received message in GC %q from blocked member %s",
-			gcAlias, ru)
+			rgcm.GCAlias, ru)
 		return nil
 	}
 
 	if !found {
 		// The sender is not in the GC list we have.
 		c.log.Warnf("Received message in GC %q from non-member %s",
-			gcAlias, ru)
+			rgcm.GCAlias, ru)
 		return nil
 	}
 
@@ -1196,20 +1193,26 @@ func (c *Client) handleGCMessage(ru *RemoteUser, gcm rpc.RMGroupMessage, ts time
 	}
 
 	ru.log.Debugf("Received message of len %d in GC %q (%s)", len(gcm.Message),
-		gcAlias, gc.Metadata.ID)
+		rgcm.GCAlias, gc.Metadata.ID)
 
 	c.gcmq.GCMessageReceived(rgcm)
 	return nil
 }
 
-// GetGC returns information about the given gc the local user participates in.
-func (c *Client) GetGC(gcID zkidentity.ShortID) (rpc.RMGroupList, error) {
+// getGC returns the full group chat data.
+func (c *Client) getGC(gcID zkidentity.ShortID) (clientdb.GroupChat, error) {
 	var gc clientdb.GroupChat
 	err := c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
 		var err error
 		gc, err = c.db.GetGC(tx, gcID)
 		return err
 	})
+	return gc, err
+}
+
+// GetGC returns information about the given gc the local user participates in.
+func (c *Client) GetGC(gcID zkidentity.ShortID) (rpc.RMGroupList, error) {
+	gc, err := c.getGC(gcID)
 	return gc.Metadata, err
 }
 
@@ -1346,11 +1349,13 @@ func (c *Client) removeFromGC(gcID zkidentity.ShortID, uid UserID,
 // logGCEvent logs the given GC event. Must not be called from inside a DB
 // transaction.
 func (c *Client) logGCEvent(gcID zkidentity.ShortID, ts time.Time, msg string, args ...interface{}) {
-	gcAlias, _ := c.GetGCAlias(gcID)
-
 	msg = fmt.Sprintf(msg, args...)
 
 	err := c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
+		gcAlias, err := c.db.GetGCName(tx, gcID)
+		if err != nil {
+			return err
+		}
 		return c.db.LogGCMsg(tx, gcAlias, gcID, true, "", msg, ts)
 	})
 	if err != nil {
@@ -1413,7 +1418,6 @@ func (c *Client) handleGCKick(ru *RemoteUser, rmgk rpc.RMGroupKick, ts time.Time
 func (c *Client) PartFromGC(gcID zkidentity.ShortID, reason string) error {
 	var gc clientdb.GroupChat
 
-	gcAlias, _ := c.GetGCAlias(gcID)
 	err := c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
 		// Ensure gc exists.
 		var err error
@@ -1427,17 +1431,12 @@ func (c *Client) PartFromGC(gcID zkidentity.ShortID, reason string) error {
 			return fmt.Errorf("cannot part from GC when we're the GC admin")
 		}
 
-		if err := c.db.LogGCMsg(tx, gcAlias, gcID, true, "", "Parting from GC", time.Now()); err != nil {
+		if err := c.db.LogGCMsg(tx, gc.Name(), gcID, true, "", "Parting from GC", time.Now()); err != nil {
 			return err
 		}
 
 		if err := c.db.DeleteGC(tx, gcID); err != nil {
 			return err
-		}
-		if aliasMap, err := c.db.SetGCAlias(tx, gc.Metadata.ID, ""); err != nil {
-			return err
-		} else {
-			c.setGCAlias(aliasMap)
 		}
 		return nil
 	})
@@ -1477,7 +1476,6 @@ func (c *Client) handleGCPart(ru *RemoteUser, rmgp rpc.RMGroupPart, ts time.Time
 // KillGroupChat completely dissolves the group chat.
 func (c *Client) KillGroupChat(gcID zkidentity.ShortID, reason string) error {
 	var oldMembers []zkidentity.ShortID
-	gcAlias, _ := c.GetGCAlias(gcID)
 	err := c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
 		// Ensure gc exists and we're the admin.
 		var err error
@@ -1496,13 +1494,8 @@ func (c *Client) KillGroupChat(gcID zkidentity.ShortID, reason string) error {
 		if err := c.db.DeleteGC(tx, gc.Metadata.ID); err != nil {
 			return err
 		}
-		if aliasMap, err := c.db.SetGCAlias(tx, gc.Metadata.ID, ""); err != nil {
-			return err
-		} else {
-			c.setGCAlias(aliasMap)
-		}
 
-		return c.db.LogGCMsg(tx, gcAlias, gcID, true, "",
+		return c.db.LogGCMsg(tx, gc.Name(), gcID, true, "",
 			fmt.Sprintf("Local user killed GC. Reason: %q", reason),
 			time.Now())
 	})
@@ -1523,7 +1516,6 @@ func (c *Client) KillGroupChat(gcID zkidentity.ShortID, reason string) error {
 }
 
 func (c *Client) handleGCKill(ru *RemoteUser, rmgk rpc.RMGroupKill, ts time.Time) error {
-	gcAlias, _ := c.GetGCAlias(rmgk.ID)
 	err := c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
 		// Ensure gc exists.
 		gc, err := c.db.GetGC(tx, rmgk.ID)
@@ -1539,13 +1531,8 @@ func (c *Client) handleGCKill(ru *RemoteUser, rmgk rpc.RMGroupKill, ts time.Time
 		if err := c.db.DeleteGC(tx, gc.Metadata.ID); err != nil {
 			return err
 		}
-		if aliasMap, err := c.db.SetGCAlias(tx, gc.Metadata.ID, ""); err != nil {
-			return err
-		} else {
-			c.setGCAlias(aliasMap)
-		}
 
-		return c.db.LogGCMsg(tx, gcAlias, rmgk.ID, true, "",
+		return c.db.LogGCMsg(tx, gc.Name(), rmgk.ID, true, "",
 			fmt.Sprintf("User %s killed GC. Reason: %q", strescape.Nick(ru.Nick()), rmgk.Reason),
 			ts)
 	})
@@ -1567,8 +1554,6 @@ func (c *Client) AddToGCBlockList(gcid zkidentity.ShortID, uid UserID) error {
 	if err != nil {
 		return err
 	}
-
-	gcAlias, _ := c.GetGCAlias(gcid)
 
 	return c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
 		// Ensure GC exists.
@@ -1596,9 +1581,9 @@ func (c *Client) AddToGCBlockList(gcid zkidentity.ShortID, uid UserID) error {
 		}
 
 		ru.log.Infof("Added user %q to GC %s (%s) block list", ru.Nick(),
-			gcAlias, gcid)
+			gc.Name(), gcid)
 
-		return c.db.LogGCMsg(tx, gcAlias, gcid, true, "",
+		return c.db.LogGCMsg(tx, gc.Name(), gcid, true, "",
 			fmt.Sprintf("Added user %s to GC block list", strescape.Nick(ru.Nick())),
 			time.Now())
 	})
@@ -1610,8 +1595,6 @@ func (c *Client) RemoveFromGCBlockList(gcid zkidentity.ShortID, uid UserID) erro
 	if err != nil {
 		return err
 	}
-
-	gcAlias, _ := c.GetGCAlias(gcid)
 
 	return c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
 		// Ensure GC exists.
@@ -1639,9 +1622,9 @@ func (c *Client) RemoveFromGCBlockList(gcid zkidentity.ShortID, uid UserID) erro
 		}
 
 		ru.log.Infof("Removed user %q from GC %s (%s) block list", ru.Nick(),
-			gcAlias, gcid)
+			gc.Name(), gcid)
 
-		return c.db.LogGCMsg(tx, gcAlias, gcid, true, "",
+		return c.db.LogGCMsg(tx, gc.Name(), gcid, true, "",
 			fmt.Sprintf("Removed user %s from GC block list", strescape.Nick(ru.Nick())),
 			time.Now())
 	})
@@ -1844,10 +1827,9 @@ func (c *Client) ModifyGCOwner(gcid zkidentity.ShortID, newOwner clientintf.User
 		return err
 	}
 
-	gcAlias, _ := c.GetGCAlias(gcid)
 	newOwnerNick, _ := c.UserNick(newOwner)
 	c.log.Infof("Changed list GC owner of GC %q (%s) to %q (%v)",
-		gcAlias, gcid, newOwnerNick, newOwner)
+		newGC.Name(), gcid, newOwnerNick, newOwner)
 	c.logGCEvent(gcid, time.Now(), "Local client modified GC admins:\n%s",
 		c.gcAdminsChangeTxt(oldGC.Metadata, newGC.Metadata, sliceDiff(oldGC.Metadata.ExtraAdmins, newGC.Metadata.ExtraAdmins)))
 
@@ -1864,11 +1846,10 @@ func (c *Client) handleGCUpdateAdmins(ru *RemoteUser, gcup rpc.RMGroupUpdateAdmi
 		return err
 	}
 
-	gcAlias, _ := c.GetGCAlias(gcup.NewGroupList.ID)
 	if gcup.NewGroupList.Members[0] != oldGC.Metadata.Members[0] {
 		newOwnerNick, _ := c.UserNick(gcup.NewGroupList.Members[0])
 		ru.log.Infof("Changed owner of GC %q (%s) to %q (%v)",
-			gcAlias, gcup.NewGroupList.ID, newOwnerNick, gcup.NewGroupList.Members[0])
+			oldGC.Name(), gcup.NewGroupList.ID, newOwnerNick, gcup.NewGroupList.Members[0])
 	}
 
 	if !slices.Equal(oldGC.Metadata.ExtraAdmins, gcup.NewGroupList.ExtraAdmins) {
