@@ -1211,9 +1211,18 @@ func (c *Client) getGC(gcID zkidentity.ShortID) (clientdb.GroupChat, error) {
 }
 
 // GetGC returns information about the given gc the local user participates in.
+//
+// Note: Prefer GetGCDB because it returns full data, not just GC metadata.
 func (c *Client) GetGC(gcID zkidentity.ShortID) (rpc.RMGroupList, error) {
 	gc, err := c.getGC(gcID)
 	return gc.Metadata, err
+}
+
+// GetGCDB returns the full information about the given gc the local user
+// participates in.
+func (c *Client) GetGCDB(gcID zkidentity.ShortID) (clientdb.GroupChat, error) {
+	gc, err := c.getGC(gcID)
+	return gc, err
 }
 
 // GetGCBlockList returns the blocklist of the given GC.
@@ -1266,7 +1275,7 @@ func (c *Client) GetGCDestCount(gcID zkidentity.ShortID) int {
 }
 
 // ListGCs lists all local GCs the user is participating in.
-func (c *Client) ListGCs() ([]rpc.RMGroupList, error) {
+func (c *Client) ListGCs() ([]clientdb.GroupChat, error) {
 	var gcs []clientdb.GroupChat
 	err := c.dbView(func(tx clientdb.ReadTx) error {
 		var err error
@@ -1274,11 +1283,7 @@ func (c *Client) ListGCs() ([]rpc.RMGroupList, error) {
 		return err
 	})
 
-	res := make([]rpc.RMGroupList, len(gcs))
-	for i := range gcs {
-		res[i] = gcs[i].Metadata
-	}
-	return res, err
+	return gcs, err
 }
 
 // removeFromGC removes the given user from the GC.

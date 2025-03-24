@@ -264,7 +264,7 @@ func assertGCDoesNotExist(t testing.TB, gcID zkidentity.ShortID, c *testClient) 
 	gcs, err := c.ListGCs()
 	assert.NilErr(t, err)
 	for _, gc := range gcs {
-		if gc.ID == gcID {
+		if gc.Metadata.ID == gcID {
 			t.Fatalf("client %s has GC %s in list, when it should not",
 				c.name, gcID)
 		}
