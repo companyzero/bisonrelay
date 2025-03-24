@@ -163,7 +163,7 @@ func (c *Client) NewGroupChatVersion(name string, version uint8) (zkidentity.Sho
 			}
 			return err
 		}
-		gc := rpc.RMGroupList{
+		gc := clientdb.GroupChat{Metadata: rpc.RMGroupList{
 			ID:         id,
 			Name:       name,
 			Generation: 1,
@@ -172,7 +172,7 @@ func (c *Client) NewGroupChatVersion(name string, version uint8) (zkidentity.Sho
 			Members: []zkidentity.ShortID{
 				c.PublicID(),
 			},
-		}
+		}}
 		if err = c.db.SaveGC(tx, gc); err != nil {
 			return fmt.Errorf("can't save gc %q (%s): %v", name, id.String(), err)
 		}
@@ -195,7 +195,7 @@ func (c *Client) NewGroupChat(name string) (zkidentity.ShortID, error) {
 
 // uidHasGCPerm returns true whether the given UID has permission to modify the
 // given GC. This takes into account the GC version.
-func (c *Client) uidHasGCPerm(gc rpc.RMGroupList, uid clientintf.UserID) error {
+func (c *Client) uidHasGCPerm(gc *rpc.RMGroupList, uid clientintf.UserID) error {
 	if gc.Version == 0 {
 		// Version 0 GCs only have admin as Members[0].
 		if len(gc.Members) > 0 && gc.Members[0].ConstantTimeEq(&uid) {
@@ -242,12 +242,12 @@ func (c *Client) InviteToGroupChat(gcID zkidentity.ShortID, user UserID) error {
 			return err
 		}
 
-		if err := c.uidHasGCPerm(gc, c.PublicID()); err != nil {
+		if err := c.uidHasGCPerm(&gc.Metadata, c.PublicID()); err != nil {
 			return fmt.Errorf("not permitted to send send invite: %v", err)
 		}
 
-		invite.Name = gc.Name
-		invite.Version = gc.Version
+		invite.Name = gc.Metadata.Name
+		invite.Version = gc.Metadata.Version
 
 		// Generate an unused token.
 		for {
@@ -536,7 +536,7 @@ func (c *Client) sendToGCMembers(gcID zkidentity.ShortID,
 					return err
 				}
 				localID = c.PublicID()
-				gcOwner = gcl.Members[0]
+				gcOwner = gcl.Metadata.Members[0]
 				gotGCInfo = true
 			}
 
@@ -611,7 +611,7 @@ func (c *Client) maybeNotifyGCVersionWarning(ru *RemoteUser, gcid zkidentity.Sho
 // made by the local client.
 //
 // f is called within a DB tx.
-func (c *Client) maybeUpdateGCFunc(ru *RemoteUser, gcid zkidentity.ShortID, f func(*rpc.RMGroupList) error) (oldGC, newGC rpc.RMGroupList, err error) {
+func (c *Client) maybeUpdateGCFunc(ru *RemoteUser, gcid zkidentity.ShortID, f func(*clientdb.GroupChat) error) (oldGC, newGC clientdb.GroupChat, err error) {
 	var checkVersionWarning bool
 	var updaterID clientintf.UserID
 	localID := c.PublicID()
@@ -633,41 +633,40 @@ func (c *Client) maybeUpdateGCFunc(ru *RemoteUser, gcid zkidentity.ShortID, f fu
 			return err
 		}
 
-		if len(oldGC.Members) == 0 {
+		if len(oldGC.Metadata.Members) == 0 {
 			return fmt.Errorf("old GC %s has zero members", gcid)
 		}
 
 		// Produce the new GC. Deep copy the old GC so f() can mutate
 		// everything.
-		newGC = oldGC
-		newGC.Members = slices.Clone(oldGC.Members)
-		newGC.ExtraAdmins = slices.Clone(oldGC.ExtraAdmins)
+		newGC = oldGC.DeepCopy()
 		if err := f(&newGC); err != nil {
 			return err
 		}
 
 		// Ensure no backtrack on generation.
-		if newGC.Generation < oldGC.Generation {
+		oldMeta, newMeta := &oldGC.Metadata, &newGC.Metadata
+		if newMeta.Generation < oldMeta.Generation {
 			return fmt.Errorf("cannot backtrack GC generation on "+
-				"GC %s (%d < %d)", gcid, oldGC.Generation,
-				newGC.Generation)
+				"GC %s (%d < %d)", gcid, oldMeta.Generation,
+				newMeta.Generation)
 		}
 
 		// Ensure no downgrade in version.
-		if newGC.Version < oldGC.Version {
+		if newMeta.Version < oldMeta.Version {
 			return fmt.Errorf("cannot downgrade GC version on "+
-				"GC %s (%d < %d)", gcid, oldGC.Generation,
-				newGC.Generation)
+				"GC %s (%d < %d)", gcid, oldMeta.Generation,
+				newMeta.Generation)
 		}
 
 		// Special case changing the owner: only the owner itself
 		// can do it.
-		if len(oldGC.Members) == 0 || len(newGC.Members) == 0 {
+		if len(oldMeta.Members) == 0 || len(newMeta.Members) == 0 {
 			return fmt.Errorf("gc has no members")
 		}
-		if oldGC.Members[0] != newGC.Members[0] && oldGC.Members[0] != updaterID {
+		if oldMeta.Members[0] != newMeta.Members[0] && oldMeta.Members[0] != updaterID {
 			return fmt.Errorf("only previous GC owner %s may change "+
-				"GC's %s owner", oldGC.Members[0], gcid)
+				"GC's %s owner", oldMeta.Members[0], gcid)
 		}
 
 		// This check is done before checking for permission because a
@@ -675,19 +674,19 @@ func (c *Client) maybeUpdateGCFunc(ru *RemoteUser, gcid zkidentity.ShortID, f fu
 		// permission.
 		checkVersionWarning = ru != nil
 
-		if err := c.uidHasGCPerm(oldGC, updaterID); err != nil {
+		if err := c.uidHasGCPerm(oldMeta, updaterID); err != nil {
 			return err
 		}
 
 		// Handle case where the local client was removed from GC.
-		stillMember := slices.Contains(newGC.Members, c.PublicID())
+		stillMember := slices.Contains(newMeta.Members, c.PublicID())
 		if !stillMember {
 			c.db.LogGCMsg(tx, gcAlias, gcid, true, "",
 				fmt.Sprintf("Admin %s removed us from GC", senderNick), time.Now())
-			if err := c.db.DeleteGC(tx, oldGC.ID); err != nil {
+			if err := c.db.DeleteGC(tx, oldMeta.ID); err != nil {
 				return err
 			}
-			if aliasMap, err := c.db.SetGCAlias(tx, oldGC.ID, ""); err != nil {
+			if aliasMap, err := c.db.SetGCAlias(tx, oldMeta.ID, ""); err != nil {
 				return err
 			} else {
 				c.setGCAlias(aliasMap)
@@ -701,7 +700,7 @@ func (c *Client) maybeUpdateGCFunc(ru *RemoteUser, gcid zkidentity.ShortID, f fu
 		// info to prevent us attempting a crossed MI with them for
 		// some time.
 		if ru != nil && stillMember {
-			for _, uid := range newGC.Members {
+			for _, uid := range newMeta.Members {
 				if uid == localID {
 					continue
 				}
@@ -731,26 +730,26 @@ func (c *Client) maybeUpdateGCFunc(ru *RemoteUser, gcid zkidentity.ShortID, f fu
 	})
 
 	if checkVersionWarning {
-		c.maybeNotifyGCVersionWarning(ru, newGC.ID, newGC)
+		c.maybeNotifyGCVersionWarning(ru, newGC.Metadata.ID, newGC.Metadata)
 	}
 
 	return
 }
 
 // maybeUpdateGC updates the given GC definitions for the specified one.
-func (c *Client) maybeUpdateGC(ru *RemoteUser, newGC rpc.RMGroupList) (oldGC rpc.RMGroupList, err error) {
-	cb := func(ngc *rpc.RMGroupList) error {
-		*ngc = newGC
+func (c *Client) maybeUpdateGC(ru *RemoteUser, newGCMeta rpc.RMGroupList) (oldGC clientdb.GroupChat, err error) {
+	cb := func(ngc *clientdb.GroupChat) error {
+		ngc.Metadata = newGCMeta
 		return nil
 	}
-	oldGC, _, err = c.maybeUpdateGCFunc(ru, newGC.ID, cb)
+	oldGC, _, err = c.maybeUpdateGCFunc(ru, newGCMeta.ID, cb)
 	return
 }
 
 // handleGCJoin handles a msg when a remote user is asking to join a GC we
 // administer (that is, responding to an invite previously sent by us).
 func (c *Client) handleGCJoin(ru *RemoteUser, invite rpc.RMGroupJoin) error {
-	var gc rpc.RMGroupList
+	var gc clientdb.GroupChat
 	updated := false
 	gcAlias, _ := c.GetGCAlias(invite.ID)
 	err := c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
@@ -780,7 +779,7 @@ func (c *Client) handleGCJoin(ru *RemoteUser, invite rpc.RMGroupJoin) error {
 		if err != nil {
 			return err
 		}
-		if err := c.uidHasGCPerm(gc, c.PublicID()); err != nil {
+		if err := c.uidHasGCPerm(&gc.Metadata, c.PublicID()); err != nil {
 			return fmt.Errorf("local user does not have permission "+
 				"to add gc member: %v", err)
 		}
@@ -791,28 +790,28 @@ func (c *Client) handleGCJoin(ru *RemoteUser, invite rpc.RMGroupJoin) error {
 		}
 
 		// Ensure user is not on gc yet.
-		if slices.Contains(gc.Members, uid) {
+		if slices.Contains(gc.Metadata.Members, uid) {
 			return fmt.Errorf("user %s already part of gc %q",
-				uid, gc.ID.String())
+				uid, gc.Metadata.ID.String())
 		}
 
 		if invite.Error == "" {
 			// Add the new member, increment generation, save the
 			// new gc group.
-			gc.Members = append(gc.Members, uid)
-			gc.Generation += 1
-			gc.Timestamp = time.Now().Unix()
+			gc.Metadata.Members = append(gc.Metadata.Members, uid)
+			gc.Metadata.Generation += 1
+			gc.Metadata.Timestamp = time.Now().Unix()
 			if err = c.db.SaveGC(tx, gc); err != nil {
 				return err
 			}
 			updated = true
 
-			c.db.LogGCMsg(tx, gcAlias, gc.ID, true, "",
+			c.db.LogGCMsg(tx, gcAlias, gc.Metadata.ID, true, "",
 				fmt.Sprintf("Local client added %s as member of the GC",
 					strescape.Nick(ru.Nick())), time.Now())
 		} else {
 			c.log.Infof("User %s rejected invitation to %q: %q",
-				ru, gc.ID.String(), invite.Error)
+				ru, gc.Metadata.ID.String(), invite.Error)
 		}
 		return nil
 	})
@@ -821,16 +820,17 @@ func (c *Client) handleGCJoin(ru *RemoteUser, invite rpc.RMGroupJoin) error {
 		return err
 	}
 
-	c.log.Infof("User %s joined gc %s (%q)", ru, gc.ID, gc.Name)
+	c.log.Infof("User %s joined gc %s (%q)", ru, gc.Metadata.ID, gc.Metadata.Name)
 
 	// Join fulfilled. Send new group list to every member except admin
 	// (us).
-	err = c.sendToGCMembers(gc.ID, gc.Members, "sendlist", gc, nil)
+	err = c.sendToGCMembers(gc.Metadata.ID, gc.Metadata.Members, "sendlist",
+		gc.Metadata, nil)
 	if err != nil {
 		return err
 	}
 
-	c.ntfns.notifyGCInviteAccepted(ru, gc)
+	c.ntfns.notifyGCInviteAccepted(ru, gc.Metadata)
 	return nil
 }
 
@@ -920,7 +920,7 @@ func (c *Client) saveJoinedGC(ru *RemoteUser, gl rpc.RMGroupList) (string, error
 
 		// Ensure we received this from someone that can add
 		// members.
-		if err := c.uidHasGCPerm(gl, ru.ID()); err != nil {
+		if err := c.uidHasGCPerm(&gl, ru.ID()); err != nil {
 			return err
 		}
 
@@ -944,7 +944,8 @@ func (c *Client) saveJoinedGC(ru *RemoteUser, gl rpc.RMGroupList) (string, error
 		}
 
 		// All is well. Update the local gc data.
-		if err := c.db.SaveGC(tx, gl); err != nil {
+		gc := clientdb.GroupChat{Metadata: gl}
+		if err := c.db.SaveGC(tx, gc); err != nil {
 			return fmt.Errorf("unable to save gc: %v", err)
 		}
 		return nil
@@ -976,7 +977,7 @@ func (c *Client) handleGCList(ru *RemoteUser, gl rpc.RMGroupList, ts time.Time) 
 
 		gcName, _ = c.GetGCAlias(gl.ID)
 		c.log.Infof("Received updated GC list %s (%q) from %s", gl.ID, gcName, ru)
-		c.notifyUpdatedGC(ru, oldGC, gl, ts)
+		c.notifyUpdatedGC(ru, oldGC.Metadata, gl, ts)
 		return nil
 	}
 
@@ -1063,7 +1064,7 @@ func (c *Client) GCMessage(gcID zkidentity.ShortID, msg string, mode rpc.Message
 	progressChan chan SendProgress) error {
 
 	<-c.abLoaded
-	var gc rpc.RMGroupList
+	var gc clientdb.GroupChat
 	var gcBlockList clientdb.GCBlockList
 	myNick := c.LocalNick()
 	err := c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
@@ -1077,7 +1078,7 @@ func (c *Client) GCMessage(gcID zkidentity.ShortID, msg string, mode rpc.Message
 
 		gcAlias, err := c.GetGCAlias(gcID)
 		if err != nil {
-			gcAlias = gc.Name
+			gcAlias = gc.Metadata.Name
 		}
 
 		return c.db.LogGCMsg(tx, gcAlias, gcID, false, myNick, msg, time.Now())
@@ -1088,11 +1089,11 @@ func (c *Client) GCMessage(gcID zkidentity.ShortID, msg string, mode rpc.Message
 
 	p := rpc.RMGroupMessage{
 		ID:         gcID,
-		Generation: gc.Generation,
+		Generation: gc.Metadata.Generation,
 		Message:    msg,
 		Mode:       mode,
 	}
-	members := gcBlockList.FilterMembers(gc.Members)
+	members := gcBlockList.FilterMembers(gc.Metadata.Members)
 	if len(members) == 0 {
 		return nil
 	}
@@ -1110,7 +1111,7 @@ func (c *Client) handleGCMessage(ru *RemoteUser, gcm rpc.RMGroupMessage, ts time
 		return nil
 	}
 
-	var gc rpc.RMGroupList
+	var gc clientdb.GroupChat
 	var found, isBlocked bool
 
 	// Create the local cached structure for a received GCM. The MsgID is
@@ -1129,8 +1130,8 @@ func (c *Client) handleGCMessage(ru *RemoteUser, gcm rpc.RMGroupMessage, ts time
 		if err != nil {
 			return err
 		}
-		for i := range gc.Members {
-			if ru.ID() == gc.Members[i] {
+		for i := range gc.Metadata.Members {
+			if ru.ID() == gc.Metadata.Members[i] {
 				found = true
 				break
 			}
@@ -1174,7 +1175,7 @@ func (c *Client) handleGCMessage(ru *RemoteUser, gcm rpc.RMGroupMessage, ts time
 	// Ignore error because gcAlias will be blank.
 	gcAlias, _ := c.GetGCAlias(gcm.ID)
 	if gcAlias == "" {
-		gcAlias = gc.Name
+		gcAlias = gc.Metadata.Name
 	}
 
 	if isBlocked {
@@ -1190,12 +1191,12 @@ func (c *Client) handleGCMessage(ru *RemoteUser, gcm rpc.RMGroupMessage, ts time
 		return nil
 	}
 
-	if filter, _ := c.FilterGCM(ru.ID(), gc.ID, gcm.Message); filter {
+	if filter, _ := c.FilterGCM(ru.ID(), gc.Metadata.ID, gcm.Message); filter {
 		return nil
 	}
 
 	ru.log.Debugf("Received message of len %d in GC %q (%s)", len(gcm.Message),
-		gcAlias, gc.ID)
+		gcAlias, gc.Metadata.ID)
 
 	c.gcmq.GCMessageReceived(rgcm)
 	return nil
@@ -1203,13 +1204,13 @@ func (c *Client) handleGCMessage(ru *RemoteUser, gcm rpc.RMGroupMessage, ts time
 
 // GetGC returns information about the given gc the local user participates in.
 func (c *Client) GetGC(gcID zkidentity.ShortID) (rpc.RMGroupList, error) {
-	var gc rpc.RMGroupList
+	var gc clientdb.GroupChat
 	err := c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
 		var err error
 		gc, err = c.db.GetGC(tx, gcID)
 		return err
 	})
-	return gc, err
+	return gc.Metadata, err
 }
 
 // GetGCBlockList returns the blocklist of the given GC.
@@ -1230,7 +1231,7 @@ func (c *Client) GetGCBlockList(gcID zkidentity.ShortID) (clientdb.GCBlockList, 
 //
 // Returns zero if the passed id is not for a GC the client is a member of.
 func (c *Client) GetGCDestCount(gcID zkidentity.ShortID) int {
-	var gc rpc.RMGroupList
+	var gc clientdb.GroupChat
 	var gcBlockList clientdb.GCBlockList
 	err := c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
 		var err error
@@ -1248,7 +1249,7 @@ func (c *Client) GetGCDestCount(gcID zkidentity.ShortID) int {
 	}
 
 	myID := c.PublicID()
-	members := gcBlockList.FilterMembers(gc.Members)
+	members := gcBlockList.FilterMembers(gc.Metadata.Members)
 	for i := 0; i < len(members); {
 		if members[i] != myID {
 			i += 1
@@ -1263,13 +1264,18 @@ func (c *Client) GetGCDestCount(gcID zkidentity.ShortID) int {
 
 // ListGCs lists all local GCs the user is participating in.
 func (c *Client) ListGCs() ([]rpc.RMGroupList, error) {
-	var gcs []rpc.RMGroupList
+	var gcs []clientdb.GroupChat
 	err := c.dbView(func(tx clientdb.ReadTx) error {
 		var err error
 		gcs, err = c.db.ListGCs(tx)
 		return err
 	})
-	return gcs, err
+
+	res := make([]rpc.RMGroupList, len(gcs))
+	for i := range gcs {
+		res[i] = gcs[i].Metadata
+	}
+	return res, err
 }
 
 // removeFromGC removes the given user from the GC.
@@ -1279,7 +1285,7 @@ func (c *Client) removeFromGC(gcID zkidentity.ShortID, uid UserID,
 	localUserMustBeAdmin bool) ([]zkidentity.ShortID,
 	rpc.RMGroupList, error) {
 
-	var gc rpc.RMGroupList
+	var gc clientdb.GroupChat
 	var oldMembers []zkidentity.ShortID
 	err := c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
 		// Ensure gc exists.
@@ -1289,41 +1295,41 @@ func (c *Client) removeFromGC(gcID zkidentity.ShortID, uid UserID,
 			return err
 		}
 
-		oldMembers = gc.Members
+		oldMembers = gc.Metadata.Members
 
 		if localUserMustBeAdmin {
-			if err := c.uidHasGCPerm(gc, c.PublicID()); err != nil {
+			if err := c.uidHasGCPerm(&gc.Metadata, c.PublicID()); err != nil {
 				return fmt.Errorf("local user cannot remove from GC: %v", err)
 			}
 		}
 
 		// Ensure the user is in the GC.
 		var newMembers []zkidentity.ShortID
-		for i, id := range gc.Members {
+		for i, id := range gc.Metadata.Members {
 			if id != uid {
 				continue
 			}
 			if i == 0 {
 				return fmt.Errorf("cannot remove members[0] from GC")
 			}
-			newMembers = make([]zkidentity.ShortID, 0, len(gc.Members)-1)
-			newMembers = append(newMembers, gc.Members[:i]...)
-			newMembers = append(newMembers, gc.Members[i+1:]...)
+			newMembers = make([]zkidentity.ShortID, 0, len(gc.Metadata.Members)-1)
+			newMembers = append(newMembers, gc.Metadata.Members[:i]...)
+			newMembers = append(newMembers, gc.Metadata.Members[i+1:]...)
 			break
 		}
 		if len(newMembers) == 0 {
 			return fmt.Errorf("user is not a member of the GC")
 		}
 
-		if idxAdmin := slices.Index(gc.ExtraAdmins, uid); idxAdmin > -1 {
-			gc.ExtraAdmins = slices.Delete(gc.ExtraAdmins, idxAdmin, idxAdmin+1)
+		if idxAdmin := slices.Index(gc.Metadata.ExtraAdmins, uid); idxAdmin > -1 {
+			gc.Metadata.ExtraAdmins = slices.Delete(gc.Metadata.ExtraAdmins, idxAdmin, idxAdmin+1)
 		}
 
-		gc.Members = newMembers
-		gc.Timestamp = time.Now().Unix()
+		gc.Metadata.Members = newMembers
+		gc.Metadata.Timestamp = time.Now().Unix()
 		if localUserMustBeAdmin {
 			// Only bump generation when removing as an admin.
-			gc.Generation += 1
+			gc.Metadata.Generation += 1
 		}
 		if err = c.db.SaveGC(tx, gc); err != nil {
 			return err
@@ -1334,7 +1340,7 @@ func (c *Client) removeFromGC(gcID zkidentity.ShortID, uid UserID,
 		return nil, rpc.RMGroupList{}, err
 	}
 
-	return oldMembers, gc, nil
+	return oldMembers, gc.Metadata, nil
 }
 
 // logGCEvent logs the given GC event. Must not be called from inside a DB
@@ -1398,14 +1404,14 @@ func (c *Client) handleGCKick(ru *RemoteUser, rmgk rpc.RMGroupKick, ts time.Time
 	// Notify specific part and any other updates.
 	c.ntfns.notifyGCUserParted(rmgk.NewGroupList.ID, rmgk.Member,
 		rmgk.Reason, !rmgk.Parted)
-	c.notifyUpdatedGC(ru, oldGC, rmgk.NewGroupList, ts)
+	c.notifyUpdatedGC(ru, oldGC.Metadata, rmgk.NewGroupList, ts)
 
 	return nil
 }
 
 // PartFromGC withdraws the local client from the given GC.
 func (c *Client) PartFromGC(gcID zkidentity.ShortID, reason string) error {
-	var gc rpc.RMGroupList
+	var gc clientdb.GroupChat
 
 	gcAlias, _ := c.GetGCAlias(gcID)
 	err := c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
@@ -1417,7 +1423,7 @@ func (c *Client) PartFromGC(gcID zkidentity.ShortID, reason string) error {
 		}
 
 		// Ensure we're not leaving if we're admin.
-		if len(gc.Members) == 0 || gc.Members[0] == c.PublicID() {
+		if len(gc.Metadata.Members) == 0 || gc.Metadata.Members[0] == c.PublicID() {
 			return fmt.Errorf("cannot part from GC when we're the GC admin")
 		}
 
@@ -1428,7 +1434,7 @@ func (c *Client) PartFromGC(gcID zkidentity.ShortID, reason string) error {
 		if err := c.db.DeleteGC(tx, gcID); err != nil {
 			return err
 		}
-		if aliasMap, err := c.db.SetGCAlias(tx, gc.ID, ""); err != nil {
+		if aliasMap, err := c.db.SetGCAlias(tx, gc.Metadata.ID, ""); err != nil {
 			return err
 		} else {
 			c.setGCAlias(aliasMap)
@@ -1446,7 +1452,7 @@ func (c *Client) PartFromGC(gcID zkidentity.ShortID, reason string) error {
 		ID:     gcID,
 		Reason: reason,
 	}
-	return c.sendToGCMembers(gcID, gc.Members, "part", rmgp, nil)
+	return c.sendToGCMembers(gcID, gc.Metadata.Members, "part", rmgp, nil)
 }
 
 func (c *Client) handleGCPart(ru *RemoteUser, rmgp rpc.RMGroupPart, ts time.Time) error {
@@ -1480,17 +1486,17 @@ func (c *Client) KillGroupChat(gcID zkidentity.ShortID, reason string) error {
 			return err
 		}
 
-		if len(gc.Members) == 0 || gc.Members[0] != c.PublicID() {
+		if len(gc.Metadata.Members) == 0 || gc.Metadata.Members[0] != c.PublicID() {
 			return fmt.Errorf("cannot kill GC: not the owner of gc %q",
 				gcID.String())
 		}
 
-		oldMembers = gc.Members
+		oldMembers = gc.Metadata.Members
 
-		if err := c.db.DeleteGC(tx, gc.ID); err != nil {
+		if err := c.db.DeleteGC(tx, gc.Metadata.ID); err != nil {
 			return err
 		}
-		if aliasMap, err := c.db.SetGCAlias(tx, gc.ID, ""); err != nil {
+		if aliasMap, err := c.db.SetGCAlias(tx, gc.Metadata.ID, ""); err != nil {
 			return err
 		} else {
 			c.setGCAlias(aliasMap)
@@ -1526,14 +1532,14 @@ func (c *Client) handleGCKill(ru *RemoteUser, rmgk rpc.RMGroupKill, ts time.Time
 		}
 
 		// Ensure we received this from the existing owner.
-		if len(gc.Members) == 0 || gc.Members[0] != ru.ID() {
+		if len(gc.Metadata.Members) == 0 || gc.Metadata.Members[0] != ru.ID() {
 			return fmt.Errorf("received gc kill %q from non-owner",
-				gc.ID.String())
+				gc.Metadata.ID.String())
 		}
-		if err := c.db.DeleteGC(tx, gc.ID); err != nil {
+		if err := c.db.DeleteGC(tx, gc.Metadata.ID); err != nil {
 			return err
 		}
-		if aliasMap, err := c.db.SetGCAlias(tx, gc.ID, ""); err != nil {
+		if aliasMap, err := c.db.SetGCAlias(tx, gc.Metadata.ID, ""); err != nil {
 			return err
 		} else {
 			c.setGCAlias(aliasMap)
@@ -1573,8 +1579,8 @@ func (c *Client) AddToGCBlockList(gcid zkidentity.ShortID, uid UserID) error {
 
 		// Ensure specified uid is a member.
 		found := false
-		for i := range gc.Members {
-			if uid == gc.Members[i] {
+		for i := range gc.Metadata.Members {
+			if uid == gc.Metadata.Members[i] {
 				found = true
 				break
 			}
@@ -1616,8 +1622,8 @@ func (c *Client) RemoveFromGCBlockList(gcid zkidentity.ShortID, uid UserID) erro
 
 		// Ensure specified uid is a member.
 		found := false
-		for i := range gc.Members {
-			if uid == gc.Members[i] {
+		for i := range gc.Metadata.Members {
+			if uid == gc.Metadata.Members[i] {
 				found = true
 				break
 			}
@@ -1658,7 +1664,7 @@ func (c *Client) ResendGCList(gcid zkidentity.ShortID, uid *UserID) error {
 		}
 	}
 
-	var gc rpc.RMGroupList
+	var gc clientdb.GroupChat
 	err := c.dbView(func(tx clientdb.ReadTx) error {
 		// Fetch GC.
 		var err error
@@ -1668,13 +1674,13 @@ func (c *Client) ResendGCList(gcid zkidentity.ShortID, uid *UserID) error {
 		}
 
 		// Ensure we're the GC admin.
-		if err := c.uidHasGCPerm(gc, c.PublicID()); err != nil {
+		if err := c.uidHasGCPerm(&gc.Metadata, c.PublicID()); err != nil {
 			return fmt.Errorf("cannot send GC list to user when "+
 				"local client is not a GC admin: %v", err)
 		}
 
 		// Ensure specified uid is a member.
-		if !allMembers && !slices.Contains(gc.Members, *uid) {
+		if !allMembers && !slices.Contains(gc.Metadata.Members, *uid) {
 			return fmt.Errorf("user %s is not part of the GC", uid)
 		}
 
@@ -1687,7 +1693,7 @@ func (c *Client) ResendGCList(gcid zkidentity.ShortID, uid *UserID) error {
 	payType := "resendGCList"
 	if allMembers {
 		c.log.Infof("Resending GC %s list to all members", gcid)
-		c.sendToGCMembers(gcid, gc.Members, payType, gc, nil)
+		c.sendToGCMembers(gcid, gc.Metadata.Members, payType, gc, nil)
 		return nil
 	}
 	ru.log.Infof("Resending GC %s list to user", gcid)
@@ -1703,16 +1709,16 @@ func (c *Client) UpgradeGC(gcid zkidentity.ShortID, newVersion uint8) error {
 			newVersion, minSupportedGCVersion, maxSupportedGCVersion)
 	}
 
-	cb := func(gc *rpc.RMGroupList) error {
-		if gc.Version >= newVersion {
+	cb := func(gc *clientdb.GroupChat) error {
+		if gc.Metadata.Version >= newVersion {
 			return fmt.Errorf("cannot downgrade GC %s from version %d to %d",
-				gcid, gc.Version, newVersion)
+				gcid, gc.Metadata.Version, newVersion)
 
 		}
 
-		gc.Version = newVersion
-		gc.Timestamp = time.Now().Unix()
-		gc.Generation += 1
+		gc.Metadata.Version = newVersion
+		gc.Metadata.Timestamp = time.Now().Unix()
+		gc.Metadata.Generation += 1
 		return nil
 	}
 
@@ -1721,14 +1727,14 @@ func (c *Client) UpgradeGC(gcid zkidentity.ShortID, newVersion uint8) error {
 		return err
 	}
 	c.log.Infof("Upgraded GC %s version from %d to %d",
-		gcid, oldGC.Version, newVersion)
+		gcid, oldGC.Metadata.Version, newVersion)
 	c.logGCEvent(gcid, time.Now(), "Local client upgraded GC version from %d to %d",
-		oldGC.Version, newVersion)
+		oldGC.Metadata.Version, newVersion)
 
 	rm := rpc.RMGroupUpgradeVersion{
-		NewGroupList: newGC,
+		NewGroupList: newGC.Metadata,
 	}
-	return c.sendToGCMembers(gcid, newGC.Members, "upgradeGC", rm, nil)
+	return c.sendToGCMembers(gcid, newGC.Metadata.Members, "upgradeGC", rm, nil)
 }
 
 func (c *Client) handleGCUpgradeVersion(ru *RemoteUser, gcuv rpc.RMGroupUpgradeVersion,
@@ -1739,8 +1745,8 @@ func (c *Client) handleGCUpgradeVersion(ru *RemoteUser, gcuv rpc.RMGroupUpgradeV
 		return err
 	}
 	ru.log.Infof("Received GC %s Version Upgrade from %d to %d",
-		gcuv.NewGroupList.ID, oldGC.Version, gcuv.NewGroupList.Version)
-	c.notifyUpdatedGC(ru, oldGC, gcuv.NewGroupList, ts)
+		gcuv.NewGroupList.ID, oldGC.Metadata.Version, gcuv.NewGroupList.Version)
+	c.notifyUpdatedGC(ru, oldGC.Metadata, gcuv.NewGroupList, ts)
 	return err
 }
 
@@ -1768,12 +1774,12 @@ func (c *Client) gcAdminsChangeTxt(oldGC, newGC rpc.RMGroupList, changes sliceCh
 
 // ModifyGCAdmins modifies the admins of the GC.
 func (c *Client) ModifyGCAdmins(gcid zkidentity.ShortID, extraAdmins []zkidentity.ShortID, reason string) error {
-	cb := func(gc *rpc.RMGroupList) error {
-		if gc.Version < 1 {
+	cb := func(gc *clientdb.GroupChat) error {
+		if gc.Metadata.Version < 1 {
 			return fmt.Errorf("cannot modify extra admins for GC with version < 1")
 		}
 		for _, uid := range extraAdmins {
-			if !slices.Contains(gc.Members, uid) {
+			if !slices.Contains(gc.Metadata.Members, uid) {
 				return fmt.Errorf("cannot make non-member an admin")
 			}
 			if _, err := c.UserByID(uid); err != nil {
@@ -1781,9 +1787,9 @@ func (c *Client) ModifyGCAdmins(gcid zkidentity.ShortID, extraAdmins []zkidentit
 			}
 		}
 
-		gc.Timestamp = time.Now().Unix()
-		gc.Generation += 1
-		gc.ExtraAdmins = extraAdmins
+		gc.Metadata.Timestamp = time.Now().Unix()
+		gc.Metadata.Generation += 1
+		gc.Metadata.ExtraAdmins = extraAdmins
 		return nil
 	}
 
@@ -1796,13 +1802,13 @@ func (c *Client) ModifyGCAdmins(gcid zkidentity.ShortID, extraAdmins []zkidentit
 		gcid, extraAdmins)
 
 	c.logGCEvent(gcid, time.Now(), "Local client modified GC admins:\n%s",
-		c.gcAdminsChangeTxt(oldGC, newGC, sliceDiff(oldGC.ExtraAdmins, newGC.ExtraAdmins)))
+		c.gcAdminsChangeTxt(oldGC.Metadata, newGC.Metadata, sliceDiff(oldGC.Metadata.ExtraAdmins, newGC.Metadata.ExtraAdmins)))
 
 	rm := rpc.RMGroupUpdateAdmins{
 		Reason:       reason,
-		NewGroupList: newGC,
+		NewGroupList: newGC.Metadata,
 	}
-	return c.sendToGCMembers(gcid, newGC.Members, "modifyAdmins", rm, nil)
+	return c.sendToGCMembers(gcid, newGC.Metadata.Members, "modifyAdmins", rm, nil)
 }
 
 // ModifyGCOwner changes the owner of a GC. The old owner still remains as
@@ -1810,25 +1816,25 @@ func (c *Client) ModifyGCAdmins(gcid zkidentity.ShortID, extraAdmins []zkidentit
 func (c *Client) ModifyGCOwner(gcid zkidentity.ShortID, newOwner clientintf.UserID,
 	reason string) error {
 
-	cb := func(gc *rpc.RMGroupList) error {
-		if gc.Version < 1 {
+	cb := func(gc *clientdb.GroupChat) error {
+		if gc.Metadata.Version < 1 {
 			return fmt.Errorf("cannot modify extra admins for GC with version < 1")
 		}
-		newOwnerIdx := slices.Index(gc.Members, newOwner)
+		newOwnerIdx := slices.Index(gc.Metadata.Members, newOwner)
 		if newOwnerIdx < 0 {
 			return fmt.Errorf("new owner is not a member of the GC")
 		}
 		if newOwnerIdx == 0 {
 			return fmt.Errorf("new owner is already owner of the GC")
 		}
-		gc.Timestamp = time.Now().Unix()
-		gc.Generation += 1
-		gc.Members[0], gc.Members[newOwnerIdx] = gc.Members[newOwnerIdx], gc.Members[0]
+		gc.Metadata.Timestamp = time.Now().Unix()
+		gc.Metadata.Generation += 1
+		gc.Metadata.Members[0], gc.Metadata.Members[newOwnerIdx] = gc.Metadata.Members[newOwnerIdx], gc.Metadata.Members[0]
 
 		// Remove new owner from list of extra admins if it's there.
-		newOwnerAdminIdx := slices.Index(gc.ExtraAdmins, newOwner)
+		newOwnerAdminIdx := slices.Index(gc.Metadata.ExtraAdmins, newOwner)
 		if newOwnerAdminIdx > -1 {
-			gc.ExtraAdmins = slices.Delete(gc.ExtraAdmins, newOwnerAdminIdx, newOwnerAdminIdx+1)
+			gc.Metadata.ExtraAdmins = slices.Delete(gc.Metadata.ExtraAdmins, newOwnerAdminIdx, newOwnerAdminIdx+1)
 		}
 		return nil
 	}
@@ -1843,13 +1849,13 @@ func (c *Client) ModifyGCOwner(gcid zkidentity.ShortID, newOwner clientintf.User
 	c.log.Infof("Changed list GC owner of GC %q (%s) to %q (%v)",
 		gcAlias, gcid, newOwnerNick, newOwner)
 	c.logGCEvent(gcid, time.Now(), "Local client modified GC admins:\n%s",
-		c.gcAdminsChangeTxt(oldGC, newGC, sliceDiff(oldGC.ExtraAdmins, newGC.ExtraAdmins)))
+		c.gcAdminsChangeTxt(oldGC.Metadata, newGC.Metadata, sliceDiff(oldGC.Metadata.ExtraAdmins, newGC.Metadata.ExtraAdmins)))
 
 	rm := rpc.RMGroupUpdateAdmins{
 		Reason:       reason,
-		NewGroupList: newGC,
+		NewGroupList: newGC.Metadata,
 	}
-	return c.sendToGCMembers(gcid, newGC.Members, "modifyOwner", rm, nil)
+	return c.sendToGCMembers(gcid, newGC.Metadata.Members, "modifyOwner", rm, nil)
 }
 
 func (c *Client) handleGCUpdateAdmins(ru *RemoteUser, gcup rpc.RMGroupUpdateAdmins, ts time.Time) error {
@@ -1859,18 +1865,18 @@ func (c *Client) handleGCUpdateAdmins(ru *RemoteUser, gcup rpc.RMGroupUpdateAdmi
 	}
 
 	gcAlias, _ := c.GetGCAlias(gcup.NewGroupList.ID)
-	if gcup.NewGroupList.Members[0] != oldGC.Members[0] {
+	if gcup.NewGroupList.Members[0] != oldGC.Metadata.Members[0] {
 		newOwnerNick, _ := c.UserNick(gcup.NewGroupList.Members[0])
 		ru.log.Infof("Changed owner of GC %q (%s) to %q (%v)",
 			gcAlias, gcup.NewGroupList.ID, newOwnerNick, gcup.NewGroupList.Members[0])
 	}
 
-	if !slices.Equal(oldGC.ExtraAdmins, gcup.NewGroupList.ExtraAdmins) {
+	if !slices.Equal(oldGC.Metadata.ExtraAdmins, gcup.NewGroupList.ExtraAdmins) {
 		ru.log.Infof("Updated list of GC admins for GC %s to %v",
 			gcup.NewGroupList.ID, gcup.NewGroupList.ExtraAdmins)
 	}
 
-	c.notifyUpdatedGC(ru, oldGC, gcup.NewGroupList, ts)
+	c.notifyUpdatedGC(ru, oldGC.Metadata, gcup.NewGroupList, ts)
 	return err
 }
 

@@ -1,6 +1,7 @@
 package clientdb
 
 import (
+	"bytes"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -235,7 +236,7 @@ func (db *DB) FindAcceptedGCInvite(tx ReadTx, gcID, uid zkidentity.ShortID) (rpc
 }
 
 // readGC reads the gc from the given filename into gl.
-func (db *DB) readGC(filename string, gc *rpc.RMGroupList) error {
+func (db *DB) readGC(filename string, gc *GroupChat) error {
 	gcJSON, err := os.ReadFile(filename)
 	if err != nil && os.IsNotExist(err) {
 		return ErrNotFound
@@ -243,11 +244,18 @@ func (db *DB) readGC(filename string, gc *rpc.RMGroupList) error {
 	if err != nil {
 		return err
 	}
-	return json.Unmarshal(gcJSON, &gc)
+	if bytes.HasPrefix(gcJSON, []byte("{\"metadata\":")) {
+		// This is a clientdb.GroupChat structure. Decode directly.
+		return json.Unmarshal(gcJSON, &gc)
+	} else {
+		// This is a rpc.RMGroupList structure. Decode into the GC
+		// metadata.
+		return json.Unmarshal(gcJSON, &gc.Metadata)
+	}
 }
 
-func (db *DB) GetGC(tx ReadTx, id zkidentity.ShortID) (rpc.RMGroupList, error) {
-	var gc rpc.RMGroupList
+func (db *DB) GetGC(tx ReadTx, id zkidentity.ShortID) (GroupChat, error) {
+	var gc GroupChat
 	filename := filepath.Join(db.root, groupchatDir, id.String())
 	err := db.readGC(filename, &gc)
 	if errors.Is(err, ErrNotFound) {
@@ -302,9 +310,9 @@ func (db *DB) SetGCAlias(tx ReadWriteTx, gcID zkidentity.ShortID, name string) (
 	return aliasMap, nil
 }
 
-func (db *DB) SaveGC(tx ReadWriteTx, gc rpc.RMGroupList) error {
+func (db *DB) SaveGC(tx ReadWriteTx, gc GroupChat) error {
 	gcDir := filepath.Join(db.root, groupchatDir)
-	filename := filepath.Join(gcDir, gc.ID.String())
+	filename := filepath.Join(gcDir, gc.Metadata.ID.String())
 	return db.saveJsonFile(filename, gc)
 }
 
@@ -321,7 +329,7 @@ func (db *DB) DeleteGC(tx ReadWriteTx, gcID zkidentity.ShortID) error {
 	return nil
 }
 
-func (db *DB) ListGCs(tx ReadTx) ([]rpc.RMGroupList, error) {
+func (db *DB) ListGCs(tx ReadTx) ([]GroupChat, error) {
 	gcDir := filepath.Join(db.root, groupchatDir)
 	entries, err := os.ReadDir(gcDir)
 	if err != nil {
@@ -331,7 +339,7 @@ func (db *DB) ListGCs(tx ReadTx) ([]rpc.RMGroupList, error) {
 		return nil, err
 	}
 
-	groups := make([]rpc.RMGroupList, 0, len(entries))
+	groups := make([]GroupChat, 0, len(entries))
 	for _, v := range entries {
 		if v.IsDir() {
 			continue
@@ -342,7 +350,7 @@ func (db *DB) ListGCs(tx ReadTx) ([]rpc.RMGroupList, error) {
 			continue
 		}
 
-		var gc rpc.RMGroupList
+		var gc GroupChat
 		err := db.readGC(fname, &gc)
 		if err != nil {
 			db.log.Warnf("Unable to read gc file for listing %s: %v",
@@ -379,7 +387,7 @@ func (db *DB) ListGCsWithMember(tx ReadTx, uid UserID) ([]zkidentity.ShortID, er
 			continue
 		}
 
-		var gc rpc.RMGroupList
+		var gc GroupChat
 		err := db.readGC(fname, &gc)
 		if err != nil {
 			db.log.Warnf("Unable to read gc file for listing %s: %v",
@@ -387,8 +395,8 @@ func (db *DB) ListGCsWithMember(tx ReadTx, uid UserID) ([]zkidentity.ShortID, er
 			continue
 		}
 
-		if slices.Contains(gc.Members, uid) {
-			res = append(res, gc.ID)
+		if slices.Contains(gc.Metadata.Members, uid) {
+			res = append(res, gc.Metadata.ID)
 		}
 	}
 

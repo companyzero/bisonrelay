@@ -788,7 +788,7 @@ func (c *Client) unsubIdleUsers() error {
 	adminGCs := make([]*rpc.RMGroupList, 0, len(gcs))
 	for i := range gcs {
 		gc := gcs[i]
-		if err := c.uidHasGCPerm(gc, c.PublicID()); err != nil {
+		if err := c.uidHasGCPerm(&gc, c.PublicID()); err != nil {
 			// Cannot admin this GC.
 			continue
 		}
