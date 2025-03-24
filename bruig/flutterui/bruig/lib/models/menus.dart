@@ -204,10 +204,10 @@ List<ChatMenuItem?> buildChatContextMenu() {
 
   return <ChatMenuItem?>[
     ChatMenuItem(
-        "New Message", (context, client) => client.ui.showAddressBookScreen),
+        "New Message", (context, client) => client.ui.showAddressBookScreen()),
     ChatMenuItem(
       "Create Group Chat",
-      (context, client) => client.ui.showCreateGroupChatScreen,
+      (context, client) => client.ui.showCreateGroupChatScreen(),
     ),
     ChatMenuItem(
         "Create Invite",
