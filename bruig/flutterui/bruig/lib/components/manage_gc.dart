@@ -210,7 +210,8 @@ class _ManageGCScreenState extends State<ManageGCScreen> {
   void reloadUsers() async {
     var snackbar = SnackBarModel.of(context);
     try {
-      var gc = await Golib.getGC(gcID);
+      var gcdb = await Golib.getGC(gcID);
+      var gc = gcdb.metadata;
       var cli = widget.client;
       List<ChatModel> newUsers = [];
       var newBlocked = await Golib.getGCBlockList(gcID);

@@ -1056,11 +1056,7 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		if err := cmd.decode(&id); err != nil {
 			return nil, err
 		}
-		gc, err := c.GetGC(id)
-		if err != nil {
-			return nil, err
-		}
-		gc.Name, err = c.GetGCAlias(gc.ID)
+		gc, err := c.GetGCDB(id)
 		if err != nil {
 			return nil, err
 		}
@@ -1079,14 +1075,10 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		gcs := make([]gcAddressBookEntry, 0, len(gcl))
 		if err == nil {
 			for _, gc := range gcl {
-				name, err := c.GetGCAlias(gc.ID)
-				if err != nil {
-					continue
-				}
 				gcs = append(gcs, gcAddressBookEntry{
-					ID:      gc.ID,
-					Members: gc.Members,
-					Name:    name,
+					ID:      gc.Metadata.ID,
+					Members: gc.Metadata.Members,
+					Name:    gc.Name(),
 				})
 			}
 		}

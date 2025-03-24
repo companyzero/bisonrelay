@@ -1038,13 +1038,11 @@ var gcCommands = []tuicmd{
 				var maxNameLen int
 				gcNames := make(map[clientintf.ID]string, len(gcs))
 				for _, gc := range gcs {
-					alias, err := as.c.GetGCAlias(gc.ID)
-					if err != nil {
-						alias = gc.ID.ShortLogID()
-					} else {
-						alias = strescape.Nick(alias)
+					alias := strescape.Nick(gc.Alias)
+					if alias == "" {
+						alias = gc.Metadata.ID.ShortLogID()
 					}
-					gcNames[gc.ID] = alias
+					gcNames[gc.Metadata.ID] = alias
 					nameLen := lipgloss.Width(alias)
 					if nameLen > maxNameLen {
 						maxNameLen = nameLen
@@ -1053,8 +1051,8 @@ var gcCommands = []tuicmd{
 				maxNameLen = clamp(maxNameLen, 5, as.winW-64-30)
 
 				sort.Slice(gcs, func(i, j int) bool {
-					ni := gcNames[gcs[i].ID]
-					nj := gcNames[gcs[j].ID]
+					ni := gcNames[gcs[i].Metadata.ID]
+					nj := gcNames[gcs[j].Metadata.ID]
 					return as.collator.CompareString(ni, nj) < 0
 				})
 
@@ -1062,12 +1060,12 @@ var gcCommands = []tuicmd{
 					pf("")
 					pf("List of GCs:")
 					for _, gc := range gcs {
-						gcAlias := gcNames[gc.ID]
+						gcAlias := gcNames[gc.Metadata.ID]
 						pf("%*s - %s - %d members",
 							maxNameLen,
 							truncEllipsis(gcAlias, maxNameLen),
-							gc.ID,
-							len(gc.Members))
+							gc.Metadata.ID,
+							len(gc.Metadata.Members))
 					}
 				})
 

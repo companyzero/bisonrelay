@@ -412,6 +412,16 @@ class RMGroupList {
 }
 
 @JsonSerializable()
+class GroupChat {
+  final RMGroupList metadata;
+  final String alias;
+
+  GroupChat(this.metadata, this.alias);
+  factory GroupChat.fromJson(Map<String, dynamic> json) =>
+      _$GroupChatFromJson(json);
+}
+
+@JsonSerializable()
 class GCInvitation extends ChatEvent {
   final RemoteUser inviter;
   final int iid;
@@ -2837,9 +2847,9 @@ abstract class PluginPlatform {
 
   Future<void> acceptGCInvite(int iid) => asyncCall(CTAcceptGCInvite, iid);
 
-  Future<RMGroupList> getGC(String name) async {
+  Future<GroupChat> getGC(String name) async {
     var res = await asyncCall(CTGetGC, name);
-    return RMGroupList.fromJson(res);
+    return GroupChat.fromJson(res);
   }
 
   Future<void> sendToGC(String gc, String msg) =>

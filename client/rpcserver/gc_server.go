@@ -119,16 +119,12 @@ func (g *gcServer) List(_ context.Context, _ *types.ListGCsRequest, res *types.L
 
 	for i := range gcs {
 		gc := &gcs[i]
-		alias, _ := g.c.GetGCAlias(gc.ID)
-		if alias == "" {
-			alias = gc.Name
-		}
 		gci := &types.ListGCsResponse_GCInfo{
-			Id:        gc.ID[:],
-			Name:      alias,
-			Version:   uint32(gc.Version),
-			Timestamp: gc.Timestamp,
-			NbMembers: uint32(len(gc.Members)),
+			Id:        gc.Metadata.ID[:],
+			Name:      gc.Name(),
+			Version:   uint32(gc.Metadata.Version),
+			Timestamp: gc.Metadata.Timestamp,
+			NbMembers: uint32(len(gc.Metadata.Members)),
 		}
 		res.Gcs = append(res.Gcs, gci)
 	}

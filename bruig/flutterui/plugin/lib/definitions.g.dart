@@ -351,6 +351,16 @@ Map<String, dynamic> _$RMGroupListToJson(RMGroupList instance) =>
       'extra_admins': instance.extraAdmins,
     };
 
+GroupChat _$GroupChatFromJson(Map<String, dynamic> json) => GroupChat(
+      RMGroupList.fromJson(json['metadata'] as Map<String, dynamic>),
+      json['alias'] as String,
+    );
+
+Map<String, dynamic> _$GroupChatToJson(GroupChat instance) => <String, dynamic>{
+      'metadata': instance.metadata,
+      'alias': instance.alias,
+    };
+
 GCInvitation _$GCInvitationFromJson(Map<String, dynamic> json) => GCInvitation(
       RemoteUser.fromJson(json['inviter'] as Map<String, dynamic>),
       (json['iid'] as num).toInt(),
