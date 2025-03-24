@@ -149,6 +149,10 @@ type GroupChat struct {
 
 	// Metadata is the latest metadata known about the GC.
 	Metadata rpc.RMGroupList `json:"metadata"` // DO NOT
+
+	// Alias is a local alias for the GC. This may be empty, in which
+	// case the Metadata.Name field is used.
+	Alias string `json:"alias"`
 }
 
 // DeepCopy makes a deep copy of this GC so that the copy can be modified.
@@ -160,6 +164,15 @@ func (gc *GroupChat) DeepCopy() GroupChat {
 	res.Metadata.Members = slices.Clone(gc.Metadata.Members)
 	res.Metadata.ExtraAdmins = slices.Clone(gc.Metadata.ExtraAdmins)
 	return res
+}
+
+// Name returns either the local alias (if one is set) or the GC name.
+func (gc *GroupChat) Name() string {
+	if gc.Alias != "" {
+		return gc.Alias
+	}
+
+	return gc.Metadata.Name
 }
 
 type GCAddressBookEntry struct {

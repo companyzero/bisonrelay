@@ -236,10 +236,11 @@ func (id PagesSessionID) String() string {
 
 // ReceivedGCMsg is an individual GC message received by a local client.
 type ReceivedGCMsg struct {
-	MsgID zkidentity.ShortID `json:"msg_id"`
-	UID   UserID             `json:"uid"`
-	GCM   rpc.RMGroupMessage `json:"gcm"`
-	TS    time.Time          `json:"ts"`
+	MsgID   zkidentity.ShortID `json:"msg_id"`
+	UID     UserID             `json:"uid"`
+	GCM     rpc.RMGroupMessage `json:"gcm"`
+	TS      time.Time          `json:"ts"`
+	GCAlias string             `json:"gc_alias"`
 }
 
 var (
