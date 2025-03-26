@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:bruig/components/buttons.dart';
 import 'package:bruig/components/chats_list.dart';
-import 'package:bruig/components/addressbook/addressbook.dart';
 import 'package:bruig/components/text.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/models/emoji.dart';
@@ -30,10 +29,9 @@ class ChatsScreenTitle extends StatelessWidget {
             ThemeNotifier>(
         builder: (context, client, activeChat, showProfile, theme, child) {
       var activeHeading = activeChat.chat;
-      var showAddressBook = client.ui.showAddressBook.val;
 
       // No active chat or address book page is active.
-      if (activeHeading == null || showAddressBook) {
+      if (activeHeading == null) {
         return const Txt.L("Bison Relay");
       }
 
@@ -324,39 +322,26 @@ class _ChatsScreenState extends State<ChatsScreen> {
     });
   }
 
-  void showAddressBookChanged() => setState(() {});
-
   @override
   void initState() {
     super.initState();
     inputFocusNode = CustomInputFocusNode(widget.typingEmoji);
     keepCheckingLNHasBalance();
-    client.ui.showAddressBook.addListener(showAddressBookChanged);
   }
 
   @override
   void didUpdateWidget(ChatsScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.client != client) {
-      oldWidget.client.ui.showAddressBook
-          .removeListener(showAddressBookChanged);
-      client.ui.showAddressBook.addListener(showAddressBookChanged);
-    }
   }
 
   @override
   void dispose() {
     checkLNTimer?.cancel();
-    client.ui.showAddressBook.removeListener(showAddressBookChanged);
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (client.ui.showAddressBook.val) {
-      return AddressBook(client, inputFocusNode);
-    }
-
     if (!client.hasChats && !client.loadingAddressBook) {
       if (!hasLNBalance) {
         // Only show f user never had any contacts.

@@ -350,7 +350,7 @@ class PM extends ChatEvent {
   final bool mine;
   final int timestamp;
 
-  const PM(sid, msg, this.mine, this.timestamp) : super(sid, msg);
+  const PM(super.sid, super.msg, this.mine, this.timestamp);
 
   factory PM.fromJson(Map<String, dynamic> json) => _$PMFromJson(json);
   Map<String, dynamic> toJson() => _$PMToJson(this);

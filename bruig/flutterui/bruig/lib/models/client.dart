@@ -196,13 +196,6 @@ class ChatModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  bool _showChatListing = true; // Nick or GC name
-  bool get showChatListing => _showChatListing;
-  set showChatListing(bool b) {
-    _showChatListing = b;
-    notifyListeners();
-  }
-
   int _scrollPosition = 0;
   int get scrollPosition => _scrollPosition;
   set scrollPosition(int s) {
@@ -602,6 +595,7 @@ class ChatsListModel extends ChangeNotifier {
       return;
     }
     _sorted.add(chat);
+    notifyListeners();
   }
 
   void _remove(ChatModel chat) {
@@ -649,7 +643,7 @@ class ClientModel extends ChangeNotifier {
   // searchChats searches all chats that match the given string (both actice and
   // hidden).
   UnmodifiableListView<ChatModel> searchChats(String b,
-      {bool ignoreGC = false}) {
+      {bool ignoreGC = false, bool ignoreUsers = false}) {
     if (b == "") {
       return UnmodifiableListView([]);
     }
@@ -660,6 +654,9 @@ class ClientModel extends ChangeNotifier {
     for (var list in [activeChats.sorted, hiddenChats.sorted]) {
       for (var chat in list) {
         if (ignoreGC && chat.isGC) {
+          continue;
+        }
+        if (ignoreUsers && !chat.isGC) {
           continue;
         }
 
@@ -778,6 +775,8 @@ class ClientModel extends ChangeNotifier {
   }
 
   set active(ChatModel? c) => _makeActive(c);
+
+  void makeTopActive(ChatModel c) => _makeActive(c, moveToMostRecent: true);
 
   void setActiveByNick(String nick, bool isGC) {
     var c = activeChats.firstByNick(nick);

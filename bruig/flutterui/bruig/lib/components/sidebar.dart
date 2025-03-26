@@ -187,6 +187,7 @@ class _SidebarState extends State<Sidebar> with WindowListener {
             child: NotificationsDrawerHeader(widget.ntfns)),
         controller: ctrl,
         items: mainMenu.menus
+            .where((m) => m.hiddenFromSideBar == false)
             .map((e) => SidebarXItem(
                   label: e.label,
                   iconBuilder: (selected, hovered) =>

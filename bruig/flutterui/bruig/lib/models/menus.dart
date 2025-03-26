@@ -2,6 +2,7 @@ import 'package:bruig/components/confirmation_dialog.dart';
 import 'package:bruig/components/pay_tip.dart';
 import 'package:bruig/components/rename_chat.dart';
 import 'package:bruig/components/suggest_kx.dart';
+import 'package:bruig/components/text.dart';
 import 'package:bruig/components/trans_reset.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/models/emoji.dart';
@@ -9,6 +10,8 @@ import 'package:bruig/models/log.dart';
 import 'package:bruig/models/notifications.dart';
 import 'package:bruig/models/resources.dart';
 import 'package:bruig/models/snackbar.dart';
+import 'package:bruig/screens/chat/new_gc_screen.dart';
+import 'package:bruig/screens/chat/new_message_screen.dart';
 import 'package:bruig/screens/chats.dart';
 import 'package:bruig/screens/feed.dart';
 import 'package:bruig/screens/gc_invitations.dart';
@@ -33,9 +36,17 @@ class MainMenuItem {
   final WidgetBuilder titleBuilder;
   final Widget? icon;
   final List<SubMenuInfo> subMenuInfo;
+  final bool hiddenFromSideBar;
 
   MainMenuItem(this.label, this.routeName, this.builder, this.titleBuilder,
-      this.icon, this.subMenuInfo);
+      this.icon, this.subMenuInfo,
+      {this.hiddenFromSideBar = false});
+
+  factory MainMenuItem.hidden(routeName, builder,
+          {WidgetBuilder? titleBuilder, String label = ""}) =>
+      MainMenuItem(label, routeName, builder,
+          titleBuilder ?? (context) => const Txt.L("Bison Relay"), null, [],
+          hiddenFromSideBar: true);
 }
 
 MainMenuItem _emptyMenu = MainMenuItem("", "", (context) => const Text(""),
@@ -137,7 +148,23 @@ final List<MainMenuItem> mainMenu = [
           Consumer<LogModel>(builder: (context, log, child) => LogScreen(log)),
       (context) => const LogScreenTitle(),
       const SidebarIcon(Icons.list_rounded, false),
-      <SubMenuInfo>[])
+      <SubMenuInfo>[]),
+
+  // Menus that are hidden from sidebar but accessible by direct route calls.
+  MainMenuItem.hidden(
+    NewMessageScreen.routeName,
+    (context) => Consumer<ClientModel>(
+        builder: (context, client, child) => NewMessageScreen(client)),
+    titleBuilder: (context) => const ChatsScreenTitle(),
+    label: "Chat",
+  ),
+  MainMenuItem.hidden(
+    NewGcScreen.routeName,
+    (context) => Consumer<ClientModel>(
+        builder: (context, client, child) => NewGcScreen(client)),
+    titleBuilder: (context) => const ChatsScreenTitle(),
+    label: "Chat",
+  ),
 ];
 
 class MainMenuModel extends ChangeNotifier {
@@ -183,7 +210,7 @@ class ChatMenuItem {
   const ChatMenuItem(this.label, this.onSelected);
 }
 
-List<ChatMenuItem?> buildChatContextMenu() {
+List<ChatMenuItem?> buildChatContextMenu(GlobalKey<NavigatorState> navKey) {
   void generateInvite(BuildContext context) {
     Navigator.of(context, rootNavigator: true).pushNamed('/generateInvite');
   }
@@ -202,13 +229,15 @@ List<ChatMenuItem?> buildChatContextMenu() {
         .pushNamed(GCInvitationsScreen.routeName);
   }
 
+  void gotoNewMessage(BuildContext context, ClientModel client) =>
+      navKey.currentState?.pushNamed(NewMessageScreen.routeName);
+
+  void gotoCreateGC(BuildContext context, ClientModel client) =>
+      navKey.currentState?.pushNamed(NewGcScreen.routeName);
+
   return <ChatMenuItem?>[
-    ChatMenuItem(
-        "New Message", (context, client) => client.ui.showAddressBookScreen()),
-    ChatMenuItem(
-      "Create Group Chat",
-      (context, client) => client.ui.showCreateGroupChatScreen(),
-    ),
+    ChatMenuItem("New Message", gotoNewMessage),
+    ChatMenuItem("Create Group Chat", gotoCreateGC),
     ChatMenuItem(
         "Create Invite",
         (context, client) =>
