@@ -643,29 +643,31 @@ class ClientModel extends ChangeNotifier {
   // searchChats searches all chats that match the given string (both actice and
   // hidden).
   UnmodifiableListView<ChatModel> searchChats(String b,
-      {bool ignoreGC = false, bool ignoreUsers = false}) {
+      {bool ignoreGC = false,
+      bool ignoreUsers = false,
+      List<ChatModel>? sourceChats}) {
     if (b == "") {
       return UnmodifiableListView([]);
     }
 
     b = b.toLowerCase();
 
+    sourceChats ??= [...activeChats.sorted, ...hiddenChats.sorted];
+
     List<ChatModel> res = [];
-    for (var list in [activeChats.sorted, hiddenChats.sorted]) {
-      for (var chat in list) {
-        if (ignoreGC && chat.isGC) {
-          continue;
-        }
-        if (ignoreUsers && !chat.isGC) {
-          continue;
-        }
-
-        if (!chat.nick.toLowerCase().contains(b)) {
-          continue;
-        }
-
-        res.add(chat);
+    for (var chat in sourceChats) {
+      if (ignoreGC && chat.isGC) {
+        continue;
       }
+      if (ignoreUsers && !chat.isGC) {
+        continue;
+      }
+
+      if (!chat.nick.toLowerCase().contains(b)) {
+        continue;
+      }
+
+      res.add(chat);
     }
 
     return UnmodifiableListView(res);

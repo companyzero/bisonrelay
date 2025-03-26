@@ -41,16 +41,34 @@ class __SearchChatItemWState extends State<_SearchChatItemW> {
     }
   }
 
+  void selModelChanged() {
+    var newSel = widget.userSelModel!.contains(chat);
+    if (newSel != selected) {
+      setState(() => selected = newSel);
+    }
+  }
+
   @override
   void initState() {
     super.initState();
     selected = userSelModel?.contains(chat) ?? false;
+    userSelModel?.addListener(selModelChanged);
   }
 
   @override
   void didUpdateWidget(covariant _SearchChatItemW oldWidget) {
     super.didUpdateWidget(oldWidget);
     selected = userSelModel?.contains(chat) ?? false;
+    if (userSelModel != oldWidget.userSelModel) {
+      oldWidget.userSelModel?.removeListener(selModelChanged);
+      userSelModel?.addListener(selModelChanged);
+    }
+  }
+
+  @override
+  void dispose() {
+    userSelModel?.removeListener(selModelChanged);
+    super.dispose();
   }
 
   @override
@@ -170,6 +188,7 @@ class UserSearchPanel extends StatefulWidget {
   final bool showButtonsRow;
   final String? searchInputHintText;
   final ValueChanged<String>? onSearchInputChanged;
+  final List<ChatModel>? sourceChats;
   const UserSearchPanel(
     this.client, {
     super.key,
@@ -183,6 +202,7 @@ class UserSearchPanel extends StatefulWidget {
     this.onConfirm,
     this.onChatTapped,
     this.onSearchInputChanged,
+    this.sourceChats,
   });
 
   @override
@@ -204,7 +224,9 @@ class _UserSearchPanelState extends State<UserSearchPanel> {
 
   void onInputChanged(String value) {
     var newSearchResults = client.searchChats(value,
-        ignoreGC: !allowGCs, ignoreUsers: !allowUsers);
+        ignoreGC: !allowGCs,
+        ignoreUsers: !allowUsers,
+        sourceChats: widget.sourceChats);
     setState(() {
       filterSearchString = value;
       filteredSearch = newSearchResults.toList();
@@ -221,7 +243,8 @@ class _UserSearchPanelState extends State<UserSearchPanel> {
   }
 
   void recalcChatsList() {
-    var newChats = client.hiddenChats.sorted + client.activeChats.sorted;
+    var newChats = widget.sourceChats ??
+        client.hiddenChats.sorted + client.activeChats.sorted;
     if (!allowGCs) {
       newChats.removeWhere((c) => c.isGC);
     }
