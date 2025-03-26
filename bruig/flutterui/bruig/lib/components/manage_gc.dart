@@ -4,8 +4,10 @@ import 'package:bruig/components/copyable.dart';
 import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/components/icons.dart';
 import 'package:bruig/components/info_grid.dart';
+import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/components/text.dart';
-import 'package:bruig/components/users_dropdown.dart';
+import 'package:bruig/components/usersearch/user_search_model.dart';
+import 'package:bruig/components/usersearch/user_search_panel.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/models/snackbar.dart';
 import 'package:bruig/theme_manager.dart';
@@ -24,8 +26,10 @@ class ManageGCScreen extends StatefulWidget {
 }
 
 class _InviteUserPanel extends StatefulWidget {
-  final String gcID;
-  const _InviteUserPanel(this.gcID);
+  final ClientModel client;
+  final ChatModel gc;
+  final VoidCallback goBack;
+  const _InviteUserPanel(this.client, this.gc, this.goBack);
 
   @override
   State<_InviteUserPanel> createState() => _InviteUserPanelState();
@@ -33,49 +37,65 @@ class _InviteUserPanel extends StatefulWidget {
 
 class _InviteUserPanelState extends State<_InviteUserPanel> {
   bool loading = false;
-  ChatModel? userToInvite;
+  ClientModel get client => widget.client;
+  ChatModel get gc => widget.gc;
+  UserSelectionModel userSel = UserSelectionModel(allowMultiple: true);
 
-  void inviteUser(BuildContext context) async {
+  void inviteUsers() async {
     if (loading) return;
-    if (userToInvite == null) return;
+    if (userSel.selected.isEmpty) {
+      widget.goBack();
+      return;
+    }
+
     setState(() => loading = true);
     var snackbar = SnackBarModel.of(context);
 
     try {
-      await Golib.inviteToGC(InviteToGC(widget.gcID, userToInvite!.id));
-      snackbar.success('Sent invitation to "${userToInvite!.nick}"');
+      var selected = userSel.selected;
+      for (var user in selected) {
+        await Golib.inviteToGC(InviteToGC(gc.id, user.id));
+      }
+      if (selected.length == 1) {
+        snackbar.success('Sent invitation to ${selected[0].nick}');
+      } else {
+        snackbar.success('Sent invitations to ${selected.length} users');
+      }
+      widget.goBack();
     } catch (exception) {
       snackbar.error('Unable to invite: $exception');
-    } finally {
       setState(() => loading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Column(children: [
-      const Divider(),
-      const SizedBox(height: 10),
-      const Text("Invite to GC"),
-      const SizedBox(height: 10),
-      Row(children: [
-        Expanded(child: UsersDropdown(cb: (ChatModel? chat) {
-          userToInvite = chat;
-        })),
-        Container(width: 20),
-        ElevatedButton(
-            onPressed: !loading ? () => inviteUser(context) : null,
-            child: const Text('Invite User')),
-      ])
-    ]);
+    return Container(
+      padding: const EdgeInsets.all(10),
+      child: Column(children: [
+        Txt.L("Invite to GC ${gc.nick}"),
+        const SizedBox(height: 10),
+        Expanded(
+            child: UserSearchPanel(
+          client,
+          userSelModel: userSel,
+          targets: UserSearchPanelTargets.users,
+          searchInputHintText: "Search for users",
+          confirmLabel: "Confirm Invitation",
+          onCancel: widget.goBack,
+          onConfirm: !loading ? inviteUsers : null,
+        ))
+      ]),
+    );
   }
 }
 
 class _ChangeGCOwnerPanel extends StatefulWidget {
-  final String gcID;
+  final ClientModel client;
+  final ChatModel gc;
   final List<ChatModel> users;
-  final Function changeOwner;
-  const _ChangeGCOwnerPanel(this.gcID, this.users, this.changeOwner);
+  final VoidCallback goBack;
+  const _ChangeGCOwnerPanel(this.client, this.gc, this.users, this.goBack);
 
   @override
   State<_ChangeGCOwnerPanel> createState() => __ChangeGCOwnerPanelState();
@@ -83,7 +103,22 @@ class _ChangeGCOwnerPanel extends StatefulWidget {
 
 class __ChangeGCOwnerPanelState extends State<_ChangeGCOwnerPanel> {
   bool loading = false;
-  ChatModel? newOwner;
+  ClientModel get client => widget.client;
+  ChatModel get gc => widget.gc;
+  UserSelectionModel userSel = UserSelectionModel(allowMultiple: false);
+  ChatModel? get newOwner =>
+      userSel.selected.isNotEmpty ? userSel.selected[0] : null;
+
+  void doChangeOwner() async {
+    setState(() => loading = true);
+    try {
+      await Golib.modifyGCOwner(gc.id, newOwner!.id);
+      widget.goBack();
+    } catch (exception) {
+      showErrorSnackbar(this, "Unable to modify GC Owner: $exception");
+      setState(() => loading = false);
+    }
+  }
 
   void confirmNewOwner() async {
     if (newOwner == null) {
@@ -106,7 +141,8 @@ class __ChangeGCOwnerPanelState extends State<_ChangeGCOwnerPanel> {
                 OutlinedButton(
                     onPressed: () {
                       Navigator.pop(context);
-                      widget.changeOwner(newOwner);
+                      // widget.changeOwner(newOwner);
+                      doChangeOwner();
                     },
                     child: const Text("Yes")),
               ]),
@@ -115,25 +151,32 @@ class __ChangeGCOwnerPanelState extends State<_ChangeGCOwnerPanel> {
 
   @override
   Widget build(BuildContext context) {
-    var userIDs = widget.users.map((e) => e.id).toList();
-    return Column(children: [
-      const SizedBox(height: 10),
-      const Text("Change GC Owner"),
-      const SizedBox(height: 10),
-      Row(children: [
+    return Container(
+      padding: const EdgeInsets.all(10),
+      child: Column(children: [
+        Txt.L("Change GC ${gc.nick} Owner"),
+        const SizedBox(height: 10),
         Expanded(
-            child: UsersDropdown(
-                limitUIDs: userIDs,
-                cb: (ChatModel? chat) {
-                  newOwner = chat;
-                })),
-        Container(width: 20),
-        ElevatedButton(
-            onPressed: !loading ? confirmNewOwner : null,
-            child: const Text('Change Owner')),
-      ])
-    ]);
+            child: UserSearchPanel(
+          client,
+          userSelModel: userSel,
+          targets: UserSearchPanelTargets.users,
+          sourceChats: widget.users,
+          searchInputHintText: "Search for user",
+          confirmLabel: "Confirm Change Owner",
+          onCancel: widget.goBack,
+          onConfirm: !loading && newOwner != null ? confirmNewOwner : null,
+          onChatTapped: (c) => setState(() {}),
+        ))
+      ]),
+    );
   }
+}
+
+enum _ScreenState {
+  managing,
+  inviting,
+  changingOwner,
 }
 
 class _ManageGCScreenState extends State<ManageGCScreen> {
@@ -158,6 +201,7 @@ class _ManageGCScreenState extends State<ManageGCScreen> {
   bool firstLoading = true;
   Map<String, bool> admins = {};
   List<String> unkxdMembers = [];
+  _ScreenState state = _ScreenState.managing;
 
   @override
   void initState() {
@@ -169,10 +213,9 @@ class _ManageGCScreenState extends State<ManageGCScreen> {
   void didUpdateWidget(ManageGCScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
     reloadUsers();
-  }
-
-  void onDone(BuildContext context) {
-    Navigator.pop(context);
+    if (widget.chat != oldWidget.chat) {
+      state = _ScreenState.managing;
+    }
   }
 
   bool isBlocked(String uid) {
@@ -390,25 +433,12 @@ class _ManageGCScreenState extends State<ManageGCScreen> {
     }
   }
 
-  Future<void> changeOwner(ChatModel newOwner) async {
-    if (loading) return;
-
-    showConfirmDialog(context,
-        title: "Confirm Change Owner",
-        child: Text(
-            "Really change ownership of this GC to ${newOwner.nick}? This action cannot be undone."),
-        onConfirm: () async {
-      setState(() => loading = true);
-      var snackbar = SnackBarModel.of(context);
-      try {
-        await Golib.modifyGCOwner(gcID, newOwner.id);
-      } catch (exception) {
-        snackbar.error("Unable to modify GC Owner: $exception");
-      } finally {
-        setState(() => loading = false);
-        reloadUsers();
-      }
-    });
+  void toStateChangeOwner() =>
+      setState(() => state = _ScreenState.changingOwner);
+  void toStateInvite() => setState(() => state = _ScreenState.inviting);
+  void toStateManage() {
+    reloadUsers;
+    setState(() => state = _ScreenState.managing);
   }
 
   Widget buildAdminAction(ChatModel user, int index) {
@@ -452,6 +482,14 @@ class _ManageGCScreenState extends State<ManageGCScreen> {
     if (firstLoading) {
       return const Scaffold(body: Center(child: Text("Loading...")));
     }
+
+    if (state == _ScreenState.inviting) {
+      return _InviteUserPanel(widget.client, widget.chat, toStateManage);
+    } else if (state == _ScreenState.changingOwner) {
+      return _ChangeGCOwnerPanel(
+          widget.client, widget.chat, users, toStateManage);
+    }
+
     return Align(
         alignment: Alignment.topLeft,
         child: Container(
@@ -477,6 +515,11 @@ class _ManageGCScreenState extends State<ManageGCScreen> {
                         onPressed: !loading ? upgradeGC : null,
                         child: const Text("Upgrade Version"))
                     : const Empty(),
+                localIsOwner
+                    ? OutlinedButton(
+                        onPressed: !loading ? toStateChangeOwner : null,
+                        child: const Text("Change Owner"))
+                    : const Empty(),
                 OutlinedButton(
                     onPressed: !loading ? hideGC : null,
                     child: const Text("Hide GC"))
@@ -491,20 +534,15 @@ class _ManageGCScreenState extends State<ManageGCScreen> {
                 Tuple2(const Txt.S("Timestamp:"),
                     Txt.S(gcTimestamp.toIso8601String())),
               ]),
-              const SizedBox(height: 10),
-              localIsAdmin
-                  ? Container(
-                      margin: const EdgeInsets.only(top: 10, bottom: 10),
-                      child: _InviteUserPanel(gcID))
-                  : const Empty(),
               const Divider(),
-              if (localIsOwner) ...[
-                Container(
-                    margin: const EdgeInsets.only(top: 10, bottom: 10),
-                    child: _ChangeGCOwnerPanel(gcID, users, changeOwner)),
-                const Divider(),
-              ],
-              const Txt.L("GC Members"),
+              Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                const Txt.L("GC Members"),
+                const SizedBox(width: 5),
+                if (localIsAdmin)
+                  OutlinedButton(
+                      onPressed: !loading ? toStateInvite : null,
+                      child: const Text("Invite to GC")),
+              ]),
               ListView.builder(
                   shrinkWrap: true,
                   itemCount: users.length,

@@ -24,7 +24,9 @@ class UserSelectionModel extends ChangeNotifier {
 
   void add(ChatModel chat) {
     if (!_selected.contains(chat)) {
-      if (!allowMultiple) _selected.clear();
+      if (!allowMultiple) {
+        _selected.clear();
+      }
       _selected.add(chat);
       notifyListeners();
     }
