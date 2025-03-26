@@ -99,7 +99,6 @@ class _ChatHeadingWState extends State<_ChatHeadingW> {
                               widget.showSubMenu();
                             }
                           : null,
-                      client: client,
                       targetGcChat: chat,
                       child: ListTile(
                         horizontalTitleGap: 12,

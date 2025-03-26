@@ -1,4 +1,3 @@
-import 'package:bruig/models/uistate.dart';
 import 'package:flutter/material.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/components/context_menu.dart';
@@ -20,26 +19,22 @@ class GcContexMenu extends StatelessWidget {
   const GcContexMenu(
       {super.key,
       required this.child,
-      this.client,
-      this.ui,
       this.targetGcChat,
       this.disabled,
-      this.targetUserId,
       this.mobile});
 
   final bool? disabled;
-  final ClientModel? client;
-  final UIStateModel? ui;
   final ChatModel? targetGcChat;
   final Widget child;
-  final String? targetUserId;
   final void Function(BuildContext)? mobile;
 
   void Function(dynamic) _handleItemTap(context) {
     return (result) {
       switch (result) {
         case 'manage':
-          ui!.showProfile.val = false;
+          var client = ClientModel.of(context, listen: false);
+          client.active = targetGcChat;
+          client.ui.showProfile.val = targetGcChat != null;
           break;
         case 'rename':
           showRenameModalBottom(context, targetGcChat!);
