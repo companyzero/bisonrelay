@@ -1,6 +1,5 @@
 import 'dart:io';
 
-import 'package:bruig/components/containers.dart';
 import 'package:bruig/util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';

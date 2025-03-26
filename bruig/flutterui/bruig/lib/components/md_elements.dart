@@ -724,7 +724,6 @@ class AVIFElementBuilder extends MarkdownElementBuilder {
     if (download != "") {
       tip += "Click to download file $download";
     }
-    var type = element.attributes["type"] ?? "";
 
     try {
       return AvifMd(tip, imgBytes);

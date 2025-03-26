@@ -27,7 +27,7 @@ class ActiveChat extends StatefulWidget {
   State<ActiveChat> createState() => _ActiveChatState();
 }
 
-class _ActiveChatState extends State<ActiveChat> {
+class _ActiveChatState extends State<ActiveChat> with RouteAware {
   ClientModel get client => widget.client;
   UIStateModel get ui => widget.client.ui;
   CustomInputFocusNode get inputFocusNode => widget.inputFocusNode;
@@ -117,6 +117,13 @@ class _ActiveChatState extends State<ActiveChat> {
   }
 
   @override
+  void didPopNext() {
+    if (!checkIsScreenSmall(context)) {
+      inputFocusNode.inputFocusNode.requestFocus();
+    }
+  }
+
+  @override
   void initState() {
     super.initState();
     _itemScrollController = ItemScrollController();
@@ -125,6 +132,12 @@ class _ActiveChatState extends State<ActiveChat> {
     client.activeChat.addListener(activeChatChanged);
     ui.showProfile.addListener(showProfileChanged);
     ui.chatSideMenuActive.addListener(chatSideMenuActiveChanged);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    ui.overviewRouteObserver.subscribe(this, ModalRoute.of(context)!);
   }
 
   @override
@@ -149,6 +162,7 @@ class _ActiveChatState extends State<ActiveChat> {
   void dispose() {
     ui.showProfile.removeListener(showProfileChanged);
     ui.chatSideMenuActive.removeListener(chatSideMenuActiveChanged);
+    ui.overviewRouteObserver.unsubscribe(this);
     _debounce?.cancel();
     client.activeChat.removeListener(activeChatChanged);
     super.dispose();

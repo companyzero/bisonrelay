@@ -145,7 +145,7 @@ AppBar _buildAppBar(BuildContext context, ClientModel client, FeedModel feed,
 
   List<ChatMenuItem?> contextMenu = [];
   if (mainMenu.activeMenu.label == "Chat") {
-    contextMenu = buildChatContextMenu();
+    contextMenu = buildChatContextMenu(navKey);
   }
 
   return AppBar(
@@ -155,9 +155,10 @@ AppBar _buildAppBar(BuildContext context, ClientModel client, FeedModel feed,
       leading: Builder(builder: (BuildContext context) {
         return InkWell(
             onTap: () {
-              if (client.ui.showAddressBook.val) {
-                client.ui.showAddressBook.val = false;
-              } else if (!client.ui.chatSideMenuActive.empty) {
+              // if (client.ui.showAddressBook.val) { // FIXME: How is this triggered?
+              //   client.ui.showAddressBook.val = false;
+              // } else
+              if (!client.ui.chatSideMenuActive.empty) {
                 client.ui.chatSideMenuActive.chat = null;
               } else if (client.ui.showProfile.val) {
                 client.ui.showProfile.val = false;
@@ -177,19 +178,13 @@ AppBar _buildAppBar(BuildContext context, ClientModel client, FeedModel feed,
                 switchScreen(SettingsScreen.routeName);
               }
             },
-            child: Consumer6<
-                    OverviewActivePath,
-                    ActiveChatModel,
-                    ShowAddressBookModel,
-                    FeedModel,
-                    ChatSideMenuActiveModel,
-                    ConnStateModel>(
-                builder: (context, overviewActivePath, activeChat, showAddrBook,
-                        feed, chatSideMenuActive, connState, child) =>
+            child: Consumer5<OverviewActivePath, ActiveChatModel, FeedModel,
+                    ChatSideMenuActiveModel, ConnStateModel>(
+                builder: (context, overviewActivePath, activeChat, feed,
+                        chatSideMenuActive, connState, child) =>
                     Stack(children: [
                       !overviewActivePath.onActiveBottomTab ||
                               !activeChat.empty ||
-                              showAddrBook.val ||
                               feed.active != null ||
                               !chatSideMenuActive.empty
                           ? const Positioned(
@@ -365,6 +360,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
             Expanded(
               child: Navigator(
                 key: navKey,
+                observers: [client.ui.overviewRouteObserver],
                 initialRoute: widget.initialRoute == ""
                     ? ChatsScreen.routeName
                     : widget.initialRoute,

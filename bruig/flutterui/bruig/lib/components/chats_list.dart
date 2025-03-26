@@ -4,6 +4,8 @@ import 'package:bruig/components/containers.dart';
 import 'package:bruig/components/text.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/models/uistate.dart';
+import 'package:bruig/screens/chat/new_gc_screen.dart';
+import 'package:bruig/screens/chat/new_message_screen.dart';
 import 'package:bruig/screens/chats.dart';
 import 'package:bruig/screens/contacts_msg_times.dart';
 import 'package:bruig/screens/gc_invitations.dart';
@@ -235,7 +237,11 @@ class _ActiveChatsListMenuState extends State<ActiveChatsListMenu> {
   ScrollController sortedListScroll = ScrollController();
 
   void doUpdateState() {
-    setState(() => chats = client.activeChats.sorted);
+    if (mounted) {
+      setState(() {
+        chats = client.activeChats.sorted;
+      });
+    }
     debounce = null;
   }
 
@@ -258,6 +264,12 @@ class _ActiveChatsListMenuState extends State<ActiveChatsListMenu> {
   void makeActive(ChatModel? c) => {client.active = c};
 
   void showSubMenu() => client.ui.chatSideMenuActive.chat = client.active;
+
+  void gotoNewMessage() =>
+      Navigator.of(context).pushNamed(NewMessageScreen.routeName);
+
+  void gotoNewGroupChat() =>
+      Navigator.of(context).pushNamed(NewGcScreen.routeName);
 
   @override
   void initState() {
@@ -308,14 +320,14 @@ class _ActiveChatsListMenuState extends State<ActiveChatsListMenu> {
                 child: _SmallScreenFabIconButton(
                     tooltip: "New Message",
                     icon: Icons.edit_outlined,
-                    onPressed: client.ui.showAddressBookScreen)),
+                    onPressed: gotoNewMessage)),
             Positioned(
                 bottom: 100,
                 right: 10,
                 child: _SmallScreenFabIconButton(
                     tooltip: "Create new group chat",
                     icon: Icons.people_outlined,
-                    onPressed: client.ui.showCreateGroupChatScreen)),
+                    onPressed: gotoNewGroupChat)),
           ]));
     }
 
@@ -347,11 +359,11 @@ class _ActiveChatsListMenuState extends State<ActiveChatsListMenu> {
                   icon: Icons.get_app_outlined),
               _FooterIconButton(
                   tooltip: "Create new group chat",
-                  onPressed: client.ui.showCreateGroupChatScreen,
+                  onPressed: gotoNewGroupChat,
                   icon: Icons.people_outline),
               _FooterIconButton(
                   tooltip: "New Message",
-                  onPressed: client.ui.showAddressBookScreen,
+                  onPressed: gotoNewMessage,
                   icon: Icons.edit_outlined),
               _FooterIconButton(
                   tooltip: "Show GC Invitations",

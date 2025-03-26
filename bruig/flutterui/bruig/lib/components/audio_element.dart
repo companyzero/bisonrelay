@@ -55,7 +55,6 @@ class _AudioPlayerTrackerState extends State<AudioPlayerTracker> {
     if (audio.playerEvents.lastEvent.processingState ==
         ProcessingState.completed) {
       if (listeningPosition) {
-        print("BBBBBBB removing listener");
         audio.audioPosition.removeListener(onPositionChanged);
         listeningPosition = false;
       }
