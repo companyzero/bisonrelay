@@ -141,7 +141,7 @@ class _ChatInputState extends State<ChatInput> {
     super.didUpdateWidget(oldWidget);
     var workingMsg = widget.chat.workingMsg;
     if (workingMsg != controller.text) {
-      isAttaching = false;
+      cancelAttach(callSetState: false);
       controller.text = workingMsg;
       controller.selection = TextSelection(
           baseOffset: workingMsg.length, extentOffset: workingMsg.length);
@@ -156,6 +156,7 @@ class _ChatInputState extends State<ChatInput> {
       widget.chat.unkxdMembers.addListener(containsUnxkdChanged);
       containsUnkxdMembers =
           widget.chat.unkxdMembers.value?.isNotEmpty ?? false;
+      cancelAttach(callSetState: false);
     }
   }
 
@@ -169,11 +170,7 @@ class _ChatInputState extends State<ChatInput> {
   }
 
   void sendAttachment(String msg) {
-    setState(() {
-      isAttaching = false;
-      initialAttachData = null;
-      initialAttachMime = null;
-    });
+    cancelAttach();
     widget._send(msg);
   }
 
@@ -231,13 +228,19 @@ class _ChatInputState extends State<ChatInput> {
     });
   }
 
-  void cancelAttach() {
-    setState(() {
+  void cancelAttach({callSetState = true}) {
+    void doCancel() {
       isAttaching = false;
       initialAttachData = null;
       initialAttachMime = null;
       widget.inputFocusNode.inputFocusNode.requestFocus();
-    });
+    }
+
+    if (callSetState) {
+      setState(doCancel);
+    } else {
+      doCancel();
+    }
   }
 
   void recordAudioNote() {
