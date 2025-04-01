@@ -191,6 +191,29 @@ class UserMenuAvatar extends StatelessWidget {
   }
 }
 
+// Display chat avatar without the context user menu.
+class ChatAvatar extends StatelessWidget {
+  final ChatModel chat;
+  final double? radius;
+  final bool disableTooltip;
+  const ChatAvatar(
+    this.chat, {
+    this.radius,
+    this.disableTooltip = false,
+    super.key,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AvatarModelAvatar(
+      chat.avatar,
+      chat.nick,
+      radius: radius,
+      disableToolTip: disableTooltip,
+    );
+  }
+}
+
 // SelfAvatar displays the avatar of the local client.
 class SelfAvatar extends StatelessWidget {
   final ClientModel client;
@@ -236,7 +259,7 @@ class UserAvatarFromID extends StatelessWidget {
           showChatSideMenuOnTap: showChatSideMenuOnTap,
           postFrom: postFrom,
           disableTooltip: disableTooltip,
-	  radius: radius);
+          radius: radius);
     }
 
     if (disableTooltip) {
