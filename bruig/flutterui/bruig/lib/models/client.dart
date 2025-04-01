@@ -766,6 +766,9 @@ class ClientModel extends ChangeNotifier {
     // Check if this cleared the indicator for unread messages.
     hasUnreadChats.val = activeChats.hasUnreadMsgs;
 
+    // If previously showing the manage GC or user profile screen, hide it.
+    ui.showProfile.val = false;
+
     // Rework this?
     if (_savedHiddenChats.contains(chat.nick)) {
       var savedHiddenChatsSplit = _savedHiddenChats.split(",");

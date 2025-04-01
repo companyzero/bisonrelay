@@ -58,9 +58,9 @@ class _UserProfileState extends State<UserProfile> {
     } catch (exception) {
       snackbar.error("Unable to load profile: $exception");
     } finally {
-      setState(() {
-        firstLoading = false;
-      });
+      if (mounted) {
+        setState(() => firstLoading = false);
+      }
     }
   }
 
@@ -196,7 +196,7 @@ class _UserProfileState extends State<UserProfile> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 const Txt.L("User Profile - "),
-                Txt.L(chat.nick),
+                Expanded(child: Txt.L(chat.nick)),
               ],
             ),
             Copyable.txt(Txt.S(chat.id)),
