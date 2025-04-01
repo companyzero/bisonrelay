@@ -189,6 +189,7 @@ class UserSearchPanel extends StatefulWidget {
   final String? searchInputHintText;
   final ValueChanged<String>? onSearchInputChanged;
   final List<ChatModel>? sourceChats;
+  final List<String>? excludeUIDs;
   const UserSearchPanel(
     this.client, {
     super.key,
@@ -198,6 +199,7 @@ class UserSearchPanel extends StatefulWidget {
     this.userSelModel,
     this.showButtonsRow = true,
     this.searchInputHintText,
+    this.excludeUIDs,
     this.onCancel,
     this.onConfirm,
     this.onChatTapped,
@@ -223,10 +225,13 @@ class _UserSearchPanelState extends State<UserSearchPanel> {
       widget.targets == UserSearchPanelTargets.users;
 
   void onInputChanged(String value) {
-    var newSearchResults = client.searchChats(value,
-        ignoreGC: !allowGCs,
-        ignoreUsers: !allowUsers,
-        sourceChats: widget.sourceChats);
+    var newSearchResults = client.searchChats(
+      value,
+      ignoreGC: !allowGCs,
+      ignoreUsers: !allowUsers,
+      sourceChats: widget.sourceChats,
+      excludeUIDs: widget.excludeUIDs,
+    );
     setState(() {
       filterSearchString = value;
       filteredSearch = newSearchResults.toList();
@@ -250,6 +255,10 @@ class _UserSearchPanelState extends State<UserSearchPanel> {
     }
     if (!allowUsers) {
       newChats.removeWhere((c) => !c.isGC);
+    }
+    if (widget.excludeUIDs != null) {
+      var excludeMap = Set.from(widget.excludeUIDs!);
+      newChats.removeWhere((c) => excludeMap.contains(c.id));
     }
     newChats
         .sort((a, b) => a.nick.toLowerCase().compareTo(b.nick.toLowerCase()));
