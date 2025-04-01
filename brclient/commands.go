@@ -1038,7 +1038,7 @@ var gcCommands = []tuicmd{
 				var maxNameLen int
 				gcNames := make(map[clientintf.ID]string, len(gcs))
 				for _, gc := range gcs {
-					alias := strescape.Nick(gc.Alias)
+					alias := strescape.Nick(gc.Name())
 					if alias == "" {
 						alias = gc.Metadata.ID.ShortLogID()
 					}
@@ -1077,14 +1077,11 @@ var gcCommands = []tuicmd{
 				return err
 			}
 
-			gc, err := as.c.GetGC(gcID)
+			gc, err := as.c.GetGCDB(gcID)
 			if err != nil {
 				return err
 			}
-			gcName, _ := as.c.GetGCAlias(gcID)
-			if gcName == "" {
-				gcName = args[0]
-			}
+			gcName := gc.Name()
 
 			gcbl, err := as.c.GetGCBlockList(gcID)
 			if err != nil {
@@ -1093,7 +1090,7 @@ var gcCommands = []tuicmd{
 
 			// Collect and sort members according to display order.
 			var maxNickW int
-			members := slices.Clone(gc.Members[:])
+			members := slices.Clone(gc.Metadata.Members[:])
 			myID := as.c.PublicID()
 			if idx := slices.Index(members, myID); idx > -1 {
 				// Remove local client id from list.
@@ -1131,23 +1128,24 @@ var gcCommands = []tuicmd{
 			maxNickW = clamp(maxNickW, 5, as.winW-64-10)
 
 			as.cwHelpMsgs(func(pf printf) {
+				meta := gc.Metadata
 				pf("")
-				pf("GC %q - %s", gcName, gc.ID.String())
+				pf("GC %q - %s", gcName, meta.ID.String())
 				pf("Version: %d, Generation: %d, Timestamp: %s",
-					gc.Version, gc.Generation,
-					time.Unix(gc.Timestamp, 0).Format(ISO8601DateTime))
-				if gc.Members[0] == myID {
+					meta.Version, meta.Generation,
+					time.Unix(meta.Timestamp, 0).Format(ISO8601DateTime))
+				if meta.Members[0] == myID {
 					pf("Local client is owner of this GC")
-				} else if slices.Contains(gc.ExtraAdmins, myID) {
+				} else if slices.Contains(meta.ExtraAdmins, myID) {
 					pf("Local client is admin of this GC")
 				}
 				pf("Members (%d + local client)", len(members))
 				firstUknown := true
 				for _, uid := range members {
 					var ignored string
-					if uid == gc.Members[0] {
+					if uid == meta.Members[0] {
 						ignored += " (owner)"
-					} else if slices.Contains(gc.ExtraAdmins, uid) {
+					} else if slices.Contains(meta.ExtraAdmins, uid) {
 						ignored += " (admin)"
 					}
 					if gcbl.IsBlocked(uid) {
