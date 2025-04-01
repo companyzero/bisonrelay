@@ -642,10 +642,13 @@ class ClientModel extends ChangeNotifier {
 
   // searchChats searches all chats that match the given string (both actice and
   // hidden).
-  UnmodifiableListView<ChatModel> searchChats(String b,
-      {bool ignoreGC = false,
-      bool ignoreUsers = false,
-      List<ChatModel>? sourceChats}) {
+  UnmodifiableListView<ChatModel> searchChats(
+    String b, {
+    bool ignoreGC = false,
+    bool ignoreUsers = false,
+    List<ChatModel>? sourceChats,
+    List<String>? excludeUIDs,
+  }) {
     if (b == "") {
       return UnmodifiableListView([]);
     }
@@ -653,6 +656,8 @@ class ClientModel extends ChangeNotifier {
     b = b.toLowerCase();
 
     sourceChats ??= [...activeChats.sorted, ...hiddenChats.sorted];
+
+    Set<String> excludeUIDsMap = Set.from(excludeUIDs ?? []);
 
     List<ChatModel> res = [];
     for (var chat in sourceChats) {
@@ -664,6 +669,9 @@ class ClientModel extends ChangeNotifier {
       }
 
       if (!chat.nick.toLowerCase().contains(b)) {
+        continue;
+      }
+      if (excludeUIDsMap.contains(chat.id)) {
         continue;
       }
 

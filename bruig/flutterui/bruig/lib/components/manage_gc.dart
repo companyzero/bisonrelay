@@ -28,8 +28,9 @@ class ManageGCScreen extends StatefulWidget {
 class _InviteUserPanel extends StatefulWidget {
   final ClientModel client;
   final ChatModel gc;
+  final List<String> memberUIDs;
   final VoidCallback goBack;
-  const _InviteUserPanel(this.client, this.gc, this.goBack);
+  const _InviteUserPanel(this.client, this.gc, this.memberUIDs, this.goBack);
 
   @override
   State<_InviteUserPanel> createState() => _InviteUserPanelState();
@@ -82,6 +83,7 @@ class _InviteUserPanelState extends State<_InviteUserPanel> {
           targets: UserSearchPanelTargets.users,
           searchInputHintText: "Search for users",
           confirmLabel: "Confirm Invitation",
+          excludeUIDs: widget.memberUIDs,
           onCancel: widget.goBack,
           onConfirm: !loading ? inviteUsers : null,
         ))
@@ -195,6 +197,7 @@ class _ManageGCScreenState extends State<ManageGCScreen> {
   DateTime gcTimestamp = DateTime.fromMillisecondsSinceEpoch(0);
   List<ChatModel> users = [];
   Map<String, dynamic> blockedUsers = {};
+  List<String> memberUIDs = [];
   ChatModel? userToInvite;
   bool localIsAdmin = false;
   bool localIsOwner = false;
@@ -275,6 +278,7 @@ class _ManageGCScreenState extends State<ManageGCScreen> {
       gc.extraAdmins?.forEach((e) => newAdmins[e] = true);
       var myID = widget.client.publicID;
       setState(() {
+        memberUIDs = gc.members;
         gcOwner = gc.members[0];
         users = newUsers;
         admins = newAdmins;
@@ -484,7 +488,8 @@ class _ManageGCScreenState extends State<ManageGCScreen> {
     }
 
     if (state == _ScreenState.inviting) {
-      return _InviteUserPanel(widget.client, widget.chat, toStateManage);
+      return _InviteUserPanel(
+          widget.client, widget.chat, memberUIDs, toStateManage);
     } else if (state == _ScreenState.changingOwner) {
       return _ChangeGCOwnerPanel(
           widget.client, widget.chat, users, toStateManage);
