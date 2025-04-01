@@ -74,7 +74,7 @@ class __SearchChatItemWState extends State<_SearchChatItemW> {
   @override
   Widget build(BuildContext context) {
     return ListTile(
-      leading: UserMenuAvatar(client, chat),
+      leading: ChatAvatar(chat),
       selected: selected,
       onTap: onTap,
       enabled: true,
