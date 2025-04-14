@@ -216,7 +216,7 @@ class _SmallScreenFabIconButton extends StatelessWidget {
     return Consumer2<ThemeNotifier, ConnStateModel>(
         builder: (context, theme, connState, child) => Material(
             borderRadius: BorderRadius.circular(30),
-            color: theme.colors.surfaceContainerHigh.withOpacity(0.7),
+            color: theme.colors.surfaceContainerHigh.withValues(alpha: 0.7),
             child: IconButton(
                 splashRadius: 28,
                 hoverColor: theme.colors.surfaceContainerHigh,
