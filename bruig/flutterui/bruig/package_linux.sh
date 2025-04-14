@@ -34,7 +34,7 @@ cp $DESKTOP_FILE $APPIMAGE_DIR
 cp $ICON_FILE $APPIMAGE_DIR/bisonrelay.png
 
 if ! type appimagetool-x86_64.AppImage > /dev/null; then
-    printf '%s\n' "appimagetool-x86_64.AppImage (github.com/AppImage/AppImage/Kit) required to be installed for appimage building"
+    printf '%s\n' "appimagetool-x86_64.AppImage (github.com/AppImage/appimagetool) required to be installed for appimage building"
     exit 1
 fi
 
