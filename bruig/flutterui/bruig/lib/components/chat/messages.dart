@@ -147,7 +147,7 @@ class _MessagesState extends State<Messages> {
         return FloatingActionButton(
           onPressed: _scrollToFirstUnread,
           tooltip: "Scroll to first unread message",
-          backgroundColor: theme.colors.surface.withOpacity(0.65),
+          backgroundColor: theme.colors.surface.withValues(alpha: 0.65),
           foregroundColor: theme.colors.onSurfaceVariant,
           elevation: 0,
           hoverElevation: 0,
@@ -161,7 +161,7 @@ class _MessagesState extends State<Messages> {
         return FloatingActionButton(
           onPressed: _scrollToBottom,
           tooltip: "Scroll to most recent messages",
-          backgroundColor: theme.colors.surface.withOpacity(0.65),
+          backgroundColor: theme.colors.surface.withValues(alpha: 0.65),
           foregroundColor: theme.colors.onSurfaceVariant,
           elevation: 0,
           hoverElevation: 0,

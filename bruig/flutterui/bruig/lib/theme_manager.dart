@@ -457,8 +457,8 @@ final appThemes = {
         end: Alignment.topRight,
         colors: [
           const Color(0xFF19172C), // surface
-          const Color(0xFF19172C).withOpacity(0.85),
-          const Color(0xFF19172C).withOpacity(0.34),
+          const Color(0xFF19172C).withValues(alpha: 0.85),
+          const Color(0xFF19172C).withValues(alpha: 0.34),
         ],
         stops: const [0, 0.37, 1],
       ))),
@@ -515,8 +515,8 @@ final appThemes = {
         end: Alignment.topRight,
         colors: [
           const Color(0xFFE8E7F3), // surface
-          const Color(0xFFE8E7F3).withOpacity(0.95),
-          const Color(0xFFE8E7F3).withOpacity(0.95),
+          const Color(0xFFE8E7F3).withValues(alpha: 0.95),
+          const Color(0xFFE8E7F3).withValues(alpha: 0.95),
         ],
         stops: const [0, 0.5, 1],
       ))),
