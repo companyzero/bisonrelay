@@ -74,6 +74,7 @@ class Config {
   late final String lnTLSCert;
   late final String lnMacaroonPath;
   late final String lnDebugLevel;
+  late final int lnMaxLogFiles;
   late final String logFile;
   late final String msgRoot;
   late final String debugLevel;
@@ -124,6 +125,7 @@ class Config {
       this.msgRoot = "",
       this.debugLevel = "",
       this.lnDebugLevel = "info",
+      this.lnMaxLogFiles = 10,
       this.walletType = "",
       this.network = "",
       this.internalWalletDir = "",
@@ -171,6 +173,7 @@ class Config {
         msgRoot: cfg.msgRoot,
         debugLevel: cfg.debugLevel,
         lnDebugLevel: cfg.lnDebugLevel,
+        lnMaxLogFiles: cfg.lnMaxLogFiles,
         walletType: cfg.walletType,
         network: cfg.network,
         internalWalletDir: cfg.internalWalletDir,
@@ -244,6 +247,7 @@ Future<void> replaceConfig(
   String filepath, {
   String? debugLevel,
   String? lnDebugLevel,
+  int? lnMaxLogFiles,
   bool? logPings,
   String? proxyAddr,
   String? proxyUsername,
@@ -289,6 +293,7 @@ Future<void> replaceConfig(
   set("log", "debuglevel", debugLevel);
   setBool("log", "pings", logPings);
   set("payment", "lndebuglevel", lnDebugLevel);
+  setInt("payment", "lnmaxlogfiles", lnMaxLogFiles);
 
   set("default", "proxyaddr", proxyAddr);
   set("default", "proxyuser", proxyUsername);
@@ -431,6 +436,7 @@ Future<Config> loadConfig(String filepath) async {
     c.lnMacaroonPath = "";
   }
   c.lnDebugLevel = f.get("payment", "lndebuglevel") ?? "info";
+  c.lnMaxLogFiles = getInt("payment", "lnmaxlogfiles") ?? 10;
 
   var resUpstream = f.get("resources", "upstream") ?? "";
   if (resUpstream.startsWith("pages:")) {

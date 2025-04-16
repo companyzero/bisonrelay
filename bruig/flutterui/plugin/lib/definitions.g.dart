@@ -270,8 +270,8 @@ Map<String, dynamic> _$GeneratedKXInviteToJson(GeneratedKXInvite instance) =>
     };
 
 PM _$PMFromJson(Map<String, dynamic> json) => PM(
-      json['sid'],
-      json['msg'],
+      json['sid'] as String,
+      json['msg'] as String,
       json['mine'] as bool,
       (json['timestamp'] as num).toInt(),
     );
@@ -1309,6 +1309,7 @@ LNInitDcrlnd _$LNInitDcrlndFromJson(Map<String, dynamic> json) => LNInitDcrlnd(
       json['autocompact'] as bool,
       (json['autocompact_min_age'] as num).toInt(),
       json['debug_level'] as String,
+      (json['max_log_files'] as num).toInt(),
     );
 
 Map<String, dynamic> _$LNInitDcrlndToJson(LNInitDcrlnd instance) =>
@@ -1327,6 +1328,7 @@ Map<String, dynamic> _$LNInitDcrlndToJson(LNInitDcrlnd instance) =>
       'autocompact': instance.autoCompact,
       'autocompact_min_age': instance.autoCompactMinAge,
       'debug_level': instance.debugLevel,
+      'max_log_files': instance.maxLogFiles,
     };
 
 LNNewWalletSeed _$LNNewWalletSeedFromJson(Map<String, dynamic> json) =>

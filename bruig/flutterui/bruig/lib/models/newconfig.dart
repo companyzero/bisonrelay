@@ -135,7 +135,7 @@ class NewConfigModel extends ChangeNotifier {
     return cfg;
   }
 
- List<ConfirmSeedWords> createConfirmSeedWords(String seed) {
+  List<ConfirmSeedWords> createConfirmSeedWords(String seed) {
     List<ConfirmSeedWords> confirmSeedWords = [];
     var seedWords = seed.trim().split(' ');
     var numWords = 5;
@@ -201,7 +201,8 @@ class NewConfigModel extends ChangeNotifier {
         true, // syncfreelist
         true, // autocompact
         60 * 60 * 24 * 14, // autocompact_min_age (14 days)
-        "info");
+        "info",
+        10);
     tlsCertPath = path.join(rootPath, "tls.cert");
     macaroonPath = path.join(rootPath, "data", "chain", "decred",
         NetworkTypeStr(netType), "admin.macaroon");
