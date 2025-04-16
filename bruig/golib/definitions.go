@@ -289,6 +289,7 @@ type lnInitDcrlnd struct {
 	AutoCompact       bool   `json:"autocompact"`
 	AutoCompactMinAge int    `json:"autocompact_min_age"` // Seconds
 	DebugLevel        string `json:"debug_level"`
+	MaxLogFiles       int    `json:"max_log_files"`
 }
 
 type lnNewWalletSeed struct {

@@ -1408,22 +1408,26 @@ class LNInitDcrlnd {
   final int autoCompactMinAge;
   @JsonKey(name: "debug_level")
   final String debugLevel;
+  @JsonKey(name: "max_log_files")
+  final int maxLogFiles;
 
   LNInitDcrlnd(
-      this.rootDir,
-      this.network,
-      this.password,
-      this.existingSeed,
-      this.multiChanBackup,
-      this.proxyaddr,
-      this.torIsolation,
-      this.proxyUsername,
-      this.proxyPassword,
-      this.circuitLimit,
-      this.syncFreeList,
-      this.autoCompact,
-      this.autoCompactMinAge,
-      this.debugLevel);
+    this.rootDir,
+    this.network,
+    this.password,
+    this.existingSeed,
+    this.multiChanBackup,
+    this.proxyaddr,
+    this.torIsolation,
+    this.proxyUsername,
+    this.proxyPassword,
+    this.circuitLimit,
+    this.syncFreeList,
+    this.autoCompact,
+    this.autoCompactMinAge,
+    this.debugLevel,
+    this.maxLogFiles,
+  );
   Map<String, dynamic> toJson() => _$LNInitDcrlndToJson(this);
 }
 
@@ -3167,7 +3171,8 @@ abstract class PluginPlatform {
       bool syncFreeList,
       bool autoCompact,
       int autoCompactMinAge,
-      String debugLevel) async {
+      String debugLevel,
+      int maxLogFiles) async {
     var req = LNInitDcrlnd(
         rootPath,
         network,
@@ -3182,7 +3187,8 @@ abstract class PluginPlatform {
         syncFreeList,
         autoCompact,
         autoCompactMinAge,
-        debugLevel);
+        debugLevel,
+        maxLogFiles);
     var res = await asyncCall(CTLNInitDcrlnd, req);
     return LNNewWalletSeed.fromJson(res);
   }
@@ -3199,7 +3205,8 @@ abstract class PluginPlatform {
       bool syncFreeList,
       bool autoCompact,
       int autoCompactMinAge,
-      String debugLevel) async {
+      String debugLevel,
+      int maxLogFiles) async {
     var req = LNInitDcrlnd(
         rootPath,
         network,
@@ -3214,7 +3221,8 @@ abstract class PluginPlatform {
         syncFreeList,
         autoCompact,
         autoCompactMinAge,
-        debugLevel);
+        debugLevel,
+        maxLogFiles);
     var res = await asyncCall(CTLNRunDcrlnd, req);
     return res;
   }
