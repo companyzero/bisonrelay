@@ -1951,7 +1951,7 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		// If it's for a local page, fetch it directly.
 		if c.PublicID() == args.UID {
 			return 0, c.FetchLocalResource(args.Path, args.Metadata,
-				args.Data)
+				args.Data, args.AsyncTargetID)
 		}
 
 		if args.SessionID == 0 {
@@ -1963,7 +1963,7 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		}
 
 		_, err := c.FetchResource(args.UID, args.Path, args.Metadata,
-			args.SessionID, args.ParentPage, args.Data)
+			args.SessionID, args.ParentPage, args.Data, args.AsyncTargetID)
 		return args.SessionID, err
 
 	case CTHandshake:
@@ -2359,6 +2359,14 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 			DurationMs: uint64(info.DurationMs),
 		}
 		return res, nil
+
+	case CTLoadFetchedResource:
+		var args loadFetchedResourceArgs
+		if err := cmd.decode(&args); err != nil {
+			return nil, err
+		}
+
+		return c.LoadFetchedResource(args.UID, args.SessionID, args.PageID)
 	}
 	return nil, nil
 

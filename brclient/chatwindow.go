@@ -189,6 +189,20 @@ type formEl struct {
 	fields []*formField
 }
 
+// asyncTarget returns the id of the target when the form has an asynctarget
+// field.
+func (f *formEl) asyncTarget() string {
+	for _, ff := range f.fields {
+		if ff.typ == "asynctarget" && ff.value != nil {
+			if target, ok := ff.value.(string); ok {
+				return target
+			}
+		}
+	}
+
+	return ""
+}
+
 func (f *formEl) action() string {
 	for _, ff := range f.fields {
 		if ff.typ == "action" && ff.value != nil {
@@ -407,6 +421,11 @@ func parseMsgLine(line string, mention string) *chatMsgElLine {
 	return res
 }
 
+var (
+	sectionStartRegexp = regexp.MustCompile(`--section id=([\w]+) --`)
+	sectionEndRegexp   = regexp.MustCompile(`--/section--`)
+)
+
 func parseMsgIntoElements(msg string, mention string) []*chatMsgElLine {
 	// First, break into lines.
 	lines := strings.Split(msg, "\n")
@@ -418,6 +437,10 @@ func parseMsgIntoElements(msg string, mention string) []*chatMsgElLine {
 			form = &formEl{}
 		case line == "--/form--":
 			form = nil
+		case sectionStartRegexp.MatchString(line):
+			// Skip section start line
+		case sectionEndRegexp.MatchString(line):
+			// Skip section end line
 		case form != nil:
 			ff := parseFormField(line)
 			if ff != nil {
@@ -429,6 +452,7 @@ func parseMsgIntoElements(msg string, mention string) []*chatMsgElLine {
 				el.PushBack(msgEl)
 				res = append(res, el)
 			}
+
 		default:
 			res = append(res, parseMsgLine(line, mention))
 		}
@@ -564,7 +588,54 @@ func (cw *chatWindow) newRecvdMsg(from, msg string, fromUID *zkidentity.ShortID,
 	return m
 }
 
-func (cw *chatWindow) replacePage(nick string, fr clientdb.FetchedResource) {
+func (cw *chatWindow) replaceAsyncTargetWithLoading(asyncTargetID string) {
+	cw.Lock()
+	defer cw.Unlock()
+
+	if len(cw.msgs) == 0 {
+		return
+	}
+	if cw.page == nil {
+		return
+	}
+
+	data := cw.page.Response.Data
+
+	reStartPattern := `--section id=` + asyncTargetID + ` --\n`
+	reStart, err := regexp.Compile(reStartPattern)
+	if err != nil {
+		// Skip invalid ids.
+		return
+	}
+
+	startPos := reStart.FindIndex(data)
+	if startPos == nil {
+		// Did not find the target location.
+		return
+	}
+
+	endPos := sectionEndRegexp.FindIndex(data[startPos[1]:])
+	if endPos == nil {
+		// Unterminated section.
+		return
+	}
+	endPos[0] += startPos[1] // Convert to absolute index
+
+	// Copy the rest of the string to an aux buffer.
+	aux := append([]byte(nil), data[endPos[0]:]...)
+
+	// Create the new buffer, replacing the contents inside
+	// the section with this response.
+	data = data[0:startPos[1]]
+	data = append(data, []byte("(⏳ Loading response)\n")...)
+	data = append(data, aux...)
+
+	msg := cw.msgs[0]
+	msg.elements = parseMsgIntoElements(string(data), "")
+	cw.page.Response.Data = data
+}
+
+func (cw *chatWindow) replacePage(nick string, fr clientdb.FetchedResource, history []*clientdb.FetchedResource) {
 	cw.Lock()
 	var msg *chatMsg
 	if len(cw.msgs) == 0 {
@@ -573,10 +644,70 @@ func (cw *chatWindow) replacePage(nick string, fr clientdb.FetchedResource) {
 	} else {
 		msg = cw.msgs[0]
 	}
-	msg.elements = parseMsgIntoElements(string(fr.Response.Data), "")
+
+	// Replace async targets.
+	var data, aux []byte
+	if len(history) > 0 || fr.AsyncTargetID != "" {
+		// If there is history, this is loading from disk, so use only
+		// whats in the slice. Otherwise, replace the response data.
+		var toProcess []*clientdb.FetchedResource
+		if len(history) > 0 {
+			data = history[0].Response.Data
+			toProcess = history[1:]
+		} else {
+			data = cw.page.Response.Data
+			toProcess = []*clientdb.FetchedResource{&fr}
+		}
+
+		// Process the async targets.
+		for _, asyncRes := range toProcess {
+			reStartPattern := `--section id=` + asyncRes.AsyncTargetID + ` --\n`
+			reStart, err := regexp.Compile(reStartPattern)
+			if err != nil {
+				// Skip invalid ids.
+				continue
+			}
+
+			startPos := reStart.FindIndex(data)
+			if startPos == nil {
+				// Did not find the target location.
+				continue
+			}
+
+			endPos := sectionEndRegexp.FindIndex(data[startPos[1]:])
+			if endPos == nil {
+				// Unterminated section.
+				continue
+			}
+			endPos[0] += startPos[1] // Convert to absolute index
+
+			// Copy the rest of the string to an aux buffer.
+			aux = append(aux, data[endPos[0]:]...)
+
+			// Create the new buffer, replacing the contents inside
+			// the section with this response.
+			data = data[0:startPos[1]]
+			data = append(data, asyncRes.Response.Data...)
+			data = append(data, aux...)
+			aux = aux[:0]
+		}
+	} else {
+		data = fr.Response.Data
+	}
+
+	msg.elements = parseMsgIntoElements(string(data), "")
 	msg.fromUID = &fr.UID
-	cw.page = &fr
-	cw.selElIndex = 0
+	if len(history) > 0 {
+		cw.page = history[0]
+	} else if fr.AsyncTargetID == "" {
+		cw.page = &fr
+	}
+	cw.page.Response.Data = data
+	if history != nil || fr.AsyncTargetID == "" {
+		// Only reset the selected element index when replacing the
+		// entire page.
+		cw.selElIndex = 0
+	}
 	cw.pageRequested = nil
 	cw.alias = fmt.Sprintf("%v/%v", nick, strings.Join(fr.Request.Path, "/"))
 	cw.Unlock()

@@ -127,27 +127,31 @@ func (s *Store) reloadStore() error {
 	tmpl := template.New("*root")
 
 	// Parse templates.
-	filenames, err := filepath.Glob(filepath.Join(s.root, "*.tmpl"))
-	if err != nil {
-		return err
-	}
-	for _, filename := range filenames {
-		if filepath.Ext(filename) != ".tmpl" {
-			continue
-		}
-		rawBytes, err := os.ReadFile(filename)
+	dirs := []string{s.root, filepath.Join(s.root, "static")}
+	for _, dir := range dirs {
+		filenames, err := filepath.Glob(filepath.Join(dir, "*.tmpl"))
 		if err != nil {
 			return err
 		}
-		data := string(rawBytes)
-		data = resources.ProcessEmbeds(data,
-			s.root, s.log)
+		for _, filename := range filenames {
+			if filepath.Ext(filename) != ".tmpl" {
+				continue
+			}
+			rawBytes, err := os.ReadFile(filename)
+			if err != nil {
+				return err
+			}
+			data := string(rawBytes)
+			data = resources.ProcessEmbeds(data,
+				s.root, s.log)
 
-		t := tmpl.New(filepath.Base(filename))
-		_, err = t.Parse(data)
-		if err != nil {
-			return fmt.Errorf("unable to parse template %s: %v",
-				filename, err)
+			s.log.Debugf("Reloading demplate %s (name %s)", filename, filepath.Base(filename))
+			t := tmpl.New(filepath.Base(filename))
+			_, err = t.Parse(data)
+			if err != nil {
+				return fmt.Errorf("unable to parse template %s: %v",
+					filename, err)
+			}
 		}
 	}
 
@@ -241,6 +245,8 @@ func (s *Store) Fulfill(ctx context.Context, uid clientintf.UserID,
 		return s.handleOrderStatus(ctx, uid, request)
 	case len(request.Path) == 2 && request.Path[0] == "orderaddcomment":
 		return s.handleOrderAddComment(ctx, uid, request)
+	case len(request.Path) == 2 && request.Path[0] == "static":
+		return s.handleStaticRequest(ctx, uid, request)
 	default:
 		return s.handleNotFound(ctx, uid, request)
 	}

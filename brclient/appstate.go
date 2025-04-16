@@ -1310,9 +1310,8 @@ func (as *appState) findPagesChatWindow(sessID clientintf.PagesSessionID) *chatW
 	return nil
 }
 
-func (as *appState) findOrNewPagesChatWindow(sessID clientintf.PagesSessionID) *chatWindow {
+func (as *appState) findOrNewPagesChatWindow(sessID clientintf.PagesSessionID) (cw *chatWindow, isNew bool) {
 	as.chatWindowsMtx.Lock()
-	var cw *chatWindow
 	for i, acw := range as.chatWindows {
 		if acw.isPage && acw.pageSess == sessID {
 			if i != as.activeCW {
@@ -1332,10 +1331,11 @@ func (as *appState) findOrNewPagesChatWindow(sessID clientintf.PagesSessionID) *
 		}
 		as.chatWindows = append(as.chatWindows, cw)
 		as.updatedCW[len(as.chatWindows)-1] = false
+		isNew = true
 	}
 	as.chatWindowsMtx.Unlock()
 	as.footerInvalidate()
-	return cw
+	return
 }
 
 // markWindowUpdated marks the window as updated.
@@ -2521,7 +2521,7 @@ func (as *appState) downloadEmbed(source clientintf.UserID, embedded mdembeds.Em
 
 // fetchPage requests the given page from the user.
 func (as *appState) fetchPage(uid clientintf.UserID, pagePath string, session,
-	parent clientintf.PagesSessionID, form *formEl) error {
+	parent clientintf.PagesSessionID, form *formEl, asyncTargetId string) error {
 	if len(pagePath) < 1 {
 		return fmt.Errorf("page path is empty")
 	}
@@ -2563,7 +2563,7 @@ func (as *appState) fetchPage(uid clientintf.UserID, pagePath string, session,
 
 	// If it's for a local page, fetch it directly.
 	if as.c.PublicID() == uid {
-		return as.c.FetchLocalResource(path, nil, data)
+		return as.c.FetchLocalResource(path, nil, data, asyncTargetId)
 	}
 
 	// Check we know the user.
@@ -2572,14 +2572,15 @@ func (as *appState) fetchPage(uid clientintf.UserID, pagePath string, session,
 		return err
 	}
 
-	tag, err := as.c.FetchResource(uid, path, nil, session, parent, data)
+	tag, err := as.c.FetchResource(uid, path, nil, session, parent, data,
+		asyncTargetId)
 	if err != nil {
 		return err
 	}
 
 	// Mark session making a new request (if it already exists).
 	cw := as.findPagesChatWindow(session)
-	if cw != nil {
+	if cw != nil && asyncTargetId == "" {
 		cw.Lock()
 		cw.pageRequested = &path
 		cw.Unlock()
@@ -2588,6 +2589,9 @@ func (as *appState) fetchPage(uid clientintf.UserID, pagePath string, session,
 			// Initialize the page spinner.
 			as.sendMsg(msgActiveCWRequestedPage{[]tea.Cmd{cw.pageSpinner.Tick}})
 		}
+	} else if cw != nil && asyncTargetId != "" {
+		cw.replaceAsyncTargetWithLoading(asyncTargetId)
+		as.repaintIfActive(cw)
 	}
 
 	as.diagMsg("Attempting to fetch %s from %s (session %s, tag %s)",
@@ -3268,8 +3272,22 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 			return
 		}
 
-		cw := as.findOrNewPagesChatWindow(fr.SessionID)
-		cw.replacePage(nick, fr)
+		cw, isNew := as.findOrNewPagesChatWindow(fr.SessionID)
+
+		// When this is the response to an async request and this is the
+		// first time this page is opened, load the entire history of
+		// the page and its async requests.
+		var history []*clientdb.FetchedResource
+		if isNew && fr.AsyncTargetID != "" {
+			history, err = as.c.LoadFetchedResource(uid, fr.SessionID, fr.ParentPage)
+			if err != nil {
+				as.diagMsg("Error loading history for page %s/%s: %v",
+					fr.SessionID, fr.ParentPage, err)
+				return
+			}
+		}
+
+		cw.replacePage(nick, fr, history)
 		sendMsg(msgPageFetched{
 			uid:  uid,
 			nick: nick,
