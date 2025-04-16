@@ -15,6 +15,9 @@ import (
 	"github.com/decred/slog"
 )
 
+// NewPagesSession creates a new namespace for resource requests. A "session"
+// is roughly equivalent to a browser tab: multiple requests may be performed
+// associated with a single session.
 func (c *Client) NewPagesSession() (clientintf.PagesSessionID, error) {
 	var id clientintf.PagesSessionID
 	err := c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
@@ -28,7 +31,8 @@ func (c *Client) NewPagesSession() (clientintf.PagesSessionID, error) {
 
 // FetchLocalResource fetches the local resource and triggers a correspoding
 // ResourceFetched call.
-func (c *Client) FetchLocalResource(path []string, meta map[string]string, data json.RawMessage) error {
+func (c *Client) FetchLocalResource(path []string, meta map[string]string,
+	data json.RawMessage, asyncTargetID string) error {
 	if c.cfg.ResourcesProvider == nil {
 		return fmt.Errorf("resources provider not configured")
 	}
@@ -49,14 +53,15 @@ func (c *Client) FetchLocalResource(path []string, meta map[string]string, data 
 	}
 
 	fr := clientdb.FetchedResource{
-		UID:        c.PublicID(),
-		SessionID:  0,
-		ParentPage: 0,
-		PageID:     0,
-		RequestTS:  reqTS,
-		ResponseTS: time.Now(),
-		Request:    rm,
-		Response:   *res,
+		UID:           c.PublicID(),
+		SessionID:     0,
+		ParentPage:    0,
+		PageID:        0,
+		RequestTS:     reqTS,
+		ResponseTS:    time.Now(),
+		Request:       rm,
+		Response:      *res,
+		AsyncTargetID: asyncTargetID,
 	}
 	var overv clientdb.PageSessionOverview
 
@@ -68,7 +73,9 @@ func (c *Client) FetchLocalResource(path []string, meta map[string]string, data 
 // resource is returned the ResourceFetched handler will be called with
 // the response using the returned tag.
 func (c *Client) FetchResource(uid UserID, path []string, meta map[string]string,
-	sess, parentPage clientintf.PagesSessionID, data json.RawMessage) (rpc.ResourceTag, error) {
+	sess, parentPage clientintf.PagesSessionID, data json.RawMessage,
+	asyncTargetID string) (rpc.ResourceTag, error) {
+
 	ru, err := c.UserByID(uid)
 	if err != nil {
 		return 0, err
@@ -81,7 +88,8 @@ func (c *Client) FetchResource(uid UserID, path []string, meta map[string]string
 	}
 
 	err = c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
-		return c.db.StoreResourceRequest(tx, uid, sess, parentPage, &rm)
+		return c.db.StoreResourceRequest(tx, uid, sess, parentPage,
+			&rm, asyncTargetID)
 	})
 	if err != nil {
 		return 0, err
@@ -174,4 +182,19 @@ func (c *Client) handleFetchResourceReply(ru *RemoteUser, frr rpc.RMFetchResourc
 		frr.Index, frr.Count, len(frr.Data))
 	c.ntfns.notifyResourceFetched(ru, fr, sess)
 	return nil
+}
+
+// LoadFetchedResource loads an already fetched resource for the given session
+// and page. The first element of the returned slice is the page, the others
+// are async requests that originated from the same page.
+func (c *Client) LoadFetchedResource(uid UserID, session,
+	page clientintf.PagesSessionID) ([]*clientdb.FetchedResource, error) {
+
+	var res []*clientdb.FetchedResource
+	err := c.dbView(func(tx clientdb.ReadTx) error {
+		var err error
+		res, err = c.db.LoadFetchedResource(tx, uid, session, page)
+		return err
+	})
+	return res, err
 }

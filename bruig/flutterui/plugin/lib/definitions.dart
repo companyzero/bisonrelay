@@ -2091,9 +2091,11 @@ class FetchResourceArgs {
   @JsonKey(name: "parent_page", defaultValue: 0)
   final int parentPage;
   final dynamic data;
+  @JsonKey(name: "async_target_id")
+  final String asyncTargetID;
 
   FetchResourceArgs(this.uid, this.path, this.metadata, this.sessionID,
-      this.parentPage, this.data);
+      this.parentPage, this.data, this.asyncTargetID);
   Map<String, dynamic> toJson() => _$FetchResourceArgsToJson(this);
 }
 
@@ -2131,6 +2133,9 @@ class RMFetchResourceReply {
       this.tag, this.status, this.meta, this.data, this.index, this.count);
   factory RMFetchResourceReply.fromJson(Map<String, dynamic> json) =>
       _$RMFetchResourceReplyFromJson(json);
+
+  RMFetchResourceReply copyWith({Uint8List? data}) =>
+      RMFetchResourceReply(tag, status, meta, data ?? this.data, index, count);
 }
 
 @JsonSerializable()
@@ -2208,11 +2213,46 @@ class FetchedResource {
   final RMFetchResource request;
   final RMFetchResourceReply response;
 
+  @JsonKey(name: "async_target_id")
+  final String asyncTargetID;
+
   factory FetchedResource.fromJson(Map<String, dynamic> json) =>
       _$FetchedResourceFromJson(json);
 
-  FetchedResource(this.uid, this.sessionID, this.parentPage, this.pageID,
-      this.requestTS, this.responseTS, this.request, this.response);
+  FetchedResource(
+      this.uid,
+      this.sessionID,
+      this.parentPage,
+      this.pageID,
+      this.requestTS,
+      this.responseTS,
+      this.request,
+      this.response,
+      this.asyncTargetID);
+
+  FetchedResource copyWith({RMFetchResourceReply? response}) => FetchedResource(
+        uid,
+        sessionID,
+        parentPage,
+        pageID,
+        requestTS,
+        responseTS,
+        request,
+        response ?? this.response,
+        asyncTargetID,
+      );
+}
+
+@JsonSerializable()
+class LoadFetchedResourceArgs {
+  final String uid;
+  @JsonKey(name: "session_id")
+  final int sessionID;
+  @JsonKey(name: "page_id")
+  final int pageID;
+
+  LoadFetchedResourceArgs(this.uid, this.sessionID, this.pageID);
+  Map<String, dynamic> toJson() => _$LoadFetchedResourceArgsToJson(this);
 }
 
 @JsonSerializable()
@@ -3397,9 +3437,10 @@ abstract class PluginPlatform {
       Map<String, String>? metadata,
       int sessionID,
       int parentPage,
-      dynamic data) async {
-    var args =
-        FetchResourceArgs(uid, path, metadata, sessionID, parentPage, data);
+      dynamic data,
+      String asyncTargetID) async {
+    var args = FetchResourceArgs(
+        uid, path, metadata, sessionID, parentPage, data, asyncTargetID);
     return await asyncCall(CTFetchResource, args);
   }
 
@@ -3516,6 +3557,18 @@ abstract class PluginPlatform {
 
   final int maxPayloadSize = 10 * 1024 * 1024; // Hope this never goes down.
   final String maxPayloadSizeStr = "10MiB";
+
+  Future<List<FetchedResource>> loadFetchedResource(
+      String uid, int sessionID, int pageID) async {
+    var res = await asyncCall(
+        CTLoadFetchedResource, LoadFetchedResourceArgs(uid, sessionID, pageID));
+    if (res == null) {
+      return List.empty();
+    }
+    return (res as List)
+        .map<FetchedResource>((v) => FetchedResource.fromJson(v))
+        .toList();
+  }
 }
 
 const int CTUnknown = 0x00;
@@ -3657,6 +3710,7 @@ const int CTAudioStartRecordNode = 0x93;
 const int CTAudioStartPlaybackNote = 0x94;
 const int CTAudioStopNote = 0x95;
 const int CTAudioNoteEmbed = 0x96;
+const int CTLoadFetchedResource = 0x97;
 
 const int notificationsStartID = 0x1000;
 

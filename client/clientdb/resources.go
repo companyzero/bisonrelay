@@ -2,6 +2,7 @@ package clientdb
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path"
 	"path/filepath"
@@ -27,7 +28,8 @@ func (db *DB) NewPagesSession(tx ReadWriteTx) (clientintf.PagesSessionID, error)
 // StoreResourceRequest stores the specified requested resource. This generates
 // a random tag for the request, which is set in the passed request Tag field.
 func (db *DB) StoreResourceRequest(tx ReadWriteTx, uid UserID,
-	sess, parentPage clientintf.PagesSessionID, req *rpc.RMFetchResource) error {
+	sess, parentPage clientintf.PagesSessionID, req *rpc.RMFetchResource,
+	asyncTargetID string) error {
 
 	userReqsDir := filepath.Join(db.root, inboundDir, uid.String(), reqResourcesDir)
 
@@ -41,11 +43,12 @@ func (db *DB) StoreResourceRequest(tx ReadWriteTx, uid UserID,
 	req.Tag = tag
 
 	rr := ResourceRequest{
-		UID:        uid,
-		SesssionID: sess,
-		ParentPage: parentPage,
-		Request:    *req,
-		Timestamp:  time.Now(),
+		UID:           uid,
+		SesssionID:    sess,
+		ParentPage:    parentPage,
+		Request:       *req,
+		Timestamp:     time.Now(),
+		AsyncTargetID: asyncTargetID,
 	}
 	if err := db.saveJsonFile(filename, rr); err != nil {
 		return err
@@ -56,7 +59,8 @@ func (db *DB) StoreResourceRequest(tx ReadWriteTx, uid UserID,
 	if err != nil {
 		return err
 	}
-	overv.appendRequest(uid, tag)
+	overv.appendRequest(uid, tag, asyncTargetID)
+
 	if err := db.saveResourcesSessionOverview(sess, &overv); err != nil {
 		return err
 	}
@@ -124,14 +128,15 @@ func (db *DB) StoreFetchedResource(tx ReadWriteTx, uid UserID, tag rpc.ResourceT
 
 	// Store the fetched resource.
 	fr = FetchedResource{
-		UID:        uid,
-		SessionID:  req.SesssionID,
-		ParentPage: req.ParentPage,
-		PageID:     clientintf.PagesSessionID(pageID),
-		RequestTS:  req.Timestamp,
-		ResponseTS: time.Now(),
-		Request:    req.Request,
-		Response:   reply,
+		UID:           uid,
+		SessionID:     req.SesssionID,
+		ParentPage:    req.ParentPage,
+		PageID:        clientintf.PagesSessionID(pageID),
+		RequestTS:     req.Timestamp,
+		ResponseTS:    time.Now(),
+		Request:       req.Request,
+		Response:      reply,
+		AsyncTargetID: req.AsyncTargetID,
 	}
 
 	fname := filepath.Join(sessionDir, pageFnamePattern.FilenameFor(pageID))
@@ -146,7 +151,8 @@ func (db *DB) StoreFetchedResource(tx ReadWriteTx, uid UserID, tag rpc.ResourceT
 		return fr, sess, err
 	}
 	sess.removeRequest(uid, tag)
-	sess.append(req.ParentPage, clientintf.PagesSessionID(pageID))
+	sess.appendResponse(req.ParentPage, clientintf.PagesSessionID(pageID),
+		req.AsyncTargetID)
 	if err := db.saveResourcesSessionOverview(req.SesssionID, &sess); err != nil {
 		return fr, sess, err
 	}
@@ -157,4 +163,38 @@ func (db *DB) StoreFetchedResource(tx ReadWriteTx, uid UserID, tag rpc.ResourceT
 	}
 
 	return fr, sess, nil
+}
+
+// LoadFetchedResource loads resources that have already been fetched from a
+// remote host. If the requested page has async resources that were already
+// fetched, they are returned as well.
+func (db *DB) LoadFetchedResource(tx ReadTx, uid UserID, sessionId, pageId clientintf.PagesSessionID) ([]*FetchedResource, error) {
+	sess, err := db.readResourcesSessionOverview(sessionId)
+	if err != nil {
+		return nil, err
+	}
+
+	pages := sess.pageAndAsyncChildren(pageId)
+	if len(pages) == 0 {
+		return nil, fmt.Errorf("%w: page %s does not have a response",
+			ErrNotFound, pageId)
+	}
+
+	sessionDir := filepath.Join(db.root, pageSessionsDir, pageSessDirPattern.FilenameFor(uint64(sessionId)))
+
+	res := make([]*FetchedResource, 0, len(pages))
+	for _, r := range pages {
+		fname := filepath.Join(sessionDir, pageFnamePattern.FilenameFor(uint64(r.ID)))
+		fr := new(FetchedResource)
+		err := db.readJsonFile(fname, fr)
+		if err != nil {
+			db.log.Warnf("Unable to load sesion resource %s/%s: %v",
+				sessionId, r.ID, err)
+			continue
+		}
+
+		res = append(res, fr)
+	}
+
+	return res, nil
 }

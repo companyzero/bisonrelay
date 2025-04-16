@@ -19,9 +19,14 @@ class _FormSubmitButton extends StatelessWidget {
     var snackbar = SnackBarModel.of(context);
     Map<String, dynamic> formData = {};
     String action = "";
+    String asyncTargetID = "";
     for (var field in form.fields) {
       if (field.type == "action") {
         action = field.value ?? "";
+      }
+      if (field.type == "asynctarget") {
+        asyncTargetID = field.value ?? "";
+        continue;
       }
       if (field.name == "" || field.value == null) {
         continue;
@@ -44,8 +49,8 @@ class _FormSubmitButton extends StatelessWidget {
     var parentPageID = pageSource?.pageID ?? 0;
 
     try {
-      await resources.fetchPage(
-          uid, parsed.pathSegments, sessionID, parentPageID, formData);
+      await resources.fetchPage(uid, parsed.pathSegments, sessionID,
+          parentPageID, formData, asyncTargetID);
     } catch (exception) {
       snackbar.error("Unable to fetch page: $exception");
     }
@@ -163,6 +168,7 @@ class CustomFormState extends State<CustomForm> {
         case "submit":
           submit = field;
           break;
+        case "asynctarget":
         case "hidden":
         case "action":
           break;

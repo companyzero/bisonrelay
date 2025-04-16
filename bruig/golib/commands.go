@@ -157,6 +157,7 @@ const (
 	CTAudioStartPlaybackNote              = 0x94
 	CTAudioStopNote                       = 0x95
 	CTAudioNoteEmbed                      = 0x96
+	CTLoadFetchedResource                 = 0x97
 
 	NTInviteReceived         = 0x1001
 	NTInviteAccepted         = 0x1002
