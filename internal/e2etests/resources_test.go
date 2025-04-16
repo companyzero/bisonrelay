@@ -8,6 +8,7 @@ import (
 	"github.com/companyzero/bisonrelay/client/clientdb"
 	"github.com/companyzero/bisonrelay/client/resources"
 	"github.com/companyzero/bisonrelay/internal/assert"
+	"github.com/companyzero/bisonrelay/internal/strescape"
 	"github.com/companyzero/bisonrelay/ratchet"
 	"github.com/companyzero/bisonrelay/rpc"
 )
@@ -196,4 +197,106 @@ func TestFetchesMultipleAsyncTargets(t *testing.T) {
 	assert.DeepEqual(t, loaded[0].PageID, resRoot.PageID)
 	assert.DeepEqual(t, loaded[1].PageID, resAsync1Req2.PageID)
 	assert.DeepEqual(t, loaded[2].PageID, resAsync2.PageID)
+}
+
+// TestResourceBundle tests handling of resource bundles.
+func TestResourceBundle(t *testing.T) {
+	// Setup Alice and Bob and have them KX.
+	tcfg := testScaffoldCfg{}
+	ts := newTestScaffold(t, tcfg)
+	alice := ts.newClient("alice")
+	bob := ts.newClient("bob")
+	ts.kxUsers(alice, bob)
+
+	// Static paths and resources data.
+	var (
+		rootPath    = resources.SplitPath("/path/to/root")
+		rootData    = []byte("root static data")
+		bundlePath1 = resources.SplitPath("/bundle/res/one")
+		bundleData1 = []byte("bundle data one")
+		bundlePath2 = resources.SplitPath("/bundle/res/two")
+		bundleData2 = []byte("bundle data two")
+		staticPath  = resources.SplitPath("/path/to/static")
+		staticData  = []byte("static unbundled data")
+	)
+
+	// Setup Alice's resources handler.
+	alice.modifyHandlers(func() {
+		p2s := strescape.ResourcesPath
+		r := resources.NewRouter()
+		bundle := resources.BundledResource{
+			Bundle: rpc.RMResourceBundle{
+				Resources: map[string]rpc.RMFetchResourceReply{
+					p2s(rootPath):    {Data: rootData},
+					p2s(bundlePath1): {Data: bundleData1},
+					p2s(bundlePath2): {Data: bundleData2},
+				},
+			},
+		}
+
+		r.BindExactPath(rootPath, &bundle)
+		r.BindExactPath(staticPath, &resources.StaticResource{Data: staticData})
+		alice.resourcesProvider = r
+	})
+
+	// Setup Bob's fetched resource handler.
+	chanResReply := make(chan clientdb.FetchedResource, 1)
+	bob.handle(client.OnResourceFetchedNtfn(func(user *client.RemoteUser,
+		fr clientdb.FetchedResource, sess clientdb.PageSessionOverview) {
+		chanResReply <- fr
+	}))
+
+	// Add hooks to check outgoing messages.
+	aliceSentResReply := make(chan struct{}, 5)
+	alice.handle(client.OnRMSent(func(ru *client.RemoteUser, rv ratchet.RVPoint, rm interface{}) {
+		if _, ok := rm.(rpc.RMFetchResourceReply); ok {
+			aliceSentResReply <- struct{}{}
+		}
+	}))
+	bobSentReq := make(chan struct{}, 5)
+	bob.handle(client.OnRMSent(func(ru *client.RemoteUser, rv ratchet.RVPoint, rm interface{}) {
+		if _, ok := rm.(rpc.RMFetchResource); ok {
+			bobSentReq <- struct{}{}
+		}
+	}))
+
+	// Start Bob session.
+	sessID, err := bob.NewPagesSession()
+	assert.NilErr(t, err)
+
+	// Bob asks for the root resource.
+	tagRoot, err := bob.FetchResource(alice.PublicID(), rootPath, nil, sessID, 0, nil, "")
+	assert.NilErr(t, err)
+	assert.ChanWritten(t, bobSentReq)
+
+	// Bob receives the resource.
+	assert.ChanWritten(t, aliceSentResReply)
+	resRoot := assert.ChanWritten(t, chanResReply)
+	assert.DeepEqual(t, resRoot.Response.Tag, tagRoot)
+	assert.DeepEqual(t, resRoot.Response.Data, rootData)
+
+	// Bob asks for a bundled resource. This errors with a signal that
+	// the resource was already fetched and generates a notification.
+	_, err = bob.FetchResource(alice.PublicID(), bundlePath1, nil, sessID, 0, nil, "")
+	assert.ErrorIs(t, err, client.ErrAlreadyHaveBundledResource)
+	assert.ChanNotWritten(t, bobSentReq, time.Second)
+	resBundle1 := assert.ChanWritten(t, chanResReply)
+	assert.DeepEqual(t, resBundle1.Response.Data, bundleData1)
+
+	// Ask for the root again, in the same session. This returns the
+	// bundled response.
+	_, err = bob.FetchResource(alice.PublicID(), rootPath, nil, sessID, 0, nil, "")
+	assert.ErrorIs(t, err, client.ErrAlreadyHaveBundledResource)
+	assert.ChanNotWritten(t, bobSentReq, time.Second)
+	resRootBundled := assert.ChanWritten(t, chanResReply)
+	assert.DeepEqual(t, resRootBundled.Response.Data, rootData)
+
+	// Ask for a resource not included in the bundle. This should generate
+	// a remote request.
+	_, err = bob.FetchResource(alice.PublicID(), staticPath, nil, sessID, 0, nil, "")
+	assert.NilErr(t, err)
+	assert.ChanWritten(t, bobSentReq)
+	assert.ChanWritten(t, aliceSentResReply)
+	resStatic := assert.ChanWritten(t, chanResReply)
+	assert.DeepEqual(t, resStatic.Response.Data, staticData)
 }

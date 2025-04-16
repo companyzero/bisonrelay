@@ -1,14 +1,17 @@
 package clientdb
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/companyzero/bisonrelay/client/clientintf"
+	"github.com/companyzero/bisonrelay/internal/strescape"
 	"github.com/companyzero/bisonrelay/rpc"
 )
 
@@ -69,7 +72,7 @@ func (db *DB) StoreResourceRequest(tx ReadWriteTx, uid UserID,
 
 // readResourceRequest returns the resource request corresponding to the
 // specified tag.
-func (db *DB) readResourceRequest(tx ReadTx, uid UserID,
+func (db *DB) readResourceRequest(uid UserID,
 	tag rpc.ResourceTag) (ResourceRequest, error) {
 
 	dir := filepath.Join(db.root, inboundDir, uid.String(), reqResourcesDir)
@@ -80,7 +83,7 @@ func (db *DB) readResourceRequest(tx ReadTx, uid UserID,
 }
 
 // removeResourceRequest deletes the request with the corresponding tag.
-func (db *DB) removeResourceRequest(tx ReadWriteTx, uid UserID, tag rpc.ResourceTag) error {
+func (db *DB) removeResourceRequest(uid UserID, tag rpc.ResourceTag) error {
 	dir := filepath.Join(db.root, inboundDir, uid.String(), reqResourcesDir)
 	filename := path.Join(dir, tag.String())
 	return removeIfExists(filename)
@@ -114,10 +117,11 @@ func (db *DB) StoreFetchedResource(tx ReadWriteTx, uid UserID, tag rpc.ResourceT
 	var sess PageSessionOverview
 
 	// Double check request exists.
-	req, err := db.readResourceRequest(tx, uid, tag)
+	req, err := db.readResourceRequest(uid, tag)
 	if err != nil {
 		return fr, sess, err
 	}
+	requestPath := strescape.ResourcesPath(req.Request.Path)
 
 	sessionDir := filepath.Join(db.root, pageSessionsDir, pageSessDirPattern.FilenameFor(uint64(req.SesssionID)))
 	last, err := pageFnamePattern.Last(sessionDir)
@@ -157,8 +161,89 @@ func (db *DB) StoreFetchedResource(tx ReadWriteTx, uid UserID, tag rpc.ResourceT
 		return fr, sess, err
 	}
 
+	// Handle bundles: when the response has a bundle tag set, decode the
+	// bundled pages.
+	if reply.Meta[rpc.ResourceMetaResponseIsBundle] == rpc.ResourceMetaResponseIsBundleValue {
+		// Decode bundle.
+		const maxBundleSize = 100000000 // 100MB
+		rawBundle, err := rpc.ZLibDecode(reply.Data, maxBundleSize)
+		if err != nil {
+			return fr, sess, fmt.Errorf("unable to uncompress raw bundle: %v", err)
+		}
+		var bundle rpc.RMResourceBundle
+		if err := json.Unmarshal(rawBundle, &bundle); err != nil {
+			return fr, sess, fmt.Errorf("unable to unmarshal response bundle: %v", err)
+		}
+
+		// Setup the overview of the bundle.
+		sess.initBundledResponse(uid, fr.PageID)
+
+		db.log.Debugf("Processing response bundle with %d pages", len(bundle.Resources))
+
+		// Find the response FR for the original request path within
+		// the bundle.
+		var replyFR *FetchedResource = &fr
+
+		// Save each page in the bundle.
+		//
+		// TODO: handle chunked response.
+		itemID := clientintf.PagesSessionID(pageID) + 1
+		for path, item := range bundle.Resources {
+			itemFR := FetchedResource{
+				UID:        uid,
+				SessionID:  req.SesssionID,
+				ParentPage: req.ParentPage,
+				PageID:     itemID,
+				RequestTS:  req.Timestamp,
+				Request: rpc.RMFetchResource{
+					Path: strings.Split(path, "/"),
+				},
+				ResponseTS:    fr.ResponseTS,
+				Response:      item,
+				AsyncTargetID: req.AsyncTargetID,
+			}
+			fname := filepath.Join(sessionDir, pageFnamePattern.FilenameFor(uint64(itemID)))
+			err = db.saveJsonFile(fname, itemFR)
+			if err != nil {
+				return fr, sess, err
+			}
+
+			db.log.Tracef("Saved bundled page %q to pageID %s", path, itemID)
+
+			// Track this in the overview.
+			sess.setBundledUserReponse(uid, path, fr.PageID, itemID)
+			sess.appendResponse(fr.ParentPage, itemID, "")
+
+			// Store if this is the resource for the original
+			// request.
+			if path == requestPath {
+				replyFR = &itemFR
+
+				// Make the tags of the item match the ones for
+				// the original request (needed by users).
+				itemFR.Response.Tag = req.Request.Tag
+				itemFR.Request.Tag = req.Request.Tag
+				db.log.Debugf("Found resource to original request %q in page %s",
+					path, itemID)
+			}
+
+			itemID += 1
+		}
+
+		// Save the overview again after processing bundle.
+		if err := db.saveResourcesSessionOverview(req.SesssionID, &sess); err != nil {
+			return fr, sess, err
+		}
+
+		fr = *replyFR
+	}
+
+	if err := db.saveResourcesSessionOverview(req.SesssionID, &sess); err != nil {
+		return fr, sess, err
+	}
+
 	// Finally, remove the old request.
-	if err := db.removeResourceRequest(tx, uid, tag); err != nil {
+	if err := db.removeResourceRequest(uid, tag); err != nil {
 		return fr, sess, err
 	}
 
@@ -197,4 +282,24 @@ func (db *DB) LoadFetchedResource(tx ReadTx, uid UserID, sessionId, pageId clien
 	}
 
 	return res, nil
+}
+
+func (db *DB) CheckForBundledResource(tx ReadTx, uid UserID, sessionID clientintf.PagesSessionID, path string) (*FetchedResource, *PageSessionOverview, error) {
+	sess, err := db.readResourcesSessionOverview(sessionID)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	itemPageID, ok := sess.getBundledUserPageID(uid, path)
+	if !ok {
+		return nil, nil, nil
+	}
+
+	sessionDir := filepath.Join(db.root, pageSessionsDir, pageSessDirPattern.FilenameFor(uint64(sessionID)))
+	fname := filepath.Join(sessionDir, pageFnamePattern.FilenameFor(uint64(itemPageID)))
+	fr := new(FetchedResource)
+	if err := db.readJsonFile(fname, fr); err != nil {
+		return nil, nil, err
+	}
+	return fr, &sess, nil
 }

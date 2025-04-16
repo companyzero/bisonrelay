@@ -19,6 +19,8 @@ var (
 	// ErrGCInvitationExpired is generated in situations where the
 	// invitation to a GC expired.
 	ErrGCInvitationExpired = errors.New("invitation to GC expired")
+
+	ErrAlreadyHaveBundledResource = errors.New("already have bundled resource")
 )
 
 type userNotFoundError struct {

@@ -7,7 +7,6 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"io"
 	"strconv"
 	"time"
 
@@ -176,6 +175,9 @@ const (
 	ResourceStatusOk         = 200
 	ResourceStatusBadRequest = 400
 	ResourceStatusNotFound   = 404
+
+	ResourceMetaResponseIsBundle      = "IsBundle"
+	ResourceMetaResponseIsBundleValue = "1"
 )
 
 const RMCFetchResource = "fetchresource"
@@ -198,6 +200,10 @@ type RMFetchResourceReply struct {
 	Data   []byte            `json:"data"`
 	Index  uint32            `json:"index"`
 	Count  uint32            `json:"count"`
+}
+
+type RMResourceBundle struct {
+	Resources map[string]RMFetchResourceReply
 }
 
 const (
@@ -451,18 +457,9 @@ type MessageVerifier func(msg []byte, sig *zkidentity.FixedSizeSignature) bool
 // DecomposeRM decodes a message of up to maxDecompressSize bytes from mb.
 func DecomposeRM(msgVerifier MessageVerifier, mb []byte, maxDecompressSize uint) (*RMHeader, interface{}, error) {
 	// Decompress everything
-	cr, err := zlib.NewReader(bytes.NewReader(mb))
+	all, err := ZLibDecode(mb, maxDecompressSize)
 	if err != nil {
 		return nil, nil, err
-	}
-	lr := &limitedReader{R: cr, N: maxDecompressSize}
-	all, err := io.ReadAll(lr)
-	closeErr := cr.Close()
-	if err != nil {
-		return nil, nil, fmt.Errorf("zlib read err: %w", err)
-	}
-	if closeErr != nil {
-		return nil, nil, fmt.Errorf("zlib close err: %w", closeErr)
 	}
 
 	var h RMHeader
