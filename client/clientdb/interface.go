@@ -2,6 +2,7 @@ package clientdb
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -486,12 +487,156 @@ type PageSessionOverviewResponse struct {
 	AsyncTargetID string                    `json:"async_target_id"`
 }
 
+type BundledPageResponse struct {
+	PagesMap map[string]clientintf.PagesSessionID `json:"pages_map"`
+}
+
+type BundledUserResponses struct {
+	Bundles           map[clientintf.PagesSessionID]*BundledPageResponse `json:"bundles"`
+	PagesToBundlesMap map[string]clientintf.PagesSessionID               `json:"pages_to_bundles_map"`
+}
+
+func (bur *BundledUserResponses) MarshalJSON() ([]byte, error) {
+	return []byte{}, nil
+}
+
+type BundledUserResponsesMap map[clientintf.UserID]*BundledUserResponses
+
+type bprJSON struct {
+	PagesMap map[string]uint64 `json:"pages_map"`
+}
+type burJSON struct {
+	Bundles           map[uint64]bprJSON `json:"bundles"`
+	PagesToBundlesMap map[string]uint64  `json:"pages_to_bundles_map"`
+}
+
+func (burmap *BundledUserResponsesMap) MarshalJSON() ([]byte, error) {
+	if burmap == nil {
+		return []byte("{}"), nil
+	}
+
+	burmapJSON := make(map[string]burJSON, len(*burmap))
+	for uid, bur := range *burmap {
+		uidStr := uid.String()
+		burmapJSON[uidStr] = burJSON{
+			Bundles:           make(map[uint64]bprJSON, len(bur.Bundles)),
+			PagesToBundlesMap: make(map[string]uint64, len(bur.PagesToBundlesMap)),
+		}
+		for bundleID, bpr := range bur.Bundles {
+			burmapJSON[uidStr].Bundles[uint64(bundleID)] = bprJSON{
+				PagesMap: make(map[string]uint64, len(bpr.PagesMap)),
+			}
+			for path, pageID := range bpr.PagesMap {
+				burmapJSON[uidStr].Bundles[uint64(bundleID)].PagesMap[path] = uint64(pageID)
+			}
+		}
+		for path, bundleID := range bur.PagesToBundlesMap {
+			burmapJSON[uidStr].PagesToBundlesMap[path] = uint64(bundleID)
+		}
+	}
+	return json.Marshal(burmapJSON)
+}
+
+func (burmap *BundledUserResponsesMap) UnmarshalJSON(b []byte) error {
+	burmapJSON := make(map[string]burJSON, len(*burmap))
+	err := json.Unmarshal(b, &burmapJSON)
+	if err != nil {
+		return err
+	}
+
+	*burmap = make(BundledUserResponsesMap, len(burmapJSON))
+	bm := *burmap
+	for uidStr, bur := range burmapJSON {
+		var uid clientintf.UserID
+		if err := uid.FromString(uidStr); err != nil {
+			return fmt.Errorf("unable to convert %q to UserID: %v", uidStr, err)
+		}
+
+		bm[uid] = &BundledUserResponses{
+			Bundles:           make(map[clientintf.PagesSessionID]*BundledPageResponse, len(bur.Bundles)),
+			PagesToBundlesMap: make(map[string]clientintf.PagesSessionID, len(bur.PagesToBundlesMap)),
+		}
+		for bundleID, bpr := range bur.Bundles {
+			bm[uid].Bundles[clientintf.PagesSessionID(bundleID)] = &BundledPageResponse{
+				PagesMap: make(map[string]clientintf.PagesSessionID, len(bpr.PagesMap)),
+			}
+			for path, pageID := range bpr.PagesMap {
+				bm[uid].Bundles[clientintf.PagesSessionID(bundleID)].PagesMap[path] = clientintf.PagesSessionID(pageID)
+			}
+		}
+		for path, bundleID := range bur.PagesToBundlesMap {
+			bm[uid].PagesToBundlesMap[path] = clientintf.PagesSessionID(bundleID)
+		}
+	}
+
+	return nil
+}
+
+func (burmap *BundledUserResponsesMap) initBundledResponse(uid clientintf.UserID, bundleID clientintf.PagesSessionID) {
+	if *burmap == nil {
+		*burmap = make(map[clientintf.UserID]*BundledUserResponses)
+	}
+	bm := *burmap
+	if bm[uid] == nil {
+		bm[uid] = &BundledUserResponses{}
+	}
+
+	userBundles := bm[uid]
+	if userBundles.Bundles == nil {
+		userBundles.Bundles = make(map[clientintf.PagesSessionID]*BundledPageResponse)
+	}
+	if userBundles.PagesToBundlesMap == nil {
+		userBundles.PagesToBundlesMap = make(map[string]clientintf.PagesSessionID)
+	}
+	if bundle, ok := userBundles.Bundles[bundleID]; !ok || bundle == nil {
+		userBundles.Bundles[bundleID] = &BundledPageResponse{}
+	}
+	if userBundles.Bundles[bundleID].PagesMap == nil {
+		userBundles.Bundles[bundleID].PagesMap = make(map[string]clientintf.PagesSessionID)
+	}
+}
+
+func (burmap *BundledUserResponsesMap) setBundledUserReponse(uid clientintf.UserID, path string, bundleID, itemID clientintf.PagesSessionID) {
+	userBundle := (*burmap)[uid]
+	userBundle.Bundles[bundleID].PagesMap[path] = itemID
+	userBundle.PagesToBundlesMap[path] = bundleID
+}
+
+func (burmap *BundledUserResponsesMap) getBundledUserPageID(uid clientintf.UserID, path string) (clientintf.PagesSessionID, bool) {
+	if *burmap == nil {
+		return 0, false
+	}
+	userBundle := (*burmap)[uid]
+	if userBundle == nil {
+		return 0, false
+	}
+	if userBundle.PagesToBundlesMap == nil || userBundle.Bundles == nil {
+		return 0, false
+	}
+	bundleID, ok := userBundle.PagesToBundlesMap[path]
+	if !ok {
+		return 0, false
+	}
+	bundle := userBundle.Bundles[bundleID]
+	if bundle == nil || bundle.PagesMap == nil {
+		return 0, false
+	}
+	itemID, ok := bundle.PagesMap[path]
+	if !ok {
+		return 0, false
+	}
+	return itemID, true
+
+}
+
 // PageSessionOverview stores the overview of a pages session navigation.
 type PageSessionOverview struct {
 	Requests       []PageSessionOverviewRequest  `json:"requests"`
 	Responses      []PageSessionOverviewResponse `json:"responses"`
 	LastResponseTS time.Time                     `json:"last_response_ts"`
 	LastRequestTS  time.Time                     `json:"last_request_ts"`
+
+	BundledUserResponses BundledUserResponsesMap `json:"bundled_user_responses"`
 }
 
 func (o *PageSessionOverview) appendResponse(parent, id clientintf.PagesSessionID, asyncId string) {
@@ -519,6 +664,18 @@ func (o *PageSessionOverview) appendRequest(uid clientintf.UserID, tag rpc.Resou
 		AsyncTargetID: asyncId,
 	})
 	o.LastRequestTS = time.Now()
+}
+
+func (o *PageSessionOverview) initBundledResponse(uid clientintf.UserID, bundleID clientintf.PagesSessionID) {
+	o.BundledUserResponses.initBundledResponse(uid, bundleID)
+}
+
+func (o *PageSessionOverview) setBundledUserReponse(uid clientintf.UserID, path string, bundleID, itemID clientintf.PagesSessionID) {
+	o.BundledUserResponses.setBundledUserReponse(uid, path, bundleID, itemID)
+}
+
+func (o *PageSessionOverview) getBundledUserPageID(uid clientintf.UserID, path string) (clientintf.PagesSessionID, bool) {
+	return o.BundledUserResponses.getBundledUserPageID(uid, path)
 }
 
 // pageAndAsyncChildren returns the page response (if it exists) and any async

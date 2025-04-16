@@ -1,7 +1,10 @@
 package resources
 
 import (
+	"bytes"
+	"compress/zlib"
 	"context"
+	"encoding/json"
 	"os"
 	"path/filepath"
 
@@ -75,4 +78,37 @@ func (fr *FilesystemResource) Fulfill(ctx context.Context, uid clientintf.UserID
 		Data:   data,
 		Status: rpc.ResourceStatusOk,
 	}, nil
+}
+
+// BundledResource is a resource that includes several child resources in a
+// bundle.
+type BundledResource struct {
+	Bundle rpc.RMResourceBundle
+	Meta   map[string]string
+}
+
+func (br *BundledResource) Fulfill(ctx context.Context, uid clientintf.UserID,
+	req *rpc.RMFetchResource) (*rpc.RMFetchResourceReply, error) {
+
+	buf := bytes.NewBuffer(nil)
+	zw := zlib.NewWriter(buf)
+	enc := json.NewEncoder(zw)
+	if err := enc.Encode(br.Bundle); err != nil {
+		return nil, err
+	}
+	if err := zw.Close(); err != nil {
+		return nil, err
+	}
+
+	if br.Meta == nil {
+		br.Meta = make(map[string]string, 1)
+	}
+	br.Meta[rpc.ResourceMetaResponseIsBundle] = rpc.ResourceMetaResponseIsBundleValue
+
+	return &rpc.RMFetchResourceReply{
+		Status: rpc.ResourceStatusOk,
+		Data:   buf.Bytes(),
+		Meta:   br.Meta,
+	}, nil
+
 }

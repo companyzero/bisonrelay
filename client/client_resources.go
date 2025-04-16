@@ -81,13 +81,31 @@ func (c *Client) FetchResource(uid UserID, path []string, meta map[string]string
 		return 0, err
 	}
 
+	pathStr := strescape.ResourcesPath(path)
+
 	rm := rpc.RMFetchResource{
 		Path: path,
 		Meta: meta,
 		Data: data,
 	}
 
+	var bundledFR *clientdb.FetchedResource
+	var sessView *clientdb.PageSessionOverview
+
 	err = c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
+		var err error
+
+		// When not sending data, check for cached bundles.
+		if data == nil {
+			bundledFR, sessView, err = c.db.CheckForBundledResource(tx, uid, sess, pathStr)
+			if err != nil {
+				return err
+			}
+			if bundledFR != nil {
+				return nil
+			}
+		}
+
 		return c.db.StoreResourceRequest(tx, uid, sess, parentPage,
 			&rm, asyncTargetID)
 	})
@@ -95,12 +113,21 @@ func (c *Client) FetchResource(uid UserID, path []string, meta map[string]string
 		return 0, err
 	}
 
+	// Already cached this page from a previously fetched bundle of
+	// resources. Notify user directly.
+	if bundledFR != nil {
+		ru.log.Infof("Requested resource path %s already bundled",
+			pathStr)
+		c.ntfns.notifyResourceFetched(ru, *bundledFR, *sessView)
+		return 0, ErrAlreadyHaveBundledResource
+	}
+
 	if ru.log.Level() < slog.LevelInfo {
 		ru.log.Debugf("Requesting resource tag %s path %s meta %s",
-			rm.Tag, strescape.ResourcesPath(path), spew.Sdump(meta))
+			rm.Tag, pathStr, spew.Sdump(meta))
 	} else {
 		ru.log.Infof("Requesting resource tag %s path %s",
-			rm.Tag, strescape.ResourcesPath(path))
+			rm.Tag, pathStr)
 	}
 
 	payEvent := "fetchresource." + strescape.ResourcesPath(path)

@@ -1,7 +1,10 @@
 package rpc
 
 import (
+	"bytes"
+	"compress/zlib"
 	"errors"
+	"fmt"
 	"io"
 )
 
@@ -27,4 +30,24 @@ func (l *limitedReader) Read(p []byte) (n int, err error) {
 	n, err = l.R.Read(p)
 	l.N -= uint(n)
 	return
+}
+
+// ZLibDecode decodes the given (zlib-encoded) input byte slice into an output
+// slice with the max number of bytes.
+func ZLibDecode(in []byte, maxDecompressSize uint) ([]byte, error) {
+	cr, err := zlib.NewReader(bytes.NewReader(in))
+	if err != nil {
+		return nil, err
+	}
+	lr := &limitedReader{R: cr, N: maxDecompressSize}
+	out, err := io.ReadAll(lr)
+	closeErr := cr.Close()
+	if err != nil {
+		return nil, fmt.Errorf("zlib read err: %w", err)
+	}
+	if closeErr != nil {
+		return nil, fmt.Errorf("zlib close err: %w", closeErr)
+	}
+
+	return out, nil
 }
