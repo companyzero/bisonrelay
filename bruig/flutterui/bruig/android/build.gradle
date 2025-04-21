@@ -1,16 +1,3 @@
-buildscript {
-    ext.kotlin_version = '1.7.21'
-    repositories {
-        google()
-        jcenter()
-    }
-
-    dependencies {
-        classpath 'com.android.tools.build:gradle:7.3.1'
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
-    }
-}
-
 allprojects {
     repositories {
         google()
@@ -20,6 +7,18 @@ allprojects {
 
 rootProject.buildDir = '../build'
 subprojects {
+    // Add namespace to plugins that do not have it
+    afterEvaluate { project ->
+        if (project.hasProperty('android')) {
+            project.android {
+                if (!hasProperty('namespace') || namespace == null || namespace.isEmpty()) {
+                    // Assign a default namespace based on the project name or group
+                    namespace = project.group.toString() ?: "org.bisonrelay.${project.name}"
+                }
+            }
+        }
+    }
+
     project.buildDir = "${rootProject.buildDir}/${project.name}"
     project.evaluationDependsOn(':app')
 }

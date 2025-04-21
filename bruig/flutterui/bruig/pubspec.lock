@@ -450,7 +450,7 @@ packages:
     dependency: "direct main"
     description:
       path: "packages/flutter_markdown"
-      ref: main
+      ref: b98386c14fef19537a8b45a232c6b04c8cf49acd
       resolved-ref: b98386c14fef19537a8b45a232c6b04c8cf49acd
       url: "https://github.com/tiagoalvesdulce/packages"
     source: git
@@ -539,10 +539,11 @@ packages:
   image_compression_flutter:
     dependency: "direct main"
     description:
-      name: image_compression_flutter
-      sha256: "0d7fc5d37bb69996285dd57342b3a37ad92fa4bb0616484af084ec924d6818b4"
-      url: "https://pub.dev"
-    source: hosted
+      path: "."
+      ref: d5cb7431516d66fa57c028049a5914b0aad7c65a
+      resolved-ref: d5cb7431516d66fa57c028049a5914b0aad7c65a
+      url: "https://github.com/SamHL/image_compression_flutter"
+    source: git
     version: "1.0.4"
   image_picker:
     dependency: "direct main"

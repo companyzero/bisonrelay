@@ -358,11 +358,11 @@ func AsyncCall(typ CmdType, id, clientHandle int32, payload []byte) {
 	go func() { cmdResultChan <- call(cmd) }()
 }
 
-func AsyncCallStr(typ CmdType, id, clientHandle int32, payload string) {
+func AsyncCallStr(typ int64, id, clientHandle int64, payload string) {
 	cmd := &cmd{
-		Type:         typ,
-		ID:           id,
-		ClientHandle: clientHandle,
+		Type:         CmdType(typ),
+		ID:           int32(id),
+		ClientHandle: int32(clientHandle),
 		Payload:      []byte(payload),
 	}
 	go func() { cmdResultChan <- call(cmd) }()
