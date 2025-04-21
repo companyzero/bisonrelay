@@ -1,11 +1,16 @@
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:bruig/components/buttons.dart';
 import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/components/text.dart';
 import 'package:bruig/models/audio.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as path;
+import 'package:share_plus/share_plus.dart';
 
 class AudioPlayerTracker extends StatefulWidget {
   final Uint8List audioBytes;
@@ -149,6 +154,45 @@ class _AudioElementState extends State<AudioElement> {
     }
   }
 
+  void saveOgg() async {
+    var fname = await FilePicker.platform.saveFile(
+          dialogTitle: "Select filename",
+          fileName: "audio.ogg",
+          bytes: widget.audioBytes,
+        ) ??
+        "";
+
+    if (fname == "") {
+      return;
+    }
+
+    // File(fname).writeAsBytesSync(widget.audioBytes);
+    if (Platform.isAndroid) {
+      showSuccessSnackbar(this, "Saved audio file");
+    } else {
+      showSuccessSnackbar(this, "Saved audio file $fname");
+    }
+  }
+
+  Future<String> tempOggDir() async {
+    bool isMobile = Platform.isIOS || Platform.isAndroid;
+    String base = isMobile
+        ? (await getApplicationCacheDirectory()).path
+        : (await getDownloadsDirectory())?.path ?? "";
+    return path.join(base, "audio");
+  }
+
+  void shareOgg() async {
+    var fname = "audio.ogg";
+    var dir = await tempOggDir();
+    if (!Directory(dir).existsSync()) {
+      Directory(dir).createSync(recursive: true);
+    }
+    fname = path.join(dir, fname);
+    File(fname).writeAsBytesSync(widget.audioBytes);
+    Share.shareXFiles([XFile(fname)]);
+  }
+
   @override
   void initState() {
     super.initState();
@@ -192,7 +236,10 @@ class _AudioElementState extends State<AudioElement> {
                 DropdownMenuItem<double>(value: v, child: Txt.S("${v}x")))
             .toList(),
         onChanged: setPlaySpeed,
-      )
+      ),
+      IconButton(onPressed: saveOgg, icon: Icon(Icons.download)),
+      if (Platform.isAndroid)
+        IconButton(onPressed: shareOgg, icon: Icon(Icons.share)),
     ]));
   }
 }
