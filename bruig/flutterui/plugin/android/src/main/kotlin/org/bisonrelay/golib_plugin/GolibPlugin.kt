@@ -185,7 +185,7 @@ class GolibPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, ServiceAware
       val id: Int = call.argument("id") ?: 0
       val handle: Int = call.argument("handle") ?: 0
       val payload: String? = call.argument("payload")
-      Golib.asyncCallStr(typ, id, handle, payload)
+      Golib.asyncCallStr(typ.toLong(), id.toLong(), handle.toLong(), payload)
     } else if (call.method == "startFgSvc") {
       fgSvcEnabled = true;
     } else if (call.method == "stopFgSvc") {

@@ -58,7 +58,7 @@ dependencies:
   flutter_markdown:
     git:
       url: https://github.com/tiagoalvesdulce/packages
-      ref: main
+      ref: b98386c14fef19537a8b45a232c6b04c8cf49acd
       path: packages/flutter_markdown
   permission_handler: ^12.0.0
   optimize_battery: ^0.0.4
@@ -73,7 +73,10 @@ dependencies:
   collection: ^1.18.0
   mobile_scanner: ^6.0.0
   super_clipboard: ^0.8.22
-  image_compression_flutter: ^1.0.4
+  image_compression_flutter:
+    git:
+      url: https://github.com/SamHL/image_compression_flutter
+      ref: d5cb7431516d66fa57c028049a5914b0aad7c65a
   archive: ^4.0.5
   emoji_picker_flutter: ^4.3.0
   retrieval: ^1.0.1
