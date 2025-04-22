@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:bruig/components/confirmation_dialog.dart';
 import 'package:bruig/components/pay_tip.dart';
 import 'package:bruig/components/rename_chat.dart';
+import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/components/suggest_kx.dart';
 import 'package:bruig/components/text.dart';
 import 'package:bruig/components/trans_reset.dart';
@@ -269,7 +270,14 @@ List<ChatMenuItem> buildUserChatMenu(ChatModel chat) {
   }
 
   void sendFile(BuildContext context) async {
-    var filePickRes = await FilePicker.platform.pickFiles();
+    FilePickerResult? filePickRes;
+    try {
+      filePickRes = await FilePicker.platform.pickFiles();
+    } catch (exception) {
+      showErrorSnackbar(context, "Unable to select file: $exception");
+      return;
+    }
+
     if (filePickRes == null) return;
     var filePath = filePickRes.files.first.path;
     if (filePath == null) return;
