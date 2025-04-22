@@ -256,14 +256,12 @@ class _ChatInputState extends State<ChatInput> {
     bool isScreenSmall = checkIsScreenSmall(context);
 
     if (isAttaching) {
-      return Column(children: [
-        Row(mainAxisAlignment: MainAxisAlignment.start, children: [
-          IconButton(
-              padding: const EdgeInsets.all(0),
-              iconSize: 25,
-              onPressed: cancelAttach,
-              icon: const Icon(Icons.keyboard_arrow_left_outlined))
-        ]),
+      return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        IconButton(
+            padding: const EdgeInsets.all(0),
+            iconSize: 25,
+            onPressed: cancelAttach,
+            icon: const Icon(Icons.keyboard_arrow_left_outlined)),
         AttachFileScreen(sendAttachment, initialAttachData, initialAttachMime)
       ]);
     }
