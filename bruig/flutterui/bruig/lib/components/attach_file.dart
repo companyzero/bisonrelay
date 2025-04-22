@@ -84,6 +84,13 @@ class AttachmentEmbed {
   }
 }
 
+class _GalleryImg {
+  final File file;
+  final ImageProvider img;
+
+  _GalleryImg(this.file, this.img);
+}
+
 class AttachFileScreen extends StatefulWidget {
   final SendMsg _send;
   final Uint8List? initialFileData;
@@ -104,7 +111,7 @@ class _AttachFileScreenState extends State<AttachFileScreen> {
   SharedFileAndShares? linkedFile;
   Timer? _debounce;
   late Future<Directory?> _futureGetPath;
-  List<dynamic> listImagePath = [];
+  List<_GalleryImg> listImages = [];
   Directory _fetchedPath = Directory.systemTemp;
   bool _permissionStatus = false;
 
@@ -150,17 +157,24 @@ class _AttachFileScreenState extends State<AttachFileScreen> {
     return await getDownloadsDirectory();
   }
 
+  final RegExp imgExtRegexp =
+      RegExp(".(gif|jpe?g|tiff?|png|webp|bmp)", caseSensitive: false);
+
   _fetchFiles(Directory dir) {
-    List<dynamic> listImage = [];
+    List<_GalleryImg> newList = [];
     dir.list().forEach((element) {
-      RegExp regExp =
-          RegExp(".(gif|jpe?g|tiff?|png|webp|bmp)", caseSensitive: false);
-      // Only add in List if path is an image
-      if (regExp.hasMatch('$element')) listImage.add(element);
-      setState(() {
-        listImagePath = listImage;
-      });
+      if (!imgExtRegexp.hasMatch(element.path)) return;
+      if (element is! File) return;
+      try {
+        var imgProvider = Image.file(element).image;
+        newList.add(_GalleryImg(element, imgProvider));
+      } catch (_) {
+        // Ignore invalid image.
+      }
     });
+
+    listImages = newList;
+
     WidgetsBinding.instance.addPostFrameCallback((_) => setState(() {
           _fetchedPath = dir;
         }));
@@ -376,26 +390,25 @@ class _AttachFileScreenState extends State<AttachFileScreen> {
                   if (_permissionStatus && _fetchedPath != dir) {
                     _fetchFiles(dir);
                   }
-                  return listImagePath.isNotEmpty
-                      ? Text(dir.path)
-                      : const Empty();
+                  return listImages.isNotEmpty ? Text(dir.path) : const Empty();
                 } else {
                   return const Text("Loading gallery");
                 }
               },
             ),
-            listImagePath.isNotEmpty
+            listImages.isNotEmpty
                 ? Container(
                     margin: const EdgeInsets.symmetric(vertical: 8.0),
                     height: 150.0,
-                    child: ListView(
+                    child: Scrollbar(
                         controller: scrollCtrl,
-                        scrollDirection: Axis.horizontal,
-                        primary: false,
-                        padding: const EdgeInsets.all(10),
-                        children: [
-                          for (var i = 0; i < listImagePath.length; i++)
-                            Padding(
+                        child: ListView.builder(
+                            controller: scrollCtrl,
+                            scrollDirection: Axis.horizontal,
+                            primary: false,
+                            padding: const EdgeInsets.all(10),
+                            itemCount: listImages.length,
+                            itemBuilder: (context, i) => Padding(
                                 padding: const EdgeInsets.all(10),
                                 child: Material(
                                     shape: const RoundedRectangleBorder(
@@ -405,7 +418,7 @@ class _AttachFileScreenState extends State<AttachFileScreen> {
                                         borderRadius: const BorderRadius.all(
                                             Radius.circular(10)),
                                         onTap: () => _onImagePressed(
-                                            listImagePath[i],
+                                            listImages[i].file,
                                             context: context),
                                         child: Container(
                                           width: 100,
@@ -416,13 +429,10 @@ class _AttachFileScreenState extends State<AttachFileScreen> {
                                                 const BorderRadius.all(
                                                     Radius.circular(8.0)),
                                             image: DecorationImage(
-                                                image:
-                                                    Image.file(listImagePath[i])
-                                                        .image,
+                                                image: listImages[i].img,
                                                 fit: BoxFit.contain),
                                           ),
-                                        ))))
-                        ]))
+                                        )))))))
                 : const Empty(),
             Row(children: [
               const SizedBox(width: 10),
