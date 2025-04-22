@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:bruig/components/confirmation_dialog.dart';
 import 'package:bruig/components/pay_tip.dart';
 import 'package:bruig/components/rename_chat.dart';
@@ -9,7 +11,6 @@ import 'package:bruig/models/emoji.dart';
 import 'package:bruig/models/log.dart';
 import 'package:bruig/models/notifications.dart';
 import 'package:bruig/models/resources.dart';
-import 'package:bruig/models/snackbar.dart';
 import 'package:bruig/screens/chat/new_gc_screen.dart';
 import 'package:bruig/screens/chat/new_message_screen.dart';
 import 'package:bruig/screens/chats.dart';
@@ -19,13 +20,13 @@ import 'package:bruig/screens/ln_management.dart';
 import 'package:bruig/screens/log.dart';
 import 'package:bruig/screens/manage_content_screen.dart';
 import 'package:bruig/screens/paystats.dart';
+import 'package:bruig/screens/send_file.dart';
 import 'package:bruig/screens/settings.dart';
 import 'package:bruig/screens/viewpage_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:path/path.dart' as path;
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:bruig/screens/contacts_msg_times.dart';
 
@@ -206,33 +207,34 @@ class MainMenuModel extends ChangeNotifier {
 
 class ChatMenuItem {
   final String label;
-  final Function(BuildContext context, ClientModel chats) onSelected;
+  final Future<void> Function(BuildContext context, ClientModel chats)
+      onSelected;
   const ChatMenuItem(this.label, this.onSelected);
 }
 
 List<ChatMenuItem?> buildChatContextMenu(GlobalKey<NavigatorState> navKey) {
-  void generateInvite(BuildContext context) {
+  Future<void> generateInvite(BuildContext context) async {
     Navigator.of(context, rootNavigator: true).pushNamed('/generateInvite');
   }
 
-  void fetchInvite(BuildContext context) {
+  Future<void> fetchInvite(BuildContext context) async {
     Navigator.of(context, rootNavigator: true).pushNamed('/fetchInvite');
   }
 
-  void gotoContactsLastMsgTimeScreen(BuildContext context) {
+  Future<void> gotoContactsLastMsgTimeScreen(BuildContext context) async {
     Navigator.of(context, rootNavigator: true)
         .pushNamed(ContactsLastMsgTimesScreen.routeName);
   }
 
-  void gotoInvitesListScreen(BuildContext context) {
+  Future<void> gotoInvitesListScreen(BuildContext context) async {
     Navigator.of(context, rootNavigator: true)
         .pushNamed(GCInvitationsScreen.routeName);
   }
 
-  void gotoNewMessage(BuildContext context, ClientModel client) =>
+  Future<void> gotoNewMessage(BuildContext context, ClientModel client) async =>
       navKey.currentState?.pushNamed(NewMessageScreen.routeName);
 
-  void gotoCreateGC(BuildContext context, ClientModel client) =>
+  Future<void> gotoCreateGC(BuildContext context, ClientModel client) async =>
       navKey.currentState?.pushNamed(NewGcScreen.routeName);
 
   return <ChatMenuItem?>[
@@ -240,11 +242,11 @@ List<ChatMenuItem?> buildChatContextMenu(GlobalKey<NavigatorState> navKey) {
     ChatMenuItem("Create Group Chat", gotoCreateGC),
     ChatMenuItem(
         "Create Invite",
-        (context, client) =>
+        (context, client) async =>
             client.connState.isOnline ? generateInvite(context) : null),
     ChatMenuItem(
         "Fetch Invite",
-        (context, client) =>
+        (context, client) async =>
             client.connState.isOnline ? fetchInvite(context) : null),
     ChatMenuItem("Received Message Log",
         (context, client) => gotoContactsLastMsgTimeScreen(context)),
@@ -267,7 +269,6 @@ List<ChatMenuItem> buildUserChatMenu(ChatModel chat) {
   }
 
   void sendFile(BuildContext context) async {
-    var snackbar = SnackBarModel.of(context);
     var filePickRes = await FilePicker.platform.pickFiles();
     if (filePickRes == null) return;
     var filePath = filePickRes.files.first.path;
@@ -275,18 +276,7 @@ List<ChatMenuItem> buildUserChatMenu(ChatModel chat) {
     filePath = filePath.trim();
     if (filePath == "") return;
 
-    var fname = path.basename(filePath);
-    var chatMsg =
-        SynthChatEvent("Sending file \"$fname\" to user", SCE_sending);
-    chat.append(ChatEventModel(chatMsg, null), false);
-
-    try {
-      await Golib.sendFile(chat.id, filePath);
-      chatMsg.state = SCE_sent;
-    } catch (exception) {
-      chatMsg.error = Exception(exception);
-      snackbar.error("Unable to send file: $exception");
-    }
+    await showSendFileScreen(context, chat: chat, file: File(filePath));
   }
 
   void listUserPosts(BuildContext context, ClientModel client) async {
@@ -360,24 +350,24 @@ List<ChatMenuItem> buildUserChatMenu(ChatModel chat) {
   }
 
   return <ChatMenuItem>[
-    ChatMenuItem("User Profile", (context, client) {
+    ChatMenuItem("User Profile", (context, client) async {
       client.active = chat;
       client.ui.showProfile.val = true;
       gotoChatScreen(context);
     }),
     ChatMenuItem(
       "Pay Tip",
-      (context, chats) => showPayTipModalBottom(context, chat),
+      (context, chats) async => showPayTipModalBottom(context, chat),
     ),
     ChatMenuItem(
       "Request Ratchet Reset",
-      (context, client) {
+      (context, client) async {
         client.active = chat;
         gotoChatScreen(context);
         chat.requestKXReset();
       },
     ),
-    ChatMenuItem("Show Content", (context, client) {
+    ChatMenuItem("Show Content", (context, client) async {
       client.active = chat;
       gotoChatScreen(context);
       listUserContent();
@@ -385,7 +375,7 @@ List<ChatMenuItem> buildUserChatMenu(ChatModel chat) {
     chat.isSubscribed
         ? ChatMenuItem(
             "Unsubscribe to Posts",
-            (context, chats) {
+            (context, chats) async {
               confirmationDialog(context, () {
                 unsubscribeToPosts();
               },
@@ -396,7 +386,7 @@ List<ChatMenuItem> buildUserChatMenu(ChatModel chat) {
             },
           )
         : !chat.isSubscribing
-            ? ChatMenuItem("Subscribe to Posts", (context, chats) {
+            ? ChatMenuItem("Subscribe to Posts", (context, chats) async {
                 confirmationDialog(
                     context,
                     subscribeToPosts,
@@ -407,38 +397,38 @@ List<ChatMenuItem> buildUserChatMenu(ChatModel chat) {
               })
             : ChatMenuItem(
                 "Subscribing to Posts",
-                (context, chats) => null,
+                (context, chats) async {},
               ),
     ...(chat.isSubscribed
         ? [
             ChatMenuItem(
               "List Posts",
-              (context, client) => listUserPosts(context, client),
+              (context, client) async => listUserPosts(context, client),
             )
           ]
         : []),
     ChatMenuItem(
       "Send File",
-      (context, chats) => sendFile(context),
+      (context, chats) async => sendFile(context),
     ),
-    ChatMenuItem("View Pages", (context, client) {
+    ChatMenuItem("View Pages", (context, client) async {
       client.active = chat;
       gotoChatScreen(context);
       viewPages(context);
     }),
     ChatMenuItem(
       "Rename User",
-      (context, chats) => showRenameModalBottom(context, chat),
+      (context, chats) async => showRenameModalBottom(context, chat),
     ),
     ChatMenuItem(
       "Suggest User to KX",
-      (context, chats) => showSuggestKXModalBottom(context, chat),
+      (context, chats) async => showSuggestKXModalBottom(context, chat),
     ),
     ChatMenuItem(
       "Issue Transitive Reset with User",
-      (context, chats) => showTransResetModalBottom(context, chat),
+      (context, chats) async => showTransResetModalBottom(context, chat),
     ),
-    ChatMenuItem("Perform Handshake", (context, client) {
+    ChatMenuItem("Perform Handshake", (context, client) async {
       client.active = chat;
       gotoChatScreen(context);
       handshake();
@@ -450,13 +440,14 @@ List<ChatMenuItem> buildGCMenu(ChatModel chat) {
   return [
     ChatMenuItem(
         "Manage GC",
-        (context, chats) => Provider.of<ClientModel>(context, listen: false)
-            .ui
-            .showProfile
-            .val = true),
+        (context, chats) async =>
+            Provider.of<ClientModel>(context, listen: false)
+                .ui
+                .showProfile
+                .val = true),
     ChatMenuItem(
       "Rename GC",
-      (context, chats) => showRenameModalBottom(context, chat),
+      (context, chats) async => showRenameModalBottom(context, chat),
     ),
     ChatMenuItem(
       "Resend GC List",

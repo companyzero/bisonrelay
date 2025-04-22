@@ -99,8 +99,8 @@ class _ChatSideMenuState extends State<ChatSideMenu> {
                 itemCount: menus.length,
                 itemBuilder: (context, index) => ListTile(
                     title: Txt.S(menus[index].label),
-                    onTap: () {
-                      menus[index].onSelected(context, client);
+                    onTap: () async {
+                      await menus[index].onSelected(context, client);
                       client.ui.chatSideMenuActive.clear();
                     }))),
       ]),
