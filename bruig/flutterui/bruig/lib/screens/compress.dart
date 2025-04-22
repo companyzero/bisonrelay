@@ -63,6 +63,7 @@ class __CompressImageScreenState extends State<_CompressImageScreen> {
   String originalPath = "";
   ImageFile? originalFile;
   Uint8List? compressed;
+  bool initing = true;
   bool compressing = false;
 
   void initOriginalFile() async {
@@ -100,6 +101,7 @@ class __CompressImageScreenState extends State<_CompressImageScreen> {
       setState(() {
         compressing = false;
         compressed = output.rawBytes;
+        initing = false; // First init done.
       });
     } catch (exception) {
       showErrorSnackbar(this, "Unable to compress image: $exception");
@@ -145,7 +147,7 @@ class __CompressImageScreenState extends State<_CompressImageScreen> {
                   Navigator.of(context).pop();
                 }),
                 Txt.S("Original File: ${humanReadableSize(original.length)}"),
-                if (compressing)
+                if (initing || compressing)
                   const SizedBox(
                       width: 20,
                       height: 20,

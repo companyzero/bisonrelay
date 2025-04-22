@@ -7,8 +7,10 @@ import 'package:bruig/components/md_elements.dart';
 import 'package:bruig/components/chat/types.dart';
 import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/components/text.dart';
+import 'package:bruig/models/client.dart';
 import 'package:bruig/models/snackbar.dart';
 import 'package:bruig/screens/compress.dart';
+import 'package:bruig/screens/send_file.dart';
 import 'package:bruig/theme_manager.dart';
 import 'package:bruig/util.dart';
 import 'package:flutter_avif/flutter_avif.dart';
@@ -21,7 +23,6 @@ import 'package:golib_plugin/definitions.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:mime/mime.dart';
-import 'package:path/path.dart' as path;
 
 List<String> allowedMimeTypes = [
   "text/plain",
@@ -95,7 +96,10 @@ class AttachFileScreen extends StatefulWidget {
   final SendMsg _send;
   final Uint8List? initialFileData;
   final String? initialMime;
+  final ChatModel chat;
+  final VoidCallback closeAttachScreen;
   const AttachFileScreen(this._send, this.initialFileData, this.initialMime,
+      this.chat, this.closeAttachScreen,
       {super.key});
 
   @override
@@ -194,28 +198,9 @@ class _AttachFileScreenState extends State<AttachFileScreen> {
         if (filePath == null) return;
         filePath = filePath.trim();
         if (filePath == "") return;
-        var data = await File(filePath).readAsBytes();
-
-        if (data.length > Golib.maxPayloadSize) {
-          throw "File is too large to attach (limit: ${Golib.maxPayloadSizeStr})";
-        }
-
-        var mimeType = lookupMimeType(filePath);
-        if (mimeType == null) {
-          throw "Unable to lookup file type";
-        }
-        if (!allowedMimeTypes.contains(mimeType)) {
-          throw "Selected file ($filePath) type not allowed, only $allowedMimeTypes currently allowed";
-        }
-        setState(() {
-          selectedAttachmentPath = filePath;
-          this.filePath = filePath!;
-          fileName = path.basename(filePath);
-          fileData = data;
-          mime = mimeType;
-        });
-      } on Exception catch (exception) {
-        snackbar.error("Unable to attach file: $exception");
+        await showSendFileScreen(context,
+            chat: widget.chat, file: File(filePath));
+        widget.closeAttachScreen(); // File screen already does the sending.
       } catch (exception) {
         snackbar.error("Unable to attach file: $exception");
       }
@@ -233,21 +218,61 @@ class _AttachFileScreenState extends State<AttachFileScreen> {
     required BuildContext context,
   }) async {
     var snackbar = SnackBarModel.of(context);
+    XFile? pickedFile;
     try {
-      final XFile? pickedFile = await _picker.pickImage(
-        source: source,
-      );
-      if (pickedFile == null) {
-        return;
+      pickedFile = await _picker.pickImage(source: source);
+    } catch (e) {
+      snackbar.error("Unable to select file: $e");
+    }
+
+    if (pickedFile == null) {
+      return;
+    }
+
+    _onImagePressed(pickedFile.path, context: context);
+  }
+
+  Future<void> _onImagePressed(
+    String filePath, {
+    required BuildContext context,
+  }) async {
+    var snackbar = SnackBarModel.of(context);
+    try {
+      var mimeType = lookupMimeType(filePath);
+      if (mimeType == null) {
+        throw "Unknown image MIME type";
+      }
+      if (!mimeType.startsWith("image/")) {
+        throw "Not an image mime type ($mimeType)";
       }
 
-      var data = await pickedFile.readAsBytes();
+      var data = await File(filePath).readAsBytes();
       if (data.length > Golib.maxPayloadSize) {
-        throw "File is too large to attach (limit: ${Golib.maxPayloadSizeStr})";
+        // Image is larger than possible to attach as message. Automatically show
+        // compression screen to try and reduce the max size.
+        var compressRes =
+            await showCompressScreen(context, original: data, mime: mimeType);
+
+        if (compressRes == null) {
+          // User canceled compression.
+          return;
+        }
+
+        if (compressRes.data.length > Golib.maxPayloadSize) {
+          // Compression was insufficient to reduce size. This needs to be sent
+          // as a file.
+          await showSendFileScreen(context,
+              chat: widget.chat, file: File(filePath));
+          return;
+        }
+
+        // Replace the vars so that the setState below uses the compressed version.
+        data = compressRes.data;
+        mimeType = compressRes.mime;
       }
-      var mimeType = lookupMimeType(pickedFile.path);
+
       setState(() {
-        selectedAttachmentPath = pickedFile.path;
+        selectedAttachmentPath = filePath;
         fileData = data;
         if (mimeType != null) {
           mime = mimeType;
@@ -255,30 +280,6 @@ class _AttachFileScreenState extends State<AttachFileScreen> {
       });
     } catch (e) {
       snackbar.error("Unable to attach file: $e");
-    }
-  }
-
-  Future<void> _onImagePressed(
-    File image, {
-    required BuildContext context,
-  }) async {
-    var snackbar = SnackBarModel.of(context);
-    try {
-      var data = await image.readAsBytes();
-      if (data.length > Golib.maxPayloadSize) {
-        throw "File is too large to attach (limit: ${Golib.maxPayloadSizeStr})";
-      }
-      var mimeType = lookupMimeType(image.path);
-      setState(() {
-        selectedAttachmentPath = image.path;
-        fileData = data;
-        fileName = path.basename(image.path);
-        if (mimeType != null) {
-          mime = mimeType;
-        }
-      });
-    } catch (e) {
-      snackbar.error("Unable to select image: $e");
     }
   }
 
@@ -418,7 +419,7 @@ class _AttachFileScreenState extends State<AttachFileScreen> {
                                         borderRadius: const BorderRadius.all(
                                             Radius.circular(10)),
                                         onTap: () => _onImagePressed(
-                                            listImages[i].file,
+                                            listImages[i].file.path,
                                             context: context),
                                         child: Container(
                                           width: 100,

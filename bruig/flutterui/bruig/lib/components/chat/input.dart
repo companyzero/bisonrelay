@@ -262,7 +262,8 @@ class _ChatInputState extends State<ChatInput> {
             iconSize: 25,
             onPressed: cancelAttach,
             icon: const Icon(Icons.keyboard_arrow_left_outlined)),
-        AttachFileScreen(sendAttachment, initialAttachData, initialAttachMime)
+        AttachFileScreen(sendAttachment, initialAttachData, initialAttachMime,
+            widget.chat, cancelAttach)
       ]);
     }
 
