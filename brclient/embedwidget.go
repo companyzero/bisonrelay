@@ -107,6 +107,7 @@ func (ew *embedWidget) tryEmbed() error {
 		id = chainhash.HashH(data).String()[:8]
 		pseudoData := fmt.Sprintf("[content %s]", id)
 		args.Data = []byte(pseudoData)
+		args.Name = filepath.Base(filename)
 	}
 
 	if ew.idxSharedFile > -1 && ew.idxSharedFile < len(ew.sharedFiles) {

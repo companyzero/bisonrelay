@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"path/filepath"
 	"regexp"
 	"sync"
 	"time"
@@ -1009,7 +1010,8 @@ func (c *Client) PM(uid UserID, msg string) error {
 
 	myNick := c.LocalNick()
 	err = c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
-		return c.db.LogPM(tx, uid, false, myNick, msg, time.Now())
+		_, err := c.db.LogPM(tx, uid, false, myNick, msg, time.Now())
+		return err
 	})
 	if err != nil {
 		return err
@@ -1048,6 +1050,12 @@ func (c *Client) Handshake(uid UserID) error {
 	}
 
 	return c.sendWithSendQ("syn", rpc.RMHandshakeSYN{}, ru.ID())
+}
+
+// FullEmbedPath returns the full path of a saved embed path, given its recorded
+// local filename.
+func (c *Client) FullEmbedPath(localFilename string) string {
+	return filepath.Join(c.db.DBRoot(), localFilename)
 }
 
 // ChatHistoryEntry contains information parsed from a single line in a chat

@@ -35,7 +35,7 @@ type EmbeddedArgs struct {
 func (args EmbeddedArgs) String() string {
 	var parts []string
 	if args.Name != "" {
-		parts = append(parts, "part="+args.Name)
+		parts = append(parts, "name="+args.Name)
 	}
 	if args.Alt != "" {
 		parts = append(parts, "alt="+args.Alt)
@@ -57,6 +57,9 @@ func (args EmbeddedArgs) String() string {
 	}
 	if args.Data != nil {
 		parts = append(parts, "data="+base64.StdEncoding.EncodeToString(args.Data))
+	}
+	if args.LocalFilename != "" {
+		parts = append(parts, "localfilename="+args.LocalFilename)
 	}
 
 	return "--embed[" + strings.Join(parts, ",") + "]--"

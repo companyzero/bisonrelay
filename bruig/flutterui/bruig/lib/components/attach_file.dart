@@ -23,6 +23,7 @@ import 'package:golib_plugin/definitions.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:mime/mime.dart';
+import 'package:path/path.dart' as path;
 
 List<String> allowedMimeTypes = [
   "text/plain",
@@ -44,8 +45,14 @@ class AttachmentEmbed {
   String? alt;
   String id;
   String? filename;
+  String? name;
   AttachmentEmbed(this.id,
-      {this.data, this.linkedFile, this.alt, this.mime, this.filename});
+      {this.data,
+      this.linkedFile,
+      this.alt,
+      this.mime,
+      this.filename,
+      this.name});
 
   String displayString() {
     return "--embed[id=$id]--";
@@ -53,6 +60,9 @@ class AttachmentEmbed {
 
   String embedString() {
     List<String> parts = [];
+    if ((name ?? "") != "") {
+      parts.add("name=${Uri.encodeComponent(name!)}");
+    }
     if ((alt ?? "") != "") {
       parts.add("alt=${Uri.encodeComponent(alt!)}");
     }
@@ -296,6 +306,9 @@ class _AttachFileScreenState extends State<AttachFileScreen> {
       alt: alt,
       mime: mime,
       filename: fileName,
+      name: selectedAttachmentPath != null
+          ? path.basename(selectedAttachmentPath!)
+          : null,
     );
     widget._send(embed.embedString());
 

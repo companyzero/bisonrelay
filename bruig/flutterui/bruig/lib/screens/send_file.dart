@@ -68,6 +68,7 @@ class _SendFileScreenState extends State<SendFileScreen> {
       alt: "",
       mime: mimeType,
       filename: filename,
+      name: path.basename(filename),
     );
     chat.sendMsg(embed.embedString());
   }

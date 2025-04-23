@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:math';
 import 'dart:developer' as developer;
 
+import 'package:bruig/components/md_elements.dart';
 import 'package:bruig/components/route_error.dart';
 import 'package:bruig/models/emoji.dart';
 import 'package:bruig/models/audio.dart';
@@ -175,6 +176,7 @@ Future<void> runMainApp(Config cfg) async {
       ChangeNotifierProvider(create: (c) => WalletModel()),
       ChangeNotifierProvider(create: (c) => TypingEmojiSelModel()),
       ChangeNotifierProvider(create: (c) => AudioModel(), lazy: false),
+      ChangeNotifierProvider(create: (c) => MarkdownAreaModel(cfg.dbRoot)),
     ],
     child: App(cfg, globalLogModel, globalShutdownModel),
   ));

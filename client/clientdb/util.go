@@ -113,6 +113,35 @@ func (db *DB) randomIDInDir(dir string) (clientintf.ID, error) {
 	return res, fmt.Errorf("could not find random id in dir %s", dir)
 }
 
+// seqPathNotExistsFile returns a filename for a file that does not exist in the
+// given dir. If dir/prefix+ext exists, starts appending numbers until a file
+// that does not exist is found (e.g. dir/prefix+"_1"+ext).
+func (db *DB) seqPathNotExistsFile(dir string, prefix, ext string) (string, error) {
+	const max = 999999999
+
+	// Ensure dir exists.
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return "", err
+	}
+
+	if len(ext) > 0 && ext[0] != '.' {
+		ext = "." + ext
+	}
+
+	fname := fmt.Sprintf("%s%s", prefix, ext)
+	for i := 1; i < max; i++ {
+		fullPath := filepath.Join(dir, fname)
+		if _, err := os.Stat(fullPath); os.IsNotExist(err) {
+			return fname, nil
+		} else if err != nil {
+			db.log.Warnf("Error attempting to evaluate existence file %s: %v", fname, err)
+		}
+
+		fname = fmt.Sprintf("%s_%d%s", prefix, i, ext)
+	}
+	return "", errors.New("too many attempts at finding a unique filename")
+}
+
 // saveJsonFile saves the data to a temp file, then renames the temp file to
 // the passed filename.
 func (db *DB) saveJsonFile(fname string, data interface{}) error {

@@ -235,3 +235,8 @@ func (db *DB) Update(ctx context.Context, f func(tx ReadWriteTx) error) error {
 	db.Unlock()
 	return err
 }
+
+// DBRoot returns the root of the DB, which is configured during startup.
+func (db *DB) DBRoot() string {
+	return db.root
+}
