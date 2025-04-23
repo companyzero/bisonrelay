@@ -92,8 +92,11 @@ class LnpayURLSyntax extends md.InlineSyntax {
 }
 
 class EmbedInlineSyntax extends md.InlineSyntax {
+  final String dbRoot;
+
   /// This is a primitive example pattern
-  EmbedInlineSyntax({
+  EmbedInlineSyntax(
+    this.dbRoot, {
     String pattern = r'--embed\[(.*?)\]--',
   }) : super(pattern);
 
@@ -125,9 +128,10 @@ class EmbedInlineSyntax extends md.InlineSyntax {
     }
 
     var data = parms["data"] ?? "";
+    var localFilename = parms["localfilename"] ?? "";
 
     // Bare link without embedded data.
-    if (data == "" && download != "") {
+    if ((data == "" && localFilename == "") && download != "") {
       var el = md.Element.text(
           "download", alt != "" ? alt : "Download file $download");
       el.attributes["fid"] = download;
@@ -136,39 +140,54 @@ class EmbedInlineSyntax extends md.InlineSyntax {
     }
 
     // Otherwise, we need data.
-    if (data == "") {
+    if (data == "" && localFilename == "") {
       return true;
     }
 
     var tag = "";
-    switch (parms["type"]) {
-      case "image/bmp":
-      case "image/gif":
-      case "image/jpeg":
-      case "image/jxl":
-      case "image/png":
-      case "image/webp":
-        tag = "image";
-        break;
-      case "image/avif":
-        tag = "avif";
-      case "text/plain":
-        // Decode plain text directly.
-        tag = "pre";
-        try {
-          data = utf8.fuse(base64).decode(data);
-        } catch (exception) {
-          data = "Unable to decode plain text contents: $exception";
-        }
-        break;
-      case "application/pdf":
-        tag = "pdf";
-        break;
-      case "audio/ogg":
-        tag = "audio";
-        break;
-      default:
-        return true;
+
+    // If localFilename is specified, load from saved embedded dir.
+    if (localFilename != "") {
+      var filePath = path.join(dbRoot, localFilename);
+      try {
+        // Encode back to base64 becase ImageBuilder decodes it itself.
+        data = base64Encode(File(filePath).readAsBytesSync());
+      } catch (exception) {
+        tag = "text";
+        data = "Error opening embedded file '$filePath': $exception";
+      }
+    }
+
+    if (tag == "") {
+      switch (parms["type"]) {
+        case "image/bmp":
+        case "image/gif":
+        case "image/jpeg":
+        case "image/jxl":
+        case "image/png":
+        case "image/webp":
+          tag = "image";
+          break;
+        case "image/avif":
+          tag = "avif";
+        case "text/plain":
+          // Decode plain text directly.
+          tag = "pre";
+          try {
+            data = utf8.fuse(base64).decode(data);
+          } catch (exception) {
+            data = "Unable to decode plain text contents: $exception";
+          }
+          break;
+        case "application/pdf":
+          tag = "pdf";
+          break;
+        case "audio/ogg":
+          tag = "audio";
+          break;
+        default:
+          return true;
+      }
     }
     md.Element el = md.Element.text(tag, data);
 
@@ -185,6 +204,11 @@ class EmbedInlineSyntax extends md.InlineSyntax {
 
     if (parms.containsKey("filename") && parms["filename"] != "") {
       el.attributes["filename"] = parms["filename"]!;
+    }
+
+    var name = parms["name"] ?? "";
+    if (name != "") {
+      el.attributes["name"] = name;
     }
 
     parser.addNode(el);
@@ -318,12 +342,12 @@ class VideoMarkdownElementBuilder extends MarkdownElementBuilder {
 }
 */
 
-class MarkdownArea extends StatelessWidget {
-  static final extensionSet = md.ExtensionSet(
+class MarkdownAreaModel extends ChangeNotifier {
+  final extensionSet = md.ExtensionSet(
       md.ExtensionSet.gitHubFlavored.blockSyntaxes,
       [md.EmojiSyntax(), ...md.ExtensionSet.gitHubFlavored.inlineSyntaxes]);
 
-  static final builders = {
+  final Map<String, MarkdownElementBuilder> builders = {
     "pre": PreformattedElementBuilder(),
     "pdf": PDFMarkdownElementBuilder(),
     "audio": AudioElementBuilder(),
@@ -336,17 +360,19 @@ class MarkdownArea extends StatelessWidget {
     "avif": AVIFElementBuilder(),
   };
 
-  static final inlineSyntaxes = [
-    //VideoInlineSyntax(),
-    //ImageInlineSyntax()
-    EmbedInlineSyntax(),
+  final List<md.InlineSyntax> inlineSyntaxes = [
     LnpayURLSyntax(),
   ];
-
-  static final blockSyntaxes = [
+  final List<FormBlockSyntax> blockSyntaxes = [
     FormBlockSyntax(),
   ];
 
+  MarkdownAreaModel(String dbroot) {
+    inlineSyntaxes.add(EmbedInlineSyntax(dbroot));
+  }
+}
+
+class MarkdownArea extends StatelessWidget {
   static final _startTagBugRe = RegExp(r'^\s*(<[^>\s]+\s*>)$');
 
   static String _cleanupSrcText(String text) {
@@ -396,18 +422,18 @@ class MarkdownArea extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer2<ThemeNotifier, PaymentsModel>(
-        builder: (context, theme, payments, _) => MarkdownBody(
+    return Consumer3<ThemeNotifier, PaymentsModel, MarkdownAreaModel>(
+        builder: (context, theme, payments, mk, _) => MarkdownBody(
               codeBlockMaxHeight: 200,
               styleSheet: theme.mdStyleSheet,
               data: text.trim(),
-              extensionSet: extensionSet,
-              builders: builders,
+              extensionSet: mk.extensionSet,
+              builders: mk.builders,
               onTapLink: (text, url, _) {
                 launchUrlAwait(context, url);
               },
-              inlineSyntaxes: inlineSyntaxes,
-              blockSyntaxes: blockSyntaxes,
+              inlineSyntaxes: mk.inlineSyntaxes,
+              blockSyntaxes: mk.blockSyntaxes,
             ));
   }
 }
@@ -452,7 +478,8 @@ class ImageMd extends StatelessWidget {
   final String tip;
   final Uint8List imgContent;
   final String type;
-  const ImageMd(this.tip, this.imgContent, this.type, {super.key});
+  final String? name;
+  const ImageMd(this.tip, this.imgContent, this.type, {this.name, super.key});
 
   @override
   Widget build(BuildContext context) => Tooltip(
@@ -462,7 +489,7 @@ class ImageMd extends StatelessWidget {
           onTap: () {
             showDialog(
                 context: context,
-                builder: (_) => ImageDialog(imgContent, type));
+                builder: (_) => ImageDialog(imgContent, type, name: name));
           },
           child: Container(
             constraints: const BoxConstraints(maxHeight: 250, maxWidth: 250),
@@ -687,9 +714,10 @@ class ImageMarkdownElementBuilder extends MarkdownElementBuilder {
       tip += "Click to download file $download";
     }
     var type = element.attributes["type"] ?? "";
+    var name = element.attributes["name"];
 
     try {
-      return ImageMd(tip, imgBytes, type);
+      return ImageMd(tip, imgBytes, type, name: name);
     } catch (exception) {
       debugPrint("Unable to decode image: $exception");
       return Image.asset(

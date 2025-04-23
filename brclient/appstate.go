@@ -535,16 +535,24 @@ func (as *appState) prettyArgs(args *mdembeds.EmbeddedArgs) string {
 	// Embedded file.
 	if args.Download.IsEmpty() {
 		switch {
-		case len(args.Data) == 0:
+		case len(args.Data) == 0 && args.LocalFilename == "":
 			s += "[Empty link and data]"
 		case args.Typ == "":
 			s += "[Embedded untyped data]"
 		default:
+			// When args.Data == 0 and args.LocalFilename != "",
+			// it means the embedded was saved to the local db.
 			name := "Embedded file"
 			if args.Name != "" {
-				name = args.Name
+				name = strescape.PathElement(args.Name)
+			} else if args.LocalFilename != "" {
+				name = filepath.Base(args.LocalFilename)
 			}
-			s += fmt.Sprintf("[%s (%s - %q)]", name, hbytes(int64(len(args.Data))), args.Typ)
+			size := int64(len(args.Data))
+			if args.LocalFilename != "" {
+				size, _ = fileSize(as.c.FullEmbedPath(args.LocalFilename))
+			}
+			s += fmt.Sprintf("[%s (%s - %q)]", name, hbytes(size), args.Typ)
 		}
 
 		return s
@@ -2454,17 +2462,23 @@ func (as *appState) viewRaw(b []byte) (tea.Cmd, error) {
 }
 
 func (as *appState) viewEmbed(embedded mdembeds.EmbeddedArgs) (tea.Cmd, error) {
-	if len(embedded.Data) == 0 {
-		return nil, fmt.Errorf("no embedded file")
-	}
 	prog := programByMimeType(*as.mimeMap.Load(), embedded.Typ)
 	if prog == "" {
 		return nil, fmt.Errorf("no external viewer configured for %v", embedded.Typ)
 	}
 
-	filePath, err := as.c.SaveEmbed(embedded.Data, embedded.Typ)
-	if err != nil {
-		return nil, err
+	var filePath string
+	switch {
+	case embedded.LocalFilename != "":
+		filePath = as.c.FullEmbedPath(embedded.LocalFilename)
+	case len(embedded.Data) != 0:
+		var err error
+		filePath, err = as.c.SaveEmbed(embedded.Data, embedded.Typ)
+		if err != nil {
+			return nil, err
+		}
+	default:
+		return nil, errors.New("embedded is empty")
 	}
 
 	c := exec.Command(prog, filePath)

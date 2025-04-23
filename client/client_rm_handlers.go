@@ -153,7 +153,9 @@ func (c *Client) handlePrivateMsg(ru *RemoteUser, p rpc.RMPrivateMessage, ts tim
 	}
 
 	err := c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
-		return c.db.LogPM(tx, ru.ID(), false, ru.Nick(), p.Message, ts)
+		var err error
+		p.Message, err = c.db.LogPM(tx, ru.ID(), false, ru.Nick(), p.Message, ts)
+		return err
 	})
 	if err != nil {
 		return err

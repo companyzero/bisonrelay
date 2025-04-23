@@ -39,12 +39,13 @@ Future<String> _tempImgDir() async {
 class ImageDialog extends StatelessWidget {
   final Uint8List imgContent;
   final String type;
-  const ImageDialog(this.imgContent, this.type, {super.key});
+  final String? name;
+  const ImageDialog(this.imgContent, this.type, {this.name, super.key});
 
   void contextMenuItemClicked(context, value) async {
     var fname = "";
     if (_suggestedExts.containsKey(type)) {
-      fname = "image.${_suggestedExts[type]}";
+      fname = name ?? "image.${_suggestedExts[type]}";
     }
 
     switch (value) {
@@ -70,9 +71,9 @@ class ImageDialog extends StatelessWidget {
         if (!Directory(dir).existsSync()) {
           Directory(dir).createSync(recursive: true);
         }
-        fname = path.join(dir, fname);
-        File(fname).writeAsBytesSync(imgContent);
-        Share.shareXFiles([XFile(fname)], text: "Image");
+        var fpath = path.join(dir, fname);
+        File(fpath).writeAsBytesSync(imgContent);
+        Share.shareXFiles([XFile(fpath)], text: fname);
         break;
     }
   }

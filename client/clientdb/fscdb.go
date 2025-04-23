@@ -12,7 +12,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"mime"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -20,6 +22,7 @@ import (
 
 	"github.com/companyzero/bisonrelay/inidb"
 	"github.com/companyzero/bisonrelay/internal/jsonfile"
+	"github.com/companyzero/bisonrelay/internal/mdembeds"
 	"github.com/companyzero/bisonrelay/internal/strescape"
 	"github.com/companyzero/bisonrelay/ratchet"
 	"github.com/companyzero/bisonrelay/ratchet/disk"
@@ -61,6 +64,7 @@ const (
 	unkxdUsersDir       = "unkxd"
 	filtersDir          = "contentfilters"
 	earlyPostStatusFile = "earlypoststatus.json"
+	embedsDir           = "embeds"
 
 	pageSessionsDir         = "pagesessions"
 	pageSessionOverviewFile = "overview.json"
@@ -528,9 +532,52 @@ func (db *DB) readLogMsg(logFname string, pageSize, pageNum int) ([]PMLogEntry, 
 	return loggedMessages[pageStart:pageEnd], nil
 }
 
-func (db *DB) logMsg(logFname string, internal bool, from, msg string, ts time.Time) error {
+func (db *DB) logMsg(logFname string, internal bool, from, msg string,
+	fromID zkidentity.ShortID, ts time.Time) (string, error) {
+
+	// Process embeds: look for them, save them in the embeds dir and link
+	// with a filename.
+	//
+	// This is done before checking for disabled logging to ensure every
+	// message is processed.
+	embedPrefix := time.Now().Format("20060102_150405")
+	msg = mdembeds.ReplaceEmbeds(msg, func(args mdembeds.EmbeddedArgs) string {
+		// Determine the file extension.
+		var fileExt string
+		if mimeExts, _ := mime.ExtensionsByType(args.Typ); len(mimeExts) > 0 {
+			fileExt = mimeExts[0][1:] // Remove "." from ext
+		} else if args.Filename != "" {
+			fileExt = strescape.PathElement(path.Ext(args.Filename))
+			if len(fileExt) > 7 {
+				fileExt = fileExt[:7]
+			}
+		}
+
+		// Determine the filename and path for the embed.
+		localDir := filepath.Join(embedsDir, fromID.ShortLogID())
+		localName, err := db.seqPathNotExistsFile(filepath.Join(db.root, localDir), embedPrefix, fileExt)
+		if err != nil {
+			db.log.Warnf("Unable to find filename for embed: %v", err)
+			return ""
+		}
+
+		// Save embed.
+		localPath := filepath.Join(db.root, localDir, localName)
+		err = os.WriteFile(localPath, args.Data, 0o0600)
+		if err != nil {
+			db.log.Warnf("Unable to save embed %s to disk: %v", localPath, err)
+			return ""
+		}
+
+		// Replace data in the original parsed embed and save it as a
+		// reference.
+		args.Data = nil
+		args.LocalFilename = filepath.Join(localDir, localName)
+		return args.String()
+	})
+
 	if db.cfg.MsgsRoot == "" {
-		return nil
+		return msg, nil
 	}
 
 	// Escape lines that match the logLineRegexp, so that when loading the
@@ -564,7 +611,7 @@ func (db *DB) logMsg(logFname string, internal bool, from, msg string, ts time.T
 	filename := filepath.Join(db.cfg.MsgsRoot, logFname)
 	f, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0600)
 	if err != nil {
-		return err
+		return msg, err
 	}
 	defer f.Close()
 
@@ -597,10 +644,10 @@ func (db *DB) logMsg(logFname string, internal bool, from, msg string, ts time.T
 
 	_, err = f.Write(b.Bytes())
 	if err != nil {
-		return err
+		return msg, err
 	}
 
-	return f.Sync()
+	return msg, f.Sync()
 }
 
 func (db *DB) IsBlocked(tx ReadTx, id UserID) bool {
@@ -623,23 +670,27 @@ func (db *DB) RemoveUser(tx ReadWriteTx, id UserID, block bool) error {
 }
 
 // LogPM logs a PM message from the given user.
-func (db *DB) LogPM(tx ReadWriteTx, uid UserID, internal bool, from, msg string, ts time.Time) error {
+//
+// Returns the message, with any filters and modifications applied.
+func (db *DB) LogPM(tx ReadWriteTx, uid UserID, internal bool, from, msg string, ts time.Time) (string, error) {
 	entry, err := db.getBaseABEntry(uid)
 	if err != nil {
-		return err
+		return msg, err
 	}
 
 	nick := entry.ID.Nick
 	logFname := fmt.Sprintf("%s.%s.log", escapeNickForFname(nick), uid)
-	return db.logMsg(logFname, internal, from, msg, ts)
+	return db.logMsg(logFname, internal, from, msg, uid, ts)
 }
 
 // LogGCMsg logs a GC message sent in the given GC.
+//
+// Returns the message, with any filters and modifications applied.
 func (db *DB) LogGCMsg(tx ReadWriteTx, gcName string, gcID zkidentity.ShortID,
-	internal bool, from, msg string, ts time.Time) error {
+	internal bool, from, msg string, ts time.Time) (string, error) {
 
 	logFname := fmt.Sprintf("groupchat.%s.%s.log", escapeNickForFname(gcName), gcID)
-	return db.logMsg(logFname, internal, from, msg, ts)
+	return db.logMsg(logFname, internal, from, msg, gcID, ts)
 }
 
 // ReadLogPM reads the log of PM messages from the given user.

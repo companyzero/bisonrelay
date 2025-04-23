@@ -1040,7 +1040,8 @@ func (c *Client) handleDelayedGCMessages(msg clientintf.ReceivedGCMsg) {
 			c.log.Warnf("Unable to remove cached RGCM: %v", err)
 		}
 
-		err := c.db.LogGCMsg(tx, msg.GCAlias, msg.GCM.ID, false, user.Nick(),
+		var err error
+		msg.GCM.Message, err = c.db.LogGCMsg(tx, msg.GCAlias, msg.GCM.ID, false, user.Nick(),
 			msg.GCM.Message, msg.TS)
 		if err != nil {
 			c.log.Warnf("Unable to log RGCM: %v", err)
@@ -1083,7 +1084,8 @@ func (c *Client) GCMessage(gcID zkidentity.ShortID, msg string, mode rpc.Message
 			return err
 		}
 
-		return c.db.LogGCMsg(tx, gc.Name(), gcID, false, myNick, msg, time.Now())
+		_, err = c.db.LogGCMsg(tx, gc.Name(), gcID, false, myNick, msg, time.Now())
+		return err
 	})
 	if err != nil {
 		return err
@@ -1361,7 +1363,8 @@ func (c *Client) logGCEvent(gcID zkidentity.ShortID, ts time.Time, msg string, a
 		if err != nil {
 			return err
 		}
-		return c.db.LogGCMsg(tx, gcAlias, gcID, true, "", msg, ts)
+		_, err = c.db.LogGCMsg(tx, gcAlias, gcID, true, "", msg, ts)
+		return err
 	})
 	if err != nil {
 		c.log.Warnf("Unable to add GC log msg: %v", err)
@@ -1436,7 +1439,7 @@ func (c *Client) PartFromGC(gcID zkidentity.ShortID, reason string) error {
 			return fmt.Errorf("cannot part from GC when we're the GC admin")
 		}
 
-		if err := c.db.LogGCMsg(tx, gc.Name(), gcID, true, "", "Parting from GC", time.Now()); err != nil {
+		if _, err := c.db.LogGCMsg(tx, gc.Name(), gcID, true, "", "Parting from GC", time.Now()); err != nil {
 			return err
 		}
 
@@ -1500,9 +1503,10 @@ func (c *Client) KillGroupChat(gcID zkidentity.ShortID, reason string) error {
 			return err
 		}
 
-		return c.db.LogGCMsg(tx, gc.Name(), gcID, true, "",
+		_, err = c.db.LogGCMsg(tx, gc.Name(), gcID, true, "",
 			fmt.Sprintf("Local user killed GC. Reason: %q", reason),
 			time.Now())
+		return err
 	})
 	if err != nil {
 		return err
@@ -1537,9 +1541,10 @@ func (c *Client) handleGCKill(ru *RemoteUser, rmgk rpc.RMGroupKill, ts time.Time
 			return err
 		}
 
-		return c.db.LogGCMsg(tx, gc.Name(), rmgk.ID, true, "",
+		_, err = c.db.LogGCMsg(tx, gc.Name(), rmgk.ID, true, "",
 			fmt.Sprintf("User %s killed GC. Reason: %q", strescape.Nick(ru.Nick()), rmgk.Reason),
 			ts)
+		return err
 	})
 	if err != nil {
 		return err
@@ -1588,9 +1593,10 @@ func (c *Client) AddToGCBlockList(gcid zkidentity.ShortID, uid UserID) error {
 		ru.log.Infof("Added user %q to GC %s (%s) block list", ru.Nick(),
 			gc.Name(), gcid)
 
-		return c.db.LogGCMsg(tx, gc.Name(), gcid, true, "",
+		_, err = c.db.LogGCMsg(tx, gc.Name(), gcid, true, "",
 			fmt.Sprintf("Added user %s to GC block list", strescape.Nick(ru.Nick())),
 			time.Now())
+		return err
 	})
 }
 
@@ -1629,9 +1635,10 @@ func (c *Client) RemoveFromGCBlockList(gcid zkidentity.ShortID, uid UserID) erro
 		ru.log.Infof("Removed user %q from GC %s (%s) block list", ru.Nick(),
 			gc.Name(), gcid)
 
-		return c.db.LogGCMsg(tx, gc.Name(), gcid, true, "",
+		_, err = c.db.LogGCMsg(tx, gc.Name(), gcid, true, "",
 			fmt.Sprintf("Removed user %s from GC block list", strescape.Nick(ru.Nick())),
 			time.Now())
+		return err
 	})
 }
 
