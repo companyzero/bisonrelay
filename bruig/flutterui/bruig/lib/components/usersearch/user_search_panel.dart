@@ -2,13 +2,10 @@ import 'package:bruig/components/interactive_avatar.dart';
 import 'package:bruig/components/text.dart';
 import 'package:bruig/components/usersearch/user_search_model.dart';
 import 'package:bruig/models/client.dart';
-import 'package:bruig/models/emoji.dart';
 import 'package:bruig/models/uistate.dart';
-import 'package:bruig/screens/chats.dart';
 import 'package:bruig/screens/ln/components.dart';
 import 'package:bruig/theme_manager.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 class _SearchChatItemW extends StatefulWidget {
   final ClientModel client;
@@ -93,11 +90,10 @@ class __SearchChatItemWState extends State<_SearchChatItemW> {
 }
 
 class ChatSearchInput extends StatefulWidget {
-  final CustomInputFocusNode inputFocusNode;
   final bool onlyUsers;
   final ValueChanged<String> onChanged;
   final String? hintText;
-  const ChatSearchInput(this.inputFocusNode, this.onlyUsers, this.onChanged,
+  const ChatSearchInput(this.onlyUsers, this.onChanged,
       {this.hintText, super.key});
 
   @override
@@ -106,67 +102,34 @@ class ChatSearchInput extends StatefulWidget {
 
 class _ChatSearchInputState extends State<ChatSearchInput> {
   final controller = TextEditingController();
-
   final FocusNode node = FocusNode();
 
-  @override
-  void initState() {
-    super.initState();
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
-  }
-
-  @override
-  void didUpdateWidget(ChatSearchInput oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    widget.inputFocusNode.inputFocusNode.requestFocus();
-    if (oldWidget.onlyUsers != widget.onlyUsers ||
-        oldWidget.hintText != widget.hintText) {
-      controller.text = "";
-    }
-  }
-
-  void handleKeyPress(KeyEvent event) {
-    bool modPressed = HardwareKeyboard.instance.isShiftPressed ||
-        HardwareKeyboard.instance.isControlPressed;
-    widget.onChanged(controller.text);
-    if (event.logicalKey.keyLabel == "Enter" && !modPressed) {
-      controller.value = const TextEditingValue(
-          text: "", selection: TextSelection.collapsed(offset: 0));
-    }
-  }
+  void preventFocusLoss(_) => node.requestFocus();
 
   @override
   Widget build(BuildContext context) {
     bool isScreenSmall = checkIsScreenSmall(context);
-    return KeyboardListener(
-        focusNode: node,
-        onKeyEvent: handleKeyPress,
-        child: Container(
-            margin: const EdgeInsets.only(bottom: 5),
-            child: Row(children: [
-              Expanded(
-                child: TextField(
-                  autofocus: isScreenSmall ? false : true,
-                  focusNode: widget.inputFocusNode.inputFocusNode,
-                  controller: controller,
-                  minLines: 1,
-                  maxLines: null,
-                  keyboardType: TextInputType.multiline,
-                  decoration: InputDecoration(
-                    isDense: true,
-                    hintText: widget.hintText ??
-                        'Search name of user ${widget.onlyUsers ? "" : "or group chat"}',
-                    border: const OutlineInputBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(30)),
-                        borderSide: BorderSide(width: 1)),
-                  ),
-                ),
-              )
-            ])));
+    return Container(
+        margin: const EdgeInsets.only(bottom: 5),
+        child: Row(children: [
+          Expanded(
+            child: TextField(
+              autofocus: isScreenSmall ? false : true,
+              focusNode: node,
+              controller: controller,
+              onSubmitted: preventFocusLoss, // Keep control focused
+              onChanged: widget.onChanged,
+              decoration: InputDecoration(
+                isDense: true,
+                hintText: widget.hintText ??
+                    'Search name of user ${widget.onlyUsers ? "" : "or group chat"}',
+                border: const OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(30)),
+                    borderSide: BorderSide(width: 1)),
+              ),
+            ),
+          )
+        ]));
   }
 }
 
@@ -179,7 +142,6 @@ enum UserSearchPanelTargets {
 class UserSearchPanel extends StatefulWidget {
   final ClientModel client;
   final UserSearchPanelTargets targets;
-  final CustomInputFocusNode? inputFocusNode;
   final VoidCallback? onCancel;
   final VoidCallback? onConfirm;
   final ValueChanged<ChatModel>? onChatTapped;
@@ -195,7 +157,6 @@ class UserSearchPanel extends StatefulWidget {
     super.key,
     this.targets = UserSearchPanelTargets.users,
     this.confirmLabel = "Confirm",
-    this.inputFocusNode,
     this.userSelModel,
     this.showButtonsRow = true,
     this.searchInputHintText,
@@ -214,7 +175,6 @@ class UserSearchPanel extends StatefulWidget {
 class _UserSearchPanelState extends State<UserSearchPanel> {
   ClientModel get client => widget.client;
   List<ChatModel> chats = [];
-  late CustomInputFocusNode inputFocusNode;
   String filterSearchString = "";
   List<ChatModel> filteredSearch = [];
   bool get allowGCs =>
@@ -268,8 +228,6 @@ class _UserSearchPanelState extends State<UserSearchPanel> {
   @override
   void initState() {
     super.initState();
-    inputFocusNode =
-        widget.inputFocusNode ?? CustomInputFocusNode(TypingEmojiSelModel());
     recalcChatsList();
   }
 
@@ -299,7 +257,7 @@ class _UserSearchPanelState extends State<UserSearchPanel> {
     var resultsChat = filterSearchString != "" ? filteredSearch : chats;
 
     return Column(children: [
-      ChatSearchInput(inputFocusNode, !allowGCs, onInputChanged,
+      ChatSearchInput(!allowGCs, onInputChanged,
           hintText: widget.searchInputHintText),
       const SizedBox(height: 10),
       if (widget.showButtonsRow)
@@ -308,7 +266,6 @@ class _UserSearchPanelState extends State<UserSearchPanel> {
             TextButton(
                 onPressed: widget.onConfirm, child: Txt.L(widget.confirmLabel)),
           TextButton(onPressed: onCancel, child: const Txt.L("Cancel")),
-          // const SizedBox(height: 10),
         ]),
       LNInfoSectionHeader(resultsHeaderTxt),
       const SizedBox(height: 10),
