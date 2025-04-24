@@ -67,7 +67,7 @@ class SimpleInfoGridAdv extends StatelessWidget {
   final ScrollController? controller;
   final List<dynamic> items;
   final int colValueFlex;
-  final double colLabelSize;
+  final double? colLabelSize;
   final double separatorWidth;
   final bool useListBuilder;
   final MainAxisAlignment rowAlignment;

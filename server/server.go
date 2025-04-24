@@ -150,6 +150,8 @@ func (z *ZKS) welcome(kx *session.KX) error {
 			properties[k].Value = strconv.FormatUint(uint64(z.settings.MaxMsgSizeVersion), 10)
 		case rpc.PropPingLimit:
 			properties[k].Value = strconv.FormatInt(int64(z.settings.PingLimit/time.Second), 10)
+		case rpc.PropSuggestClientVersions:
+			properties[k].Value = z.settings.ClientVersions
 		}
 	}
 

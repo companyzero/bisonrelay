@@ -35,6 +35,7 @@ type Settings struct {
 	PaidRVs         string        // paid for RVs
 	Listen          []string      // listen addresses and port
 	InitSessTimeout time.Duration // How long to wait for session on a new connection
+	ClientVersions  string        // Suggested list of client versions (comma separated key=value)
 
 	// policy section
 	ExpirationDays    int // How many days after which to expire data
@@ -90,6 +91,7 @@ func New() *Settings {
 		PaidRVs:         "~/.brserver/" + ZKSPaidRVs,
 		Listen:          []string{"127.0.0.1:443"},
 		InitSessTimeout: time.Second * 20,
+		ClientVersions:  "",
 
 		// Policy
 		ExpirationDays:    rpc.PropExpirationDaysDefault,
@@ -177,6 +179,9 @@ func (s *Settings) Load(filename string) error {
 		}
 		s.Listen = listenList
 	}
+
+	// Suggested client versions.
+	s.ClientVersions, _ = cfg.Get("", "clientversions")
 
 	// logging and debug
 	logFile, ok := cfg.Get("log", "logfile")

@@ -3,6 +3,7 @@
 import 'dart:async';
 import 'dart:collection';
 
+import 'package:bruig/config.dart';
 import 'package:bruig/models/resources.dart';
 import 'package:bruig/models/uistate.dart';
 import 'package:flutter/foundation.dart';
@@ -11,7 +12,9 @@ import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:intl/intl.dart';
 import 'package:bruig/storage_manager.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
+import 'package:pub_semver/pub_semver.dart';
 
 const SCE_unknown = 0;
 const SCE_sending = 1;
@@ -493,6 +496,9 @@ class ChatModel extends ChangeNotifier {
 }
 
 class ConnStateModel extends ChangeNotifier {
+  static ConnStateModel of(BuildContext context, {bool listen = true}) =>
+      Provider.of<ConnStateModel>(context, listen: listen);
+
   ServerSessionState _state = ServerSessionState.empty();
   ServerSessionState get state => _state;
 
@@ -500,8 +506,37 @@ class ConnStateModel extends ChangeNotifier {
   bool get isCheckingWallet => _state.state == connStateCheckingWallet;
   String? get checkWalletErr => _state.checkWalletErr;
 
-  _setState(ServerSessionState v) {
+  String _suggestedVersion = "";
+  String get suggestedVersion => _suggestedVersion;
+
+  _setState(ServerSessionState v) async {
     _state = v;
+    if (v.state == connStateOnline) {
+      // Check if there's an update for bruig.
+      for (var cv in v.policy.clientVersions) {
+        if (cv.client != APPNAME) {
+          continue;
+        }
+
+        try {
+          // Get current version.
+          PackageInfo packageInfo = await PackageInfo.fromPlatform();
+          var thisVersion = Version.parse(packageInfo.version);
+
+          var otherVersion = Version.parse(cv.version);
+          if (otherVersion > thisVersion) {
+            // Update exists.
+            _suggestedVersion = cv.version;
+          } else {
+            _suggestedVersion = "";
+          }
+        } catch (exception) {
+          // Ignore errors.
+          debugPrint(
+              "Unable to compare current and suggested version: $exception");
+        }
+      }
+    }
     notifyListeners();
   }
 }
@@ -1142,8 +1177,7 @@ class ClientModel extends ChangeNotifier {
   void _handleServerSessChanged() async {
     var stream = Golib.serverSessionChanged();
     await for (var state in stream) {
-      connState._setState(state);
-      notifyListeners();
+      await connState._setState(state);
     }
   }
 

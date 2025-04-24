@@ -180,6 +180,17 @@ int maxMsgPayloadSize(int msgVersion) {
 }
 
 @JsonSerializable()
+class SuggestedClientVersion {
+  final String client;
+  final String version;
+
+  SuggestedClientVersion(this.client, this.version);
+
+  factory SuggestedClientVersion.fromJson(Map<String, dynamic> json) =>
+      _$SuggestedClientVersionFromJson(json);
+}
+
+@JsonSerializable()
 class ServerPolicy {
   @JsonKey(name: "push_payment_lifetime")
   final int pushPaymentLifetime;
@@ -201,24 +212,28 @@ class ServerPolicy {
   final int subPayRate;
   @JsonKey(name: "ping_limit")
   final int pingLimit;
+  @JsonKey(name: "client_versions", defaultValue: [])
+  final List<SuggestedClientVersion> clientVersions;
 
   const ServerPolicy(
-      this.pushPaymentLifetime,
-      this.maxPushInvoices,
-      this.maxMsgSizeVersion,
-      this.maxMsgSize,
-      this.expirationDays,
-      this.pushPayRateMAtoms,
-      this.pushPayRateBytes,
-      this.pushPayRateMinMAtoms,
-      this.subPayRate,
-      this.pingLimit);
+    this.pushPaymentLifetime,
+    this.maxPushInvoices,
+    this.maxMsgSizeVersion,
+    this.maxMsgSize,
+    this.expirationDays,
+    this.pushPayRateMAtoms,
+    this.pushPayRateBytes,
+    this.pushPayRateMinMAtoms,
+    this.subPayRate,
+    this.pingLimit,
+    this.clientVersions,
+  );
 
   factory ServerPolicy.fromJson(Map<String, dynamic> json) =>
       _$ServerPolicyFromJson(json);
 
   factory ServerPolicy.empty() =>
-      const ServerPolicy(0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+      const ServerPolicy(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, []);
 
   int calcPushCostMAtoms(int sizeBytes) {
     if (pushPayRateBytes == 0) return 0;
@@ -242,7 +257,7 @@ class ServerSessionState {
   factory ServerSessionState.fromJson(Map<String, dynamic> json) =>
       _$ServerSessionStateFromJson(json);
   factory ServerSessionState.empty() => const ServerSessionState(
-      connStateOffline, null, ServerPolicy(0, 0, 0, 0, 0, 0, 0, 0, 0, 0));
+      connStateOffline, null, ServerPolicy(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, []));
 }
 
 @JsonSerializable()

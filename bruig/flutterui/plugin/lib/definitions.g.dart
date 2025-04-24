@@ -124,6 +124,20 @@ Map<String, dynamic> _$ServerCertToJson(ServerCert instance) =>
       'outer_fingerprint': instance.outerFingerprint,
     };
 
+SuggestedClientVersion _$SuggestedClientVersionFromJson(
+        Map<String, dynamic> json) =>
+    SuggestedClientVersion(
+      json['client'] as String,
+      json['version'] as String,
+    );
+
+Map<String, dynamic> _$SuggestedClientVersionToJson(
+        SuggestedClientVersion instance) =>
+    <String, dynamic>{
+      'client': instance.client,
+      'version': instance.version,
+    };
+
 ServerPolicy _$ServerPolicyFromJson(Map<String, dynamic> json) => ServerPolicy(
       (json['push_payment_lifetime'] as num).toInt(),
       (json['max_push_invoices'] as num).toInt(),
@@ -135,6 +149,11 @@ ServerPolicy _$ServerPolicyFromJson(Map<String, dynamic> json) => ServerPolicy(
       (json['push_pay_rate_min_matoms'] as num).toInt(),
       (json['sub_pay_rate'] as num).toInt(),
       (json['ping_limit'] as num).toInt(),
+      (json['client_versions'] as List<dynamic>?)
+              ?.map((e) =>
+                  SuggestedClientVersion.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          [],
     );
 
 Map<String, dynamic> _$ServerPolicyToJson(ServerPolicy instance) =>
@@ -149,6 +168,7 @@ Map<String, dynamic> _$ServerPolicyToJson(ServerPolicy instance) =>
       'push_pay_rate_min_matoms': instance.pushPayRateMinMAtoms,
       'sub_pay_rate': instance.subPayRate,
       'ping_limit': instance.pingLimit,
+      'client_versions': instance.clientVersions,
     };
 
 ServerSessionState _$ServerSessionStateFromJson(Map<String, dynamic> json) =>
@@ -461,20 +481,11 @@ UnshareFileArgs _$UnshareFileArgsFromJson(Map<String, dynamic> json) =>
       json['uid'] as String?,
     );
 
-Map<String, dynamic> _$UnshareFileArgsToJson(UnshareFileArgs instance) {
-  final val = <String, dynamic>{
-    'fid': instance.fid,
-  };
-
-  void writeNotNull(String key, dynamic value) {
-    if (value != null) {
-      val[key] = value;
-    }
-  }
-
-  writeNotNull('uid', instance.uid);
-  return val;
-}
+Map<String, dynamic> _$UnshareFileArgsToJson(UnshareFileArgs instance) =>
+    <String, dynamic>{
+      'fid': instance.fid,
+      if (instance.uid case final value?) 'uid': value,
+    };
 
 GetRemoteFileArgs _$GetRemoteFileArgsFromJson(Map<String, dynamic> json) =>
     GetRemoteFileArgs(
@@ -1721,20 +1732,11 @@ SubscribeToPosts _$SubscribeToPostsFromJson(Map<String, dynamic> json) =>
       json['fetch_post'] as String?,
     );
 
-Map<String, dynamic> _$SubscribeToPostsToJson(SubscribeToPosts instance) {
-  final val = <String, dynamic>{
-    'target': instance.target,
-  };
-
-  void writeNotNull(String key, dynamic value) {
-    if (value != null) {
-      val[key] = value;
-    }
-  }
-
-  writeNotNull('fetch_post', instance.fetchPost);
-  return val;
-}
+Map<String, dynamic> _$SubscribeToPostsToJson(SubscribeToPosts instance) =>
+    <String, dynamic>{
+      'target': instance.target,
+      if (instance.fetchPost case final value?) 'fetch_post': value,
+    };
 
 RMKXSearchRef _$RMKXSearchRefFromJson(Map<String, dynamic> json) =>
     RMKXSearchRef(

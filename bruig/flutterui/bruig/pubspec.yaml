@@ -89,6 +89,7 @@ dependencies:
   media_kit_libs_windows_audio: any
   media_kit_libs_macos_audio: any
   flutter_avif: ^3.0.0
+  pub_semver: ^2.2.0
 
 msix_config:
   display_name: Bison Relay GUI
