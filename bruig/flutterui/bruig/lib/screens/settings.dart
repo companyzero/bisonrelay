@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:bruig/components/buttons.dart';
 import 'package:bruig/components/containers.dart';
 import 'package:bruig/components/empty_widget.dart';
+import 'package:bruig/components/info_grid.dart';
 import 'package:bruig/components/interactive_avatar.dart';
 import 'package:bruig/components/md_elements.dart';
 import 'package:bruig/components/snackbars.dart';
@@ -367,10 +368,16 @@ class MainSettingsScreen extends StatelessWidget {
                     onTap: () => changePage("Notifications"),
                     leading: const Icon(Icons.notifications_outlined),
                     title: const Text("Notifications")),
-                ListTile(
-                    onTap: () => changePage("Network"),
-                    leading: const Icon(Icons.shield),
-                    title: const Text("Network")),
+                Consumer<ConnStateModel>(
+                    builder: (context, connState, child) => ListTile(
+                        tileColor: connState.state.state == connStateOffline
+                            ? Colors.red
+                            : (connState.checkWalletErr ?? "") != ""
+                                ? Colors.amber[800]
+                                : null,
+                        onTap: () => changePage("Network"),
+                        leading: const Icon(Icons.shield),
+                        title: const Text("Network"))),
                 ListTile(
                     onTap: () => changePage("Audio"),
                     leading: const Icon(Icons.perm_camera_mic_outlined),
@@ -763,30 +770,61 @@ class _NetworkSettingsScreenState extends State<NetworkSettingsScreen> {
     var maxPayloadSize = maxMsgPayloadSize(policy.maxMsgSizeVersion);
     var pushDcrGbRate = policy.calcPushCostMAtoms(1000000000).toDouble() / 1e11;
 
-    return Column(children: [
-      client.connState.isCheckingWallet && client.connState.checkWalletErr != ""
-          ? Container(
-              padding: const EdgeInsets.symmetric(vertical: 1, horizontal: 10),
-              child: Copyable(
-                  "Offline due to failed wallet check: ${client.connState.checkWalletErr}"))
-          : const Empty(),
-      Expanded(
-          child: ListView(
-        children: [
-          ListTile(
-              onTap: () => Navigator.of(context, rootNavigator: true)
-                  .pushNamed(ConfigNetworkScreen.routeName),
-              leading: const Icon(Icons.network_ping),
-              title: const Text("Proxy Settings")),
-          actionWidget,
-          const Divider(),
-          const Txt.L("Server Policy"),
-          Txt("Max Message Payload Size: ${ibSize(maxPayloadSize)} (version ${policy.maxMsgSizeVersion})"),
-          Txt("Push Rate: ${pushDcrGbRate.toStringAsFixed(8)} DCR/GB (min ${formatDCR(milliatomsToDCR(policy.pushPayRateMinMAtoms))})"),
-          Txt("Subscription Rate: ${formatDCR(milliatomsToDCR(policy.subPayRate))}/RV"),
-          Txt("Expiration days: ${policy.expirationDays}"),
-        ],
-      )),
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      ListView(shrinkWrap: true, children: [
+        ListTile(
+            onTap: () => Navigator.of(context, rootNavigator: true)
+                .pushNamed(ConfigNetworkScreen.routeName),
+            leading: const Icon(Icons.network_ping),
+            title: const Text("Proxy Settings")),
+        actionWidget,
+        // const Divider(),
+        // const Txt.L("Server Policy"),
+        // Txt("Max Message Payload Size: ${ibSize(maxPayloadSize)} (version ${policy.maxMsgSizeVersion})"),
+        // Txt("Push Rate: ${pushDcrGbRate.toStringAsFixed(8)} DCR/GB (min ${formatDCR(milliatomsToDCR(policy.pushPayRateMinMAtoms))})"),
+        // Txt("Subscription Rate: ${formatDCR(milliatomsToDCR(policy.subPayRate))}/RV"),
+        // Txt("Expiration days: ${policy.expirationDays}"),
+      ]),
+      if (client.connState.isCheckingWallet &&
+          client.connState.checkWalletErr != "") ...[
+        Divider(),
+        Container(
+            padding: EdgeInsets.all(10),
+            child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Copyable(
+                      "Offline due to failed wallet check: ${client.connState.checkWalletErr}"),
+                ]))
+      ],
+      if (client.connState.isOnline) ...[
+        Divider(),
+        Container(
+            padding: EdgeInsets.all(10),
+            child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Txt.L("Server Policy"),
+                  const SizedBox(height: 5),
+                  SimpleInfoGridAdv(colLabelSize: 200, items: [
+                    [
+                      "Max Message Payload Size",
+                      "${ibSize(maxPayloadSize)} (version ${policy.maxMsgSizeVersion})"
+                    ],
+                    [
+                      "Push Rate",
+                      "${pushDcrGbRate.toStringAsFixed(8)} DCR/GB (min ${formatDCR(milliatomsToDCR(policy.pushPayRateMinMAtoms))})"
+                    ],
+                    [
+                      "Subscription Rate",
+                      "${formatDCR(milliatomsToDCR(policy.subPayRate))}/RV"
+                    ],
+                    ["Expiration Days", "${policy.expirationDays}"],
+                  ])
+                ]))
+      ],
     ]);
   }
 }
