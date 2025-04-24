@@ -311,39 +311,33 @@ func SupportedServerProperties() []ServerProperty {
 		Required: true,
 	}
 
-	/*
-		// TODO: make this a required prop once clients have updated.
-		DefaultPropExpirationDays := ServerProperty{
-			Key:      PropExpirationDays,
-			Value:    strconv.Itoa(PropExpirationDaysDefault),
-			Required: false,
-		}
-	*/
+	DefaultPropExpirationDays := ServerProperty{
+		Key:      PropExpirationDays,
+		Value:    strconv.Itoa(PropExpirationDaysDefault),
+		Required: true,
+	}
 
-	// TODO: make this a required prop once clients have updated.
 	DefaultPropPushPaymentLifetime := ServerProperty{
 		Key:      PropPushPaymentLifetime,
 		Value:    strconv.Itoa(PropPushPaymentLifetimeDefault),
-		Required: false,
+		Required: true,
 	}
 
-	// TODO: make this a required prop once clients have updated.
 	DefaultPropMaxPushInvoices := ServerProperty{
 		Key:      PropMaxPushInvoices,
 		Value:    strconv.Itoa(PropMaxPushInvoicesDefault),
-		Required: false,
-	}
-
-	DefaultPropPingLimit := ServerProperty{
-		Key:      PropPingLimit,
-		Value:    strconv.Itoa(int(PropPingLimitDefault / time.Second)),
-		Required: false,
+		Required: true,
 	}
 
 	// optional
 	DefaultPropServerLNNode := ServerProperty{
 		Key:      PropServerLNNode,
 		Value:    "",
+		Required: false,
+	}
+	DefaultPropPingLimit := ServerProperty{
+		Key:      PropPingLimit,
+		Value:    strconv.Itoa(int(PropPingLimitDefault / time.Second)),
 		Required: false,
 	}
 
@@ -357,25 +351,24 @@ func SupportedServerProperties() []ServerProperty {
 		DefaultPropSubPaymentRate,
 		DefaultPropPushPaymentLifetime,
 		DefaultPropMaxPushInvoices,
+		DefaultPropExpirationDays,
 
-		// TODO: Add it here once the clients are updated.
-		//DefaultPropExpirationDays,
-
-		// optional
-		DefaultPropServerLNNode,
-		DefaultPropPingLimit,
-
-		// TODO: make it required once clients upgrade.
 		{
 			Key:      PropMaxMsgSizeVersion,
 			Value:    strconv.Itoa(int(PropMaxMsgSizeVersionDefault)),
-			Required: false,
+			Required: true,
 		},
+
+		// To be made required in the future.
 		{
 			Key:      PropPushPaymentRateBytes,
 			Value:    strconv.Itoa(int(PropPushPaymentRateBytesDefault)),
 			Required: false,
 		},
+
+		// optional
+		DefaultPropServerLNNode,
+		DefaultPropPingLimit,
 	}
 
 	return SupportedServerProperties
