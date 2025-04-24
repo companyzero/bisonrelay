@@ -770,6 +770,8 @@ class _NetworkSettingsScreenState extends State<NetworkSettingsScreen> {
     var maxPayloadSize = maxMsgPayloadSize(policy.maxMsgSizeVersion);
     var pushDcrGbRate = policy.calcPushCostMAtoms(1000000000).toDouble() / 1e11;
 
+    var isSmallScreen = checkIsScreenSmall(context);
+
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       ListView(shrinkWrap: true, children: [
         ListTile(
@@ -808,21 +810,33 @@ class _NetworkSettingsScreenState extends State<NetworkSettingsScreen> {
                 children: [
                   Txt.L("Server Policy"),
                   const SizedBox(height: 5),
-                  SimpleInfoGridAdv(colLabelSize: 200, items: [
-                    [
-                      "Max Message Payload Size",
-                      "${ibSize(maxPayloadSize)} (version ${policy.maxMsgSizeVersion})"
-                    ],
-                    [
-                      "Push Rate",
-                      "${pushDcrGbRate.toStringAsFixed(8)} DCR/GB (min ${formatDCR(milliatomsToDCR(policy.pushPayRateMinMAtoms))})"
-                    ],
-                    [
-                      "Subscription Rate",
-                      "${formatDCR(milliatomsToDCR(policy.subPayRate))}/RV"
-                    ],
-                    ["Expiration Days", "${policy.expirationDays}"],
-                  ])
+                  SimpleInfoGridAdv(
+                      colLabelSize: isSmallScreen ? 100 : 200,
+                      items: [
+                        [
+                          "Max Message Payload Size",
+                          "${ibSize(maxPayloadSize)} (version ${policy.maxMsgSizeVersion})"
+                        ],
+                        [
+                          "Push Rate",
+                          "${pushDcrGbRate.toStringAsFixed(8)} DCR/GB (min ${formatDCR(milliatomsToDCR(policy.pushPayRateMinMAtoms))})"
+                        ],
+                        [
+                          "Subscription Rate",
+                          "${formatDCR(milliatomsToDCR(policy.subPayRate))}/RV"
+                        ],
+                        ["Expiration Days", "${policy.expirationDays}"],
+                      ]),
+                  if (policy.clientVersions.isNotEmpty) ...[
+                    const SizedBox(height: 10),
+                    Txt.L("Suggested Client Versions"),
+                    const SizedBox(height: 5),
+                    SimpleInfoGridAdv(
+                        colLabelSize: 80,
+                        items: policy.clientVersions
+                            .map((cv) => [cv.client, cv.version])
+                            .toList()),
+                  ],
                 ]))
       ],
     ]);

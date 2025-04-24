@@ -489,6 +489,12 @@ var listCommands = []tuicmd{
 				pf("Max msg size: %s (version %d)",
 					hibytes(int64(rpc.MaxPayloadSizeForVersion(policy.MaxMsgSizeVersion))),
 					policy.MaxMsgSizeVersion)
+				if len(policy.ClientVersions) > 0 {
+					pf("Suggested Client Versions")
+					for _, cv := range policy.ClientVersions {
+						pf("  %s = %s", strescape.Nick(cv.Client), strescape.Nick(cv.Version))
+					}
+				}
 			})
 			return nil
 		},

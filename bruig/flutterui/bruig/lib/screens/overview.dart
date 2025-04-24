@@ -68,30 +68,33 @@ class OverviewScreen extends StatefulWidget {
 }
 
 class _OverviewScreenAppBarConnState {
-  final String label;
   final Widget tag;
 
-  _OverviewScreenAppBarConnState({required this.label, required this.tag});
+  _OverviewScreenAppBarConnState({required this.tag});
 }
 
 const _connStateTagClipPath =
     "M 0.31234165,80.167689 79.855347,0 37.064542,0.10411388 0,37.793339 Z";
 
+const connStateUpdate = 999;
+
 final _connStateStyles = {
   connStateCheckingWallet: _OverviewScreenAppBarConnState(
-      label: "Skip Wallet Check",
       tag: ClipPath(
           clipper:
               SVGClipper(_connStateTagClipPath, offset: const Offset(-10, 0)),
           child: Image.asset("assets/images/checktag.png", width: 50))),
   connStateOffline: _OverviewScreenAppBarConnState(
-      label: "Go online",
       tag: ClipPath(
           clipper:
               SVGClipper(_connStateTagClipPath, offset: const Offset(-10, 0)),
           child: Image.asset("assets/images/offlinetag.png", width: 50))),
-  connStateOnline:
-      _OverviewScreenAppBarConnState(label: "Go offline", tag: const Empty()),
+  connStateOnline: _OverviewScreenAppBarConnState(tag: const Empty()),
+  connStateUpdate: _OverviewScreenAppBarConnState(
+      tag: ClipPath(
+          clipper:
+              SVGClipper(_connStateTagClipPath, offset: const Offset(-10, 0)),
+          child: Image.asset("assets/images/updatetag.png", width: 50))),
 };
 
 AppBar _buildAppBar(BuildContext context, ClientModel client, FeedModel feed,
@@ -117,22 +120,28 @@ AppBar _buildAppBar(BuildContext context, ClientModel client, FeedModel feed,
         title: const _OverviewScreenTitle(),
         leadingWidth: 112,
         leading: Row(children: [
-          Consumer<ConnStateModel>(
-              builder: (context, connState, child) => Stack(children: [
-                    Row(children: [
-                      const SizedBox(width: 10),
-                      IconButton(
-                          tooltip: "About Bison Relay",
-                          splashRadius: 20,
-                          iconSize: 40,
-                          onPressed: () => goToAbout(context),
-                          icon: Image.asset(
-                            "assets/images/icon.png",
-                          ))
-                    ]),
-                    _connStateStyles[connState.state.state]?.tag ??
-                        const SizedBox(width: 100),
-                  ])),
+          Consumer<ConnStateModel>(builder: (context, connState, child) {
+            var connStateTagKey = connState.state.state;
+            if (connStateTagKey == connStateOnline &&
+                connState.suggestedVersion != "") {
+              connStateTagKey = connStateUpdate;
+            }
+            return Stack(children: [
+              Row(children: [
+                const SizedBox(width: 10),
+                IconButton(
+                    tooltip: "About Bison Relay",
+                    splashRadius: 20,
+                    iconSize: 40,
+                    onPressed: () => goToAbout(context),
+                    icon: Image.asset(
+                      "assets/images/icon.png",
+                    ))
+              ]),
+              _connStateStyles[connStateTagKey]?.tag ??
+                  const SizedBox(width: 100),
+            ]);
+          }),
           IconButton(
               splashRadius: 20,
               tooltip: "Create a new post",
@@ -153,50 +162,53 @@ AppBar _buildAppBar(BuildContext context, ClientModel client, FeedModel feed,
       titleSpacing: 0.0,
       title: const _OverviewScreenTitle(),
       leading: Builder(builder: (BuildContext context) {
-        return InkWell(
-            onTap: () {
-              // if (client.ui.showAddressBook.val) { // FIXME: How is this triggered?
-              //   client.ui.showAddressBook.val = false;
-              // } else
-              if (!client.ui.chatSideMenuActive.empty) {
-                client.ui.chatSideMenuActive.chat = null;
-              } else if (client.ui.showProfile.val) {
-                client.ui.showProfile.val = false;
-              } else if (!client.ui.overviewActivePath.onActiveBottomTab ||
-                  client.active != null) {
-                !client.ui.chatSideMenuActive.empty
-                    ? client.ui.chatSideMenuActive.clear()
-                    : client.active = null;
-                if (!client.ui.overviewActivePath.onActiveBottomTab) {
-                  switchScreen(ChatsScreen.routeName);
-                }
-              } else if (feed.active != null) {
-                feed.active = null;
-                switchScreen(FeedScreen.routeName,
-                    args: PageTabs(0, null, null));
-              } else {
-                switchScreen(SettingsScreen.routeName);
-              }
-            },
-            child: Consumer5<OverviewActivePath, ActiveChatModel, FeedModel,
-                    ChatSideMenuActiveModel, ConnStateModel>(
-                builder: (context, overviewActivePath, activeChat, feed,
-                        chatSideMenuActive, connState, child) =>
-                    Stack(children: [
-                      !overviewActivePath.onActiveBottomTab ||
-                              !activeChat.empty ||
-                              feed.active != null ||
-                              !chatSideMenuActive.empty
-                          ? const Positioned(
-                              left: 25,
-                              top: 17,
-                              child: Icon(Icons.keyboard_arrow_left_rounded))
-                          : Container(
-                              margin: const EdgeInsets.all(10),
-                              child: SelfAvatar(client)),
-                      _connStateStyles[connState.state.state]?.tag ??
-                          const Empty(),
-                    ])));
+        return InkWell(onTap: () {
+          // if (client.ui.showAddressBook.val) { // FIXME: How is this triggered?
+          //   client.ui.showAddressBook.val = false;
+          // } else
+          if (!client.ui.chatSideMenuActive.empty) {
+            client.ui.chatSideMenuActive.chat = null;
+          } else if (client.ui.showProfile.val) {
+            client.ui.showProfile.val = false;
+          } else if (!client.ui.overviewActivePath.onActiveBottomTab ||
+              client.active != null) {
+            !client.ui.chatSideMenuActive.empty
+                ? client.ui.chatSideMenuActive.clear()
+                : client.active = null;
+            if (!client.ui.overviewActivePath.onActiveBottomTab) {
+              switchScreen(ChatsScreen.routeName);
+            }
+          } else if (feed.active != null) {
+            feed.active = null;
+            switchScreen(FeedScreen.routeName, args: PageTabs(0, null, null));
+          } else {
+            switchScreen(SettingsScreen.routeName);
+          }
+        }, child: Consumer5<OverviewActivePath, ActiveChatModel, FeedModel,
+                ChatSideMenuActiveModel, ConnStateModel>(
+            builder: (context, overviewActivePath, activeChat, feed,
+                chatSideMenuActive, connState, child) {
+          var connStateTagKey = connState.state.state;
+          if (connStateTagKey == connStateOnline &&
+              connState.suggestedVersion != "") {
+            connStateTagKey = connStateUpdate;
+          }
+
+          return Stack(children: [
+            !overviewActivePath.onActiveBottomTab ||
+                    !activeChat.empty ||
+                    feed.active != null ||
+                    !chatSideMenuActive.empty
+                ? const Positioned(
+                    left: 25,
+                    top: 17,
+                    child: Icon(Icons.keyboard_arrow_left_rounded))
+                : Container(
+                    margin: const EdgeInsets.all(10),
+                    child: SelfAvatar(client)),
+            _connStateStyles[connStateTagKey]?.tag ?? const Empty(),
+          ]);
+        }));
       }),
       actions: [
         // Only render page context menu if the mainMenu ONLY has

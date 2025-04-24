@@ -281,6 +281,10 @@ const (
 	// will disconnect a client.
 	PropPingLimit        = "pinglimit"
 	PropPingLimitDefault = 5 * time.Minute
+
+	// PropSuggestClientVersions is a list of client versions suggested by
+	// the server.
+	PropSuggestClientVersions = "clientversions"
 )
 
 func SupportedServerProperties() []ServerProperty {
@@ -369,6 +373,7 @@ func SupportedServerProperties() []ServerProperty {
 		// optional
 		DefaultPropServerLNNode,
 		DefaultPropPingLimit,
+		{Key: PropSuggestClientVersions, Value: ""},
 	}
 
 	return SupportedServerProperties

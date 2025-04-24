@@ -87,6 +87,11 @@ type ServerPolicy struct {
 	// PingLimit is the deadline for writing messages (including ping) to
 	// the server.
 	PingLimit time.Duration `json:"ping_limit"`
+
+	// ClientVersions is a list of server-provided client and versions
+	// suggested for use when connecting to this server. This can be used
+	// by the client to determine if it should be updated.
+	ClientVersions []rpc.SuggestedClientVersion `json:"client_versions"`
 }
 
 // CalcPushCostMAtoms calculates the cost to push a message with the given size.

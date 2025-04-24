@@ -3205,6 +3205,14 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 			if showExpDays {
 				as.diagMsg("Days to Expire Data: %d", policy.ExpirationDays)
 			}
+			newVersion, needsUpdate := suggestedBrclientVersion(policy.ClientVersions)
+			if needsUpdate {
+				styles := as.styles.Load()
+				as.diagMsg("")
+				as.diagMsg(styles.focused.Render(fmt.Sprintf("New brclient version available: %s", newVersion)))
+				as.diagMsg(styles.focused.Render("Please update the software"))
+				as.diagMsg("")
+			}
 			as.diagMsg("Client ready!")
 		} else {
 			as.diagMsg("Connection to server closed")

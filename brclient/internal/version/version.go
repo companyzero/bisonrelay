@@ -155,3 +155,26 @@ func NormalizeString(str string) string {
 	}
 	return result.String()
 }
+
+// IsOtherVersionHigher returns true if other is a higher version than the
+// current version.
+func IsOtherVersionHigher(other string) bool {
+	omajor, ominor, opatch, _, _, _ := parseSemVer(other)
+	switch {
+	case omajor > Major:
+		return true
+	case omajor < Major:
+		return false
+	case ominor > Minor:
+		return true
+	case ominor < Minor:
+		return false
+	case opatch > Patch:
+		return true
+	case opatch < Patch:
+		return false
+	default:
+		// All equal.
+		return false
+	}
+}

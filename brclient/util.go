@@ -14,6 +14,8 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/companyzero/bisonrelay/brclient/internal/version"
+	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/decred/dcrd/dcrutil/v4"
 	"github.com/decred/dcrlnd/lnrpc"
 	"github.com/decred/dcrlnd/zpay32"
@@ -491,4 +493,24 @@ func sanitizePastedMsgString(s string) string {
 	}
 
 	return s
+}
+
+// suggestedBrclientVersion determines the server-suggested version for brclient
+// and whether the current version should be updated to this suggestion. May be
+// empty if the server did not send a suggestion.
+func suggestedBrclientVersion(clients []rpc.SuggestedClientVersion) (newVersion string, needsUpdate bool) {
+	for _, cv := range clients {
+		if cv.Client == "brclient" {
+			newVersion = cv.Version
+			break
+		}
+	}
+
+	if newVersion == "" {
+		// Not suggested.
+		return
+	}
+
+	needsUpdate = version.IsOtherVersionHigher(newVersion)
+	return
 }

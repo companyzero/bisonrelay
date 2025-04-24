@@ -292,6 +292,9 @@ func (ck *ConnKeeper) attemptWelcome(conn clientintf.Conn, kx msgReaderWriter) (
 			}
 			policy.PingLimit = time.Duration(pl) * time.Second
 
+		case rpc.PropSuggestClientVersions:
+			policy.ClientVersions = rpc.SplitSuggestedClientVersions(v.Value)
+
 		default:
 			if v.Required {
 				err := makeUnwelcomeError(fmt.Sprintf("unhandled server property: %v", v.Key))

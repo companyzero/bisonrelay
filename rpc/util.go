@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"regexp"
 
 	"github.com/decred/dcrd/chaincfg/chainhash"
 )
@@ -40,4 +41,32 @@ func (u *TxHash) UnmarshalJSON(b []byte) error {
 		return err
 	}
 	return u.FromString(s)
+}
+
+// SuggestedClientVersion is a suggested client version sent by the server.
+type SuggestedClientVersion struct {
+	// Client is the client identifier ("brclient", "bruig", etc).
+	Client string `json:"client"`
+
+	// Version is the suggested client version (semver compatible).
+	Version string `json:"version"`
+}
+
+// SplitSuggestedClientVersions splits the given string into a list of suggested
+// client versions.
+func SplitSuggestedClientVersions(s string) []SuggestedClientVersion {
+	// Regexp to detect comma-separated k=v strings.
+	var re = regexp.MustCompile(`(?:^|,)\s*([\w]+)\s*=\s*([\d\.]+)`)
+
+	matches := re.FindAllStringSubmatch(s, -1)
+	res := make([]SuggestedClientVersion, 0, len(matches))
+	for _, match := range matches {
+		if len(match) != 3 {
+			continue
+		}
+
+		res = append(res, SuggestedClientVersion{Client: match[1], Version: match[2]})
+	}
+
+	return res
 }
