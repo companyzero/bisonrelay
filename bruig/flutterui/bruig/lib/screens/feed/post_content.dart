@@ -704,7 +704,13 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
                       padding: const EdgeInsets.symmetric(horizontal: 40),
                       child: Column(children: [
                         const SizedBox(width: 300, child: Divider()),
-                        Txt.S(e, color: TextColor.onSurfaceVariant)
+                        SelectionArea(
+                            child: Container(
+                                alignment: Alignment.topLeft,
+                                child: Provider<DownloadSource>(
+                                    create: (context) => DownloadSource(
+                                        widget.args.post.summ.authorID),
+                                    child: MarkdownArea(e, false)))),
                       ]),
                     )),
               ])
