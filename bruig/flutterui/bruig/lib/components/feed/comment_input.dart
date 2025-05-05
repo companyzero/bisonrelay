@@ -11,14 +11,16 @@ import 'package:bruig/theme_manager.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:super_clipboard/super_clipboard.dart';
+import 'package:bruig/models/client.dart';
 
 class CommentInput extends StatefulWidget {
   final SendMsg commentReply;
   final String label;
   final String hintText;
   final CustomInputFocusNode inputFocusNode;
-  const CommentInput(
-      this.commentReply, this.label, this.hintText, this.inputFocusNode,
+  final ChatModel chat;
+  const CommentInput(this.commentReply, this.label, this.hintText,
+      this.inputFocusNode, this.chat,
       {super.key});
 
   @override
@@ -185,13 +187,19 @@ class _CommentInputState extends State<CommentInput> {
     });
   }
 
-  void cancelAttach() {
-    setState(() {
+  void cancelAttach({callSetState = true}) {
+    void doCancel() {
       isAttaching = false;
       initialAttachData = null;
       initialAttachMime = null;
       widget.inputFocusNode.inputFocusNode.requestFocus();
-    });
+    }
+
+    if (callSetState) {
+      setState(doCancel);
+    } else {
+      doCancel();
+    }
   }
 
   @override
@@ -207,8 +215,8 @@ class _CommentInputState extends State<CommentInput> {
                       onPressed: cancelAttach,
                       icon: const Icon(Icons.keyboard_arrow_left_outlined))
                 ]),
-                AttachFileScreen(
-                    sendAttachment, initialAttachData, initialAttachMime)
+                AttachFileScreen(sendAttachment, initialAttachData,
+                    initialAttachMime, widget.chat, cancelAttach)
               ])
             : Row(children: [
                 IconButton(

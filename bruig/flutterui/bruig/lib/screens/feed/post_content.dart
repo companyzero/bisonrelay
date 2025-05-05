@@ -323,8 +323,12 @@ class _CommentWState extends State<_CommentW> {
                           padding: const EdgeInsets.only(
                               left: 13, right: 13, top: 11, bottom: 11),
                           margin: const EdgeInsets.symmetric(horizontal: 10),
-                          child: CommentInput(sendReply, "Reply",
-                              "Reply to this comment", widget.inputFocusNode))
+                          child: CommentInput(
+                              sendReply,
+                              "Reply",
+                              "Reply to this comment",
+                              widget.inputFocusNode,
+                              chat!))
                     ])
                   : const Text(""),
               commentRRs != null ? const SizedBox(height: 10) : const Empty(),
@@ -674,8 +678,12 @@ class _PostContentScreenForArgsState extends State<_PostContentScreenForArgs> {
                     padding: const EdgeInsets.only(
                         left: 13, right: 13, top: 11, bottom: 11),
                     margin: const EdgeInsets.symmetric(horizontal: 30),
-                    child: CommentInput(addComment, "Add Comment",
-                        "Add a comment to this post", inputFocusNode)),
+                    child: CommentInput(
+                        addComment,
+                        "Add Comment",
+                        "Add a comment to this post",
+                        inputFocusNode,
+                        authorChat!)),
               ]),
         ...comments.map((e) => _CommentW(widget.args.post, e, sendReply,
             widget.client, showingReplyCB, canComment, inputFocusNode)),
