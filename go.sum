@@ -37,8 +37,8 @@ cloud.google.com/go/storage v1.8.0/go.mod h1:Wv1Oy7z6Yz3DshWRJFhqM/UCfaWIRTdp0RX
 cloud.google.com/go/storage v1.10.0/go.mod h1:FLPqc6j+Ki4BU591ie1oL6qBQGu2Bl/tZ9ullr3+Kg0=
 decred.org/cspp/v2 v2.4.0 h1:whb0YW+UELHJS/UfT5MBXSJXrKUVw5omhgKNhjzYix4=
 decred.org/cspp/v2 v2.4.0/go.mod h1:9nO3bfvCheOPIFZw5f6sRQ42CjBFB5RKSaJ9Iq6G4MA=
-decred.org/dcrwallet/v4 v4.3.0 h1:JqFyUa5Xj51br1In8wzQresUrW5nuGp7cCFIxpb4VZE=
-decred.org/dcrwallet/v4 v4.3.0/go.mod h1:cd0+55eXPYwYddb/8r3dRyXI+MXiqx642QisZbswzUI=
+decred.org/dcrwallet/v4 v4.3.1 h1:6OZ1GS9YvLk2/SGZc2Tw11QV3sqkov431da7sBd7Bc0=
+decred.org/dcrwallet/v4 v4.3.1/go.mod h1:cd0+55eXPYwYddb/8r3dRyXI+MXiqx642QisZbswzUI=
 dmitri.shuralyov.com/gpu/mtl v0.0.0-20190408044501-666a987793e9/go.mod h1:H6x//7gZCb22OMCxBHrMx7a5I7Hp++hsVxbQ4BYO7hU=
 github.com/BurntSushi/toml v0.3.1 h1:WXkYYl6Yr3qBf1K79EBnL4mak0OimBfB0XUf9Vl28OQ=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
@@ -218,8 +218,8 @@ github.com/decred/dcrd/wire v1.2.0/go.mod h1:/JKOsLInOJu6InN+/zH5AyCq3YDIOW/Eqcf
 github.com/decred/dcrd/wire v1.5.0/go.mod h1:fzAjVqw32LkbAZIt5mnrvBR751GTa3e0rRQdOIhPY3w=
 github.com/decred/dcrd/wire v1.7.0 h1:5JHiDjEQeS4XUl4PfnTZYLwAD/E/+LwBmPRec/fP76o=
 github.com/decred/dcrd/wire v1.7.0/go.mod h1:lAqrzV0SU4kyV6INLEJgDtUjJaTaVKrbF4LHtaYl+zU=
-github.com/decred/dcrlnd v0.7.7-0.20250312142956-234fcae24beb h1:OMpG/qDDKExcBHBVFYxxYjOHgiKW12lOGynB4nZDvzY=
-github.com/decred/dcrlnd v0.7.7-0.20250312142956-234fcae24beb/go.mod h1:Vz0BBDek4zrpZlFcAjjXO+SkYfCKzUGR6wVtV19ZrzU=
+github.com/decred/dcrlnd v0.7.7-0.20250507095325-b1dd23fd5d7a h1:x4uxTEBRRo0bjIqJ/QDeMr8Gc+2OCLRCTZyvcQ9Ao6w=
+github.com/decred/dcrlnd v0.7.7-0.20250507095325-b1dd23fd5d7a/go.mod h1:HTIsAQrnCVe8Ab3d5PMqQZ62/DWFj9eNF7svu8mcz98=
 github.com/decred/dcrlnlpd v0.0.0-20240916120255-786dc5d52075 h1:n3Ty+HiBmuBndhoB4Fs+msy9dAf6oaGHpQ46GYcQGaM=
 github.com/decred/dcrlnlpd v0.0.0-20240916120255-786dc5d52075/go.mod h1:SejBW9Hqgvl5DhwiB5B8FloT6DxSyXYxLOC3mklfnLc=
 github.com/decred/dcrtest/dcrdtest v1.0.1-0.20240514160637-ade8c37ad1db h1:IKGKAJaubsFC+aIoeSQP/Ne9jSdwk8H/IjJz1HUoHVs=
