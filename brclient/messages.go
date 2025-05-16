@@ -193,6 +193,15 @@ type msgPageFetched struct {
 	res  *rpc.RMFetchResourceReply
 }
 
+// showLoadingTick is sent periodically to refresh the loading screen
+type showLoadingTick struct{}
+
+// checkWalletUnlockedResult is the result of checkWalletUnlocked
+type checkWalletUnlockedResult struct {
+	isUnlocked bool
+	err        error
+}
+
 var errQuitRequested = errors.New("")
 
 func emitMsg(msg tea.Msg) tea.Cmd {

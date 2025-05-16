@@ -81,6 +81,27 @@ func (ulns *unlockLNScreen) runNotifier() {
 	go ulns.lndc.NotifyInitialChainSync(ctx, notifier)
 }
 
+// cmdCheckWalletUnlocked checks if the wallet is already unlocked
+func cmdCheckWalletUnlocked(lndc *embeddeddcrlnd.Dcrlnd) tea.Msg {
+	// Try to use a blank password to see if we get "wallet already unlocked" error
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	defer cancel()
+
+	err := lndc.TryUnlock(ctx, "")
+	// If we get nil error or "wallet already unlocked" error, wallet is unlocked
+	if err == nil || strings.Contains(err.Error(), "wallet already unlocked") {
+		return checkWalletUnlockedResult{isUnlocked: true}
+	}
+
+	return checkWalletUnlockedResult{isUnlocked: false, err: err}
+}
+
+// cmdShowLoadingTick returns a tick message after a delay
+func cmdShowLoadingTick() tea.Msg {
+	time.Sleep(500 * time.Millisecond)
+	return showLoadingTick{}
+}
+
 func (ulns unlockLNScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if isCrashMsg(msg) {
 		ulns.crashStack = allStack()
@@ -108,12 +129,41 @@ func (ulns unlockLNScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case *embeddeddcrlnd.Dcrlnd:
 		ulns.lndc = msg
+		// Check if wallet is already unlocked (probably via pass.txt file)
+		return ulns, func() tea.Msg { return cmdCheckWalletUnlocked(msg) }
+
+	case checkWalletUnlockedResult:
+		if msg.isUnlocked {
+			// Wallet is already unlocked, show a loading state while RPC starts up
+			ulns.needsUnlock = false
+			ulns.unlocking = true // Use unlocking flag to show loading state
+
+			// Start a tick to show loading animation
+			return ulns, cmdShowLoadingTick
+		}
+		// Wallet needs to be unlocked, focus the password input
 		cmd := ulns.txtPass.Focus()
 		return ulns, cmd
+
+	case showLoadingTick:
+		// Continue showing loading state and pulsing
+		if !ulns.needsUnlock && ulns.unlocking {
+			// Try to start the runNotifier
+			ulns.runNotifier()
+			// Keep ticking to show loading animation
+			return ulns, cmdShowLoadingTick
+		}
+		return ulns, nil
 
 	case unlockDcrlndResult:
 		ulns.unlocking = false
 		if msg.err != nil {
+			// Check if the error is because wallet is already unlocked
+			if strings.Contains(msg.err.Error(), "wallet already unlocked") {
+				ulns.needsUnlock = false
+				ulns.connCancel()
+				return ulns, tea.Quit
+			}
 			ulns.unlockErr = msg.err.Error()
 			return ulns, nil
 		}
@@ -169,6 +219,7 @@ func (ulns unlockLNScreen) View() string {
 
 	titleStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("5")).Bold(true)
 	migrateStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("214"))
+	loadingStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("10")).Bold(true)
 
 	var lines int
 	switch {
@@ -195,7 +246,15 @@ func (ulns unlockLNScreen) View() string {
 		}
 
 	case ulns.unlocking:
-		pf(titleStyle.Render("Unlocking internal wallet"))
+		if ulns.needsUnlock {
+			pf(titleStyle.Render("Unlocking internal wallet"))
+		} else {
+			// This is the pass.txt auto-unlock case
+			pf(loadingStyle.Render("Waiting for RPC server to be ready"))
+			pf("\n\n")
+			pf("Wallet automatically unlocked by password file")
+			lines += 3
+		}
 		pf("\n\n")
 		lines += 2
 

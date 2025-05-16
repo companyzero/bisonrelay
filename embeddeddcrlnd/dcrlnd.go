@@ -405,6 +405,13 @@ func RunDcrlnd(ctx context.Context, cfg Config) (*Dcrlnd, error) {
 	conf.DisableRest = true
 	conf.RejectHTLC = true
 	conf.DisableListen = true
+
+	// Only set the wallet unlock password file if it exists
+	passFilePath := filepath.Join(rootDir, "pass.txt")
+	if _, err := os.Stat(passFilePath); err == nil {
+		conf.WalletUnlockPasswordFile = passFilePath
+	}
+
 	conf.BackupFilePath = filepath.Join(rootDir, "channels.backup")
 	conf.Decred.Node = "dcrw"
 	conf.DB.Bolt.NoFreelistSync = !cfg.SyncFreeList
