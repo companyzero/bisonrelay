@@ -185,8 +185,8 @@ func (ulns unlockLNScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case logUpdated:
 		logLines := ulns.lndLogLines.LastLogLines(20)
-		ulns.compactingDb = stringsContains(logLines, "Compacting database file at")
-		ulns.migratingDb = stringsContains(logLines, "Performing database schema migration")
+		ulns.compactingDb = stringsContains(logLines, "Compacting database file at") && !stringsContains(logLines, "Database(s) now open")
+		ulns.migratingDb = stringsContains(logLines, "Performing database schema migration") && !stringsContains(logLines, "Database(s) now open")
 		ulns.compactErrored = stringsContains(logLines, "error during compact")
 		logTxt := ansi.Wordwrap(strings.Join(logLines, ""), ulns.viewWidth-1, wordBreakpoints)
 		ulns.viewport.SetContent(logTxt)
