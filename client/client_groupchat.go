@@ -95,15 +95,15 @@ func (c *Client) GetGCAlias(gcID zkidentity.ShortID) (string, error) {
 
 // gcIDByName returns the GC ID of the local GC with the given name. Expected
 // to be run inside a transaction.
-func (c *Client) gcIDByName(tx clientdb.ReadTx, name string) (zkidentity.ShortID, error) {
-	aliasMap := c.db.FindGCsWithPrefix(name)
+func (c *Client) gcIDByName(tx clientdb.ReadTx, byName string) (zkidentity.ShortID, error) {
+	aliasMap := c.db.FindGCsWithPrefix(byName)
 	for id, name := range aliasMap {
-		if name == name {
+		if name == byName {
 			return id, nil
 		}
 	}
 
-	return zkidentity.ShortID{}, fmt.Errorf("gc %q not found", name)
+	return zkidentity.ShortID{}, fmt.Errorf("gc %q not found", byName)
 
 }
 
