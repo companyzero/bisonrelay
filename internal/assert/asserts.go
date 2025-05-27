@@ -55,7 +55,7 @@ func ChanWrittenWithValTimeout[T any](t testing.TB, c chan T, want T, timeout ti
 
 // ChanNotWritten asserts that the chan is not written at least until the passed
 // timeout value.
-func ChanNotWritten[T any](t testing.TB, c chan T, timeout time.Duration) {
+func ChanNotWritten[T any](t testing.TB, c <-chan T, timeout time.Duration) {
 	t.Helper()
 	select {
 	case v := <-c:
@@ -66,7 +66,7 @@ func ChanNotWritten[T any](t testing.TB, c chan T, timeout time.Duration) {
 
 // Chan2NotWritten asserts that the chans are not written at least until the
 // passed timeout value.
-func Chan2NotWritten[T any, U any](t testing.TB, c chan T, d chan U, timeout time.Duration) {
+func Chan2NotWritten[T any, U any](t testing.TB, c <-chan T, d chan U, timeout time.Duration) {
 	t.Helper()
 	select {
 	case v := <-c:
@@ -175,6 +175,13 @@ func NonNilErr(t testing.TB, err error) {
 	}
 }
 
+func NotNil(t testing.TB, v any) {
+	t.Helper()
+	if v == nil {
+		t.Fatal("unexpected nil value")
+	}
+}
+
 // DoesNotBlock asserts that calling f() does not block for an inordinate amount
 // of time.
 func DoesNotBlock(t testing.TB, f func()) {
@@ -208,6 +215,22 @@ func BoolIs(t testing.TB, got, want bool) {
 	t.Helper()
 	if got != want {
 		t.Fatalf("unexpected bool. got %v, want %v", got, want)
+	}
+}
+
+// True asserts the given bool is true.
+func True(t testing.TB, got bool) {
+	t.Helper()
+	if !got {
+		t.Fatalf("unexpected false value")
+	}
+}
+
+// False asserts the given bool is false.
+func False(t testing.TB, got bool) {
+	t.Helper()
+	if got {
+		t.Fatalf("unexpected true value")
 	}
 }
 

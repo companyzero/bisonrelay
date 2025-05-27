@@ -71,9 +71,16 @@ func TestConcurrentLock(t *testing.T) {
 }
 
 // TestLocksForever tests that when the process ends, the lock file is released.
-// This test needs to be manually performed, by running go test -count=1 twice
-// so that the same file is attempted to be read.
+//
+// This test needs to be manually performed, by running
+//
+//	$ BR_LOCKSFOREVER_TEST go test -count=1
+//
+// twice so that the same file is read twice by different processes.
 func TestLocksForever(t *testing.T) {
+	if os.Getenv("BR_LOCKSFOREVER_TEST") != "1" {
+		t.Skip("Run with BR_LOCKSFOREVER_TEST=1 to manually test")
+	}
 	fname := filepath.Join(os.TempDir(), "br_clientdb_lockfile_test_file")
 	Create(context.Background(), fname)
 }
