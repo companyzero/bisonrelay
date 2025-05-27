@@ -390,6 +390,31 @@ func ComposeCompressedRM(fromSigner MessageSigner, rm interface{}, zlibLevel int
 	case RMFetchResourceReply:
 		h.Command = RMCFetchResourceReply
 
+	// RTDT
+	case RMRTDTSessionInvite:
+		h.Command = RMCRTDTSessionInvite
+
+	case RMRTDTSessionInviteAccept:
+		h.Command = RMCRTDTSessionInviteAccept
+
+	case RMRTDTSession:
+		h.Command = RMCRTDTSession
+
+	case RMRTDTExitSession:
+		h.Command = RMCRTDTExitSesssion
+
+	case RMRTDTDissolveSession:
+		h.Command = RMCRTDTDissolveSesssion
+
+	case RMRTDTRemovedFromSession:
+		h.Command = RMCRTDTRemovedFromSession
+
+	case RMRTDTRotateAppointCookie:
+		h.Command = RMCRTDTRotateAppointCookie
+
+	case RMRTDTAdminCookies:
+		h.Command = RMCRTDTAdminCookies
+
 	// Purely transitive commands
 
 	default:
@@ -751,6 +776,47 @@ func DecomposeRM(msgVerifier MessageVerifier, mb []byte, maxDecompressSize uint)
 		var fetchResReply RMFetchResourceReply
 		err = pmd.Decode(&fetchResReply)
 		payload = fetchResReply
+
+	// RTDT
+	case RMCRTDTSessionInvite:
+		var sessInvite RMRTDTSessionInvite
+		err = pmd.Decode(&sessInvite)
+		payload = sessInvite
+
+	case RMCRTDTSessionInviteAccept:
+		var sessInviteAccept RMRTDTSessionInviteAccept
+		err = pmd.Decode(&sessInviteAccept)
+		payload = sessInviteAccept
+
+	case RMCRTDTSession:
+		var sess RMRTDTSession
+		err = pmd.Decode(&sess)
+		payload = sess
+
+	case RMCRTDTExitSesssion:
+		var exitSess RMRTDTExitSession
+		err = pmd.Decode(&exitSess)
+		payload = exitSess
+
+	case RMCRTDTDissolveSesssion:
+		var dissSess RMRTDTDissolveSession
+		err = pmd.Decode(&dissSess)
+		payload = dissSess
+
+	case RMCRTDTRemovedFromSession:
+		var remSess RMRTDTRemovedFromSession
+		err = pmd.Decode(&remSess)
+		payload = remSess
+
+	case RMCRTDTRotateAppointCookie:
+		var rotCookie RMRTDTRotateAppointCookie
+		err = pmd.Decode(&rotCookie)
+		payload = rotCookie
+
+	case RMCRTDTAdminCookies:
+		var admCookie RMRTDTAdminCookies
+		err = pmd.Decode(&admCookie)
+		payload = admCookie
 
 	// Purely transitive commands
 

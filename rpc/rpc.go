@@ -50,6 +50,14 @@ const (
 
 	TaggedCmdPushRoutedMessage = "pushroutedmessage"
 
+	// PRPC RTDT commands
+	TaggedCmdCreateRTDTSession         = "creatertdtsess"
+	TaggedCmdCreateRTDTSessionReply    = "creatertdtsessreply"
+	TaggedCmdGetRTDTAppointCookie      = "getrtdtapptcookie"
+	TaggedCmdGetRTDTAppointCookieReply = "getrtdtapptcookiereply"
+	TaggedCmdAppointRTDTServer         = "appointrtdtserver"
+	TaggedCmdAppointRTDTServerReply    = "appointrtdtserverreply"
+
 	// misc
 	MessageModeNormal MessageMode = 0
 	MessageModeMe     MessageMode = 1
@@ -72,6 +80,11 @@ const (
 	// InvoiceExpiryAffordance is the time before the expiry a client may
 	// request a new invoice.
 	InvoiceExpiryAffordance = 15 * time.Second
+
+	// PublishFreePayRTPublishAllowanceMB is how many megabytes can be
+	// published per publish allowance request when using the free payment
+	// scheme.
+	PublishFreePayRTPublishAllowanceMB = 1 // WARNING: MUST match what is set in rtdtsessmanager.go or E2E tests fail.
 )
 
 // MaxMsgSizeVersion tracks defined versions of max msg size.
@@ -182,8 +195,11 @@ type Acknowledge struct {
 type GetInvoiceAction string
 
 const (
-	InvoiceActionPush GetInvoiceAction = "push"
-	InvoiceActionSub  GetInvoiceAction = "sub"
+	InvoiceActionPush            GetInvoiceAction = "push"
+	InvoiceActionSub             GetInvoiceAction = "sub"
+	InvoiceActionCreateRTSess    GetInvoiceAction = "creatertsess"
+	InvoiceActionGetRTCookie     GetInvoiceAction = "getrtcookie"
+	InvoiceActionPublishInRTSess GetInvoiceAction = "pubinrtsess"
 )
 
 type GetInvoice struct {
@@ -287,6 +303,18 @@ const (
 	PropSuggestClientVersions = "clientversions"
 )
 
+const (
+	// The following props define the rates for RTDT session management.
+
+	PropRTMAtomsPerSess          = "rtmatomspersess"
+	PropRTMAtomsPerUserSess      = "rtmatomsperusersess"
+	PropRTMAtomsGetCookie        = "rtmatomsgetcookie"
+	PropRTMAtomsPerUserGetCookie = "rtmatomsgetcookieuser"
+	PropRTMAtomsJoin             = "rtmatomsjoin"
+	PropRTMAtomsPushRate         = "rtmatomspushrate"
+	PropRTPushRateMBytes         = "rtpushratembytes"
+)
+
 func SupportedServerProperties() []ServerProperty {
 	// required
 	DefaultPropTagDepth := ServerProperty{
@@ -345,6 +373,8 @@ func SupportedServerProperties() []ServerProperty {
 		Required: false,
 	}
 
+	itoa := strconv.Itoa
+
 	// All properties must exist in this array.
 	SupportedServerProperties := []ServerProperty{
 		// required
@@ -356,10 +386,9 @@ func SupportedServerProperties() []ServerProperty {
 		DefaultPropPushPaymentLifetime,
 		DefaultPropMaxPushInvoices,
 		DefaultPropExpirationDays,
-
 		{
 			Key:      PropMaxMsgSizeVersion,
-			Value:    strconv.Itoa(int(PropMaxMsgSizeVersionDefault)),
+			Value:    itoa(int(PropMaxMsgSizeVersionDefault)),
 			Required: true,
 		},
 
@@ -374,6 +403,15 @@ func SupportedServerProperties() []ServerProperty {
 		DefaultPropServerLNNode,
 		DefaultPropPingLimit,
 		{Key: PropSuggestClientVersions, Value: ""},
+
+		// TODO: Make them required once clients upgrade.
+		{Key: PropRTMAtomsPerSess, Value: itoa(0)},
+		{Key: PropRTMAtomsPerUserSess, Value: itoa(0)},
+		{Key: PropRTMAtomsGetCookie, Value: itoa(0)},
+		{Key: PropRTMAtomsPerUserGetCookie, Value: itoa(0)},
+		{Key: PropRTMAtomsJoin, Value: itoa(0)},
+		{Key: PropRTMAtomsPushRate, Value: itoa(0)},
+		{Key: PropRTPushRateMBytes, Value: itoa(0)},
 	}
 
 	return SupportedServerProperties
