@@ -24,7 +24,9 @@ class ChatInput extends StatefulWidget {
   final SendMsg _send;
   final ChatModel chat;
   final CustomInputFocusNode inputFocusNode;
-  const ChatInput(this._send, this.chat, this.inputFocusNode, {super.key});
+  final bool allowAudio;
+  const ChatInput(this._send, this.chat, this.inputFocusNode,
+      {this.allowAudio = true, super.key});
 
   @override
   State<ChatInput> createState() => _ChatInputState();
@@ -350,7 +352,7 @@ class _ChatInputState extends State<ChatInput> {
           ),
         ),
       ),
-      if (!isScreenSmall || controller.text == "") ...[
+      if ((!isScreenSmall || controller.text == "") && widget.allowAudio) ...[
         const SizedBox(width: 5),
         const RecordAudioInputButton(),
       ],

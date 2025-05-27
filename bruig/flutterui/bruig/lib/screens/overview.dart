@@ -13,6 +13,7 @@ import 'package:bruig/models/downloads.dart';
 import 'package:bruig/models/feed.dart';
 import 'package:bruig/models/menus.dart';
 import 'package:bruig/models/notifications.dart';
+import 'package:bruig/models/realtimechat.dart';
 import 'package:bruig/models/snackbar.dart';
 import 'package:bruig/models/uistate.dart';
 import 'package:bruig/screens/chats.dart';
@@ -59,8 +60,9 @@ class OverviewScreen extends StatefulWidget {
   final MainMenuModel mainMenu;
   final FeedModel feed;
   final SnackBarModel snackBar;
+  final RealtimeChatModel rtc;
   const OverviewScreen(this.down, this.client, this.ntfns, this.initialRoute,
-      this.mainMenu, this.feed, this.snackBar,
+      this.mainMenu, this.feed, this.snackBar, this.rtc,
       {super.key});
 
   @override
@@ -97,8 +99,34 @@ final _connStateStyles = {
           child: Image.asset("assets/images/updatetag.png", width: 50))),
 };
 
-AppBar _buildAppBar(BuildContext context, ClientModel client, FeedModel feed,
-    MainMenuModel mainMenu, GlobalKey<NavigatorState> navKey) {
+class _MainAppBar extends StatefulWidget {
+  final ClientModel client;
+  final FeedModel feed;
+  final RealtimeChatModel rtc;
+  final MainMenuModel mainMenu;
+  final GlobalKey<NavigatorState> navKey;
+  const _MainAppBar(
+      this.client, this.feed, this.rtc, this.mainMenu, this.navKey);
+
+  @override
+  State<_MainAppBar> createState() => __MainAppBarState();
+}
+
+class __MainAppBarState extends State<_MainAppBar>
+    with SingleTickerProviderStateMixin {
+  GlobalKey<NavigatorState> get navKey => widget.navKey;
+  MainMenuModel get mainMenu => widget.mainMenu;
+  ClientModel get client => widget.client;
+  FeedModel get feed => widget.feed;
+  RealtimeChatModel get rtc => widget.rtc;
+
+  late AnimationController bgColorCtrl;
+  late Animation<Color?> bgColorAnim;
+
+  bool hasLiveRTCSess = false;
+  bool hasHotAudio = false;
+  bool get hasAnimation => hasLiveRTCSess || hasHotAudio;
+
   void goToNewPost(BuildContext context) {
     navKey.currentState
         ?.pushReplacementNamed('/feed', arguments: PageTabs(3, null, null));
@@ -112,118 +140,191 @@ AppBar _buildAppBar(BuildContext context, ClientModel client, FeedModel feed,
     navKey.currentState!.pushReplacementNamed(route, arguments: args);
   }
 
-  bool isScreenSmall = checkIsScreenSmall(context);
+  void rtcChanged() {
+    bool newHasHotAudio = rtc.hotAudioSession.active?.inLiveSession ?? false;
+    bool newHasLive = rtc.liveSessions.hasSessions;
+    if (newHasLive != hasLiveRTCSess || newHasHotAudio != hasHotAudio) {
+      setState(() {
+        hasLiveRTCSess = newHasLive;
+        hasHotAudio = newHasHotAudio;
+      });
+      if (hasAnimation) {
+        bgColorCtrl.repeat();
+      } else {
+        bgColorCtrl.stop();
+      }
+    }
+  }
 
-  if (!isScreenSmall) {
+  @override
+  void initState() {
+    super.initState();
+
+    rtc.hotAudioSession.addListener(rtcChanged);
+    rtc.liveSessions.addListener(rtcChanged);
+
+    // Initialize animation controller
+    bgColorCtrl = AnimationController(
+      duration: const Duration(seconds: 2),
+      vsync: this,
+    );
+
+    // Create the color animation sequence
+    bgColorAnim = TweenSequence<Color?>([
+      TweenSequenceItem(
+        weight: 1.0,
+        tween: ColorTween(
+          begin: Colors.green.shade600,
+          end: Colors.green.shade900,
+        ),
+      ),
+      TweenSequenceItem(
+        weight: 1.0,
+        tween: ColorTween(
+          begin: Colors.green.shade900,
+          end: Colors.green.shade600,
+        ),
+      ),
+    ]).animate(bgColorCtrl);
+  }
+
+  @override
+  void dispose() {
+    bgColorCtrl.dispose();
+    rtc.hotAudioSession.removeListener(rtcChanged);
+    rtc.liveSessions.removeListener(rtcChanged);
+    super.dispose();
+  }
+
+  AppBar buildAppBar(BuildContext context) {
+    bool isScreenSmall = checkIsScreenSmall(context);
+
+    if (!isScreenSmall) {
+      return AppBar(
+          titleSpacing: 0.0,
+          title: const _OverviewScreenTitle(),
+          leadingWidth: 112,
+          backgroundColor:
+              hasHotAudio || hasLiveRTCSess ? bgColorAnim.value : null,
+          leading: Row(children: [
+            Consumer<ConnStateModel>(builder: (context, connState, child) {
+              var connStateTagKey = connState.state.state;
+              if (connStateTagKey == connStateOnline &&
+                  connState.suggestedVersion != "") {
+                connStateTagKey = connStateUpdate;
+              }
+              return Stack(children: [
+                Row(children: [
+                  const SizedBox(width: 10),
+                  IconButton(
+                      tooltip: "About Bison Relay",
+                      splashRadius: 20,
+                      iconSize: 40,
+                      onPressed: () => goToAbout(context),
+                      icon: Image.asset(
+                        "assets/images/icon.png",
+                      ))
+                ]),
+                _connStateStyles[connStateTagKey]?.tag ??
+                    const SizedBox(width: 100),
+              ]);
+            }),
+            IconButton(
+                splashRadius: 20,
+                tooltip: "Create a new post",
+                onPressed: () => goToNewPost(context),
+                iconSize: 20,
+                icon: const Icon(size: 20, Icons.mode)),
+            const SizedBox(width: 20),
+          ]));
+    }
+
+    List<ChatMenuItem?> contextMenu = [];
+    if (mainMenu.activeMenu.label == "Chat") {
+      contextMenu = buildChatContextMenu(navKey);
+    }
+
     return AppBar(
+        leadingWidth: 60,
         titleSpacing: 0.0,
         title: const _OverviewScreenTitle(),
-        leadingWidth: 112,
-        leading: Row(children: [
-          Consumer<ConnStateModel>(builder: (context, connState, child) {
+        backgroundColor:
+            hasHotAudio || hasLiveRTCSess ? bgColorAnim.value : null,
+        leading: Builder(builder: (BuildContext context) {
+          return InkWell(onTap: () {
+            // if (client.ui.showAddressBook.val) { // FIXME: How is this triggered?
+            //   client.ui.showAddressBook.val = false;
+            // } else
+            if (!client.ui.chatSideMenuActive.empty) {
+              client.ui.chatSideMenuActive.chat = null;
+            } else if (client.ui.showProfile.val) {
+              client.ui.showProfile.val = false;
+            } else if (!client.ui.overviewActivePath.onActiveBottomTab ||
+                client.active != null) {
+              !client.ui.chatSideMenuActive.empty
+                  ? client.ui.chatSideMenuActive.clear()
+                  : client.active = null;
+              if (!client.ui.overviewActivePath.onActiveBottomTab) {
+                switchScreen(ChatsScreen.routeName);
+              }
+            } else if (feed.active != null) {
+              feed.active = null;
+              switchScreen(FeedScreen.routeName, args: PageTabs(0, null, null));
+            } else {
+              switchScreen(SettingsScreen.routeName);
+            }
+          }, child: Consumer5<OverviewActivePath, ActiveChatModel, FeedModel,
+                  ChatSideMenuActiveModel, ConnStateModel>(
+              builder: (context, overviewActivePath, activeChat, feed,
+                  chatSideMenuActive, connState, child) {
             var connStateTagKey = connState.state.state;
             if (connStateTagKey == connStateOnline &&
                 connState.suggestedVersion != "") {
               connStateTagKey = connStateUpdate;
             }
+
             return Stack(children: [
-              Row(children: [
-                const SizedBox(width: 10),
-                IconButton(
-                    tooltip: "About Bison Relay",
-                    splashRadius: 20,
-                    iconSize: 40,
-                    onPressed: () => goToAbout(context),
-                    icon: Image.asset(
-                      "assets/images/icon.png",
-                    ))
-              ]),
-              _connStateStyles[connStateTagKey]?.tag ??
-                  const SizedBox(width: 100),
+              !overviewActivePath.onActiveBottomTab ||
+                      !activeChat.empty ||
+                      feed.active != null ||
+                      !chatSideMenuActive.empty
+                  ? const Positioned(
+                      left: 25,
+                      top: 17,
+                      child: Icon(Icons.keyboard_arrow_left_rounded))
+                  : Container(
+                      margin: const EdgeInsets.all(10),
+                      child: SelfAvatar(client)),
+              _connStateStyles[connStateTagKey]?.tag ?? const Empty(),
             ]);
-          }),
-          IconButton(
-              splashRadius: 20,
-              tooltip: "Create a new post",
-              onPressed: () => goToNewPost(context),
-              iconSize: 20,
-              icon: const Icon(size: 20, Icons.mode)),
-          const SizedBox(width: 20),
-        ]));
+          }));
+        }),
+        actions: [
+          // Only render page context menu if the mainMenu ONLY has
+          // a context menu OR a sub page menu.
+          (mainMenu.activeMenu.subMenuInfo.isNotEmpty && contextMenu.isEmpty) ||
+                  (contextMenu.isNotEmpty &&
+                      mainMenu.activeMenu.subMenuInfo.isEmpty)
+              ? PageContextMenu(
+                  menuItem: mainMenu.activeMenu,
+                  subMenu: mainMenu.activeMenu.subMenuInfo,
+                  contextMenu: contextMenu,
+                  navKey: navKey,
+                )
+              : const Empty()
+        ]);
   }
 
-  List<ChatMenuItem?> contextMenu = [];
-  if (mainMenu.activeMenu.label == "Chat") {
-    contextMenu = buildChatContextMenu(navKey);
+  @override
+  Widget build(BuildContext context) {
+    if (hasAnimation) {
+      return AnimatedBuilder(
+          animation: bgColorAnim,
+          builder: (context, child) => buildAppBar(context));
+    }
+
+    return buildAppBar(context);
   }
-
-  return AppBar(
-      leadingWidth: 60,
-      titleSpacing: 0.0,
-      title: const _OverviewScreenTitle(),
-      leading: Builder(builder: (BuildContext context) {
-        return InkWell(onTap: () {
-          // if (client.ui.showAddressBook.val) { // FIXME: How is this triggered?
-          //   client.ui.showAddressBook.val = false;
-          // } else
-          if (!client.ui.chatSideMenuActive.empty) {
-            client.ui.chatSideMenuActive.chat = null;
-          } else if (client.ui.showProfile.val) {
-            client.ui.showProfile.val = false;
-          } else if (!client.ui.overviewActivePath.onActiveBottomTab ||
-              client.active != null) {
-            !client.ui.chatSideMenuActive.empty
-                ? client.ui.chatSideMenuActive.clear()
-                : client.active = null;
-            if (!client.ui.overviewActivePath.onActiveBottomTab) {
-              switchScreen(ChatsScreen.routeName);
-            }
-          } else if (feed.active != null) {
-            feed.active = null;
-            switchScreen(FeedScreen.routeName, args: PageTabs(0, null, null));
-          } else {
-            switchScreen(SettingsScreen.routeName);
-          }
-        }, child: Consumer5<OverviewActivePath, ActiveChatModel, FeedModel,
-                ChatSideMenuActiveModel, ConnStateModel>(
-            builder: (context, overviewActivePath, activeChat, feed,
-                chatSideMenuActive, connState, child) {
-          var connStateTagKey = connState.state.state;
-          if (connStateTagKey == connStateOnline &&
-              connState.suggestedVersion != "") {
-            connStateTagKey = connStateUpdate;
-          }
-
-          return Stack(children: [
-            !overviewActivePath.onActiveBottomTab ||
-                    !activeChat.empty ||
-                    feed.active != null ||
-                    !chatSideMenuActive.empty
-                ? const Positioned(
-                    left: 25,
-                    top: 17,
-                    child: Icon(Icons.keyboard_arrow_left_rounded))
-                : Container(
-                    margin: const EdgeInsets.all(10),
-                    child: SelfAvatar(client)),
-            _connStateStyles[connStateTagKey]?.tag ?? const Empty(),
-          ]);
-        }));
-      }),
-      actions: [
-        // Only render page context menu if the mainMenu ONLY has
-        // a context menu OR a sub page menu.
-        (mainMenu.activeMenu.subMenuInfo.isNotEmpty && contextMenu.isEmpty) ||
-                (contextMenu.isNotEmpty &&
-                    mainMenu.activeMenu.subMenuInfo.isEmpty)
-            ? PageContextMenu(
-                menuItem: mainMenu.activeMenu,
-                subMenu: mainMenu.activeMenu.subMenuInfo,
-                contextMenu: contextMenu,
-                navKey: navKey,
-              )
-            : const Empty()
-      ]);
 }
 
 class _OverviewScreenState extends State<OverviewScreen> {
@@ -361,7 +462,10 @@ class _OverviewScreenState extends State<OverviewScreen> {
     bool isScreenSmall = checkIsScreenSmall(context);
     return Scaffold(
       key: scaffoldKey,
-      appBar: _buildAppBar(context, client, feed, widget.mainMenu, navKey),
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(kToolbarHeight),
+        child: _MainAppBar(client, feed, widget.rtc, widget.mainMenu, navKey),
+      ),
       body: SnackbarDisplayer(
           widget.snackBar,
           Row(children: [

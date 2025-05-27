@@ -430,8 +430,10 @@ class RMGroupList {
 class GroupChat {
   final RMGroupList metadata;
   final String alias;
+  @JsonKey(name: "rtdt_session_rv", defaultValue: "")
+  final String rtdtSessionRV;
 
-  GroupChat(this.metadata, this.alias);
+  GroupChat(this.metadata, this.alias, this.rtdtSessionRV);
   factory GroupChat.fromJson(Map<String, dynamic> json) =>
       _$GroupChatFromJson(json);
 }
@@ -2468,12 +2470,14 @@ class AudioDevices {
 }
 
 @JsonSerializable()
-class AudioRecordNoteArgs {
+class AudioDeviceArgs {
   @JsonKey(name: "capture_device_id")
   final String captureDeviceID;
+  @JsonKey(name: "playback_device_id")
+  final String playbackDeviceID;
 
-  AudioRecordNoteArgs(this.captureDeviceID);
-  Map<String, dynamic> toJson() => _$AudioRecordNoteArgsToJson(this);
+  AudioDeviceArgs(this.captureDeviceID, this.playbackDeviceID);
+  Map<String, dynamic> toJson() => _$AudioDeviceArgsToJson(this);
 }
 
 @JsonSerializable()
@@ -2488,6 +2492,393 @@ class RecordedAudioNote {
 
   factory RecordedAudioNote.fromJson(Map<String, dynamic> json) =>
       _$RecordedAudioNoteFromJson(json);
+}
+
+@JsonSerializable()
+class CreateRTDTSessArgs {
+  final int size;
+  final String description;
+  @JsonKey(includeIfNull: false)
+  final String? gc;
+
+  CreateRTDTSessArgs(this.size, this.description, this.gc);
+
+  Map<String, dynamic> toJson() => _$CreateRTDTSessArgsToJson(this);
+}
+
+@JsonSerializable()
+class RMRTDTSessionInvite {
+  final String rv;
+  @JsonKey(name: "appoint_cookie")
+  final String appointCookie;
+  final int size;
+  final String description;
+  @JsonKey(name: "allowed_as_publisher")
+  final bool allowedAsPublisher;
+  @JsonKey(name: "peer_id")
+  final int peerID;
+  @JsonKey(defaultValue: "")
+  final String gc;
+  final int tag;
+
+  RMRTDTSessionInvite(this.rv, this.appointCookie, this.size, this.description,
+      this.allowedAsPublisher, this.peerID, this.gc, this.tag);
+
+  Map<String, dynamic> toJson() => _$RMRTDTSessionInviteToJson(this);
+  factory RMRTDTSessionInvite.fromJson(Map<String, dynamic> json) =>
+      _$RMRTDTSessionInviteFromJson(json);
+}
+
+@JsonSerializable()
+class InvitedToRTDTSess extends ChatEvent {
+  final String inviter;
+  final RMRTDTSessionInvite invite;
+
+  InvitedToRTDTSess(this.inviter, this.invite) : super(inviter, "");
+
+  factory InvitedToRTDTSess.fromJson(Map<String, dynamic> json) =>
+      _$InvitedToRTDTSessFromJson(json);
+  Map<String, dynamic> toJson() => _$InvitedToRTDTSessToJson(this);
+}
+
+@JsonSerializable()
+class AcceptRTDTInviteArgs {
+  final String inviter;
+  final RMRTDTSessionInvite invite;
+  @JsonKey(name: "as_publisher")
+  final bool asPublisher;
+
+  AcceptRTDTInviteArgs(this.inviter, this.invite, this.asPublisher);
+
+  Map<String, dynamic> toJson() => _$AcceptRTDTInviteArgsToJson(this);
+}
+
+@JsonSerializable()
+class InviteToRTDTSessArgs {
+  @JsonKey(name: "session_rv")
+  final String sessionRV;
+  @JsonKey(name: "invitee")
+  final String invitee;
+  @JsonKey(name: "allowed_as_publisher")
+  final bool allowedAsPublisher;
+
+  InviteToRTDTSessArgs(this.sessionRV, this.invitee, this.allowedAsPublisher);
+
+  Map<String, dynamic> toJson() => _$InviteToRTDTSessArgsToJson(this);
+}
+
+@JsonSerializable()
+class RMRTDTSessionPublisher {
+  @JsonKey(name: "publisher_id")
+  final String publisherID;
+  @JsonKey(name: "peer_id")
+  final int peerID;
+  @JsonKey(name: "publisher_key")
+  final String publisherKey;
+  final String alias;
+
+  RMRTDTSessionPublisher(
+      this.publisherID, this.peerID, this.publisherKey, this.alias);
+
+  factory RMRTDTSessionPublisher.empty() => RMRTDTSessionPublisher(
+      "0000000000000000000000000000000000000000000000000000000000000000",
+      0,
+      "0000000000000000000000000000000000000000000000000000000000000000",
+      "");
+
+  factory RMRTDTSessionPublisher.fromJson(Map<String, dynamic> json) =>
+      _$RMRTDTSessionPublisherFromJson(json);
+  Map<String, dynamic> toJson() => _$RMRTDTSessionPublisherToJson(this);
+}
+
+@JsonSerializable()
+class RMRTDTSession {
+  final int generation;
+  final String rv;
+  final int size;
+  final String description;
+  final String owner;
+  @JsonKey(defaultValue: [])
+  final List<String> admins;
+  @JsonKey(defaultValue: [])
+  final List<RMRTDTSessionPublisher> publishers;
+
+  RMRTDTSession(this.generation, this.rv, this.size, this.description,
+      this.owner, this.admins, this.publishers);
+
+  factory RMRTDTSession.fromJson(Map<String, dynamic> json) =>
+      _$RMRTDTSessionFromJson(json);
+}
+
+@JsonSerializable()
+class RTDTSessionMember {
+  final String uid;
+  @JsonKey(name: "peer_id")
+  final int peerID;
+  final int tag;
+  @JsonKey(name: "sent_timestamp")
+  final int sentTimestamp;
+  final bool publisher;
+  @JsonKey(name: "accepted_timestamp")
+  final int? acceptedTimestamp;
+  @JsonKey(name: "appoint_cookie", defaultValue: "")
+  final String appointCookie;
+
+  RTDTSessionMember(this.uid, this.peerID, this.tag, this.sentTimestamp,
+      this.publisher, this.acceptedTimestamp, this.appointCookie);
+
+  factory RTDTSessionMember.fromJson(Map<String, dynamic> json) =>
+      _$RTDTSessionMemberFromJson(json);
+}
+
+@JsonSerializable()
+class RTDTSession {
+  final RMRTDTSession metadata;
+  @JsonKey(name: "session_cookie", defaultValue: "")
+  final String sessionCookie;
+  @JsonKey(name: "owner_secret", defaultValue: "")
+  final String ownerSecret;
+  @JsonKey(name: "appoint_cookie", defaultValue: "")
+  final String appointCookie;
+  @JsonKey(name: "publisher_key", defaultValue: "")
+  final String publisherKey;
+  @JsonKey(name: "local_peer_id")
+  final int localPeerID;
+  @JsonKey(name: "next_peer_id")
+  final int nextPeerID;
+  @JsonKey(defaultValue: [])
+  final List<RTDTSessionMember> members;
+  @JsonKey(defaultValue: "")
+  final String gc;
+
+  RTDTSession(
+      this.metadata,
+      this.sessionCookie,
+      this.ownerSecret,
+      this.appointCookie,
+      this.publisherKey,
+      this.localPeerID,
+      this.nextPeerID,
+      this.members,
+      this.gc);
+
+  factory RTDTSession.fromJson(Map<String, dynamic> json) =>
+      _$RTDTSessionFromJson(json);
+}
+
+class RTDTSessionEvent {
+  @JsonKey(name: "session_rv")
+  final String sessionRV;
+
+  RTDTSessionEvent(this.sessionRV);
+}
+
+@JsonSerializable()
+class RTDTSessionUpdateNtfn extends RTDTSessionEvent {
+  @JsonKey(name: "new_publishers")
+  @JsonKey(defaultValue: [])
+  final List<RMRTDTSessionPublisher>? newPublishers;
+  @JsonKey(defaultValue: [])
+  final List<RMRTDTSessionPublisher>? removedPublishers;
+  @JsonKey(name: "new_metadata")
+  final RMRTDTSession newMetadata;
+  @JsonKey(name: "initial_join")
+  final bool initialJoin;
+
+  RTDTSessionUpdateNtfn(super.sessionRV, this.newPublishers,
+      this.removedPublishers, this.newMetadata, this.initialJoin);
+
+  factory RTDTSessionUpdateNtfn.fromJson(Map<String, dynamic> json) =>
+      _$RTDTSessionUpdateNtfnFromJson(json);
+}
+
+@JsonSerializable()
+class RTDTLivePeerUpdate {
+  @JsonKey(name: "session_rv")
+  final String sessionRV;
+  @JsonKey(name: "peer_id")
+  final int peerId;
+  @JsonKey(name: "has_sound")
+  final bool hasSound;
+  @JsonKey(name: "has_sound_stream")
+  final bool hasSoundStream;
+
+  RTDTLivePeerUpdate(
+      this.sessionRV, this.peerId, this.hasSound, this.hasSoundStream);
+  factory RTDTLivePeerUpdate.fromJson(Map<String, dynamic> json) =>
+      _$RTDTLivePeerUpdateFromJson(json);
+}
+
+class RTDTLivePeerUpdateNtf {
+  final int ntfType;
+  final RTDTLivePeerUpdate update;
+  RTDTLivePeerUpdateNtf(this.ntfType, this.update);
+}
+
+@JsonSerializable()
+class RTDTLiveSessionSendError {
+  @JsonKey(name: "session_rv")
+  final String sessionRV;
+  final String error;
+
+  RTDTLiveSessionSendError(this.sessionRV, this.error);
+  factory RTDTLiveSessionSendError.fromJson(Map<String, dynamic> json) =>
+      _$RTDTLiveSessionSendErrorFromJson(json);
+}
+
+@JsonSerializable()
+class RTDTLivePeerGain {
+  @JsonKey(name: "session_rv")
+  final String sessionRV;
+  @JsonKey(name: "peer_id")
+  final int peerId;
+  final double gain;
+
+  RTDTLivePeerGain(this.sessionRV, this.peerId, this.gain);
+  factory RTDTLivePeerGain.fromJson(Map<String, dynamic> json) =>
+      _$RTDTLivePeerGainFromJson(json);
+  Map<String, dynamic> toJson() => _$RTDTLivePeerGainToJson(this);
+}
+
+@JsonSerializable()
+class RTDTSessionUpdate extends RTDTSessionEvent {
+  final String source;
+  final RTDTSessionUpdateNtfn update;
+
+  RTDTSessionUpdate(this.source, this.update) : super(update.sessionRV);
+
+  factory RTDTSessionUpdate.fromJson(Map<String, dynamic> json) =>
+      _$RTDTSessionUpdateFromJson(json);
+  Map<String, dynamic> toJson() => _$RTDTSessionUpdateToJson(this);
+}
+
+@JsonSerializable()
+class RTDTKickedFromLive extends RTDTSessionEvent {
+  @JsonKey(name: "peer_id")
+  final int peerID;
+  @JsonKey(name: "ban_seconds")
+  final int banSeconds;
+
+  RTDTKickedFromLive(super.sessionRV, this.peerID, this.banSeconds);
+
+  factory RTDTKickedFromLive.fromJson(Map<String, dynamic> json) =>
+      _$RTDTKickedFromLiveFromJson(json);
+  Map<String, dynamic> toJson() => _$RTDTKickedFromLiveToJson(this);
+}
+
+@JsonSerializable()
+class RTDTRemovedFromSession extends RTDTSessionEvent {
+  final String uid;
+  final String reason;
+
+  RTDTRemovedFromSession(super.sessionRV, this.uid, this.reason);
+
+  factory RTDTRemovedFromSession.fromJson(Map<String, dynamic> json) =>
+      _$RTDTRemovedFromSessionFromJson(json);
+  Map<String, dynamic> toJson() => _$RTDTRemovedFromSessionToJson(this);
+}
+
+@JsonSerializable()
+class RTDTUserAndSess extends RTDTSessionEvent {
+  @JsonKey(name: "peer_id")
+  final int peerID;
+  final String uid;
+
+  RTDTUserAndSess(super.sessionRV, this.peerID, this.uid);
+
+  factory RTDTUserAndSess.fromJson(Map<String, dynamic> json) =>
+      _$RTDTUserAndSessFromJson(json);
+}
+
+@JsonSerializable()
+class RTDTRotatedCookies extends RTDTUserAndSess {
+  RTDTRotatedCookies(super.sessionRV, super.peerID, super.uid);
+
+  factory RTDTRotatedCookies.fromJson(Map<String, dynamic> json) =>
+      _$RTDTRotatedCookiesFromJson(json);
+}
+
+@JsonSerializable()
+class RTDTSessionDissolved extends RTDTUserAndSess {
+  RTDTSessionDissolved(super.sessionRV, super.peerID, super.uid);
+
+  factory RTDTSessionDissolved.fromJson(Map<String, dynamic> json) =>
+      _$RTDTSessionDissolvedFromJson(json);
+}
+
+@JsonSerializable()
+class RTDTPeerExited extends RTDTUserAndSess {
+  RTDTPeerExited(super.sessionRV, super.peerID, super.uid);
+
+  factory RTDTPeerExited.fromJson(Map<String, dynamic> json) =>
+      _$RTDTPeerExitedFromJson(json);
+}
+
+@JsonSerializable()
+class LiveRTDTPeer {
+  @JsonKey(name: "has_sound_stream")
+  final bool hasSoundStream;
+  @JsonKey(name: "has_sound")
+  final bool hasSound;
+  @JsonKey(name: "volume_gain")
+  final double volumeGain;
+
+  LiveRTDTPeer(this.hasSoundStream, this.hasSound, this.volumeGain);
+  factory LiveRTDTPeer.fromJson(Map<String, dynamic> json) =>
+      _$LiveRTDTPeerFromJson(json);
+}
+
+@JsonSerializable()
+class LiveRTDTSession {
+  @JsonKey(name: "hot_audio")
+  final bool hotAudio;
+  final Map<int, LiveRTDTPeer> peers;
+
+  LiveRTDTSession(this.hotAudio, this.peers);
+  factory LiveRTDTSession.fromJson(Map<String, dynamic> json) =>
+      _$LiveRTDTSessionFromJson(json);
+}
+
+class RTDTRemadeLiveSessionHot extends RTDTSessionEvent {
+  RTDTRemadeLiveSessionHot(super.sessionRV);
+}
+
+@JsonSerializable()
+class RTDTChatMessage extends RTDTSessionEvent {
+  final RMRTDTSessionPublisher publisher;
+  final String message;
+
+  RTDTChatMessage(super.sessionRV, this.publisher, this.message);
+
+  factory RTDTChatMessage.newToSend(String sessionRV, String message) =>
+      RTDTChatMessage(sessionRV, RMRTDTSessionPublisher.empty(), message);
+
+  factory RTDTChatMessage.fromJson(Map<String, dynamic> json) =>
+      _$RTDTChatMessageFromJson(json);
+  Map<String, dynamic> toJson() => _$RTDTChatMessageToJson(this);
+}
+
+@JsonSerializable()
+class RTDTTrackedChatMessage {
+  @JsonKey(name: "source_id")
+  final int sourceID;
+  final String message;
+  final int timestamp;
+
+  RTDTTrackedChatMessage(this.sourceID, this.message, this.timestamp);
+  factory RTDTTrackedChatMessage.fromJson(Map<String, dynamic> json) =>
+      _$RTDTTrackedChatMessageFromJson(json);
+}
+
+@JsonSerializable()
+class RTDTRTT {
+  final String addr;
+  @JsonKey(name: "rtt_nano")
+  final int rttNano;
+
+  RTDTRTT(this.addr, this.rttNano);
+  factory RTDTRTT.fromJson(Map<String, dynamic> json) =>
+      _$RTDTRTTFromJson(json);
 }
 
 mixin NtfStreams {
@@ -2555,6 +2946,26 @@ mixin NtfStreams {
   StreamController<UINotification> ntfUINotifications =
       StreamController<UINotification>();
   Stream<UINotification> uiNotifications() => ntfUINotifications.stream;
+
+  StreamController<RTDTSessionEvent> ntfRTDTSessEvents =
+      StreamController<RTDTSessionEvent>();
+  Stream<RTDTSessionEvent> rtdtSessionEvents() => ntfRTDTSessEvents.stream;
+
+  StreamController<String> ntfRTDTLiveSessJoined = StreamController<String>();
+  Stream<String> rtdtLiveSessionJoinedNtfns() => ntfRTDTLiveSessJoined.stream;
+
+  StreamController<RTDTLivePeerUpdateNtf> ntfRTDTLivePeerUpdates =
+      StreamController<RTDTLivePeerUpdateNtf>();
+  Stream<RTDTLivePeerUpdateNtf> rtdtLivePeerUpdates() =>
+      ntfRTDTLivePeerUpdates.stream;
+
+  StreamController<RTDTLiveSessionSendError> ntfRTDTLiveSessionErrors =
+      StreamController<RTDTLiveSessionSendError>();
+  Stream<RTDTLiveSessionSendError> rtdtLiveSessionErrors() =>
+      ntfRTDTLiveSessionErrors.stream;
+
+  StreamController<RTDTRTT> ntfRTDTRTTCalculated = StreamController<RTDTRTT>();
+  Stream<RTDTRTT> rtdtRTTStream() => ntfRTDTRTTCalculated.stream;
 
   handleNotifications(int cmd, bool isError, String jsonPayload) {
     dynamic payload;
@@ -2791,6 +3202,72 @@ mixin NtfStreams {
         ntfUINotifications.add(event);
         break;
 
+      case NTRTDTInvitedToSession:
+        var event = InvitedToRTDTSess.fromJson(payload);
+        ntfChatEvents.add(event);
+        break;
+
+      case NTRTDTSessionUpdated:
+        var event = RTDTSessionUpdate.fromJson(payload);
+        ntfRTDTSessEvents.add(event);
+        break;
+
+      case NTRTDTJoinedLiveSession:
+        ntfRTDTLiveSessJoined.add(payload as String);
+        break;
+
+      case NTRTDTLivePeerJoined:
+      case NTRTDTLivePeerStalled:
+      case NTRTDTPeerSoundChanged:
+        var update = RTDTLivePeerUpdate.fromJson(payload);
+        ntfRTDTLivePeerUpdates.add(RTDTLivePeerUpdateNtf(cmd, update));
+        break;
+
+      case NTRTDTSessionSendError:
+        var event = RTDTLiveSessionSendError.fromJson(payload);
+        ntfRTDTLiveSessionErrors.add(event);
+        break;
+
+      case NTRTDTKickedFromLive:
+        var event = RTDTKickedFromLive.fromJson(payload);
+        ntfRTDTSessEvents.add(event);
+        break;
+
+      case NTRTDTRemovedFromSess:
+        var event = RTDTRemovedFromSession.fromJson(payload);
+        ntfRTDTSessEvents.add(event);
+        break;
+
+      case NTRTDTRotatedCookie:
+        var event = RTDTRotatedCookies.fromJson(payload);
+        ntfRTDTSessEvents.add(event);
+        break;
+
+      case NTRTDTSessDissolved:
+        var event = RTDTSessionDissolved.fromJson(payload);
+        ntfRTDTSessEvents.add(event);
+        break;
+
+      case NTRTDTPeerExited:
+        var event = RTDTPeerExited.fromJson(payload);
+        ntfRTDTSessEvents.add(event);
+        break;
+
+      case NTRTDTRemadeSessHot:
+        var event = RTDTRemadeLiveSessionHot(payload as String);
+        ntfRTDTSessEvents.add(event);
+        break;
+
+      case NTRTDTChatMsgReceived:
+        var event = RTDTChatMessage.fromJson(payload);
+        ntfRTDTSessEvents.add(event);
+        break;
+
+      case NTRTDTRTTCalculated:
+        var event = RTDTRTT.fromJson(payload);
+        ntfRTDTRTTCalculated.add(event);
+        break;
+
       default:
         debugPrint("Received unknown notification ${cmd.toRadixString(16)}");
     }
@@ -2829,6 +3306,12 @@ abstract class PluginPlatform {
   Stream<SSPlacedOrder> simpleStoreOrders() => throw "unimplemented";
   Stream<int> rescanWalletProgress() => throw "unimplemented";
   Stream<UINotification> uiNotifications() => throw "unimplemented";
+  Stream<RTDTSessionEvent> rtdtSessionEvents() => throw "unimplemented";
+  Stream<String> rtdtLiveSessionJoinedNtfns() => throw "unimplemented";
+  Stream<RTDTLivePeerUpdateNtf> rtdtLivePeerUpdates() => throw "unimplemented";
+  Stream<RTDTLiveSessionSendError> rtdtLiveSessionErrors() =>
+      throw "unimplemented";
+  Stream<RTDTRTT> rtdtRTTStream() => throw "unimplemented";
 
   Future<bool> hasServer() async => throw "unimplemented";
 
@@ -3543,11 +4026,14 @@ abstract class PluginPlatform {
   Future<AudioDevices> listAudioDevices() async =>
       AudioDevices.fromJson(await asyncCall(CTListAudioDevices, null));
 
-  Future<void> startAudioNoteRecord(AudioRecordNoteArgs args) async =>
-      await (asyncCall(CTAudioStartRecordNode, args));
+  Future<void> setAudioDevices(AudioDeviceArgs args) async =>
+      await (asyncCall(CTAudioSetDevices, args));
 
-  Future<void> startAudioNotePlayback(String deviceID) async =>
-      await (asyncCall(CTAudioStartPlaybackNote, deviceID));
+  Future<void> startAudioNoteRecord() async =>
+      await (asyncCall(CTAudioStartRecordNode, null));
+
+  Future<void> startAudioNotePlayback() async =>
+      await (asyncCall(CTAudioStartPlaybackNote, null));
 
   Future<void> stopAudioNote() async =>
       await (asyncCall(CTAudioStopNote, null));
@@ -3567,6 +4053,111 @@ abstract class PluginPlatform {
     }
     return (res as List)
         .map<FetchedResource>((v) => FetchedResource.fromJson(v))
+        .toList();
+  }
+
+  Future<void> rtdtJoinSession(String serverAddr) async =>
+      await asyncCall(CTRTDTJoinSession, serverAddr);
+
+  Future<Map<String, bool>> rtdtListLiveSessions() async {
+    var res = await asyncCall(CTRTDTListLiveSessions, null);
+    if (res == null) {
+      return {};
+    }
+
+    return (res as Map).map<String, bool>((k, v) => MapEntry(k, v as bool));
+  }
+
+  Future<List<String>> rtdtListSessions() async {
+    var res = await asyncCall(CTRTDTListSessions, null);
+    if (res == null) {
+      return List.empty();
+    }
+
+    return (res as List).map<String>((v) => v as String).toList();
+  }
+
+  Future<RTDTSession> rtdtGetSession(String sessionRV) async =>
+      RTDTSession.fromJson(await (asyncCall(CTRTDTGetSession, sessionRV)));
+
+  Future<void> rtdtSwitchHotAudio(String sessionRV) async {
+    if (sessionRV == "") {
+      sessionRV = "".padLeft(64, "0"); // "empty" RV
+    }
+    await asyncCall(CTRTDTSwitchHotAudio, sessionRV);
+  }
+
+  Future<String> rtdtCreateSession(CreateRTDTSessArgs args) async =>
+      await (asyncCall(CTRTDTCreateSession, args.toJson()));
+
+  Future<void> rtdtInviteToSession(InviteToRTDTSessArgs args) async =>
+      await (asyncCall(CTRTDTInviteToSession, args.toJson()));
+
+  Future<void> rtdtAcceptInvite(AcceptRTDTInviteArgs args) async =>
+      await (asyncCall(CTRTDTAcceptInvite, args.toJson()));
+
+  Future<void> rtdtLeaveSession(String sessionRV) async =>
+      await (asyncCall(CTRTDTLeaveLiveSession, sessionRV));
+
+  Future<RTDTLivePeerGain> rtdtModifyLivePeerVolumeGain(
+          String sessionRV, int peerID, double delta) async =>
+      RTDTLivePeerGain.fromJson(await (asyncCall(CTRTDTModifyLivePeerVolumeGain,
+          RTDTLivePeerGain(sessionRV, peerID, delta).toJson())));
+
+  Future<void> setAudioCaptureGain(double delta) async =>
+      await asyncCall(CTSetAudioCaptureGain, delta);
+
+  Future<double> getAudioCaptureGain() async {
+    var res = (await asyncCall(CTGetAudioCaptureGain, null));
+    try {
+      return res as double;
+    } catch (exception) {
+      var v = res as int;
+      return v.toDouble();
+    }
+  }
+
+  Future<void> rtdtKickFromLiveSession(
+          String sessionRV, int peerID, int banSeconds) async =>
+      await asyncCall(CTRTDTKickFromLiveSession,
+          RTDTKickedFromLive(sessionRV, peerID, banSeconds));
+
+  Future<void> rtdtRemoveFromSession(
+          String sessionRV, String uid, String reason) async =>
+      await asyncCall(CTRTDTRemoveFromSession,
+          RTDTRemovedFromSession(sessionRV, uid, reason));
+
+  Future<void> rtdtExitSession(String sessionRV) async =>
+      await asyncCall(CTRTDTExitSession, sessionRV);
+
+  Future<void> rtdtDissolveSession(String sessionRV) async =>
+      await asyncCall(CTRTDTDissolveSession, sessionRV);
+
+  Future<void> rtdtRotateCookies(String sessionRV) async =>
+      await asyncCall(CTRTDTRotateCookies, sessionRV);
+
+  Future<LiveRTDTSession?> rtdtGetLiveSession(String sessionRV) async {
+    var res = await asyncCall(CTRTDTGetLiveSession, sessionRV);
+    if (res == null) {
+      return null;
+    }
+
+    return LiveRTDTSession.fromJson(res);
+  }
+
+  Future<void> rtdtSendChatMsg(String sessionRV, String message) async =>
+      await asyncCall(
+          CTRTDTSendChatMsg, RTDTChatMessage.newToSend(sessionRV, message));
+
+  Future<List<RTDTTrackedChatMessage>> rtdtGetChatMessages(
+      String sessionRV) async {
+    var res = await asyncCall(CTRTDTGetChatMessages, sessionRV);
+    if (res == null) {
+      return List.empty();
+    }
+
+    return (res as List)
+        .map<RTDTTrackedChatMessage>((v) => RTDTTrackedChatMessage.fromJson(v))
         .toList();
   }
 }
@@ -3711,6 +4302,27 @@ const int CTAudioStartPlaybackNote = 0x94;
 const int CTAudioStopNote = 0x95;
 const int CTAudioNoteEmbed = 0x96;
 const int CTLoadFetchedResource = 0x97;
+const int CTRTDTJoinSession = 0x98;
+const int CTRTDTListLiveSessions = 0x99;
+const int CTRTDTListSessions = 0x9a;
+const int CTRTDTGetSession = 0x9b;
+const int CTRTDTSwitchHotAudio = 0x9c;
+const int CTRTDTCreateSession = 0x9d;
+const int CTRTDTInviteToSession = 0x9e;
+const int CTRTDTAcceptInvite = 0x9f;
+const int CTRTDTLeaveLiveSession = 0xa0;
+const int CTAudioSetDevices = 0xa1;
+const int CTRTDTModifyLivePeerVolumeGain = 0xa2;
+const int CTSetAudioCaptureGain = 0xa3;
+const int CTGetAudioCaptureGain = 0xa4;
+const int CTRTDTKickFromLiveSession = 0xa5;
+const int CTRTDTRemoveFromSession = 0xa6;
+const int CTRTDTExitSession = 0xa7;
+const int CTRTDTRotateCookies = 0xa8;
+const int CTRTDTDissolveSession = 0xa9;
+const int CTRTDTGetLiveSession = 0xaa;
+const int CTRTDTSendChatMsg = 0xab;
+const int CTRTDTGetChatMessages = 0xac;
 
 const int notificationsStartID = 0x1000;
 
@@ -3761,3 +4373,18 @@ const int NTAddressBookLoaded = 0x102c;
 const int NTPostsSubscriberUpdated = 0x102d;
 const int NTUINotification = 0x102e;
 const int NTGCKilled = 0x102f;
+const int NTRTDTInvitedToSession = 0x1030;
+const int NTRTDTSessionUpdated = 0x1031;
+const int NTRTDTJoinedLiveSession = 0x1032;
+const int NTRTDTLivePeerJoined = 0x1033;
+const int NTRTDTLivePeerStalled = 0x1034;
+const int NTRTDTPeerSoundChanged = 0x1035;
+const int NTRTDTSessionSendError = 0x1036;
+const int NTRTDTKickedFromLive = 0x1037;
+const int NTRTDTRemovedFromSess = 0x1038;
+const int NTRTDTRotatedCookie = 0x1039;
+const int NTRTDTSessDissolved = 0x103a;
+const int NTRTDTPeerExited = 0x103b;
+const int NTRTDTRemadeSessHot = 0x103c;
+const int NTRTDTChatMsgReceived = 0x103d;
+const int NTRTDTRTTCalculated = 0x103e;

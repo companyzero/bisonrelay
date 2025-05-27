@@ -11,6 +11,7 @@ import 'package:bruig/models/client.dart';
 import 'package:bruig/models/emoji.dart';
 import 'package:bruig/models/log.dart';
 import 'package:bruig/models/notifications.dart';
+import 'package:bruig/models/realtimechat.dart';
 import 'package:bruig/models/resources.dart';
 import 'package:bruig/screens/chat/new_gc_screen.dart';
 import 'package:bruig/screens/chat/new_message_screen.dart';
@@ -22,6 +23,7 @@ import 'package:bruig/screens/log.dart';
 import 'package:bruig/screens/manage_content_screen.dart';
 import 'package:bruig/screens/paystats.dart';
 import 'package:bruig/screens/send_file.dart';
+import 'package:bruig/screens/realtimechat/rtclist.dart';
 import 'package:bruig/screens/settings.dart';
 import 'package:bruig/screens/viewpage_screen.dart';
 import 'package:flutter/material.dart';
@@ -88,9 +90,9 @@ final List<MainMenuItem> mainMenu = [
       "Chat",
       ChatsScreen.routeName,
       (context) =>
-          Consumer3<ClientModel, AppNotifications, TypingEmojiSelModel>(
-              builder: (context, client, ntfns, typingEmoji, child) =>
-                  ChatsScreen(client, ntfns, typingEmoji)),
+          Consumer3<RealtimeChatModel, AppNotifications, TypingEmojiSelModel>(
+              builder: (context, rtc, ntfns, typingEmoji, child) =>
+                  ChatsScreen(rtc.client, rtc, ntfns, typingEmoji)),
       (context) => const ChatsScreenTitle(),
       const SidebarSvgIcon("assets/icons/icons-menu-chat.svg"),
       <SubMenuInfo>[]),
@@ -102,6 +104,15 @@ final List<MainMenuItem> mainMenu = [
               FeedScreen(menu, typingEmoji)),
       (context) => const FeedScreenTitle(),
       const SidebarSvgIcon("assets/icons/icons-menu-news.svg"),
+      feedScreenSub),
+  MainMenuItem(
+      "Realtime Chat",
+      RealtimeChatScreen.routeName,
+      (context) => Consumer<TypingEmojiSelModel>(
+          builder: (context, typingEmoji, child) =>
+              RealtimeChatScreen(typingEmoji)),
+      (context) => const RealtimeChatTitle(),
+      const SidebarSvgIcon("assets/icons/icons-menu-chat.svg"),
       feedScreenSub),
   MainMenuItem(
       "LN Management",

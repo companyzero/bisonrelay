@@ -64,7 +64,7 @@ dependencies:
   optimize_battery: ^0.0.4
   dropdown_button2: ^2.3.8
   restart_app: ^1.2.1
-  share_plus: ^10.0.0
+  share_plus: ^11.0.0
   image_picker: ^1.0.7
   image_picker_platform_interface: ^2.8.0
   mime: ^1.0.0
@@ -80,7 +80,7 @@ dependencies:
   archive: ^4.0.5
   emoji_picker_flutter: ^4.3.0
   retrieval: ^1.0.1
-  just_audio: ^0.9.39
+  just_audio: ^0.10.3
   just_audio_media_kit:
     git:
       url: https://github.com/lvyueyang/just_audio_media_kit/

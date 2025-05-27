@@ -481,6 +481,119 @@ func handleInitClient(handle uint32, args initClient) error {
 		notify(NTUINotification, n, nil)
 	}))
 
+	ntfns.Register(client.OnInvitedToRTDTSession(func(ru *client.RemoteUser, invite *rpc.RMRTDTSessionInvite) {
+		event := invitedToRTDTSess{Inviter: ru.ID(), Invite: *invite}
+		notify(NTRTDTInvitedToSession, event, nil)
+	}))
+
+	ntfns.Register(client.OnRTDTSesssionUpdated(func(ru *client.RemoteUser, update *client.RTDTSessionUpdateNtfn) {
+		event := rtdtSessionUpdate{Source: ru.ID(), Update: *update}
+		notify(NTRTDTSessionUpdated, event, nil)
+	}))
+
+	ntfns.Register(client.OnRTDTLiveSessionJoined(func(sessRV zkidentity.ShortID) {
+		notify(NTRTDTJoinedLiveSession, sessRV, nil)
+	}))
+
+	ntfns.Register(client.OnRTDTLivePeerJoined(func(sessRV zkidentity.ShortID, peerID rpc.RTDTPeerID) {
+		event := rtdtLivePeerUpdate{
+			SessionRV: sessRV,
+			PeerID:    peerID,
+		}
+		notify(NTRTDTLivePeerJoined, event, nil)
+	}))
+
+	ntfns.Register(client.OnRTDTLivePeerStalled(func(sessRV zkidentity.ShortID, peerID rpc.RTDTPeerID) {
+		event := rtdtLivePeerUpdate{
+			SessionRV: sessRV,
+			PeerID:    peerID,
+		}
+		notify(NTRTDTLivePeerStalled, event, nil)
+	}))
+
+	ntfns.Register(client.OnRTDTLiveSessionSendErrored(func(sessRV zkidentity.ShortID, err error) {
+		event := rtdtLiveSessionSendError{
+			SessionRV: sessRV,
+			Error:     err.Error(),
+		}
+		notify(NTRTDTSessionSendError, event, nil)
+	}))
+
+	ntfns.Register(client.OnRTDTRemadeLiveSessionHotAudio(func(sessRV zkidentity.ShortID) {
+		notify(NTRTDTRemadeSessHot, sessRV, nil)
+	}))
+
+	ntfns.Register(client.OnRTDTPeerSoundChanged(func(sessRV zkidentity.ShortID, peerID rpc.RTDTPeerID, hasSoundStream, hasSound bool) {
+		event := rtdtLivePeerUpdate{
+			SessionRV:      sessRV,
+			PeerID:         peerID,
+			HasSoundStream: hasSoundStream,
+			HasSound:       hasSound,
+		}
+		notify(NTRTDTPeerSoundChanged, event, nil)
+	}))
+
+	ntfns.Register(client.OnRTDTKickedFromLiveSession(func(sessRV zkidentity.ShortID, peerID rpc.RTDTPeerID, banDuration time.Duration) {
+		event := rtdtKickedFromLive{
+			SessionRV:  sessRV,
+			PeerID:     peerID,
+			BanSeconds: int64(banDuration.Seconds()),
+		}
+		notify(NTRTDTKickedFromLive, event, nil)
+	}))
+
+	ntfns.Register(client.OnRTDTRemovedFromSession(func(ru *client.RemoteUser, sessRV zkidentity.ShortID, reason string) {
+		event := rtdtRemovedFromSession{
+			UID:       ru.ID(),
+			SessionRV: sessRV,
+			Reason:    reason,
+		}
+		notify(NTRTDTRemovedFromSess, event, nil)
+	}))
+
+	ntfns.Register(client.OnRTDTRotatedCookie(func(ru *client.RemoteUser, sessRV zkidentity.ShortID) {
+		event := rtdtUserAndSess{
+			UID:       ru.ID(),
+			SessionRV: sessRV,
+		}
+		notify(NTRTDTRotatedCookie, event, nil)
+	}))
+
+	ntfns.Register(client.OnRTDTSessionDissolved(func(ru *client.RemoteUser, sessRV zkidentity.ShortID, peerID rpc.RTDTPeerID) {
+		event := rtdtUserAndSess{
+			UID:       ru.ID(),
+			SessionRV: sessRV,
+			PeerID:    peerID,
+		}
+		notify(NTRTDTSessDissolved, event, nil)
+	}))
+
+	ntfns.Register(client.OnRTDTPeerExitedSession(func(ru *client.RemoteUser, sessRV zkidentity.ShortID, peerID rpc.RTDTPeerID) {
+		event := rtdtUserAndSess{
+			UID:       ru.ID(),
+			PeerID:    peerID,
+			SessionRV: sessRV,
+		}
+		notify(NTRTDTPeerExited, event, nil)
+	}))
+
+	ntfns.Register(client.OnRTDTChatMessageReceived(func(sessionRV zkidentity.ShortID, pub rpc.RMRTDTSessionPublisher, msg string, ts uint32) {
+		event := rtdtChatMsg{
+			SessionRV: sessionRV,
+			Publisher: pub,
+			Message:   msg,
+		}
+		notify(NTRTDTChatMsgReceived, event, nil)
+	}))
+
+	ntfns.Register(client.OnRTDTRTTCalculated(func(addr net.UDPAddr, rtt time.Duration) {
+		event := rtdtRTT{
+			Addr:    addr.String(),
+			RTTNano: rtt.Nanoseconds(),
+		}
+		notify(NTRTDTRTTCalculated, event, nil)
+	}))
+
 	// Initialize resources router.
 	var sstore *simplestore.Store
 	resRouter := resources.NewRouter()
@@ -503,26 +616,22 @@ func handleInitClient(handle uint32, args initClient) error {
 	}
 	brDialer := clientintf.WithDialer(args.ServerAddr, logBknd.logger("CONN"), dialFunc)
 
-	noterec, err := audio.NewRecorder(logBknd.logger("AREC"))
-	if err != nil {
-		return err
-	}
-
 	cfg := client.Config{
-		DB:                db,
-		Dialer:            brDialer,
-		DialFunc:          dialFunc,
-		UseOnion:          args.ProxyAddr != "",
-		PayClient:         pc,
-		Logger:            logBknd.logger,
-		LogPings:          args.LogPings,
-		PingInterval:      time.Duration(args.PingIntervalMs) * time.Millisecond,
-		ReconnectDelay:    5 * time.Second,
-		CompressLevel:     4,
-		Notifications:     ntfns,
-		ResourcesProvider: resRouter,
-		NoLoadChatHistory: args.NoLoadChatHistory,
-		Collator:          collate.New(language.Und, collate.Loose),
+		DB:                    db,
+		Dialer:                brDialer,
+		DialFunc:              dialFunc,
+		UseOnion:              args.ProxyAddr != "",
+		PayClient:             pc,
+		Logger:                logBknd.logger,
+		LogPings:              args.LogPings,
+		PingInterval:          time.Duration(args.PingIntervalMs) * time.Millisecond,
+		ReconnectDelay:        5 * time.Second,
+		CompressLevel:         4,
+		Notifications:         ntfns,
+		ResourcesProvider:     resRouter,
+		NoLoadChatHistory:     args.NoLoadChatHistory,
+		Collator:              collate.New(language.Und, collate.Loose),
+		TrackRTDTChatMessages: true, // Needed for when mobile restarts.
 
 		SendReceiveReceipts: args.SendRecvReceipts,
 
@@ -864,7 +973,7 @@ func handleInitClient(handle uint32, args initClient) error {
 		skipWalletCheckChan: make(chan struct{}, 1),
 		initIDChan:          initIDChan,
 		certConfChan:        certConfChan,
-		noterec:             noterec,
+		noterec:             c.NoteRecorder(),
 
 		confirmPayReqRecvChan: make(chan bool),
 		downloadConfChans:     make(map[zkidentity.ShortID]chan bool),
@@ -2290,34 +2399,38 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 	case CTListAudioDevices:
 		return audio.ListAudioDevices(cc.log)
 
-	case CTAudioStartRecordNode:
-		var args audioRecordNoteArgs
+	case CTAudioSetDevices:
+		var args audioDevicesArgs
+		if err := cmd.decode(&args); err != nil {
+			return nil, err
+		}
 
-		err := cc.noterec.SetCaptureDevice(audio.FindDevice(audio.DeviceTypeCapture,
-			args.CaptureDeviceID))
+		err := cc.noterec.SetCaptureDevice(args.CaptureDeviceID)
 		if err != nil {
 			return nil, err
 		}
 
-		err = cc.noterec.Capture(cc.ctx)
+		err = c.ChangePlaybackDeviceID(args.PlaybackDeviceID)
+		if err != nil {
+			return nil, err
+		}
+
+		return nil, nil
+
+	case CTAudioStartRecordNode:
+		if cc.c.HasHotAudioRTDT() {
+			return nil, errors.New("cannot record note while there " +
+				"are live RTDT sessions")
+		}
+
+		err := cc.noterec.Capture(cc.ctx)
 		if errors.Is(err, context.Canceled) {
 			err = nil
 		}
 		return nil, err
 
 	case CTAudioStartPlaybackNote:
-		var deviceId string
-		if err := cmd.decode(&deviceId); err != nil {
-			return nil, err
-		}
-
-		err := cc.noterec.SetPlaybackDevice(audio.FindDevice(audio.DeviceTypePlayback,
-			deviceId))
-		if err != nil {
-			return nil, err
-		}
-
-		err = cc.noterec.Playback(cc.ctx)
+		err := cc.noterec.Playback(cc.ctx)
 		if errors.Is(err, context.Canceled) {
 			err = nil
 		}
@@ -2365,11 +2478,183 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		if err := cmd.decode(&args); err != nil {
 			return nil, err
 		}
-
 		return c.LoadFetchedResource(args.UID, args.SessionID, args.PageID)
-	}
-	return nil, nil
 
+	case CTRTDTJoinSession:
+		var rv zkidentity.ShortID
+		if err := cmd.decode(&rv); err != nil {
+			return nil, err
+		}
+
+		err := cc.c.JoinLiveRTDTSession(rv)
+		return nil, err
+
+	case CTRTDTListLiveSessions:
+		return cc.c.ListLiveRTSessions(), nil
+
+	case CTRTDTListSessions:
+		return cc.c.ListRTDTSessions(), nil
+
+	case CTRTDTGetSession:
+		var rv zkidentity.ShortID
+		if err := cmd.decode(&rv); err != nil {
+			return nil, err
+		}
+
+		return cc.c.GetRTDTSession(&rv)
+
+	case CTRTDTSwitchHotAudio:
+		var rv zkidentity.ShortID
+		if err := cmd.decode(&rv); err != nil {
+			return nil, err
+		}
+
+		if !rv.IsEmpty() {
+			recording, _ := cc.noterec.Busy()
+			if recording {
+				return nil, errors.New("cannot make audio hot " +
+					"in RTDT session while recording note")
+			}
+		}
+
+		return nil, cc.c.SwitchHotAudio(rv)
+
+	case CTRTDTCreateSession:
+		var args createRTDTSessArgs
+		if err := cmd.decode(&args); err != nil {
+			return nil, err
+		}
+
+		var sess *clientdb.RTDTSession
+		var err error
+		if args.GC != nil {
+			sess, err = cc.c.CreateRTDTSessionInGC(*args.GC,
+				args.Size, true)
+		} else {
+			sess, err = cc.c.CreateRTDTSession(args.Size, args.Description)
+		}
+
+		if err != nil {
+			return nil, err
+		}
+
+		return sess.Metadata.RV, nil
+
+	case CTRTDTInviteToSession:
+		var args inviteToRTDTSessArgs
+		if err := cmd.decode(&args); err != nil {
+			return nil, err
+		}
+
+		err := cc.c.InviteToRTDTSession(args.SessionRV,
+			args.AllowedAsPublisher, args.Invitee)
+		return nil, err
+
+	case CTRTDTAcceptInvite:
+		var args acceptRTDTInviteArgs
+		if err := cmd.decode(&args); err != nil {
+			return nil, err
+		}
+
+		err := cc.c.AcceptRTDTSessionInvite(args.Inviter, &args.Invite,
+			args.AsPublisher)
+		return nil, err
+
+	case CTRTDTLeaveLiveSession:
+		var rv zkidentity.ShortID
+		if err := cmd.decode(&rv); err != nil {
+			return nil, err
+		}
+		err := cc.c.LeaveLiveRTSession(rv)
+		return nil, err
+
+	case CTRTDTModifyLivePeerVolumeGain:
+		var args rtdtModLivePeerGain
+		if err := cmd.decode(&args); err != nil {
+			return nil, err
+		}
+
+		args.Gain = cc.c.ModifyRTDTLivePeerVolumeGain(&args.SessionRV, args.PeerID,
+			args.Gain)
+		return args, nil
+
+	case CTSetAudioCaptureGain:
+		var args float64
+		if err := cmd.decode(&args); err != nil {
+			return nil, err
+		}
+
+		cc.noterec.SetCaptureGain(args)
+		return nil, nil
+
+	case CTGetAudioCaptureGain:
+		return cc.noterec.GetCaptureGain(), nil
+
+	case CTRTDTKickFromLiveSession:
+		var args rtdtKickedFromLive
+		if err := cmd.decode(&args); err != nil {
+			return nil, err
+		}
+		banDuration := time.Duration(args.BanSeconds) * time.Second
+		err := c.KickFromLiveRTDTSession(&args.SessionRV, args.PeerID, banDuration)
+		return nil, err
+
+	case CTRTDTRemoveFromSession:
+		var args rtdtRemovedFromSession
+		if err := cmd.decode(&args); err != nil {
+			return nil, err
+		}
+		err := c.RemoveRTDTMember(&args.SessionRV, &args.UID, args.Reason)
+		return nil, err
+
+	case CTRTDTExitSession:
+		var args zkidentity.ShortID
+		if err := cmd.decode(&args); err != nil {
+			return nil, err
+		}
+		err := c.ExitRTDTSession(&args)
+		return nil, err
+
+	case CTRTDTRotateCookies:
+		var args zkidentity.ShortID
+		if err := cmd.decode(&args); err != nil {
+			return nil, err
+		}
+		err := c.RotateRTDTAppointmentCookies(&args)
+		return nil, err
+
+	case CTRTDTDissolveSession:
+		var args zkidentity.ShortID
+		if err := cmd.decode(&args); err != nil {
+			return nil, err
+		}
+		err := c.DissolveRTDTSession(&args)
+		return nil, err
+
+	case CTRTDTGetLiveSession:
+		var args zkidentity.ShortID
+		if err := cmd.decode(&args); err != nil {
+			return nil, err
+		}
+		return c.GetLiveRTSession(&args), nil
+
+	case CTRTDTSendChatMsg:
+		var args rtdtChatMsg
+		if err := cmd.decode(&args); err != nil {
+			return nil, err
+		}
+		return nil, c.SendRTDTChatMsg(args.SessionRV, args.Message)
+
+	case CTRTDTGetChatMessages:
+		var args zkidentity.ShortID
+		if err := cmd.decode(&args); err != nil {
+			return nil, err
+		}
+		return c.GetRTDTMessages(args), nil
+
+	}
+
+	return nil, nil
 }
 
 func handleLNTryExternalDcrlnd(args lnTryExternalDcrlnd) (*lnrpc.GetInfoResponse, error) {

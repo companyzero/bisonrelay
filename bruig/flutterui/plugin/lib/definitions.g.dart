@@ -374,11 +374,13 @@ Map<String, dynamic> _$RMGroupListToJson(RMGroupList instance) =>
 GroupChat _$GroupChatFromJson(Map<String, dynamic> json) => GroupChat(
       RMGroupList.fromJson(json['metadata'] as Map<String, dynamic>),
       json['alias'] as String,
+      json['rtdt_session_rv'] as String? ?? '',
     );
 
 Map<String, dynamic> _$GroupChatToJson(GroupChat instance) => <String, dynamic>{
       'metadata': instance.metadata,
       'alias': instance.alias,
+      'rtdt_session_rv': instance.rtdtSessionRV,
     };
 
 GCInvitation _$GCInvitationFromJson(Map<String, dynamic> json) => GCInvitation(
@@ -2150,8 +2152,8 @@ LoadFetchedResourceArgs _$LoadFetchedResourceArgsFromJson(
         Map<String, dynamic> json) =>
     LoadFetchedResourceArgs(
       json['uid'] as String,
-      json['session_id'] as int,
-      json['page_id'] as int,
+      (json['session_id'] as num).toInt(),
+      (json['page_id'] as num).toInt(),
     );
 
 Map<String, dynamic> _$LoadFetchedResourceArgsToJson(
@@ -2380,15 +2382,16 @@ Map<String, dynamic> _$AudioDevicesToJson(AudioDevices instance) =>
       'capture': instance.capture,
     };
 
-AudioRecordNoteArgs _$AudioRecordNoteArgsFromJson(Map<String, dynamic> json) =>
-    AudioRecordNoteArgs(
+AudioDeviceArgs _$AudioDeviceArgsFromJson(Map<String, dynamic> json) =>
+    AudioDeviceArgs(
       json['capture_device_id'] as String,
+      json['playback_device_id'] as String,
     );
 
-Map<String, dynamic> _$AudioRecordNoteArgsToJson(
-        AudioRecordNoteArgs instance) =>
+Map<String, dynamic> _$AudioDeviceArgsToJson(AudioDeviceArgs instance) =>
     <String, dynamic>{
       'capture_device_id': instance.captureDeviceID,
+      'playback_device_id': instance.playbackDeviceID,
     };
 
 RecordedAudioNote _$RecordedAudioNoteFromJson(Map<String, dynamic> json) =>
@@ -2405,4 +2408,423 @@ Map<String, dynamic> _$RecordedAudioNoteToJson(RecordedAudioNote instance) =>
       'size': instance.size,
       'cost': instance.cost,
       'duration_ms': instance.durationMs,
+    };
+
+CreateRTDTSessArgs _$CreateRTDTSessArgsFromJson(Map<String, dynamic> json) =>
+    CreateRTDTSessArgs(
+      (json['size'] as num).toInt(),
+      json['description'] as String,
+      json['gc'] as String?,
+    );
+
+Map<String, dynamic> _$CreateRTDTSessArgsToJson(CreateRTDTSessArgs instance) =>
+    <String, dynamic>{
+      'size': instance.size,
+      'description': instance.description,
+      if (instance.gc case final value?) 'gc': value,
+    };
+
+RMRTDTSessionInvite _$RMRTDTSessionInviteFromJson(Map<String, dynamic> json) =>
+    RMRTDTSessionInvite(
+      json['rv'] as String,
+      json['appoint_cookie'] as String,
+      (json['size'] as num).toInt(),
+      json['description'] as String,
+      json['allowed_as_publisher'] as bool,
+      (json['peer_id'] as num).toInt(),
+      json['gc'] as String? ?? '',
+      (json['tag'] as num).toInt(),
+    );
+
+Map<String, dynamic> _$RMRTDTSessionInviteToJson(
+        RMRTDTSessionInvite instance) =>
+    <String, dynamic>{
+      'rv': instance.rv,
+      'appoint_cookie': instance.appointCookie,
+      'size': instance.size,
+      'description': instance.description,
+      'allowed_as_publisher': instance.allowedAsPublisher,
+      'peer_id': instance.peerID,
+      'gc': instance.gc,
+      'tag': instance.tag,
+    };
+
+InvitedToRTDTSess _$InvitedToRTDTSessFromJson(Map<String, dynamic> json) =>
+    InvitedToRTDTSess(
+      json['inviter'] as String,
+      RMRTDTSessionInvite.fromJson(json['invite'] as Map<String, dynamic>),
+    );
+
+Map<String, dynamic> _$InvitedToRTDTSessToJson(InvitedToRTDTSess instance) =>
+    <String, dynamic>{
+      'inviter': instance.inviter,
+      'invite': instance.invite,
+    };
+
+AcceptRTDTInviteArgs _$AcceptRTDTInviteArgsFromJson(
+        Map<String, dynamic> json) =>
+    AcceptRTDTInviteArgs(
+      json['inviter'] as String,
+      RMRTDTSessionInvite.fromJson(json['invite'] as Map<String, dynamic>),
+      json['as_publisher'] as bool,
+    );
+
+Map<String, dynamic> _$AcceptRTDTInviteArgsToJson(
+        AcceptRTDTInviteArgs instance) =>
+    <String, dynamic>{
+      'inviter': instance.inviter,
+      'invite': instance.invite,
+      'as_publisher': instance.asPublisher,
+    };
+
+InviteToRTDTSessArgs _$InviteToRTDTSessArgsFromJson(
+        Map<String, dynamic> json) =>
+    InviteToRTDTSessArgs(
+      json['session_rv'] as String,
+      json['invitee'] as String,
+      json['allowed_as_publisher'] as bool,
+    );
+
+Map<String, dynamic> _$InviteToRTDTSessArgsToJson(
+        InviteToRTDTSessArgs instance) =>
+    <String, dynamic>{
+      'session_rv': instance.sessionRV,
+      'invitee': instance.invitee,
+      'allowed_as_publisher': instance.allowedAsPublisher,
+    };
+
+RMRTDTSessionPublisher _$RMRTDTSessionPublisherFromJson(
+        Map<String, dynamic> json) =>
+    RMRTDTSessionPublisher(
+      json['publisher_id'] as String,
+      (json['peer_id'] as num).toInt(),
+      json['publisher_key'] as String,
+      json['alias'] as String,
+    );
+
+Map<String, dynamic> _$RMRTDTSessionPublisherToJson(
+        RMRTDTSessionPublisher instance) =>
+    <String, dynamic>{
+      'publisher_id': instance.publisherID,
+      'peer_id': instance.peerID,
+      'publisher_key': instance.publisherKey,
+      'alias': instance.alias,
+    };
+
+RMRTDTSession _$RMRTDTSessionFromJson(Map<String, dynamic> json) =>
+    RMRTDTSession(
+      (json['generation'] as num).toInt(),
+      json['rv'] as String,
+      (json['size'] as num).toInt(),
+      json['description'] as String,
+      json['owner'] as String,
+      (json['admins'] as List<dynamic>?)?.map((e) => e as String).toList() ??
+          [],
+      (json['publishers'] as List<dynamic>?)
+              ?.map((e) =>
+                  RMRTDTSessionPublisher.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          [],
+    );
+
+Map<String, dynamic> _$RMRTDTSessionToJson(RMRTDTSession instance) =>
+    <String, dynamic>{
+      'generation': instance.generation,
+      'rv': instance.rv,
+      'size': instance.size,
+      'description': instance.description,
+      'owner': instance.owner,
+      'admins': instance.admins,
+      'publishers': instance.publishers,
+    };
+
+RTDTSessionMember _$RTDTSessionMemberFromJson(Map<String, dynamic> json) =>
+    RTDTSessionMember(
+      json['uid'] as String,
+      (json['peer_id'] as num).toInt(),
+      (json['tag'] as num).toInt(),
+      (json['sent_timestamp'] as num).toInt(),
+      json['publisher'] as bool,
+      (json['accepted_timestamp'] as num?)?.toInt(),
+      json['appoint_cookie'] as String? ?? '',
+    );
+
+Map<String, dynamic> _$RTDTSessionMemberToJson(RTDTSessionMember instance) =>
+    <String, dynamic>{
+      'uid': instance.uid,
+      'peer_id': instance.peerID,
+      'tag': instance.tag,
+      'sent_timestamp': instance.sentTimestamp,
+      'publisher': instance.publisher,
+      'accepted_timestamp': instance.acceptedTimestamp,
+      'appoint_cookie': instance.appointCookie,
+    };
+
+RTDTSession _$RTDTSessionFromJson(Map<String, dynamic> json) => RTDTSession(
+      RMRTDTSession.fromJson(json['metadata'] as Map<String, dynamic>),
+      json['session_cookie'] as String? ?? '',
+      json['owner_secret'] as String? ?? '',
+      json['appoint_cookie'] as String? ?? '',
+      json['publisher_key'] as String? ?? '',
+      (json['local_peer_id'] as num).toInt(),
+      (json['next_peer_id'] as num).toInt(),
+      (json['members'] as List<dynamic>?)
+              ?.map(
+                  (e) => RTDTSessionMember.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          [],
+      json['gc'] as String? ?? '',
+    );
+
+Map<String, dynamic> _$RTDTSessionToJson(RTDTSession instance) =>
+    <String, dynamic>{
+      'metadata': instance.metadata,
+      'session_cookie': instance.sessionCookie,
+      'owner_secret': instance.ownerSecret,
+      'appoint_cookie': instance.appointCookie,
+      'publisher_key': instance.publisherKey,
+      'local_peer_id': instance.localPeerID,
+      'next_peer_id': instance.nextPeerID,
+      'members': instance.members,
+      'gc': instance.gc,
+    };
+
+RTDTSessionUpdateNtfn _$RTDTSessionUpdateNtfnFromJson(
+        Map<String, dynamic> json) =>
+    RTDTSessionUpdateNtfn(
+      json['session_rv'] as String,
+      (json['new_publishers'] as List<dynamic>?)
+          ?.map(
+              (e) => RMRTDTSessionPublisher.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      (json['removedPublishers'] as List<dynamic>?)
+              ?.map((e) =>
+                  RMRTDTSessionPublisher.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          [],
+      RMRTDTSession.fromJson(json['new_metadata'] as Map<String, dynamic>),
+      json['initial_join'] as bool,
+    );
+
+Map<String, dynamic> _$RTDTSessionUpdateNtfnToJson(
+        RTDTSessionUpdateNtfn instance) =>
+    <String, dynamic>{
+      'session_rv': instance.sessionRV,
+      'new_publishers': instance.newPublishers,
+      'removedPublishers': instance.removedPublishers,
+      'new_metadata': instance.newMetadata,
+      'initial_join': instance.initialJoin,
+    };
+
+RTDTLivePeerUpdate _$RTDTLivePeerUpdateFromJson(Map<String, dynamic> json) =>
+    RTDTLivePeerUpdate(
+      json['session_rv'] as String,
+      (json['peer_id'] as num).toInt(),
+      json['has_sound'] as bool,
+      json['has_sound_stream'] as bool,
+    );
+
+Map<String, dynamic> _$RTDTLivePeerUpdateToJson(RTDTLivePeerUpdate instance) =>
+    <String, dynamic>{
+      'session_rv': instance.sessionRV,
+      'peer_id': instance.peerId,
+      'has_sound': instance.hasSound,
+      'has_sound_stream': instance.hasSoundStream,
+    };
+
+RTDTLiveSessionSendError _$RTDTLiveSessionSendErrorFromJson(
+        Map<String, dynamic> json) =>
+    RTDTLiveSessionSendError(
+      json['session_rv'] as String,
+      json['error'] as String,
+    );
+
+Map<String, dynamic> _$RTDTLiveSessionSendErrorToJson(
+        RTDTLiveSessionSendError instance) =>
+    <String, dynamic>{
+      'session_rv': instance.sessionRV,
+      'error': instance.error,
+    };
+
+RTDTLivePeerGain _$RTDTLivePeerGainFromJson(Map<String, dynamic> json) =>
+    RTDTLivePeerGain(
+      json['session_rv'] as String,
+      (json['peer_id'] as num).toInt(),
+      (json['gain'] as num).toDouble(),
+    );
+
+Map<String, dynamic> _$RTDTLivePeerGainToJson(RTDTLivePeerGain instance) =>
+    <String, dynamic>{
+      'session_rv': instance.sessionRV,
+      'peer_id': instance.peerId,
+      'gain': instance.gain,
+    };
+
+RTDTSessionUpdate _$RTDTSessionUpdateFromJson(Map<String, dynamic> json) =>
+    RTDTSessionUpdate(
+      json['source'] as String,
+      RTDTSessionUpdateNtfn.fromJson(json['update'] as Map<String, dynamic>),
+    );
+
+Map<String, dynamic> _$RTDTSessionUpdateToJson(RTDTSessionUpdate instance) =>
+    <String, dynamic>{
+      'source': instance.source,
+      'update': instance.update,
+    };
+
+RTDTKickedFromLive _$RTDTKickedFromLiveFromJson(Map<String, dynamic> json) =>
+    RTDTKickedFromLive(
+      json['session_rv'] as String,
+      (json['peer_id'] as num).toInt(),
+      (json['ban_seconds'] as num).toInt(),
+    );
+
+Map<String, dynamic> _$RTDTKickedFromLiveToJson(RTDTKickedFromLive instance) =>
+    <String, dynamic>{
+      'session_rv': instance.sessionRV,
+      'peer_id': instance.peerID,
+      'ban_seconds': instance.banSeconds,
+    };
+
+RTDTRemovedFromSession _$RTDTRemovedFromSessionFromJson(
+        Map<String, dynamic> json) =>
+    RTDTRemovedFromSession(
+      json['session_rv'] as String,
+      json['uid'] as String,
+      json['reason'] as String,
+    );
+
+Map<String, dynamic> _$RTDTRemovedFromSessionToJson(
+        RTDTRemovedFromSession instance) =>
+    <String, dynamic>{
+      'session_rv': instance.sessionRV,
+      'uid': instance.uid,
+      'reason': instance.reason,
+    };
+
+RTDTUserAndSess _$RTDTUserAndSessFromJson(Map<String, dynamic> json) =>
+    RTDTUserAndSess(
+      json['session_rv'] as String,
+      (json['peer_id'] as num).toInt(),
+      json['uid'] as String,
+    );
+
+Map<String, dynamic> _$RTDTUserAndSessToJson(RTDTUserAndSess instance) =>
+    <String, dynamic>{
+      'session_rv': instance.sessionRV,
+      'peer_id': instance.peerID,
+      'uid': instance.uid,
+    };
+
+RTDTRotatedCookies _$RTDTRotatedCookiesFromJson(Map<String, dynamic> json) =>
+    RTDTRotatedCookies(
+      json['session_rv'] as String,
+      (json['peer_id'] as num).toInt(),
+      json['uid'] as String,
+    );
+
+Map<String, dynamic> _$RTDTRotatedCookiesToJson(RTDTRotatedCookies instance) =>
+    <String, dynamic>{
+      'session_rv': instance.sessionRV,
+      'peer_id': instance.peerID,
+      'uid': instance.uid,
+    };
+
+RTDTSessionDissolved _$RTDTSessionDissolvedFromJson(
+        Map<String, dynamic> json) =>
+    RTDTSessionDissolved(
+      json['session_rv'] as String,
+      (json['peer_id'] as num).toInt(),
+      json['uid'] as String,
+    );
+
+Map<String, dynamic> _$RTDTSessionDissolvedToJson(
+        RTDTSessionDissolved instance) =>
+    <String, dynamic>{
+      'session_rv': instance.sessionRV,
+      'peer_id': instance.peerID,
+      'uid': instance.uid,
+    };
+
+RTDTPeerExited _$RTDTPeerExitedFromJson(Map<String, dynamic> json) =>
+    RTDTPeerExited(
+      json['session_rv'] as String,
+      (json['peer_id'] as num).toInt(),
+      json['uid'] as String,
+    );
+
+Map<String, dynamic> _$RTDTPeerExitedToJson(RTDTPeerExited instance) =>
+    <String, dynamic>{
+      'session_rv': instance.sessionRV,
+      'peer_id': instance.peerID,
+      'uid': instance.uid,
+    };
+
+LiveRTDTPeer _$LiveRTDTPeerFromJson(Map<String, dynamic> json) => LiveRTDTPeer(
+      json['has_sound_stream'] as bool,
+      json['has_sound'] as bool,
+      (json['volume_gain'] as num).toDouble(),
+    );
+
+Map<String, dynamic> _$LiveRTDTPeerToJson(LiveRTDTPeer instance) =>
+    <String, dynamic>{
+      'has_sound_stream': instance.hasSoundStream,
+      'has_sound': instance.hasSound,
+      'volume_gain': instance.volumeGain,
+    };
+
+LiveRTDTSession _$LiveRTDTSessionFromJson(Map<String, dynamic> json) =>
+    LiveRTDTSession(
+      json['hot_audio'] as bool,
+      (json['peers'] as Map<String, dynamic>).map(
+        (k, e) => MapEntry(
+            int.parse(k), LiveRTDTPeer.fromJson(e as Map<String, dynamic>)),
+      ),
+    );
+
+Map<String, dynamic> _$LiveRTDTSessionToJson(LiveRTDTSession instance) =>
+    <String, dynamic>{
+      'hot_audio': instance.hotAudio,
+      'peers': instance.peers.map((k, e) => MapEntry(k.toString(), e)),
+    };
+
+RTDTChatMessage _$RTDTChatMessageFromJson(Map<String, dynamic> json) =>
+    RTDTChatMessage(
+      json['session_rv'] as String,
+      RMRTDTSessionPublisher.fromJson(
+          json['publisher'] as Map<String, dynamic>),
+      json['message'] as String,
+    );
+
+Map<String, dynamic> _$RTDTChatMessageToJson(RTDTChatMessage instance) =>
+    <String, dynamic>{
+      'session_rv': instance.sessionRV,
+      'publisher': instance.publisher,
+      'message': instance.message,
+    };
+
+RTDTTrackedChatMessage _$RTDTTrackedChatMessageFromJson(
+        Map<String, dynamic> json) =>
+    RTDTTrackedChatMessage(
+      (json['source_id'] as num).toInt(),
+      json['message'] as String,
+      (json['timestamp'] as num).toInt(),
+    );
+
+Map<String, dynamic> _$RTDTTrackedChatMessageToJson(
+        RTDTTrackedChatMessage instance) =>
+    <String, dynamic>{
+      'source_id': instance.sourceID,
+      'message': instance.message,
+      'timestamp': instance.timestamp,
+    };
+
+RTDTRTT _$RTDTRTTFromJson(Map<String, dynamic> json) => RTDTRTT(
+      json['addr'] as String,
+      (json['rtt_nano'] as num).toInt(),
+    );
+
+Map<String, dynamic> _$RTDTRTTToJson(RTDTRTT instance) => <String, dynamic>{
+      'addr': instance.addr,
+      'rtt_nano': instance.rttNano,
     };

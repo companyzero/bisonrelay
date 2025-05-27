@@ -4,11 +4,13 @@ import 'package:bruig/components/copyable.dart';
 import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/components/icons.dart';
 import 'package:bruig/components/info_grid.dart';
+import 'package:bruig/components/inputs.dart';
 import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/components/text.dart';
 import 'package:bruig/components/usersearch/user_search_model.dart';
 import 'package:bruig/components/usersearch/user_search_panel.dart';
 import 'package:bruig/models/client.dart';
+import 'package:bruig/models/realtimechat.dart';
 import 'package:bruig/models/snackbar.dart';
 import 'package:bruig/theme_manager.dart';
 import 'package:flutter/material.dart';
@@ -18,8 +20,9 @@ import 'package:tuple/tuple.dart';
 
 class ManageGCScreen extends StatefulWidget {
   final ClientModel client;
+  final RealtimeChatModel rtc;
   final ChatModel chat;
-  const ManageGCScreen(this.client, this.chat, {super.key});
+  const ManageGCScreen(this.client, this.rtc, this.chat, {super.key});
 
   @override
   State<ManageGCScreen> createState() => _ManageGCScreenState();
@@ -205,6 +208,7 @@ class _ManageGCScreenState extends State<ManageGCScreen> {
   Map<String, bool> admins = {};
   List<String> unkxdMembers = [];
   _ScreenState state = _ScreenState.managing;
+  String rtdtRV = "";
 
   @override
   void initState() {
@@ -290,6 +294,7 @@ class _ManageGCScreenState extends State<ManageGCScreen> {
             (gc.extraAdmins != null && gc.extraAdmins!.contains(myID));
         blockedUsers = newBlocked;
         unkxdMembers = newUnkxd;
+        rtdtRV = gcdb.rtdtSessionRV;
       });
     } catch (exception) {
       snackbar.error('Unable to reload gc: $exception');
@@ -372,6 +377,9 @@ class _ManageGCScreenState extends State<ManageGCScreen> {
     setState(() => loading = true);
     try {
       await Golib.killGC(gcID);
+      if (rtdtRV != "") {
+        widget.rtc.refreshSessions();
+      }
       widget.client.removeChat(widget.chat);
     } catch (exception) {
       snackbar.error('Unable to kill GC: $exception');
@@ -443,6 +451,50 @@ class _ManageGCScreenState extends State<ManageGCScreen> {
   void toStateManage() {
     reloadUsers;
     setState(() => state = _ScreenState.managing);
+  }
+
+  Future<void> doCreateRTDTSession(int extraSize) async {
+    if (extraSize < 0) {
+      showErrorSnackbar(this, "Cannot use additional size < 0");
+      return;
+    }
+
+    setState(() => loading = true);
+    try {
+      await widget.rtc.createSessionFromGC(gcID, extraSize);
+      showSuccessSnackbar(this, "Realtime chat session created!");
+    } catch (exception) {
+      showErrorSnackbar(this, "Unable to create RTDT session: $exception");
+    } finally {
+      setState(() => loading = false);
+    }
+  }
+
+  Future<void> createRTDTSession() async {
+    int extraSize = 0;
+    showConfirmDialog(context,
+        title: "Confirm Creating",
+        child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Txt(
+                  "Confirm creation of a realtime chat session associated with the GC"),
+              const SizedBox(height: 10),
+              Row(children: [
+                const Txt("Additional Member Capacity:"),
+                const SizedBox(width: 10),
+                SizedBox(
+                    width: 100,
+                    child: intInput(onChanged: (amount) => extraSize = amount)),
+              ]),
+              const SizedBox(height: 5),
+              const Txt.S(
+                  "Note: additional member capacity is needed if new members will be added to the GC."
+                  "This is needed because a relatime chat session size cannot be changed after creation."),
+            ]),
+        confirmButtonText: "Create",
+        onConfirm: () => doCreateRTDTSession(extraSize));
   }
 
   Widget buildAdminAction(ChatModel user, int index) {
@@ -525,6 +577,10 @@ class _ManageGCScreenState extends State<ManageGCScreen> {
                         onPressed: !loading ? toStateChangeOwner : null,
                         child: const Text("Change Owner"))
                     : const Empty(),
+                if (localIsAdmin && rtdtRV == "")
+                  OutlinedButton(
+                      onPressed: !loading ? createRTDTSession : null,
+                      child: const Text("Create Realtime Session")),
                 OutlinedButton(
                     onPressed: !loading ? hideGC : null,
                     child: const Text("Hide GC"))

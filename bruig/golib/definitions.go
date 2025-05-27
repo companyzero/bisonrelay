@@ -8,6 +8,7 @@ import (
 	"github.com/companyzero/bisonrelay/client/clientdb"
 	"github.com/companyzero/bisonrelay/client/clientintf"
 	"github.com/companyzero/bisonrelay/client/resources/simplestore"
+	"github.com/companyzero/bisonrelay/internal/audio"
 	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/companyzero/bisonrelay/zkidentity"
 	"github.com/decred/dcrd/dcrutil/v4"
@@ -539,8 +540,9 @@ type uiNotificationsConfig struct {
 	GCMentions bool `json:"gcmentions"`
 }
 
-type audioRecordNoteArgs struct {
-	CaptureDeviceID string `json:"capture_device_id"`
+type audioDevicesArgs struct {
+	CaptureDeviceID  audio.DeviceID `json:"capture_device_id"`
+	PlaybackDeviceID audio.DeviceID `json:"playback_device_id"`
 }
 
 type recordedAudioNote struct {
@@ -548,4 +550,79 @@ type recordedAudioNote struct {
 	Size       uint32 `json:"size"`
 	Cost       uint64 `json:"cost"`
 	DurationMs uint64 `json:"duration_ms"`
+}
+
+type createRTDTSessArgs struct {
+	Size        uint16              `json:"size"`
+	Description string              `json:"description"`
+	GC          *zkidentity.ShortID `json:"gc"`
+}
+
+type inviteToRTDTSessArgs struct {
+	SessionRV          zkidentity.ShortID `json:"session_rv"`
+	Invitee            zkidentity.ShortID `json:"invitee"`
+	AllowedAsPublisher bool               `json:"allowed_as_publisher"`
+}
+
+type invitedToRTDTSess struct {
+	Inviter zkidentity.ShortID      `json:"inviter"`
+	Invite  rpc.RMRTDTSessionInvite `json:"invite"`
+}
+
+type acceptRTDTInviteArgs struct {
+	Inviter     zkidentity.ShortID      `json:"inviter"`
+	Invite      rpc.RMRTDTSessionInvite `json:"invite"`
+	AsPublisher bool                    `json:"as_publisher"`
+}
+
+type rtdtSessionUpdate struct {
+	Source zkidentity.ShortID           `json:"source"`
+	Update client.RTDTSessionUpdateNtfn `json:"update"`
+}
+
+type rtdtLivePeerUpdate struct {
+	SessionRV      zkidentity.ShortID `json:"session_rv"`
+	PeerID         rpc.RTDTPeerID     `json:"peer_id"`
+	HasSound       bool               `json:"has_sound"`
+	HasSoundStream bool               `json:"has_sound_stream"`
+}
+
+type rtdtLiveSessionSendError struct {
+	SessionRV zkidentity.ShortID `json:"session_rv"`
+	Error     string             `json:"error"`
+}
+
+type rtdtModLivePeerGain struct {
+	SessionRV zkidentity.ShortID `json:"session_rv"`
+	PeerID    rpc.RTDTPeerID     `json:"peer_id"`
+	Gain      float64            `json:"gain"`
+}
+
+type rtdtKickedFromLive struct {
+	SessionRV  zkidentity.ShortID `json:"session_rv"`
+	PeerID     rpc.RTDTPeerID     `json:"peer_id"`
+	BanSeconds int64              `json:"ban_seconds"`
+}
+
+type rtdtRemovedFromSession struct {
+	UID       clientintf.UserID  `json:"uid"`
+	SessionRV zkidentity.ShortID `json:"session_rv"`
+	Reason    string             `json:"reason"`
+}
+
+type rtdtUserAndSess struct {
+	UID       clientintf.UserID  `json:"uid"`
+	PeerID    rpc.RTDTPeerID     `json:"peer_id"`
+	SessionRV zkidentity.ShortID `json:"session_rv"`
+}
+
+type rtdtChatMsg struct {
+	SessionRV zkidentity.ShortID         `json:"session_rv"`
+	Publisher rpc.RMRTDTSessionPublisher `json:"publisher"`
+	Message   string                     `json:"message"`
+}
+
+type rtdtRTT struct {
+	Addr    string `json:"addr"`
+	RTTNano int64  `json:"rtt_nano"`
 }

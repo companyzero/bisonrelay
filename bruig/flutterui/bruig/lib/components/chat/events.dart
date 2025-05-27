@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:bruig/components/containers.dart';
 import 'package:bruig/components/text.dart';
+import 'package:bruig/models/realtimechat.dart';
 import 'package:bruig/models/uistate.dart';
 import 'package:bruig/screens/feed.dart';
 import 'package:flutter/material.dart';
@@ -1093,6 +1094,72 @@ class ProfileUpdatedW extends StatelessWidget {
   }
 }
 
+class RTDTInviteW extends StatefulWidget {
+  final InvitedToRTDTSess event;
+  final RealtimeChatModel rtc;
+  const RTDTInviteW(this.event, this.rtc, {super.key});
+
+  @override
+  State<RTDTInviteW> createState() => _RTDTInviteWState();
+}
+
+class _RTDTInviteWState extends State<RTDTInviteW> {
+  InvitedToRTDTSess get event => widget.event;
+  RealtimeChatModel get rtc => widget.rtc;
+  bool acceptingInvite = false;
+  String? acceptError;
+
+  void acceptInvite() async {
+    setState(() => acceptingInvite = true);
+    try {
+      await rtc.acceptInvite(event);
+      setState(() => acceptingInvite = false);
+    } catch (exception) {
+      setState(() => acceptError = "$exception");
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (rtc.isInviteCanceled(event)) {
+      return const ServerEvent(msg: "Canceled realtime chat invite");
+    }
+
+    if (acceptError != null) {
+      return ServerEvent(
+          msg: "Error accepting realtime chat invite: ${acceptError!}");
+    }
+
+    if (acceptingInvite) {
+      return const ServerEvent(msg: "Accepting realtime chat invite...");
+    }
+
+    if (rtc.isInviteAccepted(event)) {
+      return const ServerEvent(msg: "Accepted realtime chat invite");
+    }
+
+    return ServerEvent(
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      const Txt.L("Invited to Realtime Chat"),
+      Txt.S("RV: ${event.invite.rv}"),
+      Txt.S("Size: ${event.invite.size}"),
+      Txt.S("Description: ${event.invite.description}"),
+      const SizedBox(height: 10),
+      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+        TextButton.icon(
+          onPressed: acceptInvite,
+          icon: const Icon(Icons.check),
+          label: const Text("Accept"),
+        ),
+        CancelButton(onPressed: () {
+          rtc.cancelInvite(event);
+          setState(() {});
+        }),
+      ]),
+    ]));
+  }
+}
+
 class Event extends StatelessWidget {
   final ChatEventModel event;
   final ChatModel chat;
@@ -1207,6 +1274,11 @@ class Event extends StatelessWidget {
 
     if (event.event is ProfileUpdated) {
       return ProfileUpdatedW(event.event as ProfileUpdated);
+    }
+
+    if (event.event is InvitedToRTDTSess) {
+      return RTDTInviteW(event.event as InvitedToRTDTSess,
+          RealtimeChatModel.of(context, listen: false));
     }
 
     return const Box(

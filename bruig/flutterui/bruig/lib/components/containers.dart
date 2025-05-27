@@ -74,7 +74,6 @@ class SecondarySideMenu extends StatelessWidget {
               margin: const EdgeInsets.all(1),
               width: width ?? 120,
               decoration: BoxDecoration(
-                  color: theme.colors.surfaceContainerLowest,
                   border: Border(
                       right:
                           BorderSide(color: theme.extraColors.sidebarDivider))),
