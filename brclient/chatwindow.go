@@ -482,6 +482,9 @@ type chatWindow struct {
 	me    string // nick of the local user
 	gc    zkidentity.ShortID
 
+	isRT bool
+	rtrv zkidentity.ShortID // RTDT session RV
+
 	initTime time.Time // When the cw was created and history read.
 
 	pageSess      clientintf.PagesSessionID
@@ -946,7 +949,7 @@ func (cw *chatWindow) renderMsg(winW int, styles *theme, b *strings.Builder, as 
 		prefix += "<"
 		if msg.mine {
 			prefix += styles.nickMe.Render(cw.me)
-		} else if cw.isGC {
+		} else if cw.isGC || cw.isRT {
 			prefix += styles.nickGC.Render(msg.from)
 		} else {
 			prefix += styles.nick.Render(msg.from)

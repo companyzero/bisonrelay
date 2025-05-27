@@ -730,6 +730,9 @@ func (mws mainWindowState) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case msgSendAudioNote:
 		return newSendAudioNoteWindow(mws.as, msg)
 
+	case msgOpenRTChatWin:
+		return newRtdtConferenceWin(mws.as)
+
 	default:
 		// Handle other messages.
 		mws.textArea, cmd = mws.textArea.Update(msg)

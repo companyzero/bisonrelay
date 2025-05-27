@@ -85,6 +85,10 @@ root = {{ .Root }}
 # Whether to automatically subscribe to posts of everyone you KX with.
 # autosubposts = 1
 
+# Whether to automatically make audio hot (enable mic) after joining a live
+# realtime chat session.
+# rtautohotaudio = 1
+
 # logging and debug
 [log]
 

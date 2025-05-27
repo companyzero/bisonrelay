@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"net/url"
 	"os"
 	"os/exec"
@@ -52,6 +53,7 @@ import (
 	lpclient "github.com/decred/dcrlnlpd/client"
 	"github.com/decred/slog"
 	"github.com/puzpuzpuz/xsync/v3"
+	orderedmap "github.com/wk8/go-ordered-map/v2"
 	"golang.org/x/exp/maps"
 	"golang.org/x/exp/slices"
 	"golang.org/x/text/collate"
@@ -88,6 +90,17 @@ type inboundRemoteMsg struct {
 	rm     interface{}
 	ts     time.Time
 	recvts time.Time
+}
+
+type rtdtInvite struct {
+	inviter clientintf.UserID
+	invite  *rpc.RMRTDTSessionInvite
+}
+
+type rtdtSession struct {
+	rv    zkidentity.ShortID
+	descr string
+	err   error
 }
 
 type appState struct {
@@ -218,7 +231,15 @@ type appState struct {
 	ssAcct       string
 	ssShipCharge float64
 
-	noterec *audio.NoteRecorder
+	noterec        *audio.NoteRecorder
+	rtAutoHotAudio bool
+
+	rtInvitesMtx sync.Mutex
+	rtInvites    []*rtdtInvite
+
+	rtMtx          sync.Mutex
+	rtJoinAttempts map[zkidentity.ShortID]struct{}
+	rtSessions     *orderedmap.OrderedMap[zkidentity.ShortID, *rtdtSession]
 }
 
 type appStateErr struct {
@@ -1223,6 +1244,32 @@ func (as *appState) findOrNewGCWindow(gcID zkidentity.ShortID) *chatWindow {
 	return cw
 }
 
+func (as *appState) findOrNewRTWindow(sessRV zkidentity.ShortID) *chatWindow {
+	as.chatWindowsMtx.Lock()
+	for _, cw := range as.chatWindows {
+		if cw.isRT && cw.rtrv == sessRV {
+			as.chatWindowsMtx.Unlock()
+			return cw
+		}
+	}
+
+	sessionAlias := fmt.Sprintf("RTC %x", sessRV[:4])
+	cw := &chatWindow{
+		alias: sessionAlias,
+		isRT:  true,
+		rtrv:  sessRV,
+		me:    as.c.LocalNick(),
+	}
+	cw.newInternalMsg("Opening RT Session Chat Window")
+	cw.newHelpMsg("Note: messages in realtime chat sessions are ephemeral " +
+		"and only received by people connected to the live session.")
+	as.chatWindows = append(as.chatWindows, cw)
+	as.updatedCW[len(as.chatWindows)-1] = false
+	as.chatWindowsMtx.Unlock()
+
+	return cw
+}
+
 // findOrNewChatWindow finds the existing chat window for the given user or
 // creates a new one with the given alias.
 func (as *appState) findOrNewChatWindow(id clientintf.UserID, alias string) *chatWindow {
@@ -1455,6 +1502,8 @@ func (as *appState) pm(cw *chatWindow, msg string) {
 	if cw.isGC {
 		progrChan = make(chan client.SendProgress)
 		err = as.c.GCMessage(cw.gc, msg, rpc.MessageModeNormal, progrChan)
+	} else if cw.isRT {
+		err = as.c.SendRTDTChatMsg(cw.rtrv, msg)
 	} else {
 		err = as.c.PM(cw.uid, msg)
 	}
@@ -1462,6 +1511,9 @@ func (as *appState) pm(cw *chatWindow, msg string) {
 		if cw.isGC {
 			as.cwHelpMsg("Unable to send message to GC %q: %v",
 				cw.alias, err)
+		} else if cw.isRT {
+			as.cwHelpMsg("Unable to send realtime chat message to session %s: %v",
+				cw.rtrv.ShortLogID(), err)
 		} else {
 			as.cwHelpMsg("Unable to send PM to %q: %v",
 				cw.alias, err)
@@ -2658,6 +2710,218 @@ func (as *appState) modifyGCAdmins(gcID zkidentity.ShortID, add, del clientintf.
 	return nil
 }
 
+// attemptingJoinRTDTSessions returns a map of the live RTDT sessions that the
+// user is attempting to join.
+func (as *appState) attemptingJoinRTDTSessions() map[zkidentity.ShortID]struct{} {
+	as.rtMtx.Lock()
+	res := maps.Clone(as.rtJoinAttempts)
+	as.rtMtx.Unlock()
+	return res
+}
+
+// attemptJoinRTDTSession attempts to join and maintain a live RTDT session.
+// This dispatches a message once a result is known.
+func (as *appState) attemptJoinRTDTSession(rv zkidentity.ShortID) {
+	as.rtMtx.Lock()
+	if _, ok := as.rtJoinAttempts[rv]; ok {
+		// Already attempting to join.
+		as.rtMtx.Unlock()
+		return
+	}
+	as.rtJoinAttempts[rv] = struct{}{}
+	as.rtMtx.Unlock()
+
+	go func() {
+		// This call may block until the join is complete.
+		err := as.c.JoinLiveRTDTSession(rv)
+
+		as.rtMtx.Lock()
+		delete(as.rtJoinAttempts, rv)
+		sess, _ := as.rtSessions.Get(rv)
+		if sess != nil {
+			sess.err = err
+		}
+		as.rtMtx.Unlock()
+
+		if err != nil {
+			as.diagMsg("Unable to join live RTDT session %s: %v", rv, err)
+		}
+		as.sendMsg(msgJoinLiveRTChatRes{rv: rv, res: err})
+	}()
+}
+
+func (as *appState) updateRtdtSessions() (newCount int, firstRV zkidentity.ShortID) {
+	sessRVs := as.c.ListRTDTSessions()
+	existing := make(map[zkidentity.ShortID]struct{}, len(sessRVs))
+	as.rtMtx.Lock()
+	for _, rv := range sessRVs {
+		existing[rv] = struct{}{}
+		_, exists := as.rtSessions.Get(rv)
+		if exists {
+			continue
+		}
+
+		// First time initing session.
+		rtSess, err := as.c.GetRTDTSession(&rv)
+		if err != nil {
+			as.diagMsg("Unable to fetch session %s: %v", rv, err)
+			continue
+		}
+
+		sess := &rtdtSession{rv: rv, descr: rtSess.Metadata.Description}
+		as.rtSessions.Set(rv, sess)
+	}
+
+	// Remove from rtSessions anything that is no longer in the list of
+	// existing sessions.
+	for pair := as.rtSessions.Oldest(); pair != nil; {
+		rv := pair.Key
+		pair = pair.Next()
+		if _, ok := existing[rv]; !ok {
+			as.rtSessions.Delete(rv)
+		}
+	}
+
+	// Return oldest RV.
+	oldest := as.rtSessions.Oldest()
+	if oldest != nil {
+		firstRV = oldest.Key
+	}
+
+	newCount = as.rtSessions.Len()
+	as.rtMtx.Unlock()
+	return
+}
+
+// rangeRtSessions iterates over all RT sessions.
+func (as *appState) rangeRtSessions(f func(i int, sess *rtdtSession)) {
+	as.rtMtx.Lock()
+	var i int
+	for pair := as.rtSessions.Oldest(); pair != nil; pair = pair.Next() {
+		f(i, pair.Value)
+		i++
+	}
+	as.rtMtx.Unlock()
+}
+
+// rtSessFrom returns the RV of the next or prior session from the list of
+// ordered rt sessions.
+func (as *appState) rtSessFrom(rv zkidentity.ShortID, delta int) (next zkidentity.ShortID, ok bool) {
+	as.rtMtx.Lock()
+	pair := as.rtSessions.GetPair(rv)
+	if pair != nil {
+		switch delta {
+		case +1:
+			pair = pair.Next()
+		case -1:
+			pair = pair.Prev()
+		}
+		if pair != nil {
+			next = pair.Key
+			ok = true
+		}
+	}
+	as.rtMtx.Unlock()
+	return
+}
+
+// rtSessClearError removes the last error from the realtime session.
+func (as *appState) rtSessClearError(rv zkidentity.ShortID) {
+	as.rtMtx.Lock()
+	sess, _ := as.rtSessions.Get(rv)
+	if sess != nil {
+		sess.err = nil
+	}
+	as.rtMtx.Unlock()
+}
+
+// rtKickMember kicks a member from a session.
+func (as *appState) rtKickMember(rv zkidentity.ShortID, peerID rpc.RTDTPeerID,
+	banDuration time.Duration, peerUID clientintf.UserID, peerNick string) {
+
+	err := as.c.KickFromLiveRTDTSession(&rv, peerID, banDuration)
+	if err != nil {
+		as.diagMsg("Kicking peer %s from session %s failed: %v",
+			strescape.Nick(peerNick), rv, err)
+	} else {
+		as.diagMsg("Kicked peer %s (pid %s uid %s) from session %s (temp banned for %v)",
+			strescape.Nick(peerNick), peerID, peerUID, rv, banDuration)
+	}
+}
+
+// rtLeaveLiveSession leaves the given live session.
+func (as *appState) rtLeaveLiveSession(rv zkidentity.ShortID) {
+	as.rtSessClearError(rv)
+	err := as.c.LeaveLiveRTSession(rv)
+	as.sendMsg(msgLeftLiveRTChatRes{rv: rv, res: err})
+}
+
+func (as *appState) rtRemoveMember(sessRV zkidentity.ShortID, ru *client.RemoteUser, rotateCookies bool) {
+	as.diagMsg("Attempting to remove %s from realtime chat %s", strescape.Nick(ru.Nick()),
+		sessRV.ShortLogID())
+	uid := ru.ID()
+	err := as.c.RemoveRTDTMember(&sessRV, &uid, "")
+	if err != nil {
+		errStyle := as.styles.Load().err
+		as.diagMsg(errStyle.Render("Unable to remove from realtime chat: ", err.Error()))
+		return
+	}
+
+	as.sendMsg(msgRTLivePeersChanged(sessRV))
+	as.diagMsg("Removed %s from realtime chat %s", strescape.Nick(ru.Nick()),
+		sessRV.ShortLogID())
+	if !rotateCookies {
+		as.diagMsg("NOTE: cookies were NOT rotated, which means the user may rejoin.")
+		as.diagMsg("Rotate cookies with /rtc rotcookies %s", sessRV.ShortLogID())
+		return
+	}
+
+	err = as.c.RotateRTDTAppointmentCookies(&sessRV)
+	if err != nil {
+		errStyle := as.styles.Load().err
+		as.diagMsg(errStyle.Render("Unable to rotate cookies of realtime chat: ", err.Error()))
+		return
+	}
+
+	as.diagMsg("Rotated realtime chat %s cookies", sessRV.ShortLogID())
+}
+
+func (as *appState) rtExitSession(sessRV zkidentity.ShortID) {
+	err := as.c.ExitRTDTSession(&sessRV)
+	if err != nil {
+		errStyle := as.styles.Load().err
+		as.diagMsg(errStyle.Render("Unable to exit realtime chat session: ", err.Error()))
+		return
+	}
+
+	as.diagMsg("Exited realtime chat session %s", sessRV.ShortLogID())
+	as.sendMsg(msgRTSessionsChanged{})
+}
+
+func (as *appState) rtDissolveSession(sessRV zkidentity.ShortID) {
+	err := as.c.DissolveRTDTSession(&sessRV)
+	if err != nil {
+		errStyle := as.styles.Load().err
+		as.diagMsg(errStyle.Render("Unable to dissolve realtime chat session: ", err.Error()))
+		return
+	}
+
+	as.diagMsg("Dissolved realtime chat session %s", sessRV.ShortLogID())
+	as.sendMsg(msgRTSessionsChanged{})
+}
+
+func (as *appState) rtRotateCookies(sessRV zkidentity.ShortID) {
+	err := as.c.RotateRTDTAppointmentCookies(&sessRV)
+	if err != nil {
+		errStyle := as.styles.Load().err
+		as.diagMsg(errStyle.Render("Unable to rotate realtime chat cookies: ", err.Error()))
+		return
+	}
+
+	as.diagMsg("Rotated realtime chat session cookies %s", sessRV.ShortLogID())
+	as.sendMsg(msgRTSessionsChanged{})
+}
+
 // handleCmd executes the given (already parsed) command line.
 func (as *appState) handleCmd(rawText string, args []string) {
 	if len(args) == 0 {
@@ -3589,6 +3853,165 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		as.recheckRMQLen()
 	}))
 
+	ntfns.Register(client.OnInvitedToRTDTSession(func(ru *client.RemoteUser, invite *rpc.RMRTDTSessionInvite) {
+		inviterId := ru.ID()
+		as.rtInvitesMtx.Lock()
+		setInvite := false
+		for _, oldInv := range as.rtInvites {
+			if oldInv.invite.RV == invite.RV && oldInv.inviter == inviterId {
+				oldInv.invite = invite
+				setInvite = true
+			}
+		}
+		if !setInvite {
+			as.rtInvites = append(as.rtInvites, &rtdtInvite{inviter: ru.ID(), invite: invite})
+		}
+		as.rtInvitesMtx.Unlock()
+
+		as.manyDiagMsgsCb(func(pf printf) {
+			pf("")
+			pf("User %s invited us to RTDT session %s",
+				strescape.Nick(ru.Nick()), invite.RV.ShortLogID())
+			pf("Session size: %d", invite.Size)
+			pf("Session Description: %s", strescape.Content(invite.Description))
+			pf("Type the following to accept and join:")
+			pf("  /rtchat accept %s", invite.RV.ShortLogID())
+		})
+	}))
+
+	ntfns.Register(client.OnRTDTSessionInviteAccepted(func(ru *client.RemoteUser, sessRV zkidentity.ShortID, acceptedAsPublisher bool) {
+		as.diagMsg("User %s accepted the invitation to join the realtime chat session %s",
+			strescape.Nick(ru.Nick()), sessRV.ShortLogID())
+		as.sendMsg(msgRTLivePeersChanged(sessRV))
+	}))
+
+	ntfns.Register(client.OnRTDTSesssionUpdated(func(ru *client.RemoteUser, update *client.RTDTSessionUpdateNtfn) {
+		if update.InitialJoin {
+			as.diagMsg("Joined session %s. Entering live RTDT session.\nType '/rtchat win' to manage live sessions.",
+				update.SessionRV.ShortLogID())
+			err := as.c.JoinLiveRTDTSession(update.SessionRV)
+			if err != nil {
+				errMsg := fmt.Sprintf("Unable to join live RTDT session: %v", err)
+				as.diagMsg(as.styles.Load().err.Render(errMsg))
+			}
+			return
+		}
+		if len(update.NewPublishers) != 0 {
+			as.diagMsg("%d new publishers in realtime chat session %s",
+				len(update.NewPublishers), update.SessionRV.ShortLogID())
+		}
+		if len(update.RemovedPublishers) != 0 {
+			as.diagMsg("%d removed publishers in realtime chat session %s",
+				len(update.RemovedPublishers), update.SessionRV.ShortLogID())
+		}
+	}))
+
+	ntfns.Register(client.OnRTDTLiveSessionJoined(func(sessRV zkidentity.ShortID) {
+		as.sendMsg(msgJoinedLiveRTChat(sessRV))
+	}))
+
+	ntfns.Register(client.OnRTDTLivePeerJoined(func(sessRV zkidentity.ShortID, peerID rpc.RTDTPeerID) {
+		as.sendMsg(msgRTLivePeersChanged(sessRV))
+	}))
+
+	ntfns.Register(client.OnRTDTLivePeerStalled(func(sessRV zkidentity.ShortID, peerID rpc.RTDTPeerID) {
+		as.sendMsg(msgRTLivePeersChanged(sessRV))
+	}))
+
+	ntfns.Register(client.OnRTDTLiveSessionSendErrored(func(sessRV zkidentity.ShortID, err error) {
+		as.rtMtx.Lock()
+		sess, ok := as.rtSessions.Get(sessRV)
+		if ok {
+			sess.err = err
+		}
+		as.rtMtx.Unlock()
+		as.sendMsg(msgRTLiveSessSendErrored(err))
+	}))
+
+	ntfns.Register(client.OnRTDTRemadeLiveSessionHotAudio(func(sessRV zkidentity.ShortID) {
+		as.rtMtx.Lock()
+		sess, ok := as.rtSessions.Get(sessRV)
+		if ok {
+			sess.err = nil
+		}
+		as.rtMtx.Unlock()
+		as.sendMsg(msgRTSessionsChanged{})
+	}))
+
+	ntfns.Register(client.OnRTDTPeerSoundChanged(func(sessRV zkidentity.ShortID, peerID rpc.RTDTPeerID, hasSoundStream, hasSound bool) {
+		as.sendMsg(msgRTLivePeersChanged(sessRV))
+	}))
+
+	ntfns.Register(client.OnRTDTKickedFromLiveSession(func(sessRV zkidentity.ShortID, peerID rpc.RTDTPeerID, banDuration time.Duration) {
+		styles := as.styles.Load()
+		as.diagMsg(styles.err.Render(fmt.Sprintf("Local client was kicked from session %s (temp banned for %s)",
+			sessRV, banDuration)))
+		as.rtMtx.Lock()
+		rts, _ := as.rtSessions.Get(sessRV)
+		if rts == nil {
+			rts = &rtdtSession{rv: sessRV}
+			as.rtSessions.Store(sessRV, rts)
+		}
+		if banDuration > 0 {
+			rts.err = fmt.Errorf("Temp banned from session (for %s)", banDuration)
+		} else {
+			rts.err = errors.New("Kicked from session")
+		}
+		as.rtMtx.Unlock()
+		as.sendMsg(msgRTLocalClientKicked{})
+	}))
+
+	ntfns.Register(client.OnRTDTRemovedFromSession(func(ru *client.RemoteUser, sessRV zkidentity.ShortID, reason string) {
+		as.rtMtx.Lock()
+		as.rtSessions.Delete(sessRV)
+		as.rtMtx.Unlock()
+
+		if reason != "" {
+			reason = strescape.Content(reason)
+		}
+
+		as.diagMsg("%s permanently removed local client from session %s%s",
+			strescape.Nick(ru.Nick()), sessRV.ShortLogID(), reason)
+		as.sendMsg(msgRTLocalClientKicked{})
+	}))
+
+	ntfns.Register(client.OnRTDTRotatedCookie(func(ru *client.RemoteUser, sessRV zkidentity.ShortID) {
+		as.diagMsg("User %s rotated cookies of realtime chat session %s",
+			strescape.Nick(ru.Nick()), sessRV.ShortLogID())
+	}))
+
+	ntfns.Register(client.OnRTDTSessionDissolved(func(ru *client.RemoteUser, sessRV zkidentity.ShortID, peerID rpc.RTDTPeerID) {
+		as.diagMsg("User %s dissolved realtime chat session %s",
+			strescape.Nick(ru.Nick()), sessRV.ShortLogID())
+		as.rtMtx.Lock()
+		as.rtSessions.Delete(sessRV)
+		as.rtMtx.Unlock()
+		as.sendMsg(msgRTSessionsChanged{})
+	}))
+
+	ntfns.Register(client.OnRTDTPeerExitedSession(func(ru *client.RemoteUser, sessRV zkidentity.ShortID, peerID rpc.RTDTPeerID) {
+		as.diagMsg("User %s permanently left realtime chat session %s",
+			strescape.Nick(ru.Nick()), sessRV.ShortLogID())
+		as.sendMsg(msgRTLivePeersChanged(sessRV))
+	}))
+
+	ntfns.Register(client.OnRTDTChatMessageReceived(func(sessionRV zkidentity.ShortID, pub rpc.RMRTDTSessionPublisher, msg string, ts uint32) {
+		cw := as.findOrNewRTWindow(sessionRV)
+		nick, _ := as.c.UserNick(pub.PublisherID)
+		var fromUID *zkidentity.ShortID
+		if nick == "" {
+			nick = pub.Alias
+			fromUID = &pub.PublisherID
+		}
+		nick = strescape.Nick(nick)
+		cw.newRecvdMsg(nick, msg, fromUID, time.Now())
+		as.repaintIfActive(cw)
+	}))
+
+	ntfns.Register(client.OnRTDTRTTCalculated(func(addr net.UDPAddr, rtt time.Duration) {
+		as.sendMsg(msgRTRTTCalculated(rtt))
+	}))
+
 	// Initialize resources router.
 	var sstore *simplestore.Store
 	resRouter := resources.NewRouter()
@@ -4017,11 +4440,6 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		resRouter.BindPrefixPath([]string{}, p)
 	}
 
-	noterec, err := audio.NewRecorder(logBknd.logger("AREC"))
-	if err != nil {
-		return nil, fmt.Errorf("unable to init audio subsystem: %v", err)
-	}
-
 	ctx, cancel := context.WithCancel(context.Background())
 	as = &appState{
 		ctx:         ctx,
@@ -4037,7 +4455,9 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		lnRPC:       lnRPC,
 		lnWallet:    lnWallet,
 		lnRouter:    lnRouter,
-		noterec:     noterec,
+		noterec:     c.NoteRecorder(),
+
+		rtAutoHotAudio: args.RTAutoHotAudio,
 
 		network:   args.Network,
 		isRestore: isRestore,
@@ -4085,6 +4505,9 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		ssPayType:    args.SimpleStorePayType,
 		ssAcct:       args.SimpleStoreAccount,
 		ssShipCharge: args.SimpleStoreShipCharge,
+
+		rtJoinAttempts: make(map[zkidentity.ShortID]struct{}),
+		rtSessions:     orderedmap.New[zkidentity.ShortID, *rtdtSession](),
 	}
 	as.externalEditorForComments.Store(args.ExternalEditorForComments)
 	as.mimeMap.Store(&args.MimeMap)

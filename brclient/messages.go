@@ -92,6 +92,24 @@ type msgRecordComplete struct{}
 type msgPlaybackComplete struct{}
 type msgAudioError error
 
+type msgOpenRTChatWin struct{}
+type msgJoinedLiveRTChat zkidentity.ShortID
+type msgRTLivePeersChanged zkidentity.ShortID
+type msgRTLiveSessSendErrored error
+type msgRTLocalClientKicked struct{}
+type msgRTSessionsChanged struct{}
+type msgRTRTTCalculated time.Duration
+
+type msgJoinLiveRTChatRes struct {
+	rv  zkidentity.ShortID
+	res error
+}
+
+type msgLeftLiveRTChatRes struct {
+	rv  zkidentity.ShortID
+	res error
+}
+
 func paste() tea.Msg {
 	str, err := clipboard.ReadAll()
 	if err != nil {
