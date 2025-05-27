@@ -2,15 +2,19 @@ import 'dart:async';
 
 import 'package:bruig/components/chat/chat_side_menu.dart';
 import 'package:bruig/components/chat/record_audio.dart';
+import 'package:bruig/components/chat/rtc_session_header.dart';
+import 'package:bruig/components/containers.dart';
 import 'package:bruig/components/manage_gc.dart';
 import 'package:bruig/components/typing_emoji_panel.dart';
 import 'package:bruig/models/emoji.dart';
 import 'package:bruig/models/audio.dart';
+import 'package:bruig/models/realtimechat.dart';
 import 'package:bruig/models/snackbar.dart';
 import 'package:bruig/models/uistate.dart';
 import 'package:bruig/screens/chats.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/storage_manager.dart';
+import 'package:bruig/theme_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:bruig/components/profile.dart';
 import 'package:bruig/components/chat/messages.dart';
@@ -20,8 +24,10 @@ import 'package:bruig/components/chat/input.dart';
 
 class ActiveChat extends StatefulWidget {
   final ClientModel client;
+  final RealtimeChatModel rtc;
+  final AudioModel audio;
   final CustomInputFocusNode inputFocusNode;
-  const ActiveChat(this.client, this.inputFocusNode, {super.key});
+  const ActiveChat(this.client, this.rtc, this.audio, this.inputFocusNode, {super.key});
 
   @override
   State<ActiveChat> createState() => _ActiveChatState();
@@ -29,9 +35,11 @@ class ActiveChat extends StatefulWidget {
 
 class _ActiveChatState extends State<ActiveChat> with RouteAware {
   ClientModel get client => widget.client;
+  RealtimeChatModel get rtc => widget.rtc;
   UIStateModel get ui => widget.client.ui;
   CustomInputFocusNode get inputFocusNode => widget.inputFocusNode;
   ChatModel? chat;
+  RTDTSessionModel? rtcSession;
   late ItemScrollController _itemScrollController;
   late ItemPositionsListener _itemPositionsListener;
   Timer? _debounce;
@@ -41,6 +49,7 @@ class _ActiveChatState extends State<ActiveChat> with RouteAware {
     if (newChat != chat) {
       setState(() {
         chat = newChat;
+        rtcSession = rtc.gcSession(newChat?.id ?? "");
       });
     }
   }
@@ -116,6 +125,15 @@ class _ActiveChatState extends State<ActiveChat> with RouteAware {
     setState(() {});
   }
 
+  void rtcSessionsChanged() {
+    var newRtcSess = rtc.gcSession(chat?.id ?? "");
+    if (newRtcSess != rtcSession) {
+      setState(() {
+        rtcSession = newRtcSess;
+      });
+    }
+  }
+
   @override
   void didPopNext() {
     if (!checkIsScreenSmall(context)) {
@@ -129,9 +147,11 @@ class _ActiveChatState extends State<ActiveChat> with RouteAware {
     _itemScrollController = ItemScrollController();
     _itemPositionsListener = ItemPositionsListener.create();
     chat = client.active;
+    rtcSession = rtc.gcSession(chat?.id ?? "");
     client.activeChat.addListener(activeChatChanged);
     ui.showProfile.addListener(showProfileChanged);
     ui.chatSideMenuActive.addListener(chatSideMenuActiveChanged);
+    rtc.addListener(rtcSessionsChanged);
   }
 
   @override
@@ -156,6 +176,11 @@ class _ActiveChatState extends State<ActiveChat> with RouteAware {
     } else if (client.active != chat) {
       activeChatChanged();
     }
+
+    if (oldWidget.rtc != rtc) {
+      oldWidget.rtc.removeListener(rtcSessionsChanged);
+      rtc.addListener(rtcSessionsChanged);
+    }
   }
 
   @override
@@ -165,6 +190,7 @@ class _ActiveChatState extends State<ActiveChat> with RouteAware {
     ui.overviewRouteObserver.unsubscribe(this);
     _debounce?.cancel();
     client.activeChat.removeListener(activeChatChanged);
+    rtc.removeListener(rtcSessionsChanged);
     super.dispose();
   }
 
@@ -175,7 +201,7 @@ class _ActiveChatState extends State<ActiveChat> with RouteAware {
 
     if (ui.showProfile.val) {
       if (chat.isGC) {
-        return ManageGCScreen(client, chat);
+        return ManageGCScreen(client, rtc, chat);
       } else {
         return UserProfile(client);
       }
@@ -187,6 +213,13 @@ class _ActiveChatState extends State<ActiveChat> with RouteAware {
         client,
         Column(
           children: [
+            if (rtcSession != null)
+              Box(
+                color: SurfaceColor.primaryContainer,
+                margin: const EdgeInsets.only(bottom: 5),
+                padding: const EdgeInsets.all(5),
+                child: RTCSessionHeader(rtc, rtcSession!, widget.audio),
+              ),
             Expanded(
               child: Stack(children: [
                 Messages(chat, client, _itemScrollController,

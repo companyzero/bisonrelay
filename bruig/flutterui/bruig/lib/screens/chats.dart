@@ -3,9 +3,11 @@ import 'dart:async';
 import 'package:bruig/components/buttons.dart';
 import 'package:bruig/components/chats_list.dart';
 import 'package:bruig/components/text.dart';
+import 'package:bruig/models/audio.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/models/emoji.dart';
 import 'package:bruig/models/notifications.dart';
+import 'package:bruig/models/realtimechat.dart';
 import 'package:bruig/models/uistate.dart';
 import 'package:bruig/screens/needs_out_channel.dart';
 import 'package:bruig/theme_manager.dart';
@@ -72,8 +74,10 @@ class ChatsScreen extends StatefulWidget {
   static const routeName = '/chat';
   final ClientModel client;
   final AppNotifications ntfns;
+  final RealtimeChatModel rtc;
   final TypingEmojiSelModel typingEmoji;
-  const ChatsScreen(this.client, this.ntfns, this.typingEmoji, {super.key});
+  const ChatsScreen(this.client, this.rtc, this.ntfns, this.typingEmoji,
+      {super.key});
 
   static gotoChatScreenFor(BuildContext context, ChatModel chat) {
     ClientModel.of(context, listen: false).active = chat;
@@ -290,6 +294,7 @@ class CustomInputFocusNode {
 
 class _ChatsScreenState extends State<ChatsScreen> {
   ClientModel get client => widget.client;
+  RealtimeChatModel get rtc => widget.rtc;
   AppNotifications get ntfns => widget.ntfns;
   late CustomInputFocusNode inputFocusNode;
   bool hasLNBalance = false;
@@ -353,6 +358,8 @@ class _ChatsScreenState extends State<ChatsScreen> {
       return const _LoadingAddressBookPage();
     }
 
+    AudioModel audio = AudioModel.of(context, listen: false);
+
     bool isScreenSmall = checkIsScreenSmall(context);
     return !isScreenSmall
         ? Row(children: [
@@ -360,12 +367,12 @@ class _ChatsScreenState extends State<ChatsScreen> {
             Expanded(
                 child: Container(
               margin: const EdgeInsets.all(1),
-              child: ActiveChat(client, inputFocusNode),
+              child: ActiveChat(client, rtc, audio, inputFocusNode),
             )),
           ])
         : Consumer<ActiveChatModel>(
             builder: (context, activeChat, child) => activeChat.empty
                 ? ActiveChatsListMenu(client, inputFocusNode)
-                : ActiveChat(client, inputFocusNode));
+                : ActiveChat(client, rtc, audio, inputFocusNode));
   }
 }

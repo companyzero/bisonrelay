@@ -15,6 +15,9 @@ import android.app.Service
 import android.content.pm.ServiceInfo
 import android.os.IBinder
 import android.os.Build
+import android.media.AudioManager
+import android.media.AudioDeviceInfo
+import org.json.JSONObject
 import android.graphics.drawable.Icon
 import androidx.core.graphics.drawable.IconCompat
 
@@ -195,6 +198,8 @@ class GolibPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, ServiceAware
       val enabled: Boolean = call.argument("enabled") ?: false
       Golib.logInfo(0x12131400, "NativePlugin: toggling notifications to $enabled")
       ntfnsEnabled = enabled;
+    } else if (call.method == "listAudioDevices") {
+      result.success(listAudioDevices())
     } else {
       result.notImplemented()
     }
@@ -418,4 +423,114 @@ class GolibPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, ServiceAware
       )
     }
   }
+
+  // Lists the available audio devices and returns a json-encoded object. The
+  // object is in the following format:
+  // {"playback": [device], "capture": [device]}
+  // Where each device is
+  // {"id": "id of the device", "name": "name or description of device", is_default: false}
+  fun listAudioDevices() : String {
+    try {
+      val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+      
+      // For Android 6.0 (API 23) and above, we can use getDevices()
+      val playbackDevices = mutableListOf<Map<String, Any>>()
+      val captureDevices = mutableListOf<Map<String, Any>>()
+
+      val supportedDeviceTypes = mapOf( // Note: These constants are used for switching speaker type
+        26  to "Bluetooth Headset", // AudioDeviceInfo.TYPE_BLE_HEADSET
+        27  to "Bluetooth Speaker", // AudioDeviceInfo.TYPE_BLE_SPEAKER
+        AudioDeviceInfo.TYPE_AUX_LINE to "Aux Line",
+        AudioDeviceInfo.TYPE_BLUETOOTH_A2DP to "Bluetooth A2DP",
+        AudioDeviceInfo.TYPE_BLUETOOTH_SCO to "Bluetooth SCO",
+        AudioDeviceInfo.TYPE_BUILTIN_EARPIECE to "Internal Earpiece",
+        AudioDeviceInfo.TYPE_BUILTIN_MIC to "Internal Microphone",
+        AudioDeviceInfo.TYPE_BUILTIN_SPEAKER to "Internal Speaker",
+        AudioDeviceInfo.TYPE_HEARING_AID to "Hearing Aid",
+        AudioDeviceInfo.TYPE_USB_HEADSET to "USB Headset",
+        AudioDeviceInfo.TYPE_WIRED_HEADPHONES to "Wired Headphones",
+        AudioDeviceInfo.TYPE_WIRED_HEADSET to "Wired Headset",
+      )
+
+      val addedOutputs = mutableSetOf<Int>();
+      val addedInputs = mutableSetOf<Int>();
+      
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+        // Get output (playback) devices
+        val outputDevices = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
+        for (device in outputDevices) {
+          if (!supportedDeviceTypes.containsKey(device.type)) {
+            Golib.logInfo(0x12131400, "NativePlugin: Ignoring output device ${device.productName.toString()} type ${device.type} id ${device.id.toString()}");
+            continue
+          }
+
+          if (addedOutputs.contains(device.id)) {
+            // Avoid duplicates.
+            continue
+          }
+          addedOutputs.add(device.id)
+
+          // Note: Determining the *actual* default device is complex and often
+          // requires checking routing or specific API levels. This is a basic check.
+          val isDefault = device.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER || device.type == AudioDeviceInfo.TYPE_WIRED_HEADSET || device.type == AudioDeviceInfo.TYPE_WIRED_HEADPHONES
+          playbackDevices.add(mapOf(
+            "id" to device.id.toString(),
+            "name" to "${device.productName.toString()} ${supportedDeviceTypes[device.type]}",
+            "is_default" to isDefault // Simplified default check
+          ))
+        }
+        
+        // Get input (capture) devices
+        val inputDevices = audioManager.getDevices(AudioManager.GET_DEVICES_INPUTS)
+        for (device in inputDevices) {
+          if (!supportedDeviceTypes.containsKey(device.type)) {
+            Golib.logInfo(0x12131400, "NativePlugin: Ignoring input device ${device.productName.toString()} type ${device.type} id ${device.id.toString()}");
+            continue
+          }
+
+          if (addedInputs.contains(device.id)) {
+            // Avoid duplicates.
+            continue
+          }
+          addedInputs.add(device.id)
+
+
+          val isDefault = device.type == AudioDeviceInfo.TYPE_BUILTIN_MIC
+          captureDevices.add(mapOf(
+            "id" to device.id.toString(),
+            "name" to "${device.productName.toString()} ${supportedDeviceTypes[device.type]}",
+            "is_default" to isDefault // Simplified default check
+          ))
+        }
+      } else {
+        // For older Android versions, add placeholder default devices
+        // Checking isSpeakerphoneOn() or isWiredHeadsetOn() might give clues but isn't definitive.
+        playbackDevices.add(mapOf(
+          "id" to "default_output",
+          "name" to "Default Output Device",
+          "is_default" to true
+        ))
+        
+        captureDevices.add(mapOf(
+          "id" to "default_input",
+          "name" to "Default Input Device",
+          "is_default" to true
+        ))
+      }
+      
+      // Create the result JSON structure
+      val result = mapOf(
+        "playback" to playbackDevices,
+        "capture" to captureDevices
+      )
+      
+      // Convert to JSON string
+      return JSONObject(result).toString()
+    } catch (e: Exception) {
+      Golib.logInfo(0x12131400, "NativePlugin: Error listing audio devices: ${e.message}")
+      // Return empty structure in case of error
+      return "{\"playback\": [], \"capture\": []}"
+    }
+  }
+
 }

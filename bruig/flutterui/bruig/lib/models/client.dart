@@ -1016,15 +1016,26 @@ class ClientModel extends ChangeNotifier {
         }
       }
 
+      var chatId = evnt.sid;
+
+      // Invitations to RTDT sessions are reversed: source id is always uid and
+      // invite.gc is filled when the session is associated with a GC.
+      var isRTSessInviteInGC = false;
+      if (evnt is InvitedToRTDTSess) {
+        isRTSessInviteInGC = evnt.invite.gc != "";
+        chatId = evnt.invite.gc;
+      }
+
       var isGC = (evnt is GCMsg) ||
           (evnt is GCUserEvent) ||
           (evnt is GCAdminsChanged) ||
           (evnt is GCAddedMembers) ||
           (evnt is GCMemberParted) ||
           (evnt is GCUpgradedVersion) ||
-          (evnt is GCKilled);
+          (evnt is GCKilled) ||
+          (isRTSessInviteInGC);
 
-      var chat = await _newChat(evnt.sid, "", isGC);
+      var chat = await _newChat(chatId, "", isGC);
       ChatModel? source;
       String? sourceId;
       if (evnt is PM) {
@@ -1045,6 +1056,8 @@ class ClientModel extends ChangeNotifier {
         sourceId = evnt.sid;
       } else if (evnt is GCKilled) {
         sourceId = evnt.source;
+      } else if (evnt is InvitedToRTDTSess) {
+        sourceId = evnt.inviter;
       } else {
         source = chat;
       }

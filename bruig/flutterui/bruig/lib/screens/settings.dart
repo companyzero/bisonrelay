@@ -8,7 +8,9 @@ import 'package:bruig/components/interactive_avatar.dart';
 import 'package:bruig/components/md_elements.dart';
 import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/components/text.dart';
+import 'package:bruig/components/volume_control.dart';
 import 'package:bruig/models/audio.dart';
+import 'package:bruig/models/realtimechat.dart';
 import 'package:bruig/models/snackbar.dart';
 import 'package:bruig/models/uistate.dart';
 import 'package:bruig/notification_service.dart';
@@ -20,6 +22,7 @@ import 'package:bruig/screens/log.dart';
 import 'package:bruig/screens/manage_content/manage_content.dart';
 import 'package:bruig/screens/paystats.dart';
 import 'package:bruig/screens/about.dart';
+import 'package:bruig/screens/realtimechat/rtclist.dart';
 import 'package:bruig/screens/shutdown.dart';
 import 'package:bruig/util.dart';
 import 'package:file_picker/file_picker.dart';
@@ -382,6 +385,17 @@ class MainSettingsScreen extends StatelessWidget {
                     onTap: () => changePage("Audio"),
                     leading: const Icon(Icons.perm_camera_mic_outlined),
                     title: const Text("Audio")),
+                Consumer<LiveRTDTSessionsModel>(
+                    builder: (context, liveSessions, child) => ListTile(
+                        tileColor: liveSessions.hasSessions
+                            ? Colors.green.shade700
+                            : null,
+                        onTap: () {
+                          Navigator.of(context).pushReplacementNamed(
+                              RealtimeChatScreen.routeName);
+                        },
+                        leading: const Icon(Icons.voice_chat),
+                        title: const Text("Realtime chat"))),
                 ListTile(
                     onTap: () {
                       Navigator.of(context)
@@ -974,6 +988,21 @@ class _AudioSettingsScreenState extends State<AudioSettingsScreen> {
                     audio.playbackDeviceId = newVal;
                   })),
           const SizedBox(height: 30),
+          Box(
+            padding: const EdgeInsets.all(10),
+            margin:
+                const EdgeInsets.only(top: 2, bottom: 5, left: 10, right: 12),
+            color: SurfaceColor.secondaryContainer,
+            child: Wrap(spacing: 5, runSpacing: 10, children: [
+              const Text("Microphone Volume"),
+              VolumeGainControl(
+                initialValue: audio.captureGain.value,
+                onChanged: (value) async {
+                  await audio.captureGain.set(value);
+                },
+              ),
+            ]),
+          ),
           Wrap(spacing: 10, runSpacing: 10, children: [
             TextButton.icon(
                 onPressed:

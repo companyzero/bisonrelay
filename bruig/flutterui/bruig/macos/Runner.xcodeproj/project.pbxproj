@@ -438,7 +438,6 @@
 					"$(inherited)",
 					"\"${DT_TOOLCHAIN_DIR}/usr/lib/swift/${PLATFORM_NAME}\"",
 					/usr/lib/swift,
-					"/Users/user/git/src/github.com/decred/cr-ui/build/macos/amd64",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 11.3;
 				ONLY_ACTIVE_ARCH = YES;
@@ -572,7 +571,6 @@
 					"$(inherited)",
 					"\"${DT_TOOLCHAIN_DIR}/usr/lib/swift/${PLATFORM_NAME}\"",
 					/usr/lib/swift,
-					"/Users/user/git/src/github.com/decred/cr-ui/build/macos/amd64",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 11.3;
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -599,7 +597,6 @@
 					"$(inherited)",
 					"\"${DT_TOOLCHAIN_DIR}/usr/lib/swift/${PLATFORM_NAME}\"",
 					/usr/lib/swift,
-					"/Users/user/git/src/github.com/decred/cr-ui/build/macos/amd64",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 11.3;
 				ONLY_ACTIVE_ARCH = YES;

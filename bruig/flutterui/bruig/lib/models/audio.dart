@@ -2,11 +2,13 @@ import 'dart:io';
 
 import 'package:bruig/storage_manager.dart';
 import 'package:bruig/util.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:provider/provider.dart';
 
 dynamic globalAudioPlayerInitError;
 
@@ -61,10 +63,40 @@ class AudioPositionModel extends ChangeNotifier {
   }
 }
 
+class CaptureGainModel extends ChangeNotifier {
+  double _value = 0;
+  double get value => _value;
+  Future<void> set(double newGain) async {
+    await Golib.setAudioCaptureGain(newGain);
+    if (newGain != _value) {
+      _value = newGain;
+      notifyListeners();
+    }
+  }
+
+  // Read the current internval value. Needs to be called only after the client
+  // is initialized.
+  void readCurrent() async {
+    var gain = await Golib.getAudioCaptureGain();
+    if (gain != _value) {
+      _value = gain;
+      notifyListeners();
+    }
+  }
+}
+
 class AudioModel extends ChangeNotifier {
   AudioModel() {
     if (globalAudioPlayerInitError == null) _initPlayer();
     _loadDefaultDeviceIds();
+  }
+
+  static AudioModel of(BuildContext context, {bool listen = true}) =>
+      Provider.of<AudioModel>(context, listen: listen);
+
+  void _updateNoterecDevices() async {
+    var args = AudioDeviceArgs(_captureDeviceId, _playbackDeviceId);
+    await Golib.setAudioDevices(args);
   }
 
   String _captureDeviceId = "";
@@ -73,15 +105,31 @@ class AudioModel extends ChangeNotifier {
     _captureDeviceId = v;
     notifyListeners();
     StorageManager.saveString(StorageManager.audioCaptureDeviceIdKey, v);
+    _updateNoterecDevices();
   }
 
   String _playbackDeviceId = "";
   String get playbackDeviceId => _playbackDeviceId;
   set playbackDeviceId(String v) {
     _playbackDeviceId = v;
+    if (Platform.isAndroid &&
+        v != androidSpeakerDeviceID &&
+        v != androidEarpieceDeviceID) {
+      // Track this in android to toggle speaker when there's an attached playback
+      // device (not the built in speaker or earpiece) and the user has chosen it.
+      androidPrevPlaybackDeviceID = v;
+    }
     notifyListeners();
     StorageManager.saveString(StorageManager.audioPlaybackDeviceIdKey, v);
+    _updateNoterecDevices();
   }
+
+  // These are only set on android to switch between the loudspeaker and the
+  // earpiece speaker in realtime chat calls.
+  var androidSpeakerDeviceID = "";
+  var androidEarpieceDeviceID = "";
+  var androidFoundPlaybackDevices = false;
+  var androidPrevPlaybackDeviceID = "";
 
   void _loadDefaultDeviceIds() async {
     var captureId =
@@ -110,8 +158,25 @@ class AudioModel extends ChangeNotifier {
       }
     }
 
+    // Determine special android device IDs.
+    if (Platform.isAndroid) {
+      for (var dev in devs.playback) {
+        // Note: The name constants must match GolibPlugin.kt supportedDeviceTypes.
+        if (dev.name.contains("Internal Speaker")) {
+          androidSpeakerDeviceID = dev.id;
+        } else if (dev.name.contains("Internal Earpiece")) {
+          androidEarpieceDeviceID = dev.id;
+        }
+      }
+      androidFoundPlaybackDevices =
+          androidEarpieceDeviceID != "" && androidSpeakerDeviceID != "";
+    }
+
     notifyListeners();
+    _updateNoterecDevices();
   }
+
+  CaptureGainModel captureGain = CaptureGainModel();
 
   bool _recording = false;
   bool get recording => _recording;
@@ -170,9 +235,8 @@ class AudioModel extends ChangeNotifier {
     _lockedRecording = false;
     notifyListeners();
 
-    var args = AudioRecordNoteArgs(captureDeviceId);
     try {
-      await Golib.startAudioNoteRecord(args);
+      await Golib.startAudioNoteRecord();
       var newHasRecord =
           DateTime.now().difference(startRecordTime).inSeconds > 0;
       if (newHasRecord) {
@@ -203,7 +267,7 @@ class AudioModel extends ChangeNotifier {
     _playingSource = null;
     notifyListeners();
     try {
-      await Golib.startAudioNotePlayback(playbackDeviceId);
+      await Golib.startAudioNotePlayback();
       _playing = false;
       notifyListeners();
     } catch (exception) {

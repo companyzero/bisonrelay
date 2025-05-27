@@ -73,7 +73,15 @@ class _MessagesState extends State<Messages> {
       });
     });
     chat.addListener(onChatChanged);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
     _maybeScrollToBottom();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      _maybeScrollToBottom();
+    });
   }
 
   @override
@@ -81,8 +89,6 @@ class _MessagesState extends State<Messages> {
     super.didUpdateWidget(oldWidget);
     oldWidget.chat.removeListener(onChatChanged);
     chat.addListener(onChatChanged);
-    _maybeScrollToBottom();
-    onChatChanged();
   }
 
   @override
@@ -93,16 +99,14 @@ class _MessagesState extends State<Messages> {
   }
 
   void _scrollToBottom() {
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      if (mounted) {
-        widget.itemScrollController.scrollTo(
-          index: 0,
-          alignment: 0.0,
-          duration: const Duration(
-              microseconds: 1), // a little bit smoother than a jump
-        );
-      }
-    });
+    if (mounted && widget.itemScrollController.isAttached) {
+      widget.itemScrollController.scrollTo(
+        index: 0,
+        alignment: 0.0,
+        duration: const Duration(
+            microseconds: 1), // a little bit smoother than a jump
+      );
+    }
   }
 
   void _maybeScrollToBottom() {

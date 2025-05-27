@@ -9,6 +9,7 @@ import 'package:bruig/models/emoji.dart';
 import 'package:bruig/models/audio.dart';
 import 'package:bruig/models/menus.dart';
 import 'package:bruig/models/payments.dart';
+import 'package:bruig/models/realtimechat.dart';
 import 'package:bruig/models/resources.dart';
 import 'package:bruig/models/wallet.dart';
 import 'package:bruig/models/shutdown.dart';
@@ -23,6 +24,8 @@ import 'package:bruig/screens/generate_invite.dart';
 import 'package:bruig/screens/list_kxs.dart';
 import 'package:bruig/screens/log.dart';
 import 'package:bruig/screens/onboarding.dart';
+import 'package:bruig/screens/realtimechat/creatertc.dart';
+import 'package:bruig/screens/realtimechat/invitetortc.dart';
 import 'package:bruig/screens/server_unwelcome_error.dart';
 import 'package:bruig/screens/settings.dart';
 import 'package:bruig/storage_manager.dart';
@@ -153,7 +156,10 @@ void main(List<String> args) async {
 
 Future<void> runMainApp(Config cfg) async {
   final ClientModel client = ClientModel();
+  final SnackBarModel snackbar = SnackBarModel();
   final theme = await ThemeNotifier.newNotifierWhenLoaded();
+  final RealtimeChatModel rtc = RealtimeChatModel(client, snackbar);
+
   runApp(MultiProvider(
     providers: [
       ChangeNotifierProvider.value(value: client),
@@ -171,12 +177,16 @@ Future<void> runMainApp(Config cfg) async {
       ChangeNotifierProvider.value(value: theme),
       ChangeNotifierProvider(create: (c) => MainMenuModel()),
       ChangeNotifierProvider(create: (c) => ResourcesModel()),
-      ChangeNotifierProvider(create: (c) => SnackBarModel()),
+      ChangeNotifierProvider.value(value: snackbar),
       ChangeNotifierProvider(create: (c) => PaymentsModel()),
       ChangeNotifierProvider(create: (c) => WalletModel()),
       ChangeNotifierProvider(create: (c) => TypingEmojiSelModel()),
       ChangeNotifierProvider(create: (c) => AudioModel(), lazy: false),
       ChangeNotifierProvider(create: (c) => MarkdownAreaModel(cfg.dbRoot)),
+      ChangeNotifierProvider.value(value: rtc),
+      ChangeNotifierProvider.value(value: rtc.active),
+      ChangeNotifierProvider.value(value: rtc.liveSessions),
+      ChangeNotifierProvider(create: (c) => RealtimeChatRTTModel()),
     ],
     child: App(cfg, globalLogModel, globalShutdownModel),
   ));
@@ -395,12 +405,18 @@ class _AppState extends State<App> with WindowListener {
   }
 
   Future<void> addressBookLoaded(bool wasAlreadyRunning) async {
+    var audio = Provider.of<AudioModel>(context, listen: false);
+    audio.captureGain.readCurrent();
+
     var client = Provider.of<ClientModel>(context, listen: false);
+    var rtc = Provider.of<RealtimeChatModel>(context, listen: false);
+
     await client.readAddressBook();
     navkey.currentState!.pushReplacementNamed(OverviewScreen.routeName);
     await doWalletChecks(wasAlreadyRunning);
     await client.fetchNetworkInfo();
     await client.fetchMyAvatar();
+    await rtc.refreshSessions();
     NotificationService().updateUIConfig();
   }
 
@@ -501,6 +517,14 @@ class _AppState extends State<App> with WindowListener {
                 GCInvitationsScreen.routeName: (context) =>
                     const GCInvitationsScreen(),
                 ListKXsScreen.routeName: (context) => const ListKXsScreen(),
+                CreateRealtimeChatScreen.routeName: (context) =>
+                    Consumer<RealtimeChatModel>(
+                        builder: (context, rtc, child) =>
+                            CreateRealtimeChatScreen(rtc)),
+                InviteToRealtimeChatScreen.routeName: (context) =>
+                    Consumer<RealtimeChatModel>(
+                        builder: (context, rtc, child) =>
+                            InviteToRealtimeChatScreen(rtc)),
                 ShutdownScreen.routeName: (context) =>
                     ShutdownScreen(widget.log, widget.shutdown),
               },
@@ -511,15 +535,15 @@ class _AppState extends State<App> with WindowListener {
                       settings.name!.substring(OverviewScreen.routeName.length);
                   page = Consumer6<
                           DownloadsModel,
-                          ClientModel,
+                          RealtimeChatModel,
                           AppNotifications,
                           MainMenuModel,
                           FeedModel,
                           SnackBarModel>(
-                      builder: (context, down, client, ntfns, mainMenu, feed,
+                      builder: (context, down, rtc, ntfns, mainMenu, feed,
                               snackBar, child) =>
-                          OverviewScreen(down, client, ntfns, initialRoute,
-                              mainMenu, feed, snackBar));
+                          OverviewScreen(down, rtc.client, ntfns, initialRoute,
+                              mainMenu, feed, snackBar, rtc));
                 } else if (settings.name!
                     .startsWith(NeedsOutChannelScreen.routeName)) {
                   page = Consumer2<AppNotifications, ClientModel>(
