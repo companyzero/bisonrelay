@@ -12,6 +12,7 @@ import (
 
 	"github.com/companyzero/bisonrelay/rpc"
 	brpgdb "github.com/companyzero/bisonrelay/server/internal/pgdb"
+	"github.com/companyzero/bisonrelay/zkidentity"
 	"github.com/vaughan0/go-ini"
 	strduration "github.com/xhit/go-str2duration/v2"
 )
@@ -43,16 +44,23 @@ type Settings struct {
 	PingLimit         time.Duration
 
 	// payment section
-	PayScheme            string
-	LNRPCHost            string
-	LNTLSCert            string
-	LNMacaroonPath       string
-	PushPayRateMAtoms    uint64
-	PushPayRateBytes     uint64
-	PushPayRateMinMAtoms uint64
-	MilliAtomsPerSub     uint64
-	PushPaymentLifetime  int // how long a payment to a push is valid
-	MaxPushInvoices      int
+	PayScheme               string
+	LNRPCHost               string
+	LNTLSCert               string
+	LNMacaroonPath          string
+	PushPayRateMAtoms       uint64
+	PushPayRateBytes        uint64
+	PushPayRateMinMAtoms    uint64
+	MilliAtomsPerSub        uint64
+	PushPaymentLifetime     int // how long a payment to a push is valid
+	MaxPushInvoices         int
+	MilliAtomsPerRTSess     uint64
+	MilliAtomsPerUserRTSess uint64
+	MilliAtomsGetCookie     uint64
+	MilliAtomsPerUserCookie uint64
+	MilliAtomsRTJoin        uint64
+	MilliAtomsRTPushRate    uint64
+	RTPushRateMBytes        uint64
 
 	// log section
 	LogFile    string // log filename
@@ -70,6 +78,12 @@ type Settings struct {
 	PGServerCA        string
 	PGIndexTableSpace string
 	PGBulkTableSpace  string
+
+	// RTDT config
+	RTDTServerAddr       string
+	RTDTServerPub        *zkidentity.FixedSizeSntrupPublicKey
+	RTDTCookieKey        *zkidentity.FixedSizeSymmetricKey
+	RTDTDecodeCookieKeys []*zkidentity.FixedSizeSymmetricKey
 
 	// Versioner is a function that returns the current app version.
 	Versioner func() string
@@ -99,13 +113,20 @@ func New() *Settings {
 		PingLimit:         rpc.PropPingLimitDefault,
 
 		// payment
-		PayScheme:            "free",
-		PushPayRateMAtoms:    rpc.PropPushPaymentRateDefault,
-		PushPayRateBytes:     rpc.PropPushPaymentRateBytesDefault,
-		PushPayRateMinMAtoms: rpc.MinRMPushPayment, // Not currently exposed for config
-		MilliAtomsPerSub:     rpc.PropSubPaymentRateDefault,
-		PushPaymentLifetime:  rpc.PropPushPaymentLifetimeDefault,
-		MaxPushInvoices:      rpc.PropMaxPushInvoicesDefault,
+		PayScheme:               "free",
+		PushPayRateMAtoms:       rpc.PropPushPaymentRateDefault,
+		PushPayRateBytes:        rpc.PropPushPaymentRateBytesDefault,
+		PushPayRateMinMAtoms:    rpc.MinRMPushPayment, // Not currently exposed for config
+		MilliAtomsPerSub:        rpc.PropSubPaymentRateDefault,
+		PushPaymentLifetime:     rpc.PropPushPaymentLifetimeDefault,
+		MaxPushInvoices:         rpc.PropMaxPushInvoicesDefault,
+		MilliAtomsPerRTSess:     1000,
+		MilliAtomsPerUserRTSess: 1000,
+		MilliAtomsGetCookie:     1000,
+		MilliAtomsPerUserCookie: 100,
+		MilliAtomsRTJoin:        1000,
+		MilliAtomsRTPushRate:    100,
+		RTPushRateMBytes:        1,
 
 		// log
 		LogFile:    "~/.brserver/brserver.log",
@@ -257,6 +278,43 @@ func (s *Settings) Load(filename string) error {
 	get(&s.PGIndexTableSpace, "postgres", "indexts")
 	get(&s.PGBulkTableSpace, "postgres", "bulkts")
 
+	get(&s.RTDTServerAddr, "rtdt", "serveraddress")
+
+	var rtCookieKeyStr string
+	get(&rtCookieKeyStr, "rtdt", "cookiekey")
+	if rtCookieKeyStr != "" {
+		var cookieKey zkidentity.FixedSizeSymmetricKey
+		if err := cookieKey.FromString(rtCookieKeyStr); err != nil {
+			return err
+		}
+		s.RTDTCookieKey = &cookieKey
+	}
+
+	var rtDecodeCookieKeysStr string
+	get(&rtDecodeCookieKeysStr, "rtdt", "decodecookiekeys")
+	if rtDecodeCookieKeysStr != "" {
+		keys := strings.Split(rtDecodeCookieKeysStr, ",")
+		for _, key := range keys {
+			cookieKey := new(zkidentity.FixedSizeSymmetricKey)
+			key = strings.TrimSpace(key)
+			if err := cookieKey.FromString(key); err != nil {
+				return err
+			}
+			s.RTDTDecodeCookieKeys = append(s.RTDTDecodeCookieKeys, cookieKey)
+		}
+	}
+
+	var rtdtServerPubFilename string
+	get(&rtdtServerPubFilename, "rtdt", "serverpub")
+	if rtdtServerPubFilename != "" {
+		data, err := os.ReadFile(rtdtServerPubFilename)
+		if err != nil {
+			return err
+		}
+		s.RTDTServerPub = new(zkidentity.FixedSizeSntrupPublicKey)
+		copy(s.RTDTServerPub[:], data)
+	}
+
 	expirationDays := rpc.PropExpirationDaysDefault
 	err = iniInt(cfg, &expirationDays, "policy", "expirationdays")
 	if err != nil && !errors.Is(err, errIniNotFound) {
@@ -298,6 +356,35 @@ func (s *Settings) Load(filename string) error {
 		if err != nil {
 			return fmt.Errorf("invalid combination of push pay rates and max msg size: %v", err)
 		}
+	}
+
+	err = iniUint64(cfg, &s.MilliAtomsPerRTSess, "policy", "rtmatomspersess")
+	if err != nil && !errors.Is(err, errIniNotFound) {
+		return err
+	}
+	err = iniUint64(cfg, &s.MilliAtomsPerUserRTSess, "policy", "rtmatomsperusersess")
+	if err != nil && !errors.Is(err, errIniNotFound) {
+		return err
+	}
+	err = iniUint64(cfg, &s.MilliAtomsGetCookie, "policy", "rtmatomsgetcookie")
+	if err != nil && !errors.Is(err, errIniNotFound) {
+		return err
+	}
+	err = iniUint64(cfg, &s.MilliAtomsPerUserCookie, "policy", "rtmatomsperusercookie")
+	if err != nil && !errors.Is(err, errIniNotFound) {
+		return err
+	}
+	err = iniUint64(cfg, &s.MilliAtomsRTJoin, "policy", "rtmatomsjoinsess")
+	if err != nil && !errors.Is(err, errIniNotFound) {
+		return err
+	}
+	err = iniUint64(cfg, &s.MilliAtomsRTPushRate, "policy", "rtmatomspushrate")
+	if err != nil && !errors.Is(err, errIniNotFound) {
+		return err
+	}
+	err = iniUint64(cfg, &s.RTPushRateMBytes, "policy", "rtpushratembytes")
+	if err != nil && !errors.Is(err, errIniNotFound) {
+		return err
 	}
 
 	return nil
@@ -357,6 +444,7 @@ func iniUint64(cfg ini.File, p *uint64, section, key string) error {
 	}
 	return err
 }
+
 func iniDuration(cfg ini.File, p *time.Duration, section, key string) error {
 	v, ok := cfg.Get(section, key)
 	if !ok {

@@ -85,6 +85,34 @@ func (z *ZKS) initPayments() error {
 	}
 }
 
+// checkLNInvoiceOutstanding returns an error if the invoice if the given ln
+// invoice is still outstanding or nil if the invoice is expired/cancelled.
+func (z *ZKS) checkLNInvoiceOutstanding(ctx context.Context, hash []byte) error {
+	lookupReq := &lnrpc.PaymentHash{
+		RHash: hash,
+	}
+	var lookupRes *lnrpc.Invoice
+	lookupRes, err := z.lnRpc.LookupInvoice(ctx, lookupReq)
+	if err != nil && strings.HasSuffix(err.Error(), "unable to locate invoice") {
+		// Invoice expired.
+		err = nil
+	} else if err == nil && lookupRes != nil {
+		unsettledInvoice := (lookupRes.State != lnrpc.Invoice_CANCELED) &&
+			(lookupRes.State != lnrpc.Invoice_SETTLED)
+		if unsettledInvoice {
+			expireTS := time.Unix(lookupRes.CreationDate+lookupRes.Expiry, 0)
+			minExpiryTS := time.Now().Add(rpc.InvoiceExpiryAffordance)
+			if expireTS.After(minExpiryTS) {
+				err = fmt.Errorf("already have outstanding "+
+					"ln payment request that expires only "+
+					"in %s", expireTS.Sub(minExpiryTS))
+			}
+		}
+	}
+
+	return err
+}
+
 func (z *ZKS) generateNextLNInvoice(ctx context.Context, sc *sessionContext, action rpc.GetInvoiceAction) (string, string, error) {
 
 	// Configurable timeout limit?
@@ -115,32 +143,31 @@ func (z *ZKS) generateNextLNInvoice(ctx context.Context, sc *sessionContext, act
 		}
 	case rpc.InvoiceActionSub:
 		if sc.lnPayReqHashSub != nil {
-			// Double check this invoice was not cancelled or expired.
-			lookupReq := &lnrpc.PaymentHash{
-				RHash: sc.lnPayReqHashSub,
+			err := z.checkLNInvoiceOutstanding(ctx, sc.lnPayReqHashSub)
+			if err != nil {
+				return "", "", err
 			}
-			var lookupRes *lnrpc.Invoice
-			lookupRes, err := z.lnRpc.LookupInvoice(ctx, lookupReq)
-			if err != nil && strings.HasSuffix(err.Error(), "unable to locate invoice") {
-				// Invoice expired.
-				err = nil
-			} else if lookupRes != nil {
-				unsettledInvoice := (lookupRes.State != lnrpc.Invoice_CANCELED) &&
-					(lookupRes.State != lnrpc.Invoice_SETTLED)
-				if unsettledInvoice {
-					expireTS := time.Unix(lookupRes.CreationDate+lookupRes.Expiry, 0)
-					minExpiryTS := time.Now().Add(rpc.InvoiceExpiryAffordance)
-					if expireTS.After(minExpiryTS) {
-						err = fmt.Errorf("already have outstanding "+
-							"ln payment request that expires only "+
-							"in %s", expireTS.Sub(minExpiryTS))
-					}
-				}
-			}
+		}
 
-			// There was already an outstanding payment for this
-			// session. Returning an error here ensures only a
-			// single invoice can be requested at a time.
+	case rpc.InvoiceActionCreateRTSess:
+		if sc.lnCreateRTSessHash != nil {
+			err := z.checkLNInvoiceOutstanding(ctx, sc.lnCreateRTSessHash)
+			if err != nil {
+				return "", "", err
+			}
+		}
+
+	case rpc.InvoiceActionGetRTCookie:
+		if sc.lnGetRTCookieHash != nil {
+			err := z.checkLNInvoiceOutstanding(ctx, sc.lnGetRTCookieHash)
+			if err != nil {
+				return "", "", err
+			}
+		}
+
+	case rpc.InvoiceActionPublishInRTSess:
+		if sc.lnPublishInRTSessHash != nil {
+			err := z.checkLNInvoiceOutstanding(ctx, sc.lnPublishInRTSessHash)
 			if err != nil {
 				return "", "", err
 			}
@@ -170,6 +197,12 @@ func (z *ZKS) generateNextLNInvoice(ctx context.Context, sc *sessionContext, act
 		sc.lnPushHashes[hash] = expireTS
 	case rpc.InvoiceActionSub:
 		sc.lnPayReqHashSub = addInvoiceRes.RHash
+	case rpc.InvoiceActionCreateRTSess:
+		sc.lnCreateRTSessHash = addInvoiceRes.RHash
+	case rpc.InvoiceActionGetRTCookie:
+		sc.lnGetRTCookieHash = addInvoiceRes.RHash
+	case rpc.InvoiceActionPublishInRTSess:
+		sc.lnPublishInRTSessHash = addInvoiceRes.RHash
 	}
 
 	z.stats.invoicesSent.Add(1)

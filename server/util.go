@@ -1,8 +1,10 @@
 package server
 
 import (
+	"crypto/rand"
 	"crypto/sha256"
 	"crypto/tls"
+	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -63,4 +65,10 @@ func fingerprintDER(c tls.Certificate) string {
 	d.Write(c.Certificate[0])
 	digest := d.Sum(nil)
 	return hex.EncodeToString(digest)
+}
+
+func randomUint64() uint64 {
+	var b [8]byte
+	rand.Read(b[:])
+	return binary.BigEndian.Uint64(b[:])
 }
