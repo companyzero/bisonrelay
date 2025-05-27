@@ -562,14 +562,21 @@ class _AppearanceSettingsScreenState extends State<AppearanceSettingsScreen> {
             onTap: () => _showSelectTextSizeDialog(context, theme),
             leading: const Icon(Icons.text_increase),
             title: const Text("Message font size")),
-        kDebugMode
-            ? ListTile(
-                title: const Text("Widget Test Screen"),
-                onTap: () {
-                  Navigator.of(context, rootNavigator: true)
-                      .pushNamed(ThemeTestScreen.routeName);
-                })
-            : const Empty(),
+        if (kDebugMode) ...[
+          ListTile(
+              title: const Text("Widget Test Screen"),
+              onTap: () {
+                Navigator.of(context, rootNavigator: true)
+                    .pushNamed(ThemeTestScreen.routeName);
+              }),
+          ListTile(
+              title: const Text("Unset Unkx Members Notice Flag"),
+              onTap: () async {
+                await StorageManager.saveBool(
+                    StorageManager.notifiedGCUnkxdMembers, false);
+                if (context.mounted) showSuccessSnackbar(context, "Done");
+              })
+        ]
       ],
     );
   }
