@@ -1,91 +1,102 @@
-//go:build cgo && !noaudio
-
 package audio
 
 import (
-	"github.com/decred/slog"
-
-	"github.com/gen2brain/malgo"
+	"errors"
+	"strings"
 )
 
-func listMalgoDevices(typ malgo.DeviceType, malgoCtx *malgo.AllocatedContext, log slog.Logger) ([]Device, error) {
-	devices, err := malgoCtx.Devices(typ)
-	if err != nil {
-		return nil, err
-	}
+// DeviceID is a generic id for playback and capture devices.
+type DeviceID string
 
-	res := make([]Device, 0, len(devices))
-	for _, dev := range devices {
-		full, err := malgoCtx.DeviceInfo(typ, dev.ID, malgo.Shared)
-		if err != nil {
-			log.Warnf("Unable to get audio device info: %v", err)
-			continue
-		}
+const DefaultDeviceID DeviceID = ""
 
-		res = append(res, Device{
-			ID:        string(append([]byte(nil), full.ID[:]...)),
-			Name:      full.Name(),
-			IsDefault: full.IsDefault == 1,
-		})
-	}
-
-	return res, nil
+func (id DeviceID) String() string {
+	return strings.TrimRight(string(id), "\u0000 \t\n\r")
 }
 
-// ListAudioDevices lists available audio devices.
-func ListAudioDevices(log slog.Logger) (Devices, error) {
-	malgoCtx, err := malgo.InitContext(nil, malgo.ContextConfig{}, nil)
-	if err != nil {
-		return Devices{}, err
-	}
-	defer func() {
-		_ = malgoCtx.Uninit()
-		malgoCtx.Free()
-	}()
+// DeviceType type.
+//
+// Note: This MUST match malgo.DeviceType definition.
+type DeviceType uint32
 
-	// Devices.
-	playbackDevs, err := listMalgoDevices(malgo.Playback, malgoCtx, log)
-	if err != nil {
-		return Devices{}, err
-	}
-	captureDevs, err := listMalgoDevices(malgo.Capture, malgoCtx, log)
-	if err != nil {
-		return Devices{}, err
-	}
+// rawFormatSampleSize is how many bytes per sample on the raw audio interface.
+//
+// Fixed to 2 bytes per sample (16 bits per sample) and assumes the samples are
+// ints (int16 samples).
+const rawFormatSampleSize = 2
 
-	return Devices{
-		Playback: playbackDevs,
-		Capture:  captureDevs,
-	}, nil
+// DeviceType enumeration.
+//
+// Note: This MUST match malgo's device type enumeration.
+const (
+	Playback DeviceType = iota + 1
+	Capture
+	Duplex
+	Loopback
+)
+
+// Device identifies capture/playback device.
+type Device struct {
+	ID        DeviceID `json:"id"`
+	Name      string   `json:"name"`
+	IsDefault bool     `json:"is_default"`
 }
 
-// FindDevice finds the device with the given ID or returns nil.
-func FindDevice(typ DeviceType, id string) *Device {
-	malgoCtx, err := malgo.InitContext(nil, malgo.ContextConfig{}, nil)
-	if err != nil {
-		return nil
-	}
-	defer func() {
-		_ = malgoCtx.Uninit()
-		malgoCtx.Free()
-	}()
+// Devices is the list of devices in the computer.
+type Devices struct {
+	Playback []Device `json:"playback"`
+	Capture  []Device `json:"capture"`
+}
 
-	malgoDt := malgo.Capture
-	if typ == DeviceTypePlayback {
-		malgoDt = malgo.Playback
-	}
-	devices, err := listMalgoDevices(malgoDt, malgoCtx, slog.Disabled)
-	if err != nil {
-		return nil
-	}
+// RecordInfo tracks information about a recording session.
+type RecordInfo struct {
+	SampleCount int `json:"sample_count"`
+	DurationMs  int `json:"duration_ms"`
+	EncodedSize int `json:"encoded_size"`
+	PacketCount int `json:"packet_count"`
+}
 
-	for i := range devices {
-		if devices[i].ID == id {
-			out := new(Device)
-			*out = devices[i]
-			return out
-		}
-	}
+// dataProc matches malgo.DataProc.
+type dataProc func(pOutputSample, pInputSamples []byte, framecount uint32)
 
-	return nil
+// streamEncoder is the interface of voice encoders (i.e. gopus).
+type streamEncoder interface {
+	Encode(pcm []int16, frameSize int, out []byte) ([]byte, error)
+	SetBitrate(rate int)
+}
+
+// streamDecoder is the interface of voice decoders (i.e. gopus).
+type streamDecoder interface {
+	Decode(data []byte, frameSize int, fec bool, out []int16) ([]int16, error)
+}
+
+// audioContext is an abstraction over malgo or simulation audio capture and
+// playback subsystem.
+type audioContext interface {
+	initPlayback(deviceID DeviceID, cb dataProc) (playbackDevice, error)
+	initCapture(deviceID DeviceID, cb dataProc) (captureDevice, error)
+	free() error
+	name() string
+
+	newEncoder(sampleRate, channels int) (streamEncoder, error)
+	newDecoder(sampleRate, channels int) (streamDecoder, error)
+}
+
+// playbackDevice lists the calls needed for a playback device (malgo or sim).
+type playbackDevice interface {
+	Start() error
+	Uninit()
+}
+
+// playbackDevice lists the calls needed for a capture device (malgo or sim).
+type captureDevice interface {
+	Start() error
+	Stop() error
+	Uninit()
+}
+
+// newAudioContext is set by an initer in either malgoaudio.go or noaudio.go
+// depending on the build config.
+var newAudioContext = func() (audioContext, error) {
+	return nil, errors.New("no audio context initer set")
 }
