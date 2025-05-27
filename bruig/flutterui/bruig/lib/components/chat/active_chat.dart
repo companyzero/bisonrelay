@@ -27,7 +27,8 @@ class ActiveChat extends StatefulWidget {
   final RealtimeChatModel rtc;
   final AudioModel audio;
   final CustomInputFocusNode inputFocusNode;
-  const ActiveChat(this.client, this.rtc, this.audio, this.inputFocusNode, {super.key});
+  const ActiveChat(this.client, this.rtc, this.audio, this.inputFocusNode,
+      {super.key});
 
   @override
   State<ActiveChat> createState() => _ActiveChatState();
@@ -86,7 +87,8 @@ class _ActiveChatState extends State<ActiveChat> with RouteAware {
             context: context,
             builder: (context) => Container(
                 padding: const EdgeInsets.all(20),
-                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                child: SingleChildScrollView(
+                    child: Column(mainAxisSize: MainAxisSize.min, children: [
                   const Text(
                       "Note: This GC contains un-kx'd members - other people whom this "
                       "client has not exchanged keys with. These people won't receive any "
@@ -109,7 +111,7 @@ class _ActiveChatState extends State<ActiveChat> with RouteAware {
                     },
                     child: const Text("Ok"),
                   )
-                ])));
+                ]))));
         return;
       }
 
