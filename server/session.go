@@ -42,9 +42,12 @@ type sessionContext struct {
 
 	// protected
 	sync.Mutex
-	tagMessage      []*RPCWrapper
-	lnPayReqHashSub []byte
-	lnPushHashes    map[[32]byte]time.Time
+	tagMessage            []*RPCWrapper
+	lnPayReqHashSub       []byte
+	lnPushHashes          map[[32]byte]time.Time
+	lnCreateRTSessHash    []byte
+	lnGetRTCookieHash     []byte
+	lnPublishInRTSessHash []byte
 }
 
 func (z *ZKS) sessionWriter(ctx context.Context, sc *sessionContext) error {
@@ -419,6 +422,45 @@ func (z *ZKS) sessionReader(ctx context.Context, sc *sessionContext) error {
 			if err != nil {
 				return fmt.Errorf("handleGetInvoice %q: %v",
 					r.Action, err)
+			}
+
+		case rpc.TaggedCmdCreateRTDTSession:
+			var r rpc.CreateRTDTSession
+			err = z.unmarshal(dec, &r)
+			if err != nil {
+				return fmt.Errorf("unmarshal CreateRTDTSession failed")
+			}
+
+			err = z.handleCreateRTDTSession(ctx, sc, message, r)
+			if err != nil {
+				return fmt.Errorf("handleCreateRTDTSession: %v",
+					err)
+			}
+
+		case rpc.TaggedCmdGetRTDTAppointCookie:
+			var r rpc.GetRTDTAppointCookies
+			err = z.unmarshal(dec, &r)
+			if err != nil {
+				return fmt.Errorf("unmarshal CreateRTDTSession failed")
+			}
+
+			err = z.handleGetRTDTAppointCookie(ctx, sc, message, r)
+			if err != nil {
+				return fmt.Errorf("handleCreateRTDTSession: %v",
+					err)
+			}
+
+		case rpc.TaggedCmdAppointRTDTServer:
+			var r rpc.AppointRTDTServer
+			err = z.unmarshal(dec, &r)
+			if err != nil {
+				return fmt.Errorf("unmarshal AppointRTDTServer failed")
+			}
+
+			err = z.handleAppointRTDTServer(ctx, sc, message, r)
+			if err != nil {
+				return fmt.Errorf("handleAppointRTDTServer: %v",
+					err)
 			}
 
 		default:

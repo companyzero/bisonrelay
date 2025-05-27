@@ -79,6 +79,12 @@ type ZKS struct {
 	lnRpc      lnrpc.LightningClient
 	lnInvoices invoicesrpc.InvoicesClient
 	lnNode     string
+
+	// RTDT.
+	rtServerAddr       string
+	rtServerPubKey     *zkidentity.FixedSizeSntrupPublicKey
+	rtCookieKey        *zkidentity.FixedSizeSymmetricKey
+	rtDecodeCookieKeys []*zkidentity.FixedSizeSymmetricKey
 }
 
 // BoundAddrs returns the addresses the server is bound to listen to.
@@ -124,6 +130,7 @@ func (z *ZKS) writeMessage(kx *session.KX, msg *RPCWrapper) error {
 func (z *ZKS) welcome(kx *session.KX) error {
 	var err error
 	properties := rpc.SupportedServerProperties()
+	fuint := func(i uint64) string { return strconv.FormatUint(i, 10) }
 	for k, v := range properties {
 		switch v.Key {
 		case rpc.PropTagDepth:
@@ -147,11 +154,25 @@ func (z *ZKS) welcome(kx *session.KX) error {
 		case rpc.PropMaxPushInvoices:
 			properties[k].Value = strconv.FormatInt(int64(z.settings.MaxPushInvoices), 10)
 		case rpc.PropMaxMsgSizeVersion:
-			properties[k].Value = strconv.FormatUint(uint64(z.settings.MaxMsgSizeVersion), 10)
+			properties[k].Value = fuint(uint64(z.settings.MaxMsgSizeVersion))
 		case rpc.PropPingLimit:
 			properties[k].Value = strconv.FormatInt(int64(z.settings.PingLimit/time.Second), 10)
 		case rpc.PropSuggestClientVersions:
 			properties[k].Value = z.settings.ClientVersions
+		case rpc.PropRTMAtomsPerSess:
+			properties[k].Value = fuint(z.settings.MilliAtomsPerRTSess)
+		case rpc.PropRTMAtomsPerUserSess:
+			properties[k].Value = fuint(z.settings.MilliAtomsPerUserRTSess)
+		case rpc.PropRTMAtomsGetCookie:
+			properties[k].Value = fuint(z.settings.MilliAtomsGetCookie)
+		case rpc.PropRTMAtomsPerUserGetCookie:
+			properties[k].Value = fuint(z.settings.MilliAtomsPerUserCookie)
+		case rpc.PropRTMAtomsJoin:
+			properties[k].Value = fuint(z.settings.MilliAtomsRTJoin)
+		case rpc.PropRTMAtomsPushRate:
+			properties[k].Value = fuint(z.settings.MilliAtomsRTPushRate)
+		case rpc.PropRTPushRateMBytes:
+			properties[k].Value = fuint(z.settings.RTPushRateMBytes)
 		}
 	}
 
@@ -460,6 +481,11 @@ func NewServer(cfg *settings.Settings) (*ZKS, error) {
 		pingLimit:   cfg.PingLimit,
 		dbCtx:       dbCtx,
 		dbCtxCancel: dbCtxCancel,
+
+		rtServerAddr:       cfg.RTDTServerAddr,
+		rtCookieKey:        cfg.RTDTCookieKey,
+		rtDecodeCookieKeys: cfg.RTDTDecodeCookieKeys,
+		rtServerPubKey:     cfg.RTDTServerPub,
 	}
 
 	// Init db.
