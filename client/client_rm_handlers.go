@@ -289,6 +289,30 @@ func (c *Client) innerHandleUserRM(ru *RemoteUser, h *rpc.RMHeader,
 	case rpc.RMFetchResourceReply:
 		return c.handleFetchResourceReply(ru, p)
 
+	case rpc.RMRTDTSessionInvite:
+		return c.handleRMRTDTSessionInvite(ru, p)
+
+	case rpc.RMRTDTSessionInviteAccept:
+		return c.handleRMRTDTAcceptInvite(ru, p)
+
+	case rpc.RMRTDTSession:
+		return c.handleRTDTSessionUpdate(ru, p)
+
+	case rpc.RMRTDTExitSession:
+		return c.handleRMRTDTExitSession(ru, p)
+
+	case rpc.RMRTDTDissolveSession:
+		return c.handleRMRTDTDissolveSession(ru, p)
+
+	case rpc.RMRTDTRemovedFromSession:
+		return c.handleRMRTDTRemovedFromSession(ru, p)
+
+	case rpc.RMRTDTRotateAppointCookie:
+		return c.handleRMRTDTRotateAppointCookie(ru, p)
+
+	case rpc.RMRTDTAdminCookies:
+		return c.handleRMRTDTAdminCookies(ru, p)
+
 	default:
 		return fmt.Errorf("Received unknown command %q payload %T",
 			h.Command, p)

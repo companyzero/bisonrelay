@@ -43,6 +43,12 @@ func payloadForCmd(cmd string) (interface{}, error) {
 		p = new(rpc.PushRoutedMessage)
 	case rpc.TaggedCmdGetInvoiceReply:
 		p = new(rpc.GetInvoiceReply)
+	case rpc.TaggedCmdCreateRTDTSessionReply:
+		p = new(rpc.CreateRTDTSessionReply)
+	case rpc.TaggedCmdGetRTDTAppointCookieReply:
+		p = new(rpc.GetRTDTAppointCookiesReply)
+	case rpc.TaggedCmdAppointRTDTServerReply:
+		p = new(rpc.AppointRTDTServerReply)
 	default:
 		return nil, errUnknownRPCCommand
 	}

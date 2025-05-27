@@ -154,6 +154,10 @@ type GroupChat struct {
 	// Alias is a local alias for the GC. This may be empty, in which
 	// case the Metadata.Name field is used.
 	Alias string `json:"alias"`
+
+	// RTDTSessionRV when non-empty is the RTDT session RV associated to
+	// this GC.
+	RTDTSessionRV *zkidentity.ShortID `json:"rtdt_session_rv"`
 }
 
 // DeepCopy makes a deep copy of this GC so that the copy can be modified.
@@ -777,6 +781,113 @@ type ReceiveReceipt struct {
 type EarlyPostStatus struct {
 	PID    PostID          `json:"pid"`
 	Status rpc.RMPostShare `json:"status"`
+}
+
+// RTDTSessionMember tracks the members of the RTDT session.
+type RTDTSessionMember struct {
+	UID               UserID         `json:"uid"`
+	PeerID            rpc.RTDTPeerID `json:"peer_id"`
+	Tag               uint64         `json:"tag"`
+	SentTimestamp     int64          `json:"sent_timestamp"`
+	Publisher         bool           `json:"publisher"`
+	AcceptedTimestamp *int64         `json:"accepted_timestamp"`
+	AppointCookie     []byte         `json:"appoint_cookie"`
+}
+
+// RTDTSession tracks data about a long-term RTDT session.
+type RTDTSession struct {
+	Metadata rpc.RMRTDTSession `json:"metadata"`
+
+	// SessionCookie is set when we created/admin the session.
+	SessionCookie []byte `json:"session_cookie"`
+
+	// OwnerSecret is set when we created/admin the session.
+	OwnerSecret *zkidentity.ShortID `json:"owner_secret"`
+
+	// AppointCookie is used to request new join cookies from brserver.
+	AppointCookie []byte `json:"appoint_cookie"`
+
+	// PublisherKey is set when participating as a publisher.
+	PublisherKey *zkidentity.FixedSizeSymmetricKey `json:"publisher_key"`
+
+	// LocalPeerID is the ID of the local client within the rtdt server for
+	// this session.
+	LocalPeerID rpc.RTDTPeerID `json:"local_peer_id"`
+
+	// NextPeerID is the ID to attribute to the next peer invited to the
+	// session. Only set for the owner/admin.
+	NextPeerID rpc.RTDTPeerID `json:"next_peer_id"`
+
+	// Members is the list of members of the session.
+	Members []RTDTSessionMember `json:"members"`
+
+	// GC when non-empty is the id of the GC associated with this RTDT
+	// session.
+	GC *zkidentity.ShortID `json:"gc"`
+}
+
+// MemberUIDs returns the user IDs of all members, _except_ for one user.
+func (sess *RTDTSession) MemberUIDs(exclude UserID) []UserID {
+	res := make([]UserID, 0, len(sess.Members))
+	for i := range sess.Members {
+		m := sess.Members[i]
+		if m.UID == exclude {
+			continue
+		}
+		res = append(res, m.UID)
+	}
+	return res
+}
+
+// IsPeerPublisher returns true if the given id corresponds to a publisher.
+func (sess *RTDTSession) IsPeerPublisher(id rpc.RTDTPeerID) bool {
+	for i := range sess.Metadata.Publishers {
+		if sess.Metadata.Publishers[i].PeerID == id {
+			return true
+		}
+	}
+	return false
+}
+
+// LocalIsAdmin returns true if the local client is an admin of this session.
+func (sess *RTDTSession) LocalIsAdmin() bool {
+	return len(sess.SessionCookie) > 0
+}
+
+// MemberIndices returns the index of an uid inside the members and publishers
+// lists.
+func (sess *RTDTSession) MemberIndices(uid *UserID) (memberIndex int, publisherIndex int) {
+	memberIndex = slices.IndexFunc(sess.Members, func(m RTDTSessionMember) bool {
+		return m.UID == *uid
+	})
+	publisherIndex = slices.IndexFunc(sess.Metadata.Publishers, func(p rpc.RMRTDTSessionPublisher) bool {
+		return p.PublisherID == *uid
+	})
+	return
+}
+
+// MembersMap returns a map from peer id to index in sess.Members.
+func (sess *RTDTSession) MembersMap() map[rpc.RTDTPeerID]*RTDTSessionMember {
+	res := make(map[rpc.RTDTPeerID]*RTDTSessionMember, len(sess.Members))
+	for i := range sess.Members {
+		res[sess.Members[i].PeerID] = &sess.Members[i]
+	}
+	return res
+}
+
+// RMMembersList converts the list of session members into a list of
+// RMRTDTAdminMember.
+func (sess *RTDTSession) RMMembersList() []rpc.RMRTDTAdminMember {
+	res := make([]rpc.RMRTDTAdminMember, len(sess.Members))
+	for i, member := range sess.Members {
+		res[i] = rpc.RMRTDTAdminMember{
+			UID:                member.UID,
+			PeerID:             member.PeerID,
+			AppointCookie:      member.AppointCookie,
+			AllowedAsPublisher: member.Publisher,
+		}
+	}
+	return res
 }
 
 var (

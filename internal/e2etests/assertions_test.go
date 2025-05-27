@@ -1,6 +1,7 @@
 package e2etests
 
 import (
+	"context"
 	"encoding/hex"
 	"fmt"
 	"io"
@@ -14,6 +15,7 @@ import (
 	"github.com/companyzero/bisonrelay/client/clientintf"
 	"github.com/companyzero/bisonrelay/internal/assert"
 	"github.com/companyzero/bisonrelay/rpc"
+	rtdtclient "github.com/companyzero/bisonrelay/rtdt/client"
 	"github.com/companyzero/bisonrelay/zkidentity"
 )
 
@@ -167,6 +169,7 @@ func assertClientJoinsGC(t testing.TB, gcID zkidentity.ShortID, admin, invitee *
 // assertClientsCanGCM asserts that the clients can send GC messages to each
 // other inside a GC.
 func assertClientsCanGCM(t testing.TB, gcID zkidentity.ShortID, clients ...*testClient) {
+	t.Helper()
 	regs := make([]client.NotificationRegistration, len(clients))
 	chans := make([]chan string, len(clients))
 
@@ -563,6 +566,98 @@ func assertPostSubscription(t testing.TB, c, target *testClient, assertIsSubscri
 	}
 }
 
+// assertJoinsRTDTSession asserts a client asks a target client to join an RTDT
+// session and they accept.
+func assertJoinsRTDTSession(t testing.TB, c, target *testClient, sessRV zkidentity.ShortID) {
+	t.Helper()
+	inviteChan := make(chan *rpc.RMRTDTSessionInvite, 2)
+	invitedHandler := target.handle(client.OnInvitedToRTDTSession(func(ru *client.RemoteUser, invite *rpc.RMRTDTSessionInvite) {
+		inviteChan <- invite
+	}))
+
+	updateChan := make(chan *client.RTDTSessionUpdateNtfn, 5)
+	updateHandler := target.handle(client.OnRTDTSesssionUpdated(func(ru *client.RemoteUser, update *client.RTDTSessionUpdateNtfn) {
+		updateChan <- update
+	}))
+
+	// C invites Target to session.
+	err := c.InviteToRTDTSession(sessRV, true, target.PublicID())
+	if err != nil {
+		t.Fatalf("Inviting to RTDT session failed: %v", err)
+	}
+
+	// Target will receive and accept the invitation.
+	gotInvite := assert.ChanWritten(t, inviteChan)
+	err = target.AcceptRTDTSessionInvite(c.PublicID(), gotInvite, true)
+	assert.NilErr(t, err)
+	_ = assert.ChanWritten(t, updateChan)
+
+	invitedHandler.Unregister()
+	updateHandler.Unregister()
+}
+
+// assertJoinsLiveRTDTSession asserts the client can join the specified live
+// session.
+func assertJoinsLiveRTDTSession(t testing.TB, c *testClient, sessRV zkidentity.ShortID) *rtdtclient.Session {
+	t.Helper()
+	joinedChan := make(chan struct{}, 5)
+	handler := c.handle(client.OnRTDTLiveSessionJoined(func(joinedSessRV zkidentity.ShortID) {
+		if joinedSessRV == sessRV {
+			joinedChan <- struct{}{}
+		}
+	}))
+
+	assert.NilErr(t, c.JoinLiveRTDTSession(sessRV))
+	assert.ChanWritten(t, joinedChan)
+	rtSess := c.GetLiveRTSession(&sessRV).RTSess
+	handler.Unregister()
+	return rtSess
+}
+
+// assertSendsRandomRTDTData asserts that src sends and the targets receive
+// random data in an RTDT session.
+func assertSendsRandomRTDTData(t testing.TB, src *rtdtclient.Session, dests ...chan []byte) {
+	t.Helper()
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	data := randomData(100)
+	err := src.SendRandomData(ctx, data, 1000)
+	assert.NilErr(t, err)
+
+	for _, dst := range dests {
+		gotData := assert.ChanWritten(t, dst)
+		assert.DeepEqual(t, gotData, data)
+	}
+}
+
+// assertKicksFromLiveRTDTSession asserts src can kick target from a live RTDT
+// session.
+func assertKicksFromLiveRTDTSession(t testing.TB, src *testClient,
+	target *testClient, sessRV *zkidentity.ShortID, banDuration time.Duration) {
+	t.Helper()
+
+	kickedChan := make(chan struct{}, 5)
+	handler := target.handle(client.OnRTDTKickedFromLiveSession(func(kickedSessRV zkidentity.ShortID,
+		peerID rpc.RTDTPeerID, kickedBanDuration time.Duration) {
+		if *sessRV == kickedSessRV && kickedBanDuration == banDuration {
+			kickedChan <- struct{}{}
+		}
+	}))
+
+	// Src kicks target.
+	targetSess := target.GetLiveRTSession(sessRV)
+	if targetSess == nil {
+		t.Fatalf("Target does not have live session")
+	}
+	targetPeerID := targetSess.RTSess.LocalID()
+	assert.NilErr(t, src.KickFromLiveRTDTSession(sessRV, targetPeerID, banDuration))
+
+	// Target gets notification.
+	assert.ChanWritten(t, kickedChan)
+	handler.Unregister()
+}
+
 func testRand(t testing.TB) *rand.Rand {
 	seed := time.Now().UnixNano()
 	rnd := rand.New(rand.NewSource(seed))
@@ -582,6 +677,12 @@ func randomHex(rnd io.Reader, len int) string {
 		panic(err)
 	}
 	return hex.EncodeToString(b)
+}
+
+func randomData(size int) []byte {
+	data := make([]byte, size)
+	rand.Read(data)
+	return data
 }
 
 func publicIDIsLess(c1, c2 *testClient) bool {

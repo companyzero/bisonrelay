@@ -1,6 +1,9 @@
 package testutils
 
-import "github.com/companyzero/bisonrelay/client/clientintf"
+import (
+	"github.com/companyzero/bisonrelay/client/clientintf"
+	"github.com/companyzero/bisonrelay/zkidentity"
+)
 
 // UnsafeTestInterface is an interface used for exposing internal methods to
 // integration tests.
@@ -13,4 +16,9 @@ type UnsafeTestInterface struct {
 
 	// QueueUserRM queues a custom RM to a remote user.
 	QueueUserRM func(uid clientintf.UserID, msg interface{}) error
+
+	// RotateRTDTAppointmentCookies performs the RTDT appointment cookie
+	// rotation but skips some of the members.
+	RotateRTDTAppointmentCookies func(sessRV *zkidentity.ShortID,
+		skipMembers ...zkidentity.ShortID) error
 }

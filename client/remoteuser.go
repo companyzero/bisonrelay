@@ -137,6 +137,10 @@ func (ru *RemoteUser) ID() UserID {
 	return ru.id
 }
 
+func (ru *RemoteUser) SignatureKey() *zkidentity.FixedSizeEd25519PublicKey {
+	return &ru.sigKey
+}
+
 func (ru *RemoteUser) verifyMessage(msg []byte, sig *zkidentity.FixedSizeSignature) bool {
 	return zkidentity.VerifyMessage(msg, sig, &ru.sigKey)
 }

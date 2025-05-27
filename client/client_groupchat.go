@@ -254,6 +254,26 @@ func (c *Client) InviteToGroupChat(gcID zkidentity.ShortID, user UserID) error {
 			return fmt.Errorf("not permitted to send send invite: %v", err)
 		}
 
+		// If there's an RTDT session associated with this GC, ensure
+		// there's still room in the session for new members.
+		if gc.RTDTSessionRV != nil {
+			sess, err := c.db.GetRTDTSession(tx, gc.RTDTSessionRV)
+			if err != nil {
+				return err
+			}
+			if !sess.LocalIsAdmin() {
+				return fmt.Errorf("local client is not an admin "+
+					"of associated RTDT session %s", gc.RTDTSessionRV)
+			}
+			if uint32(len(sess.Members)) >= sess.Metadata.Size {
+				return ErrRTDTSessionFull{
+					sessRV:  *gc.RTDTSessionRV,
+					members: len(sess.Members),
+					size:    int(sess.Metadata.Size),
+				}
+			}
+		}
+
 		invite.Name = gc.Metadata.Name
 		invite.Version = gc.Metadata.Version
 
@@ -816,10 +836,12 @@ func (c *Client) handleGCJoin(ru *RemoteUser, invite rpc.RMGroupJoin) error {
 			c.db.LogGCMsg(tx, gc.Name(), gc.Metadata.ID, true, "",
 				fmt.Sprintf("Local client added %s as member of the GC",
 					strescape.Nick(ru.Nick())), time.Now())
+
 		} else {
 			c.log.Infof("User %s rejected invitation to %q: %q",
 				ru, gc.Metadata.ID.String(), invite.Error)
 		}
+
 		return nil
 	})
 
@@ -838,6 +860,15 @@ func (c *Client) handleGCJoin(ru *RemoteUser, invite rpc.RMGroupJoin) error {
 	}
 
 	c.ntfns.notifyGCInviteAccepted(ru, gc.Metadata)
+
+	// If the GC has an associated RTDT session, invite the user to the
+	// session.
+	if gc.RTDTSessionRV != nil {
+		err := c.inviteToRTDTSession(*gc.RTDTSessionRV, true, ru.id)
+		if err != nil {
+			return fmt.Errorf("unable to invite to associated RTDT session: %v", err)
+		}
+	}
 	return nil
 }
 
@@ -1293,7 +1324,7 @@ func (c *Client) ListGCs() ([]clientdb.GroupChat, error) {
 // Returns the old members of the gc and the new gc list.
 func (c *Client) removeFromGC(gcID zkidentity.ShortID, uid UserID,
 	localUserMustBeAdmin bool) ([]zkidentity.ShortID,
-	rpc.RMGroupList, error) {
+	clientdb.GroupChat, error) {
 
 	var gc clientdb.GroupChat
 	var oldMembers []zkidentity.ShortID
@@ -1347,10 +1378,10 @@ func (c *Client) removeFromGC(gcID zkidentity.ShortID, uid UserID,
 		return nil
 	})
 	if err != nil {
-		return nil, rpc.RMGroupList{}, err
+		return nil, clientdb.GroupChat{}, err
 	}
 
-	return oldMembers, gc.Metadata, nil
+	return oldMembers, gc, nil
 }
 
 // logGCEvent logs the given GC event. Must not be called from inside a DB
@@ -1374,6 +1405,21 @@ func (c *Client) logGCEvent(gcID zkidentity.ShortID, ts time.Time, msg string, a
 // GCKick kicks the given user from the GC. This only works if we're the gc
 // admin.
 func (c *Client) GCKick(gcID zkidentity.ShortID, uid UserID, reason string) error {
+	// Sanity check if this GC has an associated RTDT session, can only kick
+	// if the local client is in the live session as well (to ensure
+	// user is kicked from live session).
+	gc, err := c.getGC(gcID)
+	if err != nil {
+		return err
+	}
+	if gc.RTDTSessionRV != nil {
+		isLive, _ := c.IsLiveAndHotRTSession(gc.RTDTSessionRV)
+		if !isLive {
+			return errors.New("cannot kick from GC with associated " +
+				"live RTDT session when disconnected from live session")
+		}
+	}
+
 	oldMembers, gc, err := c.removeFromGC(gcID, uid, true)
 	if err != nil {
 		return err
@@ -1383,7 +1429,7 @@ func (c *Client) GCKick(gcID zkidentity.ShortID, uid UserID, reason string) erro
 		Member:       uid,
 		Reason:       reason,
 		Parted:       false,
-		NewGroupList: gc,
+		NewGroupList: gc.Metadata,
 	}
 
 	nick := c.UserLogNick(uid)
@@ -1396,7 +1442,26 @@ func (c *Client) GCKick(gcID zkidentity.ShortID, uid UserID, reason string) erro
 
 	// Saved updated GC members list. Send kick event to list of old
 	// members (which includes the kickee).
-	return c.sendToGCMembers(gcID, oldMembers, "kick", rmgk, nil)
+	if err := c.sendToGCMembers(gcID, oldMembers, "kick", rmgk, nil); err != nil {
+		return err
+	}
+
+	// If the GC has an associated RTDT session, kick from there as well.
+	if gc.RTDTSessionRV != nil {
+		err := c.RemoveRTDTMember(gc.RTDTSessionRV, &uid, reason)
+		if err != nil {
+			return fmt.Errorf("unable to remove kicked GC member "+
+				"from associated RTDT session: %v", err)
+		}
+
+		err = c.RotateRTDTAppointmentCookies(gc.RTDTSessionRV)
+		if err != nil {
+			return fmt.Errorf("unable to rotate cookies from "+
+				"associated RTDT session: %v", err)
+		}
+	}
+
+	return nil
 }
 
 func (c *Client) handleGCKick(ru *RemoteUser, rmgk rpc.RMGroupKick, ts time.Time) error {
@@ -1459,7 +1524,19 @@ func (c *Client) PartFromGC(gcID zkidentity.ShortID, reason string) error {
 		ID:     gcID,
 		Reason: reason,
 	}
-	return c.sendToGCMembers(gcID, gc.Metadata.Members, "part", rmgp, nil)
+	if err := c.sendToGCMembers(gcID, gc.Metadata.Members, "part", rmgp, nil); err != nil {
+		return err
+	}
+
+	// Exit from realtime session as well.
+	if gc.RTDTSessionRV != nil {
+		err := c.ExitRTDTSession(gc.RTDTSessionRV)
+		if err != nil {
+			return fmt.Errorf("unable to leave associated RTDT esssion: %v", err)
+		}
+	}
+
+	return nil
 }
 
 func (c *Client) handleGCPart(ru *RemoteUser, rmgp rpc.RMGroupPart, ts time.Time) error {
@@ -1484,10 +1561,11 @@ func (c *Client) handleGCPart(ru *RemoteUser, rmgp rpc.RMGroupPart, ts time.Time
 // KillGroupChat completely dissolves the group chat.
 func (c *Client) KillGroupChat(gcID zkidentity.ShortID, reason string) error {
 	var oldMembers []zkidentity.ShortID
+	var gc clientdb.GroupChat
 	err := c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
 		// Ensure gc exists and we're the admin.
 		var err error
-		gc, err := c.db.GetGC(tx, gcID)
+		gc, err = c.db.GetGC(tx, gcID)
 		if err != nil {
 			return err
 		}
@@ -1521,7 +1599,18 @@ func (c *Client) KillGroupChat(gcID zkidentity.ShortID, reason string) error {
 
 	// Saved updated GC members list. Send kick event to list of old members (which
 	// includes the kickee).
-	return c.sendToGCMembers(gcID, oldMembers, "kill", rmgk, nil)
+	if err := c.sendToGCMembers(gcID, oldMembers, "kill", rmgk, nil); err != nil {
+		return err
+	}
+
+	if gc.RTDTSessionRV != nil {
+		err := c.DissolveRTDTSession(gc.RTDTSessionRV)
+		if err != nil {
+			return fmt.Errorf("unable to dissolve associated RTDT session: %v", err)
+		}
+	}
+
+	return nil
 }
 
 func (c *Client) handleGCKill(ru *RemoteUser, rmgk rpc.RMGroupKill, ts time.Time) error {
@@ -1803,7 +1892,18 @@ func (c *Client) ModifyGCAdmins(gcid zkidentity.ShortID, extraAdmins []zkidentit
 		Reason:       reason,
 		NewGroupList: newGC.Metadata,
 	}
-	return c.sendToGCMembers(gcid, newGC.Metadata.Members, "modifyAdmins", rm, nil)
+	err = c.sendToGCMembers(gcid, newGC.Metadata.Members, "modifyAdmins", rm, nil)
+	if err != nil {
+		return err
+	}
+
+	// If there's an associated RTDT session, ensure the same admins of the
+	// GC can admin the session.
+	if newGC.RTDTSessionRV != nil {
+		return c.ModifyRTDTSessionAdmins(*newGC.RTDTSessionRV, extraAdmins)
+	}
+
+	return nil
 }
 
 // ModifyGCOwner changes the owner of a GC. The old owner still remains as

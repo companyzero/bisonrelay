@@ -14,6 +14,9 @@ var (
 	errUserBlocked       = fmt.Errorf("user is blocked")
 	errRMTooLarge        = errors.New("RM is too large")
 
+	errNotAdmin   = errors.New("user is not an admin")
+	errNotAMember = errors.New("user is not a member")
+
 	errTimeoutWaitingPrepaidInvite = errors.New("timeout waiting for prepaid invite")
 
 	// ErrGCInvitationExpired is generated in situations where the
@@ -21,6 +24,10 @@ var (
 	ErrGCInvitationExpired = errors.New("invitation to GC expired")
 
 	ErrAlreadyHaveBundledResource = errors.New("already have bundled resource")
+
+	// ErrGCAlreadyHasRTDTSession is generated when a GC already has an
+	// associated RTDT session.
+	ErrGCAlreadyHasRTDTSession = errors.New("GC already has associated RTDT session")
 )
 
 type userNotFoundError struct {
@@ -113,4 +120,45 @@ func (err errHasOngoingKX) As(target interface{}) bool {
 	}
 	other.otherRV = err.otherRV
 	return true
+}
+
+// ErrRTDTSessionFull is an error returned when the session has too many members
+// compared to its size.
+type ErrRTDTSessionFull struct {
+	sessRV  zkidentity.ShortID
+	members int
+	size    int
+}
+
+func (err ErrRTDTSessionFull) Error() string {
+	return fmt.Sprintf("RTDT session %s has too many members (%d) compared "+
+		"to its size (%d)", err.sessRV, err.members, err.size)
+}
+
+func (err ErrRTDTSessionFull) Is(target error) bool {
+	switch target.(type) {
+	case ErrRTDTSessionFull, *ErrRTDTSessionFull:
+		return true
+	}
+	return false
+}
+
+// ErrRTDTInviteeNotGCMember is an error generated when trying to invite a
+// non-GC member to an RTDT session.
+type ErrRTDTInviteeNotGCMember struct {
+	GC      zkidentity.ShortID
+	Invitee clientintf.UserID
+}
+
+func (err ErrRTDTInviteeNotGCMember) Error() string {
+	return fmt.Sprintf("RTDT invitee %s is not a member of associated GC %s",
+		err.Invitee, err.GC)
+}
+
+func (err ErrRTDTInviteeNotGCMember) Is(target error) bool {
+	switch target.(type) {
+	case ErrRTDTInviteeNotGCMember, *ErrRTDTInviteeNotGCMember:
+		return true
+	}
+	return false
 }
