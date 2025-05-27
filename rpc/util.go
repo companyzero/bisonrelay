@@ -7,6 +7,7 @@ import (
 	"regexp"
 
 	"github.com/decred/dcrd/chaincfg/chainhash"
+	"golang.org/x/exp/constraints"
 )
 
 type TxHash chainhash.Hash
@@ -69,4 +70,18 @@ func SplitSuggestedClientVersions(s string) []SuggestedClientVersion {
 	}
 
 	return res
+}
+
+// setBoolFlag sets (or clears) the bit at position bit.
+func setBoolFlag[T constraints.Unsigned](current T, bit int, isSet bool) T {
+	if isSet {
+		return current | (1 << bit)
+	} else {
+		return current &^ (1 << bit)
+	}
+}
+
+// isBoolFlagSet returns true if the given bit is set.
+func isBoolFlagSet[T constraints.Unsigned](v T, bit int) bool {
+	return v&(1<<bit) != 0
 }
