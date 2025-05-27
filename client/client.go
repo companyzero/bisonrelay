@@ -20,9 +20,11 @@ import (
 	"github.com/companyzero/bisonrelay/client/internal/singlesetmap"
 	"github.com/companyzero/bisonrelay/client/resources"
 	"github.com/companyzero/bisonrelay/client/timestats"
+	"github.com/companyzero/bisonrelay/internal/audio"
 	"github.com/companyzero/bisonrelay/internal/strescape"
 	"github.com/companyzero/bisonrelay/rates"
 	"github.com/companyzero/bisonrelay/rpc"
+	rtdtclient "github.com/companyzero/bisonrelay/rtdt/client"
 	"github.com/companyzero/bisonrelay/zkidentity"
 	"github.com/decred/slog"
 	"golang.org/x/sync/errgroup"
@@ -219,6 +221,15 @@ type Config struct {
 
 	// UseOnion specifies if the rate collection uses Tor hidden services.
 	UseOnion bool
+
+	// RTDTRandomStreamHandler is the handler for random data received from
+	// RTDT sessions.
+	RTDTRandomStreamHandler rtdtclient.StreamHandler
+
+	// TrackRTDTChatMessages makes the client store received messages in the
+	// live session structure, while an RTDT session is live. This may
+	// be set to true when user code does not track chat messages itself.
+	TrackRTDTChatMessages bool
 }
 
 // logger creates a logger for the given subsystem in the configured backend.
@@ -416,6 +427,17 @@ type Client struct {
 	filtersMtx     sync.Mutex
 	filters        []clientdb.ContentFilter
 	filtersRegexps map[uint64]*regexp.Regexp
+
+	// RTDT related fields.
+	noterec        *audio.NoteRecorder
+	rtmgr          *lowlevel.RTDTSessionManager
+	rtc            *rtdtclient.Client
+	rtMtx          sync.Mutex
+	rtLiveSessions map[zkidentity.ShortID]*liveRTDTSession
+	rtHotAudio     *liveRTDTSession
+	rtReHotAudio   *liveRTDTSession // Set when sending errored and attempting to re-connect.
+	rtCapStream    *audio.CaptureStream
+	rtCloseCapChan chan interface{}
 }
 
 // New creates a new CR client with the given config.
@@ -471,6 +493,11 @@ func New(cfg Config) (*Client, error) {
 	}
 	ck := lowlevel.NewConnKeeper(ckCfg)
 
+	noterec, err := audio.NewRecorder(cfg.Logger("AREC"))
+	if err != nil {
+		return nil, err
+	}
+
 	rmqdb := &rmqDBAdapter{}
 	q := lowlevel.NewRMQ(cfg.logger("RMQU"), rmqdb)
 	ctx, cancel := context.WithCancel(context.Background())
@@ -523,7 +550,45 @@ func New(cfg Config) (*Client, error) {
 		tipAttemptsRunning:         make(chan struct{}),
 
 		rates: r,
+
+		noterec:        noterec,
+		rtLiveSessions: make(map[zkidentity.ShortID]*liveRTDTSession),
 	}
+
+	c.rtc, err = rtdtclient.New(
+		rtdtclient.WithLogger(cfg.logger("RTDT")),
+		rtdtclient.WithConnContext(c.ctx),
+		rtdtclient.WithIgnoreUnkeyedPeers(true),
+		rtdtclient.WithNewPeerCallback(c.newRTDTPeer),
+		rtdtclient.WithRandomStreamHandler(cfg.RTDTRandomStreamHandler),
+		rtdtclient.WithAudioStreamHandler(c.rtdtAudioStreamHandler),
+		rtdtclient.WithChatStreamHandler(c.rtdtHandleChatMsgReceived),
+		rtdtclient.WithPingRTTCalculated(ntfns.notifyRTDTRTTCalculated),
+		rtdtclient.WithPingOnConnect(),
+		rtdtclient.WithBytesWrittenCallback(func(sess *rtdtclient.Session, n int) {
+			c.rtmgr.BytesWritten(sess, n)
+		}),
+		rtdtclient.WithSessionPeerListUpdated(func(sess *rtdtclient.Session) {
+			// Launch a separate goroutine to avoid stalling the
+			// RTDT read loop.
+			go func() {
+				err := c.rtdtSessionMembersListUpdated(sess)
+				if err != nil {
+					c.log.Warnf("Unable to process RTDT members list update: %v", err)
+				}
+			}()
+		}),
+		rtdtclient.WithKickedCallback(func(sess *rtdtclient.Session, banDuration time.Duration) {
+			// Launch a separate goroutine to avoid stalling the
+			// RTDT read loop.
+			go c.rtdtKickedFromSession(sess, banDuration)
+		}),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	c.rtmgr = lowlevel.NewRTDTSessionManager(c.rtc, &rtdtMgrHandlersAdapter{Client: c}, cfg.logger("RTMG"))
 
 	kxl := newKXList(q, rmgr, &c.localID, c.Public, cfg.DB, ctx)
 	kxl.compressLevel = cfg.CompressLevel
@@ -548,6 +613,11 @@ func New(cfg Config) (*Client, error) {
 // Rates returns the rates.
 func (c *Client) Rates() *rates.Rates {
 	return c.rates
+}
+
+// NoteRecorder returns the note/audio recorder associated with this client.
+func (c *Client) NoteRecorder() *audio.NoteRecorder {
+	return c.noterec
 }
 
 // Log returns the main client logger.
@@ -593,7 +663,7 @@ func (c *Client) loadLocalID(ctx context.Context) error {
 	return nil
 }
 
-func (c *Client) loadServerCert(ctx context.Context) error {
+func (c *Client) loadServerCert(_ context.Context) error {
 	return c.dbView(func(tx clientdb.ReadTx) error {
 		tlsCert, spid, err := c.db.ServerID(tx)
 		if err != nil && !errors.Is(err, clientdb.ErrServerIDEmpty) {
@@ -820,6 +890,11 @@ func (c *Client) Public() zkidentity.PublicIdentity {
 	c.profileMtx.Unlock()
 
 	return public
+}
+
+// SignaturePrivateKey returns the private key used to sign for messages.
+func (c *Client) SignaturePrivateKey() zkidentity.FixedSizeEd25519PrivateKey {
+	return c.localID.privSigKey
 }
 
 // LocalNick is the nick of this client. This is only available after the Run()
@@ -1302,6 +1377,13 @@ func (c *Client) Run(ctx context.Context) error {
 		}
 		return err
 	})
+	g.Go(func() error {
+		err := c.rtmgr.Run(gctx)
+		if err != nil && !errors.Is(err, context.Canceled) {
+			c.log.Errorf("Error running RTDT sessions manager: %v", err)
+		}
+		return err
+	})
 
 	// Bind session changes to the other services.
 	firstConnChan := make(chan struct{})
@@ -1352,6 +1434,7 @@ func (c *Client) Run(ctx context.Context) error {
 
 			c.rmgr.BindToSession(nextSess)
 			c.q.BindToSession(nextSess)
+			c.rtmgr.BindToSession(nextSess)
 			connected := nextSess != nil
 			c.ntfns.notifyServerSessionChanged(connected, policy)
 			if canceled(gctx) {
@@ -1463,6 +1546,9 @@ func (c *Client) Run(ctx context.Context) error {
 
 	// Restart tracking tip receiving.
 	g.Go(func() error { return c.restartTrackGeneratedTipInvoices(gctx) })
+
+	// Track RTDT peers that have stalled.
+	g.Go(func() error { return c.detectStalledRTDTPeers(gctx) })
 
 	return g.Wait()
 }

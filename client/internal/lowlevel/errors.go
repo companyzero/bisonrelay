@@ -11,6 +11,9 @@ import (
 var (
 	errRMQExiting     = fmt.Errorf("rmq: %w", clientintf.ErrSubsysExiting)
 	errRdvzMgrExiting = fmt.Errorf("rendezvous manager: %w", clientintf.ErrSubsysExiting)
+	errRtdtMgrExiting = fmt.Errorf("RTDT manager: %v", clientintf.ErrSubsysExiting)
+
+	ErrNoRtdtSessToRotateCookie = errors.New("no RTDT session to rotate cookie")
 
 	errNoPeerTLSCert = errors.New("server did not send any TLS certs")
 

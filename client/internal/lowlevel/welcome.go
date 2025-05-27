@@ -195,6 +195,14 @@ func (ck *ConnKeeper) attemptWelcome(conn clientintf.Conn, kx msgReaderWriter) (
 
 		PushPayRateMinMAtoms: rpc.PropPushPaymentRateMinMAtomsDefault,
 		PushPayRateBytes:     rpc.PropPushPaymentRateBytesDefault,
+
+		MilliAtomsPerRTSess:     1000,
+		MilliAtomsPerUserRTSess: 1000,
+		MilliAtomsGetCookie:     1000,
+		MilliAtomsPerUserCookie: 100,
+		MilliAtomsRTJoin:        1000,
+		MilliAtomsRTPushRate:    100,
+		RTPushRateMBytes:        1,
 	}
 	var (
 		tagDepth   int64  = -1
@@ -202,6 +210,10 @@ func (ck *ConnKeeper) attemptWelcome(conn clientintf.Conn, kx msgReaderWriter) (
 		payScheme  string = ""
 		lnNode     string = ""
 	)
+
+	puint := func(s string) (uint64, error) {
+		return strconv.ParseUint(s, 10, 64)
+	}
 
 	for _, v := range wmsg.Properties {
 		switch v.Key {
@@ -295,6 +307,48 @@ func (ck *ConnKeeper) attemptWelcome(conn clientintf.Conn, kx msgReaderWriter) (
 		case rpc.PropSuggestClientVersions:
 			policy.ClientVersions = rpc.SplitSuggestedClientVersions(v.Value)
 
+		case rpc.PropRTMAtomsPerSess:
+			policy.MilliAtomsPerRTSess, err = puint(v.Value)
+			if err != nil {
+				return nil, fmt.Errorf("invalid RTMAtomsPerSess: %v", err)
+			}
+
+		case rpc.PropRTMAtomsPerUserSess:
+			policy.MilliAtomsPerUserRTSess, err = puint(v.Value)
+			if err != nil {
+				return nil, fmt.Errorf("invalid RTMAtomsPerUserSess: %v", err)
+			}
+
+		case rpc.PropRTMAtomsGetCookie:
+			policy.MilliAtomsGetCookie, err = puint(v.Value)
+			if err != nil {
+				return nil, fmt.Errorf("invalid RTMAtomsGetCookie: %v", err)
+			}
+
+		case rpc.PropRTMAtomsPerUserGetCookie:
+			policy.MilliAtomsPerUserCookie, err = puint(v.Value)
+			if err != nil {
+				return nil, fmt.Errorf("invalid RTMAtomsPerUserGetCookie: %v", err)
+			}
+
+		case rpc.PropRTMAtomsJoin:
+			policy.MilliAtomsRTJoin, err = puint(v.Value)
+			if err != nil {
+				return nil, fmt.Errorf("invalid RTMAtomsJoin: %v", err)
+			}
+
+		case rpc.PropRTMAtomsPushRate:
+			policy.MilliAtomsRTPushRate, err = puint(v.Value)
+			if err != nil {
+				return nil, fmt.Errorf("invalid RTMAtomsPubPerUserMB: %v", err)
+			}
+
+		case rpc.PropRTPushRateMBytes:
+			policy.RTPushRateMBytes, err = puint(v.Value)
+			if err != nil {
+				return nil, fmt.Errorf("invalid RTMAtomsPubPerUserMB: %v", err)
+			}
+
 		default:
 			if v.Required {
 				err := makeUnwelcomeError(fmt.Sprintf("unhandled server property: %v", v.Key))
@@ -344,6 +398,38 @@ func (ck *ConnKeeper) attemptWelcome(conn clientintf.Conn, kx msgReaderWriter) (
 	}
 	if policy.MaxPushInvoices < 1 {
 		return nil, fmt.Errorf("max push invoices %d < 1", policy.MaxPushInvoices)
+	}
+
+	// Realtime rates enforcement.
+	const (
+		maxRTPushRate       = 1000_000_000 // 0.01 DCR / MB
+		maxRTJoinRate       = 1000_000_000 // 0.01 DCR
+		maxRTGetCookieRate  = 1000_000_000 // 0.01 DCR
+		maxRTNewSessionRate = 1000_000_000 // 0.01 DCR
+	)
+	if policy.MilliAtomsRTPushRate > maxRTPushRate {
+		return nil, fmt.Errorf("realtime payment rate higher then maximum. got %d "+
+			"want %d", policy.MilliAtomsRTPushRate, maxRTPushRate)
+	}
+	if policy.MilliAtomsRTJoin > maxRTJoinRate {
+		return nil, fmt.Errorf("realtime join rate higher then maximum. got %d "+
+			"want %d", policy.MilliAtomsRTJoin, maxRTJoinRate)
+	}
+	if policy.MilliAtomsGetCookie > maxRTGetCookieRate {
+		return nil, fmt.Errorf("realtime get cookie rate higher then maximum. got %d "+
+			"want %d", policy.MilliAtomsGetCookie, maxRTGetCookieRate)
+	}
+	if policy.MilliAtomsPerUserCookie > maxRTGetCookieRate {
+		return nil, fmt.Errorf("realtime per user get cookie rate higher then maximum. got %d "+
+			"want %d", policy.MilliAtomsPerUserCookie, maxRTGetCookieRate)
+	}
+	if policy.MilliAtomsPerRTSess > maxRTNewSessionRate {
+		return nil, fmt.Errorf("realtime new session rate higher then maximum. got %d "+
+			"want %d", policy.MilliAtomsPerRTSess, maxRTNewSessionRate)
+	}
+	if policy.MilliAtomsPerUserRTSess > maxRTNewSessionRate {
+		return nil, fmt.Errorf("realtime per user rate higher then maximum. got %d "+
+			"want %d", policy.MilliAtomsPerUserRTSess, maxRTNewSessionRate)
 	}
 
 	// server time

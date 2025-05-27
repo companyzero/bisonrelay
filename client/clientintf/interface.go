@@ -92,6 +92,14 @@ type ServerPolicy struct {
 	// suggested for use when connecting to this server. This can be used
 	// by the client to determine if it should be updated.
 	ClientVersions []rpc.SuggestedClientVersion `json:"client_versions"`
+
+	MilliAtomsPerRTSess     uint64
+	MilliAtomsPerUserRTSess uint64
+	MilliAtomsGetCookie     uint64
+	MilliAtomsPerUserCookie uint64
+	MilliAtomsRTJoin        uint64
+	MilliAtomsRTPushRate    uint64
+	RTPushRateMBytes        uint64
 }
 
 // CalcPushCostMAtoms calculates the cost to push a message with the given size.
@@ -114,6 +122,13 @@ func (sp *ServerPolicy) PushDcrPerGB() float64 {
 // MaxPayloadSize returns the max payload size for the server policy.
 func (sp *ServerPolicy) MaxPayloadSize() int {
 	return int(rpc.MaxPayloadSizeForVersion(sp.MaxMsgSizeVersion))
+}
+
+// CalcRTPushMAtoms calculates how much to pay to push the given number of bytes
+// in a session of the given size using the current server policy.
+func (sp *ServerPolicy) CalcRTPushMAtoms(sessSize, pushMB uint32) (int64, error) {
+	return rpc.CalcRTDTSessPushMAtoms(sp.MilliAtomsRTJoin, sp.MilliAtomsRTPushRate,
+		sp.RTPushRateMBytes, pushMB, sessSize)
 }
 
 // ServerSessionIntf is the interface available from serverSession to

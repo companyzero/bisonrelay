@@ -4,11 +4,13 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/binary"
+	"math"
 	"sort"
 	"time"
 
 	"github.com/companyzero/bisonrelay/client/clientdb"
 	"github.com/companyzero/bisonrelay/client/internal/lowlevel"
+	"github.com/companyzero/bisonrelay/rpc"
 )
 
 // canceled returns true if the given context is done.
@@ -25,6 +27,26 @@ func zeroSlice(b []byte) {
 	for i := range b {
 		b[i] = 0
 	}
+}
+
+// mustRandomUintRTDTPeerID generates a random peer id as a starting point for
+// a session with the given size. Tries to leave enough room for the peer id
+// not to wrap.
+func (c *Client) mustRandomUintRTDTPeerID(sessSize uint16) rpc.RTDTPeerID {
+	var v uint32
+	var b [4]byte
+	sessSizeDbl := uint32(sessSize) * 2
+	for v == 0 { // Skip index 0
+		if n, err := rand.Read(b[:]); n < 4 || err != nil {
+			panic("out of entropy")
+		}
+		v = binary.LittleEndian.Uint32(b[:])
+		if v >= (math.MaxUint32 - sessSizeDbl) {
+			v = 0 // Skip when id would overflow for size.
+		}
+	}
+
+	return rpc.RTDTPeerID(v)
 }
 
 func (c *Client) mustRandomUint64() uint64 {

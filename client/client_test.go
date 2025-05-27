@@ -5,6 +5,8 @@ import (
 	"errors"
 	"testing"
 	"time"
+
+	"github.com/decred/slog"
 )
 
 // TestCanceledRunTerminates ensures running with a canceled context correctly
@@ -19,6 +21,7 @@ func TestCanceledRunTerminates(t *testing.T) {
 		Dialer:        nil,
 		DB:            testDB(t, id, nil),
 		LocalIDIniter: fixedIDIniter(id),
+		Logger:        func(string) slog.Logger { return slog.Disabled },
 	}
 	c, err := New(cfg)
 	if err != nil {

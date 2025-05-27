@@ -29,6 +29,10 @@ func (c *Client) addToSendQ(typ string, rmOrFileChunk interface{}, priority uint
 	var fileChunk *clientdb.SendQueueFileChunk
 	var estSize int
 
+	// Filter out the local user ID from targets, just in case.
+	myID := c.PublicID()
+	dests = slices.DeleteFunc(dests, func(id clientintf.UserID) bool { return id == myID })
+
 	// Determine the type of sendq item.
 	if fc, ok := rmOrFileChunk.(*clientdb.SendQueueFileChunk); ok {
 		fileChunk = fc

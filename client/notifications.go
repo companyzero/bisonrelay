@@ -2,6 +2,7 @@ package client
 
 import (
 	"fmt"
+	"net"
 	"regexp"
 	"strings"
 	"sync"
@@ -487,6 +488,156 @@ const onUINtfnType = "uintfn"
 type OnUINotification func(ntfn UINotification)
 
 func (_ OnUINotification) typ() string { return onUINtfnType }
+
+const onInvitedToRTDTSessionNtfnType = "invitedRTDTSess"
+
+// OnInvitedToRTDTSession is a notification sent when the local client is
+// invited to an RTDT session.
+type OnInvitedToRTDTSession func(ru *RemoteUser, sess *rpc.RMRTDTSessionInvite)
+
+func (_ OnInvitedToRTDTSession) typ() string { return onInvitedToRTDTSessionNtfnType }
+
+const onRTDTSessionInviteAcceptedNtfnType = "rtdtSessionInviteAccepted"
+
+// OnRTDTSessionInviteAccepted is a notification sent when a remote client has
+// accepted our invitation to join an RTDT session.
+type OnRTDTSessionInviteAccepted func(ru *RemoteUser, sessID zkidentity.ShortID, acceptedAsPublisher bool)
+
+func (_ OnRTDTSessionInviteAccepted) typ() string { return onRTDTSessionInviteAcceptedNtfnType }
+
+// RTDTSessionUpdateNtfn is the data of one update to an RTDT session.
+type RTDTSessionUpdateNtfn struct {
+	SessionRV         zkidentity.ShortID            `json:"session_rv"`
+	NewPublishers     []*rpc.RMRTDTSessionPublisher `json:"new_publishers"`
+	NewMetadata       *rpc.RMRTDTSession            `json:"new_metadata"`
+	InitialJoin       bool                          `json:"initial_join"`
+	RemovedPublishers []*rpc.RMRTDTSessionPublisher `json:"removed_publishers"`
+}
+
+const onRTDTSesssionUpdatedNtfnType = "rtdtSessionUpdated"
+
+// OnRTDTSesssionUpdated is a notification sent when the owner or admin of an
+// RTDT session updated its metadata.
+type OnRTDTSesssionUpdated func(ru *RemoteUser, update *RTDTSessionUpdateNtfn)
+
+func (OnRTDTSesssionUpdated) typ() string { return onRTDTSesssionUpdatedNtfnType }
+
+const onRTDTLiveSessionJoinedNtfnType = "rtdtlivesessjoined"
+
+// OnRTDTLiveSessionJoined is a notification sent when the local client joins a
+// live RTDT session.
+type OnRTDTLiveSessionJoined func(sessRV zkidentity.ShortID)
+
+func (OnRTDTLiveSessionJoined) typ() string { return onRTDTLiveSessionJoinedNtfnType }
+
+const onRTDTRefreshedSessionAllowance = "rtdtrefreshsessallowance"
+
+// OnRTDTRefreshedSessionAllowance is a notification sent when the local client
+// has refreshed its allowance to publish data in a live RTDT session.
+type OnRTDTRefreshedSessionAllowance func(sessRV zkidentity.ShortID, addAllowance uint64)
+
+func (OnRTDTRefreshedSessionAllowance) typ() string { return onRTDTRefreshedSessionAllowance }
+
+const onRTDTLivePeerJoinedNtfnType = "rtdtlivepeerjoined"
+
+// OnRTDTLivePeerJoined is a notification sent when a remote peer has joined a
+// live RTDT session.
+type OnRTDTLivePeerJoined func(sessRV zkidentity.ShortID, peerID rpc.RTDTPeerID)
+
+func (OnRTDTLivePeerJoined) typ() string { return onRTDTLivePeerJoinedNtfnType }
+
+const onRTDTLivePeerStalledNtfnType = "rtdtlivepeerstalled"
+
+// OnRTDTLivePeerStalled is a notification sent when a remote peer has stopped sending
+// live RTDT session data.
+type OnRTDTLivePeerStalled func(sessRV zkidentity.ShortID, peerID rpc.RTDTPeerID)
+
+func (OnRTDTLivePeerStalled) typ() string { return onRTDTLivePeerStalledNtfnType }
+
+const onRTDTLiveSendErroredNtfnType = "rtdtlivesenderrored"
+
+// OnRTDTLiveSessionSendErrored is called when sending data to a live RTDT session
+// errored. This moves hot audio status from the session.
+type OnRTDTLiveSessionSendErrored func(sessRV zkidentity.ShortID, err error)
+
+func (OnRTDTLiveSessionSendErrored) typ() string { return onRTDTLiveSendErroredNtfnType }
+
+const onRTDTRemadeLiveSessionHot = "rtdtremadehotsesss"
+
+// OnRTDTRemadeLiveSessionHotAudio is called when a session that had previously
+// errored was made hot again.
+//
+// This usually happens on transient network errors or when changing networks.
+type OnRTDTRemadeLiveSessionHotAudio func(sessRV zkidentity.ShortID)
+
+func (OnRTDTRemadeLiveSessionHotAudio) typ() string { return onRTDTRemadeLiveSessionHot }
+
+const onRTDTPeerSoundChangedNtfnType = "rtdtpeersoundchanged"
+
+// OnRTDTPeerSoundChanged is a notification sent when sound state changes
+// (starts/ends) for a given peer in a live RTDT session.
+type OnRTDTPeerSoundChanged func(sessRV zkidentity.ShortID, peerID rpc.RTDTPeerID, hasSoundStream, hasSound bool)
+
+func (OnRTDTPeerSoundChanged) typ() string { return onRTDTPeerSoundChangedNtfnType }
+
+const onRTDTPeerExitedSessionNtfnType = "rtdtpeerexitsess"
+
+// OnRTDTPeerExitedSession is a notification sent when the local client admins
+// a RTDT session and a remote peer asked to permanently exit it.
+type OnRTDTPeerExitedSession func(ru *RemoteUser, sessRV zkidentity.ShortID, peerID rpc.RTDTPeerID)
+
+func (OnRTDTPeerExitedSession) typ() string { return onRTDTPeerExitedSessionNtfnType }
+
+const onRTDTKickedFromLiveSessNtfnType = "rtdtkickedfromlive"
+
+// OnRTDTKickedFromLiveSession is called when the local client was kicked
+// from a live RTDT session.
+type OnRTDTKickedFromLiveSession func(sessRV zkidentity.ShortID, peerID rpc.RTDTPeerID, banDuration time.Duration)
+
+func (OnRTDTKickedFromLiveSession) typ() string { return onRTDTKickedFromLiveSessNtfnType }
+
+const onRTDTSessionDissolvedNtfnType = "rtdtsessiondissolved"
+
+// OnRTDTSessionDissolved is a notification sent when an RTDT session is dissolved.
+type OnRTDTSessionDissolved func(ru *RemoteUser, sessRV zkidentity.ShortID, peerID rpc.RTDTPeerID)
+
+func (_ OnRTDTSessionDissolved) typ() string { return onRTDTSessionDissolvedNtfnType }
+
+const onRTDTRemovedFromSessionNtfnType = "rtdtremovedfromsess"
+
+// OnRTDTRemovedFromSession is called when the local client was removed from
+// the list of members of an RTDT session.
+type OnRTDTRemovedFromSession func(ru *RemoteUser, sessRV zkidentity.ShortID, reason string)
+
+func (OnRTDTRemovedFromSession) typ() string { return onRTDTRemovedFromSessionNtfnType }
+
+const onRTDTRotatedCookieNtfnType = "rtdtrotcookie"
+
+type OnRTDTRotatedCookie func(ru *RemoteUser, sessRV zkidentity.ShortID)
+
+func (OnRTDTRotatedCookie) typ() string { return onRTDTRotatedCookieNtfnType }
+
+const onRTDTChatMsgRcvdNtfnType = "rtdtchatmsgreceived"
+
+// OnRTDTChatMessageReceived is called when the local client receives a chat
+// message in an RTDT session.
+type OnRTDTChatMessageReceived func(sessionRV zkidentity.ShortID, pub rpc.RMRTDTSessionPublisher, msg string, ts uint32)
+
+func (OnRTDTChatMessageReceived) typ() string { return onRTDTChatMsgRcvdNtfnType }
+
+const onRTDTAdminCookiesRcvdNtfnType = "rtdtadmincookiesrcv"
+
+// OnRTDTAdminCookiesReceived is called when the local client receives admin
+// cookies from another admin in an RTDT session.
+type OnRTDTAdminCookiesReceived func(ru *RemoteUser, sessionRV zkidentity.ShortID)
+
+func (OnRTDTAdminCookiesReceived) typ() string { return onRTDTAdminCookiesRcvdNtfnType }
+
+const onRTDTRTTCalculatedNtfnType = "rtdtrttcalc"
+
+type OnRTDTRTTCalculated func(addr net.UDPAddr, rtt time.Duration)
+
+func (OnRTDTRTTCalculated) typ() string { return onRTDTRTTCalculatedNtfnType }
 
 // The following is used only in tests.
 
@@ -1002,6 +1153,124 @@ func (nmgr *NotificationManager) notifyRequestingMediateID(mediator, target clie
 		visit(func(h OnRequestingMediateID) { h(mediator, target) })
 }
 
+func (nmgr *NotificationManager) notifyInvitedToRTDTSession(ru *RemoteUser, invite *rpc.RMRTDTSessionInvite) {
+	nmgr.handlers[onInvitedToRTDTSessionNtfnType].(*handlersFor[OnInvitedToRTDTSession]).
+		visit(func(h OnInvitedToRTDTSession) { h(ru, invite) })
+}
+
+func (nmgr *NotificationManager) notifyRTDTSessionInviteAccepted(ru *RemoteUser, sessID zkidentity.ShortID,
+	asPublisher bool) {
+	nmgr.handlers[onRTDTSessionInviteAcceptedNtfnType].(*handlersFor[OnRTDTSessionInviteAccepted]).
+		visit(func(h OnRTDTSessionInviteAccepted) { h(ru, sessID, asPublisher) })
+
+}
+
+func (nmgr *NotificationManager) buildRTDTSessionUpdateNtfn(oldMeta, newMeta *rpc.RMRTDTSession) RTDTSessionUpdateNtfn {
+	var res RTDTSessionUpdateNtfn
+	res.SessionRV = oldMeta.RV
+
+	// Find out new publishers.
+	oldPublishers := make(map[UserID]*rpc.RMRTDTSessionPublisher, len(oldMeta.Publishers))
+	for i := range oldMeta.Publishers {
+		oldPublishers[oldMeta.Publishers[i].PublisherID] = &oldMeta.Publishers[i]
+	}
+	for i := range newMeta.Publishers {
+		if _, ok := oldPublishers[newMeta.Publishers[i].PublisherID]; !ok {
+			res.NewPublishers = append(res.NewPublishers, &newMeta.Publishers[i])
+		}
+		delete(oldPublishers, newMeta.Publishers[i].PublisherID)
+	}
+	res.NewMetadata = newMeta
+
+	// Anything left in the map are old publishers that are not in new
+	// (i.e. removed).
+	for _, oldPub := range oldPublishers {
+		res.RemovedPublishers = append(res.RemovedPublishers, oldPub)
+	}
+
+	return res
+}
+
+func (nmgr *NotificationManager) notifyRTDTSessionUpdated(ru *RemoteUser, update *RTDTSessionUpdateNtfn) {
+	nmgr.handlers[onRTDTSesssionUpdatedNtfnType].(*handlersFor[OnRTDTSesssionUpdated]).
+		visit(func(h OnRTDTSesssionUpdated) { h(ru, update) })
+}
+
+func (nmgr *NotificationManager) notifyRTDTLiveSessionJoined(sessRV zkidentity.ShortID) {
+	nmgr.handlers[onRTDTLiveSessionJoinedNtfnType].(*handlersFor[OnRTDTLiveSessionJoined]).
+		visit(func(h OnRTDTLiveSessionJoined) { h(sessRV) })
+}
+
+func (nmgr *NotificationManager) notifyRTDTRefreshedSessionAllowance(sessRV zkidentity.ShortID, addAllowance uint64) {
+	nmgr.handlers[onRTDTRefreshedSessionAllowance].(*handlersFor[OnRTDTRefreshedSessionAllowance]).
+		visit(func(h OnRTDTRefreshedSessionAllowance) { h(sessRV, addAllowance) })
+}
+
+func (nmgr *NotificationManager) notifyRTDTLivePeerJoined(sessRV zkidentity.ShortID, peerID rpc.RTDTPeerID) {
+	nmgr.handlers[onRTDTLivePeerJoinedNtfnType].(*handlersFor[OnRTDTLivePeerJoined]).
+		visit(func(h OnRTDTLivePeerJoined) { h(sessRV, peerID) })
+}
+
+func (nmgr *NotificationManager) notifyRTDTLivePeerStalled(sessRV zkidentity.ShortID, peerID rpc.RTDTPeerID) {
+	nmgr.handlers[onRTDTLivePeerStalledNtfnType].(*handlersFor[OnRTDTLivePeerStalled]).
+		visit(func(h OnRTDTLivePeerStalled) { h(sessRV, peerID) })
+}
+
+func (nmgr *NotificationManager) notifyRTDTLiveSendErrored(sessRV zkidentity.ShortID, err error) {
+	nmgr.handlers[onRTDTLiveSendErroredNtfnType].(*handlersFor[OnRTDTLiveSessionSendErrored]).
+		visit(func(h OnRTDTLiveSessionSendErrored) { h(sessRV, err) })
+}
+
+func (nmgr *NotificationManager) notifyRTDTRemadeLiveSessionHot(sessRV zkidentity.ShortID) {
+	nmgr.handlers[onRTDTRemadeLiveSessionHot].(*handlersFor[OnRTDTRemadeLiveSessionHotAudio]).
+		visit(func(h OnRTDTRemadeLiveSessionHotAudio) { h(sessRV) })
+}
+
+func (nmgr *NotificationManager) notifyRTDTPeerSoundChanged(sessRV zkidentity.ShortID, peerID rpc.RTDTPeerID, hasSoundStream, hasSound bool) {
+	nmgr.handlers[onRTDTPeerSoundChangedNtfnType].(*handlersFor[OnRTDTPeerSoundChanged]).
+		visit(func(h OnRTDTPeerSoundChanged) { h(sessRV, peerID, hasSoundStream, hasSound) })
+}
+
+func (nmgr *NotificationManager) notifyRTDTPeerExitedSession(ru *RemoteUser, sessRV zkidentity.ShortID, peerID rpc.RTDTPeerID) {
+	nmgr.handlers[onRTDTPeerExitedSessionNtfnType].(*handlersFor[OnRTDTPeerExitedSession]).
+		visit(func(h OnRTDTPeerExitedSession) { h(ru, sessRV, peerID) })
+}
+
+func (nmgr *NotificationManager) notifyRTDTKickedFromLiveSession(sessRV zkidentity.ShortID, peerID rpc.RTDTPeerID, banDuration time.Duration) {
+	nmgr.handlers[onRTDTKickedFromLiveSessNtfnType].(*handlersFor[OnRTDTKickedFromLiveSession]).
+		visit(func(h OnRTDTKickedFromLiveSession) { h(sessRV, peerID, banDuration) })
+}
+
+func (nmgr *NotificationManager) notifyRTDTSessionDissolved(ru *RemoteUser, sessRV zkidentity.ShortID, peerID rpc.RTDTPeerID) {
+	nmgr.handlers[onRTDTSessionDissolvedNtfnType].(*handlersFor[OnRTDTSessionDissolved]).
+		visit(func(h OnRTDTSessionDissolved) { h(ru, sessRV, peerID) })
+}
+
+func (nmgr *NotificationManager) notifyRTDTRemovedFromSession(ru *RemoteUser, sessRV zkidentity.ShortID, reason string) {
+	nmgr.handlers[onRTDTRemovedFromSessionNtfnType].(*handlersFor[OnRTDTRemovedFromSession]).
+		visit(func(h OnRTDTRemovedFromSession) { h(ru, sessRV, reason) })
+}
+
+func (nmgr *NotificationManager) notifyRTDTRotatedCookie(ru *RemoteUser, sessRV zkidentity.ShortID) {
+	nmgr.handlers[onRTDTRotatedCookieNtfnType].(*handlersFor[OnRTDTRotatedCookie]).
+		visit(func(h OnRTDTRotatedCookie) { h(ru, sessRV) })
+}
+
+func (nmgr *NotificationManager) notifyRTDTChatMsgReceived(sessionRV zkidentity.ShortID, pub rpc.RMRTDTSessionPublisher, msg string, ts uint32) {
+	nmgr.handlers[onRTDTChatMsgRcvdNtfnType].(*handlersFor[OnRTDTChatMessageReceived]).
+		visit(func(h OnRTDTChatMessageReceived) { h(sessionRV, pub, msg, ts) })
+}
+
+func (nmgr *NotificationManager) notifyRTDTAdminCookiesReceived(ru *RemoteUser, sessionRV zkidentity.ShortID) {
+	nmgr.handlers[onRTDTAdminCookiesRcvdNtfnType].(*handlersFor[OnRTDTAdminCookiesReceived]).
+		visit(func(h OnRTDTAdminCookiesReceived) { h(ru, sessionRV) })
+}
+
+func (nmgr *NotificationManager) notifyRTDTRTTCalculated(addr net.UDPAddr, rtt time.Duration) {
+	nmgr.handlers[onRTDTRTTCalculatedNtfnType].(*handlersFor[OnRTDTRTTCalculated]).
+		visit(func(h OnRTDTRTTCalculated) { h(addr, rtt) })
+}
+
 func NewNotificationManager() *NotificationManager {
 	nmgr := &NotificationManager{
 		uiConfig: UINotificationsConfig{
@@ -1047,19 +1316,37 @@ func NewNotificationManager() *NotificationManager {
 			onServerUnwelcomeError:     &handlersFor[OnServerUnwelcomeError]{},
 			onRequestingMediateIDType:  &handlersFor[OnRequestingMediateID]{},
 
-			onKXSearchCompletedNtfnType:       &handlersFor[OnKXSearchCompleted]{},
-			onInvoiceGenFailedNtfnType:        &handlersFor[OnInvoiceGenFailedNtfn]{},
-			onRemoteSubscriptionChangedType:   &handlersFor[OnRemoteSubscriptionChangedNtfn]{},
-			onRemoteSubscriptionErrorNtfnType: &handlersFor[OnRemoteSubscriptionErrorNtfn]{},
-			onLocalClientOfflineTooLong:       &handlersFor[OnLocalClientOfflineTooLong]{},
-			onTipAttemptProgressNtfnType:      &handlersFor[OnTipAttemptProgressNtfn]{},
-			onTipUserInvoiceGeneratedNtfnType: &handlersFor[OnTipUserInvoiceGeneratedNtfn]{},
-			onServerSessionChangedNtfnType:    &handlersFor[OnServerSessionChangedNtfn]{},
-			onOnboardStateChangedNtfnType:     &handlersFor[OnOnboardStateChangedNtfn]{},
-			onResourceFetchedNtfnType:         &handlersFor[OnResourceFetchedNtfn]{},
-			onGCWithUnkxdMemberNtfnType:       &handlersFor[OnGCWithUnkxdMemberNtfn]{},
-			onMessageContentFilteredNtfType:   &handlersFor[OnMsgContentFilteredNtfn]{},
-			onUnsubscribingIdleRemoteClient:   &handlersFor[OnUnsubscribingIdleRemoteClient]{},
+			onKXSearchCompletedNtfnType:         &handlersFor[OnKXSearchCompleted]{},
+			onInvoiceGenFailedNtfnType:          &handlersFor[OnInvoiceGenFailedNtfn]{},
+			onRemoteSubscriptionChangedType:     &handlersFor[OnRemoteSubscriptionChangedNtfn]{},
+			onRemoteSubscriptionErrorNtfnType:   &handlersFor[OnRemoteSubscriptionErrorNtfn]{},
+			onLocalClientOfflineTooLong:         &handlersFor[OnLocalClientOfflineTooLong]{},
+			onTipAttemptProgressNtfnType:        &handlersFor[OnTipAttemptProgressNtfn]{},
+			onTipUserInvoiceGeneratedNtfnType:   &handlersFor[OnTipUserInvoiceGeneratedNtfn]{},
+			onServerSessionChangedNtfnType:      &handlersFor[OnServerSessionChangedNtfn]{},
+			onOnboardStateChangedNtfnType:       &handlersFor[OnOnboardStateChangedNtfn]{},
+			onResourceFetchedNtfnType:           &handlersFor[OnResourceFetchedNtfn]{},
+			onGCWithUnkxdMemberNtfnType:         &handlersFor[OnGCWithUnkxdMemberNtfn]{},
+			onMessageContentFilteredNtfType:     &handlersFor[OnMsgContentFilteredNtfn]{},
+			onUnsubscribingIdleRemoteClient:     &handlersFor[OnUnsubscribingIdleRemoteClient]{},
+			onInvitedToRTDTSessionNtfnType:      &handlersFor[OnInvitedToRTDTSession]{},
+			onRTDTSessionInviteAcceptedNtfnType: &handlersFor[OnRTDTSessionInviteAccepted]{},
+			onRTDTSesssionUpdatedNtfnType:       &handlersFor[OnRTDTSesssionUpdated]{},
+			onRTDTLiveSessionJoinedNtfnType:     &handlersFor[OnRTDTLiveSessionJoined]{},
+			onRTDTRefreshedSessionAllowance:     &handlersFor[OnRTDTRefreshedSessionAllowance]{},
+			onRTDTLivePeerJoinedNtfnType:        &handlersFor[OnRTDTLivePeerJoined]{},
+			onRTDTLivePeerStalledNtfnType:       &handlersFor[OnRTDTLivePeerStalled]{},
+			onRTDTLiveSendErroredNtfnType:       &handlersFor[OnRTDTLiveSessionSendErrored]{},
+			onRTDTRemadeLiveSessionHot:          &handlersFor[OnRTDTRemadeLiveSessionHotAudio]{},
+			onRTDTPeerSoundChangedNtfnType:      &handlersFor[OnRTDTPeerSoundChanged]{},
+			onRTDTPeerExitedSessionNtfnType:     &handlersFor[OnRTDTPeerExitedSession]{},
+			onRTDTKickedFromLiveSessNtfnType:    &handlersFor[OnRTDTKickedFromLiveSession]{},
+			onRTDTSessionDissolvedNtfnType:      &handlersFor[OnRTDTSessionDissolved]{},
+			onRTDTRemovedFromSessionNtfnType:    &handlersFor[OnRTDTRemovedFromSession]{},
+			onRTDTRotatedCookieNtfnType:         &handlersFor[OnRTDTRotatedCookie]{},
+			onRTDTChatMsgRcvdNtfnType:           &handlersFor[OnRTDTChatMessageReceived]{},
+			onRTDTAdminCookiesRcvdNtfnType:      &handlersFor[OnRTDTAdminCookiesReceived]{},
+			onRTDTRTTCalculatedNtfnType:         &handlersFor[OnRTDTRTTCalculated]{},
 		},
 	}
 	if !nmgr.uiTimer.Stop() {

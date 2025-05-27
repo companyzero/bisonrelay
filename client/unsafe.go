@@ -23,4 +23,6 @@ func (c *Client) FillTestInterface(i *testutils.UnsafeTestInterface) {
 		}
 		return ru.queueRMPriority(msg, priorityDefault, nil, "testinterface", nil)
 	}
+
+	i.RotateRTDTAppointmentCookies = c.rotateRTDTAppointmentCookies
 }

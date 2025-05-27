@@ -4,9 +4,11 @@ import (
 	"compress/zlib"
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"io"
 	"net"
+	"net/netip"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -21,6 +23,8 @@ import (
 	"github.com/companyzero/bisonrelay/internal/assert"
 	"github.com/companyzero/bisonrelay/internal/testutils"
 	"github.com/companyzero/bisonrelay/rpc"
+	rtdtclient "github.com/companyzero/bisonrelay/rtdt/client"
+	rtdtserver "github.com/companyzero/bisonrelay/rtdt/server"
 	"github.com/companyzero/bisonrelay/server"
 	"github.com/companyzero/bisonrelay/server/settings"
 	"github.com/companyzero/bisonrelay/zkidentity"
@@ -37,6 +41,7 @@ type testScaffoldCfg struct {
 	skipNewServer bool
 	logScanner    io.Writer
 	rootDir       string
+	runRtdtServer bool
 
 	serverMaxMsgSizeVersion rpc.MaxMsgSizeVersion
 }
@@ -98,6 +103,8 @@ type clientCfg struct {
 	pcIniter  func(loggerSubsysIniter) clientintf.PaymentClient
 	ntfns     *client.NotificationManager
 	collator  *collate.Collator
+
+	rtdtRandomStreamHandler rtdtclient.StreamHandler
 
 	sendRecvReceipts     bool
 	autoSubToPosts       bool
@@ -198,6 +205,12 @@ func withGCInviteExpiration(d time.Duration) newClientOpt {
 func withLogName(s string) newClientOpt {
 	return func(cfg *clientCfg) {
 		cfg.logName = s
+	}
+}
+
+func withRTDTRandomStreamHandler(h rtdtclient.StreamHandler) newClientOpt {
+	return func(cfg *clientCfg) {
+		cfg.rtdtRandomStreamHandler = h
 	}
 }
 
@@ -349,6 +362,7 @@ type testScaffold struct {
 	t        testing.TB
 	cfg      testScaffoldCfg
 	showLog  bool
+	keepLog  bool
 	tlb      *testutils.TestLogBackend
 	log      slog.Logger
 	logFiles []*os.File
@@ -359,13 +373,18 @@ type testScaffold struct {
 
 	svr     *server.ZKS
 	svrAddr string
+
+	rtsvr          *rtdtserver.Server
+	rtsvrAddr      string
+	rtsvrPub       *zkidentity.FixedSizeSntrupPublicKey
+	rtsvrCookieKey *zkidentity.FixedSizeSymmetricKey
 }
 
 func (ts *testScaffold) defaultNewClientCfg(name string) *clientCfg {
 	rootDir, err := os.MkdirTemp(ts.cfg.rootDir, "br-client-"+name+"-*")
 	assert.NilErr(ts.t, err)
 	ts.t.Cleanup(func() {
-		if ts.t.Failed() {
+		if ts.t.Failed() || ts.keepLog {
 			ts.t.Logf("%s DB dir: %s", name, rootDir)
 		} else {
 			os.RemoveAll(rootDir)
@@ -492,6 +511,8 @@ func (ts *testScaffold) newClientWithCfg(nccfg *clientCfg, opts ...newClientOpt)
 		SendReceiveReceipts:         nccfg.sendRecvReceipts,
 		AutoSubscribeToPosts:        nccfg.autoSubToPosts,
 
+		RTDTRandomStreamHandler: nccfg.rtdtRandomStreamHandler,
+
 		ResourcesProvider: resources.ProviderFunc(func(ctx context.Context,
 			uid clientintf.UserID,
 			request *rpc.RMFetchResource) (*rpc.RMFetchResourceReply, error) {
@@ -616,7 +637,7 @@ func (ts *testScaffold) newTestServer() {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() {
-		if t.Failed() {
+		if t.Failed() || ts.keepLog {
 			t.Logf("Server data location: %s", dir)
 		} else {
 			os.RemoveAll(dir)
@@ -631,6 +652,12 @@ func (ts *testScaffold) newTestServer() {
 	cfg.DebugLevel = "debug"
 	cfg.LogStdOut = ts.tlb
 	cfg.MaxMsgSizeVersion = ts.cfg.serverMaxMsgSizeVersion
+
+	if ts.rtsvr != nil {
+		cfg.RTDTServerAddr = ts.rtsvrAddr
+		cfg.RTDTServerPub = ts.rtsvrPub
+		cfg.RTDTCookieKey = ts.rtsvrCookieKey
+	}
 
 	s, err := server.NewServer(cfg)
 	if err != nil {
@@ -650,12 +677,15 @@ func newTestScaffold(t *testing.T, cfg testScaffoldCfg) *testScaffold {
 	logEnv := os.Getenv("BR_E2E_LOG")
 	showLog := logEnv == "1" || logEnv == t.Name()
 
+	keepLogEnv := os.Getenv("BR_E2E_KEEPLOG")
+	keepLog := keepLogEnv == "1" || keepLogEnv == t.Name()
+
 	if cfg.rootDir == "" {
 		rootDir, err := os.MkdirTemp("", "br-e2etest-*")
 		assert.NilErr(t, err)
 		cfg.rootDir = rootDir
 		t.Cleanup(func() {
-			if t.Failed() {
+			if t.Failed() || keepLog {
 				t.Logf("Root test dir: %s", rootDir)
 			} else {
 				os.RemoveAll(rootDir)
@@ -676,6 +706,7 @@ func newTestScaffold(t *testing.T, cfg testScaffoldCfg) *testScaffold {
 		ctx:     ctx,
 		cancel:  cancel,
 		showLog: showLog,
+		keepLog: keepLog,
 		log:     log,
 	}
 
@@ -704,6 +735,44 @@ func newTestScaffold(t *testing.T, cfg testScaffoldCfg) *testScaffold {
 		}
 	})
 
+	if cfg.runRtdtServer {
+		listener, err := net.ListenUDP("udp", net.UDPAddrFromAddrPort(netip.MustParseAddrPort("127.0.0.1:0")))
+		if err != nil {
+			ts.t.Fatalf("Unable to listen on UDP: %v", err)
+		}
+		ts.rtsvrAddr = listener.LocalAddr().String()
+
+		ts.rtsvrCookieKey = zkidentity.NewFixedSizeSymmetricKey()
+
+		logf, err := os.Create(filepath.Join(cfg.rootDir, "rtdtserver.log"))
+		if err != nil {
+			ts.t.Fatalf("unable to create RTDT log file: %v", err)
+		}
+		ts.logFiles = append(ts.logFiles, logf)
+		logBknd := ts.tlb.NamedSubLogger("rtservr", logf)
+		rtLogger := logBknd("RTDT")
+
+		serverPriv, serverPub := zkidentity.NewFixedSizeSntrupKeyPair()
+		ts.rtsvr, err = rtdtserver.New(
+			rtdtserver.WithLogger(rtLogger),
+			rtdtserver.WithIgnoreKernelStats(),
+			rtdtserver.WithPrivateKey(serverPriv),
+			rtdtserver.WithListeners(listener),
+			rtdtserver.WithCookieKey(ts.rtsvrCookieKey, nil),
+			rtdtserver.WithLogAndReplyErrors(),
+		)
+		if err != nil {
+			ts.t.Fatalf("Unable to create RTDTServer: %v", err)
+		}
+		go func() {
+			err := ts.rtsvr.Run(ts.ctx)
+			if err != nil && !errors.Is(err, context.Canceled) {
+				rtLogger.Errorf("RTDT server Run() errored: %v", err)
+			}
+		}()
+		ts.rtsvrPub = serverPub
+	}
+
 	if !cfg.skipNewServer {
 		ts.newTestServer()
 
@@ -721,6 +790,8 @@ func newTestScaffold(t *testing.T, cfg testScaffoldCfg) *testScaffold {
 			ts.svrAddr = addrs[0].String()
 		}
 	}
+
+	t.Cleanup(func() { log.Critical("Test cleanup starting") })
 
 	return ts
 }
