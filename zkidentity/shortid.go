@@ -2,6 +2,7 @@ package zkidentity
 
 import (
 	"bytes"
+	"crypto/rand"
 	"crypto/subtle"
 	"encoding/hex"
 	"encoding/json"
@@ -105,4 +106,18 @@ func (u ShortID) IsEmpty() bool {
 // Compare returns -1 if u < other, 0 if u == other and +1 if u > other.
 func (u ShortID) Compare(other *ShortID) int {
 	return bytes.Compare(u[:], other[:])
+}
+
+// CloneNew copies this short id into a new one.
+func (u *ShortID) CloneNew() *ShortID {
+	other := new(ShortID)
+	copy(other[:], u[:])
+	return other
+}
+
+// RandomShortID returns a random short id, generated from the cryptographically
+// secure random generator.
+func RandomShortID() (id ShortID) {
+	rand.Read(id[:])
+	return
 }
