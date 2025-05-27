@@ -174,6 +174,20 @@ func gcCompleter(arg string, as *appState) []string {
 	return res
 }
 
+// rtdtSessionCompleter returns completions for RTDT sessions that have a given
+// prefix.
+func rtdtSessionCompleter(arg string, as *appState) []string {
+	ids := as.c.ListRTDTSessions()
+	res := make([]string, 0, len(ids))
+	for i := range ids {
+		str := ids[i].String()
+		if strings.HasPrefix(str, arg) {
+			res = append(res, str)
+		}
+	}
+	return res
+}
+
 // subcmdNeededHandler is used on top-level commands that only work with a
 // subcommand.
 func subcmdNeededHandler(args []string, _ *appState) error {
@@ -495,6 +509,19 @@ var listCommands = []tuicmd{
 						pf("  %s = %s", strescape.Nick(cv.Client), strescape.Nick(cv.Version))
 					}
 				}
+
+				pf("RTDT Fee Rates")
+				pf("Create session: %.8f DCR/sess + %d MAtoms/user",
+					float64(policy.MilliAtomsPerRTSess)/1e11,
+					policy.MilliAtomsPerUserRTSess)
+
+				// This call is not batched in the client yet.
+				pf("Get appointment cookie: %.8f DCR/call",
+					float64(policy.MilliAtomsGetCookie+policy.MilliAtomsPerUserCookie)/1e11)
+				pf("Join and publish data: %.8f DCR/join + %d MAtoms/user*%dMB",
+					float64(policy.MilliAtomsRTJoin)/1e11,
+					policy.MilliAtomsRTPushRate, policy.RTPushRateMBytes)
+				pf("")
 			})
 			return nil
 		},
@@ -3587,14 +3614,21 @@ var audioCmds = []tuicmd{
 				return err
 			}
 
+			captureId := as.noterec.CaptureDeviceID()
+			playbackId := as.noterec.PlaybackDeviceID()
+
 			as.manyDiagMsgsCb(func(pf printf) {
-				printDevice := func(i int, dev *audio.Device) {
+				printDevice := func(i int, dev *audio.Device, isSelected bool) {
 					defaultStr := ""
 					if dev.IsDefault {
 						defaultStr = "(default) "
 					}
-					pf("Device %d %s%s", i, defaultStr, dev.Name)
-					pf("ID: %s", strescape.Nick(dev.ID))
+					selStr := " "
+					if isSelected {
+						selStr = "▶"
+					}
+					pf(" %s Device %d %s%s", selStr, i, defaultStr, dev.Name)
+					pf("   ID: %s", strescape.Nick(string(dev.ID)))
 					pf("")
 				}
 
@@ -3605,7 +3639,8 @@ var audioCmds = []tuicmd{
 					pf("Audio capture devices")
 					pf("")
 					for i := range devices.Capture {
-						printDevice(i, &devices.Capture[i])
+						isSel := devices.Capture[i].ID == captureId
+						printDevice(i, &devices.Capture[i], isSel)
 					}
 				}
 
@@ -3615,7 +3650,8 @@ var audioCmds = []tuicmd{
 					pf("Audio playback devices")
 					pf("")
 					for i := range devices.Playback {
-						printDevice(i, &devices.Playback[i])
+						isSel := devices.Playback[i].ID == playbackId
+						printDevice(i, &devices.Playback[i], isSel)
 					}
 				}
 			})
@@ -3630,7 +3666,7 @@ var audioCmds = []tuicmd{
 		descr:         "[<device index>]",
 		handler: func(args []string, as *appState) error {
 			if len(args) == 0 {
-				as.noterec.SetCaptureDevice(nil)
+				as.noterec.SetCaptureDevice(audio.DefaultDeviceID)
 				as.diagMsg("Using default device for audio capture")
 				return nil
 			}
@@ -3651,7 +3687,7 @@ var audioCmds = []tuicmd{
 				return fmt.Errorf("device %d does not exist", devIndex)
 			}
 
-			err = as.noterec.SetCaptureDevice(&devices.Capture[devIndex])
+			err = as.noterec.SetCaptureDevice(devices.Capture[devIndex].ID)
 			return err
 		},
 	}, {
@@ -3662,7 +3698,7 @@ var audioCmds = []tuicmd{
 		descr:         "[<device index>]",
 		handler: func(args []string, as *appState) error {
 			if len(args) == 0 {
-				as.noterec.SetPlaybackDevice(nil)
+				as.noterec.SetPlaybackDevice(audio.DefaultDeviceID)
 				as.diagMsg("Using default device for audio capture")
 				return nil
 			}
@@ -3683,7 +3719,7 @@ var audioCmds = []tuicmd{
 				return fmt.Errorf("device %d does not exist", devIndex)
 			}
 
-			err = as.noterec.SetPlaybackDevice(&devices.Playback[devIndex])
+			err = as.c.ChangePlaybackDeviceID(devices.Playback[devIndex].ID)
 			return err
 		},
 	}, {
@@ -3693,6 +3729,11 @@ var audioCmds = []tuicmd{
 		handler: func(args []string, as *appState) error {
 			var targetId clientintf.UserID
 			var targetIsGC bool
+
+			if as.c.HasHotAudioRTDT() {
+				return errors.New("cannot send audio while there " +
+					"are live realtime chat sessions")
+			}
 
 			if len(args) > 0 {
 				uid, err := as.c.UIDByNick(args[0])
@@ -3731,6 +3772,10 @@ var audioCmds = []tuicmd{
 		usableOffline: true,
 		descr:         "Record and playback a 3-second test note",
 		handler: func(args []string, as *appState) error {
+			if as.c.HasHotAudioRTDT() {
+				return errors.New("cannot test audio while there " +
+					"are live realtime chat sessions")
+			}
 			go func() {
 				as.diagMsg("Starting 3 second capture")
 				ctx, cancel := context.WithTimeout(as.ctx, 3*time.Second)
@@ -3747,6 +3792,24 @@ var audioCmds = []tuicmd{
 					as.diagMsg("Error playing back audio: %v", err)
 				}
 			}()
+			return nil
+		},
+	}, {
+		cmd:           "capgain",
+		descr:         "Set the capture gain (volume) for capture streams",
+		usage:         "<gain>",
+		usableOffline: true,
+		handler: func(args []string, as *appState) error {
+			if len(args) < 1 {
+				return usageError{msg: "gain must not be empty"}
+			}
+			gain, err := strconv.ParseFloat(args[0], 64)
+			if err != nil {
+				return err
+			}
+
+			as.noterec.SetCaptureGain(gain)
+			as.diagMsg("Modified capture gain to %.2f", gain)
 			return nil
 		},
 	},
@@ -3839,6 +3902,477 @@ var profileCmds = []tuicmd{
 			if len(args) == 0 {
 				return fileCompleter(arg)
 			}
+			return nil
+		},
+	},
+}
+
+var rtchatCommands = []tuicmd{
+	{
+		cmd:   "create",
+		descr: "Create a real time chat session",
+		usage: "<size> [<description>]",
+		handler: func(args []string, as *appState) error {
+			if len(args) < 1 {
+				return usageError{msg: "size must not be empty"}
+			}
+			size, err := strconv.ParseUint(args[0], 10, 16)
+			if err != nil {
+				return fmt.Errorf("invalid size string: %v", err)
+			}
+			var descr string
+			if len(args) > 1 {
+				descr = strings.Join(args[1:], " ")
+			}
+
+			as.diagMsg("Attempting to create RTDT session on server")
+			go func() {
+				sess, err := as.c.CreateRTDTSession(uint16(size), descr)
+				if err != nil {
+					errMsg := fmt.Sprintf("Unable to create RTDT session: %v", err)
+					as.diagMsg(as.styles.Load().err.Render(errMsg))
+					return
+				}
+
+				as.manyDiagMsgsCb(func(pf printf) {
+					pf("Created RTDT session %s", sess.Metadata.RV)
+					pf("Invite users to it with /rtchat invite %s <nick>",
+						sess.Metadata.RV.ShortLogID())
+				})
+			}()
+			return nil
+		},
+	}, {
+		cmd:   "fromgc",
+		descr: "Create a realtime chat session associated with an existing GC",
+		usage: "<gc> <extrasize>",
+		long: []string{"The extrasize parameter sets how larger the realtime chat session is compared to the current size of the GC.",
+			"If more members will be invited to the GC in the future, then the extrasize parameter should reflect the expected number of new members.",
+			"This is required because the size the of realtime chat sessions cannot be changed after creation."},
+		handler: func(args []string, as *appState) error {
+			if len(args) < 1 {
+				return usageError{msg: "GC must not be empty"}
+			}
+			gc, err := as.c.GCIDByName(args[0])
+			if err != nil {
+				return err
+			}
+			if len(args) < 2 {
+				return usageError{msg: "extrasize must not be empty"}
+			}
+			extrasize, err := strconv.ParseUint(args[1], 10, 16)
+			if err != nil {
+				return fmt.Errorf("invalid size string: %v", err)
+			}
+
+			as.diagMsg("Attempting to create RTDT session on server")
+			go func() {
+				sess, err := as.c.CreateRTDTSessionInGC(gc, uint16(extrasize), true)
+				if err != nil {
+					errMsg := fmt.Sprintf("Unable to create RTDT session: %v", err)
+					as.diagMsg(as.styles.Load().err.Render(errMsg))
+					return
+				}
+
+				gcAlias, _ := as.c.GetGCAlias(gc)
+
+				as.manyDiagMsgsCb(func(pf printf) {
+					pf("Created RTDT session %s from GC %s",
+						sess.Metadata.RV, strescape.Nick(gcAlias))
+					pf("Invited all current members to " +
+						"realtime chat session")
+				})
+			}()
+			return nil
+		},
+		completer: func(args []string, arg string, as *appState) []string {
+			if len(args) == 0 {
+				return gcCompleter(arg, as)
+			}
+			return nil
+		},
+	}, {
+		cmd:   "invite",
+		descr: "Invite users to an RTDT session",
+		usage: "<session> <user>",
+		handler: func(args []string, as *appState) error {
+			if len(args) < 1 {
+				return usageError{msg: "session RV cannot be empty"}
+			}
+			if len(args) < 2 {
+				return usageError{msg: "target user cannot be empty"}
+			}
+
+			sess, err := as.c.GetRTDTSessionByPrefix(args[0])
+			if err != nil {
+				return err
+			}
+
+			ru, err := as.c.UserByNick(args[1])
+			if err != nil {
+				return err
+			}
+
+			go func() {
+				err := as.c.InviteToRTDTSession(sess.Metadata.RV, true, ru.ID())
+				if err == nil {
+					as.diagMsg("Invited %s to realtime chat room %s",
+						strescape.Nick(ru.Nick()), sess.Metadata.RV.ShortLogID())
+				} else {
+					as.diagMsg("Unable to invite to realtime chat: %v", err)
+				}
+			}()
+			return nil
+		},
+		completer: func(args []string, arg string, as *appState) []string {
+			if len(args) == 0 {
+				return rtdtSessionCompleter(arg, as)
+			}
+			if len(args) == 1 {
+				return nickCompleter(arg, as)
+			}
+			return nil
+		},
+	}, {
+		cmd:   "accept",
+		descr: "Accept invitation to join an RTDT session",
+		usage: "<session>",
+		handler: func(args []string, as *appState) error {
+			if len(args) < 1 {
+				return usageError{msg: "session RV cannot be empty"}
+			}
+
+			var accepted *rtdtInvite
+			as.rtInvitesMtx.Lock()
+			for _, inv := range as.rtInvites {
+				if !strings.HasPrefix(inv.invite.RV.String(), args[0]) {
+					continue
+				}
+
+				if accepted != nil {
+					as.rtInvitesMtx.Unlock()
+					return errors.New("More than 1 RTDT invite with the same prefix")
+				}
+
+				accepted = inv
+			}
+			as.rtInvitesMtx.Unlock()
+
+			if accepted == nil {
+				return errors.New("could not find invite")
+			}
+
+			ru, err := as.c.UserByID(accepted.inviter)
+			if err != nil {
+				return err
+			}
+
+			err = as.c.AcceptRTDTSessionInvite(accepted.inviter, accepted.invite, true)
+			if err != nil {
+				return err
+			}
+
+			cw := as.findOrNewChatWindow(ru.ID(), strescape.Nick(ru.Nick()))
+			cw.newInternalMsg("Accepting invite to RTDT session %s", accepted.invite.RV)
+
+			as.rtInvitesMtx.Lock()
+			as.rtInvites = slices.DeleteFunc(as.rtInvites,
+				func(i *rtdtInvite) bool { return i == accepted })
+			as.rtInvitesMtx.Unlock()
+
+			return nil
+		},
+	}, {
+		cmd:     "listinvites",
+		aliases: []string{"lsinvites", "lsinv"},
+		descr:   "List received RTDT session invites",
+		handler: func(args []string, as *appState) error {
+			as.rtInvitesMtx.Lock()
+			as.manyDiagMsgsCb(func(pf printf) {
+				if len(as.rtInvites) == 0 {
+					pf("No RTDT invitations received")
+					return
+				}
+
+				pf("RTDT invitations received")
+				for _, inv := range as.rtInvites {
+					nick, _ := as.c.UserNick(inv.inviter)
+					pf("%s - %s - %s",
+						inv.invite.RV.ShortLogID(),
+						strescape.Nick(nick),
+						strescape.Content(inv.invite.Description))
+				}
+			})
+			as.rtInvitesMtx.Unlock()
+			return nil
+		},
+	}, {
+		cmd:           "list",
+		aliases:       []string{"ls"},
+		descr:         "List all known realtime chat sessions",
+		usableOffline: true,
+		handler: func(args []string, as *appState) error {
+			sessRVs := as.c.ListRTDTSessions()
+			if len(sessRVs) == 0 {
+				as.diagMsg("No realtime chat sessions found")
+				return nil
+			}
+
+			as.manyDiagMsgsCb(func(pf printf) {
+				pf("")
+				pf("Found %d realtime chat sessions", len(sessRVs))
+				for _, rv := range sessRVs {
+					sess, err := as.c.GetRTDTSession(&rv)
+					if err != nil {
+						pf("Unable to fetch data for session %s: %v", rv, err)
+						pf("")
+						continue
+					}
+					pf("Session %s", rv.ShortLogID())
+					pf("Size: %d (%d publishers)", sess.Metadata.Size,
+						len(sess.Metadata.Publishers))
+					pf("Description: %s", strescape.Content(sess.Metadata.Description))
+					pf("")
+				}
+			})
+
+			return nil
+		},
+	}, {
+		cmd:           "info",
+		usableOffline: true,
+		descr:         "Show information about a realtime chat session",
+		usage:         "<session>",
+		handler: func(args []string, as *appState) error {
+			if len(args) < 1 {
+				return usageError{msg: "session RV cannot be empty"}
+			}
+			sess, err := as.c.GetRTDTSessionByPrefix(args[0])
+			if err != nil {
+				return err
+			}
+			var gc *clientdb.GroupChat
+			if sess.GC != nil {
+				gcdb, err := as.c.GetGCDB(*sess.GC)
+				if err != nil {
+					return fmt.Errorf("unable to load associated GC: %v", err)
+				}
+				gc = &gcdb
+			}
+			localID := as.c.PublicID()
+			as.manyDiagMsgsCb(func(pf printf) {
+				pf("Realtime Chat Session %s", sess.Metadata.RV.ShortLogID())
+				pf("RV: %s", sess.Metadata.RV)
+				if gc != nil {
+					pf("Associated GC: %s (%s)",
+						strescape.Nick(gc.Name()),
+						gc.Metadata.ID)
+				}
+				pf("Size: %d", sess.Metadata.Size)
+				pf("Description: %s", strescape.Content(sess.Metadata.Description))
+				if sess.Metadata.Owner == localID {
+					pf("Local client is the session owner")
+				} else if ru, _ := as.c.UserByID(sess.Metadata.Owner); ru != nil {
+					pf("Owner: %s", strescape.Nick(ru.Nick()))
+				} else {
+					pf("Owner: %s", sess.Metadata.Owner)
+				}
+				pf("Metadata generation: %d", sess.Metadata.Generation)
+
+				if len(sess.Members) != 0 {
+					pf("Members (%d)", len(sess.Members))
+					for _, mem := range sess.Members {
+						pubStr := " "
+						if sess.IsPeerPublisher(mem.PeerID) {
+							pubStr = "🎤"
+						}
+						if mem.UID == localID {
+							pf("  %s %s - (local client)",
+								pubStr, mem.PeerID)
+						} else if ru, _ := as.c.UserByID(mem.UID); ru != nil {
+							pf("  %s %s - %s (%s)",
+								pubStr, mem.PeerID,
+								strescape.Nick(ru.Nick()),
+								mem.UID.ShortLogID())
+						} else {
+							pf("  %s %s - %s",
+								pubStr, mem.PeerID,
+								mem.UID)
+						}
+					}
+				} else {
+					pf("Publishers (%d)", len(sess.Metadata.Publishers))
+					for _, pub := range sess.Metadata.Publishers {
+						if pub.PublisherID == localID {
+							pf("  %s - (local client)", pub.PeerID)
+						} else if ru, _ := as.c.UserByID(pub.PublisherID); ru != nil {
+							pf("  %s - %s (%s)", pub.PeerID,
+								strescape.Nick(ru.Nick()),
+								pub.PublisherID.ShortLogID())
+						} else {
+							pf("  %s - %s (%s)", pub.PeerID,
+								strescape.Nick(pub.Alias),
+								pub.PublisherID.ShortLogID())
+						}
+					}
+				}
+			})
+			return nil
+
+		},
+		completer: func(args []string, arg string, as *appState) []string {
+			if len(args) == 0 {
+				return rtdtSessionCompleter(arg, as)
+			}
+
+			return nil
+		},
+	}, {
+		cmd:     "remmember",
+		aliases: []string{"removemember", "rmmember", "rmm"},
+		descr:   "Permanently remove a member from the realtime chat session",
+		long: []string{"If 'skiprotate' is specified, the appointment cookies are not rotated and must be manually rotated later.",
+			"This is useful when removing multiple members from the chat."},
+		usage: "<session> <member> [<skiprotate>]",
+		handler: func(args []string, as *appState) error {
+			if len(args) < 1 {
+				return usageError{msg: "session RV cannot be empty"}
+			}
+			if len(args) < 2 {
+				return usageError{msg: "target member cannot be empty"}
+			}
+			rotateCookies := true
+			if len(args) > 2 {
+				if args[2] == "skiprotate" {
+					rotateCookies = false
+				} else {
+					return usageError{msg: "third argument must be 'skiprotate'"}
+				}
+			}
+
+			sess, err := as.c.GetRTDTSessionByPrefix(args[0])
+			if err != nil {
+				return err
+			}
+			sessRV := sess.Metadata.RV
+
+			if !sess.LocalIsAdmin() {
+				return errors.New("Only session admins can remove members")
+			}
+
+			ru, err := as.c.UserByNick(args[1])
+			if err != nil {
+				return err
+			}
+
+			// When rotating cookies, ensure the local client is inv
+			// the live session first.
+			if rotateCookies {
+				isLive, _ := as.c.IsLiveAndHotRTSession(&sessRV)
+				if !isLive {
+					return fmt.Errorf("cannot remove member and rotate cookies when not in live session")
+				}
+			}
+
+			go as.rtRemoveMember(sessRV, ru, rotateCookies)
+			return nil
+		},
+		completer: func(args []string, arg string, as *appState) []string {
+			if len(args) == 0 {
+				return rtdtSessionCompleter(arg, as)
+			}
+			if len(args) == 1 {
+				return nickCompleter(arg, as)
+			}
+			if len(args) == 2 && (arg == "" || strings.HasPrefix("skiprotate", arg)) {
+				return []string{"skiprotate"}
+			}
+			return nil
+		},
+	}, {
+		cmd:   "exit",
+		descr: "Permanently exit the live chat session",
+		usage: "<session>",
+		handler: func(args []string, as *appState) error {
+			if len(args) < 1 {
+				return usageError{msg: "session RV cannot be empty"}
+			}
+			sess, err := as.c.GetRTDTSessionByPrefix(args[0])
+			if err != nil {
+				return err
+			}
+			if sess.LocalIsAdmin() {
+				return errors.New("cannot exit session when local client is the admin")
+			}
+
+			sessRV := sess.Metadata.RV
+			go as.rtExitSession(sessRV)
+			return nil
+		},
+		completer: func(args []string, arg string, as *appState) []string {
+			if len(args) == 0 {
+				return rtdtSessionCompleter(arg, as)
+			}
+			return nil
+		},
+	}, {
+		cmd:   "dissolve",
+		descr: "Permanently dissolve the live chat session for all members",
+		usage: "<session>",
+		handler: func(args []string, as *appState) error {
+			if len(args) < 1 {
+				return usageError{msg: "session RV cannot be empty"}
+			}
+			sess, err := as.c.GetRTDTSessionByPrefix(args[0])
+			if err != nil {
+				return err
+			}
+			sessRV := sess.Metadata.RV
+			if !sess.LocalIsAdmin() {
+				return errors.New("Only session admins can remove members")
+			}
+
+			go as.rtDissolveSession(sessRV)
+			return nil
+		},
+		completer: func(args []string, arg string, as *appState) []string {
+			if len(args) == 0 {
+				return rtdtSessionCompleter(arg, as)
+			}
+			return nil
+		},
+	}, {
+		cmd:     "rotatecookies",
+		aliases: []string{"rotcookies", "rotcookie"},
+		descr:   "Rotate session cookies to prevent kicked members from returning",
+		usage:   "<session>",
+		handler: func(args []string, as *appState) error {
+			if len(args) < 1 {
+				return usageError{msg: "session RV cannot be empty"}
+			}
+			sess, err := as.c.GetRTDTSessionByPrefix(args[0])
+			if err != nil {
+				return err
+			}
+			sessRV := sess.Metadata.RV
+			if !sess.LocalIsAdmin() {
+				return errors.New("Only session admins can remove members")
+			}
+
+			go as.rtRotateCookies(sessRV)
+			return nil
+		},
+		completer: func(args []string, arg string, as *appState) []string {
+			if len(args) == 0 {
+				return rtdtSessionCompleter(arg, as)
+			}
+			return nil
+		},
+	}, {
+		cmd:   "win",
+		descr: "Open the main real time chat window to manage live sessions",
+		handler: func(args []string, as *appState) error {
+			as.sendMsg(msgOpenRTChatWin{})
 			return nil
 		},
 	},
@@ -4770,6 +5304,18 @@ var commands = []tuicmd{
 		completer: func(args []string, arg string, as *appState) []string {
 			if len(args) == 0 {
 				return cmdCompleter(profileCmds, arg, false)
+			}
+			return nil
+		},
+		handler: subcmdNeededHandler,
+	}, {
+		cmd:     "realtimechat",
+		aliases: []string{"rtchat", "rtc"},
+		descr:   "Realtime Audio/Video chat commands",
+		sub:     rtchatCommands,
+		completer: func(args []string, arg string, as *appState) []string {
+			if len(args) == 0 {
+				return cmdCompleter(rtchatCommands, arg, false)
 			}
 			return nil
 		},

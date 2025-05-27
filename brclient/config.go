@@ -157,6 +157,8 @@ type config struct {
 	SimpleStoreAccount    string
 	SimpleStoreShipCharge float64
 
+	RTAutoHotAudio bool
+
 	dialFunc func(context.Context, string, string) (net.Conn, error)
 }
 
@@ -284,6 +286,7 @@ func loadConfig() (*config, error) {
 	// Define config file flags.
 	fs = flag.NewFlagSet("Config Options", flag.ContinueOnError)
 	flagServerAddr := fs.String("server", "127.0.0.1:443", "Address and port of the CR server")
+	flagRTAudioHotAudio := fs.Bool("rtautohotaudio", true, "Automatically make audio hot")
 	flagRootDir := fs.String("root", defaultAppDir, "Root of all app data")
 	flagWinPin := fs.String("winpin", "", "Comma delimited list of DM and GC windows to launch on start")
 	flagSendRecvReceipts := fs.Bool("sendrecvreceipts", true, "Send receive receipts")
@@ -600,6 +603,8 @@ func loadConfig() (*config, error) {
 		SimpleStorePayType:    ssPayType,
 		SimpleStoreAccount:    *flagSimpleStoreAccount,
 		SimpleStoreShipCharge: *flagSimpleStoreShipCharge,
+
+		RTAutoHotAudio: *flagRTAudioHotAudio,
 
 		dialFunc: dialFunc,
 	}, nil
