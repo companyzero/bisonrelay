@@ -288,7 +288,6 @@ class AudioModel extends ChangeNotifier {
     }
   }
 
-  final playlist = ConcatenatingAudioSource(children: []);
   final AudioPlayer player = AudioPlayer();
   dynamic _playingSource;
   dynamic get playingSource => _playingSource;
@@ -299,10 +298,9 @@ class AudioModel extends ChangeNotifier {
     player.playingStream.listen(_handlePlayingEvents);
     player.playbackEventStream.listen(_handlePlayerEvents);
     player.createPositionStream().listen(_handlePositionEvents);
-    await playlist
-        .add(SilenceAudioSource(duration: const Duration(milliseconds: 1)));
-    await player.setAudioSource(playlist);
-    await player.load();
+    var audioSource =
+        SilenceAudioSource(duration: const Duration(milliseconds: 1));
+    await player.setAudioSources([audioSource]);
     await player.play();
     (() async {
       // Needed on windows because SilenceAudioSource fails to stop automatically.
@@ -319,14 +317,6 @@ class AudioModel extends ChangeNotifier {
   }
 
   void _handlePlayerEvents(PlaybackEvent event) async {
-    // if (event.processingState != ProcessingState.ready) {
-    //   debugPrint("XXXXX audio event ${event.toString()}");
-    // }
-
-    // var idleAfterCompleted =
-    //     playerEvents.lastEvent.processingState == ProcessingState.completed &&
-    //         event.processingState == ProcessingState.idle;
-
     playerEvents._update(event);
 
     if (Platform.isAndroid &&
@@ -344,14 +334,6 @@ class AudioModel extends ChangeNotifier {
     if (event.duration != null) {
       audioPosition._setLength(event.duration!);
     }
-
-    // if (idleAfterCompleted) {
-    //   (() async {
-    //     // await player.stop();
-    //     // await sleep(const Duration(milliseconds: 1));
-    //     await player.seek(Duration.zero, index: 0);
-    //   })();
-    // }
   }
 
   void _handlePositionEvents(Duration d) {
@@ -359,13 +341,13 @@ class AudioModel extends ChangeNotifier {
   }
 
   bool _playlistItemIs(Uint8List data) {
-    if (playlist.children.isEmpty) {
+    if (player.audioSources.isEmpty) {
       return false;
     }
-    if (playlist.children[0] is! _MemAudioSource) {
+    if (player.audioSources[0] is! _MemAudioSource) {
       return false;
     }
-    return (playlist.children[0] as _MemAudioSource).bytes == data;
+    return (player.audioSources[0] as _MemAudioSource).bytes == data;
   }
 
   Future<void> playMemAudio(String contentType, Uint8List data) async {
@@ -382,14 +364,12 @@ class AudioModel extends ChangeNotifier {
 
     try {
       if (!_playlistItemIs(data)) {
-        await playlist.clear();
-        await playlist.add(_MemAudioSource(contentType, data));
-        var length = await player.load();
+        var length =
+            await player.setAudioSources([_MemAudioSource(contentType, data)]);
         audioPosition._reset(length ?? const Duration());
       } else {
         // Already loaded this audio file.
         audioPosition._setPosition(const Duration());
-        // await player.seek(const Duration(), index: 0);
       }
       await player.play();
     } catch (exception) {
