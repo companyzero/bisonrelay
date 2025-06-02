@@ -168,6 +168,7 @@ class _NewPostScreenState extends State<NewPostScreen> {
     if (_debounce?.isActive ?? false) _debounce!.cancel();
     _debounce = Timer(const Duration(milliseconds: 500), () async {
       var filePickRes = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
         allowedExtensions: [
           "avif",
           "bmp",
