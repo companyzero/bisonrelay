@@ -283,11 +283,12 @@ func (w *rtdtConferenceWin) renderInfoView() {
 			pubNick = pub.PublisherID.String()
 		}
 
+		isPeerLive := liveSess != nil && liveSess.IsPeerLive(pub.PeerID)
 		pubIsLocalClient := pub.PublisherID == myID
 		if !pubIsLocalClient {
 			if liveSess.PeerHasSound(pub.PeerID) {
 				liveIcon = "●"
-			} else if liveSess.IsPeerLive(pub.PeerID) {
+			} else if isPeerLive {
 				liveIcon = "○"
 			}
 		}
@@ -300,6 +301,9 @@ func (w *rtdtConferenceWin) renderInfoView() {
 			if ok && !pubIsLocalClient {
 				suffix = fmt.Sprintf(" 🔊 %+.0f (press +/- to change peer volume)", livePeer.VolumeGain)
 			}
+		} else if liveSess != nil && isPeerLive {
+			peerBufCount := liveSess.Peers[pub.PeerID].BufferedCount
+			suffix += fmt.Sprintf(" buf: %s", time.Duration(peerBufCount)*time.Millisecond*20)
 		}
 
 		line := fmt.Sprintf("  %s %s %s", liveIcon,
@@ -557,6 +561,11 @@ func (w rtdtConferenceWin) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case msgRTRTTCalculated:
 		w.lastRTT = time.Duration(msg)
+
+	case msgTick:
+		// Keep sending this tick to update the UI (bufferedCount).
+		w.renderInfoView()
+		return w, emitOrCancelAfter(w.as.ctx, msgTick{}, time.Second)
 	}
 
 	return w, cmd
@@ -618,5 +627,5 @@ func newRtdtConferenceWin(as *appState) (rtdtConferenceWin, tea.Cmd) {
 	w.recalcViewportSizes()
 	w.updateSessions()
 
-	return w, nil
+	return w, emitOrCancelAfter(as.ctx, msgTick{}, time.Second)
 }

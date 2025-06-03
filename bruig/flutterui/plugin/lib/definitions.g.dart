@@ -2764,6 +2764,7 @@ LiveRTDTPeer _$LiveRTDTPeerFromJson(Map<String, dynamic> json) => LiveRTDTPeer(
       json['has_sound_stream'] as bool,
       json['has_sound'] as bool,
       (json['volume_gain'] as num).toDouble(),
+      (json['buffered_count'] as num).toInt(),
     );
 
 Map<String, dynamic> _$LiveRTDTPeerToJson(LiveRTDTPeer instance) =>
@@ -2771,6 +2772,7 @@ Map<String, dynamic> _$LiveRTDTPeerToJson(LiveRTDTPeer instance) =>
       'has_sound_stream': instance.hasSoundStream,
       'has_sound': instance.hasSound,
       'volume_gain': instance.volumeGain,
+      'buffered_count': instance.bufferCount,
     };
 
 LiveRTDTSession _$LiveRTDTSessionFromJson(Map<String, dynamic> json) =>

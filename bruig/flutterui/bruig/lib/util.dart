@@ -186,6 +186,13 @@ Future<void> sleep(Duration d) {
   return p.future;
 }
 
+String formatMsDuration(Duration d) {
+  if (d.inSeconds > 0) {
+    return "${(d.inMilliseconds / 1000).toStringAsFixed(2)}s";
+  }
+  return "${d.inMilliseconds}ms";
+}
+
 String formatSmallDuration(Duration d) {
   String res = "";
   if (d.inHours > 0) {
