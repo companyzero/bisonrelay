@@ -67,6 +67,9 @@ type clientCtx struct {
 	// check.
 	skipWalletCheckChan chan struct{}
 
+	// When written, this forces a new check.
+	forceWalletRecheckChan chan struct{}
+
 	initIDChan   chan iDInit
 	certConfChan chan bool
 
@@ -725,6 +728,8 @@ func handleInitClient(handle uint32, args initClient) error {
 					// connection.
 					cctx.log.Infof("Skipping wallet check as requested")
 					return nil
+				case <-cctx.forceWalletRecheckChan:
+					// Force recheck.
 				case <-trackLNEventsChan:
 					// Force recheck.
 				case <-connCtx.Done():
@@ -970,10 +975,11 @@ func handleInitClient(handle uint32, args initClient) error {
 		log:       logBknd.logger("GOLB"),
 		logBknd:   logBknd,
 
-		skipWalletCheckChan: make(chan struct{}, 1),
-		initIDChan:          initIDChan,
-		certConfChan:        certConfChan,
-		noterec:             c.NoteRecorder(),
+		skipWalletCheckChan:    make(chan struct{}, 1),
+		forceWalletRecheckChan: make(chan struct{}, 10),
+		initIDChan:             initIDChan,
+		certConfChan:           certConfChan,
+		noterec:                c.NoteRecorder(),
 
 		confirmPayReqRecvChan: make(chan bool),
 		downloadConfChans:     make(map[zkidentity.ShortID]chan bool),
@@ -2043,9 +2049,13 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		if err := cmd.decode(&args); err != nil {
 			return nil, err
 		}
-		go func() { cc.skipWalletCheckChan <- struct{}{} }()
 
-		return nil, c.StartOnboarding(args)
+		err := c.StartOnboarding(args)
+		if err == nil {
+			go func() { cc.forceWalletRecheckChan <- struct{}{} }()
+		}
+
+		return nil, err
 
 	case CTCancelOnboard:
 		return nil, c.CancelOnboarding()

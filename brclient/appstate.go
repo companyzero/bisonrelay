@@ -149,6 +149,9 @@ type appState struct {
 	// When written, this makes the next wallet check be skipped.
 	skipWalletCheckChan chan struct{}
 
+	// When written, this forces a new check.
+	forceWalletRecheckChan chan struct{}
+
 	minWalletBal dcrutil.Amount
 	minRecvBal   dcrutil.Amount
 	minSendBal   dcrutil.Amount
@@ -399,6 +402,20 @@ func (as *appState) recheckRMQLen() {
 	select {
 	case as.qlenRecheckChan <- struct{}{}:
 	case <-as.ctx.Done():
+	}
+}
+
+// forceRecheckWalletConn forces the wallet to recheck the conditions to enable
+// server connection.
+func (as *appState) forceRecheckWalletConn() {
+	as.connectedMtx.Lock()
+	canForce := as.connected == connStateCheckingWallet
+	as.connectedMtx.Unlock()
+	if canForce {
+		select {
+		case as.forceWalletRecheckChan <- struct{}{}:
+		case <-as.ctx.Done():
+		}
 	}
 }
 
@@ -4155,12 +4172,15 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 					pf("Checking again in %s", backoff)
 					pf("Type /skipwalletcheck to skip these tests")
 				})
+
 				select {
 				case <-as.skipWalletCheckChan:
 					as.log.Warnf("Skipping next wallet check as requested")
 					as.diagMsg("Skipping next wallet check as requested")
 					return nil
 				case <-trackLNEventsChan:
+					// Force recheck.
+				case <-as.forceWalletRecheckChan:
 					// Force recheck.
 				case <-connCtx.Done():
 					exitErr = connCtx.Err()
@@ -4463,7 +4483,8 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		isRestore: isRestore,
 		rpcServer: rpcServer,
 
-		skipWalletCheckChan: make(chan struct{}),
+		skipWalletCheckChan:    make(chan struct{}),
+		forceWalletRecheckChan: make(chan struct{}, 10),
 
 		minWalletBal: args.MinWalletBal,
 		minRecvBal:   args.MinRecvBal,
