@@ -7,7 +7,6 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/companyzero/bisonrelay/client"
 	"github.com/companyzero/bisonrelay/client/clientintf"
 )
 
@@ -48,7 +47,7 @@ func (os startOnboardScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Start onboarding attempt.
 		os.attemptingStart = true
 		key := os.form.inputs[0].(*textInputHelper).Value()
-		return os, cmdAttemptStartOnboard(os.as.c, key)
+		return os, cmdAttemptStartOnboard(os.as, key)
 
 	case msgStartOnboardErr:
 		os.onboardErr = msg
@@ -119,7 +118,7 @@ func (os startOnboardScreen) View() string {
 	return b.String()
 }
 
-func cmdAttemptStartOnboard(c *client.Client, key string) func() tea.Msg {
+func cmdAttemptStartOnboard(as *appState, key string) func() tea.Msg {
 	return func() tea.Msg {
 		if key == "" {
 			return msgStartOnboardErr(fmt.Errorf("key is empty"))
@@ -130,10 +129,13 @@ func cmdAttemptStartOnboard(c *client.Client, key string) func() tea.Msg {
 			return msgStartOnboardErr(fmt.Errorf("invalid key: %v", err))
 		}
 
-		err = c.StartOnboarding(pik)
+		err = as.c.StartOnboarding(pik)
 		if err != nil {
 			return msgStartOnboardErr(fmt.Errorf("error when attempting to start onboard: %v", err))
 		}
+
+		// Force wallet to recheck server conn to enable it.
+		go as.forceRecheckWalletConn()
 
 		return nil
 	}

@@ -192,6 +192,9 @@ func (os onboardScreen) View() string {
 	pf("Balances - Wallet: %s, Send: %s, Recv: %s\n", wallet, send, recv)
 	pf("Original Key: %s\n", encKey)
 	nbLines += 4
+	if ostate.Key != nil {
+		pf("Invite Key RV: %s\n", ostate.Key.RVPoint())
+	}
 	if ostate.Invite != nil {
 		pf("Initial RV Point: %s\n", ostate.Invite.InitialRendezvous)
 		nbLines += 1
