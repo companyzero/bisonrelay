@@ -159,8 +159,9 @@ type appState struct {
 	remoteFiles map[clientintf.UserID]map[clientdb.FileID]clientdb.RemoteFile
 	progressMsg map[clientdb.FileID]*chatMsg
 
-	qlenMtx sync.Mutex
-	qlen    int
+	qlenMtx         sync.Mutex
+	qlen            int
+	qlenRecheckChan chan struct{}
 
 	// Reply chans for notifications that require confirmation.
 	clientIDChan      chan getClientIDReply
@@ -242,25 +243,34 @@ func (as *appState) run() error {
 
 	// Track outbound RMQ length.
 	go func() {
+		var timeoutChan <-chan time.Time
 		for {
-			ql, sl := as.c.RMQLen()
-			l := ql + sl
-			as.qlenMtx.Lock()
-			changed := l != as.qlen
-			as.qlen = l
-			as.qlenMtx.Unlock()
-
-			if changed {
-				as.sendMsg(rmqLenChanged(l))
-			}
 			select {
-			case <-time.After(100 * time.Millisecond):
 			case <-as.ctx.Done():
 				return
+			case <-timeoutChan:
+				ql, sl := as.c.RMQLen()
+				l := ql + sl
+				as.qlenMtx.Lock()
+				changed := l != as.qlen
+				as.qlen = l
+				as.qlenMtx.Unlock()
+
+				if changed {
+					as.sendMsg(rmqLenChanged(l))
+				}
+				timeoutChan = nil
+
+			case <-as.qlenRecheckChan:
+				// Debounce events.
+				if timeoutChan == nil {
+					timeoutChan = time.After(500 * time.Millisecond)
+				}
 			}
 		}
 	}()
 
+	// Open pinned chat windows.
 	go func() {
 		for _, nick := range as.winpin {
 			as.openChatWindow(nick)
@@ -363,6 +373,14 @@ func (as *appState) run() error {
 	return err
 }
 
+// recheckRMQLen rechecks the RMQ length after an RM is sent or received.
+func (as *appState) recheckRMQLen() {
+	select {
+	case as.qlenRecheckChan <- struct{}{}:
+	case <-as.ctx.Done():
+	}
+}
+
 // recheckLNBalance schedules a re-check of the wallet balance. This blocks
 // until the request is made to the trackLNBalances goroutine.
 func (as *appState) recheckLNBalance() {
@@ -388,8 +406,6 @@ func (as *appState) trackLNBalances() {
 			timeout = minTimeout
 
 		case <-time.After(timeout):
-
-			// TODO
 			if as.lnRPC == nil {
 				continue
 			}
@@ -3562,9 +3578,15 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		as.recheckLNBalance()
 	}))
 
+	ntfns.Register(client.OnRMQueued(func(ru *client.RemoteUser, p interface{}) {
+		// Handler is already async. so it does not need another goroutine.
+		as.recheckRMQLen()
+	}))
+
 	ntfns.Register(client.OnRMSent(func(ru *client.RemoteUser, rv ratchet.RVPoint, p interface{}) {
 		// Handler is already async. so it does not need another goroutine.
 		as.recheckLNBalance()
+		as.recheckRMQLen()
 	}))
 
 	// Initialize resources router.
@@ -4042,6 +4064,8 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		lnOpenChannelChan: make(chan msgLNOpenChannelReply),
 		lnRequestRecvChan: make(chan msgLNRequestRecvReply),
 		lnFundWalletChan:  make(chan msgLNFundWalletReply),
+
+		qlenRecheckChan: make(chan struct{}, 12),
 
 		winpin:             args.WinPin,
 		inviteFundsAccount: args.InviteFundsAccount,
