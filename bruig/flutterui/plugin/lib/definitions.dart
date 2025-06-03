@@ -2822,8 +2822,11 @@ class LiveRTDTPeer {
   final bool hasSound;
   @JsonKey(name: "volume_gain")
   final double volumeGain;
+  @JsonKey(name: "buffered_count")
+  final int bufferCount;
 
-  LiveRTDTPeer(this.hasSoundStream, this.hasSound, this.volumeGain);
+  LiveRTDTPeer(
+      this.hasSoundStream, this.hasSound, this.volumeGain, this.bufferCount);
   factory LiveRTDTPeer.fromJson(Map<String, dynamic> json) =>
       _$LiveRTDTPeerFromJson(json);
 }

@@ -894,6 +894,9 @@ type LiveRTDTPeer struct {
 	// Volume gain for this peer (in dB).
 	VolumeGain float64 `json:"volume_gain"`
 
+	// BufferedCount is the number of packets buffered for playing.
+	BufferedCount int64 `json:"buffered_count"`
+
 	// The following fields are accessed with the sessions mutex held.
 
 	// ps is the playback stream associated to this peer.
@@ -1410,6 +1413,11 @@ func (c *Client) GetLiveRTSession(sessRV *zkidentity.ShortID) *LiveRTDTSession {
 		Peers:    make(map[rpc.RTDTPeerID]LiveRTDTPeer, len(liveSess.peers)),
 	}
 	for k, v := range liveSess.peers {
+		if v.ps != nil {
+			v.BufferedCount = v.ps.BufferedCount()
+		} else {
+			v.BufferedCount = 0
+		}
 		res.Peers[k] = *v
 	}
 	liveSess.mtx.Unlock()

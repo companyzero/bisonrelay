@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bruig/components/chat/input.dart';
 import 'package:bruig/components/chat/messages.dart';
 import 'package:bruig/components/chat/rtc_session_header.dart';
@@ -17,6 +19,7 @@ import 'package:bruig/models/snackbar.dart';
 import 'package:bruig/screens/chats.dart';
 import 'package:bruig/screens/ln/components.dart';
 import 'package:bruig/theme_manager.dart';
+import 'package:bruig/util.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:provider/provider.dart';
@@ -181,6 +184,13 @@ class __RealtimeSessionPublisherWState
       ),
       const SizedBox(width: 5, height: 30),
       Txt.S(pubNick),
+      if (session.inLiveSession &&
+          peer != null &&
+          (peer?.bufferCount ?? 0) > 0) ...[
+        const SizedBox(width: 5, height: 30),
+        Txt.S(
+            "buf: ${formatMsDuration(Duration(milliseconds: (peer?.bufferCount ?? 0) * 20))}")
+      ],
       const SizedBox(width: 5),
       if (session.inLiveSession &&
           session.isAdmin &&
@@ -229,6 +239,8 @@ class _ActiveRealtimeChatScreenState extends State<ActiveRealtimeChatScreen> {
   late ItemScrollController _itemScrollController;
   late ItemPositionsListener _itemPositionsListener;
 
+  Timer? timerRefresh;
+
   void sessionUpdated() {
     setState(() {
       publishers = session.info.metadata.publishers;
@@ -250,6 +262,12 @@ class _ActiveRealtimeChatScreenState extends State<ActiveRealtimeChatScreen> {
     }
   }
 
+  void refreshIfLive(Timer t) async {
+    if (session.inLiveSession) {
+      await session.refreshFromLive();
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -257,6 +275,9 @@ class _ActiveRealtimeChatScreenState extends State<ActiveRealtimeChatScreen> {
     _itemPositionsListener = ItemPositionsListener.create();
     publishers = session.info.metadata.publishers;
     session.addListener(sessionUpdated);
+
+    // Create a timer to refresh details every 1 second (bufferCount, etc).
+    timerRefresh = Timer.periodic(Duration(seconds: 1), refreshIfLive);
   }
 
   @override
@@ -272,6 +293,7 @@ class _ActiveRealtimeChatScreenState extends State<ActiveRealtimeChatScreen> {
   @override
   void dispose() {
     session.removeListener(sessionUpdated);
+    timerRefresh?.cancel();
     super.dispose();
   }
 

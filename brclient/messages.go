@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"crypto/tls"
 	"errors"
 	"time"
@@ -61,6 +62,7 @@ type msgPasteErr error
 
 type msgNewRecvdMsg struct{}
 
+type msgTick struct{}
 type msgCancelForm struct{}
 type msgSubmitForm struct{}
 type msgRetryAction struct{}
@@ -231,6 +233,17 @@ func emitMsg(msg tea.Msg) tea.Cmd {
 func emitAfter(msg tea.Msg, delay time.Duration) tea.Cmd {
 	return func() tea.Msg {
 		time.Sleep(delay)
+		return msg
+	}
+}
+
+func emitOrCancelAfter(ctx context.Context, msg tea.Msg, delay time.Duration) tea.Cmd {
+	return func() tea.Msg {
+		select {
+		case <-ctx.Done():
+			return nil
+		case <-time.After(delay):
+		}
 		return msg
 	}
 }

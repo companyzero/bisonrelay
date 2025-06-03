@@ -330,6 +330,11 @@ func (ps *PlaybackStream) Input(data []byte, ts uint32) {
 	}
 }
 
+// BufferedCount returns the number of buffered packets.
+func (ps *PlaybackStream) BufferedCount() int64 {
+	return int64(len(ps.inputChan) + len(ps.playbackChan))
+}
+
 // inputBlocking inputs a playback packet but blocks if the input buffer is
 // full.  This is used when playing back recordings.
 func (ps *PlaybackStream) inputBlocking(ctx context.Context, data []byte, ts uint32) {
@@ -374,6 +379,7 @@ func (ps *PlaybackStream) decodeLoop(ctx context.Context) error {
 	var startTime = time.Now()   // Track total decoding time.
 	var lastTimestamp uint32 = 0 // Last decoded ts.
 	var stallStartTs uint32      // Used to log stats about stalls.
+	var stallStartTime time.Time // Used to guess when the remote mic was turned off
 
 	// Whether playback loop is stalled. This starts as true to ensure the
 	// first packet is decoded if it has a timestamp of 0.
@@ -390,7 +396,8 @@ func (ps *PlaybackStream) decodeLoop(ctx context.Context) error {
 	// it doubles the size of buffering done for the next round (up to a
 	// maximum).
 	var stallTargetQLen int = minPlaybackBufferPackets
-	const maxTargetQLen = 1000 / periodSizeMS // 1 second.
+	const maxTargetQLenTime = time.Second
+	const maxTargetQLen = int(maxTargetQLenTime/time.Millisecond) / periodSizeMS
 
 	var volumeGain float64 = 0
 
@@ -432,6 +439,20 @@ nextFrame:
 				}
 			}
 
+			// If we're coming back from a stall that lasted more
+			// than 3 times the maximum stall time, consider this
+			// was not a network stall but rather the remote peer
+			// turning off their mic, then coming back. Reset the
+			// stall target back to the minimum to avoid large
+			// buffering/latency.
+			if fillQueue && decodeQueue.len() == 0 && time.Since(stallStartTime) > 3*maxTargetQLenTime {
+				stallTargetQLen = minPlaybackBufferPackets
+				if addDebugTrace {
+					ps.log.Debugf("Resetting target qlen to %d after stall of %s",
+						stallTargetQLen, time.Since(stallStartTime))
+				}
+			}
+
 			// Put the received packet into the sorted queue.
 			decodeQueue.enq(input.data, input.ts)
 			inPackets++
@@ -455,6 +476,7 @@ nextFrame:
 				//	"stall ts %d last ts %d qlen %d",
 				//	stallTs, lastTimestamp, decodeQueue.len())
 				stallStartTs = stallTs
+				stallStartTime = time.Now()
 
 				// When the decoding queue is empty, this is a
 				// trigger to wait for a full queue before
@@ -568,6 +590,7 @@ nextFrame:
 							ts, ts-stallStartTs)
 					}
 					stallStartTs = 0
+					stallStartTime = time.Time{}
 				}
 				fillQueue = false
 			}

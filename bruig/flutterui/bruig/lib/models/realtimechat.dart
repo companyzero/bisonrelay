@@ -40,6 +40,15 @@ class RTDTLivePeerModel extends ChangeNotifier {
     return res.gain;
   }
 
+  int _bufferCount = 0;
+  int get bufferCount => _bufferCount;
+  set bufferCount(int v) {
+    if (_bufferCount != v) {
+      _bufferCount = v;
+      notifyListeners();
+    }
+  }
+
   void _init() {
     modifyGain(0); // Fetch current gain.
   }
@@ -227,10 +236,20 @@ class RTDTSessionModel extends ChangeNotifier {
         peer._hasSoundStream = lp.hasSoundStream;
         peer._isLive = true;
         peer._gain = lp.volumeGain;
+        peer._bufferCount = lp.bufferCount;
+      } else {
+        _livePeers[peerID]?._bufferCount = live.peers[peerID]?.bufferCount ?? 0;
       }
     }
 
     notifyListeners();
+  }
+
+  Future<void> refreshFromLive() async {
+    var live = await Golib.rtdtGetLiveSession(sessionRV);
+    if (live != null) {
+      _refreshFromLive(live);
+    }
   }
 
   void _appendChatMsg(
