@@ -334,6 +334,16 @@ type OnRMReceived func(ru *RemoteUser, h *rpc.RMHeader, p interface{}, ts time.T
 
 func (_ OnRMReceived) typ() string { return onRMReceived }
 
+const onRMQueuedNtfnType = "onRMQueued"
+
+// OnRMQueued is a notification sent whenever a user RM has been queued in the
+// RMQ for outbound sending to the server. This is NOT when the message has been
+// sent to the server, but rather when the RMQ has acknowledged that the message
+// has been added to the outbound queue to be sent.
+type OnRMQueued func(ru *RemoteUser, p interface{})
+
+func (_ OnRMQueued) typ() string { return onRMQueuedNtfnType }
+
 const onRMSent = "onRMSent"
 
 // OnRMSent is a notification sent whenever a message has been delivered to
@@ -955,6 +965,11 @@ func (nmgr *NotificationManager) notifyRMReceived(ru *RemoteUser, rmh *rpc.RMHea
 		visit(func(h OnRMReceived) { h(ru, rmh, p, ts) })
 }
 
+func (nmgr *NotificationManager) notifyRMQueued(ru *RemoteUser, p interface{}) {
+	nmgr.handlers[onRMQueuedNtfnType].(*handlersFor[OnRMQueued]).
+		visit(func(h OnRMQueued) { h(ru, p) })
+}
+
 func (nmgr *NotificationManager) notifyRMSent(ru *RemoteUser, rv ratchet.RVPoint, p interface{}) {
 	nmgr.handlers[onRMSent].(*handlersFor[OnRMSent]).
 		visit(func(h OnRMSent) { h(ru, rv, p) })
@@ -1007,6 +1022,7 @@ func NewNotificationManager() *NotificationManager {
 			onTipReceivedNtfnType:    &handlersFor[OnTipReceivedNtfn]{},
 			onReceiveReceipt:         &handlersFor[OnReceiveReceipt]{},
 			onRMReceived:             &handlersFor[OnRMReceived]{},
+			onRMQueuedNtfnType:       &handlersFor[OnRMQueued]{},
 			onRMSent:                 &handlersFor[OnRMSent]{},
 			onUnackedRMSentNtfnType:  &handlersFor[OnUnackedRMSent]{},
 			onProfileUpdatedType:     &handlersFor[OnProfileUpdated]{},

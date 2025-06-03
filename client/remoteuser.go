@@ -310,6 +310,10 @@ func (ru *RemoteUser) queueRMPriority(payload interface{}, priority uint,
 		return err
 	}
 
+	if ru.ntfns != nil {
+		ru.ntfns.notifyRMQueued(ru, payload)
+	}
+
 	// Handle sending reply.
 	go func() {
 		var err error
