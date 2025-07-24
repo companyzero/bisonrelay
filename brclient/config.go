@@ -301,7 +301,7 @@ func loadConfig() (*config, error) {
 
 	flagBellCmd := fs.String("bellcmd", "", "Bell command on new msgs")
 	flagSyncFreeList := fs.Bool("syncfreelist", true, "")
-	flagAutoCompact := fs.Bool("autocompact", true, "")
+	flagAutoCompact := fs.Bool("autocompact", false, "")
 	flagAutoCompactMinAge := fs.String("autocompactminage", "14d", "how often to auto compact")
 	flagExternalEditorForComments := fs.Bool("externaleditorforcomments", false, "")
 	flagNoLoadChatHistory := fs.Bool("noloadchathistory", false, "Whether to read chat logs to build chat history")
