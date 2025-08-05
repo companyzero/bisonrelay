@@ -431,7 +431,7 @@ func (as *appState) recheckLNBalance() {
 func (as *appState) trackLNBalances() {
 	const minTimeout = 500 * time.Millisecond
 	const maxTimeout = 4 * time.Minute
-	var timeout time.Duration // Execute first check immediately
+	var timeout time.Duration = minTimeout
 	var lastBal balance
 	var checkedSetupNeeds bool
 	var lastUnconf dcrutil.Amount
