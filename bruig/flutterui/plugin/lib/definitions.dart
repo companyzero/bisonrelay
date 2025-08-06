@@ -2517,8 +2517,8 @@ class RMRTDTSessionInvite {
   final bool allowedAsPublisher;
   @JsonKey(name: "peer_id")
   final int peerID;
-  @JsonKey(defaultValue: "")
-  final String gc;
+  @JsonKey(includeIfNull: false)
+  final String? gc;
   final int tag;
 
   RMRTDTSessionInvite(this.rv, this.appointCookie, this.size, this.description,

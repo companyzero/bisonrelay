@@ -1021,9 +1021,9 @@ class ClientModel extends ChangeNotifier {
       // Invitations to RTDT sessions are reversed: source id is always uid and
       // invite.gc is filled when the session is associated with a GC.
       var isRTSessInviteInGC = false;
-      if (evnt is InvitedToRTDTSess) {
-        isRTSessInviteInGC = evnt.invite.gc != "";
-        chatId = evnt.invite.gc;
+      if (evnt is InvitedToRTDTSess && (evnt.invite.gc ?? "") != "") {
+        isRTSessInviteInGC = true;
+        chatId = evnt.invite.gc!;
       }
 
       var isGC = (evnt is GCMsg) ||

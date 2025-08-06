@@ -2432,7 +2432,7 @@ RMRTDTSessionInvite _$RMRTDTSessionInviteFromJson(Map<String, dynamic> json) =>
       json['description'] as String,
       json['allowed_as_publisher'] as bool,
       (json['peer_id'] as num).toInt(),
-      json['gc'] as String? ?? '',
+      json['gc'] as String?,
       (json['tag'] as num).toInt(),
     );
 
@@ -2445,7 +2445,7 @@ Map<String, dynamic> _$RMRTDTSessionInviteToJson(
       'description': instance.description,
       'allowed_as_publisher': instance.allowedAsPublisher,
       'peer_id': instance.peerID,
-      'gc': instance.gc,
+      if (instance.gc case final value?) 'gc': value,
       'tag': instance.tag,
     };
 
