@@ -169,8 +169,8 @@ const (
 	CTRTDTLeaveLiveSession                 = 0xa0
 	CTAudioSetDevices                      = 0xa1
 	CTRTDTModifyLivePeerVolumeGain         = 0xa2
-	CTSetAudioCaptureGain                  = 0xa3
-	CTGetAudioCaptureGain                  = 0xa4
+	CTAudioSetCaptureGain                  = 0xa3
+	CTAudioGetCaptureGain                  = 0xa4
 	CTRTDTKickFromLiveSession              = 0xa5
 	CTRTDTRemoveFromSession                = 0xa6
 	CTRTDTExitSession                      = 0xa7
@@ -179,6 +179,8 @@ const (
 	CTRTDTGetLiveSession                   = 0xaa
 	CTRTDTSendChatMsg                      = 0xab
 	CTRTDTGetChatMessages                  = 0xac
+	CTAudioSetPlaybackGain                 = 0xad
+	CTAudioGetPlaybackGain                 = 0xae
 
 	NTInviteReceived         = 0x1001
 	NTInviteAccepted         = 0x1002

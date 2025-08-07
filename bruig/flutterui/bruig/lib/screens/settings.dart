@@ -1010,6 +1010,22 @@ class _AudioSettingsScreenState extends State<AudioSettingsScreen> {
               ),
             ]),
           ),
+          const SizedBox(height: 30),
+          Box(
+            padding: const EdgeInsets.all(10),
+            margin:
+                const EdgeInsets.only(top: 2, bottom: 5, left: 10, right: 12),
+            color: SurfaceColor.secondaryContainer,
+            child: Wrap(spacing: 5, runSpacing: 10, children: [
+              const Text("Output Volume"),
+              VolumeGainControl(
+                initialValue: audio.playbackGain.value,
+                onChanged: (value) async {
+                  await audio.playbackGain.set(value);
+                },
+              ),
+            ]),
+          ),
           Wrap(spacing: 10, runSpacing: 10, children: [
             TextButton.icon(
                 onPressed:

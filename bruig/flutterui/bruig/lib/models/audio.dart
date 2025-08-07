@@ -74,10 +74,32 @@ class CaptureGainModel extends ChangeNotifier {
     }
   }
 
-  // Read the current internval value. Needs to be called only after the client
+  // Read the current internal value. Needs to be called only after the client
   // is initialized.
   void readCurrent() async {
     var gain = await Golib.getAudioCaptureGain();
+    if (gain != _value) {
+      _value = gain;
+      notifyListeners();
+    }
+  }
+}
+
+class PlaybackGainModel extends ChangeNotifier {
+  double _value = 0;
+  double get value => _value;
+  Future<void> set(double newGain) async {
+    await Golib.setAudioPlaybackGain(newGain);
+    if (newGain != _value) {
+      _value = newGain;
+      notifyListeners();
+    }
+  }
+
+  // Read the current internal value. Needs to be called only after the client
+  // is initialized.
+  void readCurrent() async {
+    var gain = await Golib.getAudioPlaybackGain();
     if (gain != _value) {
       _value = gain;
       notifyListeners();
@@ -177,6 +199,7 @@ class AudioModel extends ChangeNotifier {
   }
 
   CaptureGainModel captureGain = CaptureGainModel();
+  PlaybackGainModel playbackGain = PlaybackGainModel();
 
   bool _recording = false;
   bool get recording => _recording;

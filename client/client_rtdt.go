@@ -14,6 +14,7 @@ import (
 	"github.com/companyzero/bisonrelay/client/clientdb"
 	"github.com/companyzero/bisonrelay/client/internal/lowlevel"
 	"github.com/companyzero/bisonrelay/internal/audio"
+	"github.com/companyzero/bisonrelay/internal/generics"
 	"github.com/companyzero/bisonrelay/internal/strescape"
 	"github.com/companyzero/bisonrelay/rpc"
 	rtdtclient "github.com/companyzero/bisonrelay/rtdt/client"
@@ -891,7 +892,8 @@ type LiveRTDTPeer struct {
 	// detectable level.
 	HasSound bool `json:"has_sound"`
 
-	// Volume gain for this peer (in dB).
+	// Volume gain for this peer (in dB). This is independent of the global
+	// gain.
 	VolumeGain float64 `json:"volume_gain"`
 
 	// BufferedCount is the number of packets buffered for playing.
@@ -1455,10 +1457,35 @@ func (c *Client) LeaveLiveRTSession(sessRV zkidentity.ShortID) error {
 	return err
 }
 
+// SetGlobalPlaybackGain sets the global playback gain. It modifies the gain on
+// every existing live peer.
+func (c *Client) SetGlobalPlaybackGain(gain float64) {
+	c.noterec.SetPlaybackGain(gain)
+
+	// Modify every peer to have the new gain (plus any individual gain).
+	c.rtMtx.Lock()
+	allSess := generics.CopyMapValues(c.rtLiveSessions)
+	c.rtMtx.Unlock()
+
+	for _, liveSess := range allSess {
+		liveSess.mtx.Lock()
+		for _, livePeer := range liveSess.peers {
+			if livePeer.ps != nil {
+				// Add the global gain to keep volume consistent.
+				livePeer.ps.SetVolumeGain(gain + livePeer.VolumeGain)
+			}
+		}
+		liveSess.mtx.Unlock()
+	}
+
+}
+
 // ModifyRTDTLivePeerVolumeGain modifies the playback audio gain for the given
 // peer. It adds or subtracts from the current gain (in dB).
 func (c *Client) ModifyRTDTLivePeerVolumeGain(sessRV *zkidentity.ShortID,
 	peerID rpc.RTDTPeerID, delta float64) float64 {
+
+	globalGain := c.noterec.GetPlaybackGain()
 
 	c.rtMtx.Lock()
 	liveSess := c.rtLiveSessions[*sessRV]
@@ -1473,7 +1500,8 @@ func (c *Client) ModifyRTDTLivePeerVolumeGain(sessRV *zkidentity.ShortID,
 		newGain = livePeer.VolumeGain + delta
 		livePeer.VolumeGain = newGain
 		if livePeer.ps != nil {
-			livePeer.ps.SetVolumeGain(newGain)
+			// Add the global gain to keep volume consistent.
+			livePeer.ps.SetVolumeGain(newGain + globalGain)
 		}
 	}
 	liveSess.mtx.Unlock()
