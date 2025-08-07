@@ -407,6 +407,7 @@ class _AppState extends State<App> with WindowListener {
   Future<void> addressBookLoaded(bool wasAlreadyRunning) async {
     var audio = Provider.of<AudioModel>(context, listen: false);
     audio.captureGain.readCurrent();
+    audio.playbackGain.readCurrent();
 
     var client = Provider.of<ClientModel>(context, listen: false);
     var rtc = Provider.of<RealtimeChatModel>(context, listen: false);

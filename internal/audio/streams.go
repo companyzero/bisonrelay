@@ -830,10 +830,15 @@ func newPlaybackStream(audioCtx audioContext, deviceID DeviceID) *PlaybackStream
 // playbackOpusFrames creates and runs a playback stream through a set of opus
 // packets (likely a recording).
 func playbackOpusFrames(ctx context.Context, audioCtx audioContext,
-	deviceID DeviceID, opusFrames [][]byte, log slog.Logger) *PlaybackStream {
+	deviceID DeviceID, gain float64, opusFrames [][]byte, log slog.Logger) *PlaybackStream {
 
 	ps := newPlaybackStream(audioCtx, deviceID)
 	ps.log = log
+
+	go ps.run(ctx)
+	if gain != 0 {
+		ps.SetVolumeGain(gain)
+	}
 
 	// Input opus frames.
 	go func() {
@@ -851,7 +856,6 @@ func playbackOpusFrames(ctx context.Context, audioCtx audioContext,
 		ps.MarkInputDone(ctx)
 	}()
 
-	go ps.run(ctx)
 	return ps
 }
 

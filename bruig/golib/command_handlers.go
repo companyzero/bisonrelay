@@ -2588,7 +2588,7 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 			args.Gain)
 		return args, nil
 
-	case CTSetAudioCaptureGain:
+	case CTAudioSetCaptureGain:
 		var args float64
 		if err := cmd.decode(&args); err != nil {
 			return nil, err
@@ -2597,8 +2597,20 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		cc.noterec.SetCaptureGain(args)
 		return nil, nil
 
-	case CTGetAudioCaptureGain:
+	case CTAudioGetCaptureGain:
 		return cc.noterec.GetCaptureGain(), nil
+
+	case CTAudioSetPlaybackGain:
+		var args float64
+		if err := cmd.decode(&args); err != nil {
+			return nil, err
+		}
+
+		c.SetGlobalPlaybackGain(args)
+		return nil, nil
+
+	case CTAudioGetPlaybackGain:
+		return cc.noterec.GetPlaybackGain(), nil
 
 	case CTRTDTKickFromLiveSession:
 		var args rtdtKickedFromLive

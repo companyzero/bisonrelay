@@ -4108,10 +4108,23 @@ abstract class PluginPlatform {
           RTDTLivePeerGain(sessionRV, peerID, delta).toJson())));
 
   Future<void> setAudioCaptureGain(double delta) async =>
-      await asyncCall(CTSetAudioCaptureGain, delta);
+      await asyncCall(CTAudioSetCaptureGain, delta);
 
   Future<double> getAudioCaptureGain() async {
-    var res = (await asyncCall(CTGetAudioCaptureGain, null));
+    var res = (await asyncCall(CTAudioGetCaptureGain, null));
+    try {
+      return res as double;
+    } catch (exception) {
+      var v = res as int;
+      return v.toDouble();
+    }
+  }
+
+  Future<void> setAudioPlaybackGain(double delta) async =>
+      await asyncCall(CTAudioSetPlaybackGain, delta);
+
+  Future<double> getAudioPlaybackGain() async {
+    var res = (await asyncCall(CTAudioGetPlaybackGain, null));
     try {
       return res as double;
     } catch (exception) {
@@ -4316,8 +4329,8 @@ const int CTRTDTAcceptInvite = 0x9f;
 const int CTRTDTLeaveLiveSession = 0xa0;
 const int CTAudioSetDevices = 0xa1;
 const int CTRTDTModifyLivePeerVolumeGain = 0xa2;
-const int CTSetAudioCaptureGain = 0xa3;
-const int CTGetAudioCaptureGain = 0xa4;
+const int CTAudioSetCaptureGain = 0xa3;
+const int CTAudioGetCaptureGain = 0xa4;
 const int CTRTDTKickFromLiveSession = 0xa5;
 const int CTRTDTRemoveFromSession = 0xa6;
 const int CTRTDTExitSession = 0xa7;
@@ -4326,6 +4339,8 @@ const int CTRTDTDissolveSession = 0xa9;
 const int CTRTDTGetLiveSession = 0xaa;
 const int CTRTDTSendChatMsg = 0xab;
 const int CTRTDTGetChatMessages = 0xac;
+const int CTAudioSetPlaybackGain = 0xad;
+const int CTAudioGetPlaybackGain = 0xae;
 
 const int notificationsStartID = 0x1000;
 

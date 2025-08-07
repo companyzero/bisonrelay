@@ -41,6 +41,7 @@ type NoteRecorder struct {
 	opusOutput       [][]byte
 	recInfo          RecordInfo
 	capGain          float64
+	playGain         float64
 }
 
 func NewRecorder(log slog.Logger) (*NoteRecorder, error) {
@@ -139,6 +140,22 @@ func (ar *NoteRecorder) SetCaptureGain(gain float64) {
 func (ar *NoteRecorder) GetCaptureGain() float64 {
 	ar.mtx.Lock()
 	res := ar.capGain
+	ar.mtx.Unlock()
+	return res
+}
+
+// SetPlaybackGain sets the global playback gain. This is added to the
+// per-stream playback gain.
+func (ar *NoteRecorder) SetPlaybackGain(gain float64) {
+	ar.mtx.Lock()
+	ar.playGain = gain
+	ar.mtx.Unlock()
+}
+
+// GetPlaybackGain returns the global playback gain.
+func (ar *NoteRecorder) GetPlaybackGain() float64 {
+	ar.mtx.Lock()
+	res := ar.playGain
 	ar.mtx.Unlock()
 	return res
 }
@@ -278,7 +295,7 @@ func (ar *NoteRecorder) Playback(ctx context.Context) error {
 	// Init playback stream with a copy of the opus packets.
 	ar.log.Infof("Starting playback")
 	ps := playbackOpusFrames(ctx, ar.audioCtx, ar.playbackDeviceID,
-		ar.opusOutput[:], ar.log)
+		ar.playGain, ar.opusOutput[:], ar.log)
 	start := time.Now()
 	ar.mtx.Unlock()
 
@@ -309,7 +326,12 @@ func (ar *NoteRecorder) PlaybackStream(ctx context.Context, soundStateChanged fu
 	ar.mtx.Lock()
 	ps := streamPlaybackOpusFrames(ctx, ar.audioCtx, ar.playbackDeviceID,
 		soundStateChanged, ar.log)
+	playGain := ar.playGain
 	ar.mtx.Unlock()
+
+	if playGain != 0 {
+		ps.SetVolumeGain(playGain)
+	}
 	return ps
 
 }
