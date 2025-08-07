@@ -90,6 +90,9 @@ type Settings struct {
 
 	// LogStdOut is the stdout to write the log to. Defaults to os.Stdout.
 	LogStdOut io.Writer
+
+	// API config
+	APIListen string
 }
 
 var (

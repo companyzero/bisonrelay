@@ -9,6 +9,7 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -17,6 +18,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/companyzero/bisonrelay/internal/netutils"
@@ -38,6 +40,25 @@ import (
 const (
 	tagDepth = 32
 )
+
+type APIStatusDB struct {
+	Online bool `json:"db_online"`
+	Master bool `json:"db_master"`
+}
+
+type APIStatusNode struct {
+	Online        bool   `json:"online"`
+	PublicKey     string `json:"publicKey"`
+	NumPeers      uint32 `json:"numPeers"`
+	BlockHeight   int64  `json:"blockHeight"`
+	SyncedToChain bool   `json:"syncedToChain"`
+	SyncedToGraph bool   `json:"syncedToGraph"`
+}
+
+type APIStatus struct {
+	Database APIStatusDB   `json:"db"`
+	Node     APIStatusNode `json:"node"`
+}
 
 // RPCWrapper is a wrapped RPC Message for internal use.  This is required because RPC messages
 // consist of 2 discrete pieces.
@@ -85,6 +106,10 @@ type ZKS struct {
 	rtServerPubKey     *zkidentity.FixedSizeSntrupPublicKey
 	rtCookieKey        *zkidentity.FixedSizeSymmetricKey
 	rtDecodeCookieKeys []*zkidentity.FixedSizeSymmetricKey
+
+	// api
+	apiListen net.Listener
+	apiStatus atomic.Pointer[APIStatus]
 }
 
 // BoundAddrs returns the addresses the server is bound to listen to.
@@ -426,6 +451,12 @@ func (z *ZKS) Run(ctx context.Context) error {
 	// Run the expiration loop.
 	g.Go(func() error { return z.expirationLoop(ctx) })
 
+	// Run the status api.
+	if z.lnRpc != nil && z.apiListen != nil {
+		g.Go(func() error { return z.refreshAPI(ctx) })
+		g.Go(func() error { return z.serveAPI(ctx) })
+	}
+
 	// Listen for connections.
 	for i := range listeners {
 		l := listeners[i]
@@ -461,6 +492,93 @@ func (z *ZKS) Run(ctx context.Context) error {
 	}
 
 	return err
+}
+
+func (z *ZKS) refreshAPI(ctx context.Context) error {
+	t := time.NewTicker(5 * time.Minute)
+	defer t.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		case <-t.C:
+			healthy := true
+
+			lnInfo, lnErr := z.lnRpc.GetInfo(ctx, &lnrpc.GetInfoRequest{})
+			isMaster, dbErr := z.db.IsMaster(ctx)
+			if lnErr != nil {
+				z.log.Errorf("[BACKEND] failed to get dcrlnd info: %v", lnErr)
+			}
+			if dbErr != nil {
+				z.log.Errorf("[BACKEND] failed to query db: %v", dbErr)
+			} else if isMaster {
+				healthy, dbErr = z.db.HealthCheck(ctx)
+			}
+			var apiStatusNode APIStatusNode
+			if lnErr == nil {
+				apiStatusNode = APIStatusNode{
+					Online:        lnInfo.ServerActive,
+					PublicKey:     lnInfo.IdentityPubkey,
+					BlockHeight:   int64(lnInfo.BlockHeight),
+					NumPeers:      lnInfo.NumPeers,
+					SyncedToChain: lnInfo.SyncedToChain,
+					SyncedToGraph: lnInfo.SyncedToGraph,
+				}
+			}
+			var apiStatusDB APIStatusDB
+			if dbErr == nil {
+				apiStatusDB = APIStatusDB{
+					Online: healthy,
+					Master: isMaster,
+				}
+			}
+			z.apiStatus.Store(&APIStatus{
+				Database: apiStatusDB,
+				Node:     apiStatusNode,
+			})
+		}
+	}
+}
+
+func (z *ZKS) serveAPI(ctx context.Context) error {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/live", func(w http.ResponseWriter, r *http.Request) {
+		flush, ok := w.(http.Flusher)
+		if !ok {
+			http.NotFound(w, r)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		// Replace the Server response header. When used with nginx's "server_tokens
+		// off;" and "proxy_pass_header Server;" options.
+		w.Header().Set("Server", "brserver")
+		w.WriteHeader(http.StatusOK)
+		flush.Flush()
+
+		json.NewEncoder(w).Encode(z.apiStatus.Load())
+	})
+
+	srv := &http.Server{
+		Handler:      mux,
+		ReadTimeout:  30 * time.Second,
+		WriteTimeout: 30 * time.Second,
+	}
+
+	go func() {
+		z.log.Infof("Serving API via HTTP on %s", z.apiListen.Addr())
+		err := srv.Serve(z.apiListen)
+		// ErrServerClosed is expected from a graceful server shutdown, it can
+		// be ignored. Anything else should be logged.
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
+			z.log.Errorf("[API] unexpected (http.Server).Serve error: %v", err)
+		}
+	}()
+
+	<-ctx.Done()
+	_ = srv.Close()
+	return nil
 }
 
 func NewServer(cfg *settings.Settings) (*ZKS, error) {
@@ -599,6 +717,11 @@ func NewServer(cfg *settings.Settings) (*ZKS, error) {
 	if err != nil {
 		return nil, fmt.Errorf("unable to setup payment subsystem: %v", err)
 	}
-
+	if z.settings.APIListen != "" && z.lnRpc != nil {
+		z.apiListen, err = net.Listen("tcp", z.settings.APIListen)
+		if err != nil {
+			return nil, fmt.Errorf("unable to listen for api: %v", err)
+		}
+	}
 	return z, nil
 }

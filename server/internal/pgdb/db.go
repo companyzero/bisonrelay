@@ -1,7 +1,9 @@
 package pgdb
 
 import (
+	"bytes"
 	"context"
+	"crypto/rand"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -891,6 +893,51 @@ func (db *DB) CreatePartition(ctx context.Context, date time.Time) error {
 	defer db.partitionMtx.Unlock()
 
 	return db.maybeCreatePartitions(ctx, date)
+}
+
+// IsMaster returns if the server is master (handles writes).
+func (db *DB) IsMaster(ctx context.Context) (bool, error) {
+	ctx, task := trace.NewTask(ctx, "db.IsMaster")
+	defer task.End()
+
+	var isRecovering bool
+	err := db.db.QueryRow(ctx, "SELECT pg_is_in_recovery();").Scan(&isRecovering)
+	if err != nil {
+		return false, err
+	}
+	return !isRecovering, nil
+}
+
+// HealthCheck returns if the server is functioning properly.
+func (db *DB) HealthCheck(ctx context.Context) (bool, error) {
+	ctx, task := trace.NewTask(ctx, "db.HealthCheck")
+	defer task.End()
+
+	rv := strings.Repeat("dbhealthchecking", 4)
+	var payload [1024]byte
+	_, err := rand.Read(payload[:])
+	if err != nil {
+		return false, err
+	}
+
+	insertTime := time.Now().Format(time.DateOnly)
+	_, err = db.db.Exec(ctx, "INSERT INTO data VALUES ($1, $2, $3, now());",
+		rv, payload[:], insertTime)
+	if err != nil {
+		return false, err
+	}
+	var res []byte
+	err = db.db.QueryRow(ctx, "SELECT payload FROM data WHERE rv = $1", rv).Scan(&res)
+	if err != nil {
+		// attempt to delete
+		db.db.Exec(ctx, "DELETE FROM data WHERE rv = $1", rv)
+		return false, err
+	}
+	_, err = db.db.Exec(ctx, "DELETE FROM data WHERE rv = $1", rv)
+	if err != nil {
+		return false, err
+	}
+	return bytes.Equal(payload[:], res), nil
 }
 
 // StorePayload stores the provided payload at the given rendezvous point along

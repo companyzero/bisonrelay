@@ -44,6 +44,14 @@ func NewFSDB(rootMsgs, rootSubs string) (serverdb.ServerDB, error) {
 // Static assertion that fsdb implements ServerDB.
 var _ serverdb.ServerDB = (*fsdb)(nil)
 
+func (db *fsdb) HealthCheck(ctx context.Context) (bool, error) {
+	return true, nil
+}
+
+func (db *fsdb) IsMaster(ctx context.Context) (bool, error) {
+	return true, nil
+}
+
 func (db *fsdb) StorePayload(ctx context.Context, rv ratchet.RVPoint, payload []byte, insertTime time.Time) error {
 	filename := filepath.Join(db.rootMsgs, rv.String())
 	if _, err := os.Stat(filename); !os.IsNotExist(err) {
