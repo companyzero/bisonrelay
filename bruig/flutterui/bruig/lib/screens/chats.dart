@@ -200,91 +200,95 @@ typedef AddEmojiCallback = Function(Emoji?);
 // callbacks for the Input() class to know when to send vs when to add new lines
 // to the input component. There should to be a better way to do this.
 class CustomInputFocusNode {
-  bool ctrlLeft = false;
-  bool ctrlRight = false;
-  bool shiftLeft = false;
-  bool shiftRight = false;
-  bool altLeft = false;
-  bool altRight = false;
-  bool metaLeft = false;
-  bool metaRight = false;
-  bool get anyMod =>
-      ctrlLeft ||
-      altLeft ||
-      shiftLeft ||
-      ctrlRight ||
-      altRight ||
-      shiftRight ||
-      metaLeft ||
-      metaRight;
+  bool get anyMod {
+    final kb = HardwareKeyboard.instance;
+    return kb.isControlPressed ||
+        kb.isAltPressed ||
+        kb.isShiftPressed ||
+        kb.isMetaPressed;
+  }
 
   late final FocusNode inputFocusNode;
 
+  /// Called on plain Enter (no modifiers).
   Function? noModEnterKeyHandler;
 
+  /// Insert the chosen emoji (called with the selected Emoji).
   AddEmojiCallback? addEmojiHandler;
 
-  // If set, this is called when a paste event ("ctrl+v") is detected.
+  /// Called when a paste accelerator is detected (Ctrl/Cmd + V).
   Function? pasteEventHandler;
+
+  static const Duration _pasteDebounce = Duration(milliseconds: 300);
+  DateTime? _lastPasteTime;
 
   CustomInputFocusNode(TypingEmojiSelModel typingEmoji) {
     inputFocusNode = FocusNode(onKeyEvent: (node, event) {
-      if (event.logicalKey.keyId == LogicalKeyboardKey.controlLeft.keyId) {
-        ctrlLeft = event is KeyDownEvent;
-      } else if (event.logicalKey.keyId ==
-          LogicalKeyboardKey.controlRight.keyId) {
-        ctrlRight = event is KeyDownEvent;
-      } else if (event.logicalKey.keyId == LogicalKeyboardKey.altLeft.keyId) {
-        altLeft = event is KeyDownEvent;
-      } else if (event.logicalKey.keyId == LogicalKeyboardKey.altRight.keyId) {
-        altRight = event is KeyDownEvent;
-      } else if (event.logicalKey.keyId == LogicalKeyboardKey.shiftLeft.keyId) {
-        shiftLeft = event is KeyDownEvent;
-      } else if (event.logicalKey.keyId == LogicalKeyboardKey.metaLeft.keyId) {
-        metaLeft = event is KeyDownEvent;
-      } else if (event.logicalKey.keyId == LogicalKeyboardKey.metaRight.keyId) {
-        metaRight = event is KeyDownEvent;
-      } else if (event.logicalKey.keyId ==
-          LogicalKeyboardKey.shiftRight.keyId) {
-        shiftRight = event is KeyDownEvent;
-      } else if (event.logicalKey.keyId == LogicalKeyboardKey.enter.keyId) {
-        // When typing an emoji code and there's a handler, use it.
-        if (addEmojiHandler != null && typingEmoji.selectedEmoji != null) {
-          if (event is KeyDownEvent) {
-            // Ignore KeyDown and only act on KeyUp to ensure no double insertion
-            // or insertion + sendMsg.
-            return KeyEventResult.handled;
-          }
-          addEmojiHandler!(null);
-          typingEmoji.clearSelection();
+      final kb = HardwareKeyboard.instance;
+
+      // Emoji mode (when typing a shortcode)
+      if (typingEmoji.isTypingEmoji) {
+        if (event is KeyDownEvent &&
+            (event.logicalKey == LogicalKeyboardKey.arrowUp ||
+                event.logicalKey == LogicalKeyboardKey.arrowDown)) {
+          typingEmoji.changeSelection(
+              event.logicalKey == LogicalKeyboardKey.arrowUp ? -1 : 1);
           return KeyEventResult.handled;
         }
 
-        // When a special handler is set, call it to bypass standard processing
-        // of the key and return the 'handled' result.
-        if (noModEnterKeyHandler != null && !anyMod) {
-          noModEnterKeyHandler!();
+        // Commit selection with Enter (on KeyUp to avoid double action)
+        if (event.logicalKey == LogicalKeyboardKey.enter) {
+          if (event is KeyUpEvent) {
+            final sel = typingEmoji.selectedEmoji;
+            if (sel != null) {
+              addEmojiHandler?.call(sel);
+              typingEmoji.clearSelection();
+            }
+          }
+          return KeyEventResult
+              .handled; // block enter from sending while in emoji mode
+        }
+
+        // Commit with Tab (immediate on KeyDown)
+        if (event is KeyDownEvent &&
+            event.logicalKey == LogicalKeyboardKey.tab) {
+          final sel = typingEmoji.selectedEmoji;
+          if (sel != null) {
+            addEmojiHandler?.call(sel);
+            typingEmoji.clearSelection();
+          }
           return KeyEventResult.handled;
         }
-      } else if ((ctrlLeft || ctrlRight || metaLeft || metaRight) &&
-          event.logicalKey.keyId == LogicalKeyboardKey.keyV.keyId &&
+
+        // Cancel with Esc
+        if (event is KeyDownEvent &&
+            event.logicalKey == LogicalKeyboardKey.escape) {
+          typingEmoji.clearSelection();
+          return KeyEventResult.handled;
+        }
+      }
+
+      // Paste shortcut: Ctrl/Cmd + V (with debounce)
+      if ((kb.isControlPressed || kb.isMetaPressed) &&
+          event.logicalKey == LogicalKeyboardKey.keyV &&
           event is KeyDownEvent) {
-        if (pasteEventHandler != null) {
-          pasteEventHandler!();
+        final now = DateTime.now();
+        if (_lastPasteTime == null ||
+            now.difference(_lastPasteTime!) > _pasteDebounce) {
+          _lastPasteTime = now;
+          pasteEventHandler?.call();
+        }
+        return KeyEventResult.handled;
+      }
+
+      // Plain Enter (no modifiers) -> send
+      if (event.logicalKey == LogicalKeyboardKey.enter) {
+        if (noModEnterKeyHandler != null && !anyMod) {
+          if (event is KeyDownEvent) {
+            noModEnterKeyHandler!();
+          }
           return KeyEventResult.handled;
         }
-      } else if (event.logicalKey.keyId == LogicalKeyboardKey.arrowUp.keyId &&
-          typingEmoji.isTypingEmoji) {
-        if (event is KeyDownEvent) {
-          typingEmoji.changeSelection(-1); // Move up list of emojis.
-        }
-        return KeyEventResult.handled;
-      } else if (event.logicalKey.keyId == LogicalKeyboardKey.arrowDown.keyId &&
-          typingEmoji.isTypingEmoji) {
-        if (event is KeyDownEvent) {
-          typingEmoji.changeSelection(1);
-        } // Move down list of emojis.
-        return KeyEventResult.handled;
       }
 
       return KeyEventResult.ignored;
