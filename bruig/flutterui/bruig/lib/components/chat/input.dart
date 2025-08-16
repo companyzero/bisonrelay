@@ -200,28 +200,42 @@ class _ChatInputState extends State<ChatInput> {
 
   void addEmoji(Emoji? e) {
     if (e != null) {
-      // Selected emoji from panel eidget.
-      var oldPos = controller.selection.start;
-      var newText = controller.selection.textBefore(controller.text) +
+      // Selected emoji from panel widget.
+      final oldPos = controller.selection.start;
+      final newText = controller.selection.textBefore(controller.text) +
           e.emoji +
           controller.selection.textAfter(controller.text);
       widget.chat.workingMsg = newText;
       controller.value = TextEditingValue(
-          text: newText,
-          selection: TextSelection.collapsed(offset: oldPos + e.emoji.length));
+        text: newText,
+        selection: TextSelection.collapsed(offset: oldPos + e.emoji.length),
+        composing: TextRange.empty,
+      );
       return;
     }
 
     // Selected emoji from typing panel.
-    var typingEmoji = Provider.of<TypingEmojiSelModel>(context, listen: false);
-    var newText = typingEmoji.replaceTypedEmojiCode(controller);
+    final typingEmoji =
+        Provider.of<TypingEmojiSelModel>(context, listen: false);
+    final oldText = controller.text;
+    final caret = controller.selection.start;
+    final codeLen =
+        typingEmoji.lastEmojiCode.length; // length of shortcut including ':'
+
+    // Replace the shortcode; this returns the full updated text.
+    final newText = typingEmoji.replaceTypedEmojiCode(controller);
     if (newText == "") return;
 
-    var oldPos =
-        controller.selection.start - typingEmoji.lastEmojiCode.length + 1;
+    // Emoji length = newText - (oldText - codeLen) in UTF-16 units.
+    final emojiLen = newText.length - (oldText.length - codeLen);
+    final newCaret = caret + (emojiLen - codeLen); // move caret after the emoji
+
     widget.chat.workingMsg = newText;
     controller.value = TextEditingValue(
-        text: newText, selection: TextSelection.collapsed(offset: oldPos));
+      text: newText,
+      selection: TextSelection.collapsed(offset: newCaret),
+      composing: TextRange.empty,
+    );
   }
 
   void attachFile() {

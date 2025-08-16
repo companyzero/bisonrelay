@@ -239,22 +239,20 @@ class CustomInputFocusNode {
         // Commit selection with Enter (on KeyUp to avoid double action)
         if (event.logicalKey == LogicalKeyboardKey.enter) {
           if (event is KeyUpEvent) {
-            final sel = typingEmoji.selectedEmoji;
-            if (sel != null) {
-              addEmojiHandler?.call(sel);
+            if (typingEmoji.selectedEmoji != null) {
+              addEmojiHandler?.call(null);
               typingEmoji.clearSelection();
             }
           }
-          return KeyEventResult
-              .handled; // block enter from sending while in emoji mode
+          // Block enter from sending while in emoji mode
+          return KeyEventResult.handled;
         }
 
         // Commit with Tab (immediate on KeyDown)
         if (event is KeyDownEvent &&
             event.logicalKey == LogicalKeyboardKey.tab) {
-          final sel = typingEmoji.selectedEmoji;
-          if (sel != null) {
-            addEmojiHandler?.call(sel);
+          if (typingEmoji.selectedEmoji != null) {
+            addEmojiHandler?.call(null);
             typingEmoji.clearSelection();
           }
           return KeyEventResult.handled;
