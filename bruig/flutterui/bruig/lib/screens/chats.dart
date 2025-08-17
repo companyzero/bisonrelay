@@ -210,6 +210,29 @@ class CustomInputFocusNode {
 
   late final FocusNode inputFocusNode;
 
+  TextEditingController? controller; // set from ChatInput
+  TextSelection? _savedSelection;
+
+  void saveSelection() {
+    final c = controller;
+    if (c == null) return;
+
+    final sel = c.selection;
+
+    if (!inputFocusNode.hasFocus) return;
+    if (!sel.isValid) return;
+
+    // Ignore Flutter's fallback 0/0 collapse
+    if (sel.isCollapsed && sel.start == 0) return;
+
+    _savedSelection = sel;
+  }
+
+  TextSelection? takeSavedSelection() {
+    final s = _savedSelection;
+    return s;
+  }
+
   /// Called on plain Enter (no modifiers).
   Function? noModEnterKeyHandler;
 
