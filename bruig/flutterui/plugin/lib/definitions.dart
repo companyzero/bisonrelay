@@ -4026,6 +4026,12 @@ abstract class PluginPlatform {
   Future<List<MediateIDRequest>> listMediateIDRequests() async => jsonToList(
       await asyncCall(CTListMIRequests, null), MediateIDRequest.fromJson);
 
+  Future<void> cancelKX(String initialRV) async =>
+      await asyncCall(CTCancelKX, initialRV);
+
+  Future<void> cancelMediateID(String mediator, String target) async =>
+      await asyncCall(CTCancelMediateID, MediateIDArgs(mediator, target));
+
   Future<AudioDevices> listAudioDevices() async =>
       AudioDevices.fromJson(await asyncCall(CTListAudioDevices, null));
 
@@ -4341,6 +4347,8 @@ const int CTRTDTSendChatMsg = 0xab;
 const int CTRTDTGetChatMessages = 0xac;
 const int CTAudioSetPlaybackGain = 0xad;
 const int CTAudioGetPlaybackGain = 0xae;
+const int CTCancelKX = 0xaf;
+const int CTCancelMediateID = 0xb0;
 
 const int notificationsStartID = 0x1000;
 

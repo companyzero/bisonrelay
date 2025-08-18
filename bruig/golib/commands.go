@@ -181,6 +181,8 @@ const (
 	CTRTDTGetChatMessages                  = 0xac
 	CTAudioSetPlaybackGain                 = 0xad
 	CTAudioGetPlaybackGain                 = 0xae
+	CTCancelKX                             = 0xaf
+	CTCancelMediateID                      = 0xb0
 
 	NTInviteReceived         = 0x1001
 	NTInviteAccepted         = 0x1002
