@@ -111,6 +111,8 @@ type clientCfg struct {
 	disableAutoUnsubIdle bool
 	disableAutoHandshake bool
 	gcInviteExpiration   time.Duration
+
+	recentMediateIDThreshold time.Duration
 }
 
 const defaultAutoUnsubIdleUserInterval = 14 * time.Second
@@ -211,6 +213,12 @@ func withLogName(s string) newClientOpt {
 func withRTDTRandomStreamHandler(h rtdtclient.StreamHandler) newClientOpt {
 	return func(cfg *clientCfg) {
 		cfg.rtdtRandomStreamHandler = h
+	}
+}
+
+func withRecentMediateIDThreshold(d time.Duration) newClientOpt {
+	return func(cfg *clientCfg) {
+		cfg.recentMediateIDThreshold = d
 	}
 }
 
@@ -406,6 +414,8 @@ func (ts *testScaffold) defaultNewClientCfg(name string) *clientCfg {
 			*c = *id
 			return c, nil
 		},
+
+		recentMediateIDThreshold: chooseTimeout(time.Second, 3*time.Second),
 	}
 }
 
@@ -502,7 +512,7 @@ func (ts *testScaffold) newClientWithCfg(nccfg *clientCfg, opts ...newClientOpt)
 
 		GCInviteExpiration: nccfg.gcInviteExpiration,
 
-		RecentMediateIDThreshold:   chooseTimeout(time.Second, 3*time.Second),
+		RecentMediateIDThreshold:   nccfg.recentMediateIDThreshold,
 		UnkxdWarningTimeout:        chooseTimeout(250*time.Millisecond, time.Second),
 		MaxAutoKXMediateIDRequests: 3,
 

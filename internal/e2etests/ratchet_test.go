@@ -1122,3 +1122,133 @@ func TestSendTransitiveRMToUnknown(t *testing.T) {
 	// Everything still working.
 	assertClientsCanPM(t, alice, bob)
 }
+
+// TestForceKXWithUnknownRemote tests that attempting a manual kx to a remote
+// user when a prior automated KX is pending works.
+func TestForceKXWithUnknownRemote(t *testing.T) {
+	t.Parallel()
+
+	tcfg := testScaffoldCfg{}
+	ts := newTestScaffold(t, tcfg)
+	alice := ts.newClient("alice", withRecentMediateIDThreshold(time.Hour)) // Long threshold, similar to production.
+	bob := ts.newClient("bob")
+	charlie := ts.newClient("charlie")
+	dave := ts.newClient("dave")
+
+	// Charlie is the target. Bob will go offline (and not complete the KX).
+	// Dave will serve as alternative.
+	//
+	// a -> b --> c
+	//  \-> d /
+	//
+	ts.kxUsers(alice, bob)
+	ts.kxUsers(alice, dave)
+	ts.kxUsers(bob, charlie)
+	ts.kxUsers(dave, charlie)
+
+	// Test handlers.
+	aliceMIReqs := make(chan clientintf.UserID, 5)
+	alice.handle(client.OnRequestingMediateID(func(mediator, target clientintf.UserID) {
+		// Only test when MI'ing with Charlie.
+		if target == charlie.PublicID() {
+			aliceMIReqs <- mediator
+		}
+	}))
+	aliceMediateIDs := make(chan client.UserID, 5)
+	aliceRequestedInvites := make(chan client.UserID, 5)
+	aliceReceivedInvites := make(chan client.UserID, 5)
+	alice.handle(client.OnTransitiveEvent(func(src, tgt clientintf.UserID, event client.TransitiveEvent) {
+		if event == client.TEMediateID {
+			aliceMediateIDs <- src
+		} else if event == client.TERequestInvite {
+			aliceRequestedInvites <- src
+		} else if event == client.TEReceivedInvite {
+			aliceReceivedInvites <- src
+		}
+	}))
+	aliceKxCompleted := make(chan clientintf.UserID, 5)
+	alice.handle(client.OnKXCompleted(func(_ *clientintf.RawRVID, ru *client.RemoteUser, _ bool) {
+		aliceKxCompleted <- ru.ID()
+	}))
+	aliceSuggestKxChan := make(chan clientintf.UserID, 5)
+	alice.handle(client.OnKXSuggested(func(ru *client.RemoteUser, target zkidentity.PublicIdentity) {
+		aliceSuggestKxChan <- target.Identity
+	}))
+	bobMediateIDs := make(chan clientintf.UserID, 5)
+	bob.handle(client.OnTransitiveEvent(func(src, tgt clientintf.UserID, event client.TransitiveEvent) {
+		if event == client.TEMediateID {
+			bobMediateIDs <- tgt
+		}
+	}))
+
+	charlie.handle(client.OnTransitiveEvent(func(src, tgt clientintf.UserID, event client.TransitiveEvent) {
+		if event == client.TEMediateID {
+			bobMediateIDs <- tgt
+		}
+	}))
+	charlieMIReqs := make(chan clientintf.UserID, 5)
+	charlie.handle(client.OnRequestingMediateID(func(mediator, target clientintf.UserID) {
+		// Only test when MI'ing with Alice.
+		if target == alice.PublicID() {
+			charlieMIReqs <- mediator
+		}
+	}))
+	charlieRMInvites := make(chan clientintf.UserID, 5)
+	charlie.handle(client.OnTransitiveEvent(func(src, tgt clientintf.UserID, event client.TransitiveEvent) {
+		if event == client.TERequestInvite && tgt == alice.PublicID() {
+			charlieRMInvites <- src
+		}
+	}))
+
+	// Two GCs: one from Bob (with alice), one from Dave (with Charlie).
+	bobGC, err := bob.NewGroupChat("bob gc")
+	assert.NilErr(t, err)
+	assertJoinsGC(t, bob, alice, bobGC)
+
+	daveGC, err := dave.NewGroupChat("dave gc")
+	assert.NilErr(t, err)
+	assertJoinsGC(t, dave, charlie, daveGC)
+
+	// Alice goes offline to avoid completing the KX automatically.
+	assertGoesOffline(t, alice)
+
+	// Charlie joins Bob's GC. This will trigger an autokx to Alice through
+	// Bob.
+	assertJoinsGC(t, bob, charlie, bobGC)
+	assert.ChanWrittenWithVal(t, charlieMIReqs, bob.PublicID())
+	assert.ChanWrittenWithVal(t, bobMediateIDs, alice.PublicID())
+	time.Sleep(250 * time.Millisecond)
+	assertEmptyRMQ(t, bob)
+
+	// Bob goes out. This prevents the mediation completing through Bob.
+	assertGoesOffline(t, bob)
+
+	// Alice comes back up. It sends the invite through Bob, but Bob is
+	// offline so it doesn't reach Charlie.
+	assertGoesOnline(t, alice)
+	assert.ChanWrittenWithVal(t, aliceRequestedInvites, bob.PublicID())
+	assert.ChanNotWritten(t, aliceKxCompleted, time.Second)
+	aliceKxs, err := alice.ListKXs()
+	assert.NilErr(t, err)
+	assert.DeepEqual(t, len(aliceKxs), 1)
+	assert.DeepEqual(t, aliceKxs[0].Invitee.Identity, charlie.PublicID())
+
+	// Dave adds Alice to his GC. This does not trigger a new mediateID
+	// request through Dave because Alice is already attempting a previous
+	// KX.
+	assertJoinsGC(t, dave, alice, daveGC)
+	assert.ChanNotWritten(t, aliceMIReqs, time.Second)
+	assert.ChanNotWritten(t, aliceKxCompleted, time.Second)
+
+	// Dave suggests Alice KX with Charlie.
+	assert.NilErr(t, dave.SuggestKX(alice.PublicID(), charlie.PublicID()))
+	assert.ChanWrittenWithVal(t, aliceSuggestKxChan, charlie.PublicID())
+
+	// Alice accepts and requests a manual mediate ID to Charlie through
+	// Dave. This request should go through, Charlie will send the invite
+	// through Dave and Alice will complete the KX.
+	assert.NilErr(t, alice.RequestMediateIdentity(dave.PublicID(), charlie.PublicID()))
+	assert.ChanWrittenWithVal(t, charlieRMInvites, dave.PublicID())
+	assert.ChanWrittenWithVal(t, aliceReceivedInvites, dave.PublicID())
+	assert.ChanWrittenWithVal(t, aliceKxCompleted, charlie.PublicID())
+}

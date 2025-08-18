@@ -241,6 +241,8 @@ func (kx *kxList) acceptInvite(pii rpc.OOBPublicIdentityInvite, isForReset, isAu
 		// simultaneously, thus causing broken ratchets (due to each
 		// party using a different ratchet).
 		if !isAutoKX {
+			kx.log.Tracef("Allowing invite acceptance unconditionally " +
+				"due to autokx=false")
 			return nil
 		}
 		otherKXs, err := kx.db.HasKXWithUser(tx, identity)
