@@ -22,6 +22,7 @@ import (
 	"github.com/companyzero/bisonrelay/client/clientintf"
 	"github.com/companyzero/bisonrelay/internal/audio"
 	"github.com/companyzero/bisonrelay/internal/strescape"
+	"github.com/companyzero/bisonrelay/ratchet"
 	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/companyzero/bisonrelay/zkidentity"
 	"github.com/decred/dcrd/dcrutil/v4"
@@ -5320,6 +5321,41 @@ var commands = []tuicmd{
 			return nil
 		},
 		handler: subcmdNeededHandler,
+	}, {
+		cmd:   "cancelkx",
+		usage: "<initial RV>",
+		descr: "Cancel an ongoing KX attempt",
+		handler: func(args []string, as *appState) error {
+			if len(args) < 1 {
+				return usageError{msg: "Initial RV required"}
+			}
+
+			kxs, err := as.c.ListKXs()
+			if err != nil {
+				return err
+			}
+
+			var initialRV ratchet.RVPoint
+			for _, kx := range kxs {
+				if strings.HasPrefix(kx.InitialRV.String(), args[0]) {
+					if !initialRV.IsEmpty() {
+						return fmt.Errorf("initial RV prefix matched more than 1 KX")
+					}
+					initialRV = kx.InitialRV
+				}
+			}
+
+			if initialRV.IsEmpty() {
+				return fmt.Errorf("KX with the given prefix not found")
+			}
+
+			err = as.c.CancelKX(initialRV)
+			if err != nil {
+				return err
+			}
+			as.diagMsg("Canceled KX %s", initialRV)
+			return nil
+		},
 	}, {
 		cmd:           "quit",
 		usableOffline: true,
