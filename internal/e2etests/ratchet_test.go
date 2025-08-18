@@ -1252,3 +1252,45 @@ func TestForceKXWithUnknownRemote(t *testing.T) {
 	assert.ChanWrittenWithVal(t, aliceReceivedInvites, dave.PublicID())
 	assert.ChanWrittenWithVal(t, aliceKxCompleted, charlie.PublicID())
 }
+
+// TestCancelsKX tests that the CancelKX operation works.
+func TestCancelsKX(t *testing.T) {
+	t.Parallel()
+
+	tcfg := testScaffoldCfg{}
+	ts := newTestScaffold(t, tcfg)
+	alice := ts.newClient("alice")
+	bob := ts.newClient("bob")
+
+	aliceKxCompleted := make(chan clientintf.UserID, 5)
+	alice.handle(client.OnKXCompleted(func(_ *clientintf.RawRVID, ru *client.RemoteUser, _ bool) {
+		aliceKxCompleted <- ru.ID()
+	}))
+	bobKxCompleted := make(chan clientintf.UserID, 5)
+	bob.handle(client.OnKXCompleted(func(_ *clientintf.RawRVID, ru *client.RemoteUser, _ bool) {
+		bobKxCompleted <- ru.ID()
+	}))
+
+	// Bob creates the invite.
+	bobInvite, err := bob.WriteNewInvite(io.Discard, nil)
+	assert.NilErr(t, err)
+
+	// Bob goes offline to avoid the KX from completing too soon.
+	assertGoesOffline(t, bob)
+
+	// Alice begins the acceptance procedure.
+	assert.NilErr(t, alice.AcceptInvite(bobInvite))
+	time.Sleep(time.Second)
+	assertEmptyRMQ(t, alice)
+
+	// Alice cancels the KX.
+	assert.NilErr(t, alice.CancelKX(bobInvite.InitialRendezvous))
+	aliceKXs, err := alice.ListKXs()
+	assert.NilErr(t, err)
+	assert.DeepEqual(t, 0, len(aliceKXs))
+
+	// Bob will continue the KX process but Alice won't complete it.
+	assertGoesOnline(t, bob)
+	assert.ChanWrittenWithVal(t, bobKxCompleted, alice.PublicID())
+	assert.ChanNotWritten(t, aliceKxCompleted, time.Second)
+}

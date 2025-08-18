@@ -514,7 +514,7 @@ func (kx *kxList) listenInvite(kxd *clientdb.KXData) error {
 		kxHandler = kx.handleStep3IDKX
 		subPaidHandler = kx.makePaidForRMCB(kxd.Public.Identity, "sub.step3IDKX")
 	default:
-		return fmt.Errorf("unknown kdx data to listen on: %d", kxd.Stage)
+		return fmt.Errorf("unknown kx stage to listen on: %d", kxd.Stage)
 	}
 
 	// Close over the id.
@@ -534,6 +534,21 @@ func (kx *kxList) listenInvite(kxd *clientdb.KXData) error {
 		kxd.InitialRV.ShortLogID(), kxd.Stage, rv)
 
 	return kx.rmgr.Sub(rv, handler, subPaidHandler)
+}
+
+// unlistenInvite stops listening to the given KX invite.
+func (kx *kxList) unlistenInvite(kxd *clientdb.KXData) error {
+	var rv ratchet.RVPoint
+	switch kxd.Stage {
+	case clientdb.KXStageStep2IDKX:
+		rv = kxd.InitialRV
+	case clientdb.KXStageStep3IDKX:
+		rv = kxd.Step3RV
+	default:
+		return fmt.Errorf("unknown kx stage to unlisten on: %d", kxd.Stage)
+	}
+
+	return kx.rmgr.Unsub(rv)
 }
 
 // listenAllKXs listens for all outstanding kxs in the db. KXs which are older

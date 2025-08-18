@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/companyzero/bisonrelay/client/clientdb"
+	"github.com/companyzero/bisonrelay/client/clientintf"
 	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/companyzero/bisonrelay/zkidentity"
 )
@@ -248,6 +249,14 @@ func (c *Client) ListMediateIDs() ([]clientdb.MediateIDRequest, error) {
 		return err
 	})
 	return res, err
+}
+
+// CancelMediateID removes the given mediateID request from the database
+// (preventing it from completing).
+func (c *Client) CancelMediateID(mediator, target clientintf.UserID) error {
+	return c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
+		return c.db.RemoveMediateID(tx, mediator, target)
+	})
 }
 
 // clearOldMediateIDs removes all mediate id requests that were requested over 7

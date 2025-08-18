@@ -40,9 +40,10 @@ func (db *DB) SaveKX(tx ReadWriteTx, kx KXData) error {
 	return os.WriteFile(fname, blob, 0o600)
 }
 
+// DeleteKX deletes the given ongoing KX attempt.
 func (db *DB) DeleteKX(tx ReadWriteTx, initialRV RawRVID) error {
 	fname := filepath.Join(db.root, kxDir, initialRV.String())
-	return os.Remove(fname)
+	return removeIfExists(fname)
 }
 
 func (db *DB) GetKX(tx ReadTx, initialRV RawRVID) (KXData, error) {

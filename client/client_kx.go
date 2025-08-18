@@ -481,6 +481,7 @@ func (c *Client) ResetAllOldRatchets(limitInterval time.Duration, progrChan chan
 	return res, g.Wait()
 }
 
+// ListKXs lists outstanding KX processes.
 func (c *Client) ListKXs() ([]clientdb.KXData, error) {
 	var kxs []clientdb.KXData
 	err := c.dbView(func(tx clientdb.ReadTx) error {
@@ -490,6 +491,24 @@ func (c *Client) ListKXs() ([]clientdb.KXData, error) {
 	})
 
 	return kxs, err
+}
+
+// CancelKX cancels the KX with the given RV from continuing.
+func (c *Client) CancelKX(initialRV clientintf.RawRVID) error {
+	var kxData clientdb.KXData
+	err := c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
+		var err error
+		kxData, err = c.db.GetKX(tx, initialRV)
+		if err != nil {
+			return err
+		}
+		return c.db.DeleteKX(tx, initialRV)
+	})
+	if err != nil {
+		return err
+	}
+
+	return c.kxl.unlistenInvite(&kxData)
 }
 
 // IsIgnored indicates whether the given client has the ignored flag set.
