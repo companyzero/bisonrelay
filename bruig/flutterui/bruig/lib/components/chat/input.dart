@@ -123,6 +123,11 @@ class _ChatInputState extends State<ChatInput> {
   @override
   void initState() {
     super.initState();
+    controller.addListener(() {
+      // Snapshot last good caret while user is typing/moving it.
+      widget.inputFocusNode.saveSelection();
+    });
+    widget.inputFocusNode.controller = controller;
     controller.text = widget.chat.workingMsg;
     widget.inputFocusNode.noModEnterKeyHandler = sendMsg;
     widget.inputFocusNode.pasteEventHandler = pasteEvent;
@@ -164,6 +169,7 @@ class _ChatInputState extends State<ChatInput> {
 
   @override
   void dispose() {
+    widget.inputFocusNode.controller = null;
     widget.inputFocusNode.noModEnterKeyHandler = null;
     widget.inputFocusNode.pasteEventHandler = null;
     widget.inputFocusNode.addEmojiHandler = null;
@@ -200,28 +206,63 @@ class _ChatInputState extends State<ChatInput> {
 
   void addEmoji(Emoji? e) {
     if (e != null) {
-      // Selected emoji from panel eidget.
-      var oldPos = controller.selection.start;
-      var newText = controller.selection.textBefore(controller.text) +
-          e.emoji +
-          controller.selection.textAfter(controller.text);
+      // Insert emoji at current caret/selection; move caret after it.
+      var sel = controller.selection;
+      if (!sel.isValid) {
+        // Fallback to last saved caret, or end of text.
+        sel = widget.inputFocusNode.takeSavedSelection() ??
+            TextSelection.collapsed(offset: controller.text.length);
+      }
+
+      final text = controller.text;
+      final len = text.length;
+      final start = sel.start.clamp(0, len);
+      final end = sel.end.clamp(0, len);
+
+      final before = text.substring(0, start);
+      final after = text.substring(end);
+      final newText = before + e.emoji + after;
+      final newOff = before.length + e.emoji.length; // caret after emoji
+
       widget.chat.workingMsg = newText;
       controller.value = TextEditingValue(
-          text: newText,
-          selection: TextSelection.collapsed(offset: oldPos + e.emoji.length));
+        text: newText,
+        selection: TextSelection.collapsed(offset: newOff),
+        composing: TextRange.empty,
+      );
+
+      widget.inputFocusNode.inputFocusNode.requestFocus();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        widget.inputFocusNode
+            .saveSelection(); // so closing picker restores here
+      });
       return;
     }
 
+    widget.inputFocusNode.inputFocusNode.requestFocus();
     // Selected emoji from typing panel.
-    var typingEmoji = Provider.of<TypingEmojiSelModel>(context, listen: false);
-    var newText = typingEmoji.replaceTypedEmojiCode(controller);
+    final typingEmoji =
+        Provider.of<TypingEmojiSelModel>(context, listen: false);
+    final oldText = controller.text;
+    final caret = controller.selection.start;
+    final codeLen =
+        typingEmoji.lastEmojiCode.length; // length of shortcut including ':'
+
+    // Replace the shortcode; this returns the full updated text.
+    final newText = typingEmoji.replaceTypedEmojiCode(controller);
     if (newText == "") return;
 
-    var oldPos =
-        controller.selection.start - typingEmoji.lastEmojiCode.length + 1;
+    // Emoji length = newText - (oldText - codeLen) in UTF-16 units.
+    final emojiLen = newText.length - (oldText.length - codeLen);
+    final newCaret = caret + (emojiLen - codeLen); // move caret after the emoji
+
     widget.chat.workingMsg = newText;
     controller.value = TextEditingValue(
-        text: newText, selection: TextSelection.collapsed(offset: oldPos));
+      text: newText,
+      selection: TextSelection.collapsed(offset: newCaret),
+      composing: TextRange.empty,
+    );
   }
 
   void attachFile() {
@@ -251,6 +292,33 @@ class _ChatInputState extends State<ChatInput> {
 
   void cancelAudioNote() {
     setState(() => isRecordingAudio = false);
+  }
+
+  void _toggleEmojiPanel() {
+    final emojiModel = TypingEmojiSelModel.of(context, listen: false);
+
+    final wasOpen = emojiModel.showAddEmojiPanel.value;
+
+    emojiModel.showAddEmojiPanel.value = !wasOpen;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+
+      final saved = widget.inputFocusNode.takeSavedSelection();
+      if (saved != null) {
+        final len = controller.text.length;
+        final clamped = TextSelection(
+          baseOffset: saved.start.clamp(0, len),
+          extentOffset: saved.end.clamp(0, len),
+          affinity: saved.affinity,
+          isDirectional: saved.isDirectional,
+        );
+        controller.value = controller.value.copyWith(
+          selection: clamped,
+          composing: TextRange.empty,
+        );
+      }
+    });
   }
 
   @override
@@ -319,13 +387,10 @@ class _ChatInputState extends State<ChatInput> {
             ),
             hintText: "Start a message",
             prefixIcon: IconButton(
-                onPressed: () {
-                  var emojiModel =
-                      TypingEmojiSelModel.of(context, listen: false);
-                  emojiModel.showAddEmojiPanel.value =
-                      !emojiModel.showAddEmojiPanel.value;
-                },
-                icon: const Icon(Icons.emoji_emotions_outlined)),
+              focusNode: FocusNode(canRequestFocus: false, skipTraversal: true),
+              onPressed: _toggleEmojiPanel,
+              icon: const Icon(Icons.emoji_emotions_outlined),
+            ),
             suffixIcon: Row(
                 mainAxisSize: MainAxisSize.min,
                 mainAxisAlignment: MainAxisAlignment.end,
