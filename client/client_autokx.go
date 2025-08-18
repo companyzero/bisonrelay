@@ -57,7 +57,7 @@ func (c *Client) RequestMediateIdentity(mediator, target UserID) error {
 
 	// Track that we requested this mediate ID request.
 	err = c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
-		return c.db.StoreMediateIDRequested(tx, mediator, target)
+		return c.db.StoreMediateIDRequested(tx, mediator, target, true)
 	})
 	if err != nil {
 		return err
@@ -92,14 +92,15 @@ func (c *Client) maybeRequestMediateID(mediator, target UserID) error {
 	}
 
 	// User does not exist. Check for outstanding KX/MI requests.
-	errIgnore := errors.New("ignore")
+	errIgnore := errors.New("ignoring autokx attempt")
 	err = c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
 		kxs, err := c.db.HasKXWithUser(tx, target)
 		if err != nil {
 			return err
 		}
 		if len(kxs) > 0 {
-			return errIgnore
+			return fmt.Errorf("%w due to %d outstanding KX attempts",
+				errIgnore, len(kxs))
 		}
 		hasRecent, err := c.db.HasAnyRecentMediateID(tx, target,
 			c.cfg.RecentMediateIDThreshold)
@@ -107,7 +108,8 @@ func (c *Client) maybeRequestMediateID(mediator, target UserID) error {
 			return err
 		}
 		if hasRecent {
-			return errIgnore
+			return fmt.Errorf("%w due to recent mediateID request",
+				errIgnore)
 		}
 
 		// Store total nb of MI requests.
@@ -124,10 +126,12 @@ func (c *Client) maybeRequestMediateID(mediator, target UserID) error {
 		}
 
 		// Will attempt mediate ID. Store attempt.
-		return c.db.StoreMediateIDRequested(tx, mediator, target)
+		return c.db.StoreMediateIDRequested(tx, mediator, target, false)
 	})
 	if errors.Is(err, errIgnore) {
 		// Ignore request to attempt MI.
+		c.log.Tracef("Ignoring mediateID request to %s through %s: %v",
+			target, mediator, err)
 		return nil
 	}
 	if err != nil {
@@ -186,11 +190,13 @@ func (c *Client) handleTransitiveIDInvite(ru *RemoteUser, pii rpc.OOBPublicIdent
 
 	// Double check we actually requested this invitation.
 	errNoMI := errors.New("no mi")
+	wasManualMI := false
 	err := c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
-		_, err := c.db.HasMediateID(tx, ru.ID(), pii.Public.Identity)
+		mi, err := c.db.HasMediateID(tx, ru.ID(), pii.Public.Identity)
 		if errors.Is(err, clientdb.ErrNotFound) {
 			return errNoMI
 		}
+		wasManualMI = mi.Manual
 		return err
 	})
 	if errors.Is(err, errNoMI) {
@@ -210,11 +216,7 @@ func (c *Client) handleTransitiveIDInvite(ru *RemoteUser, pii rpc.OOBPublicIdent
 		return fmt.Errorf("received pii with key different then expected by identity")
 	}
 
-	ru.log.Infof("Accepting transitive invite from %s (%q)", pii.Public.Identity,
-		pii.Public.Nick)
-	c.ntfns.notifyTransitiveEvent(ru.ID(), pii.Public.Identity, TEReceivedInvite)
-
-	err = c.kxl.acceptInvite(pii, false, true)
+	err = c.kxl.acceptInvite(pii, false, !wasManualMI)
 	if errors.Is(err, errUserBlocked) {
 		ru.log.Infof("Canceled invite from blocked identity %s (%q)", pii.Public.Identity,
 			pii.Public.Nick)
@@ -225,6 +227,10 @@ func (c *Client) handleTransitiveIDInvite(ru *RemoteUser, pii rpc.OOBPublicIdent
 			pii.Public.Identity, pii.Public.Nick, errKX.otherRV)
 	} else if err != nil {
 		return err
+	} else {
+		ru.log.Infof("Accepting transitive invite from %s (%q)", pii.Public.Identity,
+			pii.Public.Nick)
+		c.ntfns.notifyTransitiveEvent(ru.ID(), pii.Public.Identity, TEReceivedInvite)
 	}
 
 	// Everything ok, remove this mediate id request.

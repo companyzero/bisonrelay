@@ -394,6 +394,7 @@ type MediateIDRequest struct {
 	Mediator UserID    `json:"mediator"`
 	Target   UserID    `json:"target"`
 	Date     time.Time `json:"date"`
+	Manual   bool      `json:"manual"` // Manual as opposed to auto kx.
 }
 
 type PostKXActionType string

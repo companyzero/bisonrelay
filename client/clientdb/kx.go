@@ -142,13 +142,14 @@ func (db *DB) HasKXWithUser(tx ReadTx, target UserID) ([]KXData, error) {
 
 // StoreMediateIDRequested marks that a mediate id request was made on mediator
 // to invite us to target.
-func (db *DB) StoreMediateIDRequested(tx ReadWriteTx, mediator, target UserID) error {
+func (db *DB) StoreMediateIDRequested(tx ReadWriteTx, mediator, target UserID, manualMI bool) error {
 	filepath := filepath.Join(db.root, inboundDir, mediator.String(),
 		miRequestsDir, target.String())
 	req := MediateIDRequest{
 		Mediator: mediator,
 		Target:   target,
 		Date:     time.Now(),
+		Manual:   manualMI,
 	}
 	return db.saveJsonFile(filepath, req)
 }
