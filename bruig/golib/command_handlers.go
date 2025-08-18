@@ -2403,8 +2403,22 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 	case CTListKXs:
 		return c.ListKXs()
 
+	case CTCancelKX:
+		var args clientintf.ID
+		if err := cmd.decode(&args); err != nil {
+			return nil, err
+		}
+		return nil, c.CancelKX(args)
+
 	case CTListMIRequests:
 		return c.ListMediateIDs()
+
+	case CTCancelMediateID:
+		var args mediateIDArgs
+		if err := cmd.decode(&args); err != nil {
+			return nil, err
+		}
+		return nil, c.CancelMediateID(args.Mediator, args.Target)
 
 	case CTListAudioDevices:
 		return audio.ListAudioDevices(cc.log)

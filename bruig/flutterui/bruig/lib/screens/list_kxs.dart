@@ -1,3 +1,4 @@
+import 'package:bruig/components/buttons.dart';
 import 'package:bruig/components/copyable.dart';
 import 'package:bruig/components/info_grid.dart';
 import 'package:bruig/components/interactive_avatar.dart';
@@ -54,6 +55,21 @@ class _ListKXsScreenState extends State<ListKXsScreen> {
       kx.invitee?.identity ?? kx.public?.identity ?? "";
   String kxTargetNick(KXData kx) => kx.invitee?.nick ?? kx.public?.nick ?? "";
 
+  void cancelKx(KXData kx) async {
+    try {
+      if (kx.initialRV != "") {
+        await Golib.cancelKX(kx.initialRV);
+        showSuccessSnackbar(this, "Canceled KX attempt");
+      } else {
+        await Golib.cancelMediateID(kx.mediatorID!, kx.public!.identity);
+        showSuccessSnackbar(this, "Canceled MI attempt");
+      }
+      listKXs();
+    } catch (exception) {
+      showErrorSnackbar(this, "Unable to cancel KX: $exception");
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -90,6 +106,15 @@ class _ListKXsScreenState extends State<ListKXsScreen> {
                   : ""
             ],
             ["My Reset RV", Copyable(kx.myResetRV)],
+            [
+              "",
+              CancelButton(
+                onPressed: () {
+                  cancelKx(kx);
+                },
+                label: "Cancel KX",
+              )
+            ]
           ]))),
       const SizedBox(height: 10),
       TextButton(
