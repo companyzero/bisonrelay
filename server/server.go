@@ -90,6 +90,10 @@ type ZKS struct {
 	dbCtx       context.Context
 	dbCtxCancel func()
 
+	// sessions pool
+	sessionsMtx sync.Mutex
+	sessions    map[sessionID]*sessionContext
+
 	// pingLimit is the max time between pings.
 	pingLimit time.Duration
 	logPings  bool // Only set in some tests
@@ -327,6 +331,14 @@ loop:
 	// This is reached only if we error before moving on to a full session.
 	conn.Close()
 	z.log.Infof("Connection %v closed: %v", conn.RemoteAddr(), err)
+}
+
+func (z *ZKS) closeSessions() {
+	z.sessionsMtx.Lock()
+	for _, sess := range z.sessions {
+		sess.Close()
+	}
+	z.sessionsMtx.Unlock()
 }
 
 func (z *ZKS) listen(ctx context.Context, l net.Listener) error {
@@ -604,6 +616,8 @@ func NewServer(cfg *settings.Settings) (*ZKS, error) {
 		rtCookieKey:        cfg.RTDTCookieKey,
 		rtDecodeCookieKeys: cfg.RTDTDecodeCookieKeys,
 		rtServerPubKey:     cfg.RTDTServerPub,
+
+		sessions: make(map[sessionID]*sessionContext),
 	}
 
 	// Init db.
