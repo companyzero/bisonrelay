@@ -461,12 +461,12 @@ func (z *ZKS) Run(ctx context.Context) error {
 	})
 
 	// Run the expiration loop.
-	g.Go(func() error { return z.expirationLoop(ctx) })
+	g.Go(func() error { return z.expirationLoop(gctx) })
 
 	// Run the status api.
 	if z.lnRpc != nil && z.apiListen != nil {
-		g.Go(func() error { return z.refreshAPI(ctx) })
-		g.Go(func() error { return z.serveAPI(ctx) })
+		g.Go(func() error { return z.refreshAPI(gctx) })
+		g.Go(func() error { return z.serveAPI(gctx) })
 	}
 
 	// Listen for connections.
@@ -475,7 +475,7 @@ func (z *ZKS) Run(ctx context.Context) error {
 		g.Go(func() error {
 			err := z.listen(gctx, l)
 			select {
-			case <-ctx.Done():
+			case <-gctx.Done():
 				// Close() was requested, so ignore the error.
 				return nil
 			default:
