@@ -390,6 +390,10 @@ func (s *Settings) Load(filename string) error {
 		return err
 	}
 
+	apiListen, ok := cfg.Get("", "apilisten")
+	if ok {
+		s.APIListen = apiListen
+	}
 	return nil
 }
 

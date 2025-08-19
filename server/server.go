@@ -89,6 +89,7 @@ type ZKS struct {
 	logConn     slog.Logger
 	dbCtx       context.Context
 	dbCtxCancel func()
+	isMaster    atomic.Bool
 
 	// sessions pool
 	sessionsMtx sync.Mutex
@@ -366,6 +367,14 @@ func (z *ZKS) listen(ctx context.Context, l net.Listener) error {
 		if err != nil {
 			return err
 		}
+
+		// disconnect user if server is not master.
+		if !z.isMaster.Load() {
+			conn.Close()
+			z.log.Infof("disconnecting %v - server is not master",
+				conn.RemoteAddr())
+			continue
+		}
 		conn.(*net.TCPConn).SetKeepAlive(true)
 		go z.preSession(ctx, tls.Server(conn, &config))
 	}
@@ -388,21 +397,25 @@ func (z *ZKS) expirationLoop(ctx context.Context) error {
 
 	for {
 		now := z.now().UTC()
-		expirationDate := now.Add(-expirationLimit)
 
-		for i := nbPriorExpirations - 1; i >= 0; i-- {
-			date := expirationDate.Add(-time.Duration(i) * day)
+		// only run when master
+		if z.isMaster.Load() {
+			expirationDate := now.Add(-expirationLimit)
 
-			z.log.Debugf("Attempting to expire data from %s",
-				date.Format("2006-01-02"))
-			count, err := z.db.Expire(ctx, date)
-			if err != nil {
-				return fmt.Errorf("unable to expire data from %s: %v",
-					date.Format("2006-01-02"), err)
-			}
-			if count > 0 {
-				z.log.Infof("Expired %d records from %s",
-					count, date.Format("2006-01-02"))
+			for i := nbPriorExpirations - 1; i >= 0; i-- {
+				date := expirationDate.Add(-time.Duration(i) * day)
+
+				z.log.Debugf("Attempting to expire data from %s",
+					date.Format("2006-01-02"))
+				count, err := z.db.Expire(ctx, date)
+				if err != nil {
+					return fmt.Errorf("unable to expire data from %s: %v",
+						date.Format("2006-01-02"), err)
+				}
+				if count > 0 {
+					z.log.Infof("Expired %d records from %s",
+						count, date.Format("2006-01-02"))
+				}
 			}
 		}
 
@@ -490,10 +503,6 @@ func (z *ZKS) Run(ctx context.Context) error {
 	// Wait until all subsystems are done.
 	err := g.Wait()
 
-	// Close DB if needed.
-	type dbcloser interface {
-		Close() error
-	}
 	if db, ok := z.db.(dbcloser); ok {
 		closeErr := db.Close()
 		if closeErr != nil {
@@ -507,7 +516,7 @@ func (z *ZKS) Run(ctx context.Context) error {
 }
 
 func (z *ZKS) refreshAPI(ctx context.Context) error {
-	t := time.NewTicker(5 * time.Minute)
+	t := time.NewTicker(30 * time.Second)
 	defer t.Stop()
 
 	for {
@@ -517,15 +526,20 @@ func (z *ZKS) refreshAPI(ctx context.Context) error {
 		case <-t.C:
 			healthy := true
 
-			lnInfo, lnErr := z.lnRpc.GetInfo(ctx, &lnrpc.GetInfoRequest{})
 			isMaster, dbErr := z.db.IsMaster(ctx)
-			if lnErr != nil {
-				z.log.Errorf("[BACKEND] failed to get dcrlnd info: %v", lnErr)
-			}
 			if dbErr != nil {
 				z.log.Errorf("[BACKEND] failed to query db: %v", dbErr)
+				healthy = false
 			} else if isMaster {
 				healthy, dbErr = z.db.HealthCheck(ctx)
+				if dbErr != nil {
+					healthy = false
+				}
+			}
+
+			lnInfo, lnErr := z.lnRpc.GetInfo(ctx, &lnrpc.GetInfoRequest{})
+			if lnErr != nil {
+				z.log.Errorf("[BACKEND] failed to get dcrlnd info: %v", lnErr)
 			}
 			var apiStatusNode APIStatusNode
 			if lnErr == nil {
@@ -538,16 +552,12 @@ func (z *ZKS) refreshAPI(ctx context.Context) error {
 					SyncedToGraph: lnInfo.SyncedToGraph,
 				}
 			}
-			var apiStatusDB APIStatusDB
-			if dbErr == nil {
-				apiStatusDB = APIStatusDB{
+			z.apiStatus.Store(&APIStatus{
+				Database: APIStatusDB{
 					Online: healthy,
 					Master: isMaster,
-				}
-			}
-			z.apiStatus.Store(&APIStatus{
-				Database: apiStatusDB,
-				Node:     apiStatusNode,
+				},
+				Node: apiStatusNode,
 			})
 		}
 	}
@@ -640,8 +650,24 @@ func NewServer(cfg *settings.Settings) (*ZKS, error) {
 		if err != nil {
 			return nil, err
 		}
-		z.log.Infof("Initialized PG Database backend %s@%s:%s", cfg.PGDBName,
-			cfg.PGHost, cfg.PGPort)
+
+		// get and store master status.
+		isMaster, err := z.db.IsMaster(ctx)
+		if err != nil {
+			if db, ok := z.db.(dbcloser); ok {
+				closeErr := db.Close()
+				if closeErr != nil {
+					z.log.Errorf("error while closing DB: %v", closeErr)
+				} else {
+					z.log.Debugf("closed database")
+				}
+			}
+			return nil, err
+		}
+		z.isMaster.Store(isMaster)
+
+		z.log.Infof("Initialized PG Database backend %s@%s:%s master:%v", cfg.PGDBName,
+			cfg.PGHost, cfg.PGPort, z.isMaster.Load())
 	} else {
 		z.db, err = brfsdb.NewFSDB(z.settings.RoutedMessages, z.settings.PaidRVs)
 		if err != nil {

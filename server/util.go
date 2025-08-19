@@ -15,6 +15,11 @@ import (
 
 var errUnknownRPCCommand = errors.New("unknown rpc command")
 
+// Close DB if needed.
+type dbcloser interface {
+	Close() error
+}
+
 func payloadForCmd(cmd string) (interface{}, error) {
 	var p interface{}
 
