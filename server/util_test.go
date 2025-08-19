@@ -46,6 +46,9 @@ func newTestServer(t testing.TB) *ZKS {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	// TODO - test backup mode
+	s.isMaster.Store(true)
 	return s
 }
 
