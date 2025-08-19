@@ -473,6 +473,32 @@ func (z *ZKS) Run(ctx context.Context) error {
 		return firstErr
 	})
 
+	// Monitor the database mode.
+	g.Go(func() error {
+		t := time.NewTicker(10 * time.Second)
+		defer t.Stop()
+
+		for {
+			select {
+			case <-gctx.Done():
+				return nil
+			case <-t.C:
+				isMaster, err := z.db.IsMaster(gctx)
+				if err != nil {
+					z.log.Errorf("failed to check master status: %v", err)
+				}
+				old := z.isMaster.Swap(isMaster)
+				if old != isMaster {
+					z.log.Infof("db master status changed to %v", isMaster)
+
+					if !isMaster {
+						// disconnect all users.
+						z.closeSessions()
+					}
+				}
+			}
+		}
+	})
 	// Run the expiration loop.
 	g.Go(func() error { return z.expirationLoop(gctx) })
 
