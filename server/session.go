@@ -50,6 +50,10 @@ type sessionContext struct {
 	lnPublishInRTSessHash []byte
 }
 
+func (sc *sessionContext) Close() error {
+	return sc.conn.Close()
+}
+
 func (z *ZKS) sessionWriter(ctx context.Context, sc *sessionContext) error {
 
 	sc.log.Tracef("sessionWriter starting")
@@ -498,6 +502,9 @@ func (z *ZKS) runNewSession(ctx context.Context, conn net.Conn, kx *session.KX) 
 	z.logConn.Debugf("handleSession online: from %s id %s", conn.RemoteAddr(), rid)
 
 	z.stats.connections.Add(1)
+	z.sessionsMtx.Lock()
+	z.sessions[rid] = &sc
+	z.sessionsMtx.Unlock()
 
 	// Start subroutines.
 	g, gctx := errgroup.WithContext(ctx)
@@ -510,6 +517,9 @@ func (z *ZKS) runNewSession(ctx context.Context, conn net.Conn, kx *session.KX) 
 
 	// Ensure connection is closed.
 	conn.Close()
+	z.sessionsMtx.Lock()
+	delete(z.sessions, rid)
+	z.sessionsMtx.Unlock()
 
 	// Mark session offline.
 	if !errors.Is(err, context.Canceled) && !errors.Is(err, io.EOF) {
