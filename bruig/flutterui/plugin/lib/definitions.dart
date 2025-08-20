@@ -3925,9 +3925,10 @@ abstract class PluginPlatform {
     return KXSearch.fromJson(res);
   }
 
-  Future<void> suggestKX(String iuid, tuid) async {
-    await asyncCall(CTSuggestKX, SuggestKX(iuid, tuid));
-  }
+  Future<void> suggestKX(String iuid, tuid) async =>
+      await asyncCall(CTSuggestKX, SuggestKX(iuid, tuid));
+  Future<void> declineSuggestKX(String mediator, String target) async =>
+      await asyncCall(CTDeclineKXSuggestion, MediateIDArgs(mediator, target));
 
   Future<List<Account>> listAccounts() async {
     var res = await asyncCall(CTListAccounts, null);
@@ -4414,6 +4415,7 @@ const int CTAudioGetPlaybackGain = 0xae;
 const int CTCancelKX = 0xaf;
 const int CTCancelMediateID = 0xb0;
 const int CTRTDTCancelInvite = 0xb1;
+const int CTDeclineKXSuggestion = 0xb2;
 
 const int notificationsStartID = 0x1000;
 

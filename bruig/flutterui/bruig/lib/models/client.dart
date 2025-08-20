@@ -79,6 +79,9 @@ class SynthChatEvent extends ChatEvent with ChangeNotifier {
   }
 }
 
+// Regexp for messages in the history about suggested KX.
+var _suggestedKXMsgRegexp = RegExp(r'Suggested KX to ([0-9a-f]{64}) "(.*)"');
+
 class RequestedResourceEvent extends ChatEvent {
   final PagesSession session;
 
@@ -979,7 +982,21 @@ class ClientModel extends ChangeNotifier {
         ChatEvent m;
         var source = !mine ? c : null;
         if (chatHistory[i].internal) {
-          m = SynthChatEvent(chatHistory[i].message, SCE_history);
+          var matchSuggestKX =
+              _suggestedKXMsgRegexp.firstMatch(chatHistory[i].message);
+          if (matchSuggestKX != null) {
+            var targetUID = matchSuggestKX[1]!;
+            var alreadyKnown = getExistingChat(targetUID) != null;
+            m = KXSuggested(
+              alreadyKnown,
+              alias,
+              id,
+              matchSuggestKX[2]!,
+              targetUID,
+            );
+          } else {
+            m = SynthChatEvent(chatHistory[i].message, SCE_history);
+          }
         } else {
           m = PM(
               id,

@@ -184,6 +184,7 @@ const (
 	CTCancelKX                     CmdType = 0xaf
 	CTCancelMediateID              CmdType = 0xb0
 	CTRTDTCancelInvite             CmdType = 0xb1
+	CTDeclineKXSuggestion          CmdType = 0xb2
 
 	NTInviteReceived            = 0x1001
 	NTInviteAccepted            = 0x1002

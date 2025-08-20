@@ -1969,6 +1969,14 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		}
 		return nil, c.SuggestKX(args.Invitee, args.Target)
 
+	case CTDeclineKXSuggestion:
+		var args mediateIDArgs
+		if err := cmd.decode(&args); err != nil {
+			return nil, err
+		}
+
+		return nil, c.DeclineKXSuggestion(args.Mediator, args.Target)
+
 	case CTListAccounts:
 		if lnc == nil {
 			return nil, fmt.Errorf("ln client not initialized")

@@ -1072,8 +1072,13 @@ class _KXSuggestedWState extends State<KXSuggestedW> {
     }
   }
 
-  void cancelSuggestion() {
-    event.sentState = Suggestion_canceled;
+  void cancelSuggestion() async {
+    try {
+      await Golib.declineSuggestKX(suggest.invitee, suggest.target);
+      event.sentState = Suggestion_canceled;
+    } catch (exception) {
+      event.sendError = "Unable to decline KX suggestion: $exception";
+    }
     setState(() {});
   }
 
