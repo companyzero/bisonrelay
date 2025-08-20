@@ -16,7 +16,7 @@ import (
 
 // clearLastHandshakeAttemptTime clears the last handshake attempt time for
 // the given user.
-func (c *Client) clearLastHandshakeAttemptTime(ru *RemoteUser) error {
+func (c *Client) clearLastHandshakeAttemptTime(ru *RemoteUser, completed bool, completedTs time.Time) error {
 	return c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
 		entry, err := c.db.GetAddressBookEntry(tx, ru.id)
 		if err != nil {
@@ -24,12 +24,23 @@ func (c *Client) clearLastHandshakeAttemptTime(ru *RemoteUser) error {
 		}
 
 		entry.LastHandshakeAttempt = time.Time{}
-		return c.db.UpdateAddressBookEntry(tx, entry)
+		if err := c.db.UpdateAddressBookEntry(tx, entry); err != nil {
+			return err
+		}
+
+		if completed {
+			_, err := c.db.LogPM(tx, ru.id, true, ru.Nick(),
+				"Completed handshake", completedTs)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
 	})
 }
 
 // handleRMHandshake handles all handshake messages.
-func (c *Client) handleRMHandshake(ru *RemoteUser, msg interface{}) error {
+func (c *Client) handleRMHandshake(ru *RemoteUser, msg interface{}, ts time.Time) error {
 	switch msg.(type) {
 	case rpc.RMHandshakeSYN:
 		ru.log.Infof("Received handshake SYN. Replying with SYN/ACK.")
@@ -38,7 +49,7 @@ func (c *Client) handleRMHandshake(ru *RemoteUser, msg interface{}) error {
 
 	case rpc.RMHandshakeSYNACK:
 		ru.log.Infof("Received handshake SYN/ACK. Replying with ACK. User ratchet is fully synced.")
-		if err := c.clearLastHandshakeAttemptTime(ru); err != nil {
+		if err := c.clearLastHandshakeAttemptTime(ru, true, ts); err != nil {
 			return err
 		}
 		c.ntfns.notifyHandshakeStage(ru, "SYNACK")
@@ -46,7 +57,7 @@ func (c *Client) handleRMHandshake(ru *RemoteUser, msg interface{}) error {
 
 	case rpc.RMHandshakeACK:
 		ru.log.Infof("Received handshake ACK. User ratchet is fully synced.")
-		if err := c.clearLastHandshakeAttemptTime(ru); err != nil {
+		if err := c.clearLastHandshakeAttemptTime(ru, true, ts); err != nil {
 			return err
 		}
 		c.ntfns.notifyHandshakeStage(ru, "ACK")
@@ -173,7 +184,7 @@ func (c *Client) innerHandleUserRM(ru *RemoteUser, h *rpc.RMHeader,
 	// the command, so switch on the payload type directly.
 	switch p := p.(type) {
 	case rpc.RMHandshakeSYN, rpc.RMHandshakeACK, rpc.RMHandshakeSYNACK:
-		return c.handleRMHandshake(ru, p)
+		return c.handleRMHandshake(ru, p, ts)
 
 	case rpc.RMProfileUpdate:
 		return c.handleProfileUpdate(ru, p)

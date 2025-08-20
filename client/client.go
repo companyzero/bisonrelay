@@ -1108,6 +1108,28 @@ func (c *Client) NicksWithPrefix(prefix string) []string {
 	return c.rul.nicksWithPrefix(prefix)
 }
 
+// UpdateLastMsgReadTime updates the last msg read time of the given user or GC.
+func (c *Client) UpdateLastMsgReadTime(id UserID, t time.Time, isGC bool) error {
+	<-c.abLoaded
+	return c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
+		if isGC {
+			gc, err := c.db.GetGC(tx, id)
+			if err != nil {
+				return err
+			}
+			gc.LastReadMsgTime = t
+			return c.db.SaveGC(tx, gc)
+		}
+
+		ab, err := c.db.GetAddressBookEntry(tx, id)
+		if err != nil {
+			return err
+		}
+		ab.LastReadMsgTime = t
+		return c.db.UpdateAddressBookEntry(tx, ab)
+	})
+}
+
 // PM sends a private message to the given user, identified by its public id.
 // The user must have been already KX'd with for this to work.
 func (c *Client) PM(uid UserID, msg string) error {

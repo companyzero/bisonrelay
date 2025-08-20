@@ -131,6 +131,12 @@ type AddressBookEntry struct {
 	//
 	// Note: old gc entries may have a zeroed value for this field.
 	LastCompletedKX time.Time `json:"last_completed_kx"`
+
+	// LastReadMsgTime is the time of the last message received and read
+	// from this user.
+	//
+	// The interpretation of "read" depends on the UI.
+	LastReadMsgTime time.Time `json:"last_read_msg_time"`
 }
 
 // Nick returns the nick of the user.
@@ -164,6 +170,12 @@ type GroupChat struct {
 	// RTDTSessionRV when non-empty is the RTDT session RV associated to
 	// this GC.
 	RTDTSessionRV *zkidentity.ShortID `json:"rtdt_session_rv"`
+
+	// LastReadMsgTime is the time of the last message received and read
+	// from this user.
+	//
+	// The interpretation of "read" depends on the UI.
+	LastReadMsgTime time.Time `json:"last_read_msg_time"`
 }
 
 // DeepCopy makes a deep copy of this GC so that the copy can be modified.
