@@ -553,23 +553,22 @@ func (z *ZKS) refreshAPI(ctx context.Context) error {
 		case <-t.C:
 			healthy := true
 
-			isMaster, dbErr := z.db.IsMaster(ctx)
-			if dbErr != nil {
-				z.log.Errorf("[BACKEND] failed to query db: %v", dbErr)
+			isMaster, err := z.db.IsMaster(ctx)
+			if err != nil {
+				z.log.Errorf("[BACKEND] failed to query db: %v", err)
 				healthy = false
 			} else if isMaster {
-				healthy, dbErr = z.db.HealthCheck(ctx)
-				if dbErr != nil {
+				if err = z.db.HealthCheck(ctx); err != nil {
+					z.log.Errorf("[BACKEND] healthcheck: %v", err)
 					healthy = false
 				}
 			}
 
-			lnInfo, lnErr := z.lnRpc.GetInfo(ctx, &lnrpc.GetInfoRequest{})
-			if lnErr != nil {
-				z.log.Errorf("[BACKEND] failed to get dcrlnd info: %v", lnErr)
-			}
 			var apiStatusNode APIStatusNode
-			if lnErr == nil {
+			lnInfo, err := z.lnRpc.GetInfo(ctx, &lnrpc.GetInfoRequest{})
+			if err != nil {
+				z.log.Errorf("[BACKEND] failed to get dcrlnd info: %v", err)
+			} else {
 				apiStatusNode = APIStatusNode{
 					Online:        lnInfo.ServerActive,
 					PublicKey:     lnInfo.IdentityPubkey,

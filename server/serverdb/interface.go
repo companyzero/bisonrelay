@@ -25,5 +25,5 @@ type ServerDB interface {
 	IsPushPaymentRedeemed(ctx context.Context, payID []byte) (bool, error)
 	StorePushPaymentRedeemed(ctx context.Context, payID []byte, insertTime time.Time) error
 	IsMaster(ctx context.Context) (bool, error)
-	HealthCheck(ctx context.Context) (bool, error)
+	HealthCheck(ctx context.Context) error
 }
