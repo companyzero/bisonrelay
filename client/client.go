@@ -104,10 +104,6 @@ type Config struct {
 	// initialization.
 	Notifications *NotificationManager
 
-	// KXSuggestion is called when a remote user sends a suggestion to KX
-	// with a new user.
-	KXSuggestion func(user *RemoteUser, pii zkidentity.PublicIdentity)
-
 	// FileDownloadConfirmer is called to confirm the start of a file
 	// download with the user.
 	FileDownloadConfirmer func(user *RemoteUser, fm rpc.FileMetadata) bool
