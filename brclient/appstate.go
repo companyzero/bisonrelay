@@ -4102,6 +4102,27 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		as.sendMsg(msgOpenRTChatWin{})
 	}))
 
+	ntfns.Register(client.OnKXSuggested(func(user *client.RemoteUser, pii zkidentity.PublicIdentity) {
+		target, err := as.c.UserByID(pii.Identity)
+		if err == nil {
+			// Already KX'd with this user.
+			as.diagMsg("%s suggested KXing with already known "+
+				"user %s", strescape.Nick(user.Nick()),
+				strescape.Nick(target.Nick()))
+			return
+		}
+
+		as.manyDiagMsgsCb(func(pf printf) {
+			mediatorNick := strescape.Nick(user.Nick())
+			pf("")
+			pf("%s suggested KXing with %s (%q)",
+				mediatorNick,
+				pii.Identity, strescape.Nick(pii.Nick))
+			pf("Type /mi %s %s to request an introduction",
+				mediatorNick, pii.Identity)
+		})
+	}))
+
 	// Initialize resources router.
 	var sstore *simplestore.Store
 	resRouter := resources.NewRouter()
@@ -4268,27 +4289,6 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 					}
 				}
 			}
-		},
-
-		KXSuggestion: func(user *client.RemoteUser, pii zkidentity.PublicIdentity) {
-			target, err := as.c.UserByID(pii.Identity)
-			if err == nil {
-				// Already KX'd with this user.
-				as.diagMsg("%s suggested KXing with already known "+
-					"user %s", strescape.Nick(user.Nick()),
-					strescape.Nick(target.Nick()))
-				return
-			}
-
-			as.manyDiagMsgsCb(func(pf printf) {
-				mediatorNick := strescape.Nick(user.Nick())
-				pf("")
-				pf("%s suggested KXing with %s (%q)",
-					mediatorNick,
-					pii.Identity, strescape.Nick(pii.Nick))
-				pf("Type /mi %s %s to request an introduction",
-					mediatorNick, pii.Identity)
-			})
 		},
 	}
 

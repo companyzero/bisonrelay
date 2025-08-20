@@ -281,7 +281,7 @@ func (c *Client) innerHandleUserRM(ru *RemoteUser, h *rpc.RMHeader,
 		return c.handleKXSearchReply(ru, p)
 
 	case rpc.RMKXSuggestion:
-		return c.handleKXSuggestion(ru, p)
+		return c.handleKXSuggestion(ru, p, ts)
 
 	case rpc.RMFetchResource:
 		return c.handleFetchResource(ru, p)

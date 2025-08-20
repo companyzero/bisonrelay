@@ -243,6 +243,14 @@ func (c *Client) initRemoteUser(id *zkidentity.PublicIdentity, r *ratchet.Ratche
 			return err
 		}
 
+		// Remove suggestions to KX with this (now existing) user.
+		if oldEntry == nil {
+			err := c.db.RemoveAllKXSuggestionsTo(tx, id.Identity)
+			if err != nil {
+				return err
+			}
+		}
+
 		return nil
 	})
 	if err != nil {
@@ -641,7 +649,7 @@ func (c *Client) SuggestKX(invitee, target UserID) error {
 	return c.sendWithSendQ(payEvent, rm, invitee)
 }
 
-func (c *Client) handleKXSuggestion(ru *RemoteUser, kxsg rpc.RMKXSuggestion) error {
+func (c *Client) handleKXSuggestion(ru *RemoteUser, kxsg rpc.RMKXSuggestion, ts time.Time) error {
 	known := "known"
 	targetNick := kxsg.Target.Nick
 	targetRu, err := c.rul.byID(kxsg.Target.Identity)
@@ -650,17 +658,37 @@ func (c *Client) handleKXSuggestion(ru *RemoteUser, kxsg rpc.RMKXSuggestion) err
 	}
 	if targetRu != nil {
 		targetNick = targetRu.Nick()
+	} else {
+		err := c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
+			if err := c.db.StoreSuggestedKX(tx, ru.ID(), kxsg.Target); err != nil {
+				return err
+			}
+
+			// Save on log to show again on restart.
+			logLine := fmt.Sprintf(clientdb.SuggestedKXLogMsg,
+				kxsg.Target.Identity, targetNick)
+			_, err := c.db.LogPM(tx, ru.ID(), true, ru.Nick(), logLine, ts)
+			return err
+		})
+		if err != nil {
+			return err
+		}
 	}
 
 	ru.log.Infof("Received suggestion to KX with %s %s (%q)", known,
 		kxsg.Target.Identity, targetNick)
 
-	if c.cfg.KXSuggestion != nil {
-		c.cfg.KXSuggestion(ru, kxsg.Target)
-	}
-
 	c.ntfns.notifyOnKXSuggested(ru, kxsg.Target)
 	return nil
+}
+
+// DeclineKXSuggestion declines a KX suggestion from a remote user to a target.
+//
+// Other KX suggestions to the same target user may still exist.
+func (c *Client) DeclineKXSuggestion(from, target clientintf.UserID) error {
+	return c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
+		return c.db.RemoveKXSuggestion(tx, from, target)
+	})
 }
 
 // LastUserReceivedTime is a record for user and their last decrypted message

@@ -455,3 +455,53 @@ func (db *DB) HasOnboardState(tx ReadTx) bool {
 	filename := filepath.Join(db.root, onboardStateFile)
 	return fileExists(filename)
 }
+
+// StoreSuggestedKX stores the given suggestion to KX.
+func (db *DB) StoreSuggestedKX(tx ReadWriteTx, from UserID, target zkidentity.PublicIdentity) error {
+	filename := filepath.Join(db.root, inboundDir, from.String(),
+		suggestKXDir, target.Identity.String())
+	return db.saveJsonFile(filename, target)
+}
+
+// RemoveSuggestedKX removes the given suggestion to KX.
+func (db *DB) RemoveSuggestedKX(tx ReadWriteTx, from, target UserID) error {
+	filename := filepath.Join(db.root, inboundDir, from.String(),
+		suggestKXDir, target.String())
+	return removeIfExists(filename)
+}
+
+// HasKXSuggestion returns true if there is a suggestion to KX from the given
+// source to the target.
+func (db *DB) HasKXSuggestion(tx ReadTx, from, target UserID) bool {
+	filename := filepath.Join(db.root, inboundDir, from.String(),
+		suggestKXDir, target.String())
+	return fileExists(filename)
+}
+
+// RemoveAllKXSuggestionsTo removes all suggestions to KX the given target from
+// everyone.
+func (db *DB) RemoveAllKXSuggestionsTo(tx ReadWriteTx, target UserID) error {
+	pattern := filepath.Join(db.root, inboundDir, "*", suggestKXDir,
+		target.String())
+	files, err := filepath.Glob(pattern)
+	if err != nil {
+		return err
+	}
+	for _, fname := range files {
+		err := removeIfExists(fname)
+		if err != nil {
+			db.log.Warnf("Unable to remove suggested kx file %s: %v",
+				fname, err)
+		}
+	}
+
+	return nil
+}
+
+// RemoveKXSuggestion removes a KX suggestion from one remote user to a target.
+// Other KX suggestions to the same target are kept.
+func (db *DB) RemoveKXSuggestion(tx ReadWriteTx, from, target UserID) error {
+	filename := filepath.Join(db.root, inboundDir, from.String(),
+		suggestKXDir, target.String())
+	return removeIfExists(filename)
+}
