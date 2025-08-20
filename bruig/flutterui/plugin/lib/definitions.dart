@@ -405,7 +405,9 @@ class GCAddressBookEntry {
   final String id;
   final String name;
   final List<String> members;
-  GCAddressBookEntry(this.id, this.name, this.members);
+  @JsonKey(name: "last_read_msg_time")
+  final DateTime lastReadMsgTime;
+  GCAddressBookEntry(this.id, this.name, this.members, this.lastReadMsgTime);
 
   factory GCAddressBookEntry.fromJson(Map<String, dynamic> json) =>
       _$GCAddressBookEntryFromJson(json);
@@ -435,8 +437,11 @@ class GroupChat {
   final String alias;
   @JsonKey(name: "rtdt_session_rv", defaultValue: "")
   final String rtdtSessionRV;
+  @JsonKey(name: "last_read_msg_time")
+  final DateTime lastReadMsgTime;
 
-  GroupChat(this.metadata, this.alias, this.rtdtSessionRV);
+  GroupChat(
+      this.metadata, this.alias, this.rtdtSessionRV, this.lastReadMsgTime);
   factory GroupChat.fromJson(Map<String, dynamic> json) =>
       _$GroupChatFromJson(json);
 }
@@ -486,6 +491,18 @@ class GCRemoveUserArgs {
   Map<String, dynamic> toJson() => _$GCRemoveUserArgsToJson(this);
 }
 
+@JsonSerializable()
+class UpdateLastMsgReadTimeArgs {
+  final String id;
+  @JsonKey(toJson: dateTimeToGoTime)
+  final DateTime time;
+  @JsonKey(name: "is_gc")
+  final bool isGC;
+
+  UpdateLastMsgReadTimeArgs(this.id, this.time, this.isGC);
+  Map<String, dynamic> toJson() => _$UpdateLastMsgReadTimeArgsToJson(this);
+}
+
 class FeedPostEvent extends ChatEvent {
   final String postID;
   final String title;
@@ -511,26 +528,32 @@ class AddressBookEntry {
   final Uint8List? avatar;
   @JsonKey(name: "last_completed_kx")
   final DateTime lastCompletedKx;
+  @JsonKey(name: "last_read_msg_time")
+  final DateTime lastReadMsgTime;
 
   AddressBookEntry(
-      this.id,
-      this.nick,
-      this.name,
-      this.ignored,
-      this.firstCreated,
-      this.lastHandshakeAttempt,
-      this.avatar,
-      this.lastCompletedKx);
+    this.id,
+    this.nick,
+    this.name,
+    this.ignored,
+    this.firstCreated,
+    this.lastHandshakeAttempt,
+    this.avatar,
+    this.lastCompletedKx,
+    this.lastReadMsgTime,
+  );
 
   factory AddressBookEntry.empty() => AddressBookEntry(
-      "",
-      "",
-      "",
-      false,
-      DateTime.fromMicrosecondsSinceEpoch(0),
-      DateTime.fromMicrosecondsSinceEpoch(0),
-      null,
-      DateTime.fromMicrosecondsSinceEpoch(0));
+        "",
+        "",
+        "",
+        false,
+        DateTime.fromMicrosecondsSinceEpoch(0),
+        DateTime.fromMicrosecondsSinceEpoch(0),
+        null,
+        DateTime.fromMicrosecondsSinceEpoch(0),
+        DateTime.fromMicrosecondsSinceEpoch(0),
+      );
 
   factory AddressBookEntry.fromJson(Map<String, dynamic> json) =>
       _$AddressBookEntryFromJson(json);
@@ -3488,6 +3511,11 @@ abstract class PluginPlatform {
     await asyncCall(CTGCRemoveUser, GCRemoveUserArgs(gc, uid));
   }
 
+  Future<void> updateLastMsgReadTime(
+          String id, DateTime time, bool isGC) async =>
+      await asyncCall(
+          CTUpdateLastMsgReadTime, UpdateLastMsgReadTimeArgs(id, time, isGC));
+
   Future<void> shareFile(
       String filename, String? uid, double cost, String descr) async {
     var args = ShareFileArgs(filename, uid ?? "", (cost * 1e8).round(), descr);
@@ -4416,6 +4444,7 @@ const int CTCancelKX = 0xaf;
 const int CTCancelMediateID = 0xb0;
 const int CTRTDTCancelInvite = 0xb1;
 const int CTDeclineKXSuggestion = 0xb2;
+const int CTUpdateLastMsgReadTime = 0xb3;
 
 const int notificationsStartID = 0x1000;
 

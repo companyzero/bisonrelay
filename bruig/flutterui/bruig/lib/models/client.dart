@@ -55,12 +55,12 @@ class DateChangeEvent extends ChatEvent {
   final DateTime date;
 
   DateChangeEvent(this.date)
-      : super("", DateFormat("EEE - d MMM").format(date));
+    : super("", DateFormat("EEE - d MMM").format(date));
 }
 
 class SynthChatEvent extends ChatEvent with ChangeNotifier {
   SynthChatEvent(String msg, [this._state = SCE_unknown, this._error])
-      : super("", msg);
+    : super("", msg);
 
   int _state;
   int get state => _state;
@@ -86,12 +86,12 @@ class RequestedResourceEvent extends ChatEvent {
   final PagesSession session;
 
   RequestedResourceEvent(String uid, this.session)
-      : super(uid, "Fetching user resources");
+    : super(uid, "Fetching user resources");
 }
 
 class RequestedUsersPostListEvent extends ChatEvent {
   const RequestedUsersPostListEvent(String uid)
-      : super(uid, "Listing user's posts");
+    : super(uid, "Listing user's posts");
 }
 
 const int CMS_unknown = 0;
@@ -232,6 +232,23 @@ class ChatModel extends ChangeNotifier {
   bool get active => _active;
   void _setActive(bool b) {
     _active = b;
+    if (_unreadEventCount + _unreadMsgCount > 0) {
+      var timestamp = DateTime.now();
+      if (_msgs.isNotEmpty) {
+        var msg = _msgs[0];
+        var evnt = msg.event;
+        if (evnt is PM) {
+          timestamp = DateTime.fromMillisecondsSinceEpoch(
+            msg.source?.nick == null ? evnt.timestamp : evnt.timestamp * 1000,
+          );
+        } else if (evnt is GCMsg) {
+          timestamp = DateTime.fromMillisecondsSinceEpoch(
+            msg.source?.nick == null ? evnt.timestamp : evnt.timestamp * 1000,
+          );
+        }
+      }
+      Golib.updateLastMsgReadTime(id, timestamp, isGC); // Ok to be async.
+    }
     _unreadMsgCount = 0;
     _unreadEventCount = 0;
     notifyListeners();
@@ -301,8 +318,9 @@ class ChatModel extends ChangeNotifier {
     if (timestamp != 0) {
       // Only show dateChange event if it is the first message or if the
       // previous message in the chat was from a different date.
-      var dateChange =
-          DateChangeEvent(DateTime.fromMillisecondsSinceEpoch(timestamp));
+      var dateChange = DateChangeEvent(
+        DateTime.fromMillisecondsSinceEpoch(timestamp),
+      );
       if (_msgs.isEmpty) {
         _msgs.add(ChatEventModel(dateChange, null));
       } else {
@@ -310,20 +328,23 @@ class ChatModel extends ChangeNotifier {
         for (var i = 0; i < _msgs.length; i++) {
           var oldEvent = _msgs[i].event;
           if (oldEvent is PM) {
-            lastTimestamp = _msgs[i].source?.nick == null
-                ? oldEvent.timestamp
-                : oldEvent.timestamp * 1000;
+            lastTimestamp =
+                _msgs[i].source?.nick == null
+                    ? oldEvent.timestamp
+                    : oldEvent.timestamp * 1000;
             break;
           } else if (oldEvent is GCMsg) {
-            lastTimestamp = _msgs[i].source?.nick == null
-                ? oldEvent.timestamp
-                : oldEvent.timestamp * 1000;
+            lastTimestamp =
+                _msgs[i].source?.nick == null
+                    ? oldEvent.timestamp
+                    : oldEvent.timestamp * 1000;
             break;
           }
         }
         if (lastTimestamp != 0) {
           var lastDate = DateChangeEvent(
-              DateTime.fromMillisecondsSinceEpoch(lastTimestamp));
+            DateTime.fromMillisecondsSinceEpoch(lastTimestamp),
+          );
           if (lastDate.msg != dateChange.msg) {
             _msgs.insert(0, (ChatEventModel(dateChange, null)));
           }
@@ -341,9 +362,10 @@ class ChatModel extends ChangeNotifier {
       }
     }
     if (isGC) {
-      var dt = timestamp > 0
-          ? DateTime.fromMillisecondsSinceEpoch(timestamp)
-          : DateTime.now();
+      var dt =
+          timestamp > 0
+              ? DateTime.fromMillisecondsSinceEpoch(timestamp)
+              : DateTime.now();
       appendDayGCMsgs(msg, dt);
     }
 
@@ -592,7 +614,8 @@ class ConnStateModel extends ChangeNotifier {
         } catch (exception) {
           // Ignore errors.
           debugPrint(
-              "Unable to compare current and suggested version: $exception");
+            "Unable to compare current and suggested version: $exception",
+          );
         }
       }
     }
@@ -633,8 +656,9 @@ class ChatsListModel extends ChangeNotifier {
 
   // firstByNick returns the first chatModel with the given uid (if one exists).
   ChatModel? firstByUID(String id, {bool? isGC}) {
-    var idx = _sorted
-        .indexWhere((c) => c.id == id && (isGC == null || c.isGC == isGC));
+    var idx = _sorted.indexWhere(
+      (c) => c.id == id && (isGC == null || c.isGC == isGC),
+    );
     return idx == -1 ? null : _sorted[idx];
   }
 
@@ -776,7 +800,9 @@ class ClientModel extends ChangeNotifier {
   }
 
   Future<void> createNewGCAndInvite(
-      String gcName, List<ChatModel> usersToInvite) async {
+    String gcName,
+    List<ChatModel> usersToInvite,
+  ) async {
     if (gcName == "") return;
 
     // Create the GC, create the chat model and make it the active and most
@@ -795,8 +821,9 @@ class ClientModel extends ChangeNotifier {
 
       await Golib.inviteToGC(InviteToGC(newChat.id, user.id));
       var event = ChatEventModel(
-          SynthChatEvent("Inviting ${user.nick} to ${newChat.nick}", SCE_sent),
-          userChat);
+        SynthChatEvent("Inviting ${user.nick} to ${newChat.nick}", SCE_sent),
+        userChat,
+      );
       newChat.append(event, false);
     }
   }
@@ -927,8 +954,14 @@ class ClientModel extends ChangeNotifier {
 
   bool get hasChats => _activeChats.isNotEmpty;
 
-  Future<ChatModel> _newChat(String id, String alias, bool isGC,
-      {loadHistory = true}) async {
+  Future<ChatModel> _newChat(
+    String id,
+    String alias,
+    bool isGC, {
+    loadHistory = true,
+    GCAddressBookEntry? gcAB,
+    AddressBookEntry? ab,
+  }) async {
     alias = alias.trim();
 
     var c = _activeChats[id];
@@ -974,16 +1007,21 @@ class ClientModel extends ChangeNotifier {
             source = getExistingChatByNick(chatHistory[i].from, false);
           }
 
-          m = GCMsg(id, chatHistory[i].from, chatHistory[i].message,
-              chatHistory[i].timestamp * (mine ? 1000 : 1));
+          m = GCMsg(
+            id,
+            chatHistory[i].from,
+            chatHistory[i].message,
+            chatHistory[i].timestamp * (mine ? 1000 : 1),
+          );
         }
         evnt = ChatEventModel(m, source);
       } else {
         ChatEvent m;
         var source = !mine ? c : null;
         if (chatHistory[i].internal) {
-          var matchSuggestKX =
-              _suggestedKXMsgRegexp.firstMatch(chatHistory[i].message);
+          var matchSuggestKX = _suggestedKXMsgRegexp.firstMatch(
+            chatHistory[i].message,
+          );
           if (matchSuggestKX != null) {
             var targetUID = matchSuggestKX[1]!;
             var alreadyKnown = getExistingChat(targetUID) != null;
@@ -999,15 +1037,72 @@ class ClientModel extends ChangeNotifier {
           }
         } else {
           m = PM(
-              id,
-              chatHistory[i].message,
-              mine,
-              chatHistory[i].timestamp *
-                  (chatHistory[i].from == _nick ? 1000 : 1));
+            id,
+            chatHistory[i].message,
+            mine,
+            chatHistory[i].timestamp *
+                (chatHistory[i].from == _nick ? 1000 : 1),
+          );
         }
         evnt = ChatEventModel(m, source);
       }
       c.append(evnt, true);
+    }
+
+    // Track list of unread counts. Go through list of messages, find the message
+    // before last read time, count up how many internal events and messages
+    // there are.
+    if (chatHistory.isNotEmpty) {
+      DateTime lastMsgTime;
+      if (isGC && gcAB != null) {
+        lastMsgTime = gcAB.lastReadMsgTime;
+      } else if (isGC) {
+        var gc = await Golib.getGC(id);
+        lastMsgTime = gc.lastReadMsgTime;
+      } else if (ab != null) {
+        lastMsgTime = ab.lastReadMsgTime;
+      } else {
+        var ab = await Golib.addressBookEntry(id);
+        lastMsgTime = ab.lastReadMsgTime;
+      }
+
+      var lastMsgTs = lastMsgTime.millisecondsSinceEpoch ~/ 1000;
+      if (lastMsgTs > 0) {
+        int unreadMsgCount = 0;
+        int unreadEventCount = 0;
+        for (var i = chatHistory.length - 1; i >= 0; i--) {
+          var v = chatHistory[i].timestamp > lastMsgTs;
+          if (chatHistory[i].timestamp > lastMsgTs) {
+            if (chatHistory[i].internal) {
+              unreadEventCount += 1;
+            } else {
+              unreadMsgCount += 1;
+            }
+          } else {
+            c._unreadEventCount = unreadEventCount;
+            c._unreadMsgCount = unreadMsgCount;
+            var j = (unreadMsgCount + unreadEventCount) - 1;
+            if (j >= 0 && j < c._msgs.length) {
+              // Only a message may be marked as firstUnread.
+              for (var k = j; k >= 0; k--) {
+                if (c._msgs[k].isMessage) {
+                  c._msgs[k].firstUnread = true;
+                  break;
+                }
+              }
+            }
+            break;
+          }
+        }
+      } else if (lastMsgTs == -62135596800) {
+        // -62135596800 == zero time in go.
+        // History but no registered lastMsgTs. Update to set it to the TS of
+        // the last message. This runs during the update to the new code.
+        var dt = DateTime.fromMillisecondsSinceEpoch(
+          chatHistory.last.timestamp * 1000,
+        );
+        Golib.updateLastMsgReadTime(id, dt, isGC); // Ok to be async.
+      }
     }
 
     // Add the new chat to the list of chats (either hidden or active).
@@ -1099,7 +1194,8 @@ class ClientModel extends ChangeNotifier {
         chatId = evnt.invite.gc!;
       }
 
-      var isGC = (evnt is GCMsg) ||
+      var isGC =
+          (evnt is GCMsg) ||
           (evnt is GCUserEvent) ||
           (evnt is GCAdminsChanged) ||
           (evnt is GCAddedMembers) ||
@@ -1169,14 +1265,14 @@ class ClientModel extends ChangeNotifier {
     _nick = info.nick;
     var ab = await Golib.addressBook();
     for (var v in ab) {
-      var c = await _newChat(v.id, v.nick, false);
+      var c = await _newChat(v.id, v.nick, false, ab: v);
       if (v.avatar != null) {
         c.avatar.loadAvatar(v.avatar);
       }
     }
     var gcs = await Golib.listGCs();
     for (var v in gcs) {
-      await _newChat(v.id, v.name, true);
+      await _newChat(v.id, v.name, true, gcAB: v);
     }
 
     // Re-sort list of chats.
@@ -1239,11 +1335,16 @@ class ClientModel extends ChangeNotifier {
 
       // Do not load history to avoid a duplicated "KX completed" message (if
       // that message is in the history).
-      var chat = await _newChat(remoteUser.uid, remoteUser.nick, false,
-          loadHistory: false);
+      var chat = await _newChat(
+        remoteUser.uid,
+        remoteUser.nick,
+        false,
+        loadHistory: false,
+      );
       chat.append(
-          ChatEventModel(SynthChatEvent("Completed KX", SCE_received), null),
-          false);
+        ChatEventModel(SynthChatEvent("Completed KX", SCE_received), null),
+        false,
+      );
 
       // Load user's avatar (async).
       (() async {
