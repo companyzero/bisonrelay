@@ -44,8 +44,8 @@ func NewFSDB(rootMsgs, rootSubs string) (serverdb.ServerDB, error) {
 // Static assertion that fsdb implements ServerDB.
 var _ serverdb.ServerDB = (*fsdb)(nil)
 
-func (db *fsdb) HealthCheck(ctx context.Context) (bool, error) {
-	return true, nil
+func (db *fsdb) HealthCheck(ctx context.Context) error {
+	return nil
 }
 
 func (db *fsdb) IsMaster(ctx context.Context) (bool, error) {

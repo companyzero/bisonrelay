@@ -918,7 +918,7 @@ func (db *DB) IsMaster(ctx context.Context) (bool, error) {
 }
 
 // HealthCheck returns if the server is functioning properly.
-func (db *DB) HealthCheck(ctx context.Context) (bool, error) {
+func (db *DB) HealthCheck(ctx context.Context) error {
 	ctx, task := trace.NewTask(ctx, "db.HealthCheck")
 	defer task.End()
 
@@ -926,27 +926,31 @@ func (db *DB) HealthCheck(ctx context.Context) (bool, error) {
 	var payload [1024]byte
 	_, err := rand.Read(payload[:])
 	if err != nil {
-		return false, err
+		return err
 	}
 
 	insertTime := time.Now().Format(time.DateOnly)
 	_, err = db.db.Exec(ctx, "INSERT INTO data VALUES ($1, $2, $3, now());",
 		rv, payload[:], insertTime)
 	if err != nil {
-		return false, err
+		return err
 	}
 	var res []byte
-	err = db.db.QueryRow(ctx, "SELECT payload FROM data WHERE rv = $1", rv).Scan(&res)
+	err = db.db.QueryRow(ctx, "SELECT payload FROM data WHERE rendezvous_point = $1", rv).Scan(&res)
 	if err != nil {
 		// attempt to delete
-		db.db.Exec(ctx, "DELETE FROM data WHERE rv = $1", rv)
-		return false, err
+		db.db.Exec(ctx, "DELETE FROM data WHERE rendezvous_point = $1", rv)
+		return err
 	}
-	_, err = db.db.Exec(ctx, "DELETE FROM data WHERE rv = $1", rv)
+	_, err = db.db.Exec(ctx, "DELETE FROM data WHERE rendezvous_point = $1", rv)
 	if err != nil {
-		return false, err
+		return err
 	}
-	return bytes.Equal(payload[:], res), nil
+
+	if !bytes.Equal(payload[:], res) {
+		return fmt.Errorf("payloads do not match")
+	}
+	return nil
 }
 
 // StorePayload stores the provided payload at the given rendezvous point along
