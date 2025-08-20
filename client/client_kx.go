@@ -768,7 +768,7 @@ func (c *Client) handshakeIdleUsers() error {
 				ab.LastHandshakeAttempt.Format(time.RFC3339Nano),
 				lastDecTime.Format(time.RFC3339Nano))
 
-			err := c.clearLastHandshakeAttemptTime(ru)
+			err := c.clearLastHandshakeAttemptTime(ru, false, time.Time{})
 			if err != nil {
 				ru.log.Warnf("Unable to clear last handshake "+
 					"time during init: %v", err)

@@ -184,6 +184,7 @@ const (
 	CTCancelKX                             = 0xaf
 	CTCancelMediateID                      = 0xb0
 	CTDeclineKXSuggestion                  = 0xb1
+	CTUpdateLastMsgReadTime                = 0xb2
 
 	NTInviteReceived         = 0x1001
 	NTInviteAccepted         = 0x1002

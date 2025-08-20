@@ -108,6 +108,7 @@ type addressBookEntry struct {
 	LastHandshakeAttempt time.Time         `json:"last_handshake_attempt"`
 	Avatar               []byte            `json:"avatar"`
 	LastCompletedKX      time.Time         `json:"last_completed_kx"`
+	LastReadMsgTime      time.Time         `json:"last_read_msg_time"`
 }
 
 func abEntryFromDB(entry *clientdb.AddressBookEntry) addressBookEntry {
@@ -120,6 +121,7 @@ func abEntryFromDB(entry *clientdb.AddressBookEntry) addressBookEntry {
 		LastHandshakeAttempt: entry.LastHandshakeAttempt,
 		LastCompletedKX:      entry.LastCompletedKX,
 		Avatar:               entry.ID.Avatar,
+		LastReadMsgTime:      entry.LastReadMsgTime,
 	}
 }
 
@@ -151,9 +153,10 @@ type inviteToGC struct {
 }
 
 type gcAddressBookEntry struct {
-	ID      zkidentity.ShortID  `json:"id"`
-	Name    string              `json:"name"`
-	Members []clientintf.UserID `json:"members"`
+	ID              zkidentity.ShortID  `json:"id"`
+	Name            string              `json:"name"`
+	Members         []clientintf.UserID `json:"members"`
+	LastReadMsgTime time.Time           `json:"last_read_msg_time"`
 }
 
 type gcInvitation struct {
@@ -520,6 +523,12 @@ type profileUpdated struct {
 	UID           clientintf.UserID           `json:"sid"`
 	AbEntry       addressBookEntry            `json:"addressbook_entry"`
 	UpdatedFields []client.ProfileUpdateField `json:"updated_fields"`
+}
+
+type updateLastMsgReadTimeArgs struct {
+	ID   clientintf.UserID `json:"id"`
+	Time time.Time         `json:"time"`
+	IsGC bool              `json:"is_gc"`
 }
 
 type runState struct {

@@ -1,4 +1,8 @@
 analyzer:
+  exclude:
+    - "**"
+  include:
+    - lib/**
   errors:
     # These are ignored because they are in generated files.    
     non_constant_identifier_names: ignore
