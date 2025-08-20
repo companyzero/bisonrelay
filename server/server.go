@@ -56,8 +56,9 @@ type APIStatusNode struct {
 }
 
 type APIStatus struct {
-	Database APIStatusDB   `json:"db"`
-	Node     APIStatusNode `json:"node"`
+	LastUpdated int64         `json:"lastUpdated"`
+	Database    APIStatusDB   `json:"db"`
+	Node        APIStatusNode `json:"node"`
 }
 
 // RPCWrapper is a wrapped RPC Message for internal use.  This is required because RPC messages
@@ -579,6 +580,7 @@ func (z *ZKS) refreshAPI(ctx context.Context) error {
 				}
 			}
 			z.apiStatus.Store(&APIStatus{
+				LastUpdated: time.Now().Unix(),
 				Database: APIStatusDB{
 					Online: healthy,
 					Master: isMaster,
