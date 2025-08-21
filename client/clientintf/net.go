@@ -3,17 +3,73 @@ package clientintf
 import (
 	"context"
 	"crypto/tls"
+	"encoding/json"
 	"fmt"
+	"io"
 	"net"
+	"net/http"
+	"time"
 
 	"github.com/decred/slog"
 )
 
 type DialFunc func(context.Context, string, string) (net.Conn, error)
 
+type ServerGroup struct {
+	Server   string `json:"brserver"`
+	LND      string `json:"lnd"`
+	IsMaster bool   `json:"isMaster"`
+}
+
+type ClientAPI struct {
+	ServerGroups []ServerGroup `json:"serverGroups"`
+}
+
+func querySeeder(ctx context.Context, apiURL string, dialFunc DialFunc) (string, error) {
+	httpClient := http.Client{
+		Transport: &http.Transport{
+			DialContext: dialFunc,
+		},
+		Timeout: time.Minute,
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, apiURL, nil)
+	if err != nil {
+		return "", fmt.Errorf("failed to make a seeder request: %w", err)
+	}
+	rep, err := httpClient.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("failed to query seeder: %w", err)
+	}
+	defer rep.Body.Close()
+
+	if rep.StatusCode != 200 {
+		return "", fmt.Errorf("seeder returned %v", rep.Status)
+	}
+	body, err := io.ReadAll(rep.Body)
+	if err != nil {
+		return "", fmt.Errorf("failed to read seeder response: %w", err)
+	}
+	var api ClientAPI
+	if err = json.Unmarshal(body, &api); err != nil {
+		return "", fmt.Errorf("failed to unmarshal seeder response: %w", err)
+	}
+	var server string
+	for i := range api.ServerGroups {
+		if api.ServerGroups[i].IsMaster {
+			server = api.ServerGroups[i].Server
+			break
+		}
+	}
+	if server == "" {
+		return "", fmt.Errorf("seeder returned no master servers")
+	}
+	return server, nil
+}
+
 // tlsDialer creates the inner TLS client dialer, based on the outer network
 // dialer.
-func tlsDialer(addr string, log slog.Logger, dialFunc DialFunc) func(context.Context) (Conn, *tls.ConnectionState, error) {
+func tlsDialer(addr string, log slog.Logger, dialFunc DialFunc, useSeeder bool) func(context.Context) (Conn, *tls.ConnectionState, error) {
 	tlsConfig := &tls.Config{
 		MinVersion: tls.VersionTLS12,
 		CipherSuites: []uint16{
@@ -23,6 +79,16 @@ func tlsDialer(addr string, log slog.Logger, dialFunc DialFunc) func(context.Con
 	}
 
 	return func(ctx context.Context) (Conn, *tls.ConnectionState, error) {
+		if useSeeder {
+			apiURL := fmt.Sprintf("https://%s/api/live", addr)
+			log.Infof("Querying seeder at %v", apiURL)
+			server, err := querySeeder(ctx, apiURL, dialFunc)
+			if err != nil {
+				return nil, nil, err
+			}
+			addr = server
+		}
+
 		nconn, err := dialFunc(ctx, "tcp", addr)
 		if err != nil {
 			return nil, nil, err
@@ -51,10 +117,16 @@ func tlsDialer(addr string, log slog.Logger, dialFunc DialFunc) func(context.Con
 // specific server address.
 func NetDialer(addr string, log slog.Logger) func(context.Context) (Conn, *tls.ConnectionState, error) {
 	netDialer := &net.Dialer{}
-	return tlsDialer(addr, log, netDialer.DialContext)
+	return tlsDialer(addr, log, netDialer.DialContext, false)
 }
 
 // WithDialer returns a client dialer function that uses the given dialer.
 func WithDialer(addr string, log slog.Logger, dialFunc DialFunc) func(context.Context) (Conn, *tls.ConnectionState, error) {
-	return tlsDialer(addr, log, dialFunc)
+	return tlsDialer(addr, log, dialFunc, false)
+}
+
+// WithSeeder returns a client dialer function that queries a seeder
+// for the server address using the given dialer.
+func WithSeeder(addr string, log slog.Logger, dialFunc DialFunc) func(context.Context) (Conn, *tls.ConnectionState, error) {
+	return tlsDialer(addr, log, dialFunc, true)
 }
