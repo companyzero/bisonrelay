@@ -55,12 +55,12 @@ class DateChangeEvent extends ChatEvent {
   final DateTime date;
 
   DateChangeEvent(this.date)
-    : super("", DateFormat("EEE - d MMM").format(date));
+      : super("", DateFormat("EEE - d MMM").format(date));
 }
 
 class SynthChatEvent extends ChatEvent with ChangeNotifier {
   SynthChatEvent(String msg, [this._state = SCE_unknown, this._error])
-    : super("", msg);
+      : super("", msg);
 
   int _state;
   int get state => _state;
@@ -86,12 +86,12 @@ class RequestedResourceEvent extends ChatEvent {
   final PagesSession session;
 
   RequestedResourceEvent(String uid, this.session)
-    : super(uid, "Fetching user resources");
+      : super(uid, "Fetching user resources");
 }
 
 class RequestedUsersPostListEvent extends ChatEvent {
   const RequestedUsersPostListEvent(String uid)
-    : super(uid, "Listing user's posts");
+      : super(uid, "Listing user's posts");
 }
 
 const int CMS_unknown = 0;
@@ -328,16 +328,14 @@ class ChatModel extends ChangeNotifier {
         for (var i = 0; i < _msgs.length; i++) {
           var oldEvent = _msgs[i].event;
           if (oldEvent is PM) {
-            lastTimestamp =
-                _msgs[i].source?.nick == null
-                    ? oldEvent.timestamp
-                    : oldEvent.timestamp * 1000;
+            lastTimestamp = _msgs[i].source?.nick == null
+                ? oldEvent.timestamp
+                : oldEvent.timestamp * 1000;
             break;
           } else if (oldEvent is GCMsg) {
-            lastTimestamp =
-                _msgs[i].source?.nick == null
-                    ? oldEvent.timestamp
-                    : oldEvent.timestamp * 1000;
+            lastTimestamp = _msgs[i].source?.nick == null
+                ? oldEvent.timestamp
+                : oldEvent.timestamp * 1000;
             break;
           }
         }
@@ -362,10 +360,9 @@ class ChatModel extends ChangeNotifier {
       }
     }
     if (isGC) {
-      var dt =
-          timestamp > 0
-              ? DateTime.fromMillisecondsSinceEpoch(timestamp)
-              : DateTime.now();
+      var dt = timestamp > 0
+          ? DateTime.fromMillisecondsSinceEpoch(timestamp)
+          : DateTime.now();
       appendDayGCMsgs(msg, dt);
     }
 
@@ -739,6 +736,18 @@ class BoolFlagModel extends ChangeNotifier {
   }
 
   BoolFlagModel({initial = false}) : _val = initial;
+}
+
+class GCInviteCountModel extends ValueNotifier<int> {
+  GCInviteCountModel() : super(0);
+
+  int countPendingInvites(List<GCInvitation> invites) =>
+      invites.fold(0, (count, inv) => inv.accepted ? count : count + 1);
+
+  void _loadGcInviteCount() async {
+    var invites = await Golib.listGCInvitations();
+    value = countPendingInvites(invites);
+  }
 }
 
 class ClientModel extends ChangeNotifier {
@@ -1194,8 +1203,7 @@ class ClientModel extends ChangeNotifier {
         chatId = evnt.invite.gc!;
       }
 
-      var isGC =
-          (evnt is GCMsg) ||
+      var isGC = (evnt is GCMsg) ||
           (evnt is GCUserEvent) ||
           (evnt is GCAdminsChanged) ||
           (evnt is GCAddedMembers) ||
@@ -1251,6 +1259,10 @@ class ClientModel extends ChangeNotifier {
         chat.killed = true;
         debugPrint("GC ${evnt.gcid} killed");
       }
+
+      if (evnt is GCInvitation) {
+        gcInviteCount.value += 1;
+      }
     }
   }
 
@@ -1293,6 +1305,7 @@ class ClientModel extends ChangeNotifier {
     _handleChatMsgs();
     _handleGCListUpdates();
     _handleSSOrders();
+    gcInviteCount._loadGcInviteCount();
   }
 
   AvatarModel myAvatar = AvatarModel();
@@ -1400,4 +1413,6 @@ class ClientModel extends ChangeNotifier {
       _handleSSOrderPlaced(order);
     }
   }
+
+  GCInviteCountModel gcInviteCount = GCInviteCountModel();
 }

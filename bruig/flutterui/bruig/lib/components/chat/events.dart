@@ -627,15 +627,27 @@ class _JoinGCEventWState extends State<JoinGCEventW> {
       event.sentState = CMS_sending;
       setState(() {});
       await Golib.acceptGCInvite(invite.iid);
+      if (mounted) {
+        ClientModel.of(context, listen: false).gcInviteCount.value -= 1;
+      }
       event.sentState = CMS_sent;
       setState(() {});
     } catch (exception) {
-      event.sendError = "exception";
+      event.sendError = "$exception";
       setState(() {});
     }
   }
 
-  void cancelInvite() {
+  void cancelInvite() async {
+    event.sentState = CMS_canceled;
+    try {
+      await Golib.declineGCInvite(invite.iid);
+      if (mounted) {
+        ClientModel.of(context, listen: false).gcInviteCount.value -= 1;
+      }
+    } catch (exception) {
+      debugPrint("Exception declining invite: $exception");
+    }
     event.sentState = CMS_canceled;
     setState(() {});
   }
