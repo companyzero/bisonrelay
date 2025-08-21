@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/companyzero/bisonrelay/client/clientintf"
 	"github.com/companyzero/bisonrelay/server"
 	"github.com/decred/slog"
 	"github.com/jrick/logrotate/rotator"
@@ -30,16 +31,6 @@ type ServerConfig struct {
 
 type ServerAPI struct {
 	ServerConfigs []ServerConfig `json:"serverConfigs"`
-}
-
-type ServerGroup struct {
-	Server   string `json:"brserver"`
-	LND      string `json:"lnd"`
-	IsMaster bool   `json:"isMaster"`
-}
-
-type ClientAPI struct {
-	ServerGroups []ServerGroup `json:"serverGroups"`
 }
 
 func main() {
@@ -139,14 +130,14 @@ func main() {
 	}
 
 	// create the http response for brclients.
-	createClientReply := func() ClientAPI {
+	createClientReply := func() clientintf.ClientAPI {
 		serverMtx.Lock()
 		defer serverMtx.Unlock()
 
-		var clientAPI ClientAPI
+		var clientAPI clientintf.ClientAPI
 		for brserver, apiStatus := range serverMap {
 			host, _, _ := net.SplitHostPort(brserver)
-			clientAPI.ServerGroups = append(clientAPI.ServerGroups, ServerGroup{
+			clientAPI.ServerGroups = append(clientAPI.ServerGroups, clientintf.ServerGroup{
 				Server:   fmt.Sprintf("%s:443", host),
 				LND:      fmt.Sprintf("%s@%s:9735", apiStatus.Node.PublicKey, host),
 				IsMaster: apiStatus.Database.Master && apiStatus.Database.Online, // XXX
