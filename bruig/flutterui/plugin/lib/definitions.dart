@@ -3430,6 +3430,7 @@ abstract class PluginPlatform {
   }
 
   Future<void> acceptGCInvite(int iid) => asyncCall(CTAcceptGCInvite, iid);
+  Future<void> declineGCInvite(int iid) => asyncCall(CTDeclineGCInvite, iid);
 
   Future<GroupChat> getGC(String name) async {
     var res = await asyncCall(CTGetGC, name);
@@ -4380,6 +4381,7 @@ const int CTCancelKX = 0xaf;
 const int CTCancelMediateID = 0xb0;
 const int CTDeclineKXSuggestion = 0xb1;
 const int CTUpdateLastMsgReadTime = 0xb2;
+const int CTDeclineGCInvite = 0xb3;
 
 const int notificationsStartID = 0x1000;
 

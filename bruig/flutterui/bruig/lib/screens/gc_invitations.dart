@@ -1,5 +1,7 @@
+import 'package:bruig/components/buttons.dart';
 import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/components/text.dart';
+import 'package:bruig/models/client.dart';
 import 'package:bruig/models/snackbar.dart';
 import 'package:bruig/screens/startupscreen.dart';
 import 'package:bruig/theme_manager.dart';
@@ -22,9 +24,14 @@ class _GCInvitationsScreenState extends State<GCInvitationsScreen> {
   void updateList() async {
     try {
       var newInvites = await Golib.listGCInvitations();
-      setState(() {
-        invites = newInvites;
-      });
+      if (mounted) {
+        var invCountModel =
+            ClientModel.of(context, listen: false).gcInviteCount;
+        invCountModel.value = invCountModel.countPendingInvites(newInvites);
+        setState(() {
+          invites = newInvites;
+        });
+      }
     } catch (exception) {
       showErrorSnackbar(this, "Unable to load list of invitations: $exception");
     }
@@ -37,6 +44,16 @@ class _GCInvitationsScreenState extends State<GCInvitationsScreen> {
       updateList();
     } catch (exception) {
       snackbar.error("Unable to accept invite: $exception");
+    }
+  }
+
+  void declineInvite(int iid) async {
+    var snackbar = SnackBarModel.of(context);
+    try {
+      await Golib.declineGCInvite(iid);
+      updateList();
+    } catch (exception) {
+      snackbar.error("Unable to decline invite: $exception");
     }
   }
 
@@ -68,9 +85,14 @@ class _GCInvitationsScreenState extends State<GCInvitationsScreen> {
                           ? const Txt(
                               "Invite Accepted! Waiting for admin to add to GC.",
                               color: TextColor.successOnSurface)
-                          : ElevatedButton(
-                              onPressed: () => acceptInvite(i.iid),
-                              child: const Text("Accept Invite")),
+                          : Wrap(spacing: 5, children: [
+                              OutlinedButton(
+                                  onPressed: () => acceptInvite(i.iid),
+                                  child: const Text("Accept Invite")),
+                              CancelButton(
+                                  onPressed: () => declineInvite(i.iid),
+                                  label: "Decline"),
+                            ]),
                     ]),
                   ))),
               if (invites.isEmpty)
