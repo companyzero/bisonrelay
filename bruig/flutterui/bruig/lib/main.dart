@@ -300,6 +300,7 @@ class _AppState extends State<App> with WindowListener {
           cfg.dbRoot,
           cfg.downloadsDir,
           cfg.embedsDir,
+	  cfg.disableSeeder,
           cfg.serverAddr,
           cfg.lnRPCHost,
           cfg.lnTLSCert,

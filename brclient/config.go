@@ -78,6 +78,7 @@ func (sspt simpleStorePayType) isValid() bool {
 }
 
 type config struct {
+	DisableSeeder     bool
 	ServerAddr        string
 	Root              string
 	DBRoot            string
@@ -285,7 +286,8 @@ func loadConfig() (*config, error) {
 
 	// Define config file flags.
 	fs = flag.NewFlagSet("Config Options", flag.ContinueOnError)
-	flagServerAddr := fs.String("server", "127.0.0.1:443", "Address and port of the CR server")
+	flagDisableSeeder := fs.Bool("disableseeder", false, "Disable seeder and connect directly to serveraddr")
+	flagServerAddr := fs.String("server", "bisonrelay.org:443", "Address and port of the BR seeder/server")
 	flagRTAudioHotAudio := fs.Bool("rtautohotaudio", true, "Automatically make audio hot")
 	flagRootDir := fs.String("root", defaultAppDir, "Root of all app data")
 	flagWinPin := fs.String("winpin", "", "Comma delimited list of DM and GC windows to launch on start")
@@ -531,8 +533,15 @@ func loadConfig() (*config, error) {
 	if err != nil {
 		return nil, fmt.Errorf("invalid value for 'tipuser.payretrydelayfactor': %v", err)
 	}
+
+	// Disable seeder if not mainnet.
+	if *flagNetwork != "mainnet" {
+		*flagDisableSeeder = true
+	}
+
 	// Return the final cfg object.
 	return &config{
+		DisableSeeder:          *flagDisableSeeder,
 		ServerAddr:             *flagServerAddr,
 		Root:                   *flagRootDir,
 		DBRoot:                 filepath.Join(*flagRootDir, "db"),

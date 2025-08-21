@@ -22,6 +22,8 @@ class InitClient {
   final String downloadsDir;
   @JsonKey(name: "embeds_dir")
   final String embedsDir;
+  @JsonKey(name: 'disable_seeder')
+  final String disableSeeder;
   @JsonKey(name: 'server_addr')
   final String serverAddr;
   @JsonKey(name: 'ln_rpc_host')
@@ -98,6 +100,7 @@ class InitClient {
       this.dbRoot,
       this.downloadsDir,
       this.embedsDir,
+      this.disableSeeder,
       this.serverAddr,
       this.lnRPCHost,
       this.lnTLSCertPath,

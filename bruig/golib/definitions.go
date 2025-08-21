@@ -17,6 +17,7 @@ import (
 )
 
 type initClient struct {
+	DisableSeeder     bool   `json:"disable_seeder"`
 	ServerAddr        string `json:"server_addr"`
 	DBRoot            string `json:"dbroot"`
 	DownloadsDir      string `json:"downloads_dir"`
