@@ -1206,6 +1206,14 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		err := c.AcceptGroupChatInvite(iid)
 		return nil, err
 
+	case CTDeclineGCInvite:
+		var iid uint64
+		if err := cmd.decode(&iid); err != nil {
+			return nil, err
+		}
+		err := c.DeclineGroupChatInvite(iid)
+		return nil, err
+
 	case CTGetGC:
 		var id zkidentity.ShortID
 		if err := cmd.decode(&id); err != nil {

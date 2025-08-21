@@ -172,6 +172,7 @@ Future<void> runMainApp(Config cfg) async {
       ChangeNotifierProvider.value(value: client.connState),
       ChangeNotifierProvider.value(value: client.ui.smallScreenActiveTab),
       ChangeNotifierProvider.value(value: client.ui.overviewActivePath),
+      ChangeNotifierProvider.value(value: client.gcInviteCount),
       ChangeNotifierProvider(create: (c) => FeedModel()),
       ChangeNotifierProvider.value(value: globalLogModel),
       ChangeNotifierProvider(create: (c) => DownloadsModel()),
