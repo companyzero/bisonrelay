@@ -3,6 +3,7 @@ module github.com/companyzero/bisonrelay
 go 1.23
 
 require (
+	github.com/BurntSushi/toml v0.3.1
 	github.com/RoaringBitmap/roaring/v2 v2.4.3
 	github.com/atotto/clipboard v0.1.4
 	github.com/bahlo/generic-list-go v0.2.0

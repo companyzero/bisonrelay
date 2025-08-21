@@ -6,6 +6,8 @@
 scripts/zkc*
 brserver/brserver
 brclient/brclient
+brseeder/brseeder
+brrtdtserver/brrtdtserver
 server/internal/frpgdb/cmd/frdbsim/frdbsim
 server.crt
 build/
