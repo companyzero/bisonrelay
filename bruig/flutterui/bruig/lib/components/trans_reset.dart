@@ -45,6 +45,7 @@ class _TransResetModalState extends State<TransResetModal> {
 
   @override
   Widget build(BuildContext context) {
+    var client = ClientModel.of(context, listen: false);
     return Container(
       padding: const EdgeInsets.all(30),
       child: Wrap(
@@ -56,6 +57,7 @@ class _TransResetModalState extends State<TransResetModal> {
             SizedBox(
                 width: 200,
                 child: UsersDropdown(
+                    client: client,
                     cb: (ChatModel? chat) {
                       userToTarget = chat;
                     },

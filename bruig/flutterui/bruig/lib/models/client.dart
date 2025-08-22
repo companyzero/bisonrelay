@@ -348,6 +348,12 @@ class ChatModel extends ChangeNotifier {
           }
         }
       }
+
+      // When active, mark as already read.
+      if (active) {
+        Golib.updateLastMsgReadTime(
+            id, dateChange.date, isGC); // Ok to be async.
+      }
     }
     _msgs.insert(0, msg);
     if (!history) {
@@ -1080,7 +1086,6 @@ class ClientModel extends ChangeNotifier {
         int unreadMsgCount = 0;
         int unreadEventCount = 0;
         for (var i = chatHistory.length - 1; i >= 0; i--) {
-          var v = chatHistory[i].timestamp > lastMsgTs;
           if (chatHistory[i].timestamp > lastMsgTs) {
             if (chatHistory[i].internal) {
               unreadEventCount += 1;
