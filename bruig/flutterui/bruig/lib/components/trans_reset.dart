@@ -1,10 +1,11 @@
-import 'package:bruig/components/buttons.dart';
+import 'package:bruig/components/text.dart';
+import 'package:bruig/components/usersearch/user_search_model.dart';
+import 'package:bruig/components/usersearch/user_search_panel.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/models/snackbar.dart';
 import 'package:bruig/util.dart';
 import 'package:flutter/material.dart';
 import 'package:golib_plugin/golib_plugin.dart';
-import 'package:bruig/components/users_dropdown.dart';
 
 void showTransResetModalBottom(BuildContext context, ChatModel chat) {
   showModalBottomSheet(
@@ -22,18 +23,29 @@ class TransResetModal extends StatefulWidget {
 }
 
 class _TransResetModalState extends State<TransResetModal> {
-  ChatModel get chat => widget.chat;
+  ChatModel get target => widget.chat;
   bool loading = false;
-  ChatModel? userToTarget;
+  UserSelectionModel userSel = UserSelectionModel();
 
   void transReset(BuildContext context) async {
     if (loading) return;
-    if (userToTarget == null) return;
+    if (userSel.selected.isEmpty) return;
+
     setState(() => loading = true);
     var snackbar = SnackBarModel.of(context);
+    var mediator = userSel.selected[0];
+
     try {
-      await Golib.transReset(chat.id, userToTarget!.id);
-      snackbar.success('Sent transitive reset to ${chat.nick}');
+      await Golib.transReset(mediator.id, target.id);
+      target.append(
+          ChatEventModel(
+              SynthChatEvent(
+                  "Attempting transitive reset through ${mediator.nick}",
+                  SCE_sent),
+              null),
+          false);
+      snackbar.success(
+          'Attempting transitive reset with ${target.nick} through mediator ${mediator.nick}');
       popNavigatorFromState(this);
     } catch (exception) {
       snackbar.error('Unable to transitive reset: $exception');
@@ -43,30 +55,30 @@ class _TransResetModalState extends State<TransResetModal> {
     }
   }
 
+  void cancel() {
+    Navigator.of(context).pop();
+  }
+
   @override
   Widget build(BuildContext context) {
     var client = ClientModel.of(context, listen: false);
     return Container(
-      padding: const EdgeInsets.all(30),
-      child: Wrap(
-          runSpacing: 10,
-          spacing: 10,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            Text("Transitive Reset '${chat.nick}' through: "),
-            SizedBox(
-                width: 200,
-                child: UsersDropdown(
-                    client: client,
-                    cb: (ChatModel? chat) {
-                      userToTarget = chat;
-                    },
-                    excludeUIDs: [chat.id])),
-            CancelButton(onPressed: () => Navigator.pop(context)),
-            OutlinedButton(
-                onPressed: !loading ? () => transReset(context) : null,
-                child: const Text('Reset')),
-          ]),
+      padding: const EdgeInsets.all(10),
+      child: Column(children: [
+        Txt.L("Select transitive reset mediator"),
+        const SizedBox(height: 10),
+        Expanded(
+            child: UserSearchPanel(
+          client,
+          userSelModel: userSel,
+          targets: UserSearchPanelTargets.users,
+          searchInputHintText: "Search for users",
+          confirmLabel: "Attempt transitive reset",
+          excludeUIDs: [target.id],
+          onCancel: cancel,
+          onConfirm: !loading ? () => transReset(context) : null,
+        ))
+      ]),
     );
   }
 }

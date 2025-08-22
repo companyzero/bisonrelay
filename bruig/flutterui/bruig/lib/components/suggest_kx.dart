@@ -25,13 +25,11 @@ class SuggestKXModal extends StatefulWidget {
 class _SuggestKXModalState extends State<SuggestKXModal> {
   ChatModel get chat => widget.chat;
   bool loading = false;
-  FocusNode focusNode = FocusNode();
   UserSelectionModel userSel = UserSelectionModel();
 
   @override
   void initState() {
     super.initState();
-    focusNode.requestFocus();
   }
 
   void suggestKX(BuildContext context) async {
