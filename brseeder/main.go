@@ -163,37 +163,48 @@ func main() {
 				for i := range cfg.BRs {
 					brserver := cfg.BRs[i]
 					eg.Go(func() error {
-						apiurl := fmt.Sprintf("http://%v/api/live", brserver)
-						req, err := http.NewRequestWithContext(ctx, http.MethodGet, apiurl, nil)
-						if err != nil {
-							logger.Errorf("%v: %v", brserver, err)
-							return err
-						}
-						rep, err := httpClient.Do(req)
-						if err != nil {
-							logger.Errorf("%v: %v", brserver, err)
-							return err
-						}
-						if rep.StatusCode != 200 {
-							logger.Errorf("%v: %v", rep.Status)
-							return err
-						}
-						body, err := io.ReadAll(rep.Body)
-						rep.Body.Close()
-						if err != nil {
-							logger.Errorf("%v: %v", brserver, err)
-							return err
-						}
-						logger.Errorf("%s", string(body))
 						var apiStatus server.APIStatus
-						if err = json.Unmarshal(body, &apiStatus); err != nil {
-							logger.Errorf("%v: %v", brserver, err)
+
+						err := func() error {
+							apiurl := fmt.Sprintf("http://%v/api/live", brserver)
+							req, err := http.NewRequestWithContext(ctx, http.MethodGet, apiurl, nil)
+							if err != nil {
+								logger.Errorf("%v: %v", brserver, err)
+								return err
+							}
+							rep, err := httpClient.Do(req)
+							if err != nil {
+								logger.Errorf("%v: %v", brserver, err)
+								return err
+							}
+							if rep.StatusCode != 200 {
+								logger.Errorf("%v: %v", rep.Status)
+								return err
+							}
+							body, err := io.ReadAll(rep.Body)
+							rep.Body.Close()
+							if err != nil {
+								logger.Errorf("%v: %v", brserver, err)
+								return err
+							}
+							if err = json.Unmarshal(body, &apiStatus); err != nil {
+								logger.Errorf("%v: %v", brserver, err)
+								return err
+							}
+							return nil
+						}()
+						serverMtx.Lock()
+						defer serverMtx.Unlock()
+
+						if err != nil {
+							cur, ok := serverMap[brserver]
+							if ok {
+								cur.Database.Online = false
+								serverMap[brserver] = cur
+							}
 							return err
 						}
-
-						serverMtx.Lock()
 						serverMap[brserver] = apiStatus
-						serverMtx.Unlock()
 
 						return nil
 					})
