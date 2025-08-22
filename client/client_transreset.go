@@ -3,8 +3,10 @@ package client
 import (
 	"crypto/rand"
 	"fmt"
+	"time"
 
 	"github.com/companyzero/bisonrelay/client/clientdb"
+	"github.com/companyzero/bisonrelay/internal/strescape"
 	"github.com/companyzero/bisonrelay/ratchet"
 	"github.com/companyzero/bisonrelay/rpc"
 )
@@ -56,7 +58,15 @@ func (c *Client) RequestTransitiveReset(mediator, target UserID) error {
 
 	// Store half-kx in DB.
 	err = c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
-		return c.db.StoreTransResetHalfKX(tx, r, targetRU.ID())
+		err := c.db.StoreTransResetHalfKX(tx, r, targetRU.ID())
+		if err != nil {
+			return err
+		}
+
+		logMsg := fmt.Sprintf("Attempting transitive reset through %s",
+			strescape.Nick(mediatorRU.Nick()))
+		_, err = c.db.LogPM(tx, target, true, targetRU.Nick(), logMsg, time.Now())
+		return err
 	})
 	if err != nil {
 		return err
