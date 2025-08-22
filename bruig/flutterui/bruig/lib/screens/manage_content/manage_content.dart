@@ -196,6 +196,7 @@ class _AddContentPanelState extends State<AddContentPanel> {
 
   @override
   Widget build(BuildContext context) {
+    var client = ClientModel.of(context, listen: false);
     return Column(children: [
       Row(children: [
         SizedBox(
@@ -221,7 +222,7 @@ class _AddContentPanelState extends State<AddContentPanel> {
             width: 200,
             height: 34,
             child: UsersDropdown(
-              allowEmpty: true,
+              client: client,
               cb: (c) => setState(() {
                 toCtrl.text = c?.id ?? "";
               }),
