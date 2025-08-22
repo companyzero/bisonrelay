@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'package:bruig/components/dcr_input.dart';
+import 'package:bruig/components/interactive_avatar.dart';
 import 'package:bruig/components/text.dart';
-import 'package:bruig/components/users_dropdown.dart';
+import 'package:bruig/components/usersearch/user_search_model.dart';
+import 'package:bruig/components/usersearch/user_search_panel.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/models/snackbar.dart';
 import 'package:flutter/material.dart';
@@ -129,7 +131,7 @@ class SharedContent extends StatelessWidget {
 }
 
 typedef AddContentCB = Future<void> Function(
-    String filename, String nick, double cost);
+    String filename, String uid, double cost);
 
 class AddContentPanel extends StatefulWidget {
   final AddContentCB addContentCB;
@@ -142,9 +144,11 @@ class AddContentPanel extends StatefulWidget {
 class _AddContentPanelState extends State<AddContentPanel> {
   bool loading = false;
   TextEditingController fnameCtrl = TextEditingController();
-  TextEditingController toCtrl = TextEditingController();
   AmountEditingController costCtrl = AmountEditingController();
+  ChatModel? limitToUser;
   Timer? _debounce;
+  bool selectingTargetUser = false;
+  UserSelectionModel userSel = UserSelectionModel();
 
   @override
   dispose() {
@@ -178,14 +182,15 @@ class _AddContentPanelState extends State<AddContentPanel> {
     if (costCtrl.text.isNotEmpty) {
       cost = double.parse(costCtrl.text);
     }
-    var nick = toCtrl.text.trim();
+    var uid = limitToUser?.id ?? "";
     setState(() => loading = true);
     try {
-      await widget.addContentCB(fname, nick, cost);
+      await widget.addContentCB(fname, uid, cost);
       setState(() {
         fnameCtrl.clear();
         costCtrl.clear();
-        toCtrl.clear();
+        limitToUser = null;
+        userSel.clear();
       });
     } catch (exception) {
       snackbar.error('Unable to share content: $exception');
@@ -194,9 +199,39 @@ class _AddContentPanelState extends State<AddContentPanel> {
     }
   }
 
+  Widget buildSelectTargetUser(BuildContext context) {
+    var client = ClientModel.of(context, listen: false);
+    return Container(
+      padding: const EdgeInsets.all(10),
+      child: Column(children: [
+        Expanded(
+            child: UserSearchPanel(
+          client,
+          userSelModel: userSel,
+          targets: UserSearchPanelTargets.users,
+          searchInputHintText: "Search for users",
+          confirmLabel: "Select as target user",
+          onCancel: () {
+            setState(() => selectingTargetUser = false);
+          },
+          onConfirm: () {
+            setState(() {
+              limitToUser =
+                  userSel.selected.isNotEmpty ? userSel.selected[0] : null;
+              selectingTargetUser = false;
+            });
+          },
+        ))
+      ]),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    var client = ClientModel.of(context, listen: false);
+    if (selectingTargetUser) {
+      return buildSelectTargetUser(context);
+    }
+
     return Column(children: [
       Row(children: [
         SizedBox(
@@ -215,18 +250,25 @@ class _AddContentPanelState extends State<AddContentPanel> {
           child: Txt.S("Sharing Preference:"),
         ),
         Container(
-            alignment: Alignment.centerRight,
-            padding:
-                const EdgeInsets.only(left: 8, top: 4, bottom: 4, right: 8),
-            decoration: BoxDecoration(borderRadius: BorderRadius.circular(3)),
-            width: 200,
-            height: 34,
-            child: UsersDropdown(
-              client: client,
-              cb: (c) => setState(() {
-                toCtrl.text = c?.id ?? "";
-              }),
-            ))
+          alignment: Alignment.centerRight,
+          padding: const EdgeInsets.only(left: 8, top: 4, bottom: 4, right: 8),
+          decoration: BoxDecoration(borderRadius: BorderRadius.circular(3)),
+          // width: 200,
+          height: 34,
+          child: Wrap(crossAxisAlignment: WrapCrossAlignment.center, children: [
+            if (limitToUser != null) ...[
+              ChatAvatar(limitToUser!),
+              const SizedBox(width: 5),
+              Txt.S(limitToUser!.nick),
+              const SizedBox(width: 10),
+            ],
+            TextButton(
+                onPressed: () {
+                  setState(() => selectingTargetUser = true);
+                },
+                child: Txt.S("Select Target user")),
+          ]),
+        ),
       ]),
       const SizedBox(height: 20),
       Row(children: [
@@ -289,8 +331,8 @@ class _ManageContentState extends State<ManageContent> {
     });
   }
 
-  Future<void> addContent(String filename, String nick, double cost) async {
-    await Golib.shareFile(filename, nick, cost, "");
+  Future<void> addContent(String filename, String uid, double cost) async {
+    await Golib.shareFile(filename, uid, cost, "");
     await loadSharedContent();
   }
 
