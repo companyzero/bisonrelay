@@ -634,17 +634,36 @@ func (c *Client) RenameUser(uid UserID, newNick string) error {
 // SuggestKX sends a message to invitee suggesting they KX with target (through
 // the local client).
 func (c *Client) SuggestKX(invitee, target UserID) error {
-	_, err := c.rul.byID(invitee)
+	ru, err := c.rul.byID(invitee)
 	if err != nil {
 		return err
 	}
 
-	ruAB, err := c.getAddressBookEntry(target)
+	targetRU, err := c.rul.byID(target)
 	if err != nil {
 		return err
 	}
 
-	rm := rpc.RMKXSuggestion{Target: *ruAB.ID}
+	var targetAB *clientdb.AddressBookEntry
+	err = c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
+		var err error
+		targetAB, err = c.db.GetAddressBookEntry(tx, target)
+		if err != nil {
+			return err
+		}
+
+		logMsg := fmt.Sprintf("Sent KX suggestion %s", strescape.Nick(targetRU.Nick()))
+		_, err = c.db.LogPM(tx, invitee, true, ru.Nick(), logMsg, time.Now())
+		return err
+
+	})
+	if err != nil {
+		return err
+	}
+
+	ru.log.Infof("Suggesting user KX with %q (%s)", targetAB.Nick, target)
+
+	rm := rpc.RMKXSuggestion{Target: *targetAB.ID}
 	payEvent := "kxsuggest." + target.String()
 	return c.sendWithSendQ(payEvent, rm, invitee)
 }
