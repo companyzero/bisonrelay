@@ -38,4 +38,9 @@ class UserSelectionModel extends ChangeNotifier {
       notifyListeners();
     }
   }
+
+  void clear() {
+    _selected.clear();
+    notifyListeners();
+  }
 }
