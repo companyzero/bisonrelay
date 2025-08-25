@@ -6,6 +6,9 @@ const (
 # address of the server
 server = {{ .ServerAddr }}
 
+# server is not a seeder
+# disableseeder = true
+
 # root directory for brclient settings, db, etc
 root = {{ .Root }}
 
