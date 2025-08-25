@@ -617,7 +617,13 @@ func handleInitClient(handle uint32, args initClient) error {
 			dialFunc = proxy.DialContext
 		}
 	}
-	brDialer := clientintf.WithDialer(args.ServerAddr, logBknd.logger("CONN"), dialFunc)
+
+	var brDialer func(context.Context) (clientintf.Conn, *tls.ConnectionState, error)
+	if args.DisableSeeder {
+		brDialer = clientintf.WithDialer(args.ServerAddr, logBknd.logger("CONN"), dialFunc)
+	} else {
+		brDialer = clientintf.WithSeeder(args.ServerAddr, logBknd.logger("CONN"), dialFunc)
+	}
 
 	cfg := client.Config{
 		DB:                    db,

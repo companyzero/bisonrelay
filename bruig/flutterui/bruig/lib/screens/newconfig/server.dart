@@ -27,10 +27,10 @@ class _ServerPageState extends State<ServerPage> {
 
     switch (widget.newconf.netType) {
       case NetworkType.mainnet:
-        serverCtrl.text = "br00.bisonrelay.org:443";
+        serverCtrl.text = "bisonrelay.org";
         break;
       case NetworkType.testnet:
-        serverCtrl.text = "216.128.136.239:65432";
+        serverCtrl.text = "";
         break;
       case NetworkType.simnet:
         serverCtrl.text =
@@ -60,12 +60,16 @@ class _ServerPageState extends State<ServerPage> {
         builder: (context, theme, _) => StartupScreen(childrenWidth: 400, [
               const Txt.H("Setting up Bison Relay"),
               const SizedBox(height: 20),
-              const Txt.L("Connect to Server"),
+              Txt.L(widget.newconf.netType == NetworkType.mainnet
+                  ? "Server seeder service"
+                  : "Connect to Server"),
               const SizedBox(height: 34),
               TextField(
                   decoration: InputDecoration(
                       border: InputBorder.none,
-                      hintText: "Server Address",
+                      hintText: widget.newconf.netType == NetworkType.mainnet
+                          ? "Seeder Service Address"
+                          : "Server Address",
                       fillColor: theme.colors.surface,
                       filled: true),
                   controller: serverCtrl),

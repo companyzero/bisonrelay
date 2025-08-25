@@ -327,6 +327,7 @@ class _AppState extends State<App> with WindowListener {
           Platform.isAndroid || Platform.isIOS // Use longer interval on mobile
               ? 210 * 1000 // 210 = 3m30s
               : 0, // Use whatever is default
+          cfg.disableSeeder,
           cfg.jsonRPCListen,
           cfg.rpcCertPath,
           cfg.rpcKeyPath,

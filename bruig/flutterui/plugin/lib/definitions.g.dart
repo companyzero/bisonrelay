@@ -37,6 +37,7 @@ InitClient _$InitClientFromJson(Map<String, dynamic> json) => InitClient(
       json['auto_sub_posts'] as bool,
       json['log_pings'] as bool,
       (json['ping_interval_ms'] as num).toInt(),
+      json['disable_seeder'] as bool,
       (json['json_rpc_listen'] as List<dynamic>)
           .map((e) => e as String)
           .toList(),
@@ -81,6 +82,7 @@ Map<String, dynamic> _$InitClientToJson(InitClient instance) =>
       'auto_sub_posts': instance.autoSubPosts,
       'log_pings': instance.logPings,
       'ping_interval_ms': instance.pingIntervalMs,
+      'disable_seeder': instance.disableSeeder,
       'json_rpc_listen': instance.jsonRPCListen,
       'rpc_cert_path': instance.rpcCertPath,
       'rpc_key_path': instance.rpcKeyPath,

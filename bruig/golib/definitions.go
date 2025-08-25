@@ -33,6 +33,7 @@ type initClient struct {
 	SendRecvReceipts  bool   `json:"send_recv_receipts"`
 	LogPings          bool   `json:"log_pings"`
 	PingIntervalMs    int64  `json:"ping_interval_ms"`
+	DisableSeeder     bool   `json:"disable_seeder"`
 
 	SimpleStorePayType    string  `json:"simplestore_pay_type"`
 	SimpleStoreAccount    string  `json:"simplestore_account"`

@@ -96,6 +96,7 @@ class NewConfigModel extends ChangeNotifier {
     var cfg = Config.filled(
       appDataDir: dataDir,
       serverAddr: serverAddr,
+      disableSeeder: netType != NetworkType.mainnet,
       lnRPCHost: rpcHost,
       lnTLSCert: tlsCertPath,
       lnMacaroonPath: macaroonPath,
