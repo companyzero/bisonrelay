@@ -79,6 +79,7 @@ func tlsDialer(addr string, log slog.Logger, dialFunc DialFunc, useSeeder bool) 
 	}
 
 	return func(ctx context.Context) (Conn, *tls.ConnectionState, error) {
+		var serverAddr string
 		if useSeeder {
 			apiURL := fmt.Sprintf("https://%s/api/live", addr)
 			log.Infof("Querying seeder at %v", apiURL)
@@ -86,10 +87,12 @@ func tlsDialer(addr string, log slog.Logger, dialFunc DialFunc, useSeeder bool) 
 			if err != nil {
 				return nil, nil, err
 			}
-			addr = server
+			serverAddr = server
+		} else {
+			serverAddr = addr
 		}
 
-		nconn, err := dialFunc(ctx, "tcp", addr)
+		nconn, err := dialFunc(ctx, "tcp", serverAddr)
 		if err != nil {
 			return nil, nil, err
 		}
