@@ -3,11 +3,12 @@ package main
 const (
 	defaultConfigFileContent = `
 
-# address of the server
+# Address of the server or seeder service.
 server = {{ .ServerAddr }}
 
-# server is not a seeder
-# disableseeder = true
+# Must be set to true if "server" is not a seeder address. Currently, only
+# mainnet has a seeder service running.
+disableseeder = {{ .DisableSeeder }}
 
 # root directory for brclient settings, db, etc
 root = {{ .Root }}

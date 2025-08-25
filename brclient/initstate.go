@@ -46,6 +46,7 @@ func (ins initStepState) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	if ins.as.unwelcomeError.Load() != nil {
 		// Send to app anyway to allow wallet to be used.
+		ins.as.changeActiveWindow(activeCWDiag)
 		return newMainWindowState(ins.as)
 	}
 
@@ -91,6 +92,9 @@ func (ins initStepState) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case connState:
 		if msg != connStateOffline {
 			ins.as.diagMsg("Local client ID: %s", ins.as.c.PublicID())
+
+			// Ensure we go back to diag screen once on main screen.
+			ins.as.changeActiveWindow(activeCWDiag)
 
 			// Initial connection to server!
 			//
@@ -214,5 +218,6 @@ func (ins initStepState) View() string {
 func newInitStepState(as *appState, msgConfCert *msgConfirmServerCert) initStepState {
 	ins := initStepState{as: as, msgConfCert: msgConfCert}
 	ins.updateLogLines()
+	as.changeActiveWindow(activeCWLog) // Ensure we receive log events.
 	return ins
 }
