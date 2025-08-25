@@ -72,6 +72,8 @@ class InitClient {
   final bool logPings;
   @JsonKey(name: 'ping_interval_ms')
   final int pingIntervalMs;
+  @JsonKey(name: 'disable_seeder')
+  final bool disableSeeder;
   // rpc fields
   @JsonKey(name: 'json_rpc_listen')
   final List<String> jsonRPCListen;
@@ -123,6 +125,7 @@ class InitClient {
       this.autoSubPosts,
       this.logPings,
       this.pingIntervalMs,
+      this.disableSeeder,
       this.jsonRPCListen,
       this.rpcCertPath,
       this.rpcKeyPath,

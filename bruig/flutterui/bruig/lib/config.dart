@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:args/args.dart';
 import 'package:bruig/util.dart';
+import 'package:flutter/rendering.dart';
 import "package:ini/ini.dart" as ini;
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
@@ -70,6 +71,7 @@ class Config {
   late final String downloadsDir;
   late final String embedsDir;
   late final String serverAddr;
+  late final bool disableSeeder;
   late final String lnRPCHost;
   late final String lnTLSCert;
   late final String lnMacaroonPath;
@@ -118,6 +120,7 @@ class Config {
       this.downloadsDir = "",
       this.embedsDir = "",
       this.serverAddr = "",
+      this.disableSeeder = false,
       this.lnRPCHost = "",
       this.lnTLSCert = "",
       this.lnMacaroonPath = "",
@@ -166,6 +169,7 @@ class Config {
         downloadsDir: cfg.downloadsDir,
         embedsDir: cfg.embedsDir,
         serverAddr: cfg.serverAddr,
+        disableSeeder: cfg.disableSeeder,
         lnRPCHost: rpcHost,
         lnTLSCert: tlsCert,
         lnMacaroonPath: macaroonPath,
@@ -221,6 +225,7 @@ class Config {
       set("default", "root", appDataDir);
     }
     set("default", "server", serverAddr);
+    set("default", "disableseeder", disableSeeder ? "1" : "0");
     set("payment", "wallettype", walletType);
     set("payment", "network", network);
     if (walletType == "external") {
@@ -318,6 +323,27 @@ Future<void> replaceConfig(
 
 Future<Config> loadConfig(String filepath) async {
   var f = ini.Config.fromStrings(File(filepath).readAsLinesSync());
+
+  // Migrate old server address to new seeder service on mainnet.
+  var serverAddr = f.get("default", "server") ?? "bisonrelay.org";
+  var disableSeeder =
+      ["yes", "1", "true"].contains(f.get("default", "disableseeder") ?? "");
+  const oldServerAddrs = [
+    "br00.bisonrelay.org:443",
+    "br00.bisonrelay.org:12345",
+  ];
+  if (oldServerAddrs.contains(serverAddr) && !disableSeeder) {
+    var reSvrAddr =
+        // ignore: prefer_interpolation_to_compose_strings
+        RegExp(r'^server\s*=\s*' + RegExp.escape(serverAddr), multiLine: true);
+    var fileData = await File(filepath).readAsString();
+    fileData = fileData.replaceAll(reSvrAddr, "server = bisonrelay.org");
+    await File(filepath).writeAsString(fileData);
+    debugPrint(
+        "Replaced old mainnet serverAddress $serverAddr with seeder service bisonrelay.org in config file $filepath");
+    serverAddr = "bisonrelay.org";
+  }
+
   var appDataDir = await defaultAppDataDir();
   var iniAppData = f.get("default", "root");
   if (iniAppData != null && iniAppData != "") {
@@ -390,7 +416,8 @@ Future<Config> loadConfig(String filepath) async {
   c.dbRoot = path.join(appDataDir, "db");
   c.downloadsDir = path.join(appDataDir, "downloads");
   c.embedsDir = path.join(appDataDir, "embeds");
-  c.serverAddr = f.get("default", "server") ?? "localhost:443";
+  c.serverAddr = serverAddr;
+  c.disableSeeder = disableSeeder;
   c.logFile = logfile;
   c.msgRoot = msgRoot;
   c.debugLevel = f.get("log", "debuglevel") ?? "info";

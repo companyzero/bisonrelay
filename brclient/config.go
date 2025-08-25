@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strings"
 	"time"
@@ -78,6 +79,7 @@ func (sspt simpleStorePayType) isValid() bool {
 }
 
 type config struct {
+	DisableSeeder     bool
 	ServerAddr        string
 	Root              string
 	DBRoot            string
@@ -272,20 +274,10 @@ func loadConfig() (*config, error) {
 	}
 	cfgFile = expandPath(homeDir, cfgFile)
 
-	// Open config file.
-	f, err := os.Open(cfgFile)
-	if os.IsNotExist(err) {
-		// Config file does not exist. Make UI go into initial config
-		// wizard.
-		return nil, errConfigDoesNotExist{configPath: cfgFile}
-	} else if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-
 	// Define config file flags.
 	fs = flag.NewFlagSet("Config Options", flag.ContinueOnError)
-	flagServerAddr := fs.String("server", "127.0.0.1:443", "Address and port of the CR server")
+	flagDisableSeeder := fs.Bool("disableseeder", false, "Disable seeder and connect directly to serveraddr")
+	flagServerAddr := fs.String("server", "bisonrelay.org:443", "Address and port of the BR seeder/server")
 	flagRTAudioHotAudio := fs.Bool("rtautohotaudio", true, "Automatically make audio hot")
 	flagRootDir := fs.String("root", defaultAppDir, "Root of all app data")
 	flagWinPin := fs.String("winpin", "", "Comma delimited list of DM and GC windows to launch on start")
@@ -365,12 +357,55 @@ func loadConfig() (*config, error) {
 	flagSimpleStoreAccount := fs.String("simplestore.account", "", "Account to use for on-chain adresses")
 	flagSimpleStoreShipCharge := fs.Float64("simplestore.shipcharge", 0, "How much to charge for s&h")
 
+	// Open config file.
+	f, err := os.Open(cfgFile)
+	if os.IsNotExist(err) {
+		// Config file does not exist. Make UI go into initial config
+		// wizard.
+		return nil, errConfigDoesNotExist{configPath: cfgFile}
+	} else if err != nil {
+		return nil, err
+	}
+
 	// Load config from file.
 	parser := flagfile.Parser{
 		ParseSections: true,
 	}
 	if err := parser.Parse(f, fs); err != nil {
+		_ = f.Close()
 		return nil, err
+	}
+	if err := f.Close(); err != nil {
+		return nil, err
+	}
+
+	// If using the old mainnet server address, switch to the new seeder
+	// service address.
+	oldServerAddrs := []string{
+		"br00.bisonrelay.org:443",
+		"br00.bisonrelay.org:12345",
+	}
+	if slices.Contains(oldServerAddrs, *flagServerAddr) && !*flagDisableSeeder {
+		fileData, err := os.ReadFile(cfgFile)
+		if err != nil {
+			return nil, err
+		}
+		reSvrAddr, err := regexp.Compile(`(?m)^server\s*=\s*` + regexp.QuoteMeta(*flagServerAddr))
+		if err != nil {
+			return nil, fmt.Errorf("error compiling serverAddr regexp: %v", err)
+		}
+		loc := reSvrAddr.FindIndex(fileData)
+		if loc == nil {
+			return nil, fmt.Errorf("unable to find location of server=br00.bisonrelay... in config file")
+		}
+		newFileData := append([]byte(nil), fileData[:loc[0]]...)
+		newFileData = append(newFileData, []byte("server = bisonrelay.org")...)
+		newFileData = append(newFileData, fileData[loc[1]:]...)
+		if err := os.WriteFile(cfgFile, newFileData, 0o644); err != nil {
+			return nil, err
+		}
+
+		*flagServerAddr = "bisonrelay.org"
 	}
 
 	// Sanity check loaded flags.
@@ -533,6 +568,7 @@ func loadConfig() (*config, error) {
 	}
 	// Return the final cfg object.
 	return &config{
+		DisableSeeder:          *flagDisableSeeder,
 		ServerAddr:             *flagServerAddr,
 		Root:                   *flagRootDir,
 		DBRoot:                 filepath.Join(*flagRootDir, "db"),

@@ -3137,7 +3137,12 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 	}
 
 	connLog := logBknd.logger("CONN")
-	dialer := clientintf.WithDialer(args.ServerAddr, connLog, args.dialFunc)
+	var dialer clientintf.Dialer
+	if args.DisableSeeder {
+		dialer = clientintf.WithDialer(args.ServerAddr, connLog, args.dialFunc)
+	} else {
+		dialer = clientintf.WithSeeder(args.ServerAddr, connLog, args.dialFunc)
+	}
 
 	// Setup notification handlers.
 	ntfns := client.NewNotificationManager()

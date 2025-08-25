@@ -182,9 +182,10 @@ func (sws *setupWizardScreen) initInputsServer() tea.Cmd {
 	// Set default server address based on the newtork.
 	switch sws.net {
 	case "mainnet":
-		txtServer.SetValue("br00.bisonrelay.org:443")
+		txtServer.Prompt = "Network Seeder Address: "
+		txtServer.SetValue("bisonrelay.org")
 	case "testnet":
-		txtServer.SetValue("216.128.136.239:65432")
+		txtServer.SetValue("")
 	case "simnet":
 		txtServer.SetValue("127.0.0.1:12345")
 	}
@@ -258,6 +259,7 @@ func (sws *setupWizardScreen) generateConfig() error {
 		LNTLSCertPath:  sws.lnTLSPath,
 		LNMacaroonPath: sws.lnMacaroonPath,
 		ServerAddr:     sws.serverAddr,
+		DisableSeeder:  sws.net != "mainnet",
 	}
 
 	return saveNewConfig(sws.cfgFilePath, cfg)
