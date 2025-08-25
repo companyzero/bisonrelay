@@ -12,7 +12,7 @@ import (
 type config struct {
 	Listen string
 
-	BRs []string
+	Tokens []string
 }
 
 var defaultHomeDir = AppDataDir("brseeder", false)
@@ -36,14 +36,8 @@ func loadConfig() (*config, error) {
 		return nil, fmt.Errorf("invalid listen address: %w", err)
 	}
 
-	if len(cfg.BRs) == 0 {
-		return nil, fmt.Errorf("no brservers specified")
-	}
-	for i := range cfg.BRs {
-		// validate host
-		if _, _, err := net.SplitHostPort(cfg.BRs[i]); err != nil {
-			return nil, fmt.Errorf("invaid brserver %q: %w", cfg.BRs[i], err)
-		}
+	if len(cfg.Tokens) == 0 {
+		return nil, fmt.Errorf("no tokens specified")
 	}
 	return &cfg, nil
 }

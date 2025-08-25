@@ -19,6 +19,7 @@ type ServerGroup struct {
 	Server   string `json:"brserver"`
 	LND      string `json:"lnd"`
 	IsMaster bool   `json:"isMaster"`
+	Online   bool   `json:"online"`
 }
 
 type ClientAPI struct {

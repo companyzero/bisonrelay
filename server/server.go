@@ -9,7 +9,6 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -34,32 +33,13 @@ import (
 	"github.com/decred/dcrlnd/lnrpc"
 	"github.com/decred/dcrlnd/lnrpc/invoicesrpc"
 	"github.com/decred/slog"
+	"github.com/jrick/wsrpc/v2"
 	"golang.org/x/sync/errgroup"
 )
 
 const (
 	tagDepth = 32
 )
-
-type APIStatusDB struct {
-	Online bool `json:"db_online"`
-	Master bool `json:"db_master"`
-}
-
-type APIStatusNode struct {
-	Online        bool   `json:"online"`
-	PublicKey     string `json:"publicKey"`
-	NumPeers      uint32 `json:"numPeers"`
-	BlockHeight   int64  `json:"blockHeight"`
-	SyncedToChain bool   `json:"syncedToChain"`
-	SyncedToGraph bool   `json:"syncedToGraph"`
-}
-
-type APIStatus struct {
-	LastUpdated int64         `json:"lastUpdated"`
-	Database    APIStatusDB   `json:"db"`
-	Node        APIStatusNode `json:"node"`
-}
 
 // RPCWrapper is a wrapped RPC Message for internal use.  This is required because RPC messages
 // consist of 2 discrete pieces.
@@ -113,9 +93,10 @@ type ZKS struct {
 	rtCookieKey        *zkidentity.FixedSizeSymmetricKey
 	rtDecodeCookieKeys []*zkidentity.FixedSizeSymmetricKey
 
-	// api
-	apiListen net.Listener
-	apiStatus atomic.Pointer[APIStatus]
+	seederURL     string
+	seederToken   string
+	seederDisable bool
+	seederDryRun  bool
 }
 
 // BoundAddrs returns the addresses the server is bound to listen to.
@@ -475,39 +456,113 @@ func (z *ZKS) Run(ctx context.Context) error {
 	})
 
 	// Monitor the database mode.
-	g.Go(func() error {
-		t := time.NewTicker(10 * time.Second)
-		defer t.Stop()
-
-		for {
-			select {
-			case <-gctx.Done():
-				return nil
-			case <-t.C:
-				isMaster, err := z.db.IsMaster(gctx)
-				if err != nil {
-					z.log.Errorf("failed to check master status: %v", err)
+	if !z.seederDisable && z.lnRpc != nil {
+		var lastReply *bool
+		g.Go(func() error {
+			for {
+				select {
+				case <-gctx.Done():
+					return nil
+				default:
 				}
-				old := z.isMaster.Swap(isMaster)
-				if old != isMaster {
-					z.log.Infof("db master status changed to %v", isMaster)
-
-					if !isMaster {
-						// disconnect all users.
+				z.log.Infof("[ws] connecting to seeder at %v", z.seederURL)
+				ws, err := wsrpc.Dial(gctx, z.seederURL, wsrpc.WithBearerAuthString(z.seederToken))
+				if err != nil {
+					if !z.seederDryRun {
+						z.isMaster.Store(false)
 						z.closeSessions()
 					}
+
+					z.log.Errorf("[ws] failed to dial seeder at %v: %v", z.seederURL, err)
+					time.Sleep(5 * time.Second)
+					continue
+				}
+				z.log.Infof("[ws] connection established")
+
+				go func() {
+					for {
+						select {
+						case <-ws.Done():
+							return
+						case <-time.After(15 * time.Second):
+							healthy := true // XXX
+
+							isMaster, err := z.db.IsMaster(gctx)
+							if err != nil {
+								z.log.Errorf("failed to check master status: %v", err)
+								healthy = false
+							}
+							if isMaster && healthy {
+								if err = z.db.HealthCheck(ctx); err != nil {
+									z.log.Errorf("[BACKEND] healthcheck: %v", err)
+									healthy = false
+								}
+							}
+
+							var status CommandStatus
+							status.LastUpdated = time.Now().Unix()
+							status.Database.Online = healthy
+							status.Database.Master = isMaster
+
+							if z.seederDryRun && lastReply != nil {
+								status.Database.Master = *lastReply
+								isMaster = *lastReply
+							}
+
+							// TODO: Is z.lnRpc always valid?
+							lnInfo, lnErr := z.lnRpc.GetInfo(ctx, &lnrpc.GetInfoRequest{})
+							if lnErr != nil {
+								z.log.Errorf("[BACKEND] failed to get dcrlnd info: %v", lnErr)
+							} else {
+								status.Node.Alias = lnInfo.Alias
+								status.Node.Online = lnInfo.ServerActive
+								status.Node.PublicKey = lnInfo.IdentityPubkey
+								status.Node.BlockHeight = int64(lnInfo.BlockHeight)
+								status.Node.NumPeers = lnInfo.NumPeers
+								status.Node.SyncedToChain = lnInfo.SyncedToChain
+								status.Node.SyncedToGraph = lnInfo.SyncedToGraph
+							}
+
+							var reply CommandStatusReply
+							if err = ws.Call(ctx, "status", &reply, status); err != nil {
+								z.log.Errorf("[ws] failed to send status: %v", err)
+							} else {
+								var old bool
+								if z.seederDryRun {
+									old = isMaster
+									response := reply.Master
+									lastReply = &response
+								} else {
+									old = z.isMaster.Swap(reply.Master)
+								}
+								if old != reply.Master {
+									if reply.Master {
+										z.log.Warnf("[ws] pg_promote dryrun:%v", z.seederDryRun)
+									} else {
+										if !z.seederDryRun {
+											// brseeder says we aren't master!
+											z.isMaster.Store(false)
+											z.closeSessions()
+										}
+										z.log.Warnf("[ws] brseeder says secondary dryrun:%v", z.seederDryRun)
+									}
+								}
+							}
+						}
+					}
+				}()
+				select {
+				case <-gctx.Done():
+					return nil
+				case <-ws.Done():
+					z.log.Warnf("[ws] connection dropped: %v", ws.Err())
 				}
 			}
-		}
-	})
+		})
+	}
+
 	// Run the expiration loop.
 	g.Go(func() error { return z.expirationLoop(gctx) })
-
-	// Run the status api.
-	if z.lnRpc != nil && z.apiListen != nil {
-		g.Go(func() error { return z.refreshAPI(gctx) })
-		g.Go(func() error { return z.serveAPI(gctx) })
-	}
 
 	// Listen for connections.
 	for i := range listeners {
@@ -542,94 +597,6 @@ func (z *ZKS) Run(ctx context.Context) error {
 	return err
 }
 
-func (z *ZKS) refreshAPI(ctx context.Context) error {
-	t := time.NewTicker(30 * time.Second)
-	defer t.Stop()
-
-	for {
-		select {
-		case <-ctx.Done():
-			return nil
-		case <-t.C:
-			healthy := true
-
-			isMaster, err := z.db.IsMaster(ctx)
-			if err != nil {
-				z.log.Errorf("[BACKEND] failed to query db: %v", err)
-				healthy = false
-			} else if isMaster {
-				if err = z.db.HealthCheck(ctx); err != nil {
-					z.log.Errorf("[BACKEND] healthcheck: %v", err)
-					healthy = false
-				}
-			}
-
-			var apiStatusNode APIStatusNode
-			lnInfo, err := z.lnRpc.GetInfo(ctx, &lnrpc.GetInfoRequest{})
-			if err != nil {
-				z.log.Errorf("[BACKEND] failed to get dcrlnd info: %v", err)
-			} else {
-				apiStatusNode = APIStatusNode{
-					Online:        lnInfo.ServerActive,
-					PublicKey:     lnInfo.IdentityPubkey,
-					BlockHeight:   int64(lnInfo.BlockHeight),
-					NumPeers:      lnInfo.NumPeers,
-					SyncedToChain: lnInfo.SyncedToChain,
-					SyncedToGraph: lnInfo.SyncedToGraph,
-				}
-			}
-			z.apiStatus.Store(&APIStatus{
-				LastUpdated: time.Now().Unix(),
-				Database: APIStatusDB{
-					Online: healthy,
-					Master: isMaster,
-				},
-				Node: apiStatusNode,
-			})
-		}
-	}
-}
-
-func (z *ZKS) serveAPI(ctx context.Context) error {
-	mux := http.NewServeMux()
-	mux.HandleFunc("/api/live", func(w http.ResponseWriter, r *http.Request) {
-		flush, ok := w.(http.Flusher)
-		if !ok {
-			http.NotFound(w, r)
-			return
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		// Replace the Server response header. When used with nginx's "server_tokens
-		// off;" and "proxy_pass_header Server;" options.
-		w.Header().Set("Server", "brserver")
-		w.WriteHeader(http.StatusOK)
-		flush.Flush()
-
-		json.NewEncoder(w).Encode(z.apiStatus.Load())
-	})
-
-	srv := &http.Server{
-		Handler:      mux,
-		ReadTimeout:  30 * time.Second,
-		WriteTimeout: 30 * time.Second,
-	}
-
-	go func() {
-		z.log.Infof("Serving API via HTTP on %s", z.apiListen.Addr())
-		err := srv.Serve(z.apiListen)
-		// ErrServerClosed is expected from a graceful server shutdown, it can
-		// be ignored. Anything else should be logged.
-		if err != nil && !errors.Is(err, http.ErrServerClosed) {
-			z.log.Errorf("[API] unexpected (http.Server).Serve error: %v", err)
-		}
-	}()
-
-	<-ctx.Done()
-	_ = srv.Close()
-	return nil
-}
-
 func NewServer(cfg *settings.Settings) (*ZKS, error) {
 	logBknd, err := newLogBackend(cfg.LogFile, cfg.DebugLevel, cfg.LogStdOut)
 	if err != nil {
@@ -655,6 +622,11 @@ func NewServer(cfg *settings.Settings) (*ZKS, error) {
 		rtServerPubKey:     cfg.RTDTServerPub,
 
 		sessions: make(map[sessionID]*sessionContext),
+
+		seederURL:     fmt.Sprintf("wss://%v/api/v1/status", cfg.SeederAddr),
+		seederToken:   cfg.SeederToken,
+		seederDisable: cfg.SeederDisable,
+		seederDryRun:  cfg.SeederDryRun,
 	}
 
 	// Init db.
@@ -677,25 +649,17 @@ func NewServer(cfg *settings.Settings) (*ZKS, error) {
 		if err != nil {
 			return nil, err
 		}
-
-		// get and store master status.
 		isMaster, err := z.db.IsMaster(ctx)
 		if err != nil {
-			if db, ok := z.db.(dbcloser); ok {
-				closeErr := db.Close()
-				if closeErr != nil {
-					z.log.Errorf("error while closing DB: %v", closeErr)
-				} else {
-					z.log.Debugf("closed database")
-				}
-			}
+			// XXX - no db.Close?
 			return nil, err
 		}
 		z.isMaster.Store(isMaster)
-
 		z.log.Infof("Initialized PG Database backend %s@%s:%s master:%v", cfg.PGDBName,
 			cfg.PGHost, cfg.PGPort, z.isMaster.Load())
+		z.log.Infof("Seeder settings: disabled:%v dryrun:%v", z.seederDisable, z.seederDryRun)
 	} else {
+		z.isMaster.Store(true)
 		z.db, err = brfsdb.NewFSDB(z.settings.RoutedMessages, z.settings.PaidRVs)
 		if err != nil {
 			return nil, err
@@ -784,11 +748,6 @@ func NewServer(cfg *settings.Settings) (*ZKS, error) {
 	if err != nil {
 		return nil, fmt.Errorf("unable to setup payment subsystem: %v", err)
 	}
-	if z.settings.APIListen != "" && z.lnRpc != nil {
-		z.apiListen, err = net.Listen("tcp", z.settings.APIListen)
-		if err != nil {
-			return nil, fmt.Errorf("unable to listen for api: %v", err)
-		}
-	}
+
 	return z, nil
 }
