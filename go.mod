@@ -35,6 +35,7 @@ require (
 	github.com/jessevdk/go-flags v1.6.1
 	github.com/jrick/flagfile v1.0.0
 	github.com/jrick/logrotate v1.0.0
+	github.com/jrick/wsrpc/v2 v2.4.0
 	github.com/lib/pq v1.10.9
 	github.com/mattn/go-runewidth v0.0.16
 	github.com/mitchellh/go-homedir v1.1.0
@@ -138,7 +139,6 @@ require (
 	github.com/jackpal/go-nat-pmp v1.0.2 // indirect
 	github.com/jonboulle/clockwork v0.4.0 // indirect
 	github.com/jrick/bitset v1.0.0 // indirect
-	github.com/jrick/wsrpc/v2 v2.3.8 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/kkdai/bstream v1.0.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.8 // indirect

@@ -91,8 +91,17 @@ type Settings struct {
 	// LogStdOut is the stdout to write the log to. Defaults to os.Stdout.
 	LogStdOut io.Writer
 
-	// API config
-	APIListen string
+	// SeederAddr is the websocket host of the brseeder.
+	SeederAddr string
+
+	// SeederToken is the token from the brseeder.
+	SeederToken string
+
+	// SeederDisable disables the use of brseeder.
+	SeederDisable bool
+
+	// SeederDryRun pretends to follow seeder's commands.
+	SeederDryRun bool
 }
 
 var (
@@ -148,6 +157,9 @@ func New() *Settings {
 
 		Versioner: func() string { return "" },
 		LogStdOut: os.Stdout,
+
+		SeederDisable: true,
+		SeederDryRun:  true,
 	}
 }
 
@@ -390,10 +402,33 @@ func (s *Settings) Load(filename string) error {
 		return err
 	}
 
-	apiListen, ok := cfg.Get("", "apilisten")
+	seederAddr, ok := cfg.Get("seeder", "host")
 	if ok {
-		s.APIListen = apiListen
+		s.SeederAddr = seederAddr
 	}
+	seederToken, ok := cfg.Get("seeder", "token")
+	if ok {
+		s.SeederToken = seederToken
+	}
+
+	err = iniBool(cfg, &s.SeederDisable, "seeder", "disable")
+	if err != nil && !errors.Is(err, errIniNotFound) {
+		return err
+	}
+	err = iniBool(cfg, &s.SeederDryRun, "seeder", "dryrun")
+	if err != nil && !errors.Is(err, errIniNotFound) {
+		return err
+	}
+
+	if !s.SeederDisable {
+		if s.SeederAddr == "" {
+			return fmt.Errorf("no seeder address set")
+		}
+		if s.SeederToken == "" {
+			return fmt.Errorf("no seeder token set")
+		}
+	}
+
 	return nil
 }
 
