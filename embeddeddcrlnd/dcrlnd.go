@@ -86,6 +86,7 @@ type Dcrlnd struct {
 	tlsCertPath  string
 	interceptor  *signal.Interceptor
 	logPath      string
+	hasPassFile  bool
 
 	mtx      sync.Mutex
 	unlocked bool
@@ -112,6 +113,11 @@ func (lndc *Dcrlnd) MacaroonPath() string {
 // LogFilename returns the full path to the log file.
 func (lndc *Dcrlnd) LogFullPath() string {
 	return lndc.logPath
+}
+
+// HasPassFile returns true if there was a pass.txt file during init.
+func (lndc *Dcrlnd) HasPassFile() bool {
+	return lndc.hasPassFile
 }
 
 // TryUnlock attempts to unlock the wallet with the given passphrase.
@@ -485,6 +491,7 @@ func RunDcrlnd(ctx context.Context, cfg Config) (*Dcrlnd, error) {
 		tlsCertPath: conf.TLSCertPath,
 		interceptor: &inter,
 		logPath:     filepath.Join(conf.LogDir, "decred", network, "lnd.log"),
+		hasPassFile: conf.WalletUnlockPasswordFile != "",
 	}
 	go func() {
 		err := dcrlnd.Main(

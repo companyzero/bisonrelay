@@ -83,6 +83,9 @@ func (ulns *unlockLNScreen) runNotifier() {
 
 // cmdCheckWalletUnlocked checks if the wallet is already unlocked
 func cmdCheckWalletUnlocked(lndc *embeddeddcrlnd.Dcrlnd) tea.Msg {
+	// Wait for a bit for the RPC system to come online.
+	time.Sleep(time.Second)
+
 	// Try to use a blank password to see if we get "wallet already unlocked" error
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	defer cancel()
@@ -129,18 +132,29 @@ func (ulns unlockLNScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case *embeddeddcrlnd.Dcrlnd:
 		ulns.lndc = msg
-		// Check if wallet is already unlocked (probably via pass.txt file)
-		return ulns, func() tea.Msg { return cmdCheckWalletUnlocked(msg) }
+
+		// If wallet initialized with a pass file, check if wallet is
+		// already unlocked. Otherwise, wait for password.
+		if ulns.lndc.HasPassFile() {
+			ulns.unlocking = true // Use it to hide pass txt.
+
+			return ulns, func() tea.Msg { return cmdCheckWalletUnlocked(msg) }
+		} else {
+			cmd := ulns.txtPass.Focus()
+			return ulns, cmd
+		}
 
 	case checkWalletUnlockedResult:
 		if msg.isUnlocked {
 			// Wallet is already unlocked, show a loading state while RPC starts up
 			ulns.needsUnlock = false
-			ulns.unlocking = true // Use unlocking flag to show loading state
+
+			ulns.runNotifier()
 
 			// Start a tick to show loading animation
 			return ulns, cmdShowLoadingTick
 		}
+
 		// Wallet needs to be unlocked, focus the password input
 		cmd := ulns.txtPass.Focus()
 		return ulns, cmd
@@ -148,8 +162,6 @@ func (ulns unlockLNScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case showLoadingTick:
 		// Continue showing loading state and pulsing
 		if !ulns.needsUnlock && ulns.unlocking {
-			// Try to start the runNotifier
-			ulns.runNotifier()
 			// Keep ticking to show loading animation
 			return ulns, cmdShowLoadingTick
 		}
@@ -219,7 +231,6 @@ func (ulns unlockLNScreen) View() string {
 
 	titleStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("5")).Bold(true)
 	migrateStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("214"))
-	loadingStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("10")).Bold(true)
 
 	var lines int
 	switch {
@@ -250,7 +261,7 @@ func (ulns unlockLNScreen) View() string {
 			pf(titleStyle.Render("Unlocking internal wallet"))
 		} else {
 			// This is the pass.txt auto-unlock case
-			pf(loadingStyle.Render("Waiting for RPC server to be ready"))
+			pf(titleStyle.Render("Waiting for RPC server to be ready"))
 			pf("\n\n")
 			pf("Wallet automatically unlocked by password file")
 			lines += 3
