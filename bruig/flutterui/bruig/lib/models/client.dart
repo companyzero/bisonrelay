@@ -82,6 +82,13 @@ class SynthChatEvent extends ChatEvent with ChangeNotifier {
 // Regexp for messages in the history about suggested KX.
 var _suggestedKXMsgRegexp = RegExp(r'Suggested KX to ([0-9a-f]{64}) "(.*)"');
 
+// Regexp for messages in the history about a completed download.
+var _completedFTDownloadMsgRegexp =
+    RegExp(r'Download completed: "(.*)" \(([0-9a-f]{64})\)');
+
+// Regexp for messages in the history about completed uploads (/ft send).
+var _sentFTUploadMsgRegexp = RegExp(r'Sent file "(.*)" \(([0-9a-f]{64})\)');
+
 class RequestedResourceEvent extends ChatEvent {
   final PagesSession session;
 
@@ -1034,9 +1041,15 @@ class ClientModel extends ChangeNotifier {
         ChatEvent m;
         var source = !mine ? c : null;
         if (chatHistory[i].internal) {
-          var matchSuggestKX = _suggestedKXMsgRegexp.firstMatch(
+          RegExpMatch? matchSuggestKX = _suggestedKXMsgRegexp.firstMatch(
             chatHistory[i].message,
           );
+          RegExpMatch? matchDownload = matchSuggestKX == null
+              ? _completedFTDownloadMsgRegexp.firstMatch(chatHistory[i].message)
+              : null;
+          RegExpMatch? matchUpload = (matchSuggestKX ?? matchDownload) == null
+              ? _sentFTUploadMsgRegexp.firstMatch(chatHistory[i].message)
+              : null;
           if (matchSuggestKX != null) {
             var targetUID = matchSuggestKX[1]!;
             var alreadyKnown = getExistingChat(targetUID) != null;
@@ -1047,6 +1060,10 @@ class ClientModel extends ChangeNotifier {
               matchSuggestKX[2]!,
               targetUID,
             );
+          } else if (matchDownload != null) {
+            m = FileDownloadedEvent(id, matchDownload[1]!);
+          } else if (matchUpload != null) {
+            m = SynthChatEvent("Sent file ${matchUpload[1]!}", SCE_sent);
           } else {
             m = SynthChatEvent(chatHistory[i].message, SCE_history);
           }

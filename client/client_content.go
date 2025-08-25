@@ -898,7 +898,9 @@ func (c *Client) handleFTPayForChunk(ru *RemoteUser, pfc rpc.RMFTPayForChunk) er
 }
 
 // handleFTGetChunkReply is called to handle received chunk data for a download.
-func (c *Client) handleFTGetChunkReply(ru *RemoteUser, gcr rpc.RMFTGetChunkReply) error {
+//
+// This is the main handler for processing download chunks in the receiver.
+func (c *Client) handleFTGetChunkReply(ru *RemoteUser, gcr rpc.RMFTGetChunkReply, ts time.Time) error {
 	var fid clientdb.FileID
 	if err := fid.FromString(gcr.FileID); err != nil {
 		return err
@@ -917,6 +919,17 @@ func (c *Client) handleFTGetChunkReply(ru *RemoteUser, gcr rpc.RMFTGetChunkReply
 
 		completedFname, err = c.db.SaveFileDownloadChunk(tx, ru.Nick(), &fd, gcr.Index, gcr.Chunk)
 		nbMissingChunks = len(c.db.MissingFileDownloadChunks(tx, &fd))
+
+		if completedFname != "" {
+			logMsg := fmt.Sprintf(clientdb.CompletedFTDownloadMsg,
+				completedFname, fd.FID)
+			_, err := c.db.LogPM(tx, ru.ID(), true, ru.Nick(),
+				logMsg, ts)
+			if err != nil {
+				return err
+			}
+		}
+
 		return err
 	})
 	if err != nil {
@@ -1047,7 +1060,15 @@ func (c *Client) SendFile(uid UserID, chunkSize uint64, filepath string,
 		return nil
 	}
 
-	ru.log.Infof("Finished sending file %s to user", filepath)
+	ru.log.Infof("Sent file %q (%s)", filepath, fileId)
+	err = c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
+		logMsg := fmt.Sprintf(clientdb.SentFTUploadMsg, filepath, fileId)
+		_, err := c.db.LogPM(tx, uid, true, ru.Nick(), logMsg, time.Now())
+		return err
+	})
+	if err != nil {
+		return err
+	}
 	return nil
 }
 

@@ -384,7 +384,7 @@ func (c *Client) handleUserRM(ru *RemoteUser, h *rpc.RMHeader, p interface{}, ts
 		return nil
 
 	case rpc.RMFTGetChunkReply:
-		err := c.handleFTGetChunkReply(ru, p)
+		err := c.handleFTGetChunkReply(ru, p, ts)
 		c.logHandlerError(ru, h.Command, p, err)
 		return nil
 
