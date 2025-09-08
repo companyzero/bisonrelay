@@ -33,9 +33,7 @@ class _MessagesState extends State<Messages> {
   bool _showFAB = false;
   Timer? _debounce;
 
-  void onChatChanged() {
-    setState(() {});
-  }
+  void onChatChanged() => setState(() {});
 
   @override
   initState() {

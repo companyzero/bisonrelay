@@ -121,6 +121,8 @@ class CustomTextStyles {
   // light or dark).
   final TextStyle lightAvatarInitial;
   final TextStyle darkAvatarInitial;
+  final TextStyle lightAvatarInitialLarge;
+  final TextStyle darkAvatarInitialLarge;
 
   final TextStyle monospaced;
 
@@ -130,6 +132,10 @@ class CustomTextStyles {
         const TextStyle(fontSize: 16, color: Color(0xFF0E0D0D)),
     this.darkAvatarInitial =
         const TextStyle(fontSize: 16, color: Color(0xC0FCFCFC)),
+    this.lightAvatarInitialLarge =
+        const TextStyle(fontSize: 50, color: Color(0xFF0E0D0D)),
+    this.darkAvatarInitialLarge =
+        const TextStyle(fontSize: 50, color: Color(0xC0FCFCFC)),
     this.monospaced = const TextStyle(fontFamily: "RobotoMono"),
   });
 }

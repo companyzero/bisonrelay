@@ -309,7 +309,7 @@ class _ActiveRealtimeChatScreenState extends State<ActiveRealtimeChatScreen> {
         padding: const EdgeInsets.all(10),
         margin: const EdgeInsets.only(left: 10, right: 12, bottom: 10),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          RTCSessionHeader(rtc, session, widget.audio),
+          RTCSessionHeader(rtc, session, widget.audio, client),
           const SizedBox(height: 10),
           if (session.isInstant)
             Box(

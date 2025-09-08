@@ -43,6 +43,27 @@ class ServerEvent extends StatelessWidget {
   }
 }
 
+class InstantCall extends StatelessWidget {
+  final InstantCallEvent event;
+  const InstantCall({required this.event, super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    var state = "";
+    if (event.state == ICE_starting) {
+      state = "started";
+    } else if (event.state == ICE_finished) {
+      state = "ended";
+    }
+    return Container(
+        padding: const EdgeInsets.only(top: 5, bottom: 5),
+        margin: const EdgeInsets.all(5),
+        alignment: Alignment.center,
+        child: Text(
+            textAlign: TextAlign.center, "You $state a call at: ${event.msg}"));
+  }
+}
+
 class DateChange extends StatelessWidget {
   final DateChangeEvent event;
   const DateChange({required this.event, super.key});
@@ -1097,7 +1118,8 @@ class ProfileUpdatedW extends StatelessWidget {
 class RTDTInviteW extends StatefulWidget {
   final InvitedToRTDTSess event;
   final RealtimeChatModel rtc;
-  const RTDTInviteW(this.event, this.rtc, {super.key});
+  final ChatModel chat;
+  const RTDTInviteW(this.event, this.rtc, this.chat, {super.key});
 
   @override
   State<RTDTInviteW> createState() => _RTDTInviteWState();
@@ -1106,9 +1128,10 @@ class RTDTInviteW extends StatefulWidget {
 class _RTDTInviteWState extends State<RTDTInviteW> {
   InvitedToRTDTSess get event => widget.event;
   RealtimeChatModel get rtc => widget.rtc;
+  ChatModel get chat => widget.chat;
+
   bool acceptingInvite = false;
   String? acceptError;
-
   void acceptInvite() async {
     setState(() => acceptingInvite = true);
     try {
@@ -1121,6 +1144,7 @@ class _RTDTInviteWState extends State<RTDTInviteW> {
 
   @override
   Widget build(BuildContext context) {
+    print("building invite accept again");
     if (rtc.isInviteCanceled(event)) {
       return const ServerEvent(msg: "Canceled realtime chat invite");
     }
@@ -1170,6 +1194,17 @@ class Event extends StatelessWidget {
   openReplyDM(bool isGC, String id) => client.setActiveByNick(id, isGC);
   @override
   Widget build(BuildContext context) {
+    if (event.event is InstantCallEvent) {
+      // return Row(
+      //     crossAxisAlignment: CrossAxisAlignment.center,
+      //     mainAxisAlignment: MainAxisAlignment.center,
+      //     children: [
+      //       DateChange(
+      //           child: Center(
+      //               child: Text(textAlign: TextAlign.center, event.event.msg)))
+      //     ]);
+      return InstantCall(event: event.event as InstantCallEvent);
+    }
     if (event.event is DateChangeEvent) {
       // return Row(
       //     crossAxisAlignment: CrossAxisAlignment.center,
@@ -1278,7 +1313,7 @@ class Event extends StatelessWidget {
 
     if (event.event is InvitedToRTDTSess) {
       return RTDTInviteW(event.event as InvitedToRTDTSess,
-          RealtimeChatModel.of(context, listen: false));
+          RealtimeChatModel.of(context, listen: false), chat);
     }
 
     return const Box(

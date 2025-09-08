@@ -454,9 +454,13 @@ class RealtimeChatModel extends ChangeNotifier {
       }
 
       if (updt is RTDTSessionDissolved) {
+        var isSessInstant = _sessions[updt.sessionRV]?.isInstant ?? false;
         _removeSess(updt.sessionRV, notifyRemoved: true);
         var chat = client.getExistingChat(updt.uid);
         var nick = chat?.nick ?? updt.uid;
+        if (isSessInstant) {
+          chat?.finishInstantCall();
+        }
         var msg = "$nick dissolved realtime chat session ${updt.sessionRV}";
         if (chat != null) {
           chat.append(
@@ -503,6 +507,15 @@ class RealtimeChatModel extends ChangeNotifier {
           if (active.active?.sessionRV != updt.sessionRV) {
             active.active = sess;
           }
+          // Joining incoming instant 1v1 call
+          if (sess!.isInstant) {
+            var chat = client.getExistingChat(sess.info.metadata.owner);
+            if (chat != null && !chat.hasInstantCall) {
+              chat.startInstantCall(sess);
+              notifyListeners();
+            }
+          }
+
           var liveSess = await Golib.rtdtGetLiveSession(updt.sessionRV);
           if (sess != null && liveSess != null) {
             sess._refreshFromLive(liveSess);
