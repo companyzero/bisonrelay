@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 import 'dart:convert';
 
+import 'package:intl/intl.dart';
 import 'package:crypto/crypto.dart';
 import 'package:duration/duration.dart';
 import 'package:flutter/material.dart';
@@ -191,6 +192,12 @@ String formatMsDuration(Duration d) {
     return "${(d.inMilliseconds / 1000).toStringAsFixed(2)}s";
   }
   return "${d.inMilliseconds}ms";
+}
+
+int timeDifference(DateTime start, DateTime end) {
+  //DateFormat fd = DateFormat("HH:mm:ss");
+  var diff = end.difference(start);
+  return diff.inSeconds;
 }
 
 String formatSmallDuration(Duration d) {

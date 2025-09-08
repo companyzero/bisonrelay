@@ -1,16 +1,20 @@
 import 'dart:io';
+import 'dart:async';
 
 import 'package:bruig/components/confirmation_dialog.dart';
 import 'package:bruig/components/context_menu.dart';
 import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/components/text.dart';
+import 'package:bruig/models/client.dart';
 import 'package:bruig/models/audio.dart';
 import 'package:bruig/models/realtimechat.dart';
 import 'package:bruig/models/uistate.dart';
 import 'package:bruig/screens/realtimechat/invitetortc.dart';
 import 'package:bruig/screens/realtimechat/rtclist.dart';
+import 'package:golib_plugin/definitions.dart';
 import 'package:bruig/theme_manager.dart';
+import 'package:bruig/util.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -18,7 +22,9 @@ class RTCSessionHeader extends StatefulWidget {
   final RealtimeChatModel rtc;
   final RTDTSessionModel session;
   final AudioModel audio;
-  const RTCSessionHeader(this.rtc, this.session, this.audio, {super.key});
+  final ClientModel client;
+  const RTCSessionHeader(this.rtc, this.session, this.audio, this.client,
+      {super.key});
 
   @override
   State<RTCSessionHeader> createState() => _RTCSessionHeaderState();
@@ -28,10 +34,18 @@ class _RTCSessionHeaderState extends State<RTCSessionHeader> {
   RTDTSessionModel get session => widget.session;
   RealtimeChatModel get rtc => widget.rtc;
   AudioModel get audio => widget.audio;
+  ClientModel get client => widget.client;
 
   void leaveLiveSession() async {
     try {
       await rtc.leaveLiveSession(session);
+      setState(() {
+        if (session.isInstant) {
+          // Leave instant 1v1 session
+          var cm = client.getExistingChat(session.info.metadata.owner);
+          cm?.finishInstantCall();
+        }
+      });
     } catch (exception) {
       showErrorSnackbar(this, "Unable to leave session: $exception");
     }
@@ -64,6 +78,14 @@ class _RTCSessionHeaderState extends State<RTCSessionHeader> {
   void doExitSess() async {
     try {
       await rtc.exitSession(session.sessionRV);
+
+      setState(() {
+        if (session.isInstant) {
+          // Leave instant 1v1 session
+          var cm = client.getExistingChat(session.info.metadata.owner);
+          cm?.finishInstantCall();
+        }
+      });
       showSuccessSnackbar(this, "Exited session ${session.sessionShortRV}");
     } catch (exception) {
       showErrorSnackbar(this, "Unable to exit session: $exception");
@@ -81,6 +103,14 @@ class _RTCSessionHeaderState extends State<RTCSessionHeader> {
   void doDissolveSess() async {
     try {
       await rtc.dissolveSession(session.sessionRV);
+      setState(() {
+        if (session.isInstant) {
+          for (var m in session.info.members) {
+            var cm = client.getExistingChat(m.uid);
+            cm?.finishInstantCall();
+          }
+        }
+      });
       showSuccessSnackbar(this, "Dissolved session ${session.sessionShortRV}");
     } catch (exception) {
       showErrorSnackbar(this, "Unable to dissolve session: $exception");
@@ -130,6 +160,12 @@ class _RTCSessionHeaderState extends State<RTCSessionHeader> {
       audio.playbackDeviceId = audio.androidEarpieceDeviceID;
     }
     setState(() {});
+  }
+
+  void refreshIfLive(Timer t) async {
+    if (session.inLiveSession) {
+      await session.refreshFromLive();
+    }
   }
 
   @override

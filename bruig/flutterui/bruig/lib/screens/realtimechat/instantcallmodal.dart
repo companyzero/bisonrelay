@@ -4,7 +4,6 @@ import 'package:bruig/models/client.dart';
 import 'package:bruig/models/realtimechat.dart';
 import 'package:bruig/screens/overview.dart';
 import 'package:bruig/screens/realtimechat/creatertc.dart';
-import 'package:bruig/screens/realtimechat/rtclist.dart';
 import 'package:bruig/theme_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -36,10 +35,12 @@ class _InstantCallModalState extends State<InstantCallModal> {
   void makeInstantCall() async {
     setState(() => loading = true);
     try {
-      await rtc.createInstantSession([chat.id]);
+      var currentInstantSession = await rtc.createInstantSession([chat.id]);
+      // Starting instant call
+      chat.startInstantCall(currentInstantSession);
       if (mounted) {
         Navigator.of(context).pop();
-        widget.parentNav.pushReplacementNamed(RealtimeChatScreen.routeName);
+        //widget.parentNav.pushReplacementNamed(RealtimeChatScreen.routeName);
       }
     } catch (exception) {
       showErrorSnackbar(this, "Unable to join session: $exception");
@@ -63,22 +64,28 @@ class _InstantCallModalState extends State<InstantCallModal> {
             spacing: 10,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              FilledButton(
-                  onPressed: loading ? null : makeInstantCall,
-                  child: Row(
-                    children: [
-                      Icon(Icons.call),
-                      const SizedBox(width: 10),
-                      Txt.S("Instant call ${chat.nick}")
-                    ],
-                  )),
+              Consumer<ThemeNotifier>(
+                  builder: (context, theme, child) => FilledButton(
+                      style: FilledButton.styleFrom(
+                          backgroundColor: theme.extraColors.successOnSurface),
+                      onPressed: loading ? null : makeInstantCall,
+                      child: Row(
+                        children: [
+                          Icon(Icons.call,
+                              color: theme.colors.onPrimaryContainer),
+                          const SizedBox(width: 10),
+                          Txt.S("Call ${chat.nick}",
+                              style: theme.textStyleFor(
+                                  context, null, TextColor.onPrimaryContainer))
+                        ],
+                      ))),
               OutlinedButton(
                   onPressed: loading ? null : gotoCreateGroupInstantCall,
                   child: Row(
                     children: [
                       Icon(Icons.add),
                       const SizedBox(width: 10),
-                      Txt.S("Make group instant call")
+                      Txt.S("Make group call")
                     ],
                   )),
               Consumer<ThemeNotifier>(

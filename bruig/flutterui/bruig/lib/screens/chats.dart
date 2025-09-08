@@ -58,7 +58,8 @@ class ChatsScreenTitle extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Txt.L(chat.nick),
-              if (!chat.isGC) buildInstantCallIcon(context, rtc, chat),
+              if (!chat.isGC && rtc.active.active == null)
+                buildInstantCallIcon(context, rtc, chat),
               Container(
                   width: 40,
                   margin: const EdgeInsets.only(
@@ -79,7 +80,7 @@ class ChatsScreenTitle extends StatelessWidget {
 
       return Row(children: [
         Txt.L("Chat$suffix$profileSuffix"),
-        if (!chat.isGC) ...[
+        if (!chat.isGC && rtc.active.active == null) ...[
           const SizedBox(width: 10),
           buildInstantCallIcon(context, rtc, chat),
         ],
@@ -406,7 +407,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
     bool isScreenSmall = checkIsScreenSmall(context);
     return !isScreenSmall
         ? Row(children: [
-            ActiveChatsListMenu(client, inputFocusNode),
+            ActiveChatsListMenu(client, inputFocusNode, rtc),
             Expanded(
                 child: Container(
               margin: const EdgeInsets.all(1),
@@ -415,7 +416,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
           ])
         : Consumer<ActiveChatModel>(
             builder: (context, activeChat, child) => activeChat.empty
-                ? ActiveChatsListMenu(client, inputFocusNode)
+                ? ActiveChatsListMenu(client, inputFocusNode, rtc)
                 : ActiveChat(client, rtc, audio, inputFocusNode));
   }
 }

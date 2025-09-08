@@ -348,12 +348,15 @@ class _OverviewScreenState extends State<OverviewScreen> {
   AppNotifications get ntfns => widget.ntfns;
   DownloadsModel get down => widget.down;
   FeedModel get feed => widget.feed;
+  RealtimeChatModel get rtc => widget.rtc;
   ServerSessionState connState = ServerSessionState.empty();
   GlobalKey<NavigatorState> navKey =
       overviewNavKey; // GlobalKey(debugLabel: "overview nav key");
 
   bool removeBottomBar = false;
   var selectedIndex = 0;
+  bool hasInstantCall = false;
+
   void connStateChanged() {
     var newConnState = client.connState.state;
     if (newConnState.state != connState.state ||
@@ -367,6 +370,20 @@ class _OverviewScreenState extends State<OverviewScreen> {
         var msg = "LN wallet check failed: ${newConnState.checkWalletErr}";
         ntfns.addNtfn(AppNtfn(AppNtfnType.walletCheckFailed, msg: msg));
       }
+    }
+  }
+
+  void checkInstantCall() {
+    var newInstantCallState = rtc.active.active != null;
+    if (newInstantCallState != hasInstantCall) {
+      setState(() {
+        hasInstantCall = newInstantCallState;
+        if (hasInstantCall) {
+          removeBottomBar = true;
+        } else {
+          removeBottomBar = false;
+        }
+      });
     }
   }
 
@@ -418,6 +435,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
     super.initState();
     connState = widget.client.connState.state;
     widget.client.connState.addListener(connStateChanged);
+    widget.rtc.active.addListener(checkInstantCall);
     _configureSelectNotificationSubject();
   }
 
@@ -428,10 +446,15 @@ class _OverviewScreenState extends State<OverviewScreen> {
       oldWidget.client.connState.removeListener(connStateChanged);
       widget.client.connState.addListener(connStateChanged);
     }
+    if (oldWidget.rtc.active != widget.rtc.active) {
+      oldWidget.rtc.active.removeListener(checkInstantCall);
+      widget.rtc.active.addListener(checkInstantCall);
+    }
   }
 
   @override
   void dispose() {
+    widget.client.active?.removeListener(checkInstantCall);
     widget.client.connState.removeListener(connStateChanged);
     NotificationService().selectNotificationStream.close();
     super.dispose();

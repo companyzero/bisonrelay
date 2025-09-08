@@ -3,6 +3,7 @@ import 'dart:collection';
 import 'package:bruig/components/containers.dart';
 import 'package:bruig/components/text.dart';
 import 'package:bruig/models/client.dart';
+import 'package:bruig/models/realtimechat.dart';
 import 'package:bruig/models/uistate.dart';
 import 'package:bruig/screens/chat/new_gc_screen.dart';
 import 'package:bruig/screens/chat/new_message_screen.dart';
@@ -24,9 +25,10 @@ class _ChatHeadingW extends StatefulWidget {
   final ClientModel client;
   final MakeActiveCB makeActive;
   final ShowSubMenuCB showSubMenu;
+  final bool isActiveRTC;
 
-  const _ChatHeadingW(
-      this.chat, this.client, this.makeActive, this.showSubMenu);
+  const _ChatHeadingW(this.chat, this.client, this.makeActive, this.showSubMenu,
+      this.isActiveRTC);
 
   @override
   State<_ChatHeadingW> createState() => _ChatHeadingWState();
@@ -35,6 +37,7 @@ class _ChatHeadingW extends StatefulWidget {
 class _ChatHeadingWState extends State<_ChatHeadingW> {
   ChatModel get chat => widget.chat;
   ClientModel get client => widget.client;
+  bool get isActiveRTC => widget.isActiveRTC;
 
   void chatUpdated() => setState(() {});
 
@@ -87,7 +90,6 @@ class _ChatHeadingWState extends State<_ChatHeadingW> {
       avatar: chat.avatar.image,
       toolTip: true,
     );
-
     bool isScreenSmall = checkIsScreenSmall(context);
     return Consumer<ThemeNotifier>(
         builder: (context, theme, _) => Container(
@@ -124,6 +126,9 @@ class _ChatHeadingWState extends State<_ChatHeadingW> {
                       client: client,
                       targetUserChat: chat,
                       child: ListTile(
+                        tileColor: isActiveRTC ? Colors.green.shade600 : null,
+                        selectedTileColor:
+                            isActiveRTC ? Colors.green.shade600 : null,
                         horizontalTitleGap: 12,
                         contentPadding:
                             const EdgeInsets.only(left: 10, right: 8),
@@ -157,7 +162,9 @@ void gotoContactsLastMsgTimeScreen(BuildContext context) {
 class ActiveChatsListMenu extends StatefulWidget {
   final ClientModel client;
   final CustomInputFocusNode inputFocusNode;
-  const ActiveChatsListMenu(this.client, this.inputFocusNode, {super.key});
+  final RealtimeChatModel rtc;
+  const ActiveChatsListMenu(this.client, this.inputFocusNode, this.rtc,
+      {super.key});
 
   @override
   State<ActiveChatsListMenu> createState() => _ActiveChatsListMenuState();
@@ -228,9 +235,11 @@ class _SmallScreenFabIconButton extends StatelessWidget {
   }
 }
 
-class _ActiveChatsListMenuState extends State<ActiveChatsListMenu> {
+class _ActiveChatsListMenuState extends State<ActiveChatsListMenu>
+    with SingleTickerProviderStateMixin {
   ClientModel get client => widget.client;
   FocusNode get inputFocusNode => widget.inputFocusNode.inputFocusNode;
+  RealtimeChatModel get rtc => widget.rtc;
   UnmodifiableListView<ChatModel> chats = UnmodifiableListView([]);
   Timer? debounce;
   ScrollController sortedListScroll = ScrollController();
@@ -270,11 +279,61 @@ class _ActiveChatsListMenuState extends State<ActiveChatsListMenu> {
   void gotoNewGroupChat() =>
       Navigator.of(context).pushNamed(NewGcScreen.routeName);
 
+  bool hasLiveRTCSess = false;
+  bool hasHotAudio = false;
+  bool get hasAnimation => hasLiveRTCSess || hasHotAudio;
+
+  late AnimationController bgColorCtrl;
+  late Animation<Color?> bgColorAnim;
+
+  void rtcChanged() {
+    bool newHasHotAudio = rtc.hotAudioSession.active?.inLiveSession ?? false;
+    bool newHasLive = rtc.liveSessions.hasSessions;
+    if (newHasLive != hasLiveRTCSess || newHasHotAudio != hasHotAudio) {
+      setState(() {
+        hasLiveRTCSess = newHasLive;
+        hasHotAudio = newHasHotAudio;
+      });
+      if (hasAnimation) {
+        bgColorCtrl.repeat();
+      } else {
+        bgColorCtrl.stop();
+      }
+    }
+  }
+
   @override
   void initState() {
     super.initState();
     client.activeChats.addListener(activeChatsListUpdated);
     activeChatsListUpdated();
+
+    rtc.hotAudioSession.addListener(rtcChanged);
+    rtc.liveSessions.addListener(rtcChanged);
+
+    // Initialize animation controller
+    bgColorCtrl = AnimationController(
+      duration: const Duration(seconds: 2),
+      vsync: this,
+    );
+
+    // Create the color animation sequence
+    bgColorAnim = TweenSequence<Color?>([
+      TweenSequenceItem(
+        weight: 1.0,
+        tween: ColorTween(
+          begin: Colors.green.shade600,
+          end: Colors.green.shade900,
+        ),
+      ),
+      TweenSequenceItem(
+        weight: 1.0,
+        tween: ColorTween(
+          begin: Colors.green.shade900,
+          end: Colors.green.shade600,
+        ),
+      ),
+    ]).animate(bgColorCtrl);
   }
 
   @override
@@ -290,6 +349,11 @@ class _ActiveChatsListMenuState extends State<ActiveChatsListMenu> {
   @override
   void dispose() {
     client.activeChats.removeListener(activeChatsListUpdated);
+
+    bgColorCtrl.dispose();
+    rtc.hotAudioSession.removeListener(rtcChanged);
+    rtc.liveSessions.removeListener(rtcChanged);
+
     super.dispose();
   }
 
@@ -312,7 +376,11 @@ class _ActiveChatsListMenuState extends State<ActiveChatsListMenu> {
                     shrinkWrap: true,
                     itemCount: chats.length,
                     itemBuilder: (context, index) => _ChatHeadingW(
-                        chats[index], client, makeActive, showSubMenu))),
+                        chats[index],
+                        client,
+                        makeActive,
+                        showSubMenu,
+                        chats[index].hasInstantCall))),
             Positioned(
                 bottom: 20,
                 right: 10,
@@ -338,7 +406,8 @@ class _ActiveChatsListMenuState extends State<ActiveChatsListMenu> {
             scrollDirection: Axis.vertical,
             itemCount: chats.length,
             itemBuilder: (context, index) => SecondarySideMenuItem(
-                _ChatHeadingW(chats[index], client, makeActive, showSubMenu))),
+                _ChatHeadingW(chats[index], client, makeActive, showSubMenu,
+                    chats[index].hasInstantCall))),
         footer: SizedBox(
             width: double.infinity,
             child: Wrap(alignment: WrapAlignment.start, children: [

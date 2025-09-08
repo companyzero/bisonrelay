@@ -4,6 +4,7 @@ import 'dart:async';
 import 'dart:collection';
 
 import 'package:bruig/config.dart';
+import 'package:bruig/models/realtimechat.dart';
 import 'package:bruig/models/resources.dart';
 import 'package:bruig/models/uistate.dart';
 import 'package:flutter/foundation.dart';
@@ -22,6 +23,32 @@ const SCE_sent = 2;
 const SCE_received = 3;
 const SCE_history = 98;
 const SCE_errored = 99;
+
+const ICE_starting = 0;
+const ICE_dissolving = 1;
+const ICE_waiting = 2;
+const ICE_finished = 3;
+
+class InstantCallEvent extends ChatEvent with ChangeNotifier {
+  int _state;
+  int get state => _state;
+  set state(int v) {
+    _state = v;
+    notifyListeners();
+  }
+
+  Exception? _error;
+  Exception? get error => _error;
+  set error(Exception? e) {
+    if (e == null) throw Exception("Cannot set error to null");
+    _error = e;
+    _state = SCE_errored;
+    notifyListeners();
+  }
+
+  InstantCallEvent(DateTime time, [this._state = SCE_unknown, this._error])
+      : super("", DateFormat('yyyy-MM-dd hh:mm').format(time));
+}
 
 class DateChangeEvent extends ChatEvent {
   final DateTime date;
@@ -184,6 +211,13 @@ class ChatModel extends ChangeNotifier {
     _killed = v;
     notifyListeners();
   }
+
+  bool _hasInstantCall = false;
+  bool get hasInstantCall => _hasInstantCall;
+  final Map<String, RTDTSessionModel> _currentSessions = {};
+  RTDTSessionModel? currentSessions(String chatID) => _currentSessions[chatID];
+  DateTime _instantCallStart = DateTime(1);
+  DateTime get instantCallStart => _instantCallStart;
 
   int _unreadMsgCount = 0;
   int get unreadMsgCount => _unreadMsgCount;
@@ -351,6 +385,27 @@ class ChatModel extends ChangeNotifier {
   void payTip(double amount) async {
     var tip = Golib.payTip(id, amount);
     _msgs.insert(0, ChatEventModel(tip, this));
+    notifyListeners();
+  }
+
+  void startInstantCall(RTDTSessionModel? currentSession) async {
+    var startInstantCall = InstantCallEvent(DateTime.now());
+    startInstantCall.state = ICE_starting;
+    _msgs.insert(0, ChatEventModel(startInstantCall, null));
+    _hasInstantCall = true;
+    _instantCallStart = DateTime.now();
+    _currentSessions[id] = currentSession!;
+    notifyListeners();
+  }
+
+  void finishInstantCall() async {
+    var endInstantCall = InstantCallEvent(DateTime.now());
+    endInstantCall.state = ICE_finished;
+    _msgs.insert(0, ChatEventModel(endInstantCall, null));
+    _hasInstantCall = false;
+    _instantCallStart = DateTime(1);
+    _currentSessions.remove(id);
+
     notifyListeners();
   }
 

@@ -32,8 +32,12 @@ class InteractiveAvatar extends StatelessWidget {
       var avatarColor = colorFromNick(chatNick, theme.brightness);
       var avatarTextTs =
           ThemeData.estimateBrightnessForColor(avatarColor) == Brightness.dark
-              ? theme.extraTextStyles.darkAvatarInitial
-              : theme.extraTextStyles.lightAvatarInitial;
+              ? (radius != null && radius! >= 100)
+                  ? theme.extraTextStyles.darkAvatarInitialLarge
+                  : theme.extraTextStyles.darkAvatarInitial
+              : (radius != null && radius! >= 100)
+                  ? theme.extraTextStyles.lightAvatarInitialLarge
+                  : theme.extraTextStyles.lightAvatarInitial;
       return MouseRegion(
         cursor: SystemMouseCursors.click,
         child: GestureDetector(
