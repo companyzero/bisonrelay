@@ -1433,7 +1433,9 @@ func (c *Client) GCKick(gcID zkidentity.ShortID, uid UserID, reason string) erro
 	}
 
 	nick := c.UserLogNick(uid)
-	c.log.Infof("Kicking %s (%s) from GC %s", uid, nick, gcID)
+	gcAlias, _ := c.GetGCAlias(gcID)
+	c.log.Infof("Kicking %s (%s) from GC %s (%s)", nick, uid.ShortLogID(),
+		strescape.Nick(gcAlias), gcID)
 	c.logGCEvent(gcID, time.Now(), "Local client kicked user %s. Reason: %s",
 		nick, reason)
 
@@ -1471,13 +1473,20 @@ func (c *Client) handleGCKick(ru *RemoteUser, rmgk rpc.RMGroupKick, ts time.Time
 	}
 
 	// Log event.
-	adminNick := strescape.Nick(ru.Nick())
+	adminNick := c.UserLogNick(ru.ID())
 	verb := "kicked"
 	if rmgk.Parted {
 		verb = "parted"
 	}
-	ru.log.Infof("User %s %s from GC %s. Reason: %q", adminNick, verb,
-		rmgk.NewGroupList.ID, rmgk.Reason)
+	kickedUid := clientintf.UserID(rmgk.Member)
+	kickedNick := c.UserLogNick(kickedUid)
+	gcAlias, _ := c.GetGCAlias(rmgk.NewGroupList.ID)
+	if kickedUid == c.PublicID() && gcAlias == "" {
+		gcAlias = rmgk.NewGroupList.Name
+	}
+	ru.log.Infof("Admin %s %s user %s (%s) from GC %q (%s). Reason: %q",
+		adminNick, verb, kickedNick, kickedUid.ShortLogID(),
+		strescape.Nick(gcAlias), rmgk.NewGroupList.ID, rmgk.Reason)
 
 	// Notify specific part and any other updates.
 	c.ntfns.notifyGCUserParted(rmgk.NewGroupList.ID, rmgk.Member,
@@ -1614,6 +1623,7 @@ func (c *Client) KillGroupChat(gcID zkidentity.ShortID, reason string) error {
 }
 
 func (c *Client) handleGCKill(ru *RemoteUser, rmgk rpc.RMGroupKill, ts time.Time) error {
+	gcAlias, _ := c.GetGCAlias(rmgk.ID)
 	err := c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
 		// Ensure gc exists.
 		gc, err := c.db.GetGC(tx, rmgk.ID)
@@ -1639,7 +1649,9 @@ func (c *Client) handleGCKill(ru *RemoteUser, rmgk rpc.RMGroupKill, ts time.Time
 		return err
 	}
 
-	c.log.Infof("User %s killed GC %q. Reason: %q", ru, rmgk.ID.String(), rmgk.Reason)
+	adminKick, _ := c.UserNick(ru.ID())
+	ru.log.Infof("Admin %s killed GC %s (%s). Reason: %q", adminKick,
+		strescape.Nick(gcAlias), rmgk.ID.ShortLogID(), rmgk.Reason)
 
 	c.ntfns.notifyOnGCKilled(ru, rmgk.ID, rmgk.Reason)
 	return nil
