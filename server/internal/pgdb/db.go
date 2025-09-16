@@ -116,9 +116,8 @@ type DB struct {
 	redeemedPushesPartitions map[string]struct{}
 }
 
-// sqlTxRO runs the provided function inside of a read-only SQL transaction.
-func (db *DB) sqlTxRO(ctx context.Context, f func(tx pgx.Tx) error) error {
-	return db.sqlTxWithOptions(ctx, pgx.TxOptions{AccessMode: pgx.ReadOnly}, f)
+func sqlTxROInternal(ctx context.Context, conn *pgx.Conn, f func(tx pgx.Tx) error) error {
+	return sqlTxWithOptions(ctx, conn, pgx.TxOptions{AccessMode: pgx.ReadOnly}, f)
 }
 
 // sqlTx runs the provided function inside of SQL transaction and will either
@@ -126,11 +125,21 @@ func (db *DB) sqlTxRO(ctx context.Context, f func(tx pgx.Tx) error) error {
 // returned from the provided function or commit the transaction when a nil
 // error is returned the provided function.
 func (db *DB) sqlTx(ctx context.Context, f func(tx pgx.Tx) error) (err error) {
-	return db.sqlTxWithOptions(ctx, pgx.TxOptions{}, f)
+	conn, err := db.db.Acquire(ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Release()
+
+	return sqlTxInternal(ctx, conn.Conn(), f)
 }
 
-func (db *DB) sqlTxWithOptions(ctx context.Context, txOptions pgx.TxOptions, f func(tx pgx.Tx) error) (err error) {
-	tx, err := db.db.BeginTx(ctx, txOptions)
+func sqlTxInternal(ctx context.Context, conn *pgx.Conn, f func(tx pgx.Tx) error) error {
+	return sqlTxWithOptions(ctx, conn, pgx.TxOptions{}, f)
+}
+
+func sqlTxWithOptions(ctx context.Context, conn *pgx.Conn, txOptions pgx.TxOptions, f func(tx pgx.Tx) error) (err error) {
+	tx, err := conn.BeginTx(ctx, txOptions)
 	if err != nil {
 		str := fmt.Sprintf("unable to start transaction: %v", err)
 		return contextError(ErrBeginTx, str, err)
@@ -906,11 +915,21 @@ func (db *DB) CreatePartition(ctx context.Context, date time.Time) error {
 
 // IsMaster returns if the server is master (handles writes).
 func (db *DB) IsMaster(ctx context.Context) (bool, error) {
-	ctx, task := trace.NewTask(ctx, "db.IsMaster")
+	conn, err := db.db.Acquire(ctx)
+	if err != nil {
+		return false, err
+	}
+	defer conn.Release()
+
+	return isMaster(ctx, conn.Conn())
+}
+
+func isMaster(ctx context.Context, conn *pgx.Conn) (bool, error) {
+	ctx, task := trace.NewTask(ctx, "db.isMaster")
 	defer task.End()
 
 	var isRecovering bool
-	err := db.db.QueryRow(ctx, "SELECT pg_is_in_recovery();").Scan(&isRecovering)
+	err := conn.QueryRow(ctx, "SELECT pg_is_in_recovery();").Scan(&isRecovering)
 	if err != nil {
 		return false, err
 	}
@@ -1532,64 +1551,68 @@ func Open(ctx context.Context, opts ...Option) (*DB, error) {
 		str := fmt.Sprintf("failed to create connection config: %v", err)
 		return nil, contextError(ErrConnFailed, str, err)
 	}
-	sqlDB, err := pgxpool.NewWithConfig(ctx, poolCfg)
-	if err != nil {
-		str := fmt.Sprintf("unable to open connection to database: %v", err)
-		return nil, contextError(ErrConnFailed, str, err)
-	}
-	if err := sqlDB.Ping(ctx); err != nil {
-		str := fmt.Sprintf("unable to communicate with database: %v", err)
-		return nil, contextError(ErrConnFailed, str, err)
-	}
 
 	db := &DB{
 		dbName:                   o.dbName,
 		roleName:                 o.roleName,
 		indexTablespace:          o.indexTablespace,
 		bulkDataTablespace:       o.bulkDataTablespace,
-		db:                       sqlDB,
 		dataPartitions:           make(map[string]struct{}),
 		paidSubsPartitions:       make(map[string]struct{}),
 		redeemedPushesPartitions: make(map[string]struct{}),
 	}
 
-	// This ensures proper behavior in the case multiple connections are opened
-	// to the same backend.
-	db.initMtx.Lock()
-	defer db.initMtx.Unlock()
+	afterConnect := func(ctx context.Context, sqlDB *pgx.Conn) error {
+		if err := sqlDB.Ping(ctx); err != nil {
+			str := fmt.Sprintf("unable to communicate with database: %v", err)
+			return contextError(ErrConnFailed, str, err)
+		}
 
-	isMaster, err := db.IsMaster(ctx)
-	if err != nil {
-		sqlDB.Close()
-		return nil, err
-	}
+		// This ensures proper behavior in the case multiple connections are opened
+		// to the same backend.
+		db.initMtx.Lock()
+		defer db.initMtx.Unlock()
 
-	// Initialize or update the database, populate the local state, and check
-	// the overall sanity.  Sanity checks include things such as having the
-	// required settings configured, existence of required tables along with
-	// being configured with their expected tablespaces.
-	if isMaster {
-		err = db.sqlTx(ctx, func(tx pgx.Tx) error {
-			if err := db.checkDatabaseInitialized(ctx, tx); err != nil {
-				return err
-			}
-			if err = db.initDB(ctx, tx); err != nil {
-				return err
-			}
-			return db.checkDatabaseSanity(ctx, tx)
-		})
-	} else {
-		err = db.sqlTxRO(ctx, func(tx pgx.Tx) error {
-			if err := db.checkDatabaseInitialized(ctx, tx); err != nil {
-				return err
-			}
-			return db.checkDatabaseSanity(ctx, tx)
-		})
+		isMaster, err := isMaster(ctx, sqlDB)
+		if err != nil {
+			return err
+		}
+
+		// Initialize or update the database, populate the local state, and check
+		// the overall sanity.  Sanity checks include things such as having the
+		// required settings configured, existence of required tables along with
+		// being configured with their expected tablespaces.
+		if isMaster {
+			err = sqlTxInternal(ctx, sqlDB, func(tx pgx.Tx) error {
+				if err := db.checkDatabaseInitialized(ctx, tx); err != nil {
+					return err
+				}
+				if err = db.initDB(ctx, tx); err != nil {
+					return err
+				}
+				return db.checkDatabaseSanity(ctx, tx)
+			})
+		} else {
+			err = sqlTxROInternal(ctx, sqlDB, func(tx pgx.Tx) error {
+				if err := db.checkDatabaseInitialized(ctx, tx); err != nil {
+					return err
+				}
+				return db.checkDatabaseSanity(ctx, tx)
+			})
+		}
+		if err != nil {
+			return err
+		}
+		return nil
 	}
+	poolCfg.AfterConnect = afterConnect
+
+	sqlDB, err := pgxpool.NewWithConfig(ctx, poolCfg)
 	if err != nil {
-		sqlDB.Close()
-		return nil, err
+		str := fmt.Sprintf("unable to open connection to database: %v", err)
+		return nil, contextError(ErrConnFailed, str, err)
 	}
+	db.db = sqlDB
 
 	return db, nil
 }
