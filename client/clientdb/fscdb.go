@@ -65,6 +65,7 @@ const (
 	filtersDir          = "contentfilters"
 	earlyPostStatusFile = "earlypoststatus.json"
 	embedsDir           = "embeds"
+	serverCertsFile     = "knownservers.json"
 
 	pageSessionsDir         = "pagesessions"
 	pageSessionOverviewFile = "overview.json"
@@ -131,68 +132,30 @@ func (db *DB) UpdateLocalID(tx ReadWriteTx, id *zkidentity.FullIdentity) error {
 	return nil
 }
 
-func (db *DB) ServerID(tx ReadTx) ([]byte, zkidentity.PublicIdentity, error) {
-	fail := func(err error) ([]byte, zkidentity.PublicIdentity, error) {
-		return nil, zkidentity.PublicIdentity{}, err
+// KnownServerCertPairs returns the list of already known server cert pairs.
+// Returns a nil slice with nil error if no certs are known.
+func (db *DB) KnownServerCertPairs(tx ReadTx) ([]ServerCertPair, error) {
+	filename := filepath.Join(db.root, serverCertsFile)
+	if !fileExists(filename) {
+		return nil, nil // No known server certs.
 	}
 
-	// serveridentity
-	pib64, err := db.idb.Get("", "serveridentity")
-	if errors.Is(err, inidb.ErrNotFound) {
-		return fail(ErrServerIDEmpty)
-	} else if err != nil {
-		return fail(err)
-	}
-	pc64, err := db.idb.Get("", "servercert")
-	if errors.Is(err, inidb.ErrNotFound) {
-		return fail(ErrServerIDEmpty)
-	} else if err != nil {
-		return fail(err)
-	}
-
-	if err != nil {
-		return fail(fmt.Errorf("could not obtain serveridentity record"))
-	}
-	piJSON, err := base64.StdEncoding.DecodeString(pib64)
-	if err != nil {
-		return fail(fmt.Errorf("could not decode serveridentity"))
-	}
-
-	var spid zkidentity.PublicIdentity
-	err = json.Unmarshal(piJSON, &spid)
-	if err != nil {
-		return fail(fmt.Errorf("could not unmarshal serveridentity"))
-	}
-	tlsCert, err := base64.StdEncoding.DecodeString(pc64)
-	if err != nil {
-		return fail(fmt.Errorf("could not decode servercert"))
-	}
-
-	return tlsCert, spid, nil
+	var res []ServerCertPair
+	err := db.readJsonFile(filename, &res)
+	return res, err
 }
 
-func (db *DB) UpdateServerID(tx ReadWriteTx, tlsCert []byte, pid *zkidentity.PublicIdentity) error {
-	// save server as our very own
-	b, err := json.Marshal(pid)
+// AddKnownServerCertPair adds a new entry to the list of known server cert
+// pairs.
+func (db *DB) AddKnownServerCertPair(tx ReadWriteTx, pair ServerCertPair) error {
+	certs, err := db.KnownServerCertPairs(tx)
 	if err != nil {
-		return fmt.Errorf("Could not marshal server identity: %v", err)
-	}
-	err = db.idb.Set("", "serveridentity",
-		base64.StdEncoding.EncodeToString(b))
-	if err != nil {
-		return fmt.Errorf("could not insert record serveridentity: %v", err)
-	}
-	err = db.idb.Set("", "servercert",
-		base64.StdEncoding.EncodeToString(tlsCert))
-	if err != nil {
-		return fmt.Errorf("could not insert record servercert: %v", err)
-	}
-	err = db.idb.Save()
-	if err != nil {
-		return fmt.Errorf("could not save server: %v", err)
+		return err
 	}
 
-	return nil
+	filename := filepath.Join(db.root, serverCertsFile)
+	certs = append(certs, pair)
+	return db.saveJsonFile(filename, certs)
 }
 
 func (db *DB) UpdateRatchet(tx ReadWriteTx, r *ratchet.Ratchet, theirID zkidentity.ShortID) error {

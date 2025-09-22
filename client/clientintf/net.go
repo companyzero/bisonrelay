@@ -61,6 +61,8 @@ func querySeeder(ctx context.Context, apiURL string, dialFunc DialFunc) (string,
 			server = api.ServerGroups[i].Server
 			break
 		}
+
+		// FIXME: check if online is set.
 	}
 	if server == "" {
 		return "", fmt.Errorf("seeder returned no master servers")

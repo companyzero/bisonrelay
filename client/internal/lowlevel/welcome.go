@@ -37,6 +37,13 @@ type ConnKeeperCfg struct {
 	OnUnwelcomeError func(err error)
 }
 
+// serverCertPairs tracks individual pairs of outer and inner server
+// certificates.
+type serverCertPair struct {
+	outerTlsCert   []byte
+	innerServerPub zkidentity.PublicIdentity
+}
+
 // ConnKeeper maintains an open connection to a server. Whenever the connection
 // to the server closes, it attempts to re-connect. Only a single connection is
 // kept online at any one time.
@@ -51,9 +58,8 @@ type ConnKeeper struct {
 	log           slog.Logger
 	skipPerformKX bool // Only set in some unit tests.
 
-	certMtx sync.Mutex
-	tlsCert []byte
-	spid    zkidentity.PublicIdentity // server public id
+	certMtx    sync.Mutex
+	knownCerts []serverCertPair
 
 	keepOnlineChan chan bool
 }
@@ -83,13 +89,11 @@ func (ck *ConnKeeper) NextSession(ctx context.Context) clientintf.ServerSessionI
 	}
 }
 
-// SetKnownServerID sets the known server certs as the passed ones. Whenever we
-// connect to the server and the certs are different then these, we request
-// confirmation from the user.
-func (ck *ConnKeeper) SetKnownServerID(tlsCert []byte, spid zkidentity.PublicIdentity) {
+// AddKnownServerCerts adds a set of servers as already known. Whenever the
+// ConnKeeper connects to an unknown server, it will ask for user confirmation.
+func (ck *ConnKeeper) AddKnownServerCerts(tlsCert []byte, spid zkidentity.PublicIdentity) {
 	ck.certMtx.Lock()
-	ck.tlsCert = tlsCert
-	ck.spid = spid
+	ck.knownCerts = append(ck.knownCerts, serverCertPair{outerTlsCert: tlsCert, innerServerPub: spid})
 	ck.certMtx.Unlock()
 }
 
@@ -571,28 +575,32 @@ func (ck *ConnKeeper) attemptConn(ctx context.Context) (*serverSession, error) {
 		return nil, err
 	}
 
-	ck.certMtx.Lock()
-	oldCert := ck.tlsCert
-	oldSpid := ck.spid
-	ck.certMtx.Unlock()
-
 	// Verify the server has a TLS cert.
 	if len(tlsState.PeerCertificates) < 1 {
 		return fail(errNoPeerTLSCert)
 	}
 	newCert := tlsState.PeerCertificates[0].Raw
 
-	// Request the inner server public identity if we don't have it yet.
-	//
-	// Maybe we should always request and compare to ensure a clearer error
-	// in case of KX failure?
-	ck.log.Debugf("Unknown server pid. Fetching it.")
+	// Request the inner server public identity.
+	ck.log.Debugf("Fetching inner server public ID")
 	newSpid, err := ck.fetchServerPublicID(conn)
 	if err != nil {
 		return fail(err)
 	}
 
-	needsConfirm := !bytes.Equal(newCert, oldCert) || !reflect.DeepEqual(oldSpid, newSpid)
+	// Determine if the server is already known.
+	needsConfirm := true
+	ck.certMtx.Lock()
+	for _, certPair := range ck.knownCerts {
+		isKnown := bytes.Equal(certPair.outerTlsCert, newCert) &&
+			reflect.DeepEqual(certPair.innerServerPub, newSpid)
+		if isKnown {
+			needsConfirm = false
+			break
+		}
+	}
+	ck.certMtx.Unlock()
+
 	if needsConfirm {
 		ck.log.Debugf("Requiring certificate confirmation for server connection")
 
@@ -605,9 +613,10 @@ func (ck *ConnKeeper) attemptConn(ctx context.Context) (*serverSession, error) {
 		// to the same server don't require reconfirmations.
 		ck.log.Debugf("Server connection confirmed")
 		ck.certMtx.Lock()
-		ck.tlsCert = newCert
-		ck.spid = newSpid
+		ck.knownCerts = append(ck.knownCerts, serverCertPair{outerTlsCert: newCert, innerServerPub: newSpid})
 		ck.certMtx.Unlock()
+	} else {
+		ck.log.Tracef("Already known server inner and outer certs")
 	}
 
 	// Session Phase.

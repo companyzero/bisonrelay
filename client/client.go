@@ -475,8 +475,9 @@ func New(cfg Config) (*Client, error) {
 			return err
 		}
 		return cfg.DB.Update(ctx, func(tx clientdb.ReadWriteTx) error {
-			return cfg.DB.UpdateServerID(tx,
-				cs.PeerCertificates[0].Raw, spid)
+			return cfg.DB.AddKnownServerCertPair(tx,
+				clientdb.ServerCertPair{OuterTLS: cs.PeerCertificates[0].Raw,
+					InnerPub: *spid})
 		})
 	}
 
@@ -665,11 +666,13 @@ func (c *Client) loadLocalID(ctx context.Context) error {
 
 func (c *Client) loadServerCert(_ context.Context) error {
 	return c.dbView(func(tx clientdb.ReadTx) error {
-		tlsCert, spid, err := c.db.ServerID(tx)
-		if err != nil && !errors.Is(err, clientdb.ErrServerIDEmpty) {
+		certs, err := c.db.KnownServerCertPairs(tx)
+		if err != nil {
 			return err
 		}
-		c.ck.SetKnownServerID(tlsCert, spid)
+		for _, cert := range certs {
+			c.ck.AddKnownServerCerts(cert.OuterTLS, cert.InnerPub)
+		}
 		return nil
 	})
 }

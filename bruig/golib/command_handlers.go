@@ -2324,8 +2324,11 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		return nil, zipFile.Close()
 
 	case CTNotifyServerSessionState:
-		state := cc.serverState.Load().(serverSessState)
-		go notify(NTServerSessChanged, state, nil)
+		stateIntf := cc.serverState.Load()
+		if stateIntf != nil {
+			state := stateIntf.(serverSessState)
+			go notify(NTServerSessChanged, state, nil)
+		}
 
 	case CTListGCInvites:
 		invites, err := cc.c.ListGCInvitesFor(nil)

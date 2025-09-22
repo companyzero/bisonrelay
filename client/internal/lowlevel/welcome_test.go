@@ -1,12 +1,14 @@
 package lowlevel
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"reflect"
 	"strconv"
 	"sync/atomic"
 	"testing"
@@ -90,7 +92,6 @@ func TestAttemptsConn(t *testing.T) {
 				CertConf: tc.confirmer,
 			}
 			ck := NewConnKeeper(cfg)
-			ck.spid = mockServerID.Public
 			ck.skipPerformKX = true
 
 			_, err := ck.attemptConn(ctx)
@@ -100,6 +101,74 @@ func TestAttemptsConn(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestMultipleKnownCerts tests how the ConnKeeper behaves with multiple known
+// server certificate pairs.
+func TestMultipleKnownCerts(t *testing.T) {
+	t.Parallel()
+
+	inner1 := newRandSpidConn()
+	inner2 := newRandSpidConn()
+
+	testSequence := []struct {
+		outer *tls.ConnectionState
+		inner *spidConn
+	}{
+		// Four unique combinations.
+		{outer: mockTLSConnState(1), inner: inner1},
+		{outer: mockTLSConnState(1), inner: inner2},
+		{outer: mockTLSConnState(2), inner: inner1},
+		{outer: mockTLSConnState(2), inner: inner2},
+	}
+
+	var sequenceIndex atomic.Int32
+	sequenceIndex.Store(-1)
+	testDialer := func(ctx context.Context) (clientintf.Conn, *tls.ConnectionState, error) {
+		i := sequenceIndex.Load()
+		return testSequence[i].inner, testSequence[i].outer, nil
+	}
+
+	var confirmerCalls atomic.Int32
+	testConfirmer := func(_ context.Context, outer *tls.ConnectionState, inner *zkidentity.PublicIdentity) error {
+		i := sequenceIndex.Load()
+		if !bytes.Equal(outer.PeerCertificates[0].Raw, testSequence[i].outer.PeerCertificates[0].Raw) {
+			return errors.New("unexpected outer cert")
+		}
+		if !reflect.DeepEqual(*inner, testSequence[i].inner.pid) {
+			return errors.New("unexpected inner cert")
+		}
+		confirmerCalls.Add(1)
+		return nil
+	}
+
+	cfg := ConnKeeperCfg{
+		PC:       clientintf.FreePaymentClient{},
+		Dialer:   testDialer,
+		CertConf: testConfirmer,
+		// Log:      testutils.TestLoggerSys(t, "XXXX"),
+	}
+	ck := NewConnKeeper(cfg)
+	ck.skipPerformKX = true
+
+	ctx := context.Background()
+
+	// Repeat the sequence twice: the first time confirmer will be called
+	// for every combination, the second time it won't.
+	for i := 0; i < 2; i++ {
+		for j := range testSequence {
+			sequenceIndex.Store(int32(j))
+			ss, err := ck.attemptConn(ctx)
+			if err != nil {
+				t.Fatalf("Got error %v on iter %d sequence index %d",
+					err, i, j)
+			}
+			ss.cancel()
+			testSequence[j].inner.reset()
+		}
+	}
+
+	assert.DeepEqual(t, confirmerCalls.Load(), int32(len(testSequence)))
 }
 
 // TestKeepsOnline ensures the client is kept online even when connecting
@@ -132,7 +201,6 @@ func TestKeepsOnline(t *testing.T) {
 		//Log:            testutils.TestLoggerSys(t, "XXXX"),
 	}
 	ck := NewConnKeeper(cfg)
-	ck.spid = mockServerID.Public
 	ck.skipPerformKX = true
 
 	ctx, cancel := context.WithCancel(context.Background())
