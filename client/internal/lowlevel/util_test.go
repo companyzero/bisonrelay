@@ -134,7 +134,18 @@ func (oc offlineConn) String() string {
 // spidConn is a connection that writes the specified server public id to the
 // conn when needed.
 type spidConn struct {
-	b []byte
+	b   []byte
+	pid zkidentity.PublicIdentity
+}
+
+func newRandSpidConn() *spidConn {
+	full, err := zkidentity.New("", "")
+	if err != nil {
+		panic(err)
+	}
+	spid := &spidConn{pid: full.Public}
+	spid.reset()
+	return spid
 }
 
 func newSpidConn() *spidConn {
@@ -145,11 +156,21 @@ func newSpidConn() *spidConn {
 		panic(err)
 	}
 
-	return &spidConn{b: buff.Bytes()}
+	return &spidConn{b: buff.Bytes(), pid: pid}
 }
 
 // static typecheck to ensure offlineConn is a valid Conn implementation.
 var _ clientintf.Conn = offlineConn{}
+
+func (sc *spidConn) reset() {
+	var buff bytes.Buffer
+	err := json.NewEncoder(&buff).Encode(sc.pid)
+	if err != nil {
+		panic(err)
+	}
+
+	sc.b = buff.Bytes()
+}
 
 func (sc *spidConn) Read(p []byte) (n int, err error) {
 	n = copy(p, sc.b)
@@ -158,7 +179,7 @@ func (sc *spidConn) Read(p []byte) (n int, err error) {
 }
 
 func (sc *spidConn) Write(p []byte) (n int, err error) {
-	return 0, nil
+	return len(p), nil
 }
 
 func (sc *spidConn) Close() error {

@@ -32,6 +32,12 @@ type ReadWriteTx interface {
 	Writable() bool
 }
 
+// ServerCertPair is a pair of certificates which identify a server.
+type ServerCertPair struct {
+	OuterTLS []byte                    `json:"outer_tls"`
+	InnerPub zkidentity.PublicIdentity `json:"inner_pub"`
+}
+
 type KXStage uint8
 
 const (
