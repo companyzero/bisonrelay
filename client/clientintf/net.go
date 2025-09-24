@@ -3,72 +3,14 @@ package clientintf
 import (
 	"context"
 	"crypto/tls"
-	"encoding/json"
 	"fmt"
-	"io"
 	"net"
-	"net/http"
-	"time"
 
+	seederclient "github.com/companyzero/bisonrelay/brseeder/client"
 	"github.com/decred/slog"
 )
 
 type DialFunc func(context.Context, string, string) (net.Conn, error)
-
-type ServerGroup struct {
-	Server   string `json:"brserver"`
-	LND      string `json:"lnd"`
-	IsMaster bool   `json:"isMaster"`
-	Online   bool   `json:"online"`
-}
-
-type ClientAPI struct {
-	ServerGroups []ServerGroup `json:"serverGroups"`
-}
-
-func querySeeder(ctx context.Context, apiURL string, dialFunc DialFunc) (string, error) {
-	httpClient := http.Client{
-		Transport: &http.Transport{
-			DialContext: dialFunc,
-		},
-		Timeout: time.Minute,
-	}
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, apiURL, nil)
-	if err != nil {
-		return "", fmt.Errorf("failed to make a seeder request: %w", err)
-	}
-	rep, err := httpClient.Do(req)
-	if err != nil {
-		return "", fmt.Errorf("failed to query seeder: %w", err)
-	}
-	defer rep.Body.Close()
-
-	if rep.StatusCode != 200 {
-		return "", fmt.Errorf("seeder returned %v", rep.Status)
-	}
-	body, err := io.ReadAll(rep.Body)
-	if err != nil {
-		return "", fmt.Errorf("failed to read seeder response: %w", err)
-	}
-	var api ClientAPI
-	if err = json.Unmarshal(body, &api); err != nil {
-		return "", fmt.Errorf("failed to unmarshal seeder response: %w", err)
-	}
-	var server string
-	for i := range api.ServerGroups {
-		if api.ServerGroups[i].IsMaster {
-			server = api.ServerGroups[i].Server
-			break
-		}
-
-		// FIXME: check if online is set.
-	}
-	if server == "" {
-		return "", fmt.Errorf("seeder returned no master servers")
-	}
-	return server, nil
-}
 
 // tlsDialer creates the inner TLS client dialer, based on the outer network
 // dialer.
@@ -86,7 +28,7 @@ func tlsDialer(addr string, log slog.Logger, dialFunc DialFunc, useSeeder bool) 
 		if useSeeder {
 			apiURL := fmt.Sprintf("https://%s/api/live", addr)
 			log.Infof("Querying seeder at %v", apiURL)
-			server, err := querySeeder(ctx, apiURL, dialFunc)
+			server, err := seederclient.QuerySeeder(ctx, apiURL, seederclient.DialFunc(dialFunc))
 			if err != nil {
 				return nil, nil, err
 			}
