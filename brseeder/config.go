@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 
 	"github.com/BurntSushi/toml"
+	"github.com/decred/slog"
+	"github.com/jrick/logrotate/rotator"
 )
 
 type config struct {
@@ -40,4 +42,31 @@ func loadConfig() (*config, error) {
 		return nil, fmt.Errorf("no tokens specified")
 	}
 	return &cfg, nil
+}
+
+type logWriter struct {
+	r *rotator.Rotator
+}
+
+func (l *logWriter) Write(p []byte) (n int, err error) {
+	os.Stdout.Write(p)
+	return l.r.Write(p)
+}
+
+func initLog() (slog.Logger, error) {
+	logDir := filepath.Join(defaultHomeDir, "logs")
+	if err := os.MkdirAll(logDir, 0o700); err != nil {
+		return slog.Disabled, fmt.Errorf("failed to create %v: %v", logDir, err)
+	}
+	logPath := filepath.Join(logDir, "brseeder.log")
+	logFd, err := rotator.New(logPath, 32*1024, true, 0)
+	if err != nil {
+		return slog.Disabled, fmt.Errorf("Failed to setup logfile %s: %v", logPath, err)
+	}
+	defer logFd.Close()
+
+	bknd := slog.NewBackend(&logWriter{logFd}, slog.WithFlags(slog.LUTC))
+	logger := bknd.Logger("BRSEED")
+
+	return logger, nil
 }
