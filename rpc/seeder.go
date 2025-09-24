@@ -26,3 +26,16 @@ type SeederCommandStatusNode struct {
 type SeederCommandStatusReply struct {
 	Master bool `json:"db_master"`
 }
+
+type SeederServerGroup struct {
+	Server   string `json:"brserver"`
+	LND      string `json:"lnd"`
+	IsMaster bool   `json:"isMaster"`
+	Online   bool   `json:"online"`
+}
+
+// SeederClientAPI is the response of a query from the seeder server to an
+// end-user client (brclient).
+type SeederClientAPI struct {
+	ServerGroups []SeederServerGroup `json:"serverGroups"`
+}

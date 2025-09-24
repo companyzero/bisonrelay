@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/companyzero/bisonrelay/client/clientintf"
 	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/gorilla/websocket"
 )
@@ -20,18 +19,18 @@ type smi struct {
 }
 
 // create the http response for brclients.
-func (s *Server) createClientReply() clientintf.ClientAPI {
+func (s *Server) createClientReply() rpc.SeederClientAPI {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 
-	var clientAPI clientintf.ClientAPI
+	var clientAPI rpc.SeederClientAPI
 	for tokenStr, status := range s.serverMap {
 		serverAddr := net.JoinHostPort(status.Node.Alias, "443")
 		nodeAddr := net.JoinHostPort(status.Node.Alias, "9735")
 
 		isMaster := s.serverMaster.token == tokenStr
 
-		clientAPI.ServerGroups = append(clientAPI.ServerGroups, clientintf.ServerGroup{
+		clientAPI.ServerGroups = append(clientAPI.ServerGroups, rpc.SeederServerGroup{
 			Server:   serverAddr,
 			LND:      fmt.Sprintf("%s@%s", status.Node.PublicKey, nodeAddr),
 			IsMaster: isMaster,
