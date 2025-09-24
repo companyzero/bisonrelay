@@ -1,18 +1,18 @@
-package server
+package rpc
 
-// CommandStatus is sent by brserver to brseeder.
-type CommandStatus struct {
-	LastUpdated int64             `json:"lastUpdated"`
-	Database    CommandStatusDB   `json:"db"`
-	Node        CommandStatusNode `json:"node"`
+// SeederCommandStatus is sent by brserver to brseeder.
+type SeederCommandStatus struct {
+	LastUpdated int64                   `json:"lastUpdated"`
+	Database    SeederCommandStatusDB   `json:"db"`
+	Node        SeederCommandStatusNode `json:"node"`
 }
 
-type CommandStatusDB struct {
+type SeederCommandStatusDB struct {
 	Online bool `json:"db_online"`
 	Master bool `json:"db_master"`
 }
 
-type CommandStatusNode struct {
+type SeederCommandStatusNode struct {
 	Alias         string `json:"alias"`
 	Online        bool   `json:"online"`
 	PublicKey     string `json:"publicKey"`
@@ -23,6 +23,6 @@ type CommandStatusNode struct {
 }
 
 // CommandStatusReply is the response from brseeder to brserver.
-type CommandStatusReply struct {
+type SeederCommandStatusReply struct {
 	Master bool `json:"db_master"`
 }

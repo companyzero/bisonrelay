@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/companyzero/bisonrelay/server"
+	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/decred/slog"
 	"github.com/gorilla/websocket"
 	"golang.org/x/sync/errgroup"
@@ -23,7 +23,7 @@ type Server struct {
 
 	mtx          sync.Mutex
 	serverMaster smi
-	serverMap    map[string]*server.CommandStatus
+	serverMap    map[string]*rpc.SeederCommandStatus
 }
 
 // New creates a new seeder server.

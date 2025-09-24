@@ -499,7 +499,7 @@ func (z *ZKS) Run(ctx context.Context) error {
 								}
 							}
 
-							var status CommandStatus
+							var status rpc.SeederCommandStatus
 							status.LastUpdated = time.Now().Unix()
 							status.Database.Online = healthy
 							status.Database.Master = isMaster
@@ -523,7 +523,7 @@ func (z *ZKS) Run(ctx context.Context) error {
 								status.Node.SyncedToGraph = lnInfo.SyncedToGraph
 							}
 
-							var reply CommandStatusReply
+							var reply rpc.SeederCommandStatusReply
 							if err = ws.Call(ctx, "status", &reply, status); err != nil {
 								z.log.Errorf("[ws] failed to send status: %v", err)
 							} else {

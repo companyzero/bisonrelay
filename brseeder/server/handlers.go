@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/companyzero/bisonrelay/client/clientintf"
-	"github.com/companyzero/bisonrelay/server"
+	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/gorilla/websocket"
 )
 
@@ -227,7 +227,7 @@ func (s *Server) handleBRServerStatus(w http.ResponseWriter, r *http.Request) {
 		var rpcError RPCError
 		switch req.Method {
 		case "status":
-			var status server.CommandStatus
+			var status rpc.SeederCommandStatus
 			if err = json.Unmarshal(req.Params[0], &status); err != nil {
 				s.log.Errorf("failed to parse status from %v: %v", remoteAddr, err)
 				rpcError.Message = "failed to parse status json"
@@ -252,7 +252,7 @@ func (s *Server) handleBRServerStatus(w http.ResponseWriter, r *http.Request) {
 			rep := s.createServerReply(tokenStr)
 			s.mtx.Unlock()
 
-			statusReply := server.CommandStatusReply{
+			statusReply := rpc.SeederCommandStatusReply{
 				Master: rep,
 			}
 			params, err = json.Marshal(statusReply)
