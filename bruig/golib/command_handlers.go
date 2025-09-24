@@ -1150,6 +1150,14 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		cc.initIDChan <- id
 		return nil, nil
 
+	case CTUpdateLastMsgReadTime:
+		var args updateLastMsgReadTimeArgs
+		if err := cmd.decode(&args); err != nil {
+			return nil, err
+		}
+
+		return nil, c.UpdateLastMsgReadTime(args.ID, args.Time, args.IsGC)
+
 	case CTAcceptServerCert:
 		cc.certConfChan <- true
 		return nil, nil
@@ -1181,6 +1189,14 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		err := c.AcceptGroupChatInvite(iid)
 		return nil, err
 
+	case CTDeclineGCInvite:
+		var iid uint64
+		if err := cmd.decode(&iid); err != nil {
+			return nil, err
+		}
+		err := c.DeclineGroupChatInvite(iid)
+		return nil, err
+
 	case CTGetGC:
 		var id zkidentity.ShortID
 		if err := cmd.decode(&id); err != nil {
@@ -1206,9 +1222,10 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		if err == nil {
 			for _, gc := range gcl {
 				gcs = append(gcs, gcAddressBookEntry{
-					ID:      gc.Metadata.ID,
-					Members: gc.Metadata.Members,
-					Name:    gc.Name(),
+					ID:              gc.Metadata.ID,
+					Members:         gc.Metadata.Members,
+					Name:            gc.Name(),
+					LastReadMsgTime: gc.LastReadMsgTime,
 				})
 			}
 		}
@@ -1951,6 +1968,14 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 			return nil, err
 		}
 		return nil, c.SuggestKX(args.Invitee, args.Target)
+
+	case CTDeclineKXSuggestion:
+		var args mediateIDArgs
+		if err := cmd.decode(&args); err != nil {
+			return nil, err
+		}
+
+		return nil, c.DeclineKXSuggestion(args.Mediator, args.Target)
 
 	case CTListAccounts:
 		if lnc == nil {

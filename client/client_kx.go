@@ -243,6 +243,14 @@ func (c *Client) initRemoteUser(id *zkidentity.PublicIdentity, r *ratchet.Ratche
 			return err
 		}
 
+		// Remove suggestions to KX with this (now existing) user.
+		if oldEntry == nil {
+			err := c.db.RemoveAllKXSuggestionsTo(tx, id.Identity)
+			if err != nil {
+				return err
+			}
+		}
+
 		return nil
 	})
 	if err != nil {
@@ -626,22 +634,41 @@ func (c *Client) RenameUser(uid UserID, newNick string) error {
 // SuggestKX sends a message to invitee suggesting they KX with target (through
 // the local client).
 func (c *Client) SuggestKX(invitee, target UserID) error {
-	_, err := c.rul.byID(invitee)
+	ru, err := c.rul.byID(invitee)
 	if err != nil {
 		return err
 	}
 
-	ruAB, err := c.getAddressBookEntry(target)
+	targetRU, err := c.rul.byID(target)
 	if err != nil {
 		return err
 	}
 
-	rm := rpc.RMKXSuggestion{Target: *ruAB.ID}
+	var targetAB *clientdb.AddressBookEntry
+	err = c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
+		var err error
+		targetAB, err = c.db.GetAddressBookEntry(tx, target)
+		if err != nil {
+			return err
+		}
+
+		logMsg := fmt.Sprintf("Sent KX suggestion %s", strescape.Nick(targetRU.Nick()))
+		_, err = c.db.LogPM(tx, invitee, true, ru.Nick(), logMsg, time.Now())
+		return err
+
+	})
+	if err != nil {
+		return err
+	}
+
+	ru.log.Infof("Suggesting user KX with %q (%s)", targetAB.Nick, target)
+
+	rm := rpc.RMKXSuggestion{Target: *targetAB.ID}
 	payEvent := "kxsuggest." + target.String()
 	return c.sendWithSendQ(payEvent, rm, invitee)
 }
 
-func (c *Client) handleKXSuggestion(ru *RemoteUser, kxsg rpc.RMKXSuggestion) error {
+func (c *Client) handleKXSuggestion(ru *RemoteUser, kxsg rpc.RMKXSuggestion, ts time.Time) error {
 	known := "known"
 	targetNick := kxsg.Target.Nick
 	targetRu, err := c.rul.byID(kxsg.Target.Identity)
@@ -650,17 +677,37 @@ func (c *Client) handleKXSuggestion(ru *RemoteUser, kxsg rpc.RMKXSuggestion) err
 	}
 	if targetRu != nil {
 		targetNick = targetRu.Nick()
+	} else {
+		err := c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
+			if err := c.db.StoreSuggestedKX(tx, ru.ID(), kxsg.Target); err != nil {
+				return err
+			}
+
+			// Save on log to show again on restart.
+			logLine := fmt.Sprintf(clientdb.SuggestedKXLogMsg,
+				kxsg.Target.Identity, targetNick)
+			_, err := c.db.LogPM(tx, ru.ID(), true, ru.Nick(), logLine, ts)
+			return err
+		})
+		if err != nil {
+			return err
+		}
 	}
 
 	ru.log.Infof("Received suggestion to KX with %s %s (%q)", known,
 		kxsg.Target.Identity, targetNick)
 
-	if c.cfg.KXSuggestion != nil {
-		c.cfg.KXSuggestion(ru, kxsg.Target)
-	}
-
 	c.ntfns.notifyOnKXSuggested(ru, kxsg.Target)
 	return nil
+}
+
+// DeclineKXSuggestion declines a KX suggestion from a remote user to a target.
+//
+// Other KX suggestions to the same target user may still exist.
+func (c *Client) DeclineKXSuggestion(from, target clientintf.UserID) error {
+	return c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
+		return c.db.RemoveKXSuggestion(tx, from, target)
+	})
 }
 
 // LastUserReceivedTime is a record for user and their last decrypted message
@@ -740,7 +787,7 @@ func (c *Client) handshakeIdleUsers() error {
 				ab.LastHandshakeAttempt.Format(time.RFC3339Nano),
 				lastDecTime.Format(time.RFC3339Nano))
 
-			err := c.clearLastHandshakeAttemptTime(ru)
+			err := c.clearLastHandshakeAttemptTime(ru, false, time.Time{})
 			if err != nil {
 				ru.log.Warnf("Unable to clear last handshake "+
 					"time during init: %v", err)

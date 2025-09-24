@@ -26,7 +26,11 @@ class _ChatHeadingW extends StatefulWidget {
   final ShowSubMenuCB showSubMenu;
 
   const _ChatHeadingW(
-      this.chat, this.client, this.makeActive, this.showSubMenu);
+    this.chat,
+    this.client,
+    this.makeActive,
+    this.showSubMenu,
+  );
 
   @override
   State<_ChatHeadingW> createState() => _ChatHeadingWState();
@@ -66,13 +70,15 @@ class _ChatHeadingWState extends State<_ChatHeadingW> {
     if (chat.unreadMsgCount > 0) {
       // Show unread message count.
       unreadIndicator = Container(
-          margin: const EdgeInsets.all(1),
-          child: CircleAvatar(radius: 10, child: Txt.S("$unreadCount")));
+        margin: const EdgeInsets.all(1),
+        child: CircleAvatar(radius: 10, child: Txt.S("$unreadCount")),
+      );
     } else if (chat.unreadEventCount > 0) {
       // Show only a dot indicator.
       unreadIndicator = Container(
-          margin: const EdgeInsets.all(1),
-          child: const CircleAvatar(radius: 3));
+        margin: const EdgeInsets.all(1),
+        child: const CircleAvatar(radius: 3),
+      );
     } else {
       // Show nothing.
       unreadIndicator = const SizedBox(width: 21);
@@ -90,54 +96,67 @@ class _ChatHeadingWState extends State<_ChatHeadingW> {
 
     bool isScreenSmall = checkIsScreenSmall(context);
     return Consumer<ThemeNotifier>(
-        builder: (context, theme, _) => Container(
-              child: chat.isGC
-                  ? GcContexMenu(
-                      mobile: isScreenSmall
-                          ? (context) {
-                              widget.makeActive(chat);
-                              widget.showSubMenu();
-                            }
-                          : null,
-                      targetGcChat: chat,
-                      child: ListTile(
-                        horizontalTitleGap: 12,
-                        contentPadding:
-                            const EdgeInsets.only(left: 10, right: 8),
-                        enabled: true,
-                        title: Txt(chat.nick,
-                            overflow: TextOverflow.ellipsis,
-                            color: TextColor.onSurfaceVariant),
-                        leading: popMenuButton,
-                        trailing:
-                            Row(mainAxisSize: MainAxisSize.min, children: [
-                          Text("gc",
-                              style: theme.extraTextStyles.chatListGcIndicator),
-                          const SizedBox(width: 5),
-                          unreadIndicator
-                        ]),
-                        selected: chat.active,
-                        onTap: () => widget.makeActive(chat),
+      builder: (context, theme, _) => Container(
+        child: chat.isGC
+            ? GcContexMenu(
+                mobile: isScreenSmall
+                    ? (context) {
+                        widget.makeActive(chat);
+                        widget.showSubMenu();
+                      }
+                    : null,
+                targetGcChat: chat,
+                child: ListTile(
+                  horizontalTitleGap: 12,
+                  contentPadding: const EdgeInsets.only(
+                    left: 10,
+                    right: 8,
+                  ),
+                  enabled: true,
+                  title: Txt(
+                    chat.nick,
+                    overflow: TextOverflow.ellipsis,
+                    color: TextColor.onSurfaceVariant,
+                  ),
+                  leading: popMenuButton,
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        "gc",
+                        style: theme.extraTextStyles.chatListGcIndicator,
                       ),
-                    )
-                  : UserContextMenu(
-                      client: client,
-                      targetUserChat: chat,
-                      child: ListTile(
-                        horizontalTitleGap: 12,
-                        contentPadding:
-                            const EdgeInsets.only(left: 10, right: 8),
-                        enabled: true,
-                        title: Txt(chat.nick,
-                            overflow: TextOverflow.ellipsis,
-                            color: TextColor.onSurfaceVariant),
-                        leading: popMenuButton,
-                        trailing: unreadIndicator,
-                        selected: chat.active,
-                        onTap: () => widget.makeActive(chat),
-                      ),
-                    ),
-            ));
+                      const SizedBox(width: 5),
+                      unreadIndicator,
+                    ],
+                  ),
+                  selected: chat.active,
+                  onTap: () => widget.makeActive(chat),
+                ),
+              )
+            : UserContextMenu(
+                client: client,
+                targetUserChat: chat,
+                child: ListTile(
+                  horizontalTitleGap: 12,
+                  contentPadding: const EdgeInsets.only(
+                    left: 10,
+                    right: 8,
+                  ),
+                  enabled: true,
+                  title: Txt(
+                    chat.nick,
+                    overflow: TextOverflow.ellipsis,
+                    color: TextColor.onSurfaceVariant,
+                  ),
+                  leading: popMenuButton,
+                  trailing: unreadIndicator,
+                  selected: chat.active,
+                  onTap: () => widget.makeActive(chat),
+                ),
+              ),
+      ),
+    );
   }
 }
 
@@ -150,8 +169,10 @@ Future<void> fetchInvite(BuildContext context) async {
 }
 
 void gotoContactsLastMsgTimeScreen(BuildContext context) {
-  Navigator.of(context, rootNavigator: true)
-      .pushNamed(ContactsLastMsgTimesScreen.routeName);
+  Navigator.of(
+    context,
+    rootNavigator: true,
+  ).pushNamed(ContactsLastMsgTimesScreen.routeName);
 }
 
 class ActiveChatsListMenu extends StatefulWidget {
@@ -173,8 +194,10 @@ Future<void> loadInvite(BuildContext context) async {
   if (filePath == "") return;
   var invite = await Golib.decodeInvite(filePath);
   if (context.mounted) {
-    Navigator.of(context, rootNavigator: true)
-        .pushNamed('/verifyInvite', arguments: invite);
+    Navigator.of(
+      context,
+      rootNavigator: true,
+    ).pushNamed('/verifyInvite', arguments: invite);
   }
 }
 
@@ -183,16 +206,21 @@ class _FooterIconButton extends StatelessWidget {
   final IconData icon;
   final String tooltip;
   final VoidCallback onPressed;
-  const _FooterIconButton(
-      {required this.icon,
-      required this.tooltip,
-      required this.onPressed,
-      this.onlyWhenOnline = false});
+  final String? tag;
+  const _FooterIconButton({
+    required this.icon,
+    required this.tooltip,
+    required this.onPressed,
+    this.onlyWhenOnline = false,
+    this.tag,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Consumer2<ThemeNotifier, ConnStateModel>(
-        builder: (context, theme, connState, child) => IconButton(
+      builder: (context, theme, connState, child) => Stack(
+        children: [
+          IconButton(
             splashRadius: 15,
             iconSize: 15,
             tooltip: !onlyWhenOnline || connState.isOnline
@@ -200,7 +228,21 @@ class _FooterIconButton extends StatelessWidget {
                 : "Cannot perform this action when offline",
             disabledColor: theme.theme.disabledColor,
             onPressed: !onlyWhenOnline || connState.isOnline ? onPressed : null,
-            icon: Icon(icon, size: 20)));
+            icon: Icon(icon, size: 20),
+          ),
+          if ((tag ?? "") != "")
+            Positioned(
+              right: 0,
+              child: Box(
+                borderRadius: BorderRadius.circular(5),
+                padding: EdgeInsets.all(2),
+                color: SurfaceColor.primary,
+                child: Txt.S(tag!),
+              ),
+            ),
+        ],
+      ),
+    );
   }
 }
 
@@ -208,23 +250,33 @@ class _SmallScreenFabIconButton extends StatelessWidget {
   final IconData icon;
   final String tooltip;
   final VoidCallback onPressed;
-  const _SmallScreenFabIconButton(
-      {required this.icon, required this.tooltip, required this.onPressed});
+  const _SmallScreenFabIconButton({
+    required this.icon,
+    required this.tooltip,
+    required this.onPressed,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Consumer2<ThemeNotifier, ConnStateModel>(
-        builder: (context, theme, connState, child) => Material(
-            borderRadius: BorderRadius.circular(30),
-            color: theme.colors.surfaceContainerHigh.withValues(alpha: 0.7),
-            child: IconButton(
-                splashRadius: 28,
-                hoverColor: theme.colors.surfaceContainerHigh,
-                iconSize: 40,
-                tooltip: tooltip,
-                disabledColor: theme.theme.disabledColor,
-                onPressed: onPressed,
-                icon: Icon(icon, size: 49))));
+      builder: (context, theme, connState, child) => Material(
+        borderRadius: BorderRadius.circular(30),
+        color: theme.colors.surfaceContainerHigh.withValues(alpha: 0.7),
+        child: Stack(
+          children: [
+            IconButton(
+              splashRadius: 28,
+              hoverColor: theme.colors.surfaceContainerHigh,
+              iconSize: 40,
+              tooltip: tooltip,
+              disabledColor: theme.theme.disabledColor,
+              onPressed: onPressed,
+              icon: Icon(icon, size: 49),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -255,8 +307,10 @@ class _ActiveChatsListMenuState extends State<ActiveChatsListMenu> {
   }
 
   void showGCInvitationsScreen() {
-    Navigator.of(context, rootNavigator: true)
-        .pushNamed(GCInvitationsScreen.routeName);
+    Navigator.of(
+      context,
+      rootNavigator: true,
+    ).pushNamed(GCInvitationsScreen.routeName);
   }
 
   // Returns a callback to make chat c active.
@@ -300,74 +354,110 @@ class _ActiveChatsListMenuState extends State<ActiveChatsListMenu> {
     // Mobile version, display list of chats in entire screen.
     if (isScreenSmall) {
       return Container(
-          padding: const EdgeInsets.all(0),
-          child: Stack(children: [
+        padding: const EdgeInsets.all(0),
+        child: Stack(
+          children: [
             Container(
-                padding:
-                    const EdgeInsets.only(left: 0, right: 5, top: 5, bottom: 5),
-                child: ListView.builder(
-                    physics: const ScrollPhysics(),
-                    controller: sortedListScroll,
-                    scrollDirection: Axis.vertical,
-                    shrinkWrap: true,
-                    itemCount: chats.length,
-                    itemBuilder: (context, index) => _ChatHeadingW(
-                        chats[index], client, makeActive, showSubMenu))),
+              padding: const EdgeInsets.only(
+                left: 0,
+                right: 5,
+                top: 5,
+                bottom: 5,
+              ),
+              child: ListView.builder(
+                physics: const ScrollPhysics(),
+                controller: sortedListScroll,
+                scrollDirection: Axis.vertical,
+                shrinkWrap: true,
+                itemCount: chats.length,
+                itemBuilder: (context, index) => _ChatHeadingW(
+                  chats[index],
+                  client,
+                  makeActive,
+                  showSubMenu,
+                ),
+              ),
+            ),
             Positioned(
-                bottom: 20,
-                right: 10,
-                child: _SmallScreenFabIconButton(
-                    tooltip: "New Message",
-                    icon: Icons.edit_outlined,
-                    onPressed: gotoNewMessage)),
+              bottom: 20,
+              right: 10,
+              child: _SmallScreenFabIconButton(
+                tooltip: "New Message",
+                icon: Icons.edit_outlined,
+                onPressed: gotoNewMessage,
+              ),
+            ),
             Positioned(
-                bottom: 100,
-                right: 10,
-                child: _SmallScreenFabIconButton(
-                    tooltip: "Create new group chat",
-                    icon: Icons.people_outlined,
-                    onPressed: gotoNewGroupChat)),
-          ]));
+              bottom: 100,
+              right: 10,
+              child: _SmallScreenFabIconButton(
+                tooltip: "Create new group chat",
+                icon: Icons.people_outlined,
+                onPressed: gotoNewGroupChat,
+              ),
+            ),
+          ],
+        ),
+      );
     }
 
     // Desktop version, display side menu.
     return SecondarySideMenuList(
-        width: 205,
-        list: ListView.builder(
-            controller: sortedListScroll,
-            scrollDirection: Axis.vertical,
-            itemCount: chats.length,
-            itemBuilder: (context, index) => SecondarySideMenuItem(
-                _ChatHeadingW(chats[index], client, makeActive, showSubMenu))),
-        footer: SizedBox(
-            width: double.infinity,
-            child: Wrap(alignment: WrapAlignment.start, children: [
-              _FooterIconButton(
-                  onlyWhenOnline: true,
-                  tooltip: "Generate Invite",
-                  onPressed: genInvite,
-                  icon: Icons.add_outlined),
-              _FooterIconButton(
-                  tooltip: "List last received message time",
-                  onPressed: () => gotoContactsLastMsgTimeScreen(context),
-                  icon: Icons.list_outlined),
-              _FooterIconButton(
-                  onlyWhenOnline: true,
-                  tooltip: "Fetch, import or accept invite",
-                  onPressed: () => fetchInvite(context),
-                  icon: Icons.get_app_outlined),
-              _FooterIconButton(
-                  tooltip: "Create new group chat",
-                  onPressed: gotoNewGroupChat,
-                  icon: Icons.people_outline),
-              _FooterIconButton(
-                  tooltip: "New Message",
-                  onPressed: gotoNewMessage,
-                  icon: Icons.edit_outlined),
-              _FooterIconButton(
-                  tooltip: "Show GC Invitations",
-                  onPressed: showGCInvitationsScreen,
-                  icon: Icons.groups),
-            ])));
+      width: 205,
+      list: ListView.builder(
+        controller: sortedListScroll,
+        scrollDirection: Axis.vertical,
+        itemCount: chats.length,
+        itemBuilder: (context, index) => SecondarySideMenuItem(
+          _ChatHeadingW(chats[index], client, makeActive, showSubMenu),
+        ),
+      ),
+      footer: SizedBox(
+        width: double.infinity,
+        child: Wrap(
+          alignment: WrapAlignment.start,
+          children: [
+            _FooterIconButton(
+              onlyWhenOnline: true,
+              tooltip: "Generate Invite",
+              onPressed: genInvite,
+              icon: Icons.add_outlined,
+            ),
+            _FooterIconButton(
+              tooltip: "List last received message time",
+              onPressed: () => gotoContactsLastMsgTimeScreen(context),
+              icon: Icons.list_outlined,
+            ),
+            _FooterIconButton(
+              onlyWhenOnline: true,
+              tooltip: "Fetch, import or accept invite",
+              onPressed: () => fetchInvite(context),
+              icon: Icons.get_app_outlined,
+            ),
+            _FooterIconButton(
+              tooltip: "Create new group chat",
+              onPressed: gotoNewGroupChat,
+              icon: Icons.people_outline,
+            ),
+            _FooterIconButton(
+              tooltip: "New Message",
+              onPressed: gotoNewMessage,
+              icon: Icons.edit_outlined,
+            ),
+            Consumer<GCInviteCountModel>(
+                builder: (context, gcInviteCount, child) => _FooterIconButton(
+                      tooltip: "Show GC Invitations",
+                      onPressed: showGCInvitationsScreen,
+                      icon: Icons.groups,
+                      tag: gcInviteCount.value == 0
+                          ? null
+                          : gcInviteCount.value > 9
+                              ? "9+"
+                              : gcInviteCount.value.toString(),
+                    )),
+          ],
+        ),
+      ),
+    );
   }
 }

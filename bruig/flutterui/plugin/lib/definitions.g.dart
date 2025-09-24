@@ -341,6 +341,7 @@ GCAddressBookEntry _$GCAddressBookEntryFromJson(Map<String, dynamic> json) =>
       json['id'] as String,
       json['name'] as String,
       (json['members'] as List<dynamic>).map((e) => e as String).toList(),
+      DateTime.parse(json['last_read_msg_time'] as String),
     );
 
 Map<String, dynamic> _$GCAddressBookEntryToJson(GCAddressBookEntry instance) =>
@@ -348,6 +349,7 @@ Map<String, dynamic> _$GCAddressBookEntryToJson(GCAddressBookEntry instance) =>
       'id': instance.id,
       'name': instance.name,
       'members': instance.members,
+      'last_read_msg_time': instance.lastReadMsgTime.toIso8601String(),
     };
 
 RMGroupList _$RMGroupListFromJson(Map<String, dynamic> json) => RMGroupList(
@@ -377,12 +379,14 @@ GroupChat _$GroupChatFromJson(Map<String, dynamic> json) => GroupChat(
       RMGroupList.fromJson(json['metadata'] as Map<String, dynamic>),
       json['alias'] as String,
       json['rtdt_session_rv'] as String? ?? '',
+      DateTime.parse(json['last_read_msg_time'] as String),
     );
 
 Map<String, dynamic> _$GroupChatToJson(GroupChat instance) => <String, dynamic>{
       'metadata': instance.metadata,
       'alias': instance.alias,
       'rtdt_session_rv': instance.rtdtSessionRV,
+      'last_read_msg_time': instance.lastReadMsgTime.toIso8601String(),
     };
 
 GCInvitation _$GCInvitationFromJson(Map<String, dynamic> json) => GCInvitation(
@@ -439,6 +443,22 @@ Map<String, dynamic> _$GCRemoveUserArgsToJson(GCRemoveUserArgs instance) =>
       'uid': instance.uid,
     };
 
+UpdateLastMsgReadTimeArgs _$UpdateLastMsgReadTimeArgsFromJson(
+        Map<String, dynamic> json) =>
+    UpdateLastMsgReadTimeArgs(
+      json['id'] as String,
+      DateTime.parse(json['time'] as String),
+      json['is_gc'] as bool,
+    );
+
+Map<String, dynamic> _$UpdateLastMsgReadTimeArgsToJson(
+        UpdateLastMsgReadTimeArgs instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'time': dateTimeToGoTime(instance.time),
+      'is_gc': instance.isGC,
+    };
+
 AddressBookEntry _$AddressBookEntryFromJson(Map<String, dynamic> json) =>
     AddressBookEntry(
       json['id'] as String,
@@ -449,6 +469,7 @@ AddressBookEntry _$AddressBookEntryFromJson(Map<String, dynamic> json) =>
       DateTime.parse(json['last_handshake_attempt'] as String),
       base64ToUint8list(json['avatar'] as String?),
       DateTime.parse(json['last_completed_kx'] as String),
+      DateTime.parse(json['last_read_msg_time'] as String),
     );
 
 Map<String, dynamic> _$AddressBookEntryToJson(AddressBookEntry instance) =>
@@ -461,6 +482,7 @@ Map<String, dynamic> _$AddressBookEntryToJson(AddressBookEntry instance) =>
       'last_handshake_attempt': instance.lastHandshakeAttempt.toIso8601String(),
       'avatar': instance.avatar,
       'last_completed_kx': instance.lastCompletedKx.toIso8601String(),
+      'last_read_msg_time': instance.lastReadMsgTime.toIso8601String(),
     };
 
 ShareFileArgs _$ShareFileArgsFromJson(Map<String, dynamic> json) =>

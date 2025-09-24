@@ -367,6 +367,34 @@ func (c *Client) handleGCInvite(ru *RemoteUser, invite rpc.RMGroupInvite) error 
 	return nil
 }
 
+// DeclineGroupChatInvite removes the given group chat invite from the list of
+// outstanding invites.
+func (c *Client) DeclineGroupChatInvite(iid uint64) error {
+	var uid clientintf.UserID
+	var inv rpc.RMGroupInvite
+	err := c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
+		var err error
+		inv, uid, err = c.db.GetGCInvite(tx, iid)
+		if err != nil {
+			return err
+		}
+		return c.db.DelGCInvite(tx, iid)
+	})
+	if err != nil {
+		return err
+	}
+
+	ru, err := c.UserByID(uid)
+	if err != nil {
+		return err
+	}
+
+	ru.log.Infof("Declined invite from user to join GC %q (%s)", inv.Name,
+		inv.ID)
+
+	return nil
+}
+
 // AcceptGroupChatInvite accepts the given invitation, previously received from
 // some user.
 func (c *Client) AcceptGroupChatInvite(iid uint64) error {

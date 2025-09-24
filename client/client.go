@@ -104,10 +104,6 @@ type Config struct {
 	// initialization.
 	Notifications *NotificationManager
 
-	// KXSuggestion is called when a remote user sends a suggestion to KX
-	// with a new user.
-	KXSuggestion func(user *RemoteUser, pii zkidentity.PublicIdentity)
-
 	// FileDownloadConfirmer is called to confirm the start of a file
 	// download with the user.
 	FileDownloadConfirmer func(user *RemoteUser, fm rpc.FileMetadata) bool
@@ -1072,6 +1068,28 @@ func (c *Client) UserLogNick(uid UserID) string {
 func (c *Client) NicksWithPrefix(prefix string) []string {
 	<-c.abLoaded
 	return c.rul.nicksWithPrefix(prefix)
+}
+
+// UpdateLastMsgReadTime updates the last msg read time of the given user or GC.
+func (c *Client) UpdateLastMsgReadTime(id UserID, t time.Time, isGC bool) error {
+	<-c.abLoaded
+	return c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
+		if isGC {
+			gc, err := c.db.GetGC(tx, id)
+			if err != nil {
+				return err
+			}
+			gc.LastReadMsgTime = t
+			return c.db.SaveGC(tx, gc)
+		}
+
+		ab, err := c.db.GetAddressBookEntry(tx, id)
+		if err != nil {
+			return err
+		}
+		ab.LastReadMsgTime = t
+		return c.db.UpdateAddressBookEntry(tx, ab)
+	})
 }
 
 // PM sends a private message to the given user, identified by its public id.

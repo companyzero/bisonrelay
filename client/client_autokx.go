@@ -58,7 +58,11 @@ func (c *Client) RequestMediateIdentity(mediator, target UserID) error {
 
 	// Track that we requested this mediate ID request.
 	err = c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
-		return c.db.StoreMediateIDRequested(tx, mediator, target, true)
+		if err := c.db.StoreMediateIDRequested(tx, mediator, target, true); err != nil {
+			return err
+		}
+
+		return c.db.RemoveKXSuggestion(tx, mediator, target)
 	})
 	if err != nil {
 		return err
