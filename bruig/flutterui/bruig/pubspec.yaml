@@ -90,6 +90,8 @@ dependencies:
   media_kit_libs_macos_audio: any
   flutter_avif: ^3.0.0
   pub_semver: ^2.2.0
+  wakelock_plus: 1.3.3
+  proximity_sensor: ^1.3.9
 
 msix_config:
   display_name: Bison Relay GUI

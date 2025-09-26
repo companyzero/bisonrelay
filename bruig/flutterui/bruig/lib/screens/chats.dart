@@ -32,7 +32,7 @@ class ChatsScreenTitle extends StatelessWidget {
         onPressed: () {
           showInstantCallModal(context, rtc, chat);
         },
-        icon: Icon(Icons.call));
+        icon: Icon(Icons.call_outlined));
   }
 
   @override
@@ -54,19 +54,17 @@ class ChatsScreenTitle extends StatelessWidget {
       // On small screen, show only chat nick/title.
       bool isScreenSmall = checkIsScreenSmall(context);
       if (isScreenSmall) {
-        return Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Txt.L(chat.nick),
-              if (!chat.isGC && rtc.active.active == null)
-                buildInstantCallIcon(context, rtc, chat),
-              Container(
-                  width: 40,
-                  margin: const EdgeInsets.only(
-                      top: 0, bottom: 0, left: 0, right: 5),
-                  child: UserMenuAvatar(client, chat,
-                      showChatSideMenuOnTap: true)),
-            ]);
+        return Row(mainAxisAlignment: MainAxisAlignment.start, children: [
+          Container(
+              width: 40,
+              margin:
+                  const EdgeInsets.only(top: 0, bottom: 0, left: 0, right: 20),
+              child: UserMenuAvatar(client, chat, showChatSideMenuOnTap: true)),
+          Txt.L(chat.nick),
+          const Spacer(),
+          if (!chat.isGC && rtc.active.active == null)
+            buildInstantCallIcon(context, rtc, chat),
+        ]);
       }
 
       // Full chat path.

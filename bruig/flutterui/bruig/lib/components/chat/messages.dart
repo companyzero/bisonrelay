@@ -190,22 +190,21 @@ class _MessagesState extends State<Messages> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        resizeToAvoidBottomInset: true,
-        floatingActionButton: _getFAB(),
-        body: SelectionArea(
-          child: PageStorage(
-            bucket: _pageStorageBucket,
-            child: ScrollablePositionedList.builder(
-              reverse: true,
-              key: PageStorageKey<String>('chat ${chat.nick}'),
-              itemCount: chat.msgs.length,
-              physics: const ClampingScrollPhysics(),
-              itemBuilder: (context, index) =>
-                  Event(chat, chat.msgs[index], client),
-              itemScrollController: widget.itemScrollController,
-              itemPositionsListener: widget.itemPositionsListener,
-            ),
-          ),
-        ));
+      resizeToAvoidBottomInset: true,
+      floatingActionButton: _getFAB(),
+      body: PageStorage(
+        bucket: _pageStorageBucket,
+        child: ScrollablePositionedList.builder(
+          reverse: true,
+          key: PageStorageKey<String>('chat ${chat.nick}'),
+          itemCount: chat.msgs.length,
+          physics: const ClampingScrollPhysics(),
+          itemBuilder: (context, index) =>
+              Event(chat, chat.msgs[index], client),
+          itemScrollController: widget.itemScrollController,
+          itemPositionsListener: widget.itemPositionsListener,
+        ),
+      ),
+    );
   }
 }
