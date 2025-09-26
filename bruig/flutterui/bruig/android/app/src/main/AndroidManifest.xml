@@ -7,6 +7,7 @@
    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"/>
    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
    <uses-permission android:name="android.permission-group.MICROPHONE"/>
+   <uses-permission android:name="android.permission.WAKE_LOCK"/>
    <application
         android:label="bisonrelay"
         android:networkSecurityConfig="@xml/network_security_config"

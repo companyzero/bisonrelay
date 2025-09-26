@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:bruig/models/client.dart';
 import 'package:bruig/models/snackbar.dart';
 import 'package:duration/duration.dart';
@@ -5,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:provider/provider.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 class RTDTLivePeerModel extends ChangeNotifier {
   final String sessionRV;
@@ -318,12 +321,24 @@ class LiveRTDTSessionsModel extends ChangeNotifier {
       _sessions[live.sessionRV] = live;
       notifyListeners();
     }
+    if (Platform.isAndroid) {
+      if (_sessions.isNotEmpty) {
+        debugPrint("Has live RTDT sessions - enabling wake lock");
+        WakelockPlus.enable();
+      }
+    }
   }
 
   void _delLive(RTDTSessionModel live) {
     if (_sessions.containsKey(live.sessionRV)) {
       _sessions.remove(live.sessionRV);
       notifyListeners();
+    }
+    if (Platform.isAndroid) {
+      if (_sessions.isEmpty) {
+        debugPrint("No live RTDT sessions - disabling wake lock");
+        WakelockPlus.disable();
+      }
     }
   }
 
