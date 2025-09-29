@@ -226,6 +226,7 @@ type appState struct {
 	inviteFundsAccount string
 
 	externalEditorForComments atomic.Bool
+	releaseTermOnViewEmbed    bool
 
 	payReqStatuses *xsync.MapOf[chainhash.Hash, lnrpc.Payment_PaymentStatus]
 
@@ -2540,11 +2541,33 @@ func (as *appState) viewRaw(b []byte) (tea.Cmd, error) {
 	}
 	f.Close()
 	c := exec.Command(prog, f.Name())
-	cmd := tea.ExecProcess(c, func(error) tea.Msg {
-		os.Remove(f.Name())
-		return externalViewer{err: err}
-	})
-	return cmd, nil
+
+	if as.releaseTermOnViewEmbed {
+		cmd := tea.ExecProcess(c, func(err error) tea.Msg {
+			if err != nil {
+				as.diagMsg("Error viewing raw data: %v", err)
+			}
+			if err := os.Remove(f.Name()); err != nil {
+				as.diagMsg("Unable to remove tempfile %s: %v", f.Name(), err)
+			}
+			return externalViewerResult{err: err}
+		})
+		return cmd, nil
+	} else {
+		c.Stdout = nil
+		c.Stderr = nil
+		c.Stdin = nil
+		go func() {
+			err := c.Run()
+			if err != nil {
+				as.diagMsg("Unable to run %s: %v", prog, err)
+			}
+			if err := os.Remove(f.Name()); err != nil {
+				as.diagMsg("Unable to remove tempfile %s: %v", f.Name(), err)
+			}
+		}()
+		return nil, nil
+	}
 }
 
 func (as *appState) viewEmbed(embedded mdembeds.EmbeddedArgs) (tea.Cmd, error) {
@@ -2568,15 +2591,26 @@ func (as *appState) viewEmbed(embedded mdembeds.EmbeddedArgs) (tea.Cmd, error) {
 	}
 
 	c := exec.Command(prog, filePath)
-	c.Stdout = nil
-	c.Stderr = nil
-	c.Stdin = nil
-	go func() {
-		err := c.Run()
-		if err != nil {
-			as.diagMsg("Unable to run %s: %v", prog, err)
-		}
-	}()
+	if as.releaseTermOnViewEmbed {
+		cmd := tea.ExecProcess(c, func(err error) tea.Msg {
+			if err != nil {
+				as.diagMsg("Error viewing embed: %v", err)
+			}
+
+			return externalViewerResult{err: err}
+		})
+		return cmd, nil
+	} else {
+		c.Stdout = nil
+		c.Stderr = nil
+		c.Stdin = nil
+		go func() {
+			err := c.Run()
+			if err != nil {
+				as.diagMsg("Unable to run %s: %v", prog, err)
+			}
+		}()
+	}
 
 	return nil, nil
 }
@@ -4516,6 +4550,8 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 
 		winpin:             args.WinPin,
 		inviteFundsAccount: args.InviteFundsAccount,
+
+		releaseTermOnViewEmbed: args.ReleaseTermOnViewEmbed,
 
 		collator: cfg.Collator,
 

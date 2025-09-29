@@ -112,6 +112,8 @@ type config struct {
 	SendRecvReceipts  bool
 	AutoSubPosts      bool
 
+	ReleaseTermOnViewEmbed bool
+
 	AutoHandshakeInterval       time.Duration
 	AutoRemoveIdleUsersInterval time.Duration
 	AutoRemoveIdleUsersIgnore   []string
@@ -290,6 +292,7 @@ func loadConfig() (*config, error) {
 	flagCircuitLimit := fs.Uint("circuitlimit", 32, "max number of open connections per proxy connection")
 	var mimetypes cfgStringArray
 	fs.Var(&mimetypes, "mimetype", "List of mimetypes with viewer")
+	flagReleaseTermOnViewEmbed := fs.Bool("releasetermonviewembed", false, "Release terminal")
 
 	flagBellCmd := fs.String("bellcmd", "", "Bell command on new msgs")
 	flagSyncFreeList := fs.Bool("syncfreelist", true, "")
@@ -620,6 +623,7 @@ func loadConfig() (*config, error) {
 		ResourcesUpstream:      *flagResourcesUpstream,
 		RPCAllowRemoteSendTip:  *flagRPCAllowRemoteSendTip,
 		RPCMaxRemoteSendTipAmt: *flagRPCMaxRemoteSendTipAmt,
+		ReleaseTermOnViewEmbed: *flagReleaseTermOnViewEmbed,
 
 		TipUserRestartDelay:          tipUserRestartDelay,
 		TipUserReRequestInvoiceDelay: tipUserReRequestInvoiceDelay,

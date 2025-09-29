@@ -51,6 +51,10 @@ root = {{ .Root }}
 # in the posts window.
 # externaleditorforcomments = false
 
+# Whether to release terminal (i.e. put brclient on background) while viewing
+# embedded resources (images, etc).
+# releasetermonviewembed = false
+
 # Set whether to read chat logs to build chat history
 # noloadchathistory = false
 

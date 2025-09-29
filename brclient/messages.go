@@ -184,7 +184,7 @@ type lnOpenChanResult struct {
 	err error
 }
 
-type externalViewer struct {
+type externalViewerResult struct {
 	err error
 }
 
