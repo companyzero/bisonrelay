@@ -684,13 +684,6 @@ func (pw postWindow) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	switch msg := msg.(type) {
-	case externalViewer:
-		if msg.err != nil {
-			pw.as.log.Errorf("external viewer failed: %v", msg.err)
-		} else {
-			pw.as.log.Infof("external viewer successfully closed")
-		}
-
 	case tea.WindowSizeMsg: // resize window
 		pw.as.winW = msg.Width
 		pw.as.winH = msg.Height
