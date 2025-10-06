@@ -948,9 +948,15 @@ func (db *DB) HealthCheck(ctx context.Context) error {
 		return err
 	}
 
-	insertTime := time.Now().Format(time.DateOnly)
+	insertTime := time.Now().UTC()
+
+	err = db.CreatePartition(ctx, insertTime)
+	if err != nil {
+		return err
+	}
+
 	_, err = db.db.Exec(ctx, "INSERT INTO data VALUES ($1, $2, $3, now());",
-		rv, payload[:], insertTime)
+		rv, payload[:], insertTime.Format(time.DateOnly))
 	if err != nil {
 		return err
 	}
