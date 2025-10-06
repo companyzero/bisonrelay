@@ -29,7 +29,7 @@ type Server struct {
 
 	// serverMap tracks the available brserver instances. It's a map from
 	// token to last brserver status report.
-	serverMap map[string]*rpc.SeederCommandStatus
+	serverMap map[string]rpc.SeederCommandStatus
 }
 
 // New creates a new seeder server.
@@ -56,7 +56,8 @@ func New(opts ...Option) (*Server, error) {
 			ReadBufferSize:   1024,
 			WriteBufferSize:  1024,
 		},
-		mux: http.NewServeMux(),
+		mux:       http.NewServeMux(),
+		serverMap: make(map[string]rpc.SeederCommandStatus),
 	}
 
 	// serve api for brservers

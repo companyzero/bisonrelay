@@ -81,18 +81,25 @@ func (s *Server) processStatusUpdate(mytoken string, status rpc.SeederCommandSta
 	if now.Sub(time.Unix(status.LastUpdated, 0)) > 5*time.Minute {
 		return false, errLastUpdateTooOld
 	}
-	status.LastUpdated = now.Unix()
 
 	// Helper to check if time since offlineTime is > 1 minute.
 	offlineTooLong := func(offlineTime time.Time) bool {
 		return !offlineTime.IsZero() && now.Sub(offlineTime) > s.cfg.offlineLimit
 	}
 
+	// Helper to log the correct offline time.
+	logOfflineSince := func(subsys string, t time.Time) string {
+		if t.IsZero() {
+			return ""
+		}
+		return fmt.Sprintf("%s offline for %s", subsys, now.Sub(t))
+	}
+
 	// Rest of function is with state mutex locked.
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 
-	s.serverMap[mytoken] = &status
+	s.serverMap[mytoken] = status
 
 	// Relevant vars.
 	uptime := now.Sub(s.timeStarted)
@@ -152,20 +159,28 @@ func (s *Server) processStatusUpdate(mytoken string, status rpc.SeederCommandSta
 			s.serverMaster.nodeoffline = time.Time{} // LN came back.
 		}
 
-		s.log.Warnf("current master %v not healthy (%v since db offline, %v since dcrlnd offline)",
-			mytoken, now.Sub(s.serverMaster.dboffline), now.Sub(s.serverMaster.nodeoffline))
+		s.log.Warnf("current master %v not healthy %s %s",
+			mytoken, logOfflineSince("db", s.serverMaster.dboffline),
+			logOfflineSince("dcrlnd", s.serverMaster.nodeoffline))
 
 	case offlineTooLong(time.Unix(masterStatus.LastUpdated, 0)):
-		s.log.Warnf("master %v has been offline too long -- promoting %v", s.serverMaster.token, mytoken)
+		s.log.Warnf("master %v has been offline too long (%s) -- promoting %v",
+			s.serverMaster.token, now.Sub(time.Unix(masterStatus.LastUpdated, 0)), mytoken)
 		action = actionPromote
 
 	case offlineTooLong(s.serverMaster.dboffline):
-		s.log.Warnf("master %v db has been offline too long -- promoting %v", s.serverMaster.token, mytoken)
+		s.log.Warnf("master %v db has been offline too long (%s) -- promoting %v",
+			s.serverMaster.token, now.Sub(s.serverMaster.dboffline), mytoken)
 		action = actionPromote
 
 	case offlineTooLong(s.serverMaster.nodeoffline):
-		s.log.Warnf("master %v dcrlnd has been offline too long -- promoting %v", s.serverMaster.token, mytoken)
+		s.log.Warnf("master %v dcrlnd has been offline too long (%s) -- promoting %v",
+			s.serverMaster.token, now.Sub(s.serverMaster.nodeoffline), mytoken)
 		action = actionPromote
+
+	default:
+		s.log.Infof("status update from non-master %v (dbOnline=%v nodeOnline=%v)",
+			mytoken, status.Database.Online, status.Node.Online)
 	}
 
 	// Take action.
