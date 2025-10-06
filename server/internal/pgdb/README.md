@@ -20,7 +20,7 @@ $ psql -U postgres
 
 At the `psql` shell:
 ```sql
-postgres=# CREATE ROLE brdata WITH LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOREPLICATION CONNECTION LIMIT -1 PASSWORD 'xxxxxx';
+postgres=# CREATE ROLE brdata WITH LOGIN REPLICATION NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT CONNECTION LIMIT -1 PASSWORD 'xxxxxx';
 postgres=# CREATE TABLESPACE brbulk OWNER brdata LOCATION '/path/to/bulk_data';
 postgres=# CREATE TABLESPACE brindex OWNER brdata LOCATION '/path/to/index_data';
 postgres=# CREATE DATABASE brdata OWNER brdata TABLESPACE brbulk;

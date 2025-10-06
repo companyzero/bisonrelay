@@ -731,6 +731,7 @@ func NewServer(cfg *settings.Settings) (*ZKS, error) {
 			brpgdb.WithPassphrase(cfg.PGPassphrase),
 			brpgdb.WithBulkDataTablespace(cfg.PGBulkTableSpace),
 			brpgdb.WithIndexTablespace(cfg.PGIndexTableSpace),
+			brpgdb.WithSlotName(cfg.PGSlotName),
 		}
 		if cfg.PGServerCA != "" {
 			opts = append(opts, brpgdb.WithTLS(cfg.PGServerCA))

@@ -114,6 +114,9 @@ type DB struct {
 	dataPartitions           map[string]struct{}
 	paidSubsPartitions       map[string]struct{}
 	redeemedPushesPartitions map[string]struct{}
+
+	// slot name is used during replication.
+	repSlotName string
 }
 
 func sqlTxROInternal(ctx context.Context, conn *pgx.Conn, f func(tx pgx.Tx) error) error {
@@ -715,9 +718,39 @@ func checkDatabaseSetting(ctx context.Context, tx pgx.Tx, name, expected string)
 	return nil
 }
 
+// createSlot creates a slot for replication.
+func (db *DB) createSlot(ctx context.Context, tx pgx.Tx) error {
+	if db.repSlotName == "" {
+		return nil
+	}
+
+	// Ensure replication slot exists.
+	var c int
+	err := tx.QueryRow(ctx, "SELECT COUNT(*) FROM pg_replication_slots WHERE slot_name = $1;",
+		db.repSlotName).Scan(&c)
+	if err != nil {
+		return err
+	}
+	if c == 0 {
+		// Create slot.
+		var s string
+		err = tx.QueryRow(ctx, "SELECT slot_name FROM pg_create_physical_replication_slot($1);",
+			db.repSlotName).Scan(&s)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // checkDatabaseSanity return an error if required database settings are not
 // configured as needed for necessary support.
 func (db *DB) checkDatabaseSanity(ctx context.Context, tx pgx.Tx) error {
+	// Create replication slot if needed.
+	if err := db.createSlot(ctx, tx); err != nil {
+		return err
+	}
+
 	// Ensure the partition pruning config parameter is enabled.
 	const pruningName = "enable_partition_pruning"
 	if err := checkDatabaseSetting(ctx, tx, pruningName, "on"); err != nil {
@@ -1428,6 +1461,7 @@ type options struct {
 	serverCA           string
 	indexTablespace    string
 	bulkDataTablespace string
+	repSlotName        string
 }
 
 // Option represents a modification to the configuration parameters used by
@@ -1508,6 +1542,13 @@ func WithTLS(serverCA string) Option {
 	}
 }
 
+// WithSlotName sets the name of the slot used for replication.
+func WithSlotName(slotname string) Option {
+	return func(o *options) {
+		o.repSlotName = slotname
+	}
+}
+
 // Open opens a connection to a database, potentially creates any necessary data
 // tables and partitions as needed, and returns a backend instance that is safe
 // for concurrent use.
@@ -1566,6 +1607,7 @@ func Open(ctx context.Context, opts ...Option) (*DB, error) {
 		dataPartitions:           make(map[string]struct{}),
 		paidSubsPartitions:       make(map[string]struct{}),
 		redeemedPushesPartitions: make(map[string]struct{}),
+		repSlotName:              o.repSlotName,
 	}
 
 	afterConnect := func(ctx context.Context, sqlDB *pgx.Conn) error {
