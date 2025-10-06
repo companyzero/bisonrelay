@@ -14,6 +14,18 @@ import (
 
 type DialFunc func(context.Context, string, string) (net.Conn, error)
 
+// chooseServer chooses the correct server based on the reply from the seeder.
+func chooseServer(apiRes rpc.SeederClientAPI) string {
+	for _, sg := range apiRes.ServerGroups {
+		if !sg.IsMaster || !sg.Online {
+			continue
+		}
+
+		return sg.Server
+	}
+	return ""
+}
+
 // QuerySeeder queries a BR seeder service and returns the address of an active
 // BR server instance.
 func QuerySeeder(ctx context.Context, apiURL string, dialFunc DialFunc) (string, error) {
@@ -45,15 +57,7 @@ func QuerySeeder(ctx context.Context, apiURL string, dialFunc DialFunc) (string,
 	if err = json.Unmarshal(body, &api); err != nil {
 		return "", fmt.Errorf("failed to unmarshal seeder response: %w", err)
 	}
-	var server string
-	for i := range api.ServerGroups {
-		if api.ServerGroups[i].IsMaster {
-			server = api.ServerGroups[i].Server
-			break
-		}
-
-		// FIXME: check if online is set.
-	}
+	server := chooseServer(api)
 	if server == "" {
 		return "", fmt.Errorf("seeder returned no master servers")
 	}
