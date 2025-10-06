@@ -16,6 +16,7 @@ import (
 	"testing"
 	"time"
 
+	seederserver "github.com/companyzero/bisonrelay/brseeder/server"
 	"github.com/companyzero/bisonrelay/client"
 	"github.com/companyzero/bisonrelay/client/clientdb"
 	"github.com/companyzero/bisonrelay/client/clientintf"
@@ -28,6 +29,7 @@ import (
 	"github.com/companyzero/bisonrelay/server"
 	"github.com/companyzero/bisonrelay/server/settings"
 	"github.com/companyzero/bisonrelay/zkidentity"
+	"github.com/decred/dcrlnd/lnrpc"
 	"github.com/decred/slog"
 	"golang.org/x/exp/slices"
 	"golang.org/x/text/collate"
@@ -35,6 +37,17 @@ import (
 
 const (
 	defaultChunkSize = 8
+
+	// seederOfflineLimit is the time after which a server with an offline
+	// subsystem is considered offline by the test seeder service.
+	seederOfflineLimit = 2 * time.Second
+
+	// seederToken is the seeder token used by a test server in the seeder.
+	seederToken = "e2etestserver"
+
+	// mockSeederToken is the seeder token used when mocking a server for
+	// the seeder.
+	mockSeederToken = "e2emockserver"
 )
 
 type testScaffoldCfg struct {
@@ -42,6 +55,7 @@ type testScaffoldCfg struct {
 	logScanner    io.Writer
 	rootDir       string
 	runRtdtServer bool
+	runSeeder     bool
 
 	serverMaxMsgSizeVersion rpc.MaxMsgSizeVersion
 }
@@ -386,6 +400,11 @@ type testScaffold struct {
 	rtsvrAddr      string
 	rtsvrPub       *zkidentity.FixedSizeSntrupPublicKey
 	rtsvrCookieKey *zkidentity.FixedSizeSymmetricKey
+
+	seeder     *seederserver.Server
+	seederAddr string
+
+	lnRpc mockLnrpc
 }
 
 func (ts *testScaffold) defaultNewClientCfg(name string) *clientCfg {
@@ -669,6 +688,17 @@ func (ts *testScaffold) newTestServer() {
 		cfg.RTDTCookieKey = ts.rtsvrCookieKey
 	}
 
+	if ts.seeder != nil {
+		cfg.SeederAddr = ts.seederAddr
+		cfg.SeederDisable = false
+		cfg.SeederToken = seederToken
+		cfg.LNRpcGetInfoMock = ts.lnRpc.GetInfo
+		cfg.SeederInsecure = true
+		cfg.SeederDryRun = false
+	} else {
+		cfg.SeederDisable = true
+	}
+
 	s, err := server.NewServer(cfg)
 	if err != nil {
 		t.Fatal(err)
@@ -745,6 +775,11 @@ func newTestScaffold(t *testing.T, cfg testScaffoldCfg) *testScaffold {
 		}
 	})
 
+	ts.lnRpc.setGetInfoResponse(&lnrpc.GetInfoResponse{
+		Alias:        seederToken,
+		ServerActive: true,
+	}, nil)
+
 	if cfg.runRtdtServer {
 		listener, err := net.ListenUDP("udp", net.UDPAddrFromAddrPort(netip.MustParseAddrPort("127.0.0.1:0")))
 		if err != nil {
@@ -781,6 +816,38 @@ func newTestScaffold(t *testing.T, cfg testScaffoldCfg) *testScaffold {
 			}
 		}()
 		ts.rtsvrPub = serverPub
+	}
+
+	if cfg.runSeeder {
+		listener, err := net.ListenTCP("tcp", net.TCPAddrFromAddrPort(netip.MustParseAddrPort("127.0.0.1:0")))
+		if err != nil {
+			ts.t.Fatalf("Unable to listen on UDP: %v", err)
+		}
+		ts.seederAddr = listener.Addr().String()
+
+		logf, err := os.Create(filepath.Join(cfg.rootDir, "seeder.log"))
+		if err != nil {
+			ts.t.Fatalf("unable to create RTDT log file: %v", err)
+		}
+		ts.logFiles = append(ts.logFiles, logf)
+		logBknd := ts.tlb.NamedSubLogger("seeder", logf)
+		seederLogger := logBknd("SEED")
+
+		ts.seeder, err = seederserver.New(
+			seederserver.WithLogger(seederLogger),
+			seederserver.WithListeners([]net.Listener{listener}),
+			seederserver.WithPromotionTimeLimits(time.Second, seederOfflineLimit),
+			seederserver.WithTokens(map[string]struct{}{mockSeederToken: {}, seederToken: {}}),
+		)
+		if err != nil {
+			t.Fatal(err)
+		}
+		go func() {
+			err := ts.seeder.Run(ts.ctx)
+			if err != nil && !errors.Is(err, context.Canceled) {
+				seederLogger.Errorf("RTDT server Run() errored: %v", err)
+			}
+		}()
 	}
 
 	if !cfg.skipNewServer {

@@ -72,7 +72,10 @@ type ZKS struct {
 	logMonit    slog.Logger
 	dbCtx       context.Context
 	dbCtxCancel func()
-	isMaster    atomic.Bool
+
+	// isMaster tracks whether the seeder service made this server the
+	// master.
+	isMaster atomic.Bool
 
 	// sessions pool
 	sessionsMtx sync.Mutex
@@ -95,10 +98,11 @@ type ZKS struct {
 	rtCookieKey        *zkidentity.FixedSizeSymmetricKey
 	rtDecodeCookieKeys []*zkidentity.FixedSizeSymmetricKey
 
-	seederURL     string
-	seederToken   string
-	seederDisable bool
-	seederDryRun  bool
+	seederURL             string
+	seederToken           string
+	seederDisable         bool
+	seederDryRun          bool
+	seederForceUpdateChan chan chan bool
 }
 
 // BoundAddrs returns the addresses the server is bound to listen to.
@@ -107,6 +111,29 @@ func (z *ZKS) BoundAddrs() []net.Addr {
 	res := append([]net.Addr{}, z.listenAddrs...)
 	z.Unlock()
 	return res
+}
+
+// IsMaster returns true if this is the master server.
+func (z *ZKS) IsMaster() bool {
+	return z.isMaster.Load()
+}
+
+// SeederForceUpdate tries to send an update to the seeder. Returns whether the
+// seeder made this server the master.
+func (z *ZKS) SeederForceUpdate(ctx context.Context) (bool, error) {
+	c := make(chan bool, 1)
+	select {
+	case z.seederForceUpdateChan <- c:
+	case <-ctx.Done():
+		return false, ctx.Err()
+	}
+
+	select {
+	case res := <-c:
+		return res, nil
+	case <-ctx.Done():
+		return false, ctx.Err()
+	}
 }
 
 // unmarshal performs a limited json Unmarshal operation.
@@ -424,6 +451,7 @@ func (z *ZKS) dbMonitoringWithSeeder(ctx context.Context, ws *wsrpc.Client) erro
 	const checkInterval = 15 * time.Second
 
 	var dryRunIsMaster *bool
+	var forceCheckReplyChan chan bool
 	for {
 		select {
 		case <-ctx.Done():
@@ -431,6 +459,8 @@ func (z *ZKS) dbMonitoringWithSeeder(ctx context.Context, ws *wsrpc.Client) erro
 		case <-ws.Done():
 			return ws.Err()
 		case <-time.After(checkInterval):
+			// Perform check.
+		case forceCheckReplyChan = <-z.seederForceUpdateChan:
 			// Perform check.
 		}
 
@@ -461,7 +491,13 @@ func (z *ZKS) dbMonitoringWithSeeder(ctx context.Context, ws *wsrpc.Client) erro
 		}
 
 		// TODO: Is z.lnRpc always valid?
-		lnInfo, lnErr := z.lnRpc.GetInfo(ctx, &lnrpc.GetInfoRequest{})
+		var lnInfo *lnrpc.GetInfoResponse
+		var lnErr error
+		if z.settings.LNRpcGetInfoMock != nil {
+			lnInfo, lnErr = z.settings.LNRpcGetInfoMock() // Used in E2E tests.
+		} else {
+			lnInfo, lnErr = z.lnRpc.GetInfo(ctx, &lnrpc.GetInfoRequest{})
+		}
 		if lnErr != nil {
 			z.logMonit.Errorf("Failed to get dcrlnd info: %v", lnErr)
 		} else {
@@ -498,6 +534,12 @@ func (z *ZKS) dbMonitoringWithSeeder(ctx context.Context, ws *wsrpc.Client) erro
 			*dryRunIsMaster = reply.Master
 		} else {
 			oldIsMaster = z.isMaster.Swap(reply.Master)
+		}
+
+		// If this was a request to send an update, send the reply.
+		if forceCheckReplyChan != nil {
+			forceCheckReplyChan <- reply.Master
+			forceCheckReplyChan = nil
 		}
 
 		if oldIsMaster == reply.Master {
@@ -597,7 +639,7 @@ func (z *ZKS) Run(ctx context.Context) error {
 	})
 
 	// Monitor the database mode.
-	if !z.seederDisable && z.lnRpc != nil {
+	if !z.seederDisable && (z.lnRpc != nil || z.settings.LNRpcGetInfoMock != nil) {
 		g.Go(func() error { return z.dbMonitoringLoop(gctx) })
 	}
 
@@ -664,10 +706,11 @@ func NewServer(cfg *settings.Settings) (*ZKS, error) {
 
 		sessions: make(map[sessionID]*sessionContext),
 
-		seederURL:     fmt.Sprintf("wss://%v/api/v1/status", cfg.SeederAddr),
-		seederToken:   cfg.SeederToken,
-		seederDisable: cfg.SeederDisable,
-		seederDryRun:  cfg.SeederDryRun,
+		seederURL:             fmt.Sprintf("%s://%v/api/v1/status", cfg.SeederProto(), cfg.SeederAddr),
+		seederToken:           cfg.SeederToken,
+		seederDisable:         cfg.SeederDisable,
+		seederDryRun:          cfg.SeederDryRun,
+		seederForceUpdateChan: make(chan chan bool),
 	}
 
 	// Init db.
