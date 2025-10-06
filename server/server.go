@@ -9,6 +9,7 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -68,6 +69,7 @@ type ZKS struct {
 	logBknd     *logBackend
 	log         slog.Logger
 	logConn     slog.Logger
+	logMonit    slog.Logger
 	dbCtx       context.Context
 	dbCtxCancel func()
 	isMaster    atomic.Bool
@@ -416,6 +418,145 @@ func (z *ZKS) expirationLoop(ctx context.Context) error {
 	}
 }
 
+// dbMonitoringWithSeeder keeps monitoring the server status while connected to
+// a seeder.
+func (z *ZKS) dbMonitoringWithSeeder(ctx context.Context, ws *wsrpc.Client) error {
+	const checkInterval = 15 * time.Second
+
+	var dryRunIsMaster *bool
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-ws.Done():
+			return ws.Err()
+		case <-time.After(checkInterval):
+			// Perform check.
+		}
+
+		healthy := true // XXX
+
+		isMaster, err := z.db.IsMaster(ctx)
+		if err != nil {
+			z.logMonit.Errorf("Failed to check master status: %v", err)
+			healthy = false
+		}
+		if isMaster && healthy {
+			if err = z.db.HealthCheck(ctx); err != nil {
+				z.logMonit.Errorf("DB HealthCheck() errored: %v", err)
+				healthy = false
+			}
+		}
+
+		var status rpc.SeederCommandStatus
+		status.LastUpdated = time.Now().Unix()
+		status.Database.Online = healthy
+		status.Database.Master = isMaster
+
+		// In dryRun mode, lie to seeder and just say we're following
+		// whatever they reported we should be.
+		if z.seederDryRun && dryRunIsMaster != nil {
+			status.Database.Master = *dryRunIsMaster
+			isMaster = *dryRunIsMaster
+		}
+
+		// TODO: Is z.lnRpc always valid?
+		lnInfo, lnErr := z.lnRpc.GetInfo(ctx, &lnrpc.GetInfoRequest{})
+		if lnErr != nil {
+			z.logMonit.Errorf("Failed to get dcrlnd info: %v", lnErr)
+		} else {
+			status.Node.Alias = lnInfo.Alias
+			status.Node.Online = lnInfo.ServerActive
+			status.Node.PublicKey = lnInfo.IdentityPubkey
+			status.Node.BlockHeight = int64(lnInfo.BlockHeight)
+			status.Node.NumPeers = lnInfo.NumPeers
+			status.Node.SyncedToChain = lnInfo.SyncedToChain
+			status.Node.SyncedToGraph = lnInfo.SyncedToGraph
+		}
+
+		z.logMonit.Debugf("Reporting to seeder: isMaster=%v dbOnline=%v"+
+			"nodeOnline=%v (dryRun=%v)", status.Database.Master,
+			status.Database.Online, status.Node, z.seederDryRun)
+
+		var reply rpc.SeederCommandStatusReply
+		if err = ws.Call(ctx, "status", &reply, status); err != nil {
+			z.logMonit.Errorf("Failed to send status to seeder: %v", err)
+			continue // Wait and try again.
+		}
+
+		// Decide what to do based on the seeder's reply on whether we
+		// should be master or not.
+
+		var oldIsMaster bool
+		if z.seederDryRun {
+			// In dryRun mode, keep the current state (whatever it
+			// is).
+			oldIsMaster = isMaster
+			if dryRunIsMaster == nil {
+				dryRunIsMaster = new(bool)
+			}
+			*dryRunIsMaster = reply.Master
+		} else {
+			oldIsMaster = z.isMaster.Swap(reply.Master)
+		}
+
+		if oldIsMaster == reply.Master {
+			z.logMonit.Debugf("Master status did not change (isMaster=%v)",
+				oldIsMaster)
+			continue // Wait to send next update.
+		}
+
+		if reply.Master {
+			z.logMonit.Warnf("Server promoted to master! (dryrun=%v)",
+				z.seederDryRun)
+			// CHECK: Shouldn't we run something to promote DB here?
+			continue
+		}
+
+		// brseeder says we aren't master! Only close when not running
+		// in dryRun mode.
+		z.logMonit.Warnf("Server demoted to secondary! (dryrun=%v)", z.seederDryRun)
+		if !z.seederDryRun {
+			z.closeSessions()
+		}
+	}
+}
+
+// dbMonitoringLoop is the main loop for monitoring the DB/dcrlnd and reporting
+// the server status to a seeder.
+func (z *ZKS) dbMonitoringLoop(ctx context.Context) error {
+	const connRetryTime = 5 * time.Second
+	for ctx.Err() == nil {
+		z.logMonit.Debugf("Connecting to seeder at %v", z.seederURL)
+		ws, err := wsrpc.Dial(ctx, z.seederURL, wsrpc.WithBearerAuthString(z.seederToken))
+		if err != nil {
+			z.logMonit.Errorf("Failed to dial seeder at %v: %v", z.seederURL, err)
+			z.logMonit.Warnf("Considering brserver non-master due to missing seeder conn (dryRun=%v)",
+				z.seederDryRun)
+			if !z.seederDryRun {
+				z.isMaster.Store(false)
+				z.closeSessions()
+			}
+
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-time.After(connRetryTime):
+			}
+			continue
+		}
+
+		z.logMonit.Infof("Connection established to seeder %v", z.seederURL)
+
+		err = z.dbMonitoringWithSeeder(ctx, ws)
+		if !errors.Is(err, context.Canceled) {
+			z.logMonit.Warnf("Connection to seeder dropped: %v", err)
+		}
+	}
+
+	return ctx.Err()
+}
+
 func (z *ZKS) Run(ctx context.Context) error {
 	defer z.log.Infof("End of times")
 
@@ -457,108 +598,7 @@ func (z *ZKS) Run(ctx context.Context) error {
 
 	// Monitor the database mode.
 	if !z.seederDisable && z.lnRpc != nil {
-		var lastReply *bool
-		g.Go(func() error {
-			for {
-				select {
-				case <-gctx.Done():
-					return nil
-				default:
-				}
-				z.log.Infof("[ws] connecting to seeder at %v", z.seederURL)
-				ws, err := wsrpc.Dial(gctx, z.seederURL, wsrpc.WithBearerAuthString(z.seederToken))
-				if err != nil {
-					if !z.seederDryRun {
-						z.isMaster.Store(false)
-						z.closeSessions()
-					}
-
-					z.log.Errorf("[ws] failed to dial seeder at %v: %v", z.seederURL, err)
-					time.Sleep(5 * time.Second)
-					continue
-				}
-				z.log.Infof("[ws] connection established")
-
-				go func() {
-					for {
-						select {
-						case <-ws.Done():
-							return
-						case <-time.After(15 * time.Second):
-							healthy := true // XXX
-
-							isMaster, err := z.db.IsMaster(gctx)
-							if err != nil {
-								z.log.Errorf("failed to check master status: %v", err)
-								healthy = false
-							}
-							if isMaster && healthy {
-								if err = z.db.HealthCheck(ctx); err != nil {
-									z.log.Errorf("[BACKEND] healthcheck: %v", err)
-									healthy = false
-								}
-							}
-
-							var status rpc.SeederCommandStatus
-							status.LastUpdated = time.Now().Unix()
-							status.Database.Online = healthy
-							status.Database.Master = isMaster
-
-							if z.seederDryRun && lastReply != nil {
-								status.Database.Master = *lastReply
-								isMaster = *lastReply
-							}
-
-							// TODO: Is z.lnRpc always valid?
-							lnInfo, lnErr := z.lnRpc.GetInfo(ctx, &lnrpc.GetInfoRequest{})
-							if lnErr != nil {
-								z.log.Errorf("[BACKEND] failed to get dcrlnd info: %v", lnErr)
-							} else {
-								status.Node.Alias = lnInfo.Alias
-								status.Node.Online = lnInfo.ServerActive
-								status.Node.PublicKey = lnInfo.IdentityPubkey
-								status.Node.BlockHeight = int64(lnInfo.BlockHeight)
-								status.Node.NumPeers = lnInfo.NumPeers
-								status.Node.SyncedToChain = lnInfo.SyncedToChain
-								status.Node.SyncedToGraph = lnInfo.SyncedToGraph
-							}
-
-							var reply rpc.SeederCommandStatusReply
-							if err = ws.Call(ctx, "status", &reply, status); err != nil {
-								z.log.Errorf("[ws] failed to send status: %v", err)
-							} else {
-								var old bool
-								if z.seederDryRun {
-									old = isMaster
-									response := reply.Master
-									lastReply = &response
-								} else {
-									old = z.isMaster.Swap(reply.Master)
-								}
-								if old != reply.Master {
-									if reply.Master {
-										z.log.Warnf("[ws] pg_promote dryrun:%v", z.seederDryRun)
-									} else {
-										if !z.seederDryRun {
-											// brseeder says we aren't master!
-											z.isMaster.Store(false)
-											z.closeSessions()
-										}
-										z.log.Warnf("[ws] brseeder says secondary dryrun:%v", z.seederDryRun)
-									}
-								}
-							}
-						}
-					}
-				}()
-				select {
-				case <-gctx.Done():
-					return nil
-				case <-ws.Done():
-					z.log.Warnf("[ws] connection dropped: %v", ws.Err())
-				}
-			}
-		})
+		g.Go(func() error { return z.dbMonitoringLoop(gctx) })
 	}
 
 	// Run the expiration loop.
@@ -611,6 +651,7 @@ func NewServer(cfg *settings.Settings) (*ZKS, error) {
 		logBknd:     logBknd,
 		log:         logBknd.logger("SERV"),
 		logConn:     logBknd.logger("CONN"),
+		logMonit:    logBknd.logger("MONI"),
 		subscribers: make(map[ratchet.RVPoint]*sessionContext),
 		pingLimit:   cfg.PingLimit,
 		dbCtx:       dbCtx,
