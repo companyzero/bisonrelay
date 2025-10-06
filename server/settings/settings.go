@@ -13,6 +13,7 @@ import (
 	"github.com/companyzero/bisonrelay/rpc"
 	brpgdb "github.com/companyzero/bisonrelay/server/internal/pgdb"
 	"github.com/companyzero/bisonrelay/zkidentity"
+	"github.com/decred/dcrlnd/lnrpc"
 	"github.com/vaughan0/go-ini"
 	strduration "github.com/xhit/go-str2duration/v2"
 )
@@ -102,6 +103,14 @@ type Settings struct {
 
 	// SeederDryRun pretends to follow seeder's commands.
 	SeederDryRun bool
+
+	// SeederInsecure may be set to true to use ws:// instead of wss:// as
+	// protocol.
+	SeederInsecure bool
+
+	// LNRpcGetInfoMock may be set during tests to mock the lnRpc.GetInfo()
+	// call.
+	LNRpcGetInfoMock func() (*lnrpc.GetInfoResponse, error)
 }
 
 var (
@@ -160,6 +169,14 @@ func New() *Settings {
 
 		SeederDisable: true,
 		SeederDryRun:  true,
+	}
+}
+
+func (s *Settings) SeederProto() string {
+	if s.SeederInsecure {
+		return "ws"
+	} else {
+		return "wss"
 	}
 }
 
@@ -416,6 +433,10 @@ func (s *Settings) Load(filename string) error {
 		return err
 	}
 	err = iniBool(cfg, &s.SeederDryRun, "seeder", "dryrun")
+	if err != nil && !errors.Is(err, errIniNotFound) {
+		return err
+	}
+	err = iniBool(cfg, &s.SeederInsecure, "seeder", "insecure")
 	if err != nil && !errors.Is(err, errIniNotFound) {
 		return err
 	}

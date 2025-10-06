@@ -48,7 +48,15 @@ func WithLogger(log slog.Logger) Option {
 	}
 }
 
-func withPromotionTimeLimits(waitForMaster, offlineLimit time.Duration) Option {
+// WithPromotionTimeLimits sets the time limits for promotion of a server to
+// master.
+//
+// waitForMaster is the minimum seeder uptime before any server that does not
+// identify itself as master to be promoted to master.
+//
+// offlineLimit is the maximum amount of time a server may have one of its
+// subsystems offline after which it is demoted from being master.
+func WithPromotionTimeLimits(waitForMaster, offlineLimit time.Duration) Option {
 	return func(c *config) {
 		c.waitForMaster = waitForMaster
 		c.offlineLimit = offlineLimit
