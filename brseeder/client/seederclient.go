@@ -3,6 +3,7 @@ package seederclient
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -25,6 +26,8 @@ func chooseServer(apiRes rpc.SeederClientAPI) string {
 	}
 	return ""
 }
+
+var ErrNoServers = errors.New("seeder returned no master servers")
 
 // QuerySeeder queries a BR seeder service and returns the address of an active
 // BR server instance.
@@ -59,7 +62,7 @@ func QuerySeeder(ctx context.Context, apiURL string, dialFunc DialFunc) (string,
 	}
 	server := chooseServer(api)
 	if server == "" {
-		return "", fmt.Errorf("seeder returned no master servers")
+		return "", ErrNoServers
 	}
 	return server, nil
 }

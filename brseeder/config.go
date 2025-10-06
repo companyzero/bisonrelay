@@ -1,12 +1,16 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"net"
 	"os"
 	"path/filepath"
+	"runtime"
 
+	"decred.org/dcrwallet/v4/version"
 	"github.com/BurntSushi/toml"
+	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/decred/slog"
 	"github.com/jrick/logrotate/rotator"
 )
@@ -18,13 +22,26 @@ type config struct {
 }
 
 var defaultHomeDir = AppDataDir("brseeder", false)
+var defaultCfgFile = filepath.Join(defaultHomeDir, "brseeder.conf")
 
 func loadConfig() (*config, error) {
-	err := os.MkdirAll(defaultHomeDir, 0o700)
+	cfgFileFlag := flag.String("cfg", defaultCfgFile, "Config file")
+	versionFlag := flag.Bool("version", false, "Show version")
+	flag.Parse()
+
+	if *versionFlag {
+		fmt.Fprintf(os.Stderr, "brseeder %s (%s) protocol version %d\n",
+			version.String(), runtime.Version(), rpc.ProtocolVersion)
+		os.Exit(0)
+	}
+
+	cfgFilename := *cfgFileFlag
+	cfgDir := filepath.Dir(cfgFilename)
+	err := os.MkdirAll(cfgDir, 0o700)
 	if err != nil {
 		return nil, err
 	}
-	cfgBytes, err := os.ReadFile(filepath.Join(defaultHomeDir, "brseeder.conf"))
+	cfgBytes, err := os.ReadFile(cfgFilename)
 	if err != nil {
 		return nil, err
 	}
