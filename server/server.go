@@ -39,6 +39,8 @@ import (
 
 const (
 	tagDepth = 32
+
+	pingPeriod = 30 * time.Second
 )
 
 // RPCWrapper is a wrapped RPC Message for internal use.  This is required because RPC messages
@@ -466,7 +468,9 @@ func (z *ZKS) Run(ctx context.Context) error {
 				default:
 				}
 				z.log.Infof("[ws] connecting to seeder at %v", z.seederURL)
-				ws, err := wsrpc.Dial(gctx, z.seederURL, wsrpc.WithBearerAuthString(z.seederToken))
+				ws, err := wsrpc.Dial(gctx, z.seederURL,
+					wsrpc.WithBearerAuthString(z.seederToken),
+					wsrpc.WithPingPeriod(pingPeriod))
 				if err != nil {
 					if !z.seederDryRun {
 						z.isMaster.Store(false)
