@@ -15,6 +15,10 @@ type config struct {
 	appName         string
 	httpTimeout     time.Duration
 	shutdownTimeout time.Duration
+
+	// offlineLimit is how long to wait for dcrlnd/db to come back online
+	// before demoting the master.
+	offlineLimit time.Duration
 }
 
 // Option is a functional option for configuring the seeder server.
