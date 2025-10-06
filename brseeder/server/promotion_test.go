@@ -20,7 +20,7 @@ func TestServerPromotionRules(t *testing.T) {
 
 	s, err := New(
 		WithLogger(testutils.TestLoggerSys(t, "XXXX")),
-		withPromotionTimeLimits(waitForMaster, offlineLimit),
+		WithPromotionTimeLimits(waitForMaster, offlineLimit),
 		WithTokens(map[string]struct{}{token1: {}, token2: {}}),
 	)
 	assert.NilErr(t, err)
