@@ -12,6 +12,10 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+const (
+	offlineTime = time.Minute
+)
+
 type smi struct {
 	token       string
 	dboffline   time.Time
@@ -34,7 +38,7 @@ func (s *Server) createClientReply() rpc.SeederClientAPI {
 			Server:   serverAddr,
 			LND:      fmt.Sprintf("%s@%s", status.Node.PublicKey, nodeAddr),
 			IsMaster: isMaster,
-			Online:   time.Since(time.Unix(status.LastUpdated, 0)) < time.Minute && status.Database.Online && status.Node.Online,
+			Online:   time.Since(time.Unix(status.LastUpdated, 0)) < offlineTime && status.Database.Online && status.Node.Online,
 		})
 	}
 	return clientAPI
@@ -109,7 +113,7 @@ func (s *Server) createServerReply(mytoken string) bool {
 			if s.serverMaster.dboffline.IsZero() {
 				s.log.Warnf("current master %v db is offline", mytoken)
 				s.serverMaster.dboffline = now
-			} else if now.Sub(s.serverMaster.dboffline) > time.Minute {
+			} else if now.Sub(s.serverMaster.dboffline) > offlineTime {
 				s.log.Warnf("current master %v db offline too long -- demoting", mytoken)
 				s.serverMaster = smi{}
 				return false
@@ -121,7 +125,7 @@ func (s *Server) createServerReply(mytoken string) bool {
 			if s.serverMaster.nodeoffline.IsZero() {
 				s.log.Warnf("current master %v dcrlnd is offline", mytoken)
 				s.serverMaster.nodeoffline = now
-			} else if now.Sub(s.serverMaster.nodeoffline) > time.Minute {
+			} else if now.Sub(s.serverMaster.nodeoffline) > offlineTime {
 				s.log.Warnf("current master %v dcrlnd offline too long -- demoting", mytoken)
 				s.serverMaster = smi{}
 				return false
@@ -134,19 +138,19 @@ func (s *Server) createServerReply(mytoken string) bool {
 	masterStatus := s.serverMap[s.serverMaster.token]
 
 	// master disappeared for over a minute - switch
-	if now.Sub(time.Unix(masterStatus.LastUpdated, 0)) > time.Minute {
+	if now.Sub(time.Unix(masterStatus.LastUpdated, 0)) > offlineTime {
 		s.log.Warnf("master %v has been offline too long -- promoting %v", s.serverMaster.token, mytoken)
 		s.serverMaster = smi{token: mytoken}
 		return true
 	}
 	if !s.serverMaster.dboffline.IsZero() &&
-		now.Sub(s.serverMaster.dboffline) > time.Minute {
+		now.Sub(s.serverMaster.dboffline) > offlineTime {
 		s.log.Warnf("master %v db has been offline too long -- promoting %v", s.serverMaster.token, mytoken)
 		s.serverMaster = smi{token: mytoken}
 		return true
 	}
 	if !s.serverMaster.nodeoffline.IsZero() &&
-		now.Sub(s.serverMaster.nodeoffline) > time.Minute {
+		now.Sub(s.serverMaster.nodeoffline) > offlineTime {
 		s.log.Warnf("master %v dcrlnd has been offline too long -- promoting %v", s.serverMaster.token, mytoken)
 		s.serverMaster = smi{token: mytoken}
 		return true
@@ -176,13 +180,10 @@ func (s *Server) handleBRServerStatus(w http.ResponseWriter, r *http.Request) {
 
 	remoteAddr := conn.RemoteAddr()
 
-	// safety
-	conn.SetReadLimit(1024 * 1024)
-
 	conn.SetPingHandler(func(str string) error {
-		conn.SetReadDeadline(time.Now().Add(time.Minute))
+		s.log.Infof("received ping from %v", remoteAddr)
 		err := conn.WriteControl(websocket.PongMessage, []byte(str),
-			time.Now().Add(15*time.Second))
+			time.Now().Add(20*time.Second))
 		if err != nil {
 			s.log.Errorf("failed to send pong to %v: %v", remoteAddr, str)
 			return err
@@ -209,11 +210,9 @@ func (s *Server) handleBRServerStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var params []byte
-	conn.SetReadDeadline(time.Now().Add(time.Minute))
 	for {
 		var req request
 		err := conn.ReadJSON(&req)
-		conn.SetReadDeadline(time.Now().Add(time.Minute))
 		if err != nil {
 			s.log.Errorf("server %v: %v", remoteAddr, err)
 			break
@@ -226,6 +225,7 @@ func (s *Server) handleBRServerStatus(w http.ResponseWriter, r *http.Request) {
 		var rpcError RPCError
 		switch req.Method {
 		case "status":
+			s.log.Infof("received status from %v (%v)", tokenStr, remoteAddr)
 			var status rpc.SeederCommandStatus
 			if err = json.Unmarshal(req.Params[0], &status); err != nil {
 				s.log.Errorf("failed to parse status from %v: %v", remoteAddr, err)
