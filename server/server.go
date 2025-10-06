@@ -40,6 +40,9 @@ import (
 
 const (
 	tagDepth = 32
+
+	// seederPingPeriod is how often to ping the seeder server.
+	seederPingPeriod = 30 * time.Second
 )
 
 // RPCWrapper is a wrapped RPC Message for internal use.  This is required because RPC messages
@@ -568,9 +571,14 @@ func (z *ZKS) dbMonitoringWithSeeder(ctx context.Context, ws *wsrpc.Client) erro
 // the server status to a seeder.
 func (z *ZKS) dbMonitoringLoop(ctx context.Context) error {
 	const connRetryTime = 5 * time.Second
+	dialOpts := []wsrpc.Option{
+		wsrpc.WithBearerAuthString(z.seederToken),
+		wsrpc.WithPingPeriod(seederPingPeriod),
+	}
+
 	for ctx.Err() == nil {
 		z.logMonit.Debugf("Connecting to seeder at %v", z.seederURL)
-		ws, err := wsrpc.Dial(ctx, z.seederURL, wsrpc.WithBearerAuthString(z.seederToken))
+		ws, err := wsrpc.Dial(ctx, z.seederURL, dialOpts...)
 		if err != nil {
 			z.logMonit.Errorf("Failed to dial seeder at %v: %v", z.seederURL, err)
 			z.logMonit.Warnf("Considering brserver non-master due to missing seeder conn (dryRun=%v)",

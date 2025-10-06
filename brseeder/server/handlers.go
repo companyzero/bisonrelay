@@ -29,12 +29,15 @@ func (s *Server) createClientReply() rpc.SeederClientAPI {
 		nodeAddr := net.JoinHostPort(status.Node.Alias, "9735")
 
 		isMaster := s.serverMaster.token == tokenStr
+		isOnline := time.Since(time.Unix(status.LastUpdated, 0)) < s.cfg.offlineLimit &&
+			status.Database.Online &&
+			status.Node.Online
 
 		clientAPI.ServerGroups = append(clientAPI.ServerGroups, rpc.SeederServerGroup{
 			Server:   serverAddr,
 			LND:      fmt.Sprintf("%s@%s", status.Node.PublicKey, nodeAddr),
 			IsMaster: isMaster,
-			Online:   time.Since(time.Unix(status.LastUpdated, 0)) < time.Minute && status.Database.Online && status.Node.Online,
+			Online:   isOnline,
 		})
 	}
 	return clientAPI
@@ -220,13 +223,10 @@ func (s *Server) handleBRServerStatus(w http.ResponseWriter, r *http.Request) {
 
 	remoteAddr := conn.RemoteAddr()
 
-	// safety
-	conn.SetReadLimit(1024 * 1024)
-
 	conn.SetPingHandler(func(str string) error {
-		conn.SetReadDeadline(time.Now().Add(time.Minute))
+		s.log.Infof("Received ping from %v", remoteAddr)
 		err := conn.WriteControl(websocket.PongMessage, []byte(str),
-			time.Now().Add(15*time.Second))
+			time.Now().Add(20*time.Second))
 		if err != nil {
 			s.log.Errorf("failed to send pong to %v: %v", remoteAddr, str)
 			return err
@@ -253,11 +253,9 @@ func (s *Server) handleBRServerStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var params []byte
-	conn.SetReadDeadline(time.Now().Add(time.Minute))
 	for {
 		var req request
 		err := conn.ReadJSON(&req)
-		conn.SetReadDeadline(time.Now().Add(time.Minute))
 		if err != nil {
 			s.log.Errorf("server %v: %v", remoteAddr, err)
 			break
@@ -270,6 +268,7 @@ func (s *Server) handleBRServerStatus(w http.ResponseWriter, r *http.Request) {
 		var rpcError RPCError
 		switch req.Method {
 		case "status":
+			s.log.Infof("Received status from %v (%v)", tokenStr, remoteAddr)
 			var newStatus rpc.SeederCommandStatus
 			if err = json.Unmarshal(req.Params[0], &newStatus); err != nil {
 				s.log.Errorf("failed to parse status from %v: %v", remoteAddr, err)

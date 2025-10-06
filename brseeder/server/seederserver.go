@@ -52,7 +52,7 @@ func New(opts ...Option) (*Server, error) {
 		log:         cfg.log,
 		timeStarted: time.Now(),
 		upgrader: websocket.Upgrader{
-			HandshakeTimeout: time.Minute,
+			HandshakeTimeout: 20 * time.Second,
 			ReadBufferSize:   1024,
 			WriteBufferSize:  1024,
 		},
