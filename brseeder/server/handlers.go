@@ -61,98 +61,127 @@ func (s *Server) handleClientStatusQuery(w http.ResponseWriter, r *http.Request)
 	}
 }
 
-// create the http response for brservers.
-// must be called with serverMtx locked.
-func (s *Server) createServerReply(mytoken string) bool {
-	status := s.serverMap[mytoken]
+type statusUpdateAction int
 
-	healthy := status.Database.Online && status.Node.Online
+const (
+	actionNone statusUpdateAction = iota
+	actionPromote
+	actionDemote
+)
 
-	// no current master?
-	if s.serverMaster.token == "" {
-		if !healthy {
-			s.log.Warnf("no current master - %v is unhealthy", mytoken)
-			return false
-		}
-		uptime := time.Since(s.timeStarted)
-		if status.Database.Master || uptime >= s.cfg.waitForMaster {
-			s.log.Warnf("no current master - promoting %v", mytoken)
-			s.serverMaster = smi{
-				token: mytoken,
-			}
-			return true
-		}
-
-		s.log.Infof("no current master - waiting %v longer", s.cfg.waitForMaster-uptime)
-		return false
+// processStatusUpdate processes a status update from a remove brserver
+// instance.
+func (s *Server) processStatusUpdate(mytoken string, status rpc.SeederCommandStatus) (isMaster bool, err error) {
+	if status.Node.Alias == "" {
+		return false, errNoAlias
 	}
 
+	// fix your clock.
 	now := time.Now()
+	if now.Sub(time.Unix(status.LastUpdated, 0)) > 5*time.Minute {
+		return false, errLastUpdateTooOld
+	}
+	status.LastUpdated = now.Unix()
 
-	// still master and healthy?
-	if s.serverMaster.token == mytoken {
-		if !status.Database.Master {
-			s.log.Warnf("current master %v claims they are no longer master", mytoken)
-			s.serverMaster = smi{}
-			return false
-		}
-
-		if healthy {
-			s.log.Infof("current master %v is still healthy", mytoken)
-			s.serverMaster = smi{
-				token: mytoken,
-			}
-			return true
-		}
-
-		if !status.Database.Online {
-			if s.serverMaster.dboffline.IsZero() {
-				s.log.Warnf("current master %v db is offline", mytoken)
-				s.serverMaster.dboffline = now
-			} else if now.Sub(s.serverMaster.dboffline) > time.Minute {
-				s.log.Warnf("current master %v db offline too long -- demoting", mytoken)
-				s.serverMaster = smi{}
-				return false
-			} else {
-				s.log.Warnf("current master %v db offline for %v", mytoken, time.Since(s.serverMaster.dboffline))
-			}
-		}
-		if !status.Node.Online {
-			if s.serverMaster.nodeoffline.IsZero() {
-				s.log.Warnf("current master %v dcrlnd is offline", mytoken)
-				s.serverMaster.nodeoffline = now
-			} else if now.Sub(s.serverMaster.nodeoffline) > time.Minute {
-				s.log.Warnf("current master %v dcrlnd offline too long -- demoting", mytoken)
-				s.serverMaster = smi{}
-				return false
-			} else {
-				s.log.Warnf("current master %v dcrlnd offline for %v", mytoken, time.Since(s.serverMaster.nodeoffline))
-			}
-		}
+	// Helper to check if time since offlineTime is > 1 minute.
+	offlineTooLong := func(offlineTime time.Time) bool {
+		return !offlineTime.IsZero() && now.Sub(offlineTime) > s.cfg.offlineLimit
 	}
 
+	// Rest of function is with state mutex locked.
+	s.mtx.Lock()
+	defer s.mtx.Unlock()
+
+	s.serverMap[mytoken] = &status
+
+	// Relevant vars.
+	uptime := now.Sub(s.timeStarted)
+	healthy := status.Database.Online && status.Node.Online
+	hasMaster := s.serverMaster.token != ""
+	isMaster = hasMaster && s.serverMaster.token == mytoken
 	masterStatus := s.serverMap[s.serverMaster.token]
+	var action = actionNone
 
-	// master disappeared for over a minute - switch
-	if now.Sub(time.Unix(masterStatus.LastUpdated, 0)) > time.Minute {
+	// Decide what to do.
+	switch {
+	case !hasMaster && !healthy:
+		s.log.Warnf("no current master - %v is unhealthy", mytoken)
+
+	case !hasMaster && status.Database.Master:
+		s.log.Warnf("no current master - promoting %v due to being DB master", mytoken)
+		action = actionPromote
+
+	case !hasMaster && uptime >= s.cfg.waitForMaster:
+		s.log.Warnf("no current master - promoting %v due to uptime %v elapsed %v", mytoken,
+			uptime, s.cfg.waitForMaster)
+		action = actionPromote
+
+	case !hasMaster:
+		s.log.Infof("no current master - waiting %v longer", s.cfg.waitForMaster-uptime)
+
+	case isMaster && !status.Database.Master:
+		s.log.Warnf("current master %v claims they are no longer master", mytoken)
+		action = actionDemote
+
+	case isMaster && healthy:
+		s.log.Infof("current master %v is still healthy", mytoken)
+
+		// Zero out offline times in case master came back from offline.
+		s.serverMaster.dboffline = time.Time{}
+		s.serverMaster.nodeoffline = time.Time{}
+
+	case isMaster && !status.Database.Online && offlineTooLong(s.serverMaster.dboffline):
+		s.log.Warnf("current master %v db offline too long -- demoting", mytoken)
+		action = actionDemote
+
+	case isMaster && !status.Node.Online && offlineTooLong(s.serverMaster.nodeoffline):
+		s.log.Warnf("current master %v dcrlnd offline too long -- demoting", mytoken)
+		action = actionDemote
+
+	case isMaster:
+		// Not healthy (healthy and demotion cases already handled). Set
+		// or reset offline times.
+		if !status.Database.Online && s.serverMaster.dboffline.IsZero() {
+			s.serverMaster.dboffline = now
+		} else if status.Database.Online {
+			s.serverMaster.dboffline = time.Time{} // Db came back.
+		}
+		if !status.Node.Online && s.serverMaster.nodeoffline.IsZero() {
+			s.serverMaster.nodeoffline = now
+		} else if status.Node.Online {
+			s.serverMaster.nodeoffline = time.Time{} // LN came back.
+		}
+
+		s.log.Warnf("current master %v not healthy (%v since db offline, %v since dcrlnd offline)",
+			mytoken, now.Sub(s.serverMaster.dboffline), now.Sub(s.serverMaster.nodeoffline))
+
+	case offlineTooLong(time.Unix(masterStatus.LastUpdated, 0)):
 		s.log.Warnf("master %v has been offline too long -- promoting %v", s.serverMaster.token, mytoken)
-		s.serverMaster = smi{token: mytoken}
-		return true
-	}
-	if !s.serverMaster.dboffline.IsZero() &&
-		now.Sub(s.serverMaster.dboffline) > time.Minute {
+		action = actionPromote
+
+	case offlineTooLong(s.serverMaster.dboffline):
 		s.log.Warnf("master %v db has been offline too long -- promoting %v", s.serverMaster.token, mytoken)
-		s.serverMaster = smi{token: mytoken}
-		return true
-	}
-	if !s.serverMaster.nodeoffline.IsZero() &&
-		now.Sub(s.serverMaster.nodeoffline) > time.Minute {
+		action = actionPromote
+
+	case offlineTooLong(s.serverMaster.nodeoffline):
 		s.log.Warnf("master %v dcrlnd has been offline too long -- promoting %v", s.serverMaster.token, mytoken)
-		s.serverMaster = smi{token: mytoken}
-		return true
+		action = actionPromote
 	}
 
-	return false
+	// Take action.
+	switch action {
+	case actionPromote:
+		s.serverMaster = smi{token: mytoken}
+		isMaster = true
+
+	case actionDemote:
+		s.serverMaster = smi{}
+		isMaster = false
+
+		// Find a new master?
+	}
+
+	return
 }
 
 func (s *Server) handleBRServerStatus(w http.ResponseWriter, r *http.Request) {
@@ -226,33 +255,22 @@ func (s *Server) handleBRServerStatus(w http.ResponseWriter, r *http.Request) {
 		var rpcError RPCError
 		switch req.Method {
 		case "status":
-			var status rpc.SeederCommandStatus
-			if err = json.Unmarshal(req.Params[0], &status); err != nil {
+			var newStatus rpc.SeederCommandStatus
+			if err = json.Unmarshal(req.Params[0], &newStatus); err != nil {
 				s.log.Errorf("failed to parse status from %v: %v", remoteAddr, err)
 				rpcError.Message = "failed to parse status json"
 				break
 			}
-			if status.Node.Alias == "" {
-				s.log.Warnf("no alias set from %v", remoteAddr)
-				rpcError.Message = "no alias set"
+
+			isMaster, err := s.processStatusUpdate(tokenStr, newStatus)
+			if err != nil {
+				s.log.Errorf("Error processing update from %s: %v", remoteAddr, err)
+				rpcError.Message = err.Error()
 				break
 			}
-
-			// fix your clock.
-			if time.Since(time.Unix(status.LastUpdated, 0)) > 5*time.Minute {
-				s.log.Warnf("last update is too old from %v", remoteAddr)
-				rpcError.Message = "lastUpdated is too old"
-				break
-			}
-			status.LastUpdated = time.Now().Unix()
-
-			s.mtx.Lock()
-			s.serverMap[tokenStr] = &status
-			rep := s.createServerReply(tokenStr)
-			s.mtx.Unlock()
 
 			statusReply := rpc.SeederCommandStatusReply{
-				Master: rep,
+				Master: isMaster,
 			}
 			params, err = json.Marshal(statusReply)
 			if err != nil {

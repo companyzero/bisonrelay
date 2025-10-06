@@ -21,9 +21,15 @@ type Server struct {
 	timeStarted time.Time
 	mux         *http.ServeMux
 
-	mtx          sync.Mutex
+	// mtx protects the following fields.
+	mtx sync.Mutex
+
+	// serverMaster is the current master brserver instance.
 	serverMaster smi
-	serverMap    map[string]*rpc.SeederCommandStatus
+
+	// serverMap tracks the available brserver instances. It's a map from
+	// token to last brserver status report.
+	serverMap map[string]*rpc.SeederCommandStatus
 }
 
 // New creates a new seeder server.
@@ -35,6 +41,7 @@ func New(opts ...Option) (*Server, error) {
 		appName:         "brseeder",
 		httpTimeout:     20 * time.Second,
 		shutdownTimeout: time.Second,
+		offlineLimit:    time.Minute,
 	}
 	for _, o := range opts {
 		o(&cfg)
