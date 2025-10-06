@@ -503,7 +503,7 @@ func (s *Store) handleOrderStatus(ctx context.Context, uid clientintf.UserID,
 				Status: rpc.ResourceStatusBadRequest,
 			}, nil
 		}
-		return nil, fmt.Errorf("Unable to read order %s: %v",
+		return nil, fmt.Errorf("unable to read order %s: %v",
 			fname, err)
 	}
 
@@ -555,7 +555,7 @@ func (s *Store) handleOrderAddComment(ctx context.Context, uid clientintf.UserID
 				Status: rpc.ResourceStatusBadRequest,
 			}, nil
 		}
-		return nil, fmt.Errorf("Unable to read order %s: %v",
+		return nil, fmt.Errorf("unable to read order %s: %v",
 			fname, err)
 	}
 
@@ -574,7 +574,7 @@ func (s *Store) handleOrderAddComment(ctx context.Context, uid clientintf.UserID
 	// Generate template.
 	w := &bytes.Buffer{}
 	w.WriteString("# Comment added\n\n")
-	w.WriteString(fmt.Sprintf("[Back to Order](/order/%d)\n\n", id))
+	fmt.Fprintf(w, "[Back to Order](/order/%d)\n\n", id)
 	return &rpc.RMFetchResourceReply{
 		Data:   w.Bytes(),
 		Status: rpc.ResourceStatusOk,

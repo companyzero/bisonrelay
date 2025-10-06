@@ -26,21 +26,21 @@ const onPMNtfnType = "onPM"
 // OnPMNtfn is the handler for received private messages.
 type OnPMNtfn func(*RemoteUser, rpc.RMPrivateMessage, time.Time)
 
-func (_ OnPMNtfn) typ() string { return onPMNtfnType }
+func (OnPMNtfn) typ() string { return onPMNtfnType }
 
 const onGCMNtfnType = "onGCM"
 
 // OnGCMNtfn is the handler for received gc messages.
 type OnGCMNtfn func(*RemoteUser, rpc.RMGroupMessage, time.Time)
 
-func (_ OnGCMNtfn) typ() string { return onGCMNtfnType }
+func (OnGCMNtfn) typ() string { return onGCMNtfnType }
 
 const onPostRcvdNtfnType = "onPostRcvd"
 
 // OnPostRcvdNtfn is the handler for received posts.
 type OnPostRcvdNtfn func(*RemoteUser, clientdb.PostSummary, rpc.PostMetadata)
 
-func (_ OnPostRcvdNtfn) typ() string { return onPostRcvdNtfnType }
+func (OnPostRcvdNtfn) typ() string { return onPostRcvdNtfnType }
 
 const onPostStatusRcvdNtfnType = "onPostStatusRcvd"
 
@@ -48,7 +48,7 @@ const onPostStatusRcvdNtfnType = "onPostStatusRcvd"
 type OnPostStatusRcvdNtfn func(*RemoteUser, clientintf.PostID, UserID,
 	rpc.PostMetadataStatus)
 
-func (_ OnPostStatusRcvdNtfn) typ() string { return onPostStatusRcvdNtfnType }
+func (OnPostStatusRcvdNtfn) typ() string { return onPostStatusRcvdNtfnType }
 
 const onRemoteSubscriptionChangedType = "onSubChanged"
 
@@ -56,7 +56,7 @@ const onRemoteSubscriptionChangedType = "onSubChanged"
 // changed event.
 type OnRemoteSubscriptionChangedNtfn func(*RemoteUser, bool)
 
-func (_ OnRemoteSubscriptionChangedNtfn) typ() string { return onRemoteSubscriptionChangedType }
+func (OnRemoteSubscriptionChangedNtfn) typ() string { return onRemoteSubscriptionChangedType }
 
 const onRemoteSubscriptionErrorNtfnType = "onSubChangedErr"
 
@@ -64,7 +64,7 @@ const onRemoteSubscriptionErrorNtfnType = "onSubChangedErr"
 // change attempt that errored.
 type OnRemoteSubscriptionErrorNtfn func(user *RemoteUser, wasSubscribing bool, errMsg string)
 
-func (_ OnRemoteSubscriptionErrorNtfn) typ() string { return onRemoteSubscriptionErrorNtfnType }
+func (OnRemoteSubscriptionErrorNtfn) typ() string { return onRemoteSubscriptionErrorNtfnType }
 
 const onLocalClientOfflineTooLong = "onLocalClientOfflineTooLong"
 
@@ -73,7 +73,7 @@ const onLocalClientOfflineTooLong = "onLocalClientOfflineTooLong"
 // message retention policy.
 type OnLocalClientOfflineTooLong func(time.Time)
 
-func (_ OnLocalClientOfflineTooLong) typ() string { return onLocalClientOfflineTooLong }
+func (OnLocalClientOfflineTooLong) typ() string { return onLocalClientOfflineTooLong }
 
 const onKXCompleted = "onKXCompleted"
 
@@ -81,7 +81,7 @@ const onKXCompleted = "onKXCompleted"
 // new user or a reset KX).
 type OnKXCompleted func(*clientintf.RawRVID, *RemoteUser, bool)
 
-func (_ OnKXCompleted) typ() string { return onKXCompleted }
+func (OnKXCompleted) typ() string { return onKXCompleted }
 
 const onKXSuggested = "onKXSuggested"
 
@@ -89,13 +89,13 @@ const onKXSuggested = "onKXSuggested"
 // with another remote user.
 type OnKXSuggested func(*RemoteUser, zkidentity.PublicIdentity)
 
-func (_ OnKXSuggested) typ() string { return onKXSuggested }
+func (OnKXSuggested) typ() string { return onKXSuggested }
 
 const onInvoiceGenFailedNtfnType = "onInvoiceGenFailed"
 
 type OnInvoiceGenFailedNtfn func(user *RemoteUser, dcrAmount float64, err error)
 
-func (_ OnInvoiceGenFailedNtfn) typ() string { return onInvoiceGenFailedNtfnType }
+func (OnInvoiceGenFailedNtfn) typ() string { return onInvoiceGenFailedNtfnType }
 
 const onGCVersionWarningType = "onGCVersionWarn"
 
@@ -103,42 +103,42 @@ const onGCVersionWarningType = "onGCVersionWarn"
 // unsupported version.
 type OnGCVersionWarning func(user *RemoteUser, gc rpc.RMGroupList, minVersion, maxVersion uint8)
 
-func (_ OnGCVersionWarning) typ() string { return onGCVersionWarningType }
+func (OnGCVersionWarning) typ() string { return onGCVersionWarningType }
 
 const onJoinedGCNtfnType = "onJoinedGC"
 
 // OnJoinedGCNtfn is a handler for when the local client joins a GC.
 type OnJoinedGCNtfn func(gc rpc.RMGroupList)
 
-func (_ OnJoinedGCNtfn) typ() string { return onJoinedGCNtfnType }
+func (OnJoinedGCNtfn) typ() string { return onJoinedGCNtfnType }
 
 const onAddedGCMembersNtfnType = "onAddedGCMembers"
 
 // OnAddedGCMembersNtfn is a handler for new members added to a GC.
 type OnAddedGCMembersNtfn func(gc rpc.RMGroupList, uids []clientintf.UserID)
 
-func (_ OnAddedGCMembersNtfn) typ() string { return onAddedGCMembersNtfnType }
+func (OnAddedGCMembersNtfn) typ() string { return onAddedGCMembersNtfnType }
 
 const onRemovedGCMembersNtfnType = "onRemovedGCMembers"
 
 // OnRemovedGCMembersNtfn is a handler for members removed from a GC.
 type OnRemovedGCMembersNtfn func(gc rpc.RMGroupList, uids []clientintf.UserID)
 
-func (_ OnRemovedGCMembersNtfn) typ() string { return onRemovedGCMembersNtfnType }
+func (OnRemovedGCMembersNtfn) typ() string { return onRemovedGCMembersNtfnType }
 
 const onGCUpgradedNtfnType = "onGCUpgraded"
 
 // OnGCUpgradedNtfn is a handler for a GC that had its version upgraded.
 type OnGCUpgradedNtfn func(gc rpc.RMGroupList, oldVersion uint8)
 
-func (_ OnGCUpgradedNtfn) typ() string { return onGCUpgradedNtfnType }
+func (OnGCUpgradedNtfn) typ() string { return onGCUpgradedNtfnType }
 
 const onInvitedToGCNtfnType = "onInvitedToGC"
 
 // OnInvitedToGCNtfn is a handler for invites received to join GCs.
 type OnInvitedToGCNtfn func(user *RemoteUser, iid uint64, invite rpc.RMGroupInvite)
 
-func (_ OnInvitedToGCNtfn) typ() string { return onInvitedToGCNtfnType }
+func (OnInvitedToGCNtfn) typ() string { return onInvitedToGCNtfnType }
 
 const onGCInviteAcceptedNtfnType = "onGCInviteAccepted"
 
@@ -146,7 +146,7 @@ const onGCInviteAcceptedNtfnType = "onGCInviteAccepted"
 // join a GC we invited them to.
 type OnGCInviteAcceptedNtfn func(user *RemoteUser, gc rpc.RMGroupList)
 
-func (_ OnGCInviteAcceptedNtfn) typ() string { return onGCInviteAcceptedNtfnType }
+func (OnGCInviteAcceptedNtfn) typ() string { return onGCInviteAcceptedNtfnType }
 
 const onGCUserPartedNtfnType = "onGCUserParted"
 
@@ -154,33 +154,33 @@ const onGCUserPartedNtfnType = "onGCUserParted"
 // kicked a user.
 type OnGCUserPartedNtfn func(gcid GCID, uid UserID, reason string, kicked bool)
 
-func (_ OnGCUserPartedNtfn) typ() string { return onGCUserPartedNtfnType }
+func (OnGCUserPartedNtfn) typ() string { return onGCUserPartedNtfnType }
 
 const onGCKilledNtfnType = "onGCKilled"
 
 // OnGCKilledNtfn is a handler for a GC dissolved by its admin.
 type OnGCKilledNtfn func(ru *RemoteUser, gcid GCID, reason string)
 
-func (_ OnGCKilledNtfn) typ() string { return onGCKilledNtfnType }
+func (OnGCKilledNtfn) typ() string { return onGCKilledNtfnType }
 
 const onGCAdminsChangedNtfnType = "onGCAdminsChanged"
 
 type OnGCAdminsChangedNtfn func(ru *RemoteUser, gc rpc.RMGroupList, added, removed []zkidentity.ShortID)
 
-func (_ OnGCAdminsChangedNtfn) typ() string { return onGCAdminsChangedNtfnType }
+func (OnGCAdminsChangedNtfn) typ() string { return onGCAdminsChangedNtfnType }
 
 const onKXSearchCompletedNtfnType = "kxSearchCompleted"
 
 // OnKXSearchCompleted is a handler for completed KX search procedures.
 type OnKXSearchCompleted func(user *RemoteUser)
 
-func (_ OnKXSearchCompleted) typ() string { return onKXSearchCompletedNtfnType }
+func (OnKXSearchCompleted) typ() string { return onKXSearchCompletedNtfnType }
 
 const onTipAttemptProgressNtfnType = "onTipAttemptProgress"
 
 type OnTipAttemptProgressNtfn func(ru *RemoteUser, amtMAtoms int64, completed bool, attempt int, attemptErr error, willRetry bool)
 
-func (_ OnTipAttemptProgressNtfn) typ() string { return onTipAttemptProgressNtfnType }
+func (OnTipAttemptProgressNtfn) typ() string { return onTipAttemptProgressNtfnType }
 
 const onBlockNtfnType = "onBlock"
 
@@ -188,7 +188,7 @@ const onBlockNtfnType = "onBlock"
 // request. Note that the passed user cannot be used for messaging anymore.
 type OnBlockNtfn func(user *RemoteUser)
 
-func (_ OnBlockNtfn) typ() string { return onBlockNtfnType }
+func (OnBlockNtfn) typ() string { return onBlockNtfnType }
 
 const onServerSessionChangedNtfnType = "onServerSessionChanged"
 
@@ -198,13 +198,13 @@ const onServerSessionChangedNtfnType = "onServerSessionChanged"
 // The push and subscription rates are specified in milliatoms/byte.
 type OnServerSessionChangedNtfn func(connected bool, policy clientintf.ServerPolicy)
 
-func (_ OnServerSessionChangedNtfn) typ() string { return onServerSessionChangedNtfnType }
+func (OnServerSessionChangedNtfn) typ() string { return onServerSessionChangedNtfnType }
 
 const onOnboardStateChangedNtfnType = "onOnboardStateChanged"
 
 type OnOnboardStateChangedNtfn func(state clientintf.OnboardState, err error)
 
-func (_ OnOnboardStateChangedNtfn) typ() string { return onOnboardStateChangedNtfnType }
+func (OnOnboardStateChangedNtfn) typ() string { return onOnboardStateChangedNtfnType }
 
 const onResourceFetchedNtfnType = "onResourceFetched"
 
@@ -215,7 +215,7 @@ const onResourceFetchedNtfnType = "onResourceFetched"
 // through the FetchLocalResource call.
 type OnResourceFetchedNtfn func(ru *RemoteUser, fr clientdb.FetchedResource, sess clientdb.PageSessionOverview)
 
-func (_ OnResourceFetchedNtfn) typ() string { return onResourceFetchedNtfnType }
+func (OnResourceFetchedNtfn) typ() string { return onResourceFetchedNtfnType }
 
 const onTipUserInvoiceGeneratedNtfnType = "onTipUserInvoiceGenerated"
 
@@ -223,7 +223,7 @@ const onTipUserInvoiceGeneratedNtfnType = "onTipUserInvoiceGenerated"
 // invoice to send to a remote user, for tipping purposes.
 type OnTipUserInvoiceGeneratedNtfn func(ru *RemoteUser, tag uint32, invoice string)
 
-func (_ OnTipUserInvoiceGeneratedNtfn) typ() string { return onTipUserInvoiceGeneratedNtfnType }
+func (OnTipUserInvoiceGeneratedNtfn) typ() string { return onTipUserInvoiceGeneratedNtfnType }
 
 const onHandshakeStageNtfnType = "onHandshakeStage"
 
@@ -232,7 +232,7 @@ const onHandshakeStageNtfnType = "onHandshakeStage"
 // respective clients to infer that the ratchet operations are working.
 type OnHandshakeStageNtfn func(ru *RemoteUser, msgtype string)
 
-func (_ OnHandshakeStageNtfn) typ() string { return onHandshakeStageNtfnType }
+func (OnHandshakeStageNtfn) typ() string { return onHandshakeStageNtfnType }
 
 const onGCWithUnkxdMemberNtfnType = "onGCWithUnkxdMember"
 
@@ -241,14 +241,14 @@ const onGCWithUnkxdMemberNtfnType = "onGCWithUnkxdMember"
 type OnGCWithUnkxdMemberNtfn func(gc zkidentity.ShortID, uid clientintf.UserID,
 	hasKX, hasMI bool, miCount uint32, startedMIMediator *clientintf.UserID)
 
-func (_ OnGCWithUnkxdMemberNtfn) typ() string { return onGCWithUnkxdMemberNtfnType }
+func (OnGCWithUnkxdMemberNtfn) typ() string { return onGCWithUnkxdMemberNtfnType }
 
 const onTipReceivedNtfnType = "onTipReceived"
 
 // OnTipReceivedNtfn is called when a tip is received from a remote user.
 type OnTipReceivedNtfn func(ru *RemoteUser, amountMAtoms int64)
 
-func (_ OnTipReceivedNtfn) typ() string { return onTipReceivedNtfnType }
+func (OnTipReceivedNtfn) typ() string { return onTipReceivedNtfnType }
 
 const onMessageContentFilteredNtfType = "onMsgContentFiltered"
 
@@ -267,7 +267,7 @@ type MsgContentFilteredEvent struct {
 // contents.
 type OnMsgContentFilteredNtfn func(MsgContentFilteredEvent)
 
-func (_ OnMsgContentFilteredNtfn) typ() string { return onMessageContentFilteredNtfType }
+func (OnMsgContentFilteredNtfn) typ() string { return onMessageContentFilteredNtfType }
 
 const onPostSubscriberUpdated = "onPostSubscriberUpdated"
 
@@ -276,7 +276,7 @@ const onPostSubscriberUpdated = "onPostSubscriberUpdated"
 // unsubscribed to the local client's posts).
 type OnPostSubscriberUpdated func(user *RemoteUser, subscribed bool)
 
-func (_ OnPostSubscriberUpdated) typ() string { return onPostSubscriberUpdated }
+func (OnPostSubscriberUpdated) typ() string { return onPostSubscriberUpdated }
 
 const onPostsListReceived = "onPostsListReceived"
 
@@ -284,7 +284,7 @@ const onPostsListReceived = "onPostsListReceived"
 // from a remote user.
 type OnPostsListReceived func(user *RemoteUser, postList rpc.RMListPostsReply)
 
-func (_ OnPostsListReceived) typ() string { return onPostsListReceived }
+func (OnPostsListReceived) typ() string { return onPostsListReceived }
 
 const onUnsubscribingIdleRemoteClient = "onUnsubscribingIdleRemoteClient"
 
@@ -292,7 +292,7 @@ const onUnsubscribingIdleRemoteClient = "onUnsubscribingIdleRemoteClient"
 // is detected as idle and being unsubscribed from GCs and posts.
 type OnUnsubscribingIdleRemoteClient func(user *RemoteUser, lastDecTime time.Time)
 
-func (_ OnUnsubscribingIdleRemoteClient) typ() string { return onUnsubscribingIdleRemoteClient }
+func (OnUnsubscribingIdleRemoteClient) typ() string { return onUnsubscribingIdleRemoteClient }
 
 const onReceiveReceipt = "onReceiveReceipt"
 
@@ -300,7 +300,7 @@ const onReceiveReceipt = "onReceiveReceipt"
 // receive receipt.
 type OnReceiveReceipt func(user *RemoteUser, rr rpc.RMReceiveReceipt, serverTime time.Time)
 
-func (_ OnReceiveReceipt) typ() string { return onReceiveReceipt }
+func (OnReceiveReceipt) typ() string { return onReceiveReceipt }
 
 const onContentListReceived = "onContentListReceived"
 
@@ -308,7 +308,7 @@ const onContentListReceived = "onContentListReceived"
 // received.
 type OnContentListReceived func(user *RemoteUser, files []clientdb.RemoteFile, listErr error)
 
-func (_ OnContentListReceived) typ() string { return onContentListReceived }
+func (OnContentListReceived) typ() string { return onContentListReceived }
 
 const onFileDownloadCompleted = "onFileDownloadCompleted"
 
@@ -316,7 +316,7 @@ const onFileDownloadCompleted = "onFileDownloadCompleted"
 // completed.
 type OnFileDownloadCompleted func(user *RemoteUser, fm rpc.FileMetadata, diskPath string)
 
-func (_ OnFileDownloadCompleted) typ() string { return onFileDownloadCompleted }
+func (OnFileDownloadCompleted) typ() string { return onFileDownloadCompleted }
 
 const onFileDownloadProgress = "onFileDownloadProgress"
 
@@ -324,7 +324,7 @@ const onFileDownloadProgress = "onFileDownloadProgress"
 // download process.
 type OnFileDownloadProgress func(user *RemoteUser, fm rpc.FileMetadata, nbMissingChunks int)
 
-func (_ OnFileDownloadProgress) typ() string { return onFileDownloadProgress }
+func (OnFileDownloadProgress) typ() string { return onFileDownloadProgress }
 
 const onRMReceived = "onRMReceived"
 
@@ -333,7 +333,7 @@ const onRMReceived = "onRMReceived"
 // be taken when hooking and handling this notification.
 type OnRMReceived func(ru *RemoteUser, h *rpc.RMHeader, p interface{}, ts time.Time)
 
-func (_ OnRMReceived) typ() string { return onRMReceived }
+func (OnRMReceived) typ() string { return onRMReceived }
 
 const onRMQueuedNtfnType = "onRMQueued"
 
@@ -343,7 +343,7 @@ const onRMQueuedNtfnType = "onRMQueued"
 // has been added to the outbound queue to be sent.
 type OnRMQueued func(ru *RemoteUser, p interface{})
 
-func (_ OnRMQueued) typ() string { return onRMQueuedNtfnType }
+func (OnRMQueued) typ() string { return onRMQueuedNtfnType }
 
 const onRMSent = "onRMSent"
 
@@ -352,7 +352,7 @@ const onRMSent = "onRMSent"
 // has been acknowledged by the server.
 type OnRMSent func(ru *RemoteUser, rv ratchet.RVPoint, p interface{})
 
-func (_ OnRMSent) typ() string { return onRMSent }
+func (OnRMSent) typ() string { return onRMSent }
 
 const onServerUnwelcomeError = "onServerUnwelcomeError"
 
@@ -369,7 +369,7 @@ func (OnUnackedRMSent) typ() string { return onUnackedRMSentNtfnType }
 // upgrade.
 type OnServerUnwelcomeError func(err error)
 
-func (_ OnServerUnwelcomeError) typ() string { return onServerUnwelcomeError }
+func (OnServerUnwelcomeError) typ() string { return onServerUnwelcomeError }
 
 // ProfileUpdateField tracks profile fields which may be updated.
 type ProfileUpdateField string
@@ -386,7 +386,7 @@ const onProfileUpdatedType = "onProfileChanged"
 // its profile.
 type OnProfileUpdated func(ru *RemoteUser, ab *clientdb.AddressBookEntry, fields []ProfileUpdateField)
 
-func (_ OnProfileUpdated) typ() string { return onProfileUpdatedType }
+func (OnProfileUpdated) typ() string { return onProfileUpdatedType }
 
 const onTransitiveEventType = "onTransitiveEvent"
 
@@ -394,7 +394,7 @@ const onTransitiveEventType = "onTransitiveEvent"
 // local client to forward a message to dst.
 type OnTransitiveEvent func(src, dst UserID, event TransitiveEvent)
 
-func (_ OnTransitiveEvent) typ() string { return onTransitiveEventType }
+func (OnTransitiveEvent) typ() string { return onTransitiveEventType }
 
 const onRequestingMediateIDType = "onReqMediateID"
 
@@ -402,7 +402,7 @@ const onRequestingMediateIDType = "onReqMediateID"
 // mediator to mediate id between the local client and a target.
 type OnRequestingMediateID func(mediator, target UserID)
 
-func (_ OnRequestingMediateID) typ() string { return onRequestingMediateIDType }
+func (OnRequestingMediateID) typ() string { return onRequestingMediateIDType }
 
 // UINotificationsConfig is the configuration for how UI notifications are
 // emitted.
@@ -487,7 +487,7 @@ const onUINtfnType = "uintfn"
 // received message.
 type OnUINotification func(ntfn UINotification)
 
-func (_ OnUINotification) typ() string { return onUINtfnType }
+func (OnUINotification) typ() string { return onUINtfnType }
 
 const onInvitedToRTDTSessionNtfnType = "invitedRTDTSess"
 
@@ -495,7 +495,7 @@ const onInvitedToRTDTSessionNtfnType = "invitedRTDTSess"
 // invited to an RTDT session.
 type OnInvitedToRTDTSession func(ru *RemoteUser, sess *rpc.RMRTDTSessionInvite)
 
-func (_ OnInvitedToRTDTSession) typ() string { return onInvitedToRTDTSessionNtfnType }
+func (OnInvitedToRTDTSession) typ() string { return onInvitedToRTDTSessionNtfnType }
 
 const onRTDTSessionInviteAcceptedNtfnType = "rtdtSessionInviteAccepted"
 
@@ -503,7 +503,7 @@ const onRTDTSessionInviteAcceptedNtfnType = "rtdtSessionInviteAccepted"
 // accepted our invitation to join an RTDT session.
 type OnRTDTSessionInviteAccepted func(ru *RemoteUser, sessID zkidentity.ShortID, acceptedAsPublisher bool)
 
-func (_ OnRTDTSessionInviteAccepted) typ() string { return onRTDTSessionInviteAcceptedNtfnType }
+func (OnRTDTSessionInviteAccepted) typ() string { return onRTDTSessionInviteAcceptedNtfnType }
 
 // RTDTSessionUpdateNtfn is the data of one update to an RTDT session.
 type RTDTSessionUpdateNtfn struct {
@@ -601,7 +601,7 @@ const onRTDTSessionDissolvedNtfnType = "rtdtsessiondissolved"
 // OnRTDTSessionDissolved is a notification sent when an RTDT session is dissolved.
 type OnRTDTSessionDissolved func(ru *RemoteUser, sessRV zkidentity.ShortID, peerID rpc.RTDTPeerID)
 
-func (_ OnRTDTSessionDissolved) typ() string { return onRTDTSessionDissolvedNtfnType }
+func (OnRTDTSessionDissolved) typ() string { return onRTDTSessionDissolvedNtfnType }
 
 const onRTDTRemovedFromSessionNtfnType = "rtdtremovedfromsess"
 
@@ -645,7 +645,7 @@ const onTestNtfnType = "testNtfnType"
 
 type onTestNtfn func()
 
-func (_ onTestNtfn) typ() string { return onTestNtfnType }
+func (onTestNtfn) typ() string { return onTestNtfnType }
 
 // Following is the generic notification code.
 

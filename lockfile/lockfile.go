@@ -62,9 +62,9 @@ func Create(ctx context.Context, filePath string) (*LockFile, error) {
 		// Opened the locked file. Write out the current host name and
 		// pid to ease debugging. We ignore errors here as it's
 		// not fatal for our purposes.
-		f.WriteString(fmt.Sprintf("PID=%d\n", pid))
-		f.WriteString(fmt.Sprintf("Host=%q\n", host))
-		f.WriteString(fmt.Sprintf("Process=%q\n", process))
+		fmt.Fprintf(f, "PID=%d\n", pid)
+		fmt.Fprintf(f, "Host=%q\n", host)
+		fmt.Fprintf(f, "Process=%q\n", process)
 
 		lf := &LockFile{f: f, pid: pid, host: host, process: process}
 		return lf, nil

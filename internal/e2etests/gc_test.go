@@ -468,7 +468,8 @@ func TestInviteToTwoGCsConcurrentAccept(t *testing.T) {
 
 	// This handler is called async, once for each invite.
 	bob.handle(client.OnInvitedToGCNtfn(func(ru *client.RemoteUser, iid uint64, invite rpc.RMGroupInvite) {
-		if invite.ID == gcID1 {
+		switch invite.ID {
+		case gcID1:
 			// Wait until invite 2 is received, then accept invite.
 			close(invite1Recvd)
 			select {
@@ -476,7 +477,7 @@ func TestInviteToTwoGCsConcurrentAccept(t *testing.T) {
 			case <-testDone:
 			}
 			acceptErrChan <- bob.AcceptGroupChatInvite(iid)
-		} else if invite.ID == gcID2 {
+		case gcID2:
 			// Singal invite 2 received, wait until invite 1
 			// accepted, then accept this invite.
 			close(invite2Recvd)
@@ -528,14 +529,15 @@ func TestInviteToTwoGCsAcceptAfterJoin(t *testing.T) {
 
 	// This handler is called async, once for each invite.
 	bob.handle(client.OnInvitedToGCNtfn(func(ru *client.RemoteUser, iid uint64, invite rpc.RMGroupInvite) {
-		if invite.ID == gcID1 {
+		switch invite.ID {
+		case gcID1:
 			// Wait until invite 2 is received, then accept invite.
 			select {
 			case <-invite2Recvd:
 			case <-testDone:
 			}
 			acceptErrChan <- bob.AcceptGroupChatInvite(iid)
-		} else if invite.ID == gcID2 {
+		case gcID2:
 			// Singal invite 2 received, wait until fully joined
 			// GC1, then accept this invite.
 			close(invite2Recvd)

@@ -293,7 +293,7 @@ func (w *rtdtConferenceWin) renderInfoView() {
 			}
 		}
 
-		var suffix string = fmt.Sprintf("(%s)", pub.PublisherID)
+		suffix := fmt.Sprintf("(%s)", pub.PublisherID)
 		style := styles.noStyle
 		if liveSess != nil && w.selectingPeer && w.selPeerIndex == i {
 			style = styles.focused

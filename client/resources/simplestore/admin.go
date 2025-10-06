@@ -177,7 +177,7 @@ func (s *Store) handleAdminAddOrderComment(ctx context.Context, _ clientintf.Use
 	// Generate template.
 	w := &bytes.Buffer{}
 	w.WriteString("# Comment added\n\n")
-	w.WriteString(fmt.Sprintf("[Back to Order](/admin/order/%s/%s)\n\n", uid, oid))
+	fmt.Fprintf(w, "[Back to Order](/admin/order/%s/%s)\n\n", uid, oid)
 	return &rpc.RMFetchResourceReply{
 		Data:   w.Bytes(),
 		Status: rpc.ResourceStatusOk,
@@ -229,7 +229,7 @@ func (s *Store) handleAdminUpdateOrderStatus(ctx context.Context, _ clientintf.U
 	// Generate template.
 	w := &bytes.Buffer{}
 	w.WriteString("# Order Status Updated\n\n")
-	w.WriteString(fmt.Sprintf("[Back to Order](/admin/order/%s/%s)\n\n", uid, oid))
+	fmt.Fprintf(w, "[Back to Order](/admin/order/%s/%s)\n\n", uid, oid)
 	return &rpc.RMFetchResourceReply{
 		Data:   w.Bytes(),
 		Status: rpc.ResourceStatusOk,

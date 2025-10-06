@@ -10,7 +10,7 @@ import (
 // actually bound.
 func findAvailablePort() (uint16, error) {
 	for i := 32723; i < 65535; i++ {
-		lis, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", i))
+		lis, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", i)) //nolint:noctx
 		if err != nil {
 			continue
 		}

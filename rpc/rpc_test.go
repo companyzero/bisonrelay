@@ -3,11 +3,11 @@ package rpc
 import (
 	"bytes"
 	"compress/zlib"
+	"crypto/rand"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
-	"math/rand"
 	"strings"
 	"testing"
 

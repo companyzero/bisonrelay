@@ -493,7 +493,7 @@ func (c *Client) downloadChunks(ru *RemoteUser, fd clientdb.FileDownload) error 
 
 			if chunkIdx >= len(fd.Metadata.Manifest) {
 				// Shouldn't happen, but avoid panic.
-				return fmt.Errorf("Assertion error: chunkIdx %d >= len(manifest) %d",
+				return fmt.Errorf("assertion error: chunkIdx %d >= len(manifest) %d",
 					chunkIdx, len(fd.Metadata.Manifest))
 			}
 

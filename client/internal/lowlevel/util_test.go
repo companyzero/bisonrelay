@@ -332,7 +332,7 @@ func (mkx *mockKX) popWrittenMsg(t testing.TB) (rpc.Message, interface{}) {
 	return rpc.Message{}, nil
 }
 
-var mockServerSessionErr = errors.New("mock server session errored")
+var errMockServerSession = errors.New("mock server session errored")
 
 type mockServerSession struct {
 	sendErrChan chan wireMsg
@@ -365,7 +365,7 @@ func (m *mockServerSession) SendPRPC(msg rpc.Message, payload interface{}, reply
 	case m.rpcChan <- wireMsg{msg: msg, payload: payload, replyChan: reply}:
 		return nil
 	case m.sendErrChan <- wireMsg{msg: msg, payload: payload, replyChan: reply}:
-		return mockServerSessionErr
+		return errMockServerSession
 	}
 }
 
@@ -431,7 +431,7 @@ func (rm mockRM) EncryptedMsg() (RVID, []byte, error) {
 
 func (rm mockRM) PaidForRM(amount, fees int64) {}
 
-var mockRMError = errors.New("mock RM error")
+var errMockRM = errors.New("mock RM error")
 
 type mockFailedRM struct{}
 
@@ -444,7 +444,7 @@ func (rm mockFailedRM) EncryptedLen() uint32 {
 }
 
 func (rm mockFailedRM) EncryptedMsg() (RVID, []byte, error) {
-	return rvidFromStr("mock_failed_rm_rdzv"), nil, mockRMError
+	return rvidFromStr("mock_failed_rm_rdzv"), nil, errMockRM
 }
 
 func (rm mockFailedRM) PaidForRM(amount, fees int64) {}

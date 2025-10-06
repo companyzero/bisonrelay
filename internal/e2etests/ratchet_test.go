@@ -1158,11 +1158,12 @@ func TestForceKXWithUnknownRemote(t *testing.T) {
 	aliceRequestedInvites := make(chan client.UserID, 5)
 	aliceReceivedInvites := make(chan client.UserID, 5)
 	alice.handle(client.OnTransitiveEvent(func(src, tgt clientintf.UserID, event client.TransitiveEvent) {
-		if event == client.TEMediateID {
+		switch event {
+		case client.TEMediateID:
 			aliceMediateIDs <- src
-		} else if event == client.TERequestInvite {
+		case client.TERequestInvite:
 			aliceRequestedInvites <- src
-		} else if event == client.TEReceivedInvite {
+		case client.TEReceivedInvite:
 			aliceReceivedInvites <- src
 		}
 	}))

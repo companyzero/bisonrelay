@@ -2,6 +2,7 @@ package tlsconn
 
 import (
 	"bytes"
+	"context"
 	"crypto/ed25519"
 	"crypto/rand"
 	"crypto/tls"
@@ -257,16 +258,20 @@ func listen(addr string) ([]net.Listener, error) {
 			hasIPv4 = true
 		}
 	}
+
+	var netCfg net.ListenConfig
+	ctx := context.Background()
+
 	listeners := make([]net.Listener, 0, 2)
 	if hasIPv4 {
-		listener, err := net.Listen("tcp4", addr)
+		listener, err := netCfg.Listen(ctx, "tcp4", addr)
 		if err != nil {
 			return nil, fmt.Errorf("unable to listen on tcp4:%s: %v", addr, err)
 		}
 		listeners = append(listeners, listener)
 	}
 	if hasIPv6 {
-		listener, err := net.Listen("tcp6", addr)
+		listener, err := netCfg.Listen(ctx, "tcp6", addr)
 		if err != nil {
 			return nil, fmt.Errorf("unable to listen on tcp6:%s: %v", addr, err)
 		}

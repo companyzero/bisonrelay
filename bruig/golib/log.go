@@ -30,11 +30,11 @@ func newLogBackend(logFile, debugLevel string) (*logBackend, error) {
 		logDir, _ := filepath.Split(logFile)
 		err := os.MkdirAll(logDir, 0700)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create log directory: %v\n", err)
+			return nil, fmt.Errorf("failed to create log directory: %v", err)
 		}
 		logRotator, err = rotator.New(logFile, 1024, false, defaultMaxLogFiles)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create file rotator: %v\n", err)
+			return nil, fmt.Errorf("failed to create file rotator: %v", err)
 		}
 	}
 

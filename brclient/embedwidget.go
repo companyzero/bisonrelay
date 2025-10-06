@@ -60,7 +60,7 @@ func (ew *embedWidget) listSharedFiles() tea.Cmd {
 	sel := selection.New("Select shared file", choices)
 	selSharedFiles := selection.NewModel(sel)
 	selSharedFiles.Filter = nil
-	selSharedFiles.Selection.PageSize = 5
+	selSharedFiles.PageSize = 5
 
 	ew.selSharedFiles = selSharedFiles
 	ew.sharedFiles = sharedFiles
@@ -130,8 +130,8 @@ func (ew *embedWidget) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if ew.sharing {
 		switch msg := msg.(type) {
 		case tea.KeyMsg:
-			switch {
-			case msg.Type == tea.KeyEnter:
+			switch msg.Type {
+			case tea.KeyEnter:
 				ew.sharing = false
 				choice, err := ew.selSharedFiles.ValueAsChoice()
 				if err == nil {
@@ -139,7 +139,7 @@ func (ew *embedWidget) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 				return ew, nil
 
-			case msg.Type == tea.KeyEsc:
+			case tea.KeyEsc:
 				ew.sharing = false
 				return ew, nil
 			}
@@ -171,8 +171,8 @@ func (ew *embedWidget) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return ew, cmd
 
 		case tea.KeyMsg:
-			switch {
-			case msg.Type == tea.KeyF2 || msg.Type == tea.KeyEsc:
+			switch msg.Type {
+			case tea.KeyF2, tea.KeyEsc:
 				// Simulate canceling the form.
 				return ew, emitMsg(msgCancelForm{})
 			}

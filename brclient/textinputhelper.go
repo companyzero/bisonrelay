@@ -33,18 +33,18 @@ type textInputHelper struct {
 }
 
 func (input *textInputHelper) clear() {
-	input.Model.SetValue("")
+	input.SetValue("")
 }
 
 func (input *textInputHelper) Focus() tea.Cmd {
-	input.Model.PromptStyle = input.styles.focused
-	input.Model.TextStyle = input.styles.focused
+	input.PromptStyle = input.styles.focused
+	input.TextStyle = input.styles.focused
 	return input.Model.Focus()
 }
 
 func (input *textInputHelper) Blur() tea.Cmd {
-	input.Model.PromptStyle = input.styles.noStyle
-	input.Model.TextStyle = input.styles.noStyle
+	input.PromptStyle = input.styles.noStyle
+	input.TextStyle = input.styles.noStyle
 	input.Model.Blur()
 	return nil
 }

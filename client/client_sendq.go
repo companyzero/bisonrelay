@@ -101,7 +101,7 @@ type preparedSendqItem struct {
 // rm returns the actual RM for this prepared item.
 func (prep *preparedSendqItem) rm() (interface{}, error) {
 	var err error
-	var rm interface{} = prep.rmOrFileChunk
+	rm := prep.rmOrFileChunk
 	if fc, ok := prep.rmOrFileChunk.(*clientdb.SendQueueFileChunk); ok {
 		rm, err = fc.RM()
 	}

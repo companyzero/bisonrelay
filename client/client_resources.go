@@ -46,7 +46,7 @@ func (c *Client) FetchLocalResource(path []string, meta map[string]string,
 
 	res, err := c.cfg.ResourcesProvider.Fulfill(c.ctx, c.PublicID(), &rm)
 	if errors.Is(err, resources.ErrProviderNotFound) {
-		return fmt.Errorf("Provider not found for local request path %s",
+		return fmt.Errorf("provider not found for local request path %s",
 			strescape.ResourcesPath(path))
 	} else if err != nil {
 		return err

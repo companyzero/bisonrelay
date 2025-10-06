@@ -185,7 +185,7 @@ func (ck *ConnKeeper) attemptWelcome(conn clientintf.Conn, kx msgReaderWriter) (
 	}
 
 	// Deal with server properties
-	var policy clientintf.ServerPolicy = clientintf.ServerPolicy{
+	policy := clientintf.ServerPolicy{
 		// These default values may be removed once the corresponding
 		// properties are made required.
 
@@ -209,10 +209,10 @@ func (ck *ConnKeeper) attemptWelcome(conn clientintf.Conn, kx msgReaderWriter) (
 		RTPushRateMBytes:        1,
 	}
 	var (
-		tagDepth   int64  = -1
-		serverTime int64  = -1
-		payScheme  string = ""
-		lnNode     string = ""
+		tagDepth   int64 = -1
+		serverTime int64 = -1
+		payScheme        = ""
+		lnNode           = ""
 	)
 
 	puint := func(s string) (uint64, error) {

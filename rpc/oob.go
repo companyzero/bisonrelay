@@ -342,7 +342,7 @@ func DecomposeRMO(mb []byte, maxDecompressSize uint) (*RMOHeader, interface{}, e
 	d := json.NewDecoder(lr)
 	err = d.Decode(&h)
 	if err != nil {
-		return nil, nil, fmt.Errorf("Decode %v", err)
+		return nil, nil, fmt.Errorf("decode %v", err)
 	}
 
 	// Decode payload

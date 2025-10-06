@@ -28,9 +28,6 @@ func sendLoop(ctx context.Context, chat types.ChatServiceClient, log slog.Logger
 	r := bufio.NewScanner(os.Stdin)
 	for r.Scan() {
 		line := strings.TrimSpace(r.Text())
-		if len(line) < 0 {
-			continue
-		}
 
 		tokens := strings.SplitN(line, " ", 2)
 		if len(tokens) != 2 {

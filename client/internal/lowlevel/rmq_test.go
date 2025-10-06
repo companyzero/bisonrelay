@@ -472,8 +472,8 @@ func TestRMQEncryptErrorFailsRM(t *testing.T) {
 	// Expect the RM to fail to encrypt.
 	select {
 	case err := <-rmErrChan:
-		if !errors.Is(err, mockRMError) {
-			t.Fatalf("unexpected error: got %v, want %v", err, mockRMError)
+		if !errors.Is(err, errMockRM) {
+			t.Fatalf("unexpected error: got %v, want %v", err, errMockRM)
 		}
 	case <-time.After(time.Second):
 		t.Fatal("timeout")

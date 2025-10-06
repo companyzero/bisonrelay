@@ -140,7 +140,7 @@ func (b *inBurst) received(recvTime time.Time, bucketSeq uint32, pktIndex uint16
 		hiseq = int(b.buffer[b.hi].Seq)
 	}
 
-	var i int = int(bucketSeq) % len(b.buffer)
+	i := int(bucketSeq) % len(b.buffer)
 	if b.hi == -1 {
 		b.hi = i
 	} else if hiseq-bseq >= len(b.buffer) {

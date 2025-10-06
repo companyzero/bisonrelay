@@ -182,7 +182,7 @@ func (db *DB) StoreFetchedResource(tx ReadWriteTx, uid UserID, tag rpc.ResourceT
 
 		// Find the response FR for the original request path within
 		// the bundle.
-		var replyFR *FetchedResource = &fr
+		replyFR := &fr
 
 		// Save each page in the bundle.
 		//

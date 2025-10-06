@@ -149,7 +149,7 @@ func (cs *CaptureStream) encodeLoop(ctx context.Context, initialVolGain float64)
 	var encodeBuffer = make([]byte, 1024*1024)
 	var encodedSize, inputSize, inputSamples, packetCount int
 
-	var volumeGain float64 = initialVolGain
+	var volumeGain = initialVolGain
 
 	var timestamp uint32
 
@@ -195,7 +195,7 @@ nextPacket:
 		inputSize += len(samples) * 2
 		encodedSize += len(encoded)
 
-		cs.int16Buffers.Put(samples[:0])
+		cs.int16Buffers.Put(samples[:0]) //nolint:staticcheck
 	}
 
 	// Done!
@@ -383,19 +383,19 @@ func (ps *PlaybackStream) decodeLoop(ctx context.Context) error {
 
 	// Whether playback loop is stalled. This starts as true to ensure the
 	// first packet is decoded if it has a timestamp of 0.
-	var stalled bool = true
+	var stalled = true
 
 	// fillQueue is set to true when the decode queue needs to be filled
 	// with some packets before starting to decode again. This happens at
 	// startup and if playback stalled and no data was available in
 	// decodeQueue.
-	var fillQueue bool = true
+	var fillQueue = true
 
 	// Adaptative buffer length. Starts by buffering a small number of
 	// packets, but every time a stall occurs (dropped or delayed packets),
 	// it doubles the size of buffering done for the next round (up to a
 	// maximum).
-	var stallTargetQLen int = minPlaybackBufferPackets
+	var stallTargetQLen = minPlaybackBufferPackets
 	const maxTargetQLenTime = time.Second
 	const maxTargetQLen = int(maxTargetQLenTime/time.Millisecond) / periodSizeMS
 
@@ -420,7 +420,7 @@ nextFrame:
 
 			// Reject when this is an old timestamp.
 			if lastTimestamp > 0 && input.ts <= lastTimestamp {
-				ps.bytesBuffers.Put(input.data[:0])
+				ps.bytesBuffers.Put(input.data[:0]) //nolint:staticcheck
 				ps.log.Tracef("Rejecting to decode packet with "+
 					"timestamp %d due to last timestamp %d",
 					input.ts, lastTimestamp)
@@ -715,7 +715,7 @@ func (ps *PlaybackStream) playbackLoopWithDevice(ctx context.Context, devID Devi
 					"timestamp %d", lastTimestamp)
 			}
 			copy(outSample, input.data)
-			ps.bytesBuffers.Put(input.data[:0])
+			ps.bytesBuffers.Put(input.data[:0]) //nolint:staticcheck
 			return
 		}
 	}

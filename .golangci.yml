@@ -1,20 +1,16 @@
+version: "2"
 run:
-  deadline: 15m
   build-tags:
     - e2elegacylntest
     - dcrlnde2e
-
 linters:
-  disable-all: true
+  default: none
   enable:
     - asciicheck
     - bidichk
     - bodyclose
     - durationcheck
     - errchkjson
-    - gofmt
-    - goimports
-    - gosimple
     - govet
     - grouper
     - ineffassign
@@ -25,11 +21,32 @@ linters:
     - reassign
     - rowserrcheck
     - sqlclosecheck
+    - staticcheck
     - tparallel
-    - typecheck
     - unconvert
     - unused
     - wastedassign
-
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+      - protoc-gen-go-svcintf
 issues:
   max-same-issues: 0
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

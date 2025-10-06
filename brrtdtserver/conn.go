@@ -24,10 +24,11 @@ func checkKernelUDPBufferSize(socket *net.UDPConn, ignoreSmallErr bool, log slog
 			"is too small (%d bytes)", socket.LocalAddr(), size)
 		log.Warnf("Make sure the kernel buffer sizes are large enough " +
 			"to avoid dropped packets in the kernel buffers")
-		if runtime.GOOS == "linux" {
+		switch runtime.GOOS {
+		case "linux":
 			log.Warnf("Use `sysctl -w net.core.{rmem_max,rmem_default,wmem_max,wmem_default}=size_in_bytes` " +
 				"to set the UDP kernel buffer sizes on Linux")
-		} else if runtime.GOOS == "openbsd" {
+		case "openbsd":
 			log.Warnf("Use `sysctl net.inet.udp.{recvspace,sendspace}=size_in_bytes` " +
 				"to set the UDP kernel buffer sizes on OpenBSD")
 		}

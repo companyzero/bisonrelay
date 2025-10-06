@@ -51,7 +51,7 @@ func TestDifferentSessionIDs(t *testing.T) {
 			// same peer ID as Alice, to prove different cookies
 			// generate different on-server sessions.
 			var aliceId, bobId, charlieId rpc.RTDTPeerID = 1, 2, 3
-			var daveId rpc.RTDTPeerID = aliceId
+			var daveId = aliceId
 
 			alice, bob := ts.newClient(), ts.newClient()
 			charlie, dave := ts.newClient(), ts.newClient()

@@ -40,7 +40,7 @@ func PostTitle(pm *rpc.PostMetadata) string {
 	}
 
 	// Cannonicalize \r as \n.
-	title = strings.Replace(title, "\r", "\n", -1)
+	title = strings.ReplaceAll(title, "\r", "\n")
 
 	// Limit to first non-empty line.
 	subs := firstLineRE.FindStringSubmatch(title)
@@ -69,13 +69,7 @@ func FileChunkMAtoms(chunkIdx int, fm *rpc.FileMetadata) uint64 {
 		return 0
 	}
 	chunkSize := fm.Manifest[chunkIdx].Size
-	if chunkSize < 0 {
-		return 0
-	}
 	fileSize := fm.Size
-	if fileSize < 0 {
-		return 0
-	}
 	matoms := fm.Cost * chunkSize * 1000 / fileSize
 	if matoms < 1000 {
 		return 1000

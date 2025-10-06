@@ -289,7 +289,7 @@ func (s *Settings) Load(filename string) error {
 		return errors.New("pushratebytes cannot be < 1")
 	}
 
-	var atomsPerSub float64 = float64(rpc.PropSubPaymentRateDefault) / 1000
+	var atomsPerSub float64 = rpc.PropSubPaymentRateDefault / 1000
 	err = iniFloat(cfg, &atomsPerSub, "payment", "atomspersub")
 	if err != nil && !errors.Is(err, errIniNotFound) {
 		return err

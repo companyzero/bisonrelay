@@ -26,7 +26,7 @@ type kernelStatsTracker interface {
 // nullKernelStatsTracker does no tracking.
 type nullKernelStatsTracker struct{}
 
-func (_ nullKernelStatsTracker) stats() (UDPProcStats, error) {
+func (nullKernelStatsTracker) stats() (UDPProcStats, error) {
 	return UDPProcStats{}, nil
 }
 

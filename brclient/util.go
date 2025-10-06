@@ -396,9 +396,10 @@ func channelBalanceDisplay(local, remote int64) string {
 	plocal := int(float64(local) / float64(local+remote) * 10)
 	plocal = clamp(plocal, 0, 9)
 	sep := "|"
-	if plocal == 0 {
+	switch plocal {
+	case 0:
 		sep = "<"
-	} else if plocal == max-1 {
+	case max - 1:
 		sep = ">"
 	}
 	return fmt.Sprintf("[%s%s%s]", strings.Repeat(c, plocal), sep,
@@ -415,10 +416,6 @@ func isPayReqExpired(payReq *zpay32.Invoice) bool {
 func payReqStrAmount(payReq *zpay32.Invoice) string {
 	if payReq.MilliAt == nil || *payReq.MilliAt == 0 {
 		return "0 DCR"
-	}
-
-	if *payReq.MilliAt < 0 {
-		return fmt.Sprintf("negative amount (%d atoms)", *payReq.MilliAt)
 	}
 
 	if *payReq.MilliAt < 1000 {
@@ -451,7 +448,7 @@ func preferredCollator() *collate.Collator {
 	baseLocale = baseLocaleComponents[0]
 
 	// Replace underscores with hyphens to create an approximate BCP 47 language tag
-	bcp47Tag := strings.Replace(baseLocale, "_", "-", -1)
+	bcp47Tag := strings.ReplaceAll(baseLocale, "_", "-")
 
 	// Parse the BCP 47 value to ensure it's well-formed
 	tag, err := language.Parse(bcp47Tag)

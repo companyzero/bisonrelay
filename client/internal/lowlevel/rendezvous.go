@@ -738,7 +738,7 @@ loop:
 
 					// Force the server connection to be dropped.
 					if sess != nil {
-						sess.RequestClose(fmt.Errorf("Unable to "+
+						sess.RequestClose(fmt.Errorf("unable to "+
 							"update RVs in server: %v", updateErr))
 					}
 				}

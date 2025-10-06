@@ -855,7 +855,7 @@ func (as *appState) cwHelpMsgs(f func(pf printf)) {
 	case as.activeCW == activeCWLndLog:
 		as.chatWindowsMtx.Unlock()
 		pf := func(format string, args ...interface{}) {
-			as.lndLogLines.Write([]byte(fmt.Sprintf(format, args...)))
+			fmt.Fprintf(as.lndLogLines, format, args...)
 		}
 		f(pf)
 
@@ -2489,7 +2489,7 @@ func (as *appState) editExternalTextFile(baseContent string, fname string) (stri
 		return "", fmt.Errorf("$EDITOR env var is empty")
 	}
 
-	c := exec.Command(editor, fname)
+	c := exec.CommandContext(as.ctx, editor, fname)
 	ch := make(chan error, 1)
 	cmd := tea.ExecProcess(c, func(err error) tea.Msg {
 		ch <- err
@@ -2540,7 +2540,7 @@ func (as *appState) viewRaw(b []byte) (tea.Cmd, error) {
 		return nil, fmt.Errorf("failed to write temp file: %v", err)
 	}
 	f.Close()
-	c := exec.Command(prog, f.Name())
+	c := exec.CommandContext(as.ctx, prog, f.Name())
 
 	if as.releaseTermOnViewEmbed {
 		cmd := tea.ExecProcess(c, func(err error) tea.Msg {
@@ -2590,7 +2590,7 @@ func (as *appState) viewEmbed(embedded mdembeds.EmbeddedArgs) (tea.Cmd, error) {
 		return nil, errors.New("embedded is empty")
 	}
 
-	c := exec.Command(prog, filePath)
+	c := exec.CommandContext(as.ctx, prog, filePath)
 	if as.releaseTermOnViewEmbed {
 		cmd := tea.ExecProcess(c, func(err error) tea.Msg {
 			if err != nil {
@@ -4010,9 +4010,9 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 			as.rtSessions.Store(sessRV, rts)
 		}
 		if banDuration > 0 {
-			rts.err = fmt.Errorf("Temp banned from session (for %s)", banDuration)
+			rts.err = fmt.Errorf("temp banned from session (for %s)", banDuration)
 		} else {
-			rts.err = errors.New("Kicked from session")
+			rts.err = errors.New("kicked from session")
 		}
 		as.rtMtx.Unlock()
 		as.sendMsg(msgRTLocalClientKicked{})
@@ -4311,11 +4311,11 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 
 			// Replace $src and $msg in command line args.
 			for i := 1; i < len(cmd); i++ {
-				cmd[i] = strings.Replace(cmd[i], "$src", n.FromNick, -1)
-				cmd[i] = strings.Replace(cmd[i], "$msg", n.Text, -1)
+				cmd[i] = strings.ReplaceAll(cmd[i], "$src", n.FromNick)
+				cmd[i] = strings.ReplaceAll(cmd[i], "$msg", n.Text)
 			}
 
-			c := exec.Command(cmd[0], cmd[1:]...)
+			c := exec.CommandContext(as.ctx, cmd[0], cmd[1:]...)
 			c.Stdout = nil
 			c.Stderr = nil
 			err := c.Start()

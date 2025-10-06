@@ -1,6 +1,7 @@
 package netutils
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"runtime"
@@ -9,7 +10,7 @@ import (
 
 // Listen binds to the specified address, both on tcp4 and tcp6 when an empty
 // host is specified.
-func Listen(addr string) ([]net.Listener, error) {
+func Listen(ctx context.Context, addr string) ([]net.Listener, error) {
 	var hasIPv4, hasIPv6 bool
 
 	host, _, err := net.SplitHostPort(addr)
@@ -44,16 +45,18 @@ func Listen(addr string) ([]net.Listener, error) {
 			hasIPv4 = true
 		}
 	}
+
+	var netCfg net.ListenConfig
 	listeners := make([]net.Listener, 0, 2)
 	if hasIPv4 {
-		listener, err := net.Listen("tcp4", addr)
+		listener, err := netCfg.Listen(ctx, "tcp4", addr)
 		if err != nil {
 			return nil, fmt.Errorf("unable to listen on tcp4:%s: %v", addr, err)
 		}
 		listeners = append(listeners, listener)
 	}
 	if hasIPv6 {
-		listener, err := net.Listen("tcp6", addr)
+		listener, err := netCfg.Listen(ctx, "tcp6", addr)
 		if err != nil {
 			return nil, fmt.Errorf("unable to listen on tcp6:%s: %v", addr, err)
 		}

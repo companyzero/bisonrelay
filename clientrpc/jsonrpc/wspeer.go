@@ -2,6 +2,7 @@ package jsonrpc
 
 import (
 	"context"
+	"crypto/rand"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
@@ -9,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"math/rand"
 	"net"
 	"net/http"
 	"os"
@@ -87,7 +87,7 @@ func (p *wsPeer) run(ctx context.Context) error {
 		err := p.conn.WriteControl(websocket.PongMessage, pingData[:],
 			time.Now().Add(websocketPongTimeout))
 		if err != nil && !errors.Is(err, websocket.ErrCloseSent) &&
-			!(errors.As(err, &netErr) && netErr.Timeout()) {
+			!(errors.As(err, &netErr) && netErr.Timeout()) { //nolint:staticcheck
 
 			p.log.Errorf("Failed to send pong: %v", err)
 			return err

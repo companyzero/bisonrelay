@@ -46,7 +46,7 @@ func (z *ZKS) handleCreateRTDTSession(ctx context.Context, sc *sessionContext,
 				err = fmt.Errorf("LN invoice canceled")
 
 			case lookupRes.State != lnrpc.Invoice_SETTLED:
-				err = fmt.Errorf("Unexpected LN state: %d",
+				err = fmt.Errorf("unexpected LN state: %d",
 					lookupRes.State)
 
 			case lookupRes.AmtPaidMAtoms < int64(wantMAtoms):
@@ -116,7 +116,7 @@ func (z *ZKS) handleGetRTDTAppointCookie(ctx context.Context, sc *sessionContext
 				err = fmt.Errorf("LN invoice canceled")
 
 			case lookupRes.State != lnrpc.Invoice_SETTLED:
-				err = fmt.Errorf("Unexpected LN state: %d",
+				err = fmt.Errorf("unexpected LN state: %d",
 					lookupRes.State)
 
 			case lookupRes.AmtPaidMAtoms < int64(wantMAtoms):
@@ -221,7 +221,7 @@ func (z *ZKS) handleAppointRTDTServer(ctx context.Context, sc *sessionContext,
 				err = fmt.Errorf("LN invoice canceled")
 
 			case lookupRes.State != lnrpc.Invoice_SETTLED:
-				err = fmt.Errorf("Unexpected LN state: %d",
+				err = fmt.Errorf("unexpected LN state: %d",
 					lookupRes.State)
 			}
 

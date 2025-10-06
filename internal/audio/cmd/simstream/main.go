@@ -130,7 +130,7 @@ func realMain() error {
 	// Set devices.
 	if *flagCapDevice > -1 {
 		if *flagCapDevice >= len(devices.Capture) {
-			return fmt.Errorf("Capture device %d not found (%d devices)",
+			return fmt.Errorf("capture device %d not found (%d devices)",
 				*flagCapDevice, len(devices.Capture))
 		}
 		dev := devices.Capture[*flagCapDevice]
@@ -138,7 +138,7 @@ func realMain() error {
 	}
 	if *flagPlayDevice > -1 {
 		if *flagPlayDevice >= len(devices.Playback) {
-			return fmt.Errorf("Playback device %d not found (%d devices)",
+			return fmt.Errorf("playback device %d not found (%d devices)",
 				*flagPlayDevice, len(devices.Playback))
 		}
 		dev := devices.Playback[*flagPlayDevice]
