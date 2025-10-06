@@ -8,6 +8,7 @@ set -e
 /usr/bin/sudo -u $PG_USER /usr/local/bin/pg_ctl -D $PG_DATADIR stop
 
 # rewind postgresql.
+# https://www.postgresql.org/docs/current/app-pgrewind.html
 /usr/bin/sudo -u $PG_USER /usr/local/bin/pg_rewind -D /var/lib/postgres/data --source-server="host=192.168.0.1 port=5432 user=rewind_user password=rewind_user dbname=postgres"
 
 # set postgresql to secondary mode.
