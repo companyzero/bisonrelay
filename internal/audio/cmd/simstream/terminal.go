@@ -15,20 +15,20 @@ type userInputCtl struct {
 }
 
 func (ctl *userInputCtl) processInput(_ context.Context, in []byte) {
-	switch {
-	case in[0] == '+':
+	switch in[0] {
+	case '+':
 		ctl.psGain += 1
 		ctl.ss.ps.SetVolumeGain(ctl.psGain)
 
-	case in[0] == '-':
+	case '-':
 		ctl.psGain -= 1
 		ctl.ss.ps.SetVolumeGain(ctl.psGain)
 
-	case in[0] == '>':
+	case '>':
 		ctl.csGain += 1
 		ctl.ss.cs.SetVolumeGain(ctl.csGain)
 
-	case in[0] == '<':
+	case '<':
 		ctl.csGain -= 1
 		ctl.ss.cs.SetVolumeGain(ctl.csGain)
 	}

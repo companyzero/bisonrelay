@@ -258,14 +258,15 @@ func (pc *DcrlnPaymentClient) watchInvoice(ctx context.Context, rhash []byte,
 			return
 		}
 
-		if invUpdate.State == lnrpc.Invoice_SETTLED {
+		switch invUpdate.State {
+		case lnrpc.Invoice_SETTLED:
 			pc.log.Debugf("Invoice %x settled with %f DCR",
 				rhash, float64(invUpdate.AmtPaidMAtoms)/1e11)
 			if cb != nil {
 				cb(invUpdate.AmtPaidMAtoms)
 			}
 			return
-		} else if invUpdate.State == lnrpc.Invoice_CANCELED {
+		case lnrpc.Invoice_CANCELED:
 			return
 		}
 	}
@@ -308,7 +309,7 @@ func (pc *DcrlnPaymentClient) IsInvoicePaid(ctx context.Context, minMatAmt int64
 		return fmt.Errorf("LN invoice canceled")
 
 	case lookupRes.State != lnrpc.Invoice_SETTLED:
-		return fmt.Errorf("Unexpected LN state: %d",
+		return fmt.Errorf("unexpected LN state: %d",
 			lookupRes.State)
 
 	case lookupRes.AmtPaidMAtoms < minMatAmt:
@@ -436,8 +437,8 @@ func (pc *DcrlnPaymentClient) TrackInvoice(ctx context.Context, invoice string, 
 			return 0, clientintf.ErrInvoiceExpired
 
 		case res := <-resChan:
-			switch {
-			case res.State == lnrpc.Invoice_SETTLED:
+			switch res.State {
+			case lnrpc.Invoice_SETTLED:
 				if res.AmtPaidMAtoms < minMAtoms {
 					return 0, fmt.Errorf("received %d < wanted %d: %w",
 						res.AmtPaidMAtoms,
@@ -446,16 +447,16 @@ func (pc *DcrlnPaymentClient) TrackInvoice(ctx context.Context, invoice string, 
 				cancelTimer()
 				return res.AmtPaidMAtoms, nil
 
-			case res.State == lnrpc.Invoice_CANCELED:
+			case lnrpc.Invoice_CANCELED:
 				cancelTimer()
 				return 0, fmt.Errorf("LN invoice canceled")
 
-			case res.State == lnrpc.Invoice_OPEN:
+			case lnrpc.Invoice_OPEN:
 				// Continue waiting for payment or expiration.
 
 			default:
 				cancelTimer()
-				return 0, fmt.Errorf("Unexpected LN state: %d",
+				return 0, fmt.Errorf("unexpected LN state: %d",
 					res.State)
 			}
 		}
@@ -858,7 +859,7 @@ func PaymentFeeLimit(amountMAtoms uint64) *lnrpc.FeeLimit {
 func TrackWalletCheckEvents(ctx context.Context, lnRPC lnrpc.LightningClient) (chan struct{}, error) {
 	chanEvents, err := lnRPC.SubscribeChannelEvents(ctx, &lnrpc.ChannelEventSubscription{})
 	if err != nil {
-		return nil, fmt.Errorf("Unable to track channel events: %v", err)
+		return nil, fmt.Errorf("unable to track channel events: %v", err)
 	}
 
 	peerEvents, err := lnRPC.SubscribePeerEvents(ctx, &lnrpc.PeerEventSubscription{})

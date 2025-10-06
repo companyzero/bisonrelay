@@ -2,6 +2,7 @@ package e2etests
 
 import (
 	"context"
+	cryptorand "crypto/rand"
 	"encoding/hex"
 	"fmt"
 	"io"
@@ -649,6 +650,7 @@ func assertKicksFromLiveRTDTSession(t testing.TB, src *testClient,
 	targetSess := target.GetLiveRTSession(sessRV)
 	if targetSess == nil {
 		t.Fatalf("Target does not have live session")
+		return
 	}
 	targetPeerID := targetSess.RTSess.LocalID()
 	assert.NilErr(t, src.KickFromLiveRTDTSession(sessRV, targetPeerID, banDuration))
@@ -681,7 +683,7 @@ func randomHex(rnd io.Reader, len int) string {
 
 func randomData(size int) []byte {
 	data := make([]byte, size)
-	rand.Read(data)
+	cryptorand.Read(data)
 	return data
 }
 

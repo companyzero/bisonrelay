@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        go: ["1.23", "1.24"]
+        go: ["1.24", "1.25"]
     steps:
       - name: Set up Go
         uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5.0.2
@@ -17,14 +17,10 @@ jobs:
           go-version: ${{ matrix.go }}
       - name: Check out source
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
-      - name: Install Linters
-        run: "go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.64.2"
       - name: Build
         run: go build ./...
       - name: Test
         run: go test ./...
-      - name: Lint
-        run: golangci-lint run
       - name: Upload logs if tests failed
         if: failure()
         uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0

@@ -616,7 +616,7 @@ func (z *ZKS) Run(ctx context.Context) error {
 
 	listeners := make([]net.Listener, 0, len(z.settings.Listen)*2)
 	for _, addr := range z.settings.Listen {
-		ls, err := netutils.Listen(addr)
+		ls, err := netutils.Listen(ctx, addr)
 		if err != nil {
 			return fmt.Errorf("could not listen to addr %s: %v",
 				addr, err)

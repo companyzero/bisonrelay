@@ -306,7 +306,7 @@ func (tc *testClient) nextGCUserPartedIs(gcID client.GCID, uid client.UserID, ki
 			err = fmt.Errorf("unexpected UID: got %s, want %s",
 				gotUID, uid)
 		}
-		if err == nil && kick != kick {
+		if err == nil && gotKick != kick {
 			err = fmt.Errorf("unexpected kick: got %v, want %v",
 				gotKick, kick)
 

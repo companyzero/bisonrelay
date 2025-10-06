@@ -329,13 +329,14 @@ func (s *Store) runLNInvoiceWatcher(ctx context.Context) error {
 			return err
 		}
 
-		if inv.State == lnrpc.Invoice_SETTLED {
+		switch inv.State {
+		case lnrpc.Invoice_SETTLED:
 			select {
 			case s.invoiceSettledChan <- inv.PaymentRequest:
 			case <-ctx.Done():
 				return ctx.Err()
 			}
-		} else if inv.State == lnrpc.Invoice_CANCELED {
+		case lnrpc.Invoice_CANCELED:
 			select {
 			case s.invoiceCanceledChan <- inv.PaymentRequest:
 			case <-ctx.Done():

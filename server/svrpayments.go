@@ -3,9 +3,7 @@ package server
 import (
 	"context"
 	"encoding/hex"
-	"errors"
 	"fmt"
-	"math"
 	"os"
 	"strings"
 	"time"
@@ -258,13 +256,9 @@ func (z *ZKS) handleGetInvoice(ctx context.Context, sc *sessionContext,
 }
 
 func (z *ZKS) calcPushCostMAtoms(msgLen int) (int64, error) {
-	v, err := rpc.CalcPushCostMAtoms(z.settings.PushPayRateMinMAtoms,
+	return rpc.CalcPushCostMAtoms(z.settings.PushPayRateMinMAtoms,
 		z.settings.PushPayRateMAtoms, z.settings.PushPayRateBytes,
 		uint64(msgLen))
-	if v > math.MaxInt64 {
-		return 0, errors.New("push cost overflows int64")
-	}
-	return v, err
 }
 
 // isRMPaid returns whether the received routed message was paid for. Returns
@@ -326,7 +320,7 @@ func (z *ZKS) isRMPaid(ctx context.Context, rm *rpc.RouteMessage, sc *sessionCon
 					err = fmt.Errorf("LN invoice canceled")
 
 				case lookupRes.State != lnrpc.Invoice_SETTLED:
-					err = fmt.Errorf("Unexpected LN state: %d",
+					err = fmt.Errorf("unexpected LN state: %d",
 						lookupRes.State)
 
 				case lookupRes.AmtPaidMAtoms < wantMAtoms:
@@ -395,21 +389,21 @@ func (z *ZKS) areSubsPaid(ctx context.Context, r *rpc.SubscribeRoutedMessages, s
 			var lookupRes *lnrpc.Invoice
 			lookupRes, err = z.lnRpc.LookupInvoice(ctx, lookupReq)
 			if lookupRes != nil {
-				switch {
-				case lookupRes.State == lnrpc.Invoice_OPEN:
+				switch lookupRes.State {
+				case lnrpc.Invoice_OPEN:
 					// Could be that the request doesn't
 					// have any new (unpaid) RVs, so keep
 					// going until we determine a payment
 					// was actually needed.
 
-				case lookupRes.State == lnrpc.Invoice_CANCELED:
+				case lnrpc.Invoice_CANCELED:
 					// Clear canceled/timed out invoices so
 					// a new one can be generated, but
 					// otherwise don't error because we might
 					// not need any new payments yet.
 					sc.lnPayReqHashSub = nil
 
-				case lookupRes.State == lnrpc.Invoice_SETTLED:
+				case lnrpc.Invoice_SETTLED:
 					// Invoice paid. Determine how many
 					// new subscripts will be allowed based
 					// on how much was paid.
@@ -426,7 +420,7 @@ func (z *ZKS) areSubsPaid(ctx context.Context, r *rpc.SubscribeRoutedMessages, s
 					)
 
 				default:
-					err = fmt.Errorf("Unexpected LN state: %d",
+					err = fmt.Errorf("unexpected LN state: %d",
 						lookupRes.State)
 					sc.lnPayReqHashSub = nil
 				}

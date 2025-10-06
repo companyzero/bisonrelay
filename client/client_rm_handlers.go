@@ -314,7 +314,7 @@ func (c *Client) innerHandleUserRM(ru *RemoteUser, h *rpc.RMHeader,
 		return c.handleRMRTDTAdminCookies(ru, p)
 
 	default:
-		return fmt.Errorf("Received unknown command %q payload %T",
+		return fmt.Errorf("received unknown command %q payload %T",
 			h.Command, p)
 	}
 }

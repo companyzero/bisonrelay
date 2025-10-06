@@ -63,7 +63,7 @@ func (pmv protoMessageValue) Set(s string) error {
 		pmv.m.Set(pmv.f, protoreflect.ValueOfUint64(v))
 
 	case protoreflect.DoubleKind:
-		v, err := strconv.ParseFloat(s, 10)
+		v, err := strconv.ParseFloat(s, 64)
 		if err != nil {
 			return err
 		}
@@ -246,7 +246,7 @@ func parseCmdFlags(cmdName string, args []string) (proto.Message, error) {
 	argFields := flattenFields(req.ProtoReflect().Descriptor())
 	for _, fields := range argFields {
 		var f protoreflect.FieldDescriptor
-		var m protoreflect.Message = req.ProtoReflect()
+		m := req.ProtoReflect()
 		var parentName string
 		for i := range fields {
 			if i == 0 {

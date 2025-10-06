@@ -54,7 +54,7 @@ func fixedIDIniter(id *zkidentity.FullIdentity) func(context.Context) (*zkidenti
 	}
 }
 
-//nolint:golint,unused
+//nolint:unused
 func testRandomFile(t testing.TB) string {
 	t.Helper()
 	f, err := os.CreateTemp("", "test-random-file")
@@ -87,7 +87,7 @@ func randomHex(rnd io.Reader, len int) string {
 	return hex.EncodeToString(b)
 }
 
-//nolint:golint,unused
+//nolint:unused
 func orFatal(t testing.TB, err error) {
 	t.Helper()
 	if err != nil {
@@ -174,7 +174,7 @@ func pairedRatchet(t testing.TB, rnd io.Reader, ida, idb *zkidentity.FullIdentit
 //
 // It is NOT safe and only meant to be used in tests.
 //
-//nolint:golint,unused
+//nolint:unused
 func certConfirmerUnsafeAlwaysAccept(context.Context, *tls.ConnectionState,
 	*zkidentity.PublicIdentity) error {
 	return nil

@@ -42,7 +42,7 @@ func (t *textAreaModel) countWrappedLines(runes []rune) int {
 		word   = []rune{}
 		row    int
 		spaces int
-		width  = t.Model.Width()
+		width  = t.Width()
 	)
 
 	// Word wrap the runes
@@ -111,7 +111,7 @@ func (t *textAreaModel) totalLineCount() int {
 	// itself. This basically recreates the textarea's wrap() function to be
 	// able to accurately count the lines.
 	lineCount := 0
-	lines := strings.Split(t.Model.Value(), "\n")
+	lines := strings.Split(t.Value(), "\n")
 	for _, line := range lines {
 		lineCount += 1
 		lineCount += t.countWrappedLines([]rune(line))
@@ -120,7 +120,7 @@ func (t *textAreaModel) totalLineCount() int {
 }
 
 func (t *textAreaModel) lastLineSoftLineCount() int {
-	lines := strings.Split(t.Model.Value(), "\n")
+	lines := strings.Split(t.Value(), "\n")
 	if len(lines) == 0 {
 		return 0
 	}
@@ -136,15 +136,15 @@ func (t *textAreaModel) recalcDynHeight(winW, winH int) int {
 		lineCount += 1
 	}
 	lineCount = clamp(lineCount, 1, maxLines)
-	if lineCount != t.Model.Height() {
-		t.Model.SetHeight(lineCount)
+	if lineCount != t.Height() {
+		t.SetHeight(lineCount)
 	}
 
 	return lineCount
 }
 
 func (t *textAreaModel) setValue(s string) {
-	t.Model.SetValue(s)
+	t.SetValue(s)
 }
 
 func (t *textAreaModel) Update(msg tea.Msg) (*textAreaModel, tea.Cmd) {

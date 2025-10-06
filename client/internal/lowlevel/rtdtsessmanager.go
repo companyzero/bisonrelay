@@ -463,7 +463,7 @@ func (rtsm *RTDTSessionManager) firstServerAppointment(ctx context.Context,
 	// this session.
 	serverAddr, err := net.ResolveUDPAddr("udp", res.ServerAddress)
 	if err != nil {
-		return nil, fmt.Errorf("Unable to resolve RTDT server addr %s: %v", res.ServerAddress, err)
+		return nil, fmt.Errorf("unable to resolve RTDT server addr %s: %v", res.ServerAddress, err)
 	}
 	rtsm.log.Infof("Resolved RTDT server address %q to %s", res.ServerAddress, serverAddr)
 

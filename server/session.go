@@ -368,7 +368,7 @@ func (z *ZKS) sessionReader(ctx context.Context, sc *sessionContext) error {
 			// just push tag for now
 			err = sc.tagStack.Push(message.Tag)
 			if err != nil {
-				return fmt.Errorf("Acknowledge can't push tag: %v",
+				return fmt.Errorf("acknowledge can't push tag: %v",
 					message.Tag)
 			}
 

@@ -140,7 +140,7 @@ func (c *client) handleBatch(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// How many sessions to open up.
-	var count int = 100
+	count := 100
 	if str := r.URL.Query().Get("count"); str != "" {
 		v, err := strconv.ParseUint(str, 10, 32)
 		if err == nil {
@@ -177,12 +177,12 @@ func (c *client) handleBatch(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	var startConnId int = 1
+	var startConnId = 1
 
 	// Determine base peer id. If peer id is specified, also ensure the
 	// conn id is unique per peer id (so we don't use the same conn for
 	// different peers).
-	var peerID rpc.RTDTPeerID = c.basePeerID
+	peerID := c.basePeerID
 	if str := r.URL.Query().Get("peer"); str != "" {
 		v, err := strconv.ParseUint(str, 16, 32)
 		if err == nil {

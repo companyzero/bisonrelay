@@ -78,7 +78,7 @@ func initLog() (slog.Logger, error) {
 	logPath := filepath.Join(logDir, "brseeder.log")
 	logFd, err := rotator.New(logPath, 32*1024, true, 0)
 	if err != nil {
-		return slog.Disabled, fmt.Errorf("Failed to setup logfile %s: %v", logPath, err)
+		return slog.Disabled, fmt.Errorf("failed to setup logfile %s: %v", logPath, err)
 	}
 	defer logFd.Close()
 

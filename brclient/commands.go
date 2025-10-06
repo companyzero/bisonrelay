@@ -1711,7 +1711,7 @@ var gcCommands = []tuicmd{
 			})
 
 			if showId != 0 && !shown {
-				return fmt.Errorf("Invite with id %d not found", showId)
+				return fmt.Errorf("invite with id %d not found", showId)
 			}
 			return nil
 		},
@@ -2862,7 +2862,7 @@ var lnCommands = []tuicmd{
 
 			as.cwHelpMsg("Attempting to pay invoice")
 			go func() {
-				pc, err := as.lnRPC.SendPayment(as.ctx)
+				pc, err := as.lnRPC.SendPayment(as.ctx) //nolint:staticcheck
 				if err != nil {
 					as.cwHelpMsg("PC: %v", err)
 					return
@@ -4052,7 +4052,7 @@ var rtchatCommands = []tuicmd{
 
 				if accepted != nil {
 					as.rtInvitesMtx.Unlock()
-					return errors.New("More than 1 RTDT invite with the same prefix")
+					return errors.New("more than 1 RTDT invite with the same prefix")
 				}
 
 				accepted = inv
@@ -4258,7 +4258,7 @@ var rtchatCommands = []tuicmd{
 			sessRV := sess.Metadata.RV
 
 			if !sess.LocalIsAdmin() {
-				return errors.New("Only session admins can remove members")
+				return errors.New("only session admins can remove members")
 			}
 
 			ru, err := as.c.UserByNick(args[1])
@@ -4330,7 +4330,7 @@ var rtchatCommands = []tuicmd{
 			}
 			sessRV := sess.Metadata.RV
 			if !sess.LocalIsAdmin() {
-				return errors.New("Only session admins can remove members")
+				return errors.New("only session admins can remove members")
 			}
 
 			go as.rtDissolveSession(sessRV)
@@ -4357,7 +4357,7 @@ var rtchatCommands = []tuicmd{
 			}
 			sessRV := sess.Metadata.RV
 			if !sess.LocalIsAdmin() {
-				return errors.New("Only session admins can remove members")
+				return errors.New("only session admins can remove members")
 			}
 
 			go as.rtRotateCookies(sessRV)
@@ -4562,12 +4562,10 @@ var commands = []tuicmd{
 		handler: func(args []string, as *appState) error {
 			var viewAvatar bool
 			if len(args) > 1 {
-				switch {
-				case args[1] == "viewavatar":
-					viewAvatar = true
-				default:
+				if args[1] != "viewavatar" {
 					return fmt.Errorf("unknown argument %q", args[1])
 				}
+				viewAvatar = true
 			}
 
 			if len(args) > 0 {
@@ -4714,13 +4712,15 @@ var commands = []tuicmd{
 			if len(args) < 1 {
 				return usageError{"specify a window number"}
 			}
-			if args[0] == "log" {
+
+			switch args[0] {
+			case "log":
 				as.changeActiveWindow(activeCWLog)
-			} else if args[0] == "lndlog" {
+			case "lndlog":
 				as.changeActiveWindow(activeCWLndLog)
-			} else if args[0] == "0" || args[0] == "console" {
+			case "0", "console":
 				as.changeActiveWindow(activeCWDiag)
-			} else if args[0] == "feed" {
+			case "feed":
 				if len(args) > 1 {
 					ru, err := as.c.UserByNick(args[1])
 					if err != nil {
@@ -4732,7 +4732,7 @@ var commands = []tuicmd{
 					as.feedAuthor = nil
 				}
 				as.changeActiveWindow(activeCWFeed)
-			} else {
+			default:
 				win, err := strconv.ParseInt(args[0], 10, 32)
 				if err != nil {
 					return err

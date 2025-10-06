@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	cryptorand "crypto/rand"
 	"errors"
 	"flag"
 	"fmt"
@@ -411,7 +412,7 @@ func (s *simulator) Run(ctx context.Context) error {
 
 	// Timing querying for inexistent push payment.
 	var randomID [32]byte
-	_, _ = rand.Read(randomID[:])
+	_, _ = cryptorand.Read(randomID[:])
 	start = time.Now()
 	isRedeemed, err := s.db.IsPushPaymentRedeemed(ctx, randomID[:])
 	if err != nil {
@@ -427,7 +428,7 @@ func (s *simulator) Run(ctx context.Context) error {
 	// Log final sizes.
 	bulkSize, indexSize, err := s.db.TableSpacesSizes(ctx)
 	if err != nil {
-		return fmt.Errorf("Unable to fetch table space sizes: %v", err)
+		return fmt.Errorf("unable to fetch table space sizes: %v", err)
 	}
 	fmt.Printf("Tablespaces sizes: bulk: %s, index: %s\n",
 		humanReadableBytes(bulkSize), humanReadableBytes(indexSize))

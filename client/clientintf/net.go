@@ -45,7 +45,7 @@ func tlsDialer(addr string, log slog.Logger, dialFunc DialFunc, useSeeder bool) 
 		conn := tls.Client(nconn, tlsConfig)
 
 		// Force handshake to collect the completed connection state.
-		if err := conn.Handshake(); err != nil {
+		if err := conn.HandshakeContext(ctx); err != nil {
 			return nil, nil, err
 		}
 

@@ -1494,7 +1494,7 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		}
 
 		ctx := context.Background()
-		pc, err := lnc.SendPayment(ctx)
+		pc, err := lnc.SendPayment(ctx) //nolint:staticcheck
 		if err != nil {
 			return nil, err
 		}

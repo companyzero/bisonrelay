@@ -6,6 +6,7 @@ package session
 
 import (
 	"bytes"
+	"context"
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
@@ -108,16 +109,21 @@ func TestLessKX(t *testing.T) {
 func testKX(t *testing.T, alice, bob *zkidentity.FullIdentity) {
 	loadIdentities(t)
 
+	var lisCfg net.ListenConfig
+	var dialCfg net.Dialer
+
 	msg := []byte("this is a message of sorts")
 	eg := errgroup.Group{}
 	wait := make(chan bool)
+	listenerAddrChan := make(chan string, 1)
 	eg.Go(func() error {
-		listener, err := net.Listen("tcp", "127.0.0.1:12346")
+		listener, err := lisCfg.Listen(context.Background(), "tcp", "127.0.0.1:0")
 		if err != nil {
 			wait <- false
 			return err
 		}
 		defer listener.Close()
+		listenerAddrChan <- listener.Addr().String()
 		wait <- true // start client
 
 		conn, err := listener.Accept()
@@ -156,7 +162,8 @@ func testKX(t *testing.T, alice, bob *zkidentity.FullIdentity) {
 		t.Fatalf("server not started")
 	}
 
-	conn, err := net.Dial("tcp", "127.0.0.1:12346")
+	lisAddr := <-listenerAddrChan
+	conn, err := dialCfg.DialContext(context.Background(), "tcp", lisAddr)
 	if err != nil {
 		t.Fatal(err)
 	}

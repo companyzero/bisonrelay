@@ -2,7 +2,6 @@ package e2etests
 
 import (
 	"fmt"
-	"math/rand"
 	"sort"
 	"strconv"
 	"strings"
@@ -455,8 +454,7 @@ func TestContentFilters(t *testing.T) {
 			}
 			sendComment := func(commenter, postFrom *testClient, pid zkidentity.ShortID, comment string) {
 				// Use a random parent id so that each comment is unique.
-				var parent zkidentity.ShortID
-				rand.Read(parent[:])
+				parent := zkidentity.RandomShortID()
 				comment += fmt.Sprintf("#%d", time.Now().UnixMicro())
 				_, err := commenter.CommentPost(postFrom.PublicID(), pid, comment, &parent)
 				assert.NilErr(t, err)

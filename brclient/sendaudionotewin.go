@@ -130,8 +130,8 @@ func (w sendAudioNoteWin) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		switch {
-		case msg.Type == tea.KeyEsc:
+		switch msg.Type {
+		case tea.KeyEsc:
 			w.as.noterec.Stop()
 			return newMainWindowState(w.as)
 

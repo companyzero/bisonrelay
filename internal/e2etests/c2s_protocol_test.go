@@ -3,7 +3,6 @@ package e2etests
 import (
 	"bytes"
 	"encoding/hex"
-	"math/rand"
 	"testing"
 	"time"
 
@@ -66,8 +65,7 @@ func TestClientServerAgreeMaxMsgVersion(t *testing.T) {
 			// size. Note the PM is encoded to hex because it is
 			// sent as a string.
 			maxPayloadSize := rpc.MaxPayloadSizeForVersion(tc.maxSizeVersion)
-			data := make([]byte, maxPayloadSize)
-			_, _ = rand.Read(data)
+			data := randomData(int(maxPayloadSize))
 			wantMsg := hex.EncodeToString(data[:len(data)/2])
 			assert.NilErr(t, alice.PM(bob.PublicID(), wantMsg))
 			assert.ChanWrittenWithValTimeout(t, bobPmChan, wantMsg, 2*time.Minute)

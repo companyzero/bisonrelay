@@ -53,11 +53,11 @@ func (ins initStepState) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if ins.msgConfCert != nil {
 		switch msg := msg.(type) {
 		case tea.KeyMsg:
-			switch {
-			case msg.Type == tea.KeyLeft, msg.Type == tea.KeyRight:
+			switch msg.Type {
+			case tea.KeyLeft, tea.KeyRight:
 				ins.focusIdx = (ins.focusIdx + 1) % 2
 				return ins, nil
-			case msg.Type == tea.KeyEnter:
+			case tea.KeyEnter:
 				replyChan := ins.msgConfCert.replyChan
 				ins.msgConfCert = nil
 				var reply error

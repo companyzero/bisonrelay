@@ -116,7 +116,7 @@ func (db *DB) LocalID(tx ReadTx) (*zkidentity.FullIdentity, error) {
 func (db *DB) UpdateLocalID(tx ReadWriteTx, id *zkidentity.FullIdentity) error {
 	myid, err := json.Marshal(id)
 	if err != nil {
-		return fmt.Errorf("Could not marshal identity: %v", err)
+		return fmt.Errorf("could not marshal identity: %v", err)
 	}
 
 	err = db.idb.Set("", "myidentity",
@@ -582,12 +582,12 @@ func (db *DB) logMsg(logFname string, internal bool, from, msg string,
 	lastMsgTs, ok := db.lastMsgTS[logFname]
 	if !ok {
 		b.WriteString(ts.Format("2006-01-02T15:04:05 "))
-		b.WriteString(fmt.Sprintf("* Conversation started %s", ts.Format("2006-01-02")))
+		fmt.Fprintf(b, "* Conversation started %s", ts.Format("2006-01-02"))
 		b.WriteRune('\n')
 		db.lastMsgTS[logFname] = ts
 	} else if ts.Sub(lastMsgTs) > time.Hour*24 {
 		b.WriteString(ts.Format("2006-01-02T15:04:05 "))
-		b.WriteString(fmt.Sprintf("* Day Changed to %s", ts.Format("2006-01-02")))
+		fmt.Fprintf(b, "* Day Changed to %s", ts.Format("2006-01-02"))
 		b.WriteRune('\n')
 		db.lastMsgTS[logFname] = ts
 	}

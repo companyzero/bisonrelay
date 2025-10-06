@@ -243,8 +243,8 @@ func (c *client) handlePacket(_ *rtdtclient.Session, enc *rpc.RTDTFramedPacket, 
 	// absTs := time.UnixMilli(int64(plain.Timestamp) + epochUnixMilli)
 	absTs := epochUnixMilli.Add(time.Duration(plain.Timestamp) * time.Millisecond)
 	absDelay := time.Since(absTs)
-	absDelayMs := absDelay / time.Millisecond
-	c.stats.absDelay.Observe(float64(absDelayMs))
+	absDelayTime := absDelay / time.Millisecond
+	c.stats.absDelay.Observe(float64(absDelayTime))
 
 	burstIdx := int(binary.BigEndian.Uint16(plain.Data))
 	burstSeq := binary.BigEndian.Uint32(plain.Data[12:])
