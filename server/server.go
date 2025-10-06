@@ -15,6 +15,7 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strconv"
 	"sync"
@@ -554,7 +555,15 @@ func (z *ZKS) dbMonitoringWithSeeder(ctx context.Context, ws *wsrpc.Client) erro
 		if reply.Master {
 			z.logMonit.Warnf("Server promoted to master! (dryrun=%v)",
 				z.seederDryRun)
-			// CHECK: Shouldn't we run something to promote DB here?
+			if !z.seederDryRun && z.settings.PGCmdPromote != "" {
+				// promote db
+				cmd := exec.CommandContext(ctx, z.settings.PGCmdPromote)
+				if err := cmd.Run(); err != nil {
+					z.log.Errorf("promote failed: %v", err)
+				} else {
+					z.log.Infof("promote succeeded")
+				}
+			}
 			continue
 		}
 
@@ -562,7 +571,18 @@ func (z *ZKS) dbMonitoringWithSeeder(ctx context.Context, ws *wsrpc.Client) erro
 		// in dryRun mode.
 		z.logMonit.Warnf("Server demoted to secondary! (dryrun=%v)", z.seederDryRun)
 		if !z.seederDryRun {
+			z.isMaster.Store(false)
 			z.closeSessions()
+
+			if z.settings.PGCmdDemote != "" {
+				// demote db
+				cmd := exec.CommandContext(ctx, z.settings.PGCmdDemote)
+				if err := cmd.Run(); err != nil {
+					z.log.Errorf("demote failed: %v", err)
+					continue
+				}
+				z.log.Infof("demote succeeded")
+			}
 		}
 	}
 }

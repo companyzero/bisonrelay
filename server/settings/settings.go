@@ -79,9 +79,11 @@ type Settings struct {
 	PGServerCA        string
 	PGIndexTableSpace string
 	PGBulkTableSpace  string
-	
+
 	// Postgres replication config
-	PGSlotName	string
+	PGSlotName   string
+	PGCmdPromote string
+	PGCmdDemote  string
 
 	// RTDT config
 	RTDTServerAddr       string
@@ -313,6 +315,8 @@ func (s *Settings) Load(filename string) error {
 	get(&s.PGIndexTableSpace, "postgres", "indexts")
 	get(&s.PGBulkTableSpace, "postgres", "bulkts")
 	get(&s.PGSlotName, "postgres", "slotname")
+	get(&s.PGCmdPromote, "postgres", "cmdpromote")
+	get(&s.PGCmdDemote, "postgres", "cmddemote")
 
 	get(&s.RTDTServerAddr, "rtdt", "serveraddress")
 
