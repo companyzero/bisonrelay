@@ -10,6 +10,7 @@ import 'package:bruig/models/notifications.dart';
 import 'package:bruig/models/realtimechat.dart';
 import 'package:bruig/models/uistate.dart';
 import 'package:bruig/screens/needs_out_channel.dart';
+import 'package:bruig/screens/realtimechat/instantcallmodal.dart';
 import 'package:bruig/theme_manager.dart';
 import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
 import 'package:flutter/material.dart';
@@ -25,11 +26,21 @@ import 'package:bruig/components/interactive_avatar.dart';
 class ChatsScreenTitle extends StatelessWidget {
   const ChatsScreenTitle({super.key});
 
+  Widget buildInstantCallIcon(
+      BuildContext context, RealtimeChatModel rtc, ChatModel chat) {
+    return IconButton(
+        onPressed: () {
+          showInstantCallModal(context, rtc, chat);
+        },
+        icon: Icon(Icons.call));
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Consumer4<ClientModel, ActiveChatModel, ShowProfileModel,
+    return Consumer4<RealtimeChatModel, ActiveChatModel, ShowProfileModel,
             ThemeNotifier>(
-        builder: (context, client, activeChat, showProfile, theme, child) {
+        builder: (context, rtc, activeChat, showProfile, theme, child) {
+      var client = rtc.client;
       var activeHeading = activeChat.chat;
 
       // No active chat or address book page is active.
@@ -47,6 +58,7 @@ class ChatsScreenTitle extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Txt.L(chat.nick),
+              if (!chat.isGC) buildInstantCallIcon(context, rtc, chat),
               Container(
                   width: 40,
                   margin: const EdgeInsets.only(
@@ -65,7 +77,13 @@ class ChatsScreenTitle extends StatelessWidget {
               : " / Profile"
           : "";
 
-      return Txt.L("Chat$suffix$profileSuffix");
+      return Row(children: [
+        Txt.L("Chat$suffix$profileSuffix"),
+        if (!chat.isGC) ...[
+          const SizedBox(width: 10),
+          buildInstantCallIcon(context, rtc, chat),
+        ],
+      ]);
     });
   }
 }

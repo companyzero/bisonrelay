@@ -2417,6 +2417,11 @@ CreateRTDTSessArgs _$CreateRTDTSessArgsFromJson(Map<String, dynamic> json) =>
       (json['size'] as num).toInt(),
       json['description'] as String,
       json['gc'] as String?,
+      json['is_instant'] as bool,
+      (json['instant_users'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          [],
     );
 
 Map<String, dynamic> _$CreateRTDTSessArgsToJson(CreateRTDTSessArgs instance) =>
@@ -2424,6 +2429,8 @@ Map<String, dynamic> _$CreateRTDTSessArgsToJson(CreateRTDTSessArgs instance) =>
       'size': instance.size,
       'description': instance.description,
       if (instance.gc case final value?) 'gc': value,
+      'is_instant': instance.isInstant,
+      'instant_users': instance.instantUsers,
     };
 
 RMRTDTSessionInvite _$RMRTDTSessionInviteFromJson(Map<String, dynamic> json) =>
@@ -2436,6 +2443,7 @@ RMRTDTSessionInvite _$RMRTDTSessionInviteFromJson(Map<String, dynamic> json) =>
       (json['peer_id'] as num).toInt(),
       json['gc'] as String?,
       (json['tag'] as num).toInt(),
+      json['is_instant'] as bool,
     );
 
 Map<String, dynamic> _$RMRTDTSessionInviteToJson(
@@ -2449,6 +2457,7 @@ Map<String, dynamic> _$RMRTDTSessionInviteToJson(
       'peer_id': instance.peerID,
       if (instance.gc case final value?) 'gc': value,
       'tag': instance.tag,
+      'is_instant': instance.isInstant,
     };
 
 InvitedToRTDTSess _$InvitedToRTDTSessFromJson(Map<String, dynamic> json) =>
@@ -2527,6 +2536,7 @@ RMRTDTSession _$RMRTDTSessionFromJson(Map<String, dynamic> json) =>
                   RMRTDTSessionPublisher.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [],
+      json['is_instant'] as bool,
     );
 
 Map<String, dynamic> _$RMRTDTSessionToJson(RMRTDTSession instance) =>
@@ -2538,6 +2548,7 @@ Map<String, dynamic> _$RMRTDTSessionToJson(RMRTDTSession instance) =>
       'owner': instance.owner,
       'admins': instance.admins,
       'publishers': instance.publishers,
+      'is_instant': instance.isInstant,
     };
 
 RTDTSessionMember _$RTDTSessionMemberFromJson(Map<String, dynamic> json) =>

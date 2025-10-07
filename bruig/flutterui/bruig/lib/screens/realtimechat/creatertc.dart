@@ -7,7 +7,16 @@ import 'package:bruig/components/usersearch/user_search_model.dart';
 import 'package:bruig/components/usersearch/user_search_panel.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/models/realtimechat.dart';
+import 'package:bruig/screens/overview.dart';
+import 'package:bruig/screens/realtimechat/rtclist.dart';
 import 'package:flutter/material.dart';
+
+class CreateRealtimeChatScreenArgs {
+  final bool isInstant;
+  final ChatModel? initial;
+
+  CreateRealtimeChatScreenArgs({this.isInstant = false, this.initial});
+}
 
 class CreateRealtimeChatScreen extends StatefulWidget {
   static const routeName = "/createRealtimeChatSession";
@@ -24,6 +33,7 @@ class _CreateRealtimeChatScreenState extends State<CreateRealtimeChatScreen> {
   IntEditingController sizeCtrl = IntEditingController();
   TextEditingController descrCtrl = TextEditingController();
   bool creating = false;
+  bool isInstant = false;
   final UserSelectionModel userSelModel =
       UserSelectionModel(allowMultiple: true);
 
@@ -32,6 +42,18 @@ class _CreateRealtimeChatScreenState extends State<CreateRealtimeChatScreen> {
     super.initState();
     sizeCtrl.intvalue = 2;
     // sizeCtrl.text = "2";
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    var modalArgs = ModalRoute.of(context)?.settings.arguments;
+    if (modalArgs is CreateRealtimeChatScreenArgs) {
+      isInstant = modalArgs.isInstant;
+      if (modalArgs.initial != null) {
+        userSelModel.add(modalArgs.initial!);
+      }
+    }
   }
 
   void create() async {
@@ -44,11 +66,19 @@ class _CreateRealtimeChatScreenState extends State<CreateRealtimeChatScreen> {
 
     try {
       List<String> toInvite = userSelModel.selected.map((c) => c.id).toList();
-      await widget.rtc
-          .createSession(sizeCtrl.intvalue, descrCtrl.text, toInvite);
-      showSuccessSnackbar(this, "Created realtime chat session!");
+      if (isInstant) {
+        await widget.rtc.createInstantSession(toInvite);
+      } else {
+        await widget.rtc
+            .createSession(sizeCtrl.intvalue, descrCtrl.text, toInvite);
+        showSuccessSnackbar(this, "Created realtime chat session!");
+      }
       if (mounted) {
         Navigator.of(context).pop();
+        if (isInstant) {
+          Navigator.of(context).pushReplacementNamed(
+              OverviewScreen.subRoute(RealtimeChatScreen.routeName));
+        }
       }
     } catch (exception) {
       showErrorSnackbar(this, "Unable to create session: $exception");
@@ -65,23 +95,27 @@ class _CreateRealtimeChatScreenState extends State<CreateRealtimeChatScreen> {
         body: Container(
       padding: const EdgeInsets.all(10),
       child: Column(children: [
-        const Txt.H("Create Realtime Chat Session"),
+        (!isInstant
+            ? const Txt.H("Create Realtime Chat Session")
+            : const Txt.H("Instant Realtime Call")),
         const SizedBox(height: 20),
-        SizedBox(
-            width: 100,
-            child: Row(children: [
-              const Text("Size:"),
-              const SizedBox(width: 10),
-              Expanded(child: intInput(controller: sizeCtrl)),
-            ])),
-        SizedBox(
-            width: 400,
-            child: Row(children: [
-              const Text("Description:"),
-              const SizedBox(width: 10),
-              Expanded(child: TextField(controller: descrCtrl)),
-            ])),
-        const SizedBox(height: 10),
+        if (!isInstant) ...[
+          SizedBox(
+              width: 100,
+              child: Row(children: [
+                const Text("Size:"),
+                const SizedBox(width: 10),
+                Expanded(child: intInput(controller: sizeCtrl)),
+              ])),
+          SizedBox(
+              width: 400,
+              child: Row(children: [
+                const Text("Description:"),
+                const SizedBox(width: 10),
+                Expanded(child: TextField(controller: descrCtrl)),
+              ])),
+          const SizedBox(height: 10),
+        ],
         Expanded(
             child: UserSearchPanel(
           client,
@@ -102,7 +136,7 @@ class _CreateRealtimeChatScreenState extends State<CreateRealtimeChatScreen> {
           }),
           ElevatedButton(
               onPressed: !creating ? create : null,
-              child: const Text("Create")),
+              child: !isInstant ? const Text("Create") : const Text("Call")),
         ]),
       ]),
     ));
