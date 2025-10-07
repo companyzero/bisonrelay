@@ -28,7 +28,7 @@ require (
 	github.com/decred/slog v1.2.0
 	github.com/erikgeiser/promptkit v0.9.0
 	github.com/fsnotify/fsnotify v1.7.0
-	github.com/gen2brain/malgo v0.11.23-0.20241022172812-d802981a69a1
+	github.com/gen2brain/malgo v0.11.24
 	github.com/gorilla/websocket v1.5.1
 	github.com/jackc/pgerrcode v0.0.0-20240316143900-6e2875d9b438
 	github.com/jackc/pgx/v5 v5.7.1
