@@ -95,7 +95,7 @@ object NtfnBuilder {
     ) // 0x01080067
 
     return NotificationCompat.Builder(context, CHANNEL_FGSVC)
-      .setContentTitle("Bison Relay ZZZZZ")
+      .setContentTitle("Bison Relay")
       .setContentText("BR background service is waiting for messages")
       .setContentIntent(pendingIntent)
       .setPriority(NotificationCompat.PRIORITY_MIN)
@@ -146,7 +146,7 @@ object NtfnBuilder {
       //Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED or
       //Intent.FLAG_ACTIVITY_SINGLE_TOP or
       //Intent.FLAG_ACTIVITY_CLEAR_TOP
-    val answerIntent = Intent(Intent.ACTION_ANSWER, Uri.parse("rtdt://$sessRV")) 
+    val answerIntent = Intent(Intent.ACTION_ANSWER) 
         .setComponent(appActity)
         .setFlags(answerFlags)
         .putExtra("sessRV", sessRV) 
@@ -232,5 +232,10 @@ object NtfnBuilder {
     val contactID: Int = 1000
     var notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager    
     notificationManager.notify(contactID, builder.build())
+  }
+
+  fun cancelFgSvcNtf(context: Context) {
+    var notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager    
+    notificationManager.cancel(FGSVC_NTFN_ID)
   }
 }

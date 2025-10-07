@@ -75,7 +75,7 @@ class GolibPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, ServiceAware
     channel.setMethodCallHandler(this)
     this.initReadStream(flutterPluginBinding)
     this.initCmdResultLoop(flutterPluginBinding)
-    NtfnBuilder.setUpNotificationChannels(context)
+    NtfnBuilder.setUpNotificationChannels(context)    
   }
 
   override fun onMethodCall(@NonNull call: MethodCall, @NonNull result: Result) {
@@ -117,14 +117,19 @@ class GolibPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, ServiceAware
       val payload: String? = call.argument("payload")
       Golib.asyncCallStr(typ.toLong(), id.toLong(), handle.toLong(), payload)
     } else if (call.method == "startFgSvc") {
+      Golib.logInfo(0x12131400, "NativePlugin: toggling enabling FgSvc")
       fgSvcEnabled = true;
+
+      // Run the foreground service. This is needed to get rid of old notifications.
+      context.startService(Intent(context, NtfFgSvc::class.java))
     } else if (call.method == "stopFgSvc") {
+      Golib.logInfo(0x12131400, "NativePlugin: toggling disabling FgSvc")
       fgSvcEnabled = false;
       context.stopService(Intent(context, NtfFgSvc::class.java))
     } else if (call.method == "setNtfnsEnabled") {
       val enabled: Boolean = call.argument("enabled") ?: false
       Golib.logInfo(0x12131400, "NativePlugin: toggling notifications to $enabled")
-      ntfnsEnabled = enabled;
+      ntfnsEnabled = enabled;      
     } else if (call.method == "listAudioDevices") {
       result.success(listAudioDevices())
     } else if (call.method == "getLastIntent") {
@@ -288,6 +293,8 @@ class GolibPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, ServiceAware
         // "extra" to intent.extras?.let { bundleToJSON(it).toString() }
     )
     Golib.logInfo(0x12131400, "NativePlugin: action ${intent.action} data ${intent.dataString} extraAction ${intent.getExtras().toString()}  ")
+
+    NtfnBuilder.cancelFgSvcNtf(context)
   }
 
   override fun onDetachedFromActivity() {

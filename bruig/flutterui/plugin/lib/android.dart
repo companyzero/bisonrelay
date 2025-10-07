@@ -66,3 +66,8 @@ Future<AndroidIntent?> lastAndroidIntent() async {
   return AndroidIntent(res["action"] ?? "", res["data"] ?? "",
       sessRV: res["sessRV"], inviter: res["inviter"]);
 }
+
+Future<void> closeAllAndroidNativeNotifications() async {
+  const methodChan = MethodChannel("org.bisonrelay.bruig.mainActivityChannel");
+  await methodChan.invokeMethod("closeAllNotifications");
+}
