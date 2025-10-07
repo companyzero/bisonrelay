@@ -172,6 +172,10 @@ func (mpc *malgoContext) initPlayback(deviceID DeviceID, cb dataProc) (playbackD
 	deviceConfig.Playback.Format = rawFormat
 	deviceConfig.Playback.Channels = channels
 	deviceConfig.Alsa.NoMMap = 1
+	deviceConfig.AAudio.Usage = malgo.AAudioUsageVoiceCommunication
+	deviceConfig.AAudio.ContentType = malgo.AAudioContentTypeSpeech
+	deviceConfig.AAudio.InputPreset = malgo.AAudioInputPresetVoiceCommunication
+	deviceConfig.AAudio.AllowedCapturePolicy = malgo.AAudioAllowCapturePolicyBySystem
 
 	playbackCallbacks := malgo.DeviceCallbacks{
 		Data: malgo.DataProc(cb),
@@ -202,6 +206,10 @@ func (mpc *malgoContext) initCapture(deviceID DeviceID, cb dataProc) (captureDev
 	deviceConfig.Capture.Format = rawFormat
 	deviceConfig.Capture.Channels = channels
 	deviceConfig.Alsa.NoMMap = 1 // Needed for capture?
+	deviceConfig.AAudio.Usage = malgo.AAudioUsageVoiceCommunication
+	deviceConfig.AAudio.ContentType = malgo.AAudioContentTypeSpeech
+	deviceConfig.AAudio.InputPreset = malgo.AAudioInputPresetVoiceCommunication
+	deviceConfig.AAudio.AllowedCapturePolicy = malgo.AAudioAllowCapturePolicyBySystem
 
 	captureCallbacks := malgo.DeviceCallbacks{
 		Data: malgo.DataProc(cb),
