@@ -2563,6 +2563,11 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 		if args.GC != nil {
 			sess, err = cc.c.CreateRTDTSessionInGC(*args.GC,
 				args.Size, true)
+		} else if args.IsInstant {
+			if len(args.InstantUsers) == 0 {
+				return nil, errors.New("no users specified")
+			}
+			sess, err = cc.c.CreateInstantRTDTSession(args.InstantUsers)
 		} else {
 			sess, err = cc.c.CreateRTDTSession(args.Size, args.Description)
 		}

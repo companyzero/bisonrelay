@@ -554,9 +554,11 @@ type recordedAudioNote struct {
 }
 
 type createRTDTSessArgs struct {
-	Size        uint16              `json:"size"`
-	Description string              `json:"description"`
-	GC          *zkidentity.ShortID `json:"gc"`
+	Size         uint16               `json:"size"`
+	Description  string               `json:"description"`
+	GC           *zkidentity.ShortID  `json:"gc"`
+	IsInstant    bool                 `json:"is_instant"`
+	InstantUsers []zkidentity.ShortID `json:"instant_users"`
 }
 
 type inviteToRTDTSessArgs struct {

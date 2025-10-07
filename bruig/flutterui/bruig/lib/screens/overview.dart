@@ -29,6 +29,16 @@ import 'package:provider/provider.dart';
 
 final GlobalKey<ScaffoldState> scaffoldKey = GlobalKey<ScaffoldState>();
 
+class OverviewNavigatorModel extends ChangeNotifier {
+  final GlobalKey<NavigatorState> navKey;
+
+  OverviewNavigatorModel(this.navKey);
+
+  static OverviewNavigatorModel of(BuildContext context,
+          {bool listen = true}) =>
+      Provider.of<OverviewNavigatorModel>(context, listen: listen);
+}
+
 class _OverviewScreenTitle extends StatelessWidget {
   const _OverviewScreenTitle();
 
@@ -202,7 +212,9 @@ class __MainAppBarState extends State<_MainAppBar>
     if (!isScreenSmall) {
       return AppBar(
           titleSpacing: 0.0,
-          title: const _OverviewScreenTitle(),
+          title: ChangeNotifierProvider.value(
+              value: OverviewNavigatorModel(navKey),
+              builder: (context, _) => const _OverviewScreenTitle()),
           leadingWidth: 112,
           backgroundColor:
               hasHotAudio || hasLiveRTCSess ? bgColorAnim.value : null,
@@ -247,7 +259,9 @@ class __MainAppBarState extends State<_MainAppBar>
     return AppBar(
         leadingWidth: 60,
         titleSpacing: 0.0,
-        title: const _OverviewScreenTitle(),
+        title: ChangeNotifierProvider.value(
+            value: OverviewNavigatorModel(navKey),
+            builder: (context, _) => const _OverviewScreenTitle()),
         backgroundColor:
             hasHotAudio || hasLiveRTCSess ? bgColorAnim.value : null,
         leading: Builder(builder: (BuildContext context) {

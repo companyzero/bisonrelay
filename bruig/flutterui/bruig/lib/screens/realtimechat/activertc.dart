@@ -311,6 +311,12 @@ class _ActiveRealtimeChatScreenState extends State<ActiveRealtimeChatScreen> {
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           RTCSessionHeader(rtc, session, widget.audio),
           const SizedBox(height: 10),
+          if (session.isInstant)
+            Box(
+                padding: EdgeInsets.symmetric(horizontal: 10),
+                margin: EdgeInsets.only(bottom: 5),
+                color: SurfaceColor.tertiary,
+                child: Txt.S("Instant Call - will be removed once left")),
           Txt.S("RV: ${session.info.metadata.rv}"),
           Txt.S("Size: ${session.info.metadata.size}"),
           Txt.S("Description: ${session.info.metadata.description}"),

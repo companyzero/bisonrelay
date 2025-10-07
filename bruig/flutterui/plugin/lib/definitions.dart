@@ -2503,8 +2503,13 @@ class CreateRTDTSessArgs {
   final String description;
   @JsonKey(includeIfNull: false)
   final String? gc;
+  @JsonKey(name: "is_instant")
+  final bool isInstant;
+  @JsonKey(name: "instant_users", defaultValue: [])
+  final List<String> instantUsers;
 
-  CreateRTDTSessArgs(this.size, this.description, this.gc);
+  CreateRTDTSessArgs(
+      this.size, this.description, this.gc, this.isInstant, this.instantUsers);
 
   Map<String, dynamic> toJson() => _$CreateRTDTSessArgsToJson(this);
 }
@@ -2523,9 +2528,11 @@ class RMRTDTSessionInvite {
   @JsonKey(includeIfNull: false)
   final String? gc;
   final int tag;
+  @JsonKey(name: "is_instant")
+  final bool isInstant;
 
   RMRTDTSessionInvite(this.rv, this.appointCookie, this.size, this.description,
-      this.allowedAsPublisher, this.peerID, this.gc, this.tag);
+      this.allowedAsPublisher, this.peerID, this.gc, this.tag, this.isInstant);
 
   Map<String, dynamic> toJson() => _$RMRTDTSessionInviteToJson(this);
   factory RMRTDTSessionInvite.fromJson(Map<String, dynamic> json) =>
@@ -2605,9 +2612,11 @@ class RMRTDTSession {
   final List<String> admins;
   @JsonKey(defaultValue: [])
   final List<RMRTDTSessionPublisher> publishers;
+  @JsonKey(name: "is_instant")
+  final bool isInstant;
 
   RMRTDTSession(this.generation, this.rv, this.size, this.description,
-      this.owner, this.admins, this.publishers);
+      this.owner, this.admins, this.publishers, this.isInstant);
 
   factory RMRTDTSession.fromJson(Map<String, dynamic> json) =>
       _$RMRTDTSessionFromJson(json);

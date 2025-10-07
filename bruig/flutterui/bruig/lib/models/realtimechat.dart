@@ -73,6 +73,8 @@ class RTDTSessionModel extends ChangeNotifier {
         ChatEventModel(SynthChatEvent(startMsg, SCE_history), null), false);
   }
 
+  bool get isInstant => _info.metadata.isInstant;
+
   String get sessionRV => _info.metadata.rv;
   String get sessionShortRV => _info.metadata.rv.substring(0, 16);
 
@@ -418,6 +420,11 @@ class RealtimeChatModel extends ChangeNotifier {
           msg += "\nTemporarily banned for $durStr";
         }
         snackbar.error(msg);
+
+        if (sess.isInstant) {
+          // Instant sessions cannot be re-joined.
+          _removeSess(sess.sessionRV);
+        }
       }
 
       if (updt is RTDTRemovedFromSession) {
@@ -647,6 +654,9 @@ class RealtimeChatModel extends ChangeNotifier {
   Future<void> leaveLiveSession(RTDTSessionModel sess) async {
     await sess._leaveLiveSession();
     liveSessions._delLive(sess);
+    if (sess.isInstant) {
+      _removeSess(sess.sessionRV);
+    }
   }
 
   final ActiveHotAudioSessionModel hotAudioSession =
@@ -671,8 +681,8 @@ class RealtimeChatModel extends ChangeNotifier {
 
   Future<void> createSession(
       int size, String descr, List<String> toInvite) async {
-    String rv =
-        await Golib.rtdtCreateSession(CreateRTDTSessArgs(size, descr, null));
+    String rv = await Golib.rtdtCreateSession(
+        CreateRTDTSessArgs(size, descr, null, false, []));
     await _updateSess(rv);
     for (var uid in toInvite) {
       inviteToSession(rv, uid);
@@ -680,9 +690,21 @@ class RealtimeChatModel extends ChangeNotifier {
   }
 
   Future<void> createSessionFromGC(String gc, int extraSize) async {
-    String rv =
-        await Golib.rtdtCreateSession(CreateRTDTSessArgs(extraSize, "", gc));
+    String rv = await Golib.rtdtCreateSession(
+        CreateRTDTSessArgs(extraSize, "", gc, false, []));
     await _updateSess(rv);
+  }
+
+  Future<RTDTSessionModel> createInstantSession(List<String> users) async {
+    String rv = await Golib.rtdtCreateSession(
+        CreateRTDTSessArgs(0, "", null, true, users));
+    await _updateSess(rv);
+
+    // Automatically join it to display on UI.
+    var res = _sessions[rv]!;
+    joinLiveSession(res);
+    active.active = res;
+    return res;
   }
 
   Future<void> exitSession(String sessionRV) async {
