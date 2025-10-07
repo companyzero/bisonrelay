@@ -3993,6 +3993,39 @@ var rtchatCommands = []tuicmd{
 			return nil
 		},
 	}, {
+		cmd:   "call",
+		descr: "Make an instant RTDT call with users",
+		usage: "<user> [...<user>]",
+		handler: func(args []string, as *appState) error {
+			if len(args) < 1 {
+				return usageError{msg: "at least one user is required"}
+			}
+
+			users := make([]zkidentity.ShortID, 0, len(args))
+			for _, arg := range args {
+				ru, err := as.c.UserByNick(arg)
+				if err != nil {
+					return err
+				}
+				users = append(users, ru.ID())
+			}
+
+			as.diagMsg("Attempting to make instant RTDT call with users")
+			go func() {
+				sess, err := as.c.CreateInstantRTDTSession(users)
+				if err != nil {
+					errMsg := fmt.Sprintf("Unable to create RTDT session: %v", err)
+					as.diagMsg(as.styles.Load().err.Render(errMsg))
+					return
+				}
+
+				as.manyDiagMsgsCb(func(pf printf) {
+					pf("Created RTDT session %s", sess.Metadata.RV)
+				})
+			}()
+			return nil
+		},
+	}, {
 		cmd:   "invite",
 		descr: "Invite users to an RTDT session",
 		usage: "<session> <user>",
