@@ -246,6 +246,7 @@ const (
 	NTRTDTRemadeSessHot      = 0x103c
 	NTRTDTChatMsgReceived    = 0x103d
 	NTRTDTRTTCalculated      = 0x103e
+	NTRTDTJoinedInstantCall  = 0x103f
 )
 
 type cmd struct {
@@ -269,6 +270,7 @@ type CmdResult struct {
 type CmdResultLoopCB interface {
 	F(id int32, typ int32, payload string, err string)
 	UINtfn(text string, nick string, ts int64)
+	CallNtfn(from string, fromUID string, sessRV string)
 }
 
 var cmdResultChan = make(chan *CmdResult)
@@ -446,6 +448,22 @@ func emitBackgroundNtfns(r *CmdResult, cb CmdResultLoopCB) {
 		}
 
 		cb.UINtfn(n.Text, n.FromNick, n.Timestamp)
+
+	case NTRTDTInvitedToSession:
+		var n invitedToRTDTSess
+		err := json.Unmarshal(r.Payload, &n)
+		if err != nil {
+			return
+		}
+		if !n.Invite.IsInstant {
+			return
+		}
+		if time.Since(time.UnixMilli(n.ReceivedMs)) > time.Minute*5 {
+			// Ignore when this was sent > 5 minutes (likely an old
+			// invite received while the local client was offline).
+			return
+		}
+		cb.CallNtfn(n.InviterNick, n.Inviter.String(), n.Invite.RV.String())
 
 	default:
 		// Ignore every other notification.

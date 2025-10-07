@@ -27,7 +27,9 @@ import 'package:golib_plugin/definitions.dart';
 import 'package:bruig/theme_manager.dart';
 import 'package:provider/provider.dart';
 
+// These are hacks. Find a way to remove them.
 final GlobalKey<ScaffoldState> scaffoldKey = GlobalKey<ScaffoldState>();
+final GlobalKey<NavigatorState> overviewNavKey = GlobalKey<NavigatorState>();
 
 class OverviewNavigatorModel extends ChangeNotifier {
   final GlobalKey<NavigatorState> navKey;
@@ -347,7 +349,8 @@ class _OverviewScreenState extends State<OverviewScreen> {
   DownloadsModel get down => widget.down;
   FeedModel get feed => widget.feed;
   ServerSessionState connState = ServerSessionState.empty();
-  GlobalKey<NavigatorState> navKey = GlobalKey(debugLabel: "overview nav key");
+  GlobalKey<NavigatorState> navKey =
+      overviewNavKey; // GlobalKey(debugLabel: "overview nav key");
 
   bool removeBottomBar = false;
   var selectedIndex = 0;
@@ -384,6 +387,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
         .selectNotificationStream
         .stream
         .listen((String? payload) async {
+      debugPrint("Bruig: Processing system notification (payload $payload)");
       if (payload != null) {
         if (payload.startsWith("chat:") || payload.startsWith("gc:")) {
           switchScreen(ChatsScreen.routeName);
@@ -475,7 +479,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
   Widget build(BuildContext context) {
     bool isScreenSmall = checkIsScreenSmall(context);
     return Scaffold(
-      key: scaffoldKey,
+      // key: scaffoldKey,
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(kToolbarHeight),
         child: _MainAppBar(client, feed, widget.rtc, widget.mainMenu, navKey),
@@ -496,13 +500,14 @@ class _OverviewScreenState extends State<OverviewScreen> {
                     : widget.initialRoute,
                 onGenerateRoute: (settings) {
                   String routeName = settings.name!;
-                  client.ui.overviewActivePath.route = routeName;
                   MainMenuItem? menu = widget.mainMenu.menuForRoute(routeName);
 
-                  // This update needs to be on a timer so that it is decoupled to
+                  // These updates needs to be on a timer so that they are decoupled to
                   // the widget build stack frame.
-                  Timer(const Duration(milliseconds: 1),
-                      () async => widget.mainMenu.activeRoute = routeName);
+                  Timer(const Duration(milliseconds: 1), () async {
+                    widget.mainMenu.activeRoute = routeName;
+                    client.ui.overviewActivePath.route = routeName;
+                  });
 
                   return PageRouteBuilder(
                     pageBuilder: (context, animation, secondaryAnimation) =>

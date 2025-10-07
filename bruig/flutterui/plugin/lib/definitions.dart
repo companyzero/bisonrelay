@@ -2835,6 +2835,14 @@ class RTDTPeerExited extends RTDTUserAndSess {
       _$RTDTPeerExitedFromJson(json);
 }
 
+class RTDTLiveSessionJoined extends RTDTSessionEvent {
+  RTDTLiveSessionJoined(super.sessionRV);
+}
+
+class RTDTInstantCallJoined extends RTDTSessionEvent {
+  RTDTInstantCallJoined(super.sessionRV);
+}
+
 @JsonSerializable()
 class LiveRTDTPeer {
   @JsonKey(name: "has_sound_stream")
@@ -2974,9 +2982,6 @@ mixin NtfStreams {
   StreamController<RTDTSessionEvent> ntfRTDTSessEvents =
       StreamController<RTDTSessionEvent>();
   Stream<RTDTSessionEvent> rtdtSessionEvents() => ntfRTDTSessEvents.stream;
-
-  StreamController<String> ntfRTDTLiveSessJoined = StreamController<String>();
-  Stream<String> rtdtLiveSessionJoinedNtfns() => ntfRTDTLiveSessJoined.stream;
 
   StreamController<RTDTLivePeerUpdateNtf> ntfRTDTLivePeerUpdates =
       StreamController<RTDTLivePeerUpdateNtf>();
@@ -3237,7 +3242,13 @@ mixin NtfStreams {
         break;
 
       case NTRTDTJoinedLiveSession:
-        ntfRTDTLiveSessJoined.add(payload as String);
+        var event = RTDTLiveSessionJoined(payload as String);
+        ntfRTDTSessEvents.add(event);
+        break;
+
+      case NTRTDTJoinedInstantCall:
+        var event = RTDTInstantCallJoined(payload as String);
+        ntfRTDTSessEvents.add(event);
         break;
 
       case NTRTDTLivePeerJoined:
@@ -3331,13 +3342,14 @@ abstract class PluginPlatform {
   Stream<int> rescanWalletProgress() => throw "unimplemented";
   Stream<UINotification> uiNotifications() => throw "unimplemented";
   Stream<RTDTSessionEvent> rtdtSessionEvents() => throw "unimplemented";
-  Stream<String> rtdtLiveSessionJoinedNtfns() => throw "unimplemented";
   Stream<RTDTLivePeerUpdateNtf> rtdtLivePeerUpdates() => throw "unimplemented";
   Stream<RTDTLiveSessionSendError> rtdtLiveSessionErrors() =>
       throw "unimplemented";
   Stream<RTDTRTT> rtdtRTTStream() => throw "unimplemented";
 
   Future<bool> hasServer() async => throw "unimplemented";
+
+  Future<dynamic> lastAndroidIntent() async => throw "unimplemented";
 
   // These are only implemented in android.
   Future<void> startForegroundSvc() => throw "unimplemented";
@@ -4435,3 +4447,4 @@ const int NTRTDTPeerExited = 0x103b;
 const int NTRTDTRemadeSessHot = 0x103c;
 const int NTRTDTChatMsgReceived = 0x103d;
 const int NTRTDTRTTCalculated = 0x103e;
+const int NTRTDTJoinedInstantCall = 0x103f;

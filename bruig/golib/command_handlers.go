@@ -503,6 +503,10 @@ func handleInitClient(handle uint32, args initClient) error {
 		notify(NTRTDTJoinedLiveSession, sessRV, nil)
 	}))
 
+	ntfns.Register(client.OnRTDTJoinedInstantCall(func(sessRV zkidentity.ShortID) {
+		notify(NTRTDTJoinedInstantCall, sessRV, nil)
+	}))
+
 	ntfns.Register(client.OnRTDTLivePeerJoined(func(sessRV zkidentity.ShortID, peerID rpc.RTDTPeerID) {
 		event := rtdtLivePeerUpdate{
 			SessionRV: sessRV,

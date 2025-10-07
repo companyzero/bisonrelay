@@ -49,8 +49,10 @@ class OverviewActivePath extends ChangeNotifier {
   String _route = "";
   String get route => _route;
   set route(String v) {
-    _route = v;
-    notifyListeners();
+    if (_route != v) {
+      _route = v;
+      notifyListeners();
+    }
   }
 
   // onActiveBottomTab is true if the current active route is one that corresponds
