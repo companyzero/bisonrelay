@@ -2542,9 +2542,15 @@ class RMRTDTSessionInvite {
 @JsonSerializable()
 class InvitedToRTDTSess extends ChatEvent {
   final String inviter;
+  @JsonKey(name: "inviter_nick")
+  final String inviterNick;
   final RMRTDTSessionInvite invite;
+  @JsonKey(name: "received_ms")
+  final int receivedMs;
 
-  InvitedToRTDTSess(this.inviter, this.invite) : super(inviter, "");
+  InvitedToRTDTSess(
+      this.inviter, this.invite, this.inviterNick, this.receivedMs)
+      : super(inviter, "");
 
   factory InvitedToRTDTSess.fromJson(Map<String, dynamic> json) =>
       _$InvitedToRTDTSessFromJson(json);
@@ -2554,11 +2560,14 @@ class InvitedToRTDTSess extends ChatEvent {
 @JsonSerializable()
 class AcceptRTDTInviteArgs {
   final String inviter;
-  final RMRTDTSessionInvite invite;
+  final RMRTDTSessionInvite? invite;
   @JsonKey(name: "as_publisher")
   final bool asPublisher;
+  @JsonKey(name: "sess_rv")
+  final String? sessRV;
 
-  AcceptRTDTInviteArgs(this.inviter, this.invite, this.asPublisher);
+  AcceptRTDTInviteArgs(
+      this.inviter, this.invite, this.asPublisher, this.sessRV);
 
   Map<String, dynamic> toJson() => _$AcceptRTDTInviteArgsToJson(this);
 }

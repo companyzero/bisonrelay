@@ -290,7 +290,7 @@ func (c *Client) innerHandleUserRM(ru *RemoteUser, h *rpc.RMHeader,
 		return c.handleFetchResourceReply(ru, p)
 
 	case rpc.RMRTDTSessionInvite:
-		return c.handleRMRTDTSessionInvite(ru, p)
+		return c.handleRMRTDTSessionInvite(ru, p, ts)
 
 	case rpc.RMRTDTSessionInviteAccept:
 		return c.handleRMRTDTAcceptInvite(ru, p)

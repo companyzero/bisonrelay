@@ -585,7 +585,7 @@ func assertPostSubscription(t testing.TB, c, target *testClient, assertIsSubscri
 func assertJoinsRTDTSession(t testing.TB, c, target *testClient, sessRV zkidentity.ShortID) {
 	t.Helper()
 	inviteChan := make(chan *rpc.RMRTDTSessionInvite, 2)
-	invitedHandler := target.handle(client.OnInvitedToRTDTSession(func(ru *client.RemoteUser, invite *rpc.RMRTDTSessionInvite) {
+	invitedHandler := target.handle(client.OnInvitedToRTDTSession(func(ru *client.RemoteUser, invite *rpc.RMRTDTSessionInvite, ts time.Time) {
 		inviteChan <- invite
 	}))
 

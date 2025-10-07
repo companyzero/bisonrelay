@@ -55,7 +55,7 @@ func TestRTDTSession(t *testing.T) {
 	}))
 
 	bobInviteChan := make(chan *rpc.RMRTDTSessionInvite, 2)
-	bob.handle(client.OnInvitedToRTDTSession(func(ru *client.RemoteUser, invite *rpc.RMRTDTSessionInvite) {
+	bob.handle(client.OnInvitedToRTDTSession(func(ru *client.RemoteUser, invite *rpc.RMRTDTSessionInvite, ts time.Time) {
 		bobInviteChan <- invite
 	}))
 	bobUpdateChan := make(chan *client.RTDTSessionUpdateNtfn, 5)
@@ -200,7 +200,7 @@ func TestRTDTSessionNonPublisher(t *testing.T) {
 	}))
 
 	bobInviteChan := make(chan *rpc.RMRTDTSessionInvite, 2)
-	bob.handle(client.OnInvitedToRTDTSession(func(ru *client.RemoteUser, invite *rpc.RMRTDTSessionInvite) {
+	bob.handle(client.OnInvitedToRTDTSession(func(ru *client.RemoteUser, invite *rpc.RMRTDTSessionInvite, ts time.Time) {
 		bobInviteChan <- invite
 	}))
 	bobUpdateChan := make(chan *client.RTDTSessionUpdateNtfn, 5)
@@ -618,7 +618,7 @@ func TestRTDTMultipleInvites(t *testing.T) {
 		aliceAcceptedChan <- struct{}{}
 	}))
 	bobInvitedChan := make(chan *rpc.RMRTDTSessionInvite, 5)
-	bob.handle(client.OnInvitedToRTDTSession(func(ru *client.RemoteUser, invite *rpc.RMRTDTSessionInvite) {
+	bob.handle(client.OnInvitedToRTDTSession(func(ru *client.RemoteUser, invite *rpc.RMRTDTSessionInvite, ts time.Time) {
 		bobInvitedChan <- invite
 	}))
 	bobJoinedChan := make(chan struct{}, 5)
@@ -702,7 +702,7 @@ func TestRTDTSessionWithGC(t *testing.T) {
 		aliceAcceptedChan <- struct{}{}
 	}))
 	bobInvitedChan := make(chan *rpc.RMRTDTSessionInvite, 5)
-	bob.handle(client.OnInvitedToRTDTSession(func(ru *client.RemoteUser, invite *rpc.RMRTDTSessionInvite) {
+	bob.handle(client.OnInvitedToRTDTSession(func(ru *client.RemoteUser, invite *rpc.RMRTDTSessionInvite, ts time.Time) {
 		bobInvitedChan <- invite
 	}))
 	bobJoinedChan := make(chan struct{}, 5)
@@ -712,7 +712,7 @@ func TestRTDTSessionWithGC(t *testing.T) {
 		}
 	}))
 	charlieInvitedChan := make(chan *rpc.RMRTDTSessionInvite, 5)
-	charlie.handle(client.OnInvitedToRTDTSession(func(ru *client.RemoteUser, invite *rpc.RMRTDTSessionInvite) {
+	charlie.handle(client.OnInvitedToRTDTSession(func(ru *client.RemoteUser, invite *rpc.RMRTDTSessionInvite, ts time.Time) {
 		charlieInvitedChan <- invite
 	}))
 	charlieJoinedChan := make(chan struct{}, 5)
@@ -812,7 +812,7 @@ func TestRTDTSessionWithGCExtraAdmin(t *testing.T) {
 		aliceAcceptedChan <- struct{}{}
 	}))
 	bobInvitedChan := make(chan *rpc.RMRTDTSessionInvite, 5)
-	bob.handle(client.OnInvitedToRTDTSession(func(ru *client.RemoteUser, invite *rpc.RMRTDTSessionInvite) {
+	bob.handle(client.OnInvitedToRTDTSession(func(ru *client.RemoteUser, invite *rpc.RMRTDTSessionInvite, ts time.Time) {
 		bobInvitedChan <- invite
 	}))
 	bobJoinedChan := make(chan struct{}, 5)
@@ -830,7 +830,7 @@ func TestRTDTSessionWithGCExtraAdmin(t *testing.T) {
 		bobAdminCookiesChan <- struct{}{}
 	}))
 	charlieInvitedChan := make(chan *rpc.RMRTDTSessionInvite, 5)
-	charlie.handle(client.OnInvitedToRTDTSession(func(ru *client.RemoteUser, invite *rpc.RMRTDTSessionInvite) {
+	charlie.handle(client.OnInvitedToRTDTSession(func(ru *client.RemoteUser, invite *rpc.RMRTDTSessionInvite, ts time.Time) {
 		charlieInvitedChan <- invite
 	}))
 	charlieJoinedChan := make(chan struct{}, 5)
@@ -840,7 +840,7 @@ func TestRTDTSessionWithGCExtraAdmin(t *testing.T) {
 		}
 	}))
 	daveInvitedChan := make(chan *rpc.RMRTDTSessionInvite, 5)
-	dave.handle(client.OnInvitedToRTDTSession(func(ru *client.RemoteUser, invite *rpc.RMRTDTSessionInvite) {
+	dave.handle(client.OnInvitedToRTDTSession(func(ru *client.RemoteUser, invite *rpc.RMRTDTSessionInvite, ts time.Time) {
 		daveInvitedChan <- invite
 	}))
 	daveJoinedChan := make(chan struct{}, 5)
@@ -1054,7 +1054,7 @@ func TestRTDTSessionWithGCReplaceSession(t *testing.T) {
 		aliceAcceptedChan <- struct{}{}
 	}))
 	bobInvitedChan := make(chan *rpc.RMRTDTSessionInvite, 5)
-	bob.handle(client.OnInvitedToRTDTSession(func(ru *client.RemoteUser, invite *rpc.RMRTDTSessionInvite) {
+	bob.handle(client.OnInvitedToRTDTSession(func(ru *client.RemoteUser, invite *rpc.RMRTDTSessionInvite, ts time.Time) {
 		bobInvitedChan <- invite
 	}))
 	bobJoinedChan := make(chan struct{}, 5)
@@ -1064,7 +1064,7 @@ func TestRTDTSessionWithGCReplaceSession(t *testing.T) {
 		}
 	}))
 	charlieInvitedChan := make(chan *rpc.RMRTDTSessionInvite, 5)
-	charlie.handle(client.OnInvitedToRTDTSession(func(ru *client.RemoteUser, invite *rpc.RMRTDTSessionInvite) {
+	charlie.handle(client.OnInvitedToRTDTSession(func(ru *client.RemoteUser, invite *rpc.RMRTDTSessionInvite, ts time.Time) {
 		charlieInvitedChan <- invite
 	}))
 	charlieJoinedChan := make(chan struct{}, 5)
@@ -1189,7 +1189,7 @@ func TestRTDTInstantSession(t *testing.T) {
 	}))
 
 	bobInvitedChan := make(chan *rpc.RMRTDTSessionInvite, 5)
-	bob.handle(client.OnInvitedToRTDTSession(func(ru *client.RemoteUser, invite *rpc.RMRTDTSessionInvite) {
+	bob.handle(client.OnInvitedToRTDTSession(func(ru *client.RemoteUser, invite *rpc.RMRTDTSessionInvite, ts time.Time) {
 		bobInvitedChan <- invite
 	}))
 	bobJoinedChan := make(chan struct{}, 5)
@@ -1202,7 +1202,7 @@ func TestRTDTInstantSession(t *testing.T) {
 	}))
 
 	charlieInvitedChan := make(chan *rpc.RMRTDTSessionInvite, 5)
-	charlie.handle(client.OnInvitedToRTDTSession(func(ru *client.RemoteUser, invite *rpc.RMRTDTSessionInvite) {
+	charlie.handle(client.OnInvitedToRTDTSession(func(ru *client.RemoteUser, invite *rpc.RMRTDTSessionInvite, ts time.Time) {
 		charlieInvitedChan <- invite
 	}))
 	charlieJoinedChan := make(chan struct{}, 5)

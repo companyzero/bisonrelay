@@ -484,8 +484,13 @@ func handleInitClient(handle uint32, args initClient) error {
 		notify(NTUINotification, n, nil)
 	}))
 
-	ntfns.Register(client.OnInvitedToRTDTSession(func(ru *client.RemoteUser, invite *rpc.RMRTDTSessionInvite) {
-		event := invitedToRTDTSess{Inviter: ru.ID(), Invite: *invite}
+	ntfns.Register(client.OnInvitedToRTDTSession(func(ru *client.RemoteUser, invite *rpc.RMRTDTSessionInvite, ts time.Time) {
+		event := invitedToRTDTSess{
+			Inviter:     ru.ID(),
+			InviterNick: ru.Nick(),
+			Invite:      *invite,
+			ReceivedMs:  ts.UnixMilli(),
+		}
 		notify(NTRTDTInvitedToSession, event, nil)
 	}))
 
@@ -2594,8 +2599,17 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 			return nil, err
 		}
 
-		err := cc.c.AcceptRTDTSessionInvite(args.Inviter, &args.Invite,
-			args.AsPublisher)
+		var err error
+		if args.SessRV != nil {
+			err = cc.c.AcceptRTDTSessionInviteByRV(args.Inviter, *args.SessRV,
+				args.AsPublisher)
+		} else if args.Invite != nil {
+			err = cc.c.AcceptRTDTSessionInvite(args.Inviter, args.Invite,
+				args.AsPublisher)
+		} else {
+			err = errors.New("missing sessRV or invite")
+		}
+
 		return nil, err
 
 	case CTRTDTLeaveLiveSession:

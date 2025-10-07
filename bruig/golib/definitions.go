@@ -568,14 +568,17 @@ type inviteToRTDTSessArgs struct {
 }
 
 type invitedToRTDTSess struct {
-	Inviter zkidentity.ShortID      `json:"inviter"`
-	Invite  rpc.RMRTDTSessionInvite `json:"invite"`
+	Inviter     zkidentity.ShortID      `json:"inviter"`
+	InviterNick string                  `json:"inviter_nick"`
+	Invite      rpc.RMRTDTSessionInvite `json:"invite"`
+	ReceivedMs  int64                   `json:"received_ms"`
 }
 
 type acceptRTDTInviteArgs struct {
-	Inviter     zkidentity.ShortID      `json:"inviter"`
-	Invite      rpc.RMRTDTSessionInvite `json:"invite"`
-	AsPublisher bool                    `json:"as_publisher"`
+	Inviter     zkidentity.ShortID       `json:"inviter"`
+	Invite      *rpc.RMRTDTSessionInvite `json:"invite"`
+	AsPublisher bool                     `json:"as_publisher"`
+	SessRV      *zkidentity.ShortID      `json:"sess_rv"`
 }
 
 type rtdtSessionUpdate struct {

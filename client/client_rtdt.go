@@ -503,8 +503,8 @@ func (c *Client) CreateInstantRTDTSession(users []clientintf.UserID) (*clientdb.
 
 // handleRMRTDTSessionInvite handles invitations received from remote users to
 // join a new RTDT session.
-func (c *Client) handleRMRTDTSessionInvite(ru *RemoteUser, invite rpc.RMRTDTSessionInvite) error {
-	err := c.dbView(func(tx clientdb.ReadTx) error {
+func (c *Client) handleRMRTDTSessionInvite(ru *RemoteUser, invite rpc.RMRTDTSessionInvite, ts time.Time) error {
+	err := c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
 		// Double check we haven't joined the session yet.
 		sess, err := c.db.GetRTDTSession(tx, &invite.RV)
 		if err != nil && !errors.Is(err, clientdb.ErrNotFound) {
@@ -516,7 +516,8 @@ func (c *Client) handleRMRTDTSessionInvite(ru *RemoteUser, invite rpc.RMRTDTSess
 		if sess != nil && !sess.Metadata.IsOwnerOrAdmin(ru.ID()) {
 			return errors.New("new session invite not from original inviter")
 		}
-		return nil
+
+		return c.db.SaveRTDTSessionInvite(tx, ru.ID(), invite, ts)
 	})
 	if err != nil {
 		return err
@@ -524,7 +525,7 @@ func (c *Client) handleRMRTDTSessionInvite(ru *RemoteUser, invite rpc.RMRTDTSess
 
 	ru.log.Infof("Received invitation to RTDT session %s peerID %d (asPublisher %v)",
 		invite.RV, invite.PeerID, invite.AllowedAsPublisher)
-	c.ntfns.notifyInvitedToRTDTSession(ru, &invite)
+	c.ntfns.notifyInvitedToRTDTSession(ru, &invite, ts)
 	return nil
 }
 
@@ -620,6 +621,10 @@ func (c *Client) AcceptRTDTSessionInvite(inviter UserID, invite *rpc.RMRTDTSessi
 			}
 		}
 
+		if err := c.db.RemoveRTDTSessionInvite(tx, inviter, invite.RV); err != nil {
+			return err
+		}
+
 		return nil
 	})
 	if err != nil {
@@ -632,6 +637,22 @@ func (c *Client) AcceptRTDTSessionInvite(inviter UserID, invite *rpc.RMRTDTSessi
 	// Send reply accepting.
 	payEvent := fmt.Sprintf("rtdt.accept.%s", invite.RV.String())
 	return c.sendWithSendQ(payEvent, rm, inviter)
+}
+
+// AcceptRTDTSessionInviteByRV accepts an invite to join an RTDT session by RV.
+// The invite must have been received already.
+func (c *Client) AcceptRTDTSessionInviteByRV(inviter UserID, sessRV zkidentity.ShortID, acceptAsPublisher bool) error {
+	var invite *clientdb.RTDTSessionInvite
+	err := c.dbView(func(tx clientdb.ReadTx) error {
+		var err error
+		invite, err = c.db.GetRTDTSessionInvite(tx, inviter, sessRV)
+		return err
+	})
+	if err != nil {
+		return err
+	}
+
+	return c.AcceptRTDTSessionInvite(inviter, &invite.Invite, acceptAsPublisher)
 }
 
 // sendRTDTSessionUpdate sends an update of the given session to the specified
