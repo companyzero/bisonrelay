@@ -3910,7 +3910,7 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		as.recheckRMQLen()
 	}))
 
-	ntfns.Register(client.OnInvitedToRTDTSession(func(ru *client.RemoteUser, invite *rpc.RMRTDTSessionInvite) {
+	ntfns.Register(client.OnInvitedToRTDTSession(func(ru *client.RemoteUser, invite *rpc.RMRTDTSessionInvite, ts time.Time) {
 		inviterId := ru.ID()
 
 		// Prefix to show on command to join the session.

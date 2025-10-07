@@ -2464,20 +2464,28 @@ InvitedToRTDTSess _$InvitedToRTDTSessFromJson(Map<String, dynamic> json) =>
     InvitedToRTDTSess(
       json['inviter'] as String,
       RMRTDTSessionInvite.fromJson(json['invite'] as Map<String, dynamic>),
+      json['inviter_nick'] as String,
+      (json['received_ms'] as num).toInt(),
     );
 
 Map<String, dynamic> _$InvitedToRTDTSessToJson(InvitedToRTDTSess instance) =>
     <String, dynamic>{
       'inviter': instance.inviter,
+      'inviter_nick': instance.inviterNick,
       'invite': instance.invite,
+      'received_ms': instance.receivedMs,
     };
 
 AcceptRTDTInviteArgs _$AcceptRTDTInviteArgsFromJson(
         Map<String, dynamic> json) =>
     AcceptRTDTInviteArgs(
       json['inviter'] as String,
-      RMRTDTSessionInvite.fromJson(json['invite'] as Map<String, dynamic>),
+      json['invite'] == null
+          ? null
+          : RMRTDTSessionInvite.fromJson(
+              json['invite'] as Map<String, dynamic>),
       json['as_publisher'] as bool,
+      json['sess_rv'] as String?,
     );
 
 Map<String, dynamic> _$AcceptRTDTInviteArgsToJson(
@@ -2486,6 +2494,7 @@ Map<String, dynamic> _$AcceptRTDTInviteArgsToJson(
       'inviter': instance.inviter,
       'invite': instance.invite,
       'as_publisher': instance.asPublisher,
+      'sess_rv': instance.sessRV,
     };
 
 InviteToRTDTSessArgs _$InviteToRTDTSessArgsFromJson(

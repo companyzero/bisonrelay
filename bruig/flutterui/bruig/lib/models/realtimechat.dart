@@ -643,7 +643,7 @@ class RealtimeChatModel extends ChangeNotifier {
   Future<void> acceptInvite(InvitedToRTDTSess invite) async {
     _acceptedInvites.add(_inviteKey(invite));
     await Golib.rtdtAcceptInvite(AcceptRTDTInviteArgs(
-        invite.inviter, invite.invite, invite.invite.allowedAsPublisher));
+        invite.inviter, invite.invite, invite.invite.allowedAsPublisher, null));
   }
 
   Future<void> joinLiveSession(RTDTSessionModel sess) async {

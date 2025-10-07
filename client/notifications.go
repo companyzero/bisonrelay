@@ -493,7 +493,7 @@ const onInvitedToRTDTSessionNtfnType = "invitedRTDTSess"
 
 // OnInvitedToRTDTSession is a notification sent when the local client is
 // invited to an RTDT session.
-type OnInvitedToRTDTSession func(ru *RemoteUser, sess *rpc.RMRTDTSessionInvite)
+type OnInvitedToRTDTSession func(ru *RemoteUser, sess *rpc.RMRTDTSessionInvite, ts time.Time)
 
 func (OnInvitedToRTDTSession) typ() string { return onInvitedToRTDTSessionNtfnType }
 
@@ -1161,9 +1161,9 @@ func (nmgr *NotificationManager) notifyRequestingMediateID(mediator, target clie
 		visit(func(h OnRequestingMediateID) { h(mediator, target) })
 }
 
-func (nmgr *NotificationManager) notifyInvitedToRTDTSession(ru *RemoteUser, invite *rpc.RMRTDTSessionInvite) {
+func (nmgr *NotificationManager) notifyInvitedToRTDTSession(ru *RemoteUser, invite *rpc.RMRTDTSessionInvite, ts time.Time) {
 	nmgr.handlers[onInvitedToRTDTSessionNtfnType].(*handlersFor[OnInvitedToRTDTSession]).
-		visit(func(h OnInvitedToRTDTSession) { h(ru, invite) })
+		visit(func(h OnInvitedToRTDTSession) { h(ru, invite, ts) })
 }
 
 func (nmgr *NotificationManager) notifyRTDTSessionInviteAccepted(ru *RemoteUser, sessID zkidentity.ShortID,

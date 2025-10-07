@@ -4,12 +4,15 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"time"
 
+	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/companyzero/bisonrelay/zkidentity"
 )
 
 const (
 	rtdtSessionsDir = "rtdtsessions"
+	rtdtInvitesDir  = "rtdtinvites"
 )
 
 // UpdateRTDTSession updates the data for the given RTDT session.
@@ -82,4 +85,34 @@ func (db *DB) RemoveRTDTSession(tx ReadWriteTx, sessRV *zkidentity.ShortID) erro
 		return ErrNotFound
 	}
 	return err
+}
+
+// SaveRTDTSessionInvite saves the given session invite for an user.
+func (db *DB) SaveRTDTSessionInvite(tx ReadWriteTx, user UserID, invite rpc.RMRTDTSessionInvite, ts time.Time) error {
+	inv := RTDTSessionInvite{
+		UID:        user,
+		Invite:     invite,
+		ReceivedMs: ts.UnixMilli(),
+	}
+	fname := filepath.Join(db.root, inboundDir, user.String(),
+		rtdtInvitesDir, invite.RV.String())
+	return db.saveJsonFile(fname, inv)
+}
+
+// GetRTDTSessionInvite returns the given session invite for an user if it
+// exists.
+func (db *DB) GetRTDTSessionInvite(tx ReadTx, user UserID, sessRV zkidentity.ShortID) (*RTDTSessionInvite, error) {
+	fname := filepath.Join(db.root, inboundDir, user.String(),
+		rtdtInvitesDir, sessRV.String())
+	var inv RTDTSessionInvite
+	err := db.readJsonFile(fname, &inv)
+	return &inv, err
+
+}
+
+// RemoveRTDTSessionInvite removes the given session invite from the DB.
+func (db *DB) RemoveRTDTSessionInvite(tx ReadWriteTx, user UserID, sessRV zkidentity.ShortID) error {
+	fname := filepath.Join(db.root, inboundDir, user.String(),
+		rtdtInvitesDir, sessRV.String())
+	return removeIfExists(fname)
 }

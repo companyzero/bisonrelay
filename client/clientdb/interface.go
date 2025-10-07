@@ -790,6 +790,13 @@ type EarlyPostStatus struct {
 	Status rpc.RMPostShare `json:"status"`
 }
 
+// RTDTSessionInvite stores data about a specific received RTDT invite.
+type RTDTSessionInvite struct {
+	UID        UserID                  `json:"uid"`
+	Invite     rpc.RMRTDTSessionInvite `json:"invite"`
+	ReceivedMs int64                   `json:"received_ms"` // Unix millisecond timestamp
+}
+
 // RTDTSessionMember tracks the members of the RTDT session.
 type RTDTSessionMember struct {
 	UID               UserID         `json:"uid"`
