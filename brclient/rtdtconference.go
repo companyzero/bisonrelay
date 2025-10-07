@@ -193,11 +193,13 @@ func (w *rtdtConferenceWin) modifySelPeerGain(delta float64) {
 
 func (w *rtdtConferenceWin) renderInfoView() {
 	if w.indexRV.IsEmpty() {
+		w.infoView.SetContent("")
 		return
 	}
 
 	sess, err := w.as.c.GetRTDTSession(&w.indexRV)
 	if err != nil || sess == nil {
+		w.infoView.SetContent("")
 		return
 	}
 
@@ -236,6 +238,11 @@ func (w *rtdtConferenceWin) renderInfoView() {
 	isLive := liveSess != nil
 	isHotAudio := liveSess != nil && liveSess.HotAudio
 	isAdmin := sess.LocalIsAdmin()
+
+	if sess.Metadata.IsInstant {
+		pf(styles.mention.Render("Instant Call - will be removed once left"))
+		pf("\n")
+	}
 
 	if isLive && isHotAudio {
 		pf("Live & hot mic session - <Enter> to turn off mic\n")

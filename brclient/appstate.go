@@ -3912,12 +3912,24 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 
 	ntfns.Register(client.OnInvitedToRTDTSession(func(ru *client.RemoteUser, invite *rpc.RMRTDTSessionInvite) {
 		inviterId := ru.ID()
+
+		// Prefix to show on command to join the session.
+		invitePrefix := invite.RV.String()[:4]
+
 		as.rtInvitesMtx.Lock()
 		setInvite := false
 		for _, oldInv := range as.rtInvites {
 			if oldInv.invite.RV == invite.RV && oldInv.inviter == inviterId {
 				oldInv.invite = invite
 				setInvite = true
+			}
+
+			// Disambiguate invite prefix to show on command.
+			if oldInv.invite.RV != invite.RV {
+				oldRV := oldInv.invite.RV.String()
+				for strings.HasPrefix(oldRV, invitePrefix) {
+					invitePrefix = invite.RV.String()[:len(invitePrefix)+2]
+				}
 			}
 		}
 		if !setInvite {
@@ -3927,12 +3939,22 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 
 		as.manyDiagMsgsCb(func(pf printf) {
 			pf("")
-			pf("User %s invited us to RTDT session %s",
-				strescape.Nick(ru.Nick()), invite.RV.ShortLogID())
-			pf("Session size: %d", invite.Size)
-			pf("Session Description: %s", strescape.Content(invite.Description))
+
+			if invite.IsInstant {
+				theme := as.styles.Load()
+				style := theme.mention
+				pf(style.Render(fmt.Sprintf("User %s invited us to instant RTDT call %s",
+					strescape.Nick(ru.Nick()), invite.RV.ShortLogID())))
+				pf("Session size: %d", invite.Size)
+			} else {
+				pf("User %s invited us to RTDT session %s",
+					strescape.Nick(ru.Nick()), invite.RV.ShortLogID())
+				pf("Session size: %d", invite.Size)
+				pf("Session Description: %s", strescape.Content(invite.Description))
+			}
+
 			pf("Type the following to accept and join:")
-			pf("  /rtchat accept %s", invite.RV.ShortLogID())
+			pf("  /rtchat accept %s", invitePrefix)
 		})
 	}))
 
@@ -3943,7 +3965,7 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 	}))
 
 	ntfns.Register(client.OnRTDTSesssionUpdated(func(ru *client.RemoteUser, update *client.RTDTSessionUpdateNtfn) {
-		if update.InitialJoin {
+		if update.InitialJoin && !update.NewMetadata.IsInstant {
 			as.diagMsg("Joined session %s. Entering live RTDT session.\nType '/rtchat win' to manage live sessions.",
 				update.SessionRV.ShortLogID())
 			err := as.c.JoinLiveRTDTSession(update.SessionRV)
@@ -4067,6 +4089,11 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 
 	ntfns.Register(client.OnRTDTRTTCalculated(func(addr net.UDPAddr, rtt time.Duration) {
 		as.sendMsg(msgRTRTTCalculated(rtt))
+	}))
+
+	ntfns.Register(client.OnRTDTJoinedInstantCall(func(sessRV zkidentity.ShortID) {
+		as.diagMsg("Joined instant RTDT session %s", sessRV)
+		as.sendMsg(msgOpenRTChatWin{})
 	}))
 
 	// Initialize resources router.
