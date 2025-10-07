@@ -236,6 +236,39 @@ class _AppState extends State<App> with WindowListener {
     super.dispose();
   }
 
+  void checkForStartupAndroidIntents() async {
+    if (!Platform.isAndroid) {
+      return;
+    }
+
+    // Extract the last intent data (to check if we're responding to a mobile notification).
+    var lastIntent = await lastAndroidIntent();
+    debugPrint(
+        "Bruig: got last android intent ${lastIntent?.action} ${lastIntent?.data} ${lastIntent?.sessRV}");
+    if (lastIntent?.action == "android.intent.action.ANSWER" &&
+        lastIntent?.inviter != null &&
+        lastIntent?.sessRV != null) {
+      // Answer rtdt session.
+
+      // Somehow coming back from this notification adds a second "/" route.
+      // Remove until we go back to /overview.
+      navkey.currentState?.popUntil((r) {
+        return r.settings.name?.startsWith(OverviewScreen.routeName) ?? false;
+      });
+
+      // Go to realtime chat screen. Has to be decoupled from other state changes.
+      Timer(Duration(milliseconds: 1), () {
+        var inviter = lastIntent?.inviter ?? "";
+        var sessRV = lastIntent?.sessRV ?? "";
+        debugPrint("Bruig: Accepting RTDT instant call $sessRV");
+        closeAllAndroidNativeNotifications();
+        RealtimeChatModel.of(context, listen: false)
+            .acceptInviteByRV(inviter, sessRV);
+        overviewNavKey.currentState?.pushNamed(RealtimeChatScreen.routeName);
+      });
+    }
+  }
+
   void forceDetachApp() {
     forceDetachTimer = null;
     SystemChannels.platform.invokeMethod('SystemNavigator.pop');
@@ -248,34 +281,6 @@ class _AppState extends State<App> with WindowListener {
       // resources on mobile. The native plugin keeps background services running.
       forceDetachTimer = Timer(seconds(120), forceDetachApp);
     } else if (state == AppLifecycleState.resumed) {
-      // Extract the last intent data (to check if we're responding to a mobile notification).
-      if (Platform.isAndroid) {
-        var lastIntent = await lastAndroidIntent();
-        if (lastIntent?.action == "android.intent.action.ANSWER" &&
-            (lastIntent?.data ?? "").startsWith("rtdt://") &&
-            lastIntent?.inviter != null &&
-            lastIntent?.sessRV != null) {
-          // Answer rtdt session.
-
-          // Somehow coming back from this notification adds a second "/" route.
-          // Remove until we go back to /overview.
-          navkey.currentState?.popUntil((r) {
-            return r.settings.name?.startsWith(OverviewScreen.routeName) ??
-                false;
-          });
-
-          // Go to realtime chat screen. Has to be decoupled from other state changes.
-          Timer(Duration(milliseconds: 1), () {
-            var inviter = lastIntent?.inviter ?? "";
-            var sessRV = lastIntent?.sessRV ?? "";
-            RealtimeChatModel.of(context, listen: false)
-                .acceptInviteByRV(inviter, sessRV);
-            overviewNavKey.currentState
-                ?.pushReplacementNamed(RealtimeChatScreen.routeName);
-          });
-        }
-      }
-
       forceDetachTimer?.cancel();
       forceDetachTimer = null;
     }
@@ -447,12 +452,17 @@ class _AppState extends State<App> with WindowListener {
     var rtc = Provider.of<RealtimeChatModel>(context, listen: false);
 
     await client.readAddressBook();
-    navkey.currentState!.pushReplacementNamed(OverviewScreen.routeName);
+    navkey.currentState?.pushNamedAndRemoveUntil(OverviewScreen.routeName,
+        (route) {
+      return false;
+    });
     await doWalletChecks(wasAlreadyRunning);
     await client.fetchNetworkInfo();
     await client.fetchMyAvatar();
     await rtc.refreshSessions();
     NotificationService().updateUIConfig();
+
+    checkForStartupAndroidIntents();
   }
 
   void handleNotifications() async {

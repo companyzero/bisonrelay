@@ -31,7 +31,11 @@ class MainActivity: MethodCallHandler, FlutterActivity()  {
                 var res = lastIntent
                 lastIntent = null
                 result.success(res)
-            }            
+            }
+            "closeAllNotifications" -> {
+                closeAllNotifications()
+                result.success(true)
+            }
             else -> {
                 result.notImplemented()
             }
@@ -68,6 +72,7 @@ class MainActivity: MethodCallHandler, FlutterActivity()  {
     }
 
     private fun closeAllNotifications() {
+        Golib.logInfo(0x12131400, "MainActivity: Closing all notifications")
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.cancelAll()
     }
