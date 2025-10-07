@@ -85,6 +85,7 @@ type audioContext interface {
 // playbackDevice lists the calls needed for a playback device (malgo or sim).
 type playbackDevice interface {
 	Start() error
+	Stop() error
 	Uninit()
 }
 

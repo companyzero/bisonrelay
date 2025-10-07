@@ -176,6 +176,8 @@ func (mpc *malgoContext) initPlayback(deviceID DeviceID, cb dataProc) (playbackD
 	deviceConfig.AAudio.ContentType = malgo.AAudioContentTypeSpeech
 	deviceConfig.AAudio.InputPreset = malgo.AAudioInputPresetVoiceCommunication
 	deviceConfig.AAudio.AllowedCapturePolicy = malgo.AAudioAllowCapturePolicyBySystem
+	deviceConfig.AAudio.NoAutoStartAfterReroute = 1
+	deviceConfig.AAudio.EnableCompatibilityWorkarounds = 0
 
 	playbackCallbacks := malgo.DeviceCallbacks{
 		Data: malgo.DataProc(cb),

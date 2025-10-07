@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"runtime"
 	"sync"
 	"time"
 
@@ -858,6 +859,10 @@ func (ps *PlaybackStream) playbackLoopWithDevice(ctx context.Context, devID Devi
 		time.Sleep(time.Millisecond * periodSizeMS)
 	}
 
+	if err := device.Stop(); err != nil {
+		ps.log.Errorf("Playback device %q stop() call errored: %v", devID, err)
+	}
+
 	device.Uninit()
 
 	if addDebugTrace {
@@ -904,6 +909,18 @@ func (ps *PlaybackStream) playbackLoop(ctx context.Context) error {
 					return err
 				}
 			case <-ctx.Done():
+			}
+
+			if runtime.GOOS == "android" {
+				// Without this extra delay on android, AAudio
+				// sometimes reuses the old device, causes
+				// a re-route in the audio playback stack and
+				// ends up locking up the playback loop.
+				select {
+				case <-time.After(time.Millisecond * 500):
+					ps.log.Debugf("Delayed changed to new device ID %q", devID)
+				case <-ctx.Done():
+				}
 			}
 		}
 	}

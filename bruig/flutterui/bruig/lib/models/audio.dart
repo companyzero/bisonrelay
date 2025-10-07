@@ -192,6 +192,8 @@ class AudioModel extends ChangeNotifier {
       }
       androidFoundPlaybackDevices =
           androidEarpieceDeviceID != "" && androidSpeakerDeviceID != "";
+      debugPrint(
+          "FoundPlaybackDevices $androidFoundPlaybackDevices earpiece $androidEarpieceDeviceID speaker $androidSpeakerDeviceID");
     }
 
     notifyListeners();
