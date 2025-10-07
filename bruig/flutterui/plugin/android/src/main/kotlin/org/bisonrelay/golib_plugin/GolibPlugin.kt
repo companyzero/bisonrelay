@@ -338,6 +338,7 @@ class GolibPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, ServiceAware
       val supportedDeviceTypes = mapOf( // Note: These constants are used for switching speaker type
         26  to "Bluetooth Headset", // AudioDeviceInfo.TYPE_BLE_HEADSET
         27  to "Bluetooth Speaker", // AudioDeviceInfo.TYPE_BLE_SPEAKER
+        // AudioDeviceInfo.TYPE_TELEPHONY to "Telephony",
         AudioDeviceInfo.TYPE_AUX_LINE to "Aux Line",
         AudioDeviceInfo.TYPE_BLUETOOTH_A2DP to "Bluetooth A2DP",
         AudioDeviceInfo.TYPE_BLUETOOTH_SCO to "Bluetooth SCO",
@@ -368,12 +369,19 @@ class GolibPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, ServiceAware
           }
           addedOutputs.add(device.id)
 
+          Golib.logInfo(0x12131400, "NativePlugin: Output device ${device.productName.toString()} type ${device.type} id ${device.id.toString()} addr ${device.getAddress()} str ${device.toString()}");
+
+          var addr = device.getAddress()
+          if (addr != "") {
+            addr = " (${addr})"
+          }
+
           // Note: Determining the *actual* default device is complex and often
           // requires checking routing or specific API levels. This is a basic check.
           val isDefault = device.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER || device.type == AudioDeviceInfo.TYPE_WIRED_HEADSET || device.type == AudioDeviceInfo.TYPE_WIRED_HEADPHONES
           playbackDevices.add(mapOf(
             "id" to device.id.toString(),
-            "name" to "${device.productName.toString()} ${supportedDeviceTypes[device.type]}",
+            "name" to "${device.productName.toString()} ${supportedDeviceTypes[device.type]}$addr",
             "is_default" to isDefault // Simplified default check
           ))
         }
@@ -392,11 +400,17 @@ class GolibPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, ServiceAware
           }
           addedInputs.add(device.id)
 
+          Golib.logInfo(0x12131400, "NativePlugin: Input device ${device.productName.toString()} type ${device.type} id ${device.id.toString()} addr ${device.getAddress()} str ${device.toString()}");
+
+          var addr = device.getAddress()
+          if (addr != "") {
+            addr = " (${addr})"
+          }
 
           val isDefault = device.type == AudioDeviceInfo.TYPE_BUILTIN_MIC
           captureDevices.add(mapOf(
             "id" to device.id.toString(),
-            "name" to "${device.productName.toString()} ${supportedDeviceTypes[device.type]}",
+            "name" to "${device.productName.toString()} ${supportedDeviceTypes[device.type]}$addr",
             "is_default" to isDefault // Simplified default check
           ))
         }

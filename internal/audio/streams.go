@@ -447,8 +447,9 @@ func (ps *PlaybackStream) decodeLoop(ctx context.Context) error {
 	inQueue := newTsBufferQueue(maxUndecodedInputLen + cap(ps.inputChan))
 	outQueue := newInputPacketQueue(maxOutQueueLen)
 
-nextAction:
-	for {
+	dataDone := false
+
+	for !dataDone || outQueue.len() > 0 || inQueue.len() > 0 {
 		// Read as many packets as are available for reading.
 		for readIn := true; readIn; {
 			select {
@@ -462,8 +463,9 @@ nextAction:
 
 			case input := <-ps.inputChan:
 				if input.dataDone {
-					ps.log.Tracef("Playback input marked done ts %d", input.ts)
-					break nextAction
+					ps.log.Debugf("Playback input marked done")
+					dataDone = true
+					continue
 				}
 
 				// Reject when this is an old timestamp.
@@ -681,6 +683,10 @@ func (ps *PlaybackStream) playbackLoopWithDevice(ctx context.Context, devID Devi
 			bytesToRead = len(outSample)
 		}
 
+		if cbCount == 0 {
+			ps.log.Debugf("Playback loop got first onSendFrames call")
+		}
+
 		cbCount += 1
 
 		// Fetch next set of samples.
@@ -694,6 +700,11 @@ func (ps *PlaybackStream) playbackLoopWithDevice(ctx context.Context, devID Devi
 				return
 			case input = <-ps.playbackChan:
 				// Fetched next set of samples.
+			}
+
+			if addDebugTrace && cbCount == 1 {
+				ps.log.Debugf("First filling output buffer with data from "+
+					"timestamp %d (plen %d)", input.ts, len(ps.playbackChan))
 			}
 
 			if input.data == nil || input.ts == math.MaxUint32 {
@@ -737,6 +748,7 @@ func (ps *PlaybackStream) playbackLoopWithDevice(ctx context.Context, devID Devi
 			}
 			copy(outSample, (*input.data)[:input.size])
 			ps.bytesBuffers.Put(input.data)
+
 			return
 		}
 	}
@@ -751,21 +763,28 @@ func (ps *PlaybackStream) playbackLoopWithDevice(ctx context.Context, devID Devi
 		return err
 	}
 
+	if addDebugTrace {
+		ps.log.Debugf("Playback device %q started - Waiting for playback to end",
+			devID)
+	}
+
 	select {
 	case <-ctx.Done():
 		// Stop playback immediately.
-		device.Uninit()
-
-		return ctx.Err()
+		err = ctx.Err()
+		time.Sleep(time.Millisecond * periodSizeMS)
 	case <-playbackDone:
 		time.Sleep(time.Millisecond * periodSizeMS)
 	}
 
-	ps.log.Debugf("Finished playback loop with %d callbacks, %d "+
-		"packets, %d bytes", cbCount, inPackets, inSize)
-
 	device.Uninit()
-	return nil
+
+	if addDebugTrace {
+		ps.log.Debugf("Finished playback loop with %d callbacks, %d "+
+			"packets, %d bytes (err %v)", cbCount, inPackets, inSize, err)
+	}
+
+	return err
 }
 
 // playbackLoop runs the playback loop with variable devices. It starts with
@@ -864,12 +883,20 @@ func playbackOpusFrames(ctx context.Context, audioCtx audioContext,
 
 	// Input opus frames.
 	go func() {
+		ticker := time.NewTicker(periodSizeMS * time.Millisecond)
 	nextFrame:
 		for i, frame := range opusFrames {
-			buf := ps.bytesBuffers.Get().([]byte)
-			buf = append(buf, frame...)
+			ps.inputBlocking(ctx, frame, uint32(i*periodSizeMS))
 
-			ps.inputBlocking(ctx, buf, uint32(i*periodSizeMS))
+			// After sending enough to fill queues, send on a
+			// schedule.
+			if i > cap(ps.inputChan) {
+				select {
+				case <-ctx.Done():
+					break nextFrame
+				case <-ticker.C:
+				}
+			}
 
 			if ctx.Err() != nil {
 				break nextFrame
