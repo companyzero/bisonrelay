@@ -137,14 +137,6 @@ func (q *inputPacketQueue) deq() (res inputPacket) {
 	return
 }
 
-func (q *inputPacketQueue) peek() inputPacket {
-	if q.isEmpty() {
-		panic("cannot peek from empty queue")
-	}
-
-	return q.items[q.s]
-}
-
 func newInputPacketQueue(size int) *inputPacketQueue {
 	return &inputPacketQueue{items: make([]inputPacket, size)}
 }

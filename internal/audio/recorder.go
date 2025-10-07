@@ -293,7 +293,7 @@ func (ar *NoteRecorder) Playback(ctx context.Context) error {
 	ar.playing = true
 
 	// Init playback stream with a copy of the opus packets.
-	ar.log.Infof("Starting playback")
+	ar.log.Infof("Starting playback (%d opus frames to playback)", len(ar.opusOutput))
 	ps := playbackOpusFrames(ctx, ar.audioCtx, ar.playbackDeviceID,
 		ar.playGain, ar.opusOutput[:], ar.log)
 	start := time.Now()
