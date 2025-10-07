@@ -5,7 +5,8 @@ import "container/heap"
 // tsBufferItem is one item from tsBufferQueue.
 type tsBufferItem struct {
 	ts   uint32
-	data []byte
+	data *[]byte
+	size int
 }
 
 // tsBufferItemSlice is a slice of buffer items that satisfies heap.Interface.
@@ -48,7 +49,7 @@ func (q *tsBufferQueue) firstTs() uint32 {
 }
 
 // enq enqueues one item in the queue.
-func (q *tsBufferQueue) enq(data []byte, ts uint32) {
+func (q *tsBufferQueue) enq(data *[]byte, size int, ts uint32) {
 	// Reuse or alloc new item.
 	var item *tsBufferItem
 	if len(q.unused) > 0 {
@@ -61,13 +62,13 @@ func (q *tsBufferQueue) enq(data []byte, ts uint32) {
 	}
 
 	// Store data in priority queue.
-	item.data, item.ts = data, ts
+	item.data, item.size, item.ts = data, size, ts
 	heap.Push(q.items, item)
 	q.itemsLen++
 }
 
 // deq dequeues one item from the queue.
-func (q *tsBufferQueue) deq() (data []byte, ts uint32, ok bool) {
+func (q *tsBufferQueue) deq() (data *[]byte, size int, ts uint32, ok bool) {
 	// Early return when empty.
 	if q.items.Len() == 0 {
 		data, ts, ok = nil, 0, false
@@ -76,10 +77,10 @@ func (q *tsBufferQueue) deq() (data []byte, ts uint32, ok bool) {
 
 	// Pop from priority queue.
 	item := heap.Pop(q.items).(*tsBufferItem)
-	data, ts, ok = item.data, item.ts, true
+	data, size, ts, ok = item.data, item.size, item.ts, true
 
 	// Store item pointer for reuse.
-	item.data, item.ts = nil, 0
+	item.data, item.size, item.ts = nil, 0, 0
 	q.unused = append(q.unused, item)
 	q.itemsLen--
 	return
@@ -95,4 +96,55 @@ func newTsBufferQueue(sizeHint int) *tsBufferQueue {
 		items:  &tsBufferItemSlice{},
 		unused: unused,
 	}
+}
+
+type inputPacketQueue struct {
+	items []inputPacket
+	s     int // start
+	e     int // end
+	l     int // len
+}
+
+func (q *inputPacketQueue) isFull() bool {
+	return q.l == len(q.items)
+}
+
+func (q *inputPacketQueue) enq(p inputPacket) {
+	if q.isFull() {
+		panic("cannot push on full queue")
+	}
+	q.items[q.e] = p
+	q.e = (q.e + 1) % len(q.items)
+	q.l++
+}
+
+func (q *inputPacketQueue) isEmpty() bool {
+	return q.l == 0
+}
+
+func (q *inputPacketQueue) len() int {
+	return q.l
+}
+
+func (q *inputPacketQueue) deq() (res inputPacket) {
+	if q.isEmpty() {
+		panic("cannot pop from empty queue")
+	}
+
+	res = q.items[q.s]
+	q.s = (q.s + 1) % len(q.items)
+	q.l--
+	return
+}
+
+func (q *inputPacketQueue) peek() inputPacket {
+	if q.isEmpty() {
+		panic("cannot peek from empty queue")
+	}
+
+	return q.items[q.s]
+}
+
+func newInputPacketQueue(size int) *inputPacketQueue {
+	return &inputPacketQueue{items: make([]inputPacket, size)}
 }

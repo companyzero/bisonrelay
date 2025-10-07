@@ -54,7 +54,7 @@ func TestPlaybackPacketsBuffered(t *testing.T) {
 	assert.ChanNotWritten(t, audioCtx.started, time.Second)
 	for i := 0; i < minPlaybackBufferPackets-1; i++ {
 		inStream.inputIntoPlayback(ps)
-		assert.ChanNotWritten(t, audioCtx.started, time.Second)
+		assert.ChanNotWritten(t, audioCtx.started, 100*time.Millisecond)
 	}
 
 	// Audio is initialized after the last buffered packet is received.

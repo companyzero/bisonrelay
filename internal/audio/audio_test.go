@@ -1,6 +1,7 @@
 package audio
 
 import (
+	"context"
 	"io"
 	"math/rand/v2"
 	"sync"
@@ -26,7 +27,7 @@ func newTestAudioPacketGen() *testAudioPacketGen {
 
 func (tg *testAudioPacketGen) inputIntoPlayback(ps *PlaybackStream) {
 	tg.rng.Read(tg.out)
-	ps.Input(tg.out, tg.ts)
+	ps.inputBlocking(context.Background(), tg.out, tg.ts)
 	tg.ts += periodSizeMS
 }
 
