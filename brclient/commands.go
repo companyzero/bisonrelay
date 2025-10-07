@@ -4025,6 +4025,9 @@ var rtchatCommands = []tuicmd{
 			}()
 			return nil
 		},
+		completer: func(args []string, arg string, as *appState) []string {
+			return nickCompleter(arg, as)
+		},
 	}, {
 		cmd:   "invite",
 		descr: "Invite users to an RTDT session",
