@@ -26,6 +26,7 @@ import 'package:bruig/screens/log.dart';
 import 'package:bruig/screens/onboarding.dart';
 import 'package:bruig/screens/realtimechat/creatertc.dart';
 import 'package:bruig/screens/realtimechat/invitetortc.dart';
+import 'package:bruig/screens/realtimechat/rtclist.dart';
 import 'package:bruig/screens/server_unwelcome_error.dart';
 import 'package:bruig/screens/settings.dart';
 import 'package:bruig/storage_manager.dart';
@@ -53,6 +54,7 @@ import 'package:bruig/screens/verify_server.dart';
 import 'package:duration/duration.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:golib_plugin/android.dart';
 import 'package:golib_plugin/definitions.dart';
 import 'package:golib_plugin/golib_plugin.dart';
 import 'package:just_audio_media_kit/just_audio_media_kit.dart';
@@ -240,11 +242,40 @@ class _AppState extends State<App> with WindowListener {
   }
 
   void onAppStateChanged(AppLifecycleState state) async {
+    debugPrint("Bruig: OnAppStateChanged ${state.name}");
     if (state == AppLifecycleState.paused) {
       // After 120 seconds, force detach the app so the UI doesn't consume
       // resources on mobile. The native plugin keeps background services running.
       forceDetachTimer = Timer(seconds(120), forceDetachApp);
-    } else {
+    } else if (state == AppLifecycleState.resumed) {
+      // Extract the last intent data (to check if we're responding to a mobile notification).
+      if (Platform.isAndroid) {
+        var lastIntent = await lastAndroidIntent();
+        if (lastIntent?.action == "android.intent.action.ANSWER" &&
+            (lastIntent?.data ?? "").startsWith("rtdt://") &&
+            lastIntent?.inviter != null &&
+            lastIntent?.sessRV != null) {
+          // Answer rtdt session.
+
+          // Somehow coming back from this notification adds a second "/" route.
+          // Remove until we go back to /overview.
+          navkey.currentState?.popUntil((r) {
+            return r.settings.name?.startsWith(OverviewScreen.routeName) ??
+                false;
+          });
+
+          // Go to realtime chat screen. Has to be decoupled from other state changes.
+          Timer(Duration(milliseconds: 1), () {
+            var inviter = lastIntent?.inviter ?? "";
+            var sessRV = lastIntent?.sessRV ?? "";
+            RealtimeChatModel.of(context, listen: false)
+                .acceptInviteByRV(inviter, sessRV);
+            overviewNavKey.currentState
+                ?.pushReplacementNamed(RealtimeChatScreen.routeName);
+          });
+        }
+      }
+
       forceDetachTimer?.cancel();
       forceDetachTimer = null;
     }
@@ -406,6 +437,8 @@ class _AppState extends State<App> with WindowListener {
   }
 
   Future<void> addressBookLoaded(bool wasAlreadyRunning) async {
+    debugPrint(
+        "Bruig: AddressBookLoaded (wasAlreadyRunning=$wasAlreadyRunning)");
     var audio = Provider.of<AudioModel>(context, listen: false);
     audio.captureGain.readCurrent();
     audio.playbackGain.readCurrent();

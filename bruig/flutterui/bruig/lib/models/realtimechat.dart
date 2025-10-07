@@ -494,6 +494,26 @@ class RealtimeChatModel extends ChangeNotifier {
         _sessions[updt.sessionRV]?._appendChatMsg(
             client, updt.publisher.peerID, updt.message, timestamp);
       }
+
+      if (updt is RTDTInstantCallJoined || updt is RTDTLiveSessionJoined) {
+        // Ensure model has data about the session and is the active session.
+        (() async {
+          await _updateSess(updt.sessionRV);
+          var sess = _sessions[updt.sessionRV];
+          if (active.active?.sessionRV != updt.sessionRV) {
+            active.active = sess;
+          }
+          var liveSess = await Golib.rtdtGetLiveSession(updt.sessionRV);
+          if (sess != null && liveSess != null) {
+            sess._refreshFromLive(liveSess);
+            liveSessions._setLive(sess);
+            if ((liveSess.hotAudio) && hotAudioSession.active != sess) {
+              hotAudioSession.active?._setHotAudio(false);
+              hotAudioSession._setActive(sess);
+            }
+          }
+        })();
+      }
     }
   }
 
@@ -644,6 +664,12 @@ class RealtimeChatModel extends ChangeNotifier {
     _acceptedInvites.add(_inviteKey(invite));
     await Golib.rtdtAcceptInvite(AcceptRTDTInviteArgs(
         invite.inviter, invite.invite, invite.invite.allowedAsPublisher, null));
+  }
+
+  Future<void> acceptInviteByRV(String inviter, String sessRV) async {
+    const allowedAsPublisher = true; // Need to parametrize?
+    await Golib.rtdtAcceptInvite(
+        AcceptRTDTInviteArgs(inviter, null, allowedAsPublisher, sessRV));
   }
 
   Future<void> joinLiveSession(RTDTSessionModel sess) async {

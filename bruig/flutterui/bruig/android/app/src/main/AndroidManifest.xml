@@ -16,7 +16,7 @@
             android:launchMode="singleTop"
             android:theme="@style/LaunchTheme"
             android:exported="true"
-            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+            android:configChanges="orientation|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
             android:hardwareAccelerated="true"
             android:windowSoftInputMode="adjustResize"
             android:showWhenLocked="true"
@@ -48,6 +48,7 @@
                 <action android:name="org.bisonrelay.bruig.NTFN" />
             </intent-filter>
         </activity>
+        
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data
@@ -55,11 +56,23 @@
             android:value="2" />
         <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ActionBroadcastReceiver" />
 
-
         <service
             android:enabled="true"
-            android:name="org.bisonrelay.golib_plugin.GolibPlugin$FgSvc"
-            android:exported="false"
-            android:foregroundServiceType="dataSync" />
+            android:name="org.bisonrelay.golib_plugin.NtfFgSvc"
+            android:exported="true"
+            android:foregroundServiceType="dataSync">            
+        </service>
+
+
+        <activity
+            android:name="org.bisonrelay.golib_plugin.CallDeclineActivity"
+            android:exported="true"
+            android:taskAffinity=""
+            android:excludeFromRecents="true"
+        >
+            <intent-filter>
+                <action android:name="org.bisonrelay.bruig.ACTION_DECLINE_CALL"/>
+            </intent-filter>
+        </activity>
     </application>
 </manifest>
