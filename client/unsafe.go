@@ -25,4 +25,6 @@ func (c *Client) FillTestInterface(i *testutils.UnsafeTestInterface) {
 	}
 
 	i.RotateRTDTAppointmentCookies = c.rotateRTDTAppointmentCookies
+
+	i.HasRunningUserHandlers = c.rul.anyHasRunningHandlers
 }

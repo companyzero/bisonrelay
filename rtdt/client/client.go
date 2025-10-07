@@ -345,7 +345,8 @@ type SessionConfig struct {
 }
 
 // NewSession connects to and creates a new RTDT session based on the config.
-// The session runs until the passed context is done.
+// The session (and any other sessions made to the same server) run until the
+// context is canceled or LeaveSession() is called.
 func (c *Client) NewSession(ctx context.Context, sessCfg SessionConfig) (*Session, error) {
 	conn, _, err := c.connToAddrAndId(ctx, sessCfg.ServerAddr,
 		sessCfg.SessionKeyGen, sessCfg.LocalID)
@@ -379,7 +380,10 @@ func (c *Client) LeaveSession(ctx context.Context, sess *Session) error {
 				sess.conn.cAddr, sessCount, pendingCount)
 			c.log.Infof("Left session %s from conn %s",
 				sess.localID, sess.conn.cAddr)
-			return err
+			return nil
+		} else {
+			c.log.Tracef("Unable to leave session %s (attempt #%d): %v",
+				sess.localID, i, err)
 		}
 		if ctx.Err() != nil {
 			// Parent context canceled.

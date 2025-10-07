@@ -182,6 +182,23 @@ func NotNil(t testing.TB, v any) {
 	}
 }
 
+// Nil verifies if v is nil (nil type or typed nil value).
+func Nil(t testing.TB, v any) {
+	t.Helper()
+	if v == nil {
+		return
+	}
+
+	rv := reflect.ValueOf(v)
+	if rv.Kind() == reflect.Ptr || rv.Kind() == reflect.Slice ||
+		rv.Kind() == reflect.Map || rv.Kind() == reflect.Chan ||
+		rv.Kind() == reflect.Interface && rv.IsNil() {
+		return
+	}
+
+	t.Fatalf("unexpected non-nil value %v", v)
+}
+
 // DoesNotBlock asserts that calling f() does not block for an inordinate amount
 // of time.
 func DoesNotBlock(t testing.TB, f func()) {

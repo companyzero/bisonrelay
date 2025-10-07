@@ -639,6 +639,14 @@ type OnRTDTRTTCalculated func(addr net.UDPAddr, rtt time.Duration)
 
 func (OnRTDTRTTCalculated) typ() string { return onRTDTRTTCalculatedNtfnType }
 
+const onRTDTJoinedInstantCallNtfnType = "rtdtjoinedinstantcall"
+
+// OnRTDTJoinedInstantCall is called when an instant RTDT session is joined/made
+// live/hot.
+type OnRTDTJoinedInstantCall func(sessionRV zkidentity.ShortID)
+
+func (OnRTDTJoinedInstantCall) typ() string { return onRTDTJoinedInstantCallNtfnType }
+
 // The following is used only in tests.
 
 const onTestNtfnType = "testNtfnType"
@@ -1271,6 +1279,11 @@ func (nmgr *NotificationManager) notifyRTDTRTTCalculated(addr net.UDPAddr, rtt t
 		visit(func(h OnRTDTRTTCalculated) { h(addr, rtt) })
 }
 
+func (nmgr *NotificationManager) notifyRTDTJoinedInstantCall(sessionRV zkidentity.ShortID) {
+	nmgr.handlers[onRTDTJoinedInstantCallNtfnType].(*handlersFor[OnRTDTJoinedInstantCall]).
+		visit(func(h OnRTDTJoinedInstantCall) { h(sessionRV) })
+}
+
 func NewNotificationManager() *NotificationManager {
 	nmgr := &NotificationManager{
 		uiConfig: UINotificationsConfig{
@@ -1347,6 +1360,7 @@ func NewNotificationManager() *NotificationManager {
 			onRTDTChatMsgRcvdNtfnType:           &handlersFor[OnRTDTChatMessageReceived]{},
 			onRTDTAdminCookiesRcvdNtfnType:      &handlersFor[OnRTDTAdminCookiesReceived]{},
 			onRTDTRTTCalculatedNtfnType:         &handlersFor[OnRTDTRTTCalculated]{},
+			onRTDTJoinedInstantCallNtfnType:     &handlersFor[OnRTDTJoinedInstantCall]{},
 		},
 	}
 	if !nmgr.uiTimer.Stop() {

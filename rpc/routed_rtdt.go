@@ -38,6 +38,16 @@ type RMRTDTSessionInvite struct {
 
 	// Tag identifies this invite.
 	Tag uint64 `json:"tag"`
+
+	// IsInstant determines if this is an instant/ephemeral call.
+	//
+	// An instant call is one that is not meant for long term tracking, but
+	// rather for online/quick/temporary/immediate interaction.
+	//
+	// Usually, instant calls are immediately joined upon
+	// creation/acceptance and are automatically deleted from clients after
+	// finalization.
+	IsInstant bool `json:"is_instant"`
 }
 
 // RMCRTDTSessionInviteAccept is the command for the RMRTDTSessionPublisher C2C
@@ -101,6 +111,9 @@ type RMRTDTSession struct {
 	// Publishers is a list of users allowed to publish data in the
 	// session.
 	Publishers []RMRTDTSessionPublisher `json:"publishers"`
+
+	// IsInstant determines if this is an instant/ephemeral call.
+	IsInstant bool `json:"is_instant"`
 }
 
 // IsOwnerOrAdmin returns true if the given ID is the owner or an admin of the

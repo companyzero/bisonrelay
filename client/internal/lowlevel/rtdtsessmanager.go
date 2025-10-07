@@ -654,7 +654,7 @@ loop:
 			case alreadyMaintaining:
 				newSess.replyChan <- errors.New("already maintaining this session")
 			case alreadyPending:
-				newSess.replyChan <- errors.New("already pending to maintain this session")
+				newSess.replyChan <- ErrAlreadyPendingMantainRTDTSess
 			case brs == nil:
 				newSess.replyChan <- errors.New("cannot maintain session without brserver connection")
 			default:

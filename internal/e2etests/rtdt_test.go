@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/companyzero/bisonrelay/client"
+	"github.com/companyzero/bisonrelay/client/clientdb"
+	"github.com/companyzero/bisonrelay/client/clientintf"
 	"github.com/companyzero/bisonrelay/internal/assert"
 	"github.com/companyzero/bisonrelay/rpc"
 	rtdtclient "github.com/companyzero/bisonrelay/rtdt/client"
@@ -1142,5 +1144,134 @@ func TestRTDTSessionWithGCReplaceSession(t *testing.T) {
 	assertSendsRandomRTDTData(t, aliceSess, gotBobDataChan, gotCharlieDataChan)
 	assertSendsRandomRTDTData(t, bobSess, gotAliceDataChan, gotCharlieDataChan)
 	assertSendsRandomRTDTData(t, charlieSess, gotAliceDataChan, gotBobDataChan)
+}
 
+// TestRTDTInstantSession tests how instant/ephemeral RTDT ssesions work.
+func TestRTDTInstantSession(t *testing.T) {
+	t.Parallel()
+
+	// Handler for inbound RTDT random data (needs to be setup on client
+	// creation).
+	gotAliceDataChan := make(chan []byte, 5)
+	aliceRandomHandler := func(sess *rtdtclient.Session, enc *rpc.RTDTFramedPacket, plain *rpc.RTDTDataPacket) error {
+		gotAliceDataChan <- slices.Clone(plain.Data)
+		return nil
+	}
+	gotBobDataChan := make(chan []byte, 5)
+	bobRandomHandler := func(sess *rtdtclient.Session, enc *rpc.RTDTFramedPacket, plain *rpc.RTDTDataPacket) error {
+		gotBobDataChan <- slices.Clone(plain.Data)
+		return nil
+	}
+	gotCharlieDataChan := make(chan []byte, 5)
+	charlieRandomHandler := func(sess *rtdtclient.Session, enc *rpc.RTDTFramedPacket, plain *rpc.RTDTDataPacket) error {
+		gotCharlieDataChan <- slices.Clone(plain.Data)
+		return nil
+	}
+
+	// Setup Alice and Bob and have them KX.
+	tcfg := testScaffoldCfg{runRtdtServer: true}
+	ts := newTestScaffold(t, tcfg)
+	alice := ts.newClient("alice", withRTDTRandomStreamHandler(aliceRandomHandler))
+	bob := ts.newClient("bob", withRTDTRandomStreamHandler(bobRandomHandler))
+	charlie := ts.newClient("charlie", withRTDTRandomStreamHandler(charlieRandomHandler))
+	ts.kxUsers(alice, bob)
+	ts.kxUsers(alice, charlie)
+	ts.kxUsers(bob, charlie)
+
+	// Handlers.
+	aliceJoinedChan := make(chan struct{}, 5)
+	alice.handle(client.OnRTDTJoinedInstantCall(func(sessRV zkidentity.ShortID) {
+		aliceJoinedChan <- struct{}{}
+	}))
+	aliceJoinedLiveChan := make(chan struct{}, 5)
+	alice.handle(client.OnRTDTLiveSessionJoined(func(sessRV zkidentity.ShortID) {
+		aliceJoinedLiveChan <- struct{}{}
+	}))
+
+	bobInvitedChan := make(chan *rpc.RMRTDTSessionInvite, 5)
+	bob.handle(client.OnInvitedToRTDTSession(func(ru *client.RemoteUser, invite *rpc.RMRTDTSessionInvite) {
+		bobInvitedChan <- invite
+	}))
+	bobJoinedChan := make(chan struct{}, 5)
+	bob.handle(client.OnRTDTJoinedInstantCall(func(sessRV zkidentity.ShortID) {
+		bobJoinedChan <- struct{}{}
+	}))
+	bobJoinedLiveChan := make(chan struct{}, 5)
+	bob.handle(client.OnRTDTLiveSessionJoined(func(sessRV zkidentity.ShortID) {
+		bobJoinedLiveChan <- struct{}{}
+	}))
+
+	charlieInvitedChan := make(chan *rpc.RMRTDTSessionInvite, 5)
+	charlie.handle(client.OnInvitedToRTDTSession(func(ru *client.RemoteUser, invite *rpc.RMRTDTSessionInvite) {
+		charlieInvitedChan <- invite
+	}))
+	charlieJoinedChan := make(chan struct{}, 5)
+	charlie.handle(client.OnRTDTJoinedInstantCall(func(sessRV zkidentity.ShortID) {
+		charlieJoinedChan <- struct{}{}
+	}))
+	charlieJoinedLiveChan := make(chan struct{}, 5)
+	charlie.handle(client.OnRTDTLiveSessionJoined(func(sessRV zkidentity.ShortID) {
+		charlieJoinedLiveChan <- struct{}{}
+	}))
+
+	// Create the instant RTDT session.
+	invitees := []clientintf.UserID{bob.PublicID(), charlie.PublicID()}
+	initialSess, err := alice.CreateInstantRTDTSession(invitees)
+	assert.NilErr(t, err)
+	sessRV := initialSess.Metadata.RV
+
+	// Bob and Charlie receive and accept the invite.
+	gotBobInvite := assert.ChanWritten(t, bobInvitedChan)
+	assert.NilErr(t, bob.AcceptRTDTSessionInvite(alice.PublicID(), gotBobInvite, true))
+	gotCharlieInvite := assert.ChanWritten(t, charlieInvitedChan)
+	assert.NilErr(t, charlie.AcceptRTDTSessionInvite(alice.PublicID(), gotCharlieInvite, true))
+
+	// Alice, Bob and Charlie automatically join the live session.
+	assert.ChanWritten(t, aliceJoinedChan)
+	assert.ChanWritten(t, bobJoinedChan)
+	assert.ChanWritten(t, charlieJoinedChan)
+	assert.ChanWritten(t, aliceJoinedLiveChan)
+	assert.ChanWritten(t, bobJoinedLiveChan)
+	assert.ChanWritten(t, charlieJoinedLiveChan)
+
+	// Ensure all updates have been sent between the clients.
+	assertEmptyRMQ(t, alice)
+	assertClientUpToDate(t, bob)
+	assertClientUpToDate(t, charlie)
+	assertClientHasNoRunningHandlers(t, alice)
+	assertClientHasNoRunningHandlers(t, bob)
+	assertClientHasNoRunningHandlers(t, charlie)
+
+	// They exchange data.
+	aliceSess := alice.GetLiveRTSession(&sessRV)
+	bobSess := bob.GetLiveRTSession(&sessRV)
+	charlieSess := charlie.GetLiveRTSession(&sessRV)
+	assert.NotNil(t, aliceSess)
+	assert.NotNil(t, bobSess)
+	assert.NotNil(t, charlieSess)
+	assertSendsRandomRTDTData(t, aliceSess.RTSess, gotBobDataChan, gotCharlieDataChan)
+	assertSendsRandomRTDTData(t, bobSess.RTSess, gotAliceDataChan, gotCharlieDataChan)
+	assertSendsRandomRTDTData(t, charlieSess.RTSess, gotAliceDataChan, gotBobDataChan)
+
+	// Alice leaves the session. This automatically removes the session from
+	// her list of sessions.
+	assert.NilErr(t, alice.LeaveLiveRTSession(sessRV))
+	_, err = alice.GetRTDTSession(&sessRV)
+	assert.ErrorIs(t, err, clientdb.ErrNotFound)
+	assert.Nil(t, alice.GetLiveRTSession(&sessRV))
+
+	// Bob and Charlie still in the session.
+	assertSendsRandomRTDTData(t, bobSess.RTSess, gotCharlieDataChan)
+	assertSendsRandomRTDTData(t, charlieSess.RTSess, gotBobDataChan)
+
+	// Bob exits the session. Same result.
+	assert.NilErr(t, bob.LeaveLiveRTSession(sessRV))
+	_, err = bob.GetRTDTSession(&sessRV)
+	assert.ErrorIs(t, err, clientdb.ErrNotFound)
+	assert.Nil(t, bob.GetLiveRTSession(&sessRV))
+
+	// Charlie is shutdown. When he returns, he no longer has the session.
+	charlie = ts.recreateClient(charlie)
+	_, err = charlie.GetRTDTSession(&sessRV)
+	assert.ErrorIs(t, err, clientdb.ErrNotFound)
 }
