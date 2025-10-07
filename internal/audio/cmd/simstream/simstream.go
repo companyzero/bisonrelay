@@ -53,6 +53,10 @@ func (ss *simstream) run(ctx context.Context) error {
 }
 
 func (ss *simstream) capturedPacket(ctx context.Context, data []byte, timestamp uint32) error {
+
+	// Wrap timestamps every 30 seconds.
+	sendTs := timestamp % 30000
+
 	// Check if this packet should be dropped.
 	packetLossMilli := ss.packetLossMilli.Load()
 	if rand.Int31n(1000) < packetLossMilli {
@@ -62,7 +66,12 @@ func (ss *simstream) capturedPacket(ctx context.Context, data []byte, timestamp 
 
 	// Simulate long pause at the start: play from timestamps 1s to 5s,
 	// then drop 5s and resume playing.
-	if timestamp < 1000 || (timestamp > 5000 && timestamp < 10000) {
+	if timestamp < 1000 || (sendTs > 5000 && sendTs < 10000) {
+		return nil
+	}
+
+	// Simulate dropping packets during initial fill.
+	if timestamp == 10080 {
 		return nil
 	}
 
@@ -87,7 +96,7 @@ func (ss *simstream) capturedPacket(ctx context.Context, data []byte, timestamp 
 		select {
 		case <-time.After(time.Duration(delay) * time.Millisecond):
 			// Packet arrived in destination.
-			ss.inputChan <- inputPacket{data: buf, ts: timestamp}
+			ss.inputChan <- inputPacket{data: buf, ts: sendTs}
 		case <-ctx.Done():
 		}
 	}()
@@ -109,10 +118,11 @@ func newSimStream(ctx context.Context, noterec *audio.NoteRecorder, log slog.Log
 		inputChan: make(chan inputPacket, 10*50), // 10 seconds
 		bufChan:   make(chan []byte, 10*50),
 	}
-	ss.minDelayMs.Store(200)
+
+	ss.minDelayMs.Store(400)
 	ss.meanDelayMs.Store(100)
-	ss.stdDevDelayMs.Store(40)
-	ss.packetLossMilli.Store(100)
+	ss.stdDevDelayMs.Store(100)
+	ss.packetLossMilli.Store(50)
 
 	// Create a few buffers.
 	for i := 0; i < 10; i++ {

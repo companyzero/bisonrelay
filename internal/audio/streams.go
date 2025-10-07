@@ -14,11 +14,16 @@ import (
 
 // minPlaybackBufferPackets is how many packets to buffer before starting
 // playback of a stream.
-const minPlaybackBufferPackets = 5
+const minPlaybackBufferPackets = 20
 
 // EncodedCapturedFunc is the signature for the callback function that processes
 // captured and opus-encoded packets.
 type EncodedCapturedFunc func(ctx context.Context, data []byte, timestamp uint32) error
+
+type capturedPacket struct {
+	samples *[]int16
+	size    int
+}
 
 // CaptureStream captures data from an input device for some time.
 type CaptureStream struct {
@@ -26,7 +31,7 @@ type CaptureStream struct {
 	log            slog.Logger
 	deviceID       DeviceID
 	int16Buffers   sync.Pool
-	encodeChan     chan []int16
+	encodeChan     chan capturedPacket
 	volumeGainChan chan float64
 	recInfo        RecordInfo
 	encodedFunc    EncodedCapturedFunc
@@ -84,8 +89,9 @@ func (cs *CaptureStream) captureLoop(ctx context.Context) error {
 				len(inSamples), readSize)
 			readSize = len(inSamples)
 		}
-		buf := cs.int16Buffers.Get().([]int16)
-		samples := bytesToLES16Slice(inSamples[:readSize], buf)
+		samplesSize := readSize / 2
+		samples := cs.int16Buffers.Get().(*[]int16)
+		bytesToLES16Slice(inSamples[:readSize], (*samples))
 
 		inFrames += 1
 		inSize += len(inSamples)
@@ -99,7 +105,7 @@ func (cs *CaptureStream) captureLoop(ctx context.Context) error {
 
 		// Send to encode loop.
 		select {
-		case cs.encodeChan <- samples:
+		case cs.encodeChan <- capturedPacket{samples: samples, size: samplesSize}:
 		case <-sendingDone:
 		}
 	}
@@ -124,7 +130,7 @@ func (cs *CaptureStream) captureLoop(ctx context.Context) error {
 
 	// Signal the encoding loop that all data has been captured.
 	close(sendingDone)
-	cs.encodeChan <- nil
+	cs.encodeChan <- capturedPacket{}
 
 	if inFrames == 0 {
 		return errors.New("captured no data")
@@ -155,10 +161,10 @@ func (cs *CaptureStream) encodeLoop(ctx context.Context, initialVolGain float64)
 
 nextPacket:
 	for {
-		var samples []int16
+		var cp capturedPacket
 		select {
-		case samples = <-cs.encodeChan:
-			if samples == nil {
+		case cp = <-cs.encodeChan:
+			if cp.samples == nil {
 				break nextPacket
 			}
 
@@ -168,6 +174,7 @@ nextPacket:
 			continue nextPacket
 		}
 
+		samples := (*cp.samples)[:cp.size]
 		if volumeGain != 0 {
 			applyGainDB(samples, volumeGain)
 		}
@@ -183,7 +190,8 @@ nextPacket:
 		}
 
 		// Debug log commented out for performance reasons.
-		// cs.log.Tracef("Encoded packet of size %d ts %d", len(encoded), timestamp)
+		// cs.log.Tracef("Encoded packet of size %d ts %d frameSize %d",
+		//	len(encoded), timestamp, cp.size)
 
 		if err := cs.encodedFunc(ctx, encoded, timestamp); err != nil {
 			return err
@@ -195,7 +203,7 @@ nextPacket:
 		inputSize += len(samples) * 2
 		encodedSize += len(encoded)
 
-		cs.int16Buffers.Put(samples[:0]) //nolint:staticcheck
+		cs.int16Buffers.Put(cp.samples)
 	}
 
 	// Done!
@@ -246,7 +254,7 @@ func streamCaptureOpusFrames(ctx context.Context, audioCtx audioContext,
 
 	sampleCount := sampleRate / 1000 * periodSizeMS
 	cs := &CaptureStream{
-		encodeChan:     make(chan []int16),
+		encodeChan:     make(chan capturedPacket),
 		captureDone:    make(chan struct{}),
 		stopChan:       make(chan struct{}, 1),
 		volumeGainChan: make(chan float64, 1),
@@ -254,7 +262,8 @@ func streamCaptureOpusFrames(ctx context.Context, audioCtx audioContext,
 		audioCtx:       audioCtx,
 		deviceID:       deviceID,
 		int16Buffers: sync.Pool{New: func() interface{} {
-			return make([]int16, 0, sampleCount)
+			b := make([]int16, 0, sampleCount)
+			return &b
 		}},
 		encodedFunc: f,
 	}
@@ -265,7 +274,8 @@ func streamCaptureOpusFrames(ctx context.Context, audioCtx audioContext,
 
 // inputPacket tracks an individual packet and timestamp.
 type inputPacket struct {
-	data     []byte
+	data     *[]byte
+	size     int
 	ts       uint32
 	dataDone bool
 	hasSound bool
@@ -278,7 +288,7 @@ type PlaybackStream struct {
 	inputDone         chan struct{}
 	playbackDone      chan struct{}
 	playbackChan      chan inputPacket
-	stallChan         chan uint32
+	getBufCount       chan chan int
 	volumeGainChan    chan float64
 	runErr            error
 	bytesBuffers      sync.Pool
@@ -317,31 +327,55 @@ func (ps *PlaybackStream) ChangePlaybackDevice(devID DeviceID) {
 // Note: If the input buffer is full, this drops the packet.
 func (ps *PlaybackStream) Input(data []byte, ts uint32) {
 	// Copy the input data to an internal bytes buffer.
-	buf := ps.bytesBuffers.Get().([]byte)
-	buf = append(buf, data...)
-	packet := inputPacket{data: buf, ts: ts}
+	buf := ps.bytesBuffers.Get().(*[]byte)
+	bufSlice := *buf
+	if len(data) > cap(bufSlice) {
+		bufSlice = make([]byte, 0, len(data))
+		buf = &bufSlice
+	}
+	copy(bufSlice[:len(data)], data)
+	packet := inputPacket{data: buf, size: len(data), ts: ts}
 
 	// Send it to decodeLoop().
 	select {
 	case ps.inputChan <- packet:
 	default:
 		// Stall! Audio decoder stuck or too many input packets.
-		ps.log.Warnf("Input channel is full when attempting to send packet ts %d", ts)
+		ps.log.Warnf("Input channel is full when attempting to send "+
+			"packet ts %d (input %d, playback %d)", ts, len(ps.inputChan),
+			len(ps.playbackChan))
 	}
 }
 
 // BufferedCount returns the number of buffered packets.
 func (ps *PlaybackStream) BufferedCount() int64 {
-	return int64(len(ps.inputChan) + len(ps.playbackChan))
+	replyChan := make(chan int, 1)
+	select {
+	case ps.getBufCount <- replyChan:
+	case <-ps.playbackDone:
+		return 0
+	}
+
+	select {
+	case res := <-replyChan:
+		return int64(res)
+	case <-ps.playbackDone:
+		return 0
+	}
 }
 
 // inputBlocking inputs a playback packet but blocks if the input buffer is
 // full.  This is used when playing back recordings.
 func (ps *PlaybackStream) inputBlocking(ctx context.Context, data []byte, ts uint32) {
 	// Copy the input data to an internal bytes buffer.
-	buf := ps.bytesBuffers.Get().([]byte)
-	buf = append(buf, data...)
-	packet := inputPacket{data: buf, ts: ts}
+	buf := ps.bytesBuffers.Get().(*[]byte)
+	bufSlice := *buf
+	if len(data) > cap(bufSlice) {
+		bufSlice = make([]byte, 0, len(data))
+		buf = &bufSlice
+	}
+	copy(bufSlice[:len(data)], data)
+	packet := inputPacket{data: buf, size: len(data), ts: ts}
 
 	// Send it to decodeLoop().
 	select {
@@ -359,16 +393,42 @@ func (ps *PlaybackStream) Err() error {
 		return nil
 	}
 }
-
-// decodeLoop runs a loop receiving input packets and opus-decoding them.
 func (ps *PlaybackStream) decodeLoop(ctx context.Context) error {
 	decoder, err := ps.audioCtx.newDecoder(sampleRate, channels)
 	if err != nil {
 		return fmt.Errorf("newDecoder: %v", err)
 	}
 
+	// Track total decoding time.
+	var startTime = time.Now()
+
 	// Must be agreed upon.
 	const frameSize = sampleRate / 1000 * periodSizeMS
+
+	// The minimum number of items to maintain in the output queue.
+	const minOutqueueTime = 80 * time.Millisecond
+	const minOutQueueLen = int(minOutqueueTime/time.Millisecond) / periodSizeMS
+
+	// The maximum amount of packets/time to buffer on the input (undecoded)
+	// queue.
+	const maxUndecodedInputTime = 800 * time.Millisecond
+	const maxUndecodedInputLen = int(maxUndecodedInputTime/time.Millisecond) / periodSizeMS
+
+	// The maximum amount of packets/time to buffer on the output (decoded)
+	// queue.
+	const maxOutQueueLenTime = 500 * time.Millisecond
+	const maxOutQueueLen = int(maxOutQueueLenTime/time.Millisecond) / periodSizeMS
+
+	// The minimum amount to buffer within inQueue, when fillQueue == true,
+	// before decoding starts.
+	const minFillQueueTime = 400 * time.Millisecond
+	const minFillQueueLen = int(minFillQueueTime/time.Millisecond) / periodSizeMS
+
+	// fillQueue is set to true when the decode queue needs to be filled
+	// with some packets before starting to decode again. This happens at
+	// startup and if playback stalled and no data was available in
+	// inQueue.
+	var fillQueue = true
 
 	// Stats.
 	var inSize, outSize, outSamples, inPackets int
@@ -376,150 +436,147 @@ func (ps *PlaybackStream) decodeLoop(ctx context.Context) error {
 	// Buffer that receives the results of a decoder.Decode() call.
 	var decodeBuffer = make([]int16, frameSize*channels*2)
 
-	var startTime = time.Now()   // Track total decoding time.
-	var lastTimestamp uint32 = 0 // Last decoded ts.
-	var stallStartTs uint32      // Used to log stats about stalls.
-	var stallStartTime time.Time // Used to guess when the remote mic was turned off
-
-	// Whether playback loop is stalled. This starts as true to ensure the
-	// first packet is decoded if it has a timestamp of 0.
-	var stalled = true
-
-	// fillQueue is set to true when the decode queue needs to be filled
-	// with some packets before starting to decode again. This happens at
-	// startup and if playback stalled and no data was available in
-	// decodeQueue.
-	var fillQueue = true
-
-	// Adaptative buffer length. Starts by buffering a small number of
-	// packets, but every time a stall occurs (dropped or delayed packets),
-	// it doubles the size of buffering done for the next round (up to a
-	// maximum).
-	var stallTargetQLen = minPlaybackBufferPackets
-	const maxTargetQLenTime = time.Second
-	const maxTargetQLen = int(maxTargetQLenTime/time.Millisecond) / periodSizeMS
+	var lastDecTs uint32
 
 	var volumeGain float64 = 0
 
-	decodeQueue := newTsBufferQueue(20)
+	var didFEC bool
 
-nextFrame:
+	waitWorkTicker := time.NewTicker(periodSizeMS * time.Millisecond)
+
+	inQueue := newTsBufferQueue(maxUndecodedInputLen + cap(ps.inputChan))
+	outQueue := newInputPacketQueue(maxOutQueueLen)
+
+nextAction:
 	for {
-		// Take next action.
-		select {
-		case newGain := <-ps.volumeGainChan:
-			ps.log.Debugf("Changing volume gain to %.2f", newGain)
-			volumeGain = newGain
-			continue nextFrame
+		// Read as many packets as are available for reading.
+		for readIn := true; readIn; {
+			select {
+			case newGain := <-ps.volumeGainChan:
+				ps.log.Debugf("Changing volume gain to %.2f", newGain)
+				volumeGain = newGain
 
-		case input := <-ps.inputChan:
-			if input.dataDone {
-				ps.log.Tracef("Playback input marked done")
-				break nextFrame
-			}
+			case replyChan := <-ps.getBufCount:
+				replyChan <- len(ps.inputChan) + len(ps.playbackChan) +
+					outQueue.len() + inQueue.len()
 
-			// Reject when this is an old timestamp.
-			if lastTimestamp > 0 && input.ts <= lastTimestamp {
-				ps.bytesBuffers.Put(input.data[:0]) //nolint:staticcheck
-				ps.log.Tracef("Rejecting to decode packet with "+
-					"timestamp %d due to last timestamp %d",
-					input.ts, lastTimestamp)
-				continue nextFrame
-			}
-
-			if addDebugTrace {
-				if decodeQueue.len() == 0 && input.ts > lastTimestamp+periodSizeMS {
-					ps.log.Debugf("Got packet with ts %d qlen %d inlen %d playlen %d ahead of time (wanted %d)",
-						input.ts, decodeQueue.len(), len(ps.inputChan),
-						len(ps.playbackChan), lastTimestamp+periodSizeMS)
-				} else {
-					ps.log.Tracef("Got input ts %d qlen %d inlen %d playlen %d",
-						input.ts, decodeQueue.len(), len(ps.inputChan),
-						len(ps.playbackChan))
+			case input := <-ps.inputChan:
+				if input.dataDone {
+					ps.log.Tracef("Playback input marked done ts %d", input.ts)
+					break nextAction
 				}
-			}
 
-			// If we're coming back from a stall that lasted more
-			// than 3 times the maximum stall time, consider this
-			// was not a network stall but rather the remote peer
-			// turning off their mic, then coming back. Reset the
-			// stall target back to the minimum to avoid large
-			// buffering/latency.
-			if fillQueue && decodeQueue.len() == 0 && time.Since(stallStartTime) > 3*maxTargetQLenTime {
-				stallTargetQLen = minPlaybackBufferPackets
+				// Reject when this is an old timestamp.
+				if lastDecTs > 0 && input.ts <= lastDecTs {
+					ps.bytesBuffers.Put(input.data)
+					if addDebugTrace {
+						ps.log.Tracef("Rejecting to decode packet with "+
+							"timestamp %d due to last timestamp %d",
+							input.ts, lastDecTs)
+					}
+					continue
+				}
+
+				inQueue.enq(input.data, input.size, input.ts)
+
 				if addDebugTrace {
-					ps.log.Debugf("Resetting target qlen to %d after stall of %s",
-						stallTargetQLen, time.Since(stallStartTime))
+					ps.log.Tracef("Read input packet ts %d len %d inql %d outql %d",
+						input.ts, input.size, inQueue.len(), outQueue.len())
 				}
+
+			case <-waitWorkTicker.C:
+				// Time to check for additional work.
+				readIn = false
+
+			case <-ctx.Done():
+				return ctx.Err()
 			}
-
-			// Put the received packet into the sorted queue.
-			decodeQueue.enq(input.data, input.ts)
-			inPackets++
-
-			// If we're waiting for a full queue before proceeding,
-			// wait for the next action.
-			if fillQueue && decodeQueue.len() < stallTargetQLen {
-				if addDebugTrace {
-					ps.log.Debugf("Filling buffer after stallts %d lastts %d qlen %d target %d",
-						stallStartTs, lastTimestamp, decodeQueue.len(),
-						stallTargetQLen)
-				}
-				continue nextFrame
-			}
-
-		case stallTs := <-ps.stallChan:
-			// Playback stalled waiting for a packet.
-			stalled = true
-			if stallStartTs == 0 {
-				// ps.log.Tracef("Started stalling decoding "+
-				//	"stall ts %d last ts %d qlen %d",
-				//	stallTs, lastTimestamp, decodeQueue.len())
-				stallStartTs = stallTs
-				stallStartTime = time.Now()
-
-				// When the decoding queue is empty, this is a
-				// trigger to wait for a full queue before
-				// resuming playback (maybe the network lost a
-				// lot of packets or it has degraded its
-				// conditions) or the remote stopped
-				// transmitting altogether.
-				if decodeQueue.len() == 0 {
-					fillQueue = true
-
-					// Reset the timestamp. This handles
-					// cases where the remote will rewind
-					// their stream timestamps after
-					// returning.
-					lastTimestamp = 0
-
-					// Take it as hint to increase the
-					// adaptive queue size.
-					stallTargetQLen = min(stallTargetQLen*2, maxTargetQLen)
-					continue nextFrame
-				}
-			} else if ((stallTs - stallStartTs) % 1000) == 0 {
-				if addDebugTrace {
-					ps.log.Debugf("Still stalling decode stream at "+
-						"stall ts %d last ts %d", stallTs, lastTimestamp)
-				}
-			}
-
-		case <-ctx.Done():
-			break nextFrame
 		}
 
-		// Decode and send to playback every packet, as long as they
-		// are in order (the first packet in the queue is the next
-		// expected one).
-		//
-		// We stop early in case the packets are NOT ordered to give it
-		// a chance for the packet to arrive.
-		for (decodeQueue.len() > 0 && decodeQueue.firstTs() == lastTimestamp+periodSizeMS) || stalled {
-			var opusFrame []byte
+		if addDebugTrace {
+			totQueueLen := outQueue.len() + inQueue.len() + len(ps.playbackChan) + len(ps.inputChan)
+			if lastDecTs > 0 && totQueueLen > 0 && totQueueLen < 5 {
+				ps.log.Debugf("Queues getting close to depleted: ts %d inql %d outql %d pql %d ipql %d",
+					lastDecTs, inQueue.len(), outQueue.len(), len(ps.playbackChan), len(ps.inputChan))
+			} else if totQueueLen > maxOutQueueLen+maxUndecodedInputLen-5 {
+				ps.log.Debugf("Queues getting close to needing pruning: ts %d inql %d outql %d pql %d ipql %d",
+					lastDecTs, inQueue.len(), outQueue.len(), len(ps.playbackChan), len(ps.inputChan))
+			} else if lastDecTs > 0 && lastDecTs%5000 == 0 {
+				ps.log.Debugf("Queues running: ts %d inql %d outql %d pql %d ipql %d",
+					lastDecTs, inQueue.len(), outQueue.len(), len(ps.playbackChan), len(ps.inputChan))
+
+			}
+		}
+
+		// If not in filling mode, send as many decoded packets as
+		// available to output. We do the len() < cap() chan to ensure
+		// we don't lose the pop'd entry.
+		for sendOut := true; !fillQueue && sendOut && !outQueue.isEmpty() && len(ps.playbackChan) < cap(ps.playbackChan); {
+			item := outQueue.deq()
+			select {
+			case ps.playbackChan <- item:
+				if outQueue.isEmpty() {
+					if addDebugTrace {
+						ps.log.Warnf("Setting fillQueue to true due to empty queues")
+					}
+
+					// Empty queues. Start buffering up
+					// again from whatever timestamp the
+					// remote sends us.
+					fillQueue = true
+					lastDecTs = 0
+				}
+				if addDebugTrace {
+					ps.log.Tracef("Pushed ts %d inql %d outql %d",
+						item.ts, inQueue.len(), outQueue.len())
+				}
+			case <-ctx.Done():
+				return ctx.Err()
+			default:
+				sendOut = false
+			}
+		}
+
+		// If both outQueue and inQueue are full, drop some packets from
+		// outQueue (one inQueue.len worth of packets) to make room for
+		// more recent packets. Hitting this case means we're slower
+		// processing the packets than the remote end is sending them or
+		// the network/remote are bursty.
+		if outQueue.isFull() && inQueue.len() >= maxUndecodedInputLen {
+			var dropped int
+			inql, outql := inQueue.len(), outQueue.len()
+			for i := 0; !outQueue.isEmpty() && i < inQueue.len(); i++ {
+				item := outQueue.deq()
+				ps.bytesBuffers.Put(item.data)
+				dropped++
+			}
+			if addDebugTrace {
+				ps.log.Infof("Pruned %d pkts due to full queues inql %d outql %d pql %d",
+					dropped, inql, outql, len(ps.playbackChan))
+			}
+		}
+
+		// Decode as many packets as needed (or available) depending on
+		// each case.
+		for !outQueue.isFull() && inQueue.len() > 0 {
+			availableTs := inQueue.firstTs()
+
+			doInitialDecode := fillQueue &&
+				inQueue.len() >= minFillQueueLen
+			outQueueAlmostDepleted := !fillQueue && outQueue.len() < minOutQueueLen
+			doFEC := !didFEC && outQueueAlmostDepleted && availableTs == lastDecTs+periodSizeMS*2
+			doDecode := availableTs == lastDecTs+periodSizeMS
+
+			if !doDecode && !doFEC && !outQueueAlmostDepleted && !doInitialDecode {
+				// If we decided not to decode and not generate
+				// a FEC packet, nothing to do.
+				break
+			}
+
+			var opusFrame *[]byte
+			var opusFrameSlice []byte
+			var opusFrameSize int
 			var ts uint32
-			var dequeued bool
-			var fec bool
 
 			// If playback is stalled and missing just one packet
 			// (likely lost to the network), then generate a FEC
@@ -527,74 +584,60 @@ nextFrame:
 			//
 			// Otherwise, use whatever we have that is waiting for
 			// decoding.
-			if stalled && decodeQueue.firstTs() == lastTimestamp+periodSizeMS*2 {
+			if doFEC {
+				ts = lastDecTs + periodSizeMS
 				if addDebugTrace {
-					ps.log.Debugf("Generating fec packet lastts %d firstts %d",
-						lastTimestamp, decodeQueue.firstTs())
+					ps.log.Infof("FEC packet at ts %d inql %d outql %d",
+						ts, inQueue.len(), outQueue.len())
 				}
-				ts = lastTimestamp + periodSizeMS
-				lastTimestamp = ts
-				fec = true
 			} else {
-				opusFrame, ts, dequeued = decodeQueue.deq()
+				opusFrame, opusFrameSize, ts, _ = inQueue.deq()
+				if addDebugTrace {
+					ps.log.Tracef("Decoding packet ts %d inql %d outql %d",
+						ts, inQueue.len(), outQueue.len())
+				}
+				opusFrameSlice = (*opusFrame)[:opusFrameSize]
 			}
 
 			// Do the actual stateful decoding.
-			decoded, err := decoder.Decode(opusFrame, frameSize, fec, decodeBuffer)
+			decoded, err := decoder.Decode(opusFrameSlice, frameSize, doFEC, decodeBuffer)
 			if err != nil {
 				return err
 			}
+			didFEC = doFEC
 
 			// Determine if this has sound above a noise level.
 			applyGainDB(decoded, volumeGain)
-			hasSound := detectSound(decoded, 500, 5)
+			hasSound := detectSound(decoded, 250, 5)
 
 			// Convert from 16 bit samples to byte samples. Reuse
 			// buffer fetched in Input() if possible.
-			var samples []byte
-			if opusFrame != nil {
-				samples = opusFrame[:0]
-			} else {
-				samples = ps.bytesBuffers.Get().([]byte)
+			var samples = opusFrame
+			if samples == nil {
+				samples = ps.bytesBuffers.Get().(*[]byte)
 			}
-			samples = leS16SliceToBytes(decoded, samples[:0])
+			leS16SliceToBytes(decoded, (*samples))
+			samplesSize := len(decoded) * 2
 
 			// Stats.
-			inSize += len(opusFrame)
-			outSize += len(samples)
+			inSize += opusFrameSize
+			outSize += samplesSize
 			outSamples += len(decoded)
 
-			// Send to playbackLoop.
-			select {
-			case <-ctx.Done():
-				break nextFrame
-			case ps.playbackChan <- inputPacket{
-				data:     samples,
-				ts:       max(lastTimestamp, ts),
-				hasSound: hasSound,
-			}:
+			// Add to outQueue.
+			outQueue.enq(inputPacket{data: samples, size: samplesSize, ts: ts, hasSound: hasSound})
+
+			if fillQueue && outQueue.len() > minOutQueueLen+cap(ps.playbackChan) {
+				fillQueue = false
 				if addDebugTrace {
-					ps.log.Tracef("Pushed ts %d dequed %v", ts, dequeued)
+					ps.log.Infof("Considering outQueue initially filled "+
+						"with %d pkts ts %d remaining %d in inQueue",
+						outQueue.len(), ts, inQueue.len())
 				}
 			}
 
-			// If we sent a packet that was dequeued (as opposed to
-			// a FEC packet), track that and stop waiting to fill
-			// the decode queue (send packets as fast as they are
-			// coming in).
-			if dequeued {
-				lastTimestamp = ts
-				if stallStartTs > 0 {
-					if addDebugTrace {
-						ps.log.Debugf("Stopped stalling at timestamp %d (total %d ms)",
-							ts, ts-stallStartTs)
-					}
-					stallStartTs = 0
-					stallStartTime = time.Time{}
-				}
-				fillQueue = false
-			}
-			stalled = false
+			// Track timestamp of last decoded packet.
+			lastDecTs = ts
 		}
 	}
 
@@ -651,28 +694,6 @@ func (ps *PlaybackStream) playbackLoopWithDevice(ctx context.Context, devID Devi
 				return
 			case input = <-ps.playbackChan:
 				// Fetched next set of samples.
-			default:
-				// Stall! Request FEC or comfort noise packet
-				// from decoder.
-				stallTs := lastTimestamp + periodSizeMS
-				select {
-				case ps.stallChan <- stallTs:
-					// decodeLoop ack'd the stall, wait for
-					// packet.
-					select {
-					case input = <-ps.playbackChan:
-					case <-ctx.Done():
-						return
-					}
-
-				case input = <-ps.playbackChan:
-					// decodeLoop was in the process of
-					// decoding when playbackLoop stalled,
-					// accept this input.
-
-				case <-ctx.Done():
-					return
-				}
 			}
 
 			if input.data == nil || input.ts == math.MaxUint32 {
@@ -700,22 +721,22 @@ func (ps *PlaybackStream) playbackLoopWithDevice(ctx context.Context, devID Devi
 			}
 
 			inPackets += 1
-			inSize += len(input.data)
+			inSize += input.size
 			lastTimestamp = input.ts
 
-			if len(input.data) != bytesToRead {
+			if input.size != bytesToRead {
 				ps.log.Warnf("Received Samples %d is different than read size %d",
-					len(input.data), bytesToRead)
+					input.size, bytesToRead)
 				continue
 			}
 
 			// Received a valid set of samples.
 			if addDebugTrace {
 				ps.log.Tracef("Filling output buffer with data from "+
-					"timestamp %d", lastTimestamp)
+					"timestamp %d (plen %d)", lastTimestamp, len(ps.playbackChan))
 			}
-			copy(outSample, input.data)
-			ps.bytesBuffers.Put(input.data[:0]) //nolint:staticcheck
+			copy(outSample, (*input.data)[:input.size])
+			ps.bytesBuffers.Put(input.data)
 			return
 		}
 	}
@@ -815,12 +836,13 @@ func newPlaybackStream(audioCtx audioContext, deviceID DeviceID) *PlaybackStream
 		audioCtx:         audioCtx,
 		playbackDeviceID: deviceID,
 		bytesBuffers: sync.Pool{New: func() interface{} {
-			return make([]byte, 0, sampleCount*2)
+			buf := make([]byte, 0, sampleCount*2)
+			return &buf
 		}},
-		playbackChan:     make(chan inputPacket, 1000/periodSizeMS), // Buffer up to 1 second of decoded frames.
-		inputChan:        make(chan inputPacket, 1000/periodSizeMS), // Buffer up to 1 second of input frames.
+		playbackChan:     make(chan inputPacket, 4),  // 80ms
+		inputChan:        make(chan inputPacket, 20), // 400ms
+		getBufCount:      make(chan chan int, 5),
 		volumeGainChan:   make(chan float64, 1),
-		stallChan:        make(chan uint32),
 		inputDone:        make(chan struct{}),
 		playbackDone:     make(chan struct{}),
 		changeDeviceChan: make(chan DeviceID),

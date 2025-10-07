@@ -83,7 +83,7 @@ func realMain() error {
 		return fmt.Errorf("unknown log level %q", *flagDebugLevel)
 	}
 
-	logBknd := slog.NewBackend(os.Stdout)
+	logBknd := slog.NewBackend(os.Stderr)
 	log := logBknd.Logger("MAIN")
 	log.SetLevel(logLevel)
 

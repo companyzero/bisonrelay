@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
 
 	"golang.org/x/sys/unix"
@@ -14,29 +15,52 @@ type userInputCtl struct {
 	csGain     float64
 }
 
+func printf(format string, args ...interface{}) {
+	fmt.Printf(format, args...)
+	fmt.Println("")
+}
+
 func (ctl *userInputCtl) processInput(_ context.Context, in []byte) {
 	switch in[0] {
 	case '+':
 		ctl.psGain += 1
 		ctl.ss.ps.SetVolumeGain(ctl.psGain)
+		printf("Set playback gain to %.2f", ctl.psGain)
 
 	case '-':
 		ctl.psGain -= 1
 		ctl.ss.ps.SetVolumeGain(ctl.psGain)
+		printf("Set playback gain to %.2f", ctl.psGain)
 
 	case '>':
 		ctl.csGain += 1
 		ctl.ss.cs.SetVolumeGain(ctl.csGain)
+		printf("Set capture gain to %.2f", ctl.csGain)
 
 	case '<':
 		ctl.csGain -= 1
 		ctl.ss.cs.SetVolumeGain(ctl.csGain)
+		printf("Set capture gain to %.2f", ctl.csGain)
+
+	case 'j':
+		newPlMilli := ctl.ss.packetLossMilli.Add(-10)
+		printf("Set packetLoss chance to %.2f%%", float64(newPlMilli)/1000*100)
+
+	case 'k':
+		newPlMilli := ctl.ss.packetLossMilli.Add(10)
+		printf("Set packetLoss chance to %.2f%%", float64(newPlMilli)/1000*100)
+
 	}
 }
 
 func (ctl *userInputCtl) run(ctx context.Context) error {
 	defer restoreTerminal(os.Stdin, ctl.oldTermios)
 	b := make([]byte, 1)
+
+	printf("Packet Loss  : %.2f%%", float64(ctl.ss.packetLossMilli.Load())/1000*100)
+	printf("Min Delay    : %dms", ctl.ss.minDelayMs.Load())
+	printf("Avg Delay    : %dms", ctl.ss.meanDelayMs.Load())
+	printf("Std Dev Delay: %dms", ctl.ss.stdDevDelayMs.Load())
 
 	stdin := os.Stdin
 
