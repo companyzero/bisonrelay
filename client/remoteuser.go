@@ -810,6 +810,12 @@ func (ru *RemoteUser) waitHandlers(doneChan <-chan struct{}) bool {
 	return true
 }
 
+// hasRunningHandlers returns true if there are any outstanding running
+// handlers.
+func (ru *RemoteUser) hasRunningHandlers() bool {
+	return len(ru.handlerSema) < cap(ru.handlerSema)
+}
+
 // runUpdateSubs runs a loop that updates the set of RVs this user is
 // subscribed to whenever a new signal is sent on updateSubsChan.
 func (ru *RemoteUser) runUpdateSubs(updateSubsChan chan struct{}) {
@@ -1069,4 +1075,18 @@ func (rul *remoteUserList) stopAndWait(ctx context.Context) bool {
 		ok = ok && ru.waitHandlers(ctx.Done())
 	}
 	return ok
+}
+
+// anyHasRunningHandlers returns true if any user has a running handler.
+func (rul *remoteUserList) anyHasRunningHandlers() bool {
+	res := false
+	rul.Lock()
+	for _, ru := range rul.m {
+		res = ru.hasRunningHandlers()
+		if res {
+			break
+		}
+	}
+	rul.Unlock()
+	return res
 }

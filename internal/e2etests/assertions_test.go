@@ -100,6 +100,19 @@ func assertClientUpToDate(t testing.TB, c *testClient) {
 	}
 }
 
+// assertClientHasNoRunningHandlers verifies the client does not have any
+// running handlers.
+func assertClientHasNoRunningHandlers(t testing.TB, c *testClient) {
+	t.Helper()
+	ti := c.testInterface()
+	for i := 0; i < 200; i++ {
+		if !ti.HasRunningUserHandlers() {
+			return
+		}
+	}
+	t.Fatalf("Client %s still has running handlers", c)
+}
+
 // assertClientsCanPM asserts that the clients can PM each other.
 func assertClientsCanPM(t testing.TB, alice, bob *testClient) {
 	t.Helper()

@@ -21,4 +21,8 @@ type UnsafeTestInterface struct {
 	// rotation but skips some of the members.
 	RotateRTDTAppointmentCookies func(sessRV *zkidentity.ShortID,
 		skipMembers ...zkidentity.ShortID) error
+
+	// HasRunningUserHandlers returns true if there are outstanding handlers
+	// running for inbound messages from any remote users.
+	HasRunningUserHandlers func() bool
 }

@@ -413,3 +413,19 @@ func TestIgnoresInvalidRMs(t *testing.T) {
 	assert.NilErr(t, err)
 	assert.ChanWrittenWithVal(t, bobRMChan, pm2)
 }
+
+// TestRemoteUserHasAnyRemoteHandlers tests that the hasRunningHandlers()
+// function works.
+func TestRemoteUserHasAnyRemoteHandlers(t *testing.T) {
+	t.Parallel()
+
+	alice := &RemoteUser{
+		handlerSema: filledSema(5),
+	}
+
+	assert.False(t, alice.hasRunningHandlers())
+	assert.NilErr(t, alice.acquireHandlerSema())
+	assert.True(t, alice.hasRunningHandlers())
+	alice.returnHandlerSema()
+	assert.False(t, alice.hasRunningHandlers())
+}

@@ -24,6 +24,8 @@ var (
 	// closed on request.
 	errSessRequestedClose = errors.New("requested session close")
 	errORMTooLarge        = errors.New("outbound RM encrypted len greater than max allowed msg size")
+
+	ErrAlreadyPendingMantainRTDTSess = errors.New("already pending to maintain this session")
 )
 
 // kxError is returned when the server KX stage fails.

@@ -12,6 +12,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/companyzero/bisonrelay/client/clientdb"
+	"github.com/companyzero/bisonrelay/client/clientintf"
 	"github.com/companyzero/bisonrelay/client/internal/lowlevel"
 	"github.com/companyzero/bisonrelay/internal/audio"
 	"github.com/companyzero/bisonrelay/internal/generics"
@@ -77,15 +78,8 @@ func (c *Client) ListRTDTSessions() []zkidentity.ShortID {
 	return res
 }
 
-// CreateRTDTSession creates a new RTDT session. This involves fetching a
-// creation token from brserver.
-//
-// The local client does NOT automatically join the live session (but it has
-// the ability to do so by calling JoinLiveRTDTSession).
-//
-// The size of the session determines how much payment is needed to create and
-// send data ("publish") in the session. It cannot be modified after creation.
-func (c *Client) CreateRTDTSession(size uint16, description string) (*clientdb.RTDTSession, error) {
+// createRTDTSession exposes all options for creating an RTDT session.
+func (c *Client) createRTDTSession(size uint16, description string, isInstant bool) (*clientdb.RTDTSession, error) {
 	// Generate keys.
 	publisherKey := zkidentity.NewFixedSizeSymmetricKey()
 
@@ -130,6 +124,7 @@ func (c *Client) CreateRTDTSession(size uint16, description string) (*clientdb.R
 			Generation:  1,
 			Size:        uint32(size),
 			Description: description,
+			IsInstant:   isInstant,
 
 			// Local client is the owner of the session.
 			Owner: c.PublicID(),
@@ -159,10 +154,22 @@ func (c *Client) CreateRTDTSession(size uint16, description string) (*clientdb.R
 		return nil, err
 	}
 
-	c.log.Infof("Created RTDT session %s of size %d (peer ID %s)",
-		sess.Metadata.RV, size, sess.LocalPeerID)
+	c.log.Infof("Created RTDT session %s of size %d (instant %v, peer ID %s)",
+		sess.Metadata.RV, size, isInstant, sess.LocalPeerID)
 
 	return sess, nil
+}
+
+// CreateRTDTSession creates a new RTDT session. This involves fetching a
+// creation token from brserver.
+//
+// The local client does NOT automatically join the live session (but it has
+// the ability to do so by calling JoinLiveRTDTSession).
+//
+// The size of the session determines how much payment is needed to create and
+// send data ("publish") in the session. It cannot be modified after creation.
+func (c *Client) CreateRTDTSession(size uint16, description string) (*clientdb.RTDTSession, error) {
+	return c.createRTDTSession(size, description, false)
 }
 
 // inviteToRTDTSession invites an user to join an RTDT session. The local
@@ -302,6 +309,7 @@ func (c *Client) inviteToRTDTSession(session zkidentity.ShortID,
 			AppointCookie:      inv.cookie,
 			PeerID:             inv.peerID,
 			Tag:                inv.tag,
+			IsInstant:          sess.Metadata.IsInstant,
 		}
 
 		ru.log.Infof("Inviting to RTDT session %s with peer ID %s (asPublisher %v)",
@@ -451,6 +459,48 @@ func (c *Client) CreateRTDTSessionInGC(gcID zkidentity.ShortID, extraSize uint16
 	return sess, err
 }
 
+// CreateInstantRTDTSession creates an "instant" RTDT session for calling the
+// given set of users.
+func (c *Client) CreateInstantRTDTSession(users []clientintf.UserID) (*clientdb.RTDTSession, error) {
+	if len(users) < 1 {
+		return nil, errors.New("cannot create empty instant RTDT session")
+	}
+	if len(users) > 128 {
+		return nil, errors.New("cannot create large instant RTDT session")
+	}
+
+	// Check if there's already a running session?
+
+	// Verify all users exist.
+	for _, uid := range users {
+		if _, err := c.UserByID(uid); err != nil {
+			return nil, err
+		}
+	}
+
+	var descr string
+	if len(users) == 1 {
+		nick, _ := c.UserNick(users[0])
+		descr = fmt.Sprintf("Instant session with %s", strescape.Nick(nick))
+	} else {
+		descr = fmt.Sprintf("Instant session with %d users", len(users))
+	}
+
+	// Create the RTDT sesssion.
+	sess, err := c.createRTDTSession(uint16(len(users)+1), descr, true)
+	if err != nil {
+		return nil, err
+	}
+
+	// Invite everyone to it.
+	if err := c.inviteToRTDTSession(sess.Metadata.RV, true, users...); err != nil {
+		return nil, err
+	}
+
+	// All done.
+	return sess, nil
+}
+
 // handleRMRTDTSessionInvite handles invitations received from remote users to
 // join a new RTDT session.
 func (c *Client) handleRMRTDTSessionInvite(ru *RemoteUser, invite rpc.RMRTDTSessionInvite) error {
@@ -549,6 +599,7 @@ func (c *Client) AcceptRTDTSessionInvite(inviter UserID, invite *rpc.RMRTDTSessi
 				Size:        invite.Size,
 				Description: invite.Description,
 				Owner:       inviter,
+				IsInstant:   invite.IsInstant,
 			},
 		}
 		if err := c.db.UpdateRTDTSession(tx, sess); err != nil {
@@ -657,7 +708,7 @@ func (c *Client) handleRMRTDTAcceptInvite(ru *RemoteUser, accept rpc.RMRTDTSessi
 		return err
 	}
 
-	ru.log.Infof("Accepted invite to join RTDT session %s as peer %s (asPublisher %v)",
+	ru.log.Infof("User accepted our invite to join RTDT session %s as peer %s (asPublisher %v)",
 		accept.RV, peerID, accept.PublisherKey != nil)
 
 	c.ntfns.notifyRTDTSessionInviteAccepted(ru, accept.RV, accept.PublisherKey != nil)
@@ -696,6 +747,12 @@ func (c *Client) handleRMRTDTAcceptInvite(ru *RemoteUser, accept rpc.RMRTDTSessi
 		}
 	}
 
+	// If this is an instant call and we're not live in it yet, join it
+	// live and make it audio hot.
+	if sess.Metadata.IsInstant {
+		c.maybeJoinAndMakeInstantRTDTSessionHot(accept.RV)
+	}
+
 	return nil
 }
 
@@ -730,6 +787,10 @@ func (c *Client) handleRTDTSessionUpdate(ru *RemoteUser, newMeta rpc.RMRTDTSessi
 			return errors.New("only session owner can change the owner")
 		}
 
+		if sess.Metadata.IsInstant != newMeta.IsInstant {
+			return errors.New("cannot change is_instant status of session")
+		}
+
 		joined = sess.Metadata.Generation == 0
 
 		// TODO: Check if we were removed/muted.
@@ -747,12 +808,18 @@ func (c *Client) handleRTDTSessionUpdate(ru *RemoteUser, newMeta rpc.RMRTDTSessi
 	if joined {
 		c.log.Infof("Joined RTDT session %s as peer %s (asPublisher %v)",
 			newMeta.RV, sess.LocalPeerID, sess.PublisherKey != nil)
+
 	} else {
 		ru.log.Infof("Received RTDT session update for session %s (%d "+
 			"new publishers, %d removed)", newMeta.RV,
 			len(ntfnUpdate.NewPublishers), len(ntfnUpdate.RemovedPublishers))
 	}
 	c.ntfns.notifyRTDTSessionUpdated(ru, &ntfnUpdate)
+
+	// Automatically join when this is an instant call that was accepted.
+	if sess.Metadata.IsInstant {
+		c.maybeJoinAndMakeInstantRTDTSessionHot(newMeta.RV)
+	}
 
 	return nil
 }
@@ -1375,6 +1442,33 @@ func (c *Client) SwitchHotAudio(sessRV zkidentity.ShortID) error {
 	return err
 }
 
+// maybeJoinAndMakeInstantRTDTSessionHot attempts to join the live session and make it
+// hot audio if possible. This only logs/ignores errors instead of erroring out.
+func (c *Client) maybeJoinAndMakeInstantRTDTSessionHot(sessRV zkidentity.ShortID) {
+	isLive, isHot := c.IsLiveAndHotRTSession(&sessRV)
+	var err error
+	if !isLive {
+		c.log.Infof("Joining live instant RTDT session %s", sessRV)
+		err = c.JoinLiveRTDTSession(sessRV)
+
+		// Ok to ignore this error because multiple calls may be racing
+		// to process this join (the manager de-dupes the requests).
+		if errors.Is(err, lowlevel.ErrAlreadyPendingMantainRTDTSess) {
+			err = nil
+		}
+	}
+	if !isHot && err == nil {
+		err = c.SwitchHotAudio(sessRV)
+	}
+	if err != nil {
+		c.log.Warnf("Unable to join and make RTDT session hot: %v", err)
+	}
+
+	if !isLive || !isHot {
+		c.ntfns.notifyRTDTJoinedInstantCall(sessRV)
+	}
+}
+
 // HasHotAudioRTDT returns true if there is a live RTDT session with hot audio.
 func (c *Client) HasHotAudioRTDT() bool {
 	c.rtMtx.Lock()
@@ -1438,7 +1532,7 @@ func (c *Client) IsLiveAndHotRTSession(sessRV *zkidentity.ShortID) (isLive, isHo
 }
 
 // LeaveLiveRTSession leaves the given live session.
-func (c *Client) LeaveLiveRTSession(sessRV zkidentity.ShortID) error {
+func (c *Client) leaveLiveRTSession(sessRV zkidentity.ShortID) error {
 	c.rtMtx.Lock()
 	if c.rtHotAudio != nil && c.rtHotAudio.sessRV == sessRV {
 		c.removeFromHotAudio(sessRV)
@@ -1455,6 +1549,25 @@ func (c *Client) LeaveLiveRTSession(sessRV zkidentity.ShortID) error {
 	}
 
 	return err
+}
+
+// LeaveLiveRTSession leaves the given live session.
+//
+// NOTE: if the session is marked as an instant session, this automatically
+// permanently leaves it as well.
+func (c *Client) LeaveLiveRTSession(sessRV zkidentity.ShortID) error {
+	if err := c.leaveLiveRTSession(sessRV); err != nil {
+		return err
+	}
+
+	// If this is an instant call, automatically exit it after leaving the
+	// live session.
+	sess, _ := c.GetRTDTSession(&sessRV)
+	if sess != nil && sess.Metadata.IsInstant {
+		return c.exitRTDTSessionAfterLeaving(&sessRV)
+	}
+
+	return nil
 }
 
 // SetGlobalPlaybackGain sets the global playback gain. It modifies the gain on
@@ -1519,19 +1632,9 @@ func (c *Client) KickFromLiveRTDTSession(sessRV *zkidentity.ShortID, target rpc.
 	return c.rtc.KickMember(c.ctx, liveSess.RTSess, target, banDuration)
 }
 
-// ExitRTDTSession permanently removes the local client from the given RTDT
-// session. If the client is in the live session, this also makes it leave the
-// session.
-func (c *Client) ExitRTDTSession(sessRV *zkidentity.ShortID) error {
-	// Leave live session first.
-	liveSess := c.GetLiveRTSession(sessRV)
-	if liveSess != nil {
-		err := c.LeaveLiveRTSession(*sessRV)
-		if err != nil {
-			return err
-		}
-	}
-
+// exitRTDTSessionAfterLeaving permanently exits an RTDT session after leaving
+// the live session.
+func (c *Client) exitRTDTSessionAfterLeaving(sessRV *zkidentity.ShortID) error {
 	// Remove from DB.
 	var sess *clientdb.RTDTSession
 	err := c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
@@ -1566,10 +1669,39 @@ func (c *Client) ExitRTDTSession(sessRV *zkidentity.ShortID) error {
 		return nil
 	}
 
-	// Send RM to owner.
-	payEvent := fmt.Sprintf("rtdt.exit.%s", sessRV)
-	rm := rpc.RMRTDTExitSession{RV: *sessRV}
-	return c.sendWithSendQ(payEvent, rm, sess.Metadata.Owner)
+	// Send RM to owner if this is not an instant call. Instant calls are
+	// ignored because the owner will also automatically leave them.
+	if !sess.Metadata.IsInstant {
+		payEvent := fmt.Sprintf("rtdt.exit.%s", sessRV)
+		rm := rpc.RMRTDTExitSession{RV: *sessRV}
+		return c.sendWithSendQ(payEvent, rm, sess.Metadata.Owner)
+	}
+
+	return nil
+}
+
+// ExitRTDTSession permanently removes the local client from the given RTDT
+// session. If the client is in the live session, this also makes it leave the
+// session.
+func (c *Client) ExitRTDTSession(sessRV *zkidentity.ShortID) error {
+
+	// If this is an instant session, use the Leave() version instead, which
+	// automatically leaves and exits the instant session.
+	sess, _ := c.GetRTDTSession(sessRV)
+	if sess != nil && sess.Metadata.IsInstant {
+		return c.LeaveLiveRTSession(*sessRV)
+	}
+
+	// Leave live session first.
+	liveSess := c.GetLiveRTSession(sessRV)
+	if liveSess != nil {
+		err := c.leaveLiveRTSession(*sessRV)
+		if err != nil {
+			return err
+		}
+	}
+
+	return c.exitRTDTSessionAfterLeaving(sessRV)
 }
 
 // removeFromRTDTSession removes a member from an RTDT session. The local client
@@ -1690,7 +1822,7 @@ func (c *Client) DissolveRTDTSession(sessRV *zkidentity.ShortID) error {
 	// Leave live session first.
 	liveSess := c.GetLiveRTSession(sessRV)
 	if liveSess != nil {
-		err := c.LeaveLiveRTSession(*sessRV)
+		err := c.leaveLiveRTSession(*sessRV)
 		if err != nil {
 			return err
 		}
@@ -1808,7 +1940,7 @@ func (c *Client) handleRMRTDTDissolveSession(ru *RemoteUser, rmds rpc.RMRTDTDiss
 	// Session was dissolved, leave it if it is live.
 	liveSess := c.GetLiveRTSession(&rmds.RV)
 	if liveSess != nil {
-		err := c.LeaveLiveRTSession(rmds.RV)
+		err := c.leaveLiveRTSession(rmds.RV)
 		if err != nil {
 			return err
 		}
@@ -1905,7 +2037,7 @@ func (c *Client) handleRMRTDTRemovedFromSession(ru *RemoteUser, rmrs rpc.RMRTDTR
 	// it.
 	liveSess := c.GetLiveRTSession(&rmrs.RV)
 	if liveSess != nil {
-		err := c.LeaveLiveRTSession(rmrs.RV)
+		err := c.leaveLiveRTSession(rmrs.RV)
 		if err != nil {
 			return err
 		}

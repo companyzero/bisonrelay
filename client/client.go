@@ -794,6 +794,38 @@ func (c *Client) loadPrevUnsentMsgs(ctx context.Context) error {
 	})
 }
 
+// removeOldInstantRTDTSessions removes RTDT sessions that are marked as instant
+// from the DB.
+//
+// Must only be called during startup because it does not take into account live
+// sessions.
+func (c *Client) removeOldInstantRTDTSessions(ctx context.Context) error {
+	return c.db.Update(ctx, func(tx clientdb.ReadWriteTx) error {
+		sessions := c.db.ListRTDTSessions(tx)
+		for _, sessRV := range sessions {
+			sess, err := c.db.GetRTDTSession(tx, &sessRV)
+			if err != nil {
+				c.log.Warnf("Unable to load RTDT session %s: %v", sessRV, err)
+				continue
+			}
+
+			if !sess.Metadata.IsInstant {
+				continue
+			}
+
+			err = c.db.RemoveRTDTSession(tx, &sessRV)
+			if err != nil {
+				c.log.Warnf("Unable to remove RTDT session %s: %v", sessRV, err)
+				continue
+			}
+
+			c.log.Debugf("Removed old instant RTDT session %s", sessRV)
+		}
+
+		return nil
+	})
+}
+
 func (c *Client) loadInitialDBData(ctx context.Context) error {
 	if err := c.loadLocalID(ctx); err != nil {
 		return err
@@ -808,6 +840,9 @@ func (c *Client) loadInitialDBData(ctx context.Context) error {
 		return err
 	}
 	if err := c.loadPrevUnsentMsgs(ctx); err != nil {
+		return err
+	}
+	if err := c.removeOldInstantRTDTSessions(ctx); err != nil {
 		return err
 	}
 
