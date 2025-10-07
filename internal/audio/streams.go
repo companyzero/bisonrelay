@@ -14,7 +14,7 @@ import (
 
 // minPlaybackBufferPackets is how many packets to buffer before starting
 // playback of a stream.
-const minPlaybackBufferPackets = 20
+const minPlaybackBufferPackets = 8
 
 // EncodedCapturedFunc is the signature for the callback function that processes
 // captured and opus-encoded packets.
@@ -405,24 +405,56 @@ func (ps *PlaybackStream) decodeLoop(ctx context.Context) error {
 	// Must be agreed upon.
 	const frameSize = sampleRate / 1000 * periodSizeMS
 
-	// The minimum number of items to maintain in the output queue.
-	const minOutqueueTime = 80 * time.Millisecond
-	const minOutQueueLen = int(minOutqueueTime/time.Millisecond) / periodSizeMS
+	const startOutQueueTime = 80 * time.Millisecond
+	const startOutQueueLen = int(startOutQueueTime/time.Millisecond) / periodSizeMS
+	const endOutQueueLen = 10 * startOutQueueLen
+
+	// The minimum number of items to maintain in the output queue. FEC
+	// packets and skipping lost packets are only enabled when the output
+	// queue has less than this amount of packets.
+	var minOutQueueLen = startOutQueueLen
 
 	// The maximum amount of packets/time to buffer on the input (undecoded)
 	// queue.
-	const maxUndecodedInputTime = 800 * time.Millisecond
-	const maxUndecodedInputLen = int(maxUndecodedInputTime/time.Millisecond) / periodSizeMS
+	const maxUndecodedInputMultplier = 3
+	var maxUndecodedInputLen = maxUndecodedInputMultplier * minOutQueueLen
 
 	// The maximum amount of packets/time to buffer on the output (decoded)
 	// queue.
-	const maxOutQueueLenTime = 500 * time.Millisecond
-	const maxOutQueueLen = int(maxOutQueueLenTime/time.Millisecond) / periodSizeMS
+	const maxOutQueueLenMultiplier = 3
+	var maxOutQueueLen = maxOutQueueLenMultiplier * minOutQueueLen
 
 	// The minimum amount to buffer within inQueue, when fillQueue == true,
 	// before decoding starts.
-	const minFillQueueTime = 400 * time.Millisecond
-	const minFillQueueLen = int(minFillQueueTime/time.Millisecond) / periodSizeMS
+	const minFillQueueMultiplier = 2
+	var minFillQueueLen = minFillQueueMultiplier * minOutQueueLen
+
+	const resetQueuesChange = 999
+	const smallQueueDecChange = -999
+	recalcQueueLens := func(change int) {
+		switch {
+		case change == resetQueuesChange:
+			minOutQueueLen = startOutQueueLen
+		case change == smallQueueDecChange:
+			minOutQueueLen = max(minOutQueueLen-1, startOutQueueLen)
+		case change > 0:
+			minOutQueueLen = min(minOutQueueLen+4, endOutQueueLen)
+		case change < 0:
+			minOutQueueLen = max(minOutQueueLen/2, startOutQueueLen)
+		default:
+			return // No Change.
+		}
+
+		maxUndecodedInputLen = maxUndecodedInputMultplier * minOutQueueLen
+		maxOutQueueLen = maxOutQueueLenMultiplier * minOutQueueLen
+		minFillQueueLen = minFillQueueMultiplier * minOutQueueLen
+		if addDebugTrace {
+			ps.log.Debugf("Recalculated queue lengths for change %d: "+
+				"minOut: %d, maxOut: %d, maxUndecoded: %d, minFill: %d",
+				change, minOutQueueLen, maxOutQueueLen, maxUndecodedInputLen,
+				minFillQueueLen)
+		}
+	}
 
 	// fillQueue is set to true when the decode queue needs to be filled
 	// with some packets before starting to decode again. This happens at
@@ -444,10 +476,16 @@ func (ps *PlaybackStream) decodeLoop(ctx context.Context) error {
 
 	waitWorkTicker := time.NewTicker(periodSizeMS * time.Millisecond)
 
-	inQueue := newTsBufferQueue(maxUndecodedInputLen + cap(ps.inputChan))
-	outQueue := newInputPacketQueue(maxOutQueueLen)
+	inQueue := newTsBufferQueue(endOutQueueLen*maxUndecodedInputMultplier + cap(ps.inputChan))
+	outQueue := newInputPacketQueue(endOutQueueLen * maxOutQueueLenMultiplier)
 
 	dataDone := false
+
+	lastReportTime := time.Now()
+
+	var stallTime time.Time
+
+	var outQueueOverMinTime time.Time
 
 	for !dataDone || outQueue.len() > 0 || inQueue.len() > 0 {
 		// Read as many packets as are available for reading.
@@ -479,6 +517,17 @@ func (ps *PlaybackStream) decodeLoop(ctx context.Context) error {
 					continue
 				}
 
+				// If stalled for a long time, reset the
+				// expected buffer sizes back to their initial
+				// values (remote mic was offline or came back
+				// from long network stall).
+				if fillQueue && !stallTime.IsZero() {
+					if time.Since(stallTime) > 2*time.Second {
+						recalcQueueLens(resetQueuesChange)
+					}
+					stallTime = time.Time{}
+				}
+
 				inQueue.enq(input.data, input.size, input.ts)
 
 				if addDebugTrace {
@@ -500,13 +549,14 @@ func (ps *PlaybackStream) decodeLoop(ctx context.Context) error {
 			if lastDecTs > 0 && totQueueLen > 0 && totQueueLen < 5 {
 				ps.log.Debugf("Queues getting close to depleted: ts %d inql %d outql %d pql %d ipql %d",
 					lastDecTs, inQueue.len(), outQueue.len(), len(ps.playbackChan), len(ps.inputChan))
-			} else if totQueueLen > maxOutQueueLen+maxUndecodedInputLen-5 {
-				ps.log.Debugf("Queues getting close to needing pruning: ts %d inql %d outql %d pql %d ipql %d",
-					lastDecTs, inQueue.len(), outQueue.len(), len(ps.playbackChan), len(ps.inputChan))
-			} else if lastDecTs > 0 && lastDecTs%5000 == 0 {
+			} else if outQueue.len() > maxOutQueueLen-2 && inQueue.len() > maxUndecodedInputLen-2 {
+				ps.log.Debugf("Queues getting close to needing pruning: ts %d inql %d outql %d pql %d ipql %d pruneAt %d",
+					lastDecTs, inQueue.len(), outQueue.len(), len(ps.playbackChan), len(ps.inputChan),
+					maxOutQueueLen+maxUndecodedInputLen)
+			} else if time.Since(lastReportTime) > time.Second {
 				ps.log.Debugf("Queues running: ts %d inql %d outql %d pql %d ipql %d",
 					lastDecTs, inQueue.len(), outQueue.len(), len(ps.playbackChan), len(ps.inputChan))
-
+				lastReportTime = time.Now()
 			}
 		}
 
@@ -527,6 +577,8 @@ func (ps *PlaybackStream) decodeLoop(ctx context.Context) error {
 					// remote sends us.
 					fillQueue = true
 					lastDecTs = 0
+					recalcQueueLens(1)
+					stallTime = time.Now()
 				}
 				if addDebugTrace {
 					ps.log.Tracef("Pushed ts %d inql %d outql %d",
@@ -544,7 +596,7 @@ func (ps *PlaybackStream) decodeLoop(ctx context.Context) error {
 		// more recent packets. Hitting this case means we're slower
 		// processing the packets than the remote end is sending them or
 		// the network/remote are bursty.
-		if outQueue.isFull() && inQueue.len() >= maxUndecodedInputLen {
+		if outQueue.len() >= maxOutQueueLen && inQueue.len() >= maxUndecodedInputLen {
 			var dropped int
 			inql, outql := inQueue.len(), outQueue.len()
 			for i := 0; !outQueue.isEmpty() && i < inQueue.len(); i++ {
@@ -556,11 +608,12 @@ func (ps *PlaybackStream) decodeLoop(ctx context.Context) error {
 				ps.log.Infof("Pruned %d pkts due to full queues inql %d outql %d pql %d",
 					dropped, inql, outql, len(ps.playbackChan))
 			}
+			recalcQueueLens(-1)
 		}
 
 		// Decode as many packets as needed (or available) depending on
 		// each case.
-		for !outQueue.isFull() && inQueue.len() > 0 {
+		for !outQueue.isFull() && outQueue.len() < maxOutQueueLen && inQueue.len() > 0 {
 			availableTs := inQueue.firstTs()
 
 			doInitialDecode := fillQueue &&
@@ -640,6 +693,34 @@ func (ps *PlaybackStream) decodeLoop(ctx context.Context) error {
 
 			// Track timestamp of last decoded packet.
 			lastDecTs = ts
+		}
+
+		// Edge cases for reducing queue length (reducing latency).
+		if !fillQueue && minOutQueueLen > startOutQueueLen && outQueue.len() > minOutQueueLen {
+			// If the min queue length is > the absolute minimum,
+			// start slowly reducing it.
+			if outQueueOverMinTime.IsZero() {
+				outQueueOverMinTime = time.Now()
+			} else if time.Since(outQueueOverMinTime) > 2*time.Second {
+				recalcQueueLens(smallQueueDecChange)
+				outQueueOverMinTime = time.Time{}
+			}
+		} else if !fillQueue && minOutQueueLen == startOutQueueLen && outQueue.len() > minOutQueueLen+2 {
+			// If the min queue length is the absolute minimum and
+			// there are still over many packets already buffered,
+			// drop one every now an then.
+			if outQueueOverMinTime.IsZero() {
+				outQueueOverMinTime = time.Now()
+			} else if time.Since(outQueueOverMinTime) > 2*time.Second {
+				if addDebugTrace {
+					ps.log.Debugf("Dropping one packet from outqueue to reduce latency outq %d inq %d",
+						outQueue.len(), inQueue.len())
+				}
+				outQueue.deq()
+				outQueueOverMinTime = time.Time{}
+			}
+		} else {
+			outQueueOverMinTime = time.Time{}
 		}
 	}
 
@@ -858,7 +939,7 @@ func newPlaybackStream(audioCtx audioContext, deviceID DeviceID) *PlaybackStream
 			buf := make([]byte, 0, sampleCount*2)
 			return &buf
 		}},
-		playbackChan:     make(chan inputPacket, 4),  // 80ms
+		playbackChan:     make(chan inputPacket, 2),  // 40ms
 		inputChan:        make(chan inputPacket, 20), // 400ms
 		getBufCount:      make(chan chan int, 5),
 		volumeGainChan:   make(chan float64, 1),
