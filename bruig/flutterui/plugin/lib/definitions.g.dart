@@ -2476,6 +2476,27 @@ Map<String, dynamic> _$InvitedToRTDTSessToJson(InvitedToRTDTSess instance) =>
       'received_ms': instance.receivedMs,
     };
 
+CancelRTDTInviteArgs _$CancelRTDTInviteArgsFromJson(
+        Map<String, dynamic> json) =>
+    CancelRTDTInviteArgs(
+      json['inviter'] as String,
+      json['invite'] == null
+          ? null
+          : RMRTDTSessionInvite.fromJson(
+              json['invite'] as Map<String, dynamic>),
+      json['as_publisher'] as bool,
+      json['sess_rv'] as String?,
+    );
+
+Map<String, dynamic> _$CancelRTDTInviteArgsToJson(
+        CancelRTDTInviteArgs instance) =>
+    <String, dynamic>{
+      'inviter': instance.inviter,
+      'invite': instance.invite,
+      'as_publisher': instance.asPublisher,
+      'sess_rv': instance.sessRV,
+    };
+
 AcceptRTDTInviteArgs _$AcceptRTDTInviteArgsFromJson(
         Map<String, dynamic> json) =>
     AcceptRTDTInviteArgs(
@@ -2776,6 +2797,22 @@ RTDTPeerExited _$RTDTPeerExitedFromJson(Map<String, dynamic> json) =>
     );
 
 Map<String, dynamic> _$RTDTPeerExitedToJson(RTDTPeerExited instance) =>
+    <String, dynamic>{
+      'session_rv': instance.sessionRV,
+      'peer_id': instance.peerID,
+      'uid': instance.uid,
+    };
+
+RTDTSessionInviteCanceled _$RTDTSessionInviteCanceledFromJson(
+        Map<String, dynamic> json) =>
+    RTDTSessionInviteCanceled(
+      json['session_rv'] as String,
+      (json['peer_id'] as num).toInt(),
+      json['uid'] as String,
+    );
+
+Map<String, dynamic> _$RTDTSessionInviteCanceledToJson(
+        RTDTSessionInviteCanceled instance) =>
     <String, dynamic>{
       'session_rv': instance.sessionRV,
       'peer_id': instance.peerID,

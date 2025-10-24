@@ -397,6 +397,9 @@ func ComposeCompressedRM(fromSigner MessageSigner, rm interface{}, zlibLevel int
 	case RMRTDTSessionInviteAccept:
 		h.Command = RMCRTDTSessionInviteAccept
 
+	case RMRTDTSessionInviteCancel:
+		h.Command = RMCRTDTSessionInviteCancel
+
 	case RMRTDTSession:
 		h.Command = RMCRTDTSession
 
@@ -787,6 +790,11 @@ func DecomposeRM(msgVerifier MessageVerifier, mb []byte, maxDecompressSize uint)
 		var sessInviteAccept RMRTDTSessionInviteAccept
 		err = pmd.Decode(&sessInviteAccept)
 		payload = sessInviteAccept
+
+	case RMCRTDTSessionInviteCancel:
+		var sessInviteCancel RMRTDTSessionInviteCancel
+		err = pmd.Decode(&sessInviteCancel)
+		payload = sessInviteCancel
 
 	case RMCRTDTSession:
 		var sess RMRTDTSession

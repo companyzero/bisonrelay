@@ -581,6 +581,12 @@ type acceptRTDTInviteArgs struct {
 	SessRV      *zkidentity.ShortID      `json:"sess_rv"`
 }
 
+type cancelRTDTInviteArgs struct {
+	Inviter zkidentity.ShortID       `json:"inviter"`
+	Invite  *rpc.RMRTDTSessionInvite `json:"invite"`
+	SessRV  *zkidentity.ShortID      `json:"sess_rv"`
+}
+
 type rtdtSessionUpdate struct {
 	Source zkidentity.ShortID           `json:"source"`
 	Update client.RTDTSessionUpdateNtfn `json:"update"`

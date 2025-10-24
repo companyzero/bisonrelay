@@ -68,6 +68,24 @@ type RMRTDTSessionInviteAccept struct {
 	PublisherKey *zkidentity.FixedSizeSymmetricKey `json:"publisher_key"`
 }
 
+// RMCRTDTSessionInviteCancel is the command for the RMRTDTSessionInviteCancel
+// message.
+const RMCRTDTSessionInviteCancel = "rtdtsessinvitecancel"
+
+// RMRTDTSessionInviteA is the routed message of the invitee canceling the
+// invitation to join an RTDTSession.
+type RMRTDTSessionInviteCancel struct {
+	// RV is the RV of the session.
+	RV zkidentity.ShortID `json:"rv"`
+
+	// Tag must match the tag in the invitation.
+	Tag uint64 `json:"tag"`
+
+	// PublisherKey should be set if the client will send data in the
+	// session.
+	PublisherKey *zkidentity.FixedSizeSymmetricKey `json:"publisher_key"`
+}
+
 // RMRTDTSessionPublisher tracks information about a client that sends data in
 // a RTDT session.
 type RMRTDTSessionPublisher struct {

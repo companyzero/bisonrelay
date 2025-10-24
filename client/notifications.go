@@ -505,6 +505,14 @@ type OnRTDTSessionInviteAccepted func(ru *RemoteUser, sessID zkidentity.ShortID,
 
 func (OnRTDTSessionInviteAccepted) typ() string { return onRTDTSessionInviteAcceptedNtfnType }
 
+const onRTDTSessionInviteCanceledNtfnType = "rtdtSessionInviteCanceled"
+
+// OnRTDTSessionInviteCanceled is a notification sent when a remote client has
+// canceled/denied our invitation to join an RTDT session.
+type OnRTDTSessionInviteCanceled func(ru *RemoteUser, sessID zkidentity.ShortID)
+
+func (_ OnRTDTSessionInviteCanceled) typ() string { return onRTDTSessionInviteCanceledNtfnType }
+
 // RTDTSessionUpdateNtfn is the data of one update to an RTDT session.
 type RTDTSessionUpdateNtfn struct {
 	SessionRV         zkidentity.ShortID            `json:"session_rv"`
@@ -1170,7 +1178,11 @@ func (nmgr *NotificationManager) notifyRTDTSessionInviteAccepted(ru *RemoteUser,
 	asPublisher bool) {
 	nmgr.handlers[onRTDTSessionInviteAcceptedNtfnType].(*handlersFor[OnRTDTSessionInviteAccepted]).
 		visit(func(h OnRTDTSessionInviteAccepted) { h(ru, sessID, asPublisher) })
+}
 
+func (nmgr *NotificationManager) notifyRTDTSessionInviteCanceled(ru *RemoteUser, sessID zkidentity.ShortID) {
+	nmgr.handlers[onRTDTSessionInviteCanceledNtfnType].(*handlersFor[OnRTDTSessionInviteCanceled]).
+		visit(func(h OnRTDTSessionInviteCanceled) { h(ru, sessID) })
 }
 
 func (nmgr *NotificationManager) buildRTDTSessionUpdateNtfn(oldMeta, newMeta *rpc.RMRTDTSession) RTDTSessionUpdateNtfn {
@@ -1344,6 +1356,7 @@ func NewNotificationManager() *NotificationManager {
 			onUnsubscribingIdleRemoteClient:     &handlersFor[OnUnsubscribingIdleRemoteClient]{},
 			onInvitedToRTDTSessionNtfnType:      &handlersFor[OnInvitedToRTDTSession]{},
 			onRTDTSessionInviteAcceptedNtfnType: &handlersFor[OnRTDTSessionInviteAccepted]{},
+			onRTDTSessionInviteCanceledNtfnType: &handlersFor[OnRTDTSessionInviteCanceled]{},
 			onRTDTSesssionUpdatedNtfnType:       &handlersFor[OnRTDTSesssionUpdated]{},
 			onRTDTLiveSessionJoinedNtfnType:     &handlersFor[OnRTDTLiveSessionJoined]{},
 			onRTDTRefreshedSessionAllowance:     &handlersFor[OnRTDTRefreshedSessionAllowance]{},

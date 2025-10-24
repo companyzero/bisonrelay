@@ -28,6 +28,7 @@ const ICE_starting = 0;
 const ICE_dissolving = 1;
 const ICE_waiting = 2;
 const ICE_finished = 3;
+const ICE_canceled = 4;
 
 class InstantCallEvent extends ChatEvent with ChangeNotifier {
   int _state;

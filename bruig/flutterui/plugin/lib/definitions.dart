@@ -2558,6 +2558,21 @@ class InvitedToRTDTSess extends ChatEvent {
 }
 
 @JsonSerializable()
+class CancelRTDTInviteArgs {
+  final String inviter;
+  final RMRTDTSessionInvite? invite;
+  @JsonKey(name: "as_publisher")
+  final bool asPublisher;
+  @JsonKey(name: "sess_rv")
+  final String? sessRV;
+
+  CancelRTDTInviteArgs(
+      this.inviter, this.invite, this.asPublisher, this.sessRV);
+
+  Map<String, dynamic> toJson() => _$CancelRTDTInviteArgsToJson(this);
+}
+
+@JsonSerializable()
 class AcceptRTDTInviteArgs {
   final String inviter;
   final RMRTDTSessionInvite? invite;
@@ -2841,6 +2856,14 @@ class RTDTLiveSessionJoined extends RTDTSessionEvent {
 
 class RTDTInstantCallJoined extends RTDTSessionEvent {
   RTDTInstantCallJoined(super.sessionRV);
+}
+
+@JsonSerializable()
+class RTDTSessionInviteCanceled extends RTDTUserAndSess {
+  RTDTSessionInviteCanceled(super.sessionRV, super.peerID, super.uid);
+
+  factory RTDTSessionInviteCanceled.fromJson(Map<String, dynamic> json) =>
+      _$RTDTSessionInviteCanceledFromJson(json);
 }
 
 @JsonSerializable()
@@ -3301,6 +3324,11 @@ mixin NtfStreams {
       case NTRTDTRTTCalculated:
         var event = RTDTRTT.fromJson(payload);
         ntfRTDTRTTCalculated.add(event);
+        break;
+
+      case NTRTDTSessionInviteCanceled:
+        var event = RTDTSessionInviteCanceled.fromJson(payload);
+        ntfRTDTSessEvents.add(event);
         break;
 
       default:
@@ -4138,6 +4166,9 @@ abstract class PluginPlatform {
   Future<void> rtdtAcceptInvite(AcceptRTDTInviteArgs args) async =>
       await (asyncCall(CTRTDTAcceptInvite, args.toJson()));
 
+  Future<void> rtdtCancelInvite(CancelRTDTInviteArgs args) async =>
+      await (asyncCall(CTRTDTCancelInvite, args.toJson()));
+
   Future<void> rtdtLeaveSession(String sessionRV) async =>
       await (asyncCall(CTRTDTLeaveLiveSession, sessionRV));
 
@@ -4382,6 +4413,7 @@ const int CTAudioSetPlaybackGain = 0xad;
 const int CTAudioGetPlaybackGain = 0xae;
 const int CTCancelKX = 0xaf;
 const int CTCancelMediateID = 0xb0;
+const int CTRTDTCancelInvite = 0xb1;
 
 const int notificationsStartID = 0x1000;
 
@@ -4448,3 +4480,4 @@ const int NTRTDTRemadeSessHot = 0x103c;
 const int NTRTDTChatMsgReceived = 0x103d;
 const int NTRTDTRTTCalculated = 0x103e;
 const int NTRTDTJoinedInstantCall = 0x103f;
+const int NTRTDTSessionInviteCanceled = 0x1040;

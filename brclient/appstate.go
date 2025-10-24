@@ -3964,6 +3964,12 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		as.sendMsg(msgRTLivePeersChanged(sessRV))
 	}))
 
+	ntfns.Register(client.OnRTDTSessionInviteCanceled(func(ru *client.RemoteUser, sessRV zkidentity.ShortID) {
+		as.diagMsg("User %s canceled the invitation to join the realtime chat session %s",
+			strescape.Nick(ru.Nick()), sessRV.ShortLogID())
+		as.sendMsg(msgRTLivePeersChanged(sessRV))
+	}))
+
 	ntfns.Register(client.OnRTDTSesssionUpdated(func(ru *client.RemoteUser, update *client.RTDTSessionUpdateNtfn) {
 		if update.InitialJoin && !update.NewMetadata.IsInstant {
 			as.diagMsg("Joined session %s. Entering live RTDT session.\nType '/rtchat win' to manage live sessions.",
