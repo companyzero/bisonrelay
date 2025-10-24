@@ -484,6 +484,22 @@ class RealtimeChatModel extends ChangeNotifier {
         snackbar.error(msg);
       }
 
+      if (updt is RTDTSessionInviteCanceled) {
+        var isSessInstant = _sessions[updt.sessionRV]?.isInstant ?? false;
+        _removeSess(updt.sessionRV, notifyRemoved: true);
+        var chat = client.getExistingChat(updt.uid);
+        var nick = chat?.nick ?? updt.uid;
+        if (isSessInstant) {
+          chat?.finishInstantCall();
+        }
+        var msg = "$nick rejected invite to instant call ${updt.sessionRV}";
+        if (chat != null) {
+          chat.append(
+              ChatEventModel(SynthChatEvent(msg, SCE_received), null), false);
+        }
+        snackbar.error(msg);
+      }
+
       if (updt is RTDTPeerExited) {
         _sessions[updt.sessionRV]?._removeMember(updt.peerID);
         _updateSess(updt.sessionRV);
@@ -680,10 +696,19 @@ class RealtimeChatModel extends ChangeNotifier {
       invite.inviter + invite.invite.rv + invite.invite.tag.toString();
 
   final List<String> _canceledInvites = [];
-  void cancelInvite(InvitedToRTDTSess invite) =>
-      _canceledInvites.add(_inviteKey(invite));
   bool isInviteCanceled(InvitedToRTDTSess invite) =>
       _canceledInvites.contains(_inviteKey(invite));
+  Future<void> cancelInvite(InvitedToRTDTSess invite) async {
+    _canceledInvites.add(_inviteKey(invite));
+    await Golib.rtdtCancelInvite(CancelRTDTInviteArgs(
+        invite.inviter, invite.invite, invite.invite.allowedAsPublisher, null));
+  }
+
+  Future<void> cancelInviteByRV(String inviter, String sessRV) async {
+    const allowedAsPublisher = true; // Need to parametrize?
+    await Golib.rtdtCancelInvite(
+        CancelRTDTInviteArgs(inviter, null, allowedAsPublisher, sessRV));
+  }
 
   final List<String> _acceptedInvites = [];
   bool isInviteAccepted(InvitedToRTDTSess invite) =>

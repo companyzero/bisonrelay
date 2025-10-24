@@ -58,6 +58,14 @@ class InstantCall extends StatelessWidget {
       state = "started";
     } else if (event.state == ICE_finished) {
       state = "ended";
+    } else if (event.state == ICE_canceled) {
+      return Container(
+          padding: const EdgeInsets.only(top: 5, bottom: 5),
+          margin: const EdgeInsets.all(5),
+          alignment: Alignment.center,
+          child: Text(
+              textAlign: TextAlign.center,
+              "Call was rejected at: ${event.msg}"));
     }
     return Container(
         padding: const EdgeInsets.only(top: 5, bottom: 5),
