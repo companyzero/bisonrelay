@@ -14,6 +14,7 @@ import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/theme_manager.dart';
 import 'package:bruig/util.dart';
 import 'package:flutter/material.dart';
+import 'package:just_audio/just_audio.dart';
 import 'package:provider/provider.dart';
 import 'package:proximity_sensor/proximity_sensor.dart';
 
@@ -41,8 +42,8 @@ class _InstantCallScreenState extends State<InstantCallScreen> {
   RTDTLivePeerModel? livePeer;
   Timer? timerRefresh;
   bool livePeerConnected = false;
-  bool _isNear = false;
-  late StreamSubscription<dynamic> _proximityStreamSubscription;
+
+  late AudioPlayer player = AudioPlayer();
 
   void leaveLiveSession() async {
     try {
@@ -127,8 +128,11 @@ class _InstantCallScreenState extends State<InstantCallScreen> {
         if (peerChat != null) {
           livePeer = session.livePeer(pub.peerID);
           if (!livePeerConnected && livePeer != null) {
+            // Call is initially connected. Set connected true and stop ringing.
+            player.stop();
             livePeerConnected = true;
           } else if (livePeerConnected && livePeer == null) {
+            // Peer disconnected from a previously live session.  Set peer connected false and finish call.
             finishCall = true;
             livePeerConnected = false;
           }
@@ -180,6 +184,16 @@ class _InstantCallScreenState extends State<InstantCallScreen> {
     }
     // Create a timer to refresh details every 1 second (bufferCount, etc).
     timerRefresh = Timer.periodic(Duration(seconds: 1), refreshIfLive);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      // Do ringing when owner is shown instant call page (and is attempting
+      // to connect with peer).
+      if (session.info.metadata.owner == client.publicID) {
+        await player.setAsset('assets/br_instant_call.mp3');
+        await player.setLoopMode(LoopMode.all);
+        await player.play();
+      }
+    });
   }
 
   @override
@@ -189,15 +203,6 @@ class _InstantCallScreenState extends State<InstantCallScreen> {
       oldWidget.session.removeListener(sessionUpdated);
       session.addListener(sessionUpdated);
       publishers = session.info.metadata.publishers;
-      for (var pub in publishers) {
-        var peerChat = client.getExistingChat(pub.publisherID);
-        if (peerChat != null) {
-          livePeer = session.livePeer(pub.peerID);
-          if (!livePeerConnected && livePeer != null) {
-            livePeerConnected = true;
-          }
-        }
-      }
     }
   }
 
@@ -205,7 +210,7 @@ class _InstantCallScreenState extends State<InstantCallScreen> {
   void dispose() {
     session.removeListener(sessionUpdated);
     timerRefresh?.cancel();
-    _proximityStreamSubscription.cancel();
+    player.dispose();
     super.dispose();
   }
 
@@ -221,19 +226,12 @@ class _InstantCallScreenState extends State<InstantCallScreen> {
     //     <uses-permission android:name="android.permission.WAKE_LOCK"/>
     await ProximitySensor.setProximityScreenOff(true)
         .onError((error, stackTrace) {
-      print("turning screen off");
       showErrorSnackbar(
           this, "could not enable screen off functionality: $error");
 
       return null;
     });
     // -------------------------------------------------- <ANDROID ONLY>
-
-    _proximityStreamSubscription = ProximitySensor.events.listen((int event) {
-      setState(() {
-        _isNear = (event > 0) ? true : false;
-      });
-    });
   }
 
   @override

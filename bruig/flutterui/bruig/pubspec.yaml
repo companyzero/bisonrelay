@@ -151,6 +151,7 @@ flutter:
     - assets/icons/icons-menu-pages.svg
     - assets/icons/icons-menu-settings.svg
     - assets/icons/icons-menu-stats.svg
+    - assets/br_instant_call.mp3
   #   - images/a_dot_ham.jpeg
 
   # An image asset can refer to one or more resolution-specific "variants", see

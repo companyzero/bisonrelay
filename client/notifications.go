@@ -511,7 +511,7 @@ const onRTDTSessionInviteCanceledNtfnType = "rtdtSessionInviteCanceled"
 // canceled/denied our invitation to join an RTDT session.
 type OnRTDTSessionInviteCanceled func(ru *RemoteUser, sessID zkidentity.ShortID)
 
-func (_ OnRTDTSessionInviteCanceled) typ() string { return onRTDTSessionInviteCanceledNtfnType }
+func (OnRTDTSessionInviteCanceled) typ() string { return onRTDTSessionInviteCanceledNtfnType }
 
 // RTDTSessionUpdateNtfn is the data of one update to an RTDT session.
 type RTDTSessionUpdateNtfn struct {
