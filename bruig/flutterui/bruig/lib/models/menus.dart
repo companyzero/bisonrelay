@@ -112,7 +112,7 @@ final List<MainMenuItem> mainMenu = [
           builder: (context, typingEmoji, child) =>
               RealtimeChatScreen(typingEmoji)),
       (context) => const RealtimeChatTitle(),
-      const SidebarSvgIcon("assets/icons/icons-menu-chat.svg"),
+      const SidebarIcon(Icons.phone_rounded, false),
       feedScreenSub),
   MainMenuItem(
       "LN Management",
