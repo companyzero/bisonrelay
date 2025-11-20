@@ -227,17 +227,17 @@ class _RTCSessionHeaderState extends State<RTCSessionHeader> {
                       !session.joiningLiveSession ? joinLiveSession : null),
             SizedBox(width: isSmallScreen ? 5 : 20),
             if (session.inLiveSession && !session.hasHotAudio)
-              button(Icons.mic_sharp, "Enable mic", makeAudioHot,
-                  style: ElevatedButton.styleFrom(
-                      backgroundColor: theme.colors.surface,
-                      textStyle: theme.textStyleFor(
-                          context, TextSize.medium, TextColor.onPrimary))),
-            if (session.hasHotAudio)
-              button(Icons.mic_off_sharp, "Disable Mic", disableHotAudio,
+              button(Icons.mic_off_sharp, "Unmute", makeAudioHot,
                   style: ElevatedButton.styleFrom(
                       backgroundColor: theme.colors.errorContainer,
                       textStyle: theme.textStyleFor(context, TextSize.medium,
                           TextColor.onErrorContainer))),
+            if (session.hasHotAudio)
+              button(Icons.mic_sharp, "Mute", disableHotAudio,
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: theme.colors.surface,
+                      textStyle: theme.textStyleFor(
+                          context, TextSize.medium, TextColor.onSurface))),
             if (Platform.isAndroid &&
                 audio.androidFoundPlaybackDevices &&
                 session.inLiveSession) ...[
