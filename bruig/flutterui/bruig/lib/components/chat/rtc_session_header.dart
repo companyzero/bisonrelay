@@ -282,8 +282,6 @@ class _RTCSessionHeaderState extends State<RTCSessionHeader> {
           }
         },
         items: [
-          const PopupMenuItem(
-              value: "gotosess", child: Text("View Session Info")),
           if (session.isAdmin)
             const PopupMenuItem(
                 value: "invite", child: Text("Invite to Session")),
