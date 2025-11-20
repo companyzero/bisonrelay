@@ -399,44 +399,45 @@ class _ActiveChatsListMenuState extends State<ActiveChatsListMenu>
     }
 
     // Desktop version, display side menu.
-    return SecondarySideMenuList(
-        width: 205,
-        list: ListView.builder(
-            controller: sortedListScroll,
-            scrollDirection: Axis.vertical,
-            itemCount: chats.length,
-            itemBuilder: (context, index) => SecondarySideMenuItem(
-                _ChatHeadingW(chats[index], client, makeActive, showSubMenu,
-                    chats[index].hasInstantCall))),
-        footer: SizedBox(
-            width: double.infinity,
-            child: Wrap(alignment: WrapAlignment.start, children: [
-              _FooterIconButton(
-                  onlyWhenOnline: true,
-                  tooltip: "Generate Invite",
-                  onPressed: genInvite,
-                  icon: Icons.add_outlined),
-              _FooterIconButton(
-                  tooltip: "List last received message time",
-                  onPressed: () => gotoContactsLastMsgTimeScreen(context),
-                  icon: Icons.list_outlined),
-              _FooterIconButton(
-                  onlyWhenOnline: true,
-                  tooltip: "Fetch, import or accept invite",
-                  onPressed: () => fetchInvite(context),
-                  icon: Icons.get_app_outlined),
-              _FooterIconButton(
-                  tooltip: "Create new group chat",
-                  onPressed: gotoNewGroupChat,
-                  icon: Icons.people_outline),
-              _FooterIconButton(
-                  tooltip: "New Message",
-                  onPressed: gotoNewMessage,
-                  icon: Icons.edit_outlined),
-              _FooterIconButton(
-                  tooltip: "Show GC Invitations",
-                  onPressed: showGCInvitationsScreen,
-                  icon: Icons.groups),
-            ])));
+    return Consumer<ThemeNotifier>(
+        builder: (context, theme, _) => SecondarySideMenuList(
+            width: 205 * (theme.fontScale > 0 ? theme.fontScale : 1),
+            list: ListView.builder(
+                controller: sortedListScroll,
+                scrollDirection: Axis.vertical,
+                itemCount: chats.length,
+                itemBuilder: (context, index) => SecondarySideMenuItem(
+                    _ChatHeadingW(chats[index], client, makeActive, showSubMenu,
+                        chats[index].hasInstantCall))),
+            footer: SizedBox(
+                width: double.infinity,
+                child: Wrap(alignment: WrapAlignment.start, children: [
+                  _FooterIconButton(
+                      onlyWhenOnline: true,
+                      tooltip: "Generate Invite",
+                      onPressed: genInvite,
+                      icon: Icons.add_outlined),
+                  _FooterIconButton(
+                      tooltip: "List last received message time",
+                      onPressed: () => gotoContactsLastMsgTimeScreen(context),
+                      icon: Icons.list_outlined),
+                  _FooterIconButton(
+                      onlyWhenOnline: true,
+                      tooltip: "Fetch, import or accept invite",
+                      onPressed: () => fetchInvite(context),
+                      icon: Icons.get_app_outlined),
+                  _FooterIconButton(
+                      tooltip: "Create new group chat",
+                      onPressed: gotoNewGroupChat,
+                      icon: Icons.people_outline),
+                  _FooterIconButton(
+                      tooltip: "New Message",
+                      onPressed: gotoNewMessage,
+                      icon: Icons.edit_outlined),
+                  _FooterIconButton(
+                      tooltip: "Show GC Invitations",
+                      onPressed: showGCInvitationsScreen,
+                      icon: Icons.groups),
+                ]))));
   }
 }

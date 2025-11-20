@@ -9,6 +9,7 @@ import 'package:bruig/models/resources.dart';
 import 'package:bruig/models/snackbar.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:bruig/theme_manager.dart';
 
 class ViewPagesScreenTitle extends StatelessWidget {
   const ViewPagesScreenTitle({super.key});
@@ -167,27 +168,28 @@ class _ViewPageScreenState extends State<ViewPageScreen> {
   Widget build(BuildContext context) {
     var activeSess = resources.mostRecent;
     return Row(children: [
-      SecondarySideMenuList(
-          width: 125,
-          list: ListView.builder(
-              itemCount: sessions.length,
-              itemBuilder: (BuildContext context, int index) {
-                var selected = activeSess == sessions[index];
-                return SecondarySideMenuItem(ListTile(
-                  title: Txt.S("Session ${sessions[index].id}"),
-                  selected: selected,
-                  onTap: () {
-                    resources.mostRecent = sessions[index];
-                  },
-                ));
-              }),
-          footer: Row(children: [
-            IconButton(
-              onPressed: viewLocal,
-              icon: const Icon(Icons.browser_updated_sharp),
-              tooltip: "Open local pages",
-            )
-          ])),
+      Consumer<ThemeNotifier>(
+          builder: (context, theme, _) => SecondarySideMenuList(
+              width: 130 * (theme.fontScale > 0 ? theme.fontScale : 1),
+              list: ListView.builder(
+                  itemCount: sessions.length,
+                  itemBuilder: (BuildContext context, int index) {
+                    var selected = activeSess == sessions[index];
+                    return SecondarySideMenuItem(ListTile(
+                      title: Txt.S("Session ${sessions[index].id}"),
+                      selected: selected,
+                      onTap: () {
+                        resources.mostRecent = sessions[index];
+                      },
+                    ));
+                  }),
+              footer: Row(children: [
+                IconButton(
+                  onPressed: viewLocal,
+                  icon: const Icon(Icons.browser_updated_sharp),
+                  tooltip: "Open local pages",
+                )
+              ]))),
       activeSess != null
           ? Expanded(child: _ActivePageScreen(activeSess, widget.client))
           : const Empty(),
