@@ -290,38 +290,41 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     // Desktop-sized version.
     return Row(children: [
-      SecondarySideMenuList(width: 120, items: [
-        ListTile(
-          selected: settingsPage == "Account",
-          title: const Txt.S("Account"),
-          onTap: () => changePage("Account"),
-        ),
-        ListTile(
-          selected: settingsPage == "Appearance",
-          title: const Txt.S("Appearance"),
-          onTap: () => changePage("Appearance"),
-        ),
-        ListTile(
-          selected: settingsPage == "Notifications",
-          title: const Txt.S("Notifications"),
-          onTap: () => changePage("Notifications"),
-        ),
-        ListTile(
-          selected: settingsPage == "Network",
-          title: const Txt.S("Network"),
-          onTap: () => changePage("Network"),
-        ),
-        ListTile(
-          selected: settingsPage == "Audio",
-          title: const Txt.S("Audio"),
-          onTap: () => changePage("Audio"),
-        ),
-        ListTile(
-          selected: settingsPage == "RPC",
-          title: const Txt.S("RPC"),
-          onTap: () => showRpcWarningDialog(),
-        ),
-      ]),
+      Consumer<ThemeNotifier>(
+          builder: (context, theme, _) => SecondarySideMenuList(
+                  width: 130 * (theme.fontScale > 0 ? theme.fontScale : 1),
+                  items: [
+                    ListTile(
+                      selected: settingsPage == "Account",
+                      title: const Txt.S("Account"),
+                      onTap: () => changePage("Account"),
+                    ),
+                    ListTile(
+                      selected: settingsPage == "Appearance",
+                      title: const Txt.S("Appearance"),
+                      onTap: () => changePage("Appearance"),
+                    ),
+                    ListTile(
+                      selected: settingsPage == "Notifications",
+                      title: const Txt.S("Notifications"),
+                      onTap: () => changePage("Notifications"),
+                    ),
+                    ListTile(
+                      selected: settingsPage == "Network",
+                      title: const Txt.S("Network"),
+                      onTap: () => changePage("Network"),
+                    ),
+                    ListTile(
+                      selected: settingsPage == "Audio",
+                      title: const Txt.S("Audio"),
+                      onTap: () => changePage("Audio"),
+                    ),
+                    ListTile(
+                      selected: settingsPage == "RPC",
+                      title: const Txt.S("RPC"),
+                      onTap: () => showRpcWarningDialog(),
+                    ),
+                  ])),
       Expanded(child: settingsView),
     ]);
   }
