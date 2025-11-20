@@ -502,7 +502,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
   Widget build(BuildContext context) {
     bool isScreenSmall = checkIsScreenSmall(context);
     return Scaffold(
-      // key: scaffoldKey,
+      key: scaffoldKey,
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(kToolbarHeight),
         child: _MainAppBar(client, feed, widget.rtc, widget.mainMenu, navKey),
