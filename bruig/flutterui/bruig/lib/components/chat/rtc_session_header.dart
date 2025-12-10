@@ -12,9 +12,7 @@ import 'package:bruig/models/realtimechat.dart';
 import 'package:bruig/models/uistate.dart';
 import 'package:bruig/screens/realtimechat/invitetortc.dart';
 import 'package:bruig/screens/realtimechat/rtclist.dart';
-import 'package:golib_plugin/definitions.dart';
 import 'package:bruig/theme_manager.dart';
-import 'package:bruig/util.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -227,17 +225,17 @@ class _RTCSessionHeaderState extends State<RTCSessionHeader> {
                       !session.joiningLiveSession ? joinLiveSession : null),
             SizedBox(width: isSmallScreen ? 5 : 20),
             if (session.inLiveSession && !session.hasHotAudio)
-              button(Icons.mic_sharp, "Enable mic", makeAudioHot,
-                  style: ElevatedButton.styleFrom(
-                      backgroundColor: theme.colors.surface,
-                      textStyle: theme.textStyleFor(
-                          context, TextSize.medium, TextColor.onPrimary))),
-            if (session.hasHotAudio)
-              button(Icons.mic_off_sharp, "Disable Mic", disableHotAudio,
+              button(Icons.mic_off_sharp, "Unmute", makeAudioHot,
                   style: ElevatedButton.styleFrom(
                       backgroundColor: theme.colors.errorContainer,
                       textStyle: theme.textStyleFor(context, TextSize.medium,
                           TextColor.onErrorContainer))),
+            if (session.hasHotAudio)
+              button(Icons.mic_sharp, "Mute", disableHotAudio,
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: theme.colors.surface,
+                      textStyle: theme.textStyleFor(
+                          context, TextSize.medium, TextColor.onSurface))),
             if (Platform.isAndroid &&
                 audio.androidFoundPlaybackDevices &&
                 session.inLiveSession) ...[
@@ -284,8 +282,6 @@ class _RTCSessionHeaderState extends State<RTCSessionHeader> {
           }
         },
         items: [
-          const PopupMenuItem(
-              value: "gotosess", child: Text("View Session Info")),
           if (session.isAdmin)
             const PopupMenuItem(
                 value: "invite", child: Text("Invite to Session")),
