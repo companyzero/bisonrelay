@@ -1816,7 +1816,31 @@ func handleClientCmd(cc *clientCtx, cmd *cmd) (interface{}, error) {
 			return nil, err
 		}
 
-		return nil, c.SendFile(args.UID, 0, args.Filepath, nil)
+		chunkCount, err := cc.c.EstimateSendFileChunkCount(args.Filepath, 0)
+		if err != nil {
+			return nil, err
+		}
+		progressChan := make(chan client.SendProgress, int(chunkCount))
+		go func() {
+			ntf := sendFileProgress{
+				Args: args,
+			}
+			for {
+				select {
+				case progress, ok := <-progressChan:
+					if !ok {
+						return
+					}
+					ntf.Progress = progress
+					notify(NTSendFileProgress, ntf, nil)
+				case <-cc.ctx.Done():
+					return
+				}
+			}
+		}()
+		err = c.SendFile(args.UID, 0, args.Filepath, progressChan)
+		close(progressChan)
+		return nil, err
 
 	case CTEstimatePostSize:
 		var args string

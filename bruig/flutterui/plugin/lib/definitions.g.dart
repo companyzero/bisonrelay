@@ -1493,6 +1493,31 @@ Map<String, dynamic> _$SendFileArgsToJson(SendFileArgs instance) =>
       'filepath': instance.filepath,
     };
 
+SendProgress _$SendProgressFromJson(Map<String, dynamic> json) => SendProgress(
+      (json['sent'] as num).toInt(),
+      (json['total'] as num).toInt(),
+      json['error'] as String?,
+    );
+
+Map<String, dynamic> _$SendProgressToJson(SendProgress instance) =>
+    <String, dynamic>{
+      'sent': instance.sent,
+      'total': instance.total,
+      'error': instance.error,
+    };
+
+SendFileProgress _$SendFileProgressFromJson(Map<String, dynamic> json) =>
+    SendFileProgress(
+      SendFileArgs.fromJson(json['args'] as Map<String, dynamic>),
+      SendProgress.fromJson(json['progress'] as Map<String, dynamic>),
+    );
+
+Map<String, dynamic> _$SendFileProgressToJson(SendFileProgress instance) =>
+    <String, dynamic>{
+      'args': instance.args,
+      'progress': instance.progress,
+    };
+
 UserPayStats _$UserPayStatsFromJson(Map<String, dynamic> json) => UserPayStats(
       (json['total_sent'] as num).toInt(),
       (json['total_received'] as num).toInt(),
