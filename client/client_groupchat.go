@@ -1119,9 +1119,9 @@ func (c *Client) handleDelayedGCMessages(msg clientintf.ReceivedGCMsg) {
 // SendProgress is sent to track progress of messages that are sent to multiple
 // remote users (for example, GC messages that are sent to all members).
 type SendProgress struct {
-	Sent  int
-	Total int
-	Err   error
+	Sent  int   `json:"sent"`
+	Total int   `json:"total"`
+	Err   error `json:"err,omitempty"`
 }
 
 // GCMessage sends a message to the given GC. If progressChan is not nil,

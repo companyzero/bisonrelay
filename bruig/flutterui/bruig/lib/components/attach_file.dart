@@ -9,6 +9,7 @@ import 'package:bruig/components/empty_widget.dart';
 import 'package:bruig/components/text.dart';
 import 'package:bruig/models/client.dart';
 import 'package:bruig/models/snackbar.dart';
+import 'package:bruig/models/uploads.dart';
 import 'package:bruig/screens/compress.dart';
 import 'package:bruig/screens/send_file.dart';
 import 'package:bruig/theme_manager.dart';
@@ -196,6 +197,7 @@ class _AttachFileScreenState extends State<AttachFileScreen> {
 
   void loadFile() async {
     var snackbar = SnackBarModel.of(context);
+    var uploads = UploadsModel.of(context, listen: false);
     if (_debounce?.isActive ?? false) _debounce!.cancel();
     _debounce = Timer(const Duration(milliseconds: 500), () async {
       try {
@@ -209,7 +211,7 @@ class _AttachFileScreenState extends State<AttachFileScreen> {
         filePath = filePath.trim();
         if (filePath == "") return;
         await showSendFileScreen(context,
-            chat: widget.chat, file: File(filePath));
+            chat: widget.chat, file: File(filePath), uploads: uploads);
         widget.closeAttachScreen(); // File screen already does the sending.
       } catch (exception) {
         snackbar.error("Unable to attach file: $exception");
@@ -247,6 +249,7 @@ class _AttachFileScreenState extends State<AttachFileScreen> {
     required BuildContext context,
   }) async {
     var snackbar = SnackBarModel.of(context);
+    var uploads = UploadsModel.of(context, listen: false);
     try {
       var mimeType = lookupMimeType(filePath);
       if (mimeType == null) {
@@ -272,7 +275,7 @@ class _AttachFileScreenState extends State<AttachFileScreen> {
           // Compression was insufficient to reduce size. This needs to be sent
           // as a file.
           await showSendFileScreen(context,
-              chat: widget.chat, file: File(filePath));
+              chat: widget.chat, file: File(filePath), uploads: uploads);
           return;
         }
 

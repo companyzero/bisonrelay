@@ -3789,8 +3789,8 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 		if msg != nil {
 			delete(as.progressMsg, fid)
 			totChunks := len(fm.Manifest)
-			msg.msg = fmt.Sprintf("Downloaded %d/%d chunks (100.00%%)- %q",
-				totChunks, totChunks, fm.Filename)
+			msg.replaceMsg(fmt.Sprintf("Downloaded %d/%d chunks (100.00%%)- %q",
+				totChunks, totChunks, fm.Filename))
 		}
 		as.contentMtx.Unlock()
 
@@ -3816,9 +3816,9 @@ func newAppState(sendMsg func(tea.Msg), lndLogLines *sloglinesbuffer.Buffer,
 			msg = cw.newInternalMsg("")
 			as.progressMsg[fid] = msg
 		}
-		msg.msg = fmt.Sprintf("Downloaded %d/%d chunks (%.2f%%) - %q",
+		msg.replaceMsg(fmt.Sprintf("Downloaded %d/%d chunks (%.2f%%) - %q",
 			gotChunks, totChunks, float64(gotChunks*100/totChunks),
-			fm.Filename)
+			fm.Filename))
 		as.contentMtx.Unlock()
 
 		as.repaintIfActive(cw)

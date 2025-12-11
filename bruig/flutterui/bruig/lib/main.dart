@@ -11,6 +11,7 @@ import 'package:bruig/models/menus.dart';
 import 'package:bruig/models/payments.dart';
 import 'package:bruig/models/realtimechat.dart';
 import 'package:bruig/models/resources.dart';
+import 'package:bruig/models/uploads.dart';
 import 'package:bruig/models/wallet.dart';
 import 'package:bruig/models/shutdown.dart';
 import 'package:bruig/notification_service.dart';
@@ -190,6 +191,7 @@ Future<void> runMainApp(Config cfg) async {
       ChangeNotifierProvider.value(value: rtc.active),
       ChangeNotifierProvider.value(value: rtc.liveSessions),
       ChangeNotifierProvider(create: (c) => RealtimeChatRTTModel()),
+      ChangeNotifierProvider(create: (c) => UploadsModel()),
     ],
     child: App(cfg, globalLogModel, globalShutdownModel),
   ));

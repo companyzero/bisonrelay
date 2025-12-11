@@ -6,6 +6,7 @@ import 'package:bruig/components/text.dart';
 import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/models/realtimechat.dart';
 import 'package:bruig/models/uistate.dart';
+import 'package:bruig/models/uploads.dart';
 import 'package:bruig/screens/feed.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -29,11 +30,13 @@ import 'package:file_icon/file_icon.dart';
 import 'package:bruig/components/interactive_avatar.dart';
 import 'package:bruig/components/user_context_menu.dart';
 import 'package:bruig/theme_manager.dart';
+import 'package:path/path.dart' as path;
 
 class ServerEvent extends StatelessWidget {
   final Widget? child;
   final String? msg;
-  const ServerEvent({this.child, this.msg, super.key});
+  final SurfaceColor? bgColor;
+  const ServerEvent({this.child, this.msg, this.bgColor, super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -42,7 +45,7 @@ class ServerEvent extends StatelessWidget {
     return Box(
         padding: const EdgeInsets.only(left: 41, top: 5, bottom: 5),
         margin: const EdgeInsets.all(5),
-        color: SurfaceColor.surfaceContainer,
+        color: bgColor ?? SurfaceColor.surfaceContainer,
         child: child ?? Txt.S(msg!));
   }
 }
@@ -1299,6 +1302,64 @@ class _RTDTInviteWState extends State<RTDTInviteW> {
   }
 }
 
+class _FileUploadEvent extends StatefulWidget {
+  final FileUploadModel uploadModel;
+  const _FileUploadEvent(this.uploadModel);
+
+  @override
+  State<_FileUploadEvent> createState() => __FileUploadEventState();
+}
+
+class __FileUploadEventState extends State<_FileUploadEvent> {
+  FileUploadModel get uploadModel => widget.uploadModel;
+
+  void uploadUpdated() {
+    setState(() {});
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    uploadModel.addListener(uploadUpdated);
+  }
+
+  @override
+  void didUpdateWidget(covariant _FileUploadEvent oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    oldWidget.uploadModel.removeListener(uploadUpdated);
+    uploadModel.addListener(uploadUpdated);
+  }
+
+  @override
+  void dispose() {
+    uploadModel.removeListener(uploadUpdated);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    Widget child;
+    SurfaceColor? bgColor;
+    if (uploadModel.error != null) {
+      bgColor = SurfaceColor.errorContainer;
+      child = Txt("Error during upload - ${uploadModel.error}");
+    } else if (uploadModel.sent) {
+      child = Txt.S("✓ Sent file ${uploadModel.filepath}");
+    } else {
+      child = Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Txt.S("Sending file ${path.basename(uploadModel.filepath)}"),
+        const SizedBox(height: 5),
+        LinearProgressIndicator(value: uploadModel.progress)
+      ]);
+    }
+
+    return ServerEvent(
+      bgColor: bgColor,
+      child: child,
+    );
+  }
+}
+
 class Event extends StatelessWidget {
   final ChatEventModel event;
   final ChatModel chat;
@@ -1429,6 +1490,10 @@ class Event extends StatelessWidget {
     if (event.event is InvitedToRTDTSess) {
       return RTDTInviteW(event.event as InvitedToRTDTSess,
           RealtimeChatModel.of(context, listen: false), chat);
+    }
+
+    if (event.event is FileUploadModel) {
+      return _FileUploadEvent(event.event as FileUploadModel);
     }
 
     return const Box(
