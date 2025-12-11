@@ -1587,6 +1587,31 @@ class SendFileArgs {
 
   SendFileArgs(this.uid, this.filepath);
   Map<String, dynamic> toJson() => _$SendFileArgsToJson(this);
+  factory SendFileArgs.fromJson(Map<String, dynamic> json) =>
+      _$SendFileArgsFromJson(json);
+}
+
+@JsonSerializable()
+class SendProgress {
+  final int sent;
+  final int total;
+  final String? error;
+
+  SendProgress(this.sent, this.total, this.error);
+
+  factory SendProgress.fromJson(Map<String, dynamic> json) =>
+      _$SendProgressFromJson(json);
+}
+
+@JsonSerializable()
+class SendFileProgress {
+  final SendFileArgs args;
+  final SendProgress progress;
+
+  SendFileProgress(this.args, this.progress);
+
+  factory SendFileProgress.fromJson(Map<String, dynamic> json) =>
+      _$SendFileProgressFromJson(json);
 }
 
 @JsonSerializable()
@@ -3042,6 +3067,10 @@ mixin NtfStreams {
   StreamController<RTDTRTT> ntfRTDTRTTCalculated = StreamController<RTDTRTT>();
   Stream<RTDTRTT> rtdtRTTStream() => ntfRTDTRTTCalculated.stream;
 
+  StreamController<SendFileProgress> ntfSendFileProgress =
+      StreamController<SendFileProgress>();
+  Stream<SendFileProgress> sendFileProgress() => ntfSendFileProgress.stream;
+
   handleNotifications(int cmd, bool isError, String jsonPayload) {
     dynamic payload;
     if (jsonPayload != "") {
@@ -3354,6 +3383,11 @@ mixin NtfStreams {
         ntfRTDTSessEvents.add(event);
         break;
 
+      case NTSendFileProgress:
+        var event = SendFileProgress.fromJson(payload);
+        ntfSendFileProgress.add(event);
+        break;
+
       default:
         debugPrint("Received unknown notification ${cmd.toRadixString(16)}");
     }
@@ -3397,6 +3431,7 @@ abstract class PluginPlatform {
   Stream<RTDTLiveSessionSendError> rtdtLiveSessionErrors() =>
       throw "unimplemented";
   Stream<RTDTRTT> rtdtRTTStream() => throw "unimplemented";
+  Stream<SendFileProgress> sendFileProgress() => throw "unimplemented";
 
   Future<bool> hasServer() async => throw "unimplemented";
 
@@ -4514,3 +4549,4 @@ const int NTRTDTChatMsgReceived = 0x103d;
 const int NTRTDTRTTCalculated = 0x103e;
 const int NTRTDTJoinedInstantCall = 0x103f;
 const int NTRTDTSessionInviteCanceled = 0x1040;
+const int NTSendFileProgress = 0x1041;

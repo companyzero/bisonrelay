@@ -298,12 +298,18 @@ func (c *Client) sendPreparedSendqItemListSync(items []*preparedSendqItem, progr
 	for _, prep := range items {
 		err := c.sendPreparedSendqItemSync(prep)
 		if err != nil {
+			if progressChan != nil {
+				progressChan <- SendProgress{
+					Err: err,
+				}
+			}
+
 			return err
 		}
 
 		if progressChan != nil {
 			sent++
-			prep.progressChan <- SendProgress{
+			progressChan <- SendProgress{
 				Sent:  sent,
 				Total: total,
 			}

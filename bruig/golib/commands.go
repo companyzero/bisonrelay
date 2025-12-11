@@ -252,6 +252,7 @@ const (
 	NTRTDTRTTCalculated         = 0x103e
 	NTRTDTJoinedInstantCall     = 0x103f
 	NTRTDTSessionInviteCanceled = 0x1040
+	NTSendFileProgress          = 0x1041
 )
 
 type cmd struct {

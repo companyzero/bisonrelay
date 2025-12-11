@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -958,6 +959,38 @@ func (c *Client) ListDownloads() ([]clientdb.FileDownload, error) {
 		return err
 	})
 	return fds, err
+}
+
+// EstimateSendFileChunkCount estimates the number of chunks that will be needed
+// to send the file to a remote user using SendFile. If chunkSize is zero, then
+// the current max payload size of the server is assumed as chunk size.
+func (c *Client) EstimateSendFileChunkCount(filepath string, chunkSize uint64) (uint64, error) {
+	if chunkSize == 0 {
+		serverSess := c.ServerSession()
+		if serverSess == nil {
+			return 0, fmt.Errorf("cannot use chunksize 0 when not connected to a server")
+		}
+
+		maxSizeVersion := serverSess.Policy().MaxMsgSizeVersion
+		maxPayloadSize := rpc.MaxPayloadSizeForVersion(maxSizeVersion)
+		if maxPayloadSize == 0 {
+			return 0, fmt.Errorf("server did not define max payload "+
+				"size for version %d", maxSizeVersion)
+		}
+		chunkSize = uint64(maxPayloadSize)
+	}
+
+	stat, err := os.Stat(filepath)
+	if err != nil {
+		return 0, err
+	}
+
+	fsize := uint64(stat.Size())
+	chunks := fsize / chunkSize
+	if fsize%chunkSize != 0 {
+		chunks++
+	}
+	return chunks, nil
 }
 
 // SendFile sends a file to the given user without requesting a payment for it.

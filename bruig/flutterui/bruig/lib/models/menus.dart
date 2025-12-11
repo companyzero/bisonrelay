@@ -13,6 +13,7 @@ import 'package:bruig/models/log.dart';
 import 'package:bruig/models/notifications.dart';
 import 'package:bruig/models/realtimechat.dart';
 import 'package:bruig/models/resources.dart';
+import 'package:bruig/models/uploads.dart';
 import 'package:bruig/screens/chat/new_gc_screen.dart';
 import 'package:bruig/screens/chat/new_message_screen.dart';
 import 'package:bruig/screens/chats.dart';
@@ -296,7 +297,9 @@ List<ChatMenuItem> buildUserChatMenu(ChatModel chat) {
     filePath = filePath.trim();
     if (filePath == "") return;
 
-    await showSendFileScreen(context, chat: chat, file: File(filePath));
+    var uploads = UploadsModel.of(context, listen: false);
+    await showSendFileScreen(context,
+        chat: chat, file: File(filePath), uploads: uploads);
   }
 
   void listUserPosts(BuildContext context, ClientModel client) async {

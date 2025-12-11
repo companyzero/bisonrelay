@@ -331,6 +331,11 @@ type sendFileArgs struct {
 	Filepath string            `json:"filepath"`
 }
 
+type sendFileProgress struct {
+	Args     sendFileArgs        `json:"args"`
+	Progress client.SendProgress `json:"progress"`
+}
+
 type userPostList struct {
 	UID   clientintf.UserID  `json:"uid"`
 	Posts []rpc.PostListItem `json:"posts"`

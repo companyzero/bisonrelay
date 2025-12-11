@@ -5,6 +5,7 @@ import 'package:bruig/components/buttons.dart';
 import 'package:bruig/components/snackbars.dart';
 import 'package:bruig/components/text.dart';
 import 'package:bruig/models/client.dart';
+import 'package:bruig/models/uploads.dart';
 import 'package:bruig/screens/startupscreen.dart';
 import 'package:bruig/util.dart';
 import 'package:flutter/material.dart';
@@ -23,6 +24,7 @@ Future<SendFileScreenResult?> showSendFileScreen(
   BuildContext context, {
   required ChatModel chat,
   required File file,
+  required UploadsModel uploads,
 }) async {
   if (chat.isGC) {
     var mimeType = lookupMimeType(file.path) ?? "binary/octet-stream";
@@ -35,7 +37,7 @@ Future<SendFileScreenResult?> showSendFileScreen(
       useRootNavigator: true,
       context: context,
       builder: (context) {
-        final Widget child = SendFileScreen(file, chat);
+        final Widget child = SendFileScreen(file, chat, uploads);
         return Dialog.fullscreen(child: child);
       });
 }
@@ -43,7 +45,8 @@ Future<SendFileScreenResult?> showSendFileScreen(
 class SendFileScreen extends StatefulWidget {
   final File file;
   final ChatModel chat;
-  const SendFileScreen(this.file, this.chat, {super.key});
+  final UploadsModel uploads;
+  const SendFileScreen(this.file, this.chat, this.uploads, {super.key});
 
   @override
   State<SendFileScreen> createState() => _SendFileScreenState();
@@ -55,6 +58,7 @@ class _SendFileScreenState extends State<SendFileScreen> {
   String filename = "";
   int fileSize = 0;
   bool sending = false;
+  FileUploadModel? uploadModel;
 
   void cancel() {
     Navigator.of(context).pop();
@@ -74,18 +78,12 @@ class _SendFileScreenState extends State<SendFileScreen> {
   }
 
   Future<void> sendAsFileTransfer() async {
-    var chatMsg =
-        SynthChatEvent("Sending file \"$filename\" to user", SCE_sending);
-    chat.append(ChatEventModel(chatMsg, null), false);
-
-    try {
-      await Golib.sendFile(chat.id, file.absolute.path);
-      chatMsg.state = SCE_sent;
-      showSuccessSnackbar(this, "Sent file \"$filename\" to ${chat.nick}");
-    } catch (exception) {
-      chatMsg.error = Exception(exception);
-      showErrorSnackbar(this, "Unable to send file: $exception");
-    }
+    var model = widget.uploads.sendFile(chat.id, file.absolute.path);
+    chat.append(ChatEventModel(model, null), false);
+    setState(() {
+      uploadModel = model;
+      model.addListener(uploadModelChanged);
+    });
   }
 
   void send() async {
@@ -112,6 +110,10 @@ class _SendFileScreenState extends State<SendFileScreen> {
     if (mounted) Navigator.pop(context);
   }
 
+  void uploadModelChanged() {
+    setState(() {});
+  }
+
   @override
   void initState() {
     super.initState();
@@ -125,6 +127,12 @@ class _SendFileScreenState extends State<SendFileScreen> {
   }
 
   @override
+  void dispose() {
+    uploadModel?.removeListener(uploadModelChanged);
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return StartupScreen(hideAboutButton: true, [
       const Txt.H("Send File"),
@@ -133,6 +141,9 @@ class _SendFileScreenState extends State<SendFileScreen> {
       const SizedBox(height: 5),
       Txt.M("Size: ${humanReadableSize(fileSize)}"),
       // const Expanded(child: Empty()),
+      if (uploadModel != null && uploadModel?.totalChunks != 0) ...[
+        LinearProgressIndicator(value: uploadModel?.progress)
+      ],
       const SizedBox(height: 20),
       Wrap(spacing: 5, children: [
         ElevatedButton(onPressed: sending ? null : send, child: Text("Send")),
