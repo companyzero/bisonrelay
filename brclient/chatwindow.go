@@ -463,7 +463,6 @@ func parseMsgIntoElements(msg string, mention string) []*chatMsgElLine {
 type chatMsg struct {
 	ts       time.Time
 	sent     bool
-	msg      string
 	elements []*chatMsgElLine
 	mine     bool
 	internal bool
@@ -471,6 +470,12 @@ type chatMsg struct {
 	from     string
 	fromUID  *clientintf.UserID
 	post     *rpc.PostMetadata
+}
+
+// replaceMsg replace the current list of message elements with a parsed version
+// of the given string message. Not safe for concurrent access.
+func (cm *chatMsg) replaceMsg(msg string) {
+	cm.elements = parseMsgIntoElements(msg, "")
 }
 
 type chatWindow struct {
@@ -535,9 +540,8 @@ func (cw *chatWindow) newUnsentPM(msg string) *chatMsg {
 	m := &chatMsg{
 		mine:     true,
 		elements: parseMsgIntoElements(msg, ""),
-		//msg:  msg,
-		ts:   time.Now(),
-		from: cw.me,
+		ts:       time.Now(),
+		from:     cw.me,
 	}
 	cw.appendMsg(m)
 	return m
@@ -547,8 +551,7 @@ func (cw *chatWindow) newInternalMsg(msg string, args ...interface{}) *chatMsg {
 	m := &chatMsg{
 		internal: true,
 		elements: parseMsgIntoElements(fmt.Sprintf(msg, args...), ""),
-		//msg:      msg,
-		ts: time.Now(),
+		ts:       time.Now(),
 	}
 	cw.appendMsg(m)
 	return m
@@ -560,8 +563,7 @@ func (cw *chatWindow) manyHelpMsgs(f func(printf)) {
 		m := &chatMsg{
 			help:     true,
 			elements: parseMsgIntoElements(msg, ""),
-			//msg:  msg,
-			ts: time.Now(),
+			ts:       time.Now(),
 		}
 		cw.msgs = append(cw.msgs, m)
 	}
@@ -580,8 +582,7 @@ func (cw *chatWindow) newHelpMsg(f string, args ...interface{}) {
 func (cw *chatWindow) newRecvdMsg(from, msg string, fromUID *zkidentity.ShortID, ts time.Time) *chatMsg {
 
 	m := &chatMsg{
-		mine: false,
-		//msg: msg,
+		mine:     false,
 		elements: parseMsgIntoElements(msg, cw.me),
 		ts:       ts,
 		from:     from,
@@ -719,8 +720,7 @@ func (cw *chatWindow) replacePage(nick string, fr clientdb.FetchedResource, hist
 func (cw *chatWindow) newHistoryMsg(from, msg string, fromUID *zkidentity.ShortID,
 	ts time.Time, mine, internal bool) *chatMsg {
 	m := &chatMsg{
-		mine: mine,
-		//msg: msg,
+		mine:     mine,
 		elements: parseMsgIntoElements(msg, cw.me),
 		ts:       ts,
 		from:     from,
