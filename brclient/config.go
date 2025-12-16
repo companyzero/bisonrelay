@@ -18,8 +18,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/companyzero/bisonrelay/brclient/internal/version"
 	"github.com/companyzero/bisonrelay/client/clientintf"
+	"github.com/companyzero/bisonrelay/internal/version"
 	"github.com/decred/dcrd/dcrutil/v4"
 	"github.com/decred/go-socks/socks"
 	"github.com/jrick/flagfile"
