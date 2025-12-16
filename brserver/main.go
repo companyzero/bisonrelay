@@ -8,7 +8,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/companyzero/bisonrelay/brserver/internal/version"
+	"github.com/companyzero/bisonrelay/internal/version"
 	"github.com/companyzero/bisonrelay/server"
 )
 

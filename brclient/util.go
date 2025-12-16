@@ -14,7 +14,7 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/companyzero/bisonrelay/brclient/internal/version"
+	"github.com/companyzero/bisonrelay/internal/version"
 	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/decred/dcrd/dcrutil/v4"
 	"github.com/decred/dcrlnd/lnrpc"

@@ -16,12 +16,12 @@ import (
 	"time"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/companyzero/bisonrelay/brclient/internal/version"
 	"github.com/companyzero/bisonrelay/client"
 	"github.com/companyzero/bisonrelay/client/clientdb"
 	"github.com/companyzero/bisonrelay/client/clientintf"
 	"github.com/companyzero/bisonrelay/internal/audio"
 	"github.com/companyzero/bisonrelay/internal/strescape"
+	"github.com/companyzero/bisonrelay/internal/version"
 	"github.com/companyzero/bisonrelay/ratchet"
 	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/companyzero/bisonrelay/zkidentity"

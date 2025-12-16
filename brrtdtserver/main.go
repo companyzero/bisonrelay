@@ -13,7 +13,7 @@ import (
 	"path/filepath"
 	"syscall"
 
-	"github.com/companyzero/bisonrelay/brrtdtserver/internal/version"
+	"github.com/companyzero/bisonrelay/internal/version"
 	rtdtserver "github.com/companyzero/bisonrelay/rtdt/server"
 	"github.com/companyzero/bisonrelay/zkidentity"
 	"github.com/decred/slog"

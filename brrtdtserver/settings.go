@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/companyzero/bisonrelay/brrtdtserver/internal/version"
+	"github.com/companyzero/bisonrelay/internal/version"
 	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/companyzero/bisonrelay/zkidentity"
 	"github.com/companyzero/sntrup4591761"
