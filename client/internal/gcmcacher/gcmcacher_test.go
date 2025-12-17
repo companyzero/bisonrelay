@@ -1,6 +1,7 @@
 package gcmcacher
 
 import (
+	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -10,7 +11,6 @@ import (
 	"github.com/companyzero/bisonrelay/rpc"
 	"github.com/companyzero/bisonrelay/zkidentity"
 	"github.com/decred/slog"
-	"golang.org/x/net/context"
 )
 
 const (

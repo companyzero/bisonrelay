@@ -167,9 +167,15 @@ retry:
 }
 
 func (lndc *Dcrlnd) reconnect(ctx context.Context) error {
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+	}
+
 	var err error
 	rpcAddr := lndc.rpcAddr
-	lndc.conn, err = grpc.DialContext(ctx, rpcAddr, append(lndc.connOpts, grpc.WithBlock())...)
+	lndc.conn, err = grpc.NewClient(rpcAddr, lndc.connOpts...)
 	return err
 }
 

@@ -187,7 +187,7 @@ func commandUsage(cmdName string) error {
 
 	pf("Help for command %s", cmdName)
 	pf("Description:")
-	pf(method.Help)
+	pf("%s", method.Help)
 	pf("")
 
 	reqDefn := method.RequestDefn()
@@ -205,7 +205,7 @@ func commandUsage(cmdName string) error {
 		firstLine, rest := helpLinesForArg(helpMsg, len(arg)+5)
 		pf("  -%s: %s", arg, firstLine)
 		for _, line := range rest {
-			pf(line)
+			pf("%s", line)
 		}
 	}
 
@@ -225,7 +225,7 @@ func commandUsage(cmdName string) error {
 		firstLine, rest := helpLinesForArg(helpMsg, len(arg)+5)
 		pf("  %s: %s", arg, firstLine)
 		for _, line := range rest {
-			pf(line)
+			pf("%s", line)
 		}
 	}
 

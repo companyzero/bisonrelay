@@ -1,5 +1,4 @@
 //go:build pgdb
-// +build pgdb
 
 package internal
 

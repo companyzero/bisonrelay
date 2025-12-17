@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strings"
@@ -12,7 +13,6 @@ import (
 	"github.com/companyzero/bisonrelay/client/clientintf"
 	"github.com/companyzero/bisonrelay/internal/mdembeds"
 	"github.com/decred/dcrd/dcrutil/v4"
-	"golang.org/x/net/context"
 )
 
 type sendAudioNoteWin struct {

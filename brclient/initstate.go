@@ -194,7 +194,7 @@ func (ins initStepState) View() string {
 			noBtn = styles.focused.Render(noBtn)
 		}
 		wln("%s %s", yesBtn, noBtn)
-		wln(strings.Repeat("\n", ins.as.winH-13))
+		wln("%s", strings.Repeat("\n", ins.as.winH-13))
 		content = b.String()
 
 	case unwelcomeErr != nil:
