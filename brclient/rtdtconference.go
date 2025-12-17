@@ -218,9 +218,9 @@ func (w *rtdtConferenceWin) renderInfoView() {
 			userNick = kickPeer.Alias
 		}
 
-		pf(style.Render("Confirm kicking peer "))
-		pf(styles.nick.Render(strescape.Nick(userNick)))
-		pf(style.Render(" (%s)?"), kickPeer.PublisherID)
+		pf("%s", style.Render("Confirm kicking peer "))
+		pf("%s", styles.nick.Render(strescape.Nick(userNick)))
+		pf("%s %s", style.Render(" (%s)?"), kickPeer.PublisherID)
 		pf("\n\n")
 		pf("Temporary ban duration: %s (press +/- to change)\n", w.banDuration)
 		pf("  Note: ban is lifted immediately if all members leave session\n")
@@ -240,7 +240,7 @@ func (w *rtdtConferenceWin) renderInfoView() {
 	isAdmin := sess.LocalIsAdmin()
 
 	if sess.Metadata.IsInstant {
-		pf(styles.mention.Render("Instant Call - will be removed once left"))
+		pf("%s", styles.mention.Render("Instant Call - will be removed once left"))
 		pf("\n")
 	}
 

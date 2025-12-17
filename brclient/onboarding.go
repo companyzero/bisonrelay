@@ -230,18 +230,18 @@ func (os onboardScreen) View() string {
 	nbLines += 1
 	if os.oerr != nil {
 		errMsg := ansi.Wordwrap(styles.err.Render(os.oerr.Error()), os.as.winW-1, wordBreakpoints)
-		pf(errMsg)
+		pf("%s", errMsg)
 		pf("\n")
 		nbLines += countNewLines(errMsg) + 1
 	}
 
 	pf("\n\n")
 	nbLines += 2
-	pf(os.btns.View())
+	pf("%s", os.btns.View())
 	pf("\n\n")
 	nbLines += 2
 	pf("Latest Log Lines:\n")
-	pf(os.viewport.View())
+	pf("%s", os.viewport.View())
 	nbLines += 10
 
 	b.WriteString(blankLines(os.as.winH - nbLines - 1))

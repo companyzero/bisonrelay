@@ -1,5 +1,4 @@
 //go:build e2elegacylntest
-// +build e2elegacylntest
 
 package client
 

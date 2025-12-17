@@ -83,7 +83,7 @@ func NewDcrlndPaymentClient(ctx context.Context, cfg DcrlnPaymentClientCfg) (*Dc
 		grpc.WithPerRPCCredentials(macOpt),
 	)
 
-	conn, err := grpc.Dial(cfg.Address, opts...)
+	conn, err := grpc.NewClient(cfg.Address, opts...)
 	if err != nil {
 		return nil, fmt.Errorf("unable to dial to dcrlnd's gRPC server: %v", err)
 	}

@@ -196,7 +196,7 @@ func (pw lnRequestRecvWindow) View() string {
 	pf := func(f string, args ...interface{}) {
 		b.WriteString(fmt.Sprintf(f, args...))
 	}
-	pf(pw.headerView(styles))
+	pf("%s", pw.headerView(styles))
 	pf("\n\n")
 
 	nbLines := 2 + 2
@@ -221,8 +221,8 @@ func (pw lnRequestRecvWindow) View() string {
 		if pw.confirmIdx == 1 {
 			yesStyle, noStyle = noStyle, yesStyle
 		}
-		pf(yesStyle.Render("[ Yes ]"))
-		pf(noStyle.Render(" [ No ]"))
+		pf("%s", yesStyle.Render("[ Yes ]"))
+		pf("%s", noStyle.Render(" [ No ]"))
 		pf("\n")
 
 		nbLines += 9
@@ -233,7 +233,7 @@ func (pw lnRequestRecvWindow) View() string {
 		pf("Enter the following information to request recv capacity.\n\n")
 		nbLines += 2
 
-		pf(pw.form.View())
+		pf("%s", pw.form.View())
 		nbLines += pw.form.lineCount()
 
 		pf("\n")
@@ -249,7 +249,7 @@ func (pw lnRequestRecvWindow) View() string {
 		pf("\n")
 	}
 
-	pf(pw.footerView(styles))
+	pf("%s", pw.footerView(styles))
 
 	return b.String()
 }

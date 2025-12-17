@@ -235,7 +235,7 @@ func (ulns unlockLNScreen) View() string {
 	var lines int
 	switch {
 	case ulns.lndc == nil:
-		pf(titleStyle.Render("Initializing internal dcrlnd instance"))
+		pf("%s", titleStyle.Render("Initializing internal dcrlnd instance"))
 		pf("\n\n")
 		lines += 2
 
@@ -243,11 +243,11 @@ func (ulns unlockLNScreen) View() string {
 		extraLines := true
 		switch {
 		case ulns.compactErrored:
-			pf(ulns.styles.err.Render("Compaction error. Look at the log to see actual error"))
+			pf("%s", ulns.styles.err.Render("Compaction error. Look at the log to see actual error"))
 		case ulns.migratingDb:
-			pf(migrateStyle.Render("Performing DB upgrade. This might take a while."))
+			pf("%s", migrateStyle.Render("Performing DB upgrade. This might take a while."))
 		case ulns.compactingDb:
-			pf(migrateStyle.Render("Compacting DB. This might take a while."))
+			pf("%s", migrateStyle.Render("Compacting DB. This might take a while."))
 		default:
 			extraLines = false
 		}
@@ -258,10 +258,10 @@ func (ulns unlockLNScreen) View() string {
 
 	case ulns.unlocking:
 		if ulns.needsUnlock {
-			pf(titleStyle.Render("Unlocking internal wallet"))
+			pf("%s", titleStyle.Render("Unlocking internal wallet"))
 		} else {
 			// This is the pass.txt auto-unlock case
-			pf(titleStyle.Render("Waiting for RPC server to be ready"))
+			pf("%s", titleStyle.Render("Waiting for RPC server to be ready"))
 			pf("\n\n")
 			pf("Wallet automatically unlocked by password file")
 			lines += 3
@@ -270,23 +270,23 @@ func (ulns unlockLNScreen) View() string {
 		lines += 2
 
 	case ulns.needsUnlock:
-		pf(titleStyle.Render("Unlock internal dcrlnd wallet"))
+		pf("%s", titleStyle.Render("Unlock internal dcrlnd wallet"))
 		pf("\n\n")
-		pf(ulns.txtPass.View())
+		pf("%s", ulns.txtPass.View())
 		pf("\n\n")
 		errMsg := ansi.Wordwrap(ulns.unlockErr, ulns.viewWidth, wordBreakpoints)
-		pf(ulns.styles.err.Render(errMsg))
+		pf("%s", ulns.styles.err.Render(errMsg))
 		pf("\n")
 		lines += 2 + 2 + 1 + countNewLines(errMsg)
 
 	case ulns.updt == nil:
-		pf(titleStyle.Render("Initial Sync"))
+		pf("%s", titleStyle.Render("Initial Sync"))
 		pf("\n\n")
 		lines += 2
 
 	default:
 		ts := time.Unix(ulns.updt.BlockTimestamp, 0).Format("2006-01-02 15:04:05")
-		pf(titleStyle.Render("Initial Sync"))
+		pf("%s", titleStyle.Render("Initial Sync"))
 		pf("\n\n")
 		pf("Block Hash: %x\n", ulns.updt.BlockHash)
 		pf("Block Height: %d\n", ulns.updt.BlockHeight)
@@ -300,7 +300,7 @@ func (ulns unlockLNScreen) View() string {
 	// ulns.viewport.YPosition = lines + 1
 
 	pf("Latest Log Lines:\n\n")
-	pf(ulns.viewport.View())
+	pf("%s", ulns.viewport.View())
 	pf("\n")
 	return b.String()
 }

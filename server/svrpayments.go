@@ -52,7 +52,7 @@ func (z *ZKS) initPayments() error {
 			grpc.WithPerRPCCredentials(macOpt),
 		)
 
-		conn, err := grpc.Dial(z.settings.LNRPCHost, opts...)
+		conn, err := grpc.NewClient(z.settings.LNRPCHost, opts...)
 		if err != nil {
 			return fmt.Errorf("unable to dial to dcrlnd's gRPC server: %v", err)
 		}
