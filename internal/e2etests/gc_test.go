@@ -1159,6 +1159,65 @@ func TestGCUnkxMediateIDRetries(t *testing.T) {
 	assert.ChanNotWritten(t, bobGCUnkxdMemberChan, 100*time.Millisecond)
 }
 
+// TestGCPartWithUnkxdMember verifies that parting from a GC succeeds even when it
+// still contains a member the local client has not KXd with. PartFromGC deletes
+// the GC before sending the part to members, so the unkxd-member mediate-ID path
+// (which re-reads the GC) must tolerate the GC being gone instead of erroring.
+func TestGCPartWithUnkxdMember(t *testing.T) {
+	t.Parallel()
+
+	tcfg := testScaffoldCfg{}
+	ts := newTestScaffold(t, tcfg)
+	alice := ts.newClient("alice")
+	bob := ts.newClient("bob")
+	charlie := ts.newClient("charlie")
+
+	// KX Alice to Bob and Charlie (but not Bob to Charlie).
+	ts.kxUsers(alice, bob)
+	ts.kxUsers(alice, charlie)
+
+	// Alice creates the GC and adds Bob.
+	gcID, err := alice.NewGroupChat("gc01")
+	assert.NilErr(t, err)
+	assertClientJoinsGC(t, gcID, alice, bob)
+
+	bobNewMembersChan := make(chan clientintf.UserID, 3)
+	bob.handle(client.OnAddedGCMembersNtfn(func(_ rpc.RMGroupList, uids []clientintf.UserID) {
+		for _, uid := range uids {
+			bobNewMembersChan <- uid
+		}
+	}))
+	alicePartChan := make(chan clientintf.UserID, 1)
+	alice.handle(client.OnGCUserPartedNtfn(func(_ client.GCID, uid client.UserID, _ string, _ bool) {
+		alicePartChan <- uid
+	}))
+
+	// Add Charlie but keep the Bob<->Charlie KX from completing, so Charlie
+	// stays unkxd from Bob's point of view.
+	assertGoesOffline(t, charlie)
+	assert.NilErr(t, alice.InviteToGroupChat(gcID, charlie.PublicID()))
+	assertGoesOffline(t, alice)
+
+	charlieAcceptedChan := charlie.acceptNextGCInvite(gcID)
+	assertGoesOnline(t, charlie)
+	assert.NilErrFromChan(t, charlieAcceptedChan)
+	assertGoesOffline(t, charlie)
+
+	assertGoesOnline(t, alice)
+	assert.ChanWrittenWithVal(t, bobNewMembersChan, charlie.PublicID())
+
+	// Wait until Bob would actually attempt a mediate-ID for the unkxd Charlie
+	// (a recently added member is otherwise skipped) - that is the path that
+	// re-reads the GC.
+	time.Sleep(bob.cfg.RecentMediateIDThreshold)
+
+	// Bob parts. The part deletes the GC then notifies members; with Charlie
+	// unkxd this hits the mediate-ID re-read of the now-deleted GC, which must
+	// not fail the part.
+	assert.NilErr(t, bob.PartFromGC(gcID, "leaving"))
+	assert.ChanWrittenWithVal(t, alicePartChan, bob.PublicID())
+}
+
 // TestGCChangesOwner tests that changing the owner of the GC works as expected.
 func TestGCChangesOwner(t *testing.T) {
 	t.Parallel()

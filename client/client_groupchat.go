@@ -588,6 +588,16 @@ func (c *Client) sendToGCMembers(gcID zkidentity.ShortID,
 			// Fetch the group list if needed.
 			if !gotGCInfo {
 				gcl, err := c.db.GetGC(tx, gcID)
+				if errors.Is(err, clientdb.ErrNotFound) {
+					// The GC was deleted before notifying members
+					// (PartFromGC and KillGroupChat delete the GC,
+					// then send the part/kill to the pre-delete
+					// member list). With no GC there is no owner to
+					// mediate transitive KX through, so stop setting
+					// up mediate-ID requests; the message was already
+					// sent to the KX'd members.
+					break
+				}
 				if err != nil {
 					return err
 				}
