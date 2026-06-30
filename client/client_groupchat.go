@@ -1246,9 +1246,18 @@ func (c *Client) handleGCMessage(ru *RemoteUser, gcm rpc.RMGroupMessage, ts time
 	}
 
 	if !found {
-		// The sender is not in the GC list we have.
-		c.log.Warnf("Received message in GC %q from non-member %s",
-			rgcm.GCAlias, ru)
+		// The sender is not in our member list. If they were idle-kicked
+		// and are messaging the GC again, re-add them; otherwise drop it.
+		if readded, rerr := c.maybeReAddIdleKickedMember(ru, gcm.ID); rerr != nil {
+			c.log.Warnf("Unable to re-add idle-kicked member %s to GC %s: %v",
+				ru, gcm.ID, rerr)
+		} else if readded {
+			c.log.Infof("Re-added idle-kicked member %s to GC %s after their message",
+				ru, gcm.ID)
+		} else {
+			c.log.Warnf("Received message in GC %q from non-member %s",
+				rgcm.GCAlias, ru)
+		}
 		return nil
 	}
 
@@ -1456,6 +1465,11 @@ func (c *Client) GCKick(gcID zkidentity.ShortID, uid UserID, reason string) erro
 		return err
 	}
 
+	// Track idle kicks so the member can be auto re-added if they return.
+	if reason == gcIdleKickReason {
+		c.recordIdleKick(gcID, uid)
+	}
+
 	rmgk := rpc.RMGroupKick{
 		Member:       uid,
 		Reason:       reason,
@@ -1524,7 +1538,113 @@ func (c *Client) handleGCKick(ru *RemoteUser, rmgk rpc.RMGroupKick, ts time.Time
 		rmgk.Reason, !rmgk.Parted)
 	c.notifyUpdatedGC(ru, oldGC.Metadata, rmgk.NewGroupList, ts)
 
+	// If an admin idle-kicked another user, record it so the local client
+	// (when it is also an admin) can auto re-add them when they return.
+	if !rmgk.Parted && rmgk.Reason == gcIdleKickReason && kickedUid != c.PublicID() {
+		c.recordIdleKick(rmgk.NewGroupList.ID, kickedUid)
+	}
+
 	return nil
+}
+
+// gcIdleKickReason is the reason string used when auto-removing an idle user
+// from a GC. It flags an idle kick so the member can be auto re-added if they
+// later message the GC again.
+const gcIdleKickReason = "User is idle for too long"
+
+// recordIdleKick persists (only when auto-remove-idle is enabled) that uid was
+// kicked from gcid for idleness, so it can be auto re-added on return.
+func (c *Client) recordIdleKick(gcid zkidentity.ShortID, uid clientintf.UserID) {
+	if c.cfg.AutoRemoveIdleUsersInterval <= 0 {
+		return
+	}
+	err := c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
+		return c.db.AddToGCKickedMembers(tx, gcid, uid, true)
+	})
+	if err != nil {
+		c.log.Warnf("Unable to record idle-kicked member %s in GC %s: %v",
+			uid, gcid, err)
+	}
+}
+
+// maybeReAddIdleKickedMember re-adds ru to gcID when the local client admins the
+// GC, ru was idle-kicked from it, ru is not blocked, and auto-remove-idle is
+// enabled. The re-add appends the member, bumps the generation and broadcasts
+// the updated group list, which the returning member applies via the normal
+// group-list update (no invite needed - KX survives the kick). Returns whether
+// it re-added the member.
+func (c *Client) maybeReAddIdleKickedMember(ru *RemoteUser, gcID zkidentity.ShortID) (bool, error) {
+	if c.cfg.AutoRemoveIdleUsersInterval <= 0 {
+		return false, nil
+	}
+
+	uid := ru.ID()
+	var newMeta rpc.RMGroupList
+	var readded bool
+	err := c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
+		gc, err := c.db.GetGC(tx, gcID)
+		if err != nil {
+			return err
+		}
+
+		// Only an admin can change the roster.
+		if err := c.uidHasGCPerm(&gc.Metadata, c.PublicID()); err != nil {
+			return nil
+		}
+
+		// Only re-add members that were idle-kicked.
+		kicked, err := c.db.GetGCKickedMembers(tx, gcID)
+		if err != nil {
+			return err
+		}
+		if !kicked.IsIdleKicked(uid) {
+			return nil
+		}
+
+		// Never re-add a blocked user; just drop the stale record.
+		gcbl, err := c.db.GetGCBlockList(tx, gcID)
+		if err != nil {
+			return err
+		}
+		if c.db.IsBlocked(tx, uid) || gcbl.IsBlocked(uid) {
+			return c.db.RemoveFromGCKickedMembers(tx, gcID, uid)
+		}
+
+		// If somehow already a member, just clear the record.
+		for i := range gc.Metadata.Members {
+			if gc.Metadata.Members[i] == uid {
+				return c.db.RemoveFromGCKickedMembers(tx, gcID, uid)
+			}
+		}
+
+		// Re-add: append, bump generation, save, clear the record.
+		gc.Metadata.Members = append(gc.Metadata.Members, uid)
+		gc.Metadata.Generation += 1
+		gc.Metadata.Timestamp = time.Now().Unix()
+		if err := c.db.SaveGC(tx, gc); err != nil {
+			return err
+		}
+		if err := c.db.RemoveFromGCKickedMembers(tx, gcID, uid); err != nil {
+			return err
+		}
+		c.db.LogGCMsg(tx, gc.Name(), gcID, true, "",
+			fmt.Sprintf("Re-added %s after they returned from being idle-kicked",
+				strescape.Nick(ru.Nick())), time.Now())
+		newMeta = gc.Metadata
+		readded = true
+		return nil
+	})
+	if err != nil || !readded {
+		return false, err
+	}
+
+	// Broadcast the updated member list. The re-added member applies it via
+	// the normal group-list update (maybeUpdateGC).
+	if err := c.sendToGCMembers(gcID, newMeta.Members, "sendlist", newMeta, nil); err != nil {
+		return true, err
+	}
+	c.ntfns.notifyOnAddedGCMembers(newMeta, []clientintf.UserID{uid})
+	return true, nil
 }
 
 // PartFromGC withdraws the local client from the given GC.

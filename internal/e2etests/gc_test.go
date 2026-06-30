@@ -1320,3 +1320,74 @@ func TestGCInviteExpiration(t *testing.T) {
 	assert.NilErr(t, bob.AcceptGroupChatInvite(iid3))
 	assert.ChanWritten(t, bobJoinedGCChan)
 }
+
+// TestGCAutoReinviteIdleKickedMember verifies that, when auto-remove-idle is
+// enabled, a GC admin re-adds a member it previously idle-kicked once that
+// member sends a new GC message. This models a member that was offline when it
+// was idle-kicked, so it never saw the kick and still believes it is a member.
+func TestGCAutoReinviteIdleKickedMember(t *testing.T) {
+	t.Parallel()
+
+	tcfg := testScaffoldCfg{}
+	ts := newTestScaffold(t, tcfg)
+
+	// Alice is the admin. Leaving AutoRemoveIdleUsersInterval at its default
+	// (non-zero) value is what enables the auto re-invite feature.
+	alice := ts.newClient("alice")
+	bob := ts.newClient("bob")
+
+	ts.kxUsers(alice, bob)
+
+	// Alice creates a GC and Bob joins.
+	gcID, err := alice.NewGroupChat("test_gc")
+	assert.NilErr(t, err)
+	bobAcceptedChan := bob.acceptNextGCInvite(gcID)
+	assert.NilErr(t, alice.InviteToGroupChat(gcID, bob.PublicID()))
+	assert.NilErrFromChan(t, bobAcceptedChan)
+	assertClientInGC(t, bob, gcID)
+	assertClientSeesInGC(t, alice, gcID, bob.PublicID())
+
+	// Pause Bob right before he applies the incoming kick, so that (like an
+	// offline member) he never processes it, keeps the GC locally and still
+	// believes he is a member. The received notification fires on the RV
+	// manager goroutine before the kick handler runs, so blocking here keeps
+	// Bob from removing the GC.
+	bobGotKickChan := make(chan struct{}, 1)
+	bobContChan := make(chan struct{})
+	bob.handleSync(client.OnRMReceived(func(_ *client.RemoteUser, _ *rpc.RMHeader, p interface{}, _ time.Time) {
+		if _, ok := p.(rpc.RMGroupKick); ok {
+			bobGotKickChan <- struct{}{}
+			<-bobContChan
+		}
+	}))
+
+	// Track Alice re-adding members (the behavior under test). Registered
+	// after the join so it only captures the re-invite.
+	wantUIDs := []clientintf.UserID{bob.PublicID()}
+	aliceReAddedChan := make(chan []clientintf.UserID, 4)
+	alice.handle(client.OnAddedGCMembersNtfn(func(_ rpc.RMGroupList, uids []clientintf.UserID) {
+		aliceReAddedChan <- uids
+	}))
+
+	// Alice idle-kicks Bob. The reason must match the one the idle unsub
+	// machinery uses for the kick to be tracked for re-invite.
+	const idleReason = "User is idle for too long"
+	assert.NilErr(t, alice.GCKick(gcID, bob.PublicID(), idleReason))
+
+	// Bob receives the kick but is paused before applying it, so he still
+	// holds the GC.
+	assert.ChanWritten(t, bobGotKickChan)
+
+	// Bob, still believing he is a member, sends a new message. Alice should
+	// re-add Bob and broadcast the updated member list instead of dropping
+	// the message.
+	assert.NilErr(t, bob.GCMessage(gcID, "i am back", rpc.MessageModeNormal, nil))
+
+	// Alice re-adds Bob and lists him as a member again.
+	assert.ChanWrittenWithVal(t, aliceReAddedChan, wantUIDs)
+	assertClientSeesInGC(t, alice, gcID, bob.PublicID())
+
+	// Let Bob finish processing the kick to avoid leaking the paused
+	// goroutine.
+	close(bobContChan)
+}

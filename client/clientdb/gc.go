@@ -19,9 +19,10 @@ import (
 )
 
 const (
-	gcAliasesFile  = "gcaliases.json"
-	invitesTable   = "invites"
-	gcBlockListExt = ".blocklist"
+	gcAliasesFile      = "gcaliases.json"
+	invitesTable       = "invites"
+	gcBlockListExt     = ".blocklist"
+	gcKickedMembersExt = ".kickedmembers"
 )
 
 type GCInvite struct {
@@ -391,9 +392,13 @@ func (db *DB) DeleteGC(tx ReadWriteTx, gcID zkidentity.ShortID) error {
 	if err := os.Remove(filename); err != nil {
 		return err
 	}
-	blockListFname := filename + gcBlockListExt
-	if fileExists(blockListFname) {
-		return os.Remove(blockListFname)
+	for _, ext := range []string{gcBlockListExt, gcKickedMembersExt} {
+		auxFname := filename + ext
+		if fileExists(auxFname) {
+			if err := os.Remove(auxFname); err != nil {
+				return err
+			}
+		}
 	}
 	return nil
 }
@@ -544,6 +549,70 @@ func (db *DB) GetGCBlockList(tx ReadTx, gcid zkidentity.ShortID) (GCBlockList, e
 	}
 	return entries, err
 
+}
+
+// GCKickedMembers maps the UID of a member removed from a GC to whether the
+// removal was due to idleness. Used to auto re-invite idle-kicked members when
+// they message the GC again.
+type GCKickedMembers map[string]bool
+
+// IsIdleKicked returns true if the given UID is recorded as having been kicked
+// from the GC for idleness.
+func (gckm GCKickedMembers) IsIdleKicked(uid UserID) bool {
+	return gckm[uid.String()]
+}
+
+// AddToGCKickedMembers records that the given UID was kicked from the GC. idle
+// flags whether the removal was due to idleness.
+func (db *DB) AddToGCKickedMembers(tx ReadWriteTx, gcid zkidentity.ShortID, uid UserID, idle bool) error {
+	filename := filepath.Join(db.root, groupchatDir, gcid.String()+
+		gcKickedMembersExt)
+
+	var entries GCKickedMembers
+	err := db.readJsonFile(filename, &entries)
+	if err != nil && !errors.Is(err, ErrNotFound) {
+		return err
+	}
+
+	if entries == nil {
+		entries = make(GCKickedMembers)
+	}
+	entries[uid.String()] = idle
+
+	return db.saveJsonFile(filename, &entries)
+}
+
+// RemoveFromGCKickedMembers clears the kick record for the given UID in the GC.
+func (db *DB) RemoveFromGCKickedMembers(tx ReadWriteTx, gcid zkidentity.ShortID, uid UserID) error {
+	filename := filepath.Join(db.root, groupchatDir, gcid.String()+
+		gcKickedMembersExt)
+
+	var entries GCKickedMembers
+	err := db.readJsonFile(filename, &entries)
+	if errors.Is(err, ErrNotFound) {
+		// Nothing recorded. NOP.
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+
+	delete(entries, uid.String())
+	return db.saveJsonFile(filename, entries)
+}
+
+// GetGCKickedMembers returns the kicked-members record of the specified GC.
+// Returns nil if there is none.
+func (db *DB) GetGCKickedMembers(tx ReadTx, gcid zkidentity.ShortID) (GCKickedMembers, error) {
+	filename := filepath.Join(db.root, groupchatDir, gcid.String()+
+		gcKickedMembersExt)
+
+	var entries GCKickedMembers
+	err := db.readJsonFile(filename, &entries)
+	if errors.Is(err, ErrNotFound) {
+		return nil, nil
+	}
+	return entries, err
 }
 
 // CacheReceivedGCM stores a cached received GC message.
