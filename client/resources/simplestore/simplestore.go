@@ -486,7 +486,7 @@ func (s *Store) invoiceExpired(ctx context.Context, order *Order) {
 	// Remove pending invoice if exists.
 	s.removePendingInvoice(order)
 
-	// Mark order as paid. First, reload the full order from disk.
+	// Mark order as canceled. First, reload the full order from disk.
 	orderDir := filepath.Join(s.root, ordersDir, order.User.String())
 	orderFname := filepath.Join(orderDir, orderFnamePattern.FilenameFor(uint64(order.ID)))
 	order = new(Order)
@@ -496,7 +496,7 @@ func (s *Store) invoiceExpired(ctx context.Context, order *Order) {
 	}
 
 	// Now update status.
-	order.Status = StatusPaid
+	order.Status = StatusCanceled
 	if err := jsonfile.Write(orderFname, order, s.log); err != nil {
 		s.log.Warnf("Unable to write order %s: %v", orderFname, err)
 		return
