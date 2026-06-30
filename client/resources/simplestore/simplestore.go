@@ -446,35 +446,81 @@ func (s *Store) invoiceSettled(ctx context.Context, order *Order) {
 	wpm("Your order %s/%s has been identified as paid",
 		order.User.ShortLogID(), order.ID)
 
-	// If the order has files attached to it, send them to the user.
+	// If the order has files attached to it, collect them and note whether
+	// the order also contains a physical (non-download) item.
+	var files []string
+	hasPhysical := false
 	for _, item := range order.Cart.Items {
-		fname := item.Product.SendFilename
-		if item.Product.SendFilename == "" {
+		if item.Product == nil || item.Product.SendFilename == "" {
+			hasPhysical = true
 			continue
 		}
-
+		fname := item.Product.SendFilename
 		// Relative paths are set to be from the root of the simplestore.
 		if !filepath.IsAbs(fname) {
 			fname = filepath.Join(s.root, fname)
 		}
+		files = append(files, fname)
 		wpm("\nSending you the file %s included in your order",
 			filepath.Base(fname))
-		go func() {
-			err := s.c.SendFile(order.User, 0, fname, nil)
-			if err != nil {
-				s.log.Errorf("Unable to send file %s to user %s due to order %s/%s: %v",
-					fname, strescape.Nick(ru.Nick()),
-					order.User.ShortLogID(), order.ID, err)
-			} else {
-				s.log.Infof("Successfully sent file %v to user %s due to order %s/%s",
-					fname, strescape.Nick(ru.Nick()),
-					order.User.ShortLogID(), order.ID)
-			}
-		}()
 	}
 
 	if s.cfg.StatusChanged != nil {
 		s.cfg.StatusChanged(order, b.String())
+	}
+
+	// Deliver any digital files; a fully digital order auto-completes once all
+	// are sent. Runs outside the store mutex because SendFile blocks.
+	if len(files) > 0 {
+		go s.deliverFilesAndMaybeComplete(order.User, order.ID, ru.Nick(), files, hasPhysical)
+	}
+}
+
+// deliverFilesAndMaybeComplete sends an order's digital files to the buyer and,
+// for a fully digital order (no physical items), advances it to completed once
+// every file has been sent successfully. Orders with a physical item, or whose
+// files did not all send, stay paid for the merchant to handle.
+func (s *Store) deliverFilesAndMaybeComplete(user clientintf.UserID, oid OrderID,
+	nick string, files []string, hasPhysical bool) {
+
+	allSent := true
+	for _, fname := range files {
+		if err := s.c.SendFile(user, 0, fname, nil); err != nil {
+			s.log.Errorf("Unable to send file %s to user %s due to order %s/%s: %v",
+				fname, strescape.Nick(nick), user.ShortLogID(), oid, err)
+			allSent = false
+			continue
+		}
+		s.log.Infof("Successfully sent file %v to user %s due to order %s/%s",
+			fname, strescape.Nick(nick), user.ShortLogID(), oid)
+	}
+
+	if hasPhysical || !allSent {
+		return
+	}
+
+	s.mtx.Lock()
+	defer s.mtx.Unlock()
+	orderFname := filepath.Join(s.root, ordersDir, user.String(),
+		orderFnamePattern.FilenameFor(uint64(oid)))
+	order := new(Order)
+	if err := jsonfile.Read(orderFname, order); err != nil {
+		s.log.Warnf("Unable to read order %s: %v", orderFname, err)
+		return
+	}
+	if order.Status != StatusPaid { // do not clobber a status changed during delivery
+		return
+	}
+	order.Status = StatusCompleted
+	if err := jsonfile.Write(orderFname, order, s.log); err != nil {
+		s.log.Warnf("Unable to write order %s: %v", orderFname, err)
+		return
+	}
+	s.log.Infof("Order %s/%s from user %s completed (all files delivered)",
+		user.ShortLogID(), oid, strescape.Nick(nick))
+	if s.cfg.StatusChanged != nil {
+		s.cfg.StatusChanged(order, fmt.Sprintf(
+			"Your order %s/%s has been completed", user.ShortLogID(), oid))
 	}
 }
 
