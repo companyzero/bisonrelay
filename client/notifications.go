@@ -326,6 +326,14 @@ type OnFileDownloadProgress func(user *RemoteUser, fm rpc.FileMetadata, nbMissin
 
 func (OnFileDownloadProgress) typ() string { return onFileDownloadProgress }
 
+const onFileDownloadFailed = "onFileDownloadFailed"
+
+// FileDownloadFailed is called when a file download cannot proceed, for
+// example because the remote client could not generate an invoice for a chunk.
+type OnFileDownloadFailed func(user *RemoteUser, fm rpc.FileMetadata, err error)
+
+func (OnFileDownloadFailed) typ() string { return onFileDownloadFailed }
+
 const onRMReceived = "onRMReceived"
 
 // OnRMReceived is a notification sent whenever a remote user receives an RM.
@@ -1127,6 +1135,11 @@ func (nmgr *NotificationManager) notifyFileDownloadProgress(user *RemoteUser, fm
 		visit(func(h OnFileDownloadProgress) { h(user, fm, nbMissingChunks) })
 }
 
+func (nmgr *NotificationManager) notifyFileDownloadFailed(user *RemoteUser, fm rpc.FileMetadata, err error) {
+	nmgr.handlers[onFileDownloadFailed].(*handlersFor[OnFileDownloadFailed]).
+		visit(func(h OnFileDownloadFailed) { h(user, fm, err) })
+}
+
 func (nmgr *NotificationManager) notifyRMReceived(ru *RemoteUser, rmh *rpc.RMHeader, p interface{}, ts time.Time) {
 	nmgr.handlers[onRMReceived].(*handlersFor[OnRMReceived]).
 		visit(func(h OnRMReceived) { h(ru, rmh, p, ts) })
@@ -1338,6 +1351,7 @@ func NewNotificationManager() *NotificationManager {
 			onContentListReceived:      &handlersFor[OnContentListReceived]{},
 			onFileDownloadCompleted:    &handlersFor[OnFileDownloadCompleted]{},
 			onFileDownloadProgress:     &handlersFor[OnFileDownloadProgress]{},
+			onFileDownloadFailed:       &handlersFor[OnFileDownloadFailed]{},
 			onServerUnwelcomeError:     &handlersFor[OnServerUnwelcomeError]{},
 			onRequestingMediateIDType:  &handlersFor[OnRequestingMediateID]{},
 
