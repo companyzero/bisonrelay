@@ -984,7 +984,7 @@ func (c *Client) unsubIdleUsers() error {
 			gcid := gcid
 			uid := uid
 			go func() {
-				err := c.GCKick(gcid, uid, "User is idle for too long")
+				err := c.GCKick(gcid, uid, gcIdleKickReason)
 				if err != nil {
 					c.log.Warnf("Unable to remove user %s from GC %s: %v",
 						uid, gcid, err)
