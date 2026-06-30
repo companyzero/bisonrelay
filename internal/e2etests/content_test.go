@@ -136,6 +136,48 @@ func TestFtDownloadFile(t *testing.T) {
 	assert.EqualFiles(t, fGlobal, completedPath1)
 }
 
+// TestFtPaidDownloadInvoiceGenFails verifies that when a host cannot generate
+// the invoice for a paid file chunk, it signals the failure to both sides
+// (OnInvoiceGenFailedNtfn locally and an error reply that the getter surfaces
+// as OnFileDownloadFailed) rather than leaving the getter's download stalled.
+func TestFtPaidDownloadInvoiceGenFails(t *testing.T) {
+	t.Parallel()
+
+	tcfg := testScaffoldCfg{}
+	ts := newTestScaffold(t, tcfg)
+	alice := ts.newClient("alice")
+	bob := ts.newClient("bob")
+	ts.kxUsers(alice, bob)
+
+	// The host (alice) cannot generate an invoice for the chunk.
+	alice.mpc.HookGetInvoice(func(amt int64, cb func(int64)) (string, error) {
+		return "", fmt.Errorf("not enough inbound capacity")
+	})
+
+	// Host should be notified the invoice could not be generated.
+	aliceInvFailChan := make(chan error, 4)
+	alice.handle(client.OnInvoiceGenFailedNtfn(func(_ *client.RemoteUser, _ float64, err error) {
+		aliceInvFailChan <- err
+	}))
+	// Getter should be notified the download failed (instead of stalling).
+	bobDownFailChan := make(chan error, 4)
+	bob.handle(client.OnFileDownloadFailed(func(_ *client.RemoteUser, _ rpc.FileMetadata, err error) {
+		bobDownFailChan <- err
+	}))
+
+	// Alice shares a paid file with Bob.
+	f := testutils.RandomFile(t, defaultChunkSize)
+	bobUID := bob.PublicID()
+	sf, _, err := alice.ShareFile(f, &bobUID, 1, "paid file")
+	assert.NilErr(t, err)
+
+	// Bob requests it; the host's invoice generation fails. Instead of
+	// stalling, both sides receive a signal.
+	assert.NilErr(t, bob.GetUserContent(alice.PublicID(), sf.FID))
+	assert.ChanWritten(t, aliceInvFailChan)
+	assert.ChanWritten(t, bobDownFailChan)
+}
+
 // TestFtSendFile tests that the send file feature works.
 func TestFtSendFile(t *testing.T) {
 	t.Parallel()

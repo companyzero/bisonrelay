@@ -779,6 +779,8 @@ func (c *Client) handleFTGetChunk(ru *RemoteUser, gc rpc.RMFTGetChunk) error {
 	var f clientdb.SharedFile
 	var md rpc.FileMetadata
 	var inv string
+	var amountMAtoms uint64
+	var genInvErr error
 	chunkIdx := gc.Index
 	err := c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
 		var err error
@@ -793,7 +795,7 @@ func (c *Client) handleFTGetChunk(ru *RemoteUser, gc rpc.RMFTGetChunk) error {
 		}
 
 		// Generate invoice for the given amount.
-		amountMAtoms := clientintf.FileChunkMAtoms(chunkIdx, &md)
+		amountMAtoms = clientintf.FileChunkMAtoms(chunkIdx, &md)
 		if amountMAtoms < 1000 {
 			// File is free to download.
 			return nil
@@ -819,8 +821,32 @@ func (c *Client) handleFTGetChunk(ru *RemoteUser, gc rpc.RMFTGetChunk) error {
 
 		inv, err = c.genInvoiceForFTUpload(tx, ru, f, cid,
 			chunkIdx, amountMAtoms)
+		if err != nil {
+			genInvErr = err
+		}
 		return err
 	})
+	if genInvErr != nil {
+		// Generating the invoice for this chunk failed (e.g. dcrlnd has
+		// no inbound capacity). Notify the local user and reply to the
+		// getter with an error so its download does not stall silently.
+		errStr := genInvErr.Error()
+		c.ntfns.notifyInvoiceGenFailed(ru, float64(amountMAtoms)/1e11, genInvErr)
+		go func() {
+			rm := rpc.RMFTPayForChunk{
+				Tag:    gc.Tag,
+				FileID: gc.FileID,
+				Index:  chunkIdx,
+				Hash:   gc.Hash,
+				Error:  &errStr,
+			}
+			if e := ru.sendRM(rm, "ftpayforchunk"); e != nil &&
+				!errors.Is(e, clientintf.ErrSubsysExiting) {
+				ru.log.Errorf("Unable to send chunk-invoice failure: %v", e)
+			}
+		}()
+		return nil
+	}
 	if err != nil {
 		return err
 	}
@@ -838,6 +864,32 @@ func (c *Client) handleFTGetChunk(ru *RemoteUser, gc rpc.RMFTGetChunk) error {
 // handleFTPayForChunk this is called when we receive an invoice to pay for a
 // chunk of data.
 func (c *Client) handleFTPayForChunk(ru *RemoteUser, pfc rpc.RMFTPayForChunk) error {
+	// If the remote could not provide the chunk (e.g. it failed to generate
+	// an invoice), surface the failure instead of trying to decode an empty
+	// invoice, which would otherwise leave the download stalled.
+	if pfc.Error != nil {
+		derr := fmt.Errorf("remote could not provide chunk %d of file %s: %s",
+			pfc.Index, pfc.FileID, *pfc.Error)
+		ru.log.Warnf("%v", derr)
+		var fid clientdb.FileID
+		if err := fid.FromString(pfc.FileID); err != nil {
+			return err
+		}
+		var fd clientdb.FileDownload
+		err := c.dbView(func(tx clientdb.ReadTx) error {
+			var err error
+			fd, err = c.db.ReadFileDownload(tx, ru.ID(), fid)
+			return err
+		})
+		if err != nil {
+			return err
+		}
+		if fd.Metadata != nil {
+			c.ntfns.notifyFileDownloadFailed(ru, *fd.Metadata, derr)
+		}
+		return nil
+	}
+
 	// Verify this is a valid invoice.
 	inv, err := c.pc.DecodeInvoice(c.ctx, pfc.Invoice)
 	if err != nil {
