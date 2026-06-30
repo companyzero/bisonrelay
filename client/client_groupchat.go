@@ -341,12 +341,15 @@ func (c *Client) handleGCInvite(ru *RemoteUser, invite rpc.RMGroupInvite) error 
 	var iid uint64
 	err := c.dbUpdate(func(tx clientdb.ReadWriteTx) error {
 		var err error
-		_, err = c.db.GetGC(tx, invite.ID)
-		if !errors.Is(err, clientdb.ErrNotFound) {
-			if err == nil {
-				err = fmt.Errorf("can't accept gc invite: gc %q already exists",
-					invite.ID.String())
-			}
+		// A failure other than "not found" is a real error. Otherwise store
+		// the invite even when the GC already exists locally: a re-invite is
+		// how an admin re-adds a user whose local copy is stale (e.g. after
+		// restoring an old backup). The stale roster is refreshed by the
+		// normal RMGroupList update (maybeUpdateGC) once the invite is
+		// accepted, which already verifies the sender's admin permission and
+		// rejects generation backtracks.
+		if _, err = c.db.GetGC(tx, invite.ID); err != nil &&
+			!errors.Is(err, clientdb.ErrNotFound) {
 			return err
 		}
 
