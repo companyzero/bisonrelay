@@ -170,6 +170,7 @@ class EmbedInlineSyntax extends md.InlineSyntax {
           break;
         case "image/avif":
           tag = "avif";
+          break;
         case "text/plain":
           // Decode plain text directly.
           tag = "pre";
@@ -492,15 +493,20 @@ class ImageMd extends StatelessWidget {
                 builder: (_) => ImageDialog(imgContent, type, name: name));
           },
           child: Container(
-            constraints: const BoxConstraints(maxHeight: 250, maxWidth: 250),
             margin: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
-            decoration: BoxDecoration(
+            child: ClipRRect(
               borderRadius: const BorderRadius.all(Radius.circular(8.0)),
-              image: DecorationImage(
-                image: MemoryImage(imgContent),
-                onError: (exception, stackTrace) {
-                  debugPrint("ImageMd unable to decode image: $exception");
-                },
+              child: ConstrainedBox(
+                constraints:
+                    const BoxConstraints(maxHeight: 250, maxWidth: 250),
+                child: Image.memory(
+                  imgContent,
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) {
+                    debugPrint("ImageMd unable to decode image: $error");
+                    return const SizedBox.shrink();
+                  },
+                ),
               ),
             ),
           ),
