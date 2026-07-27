@@ -1406,8 +1406,15 @@ class ClientModel extends ChangeNotifier {
   void _handleGCListUpdates() async {
     var stream = Golib.gcListUpdates();
     await for (var update in stream) {
-      // Force creating the chat if it doesn't exist.
-      _newChat(update.id, update.name, true);
+      // Force creating the chat if it doesn't exist. Ignore errors: the
+      // update may race with the GC being left/removed locally, in which
+      // case Golib.getGC() (called from _newChat) fails with "entry not
+      // found" and there's nothing to create a chat for anymore.
+      try {
+        await _newChat(update.id, update.name, true);
+      } catch (exception) {
+        // Ignore.
+      }
     }
   }
 
