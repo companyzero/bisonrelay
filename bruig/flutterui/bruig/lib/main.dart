@@ -455,10 +455,18 @@ class _AppState extends State<App> with WindowListener {
     var rtc = Provider.of<RealtimeChatModel>(context, listen: false);
 
     await client.readAddressBook();
-    navkey.currentState?.pushNamedAndRemoveUntil(OverviewScreen.routeName,
-        (route) {
-      return false;
-    });
+    // Skip re-pushing Overview if it's already mounted (e.g. a
+    // resumed-from-background call into addressBookLoaded(true) above): the
+    // route below would need to survive its exit transition before
+    // Navigator removes it, so a fresh OverviewScreen would briefly coexist
+    // with the still-mounted one, and both share static GlobalKeys
+    // (scaffoldKey/overviewNavKey), tripping "Duplicate GlobalKey".
+    if (scaffoldKey.currentState == null) {
+      navkey.currentState?.pushNamedAndRemoveUntil(OverviewScreen.routeName,
+          (route) {
+        return false;
+      });
+    }
     await doWalletChecks(wasAlreadyRunning);
     await client.fetchNetworkInfo();
     await client.fetchMyAvatar();
