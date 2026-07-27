@@ -1176,6 +1176,20 @@ func (c *Client) restartDownloads(ctx context.Context) error {
 			continue
 		}
 
+		if fd.Metadata == nil {
+			// We restarted before receiving the metadata reply for
+			// this download (e.g. process died between StartFileDownload
+			// and handleFTGetReply). Re-send the metadata request instead
+			// of attempting to download chunks we can't yet describe.
+			rmftg := rpc.RMFTGet{FileID: fd.FID.String()}
+			payEvent := fmt.Sprintf("ftget.%s", fd.FID.ShortLogID())
+			if err := c.sendWithSendQ(payEvent, rmftg, fd.UID); err != nil {
+				ru.log.Errorf("Unable to re-request metadata of file %s: %v",
+					fd.FID, err)
+			}
+			continue
+		}
+
 		// Start to re-process the download.
 		go func() {
 			err := c.downloadChunks(ru, fd)
