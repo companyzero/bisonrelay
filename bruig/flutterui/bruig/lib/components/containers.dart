@@ -116,7 +116,18 @@ class SecondarySideMenuList extends StatelessWidget {
                         child: ListTileTheme.merge(
                             tileColor: theme.colors.surfaceContainerLowest,
                             // tileColor: Colors.amber,
-                            child: _child())),
+                            // ListTile.tileColor needs a nearby Material
+                            // ancestor to paint into and to render ink
+                            // splashes. `items:` callers get one per row via
+                            // SecondarySideMenuItem, but a caller passing
+                            // `list:` (a raw ListView of its own ListTiles)
+                            // does not, so the tileColor set just above never
+                            // reaches those rows. MaterialType.transparency
+                            // paints nothing itself, so it supplies that
+                            // ancestor without changing appearance.
+                            child: Material(
+                                type: MaterialType.transparency,
+                                child: _child()))),
                     ...(footer != null ? [footer!] : []),
                   ]),
             ));
