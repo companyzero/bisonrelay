@@ -134,7 +134,7 @@ func (rs *resourcesServer) FulfillRequest(_ context.Context, res *types.FulfillR
 		return errors.New(res.ErrorMsg)
 	}
 
-	rs.log.Infof("XXXXXXXXXXXXXXX %d", res.Response.Status)
+	rs.log.Debugf("Received resource reply for request %d with status %d", res.Id, res.Response.Status)
 
 	c <- &rpc.RMFetchResourceReply{
 		Tag:    rpc.ResourceTag(res.Response.Tag),
