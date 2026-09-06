@@ -54,7 +54,7 @@ func (cs *serverStreams[T]) runStream(ctx context.Context, unackedFrom uint64, s
 	ntfn = ntfn.ProtoReflect().New().Interface().(T)
 	id := replaymsglog.ID(unackedFrom)
 	err := cs.replayLog.ReadAfter(id, ntfn, func(id replaymsglog.ID) error {
-		cs.log.Infof("XXXXXXXXXXXX read %s", id)
+		cs.log.Debugf("Replaying unacked %s message %s", cs.prefix, id)
 		setSequenceIDField(ntfn, uint64(id))
 		err := stream.Send(ntfn)
 		if err != nil {
